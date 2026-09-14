@@ -68,6 +68,8 @@ from build_phases import (
     _compute_phase_mappings,
     check_command_reachability,
     AC_STORE_DEPLOY_MAP,
+    set_local_change_baseline,
+    announce_if_local_change_replaced,
 )
 from registry_validator import validate_agent_registry
 from project_context_discovery import (  # noqa: F401 — re-exported for callers
@@ -166,6 +168,11 @@ def write_file(target: Path, content: str, dry_run: bool, force: bool) -> bool:
     builds.  Binary or unreadable files fall through to an unconditional write
     (UnicodeDecodeError / OSError are caught and silently ignored).
 
+    When the target exists and IS about to be overwritten (content differs,
+    or its on-disk content could not be read for comparison), calls
+    ``announce_if_local_change_replaced(target)`` first — this is one of the
+    four named compare-before-write branches ACD-2100d-2-i instruments.
+
     In dry-run mode, prints what would happen but does not write. Creates
     parent directories as needed.
 
@@ -195,6 +202,7 @@ def write_file(target: Path, content: str, dry_run: bool, force: bool) -> bool:
                 return False
         except (UnicodeDecodeError, OSError):
             pass  # Binary or unreadable file — fall through to write.
+        announce_if_local_change_replaced(target)
     target.parent.mkdir(parents=True, exist_ok=True)
     target.write_text(content, encoding="utf-8")
     return True
@@ -1382,6 +1390,46 @@ def _source_file_for_deploy_path(
     if templated.is_file():
         return templated, package_root / "templates", ""
 
+    # ACD-2100b-5 path-form mismatch (found alongside AC BP-900g-8-ii, worktree
+    # merge 2026-09-14): check_workspace_setup_permission.py has NO sibling-module
+    # import (its own build_phases.py deploy-declaration comment says so — stdlib
+    # only), so nothing here needs the package_root-relative module namespace the
+    # "direct" family fallback below gives every other standalone script. Its only
+    # intra-package reference is a runtime DATA read of the agent registry
+    # (REGISTRY_RELATIVE_PATH = Path(".leafcutter") / "config" /
+    # "agent_registry.json"), and it is deliberately written the way the DEPLOYED
+    # script sees it — relative to the deploy OUTPUT ROOT — because the script must
+    # discover the real repo root dynamically via git, never via a fixed
+    # __file__-anchored parent walk. Rooting the closure at package_root itself (the
+    # "direct" fallback) makes this candidate resolve with a spurious literal
+    # ".leafcutter/" segment baked into the reported dependency string whenever
+    # package_root already contains a built ``.leafcutter/`` directory (true for a
+    # self-hosted, previously-built tree, and ONLY reachable in that case: this
+    # candidate is resolved by the guard's `_eval_static_path` evaluator against
+    # the process's OWN cwd, and only exists on disk pre-build in the self-hosted
+    # case) — a path nothing in Set B declares, because Set B's
+    # "config/agent_registry.json" entry is itself already expressed relative to
+    # the deploy output root. Rooting THIS script's closure at
+    # ``package_root / ".leafcutter"`` instead makes the same candidate resolve to
+    # "config/agent_registry.json", the form already declared — so this is a
+    # declaration/wiring correction, not a change to the closure algorithm itself
+    # (build_referential_integrity.py is untouched). ".leafcutter" is hardcoded
+    # rather than read from config here because the guard runs pre-build, before
+    # any target-specific config is available to this preflight, and because the
+    # only context in which this candidate is even resolvable (see above) is the
+    # package's own self-hosted default-configured install.
+    #
+    # KNOWN LIMITATION: if this file ever gains a sibling-module import, that
+    # dependency's closure entry would be computed relative to
+    # ``package_root / ".leafcutter"`` too, and would fail to resolve (silently
+    # dropped, not reported) rather than being checked against Set B. Acceptable
+    # today because no such import exists; a future author adding one must revisit
+    # this special case.
+    if deploy_path == "scripts/worktree/check_workspace_setup_permission.py":
+        worktree_setup_source = package_root / deploy_path
+        if worktree_setup_source.is_file():
+            return worktree_setup_source, package_root / ".leafcutter", ""
+
     # Everything else (build_orchestration, knowledge, agent-support,
     # workflow-tool scripts): source and deploy namespaces coincide directly
     # under package_root.
@@ -2194,6 +2242,12 @@ def main(argv: list[str] | None = None) -> int:
     # report accurate per-run numbers.
     reset_uptodate_count()
 
+    # Capture the PREVIOUS install's output_mappings as this run's
+    # local-change baseline (ACD-2100d-2-i) BEFORE any phase below writes a
+    # single file — the whole point is to see what the last install produced
+    # before this run's own manifest overwrites the record of it.
+    set_local_change_baseline(target_root, output_root)
+
     # Self-description validation: resolve enforcement level (CLI flag overrides
     # registry config key; registry key overrides the 'warning' built-in default).
     _sd_enforcement: str = "warning"
@@ -2558,6 +2612,18 @@ if __name__ == "__main__":
 #   previously-undiscovered instance: validate_ac_schema.py's missing
 #   _ac_components.py -- concrete evidence the mechanism is derived rather than
 #   an enumeration of the one known case. (#BP-900g-8)
+# - 2026-08-31 [python-coder/EPIC-StartingNewWorkTheProperWayAlways/21]:
+#   write_file() now calls announce_if_local_change_replaced(target) (new
+#   import from build_phases) right before overwriting an existing file whose
+#   on-disk content differs from what is about to be written -- the fourth
+#   named ACD-2100d-2-i compare-before-write branch. main() calls the new
+#   set_local_change_baseline(target_root, output_root) right after
+#   reset_uptodate_count(), before any build phase writes a file, so the
+#   announcement's baseline is the PREVIOUS install's recorded
+#   output_mappings (not this run's own, not-yet-written manifest). The
+#   divergence verdict itself is computed entirely in build_phases.py, which
+#   consumes ACD-2100d-2's own installer-derived mapping rather than a second,
+#   independent determination. (#EPIC-StartingNewWorkTheProperWayAlways/21)
 # - 2026-09-07 [python-coder]: Registered the new build_knowledge_sink_declaration
 #   internal phase (declares the build-time knowledge-emission sink absolute
 #   path -- see build_phases.py for the phase itself) right after "Knowledge

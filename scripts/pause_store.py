@@ -11,15 +11,19 @@ BUSINESS CONTEXT: When the workflow engine encounters a gate that requires a
     idempotently. Idempotency prevents duplicate records when the same gate is
     replayed; TTL-based staleness detection prevents resume attempts on records
     that are too old to be acted upon.
-ARCHITECTURE: Core functions write_record() and read_record() operate on
-    explicit Path arguments (pure I/O, directly testable). The CLI is a thin
-    argparse wrapper that resolves the store directory from --store-dir or a
-    git-derived default, then delegates to the core functions. Both write and
-    read print exactly one JSON object to stdout; all diagnostic messages go to
-    stderr via a module-level logger. File format: one pretty-printed JSON file
-    per run_id at <store>/<run_id>.json. write is idempotent when the same
+ARCHITECTURE: Core functions write_record(), read_record(), and
+    clear_record() operate on explicit Path arguments (pure I/O, directly
+    testable). The CLI is a thin argparse wrapper that resolves the store
+    directory from --store-dir or a git-derived default, then delegates to
+    the core functions. write, read, and clear each print exactly one JSON
+    object to stdout; all diagnostic messages go to stderr via a
+    module-level logger. File format: one pretty-printed JSON file per
+    run_id at <store>/<run_id>.json. write is idempotent when the same
     run_id+gate_id are seen again; read supports explicit --now override for
-    deterministic TTL tests.
+    deterministic TTL tests; clear removes the record for a run_id and is
+    idempotent when no record exists (ACD-2100c-3 — the resume path calls
+    clear once a paused run has moved past the decision point it was
+    waiting on, so no waiting record remains on disk).
 """
 
 from __future__ import annotations
@@ -216,6 +220,42 @@ def read_record(
 
 
 # ---------------------------------------------------------------------------
+# Core: clear
+# ---------------------------------------------------------------------------
+
+
+def clear_record(store_path: Path, run_id: str) -> dict:
+    """Remove a pending-question record from disk, if present.
+
+    Idempotent: clearing a record that does not exist is reported as success
+    with ``cleared: False``, not an error. This matters because the resume
+    path (ACD-2100c-3) may call clear more than once for the same run_id if a
+    resumed run is interrupted and the gate is answered again; the second
+    call must not fail just because the first one already removed the file.
+
+    Args:
+        store_path: Absolute directory where records are stored.
+        run_id: Unique run identifier; used as the filename stem.
+
+    Returns:
+        On success: ``{"ok": True, "cleared": <bool>}`` where ``cleared`` is
+        True only when a file was actually removed.
+        On failure: ``{"ok": False, "error": "<message>"}``.
+    """
+    record_path = store_path / f"{run_id}.json"
+    if not record_path.exists():
+        return {"ok": True, "cleared": False}
+
+    try:
+        record_path.unlink()
+    except OSError as exc:
+        logger.warning("Cannot remove record %s: %s", record_path, exc)
+        return {"ok": False, "error": str(exc)}
+
+    return {"ok": True, "cleared": True}
+
+
+# ---------------------------------------------------------------------------
 # CLI
 # ---------------------------------------------------------------------------
 
@@ -290,6 +330,17 @@ def _build_arg_parser() -> argparse.ArgumentParser:
         help="Override the current epoch seconds for deterministic TTL tests.",
     )
 
+    # --- clear subcommand ---
+    clear_p = subparsers.add_parser(
+        "clear", help="Remove a pending-question record from disk (idempotent)."
+    )
+    clear_p.add_argument(
+        "--run-id",
+        required=True,
+        metavar="ID",
+        help="Unique run identifier used as the filename stem.",
+    )
+
     return parser
 
 
@@ -334,6 +385,26 @@ def _cmd_read(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_clear(args: argparse.Namespace) -> int:
+    """Execute the clear subcommand.
+
+    Always exits 0 on a well-formed request — a record that did not exist is
+    reported as ``cleared: false`` in the JSON output, not as a non-zero exit
+    code; only an actual I/O failure while removing an existing file is
+    non-zero.
+
+    Args:
+        args: Parsed CLI arguments containing run_id and store_dir.
+
+    Returns:
+        0 on success (including the idempotent no-op case); 1 on failure.
+    """
+    store_path = _resolve_store_dir(args.store_dir)
+    result = clear_record(store_path, args.run_id)
+    print(json.dumps(result))
+    return 0 if result.get("ok") else 1
+
+
 def main() -> int:
     """Entry point for pause_store.py.
 
@@ -349,6 +420,8 @@ def main() -> int:
 
     if args.subcommand == "write":
         return _cmd_write(args)
+    if args.subcommand == "clear":
+        return _cmd_clear(args)
     return _cmd_read(args)
 
 
@@ -370,5 +443,15 @@ DECISION HISTORY
   Store dir defaults to <git-root>/.leafcutter/paused_runs/ with a WARNING
   fallback to cwd when not in a git repo. The --now override in the read
   subcommand exists solely for deterministic test assertions.
+- 2026-09-08 13:30 [python-coder]: Added the `clear` subcommand and
+  clear_record(). AC-4 of ACD-2100c-3 requires that once a resumed run moves
+  past the decision point it was waiting on, no record of it waiting remains
+  on disk; plan-feature.js's resolveGate() dispatches this new subcommand
+  right after a non-"edit" resume answer is validated against the durable
+  record, before the caller performs the work that actually commits the run
+  past the gate (so a crash between the two never leaves the run both
+  resumed and still listed as waiting -- see ADR-024 and this ticket's
+  Implementation Notes). Idempotent by design: clearing an already-absent
+  record is success, not an error. (#EPIC-StartingNewWorkTheProperWayAlways/15)
 ====================================================================
 """

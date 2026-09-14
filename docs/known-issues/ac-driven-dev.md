@@ -11,6 +11,8 @@ components:
 related_docs:
   - docs/architecture/components/ac-driven-dev.md
   - docs/architecture/components/phantom-done-prevention.md
+  - docs/architecture/components/worktree-manager.md
+  - docs/architecture/adrs/ADR-001-self-hosting-boundary.md
 ---
 
 # Known issues — ac-driven-dev
@@ -222,10 +224,14 @@ field, other code path.
 ### KI-ACD-004 — `/plan-feature` cannot start in the self-hosting layout: worktree setup resolves git from the untracked workspace
 
 - **Severity:** blocker
-- **Status:** open
+- **Status:** fixed (2026-09-14 — closes now that `ACD-2100a-3` and `ACD-2100a-4`, the two
+  sibling sites tracked separately since the 2026-08-31 partial fix, have themselves landed
+  on repository-anchored resolution; see "Fix landed" below for both dates). All five records
+  in this family (`ACD-2100a-1` through `-5`) are `work_status: done`.
 - **Occurrences:** 1
 - **First seen:** 2026-08-18 · **Last seen:** 2026-08-18
-- **Where:** `templates/workflows-js/plan-feature.js:1740` → `scripts/setup_ticket_worktree.py` `_git_toplevel()`
+- **Where:** `templates/workflows-js/plan-feature.js:1740` → `scripts/setup_ticket_worktree.py`
+  `_git_toplevel()` / `_resolve_repository_with_search_fallback()`
 
 **Symptom.** `/plan-feature` dies before triage, before the product-truth phase, and
 before any authoring agent runs. It returns
@@ -289,15 +295,141 @@ fallback above, warning on stderr when it fires. This is **build output** — `b
 overwrites it from `templates/`, so the workaround evaporates on the next build and is
 not a fix.
 
+**Fix landed 2026-08-31 (`ACD-2100a-1`).** Took the second "Fix direction" candidate,
+in `templates/workflows-js/plan-feature.js` (the source template — not the deployed
+`.leafcutter/` copy per ADR-001's self-hosting boundary):
+
+- `buildRepoAnchoredResolutionCommand(relPath)` builds a single-line POSIX-sh command
+  that resolves `.leafcutter/<relPath>` to an absolute path anchored at the actual git
+  repository — `git rev-parse --show-toplevel` first, falling back to probing the
+  session cwd's immediate child directories for exactly one git toplevel when that
+  fails (the self-hosting layout this issue's root cause names). It never falls back to
+  a cwd-relative guess: an unresolved repository or a resolved-but-missing file both
+  exit non-zero with a diagnostic naming the location that could not be found.
+- `resolveRepoAnchoredScriptPath(relPath, agentType, label)` dispatches that command to
+  a `status-checker` agent and fails closed — any dispatch error, non-zero exit, or
+  unparseable output is returned as `{ ok: false, message }`, never silently swallowed
+  into a fallback, per this repository's error-handling policy for external I/O.
+- The worktree-setup dispatch (`create-ac-worktree`) resolves `scripts/setup_ticket_worktree.py`
+  through this mechanism *before* building its own command text, and embeds the
+  resolved absolute path literally into that command — so the run's own record of the
+  command it issued names the absolute, repository-anchored location, not a
+  `{{config.output_root}}`-relative one. On resolution failure, the same diagnostic is
+  re-issued under the `worktree-setup` step's own label rather than a separate early
+  return, so a wrong-copy failure is observable on that step's own record.
+- Covered by `unit_tests/workflows/test_acd_2100a_1.py` (a real, on-disk two-copy
+  reproduction driven from an untracked, non-repository cwd — not a mock-only test).
+
+**Fix landed 2026-08-31 (`ACD-2100a-2`), as defense-in-depth inside the script itself.**
+Independent of the caller-side fix above, `_git_toplevel()`'s own anchor-based resolution
+in `scripts/setup_ticket_worktree.py` now falls back to a bounded search when the anchor
+fails — implementing the first "Fix direction" candidate above (the second is what
+`ACD-2100a-1` took), so the script recovers on its own even when a caller other than the
+now-fixed `plan-feature.js` invokes it from an unexpected `cwd`:
+
+- `_search_immediate_subdirectory_repos()` probes the *immediate* subdirectories of the
+  process's current working directory for git toplevels — never walking upward past the
+  starting directory, never following a symlinked child out of it, and rejecting a
+  candidate whose own `git rev-parse --show-toplevel` resolves to some ancestor rather
+  than the candidate itself.
+- `_resolve_repository_with_search_fallback()` keeps the anchor as the first choice,
+  unchanged for every caller that already works; the bounded search runs only when the
+  anchor raises, and only a single unambiguous candidate is accepted — zero or multiple
+  candidates raise rather than guessing.
+- A search-based resolution always announces itself on stderr at WARNING level, naming
+  the selected repository and stating that the selection came from a search rather than
+  the script's own location — silence here would be indistinguishable from the anchor
+  having worked and would leave a future wrong-repository incident undiagnosable.
+- An explicit `--repo-root` flag on the `create-only` subcommand bypasses both the anchor
+  and the search outright, so callers with a known-good location are unaffected.
+- Covered by `unit_tests/ac_driven_dev/test_acd_2100a_2.py` — real-subprocess integration
+  tests driven from a genuinely non-repository directory with exactly one git repository
+  among its immediate subdirectories, exercising the script's actual command-line entry
+  point rather than importing the resolver.
+
+**Known related gap, left open by design.** `_create_ac_worktree()` and
+`_create_fastlane_worktree()` share the same anchor-only `_git_toplevel()` call (and the
+same historical stdout-pollution pattern on `git worktree add`, also fixed for
+`create-only` in this pass) but were not brought onto this fallback — they are outside
+`ACD-2100a-2`'s AC/test scope. Track as a future ticket rather than treating the
+worktree-setup site as fully hardened across all three subcommands.
+
+This is explicitly a **shared** mechanism, not a per-site patch: `buildRepoAnchoredResolutionCommand`
+/ `resolveRepoAnchoredScriptPath` are written for reuse by the sibling
+`{{config.output_root}}`-relative sites named in the "Fix direction" above — the AC
+registry read (`ACD-2100a-3`) and the pause-store read/write (`ACD-2100a-4`). Those two
+sites had not yet been migrated onto this mechanism as of this fix and remain open; a
+per-site fix here alone is exactly what left three sites standing after this class of
+defect was first filed. See
+[`docs/architecture/components/ac-driven-dev.md`](../architecture/components/ac-driven-dev.md)
+and
+[`docs/architecture/components/worktree-manager.md`](../architecture/components/worktree-manager.md)
+for the components this resolution site touches, and
+[ADR-001](../architecture/adrs/ADR-001-self-hosting-boundary.md) for the self-hosting
+layout this fix resolves against. A standing reference page for `/plan-feature`'s
+layout and startup-time resolution checks (covering this behaviour alongside the
+sibling sites once they land) is planned at
+`docs/reference/plan-feature-layout-and-startup-checks.md` — not yet authored as of
+this entry; cross-link from there back to this entry once it exists rather than
+duplicating this narrative.
+
+**Fix landed 2026-09-14 (`ACD-2100a-3`, `ACD-2100a-4`).** The two sibling sites this
+entry tracked as open above have themselves now landed on repository-anchored
+resolution, verified directly against the current code rather than taken on the
+epic's own say-so:
+
+- `ACD-2100a-3` ("the startup charter check finds the agent registry when the run
+  starts inside a worktree") is implemented in
+  `scripts/worktree/check_workspace_setup_permission.py`'s `resolve_repo_root()`,
+  which reads `git rev-parse --git-common-dir` (the form that resolves correctly for
+  a linked worktree, whose `.git` is a file rather than a directory) with a bounded
+  child-directory probe as fallback — independent of, but the same shape as,
+  `ACD-2100a-1`'s `buildRepoAnchoredResolutionCommand()`. Covered by
+  `unit_tests/workflows/test_acd_2100a_3.py`.
+- `ACD-2100a-4` ("a pause record written from inside a worktree is found again by the
+  run that resumes") is implemented via `buildPauseStoreCommand()`'s
+  `_buildRepoRootResolutionSnippet()` in `templates/workflows-js/plan-feature.js` — the
+  same repo-anchoring primitive `ACD-2100a-1` established, applied to the pause-store
+  read/write. Covered by `unit_tests/workflows/test_acd_2100a_4.py`, including a real
+  round-trip test that writes a pause record from inside a worktree fixture and reads
+  it back from a second process started at the project root.
+- `ACD-2100a-5` ("a run reaches its first question to the user from any working
+  directory") is the direct end-to-end regression test for this entry's original
+  symptom: it drives the same run from the project root, a worktree, and a directory
+  containing neither the project nor any installed support files, and asserts all
+  three reach the same first user-facing question with no run halting on an
+  unresolved file. Covered by `unit_tests/workflows/test_acd_2100a_5.py`.
+
+**Evidence, re-run for this entry on 2026-09-14.**
+`python -m pytest unit_tests/workflows/test_acd_2100a_1.py unit_tests/workflows/test_acd_2100a_3.py unit_tests/workflows/test_acd_2100a_4.py unit_tests/workflows/test_acd_2100a_5.py`
+→ 13 passed; `unit_tests/ac_driven_dev/test_acd_2100a_2.py` → 4 passed. The four
+`-1/-3/-4/-5` files were RED for the whole epic until today's `d4146f162` ("supply
+args-shaped pre-flight verdict in 17 tests"): `ACD-2100b-5` (landed 2026-09-07) changed
+how the Pre-Stage-0 workspace-setup permission verdict reaches the workflow —
+`args.workspace_setup_permission` instead of an agent-dispatch label — and these four
+files still supplied the old label-shaped stub, so every one of them failed closed at
+Stage 0 before ever reaching the behaviour under test. `d4146f162` added each file's own
+`_real_preflight_verdict()` helper, which runs the real on-disk pre-flight script and
+uses its actual output. The fix this entry describes finally has passing evidence
+behind it, rather than a green-looking gate that never exercised the code.
+
 ---
 
 ### KI-ACD-005 — User approval gates are dispatched to a `status-checker` agent, whose out-of-scope refusal is parsed as "the user chose cancel"
 
 - **Severity:** blocker
-- **Status:** open
+- **Status:** fixed (2026-09-14 — landed via `ACD-2100c-1`, the outgoing half: no decision
+  point ever dispatches an agent to obtain an answer, and `ACD-2100c-4`, the incoming half:
+  an answer is honoured only when `resume_answer.channel === "person"`; anything else,
+  including its absence, leaves the run paused with a provenance-worded reason rather than
+  resolving to `cancel`). See "Fix landed" below.
 - **Occurrences:** 1
 - **First seen:** 2026-08-18 · **Last seen:** 2026-08-18
-- **Where:** `templates/workflows-js/plan-feature.js` — the PT-phase approve/edit/cancel gate (`pt-gate-mockdata`); `resolveGate()` / gate answer parsing
+- **Where:** `templates/workflows-js/plan-feature.js` — the PT-phase approve/edit/cancel gate (`pt-gate-mockdata`); `resolveGate()` / gate answer parsing. **Caveat on this line:** the exact
+  line numbers this register cites for `resolveGate()` elsewhere had already drifted out of
+  date before today (see the `KI-ACD-019` cross-reference note on this component); the "Fix
+  landed" section below cites line numbers re-verified against the current file rather than
+  carried forward from this entry's original filing.
 
 **Symptom.** The gates that the skill documents as *user* decision points are not
 presented to a user at all. They are dispatched as prompts to a `status-checker` agent.
@@ -329,6 +461,32 @@ real user, or persist a pause record and exit with a status that says "awaiting 
 — and re-enter via `args.resume_answer`, which the script already supports (ADR-024).
 Separately, harden the answer parser: an unrecognised or refusal-shaped reply must
 never resolve to `cancel`; fail to `pause`, never to `discard`.
+
+**Fix landed 2026-09-14 (`ACD-2100c-1` / `ACD-2100c-4`).** Verified directly against the
+current `templates/workflows-js/plan-feature.js`, not taken on the epic's own say-so:
+
+- `resolveGate()` (`:1563`) checks `args.resume_answer` before ever considering a live
+  dispatch. When no valid, person-attributed answer is present, it discards `liveGateFn`
+  entirely — `void liveGateFn; return pauseAtGate(gateId, runId, context, descriptor);`
+  (`:1726-1727`) — rather than dispatching an agent to answer on the user's behalf. This
+  closes the specific defect this entry describes: there is no code path left in which a
+  `status-checker` (or any other agent)'s reply can be parsed as the user's decision, because
+  no such dispatch is made.
+- The incoming half (`ACD-2100c-4`) checks provenance as a property of the answer, never
+  its content: `if (args.resume_answer.channel !== "person") { return { status:
+  "paused_awaiting_input", run_id: runId, gate_id: gateId, reason: "This answer did not come
+  from the person running the route, so it was not treated as their decision..." }; }`
+  (`:1590-1600`). An unrecognised, malformed, or non-person-channel reply now resolves to
+  `paused_awaiting_input`, never to `cancel` — exactly the "fail to pause, never to discard"
+  fix direction named above.
+- All five decision points named in `ACD-2100c-1`'s own criteria (product-truth,
+  mid-pipeline, final, covered-route, orphan-resolution) route through this same
+  `resolveGate()` — confirmed at each of the five call sites (`:2559`, `:2648`, `:2819`,
+  `:3182`, `:3322`) — so this is the class-wide mechanism the criteria required, not a
+  per-site patch that could leave a sixth gate unrouted.
+- Covered by `unit_tests/workflows/test_acd_2100c_1.py` (re-run 2026-09-14: 4 passed, 15
+  subtests passed) and `unit_tests/workflows/test_acd_2100c_4.py` (re-run 2026-09-14: 6
+  passed).
 
 ---
 
@@ -493,7 +651,10 @@ gate green.
 ### KI-ACD-009 — `/plan-feature` halts before any authoring agent and blames a registry field that is correct
 
 - **Severity:** blocker
-- **Status:** open
+- **Status:** fixed for the round-trip-removal site (2026-09-07 — landed via
+  `ACD-2100b-5`). See "Fix landed" below — the dispatch this entry's cause 2 names no
+  longer exists, but sibling outcome-distinction coverage still tests the retired
+  mechanism and needs re-pointing before this entry closes.
 - **Occurrences:** 1
 - **First seen:** 2026-08-19 · **Last seen:** 2026-08-19
 - **Where:** `templates/workflows-js/plan-feature.js:1745-1790` — the `resolve-workspace-setup-permission` step and the `permitsShell` fail-closed branch
@@ -572,6 +733,79 @@ all new work (`CLAUDE.md`, "New Work Goes Through ACs"). While this holds, that 
 closed from any worktree, and the only way to author ACs is to dispatch the PO/BA/IT-PO
 agents by hand — which skips the triage, the gates, and the staged-commit invariant the
 workflow exists to enforce.
+
+**Fix landed 2026-09-07 (`ACD-2100b-5`).** All three "Fix direction" bullets above are
+addressed by removing the round-trip entirely rather than by improving its failure
+reporting:
+
+- **Cause 2 (`API Error: Connection lost mid-response`) can no longer occur for this
+  check.** There is no `resolve-workspace-setup-permission` agent dispatch left to fail.
+  The startup check is now a local read performed by `/plan-feature`'s own pre-flight —
+  `scripts/worktree/check_workspace_setup_permission.py` — invoked from §WSP
+  (`templates/skills/plan-feature/SKILL.md`) BEFORE the workflow is invoked, not by a
+  dispatch the workflow body makes. An operator who previously saw this message as a
+  transport error now knows it is not this check: the E2 engine (ADR-030) contextifies
+  the workflow body with no filesystem primitive at all, so the workflow physically could
+  not have made this read itself, and no longer tries to reach it through an agent
+  round-trip either. The verdict crosses from the pre-flight into
+  `templates/workflows-js/plan-feature.js` through `args.workspace_setup_permission`,
+  the only injected global that carries caller-supplied data.
+- **"Distinguish the four outcomes" is implemented.** The script's verdict carries an
+  `outcome` field distinguishing `granted`, `read_failure`, `parse_failure`,
+  `agent_not_found`, `no_entries_collection`, and `permission_denied` — the causes named
+  above are now reported apart from one another rather than collapsed into one
+  permissions message.
+- **"Resolve the registry path, do not hardcode a relative one" is implemented.** The
+  script resolves the registry the same repository-anchored way `ACD-2100a-1` /
+  `ACD-2100a-3` already established for the sibling sites named in `KI-ACD-004` — so it
+  reaches the project's real registry from inside a linked git worktree that holds no
+  `.leafcutter/` of its own, which is cause 1 above (the missing-path failure) closed the
+  same way.
+
+Covered by `unit_tests/ac_driven_dev/test_acd_2100b_5.py` and
+`unit_tests/workflows/test_acd_2100b_5.py`. **This entry is not fully closed.** Landing
+the surface change makes the pre-existing dispatch-based coverage for the sibling
+outcome-distinction records (`ACD-2100b-1` through `-3`, `-3-i`, `-4`, plus
+`ACD-2100a-1` / `-4` and `BO-1500f-1`'s own tests, all of which stub the retired
+`resolve-workspace-setup-permission` label to get past this gate) fail — tracked in
+`ACD-2100b-5`'s own ticket under its `### test-writer` Implementation Tasks section.
+Leave `Status` above at partial until that remediation lands and those records' coverage
+is re-pointed at the script's own outcome vocabulary directly, mirroring
+`unit_tests/ac_driven_dev/test_acd_2100b_5.py`.
+
+**Update 2026-09-14 — narrower than the epic's own "all 25 tickets done" claim, still not
+closed.** Re-checked directly rather than taken on the epic's say-so, now that the epic
+(`EPIC-StartingNewWorkTheProperWayAlways`, ACD-2100 family) reports every one of its own
+tickets done:
+
+- The `ACD-2100b` sibling records are genuinely re-pointed and pass for real:
+  `unit_tests/workflows/test_acd_2100b_1.py`, `-2.py`, `-3.py`, `-3_i.py`, and `-4.py` all
+  pass (re-run 2026-09-14: 12 passed + 12 passed, no xfail masking involved — `ACD-2100b-1`
+  through `-4` and `-3-i` are all `work_status: done`). `ACD-2100a-1` and `-4` are likewise
+  re-pointed and green (see `KI-ACD-004`'s own 2026-09-14 update above).
+- **`BO-1500f-1`'s own tests are the one sibling still not re-pointed, and they are a real,
+  live failure today — not a hypothetical one.** `BO-1500f-1` belongs to a different ticket
+  (outside this epic's 25), so its remediation was never in this epic's scope to begin with.
+  `unit_tests/workflows/test_bo_1500f_1.py` and
+  `unit_tests/workflows/test_bo_1500f_1_real_registry_read.py` still assert a
+  `resolve-workspace-setup-permission` agent dispatch that no longer exists. Run under
+  `AC_ENFORCE_STRICT=1` (bypassing the xfail mask that normally hides this): 4 real
+  `AssertionError`s in `test_bo_1500f_1.py` alone, each on exactly the retired-dispatch
+  assertion this update names. Without `AC_ENFORCE_STRICT=1` these are silently downgraded
+  to `xfail` and the suite reports green — but only because `BO-1500f-1` itself is still
+  `work_status: todo`; per the `pytest_ac_enforcement` masking rule, a not-done AC's
+  failures are hidden by design, not because the code works. If `BO-1500f-1` is ever marked
+  `done` without this remediation landing first, the mask lifts and CI goes red on a ticket
+  that was already closed.
+- **Leave `Status` above at partial.** The scope of what remains is now exactly one
+  sibling (`BO-1500f-1`'s own two test files), not the five-plus this entry originally
+  named — but that one remains genuinely broken, confirmed by running the actual code, not
+  inferred from the epic's own completion claim.
+
+A standing reference page for `/plan-feature`'s layout and startup-time checks
+(`docs/reference/plan-feature-layout-and-startup-checks.md`, planned per `ACD-2100d-4`,
+not yet authored as of this entry — see `KI-ACD-004` above) should state this fix and
+cross-link back here rather than duplicating this narrative once it exists.
 
 **Pattern:** `docs/reference/false-green-mechanisms.md` → M8, inverted — not a check
 reporting success it did not establish, but a check reporting a *specific failure cause*
@@ -1124,7 +1358,10 @@ covering tests all assert `result.isascii()`, which is `True` for a comma.
 in `plan-feature.js:2057-2097` — an agent's reply is accepted as a user's decision — and both
 ACs went `done` against it in the same ticket. Fixing either half alone leaves the other
 false. Likewise `KI-ACD-004` and `KI-ACD-009` are both `{{config.output_root}}` resolving
-relative to the session cwd, and both halt `/plan-feature` before triage.
+relative to the session cwd, and both halted `/plan-feature` before triage. **Update
+2026-08-31:** `KI-ACD-004`'s worktree-setup site is now fixed (`ACD-2100a-1`, see its entry
+above); `KI-ACD-009` is a separate step (the `resolve-workspace-setup-permission` gate, not
+the script-path resolution) and remains open independently.
 
 **A correction to `KI-ACD-012`, which names the wrong gate.**
 `templates/hooks/ticket_frontmatter_guard.py` is a Claude Code `PreToolUse` hook on

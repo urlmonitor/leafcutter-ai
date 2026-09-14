@@ -20,14 +20,14 @@ criteria: |
   documentation rather than by working it out from the program itself.
 depends_on: [ACD-2100, ACD-2100c, ACD-2100a-4]
 doc_links:
-  - path: docs/architecture/diagrams/c3-006-plan-feature-decision-gate-sequence.md
+  - path: docs/architecture/diagrams/c3-008-plan-feature-decision-gate-sequence.md
     relationship: creates
-    status: planned
-    relevance: "ACD-2100e-1's deliverable. DOES NOT EXIST YET. Five records under ACD-2100c link this exact path, so the diagram author must publish here and nowhere else -- no hook validates a markdown-to-markdown link, so a renamed target dangles silently on both sides."
+    status: exists
+    relevance: "ACD-2100e-1's deliverable. PUBLISHED 2026-09-14 (commit f5cf4a166) at exactly this path. Four records under ACD-2100c link this exact path (c-1, c-2, c-4, c-5 -- c-3 links the how-to, not the diagram), so the diagram must stay here -- no hook validates a markdown-to-markdown link, so a renamed target dangles silently on both sides."
   - path: docs/how-to/resume-a-paused-plan-feature-run.md
     relationship: creates
-    status: planned
-    relevance: "ACD-2100e-2's deliverable. DOES NOT EXIST YET. Same pinning as above -- ACD-2100c-3 and c-3-i link this exact path."
+    status: exists
+    relevance: "ACD-2100e-2's deliverable. PUBLISHED 2026-09-14 (commit 15f745bb1) at exactly this path. Same pinning as above -- ACD-2100c-3 and c-3-i link this exact path."
   - path: docs/architecture/adrs/ADR-024-interactive-pause-resume.md
     relationship: describes
     status: exists
@@ -69,7 +69,7 @@ notes: |
   them as planned and a different name silently dangles every one of those links
   (check-doc-links cannot catch a target that never appears):
     - ACD-2100e-1, architecture-diagram-author, target
-      docs/architecture/diagrams/c3-006-plan-feature-decision-gate-sequence.md.
+      docs/architecture/diagrams/c3-008-plan-feature-decision-gate-sequence.md.
       Linked as planned from ACD-2100c-1, c-2, c-4 and c-5. ACD-2100c-1 also
       carries a delivers_to contract naming ACD-2100e-1 and the
       architecture-diagram-author agent: "the final set of decision points and

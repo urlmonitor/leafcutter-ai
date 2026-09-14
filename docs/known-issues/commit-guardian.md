@@ -258,6 +258,42 @@ pre-commit time. The right end state is one scanner with one definition and a te
 asserting the two gates agree on a fixture set covering all four shapes: sync, async,
 file-level, composite.
 
+**Update 2026-09-14 — the `test_required` half of the symptom above is stale; the
+composite half is not, and now has fresh evidence.** Re-read `check_staged_done_proofs`
+directly rather than trusting the symptom text as filed: it now DOES read `test_required`
+(`if data.get("test_required") is False: continue`, with a docstring describing the
+exemption as mirroring `check_all_done_acs` / `check_changed_done_acs`) — that part of this
+entry's "Symptom" no longer matches the code and should be read as historical. **The
+composite half is unchanged and still real**: `check_staged_done_proofs` has no
+`covered_by`/composite fallback of any kind — it is a flat `ac_id_str not in
+all_covered_ids` check with nothing else — while its two CI-authoritative siblings resolve
+a composite's verdict through `verify_done_eligible`'s built-in `_verify_composite_eligible`
+path. So a composite can be genuinely eligible by the authoritative CI definition and still
+be **uncommittable locally**, exactly as this entry's "Consequence" section already says.
+
+Fresh evidence for the composite half, found today and not depending on either the
+`BO-1500*` records this entry originally cited or on the tickets they came from: all five
+`L1` composites in `EPIC-StartingNewWorkTheProperWayAlways`'s own AC family —
+`ACD-2100a` through `ACD-2100e` — carry `work_status: todo` in the store right now, while
+every one of their `covered_by` children (`ACD-2100a-1` through `-5`, `ACD-2100b-1` through
+`-5`, etc.) is `work_status: done`. None of the five declares `test_required: false` (the
+field is simply absent, so the existing exemption does not apply to them either). This is
+the epic that shipped the fix for three other entries in `ac-driven-dev.md` today, and even
+it left its own five composites stuck at `todo` — consistent with "composites are
+structurally unreachable via the fast pre-commit gate," not with any one ticket's oversight.
+
+**A tension worth recording rather than resolving here.** A prior store-wide sweep (cited
+in this repo's `CLAUDE.md`, "AC-store commits — stage the parent alongside the child") found
+20 composites falsely marked `done` with unfinished children — so a gate that makes
+composite-done hard to reach is, in one reading, protective. But the gap this entry
+describes does not distinguish "protect against a false composite done" from "no composite
+may ever be marked done through the sanctioned local gate" — the current effect is the
+latter, unconditionally, for every composite regardless of whether its children are
+genuinely finished. That is a materially different (and stricter) policy than "verify
+before allowing," and nothing in this file's history suggests anyone chose it on purpose.
+Whoever picks up the "Fix direction" above should decide which of the two was intended
+before implementing it, not just port the CI-authoritative behaviour over unexamined.
+
 ---
 
 ### KI-CG-004 — moved to `security-scanner`
@@ -2456,7 +2492,9 @@ nothing and reports success).
 
 - **Severity:** high
 - **Status:** **resolved — and it was already resolved when this entry was filed.** See
-  "Correction" immediately below before reading anything else here.
+  "Correction" immediately below before reading anything else here. Since then, fixed for
+  the scan/report and trigger sites this entry names and locked in with tests — see "Fix
+  landed" below.
 - **Occurrences:** 1
 - **First seen:** 2026-08-26 · **Last seen:** 2026-08-26 (fixed by `ab9e91c41`, PR #593)
 - **Where:** `scripts/commit_guardian/check_output_drift.py` — the directory scan and the
@@ -2562,6 +2600,43 @@ the check. Run it; do not read it.
 `KI-CG-012` (the sibling exit-0-having-checked-nothing routes — those are still open, and
 unlike this one they have regressed from working states). `KI-BP-016` (the same output-root
 confusion in the build's doc-index phase).
+
+**Fix landed 2026-08-26 (`BP-100k-3` / `BP-100k-4`), confirmed and locked in with tests by
+`ACD-2100d-2` on 2026-08-31.** Both defects named above are corrected on this branch:
+
+- **Scan/report side (`scripts/commit_guardian/check_output_drift.py`).** The scanner and
+  its lookup keys are now derived from the installer's own `output_mappings` (the same
+  enumeration `build_phases._compute_phase_mappings()` and the module-level `shim_map` in
+  `scripts/build_helpers.py` produce), not a hardcoded directory list — closing the
+  namespace mismatch this entry's "Cause" section describes. The `_compute_output_mappings`
+  docstring claim flagged above as stale and false (that it enumerates four template
+  directories "by hand" and cannot see the route file) has been corrected; the manifest
+  does contain the `workflows-js` entries including `plan-feature.js`.
+- **The unmapped-file case now reports rather than silently skips (`BP-100k-3`).** An
+  output file absent from `output_mappings` prints `UNCOMPARABLE: EXEMPT <key>
+  ground=<ground>` (a declared, grounded exemption via the `drift_gate_exemption_registry`
+  in `commit_guardian.json`) or `UNCOMPARABLE: GAP <key> action=run build.py to register
+  it` when no exemption is declared. Both are counted in the `RESULT` summary line; only
+  GAPs drive a non-zero exit. See `docs/build-drift-hook.md` §2B for the full reporting
+  contract, including the sibling `MISSING` (`BP-100k-6`) and `UNREADABLE` cases added in
+  the same pass.
+- **Trigger side (`scripts/commit_guardian/commit_guardian.json`, `BP-100k-4`).** The
+  `check-output-drift` hook entry now carries `"always_run": true` instead of a `files:`
+  path-prefix filter — correct because the hook scans the whole tree by hash and never
+  consults the staged file list, so a `files:` filter would exclude a deployed file under a
+  differently-configured output root exactly as this entry's "registration compounds it"
+  point warned.
+- **What `ACD-2100d-2` actually did.** Independent re-verification (architect-review,
+  test-writer, python-coder, and test-runner all confirmed this separately on 2026-08-26
+  and again on re-dispatch 2026-08-31) found the scan/report and trigger fixes above already
+  present on this branch before any `ACD-2100d-2` coder work started — landed by the
+  `BP-100k` family, not by this AC. No production edit was made under `ACD-2100d-2`; its
+  contribution is `unit_tests/build_guards/test_acd_2100d_2.py`, which locks the behaviour
+  in with four real-artifact tests: a hand-edited deployed file is reported by name and
+  exit code, the verdict is consumed where "delivered" is decided (not merely computed),
+  re-running the installer over the same working copy removes the reported repair, and a
+  freshly-installed file that differs from its source only in a generation-explained way
+  produces no report.
 
 **Pattern:** `docs/reference/false-green-mechanisms.md` → M5 (a validator that validates
 nothing and reports success).
@@ -3669,8 +3744,8 @@ control reads a real file, finds real content, and answers a question about the 
 
 - **Severity:** medium
 - **Status:** open
-- **Occurrences:** 1
-- **First seen:** 2026-09-01 · **Last seen:** 2026-09-01
+- **Occurrences:** 2
+- **First seen:** 2026-09-01 · **Last seen:** 2026-09-14
 - **Where:** `templates/scripts/commit_guardian/verify_precommit_active.py` — the `--json`
   payload assembled in `run_checks()`, and the `check_c_git_hook` / `check_hook_freshness`
   branches that feed it
@@ -3733,6 +3808,22 @@ never-attempted from attempted-and-passed). `docs/reference/false-green-mechanis
 **Pattern:** a probe whose human-readable output distinguishes "could not determine" from a
 verdict, and whose machine-readable output does not — so the consumer built to act on it is
 the one consumer that cannot tell.
+
+**Second occurrence, 2026-09-14 — same defect, sharper consequence.** Re-verified directly
+against the current code before logging this as a recurrence rather than a new entry: the
+fallback this entry describes is still at `resolve_hooks_path()` (`verify_precommit_active.py`
+~line 359, `_resolve_git_commondir(cwd)` raising `FileNotFoundError` when no `.git` exists at
+`cwd`) with `run_checks()`'s `except (OSError, configparser.Error)` catching it and falling
+back to `hooks_dir = cwd / ".git" / "hooks"` (~line 629) — unchanged since 2026-09-01. Today's
+run returned `{"git_hook": false}` for a worktree probed from outside its own root, while
+`check-done-proof` had blocked a commit **on that same worktree minutes earlier** — direct,
+time-adjacent proof the hooks were live and the probe's `false` was the "could not look" case
+this entry names, not "not installed". Re-running under `env --chdir=<worktree root>` returned
+`failing_checks: []`, matching the original 2026-09-01 reproduction exactly. Filed here as a
+second occurrence rather than a new KI id after confirming the mechanism, evidence shape, and
+even the operator's own recovery step (`env --chdir=`) are identical to the entry above — a
+duplicate id would have fragmented one defect across two entries for no analytical benefit.
+No remediation has landed; the "Remediation" section above still describes the fix needed.
 
 ---
 
@@ -4062,6 +4153,43 @@ Both files were already committed on `origin/main` via `eaf49388b` and are untou
 - `KI-BP-20260907-bootstrap-swallows-build-failure` (`docs/known-issues/build-pipeline.md:1990`) and `KI-BO-20260907-resume-replays-cached-resolver` (`docs/known-issues/build-orchestration.md:2886`) — same-day neighbours in the sibling registers, cross-referenced only as same-day context, not because they share this defect's mechanism.
 
 **Pattern:** registering a gate as `always_run` is what turns a latent, always-true condition (here: a ref lookup that was never merge-aware) into a live, repo-wide blocker — the third instance of that shape filed within the same week.
+
+---
+
+### KI-CG-20260914-ratchet-max-baseline-refuses-union-merges — `check-file-size`'s merge baseline is the MAXIMUM across parents, but a clean merge holds BOTH parents' additions, so a union that authored no new content still exceeds the permitted length and the gate refuses it
+
+- **Severity:** high — blocks any substantive catch-up merge of `origin/main` into any long-lived branch, for anyone. The larger the divergence, the more certainly it fires: the defect is a property of merging itself, not of any file being oversized.
+- **Status:** OPEN.
+- **This is a FOLLOW-ON to `KI-CG-20260908-ratchet-reads-pre-merge-head` (RESOLVED above), NOT a duplicate of it, and not a regression of that fix.** That entry covered the ratchet reading `HEAD` — the branch's *pre-merge* tip — so a file long-standing on `origin/main` but absent from the branch had no baseline at all and was judged against the absolute limit. `62410ca66` / PR #752 fixed exactly that by taking the MOST PERMISSIVE (maximum) previous length across every parent. That fix is present, deployed, and working: verified today by running the deployed `.leafcutter/scripts/commit_guardian/_file_size_ratchet.py` directly and observing it correctly report `HEAD=1707, MERGE_HEAD(origin/main)=1915, max permitted=1915` for `scripts/build.py`. The remaining gap is narrower and was not in scope there: `max(A, B)` is still the wrong bound when the merge result legitimately contains the additions of **both** A and B. Leaving KI-CG-20260908 closed — its defect really is fixed; this is the next one along the same seam.
+- **Occurrences:** 1 observed live merge, refusing 4 files simultaneously.
+- **First seen:** 2026-09-14 (merge of 95 `origin/main` commits into `EPIC-StartingNewWorkTheProperWayAlways`) · **Last seen:** same.
+- **Where:** `templates/scripts/commit_guardian/_file_size_ratchet.py` — the merge branch added by `62410ca66` (`_merge_head_path()` at `:353` and the maximum-across-parents selection it feeds).
+
+**Symptom.** A merge whose conflicts were all resolved, whose build was green and whose test suite was clean (693 passed / 5 xfailed) was refused by `check-file-size` on four files:
+
+```text
+❌ scripts/build.py: 1915 → 1976
+❌ scripts/build_phases.py: 2848 → 2864
+❌ templates/scripts/commit_guardian/check_done_proof.py: 663 → 665
+❌ templates/scripts/setup_ticket_worktree.py: 1354 → 1441
+```
+
+**Mechanism, and the file that proves it.** `templates/scripts/setup_ticket_worktree.py` is the clinching case because **it never conflicted** — git auto-merged it, so no human and no agent wrote a line of the result. Its raw line counts: branch parent 1756, main parent 2150, merged result 2338. `git diff --cached origin/main --numstat` reported `191  3`, and 2150 + 191 − 3 = 2338 exactly. The merged file is therefore a pure union: all of main's 2150 lines, plus the 191 the branch added independently. A union of two divergent edits necessarily exceeds either parent alone, so `max(HEAD, MERGE_HEAD)` is an upper bound the result cannot satisfy while remaining a correct merge. The other three files fit the same shape (two conflicted and were union-resolved; `check_done_proof.py`'s +2 is the merged docstring of main's composite-level branch and this branch's `test_required` exemption).
+
+**Note on reproducing the figures.** The ratchet reports a code-line metric, not raw `wc -l` — hence `1354 → 1441` for a file whose raw counts are 1756 / 2150 / 2338. A reader checking these numbers with `wc` will not reproduce them and should not conclude the entry is wrong.
+
+**Workaround used, and its scope.** The merge commit `6378f4dd8` was landed with a user-authorised `SKIP=check-file-size`, recorded in that commit's own message as `[NO-HOOKS-OVERRIDE: check-file-size]` with the reason. `--no-verify` was NOT used and every other hook ran and passed. The bypass covers that one merge commit and nothing else; the ratchet remains fully active for ordinary commits, where its logic is correct.
+
+**Fix direction — a SUGGESTION, not a decision; this needs its own AC.** For a merge commit the baseline should reflect both parents' contributions rather than the larger one — conceptually a union-aware bound. This is genuinely harder than the `max()` change that preceded it and must not be patched quickly: too generous a merge baseline lets real bloat through under cover of a merge, which is the failure this gate exists to prevent, and a merge is an unusually easy place to hide it. Specify the intended bound before implementing.
+
+**Why not just split the four files.** The flagged content is legitimate merged code from both parents, verified additive against `origin/main`. Shrinking to satisfy the gate would mean deleting main's work or the branch's to make a number go down, and would leave the bound unchanged for the next catch-up merge.
+
+**Related.**
+- `KI-CG-20260908-ratchet-reads-pre-merge-head` (RESOLVED, above) — the previous defect on this same seam; its `max()` fix is the direct predecessor of this gap.
+- `KI-CG-20260914-ratchet-freezes-central-registries` (`:4276`) — same-day, same ratchet, different shape: there the per-file rule makes a growing registry unmaintainable; here the merge bound makes a correct merge unrepresentable. Both are cases of a per-file length rule meeting a situation its baseline does not model.
+- `GE-127a-1` — registered `check-file-size` as `always_run`, which is again what turns a latent bound into a live, commit-blocking condition.
+
+**Pattern:** this is the second follow-on found by fixing the *stated* case of a ratchet defect without revisiting the bound itself. `HEAD` → `max(parents)` answered "which parent do we compare against"; it never asked "is a single parent the right comparand for a merge at all".
 
 ---
 
