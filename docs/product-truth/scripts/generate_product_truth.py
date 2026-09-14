@@ -545,17 +545,14 @@ def write_index(
             derived = derive_artifact_summary(flows[artifact["id"]].get("summary", ""))
             stored = artifact.get("summary")
             if stored is not None and stored != derived:
-                # Name the journey and show BOTH texts. A caller told only that
-                # "something changed" cannot tell a second, separately authored
-                # description from an ordinary edit to the journey, which is the
-                # whole distinction this AC is about (UXP-700e-2).
+                # Name the journey, both texts, and the file to edit: whoever edited
+                # the index copy edited the text regeneration discards (UXP-700e-2-i).
                 logger.warning(
-                    "second authored description for %s: index holds %r, but the "
-                    "journey's own summary derives %r — the index copy is not "
-                    "authored, it is derived; regenerate to replace it",
-                    artifact["id"],
-                    stored,
-                    derived,
+                    "second authored description for %s: index holds %r, but the journey's "
+                    "own summary derives %r — the index copy is derived, not authored; edit "
+                    "the 'summary' field in %s instead, then regenerate",
+                    artifact["id"], stored, derived,
+                    flow_paths.get(artifact["id"], "the journey's own file"),
                 )
             artifact["summary"] = derived
 

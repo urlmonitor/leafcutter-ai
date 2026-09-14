@@ -100,23 +100,19 @@ _ELLIPSIS = "\u2026"
 def derive_artifact_summary(authoritative: str) -> str:
     """Return the short form of *authoritative*, derived rather than authored.
 
-    A description that already fits is returned unchanged — the short form of a
-    short description is itself, not a second, differently-worded string.
+    A description that already fits is returned unchanged -- the short form of a
+    short description is itself, carrying no marker that would suggest otherwise.
 
-    A longer one is shortened from BOTH ENDS: how it opens, an ellipsis, and
-    how it closes. Not a head-only truncation, because the authoritative text
-    is the only place a description is authored and an edit to its final
-    sentence must still show up in the short form (UXP-700e-2: "changing the
-    authoritative description changes every shorter form"); a prefix cut would
-    silently swallow exactly that edit. Both ends are cut at word boundaries so
-    the result reads as prose.
+    A longer one keeps its OPENING, cut at the last word boundary inside the
+    bound, and ends with an ellipsis, so a reader can see it was shortened and
+    never takes it for the whole description (UXP-700e-2-i). The result is a
+    pure function of the description, so deriving twice gives the same text.
 
-    LIMIT, stated rather than implied: this is a lossy shortening, so an edit
-    confined to the MIDDLE of a long description can leave the short form
-    unchanged. What actually prevents the two from drifting into two
-    independent descriptions is the derivation being recomputed on every run
-    and the --check gate failing when the stored value differs from a fresh
-    one — not this function being injective.
+    That also means an edit made past the cut leaves the short form unchanged,
+    which is correct: it is still the right derivation of the new text. What
+    UXP-700e-2 guarantees is propagation -- the short form is re-derived on
+    every run and never separately authored -- not that every edit shows in it.
+    A hand edit to the short form itself is what gets reported, by write_index.
 
     Args:
         authoritative: The artifact's own, authored description.
@@ -128,22 +124,11 @@ def derive_artifact_summary(authoritative: str) -> str:
     if len(text) <= _ARTIFACT_SUMMARY_LENGTH:
         return text
 
-    joiner = f" {_ELLIPSIS} "
-    budget = _ARTIFACT_SUMMARY_LENGTH - len(joiner)
-    head_budget = (budget * 7) // 10
-
-    head = text[:head_budget]
-    boundary = head.rfind(" ")
+    cut = text[: _ARTIFACT_SUMMARY_LENGTH - len(_ELLIPSIS)]
+    boundary = cut.rfind(" ")
     if boundary > 0:
-        head = head[:boundary]
-    head = head.rstrip(" ,;:.")
-
-    tail = text[-(budget - len(head)):]
-    boundary = tail.find(" ")
-    if boundary != -1:
-        tail = tail[boundary + 1:]
-
-    return f"{head}{joiner}{tail}"
+        cut = cut[:boundary]
+    return cut.rstrip(" ,;:.") + _ELLIPSIS
 
 """
 ====================================================================
@@ -154,5 +139,13 @@ DECISION HISTORY
   UXP-700e-2 added derive_artifact_summary(). Pure move: none of these touched
   module state, so behaviour is unchanged and generate_product_truth re-exports
   them for every caller. (#EPIC-TruthfulProjectRecord)
+- 2026-09-14 [python-coder]: UXP-700e-2-i -- derive_artifact_summary now keeps
+  the description's opening and ends with an ellipsis, replacing #773's
+  "opening ... closing" cut. That design existed only so an edit to the last
+  sentence would still change the short form; it could not satisfy this AC's
+  requirement that a shortened form END in a way that shows it was shortened.
+  Chosen by the user over keeping the middle cut or appending a character
+  count. UXP-700e-2's propagation guarantee is unaffected: the short form is
+  still re-derived on every run, never authored. (#EPIC-TruthfulProjectRecord/42)
 ====================================================================
 """
