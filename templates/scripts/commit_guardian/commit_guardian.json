@@ -32,6 +32,17 @@
       ".sh"
     ]
   },
+  "doc_length": {
+    "_comment": "check_doc_length.py — Length limits for docs/**.md (2026-09-14). severity 'block' (was the 'warn' default, under which this gate ALWAYS exited 0 — the reason three known-issues registers reached ~4,500 lines against a 300-line limit without one commit being stopped). Blocking is survivable only because the gate now ratchets exactly as check-file-size does for code (GE-127a-1 crossing refusal + GE-127b-1 growth ratchet, merge-aware, INDETERMINATE on an unresolvable previous value): a doc may not CROSS its limit, and a doc already over may not GROW, but shrinking or holding steady always passes. That matters here — 59 of 339 tracked docs are already over, and an absolute block would freeze every one of them including the append-heavy registers. max_lines/max_lines_adr/max_sections/excluded_files are pinned to their previous implicit defaults, so this change alters ENFORCEMENT only, not which docs are judged or where the thresholds sit. max_sections has zero current violations (the registers use ### per entry, not ##), so its dimension blocks with no grandfathered population.",
+    "severity": "block",
+    "max_lines": 300,
+    "max_lines_adr": 400,
+    "max_sections": 25,
+    "excluded_files": [
+      "README.md",
+      "CHANGELOG.md"
+    ]
+  },
   "complexity": {
     "_comment": "check_complexity.py — Cyclomatic complexity for Python functions",
     "max_score": 15,
