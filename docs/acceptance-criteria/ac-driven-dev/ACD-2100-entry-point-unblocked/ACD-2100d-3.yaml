@@ -39,7 +39,7 @@ doc_links:
     relevance: "The deployed and reachability angles this record's evidence has to satisfy -- the same BP-811 case ACD-2100d-1 cites."
   - path: docs/reference/plan-feature-layout-and-startup-checks.md
     relationship: describes
-    status: planned
+    status: exists
     relevance: "The reference page authored by ACD-2100d-4 names the startup checks; this record is the guarantee that an install adds none of them to a project that had none."
   - path: scripts/ci/check_consumer_install.py
     relationship: implements
@@ -47,12 +47,12 @@ doc_links:
     relevance: "EDIT SURFACE. The existing gate that already creates a temporary target project, runs the real installer into it as a subprocess, and has its verdict consumed by a CI job. This is the deliverability decision the standing-guarantee requirement names, so the before-and-after measurement is wired here rather than into a new script nothing invokes."
   - path: unit_tests/_installed_route_probe.py
     relationship: modifies
-    status: planned
-    relevance: "EDIT SURFACE, CREATED BY ACD-2100d-1. Reused rather than re-authored. This record adds the two-measurement comparison and the precondition-not-met verdict to the shared probe so both records read one implementation of 'how far did the run get'."
+    status: exists
+    relevance: "EDIT SURFACE, CREATED BY ACD-2100d-1 (commit dc23fa138). Reused rather than re-authored. This record adds the two-measurement comparison and the precondition-not-met verdict to the shared probe so both records read one implementation of 'how far did the run get'."
   - path: unit_tests/portability/test_acd_2100d_3.py
     relationship: creates
-    status: planned
-    relevance: "EDIT SURFACE, DOES NOT EXIST YET. The four test_spec descriptors below, including the boundary descriptor that makes the before-measurement mechanically load-bearing."
+    status: exists
+    relevance: "EDIT SURFACE, CREATED (commit f76af10b0). The four test_spec descriptors below, including the boundary descriptor that makes the before-measurement mechanically load-bearing."
 assigned_agent: python-coder
 estimated_complexity: M
 it_requirements:

@@ -23,7 +23,7 @@ depends_on: [ACD-2100c, ACD-2100c-2, ACD-2100c-4]
 doc_links:
   - path: docs/architecture/diagrams/c3-008-plan-feature-decision-gate-sequence.md
     relationship: describes
-    status: planned
+    status: exists
     relevance: "The sequence diagram authored by ACD-2100e-1 -- the discard path and the three non-discard exits are what it separates visually."
   - path: docs/known-issues/ac-driven-dev.md
     relationship: describes

@@ -28,7 +28,7 @@ depends_on: [ACD-2100a-2]
 doc_links:
   - path: docs/reference/plan-feature-layout-and-startup-checks.md
     relationship: describes
-    status: planned
+    status: exists
     relevance: "The reference page authored by ACD-2100d-4 must tell an operator what an ambiguous-layout refusal means and how to resolve it."
   - path: docs/known-issues/ac-driven-dev.md
     relationship: describes

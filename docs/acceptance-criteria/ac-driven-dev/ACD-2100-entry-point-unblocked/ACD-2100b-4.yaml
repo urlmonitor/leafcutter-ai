@@ -27,7 +27,7 @@ depends_on: [ACD-2100b, ACD-2100b-1, ACD-2100b-2, ACD-2100b-3]
 doc_links:
   - path: docs/reference/plan-feature-layout-and-startup-checks.md
     relationship: describes
-    status: planned
+    status: exists
     relevance: "The reference page authored by ACD-2100d-4 must state that every unresolved outcome halts -- a reader deciding whether to retry needs to know the halt is not selective."
   - path: docs/known-issues/ac-driven-dev.md
     relationship: describes

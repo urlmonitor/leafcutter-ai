@@ -26,7 +26,7 @@ depends_on: [ACD-2100c, ACD-2100c-2]
 doc_links:
   - path: docs/how-to/resume-a-paused-plan-feature-run.md
     relationship: describes
-    status: planned
+    status: exists
     relevance: "The how-to authored by ACD-2100e-2 -- this is the behaviour it walks an operator through."
   - path: docs/architecture/adrs/ADR-024-interactive-pause-resume.md
     relationship: implements

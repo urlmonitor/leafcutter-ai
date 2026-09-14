@@ -25,7 +25,7 @@ depends_on: [ACD-2100b-3]
 doc_links:
   - path: docs/reference/plan-feature-layout-and-startup-checks.md
     relationship: describes
-    status: planned
+    status: exists
     relevance: "The reference page authored by ACD-2100d-4 must include the could-not-determine outcome, not only the four named ones."
   - path: docs/known-issues/ac-driven-dev.md
     relationship: describes

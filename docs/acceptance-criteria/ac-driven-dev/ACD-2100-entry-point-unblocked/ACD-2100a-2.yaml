@@ -27,7 +27,7 @@ depends_on: [ACD-2100a]
 doc_links:
   - path: docs/reference/plan-feature-layout-and-startup-checks.md
     relationship: describes
-    status: planned
+    status: exists
     relevance: "The reference page authored by ACD-2100d-4. The resolution order this behaviour establishes is one of the facts that page must state."
   - path: docs/known-issues/ac-driven-dev.md
     relationship: describes

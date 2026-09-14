@@ -25,7 +25,7 @@ depends_on: [ACD-2100d]
 doc_links:
   - path: docs/reference/plan-feature-layout-and-startup-checks.md
     relationship: describes
-    status: planned
+    status: exists
     relevance: "The reference page authored by ACD-2100d-4 must state which directory a repair has to land in for an install to carry it -- this record is the check that enforces it."
   - path: docs/known-issues/ac-driven-dev.md
     relationship: describes
@@ -57,8 +57,8 @@ doc_links:
     relevance: "EDIT SURFACE. The hook's file-trigger pattern is hardcoded to the same stale directory prefixes as the check itself, so a staged edit to a deployed route file under a differently-configured output root does not even fire it. Repairing the check without repairing the trigger leaves the verdict uncomputed rather than merely unread."
   - path: unit_tests/build_guards/test_acd_2100d_2.py
     relationship: creates
-    status: planned
-    relevance: "EDIT SURFACE, DOES NOT EXIST YET. The four test_spec descriptors below; the generated ticket names this exact path."
+    status: exists
+    relevance: "EDIT SURFACE, CREATED (commit cdd8ea320). The four test_spec descriptors below; the generated ticket names this exact path."
 assigned_agent: python-coder
 estimated_complexity: M
 it_requirements:

@@ -36,8 +36,8 @@ depends_on: [ACD-2100e, ACD-2100c-1, ACD-2100c-2, ACD-2100c-4, ACD-2100c-5]
 doc_links:
   - path: docs/architecture/diagrams/c3-008-plan-feature-decision-gate-sequence.md
     relationship: creates
-    status: planned
-    relevance: "THE TARGET FILE, AND THIS RECORD'S SOLE DELIVERABLE. Relationship is 'creates' rather than 'describes' because this record authors the diagram -- the four siblings that merely reference it (ACD-2100c-1, c-2, c-4, c-5) keep 'describes'. It read 'describes' until 2026-08-31, which made every one of those four inherit this path as their own documentation target while leaving this record indistinguishable from a consumer; see BO-2200c-5-i. Publishing under any other name leaves all four dangling and check-doc-links cannot catch a target that never appears."
+    status: exists
+    relevance: "THE TARGET FILE, AND THIS RECORD'S SOLE DELIVERABLE -- PUBLISHED 2026-09-14 (commit f5cf4a166) at exactly this path. Relationship is 'creates' rather than 'describes' because this record authors the diagram -- the four siblings that merely reference it (ACD-2100c-1, c-2, c-4, c-5) keep 'describes'. It read 'describes' until 2026-08-31, which made every one of those four inherit this path as their own documentation target while leaving this record indistinguishable from a consumer; see BO-2200c-5-i. Renaming or moving it away from this path now leaves all four dangling, and check-doc-links does not validate a markdown-to-markdown link, so that breakage would be silent."
   - path: docs/architecture/adrs/ADR-024-interactive-pause-resume.md
     relationship: describes
     status: exists
@@ -72,12 +72,12 @@ it_requirements:
   - "FRONTMATTER components: MUST BE THE UNDERSCORE GRAPH ID ac_driven_dev -- NOT the kebab ac-driven-dev. check_doc_frontmatter validates every components entry against the keys of docs/components.json, which are the underscore ids. That declaration is the mechanically checkable half of the last Then clause. ACD-2100d-4's equivalent requirement states the kebab form; that wording is wrong and must not be copied."
   - "docs/INDEX.md IS GENERATED. Register the diagram by running the build and committing the regenerated index -- do not hand-edit it. A hand-edited index is reverted by the next build."
   - "LENGTH IS A REAL CONSTRAINT -- check_doc_length caps a non-ADR document at 300 lines and 25 sections. Link out to ADR-024 and to the adjacent diagrams rather than absorbing either."
-  - "TWO ADJACENT DIAGRAMS EXIST AND BOTH MUST BE LINKED RATHER THAN RESTATED. c3-002-interactive-pause-resume-sequence.md is the ADR-024 substrate at message level -- resolveGate, the persist/read exchange, the pending-question store, resumeFromRunId -- and c3-001-interactive-pause-resume-run-lifecycle.md is the same substrate as a state diagram. Both are tagged build_orchestration and both hang off interactive-pause-resume-substrate.md. Neither depicts which decisions the route stops at or what each exit costs, which is this diagram's subject: they document how a pause is mechanically effected. If on reading them the author concludes c3-006 would duplicate them, that is a finding to raise -- not a licence to merge, because four inbound links point here."
+  - "TWO ADJACENT DIAGRAMS EXIST AND BOTH MUST BE LINKED RATHER THAN RESTATED. c3-002-interactive-pause-resume-sequence.md is the ADR-024 substrate at message level -- resolveGate, the persist/read exchange, the pending-question store, resumeFromRunId -- and c3-001-interactive-pause-resume-run-lifecycle.md is the same substrate as a state diagram. Both are tagged build_orchestration and both hang off interactive-pause-resume-substrate.md. Neither depicts which decisions the route stops at or what each exit costs, which is this diagram's subject: they document how a pause is mechanically effected. If on reading them the author concludes c3-008 (RENUMBERED FROM c3-006 ON 2026-09-14) would duplicate them, that is a finding to raise -- not a licence to merge, because four inbound links point here."
   - "DO NOT DRAW ANY PART OF THIS FROM KI-ACD-005's FIX DIRECTION. That known issue's stated root cause and stated fix are both out of date -- resolveGate already pauses on an unparseable answer and the observed loss came from a well-formed one -- so a path drawn from it is wrong on the day it is published. templates/workflows-js/plan-feature.js is likewise not the source: it is being replaced underneath this page by the very records in depends_on. The source for every depicted path is the delivered behaviour of ACD-2100c-1, c-2, c-4 and c-5."
 delivers_to:
   - agent: documentation-expert
     ac_id: ACD-2100e-2
-    contract: "ORDERING GAP -- SEE NOTES. The published diagram at docs/architecture/diagrams/c3-008-plan-feature-decision-gate-sequence.md. ACD-2100e-2's how-to links that exact path as planned and sends an operator there to learn how their run came to be waiting, so this record is that link's target. The link is plain markdown and no hook in this repository validates a markdown-to-markdown link, so if the how-to is published first the link is dead and nothing reports it."
+    contract: "ORDERING GAP -- WAS REAL, CLOSED 2026-09-14. The published diagram at docs/architecture/diagrams/c3-008-plan-feature-decision-gate-sequence.md. ACD-2100e-2's how-to links that exact path and sends an operator there to learn how their run came to be waiting, so this record is that link's target. The gap was real while it stood: the link is plain markdown and no hook in this repository validates a markdown-to-markdown link, so had the how-to been published first the link would have been dead with nothing reporting it. Both pages are now published and ACD-2100e-2's depends_on names this record, so the ordering is settled -- but the no-hook fact is unchanged and still applies to any later rename on either side."
 expects_from:
   - ac_id: ACD-2100c-1
     contract: "The final set of decision points and the channel each is put on, which the sequence diagram depicts rather than re-derives from the source."
@@ -160,8 +160,9 @@ notes: |
   documents how a pause is mechanically effected, not which decisions the route stops
   at or what each exit costs. The overlap is real enough to be worth naming, so it is
   linked as related with an explicit instruction to link rather than restate. If the
-  author concludes on reading it that c3-006 would duplicate it, that is a finding to
-  raise rather than a licence to merge them -- four inbound links point here.
+  author concludes on reading it that c3-008 (RENUMBERED FROM c3-006 ON 2026-09-14)
+  would duplicate it, that is a finding to raise rather than a licence to merge them
+  -- four inbound links point here.
 
   DELIVERED BEHAVIOUR ONLY. Every path depicted must name the criterion that delivers
   it, and none of it may be drawn from KI-ACD-005's fix direction: that known issue's

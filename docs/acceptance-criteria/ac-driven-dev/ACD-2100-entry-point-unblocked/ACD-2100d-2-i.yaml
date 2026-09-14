@@ -24,7 +24,7 @@ depends_on: [ACD-2100d-2]
 doc_links:
   - path: docs/reference/plan-feature-layout-and-startup-checks.md
     relationship: describes
-    status: planned
+    status: exists
     relevance: "The reference page authored by ACD-2100d-4 must tell a reader that a local edit to a generated file is announced and then lost."
   - path: docs/known-issues/ac-driven-dev.md
     relationship: describes
@@ -48,8 +48,8 @@ doc_links:
     relevance: "EDIT SURFACE, AND THE LOAD-BEARING ONE. Three further compare-before-write branches live here, including the workflow-script phase's own inline hash comparison, which is the path the route's deployed copy takes and which does not route through the shared helper."
   - path: unit_tests/build_guards/test_acd_2100d_2_i.py
     relationship: creates
-    status: planned
-    relevance: "EDIT SURFACE, DOES NOT EXIST YET. The four test_spec descriptors below; the generated ticket names this exact path."
+    status: exists
+    relevance: "EDIT SURFACE, CREATED (commit aa96c59cd). The four test_spec descriptors below; the generated ticket names this exact path."
 assigned_agent: python-coder
 estimated_complexity: S
 it_requirements:

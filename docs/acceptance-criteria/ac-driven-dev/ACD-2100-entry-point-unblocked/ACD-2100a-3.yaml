@@ -27,7 +27,7 @@ depends_on: [ACD-2100a]
 doc_links:
   - path: docs/reference/plan-feature-layout-and-startup-checks.md
     relationship: describes
-    status: planned
+    status: exists
     relevance: "The reference page authored by ACD-2100d-4 must state which registry a run reads when started from a worktree."
   - path: docs/known-issues/ac-driven-dev.md
     relationship: describes

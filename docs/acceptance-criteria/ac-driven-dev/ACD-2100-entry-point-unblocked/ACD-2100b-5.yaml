@@ -26,7 +26,7 @@ depends_on: [ACD-2100b]
 doc_links:
   - path: docs/reference/plan-feature-layout-and-startup-checks.md
     relationship: describes
-    status: planned
+    status: exists
     relevance: "The reference page authored by ACD-2100d-4 must state that the startup check is a local read performed by the skill's pre-flight before the workflow is invoked, so an operator hitting a transport error knows it is not this check."
   - path: docs/known-issues/ac-driven-dev.md
     relationship: describes
@@ -34,8 +34,8 @@ doc_links:
     relevance: "KI-ACD-009 cause 2 -- '[resolve-workspace-setup-permission] failed: API Error: Connection lost mid-response', and the third fix direction."
   - path: scripts/worktree/check_workspace_setup_permission.py
     relationship: creates
-    status: planned
-    relevance: "New primary landing site. The executable pre-flight that reads config/agent_registry.json locally and emits the workspace-setup permission verdict. Runs from the skill in the main agent loop, which has real Bash/Read access; the workflow body does not. Precedent for a skill-invoked pre-flight script: scripts/ac_store/scan_ac_orphans.py behind SKILL.md sec-PRR."
+    status: exists
+    relevance: "Primary landing site -- CREATED (commit e4ee392db) and tracked at this path. The executable pre-flight that reads config/agent_registry.json locally and emits the workspace-setup permission verdict. Runs from the skill in the main agent loop, which has real Bash/Read access; the workflow body does not. Precedent for a skill-invoked pre-flight script: scripts/ac_store/scan_ac_orphans.py behind SKILL.md sec-PRR."
   - path: templates/skills/plan-feature/SKILL.md
     relationship: modifies
     status: exists

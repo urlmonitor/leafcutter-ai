@@ -27,7 +27,7 @@ depends_on: [ACD-2100b]
 doc_links:
   - path: docs/reference/plan-feature-layout-and-startup-checks.md
     relationship: describes
-    status: planned
+    status: exists
     relevance: "The reference page authored by ACD-2100d-4 must say what each startup-check report means -- this is the second of the four."
   - path: docs/known-issues/ac-driven-dev.md
     relationship: describes

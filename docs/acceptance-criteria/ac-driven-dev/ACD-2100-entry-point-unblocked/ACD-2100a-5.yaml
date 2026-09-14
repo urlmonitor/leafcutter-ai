@@ -26,7 +26,7 @@ depends_on: [ACD-2100a, ACD-2100a-1, ACD-2100a-2, ACD-2100a-3, ACD-2100a-4]
 doc_links:
   - path: docs/reference/plan-feature-layout-and-startup-checks.md
     relationship: describes
-    status: planned
+    status: exists
     relevance: "The reference page authored by ACD-2100d-4 -- this record is the behaviour that page's 'which copy runs from where' table describes."
   - path: docs/known-issues/ac-driven-dev.md
     relationship: describes

@@ -22,7 +22,7 @@ depends_on: [ACD-2100c-3]
 doc_links:
   - path: docs/how-to/resume-a-paused-plan-feature-run.md
     relationship: describes
-    status: planned
+    status: exists
     relevance: "The how-to authored by ACD-2100e-2 must tell an operator what a mistyped resume looks like and that the run survives it."
   - path: docs/architecture/adrs/ADR-024-interactive-pause-resume.md
     relationship: describes
