@@ -162,9 +162,13 @@
  *                   // and `opts_keys` are recorded so a test can SHOW that the
  *                   // opts channel carried nothing, rather than assume it.
  *     readbacks:    [{label, ticket_path, readable, signed_off_agents,
- *                     needed_phases}, ...],
+ *                     needed_phases, failed_phases}, ...],
  *                   // `needed_phases` is what the DRIVER was told the record
- *                   // still names as needed — observation only.
+ *                   // still names as needed — observation only. `failed_phases`
+ *                   // (BO-400e-1, pr-reviewer H-1) is what the DRIVER was told
+ *                   // the record names as literally `failed`, regardless of
+ *                   // whether that agent left a ## Comments heading — also
+ *                   // observation only.
  *     writes:       [{label, ticket_path, applied, error, prompt_excerpt}, ...],
  *     enumerations: [{label, index, failed}, ...],
  *     plan_replies: [{ticket_path, mode, reply_type, has_ordered_phases,
@@ -175,13 +179,18 @@
  *                   // that states an empty list.
  *     logs:         [string, ...],
  *     records:      {"<ticket path>": {exists, lifecycle_status, signoffs,
- *                     signed_off_agents, agents, needed_phases}},
- *                   // `agents` / `needed_phases` are the map AS THIS HARNESS
- *                   // PARSES IT, which is not always what the .md says: an
- *                   // agents: block that is the LAST frontmatter key does not
- *                   // parse (parseRecord's `\Z` is a literal "Z" in JS). Put a
- *                   // key after the map in the fixture when the driver needs
- *                   // to see it — see write_ticket_record(extra_frontmatter).
+ *                     signed_off_agents, agents, needed_phases, failed_phases}},
+ *                   // `agents` / `needed_phases` / `failed_phases` are the map
+ *                   // AS THIS HARNESS PARSES IT. parseRecord slices explicitly
+ *                   // to the next column-0 frontmatter key (or end of
+ *                   // frontmatter) rather than relying on a `\Z`-terminated
+ *                   // lookahead — JS has no `\Z` escape (it is a literal "Z")
+ *                   // — so an `agents:` block that is the LAST frontmatter key
+ *                   // parses correctly (fixed BO-400e-1; previously silently
+ *                   // returned {}). `failed_phases` (BO-400e-1, pr-reviewer
+ *                   // H-1) mirrors production's own field on the SAME
+ *                   // trusted read-back, so a fixture's claim to carry a
+ *                   // `failed`-with-no-comment phase can be asserted true.
  *     result:       <script return value>,
  *     error:        <string, if the script threw>
  *   }
@@ -244,10 +253,23 @@ function parseRecord(path) {
   const lifecycleStatus = statusMatch ? statusMatch[1] : null;
 
   // agents: map — collect "  <name>: <status>" lines under "agents:"
+  //
+  // Sliced explicitly rather than matched with a `(?=^\S|\Z)` lookahead.
+  // JavaScript has NO `\Z` escape — it is a literal "Z" — the same trap
+  // documented and already fixed below for `implementation_task_agents`.
+  // When the `agents:` key is the LAST key in the frontmatter (true for
+  // nearly every write_ticket_record(...) fixture that omits
+  // extra_frontmatter), the lookahead never matches anything, and the
+  // read-back silently reports `needed_phases: []` / `agents: {}`
+  // regardless of what the frontmatter actually names. Mirrors the
+  // tasksHeading/nextSection slice pattern used a few lines below.
   const agents = {};
-  const agentsBlock = frontmatter.match(/^agents:\n([\s\S]*?)(?=^\S|\Z)/m);
-  if (agentsBlock) {
-    for (const line of agentsBlock[1].split("\n")) {
+  const agentsHeading = frontmatter.match(/^agents:[ \t]*\n/m);
+  if (agentsHeading) {
+    const rest = frontmatter.slice(agentsHeading.index + agentsHeading[0].length);
+    const nextKey = rest.match(/^\S/m);
+    const agentsBlockBody = nextKey ? rest.slice(0, nextKey.index) : rest;
+    for (const line of agentsBlockBody.split("\n")) {
       const m = line.match(/^\s+([A-Za-z0-9_-]+):\s*(\S+)\s*$/);
       if (m) agents[m[1]] = m[2];
     }
@@ -256,9 +278,9 @@ function parseRecord(path) {
   // depends_on: list (BO-100e-1-i) — a PyYAML block list under a top-level
   // key serializes with its dash bullets at COLUMN 0, not indented (the same
   // real-artifact shape documented for files_touched elsewhere in this repo).
-  // The agentsBlock lookahead above (`(?=^\S|\Z)`) relies on its own list
-  // items being INDENTED so a column-0 line only ever means "the next key" —
-  // that assumption is false here, so a dedicated pattern is used instead:
+  // The agents: slice above relies on its own list items being INDENTED so a
+  // column-0 line only ever means "the next key" — that assumption is false
+  // here, so a dedicated pattern is used instead:
   // capture only the run of column-0 "-" bullet lines immediately following
   // "depends_on:", however many there are, however this key is ordered
   // relative to any other frontmatter key.
@@ -335,6 +357,15 @@ function parseRecord(path) {
     lifecycle_status: lifecycleStatus,
     agents,
     needed_phases: Object.keys(agents).filter((a) => agents[a] === "needed"),
+    // failed_phases (BO-400e-1, pr-reviewer H-1): every agent in the
+    // frontmatter agents: map whose value is literally "failed", reported
+    // regardless of whether that agent left any ## Comments heading at all.
+    // Mirrors production's own `failed_phases` field on the SAME trusted
+    // read-back (see RECORD_READBACK_SCHEMA / readTicketRecordBack() in both
+    // driver twins) — without this the mock cannot distinguish a fixed
+    // driver from the broken pre-H-1 one for a failed-with-no-comment phase,
+    // because demandedPhasesFromRecord's union has nothing to union in.
+    failed_phases: Object.keys(agents).filter((a) => agents[a] === "failed"),
     depends_on: dependsOn,
     implementation_task_agents: implementationTaskAgents,
     signoffs,
@@ -624,6 +655,11 @@ async function agent(prompt, opts = {}) {
       // still names as needed. Recorded so a test can show the required set it
       // is reasoning about was really non-empty, rather than assume it.
       needed_phases: record.needed_phases || [],
+      // Observation only (BO-400e-1, pr-reviewer H-1): what the DRIVER was
+      // told the record names as failed-with-possibly-no-trace. Recorded so
+      // a test can show the driver was actually handed this field, rather
+      // than assume the mock reported it.
+      failed_phases: record.failed_phases || [],
       // Observation only (BO-3000a): the `### <agent>` subsections the record
       // carries under `## Implementation Tasks`. Recorded so a test can show
       // the driver was HANDED a resolvable target before asserting it used one.
@@ -851,15 +887,17 @@ for (const p of ticketPaths) {
         signoffs: parsed.signoffs,
         signed_off_agents: parsed.signed_off_agents,
         // Observation only (BO-1900a-4-ii): the agents map AS THE HARNESS
-        // PARSES IT. A record whose agents: block is the last frontmatter key
-        // does not parse here at all (parseRecord's lookahead uses `\Z`, which
-        // JavaScript treats as a literal "Z"), so a fixture can silently
-        // present the driver with an empty needed set while the .md on disk
-        // plainly names needed phases. Surfacing it lets a test assert the
-        // fixture really is the shape it claims, instead of inheriting that
-        // blind spot.
+        // PARSES IT. parseRecord slices explicitly to the next column-0
+        // frontmatter key (or end of frontmatter) rather than a `\Z`-based
+        // lookahead (JS has no `\Z` escape), so an agents: block that is the
+        // last frontmatter key parses correctly (fixed BO-400e-1). Surfacing
+        // it lets a test assert the fixture really is the shape it claims.
         agents: parsed.agents,
         needed_phases: parsed.needed_phases,
+        // Observation only (BO-400e-1, pr-reviewer H-1): lets a test assert
+        // the final on-disk record's failed-with-no-comment phase really was
+        // reported this way, rather than assume it.
+        failed_phases: parsed.failed_phases,
       }
     : { exists: false, error: parsed.error };
 }

@@ -5,12 +5,13 @@ type: reference
 category: reference
 status: active
 created: 2026-08-18
-last_updated: 2026-09-07
+last_updated: 2026-09-14
 components:
   - build_orchestration
 related_docs:
   - docs/architecture/components/build-orchestration.md
   - docs/how-to/fast-lane-build.md
+  - docs/known-issues/build-orchestration-fabricated-evidence-pointers.md
 ---
 
 # Known issues — build-orchestration
@@ -3138,7 +3139,9 @@ ticket's own record disagreeing, with no reconciliation).
 ### KI-BO-20260831-1932 — The completion guard refuses one ticket and passes another on identical conditions
 
 - **Severity:** medium
-- **Status:** open — no AC
+- **Status:** resolved — see `BO-400e-1` (the fix) and
+  [ADR-044](../architecture/adrs/ADR-044-completion-demanded-set-is-record-only.md)
+  (the decision record)
 - **Occurrences:** 1 (one drive, three tickets, split outcome)
 - **First seen:** 2026-08-31 · **Last seen:** 2026-08-31
 - **Where:** the completion-write step of `templates/workflows-js/build-feature.js`, and
@@ -3193,6 +3196,43 @@ leaves a guard that trusts its caller. Neither works alone.
 
 **Related.** `KI-BO-20260831-1930` — the `pull-request: needed` entry that put all three
 tickets in this state.
+
+**Resolution.** `BO-400e-1` closed this by deleting the caller-supplied input from the
+decision entirely, rather than by choosing one of the two observed outcomes as "correct" and
+patching toward it. Both `templates/workflows-js/build-feature.js` and
+`templates/workflows-js/build-ticket.js` (twins, changed in the same commit per
+`BO-400a-2-ii`) now derive the demanded-step set with `demandedPhasesFromRecord(record)` —
+reading only the ticket's own frontmatter `agents:` map and its own `## Comments` sign-off
+headings — and pass that, and only that, into `requiredPhasesForCompletion`. The function no
+longer accepts a caller-supplied `drivenPhases` argument at all; the parameter was deleted,
+not merely left unread, so there is no channel left for a future edit to reopen. Full rule
+recorded in [ADR-044](../architecture/adrs/ADR-044-completion-demanded-set-is-record-only.md).
+
+The three-way split this entry documents is now impossible by construction: a narrowed
+caller list, a widened caller list, and no caller list at all reach the same
+`completionVerdictFromRecord` call with the same `requiredPhases`, because none of the three
+was ever read. `scripts/set_ticket_status.py` needed no change — `_get_needed_agents` already
+derived solely from the record, and per this decision it gains no exclusion parameter.
+
+```mermaid
+sequenceDiagram
+    participant Caller as Closing caller<br/>(narrowed list of 8 | widened list of 10 | no list)
+    participant Driver as build-feature.js / build-ticket.js<br/>concludeTicket()
+    participant Record as Ticket's own record<br/>(frontmatter agents: map + sign-off headings)
+
+    Caller->>Driver: close request
+    Note over Driver: The caller's list is never read here.<br/>drivenPhases was deleted from the signature (ADR-044 Decision §1).
+    Driver->>Record: read back (readTicketRecordBack)
+    Record-->>Driver: needed_phases + signed_off_agents — the 9 phases the record names
+    Driver->>Driver: demandedPhasesFromRecord(record)<br/>→ union(needed_phases, signed_off_agents) = the 9 named phases
+    Driver->>Driver: requiredPhasesForCompletion(recordDemandedPhases, deferredPhases)<br/>→ still the 9 phases (deferredPhases is structural, never caller-supplied)
+    Driver->>Driver: completionVerdictFromRecord(record, {requiredPhases})<br/>→ the 9th phase has no sign-off entry in the record → outstanding
+    Driver-->>Caller: refused — "'<ninth-phase>' left no sign-off entry in the record"
+    Note over Caller,Record: All three attempts produce this same refusal, naming the same phase,<br/>because what the caller presented was never an input to the decision.
+```
+
+Covers AC-1 of `BO-400e-1`: the decision is taken against the nine phases the ticket's own
+record names, in all three attempts alike.
 
 ---
 
@@ -4139,102 +4179,12 @@ owed.
 **Severity:** medium for `tests_written` (broken audit trail); **high** for `files_modified`,
 which is the same unchecked shape but drives dispatch rather than reporting.
 **Found:** 2026-09-08, on the `INF-400c-4-iv` fast-lane run (PR #755).
-**Component:** build-orchestration (`templates/workflows-js/fast-lane-ship.js`).
 
-**What was observed.** The run's terminal payload reported six tests written to
-`tests/knowledge/test_harvest_learnings.py`, as fully-qualified pytest node ids:
-
-```
-tests/knowledge/test_harvest_learnings.py::TestAbsentSinkExitStatusEqualsTheEmptySinkExitStatus::test_absent_sink_exit_status_equals_the_empty_sink_exit_status
-```
-
-The tests were actually written to a **new** file,
-`tests/knowledge/test_harvest_learnings_inf400c4iv.py`.
-
-This is worse than a dead link, and the difference is the whole point of the entry. The
-reported path **exists** — a real, tracked, 98 KB file — and contains **none** of the six
-reported classes (`grep -c TestAbsentSink` → `0`). So every reported node id is
-unresolvable, and says so only if you actually run it:
-
-```
-$ pytest "tests/knowledge/test_harvest_learnings.py::TestAbsentSinkExitStatus...::test_..."
-ERROR: not found: .../test_harvest_learnings.py::TestAbsentSinkExitStatus...::test_...
-(no match in any of [<Module test_harvest_learnings.py>])
-no tests ran in 0.04s
-```
-
-An auditor who opens the named file finds a large, plausible, entirely unrelated test module
-and concludes the reported tests were never written. The work was real and the tests were
-genuinely red-before/green-after (verified independently by reverting the implementation to
-`origin/main`: all 6 fail). Only the citation was wrong — which is precisely the citation an
-audit of "were these tests really written" depends on.
-
-**Mechanism.** `tests_written` is **self-reported by the test-writer agent** in free-form
-JSON (`fast-lane-ship.js:1056`), and passed straight through to the terminal payload
-(`:1604`):
-
-```js
-tests_written: (testWriterResult && testWriterResult.tests_written) || [],
-```
-
-Nothing between those two lines checks that the paths exist, that the node ids collect, or
-that they appear in the run's own diff.
-
-**The asymmetry is the tell.** The same prompt that requests `tests_written` carries an
-explicit anti-fabrication clause — but only for the verdict:
-
-> `CRITICAL: gate_passed and reason MUST reflect the real gate output — do NOT fabricate
-> them. Fail closed: if the gate's JSON cannot be parsed or "gate_passed" is absent, report
-> gate_passed: false.`
-
-So the run defends *the claim that the gate passed* and leaves *the pointer to the evidence
-for that claim* unguarded. A reader who cannot resolve the citation has no way to check the
-verdict the citation exists to support.
-
-**`files_modified` is the same shape and matters more.** It is likewise self-reported by the
-coder (`:1146`) and passed through unchecked (`:1605`) — but it is not merely reported. It
-**drives dispatch topology** (`:1342-1346`):
-
-```js
-const filesModified = (coderResult && coderResult.files_modified) || [];
-const releasablePaths = filesModified.filter(
-  (p) => !CHANGELOG_EXEMPT_PREFIXES.some((prefix) => p.startsWith(prefix)));
-const changelogRequired = releasablePaths.length > 0;
-```
-
-An under-reported `files_modified` therefore skips the changelog agent entirely, and the run
-opens a PR that fails the required "Changelog entry present" check — `KI-BO-001`, already on
-the register as its own recurring failure. An over-report demands an entry the change does
-not owe. On the observed run `files_modified` happened to be correct; nothing in the workflow
-would have noticed if it were not.
-
-**Trap.** Neither field's wrongness is visible in a green run. Every gate passed on PR #755,
-the review passed, the changelog was correctly required and written, and the payload's
-`status` was `ok`. The defect surfaces only when someone tries to *use* the citation —
-which, by construction, is after the run has been accepted.
-
-**Fix direction.**
-1. Validate `tests_written` before it reaches the payload: each entry must resolve under
-   `pytest --collect-only`, in the run's own worktree. A node id that does not collect is a
-   failed run, not a cosmetic slip.
-2. Prefer deriving both lists from the run's own diff (`git diff --name-only` against the
-   base commit the run already records as `base_commit`) rather than accepting the agent's
-   account of what it did. The workflow already knows the base; the diff is authoritative and
-   free.
-3. Where derivation is not possible, cross-check the self-report against the diff and refuse
-   on disagreement — the same fail-closed posture `gate_passed` already gets.
-4. Extend the prompt's `CRITICAL:` clause to the evidence pointers, as an interim measure
-   only. A prompt instruction is weaker than a check and should not be the resting state for
-   `files_modified`, which is load-bearing.
-
-**Related.** `KI-BO-001` (missing changelog entry fails a required check — the concrete
-downstream failure an unchecked `files_modified` produces). `KI-BO-20260831-1520` (the same
-run's green gate reporting narrower truth than its wording implies). The broader family is
-the repo's standing one: a report whose shape implies verification that never happened.
-
-**Pattern:** a pipeline that fail-closes on the verdict and fail-opens on the citation — so
-the artifact proving the verdict is the one thing nobody checked, and the report stays green
-while its own audit trail points somewhere else.
+> Full write-up (mechanism, fix direction, related entries) moved to
+> [build-orchestration-fabricated-evidence-pointers.md](build-orchestration-fabricated-evidence-pointers.md)
+> to keep this file under its line-length limit. Summary: the terminal payload's
+> self-reported `tests_written`/`files_modified` are passed through unchecked, so either can
+> name a file or path that does not actually contain the claimed work.
 
 ---
 

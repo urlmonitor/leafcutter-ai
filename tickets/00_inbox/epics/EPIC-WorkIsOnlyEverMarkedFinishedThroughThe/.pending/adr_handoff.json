@@ -1,0 +1,9 @@
+{
+  "adr_id": "ADR-044",
+  "affected_files": [
+    "scripts/set_ticket_status.py",
+    "templates/workflows-js/build-feature.js",
+    "templates/workflows-js/build-ticket.js"
+  ],
+  "one_line_summary": "The completion decision derives its demanded-step set solely from the ticket's own agents record; no caller list, parameter, or deferral may narrow or widen it."
+}

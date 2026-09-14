@@ -121,6 +121,17 @@ def _get_current_status(yaml_block: str) -> str | None:
 def _get_needed_agents(yaml_block: str) -> list[str]:
     """Extract agent names that have status 'needed' from the agents: map.
 
+    BO-400e-1 / ADR-044: this is deliberately the ONLY source this module reads
+    for the demanded-step set, and this function deliberately takes no
+    exclusion/skip parameter. See
+    docs/architecture/adrs/ADR-044-completion-demanded-set-is-record-only.md
+    Decision (2) and docs/known-issues/build-orchestration.md's
+    `KI-BO-20260831-1932` for why: a caller-trusted exclusion list here would
+    reopen, one layer below the workflow drivers, the exact caller-controlled
+    channel those drivers' twin `requiredPhasesForCompletion` functions were
+    changed to remove. The absence of such a parameter is load-bearing, not an
+    oversight — do not add one.
+
     Args:
         yaml_block: The raw YAML content between frontmatter delimiters.
 

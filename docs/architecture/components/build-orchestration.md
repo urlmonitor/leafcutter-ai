@@ -5,9 +5,11 @@ flight_level: L3-Component
 status: active
 type: reference
 created: 2026-07-10
-last_updated: 2026-07-21
+last_updated: 2026-09-14
 components:
   - build_orchestration
+related_docs:
+  - docs/architecture/adrs/ADR-044-completion-demanded-set-is-record-only.md
 children:
   - docs/architecture/diagrams/c3-fast-lane-build-loop-sequence.md
 ---
@@ -73,6 +75,25 @@ was absent. The sequence diagram below places each of the five gates on the time
 relative to dispatch and to the done state:
 
 - [Phantom-Done Prevention — Proving a Durable Change by Real Effect and Intent](../diagrams/c3-003-phantom-done-real-effect-intent-verification.md) — the end-to-end BP-1100f verification flow: pre-dispatch intent-vs-surface consistency (BP-1100f-3), instruction-carrying dispatch review (BP-1100f-1), the harness-level instruction-less-dispatch contract violation (BP-1100f-4), the real-artifact test-evidence requirement (BP-1100f-2), and the automatic observable-side-effect smoke check that gates the done state (BP-1100f-5).
+
+## Completion Decision — Demanded-Step Set Is Record-Only
+
+The two workflow drivers this component owns, `templates/workflows-js/build-feature.js`
+(epic drives) and `templates/workflows-js/build-ticket.js` (single-ticket drives), are the
+only surfaces that write a ticket's `status: done`. Before doing so, each derives a
+**demanded-step set** — the phases the close is checked against — via
+`demandedPhasesFromRecord()` and `requiredPhasesForCompletion()`. Per
+[ADR-044](../adrs/ADR-044-completion-demanded-set-is-record-only.md), that set has exactly
+one source: the ticket's own frontmatter `agents:` map and its own sign-off headings. No
+caller-supplied list — from a ticket-planner reply, a request payload, or any other
+channel — may add to or subtract from it, and `scripts/set_ticket_status.py` (the mechanism
+that performs the write) accepts no exclusion parameter for the same reason. Both drivers
+must derive the set identically, in the same commit, per `BO-400a-2-ii`'s twin constraint.
+
+`docs/known-issues/build-orchestration.md`'s `KI-BO-20260831-1932` documents the defect this
+rule closes (a caller-trusted union let the same ticket state produce a refusal or a
+phantom-done write depending on what the caller supplied) and includes a sequence diagram of
+the corrected, record-only decision path.
 
 ## Documentation Coverage — Runtime Phase Flow
 
