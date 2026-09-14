@@ -225,6 +225,15 @@ ENTROPY_HIGH:unit_tests/product_truth/test_uxp_700c_1_i.py:*
 # still shift.
 ENTROPY_HIGH:unit_tests/product_truth/test_uxp_700b_2.py:*
 
+# GE-127c-1's dividing-advice descriptor. The flagged line is a long CamelCase
+# test-class name -- the same false-positive pattern as the entries above, and
+# not reproduced here for the same reason: quoting it would trip the scanner
+# this entry suppresses. Glob, not per-line: the class sits mid-file and its
+# line number moves whenever anything is added above it.
+# The file is named for the split: GE-127c-1's tests were divided into four
+# when the widened size gate refused the original 579-line single file.
+ENTROPY_HIGH:unit_tests/commit_guardian/test_ge_127c_1_dividing_advice.py:*
+
 # unit_tests/product_truth/test_uxp_700e_3_i.py's TestCase class names are long
 # CamelCase identifiers -- same false-positive pattern as the other test-class-name
 # entries above (not reproduced here for the same reason: quoting it would trip the
