@@ -63,7 +63,9 @@ MANIFEST_PATH = GUARDIAN_DIR / "commit_guardian.json"
 
 # ---------------------------------------------------------------------------
 # Ratchet baseline — hook scripts that exist on disk with no hooks_manifest
-# entry, as measured on main at 2524993b9 (2026-09-14).
+# entry. 18 at 2524993b9 (2026-09-14); 16 since check_pytest_style.py and
+# check_sql_dependencies.py were deleted as bybit-trader residue — the first
+# scripts this test's inventory retired.
 #
 # THIS LIST MAY ONLY SHRINK. Every entry is a script that pre-commit never
 # runs. Adding to it would make this test the rubber stamp it exists to
@@ -93,10 +95,8 @@ UNREGISTERED_BASELINE: frozenset[str] = frozenset(
         "check_documentation.py",  # settings, no runner
         "check_folder_density.py",  # settings, no runner
         "check_outcome.py",
-        "check_pytest_style.py",
         "check_root_files.py",  # settings, no runner
         "check_sql_complexity.py",  # settings, no runner
-        "check_sql_dependencies.py",
         "check_test_ac_tags.py",
         "check_test_fixture_bloat.py",
         "check_ticket_test_requirements.py",
