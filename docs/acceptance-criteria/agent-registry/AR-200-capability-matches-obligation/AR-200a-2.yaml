@@ -1,0 +1,130 @@
+id: AR-200a-2
+components:
+  - agent_registry
+title: "An agent told to hand work onward is told to sign off completely, not partially"
+component: agent-registry
+level: L2
+status: active
+req_status: draft
+work_status: done
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given the set of agent templates the build can dispatch as a ticket phase,
+    And the sign-off protocol requires a dispatched agent to record its outcome in
+      three places at once -- the frontmatter agents map, the Sign-offs checklist
+      line with its timestamp, and the Comments section,
+    And some of those templates carry a section instructing their agent, in a named
+      situation, to hand work to a sibling by emitting a handoff status tag instead
+      of an ordinary completion tag,
+  When each such handoff instruction is read on its own -- as it is in practice,
+    because it is the procedure the agent follows for exactly that situation,
+  Then the instruction states that all three places are still written,
+    And it does not describe handing off merely as substituting one status tag for
+      another, because an agent that reads it that way updates the frontmatter and
+      the comment and leaves the checklist line unchecked,
+    And where a neighbouring rule relaxes one obligation for the handoff case, the
+      instruction names precisely what is relaxed, so the exemption cannot be read
+      as making the whole path lighter,
+    And the check derives both sides from the templates themselves, so a newly
+      added phase agent whose handoff instruction is incomplete is reported without
+      anyone editing the check,
+  So a ticket's record never comes back internally inconsistent -- asserting in its
+    frontmatter that a phase signed off while its own checklist still shows that
+    phase unchecked -- and a drive is never halted at the completion write by a
+    contradiction the agent was told to create.
+depends_on:
+  - AR-200a
+doc_links:
+  - path: templates/agents/python-coder.md
+    relationship: modifies
+    status: exists
+    relevance: "Carries two incomplete handoff instructions. `## Test Delegation` step 2 describes the handoff as substituting `(status: handoff)` for `(status: ok)` plus a `handoff_target` field and never restates the three-place atomic sign-off -- this is the section whose gap was observed live. `## Contract-Shrinkage Guard` has the same shape."
+  - path: templates/agents/test-writer.md
+    relationship: modifies
+    status: exists
+    relevance: "The agent python-coder hands off TO, and it carries the same defect in two places: `Rule 2 -- Consumer enumeration` and `Rule 4 -- Test-repair commits`. Both instruct a handoff without restating the sign-off obligations, so the failure could recur travelling back the other way. Found by this record's own test, not by the original diagnosis."
+  - path: templates/skills/signoff/SKILL.md
+    relationship: describes
+    status: exists
+    relevance: "Owns the Three-Place Parity Rule at §1.5. Its step 3 is the ONLY mention of handoff in that rule and it is a relaxation (other agents' task boxes may stay unchecked), which is what makes over-generalising to 'handoff is lighter' easy. Read before wording any handoff instruction."
+  - path: docs/acceptance-criteria/agent-registry/AR-200-capability-matches-obligation/AR-200a-1.yaml
+    relationship: related
+    status: exists
+    relevance: "The sibling condition on the same obligation: AR-200a-1 asks whether a template CAN perform the three-place write (declares a capable tool); this record asks whether it is TOLD to perform all three. A template can pass that one and fail this one, which is exactly what happened."
+  - path: scripts/commit_guardian/check_ticket_signoff_parity.py
+    relationship: describes
+    status: exists
+    relevance: "The guard that detects the resulting inconsistency after the fact. This record prevents the inconsistency being authored in the first place; it does not replace or relax that guard."
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  config_schema_fragment: null
+  reference_file_path: templates/agents/python-coder.md
+  n_location_rule: "4, across 2 templates -- `## Test Delegation` and `## Contract-Shrinkage Guard` in templates/agents/python-coder.md, and `Rule 2 -- Consumer enumeration is mandatory before contract changes` and `Rule 4 -- Test-repair commits must not change production behavior` in templates/agents/test-writer.md. CORRECTED FROM 1 on 2026-09-14: the original figure came from `grep -ln '## Test Delegation' templates/agents/*.md`, which returns python-coder.md alone. That was the wrong query -- the defect is not the Test Delegation heading, it is ANY section instructing a handoff -- and the rule-level test written for this record found four instances the moment it first ran. Note that test-writer is the agent python-coder hands off TO, so both ends of that handoff carried the same incomplete instruction and the failure could recur in either direction. All four must be amended together: this record's test asserts the rule over every template, so it stays red until the last one is complete."
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python -m pytest unit_tests/commit_guardian/test_handoff_signoff_completeness.py -v"
+  constraints:
+    - "THE AGENT GAINS AN INSTRUCTION; THE CHECKLIST DOES NOT LOSE AN ENTRY. Do not close this by relaxing the three-place parity rule, by making the Sign-offs line optional on the handoff path, or by teaching the completion write to tolerate the mismatch. The parity guard is what caught this, and the record's internal consistency is what the BO-400 family exists to make authoritative."
+    - "DO NOT DELETE THE TWO-READERS EXPLANATION. Test Delegation step 2 explains that the ticket prose tells the NEXT AGENT what to do while `handoff_target` tells the DRIVER whom to dispatch, and that dropping either leaves its reader with nothing to act on. That paragraph is load-bearing (BO-3000a) and must survive the edit intact."
+    - "NAME WHAT THE EXEMPTION ACTUALLY COVERS. The signoff skill's §1.5 step 3 relaxes exactly one thing for handoff -- the OTHER agent's task checkboxes. The amended instruction must say so explicitly, because the observed failure is an agent generalising that single exemption into 'the handoff path is lighter overall'."
+    - "VERIFY BY RULE, NOT BY PHRASE. A test asserting that python-coder.md contains the words 'atomic sign-off' passes on any wording that happens to include them and protects only the file already fixed. Derive both sides from the templates, per AR-200a-1's own precedent."
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-09-14
+amended_by: []
+superseded_by: null
+covered_by:
+  - unit_tests/commit_guardian/test_handoff_signoff_completeness.py
+implemented_by:
+  - templates/agents/python-coder.md
+  - templates/agents/test-writer.md
+change_target: prompt
+risk_surface: contract_boundary
+test_spec:
+  - name: test_handoff_instruction_requires_full_atomic_signoff
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "Scan every templates/agents/*.md for a section instructing the agent to emit a handoff status tag. For each one found, assert that the same section also requires the frontmatter update AND the Sign-offs checklist entry. Derives the agent list from the templates on disk, so a newly added phase agent with an incomplete handoff instruction fails without the test being edited."
+  - name: test_scan_finds_at_least_one_handoff_instruction
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: reachability
+    description: "REQUIRED non-vacuity guard. Assert the scan actually located at least one handoff-instructing section. Without this, a scanner whose pattern matches nothing passes the rule above trivially and reports success having examined no templates at all -- the silent-no-op failure this repository has hit three times in its own defences."
+notes: |
+  OBSERVED, NOT HYPOTHESISED. On 2026-09-14, driving ticket 01 of
+  EPIC-WorkIsOnlyEverMarkedFinishedThroughThe, python-coder took the Test
+  Delegation handoff path. It set `python-coder: signed_off` in frontmatter and
+  wrote a correct `(status: handoff)` comment, but left `- [ ] python-coder`
+  unchecked in the Sign-offs checklist. Its own comment names the surface it
+  updated twice -- "python-coder's own FRONTMATTER status is flipped to
+  signed_off" -- and never mentions the checklist.
+
+  THE COST WAS NOT COSMETIC. The completion write refused the ticket four
+  /build-feature runs later, correctly: the record asserted in one place what it
+  denied in another. The epic halted at batch 1 and its four remaining tickets
+  stayed blocked behind it until the record was repaired by hand.
+
+  There is an irony worth preserving here, because it is also the argument for
+  this record. The agent that refused was applying BO-400e-1 -- the criterion
+  that a close is checked against the ticket's OWN record and not against a
+  caller's claim about it. It declined to accept "only commit is outstanding"
+  because the record itself still showed a phase unchecked. The refusal was
+  right. What was wrong was upstream: an agent had been told to produce a record
+  it could not make consistent.
+
+  WHY THIS IS AR AND NOT BO. The defect is in an agent template's instructions,
+  and `templates/agents/*.md` is agent-registry's own directory pattern. It sits
+  under AR-200 ("every agent that has to record a verdict is able to record
+  one") beside AR-200a-1, which asks whether such a template CAN write all three
+  surfaces. This record asks whether it is TOLD to. python-coder passes
+  AR-200a-1 -- it declares Edit and Write -- and still produced a half-written
+  record, which is what makes these two conditions genuinely distinct rather
+  than one restated.

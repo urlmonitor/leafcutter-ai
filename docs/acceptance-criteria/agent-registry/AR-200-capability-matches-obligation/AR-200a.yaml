@@ -41,6 +41,7 @@ amended_by: []
 superseded_by: null
 covered_by:
   - AR-200a-1
+  - AR-200a-2
 implemented_by: []
 documentation_triggers: []
 documentation_rationale: "No new user-facing surface — an existing class of halt stops occurring."
