@@ -1563,7 +1563,41 @@ Named nodeids, no timeout indication anywhere. The only available reading is "th
 
 **Second, smaller finding: the per-file allowance is too low for subprocess-heavy build ACs.** `_PYTEST_PER_FILE_BUDGET_SECONDS = 300.0` was set in PR #706 (by me) from a ~142s measurement on BP-900g-8-ii, described in its own comment as "roughly a 2x margin." BP-1500g-1's tests each invoke `build.py --target-dir` as a real subprocess against scratch adopter trees and need materially more. The margin was real; the baseline AC was simply lighter than this class of work. Note the rot this produces: `BP-1500g-1`'s own `test_rationale` states the contract sits "comfortably inside the done-proof pytest budget as fixed by PR #706" — an authored prediction, now falsified, sitting in an approved record.
 
-**Fix direction.** Surface the timeout at the gate: have `verify_green_and_coverage` carry the timeout verdict through instead of flattening it into `failing_tests` — a `timed_out` field, or at minimum a distinct reason, so the caller can tell "did not finish" from "does not pass." Both `verify_done_eligible` and `_verify_composite_eligible` already compute it. Separately, reconsider the per-file allowance for ACs whose tests spawn real builds, or scale it from a measured per-file cost rather than one constant shared by every AC in the store. Whichever is chosen, **the gate must never again render a non-answer as a specific accusation** — that is the general rule this register keeps rediscovering.
+**WIDENED 2026-09-15 — the timeout is only one way in, and the other has no budget to tune.**
+The same false accusation was produced again on this AC set with NO timeout involved. A
+`verify_done_eligible` run for `BP-1500g-1` returned 7 passing and 7 `linked test not run`
+after **440.6s** — under the 630s default budget AND under a 3600s override, so neither
+ceiling fired. The machine was simply busy (a dozen concurrent sessions), the pytest
+subprocess was killed partway, and `_run_pytest_and_parse` returned whatever partial stdout
+had accumulated. Every test whose result line had not yet been printed was then unmatched by
+`_find_nodeid_for_test` and reported as non-passing, by nodeid, exactly as in the timeout
+case. Re-run on a quiet machine, the same AC returned `eligible: true` in 402.9s with all 14
+tests passing; the two linked files run directly give `10 passed in 484.61s` plus a green
+`build_guards` directory.
+
+So the root defect is NOT the budget. It is that **`_run_pytest_and_parse` cannot distinguish
+"this test did not pass" from "this run never reached this test"**, and the gate above it
+renders both as a named failing test. A timeout is one cause of a truncated run; an OOM, a
+scheduler kill, contention, or any non-zero exit before the last result line are others, and
+none of them are tunable. The earlier entry treated the budget as the problem; the budget is
+one trigger.
+
+The gate also never checks pytest's exit status or whether the number of parsed result lines
+matches the number of linked tests it asked about — either check would separate "ran and
+failed" from "did not finish" for every cause at once, without knowing which cause it was.
+
+**Fix direction.** Surface non-completion at the gate, from ANY cause. `_run_pytest_and_parse`
+should report that a run was incomplete — a missing result for a test it was asked to run, or
+a subprocess exit inconsistent with a completed session — and `verify_green_and_coverage`
+should carry that through instead of flattening it into `failing_tests`. A `timed_out` field
+alone is too narrow: it fixes the trigger I happened to hit first and leaves the contention
+path reporting the same lie. Both `verify_done_eligible` and `_verify_composite_eligible`
+already compute a timeout reason; the shape needs widening to "did not complete", not just
+re-plumbing. Separately, reconsider the per-file allowance for ACs whose tests spawn real
+builds, or scale it from a measured per-file cost rather than one constant shared by every AC
+in the store — that remains worth doing, but it is a comfort measure, not the fix. Whichever
+is chosen, **the gate must never again render a non-answer as a specific accusation** — that
+is the general rule this register keeps rediscovering.
 
 **Related.** `KI-TQ-20260901-1310` (the originating budget/masking entry, and the source of the sentinel this one shows is unreachable) · `KI-TQ-011` (same plugin family, masking vs. CI opt-out) · `docs/reference/false-green-mechanisms.md` — this is that catalogue inverted: a false RED, which is rarer and, because it is trusted as a finding rather than as an absence, more expensive.
 
