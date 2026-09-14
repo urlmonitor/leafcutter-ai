@@ -1,0 +1,180 @@
+id: BO-2400c-1-ix
+components:
+  - build_orchestration
+  - injection_builder
+title: "A bundle damaged on the way is reported as damaged on the way, not as a bad bundle"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a run that stops because what arrived is not what was produced,
+  When it reports why it stopped,
+  Then its leading statement is that the bundle was produced and then altered between
+    production and arrival — not a detail further down, and not an inference the reader
+    has to make,
+  And it reports both sides of the comparison, the value the producer stated and the value
+    derived from what arrived, so a reader can see the two disagree without re-running
+    anything,
+  And it does not describe the bundle as never produced, as a location standing in for
+    content, or as incompletely composed, because each of those names a different fault
+    and sends the reader somewhere the fault is not.
+
+  Given the alteration also destroyed a structural landmark the lane independently checks
+    for,
+  When the lane decides which of the two findings to report,
+  Then it reports the delivery failure, because the disagreement with what was produced is
+    the finding that explains the missing landmark rather than a second, separate defect,
+  And the run therefore does not present a complaint about the bundle's content whose
+    actual cause is its delivery — the reversal that, on both recorded occurrences, pointed
+    an operator at an assembly that had not failed.
+
+  Given one run driven through each distinct way the bundle can be unusable, in turn,
+  When the messages those runs produced are set side by side,
+  Then the damaged-in-transit message is distinguishable from every other one — no message
+    is a restatement of another and none is a superset of another,
+  And a check written for any one cause is not satisfied by the message for a different
+    one, so the set of causes stays as separable to a reader as it is to the lane.
+depends_on: [BO-2400c-1, BO-2400c-1-iii, BO-2400c-1-viii]
+doc_links:
+  - path: docs/known-issues/build-orchestration.md
+    relationship: describes
+    status: exists
+    relevance: "KI-BO-019. Both occurrences halted with the operator pointed at the bundle's content while the fault was its delivery — occurrence one with a marker-not-found halt against a 47-character path, occurrence two with a marker-not-found halt against content whose marker had been escaped. The entry's standing instruction that a halt must stop saying 'was not obtained' when obtained was true is the same concern one state further on."
+  - path: docs/reference/workflow-constraints.md
+    relationship: describes
+    status: exists
+    relevance: "Added by the IT PO 2026-09-14. The engine has no filesystem access, so the halt payload is the ONLY surface on which this record's wording can be observed — by an operator or by a test. That is why every test below reads HarnessResult.result rather than a log or a file."
+origin_agent: BrainCandy
+created: 2026-09-14
+amended_by:
+  - agent: it-po
+    date: "2026-09-14"
+    reason: "TECHNICAL ENRICHMENT ONLY — criteria, title, level, depends_on, covered_by, declares_side_effect, change_target, risk_surface, test_required, test_rationale and notes are untouched. Added assigned_agent, estimated_complexity, it_requirements, delivers_to, expects_from, test_spec, one doc_link, and readiness draft -> reviewed. What this pass adds beyond the BA's specification: the ordering clause is stated as a constraint on WHERE the decision is computed (inside classifyContextBundle, before the marker and empty-layer checks) rather than as a property of the resulting text, because an implementation that checks the landmark first and then re-words its message satisfies every assertion about wording while still reporting the symptom; the requirement that the two compared values appear in the LEADING statement rather than inside the appended JSON.stringify(bundleResult) detail blob, which is how the existing halts already carry data a reader has to dig for; and the single-construction-site rule extended to a fourth state, shared with BO-2400c-1-x's shortfall message so the two records cannot drift into two sites. implemented_by deliberately left empty — in this family it is a back-reference populated at done."
+superseded_by: null
+covered_by: []
+implemented_by: []
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  config_schema_fragment:
+    fast_lane_delivery_failure_report:
+      type: object
+      description: >-
+        The terminal payload for a run that ended because what arrived is not what was
+        produced. Shape: {phase: "context-bundle", cause: "delivery_altered", message: str,
+        stated_value: str, derived_value: str, stated_bytes: int, received_bytes: int}.
+        `message` LEADS with the statement that the bundle was produced and then altered
+        between production and arrival, and carries both compared values in that leading
+        statement rather than only inside an appended detail blob. `cause` joins the three
+        BO-2400c-1-iii already defines (not_obtained, a_reference, incomplete) as a fourth
+        disjoint member; no member's message is a restatement or a superset of another's.
+  reference_file_path: "templates/workflows-js/fast-lane-ship.js"
+  n_location_rule: "2"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python scripts/build.py --target-dir ."
+  constraints:
+    - "SCOPE — JAVASCRIPT ONLY, AND NO NEW DATA. Everything this record reports is already produced by BO-2400c-1-viii's comparison; nothing in scripts/injection_builders.py belongs here. The two locations counted by n_location_rule are both in templates/workflows-js/fast-lane-ship.js: (1) classifyContextBundle, currently ~297-390, where the ordering between the delivery comparison and the landmark check is decided; (2) the halt payload construction reached from the gate at ~1077-1090, where exactly one cause is named. If this record is built in the same pass as -viii, say so in the sign-off and keep the edits attributable, because a later regression in the WORDING and a later regression in the COMPARISON have different owners."
+    - "THE ORDERING MUST BE ENFORCED WHERE THE CLASSIFICATION IS COMPUTED, NOT IN THE WORDING. The delivery comparison is evaluated BEFORE the breakpoint-marker and empty-layer checks, so that corrupted content whose landmark did not survive is classified as a delivery failure and not as incomplete content. This mirrors the decision BO-2400c-1-iii already made in the other direction (reference-rejection before the marker check, or a locator containing the marker collapses two states into one). An implementation that checks the landmark first and then rewrites its message to mention delivery passes every assertion about wording while still reporting the symptom — which is why the covering test asserts on the message produced by a run in which the landmark is genuinely destroyed, not on the message alone."
+    - "BOTH COMPARED VALUES APPEAR IN THE LEADING STATEMENT. The producer-stated value and the value the lane derived from what arrived must be readable without re-running anything and without parsing a serialised detail object. Appending JSON.stringify(bundleResult) after a message that still leads with composition does not satisfy this: the existing halts already do exactly that, and both recorded occurrences still sent an operator to look at an assembly that had not failed."
+    - "THE MESSAGE MUST NOT NAME A COMPOSITION CAUSE. A delivery failure is not 'was not obtained' (obtained was true), not 'a location standing in for content' (the reply was content), and not 'incompletely composed' (assembly is working and its output was correct). Each of those names a different fault and sends the reader somewhere the fault is not. The covering test asserts their ABSENCE from the delivery-failure payload, because asserting only that the right words are present passes on a message that contains both."
+    - "ONE CONSTRUCTION SITE, FOUR MUTUALLY DISTINGUISHABLE MESSAGES. The fourth cause joins BO-2400c-1-iii's three at the site that already builds them; do not add a second site. BO-2400c-1-x extends this SAME site with the shortfall case, so a second site would let two records' messages drift apart while each one's own tests stay green. Distinguishability is a pairwise property and must be asserted pairwise in one test: four messages asserted in isolation can all be satisfied by one undifferentiated wording."
+    - "DELIBERATELY NOT IN SCOPE: the general rule that a halt must not state a reason its own evidence denies. BO-2400c-1-iii assigns that to the BO-2400f-4-vi family and duplicating it here would give it two owners and no home. Implement the instance, not the rule."
+    - "NO GREP TESTS. This record is about wording, and wording is evidence only when it is the wording a real run produced. A test that finds a message string in fast-lane-ship.js proves the message was AUTHORED, not that any run reaches it — and this family already shipped a month of green tests over a layer that never ran. Every assertion here reads HarnessResult.result from a run executed under unit_tests/_workflow_engine_harness.py."
+delivers_to:
+  - agent: python-coder
+    contract: "A single halt-message construction site carrying four disjoint causes, of which the fourth names delivery and carries both compared values. BO-2400c-1-x extends this same site with the stated-versus-received quantities for the shortfall case; the site is shared deliberately so the two records' messages cannot drift."
+expects_from:
+  - ac_id: BO-2400c-1-viii
+    contract: "The classification outcome plus both compared values (producer-stated and lane-derived) and both quantities (stated bytes, received bytes), available at the halt site rather than recomputed there. Without -viii there is no delivery state to report and this record is unimplementable: it describes the wording of a halt that cannot yet occur."
+  - ac_id: BO-2400c-1-iii
+    contract: "The existing three failure causes, their evaluation order (reference-rejection before the marker check), and their single message-construction site. The fourth cause is inserted into that order ahead of the marker check and into that site alongside the other three."
+test_required: true
+test_spec:
+  - name: test_escaped_content_halt_leads_with_delivery_and_carries_both_values
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "Drive the 2026-08-31 escaped-content case under the harness and assert HarnessResult.result's leading statement says the bundle was produced and then altered in transit, and carries the producer-stated value and the lane-derived value. Asserting only that the run halted passes on today's behaviour, which halts for a stated reason that is wrong."
+  - name: test_delivery_is_reported_when_the_landmark_was_also_destroyed
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: seam
+    description: "The ordering test, and the load-bearing one. Deliver an alteration that genuinely destroys the breakpoint marker, and assert the terminal payload reports the delivery failure and does NOT report the landmark as missing. An implementation that checks the landmark first reports the symptom and passes every test written about the symptom; only a run in which both conditions are true at once separates them."
+  - name: test_delivery_failure_message_names_no_composition_cause
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: boundary
+    description: "Assert the ABSENCE from the delivery-failure payload of the three wrong namings — never obtained, a location standing in for content, incompletely composed. A message that leads correctly and then also mentions one of these satisfies a presence-only assertion while still sending a reader to the assembly."
+  - name: test_the_four_halt_messages_are_pairwise_distinguishable
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "Drive all four unusable states — nothing obtained, a reference, incomplete content, altered in transit — in ONE test and compare the four terminal messages pairwise: none is a restatement of another, none a superset of another, and a check written for one is not satisfied by another. Asserting each in isolation is what lets a single undifferentiated wording pass all four."
+  - name: test_delivery_failure_halt_dispatches_no_context_carrying_agent
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: reachability
+    surface_invoked: ".claude/workflows/fast-lane-ship.js (top-level body under run_workflow_under_e2)"
+    description: "On the delivery-failure path HarnessResult.agent_calls records no test-writer-connected or coder-connected dispatch — proving the new message is on a branch a run actually reaches and terminates from, rather than a string that exists in a branch nothing enters."
+test_rationale: |
+  This record is about wording, and wording is only evidence when it is the wording a real
+  run produced. Drive the lane with the producing step's reply controlled and assert on the
+  run's terminal output — never on a string found in the lane's source, which proves only
+  that a message was authored, not that this run reaches it.
+
+  Three shapes.
+
+  Drive the escaped-content case and assert the terminal output states that the bundle was
+  produced and altered in transit, and carries both compared values. Asserting only that
+  the run halted passes on today's behaviour, which halts for a stated reason that is
+  wrong; the assertion has to be on what it says.
+
+  Drive an alteration that destroys the structural landmark, and assert the output reports
+  the delivery failure and does NOT report the landmark as missing. This is the ordering
+  test: an implementation that checks the landmark first reports the symptom and passes
+  every test written about the symptom.
+
+  Drive every unusable state in ONE test and compare the messages pairwise. Asserting each
+  in isolation is what allows a single undifferentiated wording to satisfy all of them —
+  the same trap BO-2400c-1-iii records for its three states, now with a fourth member.
+declares_side_effect: false
+change_target: pipeline
+risk_surface: internal
+notes: |
+  SCOPE AGAINST BO-2400c-1-iii. That record owns three causes — nothing came back, a
+  reference came back, incomplete content came back — and owns the rule that each halt names
+  its own cause and only its own. This record adds a fourth cause to that set and requires
+  it to join distinctly. It does not restate the three, and it does not relocate ownership
+  of them: if the two records ever disagree, -iii governs its three and this one governs the
+  fourth and the ordering between the fourth and the incomplete-content case.
+
+  THE ORDERING CLAUSE IS THE LOAD-BEARING PART, and it mirrors an existing decision rather
+  than inventing one. -iii already requires reference-rejection to be evaluated before the
+  landmark check, for exactly this reason: evaluated after, a locator that happens to
+  contain the landmark is misfiled as incomplete content and two states collapse into one.
+  The same collapse happens here in the other direction — corrupted content whose landmark
+  did not survive is misfiled as incomplete content — and it is worse, because incomplete
+  content implicates assembly, which is working.
+
+  WHY THIS IS WORTH A CRITERION AT ALL. On 2026-08-31 the landmark check was the only thing
+  that noticed anything was wrong, and it noticed by luck of shape: the landmark happened to
+  contain a character the corruption happened to alter. Its report named the landmark. An
+  operator reading that report goes to look at how the bundle is composed, which is
+  correct, complete, and not the problem. Every hour spent there is a cost this criterion
+  removes, and it is a cost that recurs on every occurrence.
+
+  DELIBERATELY NOT IN SCOPE: the general rule that a halt must not state a reason its own
+  evidence denies. That belongs to the BO-2400f-4-vi family, as -iii already records. This
+  record specifies one instance of truthful diagnosis, not the rule.
