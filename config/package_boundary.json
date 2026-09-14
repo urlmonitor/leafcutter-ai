@@ -45,8 +45,6 @@
                 "check_folder_density.py":       "portable",
                 "check_complexity.py":           "portable",
                 "check_sql_complexity.py":       "portable",
-                "check_sql_dependencies.py":     "portable",
-                "check_pytest_style.py":         "portable",
                 "check_root_files.py":           "portable",
                 "check_debug_scripts.py":        "portable",
                 "check_doc_links.py":            "portable",

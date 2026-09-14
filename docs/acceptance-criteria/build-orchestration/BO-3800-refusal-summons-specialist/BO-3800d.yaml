@@ -1,0 +1,102 @@
+id: BO-3800d
+title: "A tidy-up that cannot meet the demand stops and says so, instead of looping or quietly passing"
+component: build-orchestration
+components:
+  - build_orchestration
+  - supervisor_system
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  No endless loop and no quiet pass — a file that stays stuck is reported.
+
+  If the file still does not meet the standard after the specialist has worked
+  on it, the attempt is not repeated without end and the work is not waved
+  through anyway. It stops, and reports what was asked for, what was done and
+  what is still outstanding, so a person can decide what happens next.
+depends_on:
+  - BO-3800
+doc_links:
+  - path: docs/acceptance-criteria/build-orchestration/BO-3800-refusal-summons-specialist/BO-3800.yaml
+    relationship: parent
+    status: exists
+  - path: docs/architecture/agent_delivery_workflows.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      THE SHAPE ALREADY EXISTS AND SHOULD BE FOLLOWED, NOT REINVENTED. The delivery
+      topology's adjudication ladder already retries a failing step a bounded number of
+      times and ends at "Exhausted → Halt & Surface to User". This record is that ladder's
+      last two rungs applied to a restructuring handoff.
+  - path: docs/acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/GE-127b.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      THE WARNING THIS RECORD ANSWERS. GE-127b's notes state that whether any condition
+      warrants an exception "is a decision to be taken explicitly and recorded, never
+      defaulted into existence". A give-up path is exactly such a decision: unstated, it
+      becomes whatever the first implementation happens to do, and the most likely default
+      — let the change through after N attempts — silently reopens the rule for every file
+      that is hard to restructure, which is the population the rule exists for.
+  - path: docs/acceptance-criteria/build-orchestration/BO-3100-delegated-work-completes/BO-3100.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      THE SAME CONSTRAINT ONE TREE OVER, AND A REASON NOT TO MERGE THEM. BO-3100's authoring
+      notes require that a retry terminate — "an agent that parks identically every time
+      must end as a visible failure, not a loop" — for a step that vanished. This record
+      requires the same of a step that ran and did not achieve enough. Distinct trigger,
+      same discipline; neither closes the other.
+delivers_to: null
+expects_from: null
+documentation_triggers:
+  - state-diagram
+origin_agent: product-owner-v3
+created: 2026-09-14
+amended_by: []
+superseded_by: null
+covered_by:
+  - BO-3800d-1
+  - BO-3800d-2
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+notes: |
+  THE EDGE THE USER SINGLED OUT, AND THE ONLY PART OF IT SETTLED HERE. What happens when the
+  specialist runs and the file still does not meet the demand? Three answers are available
+  and two of them are wrong:
+
+    - RETRY WITHOUT END. Wrong, and expensive in a way that is invisible until the bill
+      arrives. A file that resists restructuring resists it identically on the second and
+      tenth attempt.
+    - GIVE UP SILENTLY, OR LET THE CHANGE THROUGH. Worse. Letting it through reopens the
+      standard for exactly the files it exists for. Giving up without saying so leaves the
+      author holding a refusal with no explanation, which is indistinguishable from the
+      feature not existing at all — and that is the state the repository is in today.
+    - STOP, AND ACCOUNT FOR IT. The answer this record fixes.
+
+  WHAT IS FIXED HERE AND WHAT IS DELIBERATELY LEFT OPEN. Fixed: that there is a bound, that
+  reaching it stops rather than passes, and that the stop carries what was asked, what was
+  done and what remains. Left to decomposition and enrichment: the value of the bound, the
+  surface the account appears on, and whether a partial improvement — the file smaller than
+  before but still short of the demand — is kept or discarded. That last one is a real
+  question and must be SETTLED EXPLICITLY rather than defaulted: keeping partial progress is
+  humane and makes the next attempt cheaper, and it also means a stopped run leaves the file
+  in a state nobody chose. Name the decision; do not inherit it.
+
+  THE THREE OUTCOMES MUST BE TOLD APART, AND THIS IS THE STORE'S STANDING DISCIPLINE RATHER
+  THAN A NEW IDEA. The demand was met; the specialist ran and fell short; the specialist
+  could not be reached or produced nothing usable. GE-127f-2-i insists on the same
+  separation one layer down for its own inputs, and BO-3000a insists on it for a phase that
+  returned nothing versus one that returned something unusable. Collapsing any two of these
+  into one message costs the reader the only information that tells them whether the file is
+  hard or the machinery is broken.
+
+  WHAT THIS RECORD MUST NOT BECOME. A criterion asserting that the file is eventually always
+  restructured successfully. Some files will not be, and the nine files in this repository
+  standing above 1,500 lines are named in GE-127f's notes as exactly that population. This
+  record promises an honest stop, not a guaranteed success.

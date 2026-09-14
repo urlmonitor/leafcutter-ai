@@ -1,0 +1,618 @@
+id: GE-127f-1
+title: "An addition to an already-oversized file must leave it at or below the less demanding of its permitted length and its previous length minus what the change added"
+component: guardrail-engine
+components:
+  - commit_guardian
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a tracked file of a kind the size standard covers stands at 2,677
+    measured lines before the change, against a permitted length of 400,
+  And a change is staged that adds 50 measured lines to that file and leaves it
+    standing at 2,628,
+  When the author performs an ordinary commit,
+  Then the commit does not complete, and the outcome states the length the file
+    stood at before the change, the length it stands at after it, the number of
+    lines the change added, and the length it is required to stand at or below,
+  And given instead the same file and the same 50 added lines, with the change
+    leaving it standing at 2,627,
+  When the author performs an ordinary commit,
+  Then the commit completes, and the file is not refused for still standing above
+    its permitted length,
+  And given instead the same file and the same 50 added lines, with the change
+    leaving it standing at exactly the 2,677 it stood at before,
+  When the author performs an ordinary commit,
+  Then the commit does not complete — a change that adds to an already-oversized
+    file and gives back only what it took is no longer sufficient,
+  And given a tracked covered file standing at 410 measured lines against a
+    permitted length of 400, and a change that adds 50 measured lines to it and
+    leaves it standing at exactly 400,
+  When the author performs an ordinary commit,
+  Then the commit completes — the required length is the less demanding of the
+    permitted length and the previous length minus the lines added, so 60 lines
+    leaving the file discharges the change and 100 is never asked for,
+  And given the same 410-line file and the same 50 added lines, with the change
+    leaving it standing at 401,
+  When the author performs an ordinary commit,
+  Then the commit does not complete,
+  And given the same 2,677-line file and a change that adds no measured lines to
+    it and removes three, leaving it standing at 2,674,
+  When the author performs an ordinary commit,
+  Then the commit completes, and nothing further is required of the change,
+  And given a tracked covered file standing at 380 measured lines against a
+    permitted length of 400, and a change that adds 12 measured lines to it and
+    leaves it standing at 392,
+  When the author performs an ordinary commit,
+  Then the commit completes and no line of the outcome names that file — a file
+    at or below its permitted length is not in this population at all.
+depends_on:
+  - GE-127f
+doc_links:
+  - path: docs/acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/GE-127f.yaml
+    relationship: parent
+    status: exists
+  - path: docs/acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/GE-127b-1.yaml
+    relationship: depends_on
+    status: exists
+    relevance: >-
+      THE FLOOR THIS RECORD RAISES, AND THE COMPARISON IT REUSES RATHER THAN
+      RE-IMPLEMENTS. GE-127b-1 is delivered: it already resolves each staged covered
+      file's previous length from its HEAD blob, measures both lengths with one shared
+      function, and judges the direction of the comparison. This record changes only the
+      THRESHOLD that comparison is judged against — from "no greater than the previous
+      length" to "no greater than the less demanding of the permitted length and the
+      previous length minus the lines added". It adds no second comparison, no second
+      previous-length source and no second measurement function. An implementation that
+      stands up a parallel gate beside GE-127b-1's is at the wrong address.
+  - path: docs/acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/GE-127f-2.yaml
+    relationship: depends_on
+    status: exists
+    relevance: >-
+      DEFINES THE INPUT THIS RECORD CONSUMES. "The lines the change added" is GROSS
+      measured lines added by the change, never the file's net growth; GE-127f-2 owns
+      that and this record must not restate it. The dependency is real and asymmetric,
+      and the asymmetry is recorded in the notes: GE-127f-2's named mutation reddens
+      this record's refusal arms as well as its own, while this record's named mutations
+      leave every arm of GE-127f-2 green. That is what shows the two are not duplicates.
+  - path: docs/acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/GE-127a-1.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      BOUNDARY, INHERITED AND NOT RESTATED. GE-127a-1 owns the crossing event and the
+      threshold arm, and owns the silence that must be preserved for a file below its
+      permitted length. The last arm here is a seam guard on that silence, not a
+      restatement of it: it asserts only that this record's comparison does not reach a
+      file that is not already over. Once a file reaches its permitted length it leaves
+      this regime entirely and GE-127a-1's threshold governs it alone.
+  - path: docs/acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/GE-127d.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      CONSUMED, NEVER RESTATED. Which lines are measured is GE-127d's. Every number in
+      every arm above is denominated in that unit, and the arithmetic relating them is
+      this record's only subject. Do not write a second counting rule into the
+      comparison. The interaction is sharper here than it was for GE-127b and is named
+      in the notes rather than inherited silently.
+  - path: docs/acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/GE-127e.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      BOUNDARY. A refusal under this record needs a message, and the QUALITY of that
+      message — the parts, the division, the honesty about what it can offer — is
+      GE-127e's subject. The clause here requires four specific quantities to be present
+      in the outcome because they are the arithmetic the author must be able to
+      reproduce; it takes no position on how the refusal reads.
+  - path: docs/acceptance-criteria/build_pipeline/BP-1600-counted-from-reality/BP-1600a-2.yaml
+    relationship: depends_on
+    status: exists
+    relevance: >-
+      PRECONDITION, NOT SCOPE — INHERITED FROM THE WHOLE TREE AND NOT RESTATED. Every
+      clause here is a commit outcome and presupposes the guard runs at commit time. Do
+      not restate the census or its counts.
+  - path: templates/scripts/commit_guardian/_file_size_ratchet.py
+    relationship: modifies
+    status: exists
+  - path: templates/scripts/commit_guardian/check_file_size.py
+    relationship: modifies
+    status: exists
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+  - path: docs/pre-commit-hooks.md
+    relationship: related
+    status: exists
+  - path: CLAUDE.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      "Gate / Workflow ACs — Verify Behaviorally, Not by Grep". A test that reads the
+      comparison's source, or that calls a threshold function directly, stays green on a
+      gate whose new threshold is computed and never consulted. Every arm above is an
+      ordinary commit in a real repository over real history.
+assigned_agent: python-coder
+estimated_complexity: M
+package_surface: false
+declares_side_effect: false
+it_requirements:
+  - >-
+    NO PACKAGE SURFACE — MEASURED IN THIS WORKTREE, NOT ASSUMED, WHICH IS WHY THE SPEC
+    HERE IS A PLAIN LIST RATHER THAN THE STRUCTURED FIVE-FIELD OBJECT.
+    _package_surface_registry.WATCHED_REGISTRIES binds exactly two containers on
+    commit_guardian.json: hooks_manifest.hooks (by entry id) and the document's own top
+    level (by mapping key, with only "$schema" and "_comment" excluded). Both were read at
+    enrichment time. `check-file-size` is ALREADY one of the hooks ids, so no id is added.
+    `file_size` is ALREADY one of the top-level keys, and everything this record could
+    conceivably want to configure — the permitted lengths it compares against — is
+    `file_size.line_limits`, NESTED inside it and therefore invisible to the watcher. This
+    record registers nothing. Do NOT mint a config_schema_fragment to satisfy the
+    structured-spec validator: BP-1600a-2-ii records that BP-100k-4 and BP-100k-4-i both
+    declared keys that were never created and still do not exist. An imaginary key makes
+    the machine-checked spec less trustworthy than no spec at all. If GE-127f-3's
+    author-versus-specialist threshold eventually needs a configuration home, that is
+    GE-127f-3's declaration to make and must not be pre-declared here.
+  - >-
+    ONE COMPARISON, ONE THRESHOLD — THE ADDRESS IS GE-127b-1's SHIPPED COMPARISON AND
+    NOWHERE ELSE. _file_size_ratchet already resolves each staged covered file's previous
+    length from its HEAD blob, measures both lengths with the one shared function, and
+    judges the direction. What changes is the LENGTH THAT COMPARISON IS JUDGED AGAINST. Do
+    not stand up a second gate beside it, a second previous-length source, or a second
+    measurement. Express the new threshold as the single end-state value — the less
+    demanding of the permitted length and (previous length minus measured lines added) —
+    computed once per file and compared once. An implementation that computes a REMOVAL
+    QUOTA and then checks it has been met drifts from the criteria on the capped arm and
+    on the zero-addition arm, and is the shape to avoid.
+  - >-
+    THE CAP GOVERNS MORE THAN A THIRD OF THE REAL POPULATION AND IS NOT A COURTESY.
+    Measured in this worktree: 988 tracked .py files, 212 above 400 counted lines, 62,524
+    excess lines, median oversized file 551 counted lines, and 78 of the 212 standing
+    between 400 and 500. The "previous length minus added" half is the memorable half and
+    the cap is the half that reads like a rounding concession; dropping it makes the gate
+    demand hundreds of lines from files that are twenty over. Both halves are load-bearing
+    and the named cap mutation below exists to prove it.
+  - >-
+    THE FOUR QUANTITIES IN A REFUSAL COME OUT OF THE COMPARISON THAT REFUSED, NOT FROM A
+    SECOND DERIVATION. Before-length, after-length, measured lines added, and the required
+    length are all already in hand at the moment the verdict is formed; print those four
+    values. Recomputing any of them on the way to the message is how the printed arithmetic
+    stops reconciling with the verdict, and the author is then handed four numbers that do
+    not add up. This record takes no position on how the refusal READS — that is GE-127e's
+    — only that those four quantities are present and mutually consistent.
+  - >-
+    GE-127b-1's DELIVERED BOUNDARY DESCRIPTOR WILL GO RED, AND THAT IS A NARROWING TO BE
+    CARRIED IN THE SAME CHANGE — NOT A REGRESSION TO BE DISCOVERED.
+    test_ge_127b_1_an_oversized_file_left_at_exactly_its_previous_length_commits is green
+    today and asserts that a same-length change to an already-oversized covered file
+    commits. This record's third arm refuses exactly that case when the change added 50
+    measured lines. After this lands, the delivered descriptor holds for ONE shape only: a
+    change that added no MEASURED lines — the surviving shape GE-127f-2's last arm owns
+    ("adding only unmeasured content is free"). The reconciliation is GE-127f-2's to
+    execute because GE-127f-2 owns what "added" means, and it is written out there: the
+    descriptor is NOT deleted and its assertion is NOT weakened, its fixture is pinned to a
+    change that adds no measured lines, and its name and description are amended to say so.
+    Both records land in one change; whoever implements this one must confirm the amended
+    descriptor is green in the same run rather than leaving a mystery failure behind. The
+    narrowing is already recorded on GE-127b's amended_by and GE-127b's criteria stay
+    untouched.
+  - >-
+    NO ARM IN WHICH THE COMMIT COMPLETES MAY BE REACHABLE BY STRIPPING BLANK LINES OR HASH
+    COMMENTS — THIS IS A FIXTURE CONSTRAINT, NOT A SECOND COUNTING RULE. Measured by probe
+    in this worktree: count_content_lines strips triple-quoted regions and block comments
+    ONLY. It does NOT strip `#` line comments (three of them count as 3) and does NOT strip
+    blank lines (four of them count as 4). So deleting whitespace and hash comments is a
+    fully valid, and the cheapest, way to discharge a demand made under this record.
+    Reclassifying which lines count is GE-127d's call and MUST NOT be settled here by
+    writing a second counting rule into this comparison. What IS required here: every
+    fixture whose commit completes must reach its end state by WHOLE CONSTITUENT
+    DEFINITIONS leaving the file — never by blank-line or hash-comment stripping — so no
+    descriptor can be satisfied by the manoeuvre. A fixture that reaches the number the
+    cheap way has failed to exercise the record and must be rebuilt, not accepted.
+  - >-
+    THE DOCSTRING-ONLY LOOPHOLE IS REAL, IS ACCEPTED, AND MUST BE RECORDED RATHER THAN
+    HIDDEN. Because "added" is necessarily counted in the same unit the file's length is
+    counted in (GE-127f-2, consuming GE-127d), a change that adds ONLY docstrings or block
+    comments has added nothing measured and is therefore free at any size — an arbitrarily
+    large docstring-only addition to an already-oversized file commits. That is the honest
+    consequence of refusing to write a second counting rule, not an oversight, and the
+    alternative (counting additions in a different unit from the file) is forbidden in four
+    places in this tree. Whoever implements this must carry that reasoning into the
+    module's own DECISION HISTORY beside the threshold, so the next reader meets the
+    argument rather than the surprise and does not "fix" it by introducing the second rule.
+    Closing it, if it is ever to be closed, is GE-127d's.
+  - >-
+    THE TRAP THAT BIT THIS REPOSITORY TODAY — IF THIS CHANGE ADDS ANY NEW MODULE IMPORTED
+    BY check_file_size.py, BOTH HAND-ENUMERATED FIXTURE LISTS MUST BE UPDATED IN THE SAME
+    CHANGE. unit_tests/commit_guardian/_ge_127a_1_ordinary_commit_fixture.py
+    (PRODUCTION_MODULES) and unit_tests/commit_guardian/_ge_127c_1_scope_fixture.py each
+    copy a hand-maintained list of modules beside check_file_size.py into their temp
+    repositories. Nothing checks either list against the real import graph. When GE-127e-1
+    added the _file_description import, both lists were silently incomplete and six
+    descriptors went red, surfacing as "baseline commit failed" with the actual
+    ModuleNotFoundError visible only inside a captured traceback; it was caught only by
+    rebasing onto main and running the WHOLE commit_guardian suite. Do that run before
+    signing off, whether or not a module was added.
+  - >-
+    HOST AND LAYERING, AND THE REFLEXIVE HAZARD. Prefer keeping the new threshold inside
+    _file_size_ratchet.py beside the comparison it belongs to. If a new module is warranted,
+    it goes INSIDE templates/scripts/commit_guardian/, which build_commit_guardian copies
+    verbatim, so no scripts/build_phases.py deploy-map entry is needed. A module imported
+    from OUTSIDE that directory MUST be added to the deploy map in the same change or the
+    DEPLOYED hook raises ModuleNotFoundError at commit time while every source-tree test
+    stays green. Note that this guard is subject to its own limit and its own ratchet:
+    growing check_file_size.py or _file_size_ratchet.py past 400 counted lines while
+    implementing this record makes the gate refuse the very commit that implements it — and
+    under this record it will then also demand twice what the change added.
+  - >-
+    HOOK-RUNNING COMMITS GET THE BUILD-CLASS TIMEOUT, NOT THE SHORT ONE. Any descriptor
+    that performs a real `git commit` through a `.pre-commit-config.yaml` must use the
+    180-second bound (_HOOK_COMMIT_TIMEOUT_SECONDS), never the 30-second plumbing bound. At
+    30s this construction was observed FLAKY in this worktree today — passing at 28.5s and
+    timing out at ~30s on the same commit — and a TimeoutExpired reads exactly like a real
+    refusal, so the flake is indistinguishable from the behaviour under test. Plain git
+    plumbing keeps the short bound.
+  - >-
+    PROPORTION AND SPLITTING, BECAUSE THIS GATE JUDGES ITS OWN TESTS. The descriptors below
+    do not fit one module under a 400-counted-line limit. Split them across focused test
+    modules sharing ONE fixture helper — the established shape is
+    _ge_127a_1_ordinary_commit_fixture.py (real `git commit` through a one-hook
+    .pre-commit-config.yaml) and _ge_127c_1_scope_fixture.py. When a test module reaches
+    the limit the precedent is SPLIT plus a shared fixture module, never an exemption.
+  - >-
+    Must follow the repo error-handling policy: specific-exception try/except around any
+    read or subprocess; log at WARNING or higher or re-raise; no bare or blind excepts. A
+    swallowed error on the added-line input must never become an added-line count of zero —
+    that collapses the required length back to the previous length for every file and
+    silently restores GE-127b, which is precisely the fail-open GE-127f-2-i exists to make
+    impossible. Route it there.
+  - >-
+    COST BUDGET, BECAUSE THIS RUNS ON EVERY COMMIT. The new threshold may be computed only
+    for files already judged to stand above their permitted length, and must read no file
+    and run no subprocess that was not already run to measure them. A commit that refuses
+    nothing must not become measurably slower than it is today.
+  - >-
+    CANONICAL VERSUS BUILD OUTPUT, AND THE BUILD IS PART OF THE CHANGE.
+    templates/scripts/commit_guardian/ is canonical and tracked; scripts/commit_guardian/
+    and the repo-root .pre-commit-config.yaml are untracked build outputs that build.py
+    overwrites, and templates/commit-guardian/commit_guardian.json is a decoy needing no
+    edit. Edit the canonical template and re-run `python scripts/build.py --target-dir .` —
+    config.py resolves commit_guardian.json beside the DEPLOYED script, so an unbuilt change
+    leaves the running gate on GE-127b's old threshold while every source-tree test passes.
+test_spec:
+  - name: test_ge_127f_1_an_oversized_file_given_back_less_than_twice_what_was_added_is_refused_naming_four_quantities
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: >-
+      In a real temporary git repository with the gate installed, establish a covered file
+      standing at 2,677 measured lines against a permitted length of 400, then stage a
+      change adding 50 measured lines and leaving it at 2,628, and run an ordinary `git
+      commit`. The commit must not complete, and the outcome must state all four
+      quantities — the length before, the length after, the lines the change added, and
+      the length required — all read from the process output, never compared against a
+      literal the test authored beyond the fixture's own construction. Repeat with the
+      same file and the same 50 added lines left at exactly 2,677: also refused, because a
+      change that adds to an already-oversized file and gives back only what it took is no
+      longer sufficient. NAMED MUTATION (mandatory, run it, do not merely describe it —
+      the BA's injection 2, THE MULTIPLIER, carried verbatim): "judge the file against its
+      previous length alone — GE-127b's shipped comparison, unchanged." MUST GO RED: the
+      2,677-line arm left at 2,628, the 2,677-line arm left at exactly 2,677, and the
+      410-line arm left at 401. All three commit under the injection and must be refused.
+      MUST STAY GREEN: the 2,677-line arm left at 2,627, the 410-line arm left at 400, the
+      zero-addition arm, and the under-limit silence arm. This injection is not
+      hypothetical — it is the code that ships today. It is the RED BASELINE for this
+      record and must be captured before any work starts.
+  - name: test_ge_127f_1_an_oversized_file_left_at_previous_length_minus_the_lines_added_commits
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: >-
+      The same 2,677-line covered file with the same 50 added measured lines, left standing
+      at 2,627 — net 50 lines out of the file, the 2x effect — commits cleanly, and is not
+      refused for still standing far above its permitted length. The fixture must reach
+      2,627 by whole constituent definitions leaving the file, never by deleting blank
+      lines or hash comments, which today's measurement rule counts and which would
+      discharge the demand while improving nothing; assert the end length from the gate's
+      own quoted number so a fixture whose size drifted is visible. This is one of the two
+      arms that must STAY GREEN under both of this record's named mutations.
+  - name: test_ge_127f_1_the_demand_is_capped_at_the_permitted_length_and_never_asks_for_more
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: >-
+      A covered file standing at 410 measured lines against a permitted length of 400, with
+      a change adding 50 measured lines, commits when it is left standing at exactly 400 —
+      sixty lines leave the file, not a hundred — and is refused when it is left at 401.
+      Both outcomes are read from the real commit. NAMED MUTATION (mandatory, run it, do
+      not merely describe it — the BA's injection 1, THE CAP, carried verbatim): "judge the
+      file against the previous length minus the lines added, unconditionally, ignoring the
+      permitted length — that is, drop the "less demanding of" and keep only the
+      subtraction." MUST GO RED: the 410-line arm left at exactly 400, which commits today
+      and is refused under the injection because the injection demands 360. MUST STAY
+      GREEN: both 2,677-line refusal arms, the 2,677-line arm left at 2,627, the
+      zero-addition arm, the under-limit silence arm, and EVERY arm of GE-127f-2. This is
+      the single most likely wrong implementation, because "previous minus added" is the
+      memorable half of the rule and the cap is the half that reads like a courtesy. It is
+      not a courtesy: 78 of the 212 oversized files in this repository stand between 400
+      and 500 measured lines, so the cap governs more than a third of the population.
+  - name: test_ge_127f_1_a_change_that_adds_no_measured_lines_to_an_oversized_file_is_free
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: >-
+      The same 2,677-line covered file, with a change that adds no measured lines and
+      removes three, leaving it at 2,674, commits and nothing further is required of the
+      change — the outcome asks nothing more of that file. This is the load-bearing free
+      case of the whole L1 (the urgent correction in a very large file) and the arm that
+      must stay GREEN under both of this record's named mutations and under GE-127f-2's.
+      The three removed lines must be whole constituent definitions, not blank lines or
+      hash comments.
+  - name: test_ge_127f_1_a_file_at_or_below_its_permitted_length_is_not_in_this_population_at_all
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: seam
+    description: >-
+      A covered file standing at 380 measured lines against a permitted length of 400, with
+      a change adding 12 measured lines and leaving it at 392, commits AND no line of the
+      outcome names that file. Guards the seam with GE-127a-1's silence arm: an over-eager
+      end-state rule applied to every file rather than only those already above their limit
+      refuses or reports ordinary growth everywhere. Once a file reaches its permitted
+      length it leaves this regime entirely and GE-127a-1's threshold governs it alone;
+      this descriptor asserts only that this record's comparison does not reach it.
+  - name: test_ge_127f_1_the_cap_and_multiplier_injections_red_their_own_arms_and_leave_the_named_siblings_green
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: >-
+      THE TWO-INJECTION PROOF, RUN AS TWO EXPERIMENTS AND RECORDED AS ONE RESULT. Apply the
+      CAP injection, run every arm above AND every arm of GE-127f-2, and record the
+      outcomes together; then revert, apply the MULTIPLIER injection, and do the same. The
+      REQUIRED OBSERVATIONS, each of which must actually be observed rather than assumed:
+      under the CAP injection the 410-at-400 arm is RED while both 2,677 refusal arms, the
+      2,627 arm, the zero-addition arm, the under-limit silence arm and EVERY ARM OF
+      GE-127f-2 are GREEN; under the MULTIPLIER injection the 2,628 arm, the exactly-2,677
+      arm and the 401 arm are RED while the 2,627 arm, the 400 arm, the zero-addition arm
+      and the under-limit silence arm are GREEN. The stay-green halves are not decoration
+      and are not optional: they are the evidence that the cap and the multiplier are
+      separable and that this record is not a duplicate of GE-127f-2. AN INJECTION RUN THAT
+      REDDENS EVERYTHING IS A FAILURE OF THIS DESCRIPTOR, NOT A STRONGER RESULT — it means
+      the arms were never independent. Both injections must revert cleanly.
+  - name: test_ge_127f_1_the_end_state_verdict_reaches_the_registered_hook_output_and_refusal_status
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: reachability
+    surface_invoked: >-
+      python .leafcutter/scripts/commit_guardian/run_hook.py
+      .leafcutter/scripts/commit_guardian/check_file_size.py
+    description: >-
+      PRODUCTION ENTRY POINT. Run the gate through the registered hook path with an
+      oversized covered file staged short of its required end state and assert the refusal
+      and its four quantities appear in the hook's OWN output stream, in the same per-file
+      block as the length finding, under the ordinary finding exit status rather than an
+      advisory note. A threshold computed by a function nothing at commit time calls is
+      inert, and the shipped gate's comparison is reached only through this path.
+  - name: test_ge_127f_1_the_deployed_copy_applies_the_end_state_threshold_in_a_cold_process
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: deployed
+    description: >-
+      After build.py, the DEPLOYED copy of the gate and every module it imports load and
+      run in a cold process, and the refusal arm and the 2,627 allow arm both hold against
+      it. A new module placed outside templates/scripts/commit_guardian/ without a
+      scripts/build_phases.py deploy-map entry surfaces here as ModuleNotFoundError rather
+      than passing, and a threshold written only into the canonical template and never
+      built fails here instead of passing on source-tree greenness.
+test_rationale: |
+  Every descriptor performs an ordinary `git commit` in a real temporary repository over
+  real history and reads its assertions out of the process output and the commit outcome.
+  Per CLAUDE.md "Gate / Workflow ACs — Verify Behaviorally, Not by Grep" and this record's
+  own doc_link, a test that reads the comparison's source, or calls a threshold function
+  directly, stays green on a gate whose new threshold is computed and never consulted.
+
+  The BA's two named mutations are carried into descriptors verbatim rather than restated
+  as prose. They are load-bearing in opposite directions. The MULTIPLIER injection is not
+  hypothetical — it is the shipped code, so it doubles as this record's red baseline and
+  must be captured before any work starts. The CAP injection guards the half of the rule
+  that reads like a courtesy and in fact governs 78 of the 212 oversized files.
+
+  The dedicated two-injection descriptor exists because the stay-green halves are the
+  separability argument, and a stay-green half that is merely asserted in prose is not
+  observed. Recording "every arm of GE-127f-2 stayed green under both of this record's
+  injections" as a REQUIRED observation is what distinguishes this record from GE-127f-2;
+  the coupling runs the other way (GE-127f-2's injection necessarily reddens this record's
+  refusal arms, because an input read wrong makes any comparison vacuous) and that
+  asymmetry is declared on GE-127f-2 and must be reported there, not suppressed.
+
+  The under-limit descriptor is a seam guard, not a restatement of GE-127a-1's silence: it
+  asserts only that this comparison does not reach a file that is not already over. The
+  reachability and deployed descriptors are not redundant with each other — reachability
+  proves the registered hook path executes the new threshold, deployed proves the BUILT
+  copy and its config are what execute, which is where a missing deploy-map entry surfaces.
+delivers_to:
+  - agent: python-coder
+    ac_id: GE-127f-3
+    contract: >-
+      The per-file end-state comparison and the length it requires the file to stand at or
+      below, emitted on the existing single outcome stream alongside the length before, the
+      length after and the measured lines added. GE-127f-3's demand is the difference
+      between that required length and the length the file actually stands at; it computes
+      nothing of its own and must not derive the demand by a second route. NOTE: GE-127f-3
+      is deliberately NOT enriched yet — it is hard-blocked on INF-800f, which has nothing
+      built — so this contract is stated from this side and is not yet mirrored by an
+      enriched consumer.
+expects_from:
+  - ac_id: GE-127b-1
+    contract: >-
+      The per-file before-versus-after comparison already delivered — each staged covered
+      file's previous length resolved from its HEAD blob, its current length measured with
+      the same single function, and the per-file verdict emitted on the one outcome
+      stream. This record replaces the threshold that comparison is judged against and
+      consumes everything else unchanged.
+  - ac_id: GE-127f-2
+    contract: >-
+      The measured count of lines the staged change PUT INTO each already-oversized covered
+      file — gross, never the file's net growth, counted by the same function that produced
+      both lengths. This record consumes that number as the second operand of its end-state
+      threshold and must not restate how it is defined, nor derive it by subtracting the two
+      lengths it already holds. Its UNAVAILABILITY is floored by GE-127f-2-i and must reach
+      this comparison as a named refusal, never as a count of zero.
+origin_agent: business-analyst
+created: 2026-09-14
+amended_by:
+  - reason: technical-enrichment
+    by: it-po
+    at: 2026-09-14
+    note: 'criteria UNTOUCHED, as are title, level, component, components, depends_on, status,
+      req_status, work_status, priority, roadmap_phase, change_target, risk_surface and notes.
+      PACKAGE SURFACE FALSE, AND MEASURED IN THIS WORKTREE: the two containers
+      WATCHED_REGISTRIES binds on commit_guardian.json were read — `check-file-size` is already
+      a hooks_manifest.hooks id and `file_size` is already a top-level key, and the only thing
+      this record could configure (line_limits) is nested inside it and invisible to the
+      watcher. Nothing is registered; the plain-list spec form is correct and the BP-100k-4
+      fictional-key precedent is not repeated. GE-127f-3''s threshold is NOT pre-declared here.
+      COMPLEXITY M: this changes the THRESHOLD inside GE-127b-1''s shipped comparison and the
+      four quantities the refusal carries; it builds no new engine (contrast GE-127e-1, L) but
+      touches the ratchet, the gate and two fixture modules. THREE DISPOSALS MADE EXPLICIT, all
+      in it_requirements. (1) GE-127b-1''s delivered boundary descriptor
+      test_ge_127b_1_an_oversized_file_left_at_exactly_its_previous_length_commits goes RED
+      under this record''s third arm; it is a deliberate narrowing recorded on GE-127b''s
+      amended_by, is reconciled by GE-127f-2 (which owns "added") by pinning its fixture to a
+      change adding no MEASURED lines rather than by deletion or weakening, and the surviving
+      shape is GE-127f-2''s "adding only unmeasured content is free" arm. (2) THE BLANK-LINE /
+      HASH-COMMENT MANOEUVRE IS NOT CLOSED HERE: reclassifying which lines count is GE-127d''s
+      call and no second counting rule is written into this comparison; instead every arm in
+      which the commit completes is required BY FIXTURE CONSTRAINT to reach its end state by
+      whole constituent definitions leaving the file. Ground truth re-stated correctly from the
+      probe: count_content_lines strips triple-quoted regions and block comments ONLY — hash
+      comments and blank lines DO count. (3) THE DOCSTRING-ONLY LOOPHOLE is named as a known,
+      accepted consequence of counting additions in the file''s own unit, with the reasoning
+      required to be carried into the module''s DECISION HISTORY so a future reader meets the
+      argument rather than the surprise. THE FIXTURE-LIST TRAP that bit this repository today
+      is stated as a requirement: _ge_127a_1_ordinary_commit_fixture.py (PRODUCTION_MODULES)
+      and _ge_127c_1_scope_fixture.py each hand-enumerate the modules copied beside
+      check_file_size.py, nothing checks either against the real import graph, and a missing
+      entry surfaces as "baseline commit failed" with the real ModuleNotFoundError only in a
+      captured traceback. declares_side_effect false — DERIVED, not authored by opinion: the
+      Then clauses assert commit outcomes and printed text, no durable artifact; confirmed by
+      running derive_declares_side_effect over this record (False). test_spec: eight executing
+      descriptors on real commits, two carrying the BA''s named mutations verbatim with their
+      MUST-STAY-GREEN halves intact, one dedicated two-injection proof recording the stay-green
+      halves (including EVERY arm of GE-127f-2) as REQUIRED observations and declaring that an
+      injection reddening everything is a FAILURE of the descriptor, one seam guard on
+      GE-127a-1''s silence, one registered-hook entry point and one deployed cold process.
+      Hook-running commits are pinned to the 180s build-class timeout after a 30s flake today.'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  ONE COMPARISON, EXPRESSED AS AN END STATE, NOT A REMOVAL QUOTA. The whole of this
+  record is a single inequality: the file must end at or below the LESS DEMANDING of
+  (a) its permitted length and (b) the length it stood at before the change minus the
+  measured lines the change added. Everything the user settled falls out of that one
+  expression and none of it needs a second rule:
+    - 2,677 with 50 added → 2,627. Net 50 lines leave the file. The 2x effect.
+    - 410 with 50 added → the less demanding of 400 and 360 is 400. Sixty lines leave
+      the file, not a hundred. The demand is capped at the size standard and nobody
+      refactors two hundred lines when twenty would clear it.
+    - 0 added → the previous length. Free.
+    - at or below the permitted length → out of this regime entirely; GE-127a-1's
+      threshold governs and this comparison must not reach the file at all.
+  An implementation that computes a REMOVAL QUOTA and then checks it has been met will
+  drift from this on the capped arm and on the zero-addition arm, and is the shape to
+  avoid.
+
+  NAMED MUTATIONS — EXECUTE THEM, DO NOT MERELY DESCRIBE THEM. Written so the IT PO can
+  lift them verbatim into test descriptors. Each names the arms that must go RED and the
+  arms that must STAY GREEN; a mutation run that reddens everything is a FAILURE of the
+  descriptor, not a stronger result, because it means the arms are not independent.
+
+  (1) THE CAP. MUTATION: judge the file against the previous length minus the lines
+      added, unconditionally, ignoring the permitted length — that is, drop the "less
+      demanding of" and keep only the subtraction.
+      MUST GO RED: the 410-line arm left at exactly 400, which commits today and is
+      refused under the injection because the injection demands 360.
+      MUST STAY GREEN: both 2,677-line refusal arms, the 2,677-line arm left at 2,627,
+      the zero-addition arm, the under-limit silence arm, and EVERY arm of GE-127f-2.
+      This is the single most likely wrong implementation, because "previous minus
+      added" is the memorable half of the rule and the cap is the half that reads like a
+      courtesy. It is not a courtesy: 78 of the 212 oversized files in this repository
+      stand between 400 and 500 measured lines, so the cap is the arm that governs more
+      than a third of the population.
+
+  (2) THE MULTIPLIER. MUTATION: judge the file against its previous length alone —
+      GE-127b's shipped comparison, unchanged.
+      MUST GO RED: the 2,677-line arm left at 2,628, the 2,677-line arm left at exactly
+      2,677, and the 410-line arm left at 401. All three commit under the injection and
+      must be refused.
+      MUST STAY GREEN: the 2,677-line arm left at 2,627, the 410-line arm left at 400,
+      the zero-addition arm, and the under-limit silence arm.
+      This injection is not hypothetical — it is the code that ships today. It is the
+      red baseline for this record and should be captured before any work starts.
+
+  WHY THE SAME-LENGTH ARM IS HERE AND WHAT IT NARROWS. GE-127b-1 is delivered and green,
+  and one of its boundary descriptors asserts that a change leaving an already-oversized
+  file at exactly its previous length commits, pinning the boundary at strictly
+  greater-than. The third arm above refuses exactly that case when the change added 50
+  lines. This is a deliberate narrowing recorded on GE-127b's amended_by, not a
+  regression, and the full reconciliation — including the one shape under which
+  GE-127b-1's descriptor still holds unchanged — is written on GE-127f-2, which owns
+  what "added" means. Read it before touching that descriptor.
+
+  THE ASYMMETRY WITH GE-127f-2, STATED SO IT IS NOT READ AS DUPLICATION. This record
+  owns the comparison; GE-127f-2 owns one of its inputs. Both of this record's named
+  mutations leave every arm of GE-127f-2 green, which is the evidence that the cap and
+  the multiplier are this record's subject alone. GE-127f-2's named mutation, by
+  contrast, reddens this record's refusal arms as well as its own — necessarily, because
+  an input read the wrong way makes the comparison vacuous whatever the comparison says.
+  That direction of coupling is the reason GE-127f-2 exists as its own record rather
+  than being inferred from this one passing.
+
+  THE GAMING ROUTE THIS RECORD MAKES URGENT, NAMED RATHER THAN INHERITED SILENTLY, AND
+  NOT CLOSED HERE. Verified by probe in this worktree: the measurement rule discards
+  triple-quoted regions and block comments ONLY. Three hash-comment lines measure as 3
+  and four blank lines measure as 4. So deleting blank lines and hash comments is a
+  fully valid way to satisfy a demand made under this record, it improves nothing, and
+  it is the CHEAPEST available response to a demand of 50 or 100 lines. Three things
+  follow and all three are deliberate:
+    - No arm above is satisfied by that manoeuvre. Every arm in which the commit
+      completes reaches its end state by whole constituent definitions leaving the file,
+      never by stripping blank lines or hash comments, and any fixture that reaches the
+      number the cheap way has failed to exercise the record.
+    - Closing it mechanically would require reclassifying which lines are measured, and
+      that is GE-127d's call. It must NOT be settled here by writing a second counting
+      rule into this comparison. This record is the reason the question becomes urgent
+      and that is the whole of its claim on it.
+    - The structural answer the user chose is GE-127f-3: a demand above the
+      author-clearable threshold is discharged by a restructuring specialist rather than
+      by an author racing a gate, and a specialist optimising for structure does not
+      answer "remove a hundred lines" by deleting a hundred blank ones. That protection
+      is real and it is not mechanical. Do not write an acceptance clause that pretends
+      otherwise.
+
+  THE SHUFFLING EXPOSURE, AND THE PART OF IT THAT IS ALREADY COVERED. Moving a hundred
+  existing lines into a neighbouring file satisfies this comparison and improves
+  nothing; moving NEW work into a home of its own is the desired behaviour, and a diff
+  shows the two identically. One half is already fenced by inheritance and should not be
+  re-specified: if the receiving file is itself already oversized, GE-127b refuses the
+  commit, and if the receiving file crosses its limit, GE-127a-1 does. The residual
+  exposure is existing content moved into a NEW file, which has no mechanical backstop
+  at all and rests entirely on GE-127f-3's separation of duties.
+
+  NOT AUTHORED HERE, BY DESIGN: assigned_agent, estimated_complexity, it_requirements,
+  test_spec, test_rationale and declares_side_effect. Those are the IT PO's. The two
+  named mutations above, including which arms must stay green, are written to be turned
+  directly into test descriptors. delivers_to is null because nothing is enriched yet,
+  not because this record is terminal.

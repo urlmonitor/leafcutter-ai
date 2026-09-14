@@ -1,0 +1,184 @@
+id: BO-2400c-1-x
+components:
+  - build_orchestration
+  - injection_builder
+title: "The delivery guarantee holds at any bundle size, and a ceiling announces itself"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given the same lane and the same delivery check exercised twice — once with a bundle at
+    the size the design intends, and once with one several times larger,
+  When each is delivered unaltered,
+  Then both are accepted and both are carried into the context-carrying dispatches,
+  And when each is altered on the way, both are refused,
+  So the size at which the guarantee holds is a property of the check rather than a
+    threshold that has to be rediscovered every time the payload grows.
+
+  Given a bundle far smaller than the size the design names,
+  When it arrives altered,
+  Then it is refused exactly as a large one is,
+  And there is no size beneath which the check is skipped, because the failure of
+    2026-08-31 happened at eighteen kilobytes — under the expectation the design itself
+    states — so being small is not evidence of having arrived intact.
+
+  Given a reply carrying only part of what was produced, which is the shape a limit on how
+    much text can cross the boundary produces,
+  When the lane compares what arrived against what was produced,
+  Then the run ends reporting how much was produced against how much arrived,
+  And it names the shortfall as a shortfall rather than as damaged content, so a ceiling on
+    what can cross is discovered as a ceiling,
+  And a decision to make the payload smaller is then one somebody takes knowingly, rather
+    than a wall a run walks into and reports as something else.
+depends_on: [BO-2400c-1, BO-2400c-1-viii]
+doc_links:
+  - path: docs/known-issues/build-orchestration.md
+    relationship: describes
+    status: exists
+    relevance: "KI-BO-019 twice states a size conclusion and twice revises it. Occurrence one concluded the contract was unsound at 149 KB and would fail on comparably sized targets; occurrence two failed at 18 KB and the entry then records that the contract is unsound at any size. This record is written against the corrected conclusion."
+  - path: docs/reference/workflow-constraints.md
+    relationship: describes
+    status: exists
+    relevance: "Added by the IT PO 2026-09-14. If a ceiling on how much text can cross the agent boundary exists, this is the page it belongs on once measured — the third scenario exists to turn an unknown limit into a number, and a number nobody records is discovered again next time."
+origin_agent: BrainCandy
+created: 2026-09-14
+amended_by:
+  - agent: it-po
+    date: "2026-09-14"
+    reason: "TECHNICAL ENRICHMENT ONLY — criteria, title, level, depends_on, covered_by, declares_side_effect, change_target, risk_surface, test_required, test_rationale and notes are untouched. Added assigned_agent, estimated_complexity, it_requirements, delivers_to, expects_from, test_spec, one doc_link, and readiness draft -> reviewed. What this pass adds. (1) THE ANTI-THRESHOLD RULE IS STATED AS A PROHIBITION ON A CODE SHAPE, not as a property of outcomes: no branch may gate, skip or shortcut the comparison on a size, because a size-gated check is the optimisation most likely to be reached for once the check exists and the payload is usually small — and the 2026-08-31 failure was 18,190 bytes. Paired with a performance statement so nobody has to guess whether the optimisation is needed: a digest over 150 KB costs under a millisecond, so there is no latency argument for making the check conditional. (2) THE SHORTFALL TEST IS BOUNDED BY WHAT THE LANE CAN KNOW. The lane does not hold the produced bytes and cannot prove the received text is a genuine prefix of them; what it can do is compare the stated byte count against the received one and report both. Written the other way, this criterion would be unimplementable within the engine's constraints. (3) The shortfall message is required to be built at the SAME site as BO-2400c-1-ix's four causes, so the two records cannot drift into two sites. implemented_by deliberately left empty — in this family it is a back-reference populated at done."
+superseded_by: null
+covered_by: []
+implemented_by: []
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  config_schema_fragment:
+    fast_lane_delivery_shortfall_report:
+      type: object
+      description: >-
+        A fifth disjoint cause at the same halt-message site: the reply carried less than
+        what was produced. Shape: {phase: "context-bundle", cause: "delivery_shortfall",
+        message: str, stated_bytes: int, received_bytes: int, shortfall_bytes: int}.
+        Determined by comparing the producer-stated byte count against the received length
+        — the only comparison the lane can make, since it does not hold the produced bytes
+        and cannot prove prefix-ness. The message names a SHORTFALL and reports both
+        quantities; it does not describe the payload as damaged, because a ceiling on what
+        can cross the boundary is a different finding from corruption and leads somewhere
+        different. The integrity comparison itself is not conditioned on any size, at
+        either end of the range.
+  reference_file_path: "templates/workflows-js/fast-lane-ship.js"
+  n_location_rule: "2"
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python scripts/build.py --target-dir ."
+  constraints:
+    - "SCOPE — JAVASCRIPT ONLY, AND MOSTLY A PROOF OBLIGATION. The mechanism is BO-2400c-1-viii's and the message site is BO-2400c-1-ix's; this record adds one distinction and one reporting duty on top of them, and otherwise exists to prove a property that has twice been assumed and twice been wrong. The two locations counted by n_location_rule are in templates/workflows-js/fast-lane-ship.js: (1) classifyContextBundle, currently ~297-390, where a received length short of the stated one is separated from a general alteration; (2) the shared halt-message site reached from the gate at ~1077-1090, where the shortfall cause is named with both quantities."
+    - "NO SIZE THRESHOLD ANYWHERE IN THE CHECK. The comparison must not be gated on a size, skipped below one, shortcut above one, or given a separate code path for 'large' bundles. One path, exercised at both sizes. The failure of 2026-08-31 occurred at 18,190 bytes — under the roughly twenty kilobytes the design itself targets, and after the layer cut that produced that target had already landed — so smallness is not evidence of having arrived intact, and any 'if (bytes > N)' around the comparison reintroduces precisely the defect it was added to catch."
+    - "AND THERE IS NO PERFORMANCE ARGUMENT FOR ONE, SO DO NOT INVENT ONE. A digest over a 150 KB payload completes in well under a millisecond against a run that takes minutes and spans five or more agent dispatches. The integrity comparison must add no measurable latency at any size this lane produces, and must not be made conditional in the name of speed. Stated explicitly because the threshold this constraint forbids is the kind of thing added later, in good faith, by someone optimising a hot path that is not hot."
+    - "A SHORTFALL IS DETERMINED BY THE QUANTITIES, NOT BY PROVING PREFIX-NESS. The lane does not hold the produced bytes — that is the whole premise of BO-2400c-1-viii — so it cannot establish that what arrived is a genuine prefix of what was produced. What it can establish is that the received length is short of the stated length, and that is sufficient to name the finding and report it. Do not specify or implement any check that would require the produced text on the consuming side; it is not available and never will be under this engine."
+    - "NAME THE SHORTFALL AS A SHORTFALL, AT THE EXISTING SITE. The message reports how much was produced against how much arrived, and does not describe the content as damaged. Truncation is the one alteration a reader can act on directly, and it is the one that is misreported as corruption when the quantities are not named. Build it at the SAME construction site as BO-2400c-1-ix's four causes — a second site lets the two records' messages drift apart while each one's own tests stay green — and make it pairwise distinguishable from the altered-in-transit message, since both are true statements about a reply that is not what was produced."
+    - "THIS RECORD DOES NOT ASK FOR A SIZE LIMIT AND MUST NOT PRODUCE ONE. No cap, no truncation, no summarisation, no chunking, no maximum-size rejection. BO-2400c-1-vi owns composition and requires smallness to be a consequence of what the bundle contains rather than of a cap; BO-2400c-1-iii's size expectation is explicitly a belt and not a mechanism. The third scenario detects and names a shortfall that has already happened. If a transport ceiling exists, this record turns it into a measurement the first time it is hit — which is the difference between a wall that has been located and a wall that has been moved."
+    - "NO GREP TESTS, AND SPECIFICALLY NO TEST MAY ASSERT A BYTE CONSTANT FOUND IN THE LANE'S SOURCE. The claim is about behaviour at two sizes; an assertion about a constant in fast-lane-ship.js is compatible with the check never running at either. Every test executes the lane under unit_tests/_workflow_engine_harness.py, and the two-size test must parameterise ONE test over both sizes rather than duplicate it — two tests drift apart and stop comparing anything, which is the failure this record was written to prevent at the level of the code."
+delivers_to:
+  - agent: python-coder
+    contract: "A halt payload that, on a short reply, states how much was produced against how much arrived. This is the measurement that converts an unknown ceiling on what can cross the agent boundary into a recorded number; whoever records it should put it in docs/reference/workflow-constraints.md, where the engine's other hard limits already live."
+expects_from:
+  - ac_id: BO-2400c-1-viii
+    contract: "The size-independent integrity comparison and the producer-stated byte count. This record adds no mechanism of its own: without -viii there is nothing whose size-independence could be exercised, and no stated quantity to set the received one against."
+  - ac_id: BO-2400c-1
+    contract: "The assembled bundle at its design size, and the ability to assemble a materially larger one from a larger real input — the two-size test requires both to be produced by running the assembly, not hand-written, or it proves nothing about the real payload."
+test_required: true
+test_spec:
+  - name: test_delivery_guarantee_holds_at_two_sizes
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    surface_invoked: "python3 scripts/injection_builders.py assemble-bundle"
+    description: "ONE test parameterised over two bundle sizes differing by close to an order of magnitude, both produced by running the assembly over real inputs rather than hand-written: intact is verified and reaches both context-carrying prompts at both sizes, altered is refused at both. Parameterising rather than duplicating is the point — two separate tests drift apart and stop comparing anything, which is how a size-specific conclusion got drawn twice from this family's evidence."
+  - name: test_altered_small_bundle_is_still_refused
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: boundary
+    description: "Deliver an altered bundle of a few kilobytes — well below the size the design states as its expectation — and assert it is refused exactly as a large one is. This test fails against any implementation that gates, skips or shortcuts the comparison on a size threshold, which is the optimisation most likely to be reached for once the check exists and the payload is usually small."
+  - name: test_truncated_reply_reports_stated_and_received_quantities
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: failure
+    description: "Deliver a genuine prefix of what was produced together with the producer's stated value and byte count for the whole. Assert the run ends and that HarnessResult.result carries BOTH quantities and names the shortfall as a shortfall. Asserting only that the run ended passes on an implementation that reports it as corruption, which is the misreading this scenario exists to prevent."
+  - name: test_shortfall_and_altered_messages_are_distinguishable
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: seam
+    description: "Drive a truncated reply and an equal-length altered reply in ONE test and compare the two terminal messages: neither is a restatement or a superset of the other, and a check written for one is not satisfied by the other. Both are true statements about a reply that is not what was produced, so one undifferentiated wording would satisfy each in isolation."
+  - name: test_no_context_carrying_dispatch_at_either_size_when_altered
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: reachability
+    surface_invoked: ".claude/workflows/fast-lane-ship.js (top-level body under run_workflow_under_e2)"
+    description: "At both sizes and on the shortfall path, HarnessResult.agent_calls records no test-writer-connected or coder-connected dispatch — proving the refusal is reached and terminates the run at every size rather than being defined once and skipped at one of them."
+test_rationale: |
+  The claim is that a guarantee is size-independent, and the only way to falsify that is to
+  exercise it at more than one size. A single test at the design size is exactly the
+  evidence that existed before 2026-08-31 and it was not evidence at all.
+
+  Run the same delivery scenarios twice with bundles that differ by close to an order of
+  magnitude, both produced by actually running the assembly rather than hand-written, and
+  assert identical outcomes: intact is used at both sizes, altered is refused at both.
+  Parameterising one test over two sizes is the point — two tests that drift apart stop
+  comparing anything.
+
+  Run the altered case at a size well below the stated expectation — a few kilobytes — and
+  assert it is still refused. This test fails against any implementation that gates the
+  check on a size threshold, which is the optimisation most likely to be reached for once
+  the check exists and the payload is usually small.
+
+  Run a truncation case: deliver a genuine prefix of what was produced, with the producer's
+  stated value for the whole. Assert the run ends and that the terminal output carries both
+  quantities. Truncation is the one alteration a reader can act on directly, and it is the
+  one that gets misreported as corruption if the quantities are not named.
+
+  No test here may assert a byte count found in the lane's source. The size-independence
+  claim is about behaviour at two sizes; a source assertion about a constant is compatible
+  with the check never running at either.
+declares_side_effect: false
+change_target: pipeline
+risk_surface: internal
+notes: |
+  WHY SIZE GETS ITS OWN RECORD RATHER THAN A CLAUSE. Size has been the wrong answer twice in
+  this family's history and the wrong answer has been load-bearing both times. Occurrence
+  one produced "the contract is unsound at this size", which licensed a fix aimed at making
+  the payload smaller. The payload was made smaller — BO-2400c-1-vi cut it from 148,891
+  bytes to roughly 20 KB, correctly and for good independent reasons — and occurrence two
+  then failed at 18,190 bytes. Recording the size-independence of the guarantee as its own
+  criterion is what stops the next reader reaching the same conclusion a third time from the
+  same evidence.
+
+  THIS RECORD DOES NOT ASK FOR A SIZE LIMIT, AND SPECIFICALLY DOES NOT ASK FOR THE PAYLOAD
+  TO BE SMALLER. BO-2400c-1-vi owns composition and states plainly that smallness must be a
+  consequence of what the bundle contains and never of a cap, a truncation or a
+  summarisation step. Nothing here contradicts that: the third scenario is about detecting
+  and naming a shortfall that has already happened, not about imposing one.
+
+  WHAT THE THIRD SCENARIO IS ACTUALLY FOR. Nobody currently knows whether a ceiling on what
+  can cross the boundary exists or where it is. If one does, a run that meets it today
+  produces a truncated reply that reads as corrupted content, and the finding would be filed
+  as a third occurrence of the same mystery. Requiring the quantities to be reported turns
+  an unknown limit into a measurement the first time it is hit. That is the difference
+  between a wall that has been moved and a wall that has been located.
+
+  ON THE 2026-08-31 SIZE READING. The reply reported 18,190 bytes for a bundle the design
+  targets at roughly 20 KB, so the producer was operating exactly where it was asked to. The
+  corruption was introduced by the transport, not by volume — the source document on disk
+  contains no escaped entities at all, confirmed at the time. Any future criterion in this
+  family that reasons from size should cite that measurement before it does.

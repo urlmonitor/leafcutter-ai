@@ -1,0 +1,245 @@
+id: GE-127f-3
+title: "Any addition engages the rule, and the outcome states how much must leave the file and whether the author may take it out or a restructuring specialist is asked to"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - build_orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a threshold, separating a demand an author may discharge inside the same
+    change from one that is handed to a restructuring specialist, is settled at
+    technical enrichment and is at least one measured line,
+  And a tracked file of a kind the size standard covers stands at 2,677 measured
+    lines before the change, against a permitted length of 400,
+  And a change is staged that replaces one measured line of that file with one
+    different measured line, so the file still stands at 2,677,
+  When the author performs an ordinary commit,
+  Then the commit does not complete — there is no size of addition small enough
+    for an already-oversized file to be exempt from the rule,
+  And the outcome states that one measured line must leave the file, and states
+    that a demand of that size may be discharged by the author inside this change,
+  And given the same change with one further measured line taken out, leaving the
+    file at 2,676,
+  When the author performs an ordinary commit,
+  Then the commit completes,
+  And given instead the same 2,677-line file and a change whose demand exceeds
+    that threshold,
+  When the author performs an ordinary commit,
+  Then the commit does not complete, and the outcome states how many measured
+    lines must leave the file and states that a demand of that size is handed to a
+    restructuring specialist rather than to the author inside this change,
+  And given a tracked covered file standing at 410 measured lines against a
+    permitted length of 400, refused with a demand that exceeds the threshold,
+  When the author reads the outcome,
+  Then it states that this demand too is handed to a restructuring specialist,
+  And given the 2,677-line file refused with a demand of one measured line,
+  When the author reads the outcome,
+  Then it states that this demand may be discharged by the author — so which of
+    the two the author is told follows from the size of the demand alone, and
+    never from how large the file is or how far above its permitted length it
+    stands.
+depends_on:
+  - GE-127f
+doc_links:
+  - path: docs/acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/GE-127f.yaml
+    relationship: parent
+    status: exists
+  - path: docs/acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/GE-127f-1.yaml
+    relationship: depends_on
+    status: exists
+    relevance: >-
+      PRODUCES THE DEMAND THIS RECORD DISPOSES OF. The number of measured lines that
+      must leave the file is the difference between the length the file stands at after
+      the change and the length GE-127f-1's end-state comparison requires it to stand at
+      or below. This record computes nothing of its own: it states that quantity and
+      classifies it. Do not restate the inequality or its cap here.
+  - path: docs/acceptance-criteria/infrastructure/INF-800-safe-restructuring/INF-800f.yaml
+    relationship: depends_on
+    status: exists
+    relevance: >-
+      HARD PRECONDITION — THIS RECORD CANNOT BE BUILT BEFORE IT, AND IT IS NOT
+      DECOMPOSED HERE. INF-800f makes the restructuring specialist a first-class,
+      dispatchable agent rather than a slash command reachable only by hand. This record
+      names the specialist as the party a demand above the threshold is handed to; it
+      does not create, define or dispatch it. Sequence behind INF-800f and do not
+      re-specify it.
+  - path: docs/acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/GE-127e.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      BOUNDARY, AND THIS IS THE RECORD MOST LIKELY TO BLUR IT. GE-127e owns what a
+      refusal SAYS and how useful it is — the parts, the division, the honesty about
+      what it can offer. This record adds two computed facts to the verdict: how many
+      measured lines must leave the file, and which of the two dispositions applies to a
+      demand of that size. It takes no position on wording, ordering, framing or
+      helpfulness, and no clause here may be discharged by improving a message.
+  - path: docs/acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/GE-127c.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      THE PRECEDENT FOR LEAVING A NUMBER TO ENRICHMENT. GE-127c states the principle and
+      lets the IT PO pin the concrete list, because the criteria must survive the answer
+      changing. The threshold here is left the same way: the criteria fix that a
+      threshold exists, that it is at least one measured line, and that the disposition
+      follows from the demand alone. The value itself is an enrichment decision and a
+      criterion here that names a number is at the wrong altitude.
+  - path: docs/acceptance-criteria/build_pipeline/BP-1600-counted-from-reality/BP-1600a-2.yaml
+    relationship: depends_on
+    status: exists
+    relevance: >-
+      PRECONDITION, NOT SCOPE — INHERITED FROM THE WHOLE TREE AND NOT RESTATED.
+  - path: templates/scripts/commit_guardian/check_file_size.py
+    relationship: modifies
+    status: exists
+  - path: templates/workflows/code-refactoring-specialist.md
+    relationship: related
+    status: exists
+    relevance: >-
+      Where the restructuring craft lives today, reachable by hand and by nothing else.
+      Cited so the specialist this record names is identifiable; making it dispatchable
+      is INF-800f's and dispatching it is build-orchestration's.
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+  - path: docs/pre-commit-hooks.md
+    relationship: related
+    status: exists
+  - path: CLAUDE.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      "Gate / Workflow ACs — Verify Behaviorally, Not by Grep" is binding twice over
+      here. A test that greps an agent template, a workflow file or a prompt for the
+      specialist's name proves nothing about a commit outcome, and separation of duties
+      is exactly the property most likely to attract such a test. Every arm above is an
+      ordinary commit in a real repository, and the two facts asserted are read out of
+      the commit's own output.
+delivers_to: null
+expects_from:
+  - ac_id: GE-127f-1
+    contract: >-
+      The per-file end-state comparison and the length it requires the file to stand at
+      or below. The demand this record states and classifies is the difference between
+      that required length and the length the file actually stands at; it is not a
+      second computation and must not be derived by a second route.
+  - agent: build-orchestration
+    contract: >-
+      THE OTHER HALF OF THE PROMISE, NAMED HERE AND DELIBERATELY NOT DECOMPOSED HERE. A
+      commit-time gate can only REFUSE; it cannot summon anyone. What this record
+      delivers is a refusal carrying a demand and a disposition. What the supervisor /
+      build-orchestration layer must deliver in return, on a refusal whose disposition is
+      the specialist, is the sequence: the author's change is held, the restructuring
+      specialist (INF-800f) is dispatched against the named file with the named demand,
+      the specialist restructures, and the commit is retried. That sequence is provable
+      only by a reachability-angle test that the specialist is actually dispatched on the
+      refusal path, and it belongs in build-orchestration's own tree. NO AC IN THIS TREE
+      MAY SPECIFY DISPATCH MECHANICS INSIDE THE HOOK, and none does. A separate Product
+      Owner pass is required to author that half; until it exists, this record's
+      disposition is a statement in an outcome and nothing acts on it.
+origin_agent: business-analyst
+created: 2026-09-14
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  TWO QUESTIONS, AND THEY MUST NOT BE CONFLATED — THIS IS THE USER'S DECISION OF
+  2026-09-14, TAKEN AFTER THE PRODUCT OWNER RAN AND SETTLING THE EDGE THE L1's NOTES
+  LEFT OPEN.
+    (1) DOES THE RULE APPLY? Always, on any addition. There is no threshold below which
+        an already-oversized file may be added to for free. The Product Owner was right
+        that "zero addition is free" is literally true only of a change that adds
+        nothing, and that under gross counting a one-line correction which REPLACES a
+        line adds one. The user did not close that gap by exempting small changes.
+    (2) MUST A SPECIALIST DO THE WORK? Only above a threshold. Below it the author takes
+        the lines out inside the same change. This is what keeps the rule from
+        dispatching a restructuring specialist to delete two lines for a typo fix, which
+        is a real cost and not a rounding error.
+  An implementation that answers (1) with (2)'s threshold has deleted the rule for every
+  small change, and that is the named mutation below. An implementation that answers (2)
+  with "always the specialist" has made the urgent one-line correction expensive in the
+  way the L1's second decision exists to prevent.
+
+  THE THRESHOLD'S VALUE IS AN ENRICHMENT DECISION, FOLLOWING THIS TREE'S PRECEDENT. The
+  criteria fix three things only: a threshold exists, it is at least one measured line
+  (otherwise the author-clearable band is empty and decision (2) does not exist), and
+  the disposition follows from the size of the DEMAND rather than from the size of the
+  file. Pinning the number is the IT PO's, exactly as GE-127c authors the principle and
+  leaves the concrete list to enrichment. Two measured facts belong in that decision
+  rather than in the criteria: the median oversized file in this repository stands at
+  551 measured lines, and 78 of the 212 oversized files stand between 400 and 500, so
+  the capped arm of GE-127f-1 puts a large share of real demands in the tens rather than
+  the hundreds.
+
+  NAMED MUTATIONS — EXECUTE THEM, DO NOT MERELY DESCRIBE THEM.
+
+  (1) THE LOOPHOLE. MUTATION: exempt a change from the end-state rule entirely when its
+      measured addition is at or below the threshold, rather than only routing the work
+      to the author.
+      MUST GO RED: the one-line replacement arm, which must be refused and commits under
+      the injection.
+      MUST STAY GREEN: every above-threshold arm here, and both refusal arms of
+      GE-127f-1, whose additions of 50 measured lines sit above any threshold enrichment
+      can defensibly pin.
+      EXPECTED COUPLING, TO BE REPORTED RATHER THAN SUPPRESSED: if enrichment pins the
+      threshold at five measured lines or more, GE-127f-2's five-line replacement arm
+      also reds under this injection. That is a true consequence of the injection and
+      not a defect in either record; record which threshold value the run used.
+
+  (2) THE BAND. MUTATION: hand every demand to the restructuring specialist, removing
+      the author-clearable band entirely.
+      MUST GO RED: the one-line disposition arm, which must state that the author may
+      discharge it.
+      MUST STAY GREEN: every above-threshold arm here, and EVERY arm of GE-127f-1 and
+      GE-127f-2, neither of which says anything about who removes the lines. That green
+      half is the evidence that the disposition is this record's subject alone and that
+      the three records are not restatements of one another.
+
+  WHAT IS NOT MECHANICALLY ENFORCEABLE HERE, STATED PLAINLY RATHER THAN PAPERED OVER.
+  Two things, and both were named by the Product Owner:
+    - SEPARATION OF DUTIES CANNOT BE CHECKED AT COMMIT TIME. A commit is one diff under
+      one identity, and nothing in it distinguishes a hundred lines removed by the
+      author from a hundred removed by a specialist. No clause above asserts that the
+      restructuring WAS performed by the specialist, and none may be added. What is
+      checkable is what the refusal states: the demand, and which party it is handed to.
+      A test that proves separation of duties by inspecting a prompt file, an agent
+      template or a workflow definition is a grep-shaped test on a workflow property and
+      is forbidden by CLAUDE.md; it would stay green on a gate that never runs.
+    - THE ANTI-SHUFFLING PROTECTION HAS NO MECHANICAL BACKSTOP. Moving NEW work out of
+      an oversized file into a home of its own is the desired behaviour; moving EXISTING
+      content out purely to make a number fall is the failure; a diff shows both
+      identically. The protection rests entirely on the specialist's judgement, which is
+      precisely the user's stated reason for requiring one. The same is true of the
+      cheaper manoeuvre named on GE-127f-1 — deleting blank lines and hash comments,
+      which today's measurement rule counts and which therefore discharges a demand
+      while improving nothing. This record's band is the only structural answer to
+      either: above the threshold the author is not the one who does the work, and a
+      specialist optimising for structure does not answer a demand by stripping
+      whitespace. That answer is real, it is the user's, and it is a matter of who is
+      asked rather than of what a gate can detect. Do not write an acceptance clause
+      that implies otherwise.
+
+  THE SEAM WITH BUILD-ORCHESTRATION, NAMED AND NOT CROSSED. The RULE — the comparison,
+  the refusal, the demand and the disposition — is the guardrail tree's and is what this
+  subtree delivers. The HANDOFF — author hits the rule, work passes to the specialist,
+  the specialist restructures, the commit is retried — is a sequencing property of the
+  supervisor layer, provable only by a reachability-angle test that the specialist is
+  actually dispatched on the refusal path. It is expressed above as an expects_from
+  contract on build-orchestration and is NOT decomposed here, because authoring ACs in
+  another component's tree is not this agent's to do. A separate Product Owner pass is
+  needed for that half, and until it lands the disposition this record emits is a
+  statement nobody acts on. That is a known, deliberate partial delivery, not an
+  oversight.
+
+  NOT AUTHORED HERE, BY DESIGN: assigned_agent, estimated_complexity, it_requirements,
+  test_spec, test_rationale and declares_side_effect. The two named mutations above,
+  including which arms must stay green and which coupling is expected, are written to be
+  turned directly into test descriptors.

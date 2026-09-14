@@ -1,0 +1,199 @@
+id: BO-3800b-1
+title: "On the refusal path the restructuring specialist is actually engaged by the run, and is engaged before delivery is attempted again"
+component: build-orchestration
+components:
+  - build_orchestration
+  - supervisor_system
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a ticket is being driven and delivery is refused with an outcome that
+    names one file, states a demand of 120 measured lines against it, and states
+    that a demand of that size is handed to a restructuring specialist rather than
+    to the author inside this change,
+  When the run adjudicates that refusal,
+  Then the run engages the restructuring specialist,
+  And that engagement is observable as a step the run actually took — it appears
+    in the ordered record of parties the run engaged, alongside the parties engaged
+    before the refusal, and it is not evidenced by the specialist's name appearing
+    in a template, a workflow definition, a prompt, a routing table, a
+    configuration file or a line the run printed without acting on,
+  And the party engaged is the restructuring specialist and not some other party
+    the run had to hand,
+  And the engagement appears in that record BEFORE the entry for the second
+    delivery attempt,
+  And given instead the same refusal with its stated disposition changed in one
+    respect only — it states that the demand is one the author may discharge
+    inside this change,
+  When the run adjudicates that refusal,
+  Then no restructuring specialist appears in the record of parties the run
+    engaged, so the engagement follows the disposition the refusal states and is
+    not something this run does on every refusal.
+depends_on:
+  - BO-3800b
+doc_links:
+  - path: docs/acceptance-criteria/build-orchestration/BO-3800-refusal-summons-specialist/BO-3800b.yaml
+    relationship: parent
+    status: exists
+  - path: docs/acceptance-criteria/infrastructure/INF-800-safe-restructuring/INF-800f.yaml
+    relationship: depends_on
+    status: exists
+    relevance: >-
+      HARD PRECONDITION — NOT RE-SPECIFIED AND NOT DECOMPOSED HERE. INF-800f makes the
+      restructuring craft a first-class identity a supervisor can ask for, rather than a
+      slash command reachable only by a human. This record engages that party; it does not
+      create, define, register, scope or configure it. Nothing above is buildable before it.
+  - path: docs/acceptance-criteria/build-orchestration/BO-3000a.yaml
+    relationship: depends_on
+    status: exists
+    relevance: >-
+      THE SHIPPED ROUTING, REUSED AND NOT RESTATED. BO-3000a already re-dispatches a named
+      target before any later phase runs and refuses diagnosably when the target is absent
+      or unrecognised. Those behaviours are consumed. What it cannot supply is the trigger —
+      it routes a handoff an AGENT emitted and targeted, and a refusing standard emits no
+      handoff and names no target — and supplying that trigger is the whole of this record's
+      novelty. Do not re-implement the routing beside it.
+  - path: docs/acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/GE-127f-3.yaml
+    relationship: depends_on
+    status: exists
+    relevance: >-
+      STATES WHICH PARTY A GIVEN DEMAND GOES TO. This record acts on that stated
+      disposition and takes no position on where the line between the two dispositions
+      falls, nor on how the demand was computed.
+  - path: docs/architecture/adrs/ADR-019-build-feature-inline-phase-dispatch.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      THE CONSTRAINT THAT DECIDES WHICH LAYER DOES THE ENGAGING, AND WHOSE VIOLATION IS
+      SILENT. An agent invoked via the Agent tool runs at depth 1 and cannot itself invoke
+      the Agent tool — calls beyond depth 1 are SILENTLY DROPPED. The delivery step is
+      itself a depth-1 agent, so it cannot be the party that engages the specialist; the
+      asking must be done by the depth-0 driver that owns the phase loop. An implementation
+      that puts the ask inside the delivery step produces a run in which nobody is engaged
+      and nothing complains, which is indistinguishable from this record not being built.
+  - path: templates/workflows/code-refactoring-specialist.md
+    relationship: related
+    status: exists
+    relevance: >-
+      Where the restructuring craft lives today — reachable by hand and by nothing else.
+      Cited so the party is identifiable. Making it askable is INF-800f's; what it does
+      once asked is INF-800's.
+  - path: CLAUDE.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      "Gate / Workflow ACs — Verify Behaviorally, Not by Grep", binding twice over here.
+      Separation of duties is the single property in this tree most likely to attract a test
+      that greps a template, a workflow file or a prompt for the specialist's name — a test
+      that stays green on a handoff that never fires. fast-lane-build.js is this repository's
+      own scar on exactly that shape: it passed its grep-only structural tests while never
+      executing its red/green gates. The second clause above exists to make that test
+      inadmissible as coverage.
+delivers_to:
+  - ac_id: GE-127f-3
+    contract: >-
+      The WHO half of GE-127f-3's expects_from: on a refusal whose stated disposition is
+      the restructuring specialist, that specialist is actually engaged by the run, before
+      delivery is attempted again. What the specialist is told is BO-3800c's; that the
+      author is not engaged instead is BO-3800b-2's.
+expects_from:
+  - ac_id: INF-800f
+    contract: >-
+      A restructuring specialist a supervisor can engage as part of an ordinary workflow,
+      with its own identity, tool set, invocation path and sign-off protocol.
+it_requirements:
+  - "HELD — DELIBERATELY NOT ENRICHED. No assigned_agent, no estimated_complexity and no
+    test_spec are authored for this record, on purpose. It is blocked on INF-800f
+    (infrastructure; readiness reviewed, covered_by empty, nothing built). The restructuring
+    craft exists today only as templates/workflows/code-refactoring-specialist.md — a slash
+    command reachable by a human at a terminal and by nothing else. It has NO entry in
+    config/agent_registry.json, NO position in the phaseOrder twins in
+    templates/workflows-js/build-feature.js and build-ticket.js, and NO defined result
+    contract. Every arm of this record asserts WHICH PARTY the run engaged, so a test_spec
+    here would have to name a dispatch key, an agent id or a result field that does not
+    exist. That is the BP-100k-4 mistake this store has already made once — declared config
+    keys that were never created — which leaves a spec less trustworthy than no spec."
+  - "WHAT WOULD UNBLOCK IT: INF-800f landing with (a) the specialist's agent id registered in
+    config/agent_registry.json, (b) its position in the phaseOrder twins in
+    templates/workflows-js/build-feature.js and templates/workflows-js/build-ticket.js, and
+    (c) the shape of the result it returns to the driver. With those three facts in hand this
+    record is enrichable in a single pass and nothing else about it changes. Its named
+    mutations, including their must-go-red and must-stay-green lists, are already written to
+    be lifted verbatim into descriptors."
+  - "CONSTRAINT THAT SURVIVES THE HOLD AND MUST BE HONOURED WHEN IT IS LIFTED: the engaging
+    party is the depth-0 driver that owns the phase loop, never the delivery step. ADR-019 —
+    an agent at depth 1 cannot invoke the Agent tool and such calls are silently dropped, so
+    an ask placed inside the delivery step engages nobody and complains about nothing."
+  - "SECOND CONSTRAINT THAT SURVIVES THE HOLD: the routing seam is decided on BO-3800b-2's
+    it_requirements — route on the disposition the refusal states, never on the hook id, and
+    leave blocking_hook_ids unchanged."
+origin_agent: business-analyst
+created: 2026-09-14
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  THIS IS THE ONLY CLAIM ABOUT THE SPECIALIST THAT IS TRUE AND PROVABLE, AND IT IS
+  DELIBERATELY NOT THE STRONGER ONE. BO-3800's notes and BO-3800b's notes both fix this and
+  neither may be widened at decomposition: separation of duties is invisible at delivery
+  time — one change, one identity, and nothing distinguishes a hundred lines removed by the
+  author from a hundred removed by a specialist. NO CLAUSE ABOVE ASSERTS THAT THE
+  RESTRUCTURING WAS PERFORMED BY THE SPECIALIST, and none may be added. What is asserted is
+  a SEQUENCING property about the run: the specialist is engaged, and engaged before the
+  retry. That is reachability-shaped, it is observable, and it is the weakest claim that
+  still cannot be satisfied by a system which does nothing.
+
+  THE SECOND ARM IS NOT BO-3800e IN DISGUISE. The author-clearable arm here holds the
+  refusal fixed and moves ONE field — the disposition — and requires the engagement to move
+  with it. Without that pairing, a single-run assertion that "the specialist was engaged" is
+  satisfied by an implementation that engages one on every refusal, which is the single most
+  likely wrong build in this tree. BO-3800e-1 makes a different claim about the same
+  population: that the author-clearable route is the one that ships TODAY, unchanged, with
+  its own parties and its own outcome. This arm says only that the engagement MOVED. The
+  construction is BP-900c-4-i's, reused via GE-127e-2 rather than reinvented: a test whose
+  assertion holds on a single run cannot fail on the implementation the record exists to
+  exclude.
+
+  NAMED MUTATIONS — EXECUTE THEM, DO NOT MERELY DESCRIBE THEM. Written so the IT PO can
+  lift them verbatim into test descriptors.
+
+  (1) THE INERT ASK — THIS REPOSITORY'S OWN SCAR, REPRODUCED ON PURPOSE. MUTATION: on a
+      refusal whose disposition names the specialist, write the specialist's name and the
+      demand into the run's output and continue straight to the second delivery attempt
+      without engaging anyone.
+      MUST GO RED: the engagement-actually-took-place arm and the engagement-precedes-the-
+      retry arm.
+      MUST STAY GREEN: every arm of BO-3800a-1 — the change is still held and still
+      re-offered — and both arms of BO-3800e-1 and BO-3800e-2. That green half is the
+      evidence that this record's teeth are in the ASK and not in the hold.
+      WHY THIS ONE IS MANDATORY: it is the exact shape of fast-lane-build.js, which passed
+      its grep-only structural tests while never executing its gates. A descriptor that goes
+      GREEN under this injection is not covering this record, whatever else it proves.
+
+  (2) THE LATE ASK. MUTATION: attempt delivery a second time first, and engage the
+      restructuring specialist afterwards.
+      MUST GO RED: the engagement-precedes-the-retry arm.
+      MUST STAY GREEN: the engagement-took-place arm, the party-is-the-specialist arm, every
+      arm of BO-3800a-1's hold, and BO-3800e-1/e-2. An ask that arrives after the answer was
+      due is a report, not a handoff, and the ordering is the only thing that separates the
+      two.
+
+  (3) THE DISPOSITION IGNORED. MUTATION: engage the restructuring specialist on every
+      refusal, without reading the stated disposition.
+      MUST GO RED: the author-clearable arm above, and both arms of BO-3800e-1.
+      MUST STAY GREEN: the first three arms of this record, and every arm of BO-3800a-1,
+      BO-3800c-1 and BO-3800d-1 — all of which the over-broad build satisfies. That is
+      precisely why BO-3800e exists, and recording this injection here is how the two
+      records prove they are not restatements of one another.
+
+  NOT AUTHORED HERE, BY DESIGN: assigned_agent, estimated_complexity, it_requirements,
+  test_spec, test_rationale and declares_side_effect. Those are the IT PO's, which runs
+  after this pass.

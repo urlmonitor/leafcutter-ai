@@ -8,7 +8,7 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
+readiness: approved
 priority: critical
 roadmap_phase: phase_1
 criteria: |
@@ -73,8 +73,150 @@ doc_links:
   - path: docs/architecture/components/commit-guardian.md
     relationship: related
     status: exists
+  - path: docs/reference/false-green-mechanisms.md
+    relationship: context
+    status: exists
+    relevance: >-
+      READ-ONLY, OWNED ELSEWHERE. A guard widened until it refuses everything is a second
+      shape missing from that catalogue, beside the unreachable-refusal shape the L1 already
+      recommends an entry for. Recommending the entry is this record's; writing it is not.
+  - path: docs/testing/test-angles.md
+    relationship: related
+    status: exists
+    relevance: Source of the `angle` values on the descriptors below.
 assigned_agent: python-coder
 estimated_complexity: M
+it_requirements:
+  - >-
+    THE ACCEPTABLE INPUT IS ONE DATUM IN ONE PLACE, NEVER A SECOND DECLARATION STORE. DECIDED
+    HERE, AS THE doc_link ON config/verification_flow.schema.json ASKS: the schema already
+    carries both sides of the pair — a check's ordinary `command` with its observable
+    `pass_criteria` for the case it must accept, and `negative_control` for the case it must
+    reject. Model the acceptable input as the check's ordinary case in the SAME registration
+    entry as the negative control. Do not add a parallel declaration record; two records will
+    disagree about which checks are enrolled, which is the failure GE-126b-5's doc_link warns
+    about in this exact spot.
+  - >-
+    BOTH INPUTS GO THROUGH THE SAME ENTRY POINT, IN THE SAME RUN. The observed value is
+    conditional on the two invocations DIFFERING, so a single invocation can never produce it.
+    An implementation that records the rejection as observed the moment the bad input is
+    refused — one invocation instead of two — is the obvious efficiency and is the whole
+    defect; the mandatory injection below exists to make it red.
+  - >-
+    THREE OUTCOMES, THREE WORDINGS, AND THEY ARE NOT INTERCHANGEABLE. A check that refuses both
+    inputs is "refuses without discriminating". A check that refuses neither is "declared
+    rejection not observed". A check whose two declared inputs are identical or differ in no way
+    the check can act on is "pair cannot discriminate". The first two have OPPOSITE remedies —
+    narrow the guard, or widen it — so one shared message lets an implementer discharge both
+    findings with a repair that makes one of them worse.
+  - >-
+    A PAIR THAT DOES NOT DISCRIMINATE IS A FINDING, NOT A MALFORMED-INPUT ERROR. The run must
+    report it and continue examining the remaining checks. A run that refuses to proceed on a
+    bad declaration leaves those checks unexamined, which is the never-attempted state wearing
+    an error message — and an unexamined check is exactly what this tree exists to make
+    visible. Assert the continuation, not only the report.
+  - >-
+    DO NOT FORCE A PAIR ONTO A CENSUS-SHAPED CHECK. A check that counts or measures rather than
+    accepts or rejects has no acceptable-versus-unacceptable pair at all and is handled by
+    GE-126b-5-i's grounded exemption (`negative_control.not_applicable` + `reason`, already in
+    the schema). Consume that disposition; do not re-derive it, and do not let the exemption be
+    used to escape a pair that simply fails to discriminate.
+  - >-
+    EXTEND GE-120f-1's RUNNER AND ITS SINGLE RECORD PER CHECK. This record adds a second
+    observation and makes the parent's observed value conditional on the two differing. It does
+    not add a second record, a second report, or a second population.
+  - >-
+    AC_ENFORCE_STRICT=1 on every pytest invocation; execute the DEPLOYED copy out of process
+    through GE-120c-1's harness; any module imported from outside templates/scripts/commit_guardian/
+    goes into the scripts/build_phases.py deploy map in the same change.
+  - >-
+    Error-handling policy: specific-exception try/except around subprocess and I/O, logged at
+    WARNING or higher or re-raised. A failed second invocation is `blocked` for that check, not
+    a silent fallback to the single-invocation verdict.
+test_spec:
+  - name: test_ge120f1ii_an_indiscriminate_check_and_a_discriminating_check_are_separated_in_one_run
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: >-
+      THE PAIRING — BOTH HALVES IN ONE INVOCATION. Fixture check A refuses BOTH its declared
+      inputs; fixture check B refuses the bad one and accepts the acceptable one. In one run
+      assert A is named as a check that refuses without discriminating, A's record does NOT say
+      the rejection was observed, the run fails, and B's record DOES say the rejection was
+      observed. NAMED MUTATION (mandatory, run it): record the rejection as observed as soon as
+      the declared bad input produces the declared rejection, without putting the acceptable
+      input through at all. Under that injection A records a demonstrated refusal; this
+      descriptor must go RED naming A, and return to green on revert.
+  - name: test_ge120f1ii_refusing_both_and_refusing_neither_are_reported_under_different_wording
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: behavioral
+    angle: seam
+    description: >-
+      In one run over a fixture population holding a check that refuses both inputs and a check
+      that refuses neither, assert the two findings carry DIFFERENT wording and that a reader
+      can tell which repair each needs. NAMED MUTATION (mandatory, run it): report both under
+      one shared wording. Under that injection the run still fails in both cases, so the
+      parent's clauses and this record's earlier descriptor stay green and ONLY this descriptor
+      goes red. That asymmetry is what stops an implementer discharging both findings with one
+      message whose two remedies are opposite.
+  - name: test_ge120f1ii_a_non_discriminating_pair_is_reported_and_the_remaining_checks_are_still_examined
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: >-
+      A fixture surface holding (a) a check declaring the same input twice, (b) a check whose
+      two declared inputs differ in no way it can act on, and (c) a healthy discriminating
+      check. In one run assert (a) and (b) are each named as a check whose pair cannot
+      discriminate, the run fails, AND (c) still receives its own observed record. The last
+      assertion is the one that matters: a run that aborts on a bad declaration leaves (c)
+      unexamined, which is the never-attempted state wearing an error message.
+  - name: test_ge120f1ii_the_acceptable_input_is_read_from_the_one_declaration_and_not_a_second_store
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: behavioral
+    angle: seam
+    description: >-
+      Remove the acceptable-input side from a fixture check's SINGLE declaration entry, change
+      nothing else, and re-run: that check must be reported as a pair that cannot discriminate.
+      Then restore it and the check must record observed again. Establishes the run reads both
+      sides from one datum in one place; an implementation carrying a second declaration store
+      keeps passing when the first is emptied.
+  - name: test_ge120f1ii_deployed_runner_performs_both_invocations_in_a_cold_process
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: integration
+    angle: deployed
+    description: >-
+      After build.py, the DEPLOYED runner performs BOTH invocations per check in a cold process
+      with the source tree off the import path, and the invocation count observed at the entry
+      point is two per examined check rather than one. A helper outside
+      templates/scripts/commit_guardian/ without a deploy-map entry surfaces here as
+      ModuleNotFoundError. Invoke pytest with AC_ENFORCE_STRICT=1.
+test_rationale: |
+  This record is the regime's own off switch, so its descriptors are written against the repair
+  an implementer under day-one noise will actually reach for. On the commit that lands the
+  parent, a large part of the family reports that no refusal has ever been observed. There are
+  two ways to quieten that: repair the guards, or make each guard refuse something — and the
+  cheapest refusal to arrange is one that fires on everything, because it needs no understanding
+  of what the guard was for. A guard widened that far satisfies every clause of the parent,
+  records a demonstrated refusal, and protects less than the guard it replaced.
+
+  The first descriptor's injection (one invocation instead of two) is the natural implementation,
+  not a straw man, which is why it must be executed rather than described. The second
+  descriptor's injection is deliberately narrow: under it the run still fails in both cases, so
+  everything else stays green and only the wording clause goes red — that asymmetry is the
+  evidence that this clause is load-bearing on its own.
+
+  The continuation assertion in the third descriptor is the one most likely to be dropped,
+  because reporting a malformed declaration as an error reads like diligence. It is not: it
+  leaves the remaining checks unexamined, which is the state this whole tree exists to surface.
+
+  Per CLAUDE.md's grep rule every descriptor executes the runner and reads its emitted output;
+  none asserts on source text. AC_ENFORCE_STRICT=1 on every invocation, or these tests are
+  xfail-masked and their green means nothing.
 delivers_to: null
 expects_from:
   ac_id: GE-120f-1
@@ -88,7 +230,8 @@ created: 2026-09-01
 amended_by: []
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-AGuardThatHasNeverSaidNoIsNotCountedAs/03_TICKET-20260914-GE-120f-1-ii.md
 change_target: code
 risk_surface: contract_boundary
 notes: |
@@ -136,3 +279,4 @@ notes: |
   never-attempted state wearing an error message.
 
   NO COUNT OF INSTANCES IS STATED OR IMPLIED HERE, per the parent's disputed-count rule.
+target_epic: EPIC-AGuardThatHasNeverSaidNoIsNotCountedAs
