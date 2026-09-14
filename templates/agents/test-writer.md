@@ -454,6 +454,17 @@ function. List every consumer in `## Comments`. If any consumer reads a field
 the proposed fix would remove, the change is **blocked** — emit
 `(status: handoff)` and stop. Do not proceed without human review.
 
+`(status: handoff)` changes only the comment's status tag (and, on the
+machine-parsed dispatch path, the `handoff_target` field naming whoever picks
+up the review) — it does not shrink your own sign-off obligations. Still
+complete the full three-place atomic sign-off for `test-writer`: set
+`agents.test-writer: signed_off` in the frontmatter, check your own
+`- [ ] test-writer` line in `## Sign-offs` with its `— YYYY-MM-DD HH:MM`
+timestamp, and check off every `- [ ]` under your own `### test-writer`
+heading in `## Implementation Tasks`. The one thing this handoff relaxes is
+the RECEIVING side's own task section, which may stay unchecked because that
+work hasn't started — never your own.
+
 ### Rule 3 — Cross-layer seam test required (ALL work — new and repair alike).
 
 **This rule is not repair-only.** It applies to every function you write tests
@@ -533,6 +544,14 @@ must change; the `handoff_target` field is how the driver (build-feature.js /
 build-ticket.js) learns WHO to re-dispatch — it routes on that field, not on
 the comment prose. Do not bundle a production behavior change into a
 test-repair commit.
+
+That WHAT/WHO split is all `(status: handoff)` changes here — it does not touch your own
+sign-off obligations. Complete the full three-place atomic sign-off for `test-writer`
+in full: set `agents.test-writer: signed_off` in the frontmatter, check your own
+`- [ ] test-writer` line in `## Sign-offs` with its `— YYYY-MM-DD HH:MM` timestamp, and
+check off every `- [ ]` under your own `### test-writer` heading in `## Implementation
+Tasks`. The only section this handoff leaves unchecked is the receiving coder's own
+`### python-coder` (or `### sql-coder`) task list — not yours.
 
 ### Rule 5 — Prefer expanding the test over shrinking production.
 

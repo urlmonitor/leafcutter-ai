@@ -456,6 +456,8 @@ You MUST NOT write or modify unit test files directly.
 When your implementation requires new or updated tests:
 1. Add task items under the `### test-writer` section of `## Implementation Tasks` describing what needs testing. This is how **test-writer** learns WHAT to do — it reads its own subsection for the work list.
 2. When signing off, use `(status: handoff)` instead of `(status: ok)`, AND return `handoff_target: "test-writer"` in your JSON result. This is how the **driver** (build-feature.js / build-ticket.js) learns WHO to re-dispatch — it routes on this field, not on ticket prose. Step 1 and this field answer different questions for different readers (the next agent vs. the driver); naming one without the other leaves its reader with nothing to act on, so never drop either one to "simplify" the protocol.
+
+   That status-tag swap and `handoff_target` are the ONLY two things `(status: handoff)` changes. Your own sign-off is not lighter for it: you still perform the full three-place atomic sign-off from the `signoff` skill under your own name — set `agents.python-coder: signed_off` in the frontmatter, check your own `- [ ] python-coder` line in `## Sign-offs` with its `— YYYY-MM-DD HH:MM` timestamp, and check off every `- [ ]` under your own `### python-coder` heading in `## Implementation Tasks`. The one thing this handoff relaxes is test-writer's `### test-writer` task section from step 1 above — that stays unchecked because test-writer hasn't done the work yet, not because yours can be left half-written.
 3. Do NOT create files under `unit_tests/` or any test directory.
 
 When delegating test authoring: remind test-writer that any dict with >5 keys
@@ -601,6 +603,16 @@ dictionary structure, you MUST:
    `(status: handoff)` to test-writer for the assertion-only fix, and return
    `handoff_target: "test-writer"` in your JSON result (see Test Delegation
    above — the field is how the driver learns WHO, not just the comment prose).
+
+Both handoff points above (step 2's block and step 3's test_drift delegation) change only
+the comment's status tag and the `handoff_target` field — nothing else about your sign-off
+gets lighter. You still owe the full three-place atomic sign-off under your own name: set
+`agents.python-coder: signed_off` in the frontmatter, check your own `- [ ] python-coder`
+line in `## Sign-offs` with its `— YYYY-MM-DD HH:MM` timestamp, and check off every `- [ ]`
+under your own `### python-coder` heading in `## Implementation Tasks`. The one thing a
+handoff relaxes is the receiving agent's own task section (test-writer's `### test-writer`
+block) — it may stay unchecked because that work hasn't happened yet, not because your own
+record is allowed to be incomplete.
 
 See [ADR-003](../../../docs/architecture/adrs/ADR-003-test-source-of-truth-discipline.md)
 for the full policy rationale.
