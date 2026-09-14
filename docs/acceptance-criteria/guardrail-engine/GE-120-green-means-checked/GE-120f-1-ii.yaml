@@ -230,7 +230,8 @@ created: 2026-09-01
 amended_by: []
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-AGuardThatHasNeverSaidNoIsNotCountedAs/03_TICKET-20260914-GE-120f-1-ii.md
 change_target: code
 risk_surface: contract_boundary
 notes: |
@@ -278,3 +279,4 @@ notes: |
   never-attempted state wearing an error message.
 
   NO COUNT OF INSTANCES IS STATED OR IMPLIED HERE, per the parent's disputed-count rule.
+target_epic: EPIC-AGuardThatHasNeverSaidNoIsNotCountedAs

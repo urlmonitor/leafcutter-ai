@@ -245,7 +245,8 @@ created: 2026-09-01
 amended_by: []
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-AGuardThatHasNeverSaidNoIsNotCountedAs/08_TICKET-20260914-GE-120f-4-i.md
 change_target: code
 risk_surface: contract_boundary
 notes: |
@@ -289,3 +290,4 @@ notes: |
 
   NO COUNT OF INSTANCES IS STATED OR IMPLIED, per the parent's disputed-count rule. How many
   checks the first run names is exactly what the run measures.
+target_epic: EPIC-AGuardThatHasNeverSaidNoIsNotCountedAs

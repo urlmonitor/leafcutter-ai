@@ -300,7 +300,8 @@ amended_by: []
 superseded_by: null
 covered_by:
   - GE-120f-2-i
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-AGuardThatHasNeverSaidNoIsNotCountedAs/04_TICKET-20260914-GE-120f-2.md
 change_target: code
 risk_surface: contract_boundary
 notes: |
@@ -357,3 +358,4 @@ notes: |
   the group is. Under that injection a demonstrated check inherits its neighbour's finding
   and this clause goes RED. It is the same shape as quoting a disputed population figure as
   though it were measured, and it is the reason the clause is written.
+target_epic: EPIC-AGuardThatHasNeverSaidNoIsNotCountedAs

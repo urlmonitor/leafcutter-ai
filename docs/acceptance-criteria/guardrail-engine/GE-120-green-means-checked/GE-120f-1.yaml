@@ -354,7 +354,8 @@ superseded_by: null
 covered_by:
   - GE-120f-1-i
   - GE-120f-1-ii
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-AGuardThatHasNeverSaidNoIsNotCountedAs/01_TICKET-20260914-GE-120f-1.md
 change_target: code
 risk_surface: contract_boundary
 notes: |
@@ -413,3 +414,4 @@ notes: |
   Falsifiability of TESTS is TQ-500's; this tree owns falsifiability of GUARDS. The worked
   example passes all four and still cannot refuse, which is why none of them may be closed
   as a duplicate of this tree, nor the reverse.
+target_epic: EPIC-AGuardThatHasNeverSaidNoIsNotCountedAs

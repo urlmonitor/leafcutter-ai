@@ -382,7 +382,8 @@ amended_by: []
 superseded_by: null
 covered_by:
   - GE-120f-4-i
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-AGuardThatHasNeverSaidNoIsNotCountedAs/07_TICKET-20260914-GE-120f-4.md
 change_target: code
 risk_surface: contract_boundary
 notes: |
@@ -444,3 +445,4 @@ notes: |
 
   NO COUNT OF INSTANCES IS STATED OR IMPLIED IN THIS RECORD, per the parent's disputed-count
   rule. How many checks currently carry no declaration is a measurement, not a premise.
+target_epic: EPIC-AGuardThatHasNeverSaidNoIsNotCountedAs

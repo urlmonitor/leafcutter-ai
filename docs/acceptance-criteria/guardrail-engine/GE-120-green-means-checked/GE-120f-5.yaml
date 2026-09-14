@@ -292,7 +292,8 @@ created: 2026-09-01
 amended_by: []
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-AGuardThatHasNeverSaidNoIsNotCountedAs/09_TICKET-20260914-GE-120f-5.md
 change_target: docs
 risk_surface: contract_boundary
 notes: |
@@ -343,3 +344,4 @@ notes: |
   same day disagree about how many instances of this shape exist and the parent records the
   figure as disputed. The document states the rule and the procedure; how widespread the
   defect is belongs to whatever measures it, with the date and the state it was measured at.
+target_epic: EPIC-AGuardThatHasNeverSaidNoIsNotCountedAs
