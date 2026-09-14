@@ -63,7 +63,7 @@ created: 2026-06-18
 amended_by:
   - reason: "renamed TKT-500d-10 -> TKT-500f-5 in split of TKT-500d, 2026-06-18"
 superseded_by: null
-covered_by: [TKT-500f-5-i]
+covered_by: [TKT-500f-5-i, unit_tests/ac_store/test_tkt_500f_5.py]
 implemented_by: []
 test_spec:
   - name: test_non_phase_agent_is_not_named_as_the_ticket_phase_agent

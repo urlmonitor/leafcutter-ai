@@ -52,7 +52,7 @@ created: 2026-06-22
 amended_by:
   - reason: "it-po technical enrichment 2026-06-22: repointed delivers_to from non-existent 'ac-supervisor' to the real gating agent 'ticket-supervisor' (no agent named ac-supervisor exists in config/agent_registry.json). NOTE FOR FINAL-GATE REVIEWER: the criteria PROSE elsewhere in this cluster still says 'ac-supervisor' (see TKT-500f-6-iii) and should be corrected to 'ticket-supervisor' in a follow-up BA edit — criteria left unchanged here per role boundary."
 superseded_by: null
-covered_by: [TKT-500f-6-i, TKT-500f-6-ii, TKT-500f-6-iii]
+covered_by: [TKT-500f-6-i, TKT-500f-6-ii, TKT-500f-6-iii, unit_tests/ac_store/test_tkt_500f_6.py]
 implemented_by: []
 test_spec:
   - name: test_qualifying_implementation_py_emits_test_requirements_section

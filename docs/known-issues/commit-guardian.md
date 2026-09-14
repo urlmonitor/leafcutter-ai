@@ -73,7 +73,7 @@ Severity in the **filename** is a three-level index bucket (`blocker` / `high` /
 
 Fixed issues move to [`commit-guardian/resolved/`](commit-guardian/resolved/) and are no longer listed as open. They are kept, not deleted.
 
-**Open: 67** (6 blocker, 25 high, 36 low) · **Resolved: 6**
+**Open: 68** (6 blocker, 26 high, 36 low) · **Resolved: 6**
 
 ## Open
 
@@ -95,6 +95,7 @@ Fixed issues move to [`commit-guardian/resolved/`](commit-guardian/resolved/) an
 | `high` | KI-CG-014 — `declares_side_effect` derivation is negation-blind, so an AC asserting that nothing is written is forced to declare that something is | [open-high-ki-cg-014.md](commit-guardian/open-high-ki-cg-014.md) |
 | `high` | KI-CG-017 — `check-build-drift` is filtered on the consumer layout path, so it has never run on this repo's own template changes | [open-high-ki-cg-017.md](commit-guardian/open-high-ki-cg-017.md) |
 | `high` | KI-CG-018 — `check_ac_governance` exits 0 without inspecting anything, and its own "did I look?" diagnostic cannot fire on the paths where it did not | [open-high-ki-cg-018.md](commit-guardian/open-high-ki-cg-018.md) |
+| `high` | KI-CG-20260914-ac-hooks-resolve-root-from-cwd — all six AC gates take their project root AND their file set from the current directory, so from the wrong cwd they validate zero files and exit 0 | [open-high-ki-cg-20260914-ac-hooks-resolve-root-from-cwd.md](commit-guardian/open-high-ki-cg-20260914-ac-hooks-resolve-root-from-cwd.md) |
 | `high` | KI-CG-022 — `check_adr_collision.py` exists but is registered nowhere, and the branch that registers it also makes it fail closed without `origin/main` | [open-high-ki-cg-022.md](commit-guardian/open-high-ki-cg-022.md) |
 | `high` | KI-CG-035 — `check-proof-promise-claim` is a done-time gate that fires at creation time, so no generated epic scaffold can be committed | [open-high-ki-cg-035.md](commit-guardian/open-high-ki-cg-035.md) |
 | `high` | KI-CG-20260826-1612 — Every AC guardian filters the index on `--diff-filter=AM`, so a *renamed* AC record is invisible to all six — and renaming is exactly what a tree split requires | [open-high-ki-cg-20260826-1612.md](commit-guardian/open-high-ki-cg-20260826-1612.md) |

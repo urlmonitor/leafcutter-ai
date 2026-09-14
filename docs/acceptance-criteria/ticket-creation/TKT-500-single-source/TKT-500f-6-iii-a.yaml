@@ -60,7 +60,7 @@ created: 2026-06-22
 amended_by:
   - reason: "it-po split 2026-06-22: TKT-500f-6-iii crossed a .py/.md owner boundary; this child carries the python-coder generator + shared classification-helper portion. Sibling TKT-500f-6-iii-b carries the ticket-supervisor template skip-rule change (llm-expert)."
 superseded_by: null
-covered_by: []
+covered_by: [unit_tests/ac_store/test_tkt_500f_6_iii_a.py]
 implemented_by: []
 test_spec:
   - name: test_section_presence_is_the_signal_that_test_writer_is_required

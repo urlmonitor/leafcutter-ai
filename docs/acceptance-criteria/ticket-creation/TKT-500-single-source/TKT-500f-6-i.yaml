@@ -46,7 +46,7 @@ origin_agent: business-analyst
 created: 2026-06-22
 amended_by: []
 superseded_by: null
-covered_by: []
+covered_by: [unit_tests/ac_store/test_tkt_500f_6_i.py]
 implemented_by: []
 test_spec:
   - name: test_mixed_impl_docs_config_set_still_emits_test_requirements
