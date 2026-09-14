@@ -2869,12 +2869,15 @@ if (ptRunSet.skip) {
           // AC BO-2300a-2 — distinct terminal status for a cancelled run. `cancelled_at`
           // alone was not enough: nothing machine-readable reads it, so a caller
           // branching on `status` saw a plain success.
+          // ACD-2100c-5 — `cancelled_by: "person"` (see the mid-gate cancel above
+          // for why this branch is only ever reached with person attribution).
           return {
             status: "cancelled",
             message:
               `Pipeline cancelled at the product-truth gate (${ptStep.agent}). No PR was opened. ` +
               `Prior committed product-truth stages are preserved; the current ${ptStep.stage} draft is left uncommitted on disk.`,
             cancelled_at: `pt-gate-${ptStep.stage}`,
+            cancelled_by: "person",
           };
         } else if (ptAction === "edit" && ptEditRetries < MAX_EDIT_RETRIES) {
           ptEditRetries++;
@@ -3244,9 +3247,19 @@ for (const step of pipeline) {
         // successful one. `status: "ok"` here made "the user aborted and zero ACs
         // shipped" indistinguishable from "the pipeline completed" for any caller
         // that branches on `status` — which is the only reason the field exists.
+        // ACD-2100c-5 — `cancelled_by: "person"` attributes this discard to the
+        // person who chose it. This branch is reachable ONLY via a decision
+        // object returned by resolveGate() (every pause-related/non-person
+        // status was returned above, before this line), and resolveGate()
+        // returns a decision object ONLY after validating
+        // `resume_answer.channel === "person"` -- so every arrival here is
+        // already known to be person-attributed. Without this field a
+        // legitimate discard is indistinguishable from a fallback discard
+        // after the fact (Implementation Notes).
         return {
           status: "cancelled",
           cancelled_at: `gate-${step.stage}`,
+          cancelled_by: "person",
           message: buildCancelMessage(committedAcs, written, cancelLabel, acStoreDir, authoringWorktreePath),
           committed_acs: committedAcs,
           acs_as_drafts: written,
@@ -3336,16 +3349,39 @@ for (const step of pipeline) {
           ["paused_awaiting_input", "nothing_to_resume", "unresumable_stale", "pause_persist_failed"].includes(_finalGateResult.status)) {
         return _finalGateResult;
       }
-      // ACD-2100c-2: resolveGate() never returns a falsy value -- every path
-      // out of it is either one of the four pause-related statuses handled
-      // above (which return before this line), or a decision object from
-      // applyAnswerByType(). The `|| { action: "defer" }` fallback that used
-      // to sit here was therefore unreachable dead code (confirmed by
-      // architect-review and covered by this ticket's tests, which assert
-      // the terminal status is exactly "paused_awaiting_input" on the
-      // unattended path -- never the "defer" this fallback would have
-      // produced if it were ever reached). Removed for clarity; no behaviour
-      // change.
+      // ACD-2100c-2: resolveGate() never returns a falsy value TODAY -- every
+      // path out of it is either one of the four pause-related statuses
+      // handled above (which return before this line), or a decision object
+      // from applyAnswerByType(). The `|| { action: "defer" }` fallback that
+      // used to sit here was unreachable dead code and was removed for
+      // clarity with no behaviour change at the time.
+      //
+      // ACD-2100c-5: that "never returns falsy" property is a fact about
+      // resolveGate()'s CURRENT body, not a contract enforced at this call
+      // site -- the next refactor of resolveGate() (or a future sixth gate)
+      // can silently reintroduce a falsy return, and a test written only
+      // against the destructive-fallback LINE would have been deleted along
+      // with it, letting the invariant lapse unnoticed (this AC's own
+      // test_rationale). So this guard is restated here as a standing
+      // invariant over the exit path, not a repair to one known line: a
+      // missing/falsy gate result is a gate FAILURE (KI-ACD-005), never a
+      // user cancellation and never a silent "defer" -- it must fail CLOSED
+      // with the same "undetermined" vocabulary the other four call sites
+      // already use, so the drafted work is never discarded and no stop is
+      // ever attributed to the person on this path.
+      if (!_finalGateResult) {
+        return {
+          status: "undetermined",
+          message:
+            "The final gate (IT PO v3 review) returned no usable answer, so " +
+            "no decision was recorded. This is a gate failure, NOT a user " +
+            "cancellation. Committed ACs are preserved and drafted ACs are " +
+            "left on disk -- re-run /plan-feature and answer the gate.",
+          stage: "final-gate",
+          committed_acs: committedAcs,
+          acs_as_drafts: written,
+        };
+      }
       const finalDecision = _finalGateResult;
 
       // ACD-2100c-3 AC-1/AC-2: the it-po authoring dispatch was skipped above
@@ -3387,9 +3423,12 @@ for (const step of pipeline) {
       if (finalAction === "cancel") {
         // AC BO-1500c-1-i — NO-PR GUARANTEE (final-gate cancel).
         // AC BO-2300a-2 — distinct terminal status (see the mid-gate cancel above).
+        // ACD-2100c-5 — `cancelled_by: "person"` (see the mid-gate cancel above
+        // for why this branch is only ever reached with person attribution).
         return {
           status: "cancelled",
           cancelled_at: "final-gate",
+          cancelled_by: "person",
           message: buildCancelMessage(committedAcs, written, "final gate (IT-PO)", acStoreDir, authoringWorktreePath),
           committed_acs: committedAcs,
           acs_as_drafts: written,
