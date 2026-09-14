@@ -203,6 +203,14 @@ ENTROPY_HIGH:unit_tests/product_truth/test_uxp_700d_1.py:*
 # still shift.
 ENTROPY_HIGH:unit_tests/ac_store/test_uxp700d2_reachability.py:*
 
+# GE-127a-1's ordinary-commit fixture. The flagged lines are a keyword argument
+# whose name and value are both long uppercase/underscore identifiers -- the
+# ablation switch that removes check-file-size from the generated pre-commit
+# config to prove the descriptors are not vacuous. High entropy, no secret.
+# Glob, not per-line: the fixture is called from two places today and the line
+# numbers shift whenever a helper is added above them.
+ENTROPY_HIGH:unit_tests/commit_guardian/_ge_127a_1_ordinary_commit_fixture.py:*
+
 # unit_tests/product_truth/test_uxp_700c_1_i.py's TestCase class name is a long
 # CamelCase identifier -- same false-positive pattern as the other test-class-name
 # entries above (not reproduced here for the same reason: quoting it would trip the
