@@ -217,6 +217,9 @@ class TestSummaryStatesAllFourPopulationNumbers(_FixtureRepoTestCase):
         self.assertIsNotNone(
             m1, f"expected all four population counts on the first run; got {out1!r}"
         )
+        assert m1 is not None, (
+            f"expected all four population counts on the first run; got {out1!r}"
+        )
         compared1, registered1, unreferenced1, declared1 = (int(x) for x in m1.groups())
 
         _write_gate_script(self.gate_dir / "check_bp_100n_4_ii_novel_fixture.py")
@@ -227,6 +230,9 @@ class TestSummaryStatesAllFourPopulationNumbers(_FixtureRepoTestCase):
         m2 = _RESULT_LINE_RE.search(out2)
         self.assertIsNotNone(
             m2, f"expected all four population counts on the second run; got {out2!r}"
+        )
+        assert m2 is not None, (
+            f"expected all four population counts on the second run; got {out2!r}"
         )
         compared2, registered2, unreferenced2, _declared2 = (int(x) for x in m2.groups())
 
@@ -262,6 +268,7 @@ class TestSummaryStatesAllFourPopulationNumbers(_FixtureRepoTestCase):
         out3 = run3.stdout + run3.stderr
         m3 = _RESULT_LINE_RE.search(out3)
         self.assertIsNotNone(m3, f"expected all four counts on the third run; got {out3!r}")
+        assert m3 is not None, f"expected all four counts on the third run; got {out3!r}"
         _compared3, _registered3, unreferenced3, declared3 = (int(x) for x in m3.groups())
 
         self.assertEqual(
@@ -333,6 +340,7 @@ class TestCleanRunStatesComparedCountGreaterThanZero(unittest.TestCase):
         output = result.stdout + result.stderr
         match = _RESULT_LINE_RE.search(output)
         self.assertIsNotNone(match, f"expected the RESULT line on a clean run; got {output!r}")
+        assert match is not None, f"expected the RESULT line on a clean run; got {output!r}"
         compared = int(match.group(1))
         self.assertGreater(compared, 0)
         self.assertEqual(

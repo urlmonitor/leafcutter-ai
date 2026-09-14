@@ -330,6 +330,10 @@ class TestSummaryStatesDeclaredNonGateCount(_FixtureRepoTestCase):
             "expected a RESULT line stating declared_non_gate=<n> on the "
             f"baseline run; got {(baseline.stdout + baseline.stderr)!r}",
         )
+        assert baseline_match is not None, (
+            "expected a RESULT line stating declared_non_gate=<n> on the "
+            f"baseline run; got {(baseline.stdout + baseline.stderr)!r}"
+        )
         baseline_declared = int(baseline_match.group(4))
 
         _write_gate_script(self.gate_dir / "check_bp_100n_4_i_count_fixture.py")
@@ -344,6 +348,10 @@ class TestSummaryStatesDeclaredNonGateCount(_FixtureRepoTestCase):
             after_match,
             "expected a RESULT line on the second run; got "
             f"{(after.stdout + after.stderr)!r}",
+        )
+        assert after_match is not None, (
+            "expected a RESULT line on the second run; got "
+            f"{(after.stdout + after.stderr)!r}"
         )
         after_declared = int(after_match.group(4))
 

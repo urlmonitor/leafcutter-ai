@@ -43,6 +43,14 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    # Static-only import so mypy can resolve `_FixtureRepoTestCase` as a base
+    # class. At runtime this branch never executes; the real class comes from
+    # the importlib-loaded `_base` module below (see DEPENDENCY NOTE above —
+    # the shared-fixture convention is preserved, this is resolution-only).
+    from test_bp_100n_4 import _FixtureRepoTestCase
 
 _THIS_DIR = Path(__file__).resolve().parent
 _BASE_MODULE_PATH = _THIS_DIR / "test_bp_100n_4.py"
@@ -69,6 +77,11 @@ def _load_base_module():
 
 
 _base = _load_base_module()
+# Runtime reassignment: the dynamically-loaded module's real class, used as
+# the base for the fixture-repo test case below. mypy statically resolves
+# `_FixtureRepoTestCase` via the TYPE_CHECKING import above instead of
+# tracing this dynamic attribute access.
+_FixtureRepoTestCase = _base._FixtureRepoTestCase
 
 
 # ---------------------------------------------------------------------------
@@ -76,7 +89,7 @@ _base = _load_base_module()
 # ---------------------------------------------------------------------------
 
 
-class TestCensusEmittedThroughRegisteredHookEntryPoint(_base._FixtureRepoTestCase):
+class TestCensusEmittedThroughRegisteredHookEntryPoint(_FixtureRepoTestCase):
     def test_bp_100n_4_census_is_emitted_through_the_registered_hook_entry_point(
         self,
     ) -> None:

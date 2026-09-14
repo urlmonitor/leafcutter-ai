@@ -239,6 +239,10 @@ class TestAddedGateScriptRaisesComparedCount(_FixtureRepoTestCase):
             "expected a RESULT line stating compared=/registered=/"
             f"unreferenced=/declared_non_gate= counts; got: {first_output!r}",
         )
+        assert first_match is not None, (
+            "expected a RESULT line stating compared=/registered=/"
+            f"unreferenced=/declared_non_gate= counts; got: {first_output!r}"
+        )
         first_compared = int(first_match.group(1))
 
         _write_gate_script(self.gate_dir / "check_bp_100n_4_novel_fixture.py")
@@ -248,6 +252,9 @@ class TestAddedGateScriptRaisesComparedCount(_FixtureRepoTestCase):
         second_match = _RESULT_LINE_RE.search(second_output)
         self.assertIsNotNone(
             second_match, f"expected a RESULT line on the second run; got: {second_output!r}"
+        )
+        assert second_match is not None, (
+            f"expected a RESULT line on the second run; got: {second_output!r}"
         )
         second_compared = int(second_match.group(1))
 
@@ -278,6 +285,7 @@ class TestAddedGateScriptInSubdirectoryAlsoRaisesComparedCount(_FixtureRepoTestC
         first = _run_reachability_hook(self.script_path, self.workspace)
         first_match = _RESULT_LINE_RE.search(first.stdout + first.stderr)
         self.assertIsNotNone(first_match, "expected a RESULT line on the first run")
+        assert first_match is not None, "expected a RESULT line on the first run"
         first_compared = int(first_match.group(1))
 
         subdir = self.gate_dir / "hooks"
@@ -288,6 +296,7 @@ class TestAddedGateScriptInSubdirectoryAlsoRaisesComparedCount(_FixtureRepoTestC
         second_output = second.stdout + second.stderr
         second_match = _RESULT_LINE_RE.search(second_output)
         self.assertIsNotNone(second_match, f"expected a RESULT line; got {second_output!r}")
+        assert second_match is not None, f"expected a RESULT line; got {second_output!r}"
         second_compared = int(second_match.group(1))
 
         self.assertEqual(
