@@ -34,10 +34,10 @@ depends_on:
   - TQ-200c
   - TQ-200c-1
 doc_links:
-  - path: scripts/ac_store/generate_ticket_from_ac.py
+  - path: scripts/ac_store/_gtfa_report.py
     relationship: modifies
     status: exists
-    relevance: "The exact behaviour this AC reverses, and the one file this AC edits. Verified 2026-08-18. Line 2740 sets is_code_ac; line 2773 records `PASS` with `non-code AC — no test contract required`, so the omission of every proof demand is reported as a passing check. Worse for the fourth clause: check #4 at line 2776 (would the generated Test Requirements pass the ticket guard?) and check #5 at line 2783 (it_requirements present?) are BOTH gated on is_code_ac and are therefore not failed but never attempted, and the report does not say so. The verdict line at 2801 is computed from the recorded lines, so a report full of un-attempted checks reads as READY. Retagged describes -> modifies by it-po 2026-08-18: this is an edit surface, and only edit-surface relationships reach a generated ticket's files_touched (generate_ticket_from_ac.py:104-106, docs/how-to/ac-traceability-store.md)."
+    relevance: "The exact behaviour this AC reverses, and the one file this AC edits. Verified 2026-08-18, re-pointed 2026-09-14 after the generator decomposition moved the readiness report into its own module. _build_verification_report sets is_code_ac and records `PASS` with `non-code AC — no test contract required`, so the omission of every proof demand is reported as a passing check. Worse for the fourth clause: the check that the generated Test Requirements would pass the ticket guard and the check that it_requirements is present are BOTH gated on is_code_ac and are therefore not failed but never attempted, and the report does not say so. The verdict line is computed from the recorded lines, so a report full of un-attempted checks reads as READY. Retagged describes -> modifies by it-po 2026-08-18: this is an edit surface, and only edit-surface relationships reach a generated ticket's files_touched (_gtfa_constants._EDIT_SURFACE_RELATIONSHIPS, docs/how-to/ac-traceability-store.md)."
   - path: config/ac_store_schema.json
     relationship: describes
     status: exists
@@ -57,8 +57,8 @@ doc_links:
 assigned_agent: python-coder
 estimated_complexity: L
 it_requirements:
-  reference_file_path: "scripts/ac_store/generate_ticket_from_ac.py"
-  n_location_rule: "all"
+  reference_file_path: "scripts/ac_store/_gtfa_report.py"
+  n_location_rule: "all — every is_code_ac-gated check in the readiness report, all of which now live in this one module."
   required_skills:
     - python-coder
   post_write_commands:

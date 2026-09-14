@@ -41,10 +41,14 @@ doc_links:
     relationship: related
     status: exists
     relevance: "The workflow-step analogue (done). Reuse its record shape — one outcome per item, reason carried with the skip — do not fold the two together."
-  - path: scripts/ac_store/generate_ticket_from_ac.py
+  - path: scripts/ac_store/_gtfa_agents_map.py
     relationship: describes
     status: exists
-    relevance: "_build_agents_map (line 651) is where the requested-gate set is computed from guardrail_gates.yaml and materialised onto the work item. That computed set is the denominator this AC requires; it is captured before any enablement decision runs."
+    relevance: "_build_agents_map is where the requested-gate set is materialised onto the work item. That computed set is the denominator this AC requires; it is captured before any enablement decision runs."
+  - path: scripts/ac_store/_gtfa_agents_inputs.py
+    relationship: describes
+    status: exists
+    relevance: "_collect_needed_agents is the upstream half — it reads guardrail_gates.yaml and unions the requested gates into the needed set that _build_agents_map then materialises."
   - path: config/guardrail_gates.yaml
     relationship: describes
     status: exists
@@ -64,7 +68,7 @@ it_requirements:
     requested_gate_record:
       type: object
       description: "One record per gate the work item REQUESTED: { gate: str, outcome: 'skipped' | the outcome the gate actually produced, reason: str|null, source: str|null }. When outcome is 'skipped', reason and source are both required and non-empty: reason names the disabling condition (the setting that is off, or the precondition that is absent) and source names where that condition was read from (config file plus key path, or the named precondition). A gate that is NOT in the requested set has no record at all — not an entry with a null outcome, not an entry with outcome 'skipped'."
-  reference_file_path: "scripts/ac_store/generate_ticket_from_ac.py"
+  reference_file_path: "scripts/ac_store/_gtfa_agents_map.py"
   n_location_rule: "1"
   required_skills:
     - python-coder
