@@ -1,0 +1,72 @@
+id: BO-3800a
+title: "Your change is held while the file is put right, and lands once it is"
+component: build-orchestration
+components:
+  - build_orchestration
+  - supervisor_system
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Turned away is not lost — the change waits, then goes through on its own.
+
+  When a standard refuses the work, the change is kept exactly as it was left
+  while the file is put right, and it is delivered afterwards without anyone
+  having to start again, re-do the work by hand, or push it past the standard.
+depends_on:
+  - BO-3800
+doc_links:
+  - path: docs/acceptance-criteria/build-orchestration/BO-3800-refusal-summons-specialist/BO-3800.yaml
+    relationship: parent
+    status: exists
+  - path: docs/acceptance-criteria/build-orchestration/BO-3000a.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      THE SHIPPED SHAPE TO REUSE. BO-3000a already establishes that a handoff re-dispatches
+      its target BEFORE any later phase runs, that the handing-off phase is not recorded as
+      completed, and that the run does not advance past it. That is the same "held, not
+      abandoned and not advanced past" property this record needs. Reuse it; do not build a
+      second holding mechanism beside it.
+  - path: docs/architecture/agent_delivery_workflows.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      Documents the phase loop and the adjudication ladder in which the holding and the
+      retry must sit, including the existing respawn-and-retry rung.
+delivers_to: null
+expects_from: null
+documentation_triggers:
+  - sequence-diagram
+origin_agent: product-owner-v3
+created: 2026-09-14
+amended_by: []
+superseded_by: null
+covered_by:
+  - BO-3800a-1
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+notes: |
+  WHAT THIS RECORD OWNS: the fate of the change. Not who does the tidying (BO-3800b),
+  not what they are told (BO-3800c), not what happens when it still fails (BO-3800d).
+
+  THE TWO FAILURES IT EXCLUDES, BOTH OF WHICH LOOK LIKE SUCCESS FROM A DISTANCE. The
+  change discarded or rolled back so the restructuring starts from a clean file and the
+  author's work is silently gone; and the change forced through unchanged once someone
+  has "dealt with" the refusal. Either satisfies a naive reading of "the handoff
+  happened" while destroying the reason for having one.
+
+  THE RETRY IS PART OF THIS PROMISE, NOT A SEPARATE ONE. Holding a change that is never
+  re-offered is the same outcome as losing it, from the point of view of the person
+  waiting for it to land. Decomposition must keep the two halves in one record so an
+  implementation cannot satisfy the hold and quietly drop the retry.
+
+  HOW IT IS PROVABLE. By observing a run: the change is still present and unaltered after
+  the refusal, delivery is attempted again after the restructuring, and no later step ran
+  in between. Per CLAUDE.md, a test that reads a workflow file for the presence of a retry
+  branch is not coverage — it stays green on a branch nothing reaches.

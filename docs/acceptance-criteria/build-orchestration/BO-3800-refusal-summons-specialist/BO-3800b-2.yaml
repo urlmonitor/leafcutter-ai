@@ -1,0 +1,184 @@
+id: BO-3800b-2
+title: "The coder that authored the work is not engaged to discharge a demand the refusal handed to a specialist, and nobody is engaged in its place"
+component: build-orchestration
+components:
+  - build_orchestration
+  - supervisor_system
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a ticket is being driven whose implementing work was produced by a coder
+    of a known type, and that coder appears in the ordered record of parties the
+    run engaged,
+  And delivery is refused with an outcome that names one file, states a demand of
+    120 measured lines against it, and states that a demand of that size is handed
+    to a restructuring specialist rather than to the author inside this change,
+  When the run adjudicates that refusal,
+  Then between the refusal and the second delivery attempt, the record of parties
+    the run engaged contains the restructuring specialist and does NOT contain the
+    coder that authored the work,
+  And it contains no other party engaged to take lines out of the named file in
+    that coder's place,
+  And given the same run with the refusal changed in one respect only — it states
+    that the demand is one the author may discharge inside this change,
+  When the run adjudicates that refusal,
+  Then the record of parties engaged between the refusal and the second delivery
+    attempt contains the coder that authored the work and does NOT contain the
+    restructuring specialist,
+  So which party is engaged MOVED when the disposition moved, and follows from the
+    disposition the refusal states rather than from the file, from how far the
+    file stands above its permitted length, from the ticket, or from which party
+    the run engaged last.
+depends_on:
+  - BO-3800b
+doc_links:
+  - path: docs/acceptance-criteria/build-orchestration/BO-3800-refusal-summons-specialist/BO-3800b.yaml
+    relationship: parent
+    status: exists
+  - path: docs/acceptance-criteria/build-orchestration/BO-210-precommit-safety-net/BO-210.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      THE RECORD THIS ONE CARVES AN EXCEPTION OUT OF, AND THE SOURCE OF THE MOST LIKELY
+      WRONG IMPLEMENTATION. BO-210 is approved and active, and its Then clause says the
+      agent that fixes a hook violation is the SAME agent type that authored the work. That
+      is right for every refusal except this class, where the author being the fixer IS the
+      defect. BO-210 now carries a narrowed-by-later-sibling audit entry pointing at
+      BO-3800, criteria untouched. This record is the arm that makes the carve-out
+      observable; BO-3800e-1 is the arm that guarantees the rest of BO-210's population is
+      untouched. An implementation that routes this class back to the author "because
+      BO-210 says so" has deleted this record.
+  - path: docs/acceptance-criteria/build-orchestration/BO-210-precommit-safety-net/BO-210a.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      THE SEAM THAT WILL BE REOPENED, NAMED HERE AND NOT DECIDED HERE. BO-210a requires the
+      auto-fix routing configuration to carry "a single blocking_hook_ids list that is the
+      sole authority on which hooks gate a commit" — a concrete artifact with one gating
+      list and a per-hook route. Nothing in the store decides how that single list learns
+      about a disposition it has never seen: whether the new class is a route keyed on the
+      hook id, a route keyed on the disposition the refusal states, or a decision taken
+      before the list is consulted at all. Getting it wrong in either direction breaks a
+      live approved requirement or this one. That decision is the IT PO's and must be taken
+      explicitly at enrichment; this record states only the observable outcome it must
+      produce.
+  - path: docs/acceptance-criteria/build-orchestration/BO-210-precommit-safety-net/BO-210c.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      THE BEHAVIOUR THAT MUST NOT FIRE FOR THIS CLASS. BO-210c re-dispatches the originating
+      coder with its context capsule and retries the commit once. For a refusal whose
+      disposition names a craft the author is not being asked to supply, that re-dispatch is
+      precisely what must not happen — and because BO-210c reads the originating agent
+      identity from the hook's own output, an implementation that adds the specialist
+      without touching BO-210c's route produces a run in which BOTH are engaged. That is
+      this record's first named mutation and it is the belt-and-braces build a careful
+      implementer reaches for first.
+  - path: docs/acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/GE-127f-3.yaml
+    relationship: depends_on
+    status: exists
+    relevance: >-
+      OWNS THE DISPOSITION THIS RECORD READS AND NEVER SECOND-GUESSES, INCLUDING THAT THE
+      AUTHOR-CLEARABLE BAND IS NEVER EMPTY. Consumed as stated; the threshold's value and
+      its arithmetic are not restated here and are not judged here.
+  - path: docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900c-4-i.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      THE CONSTRUCTION REUSED RATHER THAN REINVENTED. It settles the identical epistemic
+      problem on a different subject: run the guard BEFORE and AFTER changing the one input
+      in question and require the answer to MOVE, because a hard-coded selector passes every
+      single-run assertion. The paired arm above is that construction applied to the party
+      engaged. A single-run assertion that "the author was not engaged" is satisfied by a
+      run that engages nobody at all.
+  - path: CLAUDE.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      "Gate / Workflow ACs — Verify Behaviorally, Not by Grep". An assertion that a routing
+      table no longer maps this hook to the coder is a grep on a configuration file; it
+      stays green on a run in which the coder is engaged by some other path. Both arms above
+      are read from the parties a real run actually engaged.
+delivers_to:
+  - ac_id: GE-127f-3
+    contract: >-
+      The other half of the WHO promise: not only is the specialist engaged (BO-3800b-1),
+      the author is not engaged to discharge the same demand inside the same change. Without
+      this half, a build that engages both satisfies BO-3800b-1 entirely while leaving the
+      author racing the standard — which is the behaviour the user asked for a specialist to
+      prevent.
+expects_from: null
+origin_agent: business-analyst
+created: 2026-09-14
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  WHY THIS IS NOT PART OF BO-3800b-1, AND THE MUTATION THAT PROVES IT. Engaging the right
+  party and NOT engaging the wrong one are separately failable, and the implementation that
+  separates them is not hypothetical — it is the safest-looking build available. BO-210c's
+  route already re-dispatches the originating coder on a gating-hook failure and retries
+  once; adding the specialist alongside it, without touching that route, satisfies every arm
+  of BO-3800b-1 (the specialist is engaged, and engaged before the retry) while leaving the
+  author racing the standard in parallel. The user's stated reason for wanting a specialist
+  is that an author racing a gate moves lines to a neighbouring file to make a number fall;
+  a build that engages both gets that failure anyway, at twice the cost, and looks correct
+  from BO-3800b-1's side. That is injection (1) below, and its stay-green half is the whole
+  argument for two records instead of one.
+
+  WHAT THIS RECORD DOES NOT CLAIM. It does not claim the specialist did the restructuring —
+  unobservable, and forbidden by BO-3800's notes. It claims only which parties the run
+  engaged, which is observable. In particular, a run satisfying every arm above may still
+  have produced a file the author would have produced: the protection against that rests on
+  the specialist's judgement, not on anything a check can detect, and BO-3800b's notes say
+  so plainly. Do not write a clause that implies otherwise.
+
+  THE BOUNDARY WITH BO-3800e-1, STATED SO THE TWO ARE NOT READ AS DUPLICATES. The paired arm
+  above asserts only that the party MOVED when the disposition moved — it is this record's
+  discriminator, without which the first arm is satisfied by a run that engages nobody.
+  BO-3800e-1 asserts something this record does not: that in the author-clearable case the
+  parties, their order and the outcome are the same as they are BEFORE this capability
+  exists. A build could make the party move correctly while changing how the author-clearable
+  case behaves in every other respect; that build passes here and fails there.
+
+  NAMED MUTATIONS — EXECUTE THEM, DO NOT MERELY DESCRIBE THEM. Written so the IT PO can
+  lift them verbatim into test descriptors.
+
+  (1) THE BELT AND BRACES. MUTATION: on a refusal whose disposition names the specialist,
+      engage the restructuring specialist AND ALSO re-engage the originating coder with the
+      same demand, exactly as the existing same-agent recovery route already does for every
+      refusal — that is, add the specialist without removing the coder from this class.
+      MUST GO RED: the coder-not-engaged arm and the nobody-in-its-place arm.
+      MUST STAY GREEN: EVERY arm of BO-3800b-1 — the specialist is still engaged, still
+      before the retry, and the engagement still moves with the disposition — and every arm
+      of BO-3800a-1 and BO-3800e-1. That green half is the separability evidence for this
+      record and must be observed rather than assumed.
+
+  (2) THE DISPOSITION IGNORED. MUTATION: engage the restructuring specialist on every
+      refusal and never the originating coder, without reading the stated disposition.
+      MUST GO RED: the paired author-clearable arm of this record, and both arms of
+      BO-3800e-1.
+      MUST STAY GREEN: the first two arms of this record, every arm of BO-3800b-1 and
+      BO-3800a-1. EXPECTED COUPLING, TO BE REPORTED RATHER THAN SUPPRESSED: this injection
+      reddens BO-3800e-1 by construction, because BO-3800e-1 is the record that owns the
+      population it destroys. That is a true consequence and not a defect in either record.
+
+  THE RECONCILIATION THIS RECORD FORCES AND DOES NOT PERFORM. BO-210 is approved, active and
+  priority high, with three approved children. Its same-agent clause is narrowed by this
+  record for one class and by nothing else. The change that implements this must reconcile
+  BO-210a's single gating list and BO-210c's re-dispatch with the carve-out in the same pass
+  — not discover it when BO-210's own descriptors go red. Which of the two possible seams is
+  taken (route on the hook id, or route on the disposition the refusal states) is named in
+  the doc_links above as an IT PO decision and is deliberately not taken here.
+
+  NOT AUTHORED HERE, BY DESIGN: assigned_agent, estimated_complexity, it_requirements,
+  test_spec, test_rationale and declares_side_effect. Those are the IT PO's, which runs
+  after this pass.

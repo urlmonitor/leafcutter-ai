@@ -1,0 +1,111 @@
+id: BO-3800c-1-i
+title: "A refusal that hands the work to a specialist but carries no usable demand stops the run and reproduces what it was given, rather than supplying a demand of its own"
+component: build-orchestration
+components:
+  - build_orchestration
+  - supervisor_system
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a ticket is being driven and delivery is refused with an outcome stating
+    the disposition that hands the work to a restructuring specialist, but
+    carrying no usable demand — the file unnamed, or the quantity absent, empty,
+    blank, or not a quantity,
+  When the run adjudicates that refusal,
+  Then no restructuring specialist is engaged,
+  And the run stops, reporting that the refusal was read and carried no usable
+    demand, and reproducing the value it was given rather than substituting one,
+  And delivery is not attempted again,
+  And given instead a refusal the run could not obtain or read at all,
+  When the run adjudicates it,
+  Then the run stops and reports that distinguishably — a refusal that was read
+    and said nothing usable is never reported as one that could not be read, nor
+    the reverse,
+  And in neither case is a demand supplied, defaulted to any value, inferred from
+    the file, or obtained by re-running the standard.
+depends_on:
+  - BO-3800c-1
+doc_links:
+  - path: docs/acceptance-criteria/build-orchestration/BO-3800-refusal-summons-specialist/BO-3800c-1.yaml
+    relationship: parent
+    status: exists
+  - path: docs/acceptance-criteria/build-orchestration/BO-3000a.yaml
+    relationship: depends_on
+    status: exists
+    relevance: >-
+      THE SHAPE THIS RECORD COPIES RATHER THAN INVENTS, ONE FIELD OVER. BO-3000a already
+      pins three behaviours for a handoff whose target is missing or unrecognised: dispatch
+      nobody, reproduce the value you were given rather than resolving it to something else,
+      and tell "no usable result was obtained" apart from "a result was obtained and named
+      nothing". This record applies all three to a refusal whose demand is missing or
+      unusable. Reuse that behaviour; do not build a second refusal path beside it.
+  - path: docs/acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/GE-127f-2-i.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      THE SAME FLOOR ONE LAYER DOWN, AND THE REASON IT IS NEEDED HERE. That record exists so
+      an unavailable input reaches the comparison as a named refusal and never as a count of
+      zero, because a swallowed error that becomes a default silently restores the previous
+      behaviour while every test stays green. A defaulted demand does the same thing here: it
+      produces a confident handoff answering a question nobody asked.
+  - path: CLAUDE.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      Error-handling policy — a swallowed read or parse error on the refusal must never
+      become a demand of zero, a demand of some standing default, or an unnamed file. Route
+      it to the stop above. "Verify Behaviorally, Not by Grep" applies equally: the arms here
+      are read from what a real run did, not from the presence of a validation branch.
+delivers_to: null
+expects_from:
+  - ac_id: GE-127f-3
+    contract: >-
+      A refusal stating the file, the demand and the disposition. This record is the floor
+      for the case where the disposition is present and one of the other two is not, and it
+      requires that case to surface as a stop rather than as a handoff carrying an invented
+      demand.
+origin_agent: business-analyst
+created: 2026-09-14
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: internal
+notes: |
+  WHY THIS EDGE EARNS A RECORD WHEN MOST DO NOT. Because its wrong answer is the HELPFUL one
+  and will be written by default. Faced with a disposition naming the specialist and a
+  demand that did not arrive, the obvious implementation engages the specialist anyway —
+  with the demand omitted, or with a placeholder, or with a number recovered by re-running
+  the standard. All three produce a run in which the right party is engaged, the change is
+  held, delivery is retried, and BO-3800b-1 and BO-3800a-1 are both fully green, while the
+  specialist answers a question nobody asked. GE-127f-2-i exists for exactly this shape one
+  layer down; BO-3000a's refusal behaviour is the same discipline one field over. Without
+  this record the parent's last arm is defeated by the case it never sees.
+
+  THE SECOND ARM IS NOT DECORATION. "Read and said nothing usable" versus "could not be read
+  at all" is the distinction BO-3000a insists on for a phase reply and BO-400a-2-iii for the
+  ticket record. Collapsed into one message, the reader cannot tell a refusing standard that
+  is emitting a malformed outcome from one that is not being reached at all — which is the
+  difference between a bug in the guardrail and a bug in the wiring, and the two are fixed
+  in different components.
+
+  NAMED MUTATION — EXECUTE IT, DO NOT MERELY DESCRIBE IT.
+
+  THE HELPFUL DEFAULT. MUTATION: when a refusal states the specialist disposition but
+  carries no usable demand, engage the specialist anyway, with the demand omitted from the
+  brief.
+  MUST GO RED: the no-specialist-engaged arm and the run-stops arm.
+  MUST STAY GREEN: every arm of BO-3800c-1 — a well-formed refusal still carries the file
+  and the demand intact and still moves when they move — and every arm of BO-3800b-1,
+  BO-3800a-1 and BO-3800e-1. That green half is the evidence that this record is a floor
+  under its parent rather than a restatement of it.
+
+  NOT AUTHORED HERE, BY DESIGN: assigned_agent, estimated_complexity, it_requirements,
+  test_spec, test_rationale and declares_side_effect. Those are the IT PO's, which runs
+  after this pass.

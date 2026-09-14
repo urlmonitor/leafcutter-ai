@@ -1,0 +1,156 @@
+id: BO-3800d-2
+title: "The stop accounts for itself — what was asked, what was done, where the file now stands and that nothing was delivered — and the three ways the handoff can end are told apart"
+component: build-orchestration
+components:
+  - build_orchestration
+  - supervisor_system
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a run has stopped because the restructuring specialist was engaged up to
+    the bound and the named file still does not meet the demand,
+  When the account the run produced is read,
+  Then it names the file that was at issue and states the demand that was asked of
+    it,
+  And it states that the restructuring specialist was engaged, and how many times,
+  And it states where the file now stands against that demand, including the case
+    in which the file was improved without reaching it,
+  And it states that whatever the specialist changed in the file is still there and
+    has not been undone,
+  And it states that the change was not delivered,
+  And given instead a run that stopped because the restructuring specialist could
+    not be engaged at all, or was engaged and returned nothing usable,
+  When that account is read,
+  Then it says which of those two happened, and it is not the same account as the
+    one above — a file that resists restructuring is never reported as broken
+    machinery, nor the reverse,
+  And given instead a run in which the specialist met the demand and delivery
+    completed,
+  When the run is read,
+  Then neither of those accounts is produced,
+  So the three endings — the demand met, the specialist fell short, the specialist
+    could not be engaged or produced nothing usable — are three things a reader can
+    tell apart from the account alone, without inspecting the repository.
+depends_on:
+  - BO-3800d
+doc_links:
+  - path: docs/acceptance-criteria/build-orchestration/BO-3800-refusal-summons-specialist/BO-3800d.yaml
+    relationship: parent
+    status: exists
+  - path: docs/acceptance-criteria/build-orchestration/BO-3000a.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      THE SAME SEPARATION ONE LAYER OVER, AND THE SHAPE TO COPY. BO-3000a requires a phase
+      that returned nothing usable and a phase that returned something readable but empty to
+      be reported distinguishably, "so an agent that never reported is never diagnosed as an
+      agent that reported badly, nor the reverse". The second arm above is that rule applied
+      to a specialist that could not be engaged versus one that ran and fell short.
+  - path: docs/acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/GE-127f-2-i.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      THE STORE'S STANDING DISCIPLINE ON TELLING FAILURE MODES APART, one layer down and on
+      a different subject. Cited so the construction is not invented twice; not restated.
+  - path: docs/architecture/agent_delivery_workflows.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      The adjudication ladder's last rung is "Halt & Surface to User"; this record says what
+      must be in hand when that rung is reached for a restructuring handoff. The surface the
+      account appears on is an enrichment decision and is deliberately not fixed above.
+  - path: docs/acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/GE-127e.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      BOUNDARY. GE-127e owns what a REFUSAL says to a human and how well it reads. This
+      record owns what a STOP must contain after a handoff has been attempted and has not
+      worked — a different artifact, produced by a different layer, at a different moment.
+      No clause above takes a position on wording, and none may be discharged by improving
+      the refusal's message.
+  - path: CLAUDE.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      "Gate / Workflow ACs — Verify Behaviorally, Not by Grep". A test that asserts a message
+      template contains the right placeholders stays green on a stop that is never reached
+      and on one whose values are never filled in. Every arm above is read from the account a
+      real stopped run actually produced.
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-09-14
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: internal
+notes: |
+  WHY THIS IS NOT PART OF BO-3800d-1, AND THE MUTATION THAT PROVES IT. A system that stops
+  cleanly at the bound and reports a single line — "restructuring failed" — satisfies every
+  arm of BO-3800d-1 and leaves the author in the state BO-3800d's notes call the worst of
+  the three: holding a refusal with no explanation, which is indistinguishable from the
+  feature not existing at all. Conversely a system that accounts beautifully and loops
+  forever never produces an account, because it never stops. The two records fail in
+  opposite directions and injection (1) below leaves BO-3800d-1 entirely green, which is the
+  evidence they are not one record.
+
+  THE PARTIAL-PROGRESS DECISION, TAKEN EXPLICITLY HERE AS BO-3800d's NOTES REQUIRE RATHER
+  THAN INHERITED. The question is whether a file the specialist improved without bringing it
+  to the demand keeps that improvement at the stop or has it discarded. THE DECISION TAKEN:
+  the improvement is KEPT, and the account must say where the file now stands and that the
+  specialist's work is still in place. Three reasons, recorded so the decision is not
+  re-litigated at enrichment:
+    - Discarding contradicts the tree's own hold promise one layer in. BO-3800a-1 forbids
+      reverting the author's change on the refusal path, for the reason that work destroyed
+      to make a recovery tidy is work lost. The specialist's work is in the same position.
+    - Discarding requires a rollback the hold path does not otherwise need, and a rollback
+      that must distinguish the specialist's edits from the author's inside one working tree
+      is exactly the separation this tree has already established is not observable.
+    - The stated hazard of keeping — "a stopped run leaves the file in a state nobody chose"
+      — is answered by the account rather than by the rollback: the arm above requires the
+      stop to state where the file stands and that the specialist's changes remain, so
+      nobody has to discover it. That is why the two arms are in one record.
+  This is a decision, not a discovery, and it is open to being overturned by the user or the
+  IT PO on the record — but it must not be quietly reversed by an implementation that finds
+  a rollback convenient.
+
+  WHAT IS DELIBERATELY LEFT TO ENRICHMENT. The surface the account appears on. BO-3800d's
+  notes leave it open, the adjudication ladder's existing "Halt & Surface to User" rung is
+  the obvious home, and pinning it in criteria would make this record fail for a reason
+  unrelated to its promise the first time the surface moves.
+
+  THE THIRD ARM IS NOT DECORATION. Requiring the successful run to produce NEITHER account
+  is what stops the two accounts being emitted unconditionally — a stop-shaped report printed
+  on every handoff, including the ones that worked, tells a reader nothing and makes the
+  first two arms trivially satisfiable.
+
+  NAMED MUTATIONS — EXECUTE THEM, DO NOT MERELY DESCRIBE THEM. Written so the IT PO can lift
+  them verbatim into test descriptors.
+
+  (1) THE BARE FAILURE. MUTATION: replace the account with a single line stating that the
+      restructuring specialist did not resolve the refusal.
+      MUST GO RED: every arm of this record except the third.
+      MUST STAY GREEN: EVERY arm of BO-3800d-1 — the bound holds, the stop happens, nothing
+      is delivered — and every arm of BO-3800a-1, BO-3800b-1, BO-3800e-1 and BO-3800e-2.
+      That green half is the separability evidence for this record and must be observed
+      rather than assumed. It is also the state the repository is in today: the author is
+      handed a refusal and nothing else.
+
+  (2) THE COLLAPSED ENDINGS. MUTATION: report the same account for the fell-short ending and
+      for the could-not-be-engaged ending.
+      MUST GO RED: the told-apart arm only.
+      MUST STAY GREEN: every other arm of this record, and every arm of BO-3800d-1. The
+      narrowness of this injection is the point — it costs the reader the one piece of
+      information that says whether the file is hard or the machinery is broken, and it
+      changes nothing else that any descriptor can see.
+
+  NOT AUTHORED HERE, BY DESIGN: assigned_agent, estimated_complexity, it_requirements,
+  test_spec, test_rationale and declares_side_effect. Those are the IT PO's, which runs after
+  this pass — including the surface the account appears on.
