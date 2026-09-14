@@ -92,11 +92,19 @@ from build_helpers import (
     install_shims as _install_shims,
     install_hooks as _install_hooks,
     write_build_manifest,
+    shim_map,
+    file_shims,
 )
-from build_ownership import (  # noqa: F401 — re-exported for callers (unit_tests/build_guards/test_bp_1500g_1.py calls build.paths_scheduled_for_both_removal_and_claim)
+# All names below are genuinely called in this file (main(),
+# _cleanup_stale_paths) -- not a re-export crutch, so no noqa needed.
+from build_ownership import (
     _PRE_CONSOLIDATION_PATHS,
     paths_scheduled_for_both_removal_and_claim,
     resolve_removal_verdict,
+    compute_removal_candidates,
+    format_reconciliation_refusal,
+    run_migration_report,
+    assemble_claim_set,
 )
 from build_glossary import build_glossary
 from build_propagation_audit import (
@@ -1593,6 +1601,7 @@ def _cleanup_stale_paths(
     output_root: Path,
     dry_run: bool,
     blocked_paths: list[str] | None = None,
+    strategy: str = "auto",
 ) -> int:
     """Auto-remove stale pre-consolidation files that have moved into .leafcutter/.
 
@@ -1604,6 +1613,12 @@ def _cleanup_stale_paths(
     to *blocked_paths* (when provided) rather than removed — non-attribution
     is treated as keep, never as stale.
 
+    Under ``shim_strategy: "copy"``, a co-claimed path (see
+    ``resolve_removal_verdict``'s *is_claimed* parameter) is never treated
+    as a removal candidate at all — see that function's docstring for why
+    content alone cannot distinguish a stale leftover from the build's own
+    current copy-strategy output (ADR-041 review defect 2a).
+
     Args:
         target_root: Root of the target project.
         output_root: The consolidated output directory (symlinks resolving
@@ -1612,16 +1627,19 @@ def _cleanup_stale_paths(
         blocked_paths: Optional list to append the relative path of any
             entry whose content could not be removed because it is not
             ``package_produced``.
+        strategy: The configured ``shim_strategy`` (``"symlink"``,
+            ``"copy"``, or ``"auto"``), forwarded to ``resolve_removal_verdict``.
 
     Returns:
         Count of paths removed.
     """
     import shutil
 
+    claimed = assemble_claim_set(shim_map, file_shims)
     removed = 0
     for rel_path in _PRE_CONSOLIDATION_PATHS:
         full = target_root / rel_path
-        verdict = resolve_removal_verdict(full, output_root)
+        verdict = resolve_removal_verdict(full, output_root, strategy, rel_path in claimed)
         if verdict is None:
             continue
         if verdict != "package_produced":
@@ -1742,68 +1760,10 @@ def _migrate_skills_config(
     )
 
 
-def _run_migration_report(target_root: Path, output_root: Path) -> int:
-    """Scan for stale pre-consolidation files and print a migration report.
-
-    Checks known pre-consolidation output paths. A path already shimmed
-    correctly (symlink into the output root) is not stale. Of the
-    remainder, only paths BP-1500g-1's ownership verdict (``owns_installed_path``)
-    calls ``"package_produced"`` (a foreign symlink, or a real empty
-    directory/file) are suggested for removal via an ``rm``/``rm -rf``
-    instruction — the fifth enforcement point this AC governs. A path
-    holding content the build cannot attribute to itself is listed
-    separately as PROTECTED and is never named in a removal instruction:
-    a migration report must not instruct the adopter to delete their own
-    content by hand.
-
-    Returns 0 always (report-only, no deletions).
-    """
-    print(f"\nMigration report for: {target_root}")
-    print(f"Output root: {output_root}\n")
-
-    stale: list[str] = []
-    protected: list[str] = []
-    for rel_path in _PRE_CONSOLIDATION_PATHS:
-        full = target_root / rel_path
-        verdict = resolve_removal_verdict(full, output_root)
-        if verdict is None:
-            continue
-        if verdict == "package_produced":
-            stale.append(rel_path)
-        else:
-            protected.append(rel_path)
-
-    if not stale and not protected:
-        print("No stale pre-consolidation files found. Migration complete.")
-        return 0
-
-    if stale:
-        print(f"Found {len(stale)} stale pre-consolidation path(s):\n")
-        for p in stale:
-            full = target_root / p
-            kind = "directory" if full.is_dir() else "file"
-            print(f"  STALE: {p} ({kind})")
-
-        print("\nTo remove stale files, run:")
-        for p in stale:
-            full = target_root / p
-            if full.is_dir():
-                print(f"  rm -rf {p}")
-            else:
-                print(f"  rm {p}")
-    else:
-        print("No stale pre-consolidation files are safe to remove automatically.")
-
-    if protected:
-        print(
-            f"\n{len(protected)} path(s) hold content this build did not "
-            "produce and will NOT be suggested for removal:\n"
-        )
-        for p in protected:
-            print(f"  PROTECTED: {p} (adopter-owned or unattributable content)")
-
-    print(f"\nThen re-run: python {Path(__file__).name} --target-dir {target_root}")
-    return 0
+# _run_migration_report moved to build_ownership.run_migration_report
+# (headroom pass, ADR-041 review -- see build_ownership.py's decision
+# history for the full account). build.py's --migrate flag below calls it
+# unchanged in behaviour.
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -1922,7 +1882,9 @@ def main(argv: list[str] | None = None) -> int:
     if args.migrate:
         output_root_name = config.get("output_root", ".leafcutter")
         output_root = target_root / output_root_name
-        return _run_migration_report(target_root, output_root)
+        _strategy = config.get("shim_strategy", "auto")
+        _claim_set = assemble_claim_set(shim_map, file_shims)
+        return run_migration_report(target_root, output_root, _strategy, _claim_set)
 
     # Halt-guard: check for breaking changes since last build
     changelogs_dir = package_root / "changelogs"
@@ -2099,10 +2061,24 @@ def main(argv: list[str] | None = None) -> int:
     # the content survives, but the run does not report success.
     _blocked_conflicts: list[str] = []
 
+    # ADR-041 §3 reconciliation, BEFORE any action this run -- see
+    # compute_removal_candidates's docstring in build_ownership.py.
+    _shim_strategy = config.get("shim_strategy", "auto")
+    _claim_set = assemble_claim_set(shim_map, file_shims)
+    _removal_candidates = compute_removal_candidates(
+        target_root, output_root, _shim_strategy, _PRE_CONSOLIDATION_PATHS, _claim_set
+    )
+    _reconciliation_conflicts = paths_scheduled_for_both_removal_and_claim(
+        _removal_candidates, _claim_set
+    )
+    if _reconciliation_conflicts:
+        _error(format_reconciliation_refusal(_reconciliation_conflicts))
+        return 1
+
     print()
     _heading("Stale file cleanup")
     stale_count = _cleanup_stale_paths(
-        target_root, output_root, args.dry_run, _blocked_conflicts
+        target_root, output_root, args.dry_run, _blocked_conflicts, _shim_strategy
     )
     if stale_count == 0 and not _blocked_conflicts:
         print(f"  {DIM}(no stale files found){RESET}")
@@ -2167,6 +2143,12 @@ if __name__ == "__main__":
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-09-14 [python-coder/ADR-041 review-defects pass]: Wired ADR-041
+#   §3's removal/claim reconciliation into main(); moved _run_migration_
+#   report to build_ownership.run_migration_report. Full account (all four
+#   touched files) is build_ownership.py's own decision history --
+#   consolidated there rather than repeated once per file.
+#   (#BP-1500g-1/adr-041-review)
 # - 2026-08-26 [python-coder/BP-900g-8 review-fix]: Registered
 #   scripts/release/check_changelog_presence.py in both
 #   _get_source_deployable_scripts() and _get_source_paths_for_guard() (source

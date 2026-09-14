@@ -67,6 +67,11 @@ from template_compiler import (
     parse_frontmatter,
 )
 from build_agent_self_description import validate_agent_self_description  # noqa: F401 — re-exported for build.py + unit_tests/test_agent_self_description_validation.py
+from build_ownership import (
+    _CLEAN_LEDGER_FILENAME,
+    _load_clean_ledger,
+    _save_clean_ledger,
+)
 
 PACKAGE_ROOT = Path(__file__).resolve().parent.parent
 TEMPLATES_DIR = PACKAGE_ROOT / "templates"
@@ -3458,40 +3463,9 @@ _MANAGED_ARTIFACT_DIRS = {
     "workflows": ".claude/workflows",
 }
 
-#: BP-1500g-1-i: filename of the ledger clean_stale_artifacts() maintains
-#: under output_root, recording — per artifact type — the UNION of every
-#: name ever seen in a real ``source_manifests`` at clean-mode time. Never
-#: shrinks. This is the "provenance record" it_requirements calls for: an
-#: item absent from the CURRENT manifest is only removed when it was
-#: PREVIOUSLY, genuinely package-produced (recorded here in an earlier
-#: --clean run) — never merely because its name is unrecognised today.
-#: An unrecognised name the ledger has never seen is adopter-owned or
-#: unattributable by definition and is always kept.
-_CLEAN_LEDGER_FILENAME = ".clean_deploy_ledger.json"
-
-
-def _load_clean_ledger(ledger_path: Path) -> dict[str, set[str]]:
-    """Load the clean-mode provenance ledger, tolerating absence/corruption."""
-    if not ledger_path.exists():
-        return {}
-    try:
-        raw = json.loads(ledger_path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError) as exc:
-        _log.warning("Could not read clean-mode ledger %s: %s — treating as empty.", ledger_path, exc)
-        return {}
-    return {k: set(v) for k, v in raw.items()} if isinstance(raw, dict) else {}
-
-
-def _save_clean_ledger(ledger_path: Path, ledger: dict[str, set[str]]) -> None:
-    """Persist the clean-mode provenance ledger (never shrinks its entries)."""
-    try:
-        ledger_path.parent.mkdir(parents=True, exist_ok=True)
-        serialisable = {k: sorted(v) for k, v in ledger.items()}
-        ledger_path.write_text(
-            json.dumps(serialisable, indent=2, sort_keys=True) + "\n", encoding="utf-8"
-        )
-    except OSError as exc:
-        _log.warning("Could not write clean-mode ledger %s: %s", ledger_path, exc)
+# _CLEAN_LEDGER_FILENAME, _load_clean_ledger, _save_clean_ledger moved to
+# build_ownership.py (headroom pass, ADR-041 review -- see that module's
+# decision history). Imported below, unchanged in behaviour.
 
 
 def clean_stale_artifacts(
@@ -3516,6 +3490,14 @@ def clean_stale_artifacts(
     Only removes files/directories under the known managed subdirectories.
     Files elsewhere in ``.claude/`` or the broader target directory are
     never touched.
+
+    ADR-041 Consequences/Negative: a kept-but-unattributable item (name not
+    in the current manifest AND not in the ledger) MUST be reported, not
+    merely spared -- a bare ``continue`` here was silent, which is exactly
+    what let KI-BP-009 survive months of green builds undetected, including
+    on the very first ``--clean`` after an upgrade (ledger empty by
+    construction, every unmatched item takes this path). Prints a WARNING
+    naming the item instead.
 
     Args:
         target_dir: Root directory of the target project. The managed artifact
@@ -3560,8 +3542,7 @@ def clean_stale_artifacts(
             if item.name in expected_names:
                 continue
             if item.name not in known_before:
-                # Never recorded as package-produced in any earlier
-                # --clean run — cannot attribute it to the build.
+                print(f"WARNING: kept unattributable item (unrecorded, not removed): {item}")
                 continue
             print(f"Removing stale artifact: {item}")
             removed += 1
@@ -3588,6 +3569,9 @@ def clean_stale_artifacts(
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-09-14 [python-coder]: WARNs on kept-unattributable items (ADR-041
+#   review defect 3); moved the clean-ledger helpers to build_ownership.py
+#   for headroom. Full account: build_ownership.py. (#BP-1500g-1-i)
 # - 2026-05-14 00:50 [epic-supervisor/T04]: Added _find_decision_history_index (#EPIC-LeafcutterMVP/01)
 #   and _build_output_lines to re-exports from build_precommit so unit tests
 #   can access them via build_phases. No logic changes in this module.

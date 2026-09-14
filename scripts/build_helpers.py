@@ -29,6 +29,20 @@ ARCHITECTURE: Each function is self-contained and safe to import independently.
     table install_shims() uses to create the shims — so a new deploy
     phase or a new shim entry extends coverage on both sides without a
     separate edit here.
+
+    ADR-041 Decision §3 (BP-1500g-1): the removal/claim reconciliation
+    check in ``build.py``'s ``main()`` must be assembled from ALL of the
+    claim tables named in the ADR's Context §4, not just ``shim_map`` --
+    which requires ``file_shims`` (previously a local variable inside
+    ``install_shims()``, holding the single-file shims
+    ``.pre-commit-config.yaml`` and ``.claude/settings.json``) to be
+    promoted to module scope so it is importable, reconcilable, and
+    testable. This is explicitly not incidental tidying (see the ADR's
+    Consequences/Negative). ``build_ownership.assemble_claim_set`` is what
+    combines it with ``shim_map`` into the full claim set ``build.py``
+    passes around -- kept in ``build_ownership`` rather than here so that
+    module never needs to import back from this one (it already imports
+    ``resolve_shim_ownership_veto`` the other way).
 """
 
 from __future__ import annotations
@@ -45,7 +59,7 @@ from build_colors import dry_run as _dry_run
 from build_colors import info as _info
 from build_colors import success as _success
 from build_colors import warn as _warn
-from build_ownership import resolve_shim_ownership_veto
+from build_ownership import resolve_shim_ownership_veto, _create_shim, _create_file_shim
 from build_precommit_install import install_hooks  # noqa: F401 — re-exported for build.py's existing import
 
 # ---------------------------------------------------------------------------
@@ -93,6 +107,10 @@ shim_map: list[tuple[str, str]] = [
 _OUTPUT_REL_TO_CANONICAL: dict[str, str] = {
     output_rel: canonical_rel for canonical_rel, output_rel in shim_map
 }
+file_shims: list[tuple[str, str]] = [  # File claim set (see module docstring).
+    (".pre-commit-config.yaml", "pre-commit-config.yaml"),
+    (".claude/settings.json", "settings.json"),
+]
 
 
 def _load_build_phases_module(package_root: Path):
@@ -1391,6 +1409,21 @@ def install_shims(
     - ``"copy"``: always use file copies (safe on all platforms).
     - ``"auto"`` (default): try symlinks first, fall back to copies on error.
 
+    ADR-041 review defect 2b: the directory-shim loop's pre-removal step
+    does NOT ``shutil.rmtree()`` an existing canonical directory when
+    *strategy* is ``"copy"`` (unlike symlink/auto, where an existing
+    directory is removed before the shim is created). Under copy strategy
+    the canonical directory can hold BOTH this build's own previously-
+    copied files AND genuine adopter content placed inside it -- a
+    co-claimed container is never the unit of removal (ADR-041 §2).
+    Pre-removing it wholesale used to destroy the latter before
+    ``_create_shim``'s ``shutil.copytree(source, canonical,
+    dirs_exist_ok=True)`` could merge the former back in. No pre-removal is
+    needed under copy strategy at all: that ``copytree`` call merges the
+    package's own current files in by name and never deletes a name it
+    doesn't overwrite, so anything genuinely adopter-owned inside the
+    container survives untouched.
+
     Args:
         target_root: Absolute path to the target project root.
         output_root: Absolute path to the consolidated output directory
@@ -1444,7 +1477,7 @@ def install_shims(
                 try:
                     if canonical_path.is_symlink() or canonical_path.is_file():
                         canonical_path.unlink()
-                    elif canonical_path.is_dir():
+                    elif canonical_path.is_dir() and strategy != "copy":  # ADR-041 2b
                         import shutil
                         shutil.rmtree(canonical_path)
                 except OSError as exc:
@@ -1470,13 +1503,7 @@ def install_shims(
         })
         _info(f"shim: {canonical_rel} -> {output_rel} ({method})")
 
-    # Single-file shims (these are files, not directories)
-    file_shims: list[tuple[str, str]] = [
-        (".pre-commit-config.yaml", "pre-commit-config.yaml"),
-        (".claude/settings.json", "settings.json"),
-    ]
-
-    for canonical_rel, output_rel in file_shims:
+    for canonical_rel, output_rel in file_shims:  # single-file shims
         canonical_path = target_root / canonical_rel
         source_path = output_root / output_rel
 
@@ -1526,91 +1553,15 @@ def install_shims(
     return results
 
 
-def _relative_symlink_target(canonical: Path, source: Path) -> str:
-    """Return the symlink target to record for ``canonical`` -> ``source``.
-
-    Computed relative to ``canonical``'s own parent directory (ADR-004 /
-    ADR-016) — not the process's working directory — so a rebuild from any
-    cwd, and a relocation/copy of the whole tree, still resolves. Falls back
-    to an absolute target when no relative path can be expressed (e.g. the
-    canonical location and the output root sit on different drives/mounts
-    with no common ancestor); the caller still completes in that case.
-
-    Args:
-        canonical: Absolute path where the shim link will be created.
-        source: Absolute path inside the output root the link must resolve to.
-
-    Returns:
-        The string to pass to ``Path.symlink_to()`` — a relative path when
-        one can be expressed, otherwise the absolute ``source`` path.
-    """
-    try:
-        return os.path.relpath(str(source), str(canonical.parent))
-    except ValueError:
-        return str(source)
-
-
-def _create_shim(canonical: Path, source: Path, strategy: str) -> str:
-    """Create a directory shim (symlink or copy) at canonical pointing to source.
-
-    Args:
-        canonical: Absolute path where the shim is created (e.g. `.claude/agents`).
-        source: Absolute path inside the output root the shim must resolve to.
-        strategy: ``"symlink"``, ``"copy"``, or ``"auto"`` (see ``install_shims``).
-
-    Returns:
-        The method used: ``"symlink"``, ``"copy"``, or ``"copy (symlink failed)"``.
-    """
-    import shutil
-
-    if strategy == "copy":
-        shutil.copytree(source, canonical, dirs_exist_ok=True)
-        return "copy"
-
-    target = _relative_symlink_target(canonical, source)
-    try:
-        canonical.symlink_to(target, target_is_directory=True)
-    except (OSError, PermissionError):
-        if strategy == "symlink":
-            raise
-        shutil.copytree(source, canonical, dirs_exist_ok=True)
-        return "copy (symlink failed)"
-    else:
-        return "symlink"
-
-
-def _create_file_shim(canonical: Path, source: Path, strategy: str) -> str:
-    """Create a file shim (symlink or copy) at canonical pointing to source.
-
-    Args:
-        canonical: Absolute path where the shim is created (e.g. `.gemini`).
-        source: Absolute path inside the output root the shim must resolve to.
-        strategy: ``"symlink"``, ``"copy"``, or ``"auto"`` (see ``install_shims``).
-
-    Returns:
-        The method used: ``"symlink"``, ``"copy"``, or ``"copy (symlink failed)"``.
-    """
-    import shutil
-
-    if strategy == "copy":
-        shutil.copy2(source, canonical)
-        return "copy"
-
-    target = _relative_symlink_target(canonical, source)
-    try:
-        canonical.symlink_to(target)
-    except (OSError, PermissionError):
-        if strategy == "symlink":
-            raise
-        shutil.copy2(source, canonical)
-        return "copy (symlink failed)"
-    else:
-        return "symlink"
+# _relative_symlink_target, _create_shim, _create_file_shim moved to
+# build_ownership.py (headroom pass, ADR-041 review -- see that module's
+# decision history). Imported below, unchanged in behaviour.
 
 
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-09-14 [python-coder]: ADR-041 fixes -- see build_ownership.py. (#BP-1500g-1)
 # - 2026-08-26 [python-coder/EPIC-BuildPipelinePhantomRemediation, adversarial
 #   review round 2, B-1(b)]: Every per-file existence gate this round added to
 #   _compute_output_mappings() (phase_mappings, skills, direct-output

@@ -159,6 +159,66 @@ def test_bp_1500g_1_i_two_consecutive_clean_runs_leave_the_adopter_content_byte_
 
 
 # ====================================================================
+# REVIEW-FOUND DEFECT (2026-09-14) -- ADR-041 divergence
+# ====================================================================
+
+
+def test_bp_1500g_1_i_clean_reports_a_kept_unattributable_item_instead_of_staying_silent(
+    tmp_path: Path,
+) -> None:
+    # covers: BP-1500g-1-i
+    # angle: criterion
+    """REVIEW DEFECT 3: unattributable items are kept silently. ADR-041
+    Consequences/Negative -- "it MUST be visible in run output at an
+    appropriate severity... a build that quietly keeps more than it used to
+    is a build whose behaviour nobody can audit. Kept-but-unattributable
+    items MUST be reported, not merely spared."
+
+    `clean_stale_artifacts` (`scripts/build_phases.py:3559-3565`): when an
+    item's name is absent from BOTH the current source manifest AND the
+    on-disk provenance ledger, the loop does a bare `continue` -- no print,
+    no warning. The adjacent removal branch a few lines below prints
+    `Removing stale artifact: {item}`. So the build is silent about
+    precisely the items it newly protects -- including on the very first
+    `--clean` after upgrading, when the ledger is empty by construction and
+    EVERY unmatched item is retained by this path.
+
+    Distinct from this file's other entries, which assert the item
+    SURVIVES: this test asserts the run's OUTPUT says so. An implementation
+    that fixes only survival (as this file's other entries already require)
+    without also fixing the silence would leave this entry RED on its own.
+
+    Confirmed RED on this worktree at HEAD 2fc29efb2: planting an adopter
+    capability inside the generated tree and running a real `--clean`
+    subprocess against a project whose ledger is empty (a fresh scratch
+    adopter's first `--clean` run) survives the item but the run's combined
+    stdout/stderr never mentions its name anywhere -- the Clean mode section
+    prints only `No stale artifacts found`."""
+    target_root = fresh_scratch_adopter(tmp_path)
+    planted = plant_capability_inside_generated_tree(target_root)
+
+    result = run_build(target_root, "--clean")
+
+    combined = result.stdout + result.stderr
+    assert planted["name"] in combined, (
+        "The retained item's name never appears anywhere in the --clean "
+        "run's output -- it was kept, but the build never said so "
+        f"(ADR-041 Consequences/Negative).\nstdout:\n{result.stdout}\n"
+        f"stderr:\n{result.stderr}"
+    )
+    marker_lines = [ln for ln in combined.splitlines() if planted["name"] in ln]
+    assert any(
+        keyword in ln.lower()
+        for ln in marker_lines
+        for keyword in ("warning", "kept", "keep", "retain", "unattributable", "spared")
+    ), (
+        "The retained item's name appears in the output, but not at a "
+        "severity a reader would notice (no warning/kept/retained/"
+        f"unattributable marker on any line naming it): {marker_lines}"
+    )
+
+
+# ====================================================================
 # DECISION HISTORY
 # ====================================================================
 # - 2026-09-08 [test-writer/fast-lane BP-1500g-1-i build set]: Initial RED
@@ -169,4 +229,11 @@ def test_bp_1500g_1_i_two_consecutive_clean_runs_leave_the_adopter_content_byte_
 #   KI-BP-009. `--dry-run --clean` does not gate `clean_stale_artifacts` at
 #   all (no dry_run parameter, no branch), confirmed by reading
 #   scripts/build.py's main().
+# - 2026-09-14 [test-writer/review-defects pass, HEAD 2fc29efb2]: Added a
+#   regression test for a defect found reviewing this AC's implementation
+#   against ADR-041 Consequences/Negative: `clean_stale_artifacts`'s bare
+#   `continue` for a kept-but-unattributable item prints nothing, unlike the
+#   adjacent removal branch's `Removing stale artifact: {item}`. Confirmed
+#   RED via a real --clean subprocess run whose output never names the
+#   retained item.
 # ====================================================================
