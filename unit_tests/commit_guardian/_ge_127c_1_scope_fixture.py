@@ -57,11 +57,17 @@ SUBPROCESS_TIMEOUT_SECONDS = 30
 BUILD_TIMEOUT_SECONDS = 180
 
 # Modules check_file_size.py needs beside it to run standalone from a copy.
+# Hand-enumerated, so it carries the same failure mode as the build's deploy
+# map one layer down: a new import of check_file_size.py that is not added here
+# resolves fine in the source tree and raises ModuleNotFoundError only inside
+# the fixture's temp copy. Nothing checks this list against the real import
+# graph. GE-127e-1's _file_description.py was added for exactly that reason.
 CHECK_FILE_SIZE_SIBLINGS = [
     "check_file_size.py",
     "config.py",
     "_resolve_root.py",
     "_file_size_ratchet.py",
+    "_file_description.py",
     "commit_guardian.json",
 ]
 RUN_HOOK_SIBLINGS = [*CHECK_FILE_SIZE_SIBLINGS, "run_hook.py", "check_outcome.py"]
