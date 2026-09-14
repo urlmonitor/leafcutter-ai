@@ -96,7 +96,26 @@ ENTROPY_HIGH:unit_tests/test_bp_1100f_5.py:*
 ENTROPY_HIGH:unit_tests/test_setup_ticket_worktree.py:*
 ENTROPY_HIGH:unit_tests/workflows/test_bo2400c_context_bundle.py:*
 ENTROPY_HIGH:unit_tests/workflows/test_finalize_feature_preflight.py:*
-ENTROPY_HIGH:unit_tests/workflows/test_quick_fix_workflow.py:*
+# test_quick_fix_workflow.py was split into the nine files below (plus an
+# uncollected harness) when check-file-size refused its 1731 content lines
+# against the 400 limit. Its blanket glob is replaced by theirs rather than
+# dropped: these files ARE its contents, so the same long-CamelCase test-class
+# names that tripped ENTROPY_HIGH there trip it here. Only
+# test_quick_fix_ac_creation.py fires today; the rest are listed because the
+# pattern is identical and a later edit surfacing one should not block a commit
+# for a finding already triaged as a false positive. The names are deliberately
+# NOT reproduced here — quoting one makes this allowlist trip the scanner it
+# suppresses. Glob, not per-line, per CLAUDE.md: these files grow.
+ENTROPY_HIGH:unit_tests/workflows/_quick_fix_harness.py:*
+ENTROPY_HIGH:unit_tests/workflows/test_quick_fix_ac_creation.py:*
+ENTROPY_HIGH:unit_tests/workflows/test_quick_fix_commit_changelog_and_delivery.py:*
+ENTROPY_HIGH:unit_tests/workflows/test_quick_fix_diagnosis_and_fix.py:*
+ENTROPY_HIGH:unit_tests/workflows/test_quick_fix_escalation_and_topology.py:*
+ENTROPY_HIGH:unit_tests/workflows/test_quick_fix_green_phase_and_mutation_proof.py:*
+ENTROPY_HIGH:unit_tests/workflows/test_quick_fix_guard_halts.py:*
+ENTROPY_HIGH:unit_tests/workflows/test_quick_fix_red_phase.py:*
+ENTROPY_HIGH:unit_tests/workflows/test_quick_fix_verification_trust_boundary.py:*
+ENTROPY_HIGH:unit_tests/workflows/test_quick_fix_worktree_invariant.py:*
 # ACS-100i-7 baseline fixture: a recorded list of AC file paths and their
 # validator messages. The long hyphenated store paths trip the entropy
 # heuristic. Glob rather than per-line, since the file is regenerated when the
