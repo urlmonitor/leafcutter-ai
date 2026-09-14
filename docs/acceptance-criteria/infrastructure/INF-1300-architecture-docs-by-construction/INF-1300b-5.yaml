@@ -1,0 +1,301 @@
+id: INF-1300b-5
+title: "One place to look up what an architecture document is made of, kind by kind, that cannot quietly fall behind what is produced"
+component: infrastructure
+components:
+  - documentation_system
+  - infrastructure
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+created_by: "docs/acceptance-criteria/infrastructure/INF-1300-architecture-docs-by-construction/INF-1300b.yaml"
+criteria: |
+  Given the project's declared vocabulary of kinds of picture, a document produced
+    for each kind it declares as current, and a reference describing what an
+    architecture document is made of,
+  When the reference's per-kind entries are read against that declaration and
+    against the produced documents,
+  Then the reference holds one entry for each kind the declaration lists as a kind
+    of picture and no entry for a name it does not list, with the set of kinds
+    taken from the declaration at the moment of the reading rather than from a
+    list written into the reference or into the observation,
+  And each entry's account of the notation that kind's explanatory key covers
+    matches the key the produced document of that kind actually carries, element
+    for element in both directions — notation described but not produced, and
+    notation produced but not described, are both failures,
+  And each entry states, for every part of a produced document of that kind,
+    whether it arrives already written or is left for the author to complete, and
+    that statement matches what the produced document of that kind actually leaves
+    open,
+  And each entry names the further fact that kind obliges the author to supply, or
+    states that the kind obliges none, in agreement with the declaration — and for
+    a name the declaration marks as retired, in agreement with the declaration for
+    the name that replaced it,
+  And when a kind is added to the declaration, or retired in it, or the notation a
+    kind's picture uses is changed, and nothing else is altered, the reference is
+    reported as out of step rather than continuing to read as complete,
+  And nothing the reference states about the invocation, about how to start a
+    document, or about how to verify one is a second copy of what an authoring
+    surface already publishes: each is referenced, so a correction made on that
+    surface cannot leave a stale duplicate standing here.
+depends_on:
+  - INF-1300b
+  - INF-1300a-4
+  - INF-1300b-1
+  - INF-1300b-2
+  - INF-1300b-3
+  - INF-1300b-4
+doc_links:
+  - path: docs/acceptance-criteria/infrastructure/INF-1300-architecture-docs-by-construction/INF-1300b.yaml
+    relationship: parent
+    status: exists
+    relevance: >-
+      The L1 whose documentation_triggers names reference-doc, and whose closing note
+      designates this document as the home for the answer to the missing-key question: an
+      author must be able to look up what the parts of an architecture document are and which
+      of them are theirs to change.
+  - path: docs/reference/architecture-document-anatomy.md
+    relationship: implements
+    status: planned
+    relevance: >-
+      The document this record brings into existence. Noun-phrase kebab name in
+      docs/reference/ per the reference naming rule. Distinct from
+      architecture-docs-layout.md, which says where documents LIVE; this one says what a
+      document is MADE OF.
+  - path: config/diagram_types.json
+    relationship: specifies
+    status: exists
+    relevance: >-
+      THE DECLARATION EVERY PER-KIND TABLE IS CHECKED AGAINST, AND IT IS NOT UNIFORM. Eleven
+      entries: three oblige a further frontmatter fact, one carries an explicit deprecation
+      marker naming its successor, and one is the non-diagram placeholder. It also carries a
+      measured inconsistency the reference must not copy — the retired alias declares an empty
+      obligation while the successor it defers to obliges related_code.
+  - path: docs/acceptance-criteria/infrastructure/INF-1300-architecture-docs-by-construction/INF-1300b-2.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      Establishes what the explanatory key IS and that it is derived per kind from the
+      notation the skeleton uses — and that ADR-015, which both authoring surfaces name as its
+      source, defines no key. This reference is where that answer becomes findable; b-2 is
+      where it becomes true. The reference describes the derivation's result, it does not
+      declare a second version of it.
+  - path: docs/acceptance-criteria/infrastructure/INF-1300-architecture-docs-by-construction/INF-1300b-3.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      Owns the produced-versus-authored partition inside the document. This record's third
+      clause is that partition made lookup-able per kind, and is checked against the same
+      partition rather than re-decided: the page is a view of b-3's split, not a rival one.
+  - path: docs/acceptance-criteria/infrastructure/INF-1300-architecture-docs-by-construction/INF-1300b-1.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      Supplies the single ordered section shape the reference enumerates. Because b-1 requires
+      one declaration held in one place, the reference must read that declaration rather than
+      transcribe the section list — a transcription is the second expression b-1 forbids.
+  - path: docs/acceptance-criteria/infrastructure/INF-1300-architecture-docs-by-construction/INF-1300a-4.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      Owns the single run-time enumeration of reachable (kind, tier) pairs, with the
+      deprecation marker resolved to the successor's rules and the non-diagram entry excluded
+      by a data property rather than by name. This record sweeps that one enumeration instead
+      of re-deriving it, which is what makes the first clause's movement arm possible.
+  - path: docs/acceptance-criteria/infrastructure/INF-1300-architecture-docs-by-construction/INF-1300b-4.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      Owns retiring the four measured defects on the two authoring surfaces. The last clause
+      here is the fence that keeps this reference from becoming a fifth place those
+      corrections must reach.
+  - path: docs/how-to/documentation/write-reference.md
+    relationship: specifies
+    status: exists
+    relevance: >-
+      The genre convention this page must satisfy in full: docs/reference/ placement, the
+      "Reference: " title prefix, required frontmatter including description:, tables as the
+      primary structure, the dry third-person voice with no "you", no Overview or Background
+      headings, and a closing See Also section.
+  - path: docs/reference/architecture-docs-layout.md
+    relationship: related
+    status: exists
+    relevance: >-
+      The neighbouring reference, named to fix the boundary. It answers where an architecture
+      document lives and how the tree is organised; this one answers what the document
+      contains. Neither may restate the other, and this page links to it rather than absorbing
+      the layout rules.
+  - path: CLAUDE.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      "Gate / Workflow ACs — Verify Behaviorally, Not by Grep". Every table on this page is
+      derivable from a declaration or from a produced artifact, so none of it may be checked
+      by searching the page for the strings it is supposed to contain.
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+    relevance: "The angle taxonomy this record's test_spec classifies against; the vocabulary-movement arm is real_artifact and is the one with teeth."
+origin_agent: BrainCandy
+created: 2026-09-14
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-09-14'
+superseded_by: null
+covered_by: []
+implemented_by: []
+assigned_agent: documentation-expert
+estimated_complexity: M
+change_target:
+  - code
+  - docs
+risk_surface: contract_boundary
+test_required: true
+it_requirements:
+  - "PLACEMENT, NAME AND GENRE. docs/reference/architecture-document-anatomy.md, title prefixed \"Reference: \" per the genre guide. Lookup-oriented throughout: tables and enumerations, one row per part and one entry per kind. No numbered steps, no walk-through, no \"you\" — the task guide is INF-1300a-5's how-to and the two must cross-link rather than overlap. If a paragraph is explaining WHY the collection has a convention, it belongs in an explanation doc and not here."
+  - "THE KIND SET IS READ FROM config/diagram_types.json THROUGH INF-1300a-4's SINGLE RUN-TIME ENUMERATION, by the observation and by any generation step alike. Never a list written into the page's check. This is the recurring defect across this whole tree and it is the one that makes a reference rot silently: a table is correct on the day it is typed and stops discriminating the moment the vocabulary moves. The vocabulary has already moved once, which is how it came to contain a retired alias."
+  - "MEASURED — THE DECLARATION IS NOT UNIFORM AND THE TABLE MUST REFLECT THAT, NOT SMOOTH IT. Eleven entries. Three oblige a further frontmatter fact: data_flow obliges related_code, user_flow obliges related_surfaces, agent_flow obliges related_agents. One, dataflow, carries _deprecated: true and is described as a legacy alias for data_flow — and declares requires_frontmatter: [] while its successor declares [related_code], so reading the obligation off the alias silently drops it. One, none, is a placeholder for documents declaring no picture and is not a kind of picture. Exclude it by its data property, never by matching its name."
+  - "THE OBLIGED-FACT COLUMN IS THE ONLY PLACE AN AUTHOR CAN LEARN THIS, AND IT IS CHECKED AGAINST THE DECLARATION, NEVER AGAINST A HOOK. Verified: requires_frontmatter is enforced by nothing — check_doc_frontmatter validates the kind NAME against the vocabulary and stops, and the identifier appears outside the JSON only in a docstring. So a document of an obliging kind that omits the field passes every check today. An observation built on \"the checks agree with the page\" would report a green that says nothing about this column. Assert against config/diagram_types.json directly. Closing the enforcement gap is the guardrail surface's work and is outside INF-1300's fence."
+  - "THE KEY COLUMN IS CHECKED AGAINST WHAT IS PRODUCED, IN BOTH DIRECTIONS. For each kind, parse the notation elements out of the produced document's emitted picture and out of its key, and require the page's account to equal that set. One-directional agreement passes on a page carrying stale entries for notation that has been removed, which is precisely how a reference goes out of date without ever being wrong about anything it was checked for."
+  - "THE PRODUCED-VERSUS-AUTHORED COLUMN IS A VIEW OF INF-1300b-3's PARTITION, NOT A SECOND OPINION. Compute it by running b-3's partition over the produced document of that kind and comparing; do not hand-author the column and do not let the page become the place the split is decided. Where a split is expressed twice it drifts, and b-1 states the same rule for the section shape."
+  - "NO ATTRIBUTION ON THE PAGE MAY POINT AT A DOCUMENT THAT DOES NOT DEFINE WHAT IS ATTRIBUTED TO IT. Concretely: the key is not attributed to ADR-015, which concerns honouring an inline exception-handling suppression and defines no key. This page is being written precisely because that question had no findable answer; reproducing the false answer in the place readers are now sent would be the worst available outcome."
+  - "REFERENCE, DO NOT FORK. The invocation, the frontmatter checklist and the verification command belong to the two authoring surfaces and are INF-1300b-4's to correct. Link to them. A reference page is the most attractive place to paste a field checklist and the worst place for a second copy of one, because readers will trust it over the surface."
+  - "THE PAGE IS ITSELF A docs/**/*.md. It must carry a non-empty description:, valid frontmatter and components values drawn from docs/components.json, and must pass the judgment-tier hooks its own path matches with the transform tier disabled."
+  - "BACK-LINKS ARE PART OF DELIVERY, NOT POLISH. Per the genre guide's step 9: INF-1300a-5's how-to lists this page in related_docs and links to it for anatomy, and this page's See Also names that how-to as its task guide. A reference nothing links to is one nobody finds, and the whole point of this record is that the answer becomes findable."
+  - "Error handling per the project error-handling policy (CLAUDE.md rules 1-4) applies to the test harness this record adds: every filesystem and subprocess boundary wrapped with a named exception type, nothing swallowed."
+test_spec:
+  - name: test_one_entry_per_declared_kind_of_picture_and_no_entry_for_any_other_name
+    target_dir: unit_tests/docs/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    description: "Read the kind set through INF-1300a-4's run-time enumeration and require a bijection with the page's per-kind entries, with the non-diagram placeholder excluded by its data property rather than by name."
+  - name: test_each_entrys_notation_account_equals_the_key_the_produced_document_carries
+    target_dir: unit_tests/docs/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    description: "Per kind: produce a document, parse the notation elements out of its picture and its key, and require the page's account equal in BOTH directions — notation described but not produced fails, and notation produced but not described fails."
+  - name: test_each_entrys_produced_versus_authored_split_matches_the_produced_document
+    target_dir: unit_tests/docs/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "Run INF-1300b-3's partition over the produced document of each kind and require the parts the page marks as the author's to be exactly the open prompts the partition finds; the page is a view of that split, never a second opinion about it."
+  - name: test_obliged_fact_column_agrees_with_the_declaration_including_via_the_successor
+    target_dir: unit_tests/docs/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "ASSERTED AGAINST config/diagram_types.json DIRECTLY, because no hook enforces requires_frontmatter at all: the three obliging kinds carry their declared fact, the eight others state that none is obliged, and the retired alias's row carries the obligation its successor declares rather than the empty list it declares for itself."
+  - name: test_a_kind_added_or_retired_in_the_declaration_reddens_this_suite
+    target_dir: unit_tests/docs/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    description: "THE ARM WITH TEETH — add a synthetic kind to the diagram_types.json the run resolves and change nothing else; then, separately, mark an existing kind retired. Each must fail the bijection descriptor. A page that stays green through a vocabulary change is a page that will go quietly stale, which is the single failure this record exists to prevent."
+  - name: test_a_change_to_a_kinds_notation_reddens_this_suite
+    target_dir: unit_tests/docs/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    description: "Alter the notation one kind's emitted picture uses and change nothing else; the both-directions key descriptor must fail rather than the page continuing to read as complete."
+  - name: test_no_attribution_on_the_page_points_at_a_non_defining_document
+    target_dir: unit_tests/docs/
+    framework: pytest
+    type: integration
+    angle: failure
+    description: "Sweep every document the page cites as the source of produced content, open it, and require it to define what is attributed to it. ADR-015 named as the source of the explanatory key fails."
+  - name: test_no_block_on_the_page_duplicates_one_an_authoring_surface_publishes
+    target_dir: unit_tests/docs/
+    framework: pytest
+    type: integration
+    angle: boundary
+    description: "Compare the page's fenced blocks and field enumerations against those published on the two authoring surfaces; anything a surface owns must be linked here, not reproduced. Artifact-against-artifact, not a search for strings."
+  - name: test_the_page_itself_passes_the_document_checks_that_apply_to_it
+    target_dir: unit_tests/docs/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "With the transform tier disabled, every judgment-tier hook whose manifest files-regex matches docs/reference/architecture-document-anatomy.md exits 0 over the staged page, including check_description_field and check_surface_components_e2."
+test_rationale: >-
+  The failure this page exists to prevent is not being wrong on the day it ships; it is being
+  right on that day and silently wrong a month later, because everything it states is
+  derivable from a declaration and from an emitted artifact that both move. Every descriptor
+  is therefore a comparison against one of those two rather than a reading of the page, and
+  three of them are movement arms: add a kind, retire a kind, change a kind's notation. A
+  suite that stays green through any of those is not checking the page, it is describing it.
+  Two further shapes are deliberately excluded. A stored expected copy of the tables would
+  pass precisely when the page and the copy are equally stale, the same construction
+  INF-1300b-1 rules out for section shapes. And "the project's checks pass over documents the
+  page describes" says nothing at all about the obliged-fact column, because that obligation
+  is declared in the vocabulary and enforced nowhere in the codebase — verified by search —
+  so that column is asserted against the declaration directly. The both-directions
+  requirement on the key column is the quiet one: a one-directional check is satisfied by a
+  page that still lists notation the pictures stopped using, which is exactly the state a
+  reference drifts into.
+delivers_to:
+  agent: documentation-expert
+  contract: "The reference at docs/reference/architecture-document-anatomy.md: a part-by-part table of what an architecture document contains, and a per-kind table giving, for each kind the vocabulary declares, the notation its explanatory key covers, which parts of the document arrive produced versus left for the author, and the further fact that kind obliges. INF-1300a-5's how-to links here for anatomy instead of restating it, and this page links there as its task guide."
+expects_from:
+  - ac_id: INF-1300a-4
+    contract: "The single run-time enumeration of reachable (kind, tier) pairs, with the deprecation marker resolved to the successor's rules and the non-diagram entry excluded by a data property. The page's per-kind bijection is asserted against this one enumeration rather than a re-derivation."
+  - ac_id: INF-1300b-2
+    contract: "The per-kind explanatory key as actually emitted, and its real derivation source — the declared kind vocabulary plus the per-kind skeleton, not ADR-015. The page describes this result; it must not declare a second version of it."
+  - ac_id: INF-1300b-3
+    contract: "The machine-decidable produced-versus-authored partition over a produced document, so the page's split column is computed from that partition rather than hand-authored beside it."
+  - ac_id: INF-1300b-1
+    contract: "The single ordered section-shape declaration, which the page enumerates by reading rather than by transcribing — a transcription is the second expression b-1 exists to forbid."
+  - ac_id: INF-1300b-4
+    contract: "The two authoring surfaces after their four measured defects are retired, so this page can link to a correct invocation, a complete field checklist and a verification command that runs, and never needs a corrected copy of its own."
+notes: |
+  WHY A REFERENCE AND WHY THIS ONE ANSWERS THE MISSING-KEY QUESTION. INF-1300b's notes place
+  the trigger here rather than on INF-1300a and say why: the shape and the key are lookup
+  material, and this is the natural home for the answer to a question that currently has
+  none. Both authoring surfaces tell an author the explanatory key comes from ADR-015 and
+  must not be altered; ADR-015 is about honouring an inline exception-handling suppression
+  and defines no key. INF-1300b-2 settles what the key actually is — derived per kind from
+  the notation the picture uses — and INF-1300b-4 retires the false attribution from the
+  surfaces. Neither of those makes the answer FINDABLE by an author who is holding a document
+  and wondering which parts are theirs. That is this page, and it is the reason the trigger
+  exists.
+
+  FALSIFIABILITY, AND WHY EVERY ARM POINTS AT SOMETHING RUNNABLE. Read the declaration and
+  require a bijection with the page's per-kind entries. Produce a document for each kind and
+  require the page's account of its notation to equal the key that document carries, in both
+  directions. Run the partition over each produced document and require the page's
+  produced-versus-authored column to equal it. Read the obliged-fact column against the
+  declaration. Then move the world and require the page to notice: add a kind, retire a kind,
+  change the notation one kind's picture uses — each with nothing else altered, and each must
+  redden. The record is falsified by any disagreement, and equally by a suite that survives
+  any of those three movements, because a reference that cannot fail is one that will be
+  believed long after it stopped being true.
+
+  WHAT WILL NOT FALSIFY IT. Searching the page for the name of each kind. Comparing the page
+  against a stored copy of the tables — that construction passes exactly when page and copy
+  are equally stale, which is the construction INF-1300b-1 already rules out for section
+  shapes and the same reasoning applies unchanged. And running the project's checks over
+  documents the page describes: the checks have no opinion about what a page says, and in the
+  one place it matters most — the obliged-fact column — the obligation is declared in the
+  vocabulary and enforced by nothing, so a green from the check set would say nothing
+  whatever about the column most likely to be wrong.
+
+  THE MEASURED IRREGULARITIES THE TABLE MUST CARRY RATHER THAN TIDY AWAY. The vocabulary is
+  eleven entries and is not uniform: three kinds oblige a further fact and eight do not; one
+  name is a retired alias whose own entry declares an empty obligation while the successor it
+  defers to obliges one, so a table built by reading each entry in isolation drops that
+  obligation silently; and one entry is not a kind of picture at all. A reference that
+  presents eleven equal rows is easier to write and is wrong in three separate ways. The
+  retired alias in particular must appear — an author who meets that name in an existing
+  document needs to be told it is retired and what replaced it, which is exactly the lookup
+  this page exists for.
+
+  FENCED. WHAT the key contains and WHERE it derives from is INF-1300b-2's; the partition it
+  describes is INF-1300b-3's; the section shape it enumerates is INF-1300b-1's; the surfaces'
+  corrections are INF-1300b-4's. This page owns only that all of it becomes findable in one
+  place and stays in step with what is produced. Where architecture documents LIVE remains
+  docs/reference/architecture-docs-layout.md's subject and is linked, not absorbed.
