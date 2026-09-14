@@ -233,6 +233,19 @@ def _inspect_surface(
         resolved, error = _resolve_via_invocation(harvester_path, target_dir)
         if error is not None:
             return SurfaceResult(surface_id, False, error)
+        # A zero exit with empty stdout would otherwise become Path("") ==
+        # Path("."), reported as a path mismatch -- a confusing message for a
+        # different problem. Name it instead. This also narrows `resolved` to
+        # str for the comparison below, which `_resolve_via_invocation`'s
+        # (str | None, str | None) signature cannot express on its own.
+        if not resolved:
+            return SurfaceResult(
+                surface_id,
+                False,
+                f"{harvester_path} --print-sink exited 0 but printed no path, "
+                "so there is no resolved destination to compare against the "
+                f"declared sink {declared_sink!r}",
+            )
         if Path(resolved) != Path(declared_sink):
             return SurfaceResult(
                 surface_id,
