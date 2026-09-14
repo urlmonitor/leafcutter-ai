@@ -26,6 +26,7 @@ from generate_product_truth import (
     impl_status_for_ac,
     iter_nodes,
 )
+from product_truth_bounds import bound_named, check_bounds
 from product_truth_shapes import expansion_targets
 
 # Re-exported, not used here: validate_product_truth imports the whole check
@@ -313,18 +314,10 @@ def _check_mock_invariants(mock: dict, errors: list[str], warnings: list[str]) -
             )
 
 
-#: The longest a journey `summary` may run once a journey declares it is
-#: shaped to the current conventions. A record that keeps growing stops being
-#: readable at a glance, which is the whole point of holding one.
-_DESCRIPTION_LENGTH_BOUND = 120
-
-
-#: The shape_version at which _DESCRIPTION_LENGTH_BOUND became binding. A
-#: journey declaring THIS version or later is held to the bound; one declaring
-#: an earlier version -- or none at all -- predates it and is only warned
-#: about, so introducing a bound never retroactively blocks a record written
-#: before it existed.
-_DESCRIPTION_BOUND_EFFECTIVE_SHAPE_VERSION = 2
+#: The journey description bound UXP-700e-1-i introduced, now declared in
+#: product_truth_bounds.BOUNDS; kept here under its original names for callers.
+_DESCRIPTION_LENGTH_BOUND = bound_named("journey-description-length").limit
+_DESCRIPTION_BOUND_EFFECTIVE_SHAPE_VERSION = bound_named("journey-description-length").effective_shape_version
 
 
 def _check_artifact_paths(index: dict, errors: list[str]) -> None:
@@ -386,51 +379,24 @@ def _check_canonical_datasets(mocks: dict, errors: list[str]) -> None:
 
 
 def _check_shape_version_bounds(flows: dict, errors: list[str], warnings: list[str]) -> None:
-    """Hold each journey to the size bound its declared shape_version opts into.
+    """Hold each journey to the description bound its declared shape_version opts into.
 
     Only journeys whose `summary` exceeds :data:`_DESCRIPTION_LENGTH_BOUND` are
-    considered at all; one within the bound is never reported whatever version
-    it declares. An over-long journey is then classified by its declared
-    shape_version, and the classification decides which list it lands in:
+    reported, and the declared shape_version decides which list each lands in:
 
     * declares >= the effective version -> `errors` (blocks: it opted in)
     * declares an earlier version       -> `warnings` (predates the bound)
     * declares none                     -> `warnings` (needs a shape_version)
 
-    Only the first case reaches `errors`, so a bound introduced today cannot
-    retroactively block a record written before it -- the grandfathered cases
-    stay visible as warnings instead of being silently dropped (GE-120).
+    The journey-description slice of product_truth_bounds.check_bounds(), which
+    the checker runs over every declared bound (UXP-700e-1).
 
     Args:
         flows: ``{flow_id -> flow}``.
         errors: Shared error list; appended to for a real violation.
         warnings: Shared warning list; appended to for a grandfathered finding.
     """
-    for flow_id, flow in flows.items():
-        summary = flow.get("summary") or ""
-        if len(summary) <= _DESCRIPTION_LENGTH_BOUND:
-            continue
-
-        shape_version = flow.get("shape_version")
-        if shape_version is None:
-            warnings.append(
-                f"[shape] {flow_id}: summary is {len(summary)} characters, over the "
-                f"{_DESCRIPTION_LENGTH_BOUND}-character bound, but the journey declares no "
-                f"shape_version — it needs a shape_version before the bound can be applied to it"
-            )
-        elif shape_version < _DESCRIPTION_BOUND_EFFECTIVE_SHAPE_VERSION:
-            warnings.append(
-                f"[shape] {flow_id}: summary is {len(summary)} characters, over the "
-                f"{_DESCRIPTION_LENGTH_BOUND}-character bound, but the journey declares "
-                f"shape_version {shape_version}, which predates the bound "
-                f"(effective at shape_version {_DESCRIPTION_BOUND_EFFECTIVE_SHAPE_VERSION}) — not blocked"
-            )
-        else:
-            errors.append(
-                f"[shape] {flow_id}: summary is {len(summary)} characters, over the "
-                f"{_DESCRIPTION_LENGTH_BOUND}-character bound this journey is held to at "
-                f"shape_version {shape_version}"
-            )
+    check_bounds({"flows": flows}, errors, warnings, (bound_named("journey-description-length"),))
 
 
 #: The one pointer-target kind the checker knows how to resolve: an acceptance-
@@ -533,5 +499,9 @@ DECISION HISTORY
 - 2026-09-14 [python-coder]: UXP-700e-3-i -- the cycle and dangling-reference
   checks read `expands_to` in either shape via expansion_targets, and check
   every id in a list. (#EPIC-TruthfulProjectRecord/44)
+- 2026-09-14 [python-coder]: UXP-700e-1 -- the description bound and its
+  shape-version rule move into product_truth_bounds.BOUNDS;
+  _check_shape_version_bounds and its two constants stay as the journey-
+  description slice of it. (#EPIC-TruthfulProjectRecord/38)
 ====================================================================
 """

@@ -29,7 +29,8 @@ doc_links:
 assigned_agent: llm-expert
 estimated_complexity: S
 it_requirements:
-  - "The sign-off block must contain the section 7 knowledge-capture trigger (route-learning / capture-learning) as a mandatory post-sign-off step."
+  - "The sign-off block must contain the section 7 knowledge-capture step as a mandatory post-sign-off step, so every signing agent inherits it without a per-ticket instruction. The step's own content is that the agent emits a knowledge_captured record; section 7 itself is the trigger. This AC constrains only that the step is PRESENT and mandatory in the shared block -- what the record contains (INF-700b-1) and where it is appended (INF-400c-4, INF-400c-4-i) are owned elsewhere and may change without touching this AC."
+  - "DO NOT reintroduce `route-learning` / `capture-learning` here. This bullet named them as the section 7 trigger until 2026-09-14; both skill names were retired by ADR-034 decision 3, neither has ever existed under templates/skills/ or .claude/skills/, and section 7 now explicitly PROHIBITS loading them. They were never the trigger mechanism -- reaching section 7 in the protocol is."
   - "Test coverage: assert the compiled sign-off block contains the knowledge-capture (section 7) step."
 delivers_to:
   agent: llm-expert
@@ -37,7 +38,10 @@ delivers_to:
 expects_from: null
 origin_agent: BrainCandy
 created: 2026-07-08
-amended_by: []
+amended_by:
+  - reason: "Corrected a stale it_requirement, found while building INF-400c-4-i. The first bullet named '(route-learning / capture-learning)' as the section 7 knowledge-capture trigger. Both skill names were retired by ADR-034 decision 3, neither has ever existed on disk under templates/skills/ or .claude/skills/, and section 7 now explicitly prohibits loading them -- so the bullet pointed an implementer at two files that were never there, and at a trigger mechanism that never existed. Reaching section 7 in the protocol IS the trigger. NOTHING ABOUT THE REQUIREMENT CHANGED: the criteria were already correct and are untouched, work_status stays done, and its covering test (unit_tests/prompt_assembly/test_signoff_block_protocol.py, 4 passed) was re-run to confirm no regression. Also added an explicit do-not-reintroduce bullet, and scoped the first bullet to say this AC constrains only that the step is present and mandatory -- the record's content (INF-700b-1) and its destination (INF-400c-4, INF-400c-4-i) are owned elsewhere, which is what let this parenthetical rot unnoticed while those ACs moved underneath it."
+    by: claude-opus-5
+    at: 2026-09-14
 superseded_by: null
 covered_by:
 - unit_tests/prompt_assembly/test_signoff_block_protocol.py

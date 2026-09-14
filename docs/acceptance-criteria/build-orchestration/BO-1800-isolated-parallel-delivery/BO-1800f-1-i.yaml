@@ -1,0 +1,162 @@
+id: BO-1800f-1-i
+components:
+  - build_orchestration
+readiness: approved
+priority: medium
+title: "A shared branch whose current state cannot be read stops the delivery"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+created_by: "docs/acceptance-criteria/build-orchestration/BO-1800-isolated-parallel-delivery/BO-1800f.yaml"
+criteria: |
+  Given a copy whose work is finished and ready to leave,
+    and the shared branch cannot be consulted at that moment
+    (the remote does not answer, or answers with an error),
+  When the workflow tries to establish the state the shared branch is currently in,
+  Then no part of the delivery leaves the copy,
+  And the run stops and states that it could not establish the shared branch's
+    current state, distinguishing that from having established it and found nothing
+    wrong,
+  And the copy is left in the state it was in before the attempt, with no partial
+    replay applied and no change to which commits the copy holds,
+  And a state recorded locally at an earlier point is not substituted for the state
+    that could not be read.
+depends_on: [BO-1800f-1]
+doc_links:
+  - path: docs/known-issues/build-orchestration.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Fail-closed at this boundary. could-not-verify must be its own outcome, distinct
+     from verified-clean, and it must stop the delivery. A boolean return that maps both
+     'unreachable' and 'nothing wrong' onto the same value cannot satisfy this record
+     however carefully the caller is written."
+  - "COLLISION, FLAG RATHER THAN RESOLVE. BO-900a-1-i specifies the opposite disposition
+     for an unreachable remote — count it as zero divergence and continue. Both are
+     correct in their own context (advisory mid-epic warning vs delivery gate). If the
+     implementation puts the remote-read behind a helper shared with BO-900a's
+     divergence check, the fail-open/fail-closed choice must be a parameter supplied by
+     the CALLER, never a default baked into the shared helper, and the change must not
+     silently flip BO-900a-1-i's behaviour. If that cannot be done cleanly, duplicate
+     the read rather than unify it, and say so — unifying these two dispositions is a
+     decision for the user, not for the implementer of this record."
+  - "Nothing may be pushed, force-pushed, or otherwise sent to any remote on this path,
+     and no PR may be opened. Assert on the remote's own refs after the run, not only on
+     the workflow's reported status."
+  - "The copy must be left exactly as found: the same commit set, the same worktree
+     status, no partial replay, no rebase left in progress, no detached HEAD, no
+     .git/rebase-merge or .git/rebase-apply state remaining. A copy left mid-operation
+     is repaired under time pressure, and CLAUDE.md records that the intuitive repair
+     command in exactly that situation discards the shared branch's side of the affected
+     paths."
+  - "The refusal message must say that the shared branch's state could not be
+     established, and must name the underlying failure (unreachable host, authentication
+     refusal, timeout, non-zero exit) so the reader can tell a network outage from a
+     credentials problem. 'Could not verify' with no cause reproduces the defect one
+     level up: a message that examined something and reported nothing about it."
+  - "A locally-recorded earlier state must not be substituted, and must not be consulted
+     as a fallback even when it is present and readable — including
+     refs/remotes/origin/main, FETCH_HEAD, a value cached earlier in the same run, and
+     any reflog entry."
+  - "Must complete within the same 30-second budget as BO-1800f-1 and must not retry
+     indefinitely; an exhausted retry budget is could-not-verify, not verified clean."
+test_spec:
+  - name: test_unreachable_remote_stops_the_delivery
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: failure
+    description: "Remote URL repointed at a nonexistent path in a tmpdir; the run halts
+      and the remote repository holds no new refs afterwards."
+  - name: test_could_not_verify_is_distinguishable_from_verified_clean
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: failure
+    description: "The unreachable-remote run and a reachable run that finds nothing
+      wrong produce different outcome values and different messages; asserting the two
+      are not equal is the point of the test."
+  - name: test_a_usable_local_record_is_not_substituted_when_the_remote_cannot_be_read
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    description: "refs/remotes/origin/main and FETCH_HEAD are populated and readable
+      while the remote is unreachable; the run still halts rather than proceeding on the
+      local value."
+  - name: test_copy_is_unchanged_after_a_halted_read
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "rev-list of the branch, `git status --porcelain`, and the absence of
+      .git/rebase-merge and .git/rebase-apply are all identical before and after the
+      halted attempt."
+test_rationale: |
+  The fixture the record's own falsifiability note demands is specific and easy to get
+  wrong: the remote must be unreachable AND a locally-recorded earlier state must be
+  present and usable. Make the remote unreachable in a fixture that also wipes the local
+  refs and the discriminating case disappears — an implementation that silently falls
+  back to the local state has nothing to fall back to, so it halts for the wrong reason
+  and the test passes on a broken implementation. That is why
+  test_a_usable_local_record_is_not_substituted_when_the_remote_cannot_be_read is
+  separate from test_unreachable_remote_stops_the_delivery rather than folded into it.
+
+  test_could_not_verify_is_distinguishable_from_verified_clean is an inequality
+  assertion on purpose. The failure this record guards against is not a missing check,
+  it is a check whose "I could not look" is reported in the same shape as "I looked and
+  it was fine". Only comparing the two runs' outputs to each other catches that; asserting
+  a single run's exit code does not.
+
+  A direct-import unit test over a mocked git layer would be insufficient for all four:
+  the assertions are about the state of a real repository and a real remote after the
+  attempt — refs on the remote, the copy's commit set, and the absence of leftover rebase
+  state — none of which a mock can falsify.
+delivers_to: null
+expects_from:
+  ac_id: BO-1800f-1
+  contract: "The delivery-time read of the shared branch's current state that BO-1800f-1
+    performs. This record specifies the disposition when that read cannot be completed,
+    so it constrains the same call and must not be implemented as a separate,
+    independently-reachable code path."
+origin_agent: BrainCandy
+created: 2026-09-14
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: safety
+notes: |
+  Why unverifiable must mean stop here, and why the opposite answer is right
+  elsewhere. This is a deliberate divergence from BO-900a-1-i, which specifies that
+  an unreachable remote counts as zero divergence and the drive continues. Both are
+  correct in their own context, and the difference is what the check is for:
+
+    - BO-900a-1-i guards an advisory mid-epic warning. Its worst failure is a
+      warning that does not appear; the work is unaffected and the user can still
+      act. Failing open there buys uninterrupted progress at negligible cost.
+    - This record guards the last point before work leaves the copy. Here
+      "unreachable" and "nothing to worry about" are not the same answer, and
+      treating them as the same is precisely the shape of defect BO-1800f exists to
+      remove: a check that examined nothing must not be reported as a check that
+      found nothing. Failing open at a delivery gate converts the gate into a
+      formality on exactly the occasions when the shared branch's state is unknown.
+
+  Neither record should be changed to match the other without deciding that question
+  on purpose; BO-1800f's notes carry the same flag so that whoever unifies them does
+  so deliberately.
+
+  Falsifiability. The fixture makes the shared branch unreachable at delivery time
+  while a locally-recorded earlier state is present and usable. An implementation
+  that silently falls back to that local state proceeds and fails this record; the
+  assertions are that nothing left the copy and that the copy's commits are
+  unchanged, both observable on the fixture afterwards.

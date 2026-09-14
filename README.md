@@ -323,7 +323,7 @@ per consumer project.
 |------|---------|
 | `check_build_drift.py` | Detects template/generated-output drift via `build.py --dry-run` |
 | `check_secrets.py` | Scans staged files for secrets; scanner path via `security_scanner.scripts_dir` |
-| `check_doc_length.py` | Enforces per-extension line limits on new files |
+| `check_doc_length.py` | Blocks a `docs/**.md` file that crosses its line/section limit, or that grows while already over |
 | `check_structural_change.py` | Blocks structural commits without `docs/components.json` update |
 | `check_components_integrity.py` | Validates `docs/components.json` schema and cross-references |
 | `check_adr_coverage.py` | Advisory warning when structural changes land without an ADR |

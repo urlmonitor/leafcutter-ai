@@ -1,0 +1,292 @@
+id: GE-128
+title: "Every test you write from now on says which requirement it proves"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - testing_quality
+level: L0
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  New tests name what they prove, with no backlog to clear first.
+
+  A requirement is only provably satisfied if some test says it is proving it. In
+  a project of any age most tests never said, so the proof exists but nobody can
+  find it, count it or rely on it — and every claim that a piece of work is
+  finished rests on a link that may simply not be there. Switching the standard on
+  is no help, because on the day it is switched on almost every test in the
+  project breaks it, and switching it off protects nothing. After this goal, a
+  test added from today names the requirement it proves; the tests already written
+  are tolerated for as long as they need to be and never stop anyone working;
+  rearranging existing tests is not mistaken for adding undeclared ones; a name
+  that points at nothing does not satisfy the rule; and a test naming a
+  requirement that has since been retired is a question surfaced for someone to
+  answer, never an inconvenience to be silenced.
+depends_on: []
+doc_links:
+  - path: docs/acceptance-criteria/ac-driven-dev/ACD-2200-adoption-floor/ACD-2200b.yaml
+    relationship: depends_on
+    status: exists
+    relevance: >-
+      THE GENERIC POLICY THIS TREE IS ONE INSTANCE OF — READ IT BEFORE DECOMPOSING
+      ANYTHING HERE, AND DO NOT RESTATE IT. ACD-2200b ("what you already have stays
+      workable and what you add is held to the standard") and ACD-2200c (the
+      tolerated backlog is counted and can only shrink) are the cross-standard
+      adoption rule, approved and phase_1. This tree does NOT re-decide it. What
+      the generic rule cannot supply, and what this tree owns, is what the counted
+      quantity IS for this particular standard, that the count is held per file,
+      and how a rearrangement of existing work is distinguished from new work. Any
+      criterion here that argues FOR grandfathering, or restates the adoption
+      ladder, is duplicating an approved record and must be withdrawn.
+  - path: docs/acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/GE-127b.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      THE IN-COMPONENT PRECEDENT FOR A PER-GATE RATCHET, ALREADY BUILT, AND THE
+      LIKELIEST PLACE TO DUPLICATE COMMITTED WORK. GE-127b is the same shape one
+      gate over — already over the line may be worked on, may not be made worse —
+      and it shipped with a reusable ratchet helper. The register explicitly
+      recommends reusing that helper for the next gate rather than growing a second
+      implementation of the same idea. Note also that GE-127b predates ACD-2200 and
+      carries no fence to it; that omission is recorded here rather than repeated.
+  - path: docs/acceptance-criteria/guardrail-engine/GE-117-code-declares-what-it-serves/GE-117.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      THE CLOSEST SUBJECT MATCH IN THIS COMPONENT, EXAMINED AS A HOST AND
+      DELIBERATELY NOT WIDENED. GE-117 is the same act for SOURCE code — each file
+      states the part of the system it belongs to, each public function states the
+      requirement it satisfies. Rejected as a host on two grounds: it is at five
+      L1s against a cap of seven, so this subject could not fit without losing one
+      of its guarantees; and the two are read by different consumers for different
+      purposes. GE-117's value is that you can tell why a piece of code exists. A
+      test's declaration is load-bearing for done-claims — the proof-of-done
+      machinery reads it to decide what is enforced and what is proven. Neither may
+      be closed as a duplicate of the other.
+  - path: docs/acceptance-criteria/testing-quality/TQ-100-trustworthy-test-gate/TQ-100b.yaml
+    relationship: depends_on
+    status: exists
+    relevance: >-
+      OWNS WHAT A DECLARATION IS; THIS TREE OWNS WHETHER ONE IS REQUIRED. TQ-100b
+      and its descendants own recognition — what shape counts as a declaration,
+      that a malformed one is reported rather than dropped, that an id-shaped
+      phrase inside a string is not one, and that every recogniser in the repo
+      recognises the same set over the real tree. This tree CONSUMES that answer
+      and must not restate it. A criterion here that defines the shape of a
+      declaration is in the wrong tree. Note the interaction, because it is a real
+      hazard: the counted quantity this tree ratchets is derived by a recogniser
+      TQ-100b-5 is making uniform, so a change in recognition moves every count.
+  - path: docs/known-issues/commit-guardian.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      THE MEASUREMENT THAT SCOPES THIS TREE AND THE INSTRUCTION THAT BOUNDS IT.
+      Read the dormant-gate registration census and the per-gate entry for this
+      gate before decomposing. The per-gate entry carries the ratchet shape, the
+      refactor edge case, and the explicit instruction not to attempt a bulk
+      backfill. Do not restate its counts at a higher confidence than it records
+      them.
+  - path: docs/acceptance-criteria/build_pipeline/BP-1600-counted-from-reality/BP-1600a-2.yaml
+    relationship: depends_on
+    status: exists
+    relevance: >-
+      PRECONDITION, NOT SCOPE. This gate is present on disk and registered nowhere,
+      so it has never run. Registering it is BP-1600a-2's day-one triage, exactly
+      as for GE-127. Every criterion here assumes the gate runs. An L2 that
+      re-specifies the registration census, restates its counts, or proposes a
+      second reachability check is duplicating an approved, high-priority record.
+  - path: docs/reference/ac-schema.md
+    relationship: related
+    status: exists
+  - path: docs/pre-commit-hooks.md
+    relationship: related
+    status: exists
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-09-14
+amended_by: []
+superseded_by: null
+covered_by:
+  - GE-128a
+  - GE-128b
+  - GE-128c
+  - GE-128d
+  - GE-128e
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  ORIGIN (2026-09-14, product-owner, on BrainCandy's brief). Authored as a separate
+  tree from ACS-1600 on the user's explicit instruction that the two are distinct
+  subjects. They are: one governs a store-writing tool run by hand, the other a
+  commit-time gate. They touch at exactly one point, recorded in GE-128d.
+
+  ==========================================================================
+  THE OVERLAP I FOUND THAT THE BRIEF DID NOT NAME — FLAGGED, NOT PAPERED OVER
+  ==========================================================================
+  ACD-2200 ("turn the standards on in a codebase that was not built under them",
+  active, phase_1, four L1s, no children yet) already owns the ratchet AS A
+  GENERIC CROSS-STANDARD POLICY. ACD-2200b is "existing shortfalls never block your
+  work — new ones are refused at the door"; ACD-2200c is "the tolerated backlog is
+  counted and never grows". Those are the user's governing rule stated once for all
+  standards.
+
+  So a tree here whose headline was "the ratchet" would be a duplicate at a lower
+  altitude. Three responses were considered:
+    (a) Hang this subject under ACD-2200. REJECTED: that tree is deliberately
+        standard-agnostic; attaching one standard's content to it breaks its
+        altitude, and all four of its L1s are about the adoption mechanism rather
+        than about anything being adopted.
+    (b) Author only the parts ACD-2200 does not reach. REJECTED: it would leave the
+        obligation itself — that a test declares what it proves — owned by nobody,
+        which is the actual gap.
+    (c) TAKEN: the tree's subject is the DECLARATION, not the ratchet. The
+        obligation is the goal; the ratchet is how it is adopted, and adoption is
+        ACD-2200's. GE-128a therefore states only what the generic rule cannot —
+        what the counted quantity is here and that it is held per file — and
+        carries ACD-2200b as a depends_on doc_link rather than re-arguing it.
+
+  RELATED FINDING, FILED RATHER THAN FIXED: GE-127b is a per-gate ratchet authored
+  2026-09-01, eight days before ACD-2200 generalised the same rule, and it carries
+  no fence to it. The two currently sit side by side with no stated relationship.
+  That is a store defect and it is not this tree's to repair, but the next person
+  to touch either should join them up.
+
+  ==========================================================================
+  WHY A NEW ROOT L0 — FOUR CANDIDATES EXAMINED AND REJECTED
+  ==========================================================================
+  - GE-117 (code declares what it serves) is the nearest subject and is fenced in
+    doc_links. Five L1s of seven, and a different consumer for the declaration.
+  - GE-126 (checks answer truthfully) has the only two free L1 slots in the
+    GE-120/GE-126 family and was rejected on subject: it owns whether a check's
+    answer about its own work is honest. This tree owns what the rule the check
+    enforces actually IS. Two L1 slots could not hold this subject anyway.
+  - GE-120 is at the cap — seven L1s, a..g — and every one of GE-120a..f is at the
+    five-L2 cap. Closed both ways.
+  - TQ-100 (trustworthy test gate) owns which test failures may block, and TQ-100b
+    owns declaration recognition. Adjacent and fenced; wrong subject, and at five
+    L1s.
+
+  ==========================================================================
+  MEASURED FACTS — SUPPLIED BY THE USER FROM THE REGISTER, CARRIED AT THE
+  CONFIDENCE RECORDED THERE. DO NOT PUT ANY FIGURE IN A CRITERIA BLOCK.
+  ==========================================================================
+  Single measurement pass, one commit, one repository, unverified by a second
+  method, and bound by ACS-1100 (inherited) wherever restated:
+    - 5,566 test functions across 595 of 597 test files carry no declaration. Only
+      2 files are fully declared.
+    - The gate is NOT registered in the hook manifest. It has never run.
+    - Its mode resolves to advisory because its configuration key is ABSENT, not
+      because anyone chose advisory. It is one key away from refusing essentially
+      all test work.
+    - The register additionally notes that roughly 87 distinct declaration
+      identifiers already in the test tree name a record that does not exist. That
+      is the pre-existing rate of the defect GE-128c refuses to let grow.
+  A criterion pinned to any of these numbers is falsified by the next commit that
+  changes it. State the guarantee; leave the numbers here.
+
+  ==========================================================================
+  L1 CUT — BY GUARANTEE, NOT BY DEFECT. DO NOT RE-CUT AT L1.
+  ==========================================================================
+  - GE-128a — THE OBLIGATION AND ITS COUNTED QUANTITY. New work declares; the
+    existing population is tolerated; the count is per file and moves one way.
+    The keystone.
+  - GE-128b — REARRANGEMENT IS NOT NEW DEBT. The refactor case and the new-file
+    case, which is the loophole in the same mechanism.
+  - GE-128c — A DECLARATION NAMES SOMETHING REAL. The guard on the guard.
+  - GE-128d — A RETIRED REQUIREMENT NAMED BY A LIVE TEST IS A SIGNAL.
+  - GE-128e — ACTIONABILITY. Being stopped hands you the next step, including when
+    no suitable requirement exists yet.
+
+  WHY GE-128c IS NOT OPTIONAL AND MUST NOT BE FOLDED INTO a. Without it, the
+  cheapest implementation that satisfies GE-128a across the whole backlog is a
+  script that writes a plausible-looking name above every undeclared test. That
+  converts an honest gap into a dishonest green, at scale, using the standard meant
+  to cure it — and the register's instruction not to attempt a bulk backfill is
+  precisely this concern written as an instruction. This tree turns it into a
+  property, because an instruction binds whoever read it and a property binds the
+  implementation. NO CRITERION HERE MAY SPECIFY A BULK BACKFILL OF THE EXISTING
+  POPULATION, and an L2 proposing one must be withdrawn rather than approved.
+
+  WHY GE-128b IS SEPARATE FROM a. A per-file count degrades under movement: moving
+  a declared test between files raises one file's count and lowers another's, and a
+  file that did not exist before has no previous count to compare against. Treated
+  carelessly in either direction the rule either punishes every refactor or lets
+  every new file in undeclared. Both failures live in the same mechanism and
+  neither is visible from GE-128a's own scenarios, which is what earns b its own
+  record rather than a note.
+
+  ==========================================================================
+  THE INTERACTION WITH ACS-1600 — THE ONE POINT THE TWO TREES TOUCH
+  ==========================================================================
+  Six declarations in the test file for the store-writing tool governed by ACS-1600
+  point at records being retired in an open pull request. GE-128d is about to fire
+  on them. THE USER'S INSTRUCTION IS EXPLICIT AND IS ENCODED AS A PROPERTY RATHER
+  THAN A NOTE: that notice is the live code behind a retired requirement making
+  itself visible, and it is resolved by deciding the tool's fate — never by
+  deleting the declarations so the notice stops. Once ACS-1600 exists, those
+  declarations should point at it. That re-pointing is ACS-1600's tree's business
+  and is NOT authored here.
+
+  ==========================================================================
+  INHERITED AND NOT REPEALED
+  ==========================================================================
+  This component's deliberate fail-open convention (an internal error yields a
+  stderr warning and a zero exit so a script bug never blocks an unrelated commit)
+  applies unchanged. So does the line GE-120 drew over it: failing open on one bad
+  input while the check still ran is acceptable; reporting success for a check that
+  never ran is not. A gate that could not read a file must say so rather than count
+  it as compliant — and for a ratchet that matters twice over, because an unreadable
+  previous version silently becomes a count of zero and turns the whole file into
+  new debt.
+
+  SILENCE IS NOT A PASS — carried from this component's standing notes. Several AC
+  hooks read the git index or an environment variable rather than their arguments,
+  so pointing one at a file does not make it inspect that file. Establish a positive
+  control before believing any clean result while decomposing or testing this tree.
+
+  ==========================================================================
+  ROADMAP — phase_1 CLAIMED, AND THE ARGUMENT IS MADE RATHER THAN BORROWED
+  ==========================================================================
+  phase_1 is claimed on ACD-2200's reasoning, which this tree is an instance of:
+  being able to switch a standard on in a codebase that was not built under it is
+  part of "installs into any project and helps the user build good software". A
+  gate that cannot be switched on without stopping all test work is not portable in
+  any useful sense. Every recent L0 in this component claims phase_1 and this one
+  is consistent with them. No roadmap or vision file was modified while authoring
+  this.
+
+  ==========================================================================
+  IDENTIFIER AND CAPS
+  ==========================================================================
+  GE-128 established free on 2026-09-14 by four independent checks, none of which
+  is a directory listing (a folder-only listing under-reports taken ids here —
+  GE-114-1..4 and GE-115 sit loose at namespace root):
+    (1) every id value across the whole AC store parsed from YAML — highest GE root
+        is GE-127;
+    (2) a recursive grep for the literal GE-128 across the whole worktree excluding
+        .git — two hits, both prose in this component recording that GE-128 was
+        verified free on 2026-09-07 and deliberately not taken in favour of a
+        suffix under an existing parent. No record claims it;
+    (3) git grep for GE-128 against a freshly fetched origin/main — the same two
+        prose hits, no record;
+    (4) a grep of the shared main working tree for an uncommitted claim — the same
+        two, no record.
+  This is NOT the GE-121 situation. GE-121 must never be reissued because live
+  prose cites it repeatedly as a rejected candidate that would resolve to the wrong
+  thing. The GE-128 citations say only that it was free and unused, so taking it
+  creates no ambiguity — but both notes now name a live record and should be read
+  as historical. GE-119, GE-121 and GE-124 remain as previously recorded.
+  RE-VERIFY at merge time; id allocation in this store is known-broken.
+
+  Five L1s against a hard cap of seven — two slots of headroom, deliberately
+  preserved. No child_limit_override is authored here and none may be added.
+  Decompose each of a–e into L2 behaviours; do NOT re-cut the L1 split.
+
+  Authored at the PO stage. L0 and L1 only. No L2, no test_spec, no
+  it_requirements and no declares_side_effect, by design.

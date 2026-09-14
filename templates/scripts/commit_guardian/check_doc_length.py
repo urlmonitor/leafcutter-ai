@@ -1,10 +1,20 @@
 """
-Pre-commit hook to warn/block documentation files that exceed length thresholds.
+Pre-commit hook to block documentation files that exceed length thresholds.
 
-Checks:
+Checks, each RATCHETED against the file's size at every parent of the commit:
 - Line count (excluding YAML frontmatter) against max_lines / max_lines_adr.
 - Section count (## headings) against max_sections.
 - Suggests which top-level sections could be extracted into linked docs.
+
+A doc is refused when it CROSSES its limit, or when it is already over and
+GROWS further. A doc that is already over and shrinks, or stays the same
+size, passes — so the 59 docs over the limit when this gate started blocking
+stay editable, and only new length is stopped. The counting rule is applied
+to the staged content and to every parent revision through ONE function
+(_doc_length_ratchet.measure_doc_lines / measure_doc_sections) so the two
+sides of the comparison can never drift apart. See _file_size_ratchet.py for
+the git plumbing this shares with check_file_size.py, and that module's
+MERGE COMMITS note for why a merge's baseline is the maximum across parents.
 
 Usage:
     poetry run python scripts/commit_guardian/check_doc_length.py
@@ -38,18 +48,22 @@ from doc_length_helpers import (
     lookup_writer_agent,
     read_frontmatter_type,
 )
+from _file_size_ratchet import CurrentLengthUnmeasurableError, PreviousLengthSourceError
+from _doc_length_ratchet import (
+    classify_dimension,
+    count_lines_and_sections,
+    is_adr_file,
+    is_checked,
+    read_doc_content,
+    resolve_doc_ratchet,
+    strip_frontmatter,
+)
 
 # ---------------------------------------------------------------------------
 # Constants
 # ---------------------------------------------------------------------------
 # Minimum lines for a section to be flagged as "extractable"
 _MIN_EXTRACTABLE_SECTION_LINES = 30
-
-# YAML frontmatter regex (opening --- to closing ---)
-_FRONTMATTER_RE = re.compile(r"\A---\s*\n.*?\n---\s*\n", re.DOTALL)
-
-# Top-level sections: lines starting with ## (but not ###)
-_SECTION_RE = re.compile(r"^##\s+(.+)$")
 
 # DECISION HISTORY and related non-content blocks that should not be suggested for extraction
 _NON_EXTRACTABLE_PATTERNS = frozenset({
@@ -76,51 +90,6 @@ _CHILD_LINK_TEMPLATE = """\
 # ---------------------------------------------------------------------------
 # Core analysis
 # ---------------------------------------------------------------------------
-
-def strip_frontmatter(content: str) -> str:
-    """Remove YAML frontmatter from the beginning of a markdown file.
-
-    Args:
-        content: Full file content as a string.
-
-    Returns:
-        str: Content with frontmatter stripped.
-    """
-    return _FRONTMATTER_RE.sub("", content, count=1)
-
-
-def count_lines_and_sections(content: str) -> tuple[int, list[tuple[str, int, int]]]:
-    """Count content lines and identify top-level (##) sections with their spans.
-
-    Args:
-        content: Markdown content with frontmatter already stripped.
-
-    Returns:
-        tuple: (line_count, sections) where sections is a list of
-            (title, start_line, line_count) tuples.
-    """
-    lines = content.split("\n")
-    line_count = len(lines)
-
-    # Find all ## sections with their line numbers
-    section_starts: list[tuple[str, int]] = []
-    for i, line in enumerate(lines):
-        match = _SECTION_RE.match(line)
-        if match:
-            section_starts.append((match.group(1).strip(), i + 1))
-
-    # Calculate section spans
-    sections: list[tuple[str, int, int]] = []
-    for idx, (title, start) in enumerate(section_starts):
-        if idx + 1 < len(section_starts):
-            end = section_starts[idx + 1][1] - 1
-        else:
-            end = line_count
-        span = end - start + 1
-        sections.append((title, start, span))
-
-    return line_count, sections
-
 
 def find_extractable_sections(
     sections: list[tuple[str, int, int]],
@@ -270,6 +239,16 @@ def get_staged_files() -> dict[str, str]:
 
     Returns:
         dict[str, str]: Mapping of filepath to git status.
+
+    Raises:
+        PreviousLengthSourceError: the staged set could not be read at all
+            (not a git repository, or git unavailable). This must REFUSE
+            rather than return an empty mapping: an empty staged set is
+            main()'s "nothing to check, exit 0" shortcut, so returning {}
+            here turns a gate that could not look into a gate that looked
+            and approved — the fail-open shape KI-CG-034, KI-CG-012 and
+            KI-CG-018 each shipped, and one this gate demonstrably had while
+            it was warn-only and the distinction could not change an outcome.
     """
     try:
         result = subprocess.run(
@@ -278,8 +257,15 @@ def get_staged_files() -> dict[str, str]:
             text=True,
             check=True,
         )
-    except subprocess.CalledProcessError:
-        return {}
+    except subprocess.CalledProcessError as exc:
+        raise PreviousLengthSourceError(
+            f"the staged file set could not be read: git exited {exc.returncode} "
+            f"({(exc.stderr or '').strip()})"
+        ) from exc
+    except (OSError, subprocess.SubprocessError) as exc:
+        raise PreviousLengthSourceError(
+            f"the staged file set could not be read: git could not be invoked ({exc})"
+        ) from exc
 
     staged = {}
     for line in result.stdout.strip().split("\n"):
@@ -291,60 +277,40 @@ def get_staged_files() -> dict[str, str]:
     return staged
 
 
-def is_doc_file(filepath: str) -> bool:
-    """Check whether a file path is a documentation markdown file in docs/.
-
-    Args:
-        filepath: Relative file path from the project root.
-
-    Returns:
-        bool: True if the file is a docs/*.md file.
-    """
-    return filepath.startswith("docs/") and filepath.endswith(".md")
-
-
-def is_adr_file(filepath: str) -> bool:
-    """Check whether a file path is an Architecture Decision Record.
-
-    Args:
-        filepath: Relative file path from the project root.
-
-    Returns:
-        bool: True if the file is in docs/architecture/adrs/.
-    """
-    return filepath.startswith("docs/architecture/adrs/")
-
-
-def is_excluded(filepath: str, excluded_files: set[str]) -> bool:
-    """Check whether a file should be excluded from checking.
-
-    Args:
-        filepath: Relative file path from the project root.
-        excluded_files: Set of filenames (basenames) to exclude.
-
-    Returns:
-        bool: True if the file should be skipped.
-    """
-    return Path(filepath).name in excluded_files
-
-
 # ---------------------------------------------------------------------------
 # Analysis function (testable without git)
 # ---------------------------------------------------------------------------
 
-def analyze_file(filepath: str, content: str) -> dict | None:
+def analyze_file(
+    filepath: str,
+    content: str,
+    previous_lines: int | None = None,
+    previous_sections: int | None = None,
+) -> dict | None:
     """Analyze a documentation file for length and section violations.
 
     This is the core analysis function, separated from git I/O for testability.
 
+    Both dimensions are judged through ``classify_dimension``, so an
+    already-oversized doc is measured against its OWN previous value rather
+    than the fixed limit — it may shrink or hold steady, but not grow. When
+    both previous values are omitted the file is judged against the limits
+    alone, which is the correct reading for a doc that existed at no parent.
+
     Args:
         filepath: Relative file path (used for ADR detection).
         content: Full file content as a string.
+        previous_lines: The doc's line count at the most permissive parent,
+            or None when it existed at no parent.
+        previous_sections: The doc's section count at the most permissive
+            parent, or None when it existed at no parent.
 
     Returns:
-        dict | None: Violation details if thresholds exceeded, else None.
-            Keys: filepath, line_count, max_lines, section_count, max_sections,
-                  extractable, lines_over, sections_over.
+        dict | None: Violation details if either dimension is refused, else
+            None. Keys: filepath, line_count, max_lines, section_count,
+            max_sections, extractable, lines_over, sections_over,
+            lines_verdict, sections_verdict, previous_lines,
+            previous_sections.
     """
     max_lines = DOC_LENGTH_MAX_LINES_ADR if is_adr_file(filepath) else DOC_LENGTH_MAX_LINES
     max_sections = DOC_LENGTH_MAX_SECTIONS
@@ -353,13 +319,11 @@ def analyze_file(filepath: str, content: str) -> dict | None:
     line_count, sections = count_lines_and_sections(body)
     section_count = len(sections)
 
-    lines_over = line_count > max_lines
-    sections_over = section_count > max_sections
+    lines_verdict = classify_dimension(line_count, previous_lines, max_lines)
+    sections_verdict = classify_dimension(section_count, previous_sections, max_sections)
 
-    if not lines_over and not sections_over:
+    if lines_verdict == "pass" and sections_verdict == "pass":
         return None
-
-    extractable = find_extractable_sections(sections)
 
     return {
         "filepath": filepath,
@@ -367,29 +331,40 @@ def analyze_file(filepath: str, content: str) -> dict | None:
         "max_lines": max_lines,
         "section_count": section_count,
         "max_sections": max_sections,
-        "extractable": extractable,
-        "lines_over": lines_over,
-        "sections_over": sections_over,
+        "extractable": find_extractable_sections(sections),
+        "lines_over": lines_verdict != "pass",
+        "sections_over": sections_verdict != "pass",
+        "lines_verdict": lines_verdict,
+        "sections_verdict": sections_verdict,
+        "previous_lines": previous_lines,
+        "previous_sections": previous_sections,
     }
 
 
-# ---------------------------------------------------------------------------
-# File I/O helper (mockable in tests)
-# ---------------------------------------------------------------------------
+def format_growth_note(violation: dict) -> str | None:
+    """Describe a ratchet refusal, or None when neither dimension grew.
 
-def read_file_content(filepath: str) -> str | None:
-    """Read file content, returning None on error.
+    A "grew" refusal needs different wording from a "crossed the limit" one:
+    the author is not being told to get under 300 lines, they are being told
+    not to make an already-long doc longer in this commit.
 
     Args:
-        filepath: Relative file path from the project root.
+        violation: A violation dict from ``analyze_file``.
 
     Returns:
-        str | None: File content, or None if file cannot be read.
+        The explanatory line, or None when no dimension grew.
     """
-    try:
-        return Path(filepath).read_text(encoding="utf-8")
-    except (OSError, UnicodeDecodeError):
+    grew = []
+    if violation.get("lines_verdict") == "grew":
+        grew.append(f"lines {violation['previous_lines']} → {violation['line_count']}")
+    if violation.get("sections_verdict") == "grew":
+        grew.append(f"sections {violation['previous_sections']} → {violation['section_count']}")
+    if not grew:
         return None
+    return (
+        f"   📈 Already over its limit and grew further in this commit ({', '.join(grew)}).\n"
+        "      Shrinking it, or leaving its size unchanged, is allowed — growing it is not."
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -400,7 +375,11 @@ def main() -> int:
     """Run documentation length checks on all staged docs/*.md files.
 
     Returns:
-        int: Exit code. 0 = pass (or warn-only), 1 = violations in block mode.
+        int: Exit code. 0 = clean run (nothing crossed its limit, nothing
+        already-over grew, or the previous-value history is empty), 1 = a
+        refused finding when severity is ``block`` (always 0 under ``warn``),
+        2 = INDETERMINATE — the previous-value source could not be reached or
+        interpreted, or a staged doc's current content could not be read.
     """
     if sys.stdout.encoding and sys.stdout.encoding.lower() != "utf-8":
         try:
@@ -409,7 +388,12 @@ def main() -> int:
             pass
 
     excluded_files = set(DOC_LENGTH_EXCLUDED_FILES)
-    staged_files = get_staged_files()
+    try:
+        staged_files = get_staged_files()
+    except PreviousLengthSourceError as exc:
+        print(f"INDETERMINATE: reason={exc.reason}", file=sys.stderr)
+        return 2
+
     if not staged_files:
         return 0
 
@@ -417,32 +401,40 @@ def main() -> int:
     # (same resolution pattern used for sys.path above).
     doc_types_path = project_root / "leafcutter" / "config" / "doc_types.json"
 
+    checked_paths = [
+        filepath
+        for filepath, status in staged_files.items()
+        if status != "D" and is_checked(filepath, excluded_files)
+    ]
+
+    previous_values, indeterminate_exit = resolve_doc_ratchet(checked_paths, excluded_files)
+    if indeterminate_exit is not None:
+        return indeterminate_exit
+    previous_lines, previous_sections = previous_values
+
     violations = []
-    checked_count = 0
+    try:
+        for filepath in checked_paths:
+            content = read_doc_content(filepath)
+            result = analyze_file(
+                filepath,
+                content,
+                previous_lines.get(filepath),
+                previous_sections.get(filepath),
+            )
+            if result:
+                # Compute the autofix agent from frontmatter type before content was stripped.
+                doc_type = read_frontmatter_type(content)
+                result["autofix_agent"] = lookup_writer_agent(doc_type, doc_types_path)
+                violations.append(result)
+    except CurrentLengthUnmeasurableError as exc:
+        print(f"INDETERMINATE: reason={exc.reason}", file=sys.stderr)
+        return 2
 
-    for filepath, status in staged_files.items():
-        if status == "D":  # Deleted files — skip
-            continue
-        if not is_doc_file(filepath):
-            continue
-        if is_excluded(filepath, excluded_files):
-            continue
-
-        checked_count += 1
-        content = read_file_content(filepath)
-        if content is None:
-            continue
-
-        result = analyze_file(filepath, content)
-        if result:
-            # Compute the autofix agent from frontmatter type before content was stripped.
-            doc_type = read_frontmatter_type(content)
-            result["autofix_agent"] = lookup_writer_agent(doc_type, doc_types_path)
-            violations.append(result)
-
+    checked_count = len(checked_paths)
     if not violations:
         if checked_count > 0:
-            print(f"✅ PASSED: {checked_count} doc files within length limits")
+            print(f"✅ PASSED: compared {checked_count} doc files against their length limits")
         return 0
 
     # Report violations
@@ -472,16 +464,23 @@ def main() -> int:
             autofix_agent=v.get("autofix_agent", "documentation-expert"),
         )
         print(report)
+        growth_note = format_growth_note(v)
+        if growth_note:
+            print(growth_note)
 
     print()
-    print(f"📊 Summary: {len(violations)} file(s) exceed limits out of {checked_count} checked")
+    print(
+        f"📊 Summary: {len(violations)} file(s) refused out of {checked_count} compared"
+    )
 
     if is_blocking:
         print(
             "\n🛑 Commit blocked. Split the file(s) above before committing.\n"
             "   DO NOT simply delete content to bypass this check.\n"
             "   Use the `@documentation-expert` agent to intelligently split\n"
-            "   and cross-reference these sections without losing context."
+            "   and cross-reference these sections without losing context.\n"
+            "   A doc that is ALREADY over its limit is judged against its own\n"
+            "   previous size, so shrinking it or leaving it unchanged passes."
         )
         return 1
 
@@ -509,5 +508,32 @@ DECISION HISTORY
   AUTOFIX_AGENT is only emitted on violation; clean files are
   unaffected. Exact type string used for lookup (no normalisation
   needed — deprecated aliases preserved in doc_types.json).
+- 2026-09-14 [doc-length ratchet]: Made the gate actually refuse. The
+  "warn-only mode" the 2026-05-13 entry above describes as a starting
+  point was never left: `doc_length` had no section in
+  commit_guardian.json, so DOC_LENGTH_SEVERITY took its "warn" default
+  and main() returned 0 on every run for sixteen months. Three
+  known-issues registers reached ~4,500 lines against the 300-line
+  limit without one commit being stopped. severity is now "block" and
+  every threshold is pinned explicitly in the config rather than left
+  to a default, so the posture is legible in the file that sets it.
+  Blocking is ratcheted, not absolute: 59 of 339 tracked docs were
+  already over the limit, and refusing all of them would have frozen
+  the append-heavy registers and got the gate switched off again. Both
+  dimensions now route through _doc_length_ratchet.classify_dimension,
+  so a doc is refused only when it CROSSES its limit or GROWS while
+  already over — the same GE-127a-1 / GE-127b-1 posture check_file_size
+  .py takes for code, reusing that gate's _file_size_ratchet module
+  (merge-parent resolution, INDETERMINATE floor, empty-history
+  classification) rather than a second copy of it.
+  Two fail-opens closed on the way, both previously harmless because a
+  warn-only gate cannot change an outcome and now not: read_file_content
+  () returned None on an unreadable doc and the loop skipped it, and
+  get_staged_files() returned {} when git failed, which main() reads as
+  "nothing staged, exit 0" — a gate that could not look reporting as a
+  gate that looked and approved. Both now raise and surface as
+  INDETERMINATE (exit 2). Covered behaviourally by
+  unit_tests/commit_guardian/test_doc_length_blocking_ratchet.py and
+  spot-checked against the real 4,388-line commit-guardian.md register.
 ====================================================================
 """

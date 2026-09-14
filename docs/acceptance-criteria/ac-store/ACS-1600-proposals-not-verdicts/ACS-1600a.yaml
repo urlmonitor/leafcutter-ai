@@ -1,0 +1,88 @@
+id: ACS-1600a
+title: "Automation leaves your retired requirements alone"
+component: ac-store
+components:
+  - ac_store
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+criteria: |
+  Only requirements still in force are ever eligible for an automatic change.
+
+  Whatever a tool considers changing is drawn from the requirements the project
+  still holds itself to. A requirement that has been retired or replaced is
+  outside that set by construction, so retiring a requirement is on its own
+  enough to put it beyond the reach of automation — nobody has to remember to
+  exclude it, and no later tool inherits the omission.
+depends_on:
+  - ACS-1600
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: related
+    status: exists
+    relevance: >-
+      THE LIFECYCLE THIS CRITERION READS, AND THE PLACE IT IS CURRENTLY UNDER-READ.
+      The status lifecycle defines retired states and says they are "excluded from
+      active enforcement", listing the readers that honour that. This adds one more
+      reader. Decomposition must derive the set of retired states FROM that
+      lifecycle rather than hard-coding the two values that happen to be common
+      today — a third retired state added later must not silently re-open the hole.
+  - path: docs/acceptance-criteria/ac-store/ACS-900-deprecation-hygiene/ACS-900.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      ADJACENT, FENCED, AND NOT TO BE ABSORBED IN EITHER DIRECTION. ACS-900 is the
+      commit-time gate that fires when a requirement is retired and checks the code
+      it claimed is gone. This criterion is the opposite direction on the same
+      lifecycle: a retired requirement being out of reach of automation that would
+      otherwise still act on it. Neither may be closed as a duplicate of the other.
+delivers_to: null
+expects_from: null
+documentation_triggers:
+  - reference-doc
+origin_agent: BrainCandy
+created: 2026-09-14
+amended_by: []
+superseded_by: null
+covered_by: [ACS-1600a-1]
+implemented_by: []
+change_target: code
+risk_surface: internal
+notes: |
+  THIS IS THE HOME FOR THE QUEUED POINT FIX AND IT HAS FIVE FREE SLOTS. A fix is
+  already queued to stop the governed tool treating retired records as candidates.
+  It arrives as its own child record with this one as its parent, and this record's
+  covered_by is updated in that same write. It is deliberately NOT authored here.
+  Zero children today against a hard cap of five.
+
+  THE SPECIFIC DEFECT, SUPPLIED BY THE USER AND CARRIED AT THE CONFIDENCE GIVEN —
+  IT BELONGS HERE AND NOT IN THE CRITERIA. The governed tool's candidate selection
+  reads only the finished-state field and the implementation-link field. It never
+  reads lifecycle status at all, so a record whose requirement has been retired is
+  as eligible as any other. This is a single unread field, which is what makes the
+  fix small; it is also why the criterion above is written as a GUARANTEE about
+  which records are in reach rather than as an instruction to read one more field.
+  A criterion pinned to the fields today's implementation happens to consult is
+  falsified the moment that implementation changes.
+
+  THE SHARPEST REASON THIS MATTERS RIGHT NOW, AND IT IS NOT HYPOTHETICAL. The
+  entire governing specification of the governed tool is itself being retired.
+  Once that lands, the store contains a live tool whose candidate set includes the
+  very records that were retired for describing it. A tool that acts on retired
+  requirements does not merely waste effort — it re-animates decisions the project
+  has already taken.
+
+  MANDATORY NEGATIVE ARM. Every positive reading of this criterion is satisfied by
+  a tool that selects nothing at all. The arm that distinguishes a working
+  eligibility rule from a broken one is a run over a store containing BOTH a live
+  record needing a change AND a retired record that would otherwise have matched:
+  the live one is acted on and the retired one is not, in the same run. Either arm
+  alone passes on a stuck answer.
+
+  AND THE ABSTENTION IS REPORTED, NOT SILENT. A retired record that would have
+  matched is excluded visibly, not dropped without trace — otherwise the exclusion
+  is indistinguishable from the tool having found nothing. That property is
+  ACS-1600d's and is inherited here rather than restated.
