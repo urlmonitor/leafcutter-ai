@@ -1,0 +1,113 @@
+id: ACD-400c-3
+components:
+  - ac_driven_dev
+title: "The approval requirement holds whatever question is asked of the queue, including an inventory of everything"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the store holds four active pieces of work whose recorded approval is draft:
+    one leaf-level and still to do, one leaf-level and already finished, one
+    composite and still to do, and one leaf-level, still to do and waiting on an
+    unfinished prerequisite,
+  And the store also holds one leaf-level, already-finished piece whose recorded
+    approval is approved,
+  When the queue is asked the broadest question it accepts — every level of work, in
+    every state of completion, not only the leaf-level work still to do,
+  Then the approved piece is the only one returned,
+  And each of the four draft pieces is withheld, appearing in neither list the queue
+    produces,
+  And the same holds for every narrower question the queue accepts: widening the
+    question never widens the approval requirement, so no question exists that will
+    show a reader work the queue has withheld for want of approval.
+depends_on: [ACD-400c, ACD-400c-1]
+doc_links:
+  - path: scripts/ac_store/scan_ac_store.py
+    relationship: describes
+    status: exists
+    relevance: "Verified by execution 2026-09-08 across three argument combinations — (--level all --work-status all), (--level all --work-status done) and (--level leaf --work-status all) — over one temp store holding four draft records (leaf/todo, leaf/done, composite/todo, leaf/todo-with-unfinished-dep) and one approved done leaf. All three combinations returned ready=['the approved id'] and blocked=[]. The approval test sits in the same unconditional filter sequence as the level and completion tests and is not keyed to either argument. Tagged `describes`, not `modifies`."
+  - path: docs/acceptance-criteria/ac-store/ACS-1100-honest-coverage-answers/ACS-1100.yaml
+    relationship: related
+    status: exists
+    relevance: "The standing contract that makes this behaviour worth stating: the broadest question a tool accepts is the one a reader reaches for when they want a complete picture, and it is precisely the question whose answer is least obviously partial. This AC states that the partiality is total across every question; it does not require the queue to announce it. Announcing it remains the ACS-1100-shaped follow-up flagged in ACD-400c's notes."
+  - path: docs/architecture/components/ac-driven-dev.md
+    relationship: describes
+    status: exists
+    relevance: "Component architecture for the queue whose full question surface this AC sweeps."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "Every pytest invocation used to run or verify these tests must set AC_ENFORCE_STRICT=1, or a red result is masked as an xfail and reads green."
+  - "The set of questions swept must be DERIVED from the scanner's own declared option values rather than written out as a literal list, so an option value added or renamed later is covered without anyone remembering to edit the test. A hardcoded enumeration is exactly the record that goes stale, and going stale silently is the failure this whole tree exists to close."
+  - "The sweep must cover the full cross-product of the filtering options, and each combination must be executed against the store rather than reasoned about. Executing one combination and arguing the rest follow reintroduces the assumption the AC was written to test."
+  - "Do not assert that the approved record is returned by every question. It is a finished leaf, so the questions scoped to unfinished work correctly return nothing. The universal claim is the NEGATIVE one — no question returns any of the four draft records — and stating it as a positive would produce a test that fails against correct behaviour."
+  - "Both output forms the scanner offers must be swept, not only the machine-readable one. The reader this AC protects is a person reading the human-readable output, and a gate proved only on the JSON path leaves the surface they actually use unproven."
+  - "This AC authorises no change to the scanner. It states that the approval requirement is unconditional across the question surface; whether it should be is a separately changeable decision the BA deliberately left open."
+test_spec:
+  - name: test_no_question_the_scanner_accepts_returns_an_unapproved_record
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    surface_invoked: "python scripts/ac_store/scan_ac_store.py --level {leaf,all} --work-status {todo,done,all} --ac-root <tmp> [--json]"
+    description: "Over one store holding four draft records (leaf/todo, leaf/done, composite/todo, leaf/todo-with-unfinished-prerequisite) and one approved finished leaf, every combination of the scanner's declared filtering options returns none of the four draft ids in either list."
+  - name: test_the_broadest_question_returns_only_the_approved_record
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    surface_invoked: "python scripts/ac_store/scan_ac_store.py --level all --work-status all --ac-root <tmp> --json"
+    description: "Asking for every level in every state of completion returns exactly the approved id and an empty held list, so widening the question does not widen the approval requirement."
+  - name: test_the_question_set_is_read_from_the_scanner_not_from_the_test
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    angle: reachability
+    surface_invoked: "python scripts/ac_store/scan_ac_store.py --help"
+    description: "The combinations swept are enumerated from the scanner's own declared option values, so adding a further option value extends the sweep automatically and a test asserting a fixed number of combinations would fail."
+test_rationale: "The load-bearing risk is not that today's three combinations behave differently — they do not — but that a fourth is added later and nobody re-checks it. Only a sweep whose membership is derived from the scanner keeps the universal claim universal, so the enumeration mechanism is itself worth a test."
+delivers_to: null
+expects_from:
+  ac_id: ACD-400c-1
+  contract: "The temp-AC-store fixture builder and the scanner-invocation helper; this AC additionally needs the helper to accept arbitrary option combinations and to return both the parsed JSON and the raw human-readable stdout."
+origin_agent: BrainCandy
+created: 2026-09-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  AUTHORED 2026-09-08 by BA v3, stage 2 of PO -> BA -> IT-PO. Decomposes ACD-400c.
+
+  THIS BEHAVIOUR WAS NOT IN THE PO'S BRIEF AND WAS FOUND BY PROBING THE QUEUE. The PO
+  specified the approval gate as it applies to the ready-batch question. Running the
+  queue across its full argument surface showed the requirement is unconditional: asking
+  for every level and every completion state still returns only approved work. That is a
+  separately changeable decision — a reasonable person could argue the gate belongs on
+  the build-selection question and not on an inventory question — and nothing anywhere
+  records which it is. So it is silent in exactly the way ACD-400c exists to fix, and it
+  belongs under ACD-400c rather than being noticed and dropped.
+
+  WHY IT MATTERS MORE THAN IT LOOKS. The narrow question is asked by the build loop,
+  which only ever wants approved work, so the gate is invisible there. The broad question
+  is asked by a person trying to find out what is in the store — and that is the reader
+  who will be misled, because they asked for everything and received a filtered subset
+  with no indication of filtering. The four draft records in the criteria are chosen so
+  that each would have been returned by the broad question for a different reason had the
+  approval requirement not applied.
+
+  THE LAST CLAUSE IS DELIBERATELY UNIVERSAL RATHER THAN ENUMERATED. Naming today's exact
+  argument spellings would freeze a command-line detail into a behavioural requirement and
+  would go stale the moment an argument is renamed or added. What must remain true is that
+  no question reaches behind the approval requirement. A test satisfies it by exercising
+  every question the queue accepts, which is a small closed set; the IT PO owns how that
+  set is enumerated.
+
+  AGENT ASSIGNMENT AND TECHNICAL ENRICHMENT DELIBERATELY OMITTED — BA-authored L2.

@@ -1,0 +1,92 @@
+id: ACS-1500c
+components:
+  - ac_store
+title: "The records already written carry their meaning across, and nobody re-decides it for them"
+component: ac-store
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Existing records keep the meaning they were written with, including the ones
+  that say both things at once.
+
+  Records already in the store are carried across as what their author meant,
+  never as what a tool guessed. A record holding both kinds of link keeps both.
+  Where the meaning genuinely cannot be established, the record is reported and
+  left untouched rather than assigned one.
+depends_on:
+  - ACS-1500
+  - ACS-1500a
+  - ACS-1500b
+doc_links:
+  - path: docs/acceptance-criteria/testing-quality/TQ-400-durable-done-proof/TQ-400e-1.yaml
+    relationship: related
+    status: exists
+    relevance: "OWNS BYTE STABILITY AND ITS TEST SHAPE — INHERIT, DO NOT RESTATE. Byte stability means a record needing no change is never OPENED for writing, not that it is rewritten identically: a load-and-dump round trip preserves every value while reformatting quoting, key order and line wrapping. At 3,925 records this is the largest-churn operation the store has contemplated, so this is where the rule earns its keep. Its test shape (raw-byte hash before/after plus an anti-no-op control in the same run) is the one to copy."
+  - path: docs/acceptance-criteria/ac-store/ACS-1300-trustworthy-coverage-links/ACS-1300a-3.yaml
+    relationship: related
+    status: exists
+    relevance: "THE ABSTENTION PATTERN AND THE CLASSIFY-BY-RESOLUTION RULE. Inherit both. Its warning is the operative one here: entry shape, the level field and the id string are all wrong proxies for exactly the records at issue. Note the correction in ACS-1500's notes though — measured store-wide, resolution and shape disagree exactly once, and on that one record (ACD-300f -> ACD-300f-5) RESOLUTION is the proxy that gets it wrong, in the direction that loses a child link."
+  - path: scripts/ac_store/fix_ac_orphans.py
+    relationship: related
+    status: exists
+    relevance: "THE WORKED EXAMPLE OF HOW NOT TO DO THIS, IN THIS EXACT STORE. It appends every orphan to every parent with no adjudication, no abstention channel, and a case-4 branch that yaml.dumps whole files — violating byte stability outright. Read it before specifying any bulk pass. The failure mode this L1 must avoid is not hypothetical; it is checked in and one command away."
+  - path: docs/acceptance-criteria/ac-store/ACS-800-stable-ac-identity/ACS-800.yaml
+    relationship: related
+    status: exists
+    relevance: "ACS-800d IS THE SAME OPERATION ON A DIFFERENT FIELD — whole-store migration with zero dangling references, already flagged in PROJECT_CONTEXT.md as the highest-risk item in that tree. If both migrations run, they must not run as two independent whole-store rewrites of the same 3,925 files; that is two maximum-churn passes where one would do."
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-09-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - code
+risk_surface: contract_boundary
+documentation_triggers:
+  - how-to
+notes: |
+  WRITE THE MIXED-LIST CASE FIRST. NOT LAST, NOT AS AN EDGE CASE. Measured
+  2026-09-08 on the whole store: of 1,739 records holding coverage entries,
+  76 hold BOTH relations in one list — child ids and test paths together. That
+  is legal per ac-schema.md and nobody had counted it before this tree.
+  Examples to build the L2 against: BP-1100e-1 (seven child ids plus one test
+  path), BP-100k-5 (one child id plus five test paths), UXP-603 (one child id
+  plus five vitest node ids), ACD-1200a-11 (one child id plus one test path).
+  A migration that assumes each list is wholly one thing mangles all 76
+  silently, and every one of them is a record with real children.
+
+  THE DENOMINATORS, so no descendant reports a bare number (ACS-1100,
+  inherited). 3,925 records carry an id; 1,739 hold coverage entries; 2,186 hold
+  none. Of the 1,739: 1,302 resolve-only, 361 unresolve-only, 76 mixed. At entry
+  level, 552 unresolvable entries are path-shaped and exactly one is id-shaped.
+  All figures 2026-09-08, branch ac/coverage-field-split, no sampling.
+  Provisional — re-measure before implementing and expect the numbers to have
+  moved; no criterion may pin one.
+
+  THE ONE DISAGREEMENT IS THE WHOLE ARGUMENT FOR ABSTENTION. ACD-300f lists
+  ACD-300f-5, which does not exist. Resolution says 'test link'; shape says
+  'child link'; the author plainly meant a child. Two proxies, one record, and
+  the safer-sounding rule is the one that loses the link. There will be more of
+  these after the next few hundred commits. The pass must abstain on the class,
+  not adjudicate it.
+
+  EVERY SAFETY GUARANTEE HERE IS SATISFIED BY A TOOL THAT DOES NOTHING.
+  'Byte-stable', 'left the ambiguous ones alone', 'changed no verdict' are all
+  trivially true of a no-op. Each must be asserted in the SAME invocation as a
+  conversion that genuinely happened — copy ACS-1300a-3's pairing test shape,
+  which exists for exactly this reason.
+
+  THIS L1 DOES NOT REPAIR ANYTHING. It moves existing meaning into its new
+  place. Completing an incomplete parts list is ACS-1400c's job and stays there;
+  conflating the two would make this pass both migrate and repair in one
+  unreviewable sweep, which is how fix_ac_orphans.py got dangerous.

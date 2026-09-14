@@ -1,0 +1,97 @@
+id: ACS-1400b
+components:
+  - ac_store
+title: "See the whole store's answer, not just this commit's corner of it"
+component: ac-store
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Someone finds out the store has drifted without having to go looking.
+
+  The health of every recorded link is answered across the whole store on a regular
+  basis, and that answer reaches a person — so a gap that no single commit could
+  ever reveal stops depending on somebody thinking to check.
+depends_on:
+  - ACS-1400
+doc_links:
+  - path: scripts/ac_store/scan_ac_orphans.py
+    relationship: related
+    status: exists
+    relevance: "DO NOT BUILD A SCANNER — THIS ONE WORKS. `find_orphaned_children()` performs the correct single-hop check across every record at every level and exits 1 with a grouped report when it finds anything. Verified 2026-09-08: it correctly finds all 47. The ENTIRE gap for this L1 is that nothing invokes it — zero references in .github/, config/, templates/config/ or .pre-commit-config.yaml. This L1 is a wiring and reporting problem wearing a detection problem's clothes."
+  - path: scripts/ac_store/validate_ac_schema.py
+    relationship: related
+    status: exists
+    relevance: "THE PRECEDENT TO COPY, INCLUDING ITS SCAR. It is the AC-store check that DID get wired to a required CI gate ('AC store valid'), so its wiring is the working model. Its scar is the more useful half: for eight days a bare-directory argument matched zero files, printed a success message and exited 0 — a documented defence that reported clean while checking nothing. Any gate this L1 adds must state the population it examined, so a run that checked nothing cannot look like a run that found nothing."
+  - path: docs/acceptance-criteria/ac-store/ACS-1200-parked-ideas/ACS-1200b.yaml
+    relationship: related
+    status: exists
+    relevance: "ALREADY OWNS PART OF THIS SURFACE — READ IT BEFORE WRITING ANY CRITERION, AND DO NOT DUPLICATE IT. ACS-1200b requires the health surfaces (naming scan_ac_orphans.py explicitly) to stop reporting deliberately-parked trees as breakage, and instructs that every reader inferring breakage from a missing link be ENUMERATED. This L1 inherits that enumeration rather than repeating it, and must not make the scan louder before ACS-1200b has made it correct — a schedule that reports six deliberate records as drift every week trains people to ignore the report."
+  - path: docs/acceptance-criteria/ac-store/ACS-1100-honest-coverage-answers/ACS-1100.yaml
+    relationship: related
+    status: exists
+    relevance: "INHERITED, NOT DUPLICATED. This L1's output is by definition an answer about the store, so it must state the total it was measured against and what it excluded. Given that this tree's own headline 47 decomposes into four populations with opposite correct actions, a bare count here would be actively misleading. Reuse ACS-1100's vocabulary; do not invent a second."
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-09-08
+amended_by: []
+superseded_by: null
+covered_by:
+  - ACS-1400b-1
+  - ACS-1400b-2
+  - ACS-1400b-3
+  - ACS-1400b-4
+  - ACS-1400b-5
+implemented_by: []
+change_target:
+  - code
+risk_surface: internal
+documentation_triggers:
+  - how-to
+notes: |
+  THE STRUCTURAL ARGUMENT FOR THIS L1, AND WHY IT IS NOT A DUPLICATE OF ACS-1400a.
+  A per-commit check cannot see this class of defect, and no amount of hardening
+  will change that. It is handed one commit's staged set; the fact in question is
+  a property of the whole store. Even a perfect ACS-1400a is blind to a record
+  that nobody is touching today. The two are different instruments, not two
+  attempts at the same one.
+
+  THE GAP IS WIRING, NOT CAPABILITY — do not let the BA specify a scanner. The
+  scan exists, is correct, and has been correct since 2026-06-08 (ACS-100i-4).
+  For fifteen months it has been able to answer this question and has been asked
+  it only when a human remembered. That is the whole finding. An L2 that
+  re-specifies detection logic is rebuilding working code and will drift from it.
+
+  WHAT IS GENUINELY UNDECIDED, and what the BA should spend the L2 budget on:
+  WHERE the answer goes and WHAT MAKES IT ACTIONABLE. A required CI gate that
+  blocks merges on 47 pre-existing orphans is unshippable until ACS-1400c has run
+  — sequence matters, and a gate that must be bypassed on day one is worse than no
+  gate, because the bypass becomes the habit. Consider a reporting posture first
+  and a blocking posture after reconciliation, and make that transition explicit
+  rather than implied.
+
+  A COUNT ALONE IS NOT AN ACTIONABLE ANSWER, and this tree is the proof. "47
+  orphans" is true, and acting on it directly would have damaged the store: six of
+  those records must never be repaired and twenty-five more carry a done-proof
+  consequence. Whatever this L1 emits must distinguish drift from decision, or it
+  will keep prompting exactly the unsafe repair described in ACS-1400c. That
+  distinction depends on ACS-1200's parked-state signal existing — note the
+  dependency rather than re-deriving a second way to detect deliberateness.
+
+  THE FAILURE MODE TO DESIGN AGAINST IS NOISE, NOT MISSES. A weekly report nobody
+  reads is indistinguishable in outcome from the silence we have now, and it costs
+  more. Whatever cadence and channel are chosen, the criterion should bind to the
+  answer REACHING someone, not to the job having executed.
+
+  DOCUMENTATION: `[how-to]`. A person needs to know how to run the store-wide
+  check on demand and how to read what comes back — particularly how to tell a
+  deliberate exclusion from real drift, which is the judgement this whole tree
+  turns on. No component-diagram: no new architectural layer, just wiring for a
+  script that already exists.

@@ -1,0 +1,170 @@
+id: BP-1500b-3
+title: "A clean sweep states the installed tree it examined and how much of it, so the all-clear is checkable"
+component: build-pipeline
+components:
+  - build_pipeline
+level: L2
+status: active
+req_status: draft
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+work_status: todo
+declares_side_effect: false
+criteria: |
+  Given a project whose installed tree carries no orphans at all,
+  When the install is rebuilt,
+  Then the build's clean result for the sweep states which installed tree it
+    examined, which parts of that tree it walked, how many installed artifacts
+    it inspected, and how many current sources it compared them against,
+  And both stated counts are the real ones for that run, so rebuilding after
+    adding one template raises the compared-against count by exactly one and
+    rebuilding after removing one lowers it by exactly one,
+  And for a project that has actually received an install, both stated counts
+    are greater than zero,
+  And a reader who does not believe the result can reconstruct the same scope by
+    hand from what the report states alone, without reading the build's source,
+    and arrive at the same two counts.
+depends_on:
+  - BP-1500b
+  - BP-1500b-2
+doc_links:
+  - path: scripts/build.py
+    relationship: describes
+    status: exists
+    relevance: "The step that prints the clean result today. It reports truthfully over a scope of eleven historical paths that have nothing to do with orphans, which is why its all-clear is vacuous rather than wrong."
+  - path: "docs/acceptance-criteria/build_pipeline/BP-1500-honest-builds/BP-1500d-4.yaml"
+    relationship: describes
+    status: exists
+    relevance: "SAME FAMILY, DIFFERENT CAUSE -- cite, do not merge, and do not satisfy this by pointing at it. There a check CANNOT READ the record it needs and says so. Here the record reads fine and the check's notion of what to look for is simply unrelated to orphans. Approved."
+  - path: "docs/acceptance-criteria/build_pipeline/BP-1500-honest-builds/BP-1500e.yaml"
+    relationship: describes
+    status: exists
+    relevance: "SAME FAMILY, DIFFERENT CAUSE. There a check DID NOT RUN because an earlier one failed, and is reported as not-run. Here the check ran to completion and reported success. Approved."
+  - path: docs/reference/build-telemetry.md
+    relationship: describes
+    status: exists
+    relevance: "The existing reference for what the build reports about itself, and the established conventions the scope record must follow rather than invent. Read before choosing a shape for the two counts."
+  - path: docs/reference/false-green-mechanisms.md
+    relationship: describes
+    status: exists
+    relevance: "The project's catalogue of checks that report success having examined nothing. A vacuous all-clear over eleven historical paths is an instance of the catalogued pattern; the catalogue is where the general shape is already described, so do not re-describe it here."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "The clean result must state, in the build's own output for that run: the installed tree examined (absolute, after symlink resolution), the sub-locations walked, the count of installed artifacts inspected, and the count of current sources compared against. All four are per-run facts computed from the walk in progress -- never a constant, never the length of a list taken before the walk, never a value carried over from a previous build."
+  - "FALSIFIABILITY GATE, from the AC's own notes and non-negotiable: the tests for this AC must go RED against today's build, which prints `(no stale files found)` from `_cleanup_stale_paths` over eleven `_PRE_CONSOLIDATION_PATHS` entries. If a proposed test can pass against the current code, the test is too weak -- do not weaken the AC to match it."
+  - "The two counts must be reproducible by a reader from the stated scope alone, using ordinary shell tools and no build source. That is a constraint on the WORDING as much as the numbers: the report must name paths a reader can list, not internal phase labels a reader cannot resolve to a directory."
+  - "Do not satisfy the count clauses by reporting over `_PRE_CONSOLIDATION_PATHS`. Its length is eleven whatever exists on disk; that number is reproducible-by-hand and completely uninformative, which would satisfy the letter of every clause and none of their purpose."
+  - "The scope report must be emitted on the default build path, in the same output section as the sweep's other results, and must be present whether or not anything was removed. A report that appears only when something is found leaves the clean path exactly as unfalsifiable as it is today."
+  - "The scope record must also be available in a structured, machine-readable form -- not only as formatted console text -- so a later check can assert on it without parsing prose. Follow the conventions already in docs/reference/build-telemetry.md rather than introducing a new telemetry shape."
+  - "The compared-against count must be the size of the recomputed producible set from BP-1500b-2, so it moves when templates/ moves. Reporting the size of anything that does not change when a template is deleted fails the second Then clause by construction."
+test_spec:
+  - name: test_bp_1500b_3_the_clean_result_states_the_examined_tree_the_walked_locations_and_both_counts
+    target_dir: unit_tests/build_guards/
+    framework: pytest
+    type: integration
+    angle: criterion
+    surface_invoked: "python scripts/build.py --target-dir <root>  (no flags)"
+    description: "Rebuild a target carrying no orphans via a real no-flag subprocess. The sweep's output names the resolved installed tree, the sub-locations walked, an inspected count and a compared-against count. Red today: the current output is the single line `(no stale files found)`."
+  - name: test_bp_1500b_3_the_compared_against_count_rises_by_exactly_one_when_a_template_is_added
+    target_dir: unit_tests/build_guards/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "Build, add one template to the package copy, rebuild; the compared-against count is exactly one higher and no other reported number moves unexpectedly."
+  - name: test_bp_1500b_3_the_compared_against_count_falls_by_exactly_one_when_a_template_is_removed
+    target_dir: unit_tests/build_guards/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "The mirror direction. Together with the add case this is what distinguishes a recomputed set from a cached one or a constant."
+  - name: test_bp_1500b_3_both_counts_are_greater_than_zero_for_a_tree_that_received_a_real_install
+    target_dir: unit_tests/build_guards/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "A target that has actually been installed into reports a positive inspected count and a positive compared-against count. The zero case is BP-1500b-3-i's; this asserts it cannot be the normal one."
+  - name: test_bp_1500b_3_the_reported_counts_match_an_independent_recount_of_the_stated_scope
+    target_dir: unit_tests/build_guards/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    description: "THE REPRODUCE-BY-HAND CLAUSE, mechanised. Parse the two paths sets out of the report text, walk them in the test with plain filesystem calls, count, and compare to the reported integers. The recount must NOT call the build's own counter -- an independent count is the whole point, and reusing the counter would make the test pass on a report that names the wrong directory."
+  - name: test_bp_1500b_3_the_legacy_no_stale_files_found_output_is_rejected_by_the_report_contract
+    target_dir: unit_tests/build_guards/
+    framework: pytest
+    type: unit
+    angle: failure
+    description: "Falsifiability control. Feed the assertion helper the exact string today's build prints -- `Stale file cleanup:` followed by `(no stale files found)` -- and assert it is rejected. Proves the other five tests are not vacuously satisfiable by the current implementation."
+test_rationale: |
+  THIS AC'S OWN NOTES SUPPLY THE ACCEPTANCE TEST FOR ITS TEST CONTRACT: does
+  the proposed test go red against today's build? Today's build prints a
+  truthful clean result over eleven historical paths. Any test that asserts
+  only "the sweep reported success" or "no exception was raised" is green
+  against it, and this file would then be wrong rather than the code. So the
+  contract is written backwards from that gate, and the last entry mechanises
+  it -- an explicit control asserting the legacy output string FAILS the
+  helper the other entries assert with. Without that control, a later
+  weakening of the helper would silently un-cover all five behavioural tests
+  at once, which is precisely the failure this AC is about.
+
+  THE INDEPENDENT-RECOUNT ENTRY IS THE LOAD-BEARING ONE AND IS EASY TO GET
+  SUBTLY WRONG. Its value comes entirely from NOT reusing the build's counter.
+  A test that asks the build for its count and compares it to the build's
+  count is a tautology that passes on a report naming a directory the sweep
+  never walked. Walking the reported paths in the test with plain filesystem
+  calls is what turns the printed integers into a claim about the world, and
+  it is the same check the reporter performed by hand to find the live orphan
+  after distrusting the printed line.
+
+  A UNIT TEST OF A FORMATTER WOULD BE INSUFFICIENT. It could assert the
+  sentence contains two integers while the integers came from anywhere. The
+  claim is about correspondence between the report and the filesystem, so the
+  filesystem has to be in the test.
+delivers_to:
+  agent: python-coder
+  contract: "A per-run scope record emitted on the default build path in both console and structured form: {examined_root: str (absolute, symlink-resolved), walked_locations: list[str] (each a real path a reader can list), installed_artifacts_inspected: int, current_sources_compared: int}. Emitted whether or not anything was removed. BP-1500b-3-i constrains the shape this record takes when installed_artifacts_inspected is zero; BP-1500b-5 documents how a reader reproduces the two counts from it."
+expects_from:
+  ac_id: BP-1500b-2
+  contract: "The producible set recomputed inside this rebuild, as {artifact_type: set[basename]} -- its total cardinality IS current_sources_compared. Depending on BP-1500b-2 rather than only on the parent is deliberate: reporting the size of a hardcoded eleven-entry list would satisfy the letter of the count clauses and none of their purpose."
+origin_agent: BrainCandy
+created: 2026-09-07
+created_by_ticket: null
+amended_by:
+  - action: technical_enrichment
+    agent: it-po
+    date: '2026-09-07'
+    reason: "Added assigned_agent (python-coder), estimated_complexity (M), it_requirements, test_spec, test_rationale, delivers_to, expects_from, and two reference doc_links (build-telemetry.md for the structured shape, false-green-mechanisms.md for the catalogued pattern). Criteria, title and depends_on unchanged. The test contract is written backwards from the AC's own falsifiability gate and includes an explicit control asserting today's `(no stale files found)` output is REJECTED by the helper the behavioural tests assert with -- without it, a later weakening of the helper would silently un-cover all five at once. The independent-recount entry is specified to walk the reported paths itself rather than call the build's counter, since a self-comparison passes on a report naming a directory the sweep never walked."
+superseded_by: null
+covered_by:
+  - BP-1500b-3-i
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  THIS AC IS THE HALF THE PARENT'S 2026-09-07 AMENDMENT ADDED, AND IT IS THE ONE
+  THAT CANNOT BE DROPPED. The pre-existing L1 clause only required a SURVIVING
+  orphan to be named. The current implementation never has a survivor to name,
+  so it satisfied that clause perfectly while changing nothing. Any decomposition
+  that constrains only the found-something path leaves the defect exactly where
+  it is. That is why the clean path gets its own AC rather than an And-clause on
+  BP-1500b-1.
+
+  THE FALSIFIABILITY TEST TO APPLY TO ANY PROPOSED IMPLEMENTATION: take the
+  build as it stands today, which prints a clean result over eleven unrelated
+  historical paths. Does the proposal's test go RED against it? If the test can
+  pass against today's code, the AC has been written too weakly and this file is
+  wrong, not the code.
+
+  WHY COUNTS AND NOT PROSE. "Examined the installed tree" is unfalsifiable -- it
+  is true of a run that walked four hundred files and of one that walked none.
+  Two integers, each reproducible by hand from the stated scope, are what turn
+  the all-clear into something a reader can check in under a minute. The
+  reproduce-by-hand clause is deliberate: it is the check the reporter actually
+  performed to find the live orphan, having distrusted the printed line.
+
+  ORDERING. This depends on BP-1500b-2 rather than only on the parent because
+  the compared-against count is meaningless until the comparison set is derived
+  from current sources. Reporting the size of a hardcoded list of eleven paths
+  would satisfy the letter of the count clauses and none of their purpose.

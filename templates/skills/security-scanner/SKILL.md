@@ -103,11 +103,16 @@ fits into the broader pre-commit hook pipeline).
 
 ## Secrets Detection Rules
 
-The scanner applies these rules in order:
+The scanner applies these rules in order. The `ENV_FILE` filename match ADDS
+a finding — it never ends the scan. Every file, whatever its name, still has
+its content read line by line against the remaining rules below, so a
+sensitive filename and its content findings are always additive in the same
+result (GE-123a-1). Suppressing the `ENV_FILE` finding alone therefore never
+leaves a file's contents unexamined.
 
 | Rule ID | Pattern / Method | Description |
 |---------|-----------------|-------------|
-| `ENV_FILE` | filename match `*.env`, `.env.*` | Staged .env files |
+| `ENV_FILE` | filename match `*.env`, `.env.*` | Staged .env files — adds a finding, content rules still run |
 | `EXCHANGE_API_KEY` | `[A-Za-z0-9]{36,}` near `api_key`, `apikey`, `api_secret` | Third-party API key pattern |
 | `GENERIC_SECRET` | keyword proximity: `secret`, `password`, `token`, `passwd` | Generic credential keyword |
 | `AWS_KEY` | `AKIA[0-9A-Z]{16}` | AWS access key pattern |

@@ -1,0 +1,178 @@
+id: BP-1500g-3
+title: "It survives the second build and the tenth, and it survives the upgrade"
+component: build-pipeline
+components:
+  - build_pipeline
+level: L2
+status: active
+req_status: draft
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+work_status: todo
+declares_side_effect: false
+criteria: |
+  Given a project in which an adopter-authored capability survived one ordinary
+    build as BP-1500g-1 requires,
+  When that project is rebuilt twice more with nothing changed in the package or
+    the project between runs, and is then rebuilt once more after the project has
+    been upgraded to a newer version of the package that both adds capabilities
+    and retires others,
+  Then the adopter's capability is present and unchanged after every one of those
+    runs, not only after the first,
+  And the tool which runs capabilities in that project still discovers it by name
+    and runs it after the upgrade, so the upgrade does not quietly reclaim the
+    place the adopter's work occupies,
+  And no run in that sequence removes, empties or relocates it, so a repair that
+    holds on the run it was tested against and lapses on a later one does not
+    satisfy this criterion.
+depends_on:
+  - BP-1500g
+  - BP-1500g-1
+doc_links:
+  - path: docs/known-issues/build-pipeline.md
+    relationship: describes
+    status: exists
+    relevance: "KI-BP-009 was reported by an adopter repository that had been running builds for months, not from a first install. The defect it records is one that fires on EVERY build, which is why a repair verified against a single run proves less here than it looks."
+  - path: scripts/build.py
+    relationship: describes
+    status: exists
+    relevance: "The build re-run in this sequence. The stale-path cleanup list it iterates is a list of historical locations, so it is exactly the kind of thing that grows at an upgrade -- which is the mechanism by which an upgrade can reclaim a place that was safe the day before."
+  - path: "docs/acceptance-criteria/build_pipeline/BP-1500-honest-builds/BP-1500b-1.yaml"
+    relationship: describes
+    status: exists
+    relevance: "BOUNDARY, NOT COVERAGE. That AC requires a capability the package can no longer produce to be REMOVED from an installed project. This AC requires an adopter's capability to SURVIVE the same upgrade. They are the two sides the implementation has to tell apart, and BP-1500g-3-i states the part of that which belongs here. Do not restate that AC's removal requirement."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "THIS AC IS THE THIRD UNSAFE DIRECTION AND IT IS TIME. BP-1500g-1 covers the default path, BP-1500g-1-i the opt-in mode; both are directions in SPACE -- which command, which placement. This one is the direction the original framing missed: the set of locations the build claims as its own is DATA THAT GROWS BETWEEN VERSIONS. `_PRE_CONSOLIDATION_PATHS` is by construction a register of historical locations, and KI-BP-009 says of it that it is destructive rather than inert and must not be grown -- which concedes that growing it is the normal thing to do. So a location genuinely safe today can be claimed by a version shipped next month with no action by the adopter, and the guarantee lapses without anyone changing anything."
+  - "THAT IS WHY `PICK A DIRECTORY, DOCUMENT IT, DONE` IS A NON-FIX BY CONSTRUCTION, AND WHY THIS AC MUST NOT BE DROPPED OR WEAKENED ON RUNTIME-COST GROUNDS. A guarantee that rests on a location not appearing in a list later is a promise about a list, and the list is maintained by people who do not know the promise exists. The guarantee has to be enforced by something the build EVALUATES AT RUN TIME. Concretely: on every run, the build reconciles the set of paths it is about to remove against the set it is about to claim and against its ownership verdict, and a path that is both claimed and occupied by content it cannot attribute to itself is a contradiction it surfaces rather than resolves. That check costs one set intersection over collections the build already computes, and it is the only construct in this AC set that is still true after the next version bump."
+  - "THE UPGRADE CLAUSE REQUIRES TWO PACKAGE VERSIONS IN THE FIXTURE AND IS THE CLAUSE MOST LIKELY TO BE QUIETLY DROPPED FOR THAT REASON. The AC's own notes say so. It is also the clause that matches how the defect was actually met -- an adopter building successfully for months and then not. The second version must both ADD a claimed location and RETIRE a shipped item, because those two changes exercise opposite halves: growth of the claim set is how the adopter's place gets taken, and retirement is what BP-1500g-3-i requires the build to still act on."
+  - "REPETITION IS NOT AN ASSERTION ABOUT SPEED. Three-plus builds over a small scratch tree is a cost measured in seconds against a per-file budget of 300s (PR #706, overridable via LEAFCUTTER_DONE_PROOF_PYTEST_TIMEOUT_SECONDS). Any proposal to reduce this AC to a single run for runtime reasons should be refused on the arithmetic before it is refused on the principle."
+  - "IDEMPOTENCE MUST BE BYTE-STABILITY, NOT ABSENCE OF ERRORS. Every run after the first leaves the adopter's content byte-identical and produces no removal or relocation of it. A run that rewrites the content with identical semantics but different bytes fails, because the adopter cannot distinguish that from the beginning of a loss."
+  - "DO NOT SATISFY THIS BY FREEZING THE TREE. The obvious route to surviving every run is to stop the build changing anything it has already written, which passes every survival assertion in this set and silently pins the package's own content at whatever version the project first received. BP-1500g-3-i exists to make that a failure and must be treated as part of THIS AC's done-condition, not as an optional sibling."
+  - "THE REPAIR MUST NOT DEPEND ON THE STATE THE FIRST BUILD HAPPENED TO FIND. A guard that works because the tree was in a particular condition on run one, and stops working once the build has changed that condition, is the first of the two failure shapes this AC names, and it is invisible to any test that builds once."
+  - "Observability across runs: if the build's claim set changed between two versions, that change must be visible in the output of the run that first acts on it. An upgrade that silently begins claiming a new location is the mechanism by which this defect will recur, and it is cheap to make audible."
+test_spec:
+  - name: test_bp_1500g_3_the_adopter_capability_survives_three_consecutive_no_flag_builds_byte_identical
+    target_dir: unit_tests/portability/
+    framework: pytest
+    type: integration
+    angle: criterion
+    surface_invoked: "python scripts/build.py --target-dir <scratch_adopter>   (three consecutive no-flag runs)"
+    description: "The first Then clause. Three real build subprocesses with nothing changed between them; the adopter's capability is byte-identical after EACH, not only after the last. Asserting only after the third would miss a repair that deletes on run two and restores on run three."
+  - name: test_bp_1500g_3_the_capability_is_still_discovered_by_name_after_every_run_in_the_sequence
+    target_dir: unit_tests/portability/
+    framework: pytest
+    type: integration
+    angle: reachability
+    description: "Reachability checked per run rather than once at the end. A repair that leaves the bytes in place while a later run quietly relocates them out of the discovery path passes the byte-identity entry above and delivers an adopter whose capability stopped working for no visible reason."
+  - name: test_bp_1500g_3_the_capability_survives_an_upgrade_to_a_package_version_that_claims_a_new_location
+    target_dir: unit_tests/portability/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    surface_invoked: "python scripts/build.py --target-dir <scratch_adopter>   (run under package version A, then under version B)"
+    description: "THE UPGRADE CLAUSE, AND THE ENTRY THAT ANSWERS THE TIME DIRECTION. Build under a package whose claim set does not include the adopter's location, then build the SAME project under a second package version whose claim set DOES include it and which also retires a shipped item. The adopter's capability survives byte-identical and stays discoverable. This is the only entry that reproduces how the defect was actually met, and it is the one flagged in the AC's notes as most likely to be dropped because it needs two versions in the fixture. Do not drop it."
+  - name: test_bp_1500g_3_the_build_surfaces_a_newly_claimed_location_that_is_already_occupied
+    target_dir: unit_tests/build_guards/
+    framework: pytest
+    type: unit
+    angle: seam
+    description: "THE RUN-TIME INVARIANT, ASSERTED WITHOUT A FILESYSTEM, AND THE ENTRY THAT KEEPS THIS AC TRUE AFTER THE NEXT VERSION BUMP. Given a claim set, a removal set and an ownership verdict in which a path is both claimed and occupied by unattributable content, the build surfaces the contradiction and does not remove. Given no such path, it proceeds silently. Every other entry in this contract demonstrates correct behaviour over a tree that exists today; only this one asserts a property the build checks about itself on a tree nobody has built yet."
+  - name: test_bp_1500g_3_no_run_in_the_sequence_relocates_or_empties_the_capability
+    target_dir: unit_tests/portability/
+    framework: pytest
+    type: integration
+    angle: boundary
+    description: "The third Then clause stated as the four distinct failure modes it names -- removed, emptied, relocated, or altered -- checked after every run in the sequence including the post-upgrade one. Relocation in particular passes a naive `still exists somewhere` assertion."
+  - name: test_bp_1500g_3_a_guard_that_depends_on_the_first_builds_starting_state_is_detected
+    target_dir: unit_tests/build_guards/
+    framework: pytest
+    type: integration
+    angle: failure
+    description: "The first of the two failure shapes the AC's notes name, made executable. Run the sequence starting from a tree the build has ALREADY built once and modified -- not a pristine scratch dir -- and require the same outcome. A repair that holds only because run one found the tree in a particular condition passes every pristine-fixture entry above and fails here."
+  - name: test_bp_1500g_3_the_package_content_is_still_brought_up_to_date_across_the_same_sequence
+    target_dir: unit_tests/portability/
+    framework: pytest
+    type: integration
+    angle: failure
+    covers:
+      - BP-1500g-3
+      - BP-1500g-3-i
+    description: "THE FROZEN-TREE CONTROL, placed in THIS AC's contract because the AC's notes say BP-1500g-3-i is part of this record's done-condition rather than an optional extra. Across the same multi-run and upgrade sequence, the package's own content is updated to the newer version while the adopter's is untouched. Without this entry, `never change anything already written` satisfies every other entry in this contract."
+test_rationale: |
+  EVERY OTHER AC IN THIS SET IS VERIFIED BY BUILDING ONCE. That is the gap this
+  record exists to close, and it is why the contract is shaped around sequences
+  rather than around clauses. The two failure shapes the AC names -- a guard
+  that depended on the starting state, and a claim set that grew -- are both
+  unreachable by a single invocation, so a contract derived clause-by-clause
+  from BP-1500g-1 would look complete and cover neither.
+
+  THE SEAM ENTRY IS THE ONLY THING IN THIS AC SET THAT SURVIVES THE NEXT
+  VERSION BUMP. Every behavioural entry, here and in the sibling records,
+  demonstrates that the build behaves correctly over a tree that exists today.
+  If the guarantee rests on those alone, it rests on the claim set not growing
+  -- and KI-BP-009 states plainly that the claim set is a growing register of
+  historical locations. Asserting the reconciliation directly, over synthetic
+  sets and no filesystem, is what makes the guarantee a property of the build
+  rather than a property of this month's constant. If this contract is ever
+  trimmed, this is the entry to defend.
+
+  THE UPGRADE ENTRY IS EXPENSIVE AND IS KEPT ANYWAY, WITH THE ARITHMETIC
+  WRITTEN DOWN SO THE ARGUMENT DOES NOT HAVE TO BE HAD AGAIN. Two package
+  versions in one fixture is the heaviest construction in this AC set. Seven
+  entries, five of them real build subprocesses over small scratch trees, sit
+  far inside the budget fixed by PR #706 -- a 30s collection floor plus 300s
+  per linked test file, overridable via
+  LEAFCUTTER_DONE_PROOF_PYTEST_TIMEOUT_SECONDS. This contract was NOT shaped by
+  the retired 60s ceiling and must not be trimmed toward it. It is also the only
+  entry that reproduces the reported experience: an adopter who had been
+  building successfully for months and then was not.
+
+  THE FROZEN-TREE ENTRY IS DELIBERATELY IN THIS CONTRACT RATHER THAN ONLY IN
+  BP-1500g-3-i's, and carries both AC ids in `covers`. Six of the seven entries
+  here assert that something survived, and `stop changing anything already
+  written` satisfies all six. The AC's notes say BP-1500g-3-i should be read as
+  part of this AC's done-condition; putting the control in this contract is what
+  makes that instruction operative rather than advisory.
+delivers_to:
+  agent: python-coder
+  contract: "The run-time reconciliation invariant as a reusable predicate over the build's own data: reconcile(claim_set, removal_set, ownership_verdict) -> ok | contradiction(path, claiming_step, removing_step), evaluated on every run before any removal, where a path that is both claimed and occupied by content the verdict does not attribute to the package is a contradiction the build surfaces rather than resolves. This is the construct that makes the guarantee independent of the current contents of `_PRE_CONSOLIDATION_PATHS` and `shim_map`. BP-1500g-1-ii consumes the contradiction case as its blocked-step condition; BP-1500g-5's reference documentation describes the categories this predicate partitions the tree into."
+expects_from:
+  ac_id: BP-1500g-1
+  contract: "The recomputed ownership verdict owns(installed_path) -> {package_produced | adopter_owned | unattributable} and the chosen layout, both as they stand after one successful ordinary build. This AC re-evaluates that verdict across repeated runs and across a package version change, and requires it to return the same answer for the adopter's content each time -- including under a later version whose claim set has grown to include the location the verdict previously returned as adopter_owned."
+origin_agent: BrainCandy
+created: 2026-09-08
+created_by_ticket: null
+amended_by:
+  - action: technical_enrichment
+    agent: it-po
+    date: '2026-09-08'
+    reason: "Added assigned_agent (python-coder), estimated_complexity (M), it_requirements, test_spec, test_rationale, delivers_to and expects_from. Criteria, title, depends_on and doc_links UNCHANGED; readiness remains draft. THIS AC WAS EXPLICITLY PROTECTED FROM WEAKENING AT ENRICHMENT AND WAS NOT WEAKENED. (1) The it_requirements now name TIME as the third unsafe direction, distinct from the two directions in space the other records cover, and record WHY it is not a nice-to-have: `_PRE_CONSOLIDATION_PATHS` is a growing register of historical locations -- KI-BP-009 calls it destructive rather than inert and says it must not be grown, which concedes that growing it is normal -- so a location safe today can be claimed by next month's version with no action by the adopter. That makes `pick a directory, document it, done` a non-fix BY CONSTRUCTION, and it is why the guarantee must be enforced by something the build evaluates at run time rather than by a promise about a list. (2) A SEAM entry asserting that run-time reconciliation directly, over synthetic sets with no filesystem, is specified as the entry to defend if the contract is ever trimmed: it is the only construct in this AC set still true after the next version bump. (3) The UPGRADE clause was KEPT despite needing two package versions in the fixture -- the AC's own notes flag it as the clause most likely to be dropped at enrichment for exactly that reason -- and the runtime arithmetic is written into the test_rationale so the cost argument does not have to be had again: seven entries, five real build subprocesses over small trees, far inside PR #706's 30s collection floor plus 300s per linked test file. The second version must both ADD a claimed location and RETIRE a shipped item, since those exercise opposite halves. (4) The FROZEN-TREE control was placed in THIS contract, carrying covers: [BP-1500g-3, BP-1500g-3-i], because six of seven entries assert survival and `never change anything already written` would satisfy all six; the AC's notes say BP-1500g-3-i is part of this record's done-condition, and putting the control here is what makes that operative rather than advisory."
+superseded_by: null
+covered_by:
+  - BP-1500g-3-i
+implemented_by: []
+change_target: pipeline
+risk_surface: safety
+notes: |
+  WHY REPETITION IS ITS OWN BEHAVIOUR AND NOT AN "AND" ON BP-1500g-1. Two
+  distinct failure shapes only appear on a later run. The first is state: a
+  repair that works because the first build found the project in a particular
+  condition, and stops working once the build has changed that condition. The
+  second is the upgrade: the package's own idea of which locations it claims is
+  data that changes between versions, so a place that was the adopter's on
+  Monday can be claimed on Tuesday by a version that knows about one more
+  historical location. Neither is reachable by running the build once, which is
+  what a test written from BP-1500g-1 alone would do.
+
+  THE UPGRADE CLAUSE IS THE ONE MOST LIKELY TO BE DROPPED AT ENRICHMENT because
+  it needs two package versions in the fixture and the other clauses do not.
+  It is also the clause that matches how the defect was actually met: an adopter
+  who had been building successfully for months and then was not. Keep it.
+
+  DO NOT SATISFY THIS BY FREEZING THE TREE. The obvious way to make everything
+  survive every run is to stop the build changing anything it has already
+  written. BP-1500g-3-i exists to make that a failure, and it should be read as
+  part of this AC's done-condition rather than as an optional extra.

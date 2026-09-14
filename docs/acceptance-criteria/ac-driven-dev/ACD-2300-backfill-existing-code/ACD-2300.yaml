@@ -1,0 +1,358 @@
+id: ACD-2300
+components:
+  - ac_driven_dev
+  - ac_store
+  - onboarding
+readiness: draft
+priority: medium
+title: "Code that already exists gets the requirements and the proof it never had"
+component: ac-driven-dev
+level: L0
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  Existing code earns real requirements and real proof — never invented ones.
+
+  A project that has been running for years already does thousands of things and
+  none of them is written down as something it must keep doing. Its tests already
+  prove a great deal and none of that proof is credited to anything. So the
+  record this way of working depends on — what the project must do and what shows
+  that it does — starts empty, and the only way to fill it is by hand, thousands
+  of times. Nobody does that, so the record stays empty and every guarantee built
+  on top of it is guaranteeing nothing. After this goal the work already in the
+  codebase becomes that record: behaviour is written up as criteria you accept or
+  reject, tests already written are credited to what they prove, and criteria
+  that nothing proves are visible instead of quietly assumed. Every one of those
+  is a proposal a person confirms. Anything that cannot be established is left
+  plainly unclaimed rather than filled in with a plausible guess, because a
+  record that says something false is worse than one that says nothing at all.
+depends_on:
+  - ACD-2200
+doc_links:
+  - path: docs/acceptance-criteria/ac-driven-dev/ACD-2200-adoption-floor/ACD-2200.yaml
+    relationship: depends_on
+    status: exists
+    relevance: >-
+      THE OTHER HALF OF THE SAME REQUEST AND THE ONE THAT COMES FIRST. ACD-2200
+      establishes the floor so the backlog stops growing; this tree works the
+      backlog down. The register states the order plainly in
+      KI-CG-20260908-gate-test-ac-tags: "Ratchet first, backfill opportunistically."
+      Building this tree first means working through a backlog that refills behind
+      you, which is the specific outcome BrainCandy's governing rule forbids.
+  - path: docs/acceptance-criteria/ac-store/ACS-1300-trustworthy-coverage-links/ACS-1300.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      ADJACENT AND DELIBERATELY NOT ABSORBED — READ THIS BEFORE DECOMPOSING
+      ACD-2300b. ACS-1300 repairs the case where a test ALREADY CARRIES a link tag
+      and the record has forgotten it. Its join key is an exact mechanical match on
+      an identifier that exists in both places; its own notes say "NOT text
+      similarity, NOT keyword heuristics". Measured population 549 records. That job
+      is genuinely owned and must not be re-authored here. What this tree faces is
+      the opposite: the tag does not exist, so there is no join key and the link
+      must be PROPOSED. Different evidence, different risk, different safeguards.
+      Both refusals in ACS-1300 are inherited here verbatim — byte stability and
+      abstention-over-action — and so is its absolute refusal to write the
+      finished-state field.
+  - path: docs/acceptance-criteria/ac-driven-dev/ACD-800.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      CLOSEST SUBJECT MATCH IN THIS COMPONENT — NOW RETIRED, AND THE DISAGREEMENT
+      IS SETTLED IN THIS TREE'S FAVOUR. UPDATED 2026-09-09. ACD-800 and all ten of
+      its descendants were retired (status deprecated, req_status superseded, no
+      successor) on BrainCandy's decision, "retire as it will not work properly".
+      It had promised to discover which done TICKETS match which unlinked records
+      "using text similarity and keyword heuristics" and to backfill
+      "(implemented_by, work_status)". Two reasons retired it: writing the
+      finished-state field from a similarity score is the phantom-done mechanism
+      stated as a feature, and its evidence is a done-ticket history an adopting
+      project does not have. THIS TREE IS NOT ITS SUCCESSOR and ACD-800 does not
+      name one — the field-reconciliation job was dropped, not handed over, so do
+      not read ACD-2300 as owing anything ACD-800 promised. Read ACD-800's notes
+      before assuming the hazard is gone: its implementation SHIPPED
+      (scripts/ac_store/cross_reference_audit.py, deployed to consumers) and still
+      writes work_status; retiring the requirement did not remove the code.
+  - path: docs/known-issues/commit-guardian.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      The measured backlog and, more importantly, the two traps. KI-CG-20260908-
+      gate-test-ac-tags carries the explicit instruction "Do not attempt a bulk
+      backfill of 5,566 tags" and the reason — a mechanical pass "would produce
+      thousands of tags pointing at nothing". KI-CG-20260908-gate-ac-done-on-merge
+      carries the second: the tool that marks a record finished gates on a passing
+      linked test but does not populate implementation evidence, so a bulk run "could
+      produce records that are done with empty implementation evidence — the
+      phantom-done shape, created by the tool meant to prevent it."
+  - path: docs/reference/false-green-mechanisms.md
+    relationship: related
+    status: exists
+    relevance: >-
+      The register of the failure family both of this tree's traps belong to. A
+      manufactured link and an unearned finished badge are the same mechanism at two
+      different fields: an assertion of proof written where an observation of
+      evidence belongs.
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-09-09
+amended_by: []
+superseded_by: null
+covered_by:
+  - ACD-2300a
+  - ACD-2300b
+  - ACD-2300c
+  - ACD-2300d
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  ORIGIN (2026-09-09, product-owner, on BrainCandy's brief). This is the second
+  half of the request quoted verbatim as: "That would also enable repos to migrate
+  to this in an easy way. They could just run the script and then goes through each
+  function and backfills ACs, connects to existing ACs, goes through ACs without
+  proper test coverage connects or creates, etc." The first half — the floor — is
+  ACD-2200 and is a hard prerequisite recorded in depends_on.
+
+  ==========================================================================
+  WHERE I DISAGREED WITH THE BRIEF, AND WHY
+  ==========================================================================
+  BrainCandy sketched four jobs and invited disagreement on the cut. Three
+  survived. The fourth did not, and one was substantially reframed.
+
+  KEPT AS SKETCHED — walk existing code and propose criteria for what it does.
+  Genuinely unowned. Every authoring surface in this repository writes criteria
+  from INTENT: /plan-feature from a request, goal-to-epic from a goal statement.
+  Nothing writes criteria from BEHAVIOUR THAT ALREADY SHIPS. That is ACD-2300a.
+
+  REFRAMED — "connect existing tests to existing ACs where the link is merely
+  unrecorded". As written this is ACS-1300a, which owns it, has measured it (549
+  records), and resolves it by exact mechanical match on an identifier present in
+  both places. Re-authoring it here would be a duplicate of an existing tree. The
+  part that is NOT owned is the far larger and far more dangerous population: 5,566
+  test functions carrying no identifier at all, where there is no join key and the
+  link has to be proposed from evidence rather than read off. ACD-2300b is scoped
+  to that population only and says so.
+
+  DROPPED — "reconcile store fields (implemented_by, covered_by, work_status)
+  against what the repo actually shows". This is not one job, it is three, and each
+  is in a different state:
+    - covered_by is ACS-1300's, entirely, in both directions of rot.
+    - work_status is REFUSED. ACS-1300's L0 states the refusal as a standing
+      boundary — "no AC in the tree, at any level, may write the finished-state
+      field ... this is a refusal, not a phasing decision" — on the grounds that
+      auto-promoting finished state from derived evidence manufactures a done claim
+      on the single field the entire phantom-done edifice rests on. That reasoning
+      applies here identically and with more force, because this tree's evidence is
+      weaker than ACS-1300's. INHERITED, NOT RE-DECIDED. Nothing in this tree writes
+      it.
+    - implemented_by is the only genuinely open field, and it does not need a
+      reconciler. Criteria authored FROM code carry the code they were drawn from
+      as a by-product of how they were made. That is ACD-2300a's promise and it is
+      strictly better evidence than any after-the-fact matching pass, which is
+      exactly why the field is folded there rather than given its own L1.
+  So this tree authors NO general store-field reconciler. Building one would be the
+  third tool writing the same fields from a third body of evidence, and the two that
+  already exist contradict each other.
+
+  ADDED, AND THE USER DID NOT ASK FOR IT — ACD-2300d, the guarantee. See below.
+
+  ==========================================================================
+  A DISAGREEMENT IN THE STORE THAT THIS AUTHORING SURFACED — RESOLVED 2026-09-09
+  BY RETIRING ACD-800. RECORD KEPT FOR THE REASONING.
+  ==========================================================================
+  RESOLUTION FIRST. ACD-800 and its whole tree (a, a-1, a-2, b, b-1, c, c-1, c-2,
+  d, d-1) are RETIRED as of 2026-09-09 — status deprecated, req_status
+  superseded, no successor named — on BrainCandy's decision, quoted verbatim:
+  "retire as it will not work properly." This tree stands as authored and needs
+  no amendment; it already sided with ACS-1300 and authored no field reconciler.
+  The full reasoning lives in ACD-800's notes.
+
+  WHAT THE DISAGREEMENT ACTUALLY WAS — corrected, because this record originally
+  overstated it. ACD-800 commits in its L0 criteria to backfilling
+  "(implemented_by, work_status)" for matches found "using text similarity and
+  keyword heuristics". ACS-1300 (ac-store, authored 2026-09-01) forbids writing
+  work_status — but scopes that refusal to ITS OWN TREE ("no AC in the tree, at
+  any level"). It therefore never bound ACD-800, and this was NOT a literal
+  contradiction between two records, as the paragraph here previously implied.
+  It was two trees holding incompatible PHILOSOPHIES about one field, with only
+  one of them having written its philosophy down as a binding rule. That is the
+  accurate description and it was still sufficient grounds to retire: the
+  philosophy ACD-800 encoded is the one this repository exists to prevent.
+  The second, independent ground was never a safety question at all — ACD-800's
+  method presumes a history of completed TICKETS to match against, which an
+  adopting project does not have, so it could not work for the adoption case
+  regardless of how the field question was decided.
+
+  WHAT THE RETIREMENT DID NOT DO, AND WHY IT MATTERS TO THIS TREE. ACD-800 was
+  believed unbuilt. It is not: scripts/ac_store/cross_reference_audit.py shipped
+  in EPIC-ACDrivenDevelopment ticket 05, is in the build deploy-manifest, and
+  line 457 still executes `ac_data["work_status"] = "done"`. Retiring the
+  requirement withdrew the specification and left the tool installed. An
+  implementer of ACD-2300b who goes looking for reusable enumeration helpers
+  will still find a working apply path that does the forbidden thing — now with
+  no requirement backing it at all. ACS-1300c-1-i already treats this exact code
+  as its fixture. Reuse `_detect_worktree_root`, `_load_ac_yamls` and
+  `_write_report`; never `_apply_backfill`.
+
+  ==========================================================================
+  THE TWO TRAPS — WHERE EACH IS ENCODED AND WHY IT IS ENCODED AS A CONSTRAINT
+  RATHER THAN AS AN INSTRUCTION
+  ==========================================================================
+  BrainCandy asked specifically that both be visible in the criteria. They share
+  one root cause, stated in the brief and adopted here as this tree's governing
+  sentence: AUTOMATION THAT WRITES AN ASSERTION OF PROOF RATHER THAN AN OBSERVATION
+  OF EVIDENCE.
+
+  TRAP 1 — a mechanically-generated link is worse than no link. A bulk pass that
+  emits thousands of link tags naming criteria that do not exist converts an honest
+  gap into a dishonest green, at scale, using the tool built to cure it. Encoded in
+  ACD-2300b's criteria as a positive-and-negative pair: a link that is recorded is
+  a link that was verified, AND a test whose subject cannot be established stays
+  unlinked and is reported as unlinked. The negative arm is the load-bearing one —
+  every positive arm is satisfied by an implementation that links everything.
+  Encoded again at the goal level above ("left plainly unclaimed rather than filled
+  in with a plausible guess") and made falsifiable in ACD-2300d.
+
+  TRAP 2 — the same hazard in the store-write direction. Encoded in ACD-2300d:
+  nothing this capability produces marks work finished, and nothing records
+  implementation evidence it did not observe. Encoded structurally in ACD-2300a,
+  where criteria drawn from code carry their evidence by construction, so the field
+  is never populated by inference in the first place.
+
+  WHY ACD-2300d IS ITS OWN L1 AND NOT A NOTE ON THE OTHER THREE. A refusal that
+  lives only in prose is not falsifiable, and the cheapest implementation of a, b
+  and c satisfies all three perfectly while violating every guarantee in d. It is
+  the guard on the guard. The precedent is exact and in-store twice: ACS-1300c
+  ("awards nothing, rewrites nothing that is already correct, abstains out loud")
+  and TQ-400e ("you can trust what the check takes away — it never cries wolf").
+  ACS-1300's notes give the reasoning in these same terms.
+
+  ==========================================================================
+  THE MEASURED BACKLOG — THIS REPOSITORY, ONE DAY, ONE COMMIT
+  ==========================================================================
+  From the census at df1f0cfb5, 2026-09-08. Single measurement pass, unverified by
+  a second method except where noted, and bound by ACS-1100 (inherited): 5,566 test
+  functions across 595 of 597 test files carry no link tag — only 2 files are fully
+  tagged; 499 fixture-bloat violations across 266 files; 252 of 370 code tickets
+  with no test-requirements block; 49 of 915 Python files over the complexity limit;
+  354 tickets a post-merge write hook would act on.
+
+  Two further figures from ACS-1300's own re-measurement on 2026-09-01, against a
+  denominator of 3,749 records carrying an identifier: 856 are named by at least one
+  link tag somewhere in the test tree, and roughly 87 distinct tag identifiers name
+  a record that does not exist. That last number is the pre-existing rate of exactly
+  the defect Trap 1 would mass-produce.
+
+  DO NOT BAKE ANY FIGURE INTO A CRITERIA BLOCK. They describe one repository on one
+  day; this capability must work on a repository nobody here has counted. State the
+  guarantee in criteria and leave the numbers here.
+
+  ==========================================================================
+  ONE L0 OR TWO FOR ADOPTION-BY-OTHERS VERSUS OUR OWN DEBT — DECIDED: ONE
+  ==========================================================================
+  Argued in full in ACD-2200's notes; the same decision governs this tree. The two
+  populations share one mechanism, this repository is the first customer, and its
+  numbers above are the acceptance fixture. The dogfood-first framing is inherited
+  from ACD-1900g and is not re-authored as a child here.
+
+  ==========================================================================
+  ROADMAP — RESOLVED 2026-09-09: NO CURRENT PHASE CLAIMS THIS TREE, ARGUED
+  ==========================================================================
+  This section previously left the question open ("Either a phase claims this
+  tree or it stays unphased backlog"). BrainCandy asked for it to be decided
+  rather than left open ("let PO fix it"). DECIDED: `roadmap_phase` is
+  deliberately ABSENT, and the absence is the answer rather than an omission.
+  All six phases in docs/roadmap.json were checked by their exit criteria, not
+  by their titles.
+
+  phase_1 (Stable Portable MVP) — REJECTED, and this is the closest call. Its
+  four exit criteria are: clean install on a blank project, `build.py
+  --validate-only` returning 0, consecutive builds producing zero git diff, and
+  a truthful self-host build. Not one of them moves when the AC store's CONTENT
+  changes; they are all about the build producing correct artifacts. The
+  tempting argument is the one ACD-2200 makes — "installs into any project" —
+  but the two trees sit on opposite sides of that phrase. ACD-2200 makes
+  adoption POSSIBLE: without the floor, switching a standard on in an existing
+  codebase stops all work, so there is no working install at all. ACD-2300
+  makes an adoption already achieved MORE VALUABLE. A project that has ACD-2200
+  and not ACD-2300 has a genuine, working, honest install: new work is held to
+  the standard and the tolerated backlog is counted and can only go down. That
+  is the whole of what phase_1 promises. Claiming phase_1 here would be
+  borrowing the sibling's argument for a weaker case — precisely the
+  over-claiming ACS-1300's notes warn about.
+
+  phase_acbuild_3_migration — REJECTED, and it is a deliberate trap worth
+  naming because its wording matches almost exactly. Its exit criterion reads
+  "Opt-in idempotent backfill ships (dry-run, --ac-store-dir, preserves notes
+  blocks); >=1 consumer migrated green". That backfill migrates EXISTING
+  RECORDS INTO THE NEW SCHEMA SHAPE — schema_version skew, the phase-2a
+  deliverable-checklist fields. It is a FORMAT migration over records that
+  already exist. This tree CREATES records for code that has none: a CONTENT
+  backfill. Same word, disjoint populations. This is exactly the failure mode
+  this component's own PROJECT_CONTEXT.md lesson 3 warns about — "check not
+  only whether an AC covers it wrongly but whether one covers a NEIGHBOURING
+  population under wording that sounds identical" — and it would be a poor
+  showing to fall into it in this record's own roadmap section.
+
+  phase_acbuild_1 / 2a / 2b — REJECTED on subject. All three are about moving
+  the unit of work onto the requirement (schema slots, deliverable checklists,
+  sign-off relocation, ticket thinning). None concerns where a requirement's
+  CONTENT comes from. phase_2 (version upgrades, contribution workflow, config
+  schema validation) and phase_3 (packaging, distribution) — rejected on
+  subject, no argument needed.
+
+  WHY ABSENCE IS A LEGITIMATE ENCODING AND NOT A DODGE. `roadmap_phase` has no
+  "none" member in ac_store_schema.json (it is an optional string with
+  minLength 1), so inventing a sentinel value would break the field's contract
+  with docs/roadmap.json. Absence is already a first-class, queryable state:
+  roadmap_query.py reports ACs with no roadmap_phase assigned. This tree is
+  therefore recorded as what it actually is — valuable work that no CURRENT
+  phase's outcome depends on. The precedent is in-store: ACS-1200 and ACS-1300
+  are both unphased for the same reason.
+
+  WHAT WOULD HAVE TO BE TRUE FOR IT TO CLAIM A PHASE — the condition is stated
+  so this is falsifiable rather than a permanent shrug. Any ONE of:
+    (a) A phase acquires an exit criterion about the RECORD's completeness
+        rather than the BUILD's correctness — e.g. "a repository adopting
+        leafcutter reaches N% of its behaviour described by requirements". No
+        phase carries such a criterion today; that is the actual reason this
+        tree is homeless, and it is a gap in the roadmap, not a defect in the
+        tree.
+    (b) phase_acbuild_3's consumer-migration criterion is widened from schema
+        migration to content backfill. Then this tree becomes the mechanism
+        that criterion depends on and should claim it outright.
+    (c) ACD-2200 ships and the counted backlog turns out NOT to be a tolerable
+        steady state for a real adopter — i.e. the floor alone leaves the
+        install unusable in practice. That would retroactively make this tree
+        part of phase_1's "installs into any project", and the phase_1 claim
+        rejected above should be revisited on that evidence.
+  Until one of those holds, this is unphased backlog by decision, not by
+  neglect.
+
+  No roadmap or vision file was modified, either while authoring this record or
+  while resolving the phase question on 2026-09-09. Option (a) above is a
+  roadmap change and is NOT proposed here — it is offered as the condition, for
+  BrainCandy to accept or decline separately.
+
+  ==========================================================================
+  IDENTIFIER AND CAPS
+  ==========================================================================
+  ACD-2300 established free on 2026-09-09 by the same four independent checks
+  recorded in ACD-2200's notes — store-wide id scan (highest ACD-2100),
+  whole-worktree grep excluding .git, a grep of the shared main working tree, and
+  git grep against origin/main. None of the four is a directory listing, because
+  this component holds loose namespace-root records ACD-1400 through ACD-1405 that
+  a folder listing misses. RE-VERIFY at merge time; id allocation here is
+  known-broken (KI-ACD-008).
+
+  Four L1s against a hard cap of seven — three slots of headroom, deliberately
+  preserved. No child_limit_override is authored here and none may be added. Do NOT
+  re-cut this split at L1; decompose each of a, b, c and d into L2 behaviours.
+
+  Authored at the PO stage. L0 and L1 only. No L2, no test_spec, no
+  it_requirements and no declares_side_effect, by design.

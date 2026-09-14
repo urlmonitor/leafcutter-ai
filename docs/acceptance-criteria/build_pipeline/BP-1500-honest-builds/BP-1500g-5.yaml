@@ -1,0 +1,128 @@
+id: BP-1500g-5
+title: "The ownership boundary of an installed project is written down: what the build claims, and what stays the adopter's"
+component: build-pipeline
+components:
+  - build_pipeline
+level: L2
+status: active
+req_status: draft
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+work_status: todo
+declares_side_effect: false
+criteria: |
+  Given a project whose installed tree holds content the package produced and
+    content the adopter owns side by side,
+  When a reader who has never seen the implementation consults the build's
+    reference documentation,
+  Then it states, by category rather than by filename, which parts of that tree
+    the build claims and rewrites and which parts it never touches,
+  And it states what each way of running the build does to each of those
+    categories,
+  And it names this question apart from the residue question -- what a sweep may
+    remove because the package no longer produces it -- so a reader does not take
+    a statement about one as an answer about the other,
+  And, given any one thing in that tree, that reader can say from the
+    documentation alone whether an ordinary build would leave it alone, without
+    reading the build's source.
+depends_on:
+  - BP-1500g
+  - BP-1500g-1
+  - BP-1500g-2
+  - BP-1500g-3
+doc_links:
+  - path: "docs/acceptance-criteria/build_pipeline/BP-1500-honest-builds/BP-1500b-5.yaml"
+    relationship: describes
+    status: exists
+    relevance: "THE NEAREST NEIGHBOUR AND THE OVERLAP TO MANAGE -- read it before writing a line. That AC asks the reference documentation to let a reader predict what the SWEEP removes and what it will never remove, decided per file by provenance. This one asks it to state which parts of the tree the BUILD claims and rewrites at all, across every way of running it, whether or not a sweep exists. The third Then clause here and the fourth there are the same instruction pointed at each other: whoever writes second must name the two apart in one place rather than restating the first. If both are implemented by one page, that is a legitimate outcome -- but each AC's clauses must be separately answerable in it."
+  - path: docs/build-pipeline.md
+    relationship: describes
+    status: exists
+    relevance: "The component's detail reference and the existing candidate home. Check it and its neighbours for overlap before creating a new page; the boundary this AC describes may belong there rather than in a new file."
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: describes
+    status: exists
+    relevance: "The convention that produces the mixed tree this documentation describes. If implementing BP-1500g-1 required a new ownership convention, that decision is likely to have its own record -- cite it here rather than paraphrasing it."
+assigned_agent: reference-author
+estimated_complexity: M
+it_requirements:
+  - "THE OVERLAP WITH BP-1500b-5 IS A DECIDED QUESTION, NOT AN OPEN ONE, AND THE RULE IS CITE RATHER THAN REPEAT. Both records stand; they were kept separate because they answer different questions about the same tree and become true at different times -- BP-1500b-5 describes a sweep that does not exist and is gated behind building it, while the boundary this AC describes is a property of the build as it stands today and is what an adopter needs in order to place their own work at all. WHICHEVER LANDS SECOND CITES THE FIRST. Before writing a line, check whether BP-1500b-5's page exists: if it does, this content extends it by reference and does not restate the sweep's rules; if it does not, write this one so BP-1500b-5 can later attach to it. One page implementing both is a legitimate outcome, but each AC's clauses must remain separately answerable in it -- two pages saying the same thing is not."
+  - "THE THIRD Then CLAUSE AND BP-1500b-5's FOURTH ARE THE SAME INSTRUCTION POINTED AT EACH OTHER, AND THE SEPARATION MUST BE WRITTEN ONCE IN ONE PLACE. Naming the two questions apart -- what the BUILD claims and rewrites at all, versus what a SWEEP may remove because the package no longer produces it -- is a single passage owned by whichever page lands first. The second page links to it. A reader who takes a statement about one as an answer about the other is the failure both clauses exist to prevent, and writing the disambiguation twice, in slightly different words, is how that failure gets created rather than prevented."
+  - "BY CATEGORY, NOT BY FILENAME, IS THE CONSTRAINT THAT MAKES THIS DURABLE. A filename list is a snapshot that is wrong after the next release -- and the growth of the claimed set between versions is the third unsafe direction BP-1500g-3 exists for. Categories must be stated so a reader can classify an item the page never mentions."
+  - "THE LAST Then CLAUSE IS THE FALSIFIABLE ONE AND IS THE ACCEPTANCE TEST FOR THE WHOLE PAGE. Given any one thing in the installed tree, a reader who has never seen the implementation can say from the documentation alone whether an ordinary build would leave it alone. This is checkable by handing a reviewer items they have not seen -- including ones nobody thought about when the page was written -- and a page that lists categories without letting a reader classify a novel item fails it. Write the categories as decision rules, not as inventories."
+  - "THE CATEGORIES MUST PARTITION THE TREE AS THE IMPLEMENTATION ACTUALLY PARTITIONS IT, WHICH IS WHY THIS DEPENDS ON THREE BEHAVIOURAL ACs AND NOT ONE. The distinctions the build genuinely draws after BP-1500g-1, BP-1500g-2 and BP-1500g-3 land -- content the build produces and rewrites, content it produces and removes when retired, content it never touches, and content it cannot attribute either way -- are the categories. Do not invent a taxonomy that reads well and does not match the predicate; a reader classifying by the page must reach the same answer the build reaches."
+  - "ONE STATEMENT PER CATEGORY PER WAY OF RUNNING THE BUILD, WITH THE INVOCATIONS ENUMERATED FROM THE BUILD'S OWN INTERFACE AT AUTHORING TIME RATHER THAN FROM MEMORY. As of origin/main 1cce5b48a the invocations with distinct consequences for adopter content are the plain no-flag run, the opt-in removal mode, the no-shims variant and the dry-run/report path. A grid missing a mode reassures a reader about a command they are not running -- and the plain no-flag run is the destructive one today, which is the opposite of what a reader will assume, so the grid must make that visible rather than leaving it to be inferred."
+  - "IF IMPLEMENTING BP-1500g-1 REQUIRED A NEW OWNERSHIP CONVENTION, CITE ITS RECORD RATHER THAN PARAPHRASING IT. An ADR paraphrased into a reference page becomes a second source that drifts. `docs/architecture/adrs/ADR-001-self-hosting-boundary.md` is the convention that produces the mixed tree and is cited, not restated; anything new should be treated the same way."
+  - "Placement: assess `docs/build-pipeline.md`, the component's existing detail reference, as the host before creating a page. Check its neighbours for overlap. A new page must be registered wherever the project's doc index requires it, and must satisfy the documentation frontmatter and doc-compliance gates."
+test_required: false
+test_rationale: |
+  test_required IS false BECAUSE THIS AC PRODUCES A PROSE ARTIFACT AND NO
+  EXECUTABLE BEHAVIOUR. Recorded explicitly rather than left absent so that
+  test-writer skips for the stated reason instead of the omission reading as
+  an oversight.
+
+  WHAT VERIFIES IT INSTEAD IS AN UNSEEN-ITEM REVIEW, AND IT IS CHEAP ENOUGH TO
+  BE MANDATORY. The last Then clause is deliberately falsifiable: hand a
+  reviewer who has not read the implementation a handful of items from a real
+  installed tree -- chosen to include at least one nobody had in mind when the
+  page was written -- and ask them to predict, from the page alone, whether an
+  ordinary build would leave each alone. Compare their answers to what the
+  build actually does. A page that lists categories without letting a reader
+  classify a novel item fails, and this is the only check that distinguishes
+  a real taxonomy from a well-written inventory.
+
+  A SECOND REVIEW STEP THIS AC OWES ITS NEIGHBOUR. Confirm that the passage
+  separating this question from the residue question exists exactly ONCE
+  across this page and BP-1500b-5's, and that the other page cites it. The
+  duplication risk here is real and was flagged by the BA rather than avoided
+  by dropping the record; leaving it unchecked at review is how the flag
+  becomes the defect.
+
+  DO NOT SATISFY THIS AC BY ADDING A SUITE TEST. Any executable check that
+  could be written here would be a test of BP-1500g-1's or BP-1500g-3's
+  behaviour under this AC's name, and this AC would remain unverified.
+delivers_to: null
+expects_from:
+  ac_id: BP-1500g-3
+  contract: "The categories the implementation actually partitions the installed tree into, as they stand once BP-1500g-1, BP-1500g-2 and BP-1500g-3 have landed -- content the build produces and rewrites, content it produces and removes when retired, content it never touches, and content it cannot attribute either way -- together with the reconciliation predicate that assigns any given path to one of them. The page's last Then clause requires a reader to reach the same verdict from the documentation that the build reaches from the predicate, so the predicate's partition is the input, not a taxonomy invented at writing time. Also required, from the store rather than from code: whether BP-1500b-5's reference page has landed, since that determines which of the two records owns the passage separating this question from the residue question."
+origin_agent: BrainCandy
+created: 2026-09-08
+created_by_ticket: null
+amended_by:
+  - action: technical_enrichment
+    agent: it-po
+    date: '2026-09-08'
+    reason: "Added assigned_agent (reference-author), estimated_complexity (M), it_requirements, test_required, test_rationale and expects_from. Criteria, title, depends_on, priority (medium, as the BA set it) and doc_links UNCHANGED; readiness remains draft. NOTES ON THE CHOICES. (1) THE BP-1500b-5 OVERLAP IS TREATED AS A DECIDED QUESTION. The owner ruled on 2026-09-08 that both records stand, because they become true at different times -- BP-1500b-5 is gated behind a sweep that does not exist, while this boundary is a property of the build today and is what an adopter needs in order to place their own work at all. The BA's cite-rather-than-repeat instruction is made operative in the it_requirements: whichever page lands second cites the first, the passage separating this question from the residue question is written exactly ONCE and owned by whichever lands first, and a review step confirming that is written into the test_rationale. One page implementing both ACs is permitted; two pages saying the same thing is not. (2) assigned_agent is `reference-author`, the registry's leaf documentation author, rather than the `documentation-expert` the it-po template's trigger table nominates for reference-doc. Both are registered and reference-author is `is_ticket_phase: true` with documentation-expert in its `spawned_by`, so the S7b coverage the gate checks for is present; the leaf author is named directly because documentation-expert dispatching a specialist and returning before it finishes is a known hazard here. Flagged rather than done silently. (3) Complexity M rather than S, unlike the sibling how-to: this page must reproduce the partition the implementation actually draws across four categories and four build invocations, and must be reconciled against a neighbouring record's page. (4) test_required: false with the reasoning recorded, plus a named UNSEEN-ITEM review as what verifies it instead -- the last Then clause is deliberately falsifiable and is the only check that distinguishes a real taxonomy from a well-written inventory. The test_rationale also names the reading to refuse: any suite test written here would cover BP-1500g-1's or BP-1500g-3's behaviour under this AC's name and leave this AC unverified."
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: docs
+risk_surface: internal
+notes: |
+  SATISFIES THE reference-doc ENTRY IN BP-1500g's documentation_triggers.
+
+  THE DUPLICATION RISK IS REAL AND IS FLAGGED RATHER THAN AVOIDED BY DROPPING
+  THIS AC. BP-1500b-5 already requires reference documentation about what a sweep
+  will and will not remove, and a careless implementation of either would produce
+  most of the other. They were kept separate because they answer different
+  questions about the same tree and become true at different times: BP-1500b-5
+  describes a sweep that does not exist yet and is gated behind building it, while
+  the boundary this AC describes is a property of the build as it stands today and
+  is what an adopter needs in order to place their own work at all. Collapsing
+  them would have put the adopter's answer behind the residue feature, which is
+  the same sequencing mistake the L1 was split out of BP-1500b-4 to avoid.
+  Whichever lands first should be cited by the second, not repeated.
+
+  THE LAST CLAUSE IS THE FALSIFIABLE ONE and is the reason this is not a
+  documentation-shaped restatement of BP-1500g-1. "Given any one thing in the
+  tree, predict the outcome from the documentation alone" is checkable by handing
+  a reader items they have not seen, including ones nobody thought about when the
+  page was written. A page that lists categories without letting a reader classify
+  a new item fails it.
+
+  PRIORITY IS medium AGAINST THE L1's high, DELIBERATELY. The reference statement
+  is what makes the guarantee durable; the how-to (BP-1500g-4) is what an adopter
+  reaches for first and what unblocks them. Neither is the data-loss repair
+  itself. Recorded so the deviation is visible rather than inherited by accident;
+  adjust at approval.

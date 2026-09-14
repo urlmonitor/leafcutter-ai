@@ -7,7 +7,7 @@ components:
 level: L3
 status: active
 req_status: approved
-work_status: todo
+work_status: done
 readiness: approved
 priority: medium
 criteria: |
@@ -39,8 +39,11 @@ amended_by:
   agent: approve_acs
   date: '2026-09-07'
 superseded_by: null
-covered_by: []
-implemented_by: []
+covered_by:
+- unit_tests/portability/test_uxp_700c_3_i.py
+implemented_by:
+- docs/product-truth/scripts/generate_product_truth.py
+- docs/product-truth/scripts/product_truth_index_checks.py
 change_target: code
 risk_surface: contract_boundary
 test_required: true
@@ -86,3 +89,4 @@ notes: |
   where the defect lives) and GE-120 (whose every L1 is already at 5/5 per the BA memory note of
   2026-09-01). Nothing is lost by the L3 placement: it carries its own test_spec and is
   independently buildable.
+target_epic: EPIC-TruthfulProjectRecord

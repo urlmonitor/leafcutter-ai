@@ -26,13 +26,133 @@ doc_links:
   - path: docs/acceptance-criteria/testing-quality/TQ-100-trustworthy-test-gate/TQ-100c.yaml
     relationship: describes
     status: exists
+  - path: templates/scripts/commit_guardian/check_ac_coverage.py
+    relationship: related
+    status: exists
+    relevance: >-
+      THE FILE THIS RECORD SAID DID NOT EXIST. Verified present 2026-09-07. Read it before
+      deciding whether to reuse its reverse-direction coverage scan. Do NOT reuse its
+      tag-recognition rule (_COVERS_REGEX at :41): ACS-1300a-1:76 records it VERIFIED
+      DISQUALIFIED 2026-09-01 for collapsing every suffixed id to its L0 root and being blind
+      to "// covers:" tags. It is registered in no hooks_manifest entry today, so it does not run.
+  - path: docs/acceptance-criteria/build_pipeline/BP-1600-counted-from-reality/BP-1600a-2.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      WHERE THE THREE POSITIONS ON check_ac_coverage.py ARE CROSS-LINKED. BP-1600a-2's day-one
+      triage must register, delete, or record as a declared non-gate every commit-guardian
+      script that no registry entry names — check_ac_coverage.py among them — and it now carries
+      links to all three incompatible positions the store holds on that script: KM-ADM-001
+      requires it rated dead, TQ-100b-5 treats it as live reader R3, and this record believed it
+      absent. Whoever runs that triage decides its fate; this record must be re-read afterwards,
+      because the premise of its design decision has already moved once.
 assigned_agent: python-coder
 estimated_complexity: S
 it_requirements:
   - "DESIGN DECISION (settled): a done AC with zero covering tests is a HARD failure of the pre-pytest integrity check (non-zero exit), NOT a non-blocking warning — scoped strictly to ACs whose work_status is done ('a shipped feature must have a protecting test')."
-  - "DESIGN DECISION (settled): there is currently NO check_ac_coverage.py in this repo. Build the zero-coverage detection as a violation class of the TQ-100c-2 integrity check (one module). IF a check_ac_coverage.py is later introduced, EXTEND/REUSE its reverse-direction coverage scan rather than duplicating logic — the done-scoped hard-fail is an added severity tier, not a second coverage walker."
+  - "DESIGN DECISION (settled 2026-06-24, PREMISE CORRECTED 2026-09-07): build the zero-coverage detection as a violation class of the TQ-100c-2 integrity check (one module). The original wording of this requirement read 'there is currently NO check_ac_coverage.py in this repo'. THAT IS FALSE and was corrected on 2026-09-07: the file exists at templates/scripts/commit_guardian/check_ac_coverage.py. The design decision itself is UNCHANGED — the detection is still a violation class of the TQ-100c-2 integrity module, and the done-scoped hard-fail is still an added severity tier rather than a second coverage walker — but the 'if such a script is later introduced' framing no longer applies, because it is already here. WHAT TO DO INSTEAD OF ASSUMING: read the script before deciding whether to reuse its reverse-direction coverage scan, and read the three incompatible positions the store holds on it (see the doc_link to BP-1600a-2 on this record, which cross-links all three). Do NOT reuse its tag-recognition rule: ACS-1300a-1:76 records it VERIFIED DISQUALIFIED 2026-09-01 because it collapses every suffixed id to its L0 root and is blind to '// covers:' tags, so a coverage judgement built on it attributes tags to the wrong record. It is also registered in no hooks_manifest entry today, so it does not run."
   - "Coverage is determined by scanning test bodies for the `# covers: <AC-ID>` tag (the established convention) — an AC is covered iff at least one collected/known test names it."
   - "The violation message must name the offending AC id; the violation class must be reported distinctly from an assertion failure."
+test_spec:
+  - name: test_done_ac_with_zero_covering_tests_is_flagged_and_the_message_names_it
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: >-
+      Build a real on-disk AC store containing an AC whose work_status is done,
+      alongside a real test tree in which no test carries a "# covers:" tag
+      naming that AC. Run the pre-pytest integrity check over that pair and
+      assert a zero-covering-tests violation is reported, naming the done AC's
+      id verbatim. Handing a hand-built in-memory record straight to the
+      detection function does not satisfy this entry — the check must walk the
+      store and the tree, because the failure mode this AC guards against is a
+      real done AC in the real store going unnoticed.
+  - name: test_zero_coverage_violation_blocks_at_the_pre_pytest_entry_point
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: reachability
+    surface_invoked: >-
+      The pre-pytest linkage-integrity check entry point delivered by TQ-100c-2,
+      invoked as a subprocess exactly as the gate runs it — not imported.
+    description: >-
+      The must_block control. Invoke the integrity check through its production
+      pre-pytest entry point as a subprocess over the same tree and assert a
+      non-zero exit status. A violation that is computed but emitted with exit 0,
+      or downgraded to a warning, fails this entry: the settled design decision
+      is a HARD failure, and a hard failure that does not stop the run is
+      indistinguishable from the silently-unprotected done feature this AC
+      exists to prevent. Proves the verdict survives from the detection code to
+      what the caller actually acts on.
+  - name: test_zero_coverage_violation_is_reported_as_a_distinct_class_from_an_assertion_failure
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: >-
+      Over one tree carrying BOTH a done AC with zero covering tests AND a
+      covered test that genuinely fails its assertion, assert the two land in
+      separately addressable output classes: the coverage-gap violation is
+      emitted by the pre-pytest gate before any test executes, the assertion
+      failure by the pytest session, and neither appears in the other's list. A
+      run that collapses both into one undifferentiated failure count fails this
+      entry — the criteria require the integrity violation to be distinguishable
+      from a normal test failure, which is only observable by producing one of
+      each in the same run.
+  - name: test_adding_a_covering_tag_for_the_named_ac_clears_that_violation_and_nothing_else
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: failure
+    description: >-
+      Run two of the discriminating pair. Rerun over the identical tree with the
+      single change of adding a "# covers:" tag naming that AC to one test, and
+      assert the zero-coverage violation for that AC is gone while every other
+      record in the run is byte-identical to run one. This is what falsifies the
+      two ways the check can be wrong without anyone noticing: it fails if the
+      check reports nothing at all (no violation in run one), and it fails if
+      the report is driven by a fixed AC list rather than by the tags actually
+      present in the tree (violation persists in run two).
+  - name: test_a_not_done_ac_with_zero_covering_tests_is_not_flagged
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: >-
+      NEGATIVE CONTROL — green on arrival, and no red baseline is possible for
+      it, because a check that flags nothing whatsoever also passes it. In the
+      same run as the first descriptor, an AC whose work_status is todo and
+      which has zero covering tests must NOT appear in the violation list: the
+      hard failure is done-scoped per the settled design decision, and a check
+      that flags every uncovered AC in the store would block the repository on
+      unbuilt work. Because this clause asserts an absence it owes a substitute
+      proof rather than a before-and-after one — TQ-500a owns that obligation
+      and the form it takes; do not invent the alteration here, and do not sign
+      this off as "green on arrival, nothing to prove".
+test_rationale: |
+  Every descriptor runs the integrity check and asserts its verdict. None of
+  them greps the source for a violation-class name, a message string, or an
+  exit code, because this AC specifies a gate: a grep passes identically on a
+  gate that is wired and running and on one whose strings are defined and never
+  reached, which is the exact distinction the AC is about. That is also why the
+  entry-point descriptor is a subprocess through the production pre-pytest
+  surface rather than a direct import of the detection function — a violation
+  correctly computed but dropped before it reaches the caller is the same
+  observable outcome as no violation at all.
+
+  The tag-added rerun is the load-bearing entry. A single flagging run proves
+  only that something was emitted; it cannot separate a real tag scan from a
+  hard-coded list of AC ids, and this record's own history is a warning about
+  premises that are simply assumed (its it_requirement asserted for months that
+  check_ac_coverage.py did not exist). Demanding that the violation disappear
+  when a covering tag appears, and that nothing else in the output move, pins
+  the verdict to the tags actually present in the tree.
+
+  One descriptor asserts an absence and is therefore green on arrival by
+  construction: the done-scoping control. It is marked as such rather than
+  quietly counted as coverage, and the substitute-proof obligation is deferred
+  to TQ-500a rather than restated or improvised here.
 delivers_to: null
 expects_from:
   ac_id: TQ-100c-2
@@ -44,14 +164,73 @@ amended_by:
     by: it-po
     at: 2026-06-24
     note: "Settled BA flag #2: HARD failure (not warning) for a done AC with zero covering tests, done-scoped. Recorded that check_ac_coverage.py does NOT exist today — build as a violation class of the TQ-100c-2 integrity check; reuse/extend check_ac_coverage.py only if/when it appears. Re-pointed expects_from contract wording to the integrity-check surface. Confirmed python-coder / S."
+  - reason: false-existence-claim-corrected-and-script-triage-cross-linked
+    by: business-analyst
+    at: '2026-09-07'
+    note: >-
+      criteria UNTOUCHED. readiness (approved), priority and work_status UNTOUCHED. The
+      it_requirement and the notes both stated "there is currently NO check_ac_coverage.py in
+      this repo". That is FALSE — the file exists at
+      templates/scripts/commit_guardian/check_ac_coverage.py, verified 2026-09-07 — and it was a
+      live instruction telling the implementer to build fresh against a premise that no longer
+      holds. Both live statements corrected. THE DESIGN DECISION ITSELF IS UNCHANGED: the
+      zero-coverage detection is still a violation class of the TQ-100c-2 integrity module and
+      the done-scoped hard-fail is still an added severity tier, not a second coverage walker.
+      What is retired is only the "if such a script is later introduced" framing. Two doc_links
+      added — the script itself, and BP-1600a-2, where the three mutually exclusive positions the
+      store holds on that script are cross-linked (KM-ADM-001 requires it rated dead;
+      TQ-100b-5 / TQ-100b-5-i treat it as live reader R3; this record believed it absent). Also
+      recorded: ACS-1300a-1:76 disqualifies its tag-recognition rule, so reuse of its coverage
+      scan must not extend to reuse of its pattern. DELIBERATELY NOT CHANGED: the identical false
+      sentence in this record's 2026-06-24 amended_by note and in TQ-100c-2's 2026-06-24
+      amended_by note. Amendment history is a dated record of what was believed at the time, not
+      an instruction, and rewriting it would erase the evidence that the claim was ever made.
+  - reason: test-contract-added-latent-ratchet-gap
+    by: it-po
+    at: '2026-09-07'
+    note: >-
+      ADDED test_spec (five descriptors) and test_rationale. NOTHING ELSE CHANGED — criteria,
+      readiness (approved), priority, work_status, change_target and assigned_agent are all
+      untouched. THIS WAS A LATENT DEFECT, NOT NEW WORK. The record has been approved +
+      change_target code + assigned_agent python-coder with no test contract since it was
+      authored on 2026-06-24. check_ac_schema's validate_test_contract is a FORWARD RATCHET
+      that inspects STAGED files only, so the violation was never evaluated: the record simply
+      was not staged again after the rule shipped. PR #726 edited it for an unrelated reason
+      (correcting the false claim that check_ac_coverage.py does not exist) and staging it
+      surfaced the pre-existing gap as a CI failure. This is the SECOND confirmed leak of that
+      ratchet; UXP-600a is the first. Whoever audits the ratchet should assume more approved
+      code ACs authored before the rule are carrying the same gap unseen — CI cannot report
+      them until something unrelated happens to stage them. The escape hatch the error message
+      offers (reclassify to change_target docs/prompt with a non-coder agent) was DELIBERATELY
+      REFUSED: this record specifies the behaviour of an integrity check, which is code, and
+      dodging a gate to silence it is the failure mode this whole component exists to prevent.
+      Descriptors execute the check and assert its verdict; none greps source. The
+      done-scoping descriptor is flagged in-line as a green-on-arrival negative control and its
+      substitute-proof obligation is cross-linked to TQ-500a rather than improvised here.
 superseded_by: null
 covered_by: []
 implemented_by: []
 notes: |
   Here it is a loud failure scoped to DONE ACs (a shipped feature must have a
   protecting test), not a non-blocking store-wide warning.
-  RESOLVED (IT-PO): hard failure, done-scoped. check_ac_coverage.py does not
-  currently exist; build the detection inside the TQ-100c-2 integrity module and
-  reuse/extend any future check_ac_coverage.py rather than duplicating.
+  RESOLVED (IT-PO 2026-06-24): hard failure, done-scoped. Build the detection
+  inside the TQ-100c-2 integrity module rather than duplicating a coverage walker.
+
+  CORRECTION 2026-09-07 — THE EXISTENCE CLAIM WAS FALSE. This note and the
+  it_requirement above both stated that check_ac_coverage.py "does not currently
+  exist". The file exists at templates/scripts/commit_guardian/check_ac_coverage.py
+  (verified 2026-09-07). The resolution above is unaffected — the detection still
+  belongs in the TQ-100c-2 integrity module — but the "any future
+  check_ac_coverage.py" framing is retired: it is present, and it is contested. The
+  store holds three mutually exclusive positions on that one script, cross-linked
+  from BP-1600a-2 (see the doc_link added below): KM-ADM-001 REQUIRES it rated dead
+  ("unregistered dead code"), so registering it falsifies that AC; TQ-100b-5 and
+  TQ-100b-5-i treat it as live reader R3 in a four-rule parity set; and this record
+  believed it absent. Its tag-recognition rule is separately disqualified by
+  ACS-1300a-1:76 — it collapses suffixed ids to their L0 root and is blind to "//"
+  — so reuse the canonical seam, never this script's pattern. The identical false
+  sentence also survives in TQ-100c-2's 2026-06-24 amended_by note; that one was
+  deliberately left as written, because amendment history records what was believed
+  at the time and is not a live instruction.
 change_target: code
 risk_surface: internal

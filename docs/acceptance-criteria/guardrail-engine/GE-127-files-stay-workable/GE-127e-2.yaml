@@ -1,0 +1,396 @@
+id: GE-127e-2
+title: "Two different oversized files are not given the same advice, and changing what is in a file changes the advice it gets"
+component: guardrail-engine
+components:
+  - commit_guardian
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given two tracked files of a kind the size standard covers, holding different
+    content, are both refused for their length in the same commit,
+  When the author reads the refusal,
+  Then the parts named for the first file and the parts named for the second are
+    not the same set, and the division named for each is stated in terms of that
+    file's own parts,
+  And given a single refused file is then rearranged so that its constituent
+    parts are different while its measured length is exactly what it was before,
+    and the same file is refused again,
+  When the author reads the second refusal,
+  Then the parts named and the division named have MOVED from what they were in
+    the first refusal,
+  And given instead the refused file is copied byte for byte to a second path, of
+    the same covered kind, and refused there,
+  When the author reads that refusal,
+  Then the parts named and the division named are the same as those named for the
+    original — so what the author is told follows from the file's content and not
+    from its name, its path, its kind, or the length it happens to measure.
+depends_on:
+  - GE-127e
+doc_links:
+  - path: docs/acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/GE-127e.yaml
+    relationship: parent
+    status: exists
+  - path: docs/acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/GE-127e-1.yaml
+    relationship: depends_on
+    status: exists
+    relevance: >-
+      The record that requires the description and the division to EXIST. This one
+      requires them to be a function of the file. Neither implies the other and
+      neither may absorb the other.
+  - path: docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900c-4-i.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      THE SHAPE TO REUSE, NOT REINVENT — AN EXISTING RECORD IN THIS STORE THAT
+      SOLVES THE IDENTICAL EPISTEMIC PROBLEM ON A DIFFERENT SUBJECT. It pins that a
+      guard's remediation must be read from the input it claims to describe, by
+      running the guard BEFORE and AFTER changing that input and requiring the advice
+      to MOVE — "the pass condition is that the value MOVED", because a hard-coded
+      selector passes every single-run assertion. Its notes state the general rule
+      plainly: a test whose assertion holds on a single run cannot fail on the
+      implementation the record exists to exclude. That is why the arms here are
+      written as before-and-after pairs rather than as assertions about one refusal.
+      Different component, different subject, not a duplicate; cited so the
+      construction is not invented twice.
+  - path: templates/scripts/commit_guardian/check_file_size.py
+    relationship: modifies
+    status: exists
+    relevance: >-
+      THE IMPLEMENTATION THIS RECORD EXISTS TO EXCLUDE IS THE ONE ALREADY SHIPPED.
+      Today's refusal emits the same remediation sentences for every file, and it
+      would satisfy "the refusal includes remediation guidance" on any single run.
+      Only a pair of runs whose input differs separates guidance from a template.
+  - path: docs/acceptance-criteria/code-review/CR-100-refactoring-guidance/CR-100.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      FENCED. If the naming vocabulary for parts and divisions is drawn from CR-100's
+      catalogue work, this record still holds: the vocabulary may be shared, the
+      SELECTION must be made from this file's content. A catalogue consulted by kind
+      rather than by content is precisely the failure this record's second arm
+      catches. Do not widen CR-100 to absorb this.
+  - path: docs/acceptance-criteria/infrastructure/INF-800-safe-restructuring/INF-800.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      FENCED. Nothing here requires the division to be correct, safe, or preserving
+      of behaviour — only that it is derived from the file in hand. Performing the
+      division is INF-800's.
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      IT PO. The commit-time invocation shape. Every arm here is two ordinary commits
+      differing in one input, so the guard must be runnable twice over a controlled
+      change with nothing else moving.
+  - path: docs/pre-commit-hooks.md
+    relationship: related
+    status: exists
+  - path: CLAUDE.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      "Gate / Workflow ACs — Verify Behaviorally, Not by Grep". A test that reads the
+      description function's source, or that asserts two calls return different
+      values without a real commit in between, stays green on a gate that never runs
+      and on one whose output is fixed.
+assigned_agent: python-coder
+estimated_complexity: M
+package_surface: false
+declares_side_effect: false
+it_requirements:
+  - >-
+    NO PACKAGE SURFACE — MEASURED, NOT ASSUMED. WATCHED_REGISTRIES binds two containers on
+    commit_guardian.json: hooks_manifest.hooks (by id) and the document's own top level (by
+    mapping key). This record adds neither — it registers nothing at all, because it adds
+    no output and no configuration; it constrains what GE-127e-1's description is COMPUTED
+    FROM. `check-file-size` is already a manifest id and `file_size` is already a top-level
+    key, both read in this worktree. Plain-list spec form, and no config_schema_fragment
+    invented to satisfy the structured-spec validator.
+  - >-
+    THIS RECORD ADDS NO CODE PATH OF ITS OWN, AND THAT IS THE CONSTRAINT, NOT AN EXCUSE.
+    There must be exactly ONE description function, the one GE-127e-1 builds, and it must
+    take the refused file's CONTENT as its input. A second derivation path added to satisfy
+    this record — a "content-aware mode", a per-file override, anything selected at run time
+    — leaves GE-127e-1's path unconstrained and is the failure this record exists to
+    prevent. The whole of the work here is that the single path reads content, plus the
+    paired-run tests that prove it.
+  - >-
+    NOTHING OUTSIDE THE FILE'S CONTENT MAY REACH THE DESCRIPTION. Not the path, not the
+    file name, not the extension beyond choosing HOW parts are recognised, not the measured
+    length, not the clock, not a per-run nonce, not a counter, not the position of the file
+    in the staged set. The byte-identical-copy arm is what enforces this, and it is
+    enforceable only if the description is a pure function of content: given identical
+    bytes it must produce an identical description, every time, in any order, at any path.
+    Make that determinism a property of the function rather than something the tests happen
+    to observe.
+  - >-
+    KEYING ON THE MEASURED LENGTH IS THE SPECIFIC PROHIBITION, AND IT IS EASY TO DO BY
+    ACCIDENT. Apportioning a fixed per-kind inventory across the measured length produces
+    output that varies between files, looks derived, and is not — and it passes any
+    single-run assertion. The rearrangement arm holds the measured length constant on
+    purpose so that content is the only variable left. Do not let the length participate in
+    selecting or naming parts; it participates only in the reconciliation arithmetic
+    GE-127e-1 pins.
+  - >-
+    THE PAIRED-RUN CONSTRUCTION IS BP-900c-4-i's AND IS REUSED, NOT REINVENTED. That record
+    already settles the epistemics for a guard whose remediation must be read from the input
+    it describes: run the guard BEFORE and AFTER changing that input and require the advice
+    to MOVE, because a hard-coded selector passes every single-run assertion. Follow it; do
+    not invent a second construction, and do not weaken any arm here into an assertion about
+    one refusal.
+  - >-
+    THE REARRANGEMENT FIXTURE MUST STATE ITS OWN LENGTH INVARIANCE. Construct the
+    rearranged file so its measured length under count_content_lines is unchanged, and
+    assert that invariance IN THE TEST from the gate's own quoted number rather than
+    assuming it. If the counting rule GE-127d owns makes an exactly length-preserving
+    rearrangement awkward, the fallback the BA permits applies — the advice must move
+    further than the length does — but the fixture must report both numbers so a reader can
+    see which case was exercised. A silently drifting length turns this arm into a test that
+    a length-keyed implementation also passes.
+  - >-
+    THE COPY ARM IS A REGRESSION FENCE AND MUST NOT BE WEAKENED TO MAKE THE OTHER TWO PASS.
+    If an implementation cannot make the two moving arms red-then-green without also
+    disturbing the copy arm, the description is not a function of content — it has acquired
+    a second input. Resolve that by removing the second input, never by relaxing the copy
+    arm to "similar" or "equivalent" advice. The two descriptions must be equal.
+  - >-
+    Must follow the repo error-handling policy: specific-exception try/except around the
+    file read and any parse; log at WARNING or higher or re-raise; no bare or blind excepts.
+    Note the interaction with GE-127e-3-i: a parse failure on one of a pair of files must
+    produce that record's could-not-be-described state, never a fallback description that
+    would silently satisfy this record's arms with generic text.
+  - >-
+    CANONICAL VERSUS BUILD OUTPUT, AND THE BUILD IS PART OF THE CHANGE. Edit
+    templates/scripts/commit_guardian/ only — scripts/commit_guardian/ and the repo-root
+    .pre-commit-config.yaml are untracked build outputs overwritten by build.py, and
+    templates/commit-guardian/commit_guardian.json is a decoy. Re-run `python
+    scripts/build.py --target-dir .`; config.py resolves the config beside the deployed
+    script, so an unbuilt change leaves the running gate on the old behaviour.
+test_spec:
+  - name: test_ge_127e_2_two_different_files_refused_in_one_commit_receive_different_parts
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: >-
+      Stage two covered files of the same kind, holding different content, both over their
+      permitted length, and run one ordinary `git commit`. The parts named for the first and
+      the parts named for the second must not be the same set, and each file's division must
+      be stated in terms of that file's own parts. Both sets are read from the single
+      refusal's output. NAMED MUTATION (mandatory, run it, do not merely describe it — the
+      BA's injection, carried verbatim): MUTATION: derive the named parts and the named
+      division from the refused file's KIND and its MEASURED LENGTH alone, ignoring its
+      content entirely — for example, a fixed table of part names per covered kind,
+      apportioned across the measured length. Under that injection this arm must go RED,
+      because two files of the same kind now receive the same parts; it must return to green
+      on revert.
+  - name: test_ge_127e_2_rearranging_a_file_at_constant_length_moves_the_parts_and_the_division
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: >-
+      Refuse one covered file, capture the parts and the division; rearrange that same file
+      so its constituent parts differ while its measured length is exactly what it was
+      before; refuse it again. The parts named and the division named must have MOVED. The
+      test asserts the length invariance from the gate's own quoted number in both runs, so
+      a fixture whose size drifted is visible rather than silently converting this into an
+      arm a length-keyed implementation passes. NAMED MUTATION (mandatory, run it — the BA's
+      injection, carried verbatim): MUTATION: derive the named parts and the named division
+      from the refused file's KIND and its MEASURED LENGTH alone, ignoring its content
+      entirely — for example, a fixed table of part names per covered kind, apportioned
+      across the measured length. Under that injection this arm must go RED, because the
+      length did not change so the advice does not move; it must return to green on revert.
+  - name: test_ge_127e_2_a_byte_identical_copy_at_another_path_receives_identical_advice
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: seam
+    description: >-
+      Copy the refused file byte for byte to a second path of the same covered kind and
+      refuse it there. The parts named and the division named must be EQUAL to those named
+      for the original — not similar, not equivalent — so what the author is told follows
+      from the file's content and not from its name, its path, its kind or the length it
+      happens to measure. THIS DESCRIPTOR MUST STAY GREEN UNDER THE BA's NAMED MUTATION, and
+      that is its second job: a kind-and-length-only implementation still gives identical
+      advice to identical copies, so a red here under the injection would mean the arms are
+      not independent. It is also the arm that forbids the cheap way to pass the other two —
+      deriving anything from the path, the file name, or a per-run nonce.
+  - name: test_ge_127e_2_the_kind_and_length_injection_reds_both_moving_arms_and_leaves_the_copy_arm_green
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: >-
+      THE THREE-WAY MUTATION PROOF, RUN AS ONE EXPERIMENT AND RECORDED AS ONE RESULT. Apply
+      the BA's injection once — MUTATION: derive the named parts and the named division from
+      the refused file's KIND and its MEASURED LENGTH alone, ignoring its content entirely —
+      for example, a fixed table of part names per covered kind, apportioned across the
+      measured length — then run all three arms above and record their outcomes together.
+      The required observation is: the two-different-files arm RED, the rearrangement arm
+      RED, and the byte-identical-copy arm GREEN. All three outcomes must be observed, and
+      all three must revert. The third is not decoration: a mutation that turned every arm
+      red would mean the arms are not independent, and the copy arm's staying green is the
+      evidence that this record's teeth are in the two moving arms. An injection run that
+      reddens all three is a FAILURE of this descriptor even though it looks like a stronger
+      result.
+  - name: test_ge_127e_2_both_files_advice_reaches_the_registered_hook_output_in_one_run
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: reachability
+    surface_invoked: >-
+      python .leafcutter/scripts/commit_guardian/run_hook.py
+      .leafcutter/scripts/commit_guardian/check_file_size.py
+    description: >-
+      PRODUCTION ENTRY POINT. Run the gate through the registered hook path with the two
+      differing over-limit files staged and assert that BOTH per-file descriptions appear,
+      distinct from each other, in the hook's own output stream under the refusal exit
+      status. Two descriptions computed by a function nothing at commit time calls are two
+      inert values, and a per-file description that collapses to one shared block when more
+      than one file is refused fails here and nowhere else.
+  - name: test_ge_127e_2_the_deployed_copy_gives_two_different_files_two_different_descriptions
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: deployed
+    description: >-
+      After build.py, the DEPLOYED copy and every module it imports load and run in a cold
+      process, and the two-different-files arm and the copy arm both hold against it. A
+      description module placed outside templates/scripts/commit_guardian/ without a
+      scripts/build_phases.py deploy-map entry surfaces here as ModuleNotFoundError rather
+      than passing, and a content-derivation change written only into the canonical template
+      fails here rather than passing on source-tree greenness.
+test_rationale: |
+  Every arm of this record is a PAIR of runs whose input differs, and the pass condition is
+  that the value MOVED — not that a particular value appeared. That construction is not a
+  stylistic choice: BP-900c-4-i settles the identical epistemic problem on a different
+  subject and states the general rule plainly — a test whose assertion holds on a single run
+  cannot fail on the implementation the record exists to exclude. Today's shipped refusal
+  emits the same sentences for every file and would satisfy "the refusal includes remediation
+  guidance", and any single-run assertion about a description, on any single fixture.
+
+  The BA's mutation is carried into descriptors verbatim rather than restated, and it is
+  carried three times on purpose. It appears on each moving arm stating that arm's required
+  RED, and once more in a dedicated descriptor whose whole job is the three-way observation:
+  two arms red, the copy arm green. Without that fourth descriptor the three-way property is
+  something a careful implementer might notice and a hurried one will not, and a mutation run
+  that reddens all three would be recorded as a success while having destroyed exactly the
+  independence the BA built in.
+
+  The copy arm asserts EQUALITY rather than similarity, and the rearrangement arm asserts the
+  quoted length is unchanged, both read from the gate's own output. Those two constraints are
+  what stop the arms being satisfiable by an implementation with a second, non-content input:
+  loosen either and a path-derived or nonce-derived description passes the moving arms while
+  the copy arm silently stops fencing anything.
+
+  No descriptor reads the description function's source, and none asserts that two direct
+  calls return different values. Per CLAUDE.md "Gate / Workflow ACs — Verify Behaviorally, Not
+  by Grep" and this record's own doc_link, both stay green on a gate that never runs and on
+  one whose output is fixed; the only admissible evidence is two real commits differing in one
+  input.
+delivers_to: null
+expects_from:
+  ac_id: GE-127a-1
+  contract: >-
+    The commit-time per-file verdict and the single outcome stream. This record adds
+    no new output: it constrains WHAT THE DESCRIPTION IS COMPUTED FROM — the refused
+    file's own content — and pins it by changing that content and requiring the
+    description to move.
+origin_agent: business-analyst
+created: 2026-09-08
+amended_by:
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-09-08
+  note: 'criteria untouched. PACKAGE SURFACE FALSE, AND MEASURED: this record adds no
+    hooks_manifest.hooks id and no new top-level mapping key to commit_guardian.json — the only
+    two containers WATCHED_REGISTRIES binds on that file — because it adds no output and no
+    configuration at all. Both containers were read in this worktree; `check-file-size` and
+    `file_size` already exist. COMPLEXITY M: no new code path is authored here, and that is
+    stated as a constraint — there must be exactly ONE description function, GE-127e-1''s, and
+    a second "content-aware" derivation added to satisfy this record would leave GE-127e-1''s
+    path unconstrained. The substance is a purity requirement (given identical bytes, an
+    identical description; nothing from path, name, length, clock, order or nonce) plus the
+    paired-run proofs. THE THREE-WAY MUTATION IS PRESERVED AS A THREE-WAY OBSERVATION: the
+    BA''s injection is carried verbatim onto both moving arms AND into a dedicated fourth
+    descriptor whose required result is two arms RED and the byte-identical-copy arm GREEN,
+    with an injection run that reddens all three recorded explicitly as a FAILURE of that
+    descriptor rather than a stronger pass. The copy arm asserts equality (not similarity) and
+    the rearrangement arm asserts the quoted length is unchanged from the gate''s own number —
+    loosening either lets a path-keyed or length-keyed implementation through. Construction
+    reused from BP-900c-4-i rather than reinvented. declares_side_effect false: every Then
+    clause reports to a stream and sets an exit status. test_spec: six executing descriptors,
+    three carrying the BA''s mutation verbatim, one through the registered hook entry point and
+    one on the deployed copy in a cold process.'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  THIS IS THE DISCRIMINATOR THE L1's NOTES DEMAND, AND WITHOUT IT THE WHOLE TREE IS
+  VACUOUS. "The refusal includes remediation guidance" is satisfied today by a fixed
+  sentence pointing at a helper. So is "the refusal describes the file", by any
+  description that looks plausible for files of that kind. The only observation that
+  separates guidance from a template is a pair of runs whose input differs and whose
+  advice must differ with it. Every arm here is therefore stated as a pair, and the
+  pass condition is that the value MOVED — not that a particular value appeared.
+
+  THE THIRD ARM IS THE ONE THAT LOOKS REDUNDANT AND IS NOT. The byte-identical copy
+  at a different path must produce the SAME advice. It is there for two reasons.
+  First, it forbids the cheap way to pass the first two arms — deriving anything at
+  all from the path, the file name or a per-run nonce, which makes advice "differ"
+  without ever looking at content. Second, it is the arm the named mutation below
+  must NOT turn red, which is what proves the other two arms are carrying the
+  criterion rather than the copy arm carrying it.
+
+  THE REARRANGEMENT ARM HOLDS MEASURED LENGTH CONSTANT ON PURPOSE. If the rearranged
+  file were also allowed to change size, an implementation keyed on the measured
+  length alone would pass. Holding the number fixed while the content moves leaves
+  content as the only variable that could have produced the change. Whether the
+  counting rule makes such a rearrangement possible is inherited from GE-127d, not
+  settled here; if the rule makes an exactly-length-preserving rearrangement awkward
+  to construct, the arm is satisfied by any rearrangement in which the advice moves
+  further than the length does — but the length must be reported unchanged or
+  near-unchanged in the fixture, and the fixture must say so.
+
+  NAMED MUTATION — EXECUTE IT, DO NOT MERELY DESCRIBE IT. Written so the IT PO can
+  lift it verbatim into a test descriptor.
+
+  MUTATION: derive the named parts and the named division from the refused file's
+  KIND and its MEASURED LENGTH alone, ignoring its content entirely — for example, a
+  fixed table of part names per covered kind, apportioned across the measured length.
+  Under that injection:
+    - the two-different-files arm must go RED, because two files of the same kind now
+      receive the same parts;
+    - the rearrangement arm must go RED, because the length did not change so the
+      advice does not move;
+    - the byte-identical-copy arm must STAY GREEN.
+  All three outcomes must be observed, and all three must revert. The third is not
+  decoration: a mutation that turns every arm red would mean the arms are not
+  independent, and the copy arm's staying green is the evidence that this record's
+  teeth are in the two moving arms.
+
+  WHAT THIS RECORD DOES NOT REQUIRE, STATED SO IT IS NOT INFERRED. It does not
+  require the advice to be good, correct, complete, or the same advice a human would
+  give. It requires it to be ABOUT THE FILE. A decomposition that reaches for
+  correctness has left this goal and entered CR-100's and INF-800's territory, and
+  both are fenced in the doc_links above.
+
+  BOUNDARY WITH GE-127e-3. That record forbids the refusal from promising help that
+  does not arrive. This one forbids it from describing a file it did not look at.
+  A refusal can be scrupulously honest about a description that is generic, and it
+  can be specific about a file while promising a tool that does not exist. Keep the
+  two obligations apart.
+
+  NOT AUTHORED HERE, BY DESIGN: assigned_agent, estimated_complexity,
+  it_requirements, test_spec, test_rationale and declares_side_effect. The mutation
+  above, including which arm must stay green, is written to be turned directly into
+  test descriptors.

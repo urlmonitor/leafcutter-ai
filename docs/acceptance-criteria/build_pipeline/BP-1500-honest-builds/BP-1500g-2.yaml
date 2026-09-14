@@ -1,0 +1,173 @@
+id: BP-1500g-2
+title: "The package's own capabilities arrive and are usable in the same project, out of the same run, in which the adopter's survived"
+component: build-pipeline
+components:
+  - build_pipeline
+level: L2
+status: active
+req_status: draft
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+work_status: todo
+declares_side_effect: false
+criteria: |
+  Given the project and the single ordinary build of BP-1500g-1, in which the
+    adopter's own capability survived,
+  When that same project is asked, after that same run, for the capabilities the
+    package ships,
+  Then every capability the package currently ships is present in that project,
+  And the tool which runs capabilities in that project discovers each of them by
+    name and runs it, so they are reachable and not merely written somewhere in
+    the tree,
+  And this is observed of the one run in which the adopter's capability survived,
+    not of a separately configured run, so the two outcomes are proven to hold at
+    once in one project,
+  And a project that has never held any adopter-owned content receives the same
+    complete set, so the guarantee is not obtained by treating the package's own
+    delivery as optional.
+depends_on:
+  - BP-1500g
+  - BP-1500g-1
+doc_links:
+  - path: docs/known-issues/build-pipeline.md
+    relationship: describes
+    status: exists
+    relevance: "KI-BP-009's fix-direction section is the reason this AC exists as a separate record. The entry itself offers a weaker fallback -- an allowlist of names the cleanup must not remove -- which protects only what someone remembered to declare. Read the fix direction and the fallback together before choosing, and note that neither is mandated by this AC."
+  - path: scripts/build.py
+    relationship: describes
+    status: exists
+    relevance: "Holds the step that installs the link making the package's capabilities discoverable. Removing that step is the cheapest way to stop the deletion and is the outcome this AC exists to fail."
+  - path: docs/build-pipeline.md
+    relationship: describes
+    status: exists
+    relevance: "The component's detail reference. Describes the link layer and the mixed-ownership installed tree it produces -- the layout in which both halves of this AC have to be true simultaneously."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "THE SET THIS AC MEASURES AGAINST MUST BE RECOMPUTED FROM THE PACKAGE'S OWN SOURCES ON THE RUN BEING CHECKED, NOT HARDCODED AND NOT SNAPSHOTTED. `_build_source_manifests` in `scripts/build.py` already derives the shipped set by scanning the template directories, and that derivation -- or an equivalent recomputation -- is what `every capability the package currently ships` has to mean. A test or an implementation that compares against a fixed list of names passes on the day it is written and silently stops covering everything added afterwards, which is the same time-dependence that produced the parent defect."
+  - "REACHABILITY, NOT PRESENCE, AND THE TWO ARE MEASURED DIFFERENTLY. Presence is a filesystem assertion; reachability is that the consuming tool resolves the item by its own name at the location it discovers from. Any repair that relocates the package's items somewhere still on disk but outside the discovery path satisfies presence and delivers a project with no capabilities. This clause is what makes `stop installing the shim` -- the cheapest repair for BP-1500g-1 -- a failure rather than a pass."
+  - "THE OBSERVATION MUST BE OF ONE RUN. The third Then clause is the whole reason this record is separate from BP-1500g-1, and it constrains the TEST as much as the implementation: both halves must be asserted against the same invocation over the same tree. Two runs with different inputs each demonstrating one half do not demonstrate coexistence, and coexistence is the property at issue."
+  - "THE CLEAN-PROJECT ARM IS NOT OPTIONAL AND IS NOT A DUPLICATE OF THE FIRST THREE CLAUSES. An implementation that installs the package's items only when it finds nothing of the adopter's in the way satisfies clauses one to three on every fixture that HAS adopter content in it. Only a project that has never held adopter content distinguishes `the package delivers, and also tolerates the adopter` from `the package delivers only when unobstructed`."
+  - "THE ALLOWLIST FALLBACK OFFERED IN KI-BP-009 IS NOT SUFFICIENT FOR THIS AC AND SHOULD NOT BE ADOPTED SILENTLY IF IT IS ADOPTED FOR BP-1500g-1. That entry itself calls it strictly weaker: it protects the items someone remembered to declare. Applied here it also means the package's delivery guarantee becomes conditional on a declaration file staying accurate, which is a second maintained list. BP-1500g-3-i rules this out on the design side; this it_requirement records that it fails this AC's fourth clause too, for a different reason."
+  - "DELIVERY COMPLETENESS AND ADOPTER SURVIVAL MUST NOT BE TRADED AGAINST EACH OTHER AT RUN TIME. If the implementation reaches a state where it can deliver one but not the other, that is BP-1500g-1-ii's condition -- stop and say so -- not a case for silently preferring either. An implementation that quietly drops one shipped item to make room is the failure this AC and BP-1500g-2-i jointly exist to catch."
+  - "Observability: the run must make the count or the identity of the shipped items it installed available in its output, so `the package's capabilities silently never arrived` is detectable from a transcript rather than only by asking the project afterwards."
+  - "Must not make delivery completeness depend on the order in which adopter content is encountered; the result must be the same whichever way the tree is walked."
+test_spec:
+  - name: test_bp_1500g_2_every_currently_shipped_capability_is_present_after_the_same_run_the_adopter_content_survived
+    target_dir: unit_tests/portability/
+    framework: pytest
+    type: integration
+    angle: criterion
+    surface_invoked: "python scripts/build.py --target-dir <scratch_adopter>   (one no-flag run; both halves asserted against it)"
+    description: "Clauses one and three together, which is the only way clause three can be honoured. ONE no-flag build subprocess over a tree holding adopter content; from that single run assert both that the adopter's capability survived and that every shipped item is present. The shipped set is RECOMPUTED in the test body from the package's template sources -- never a hardcoded list, or the entry stops covering everything added after it was written."
+  - name: test_bp_1500g_2_every_shipped_capability_is_discovered_by_name_and_runs_after_that_run
+    target_dir: unit_tests/portability/
+    framework: pytest
+    type: integration
+    angle: reachability
+    surface_invoked: "python scripts/build.py --target-dir <scratch_adopter>"
+    description: "The second clause, and the entry that fails the cheapest repair. For each item in the recomputed shipped set, the consuming tool resolves it by name through the project's discovery path. Presence on disk is explicitly not sufficient: a repair that stops installing the discovery link satisfies the presence entry above and fails here, which is exactly the trade this AC exists to forbid."
+  - name: test_bp_1500g_2_a_project_that_never_held_adopter_content_receives_the_same_complete_set
+    target_dir: unit_tests/portability/
+    framework: pytest
+    type: integration
+    angle: boundary
+    description: "The fourth clause. A pristine scratch adopter with no adopter-owned content anywhere receives the identical recomputed set, reachable by name. Catches an implementation that delivers only when unobstructed, which passes every other entry in this contract because every other entry's fixture has adopter content in it."
+  - name: test_bp_1500g_2_the_delivered_set_equals_the_recomputed_shipped_set_exactly_with_no_omissions
+    target_dir: unit_tests/build_guards/
+    framework: pytest
+    type: integration
+    angle: seam
+    description: "Set equality rather than membership, asserted at the seam: delivered == recomputed_shipped, with both directions reported on failure. A membership-only assertion cannot see a single dropped item in a set of dozens, and one silently dropped item is the exact shape of `the package's capabilities silently stopped arriving`."
+  - name: test_bp_1500g_2_removing_the_discovery_link_is_detected_as_a_failure_of_this_ac
+    target_dir: unit_tests/build_guards/
+    framework: pytest
+    type: unit
+    angle: failure
+    description: "THE CHEAP-PASS DIFFERENTIAL. Construct the state the cheapest BP-1500g-1 repair produces -- adopter content intact, package items written into the tree, discovery link absent -- and require this AC's reachability assertion to be RED against it. Encodes the rejected repair as executable code so it stays refuted when the reasoning in these notes is forgotten."
+  - name: test_bp_1500g_2_a_capability_added_to_the_package_after_this_test_was_written_is_also_delivered
+    target_dir: unit_tests/build_guards/
+    framework: pytest
+    type: integration
+    angle: failure
+    description: "The count-agnostic control. Inject an additional item into the package's template sources inside the test body, under a name minted at run time, then build: the recomputed set includes it and it is delivered and reachable. Fails any implementation or fixture that enumerates the shipped set by hand."
+test_rationale: |
+  THE SINGLE-RUN CONSTRAINT IS A TEST CONSTRAINT BEFORE IT IS AN IMPLEMENTATION
+  CONSTRAINT. This AC's third clause is unusual in that it governs how the
+  evidence is gathered, not what the build does: two runs each demonstrating one
+  half is the natural way to write these tests and is precisely the thing the
+  clause forbids. The first entry is therefore specified as one invocation with
+  both assertions hung off it, and a reviewer should check that shape before
+  checking anything else.
+
+  THE CHEAP-PASS DIFFERENTIAL IS THIS CONTRACT'S CENTRE OF GRAVITY. The record
+  exists to make one particular outcome a failure -- stop installing the link,
+  the adopter's work survives, nobody warns anybody, the package quietly never
+  arrives. That outcome is not hypothetical; it is the least-effort way to close
+  BP-1500g-1 and it will occur to whoever implements it. A prose warning in the
+  notes is refutable only by someone who reads the notes; an executable entry
+  that constructs the state and requires red is refutable by the suite.
+
+  RECOMPUTATION IS SPECIFIED IN THREE SEPARATE ENTRIES ON PURPOSE. `every
+  capability the package currently ships` is a moving target by construction --
+  the package adds and retires items between versions, which is the same
+  time-dependence that produced the parent defect. A contract that pins the set
+  at authoring time degrades into a contract about a subset, silently, and the
+  count-agnostic entry is what keeps that from happening without anyone noticing.
+
+  SET EQUALITY RATHER THAN MEMBERSHIP. One silently dropped item out of dozens
+  is the realistic shape of this failure, and a membership assertion over a
+  large set is close to blind to it.
+
+  RUNTIME. Six entries, four real build subprocesses over small scratch trees.
+  Inside the done-proof pytest budget as fixed by PR #706 (30s collection floor,
+  300s per linked test file, overridable via
+  LEAFCUTTER_DONE_PROOF_PYTEST_TIMEOUT_SECONDS). Not shaped by the retired 60s
+  ceiling.
+delivers_to:
+  agent: python-coder
+  contract: "The coexistence guarantee as a checkable pair over a single run: (recomputed_shipped_set, delivered_and_reachable_set, adopter_content_intact) with delivered_and_reachable_set == recomputed_shipped_set AND adopter_content_intact true, both observed of the same invocation. Consumed by BP-1500g-2-i, which specifies what must happen when the two sets contend for the same name, and by BP-1500g-4 and BP-1500g-5, whose documentation cannot state a safe placement until this pair is demonstrably satisfiable."
+expects_from:
+  ac_id: BP-1500g-1
+  contract: "The recomputed ownership verdict owns(installed_path) -> {package_produced | adopter_owned | unattributable} and the layout it implies. This AC constrains that layout from the opposite side: whatever placement BP-1500g-1 chooses, every item in the recomputed shipped set must remain resolvable by name through the consuming tool's discovery path in the same project after the same run. A layout satisfying BP-1500g-1 that does not satisfy this constraint is not an acceptable resolution of BP-1500g-1."
+origin_agent: BrainCandy
+created: 2026-09-08
+created_by_ticket: null
+amended_by:
+  - action: technical_enrichment
+    agent: it-po
+    date: '2026-09-08'
+    reason: "Added assigned_agent (python-coder), estimated_complexity (M), it_requirements, test_spec, test_rationale, delivers_to and expects_from. Criteria, title, depends_on and doc_links UNCHANGED; readiness remains draft. WHAT THE ENRICHMENT ADDS. (1) The single-run clause is specified as a TEST-SHAPE constraint, not only an implementation one -- writing two runs that each demonstrate one half is the natural thing to do and is exactly what the clause forbids, so the first entry is defined as one invocation carrying both assertions. (2) A cheap-pass DIFFERENTIAL was added: the state produced by the cheapest BP-1500g-1 repair (adopter content intact, package items on disk, discovery link absent) is constructed in the test body and this AC's reachability assertion is required to be RED against it, so the rejected repair is refuted by the suite and not only by prose. (3) RECOMPUTATION is required in three places, including a count-agnostic entry that mints a new package item at run time -- `every capability the package currently ships` is a moving target by construction, and a contract that pins the set at authoring time degrades into a contract about a subset without anyone noticing. `_build_source_manifests` in `scripts/build.py` is named as the existing derivation to reuse. (4) Set EQUALITY rather than membership, because one silently dropped item out of dozens is the realistic failure shape and membership assertions are close to blind to it. (5) The it_requirements record that KI-BP-009's allowlist fallback fails this AC too, for a reason distinct from BP-1500g-3-i's: it makes the package's own delivery guarantee conditional on a declaration file staying accurate."
+superseded_by: null
+covered_by:
+  - BP-1500g-2-i
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  THIS AC EXISTS TO MAKE ONE PARTICULAR PASS INTO A FAILURE. The cheapest repair
+  for BP-1500g-1 is to stop installing the link that makes the package's
+  capabilities discoverable. That trades a visible data loss for an invisible
+  broken install: the adopter's work survives, nothing warns anybody, and the
+  package's capabilities quietly never arrive. The L1's third criteria paragraph
+  says both must work at once, in the same project, after the same ordinary build,
+  and this is the record that holds an implementation to it.
+
+  "SAME RUN" IS THE LOAD-BEARING WORD IN THE THIRD Then CLAUSE. Two runs with
+  different inputs can each demonstrate one half. Only one run demonstrates
+  coexistence, which is the property actually at issue. An implementation
+  verified across two runs has not been verified.
+
+  REACHABILITY, NOT PRESENCE -- AND THIS IS WHERE THE CURRENT DESIGN GOT ITS
+  SHAPE. The tool that consumes these capabilities looks in exactly one place,
+  which is why the package claims that place wholesale, which is why the adopter
+  has nowhere to stand. Any repair that relocates the package's capabilities
+  somewhere the tool does not look satisfies a presence check and delivers a
+  project with no capabilities. The second Then clause is written as discovery by
+  name and successful execution for that reason, and it names no location.
+
+  THE FOURTH Then CLAUSE GUARDS A SECOND CHEAP PASS. An implementation that
+  installs the package's capabilities only when it finds nothing of the adopter's
+  in the way would satisfy the first three clauses on the fixture that has adopter
+  content in it. The clean-project case catches that.

@@ -1,0 +1,120 @@
+id: ACD-400e-4
+components:
+  - ac_driven_dev
+title: "The account states how the fast lane's approval posture differs from the backlog queue's, and the difference is demonstrable"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given one store holding two pieces of leaf-level work, identical but for the
+    approval recorded against them — one draft, one approved,
+  When the build backlog queue is asked which work is ready, and separately the fast
+    lane is pointed at the draft piece to resolve the connected set it would build,
+  Then the backlog queue offers the approved piece and withholds the draft one,
+  And the fast lane returns the draft piece,
+  And the written account of how work is chosen states this difference and the reason
+    for it — that pointing the fast lane at a piece of work is itself the go-ahead
+    that the backlog queue requires a recorded approval for,
+  And the account confines the difference to the fast lane's connected-set selection:
+    the fast lane's whole-store batch selection applies the same approval requirement
+    the backlog queue does, so the account does not claim the fast lane is indifferent
+    to approval as a whole.
+depends_on: [ACD-400e, ACD-400e-1a, ACD-400e-1b, ACD-400c-1]
+doc_links:
+  - path: docs/acceptance-criteria/build-orchestration/BO-2400-fast-lane-build/BO-2400f-2.yaml
+    relationship: related
+    status: exists
+    relevance: "THE APPROVED CRITERION WHOSE WORDING DEPENDS ON THIS ACCOUNT EXISTING. Quote confirmed verbatim 2026-09-08: 'readiness does not filter the set (unlike the normal ready-batch scan)'. The contrast it draws is real — verified by execution, see the notes — but the thing it contrasts itself against has never been written down. This AC does not amend BO-2400f-2 and does not touch the fast lane; it makes the contrast checkable instead of folkloric."
+  - path: scripts/build_orchestration/fast_lane.py
+    relationship: describes
+    status: exists
+    relevance: "The other selector, and the source of a correction to the folklore. Verified by execution 2026-09-08 over one temp store holding a draft leaf and an approved leaf: resolve_connected_build_set — the function backing the connected-set selection the live lane calls — returned the DRAFT id, while select_batch returned only the APPROVED id, matching the backlog queue exactly. Its own docstring states both postures: 'Readiness is NOT a filter' for the connected set, and 'readiness: approved' among select_batch's ready-leaf requirements. So 'the fast lane is readiness-agnostic', stated flatly, is false of one of its two selectors. Tagged `describes`: this AC must not edit the fast lane."
+  - path: docs/reference/ac-schema.md
+    relationship: related
+    status: exists
+    relevance: "Where the account lives. The difference between the two selectors belongs beside the field it turns on, or a reader who finds the approval field documented in one place will keep meeting the contradiction in another."
+  - path: docs/architecture/components/ac-driven-dev.md
+    relationship: describes
+    status: exists
+    relevance: "Component architecture for the backlog queue side of the contrast this AC records."
+assigned_agent: documentation-expert
+estimated_complexity: M
+it_requirements:
+  - "IT-PO CORRECTION TO THE FRAMING, FOUND BY READING fast_lane.py 2026-09-08 — THE ACCOUNT MUST NOT PRESENT THE BATCH SELECTOR AS A LIVE PATH. select_batch carries an explicit docstring stating it has NO PRODUCTION CALLER: the live lane (fast-lane-ship.js) invokes the select_connected subcommand, and select_batch's only former caller, fast-lane-build.js, was deleted under BO-2400c-1-v. It is retained deliberately as dormant-not-dead. So the criteria's final clause is true of the function and would mislead if written as though a reader could reach it: the account must say that the fast lane's approval-respecting batch selection exists and is dormant, not that it is a path work travels. Writing it as live would make this page the next ACD-400a-1, which is the failure the whole tree exists to close."
+  - "The account must record WHY the two postures cannot be unified, not merely that they differ. BO-2400f-2 is approved and done, and BO-2400f-12-ii holds as a hard constraint that approval, urgency, requirement status and status must not appear anywhere in the fast lane's producibility decision. An account that states the difference without its reason invites the next reader to 'fix' the inconsistency and contradict an approved criterion in another component."
+  - "State that the two selectors share the approval test rather than merely agreeing on it: fast_lane.py imports the scanner's admission predicate and its sort helper directly, so the batch selector's agreement with the backlog queue is identity, not coincidence, and an edit to either rule moves both at once. A reader told only that they 'both require approval' will not know that."
+  - "This AC changes no code in either component. scripts/ac_store/scan_ac_store.py and scripts/build_orchestration/fast_lane.py must be byte-identical before and after; the deliverable is an account plus a demonstration. A reading that harmonises the two selectors contradicts an approved criterion elsewhere and is wrong."
+  - "Every pytest invocation used to run or verify the demonstration must set AC_ENFORCE_STRICT=1, or a red result is masked as an xfail and reads green."
+  - "The demonstration must ask both selectors about ONE store in a single run and compare their two answers, rather than asserting each separately against a written expectation. Comparing the answers is what makes the difference an observation, and it is what turns this test red the moment someone unifies the two — which is the outcome the fast-lane ACs want."
+  - "Both selectors must be reached through their real command surfaces over a temporary store; neither may be exercised by importing a private helper, and neither verdict may be inferred from the other."
+test_spec:
+  - name: test_one_store_two_selectors_disagree_on_the_draft_record
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    angle: seam
+    surface_invoked: "python scripts/ac_store/scan_ac_store.py --ac-root <tmp> --json AND python scripts/build_orchestration/fast_lane.py select_connected --ac <draft-id> --ac-root <tmp>"
+    description: "Over one store holding a draft leaf and an approved leaf, the backlog queue offers the approved id and withholds the draft one, while the fast lane's connected-set resolution returns the draft id — the two answers obtained in the same run against the same records."
+  - name: test_the_fast_lanes_batch_selector_applies_the_same_approval_requirement
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    surface_invoked: "python scripts/build_orchestration/fast_lane.py select_batch --ac-root <tmp> --limit 10"
+    description: "Against the same store, the fast lane's whole-store batch selection returns only the approved id, matching the backlog queue — so the account cannot claim the fast lane is indifferent to approval as a whole."
+  - name: test_the_account_states_the_difference_and_confines_it_to_the_connected_set
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    angle: real_artifact
+    surface_invoked: "docs/reference/ac-schema.md (parsed selection-verdict block)"
+    description: "The committed account carries the two-selector difference as a verdict entry naming which selection it applies to, so a blanket claim of fast-lane indifference cannot be written without failing."
+test_rationale: "Asserting the two behaviours separately would leave the account free to describe them as one, which is precisely the folklore BO-2400f-2 rests on. One store, both selectors, answers compared, is the construction that goes red on unification — and unification is the specific wrong repair a reader of the account is most likely to attempt."
+delivers_to: null
+expects_from:
+  ac_id: ACD-400e-1a
+  contract: "The stably-marked machine-parseable verdict block in docs/reference/ac-schema.md. This AC adds the two-selector contrast as further entries in that same block rather than as a separate prose passage, so the drift detector covers it on the same terms as the other verdicts."
+origin_agent: BrainCandy
+created: 2026-09-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: docs
+risk_surface: contract_boundary
+notes: |
+  AUTHORED 2026-09-08 by BA v3, stage 2 of PO -> BA -> IT-PO. Decomposes ACD-400e.
+
+  A CORRECTION TO THE INHERITED FRAMING, FOUND BY EXECUTING BOTH SELECTORS. The PO's
+  notes and the project context both say, correctly, that the fast lane and the backlog
+  queue have deliberately opposite approval rules and must not be unified. What neither
+  says is that the fast lane has TWO selectors with DIFFERENT postures. resolve_connected
+  _build_set ignores approval, as BO-2400f-2 describes. select_batch does not — it
+  requires an approval of approved, exactly as the backlog queue does, and its own
+  docstring says so. An account written from the folklore would state a blanket contrast
+  that is false of half the surface it describes, and would be the next ACD-400a-1. The
+  final clause of the criteria exists solely to prevent that, and the fixture proves the
+  distinction rather than asserting it.
+
+  THIS AC PINS THE DIFFERENCE; IT DOES NOT NARROW IT. BO-2400f-12-ii holds as a hard
+  constraint that approval, urgency, requirement status and status must not appear
+  anywhere in the fast lane's producibility decision, and BO-2400f-2 is approved and done.
+  Nothing here changes either selector's behaviour, and the criteria are satisfied by the
+  code exactly as it ships today. A reading of this AC that harmonises the two selectors
+  contradicts an approved criterion in another component and is wrong.
+
+  WHY ONE STORE AND NOT TWO. Asking both selectors the same question about the same two
+  records in a single run is what makes the difference an observation rather than two
+  separate claims a reader has to hold side by side. It also makes the assertion robust to
+  someone "fixing" the apparent inconsistency: unify the two and this AC goes red
+  immediately, which is the outcome the fast-lane ACs want.
+
+  AGENT ASSIGNMENT AND TECHNICAL ENRICHMENT DELIBERATELY OMITTED — BA-authored L2. Note
+  for that pass: this AC deliberately spans two components' code without editing either.
+  The deliverable is an account plus a demonstration, so `modifies` is tagged on neither
+  selector.

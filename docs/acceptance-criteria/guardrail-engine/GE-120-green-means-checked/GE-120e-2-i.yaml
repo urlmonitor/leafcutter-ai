@@ -7,7 +7,7 @@ components:
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -87,6 +87,7 @@ superseded_by: null
 covered_by: []
 implemented_by:
 - tickets/00_inbox/epics/EPIC-TrustThatAGreenCheckActuallyChecked/31_TICKET-20260825-GE-120e-2-i.md
+- unit_tests/portability/test_ge_120e_2_i.py
 change_target: code
 risk_surface: internal
 notes: |

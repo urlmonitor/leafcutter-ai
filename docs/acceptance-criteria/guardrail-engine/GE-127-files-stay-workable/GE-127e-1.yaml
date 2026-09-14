@@ -1,0 +1,476 @@
+id: GE-127e-1
+title: "The refusal accounts for what is inside the file it refused, and names a division of that file in terms of those same parts"
+component: guardrail-engine
+components:
+  - commit_guardian
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a tracked file of a kind the size standard covers is refused for its
+    length,
+  When the author reads the refusal,
+  Then the refusal accounts for that file's measured length as a set of named
+    constituent parts of that same file, each part named as it appears in the
+    file itself and each stated with the portion of the measured length it
+    accounts for,
+  And every part the refusal names can be located in the refused file's own
+    content,
+  And the named parts together account for at least half of the measured length
+    the refusal quotes for that file, so the author is not handed a list of
+    fragments that explains nothing about where the size went,
+  And the refusal names at least one division of that file, stated as which of
+    those named parts fall on each side of it, together with the length each
+    side would stand at,
+  And the two stated side lengths reconcile with the measured length the refusal
+    quotes for the whole file,
+  And given instead a refused file whose measured length is accounted for by a
+    single named part, so that no division between parts exists,
+  When the author reads the refusal,
+  Then the refusal states that no division of that file was found and names the
+    single part accounting for it, rather than naming a division that does not
+    follow from the file's own parts.
+depends_on:
+  - GE-127e
+doc_links:
+  - path: docs/acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/GE-127e.yaml
+    relationship: parent
+    status: exists
+  - path: docs/acceptance-criteria/build_pipeline/BP-1600-counted-from-reality/BP-1600a-2.yaml
+    relationship: depends_on
+    status: exists
+    relevance: >-
+      PRECONDITION, NOT SCOPE — INHERITED FROM THE L1 AND NOT RESTATED. Every clause
+      here is an outcome of a refusal, which presupposes a refusal happens at commit
+      time at all. Making the gate reached is BP-1600a-2's day-one triage. No
+      criterion here mentions a registry, a manifest, a census or a count of scripts,
+      and none may be added.
+  - path: templates/scripts/commit_guardian/check_file_size.py
+    relationship: modifies
+    status: exists
+    relevance: >-
+      Holds the incumbent refusal message. Its remediation today is a pointer to a
+      refactoring helper plus an instruction not to strip content — the same two
+      sentences for every file, saying nothing about the file in hand. That message
+      is the baseline this record replaces, and it is what "settling this with the
+      presence of text" looks like in practice.
+  - path: docs/acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/GE-127d.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      BOUNDARY, CONSUMED NOT RESTATED. Which lines are counted, and whether the
+      quoted number is reproducible, is GE-127d's subject. This record uses "the
+      measured length the refusal quotes" as a given and specifies only that the
+      parts and the two sides reconcile with it. Do not write a second counting rule
+      into the reconciliation.
+  - path: docs/acceptance-criteria/code-review/CR-100-refactoring-guidance/CR-100.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      FENCED, AND THE FENCE IS TIGHTEST ON THIS RECORD. CR-100 owns advisory,
+      prioritised, weighable refactoring guidance across a whole review, including a
+      smell catalogue in which every entry names a Fowler move (CR-100b-1). Reuse
+      whatever vocabulary that work produces for naming a division; do NOT grow a
+      second body of refactoring advice inside a commit gate, and do NOT widen CR-100
+      to absorb this. The observable here is a description of one file at the moment
+      it is refused, not a ranked report.
+  - path: docs/acceptance-criteria/infrastructure/INF-800-safe-restructuring/INF-800.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      FENCED. INF-800 owns performing a split safely once it is decided on — tracing
+      consumers, proving behaviour preserved. This record stops at naming where a
+      division lies and what each side would weigh. It performs nothing and must not
+      be decomposed into doing so.
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      IT PO. Describes the commit-time invocation shape every clause here is written
+      against, and the single outcome stream the description must be emitted through.
+  - path: docs/pre-commit-hooks.md
+    relationship: related
+    status: exists
+  - path: CLAUDE.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      "Gate / Workflow ACs — Verify Behaviorally, Not by Grep" is binding here: a test
+      that asserts the refusal text contains a heading, or that a description function
+      is defined, stays green on the fixed two-sentence message this record exists to
+      replace.
+assigned_agent: python-coder
+estimated_complexity: L
+package_surface: false
+declares_side_effect: false
+it_requirements:
+  - >-
+    NO PACKAGE SURFACE — MEASURED IN THIS WORKTREE, NOT ASSUMED, WHICH IS WHY THE SPEC
+    HERE IS A PLAIN LIST RATHER THAN THE STRUCTURED FIVE-FIELD OBJECT.
+    _package_surface_registry.WATCHED_REGISTRIES binds exactly two containers on
+    commit_guardian.json: hooks_manifest.hooks (by entry id) and the document's own top
+    level (by mapping key, with only "$schema" and "_comment" excluded). Both were read
+    at enrichment time. `check-file-size` is ALREADY one of the hooks ids — the
+    registration GE-127a-1 owned has landed and the gate has run on every commit since —
+    so no id is added here. `file_size` is ALREADY one of the file's 37 top-level keys,
+    and any per-kind part vocabulary or description tuning this record wants is NESTED
+    inside it, which the watcher cannot see. This record therefore registers nothing.
+    Do NOT mint a config_schema_fragment key to satisfy the structured-spec validator:
+    BP-1600a-2-ii records that BP-100k-4 and BP-100k-4-i both declared keys
+    (hook_trigger_reachability, hook_trigger_reachability_indeterminate) that were never
+    created and still are not among the top-level keys. An imaginary key makes the
+    machine-checked spec less trustworthy than no spec at all.
+  - >-
+    REACHABILITY IS SETTLED AND MUST NOT BE RE-ASSERTED. Unlike when GE-127a-1 was
+    written, `check-file-size` is registered and live, so every descriptor here can drive
+    a real refusal from a real commit today. The consequence is a discipline, not a
+    licence: no requirement here may be satisfied by inspecting a manifest, a registry or
+    a census — that is BP-1600a-2's subject and it forbids a second one. What does NOT
+    exist is any per-file content analysis whatsoever; the shipped refusal is a fixed
+    block of sentences (_print_too_large_file) naming a helper and warning against
+    stripping content, identical for every file. That fixed block is this record's red
+    baseline and it should be captured before any work starts.
+  - >-
+    HOST AND LAYERING — MEASURED UNDER THE GUARD'S OWN COUNTING RULE, IN THIS WORKTREE.
+    check_file_size.py stands at 231 of its 400 counted lines (463 raw) and its sibling
+    _file_size_ratchet.py at 215 of 400 (528 raw). A description engine — per-kind part
+    extraction, portion accounting, division selection, reconciliation, and the printed
+    block — does not fit in either with headroom left for the four sibling records
+    landing on the same guard. Put it in a NEW sibling module INSIDE
+    templates/scripts/commit_guardian/, which build_commit_guardian copies verbatim, so
+    no scripts/build_phases.py deploy-map entry is needed. A module imported from OUTSIDE
+    that directory MUST be added to the deploy map in the same change or the deployed
+    hook raises ModuleNotFoundError at commit time while source-tree tests stay green.
+    Note the reflexive hazard, which is real and not a joke: this guard is subject to its
+    own limit and its own ratchet, so growing check_file_size.py past 400 counted lines
+    while implementing this record makes the gate refuse the very commit that implements
+    it.
+  - >-
+    THE PORTIONS AND BOTH SIDE LENGTHS MUST BE PRODUCED BY THE MEASUREMENT FUNCTION THAT
+    PRODUCED THE QUOTED LENGTH, AND BY NO OTHER. _file_size_ratchet.count_content_lines
+    is the single pure function behind both the current-length and previous-length
+    measurements; the description must account against the same function so
+    reconciliation is arithmetic rather than a second counting rule. GE-127d owns which
+    lines count. A portion or a side length produced by any other measurement will fail
+    the reconciliation clause for reasons that have nothing to do with this record, and
+    the fix will look like a rounding argument instead of the duplicated rule it is.
+  - >-
+    THE EXTRACTION MAY BE PER KIND; THE SELECTION MAY NOT. The covered kinds today are
+    exactly `.py` and `.sql` (checked_extensions). How a part is recognised is
+    necessarily kind-specific — a top-level definition for Python, a statement or object
+    for SQL — and that is fine. What is forbidden is a table of part NAMES or PORTIONS
+    keyed by kind: that is GE-127e-2's excluded implementation, it is the cheapest thing
+    to build, and it satisfies every clause of this record on any single run. Where a
+    naming vocabulary is wanted, reuse whatever CR-100's catalogue work produces rather
+    than growing a second body of refactoring vocabulary inside a commit gate; do not
+    widen CR-100 to absorb this.
+  - >-
+    THE HALF THRESHOLD IS A FLOOR ON WHAT MAY BE PRINTED, NOT A LICENCE TO PAD AND NOT A
+    NEW REASON TO REFUSE. If the located parts cannot account for at least half of the
+    quoted length, the description was not produced — route that state to GE-127e-3-i's
+    could-not-be-described statement rather than padding the list with one-line fragments
+    or quietly printing a short list that explains nothing. Whichever way it resolves, the
+    verdict is unchanged: the file is refused for its length and for nothing else.
+  - >-
+    ONE OUTCOME, NOT A SECOND SURFACE. The description and the division are FURTHER
+    CONTENT ON THE EXISTING REFUSAL BLOCK — printed on the same stream, inside the same
+    per-file block, under the same exit status as the length finding itself. Do not build
+    a report writer, a cache, or a second advisory pass. GE-127e-4 makes the delivery
+    surface an acceptance clause in its own right, and its named mutation is precisely
+    the relocation this constraint forbids.
+  - >-
+    COST BUDGET, BECAUSE THIS RUNS ON EVERY COMMIT. The description may be computed only
+    for files that have already been judged over their permitted length, and it must read
+    no file that was not already read to measure it — the content is in hand at that
+    point. A commit that refuses nothing must do no description work at all and must not
+    become measurably slower than it is today.
+  - >-
+    Must follow the repo error-handling policy: specific-exception try/except around the
+    file read and any parse; log at WARNING or higher or re-raise; no bare or blind
+    excepts. A swallowed parse error must never become an empty description that also
+    relaxes the verdict — that is the exact fail-open shape already recorded on this
+    guard's measurement step and the shape GE-127e-3-i exists to make impossible.
+  - >-
+    CANONICAL VERSUS BUILD OUTPUT, AND THE BUILD IS PART OF THE CHANGE.
+    templates/scripts/commit_guardian/ is canonical and tracked;
+    scripts/commit_guardian/ and the repo-root .pre-commit-config.yaml are untracked
+    build outputs that build.py overwrites, and templates/commit-guardian/
+    commit_guardian.json is a decoy needing no edit. Edit the canonical template and
+    re-run `python scripts/build.py --target-dir .` — config.py resolves
+    commit_guardian.json beside the DEPLOYED script, so an unbuilt change leaves the
+    running gate emitting the old fixed block while every source-tree test passes.
+test_spec:
+  - name: test_ge_127e_1_the_refusal_names_parts_that_can_be_located_in_the_refused_file
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: >-
+      In a real temporary git repository with the gate installed, stage a covered file
+      whose content divides into several clearly distinguishable named parts, take it over
+      its permitted length, and run an ordinary `git commit`. The refusal must name a set
+      of constituent parts, and EVERY name it prints must be findable in the refused
+      file's own content — the test reads the names out of the process output and searches
+      the fixture's bytes for each, never comparing against a literal list it authored.
+      NAMED MUTATION (mandatory, run it, do not merely describe it — this is the BA's
+      injection 1): "the refusal accounts for that file's measured length as a set of
+      named constituent parts of that same file" — MUTATION: replace the per-file parts
+      with a fixed inventory selected from the file's KIND alone, so every refused file of
+      that kind is described with the same part names and the same portions. Under that
+      injection the named parts can no longer be located in the refused file's own content
+      and the stated portions no longer sum against its measured length; this clause must
+      go RED, and must return to green on revert. Without the injection the clause is
+      satisfied by any implementation that prints a plausible-looking list.
+  - name: test_ge_127e_1_the_named_parts_account_for_at_least_half_the_quoted_length
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: >-
+      From the same real refusal, read the per-part portions and the measured length the
+      refusal quotes for the whole file, both out of the process output, and assert the
+      portions sum to at least half of that quoted length. Nothing is compared against an
+      expected literal — the arithmetic is between two numbers the gate itself printed, so
+      the descriptor cannot be satisfied by a fixture tuned to a hard-coded answer. A
+      description that names twenty one-line fragments fails here, which is the whole
+      point of the threshold.
+  - name: test_ge_127e_1_the_named_division_falls_between_named_parts_and_the_two_sides_reconcile
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: >-
+      The refusal names at least one division, states which of the named parts fall on
+      each side of it, and states the length each side would stand at; the two side
+      lengths must reconcile with the quoted whole-file length, and each side must be a
+      whole number of named parts rather than a cut through one. NAMED MUTATION
+      (mandatory, run it — the BA's injection 2): "the refusal names at least one division
+      of that file, stated as which of those named parts fall on each side of it" —
+      MUTATION: name the division at a fixed fraction of the measured length — halfway
+      down the file — instead of at a boundary between the named parts. Under that
+      injection the sides no longer correspond to whole named parts; this clause must go
+      RED, and must return to green on revert. This is the cheapest implementation that
+      satisfies the words "names a division" and it is worth nothing to an author, so it
+      must be excluded explicitly rather than trusted not to happen.
+  - name: test_ge_127e_1_a_file_accounted_for_by_a_single_part_is_told_no_division_was_found
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: >-
+      A refused covered file whose measured length is accounted for by ONE named part —
+      a single long definition and nothing else at top level — is told that no division of
+      it was found, and the single part is named. No division may be printed for it. This
+      is the arm that separates a description read from the file from one invented to fill
+      a template: an invented division is exactly what does not reconcile, and a guard
+      that always prints a seam fails here while passing every other descriptor.
+  - name: test_ge_127e_1_a_real_tracked_over_limit_source_file_is_described_in_terms_of_its_own_parts
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: real_artifact
+    description: >-
+      REAL ARTIFACT, NOT A GENERATED FIXTURE. Copy an actual tracked repository file that
+      already stands over its permitted length (roughly 200 of the tracked .py files do)
+      into the fixture repository verbatim, refuse it, and assert the same three
+      properties — parts locatable in its bytes, portions summing to at least half the
+      quoted length, a division between whole parts that reconciles. A fixture built from
+      uniform generated definitions shares the bias of the extractor written against it;
+      real code carries decorators, nested classes, module-level constants and a decision
+      -history block, and is where a part extractor that only understands its own fixture
+      shape fails.
+  - name: test_ge_127e_1_the_description_reaches_the_registered_hook_output_and_the_refusal_status
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: reachability
+    surface_invoked: >-
+      python .leafcutter/scripts/commit_guardian/run_hook.py
+      .leafcutter/scripts/commit_guardian/check_file_size.py
+    description: >-
+      PRODUCTION ENTRY POINT. Run the gate through the registered hook path with an
+      over-limit covered file staged and assert the parts and the division appear in the
+      hook's OWN output stream, in the same per-file block as the length finding, and that
+      the exit status is the ordinary finding status rather than an advisory note. A
+      description computed by a function nothing at commit time calls is inert, and a
+      description printed on some other stream is invisible to the author this record
+      exists to serve.
+  - name: test_ge_127e_1_the_deployed_copy_emits_the_description_in_a_cold_process
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: deployed
+    description: >-
+      After build.py, the DEPLOYED copy of the gate and every module it imports load and
+      run in a cold process — a description module placed outside
+      templates/scripts/commit_guardian/ without a scripts/build_phases.py deploy-map
+      entry surfaces here as ModuleNotFoundError rather than passing. The deployed run
+      must refuse an over-limit covered file AND print the parts and the division, so a
+      description written only into the canonical template and never built fails this
+      descriptor instead of passing on source-tree greenness.
+test_rationale: |
+  Every descriptor performs an ordinary `git commit` in a real temporary repository and
+  reads its assertions out of the process output and the commit outcome. Per CLAUDE.md
+  "Gate / Workflow ACs — Verify Behaviorally, Not by Grep" and this record's own doc_link,
+  a test that asserts the refusal text contains a heading, or that a description function
+  is defined and returns something, stays green on precisely the fixed two-sentence block
+  this record exists to replace — and that block is what ships today.
+
+  The two named mutations are the BA's and are carried into descriptors verbatim rather
+  than restated as prose, following this tree's convention. They are load-bearing for a
+  reason peculiar to this record: unlike the absence-arms elsewhere in the tree, these
+  clauses are assertions about text that WILL be present once anything is built, so they
+  are satisfiable by a plausible-looking list and a plausible-looking seam. The
+  kind-inventory injection and the halfway-down-the-file injection are the two cheapest
+  such implementations, and each is excluded by an executable run rather than by trust.
+
+  No assertion anywhere compares a part name, a portion or a side length against a literal
+  the test authored. Each is read from the gate's own output and checked against the
+  fixture's own bytes or against another number the gate printed. A test that hard-codes
+  the expected description has re-created the kind-inventory implementation inside the
+  test suite and will keep passing after the mutation is applied.
+
+  The real-artifact descriptor is not redundant with the generated-fixture ones. An
+  extractor written alongside a fixture of uniform definitions inherits that fixture's
+  bias, which is the documented shape of this repository's worst phantom-done incident;
+  the reconciliation clause in particular is where a real file with decorators and nested
+  scopes separates from a synthetic one. The deployed descriptor is likewise not redundant
+  with the reachability one: reachability proves the hook path executes, deployed proves
+  the BUILT copy and its config are what execute.
+delivers_to:
+  - agent: python-coder
+    ac_id: GE-127e-2
+    contract: >-
+      The per-file description — the named parts, their portions, and the named division —
+      as further content on the existing refusal block. GE-127e-2 adds no output to it and
+      constrains only what it is COMPUTED FROM, so the two records must share one
+      description function and one printed block; a second derivation path built to
+      satisfy GE-127e-2 would leave this one un-constrained.
+  - agent: python-coder
+    ac_id: GE-127e-3-i
+    contract: >-
+      The description step itself, together with the outcome and exit status it is printed
+      under. GE-127e-3-i inserts the one input state for which the description cannot be
+      produced, as a named line carried on an UNCHANGED refusal — so the description step
+      must be able to report its own failure to the caller without the caller being able
+      to mistake that for either a description or a verdict.
+  - agent: python-coder
+    ac_id: GE-127e-4
+    contract: >-
+      The same description and division, whose DELIVERY SURFACE and whose LIMITS GE-127e-4
+      constrains: they must arrive in the refusal itself rather than in any second
+      artifact, and they must be framed as a starting point taken from the file as it
+      stands. Nothing here may be written to a report, a cache or a log for GE-127e-4 to
+      point at.
+expects_from:
+  ac_id: GE-127a-1
+  contract: >-
+    The commit-time per-file verdict and the single outcome stream it is reported
+    through, plus the measured length quoted for the refused file. This record adds
+    the description of that file's contents and the named division to the SAME
+    outcome, as further content on an existing refusal — never as a second report,
+    a second stream, or a separate advisory run.
+origin_agent: business-analyst
+created: 2026-09-08
+amended_by:
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-09-08
+  note: 'criteria untouched. PACKAGE SURFACE FALSE, AND MEASURED IN THIS WORKTREE: the two
+    containers WATCHED_REGISTRIES binds on commit_guardian.json were read — hooks_manifest.hooks
+    already contains `check-file-size` (GE-127a-1''s registration landed, the gate is live on
+    every commit) and `file_size` is already one of the 37 top-level keys, so the nested
+    part-vocabulary or tuning this record might want is invisible to the watcher. Nothing is
+    registered; the plain-list spec form is correct and the BP-100k-4 fictional-key precedent
+    is not repeated. COMPLEXITY L: this is the only record in the subtree that builds
+    something — a per-file description engine (part extraction per covered kind, portion
+    accounting, division selection, reconciliation, printed block) — and the other four
+    constrain what it produces. HOST MEASURED under the guard''s own rule: check_file_size.py
+    at 231/400 counted (463 raw), _file_size_ratchet.py at 215/400 (528 raw), so the engine
+    goes in a NEW sibling INSIDE templates/scripts/commit_guardian/ (copied whole by
+    build_commit_guardian, no deploy-map entry) — and the reflexive hazard is recorded: this
+    guard is subject to its own limit and ratchet. RECONCILIATION PINNED TO THE EXISTING
+    MEASUREMENT FUNCTION: portions and both side lengths must come from
+    _file_size_ratchet.count_content_lines, the same pure function the quoted length comes
+    from, so reconciliation is arithmetic and no second counting rule is written against
+    GE-127d. UNDER-HALF ROUTED, NOT PADDED: a description that cannot account for half the
+    quoted length is a could-not-be-described state and goes to GE-127e-3-i, with the verdict
+    unchanged either way. declares_side_effect false: every Then clause reports to a stream and
+    sets an exit status, and GE-127e-4 positively forbids a durable second artifact. test_spec:
+    seven executing descriptors, two carrying the BA''s named mutations verbatim, one on a real
+    tracked over-limit file rather than a generated fixture, one through the registered hook
+    entry point and one on the deployed copy in a cold process.'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  THIS RECORD IS THE SUBSTANCE OF THE L1 TITLE — "what to split and roughly where"
+  — AND IT IS THE ONE THAT DECIDES WHETHER THE REST OF THE TREE HAS ANYTHING TO
+  CONSTRAIN. The incumbent refusal already contains remediation-shaped text. What it
+  does not contain is a single fact about the file in hand. Every clause here is
+  therefore an assertion about content that can only be produced by looking at the
+  refused file: parts that can be located in it, portions that sum against its own
+  measured length, and two sides that reconcile with it.
+
+  WHY "AT LEAST HALF" IS A NUMBER AND NOT A HEDGE. A description that names twenty
+  one-line parts is technically derived from the file and useless. The threshold
+  states the bar the L1's notes set — the author stops investigating and starts
+  choosing — in the only form a test can hold: the named parts must account for the
+  bulk of the size, not a scattering of it. It is deliberately generous. It is not a
+  completeness requirement, and it must not be raised into one, because that is the
+  road to a correct-and-complete refactoring plan, which is CR-100's and INF-800's
+  territory and explicitly not this goal's.
+
+  THE NO-DIVISION ARM IS NOT A COURTESY, IT IS THE HONESTY OF THIS RECORD. A file
+  whose length is one part has no seam between parts, and a gate that names one
+  anyway has invented it. Naming a division that does not follow from the file's
+  parts is the same defect as a fixed sentence, wearing better clothes. This arm is
+  also the reason the reconciliation clause is stated: an invented division does not
+  reconcile.
+
+  NAMED MUTATIONS — EXECUTE THEM, DO NOT MERELY DESCRIBE THEM. Written so the IT PO
+  can lift them verbatim into test descriptors.
+
+  (1) "the refusal accounts for that file's measured length as a set of named
+      constituent parts of that same file" — MUTATION: replace the per-file parts
+      with a fixed inventory selected from the file's KIND alone, so every refused
+      file of that kind is described with the same part names and the same portions.
+      Under that injection the named parts can no longer be located in the refused
+      file's own content and the stated portions no longer sum against its measured
+      length; this clause must go RED, and must return to green on revert. Without
+      the injection the clause is satisfied by any implementation that prints a
+      plausible-looking list.
+
+  (2) "the refusal names at least one division of that file, stated as which of
+      those named parts fall on each side of it" — MUTATION: name the division at a
+      fixed fraction of the measured length — halfway down the file — instead of at a
+      boundary between the named parts. Under that injection the sides no longer
+      correspond to whole named parts; this clause must go RED, and must return to
+      green on revert. This is the cheapest implementation that satisfies the words
+      "names a division" and it is worth nothing to an author, so it must be excluded
+      explicitly rather than trusted not to happen.
+
+  BOUNDARY WITH GE-127a AND GE-127b. WHEN a refusal happens — the crossing event and
+  the ratchet — is theirs. This record owns only what the refusal SAYS once it has
+  happened, and it applies identically to a refusal from either cause. Do not
+  restate either population here, and do not make the description conditional on
+  which of them fired.
+
+  BOUNDARY WITH GE-127e-2, DELIBERATE AND LOAD-BEARING. This record says the refusal
+  must CONTAIN a description and a division. It does not, and cannot, say the
+  description is a function of the file — every clause here is satisfiable by an
+  implementation whose parts happen to be locatable in most files of that kind. That
+  gap is exactly why GE-127e-2 exists, and the two must not be merged: merged, an
+  implementer satisfies the containment half, which is the cheap one.
+
+  NOT AUTHORED HERE, BY DESIGN: assigned_agent, estimated_complexity,
+  it_requirements, test_spec, test_rationale and declares_side_effect. Those are the
+  IT PO's. The two named mutations above are written to be turned directly into test
+  descriptors. delivers_to is null because nothing is enriched yet, not because this
+  record is terminal.

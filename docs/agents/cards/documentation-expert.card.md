@@ -180,6 +180,8 @@ flowchart TD
 - ACD-2000b-5: Reference doc describes how a requirement is taken, handed back, and reclaimed
 - ACD-2100d-4: A reference page states which copy of the route runs and where a repair has to land
 - ACD-2100e-2: A how-to guide takes an operator from a waiting run back to a running one
+- ACD-400e-1a: One written account of how work is chosen, stating all five verdicts in a form a reader and a check can both use
+- ACD-400e-4: The account states how the fast lane's approval posture differs from the backlog queue's, and the difference is demonstrable
 - ACS-1200a-3: The written back-link rule matches the enforced one
 - ACS-1200d-4: The how-to tells you how to park an idea and how to take it back out
 - ACS-1300a-4: Someone who did not build the repair can preview it, run it, and read what it did
@@ -231,6 +233,7 @@ flowchart TD
 - BP-100b-9: Consolidated output root doc lists .claude/workflows/ as a shimmed output
 - BP-1100a-5: The guidance on getting a generated ticket's surface right describes the derivation that actually runs
 - BP-1200a-2: The CI test command is documented as the single authoritative way to run the suite from a clean checkout
+- BP-1500b-5: Reference documentation lets a reader predict what the sweep removes and what it will never touch
 - BP-1500d-5: The published reference tells an adopter where their record lives and how to tell an inert check from a passing one
 - BP-200c-4: Agents README documents llm-expert in the phase agents table
 - BP-300a-7: debug.md falls back to prose skill for older Claude Code runtimes
@@ -266,6 +269,7 @@ flowchart TD
 - GE-120d-5: The how-to states what a prepared working copy guarantees and how to confirm it
 - GE-120e-5: The attribution rule is written where the next check author decides how to get their diff
 - GE-120f-5: The rule is written where the next check author is already looking, in the vocabulary the machine reads, and the written procedure and the enforced procedure say the same thing
+- GE-120g-3: The guidance a check author reads states what declaring a role commits the check to, and states that a refusal comes from an objection
 - GE-122a-3: The numbering rules for all four namespaces are written down in one place
 - GE-122b-3: An author with no prior knowledge can find out how to get a number
 - GE-122b-4: Which locations must carry a number, and which need not, is written down
@@ -287,6 +291,8 @@ flowchart TD
 - GE-126d-5: What each registration leg buys you is written down beside the list of legs
 - GE-126e-5: The first measured answer is published with the question that produced it
 - INF-300a-1: Knowledge surface map documents all surfaces with when-to-use rules
+- INF-700a-3: A how-to gets a person from a finished piece of work to the learning on its page
+- INF-700a-4: Reference documentation states when the routing step runs and what its report means
 - INF-700b-5: Reference documentation states what the capture step requires of an agent, and names only steps that exist
 - INF-700c-3: Reference documentation states what may be written as knowledge and what the waiting count means
 - KM-KGS-100b-3: How-to guide for tracing a requirement to its code and tests
@@ -308,3 +314,8 @@ flowchart TD
 - UXP-100a-3: How-to guide for assembling prototypes from the component library
 - UXP-100c-5: How-to guide for reviewing and deciding on a prototype
 - UXP-606: How-to: read decision diamonds in the Atlas Flows view
+- UXP-700a-5: A how-to for starting a project record from nothing
+- UXP-700b-4: A reference for what each outcome of the record's checker licenses a reader to conclude
+- UXP-700c-4: A how-to for reading a drift report and reconciling the record
+- UXP-700d-5: A reference for how example content is kept apart from a project's own record
+- UXP-700e-4: A reference for the record's size bounds and how a shape change is rolled out

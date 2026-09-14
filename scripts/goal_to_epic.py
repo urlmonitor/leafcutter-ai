@@ -2311,6 +2311,40 @@ def run(
 
     print(f"EPIC folder created: {epic_folder}")
 
+    # --- depends_on translation (TKT-017) ---
+    # Assembly renames every ticket with an NN_ prefix recording build order.
+    # Sibling references must be rewritten to the names assembly actually
+    # produced, or check-doc-frontmatter refuses the commit and the epic cannot
+    # land at all.
+    #
+    # This mirrors build_epic_from_ids() Steps 7-8 exactly. BO-2600a-5 added the
+    # translation to that function and did not back-port it here, so the DEFAULT
+    # route -- the one /build-ac drives -- has been emitting epics whose tickets
+    # depend on files that do not exist. TKT-016 fixed the implemented_by half of
+    # the same back-port gap; this is the other half.
+    #
+    # Prefix assignment mirrors assemble_epic_folder: topo_order[i] -> NN_<base>.
+    #
+    # The loop variable is deliberately NOT named ac_id: that name is this
+    # function's parameter, holding the goal AC the caller asked for, and the
+    # Master_Plan block further down still reads it. A statement-level `for
+    # ac_id in topo_order` leaks past the loop and leaves the goal id set to
+    # whichever leaf happened to sort last, so the plan attributes the whole
+    # epic to that leaf. (The dict comprehension above is safe — comprehension
+    # targets are scoped to the comprehension — which is exactly what makes the
+    # asymmetry easy to miss.)
+    ac_to_epic_filename: dict[str, str] = {
+        ac_id: f"{i:02d}_{Path(ticket_path).name}"
+        for i, (ac_id, ticket_path) in enumerate(
+            zip(topo_order, ticket_paths, strict=True), start=1
+        )
+    }
+    for leaf_ac_id in topo_order:
+        ticket_file = epic_folder / ac_to_epic_filename[leaf_ac_id]
+        _translate_ticket_depends_on(
+            ticket_file, dep_graph.get(leaf_ac_id, []), ac_to_epic_filename
+        )
+
     # --- target_epic stamping (ACD-1200d-1) ---
     # Back-reference each included leaf AC to the epic it now belongs to. Use
     # the actual assembled folder name (e.g. "EPIC-RecogniseEveryDetailPage…")
@@ -2335,12 +2369,24 @@ def run(
     # function silently does nothing.  We must relativise loose_path before
     # the call so the comparison form matches what generate_ticket_from_ac.py
     # wrote.
+    import logging  # noqa: PLC0415
+
+    _backref_log = logging.getLogger(__name__)
+
     loose_to_epic_map = _build_loose_to_epic_map(ticket_paths, epic_folder)
     for loose_path, epic_path in loose_to_epic_map.items():
         # Normalise loose_path to a relative form when worktree_root is known
         # so that the comparison inside _replace_implemented_by_entry matches
         # the relative path stored in the AC YAML by generate_ticket_from_ac.py.
         comparison_old_path = loose_path
+        # TKT-016: the REPLACEMENT value must be relativised too, not only the
+        # lookup key. Relativising just the old path makes the lookup match and
+        # then writes an absolute epic path into the store — a back-reference
+        # that resolves only on the machine that produced it, and that carries a
+        # developer's home directory into a shared record. The sibling call site
+        # in run() relativises both; this one did not, and the asymmetry read as
+        # intentional because the comment above explained only the old path.
+        recorded_new_path = epic_path
         if worktree_root is not None:
             loose_as_path = Path(loose_path)
             try:
@@ -2350,7 +2396,28 @@ def run(
                 # original value (covers edge cases like absolute paths
                 # outside the tree).
                 pass
-        _replace_implemented_by_entry(ac_store_root, comparison_old_path, epic_path)
+            try:
+                recorded_new_path = str(Path(epic_path).relative_to(worktree_root))
+            except ValueError:
+                _backref_log.warning(
+                    "epic ticket %s is not under the worktree root %s — recording "
+                    "an absolute implemented_by back-reference, which will not "
+                    "resolve on any other machine",
+                    epic_path,
+                    worktree_root,
+                )
+        else:
+            # TKT-016 second clause: an underivable worktree root previously
+            # produced absolute paths indistinguishable from correct output.
+            # Say so rather than recording one silently.
+            _backref_log.warning(
+                "worktree root could not be derived from the inbox directory — "
+                "recording an ABSOLUTE implemented_by back-reference for %s. It "
+                "will not resolve on another machine; re-run with an inbox "
+                "directory of the form <worktree>/tickets/00_inbox.",
+                epic_path,
+            )
+        _replace_implemented_by_entry(ac_store_root, comparison_old_path, recorded_new_path)
     _remove_loose_inbox_tickets(ticket_paths, inbox_dir)
 
     # --- Master_Plan.md generation (ACD-1200a-7) ---

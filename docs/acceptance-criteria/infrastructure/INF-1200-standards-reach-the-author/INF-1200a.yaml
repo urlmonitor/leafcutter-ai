@@ -1,0 +1,76 @@
+id: INF-1200a
+title: "You learn the limit while the work is still cheap to change"
+component: infrastructure
+components:
+  - infrastructure
+  - injection_builder
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  The standard arrives before you write, not after you are turned away.
+
+  Whoever is about to work on a kind of file knows what that kind of file has
+  to satisfy at the moment the work starts, so the standard shapes the work
+  while shaping it is still a single small decision — instead of surfacing as a
+  refusal once the work is finished and expensive to reopen.
+depends_on:
+  - INF-1200
+doc_links:
+  - path: docs/architecture/agent_knowledge_plane.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      This criterion is the timing promise, and the timing it promises is the
+      one this document defines: context assembled before execution begins,
+      not feedback produced after it ends.
+  - path: docs/acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/GE-127.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      THE FENCE THIS CRITERION IS. GE-127 owns being refused; this owns being
+      told. They are complementary and neither is a duplicate of the other. A
+      decomposition here that improves what a refusal says, or when a refusal
+      fires, has crossed into GE-127 and must be withdrawn.
+delivers_to: null
+expects_from: null
+documentation_triggers:
+  - reference-doc
+origin_agent: product-owner-v3
+created: 2026-09-09
+amended_by: []
+superseded_by: null
+covered_by:
+  - INF-1200a-1
+  - INF-1200a-2
+  - INF-1200a-3
+implemented_by: []
+change_target: prompt
+risk_surface: contract_boundary
+notes: |
+  User-authored intent: BrainCandy. Framed by product-owner-v3, 2026-09-09.
+
+  WHY THIS L1 EXISTS AT ALL, AND WHY IT IS FIRST. Being told beforehand and
+  being refused afterwards are different goods with different economics. A
+  refusal is worth something only once the work exists; advance knowledge is
+  worth something even in the runs where nothing would ever have been refused,
+  because the work comes out differently. Bind the benefit to that timing or
+  the whole tree collapses into GE-127, which already owns refusal completely.
+
+  THE ACCEPTANCE SHAPE WITH TEETH, AND THE ONE WITHOUT. A criterion satisfied
+  by "the standard is written down somewhere the specialist could find it" is
+  satisfied today and always has been — the standards are in a configuration
+  file any reader can open. What discharges this is that the standard is
+  present in what the specialist is working from when it begins, without the
+  specialist having to know to go looking. The working precedent to generalise
+  is the one pairing that already behaves this way: a line limit appears in a
+  coding specialist's own instructions, including in a trigger that makes it
+  stop and ask BEFORE producing an oversized file rather than after.
+
+  DO NOT LET THIS BECOME "WARN EARLIER". A warning issued while the work is in
+  flight is still feedback on work already being done. The promise is that the
+  constraint is part of the brief.

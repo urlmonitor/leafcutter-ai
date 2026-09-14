@@ -1,0 +1,134 @@
+id: ACD-400e-3
+components:
+  - ac_driven_dev
+title: "A written account that stops matching the queue is caught when it stops, not months later"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the written account of how the queue chooses and the queue itself agree,
+  When the two are made to disagree from either side — the queue is changed to
+    consult a further key when ordering the offer, or the account is edited to
+    describe an order or an admission test the queue does not use,
+  Then the disagreement is reported at the point the change is introduced, naming
+    both the statement that no longer holds and the answer the queue actually gave,
+  And the report is reached by asking the queue rather than by inspecting how it is
+    written: a change that alters only wording the queue never consults is still
+    caught, and a change that alters what the queue does while leaving every expected
+    word in place is caught too,
+  And while the two agree the check reports nothing, so a store in which nothing has
+    drifted is not made to look like one in which something has.
+depends_on: [ACD-400e, ACD-400e-1a, ACD-400e-1b, ACD-400e-2]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: related
+    status: exists
+    relevance: "Where the single account lives (ACD-400e-1). This AC is what keeps it true after the pass that writes it: an account correct on the day it is authored and unguarded afterwards is the exact object ACD-400a-1 already is."
+  - path: scripts/ac_store/scan_ac_store.py
+    relationship: describes
+    status: exists
+    relevance: "The queue the check must interrogate. The both-directions clause exists because this file and the account can each move independently, and each has moved independently before — the urgency key was added here and never reached the store's records."
+  - path: docs/acceptance-criteria/build-orchestration/BO-2400-fast-lane-build/BO-2400f-2.yaml
+    relationship: related
+    status: exists
+    relevance: "Evidence that an unguarded written account decays into folklore. This APPROVED criterion defines itself by contrast with a rule nobody ever wrote down — 'readiness does not filter the set (unlike the normal ready-batch scan)'. The contrast is true, verified by execution 2026-09-08, but it has rested on nothing for as long as it has existed. ACD-400e-4 makes that particular contrast checkable; this AC keeps it checkable."
+  - path: docs/architecture/components/ac-driven-dev.md
+    relationship: describes
+    status: exists
+    relevance: "Component architecture for the queue side of the agreement this AC guards."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "SURFACE DECISION (IT PO, 2026-09-08) — THE CHECK RUNS AS A BEHAVIOURAL TEST IN THE PROJECT TEST SUITE, under unit_tests/ac_store/, reached by the required `Test suite (pytest)` CI gate. It must NOT be implemented as a pre-commit hook and must NOT be a standalone CI job. The reason is the both-directions clause: a commit hook is handed a staged file set, so a code-side change that stages no documentation file, or a documentation edit that stages no code, leaves the hook unfired — and the code side is the direction that actually caused this incident, when the urgency key was added and nothing re-checked the sentence. The test suite runs unconditionally on every change, which is the only surface with no path-scoping blind spot in either direction."
+  - "Every pytest invocation used to run or verify this check must set AC_ENFORCE_STRICT=1, or a red result is masked as an xfail and reads green."
+  - "The drift detector must be proved LIVE, not merely present: this AC's deliverable is the demonstration that it refuses. Show a doc-side falsification turning it red, show a code-side falsification turning it red, and show it green when neither is falsified. A detector asserted only on the happy path is satisfied by one that can never fail, and that is indistinguishable from the absence being closed."
+  - "The code-side falsification must be applied to a COPY of the selector exercised in isolation, never to the committed scanner. Mutating scripts/ac_store/scan_ac_store.py in place to prove a point is how a mutation proof becomes a shipped regression."
+  - "The verdict must be reached by asking the queue, in both directions at once: the detector must go red when the account's words are right and the behaviour is wrong, and must not be satisfiable by the words alone. A text-comparison between the account and the scanner's source satisfies neither half."
+  - "The detector must stay silent while the account and the queue agree — no advisory output, no warning, no skipped-with-a-message. A noisy detector is switched off and a switched-off detector is the absence this AC closes."
+  - "Extend the checker delivered by ACD-400e-1b rather than authoring a second detector. Two implementations of the same agreement will drift from each other, which is the failure this AC is about, reproduced inside its own fix."
+  - "If the detector is factored into an importable module and any hook or CI gate later imports it, it must be added to the build deploy manifest in the same change, or the deployed gate raises ModuleNotFoundError while the unit tests pass against the source tree."
+  - "This AC adds no gate to the queue and no requirement to any build. Its subject is the agreement between the account and the behaviour, and it must not acquire a requirement about what the queue outputs."
+test_spec:
+  - name: test_editing_the_account_to_describe_an_order_the_queue_does_not_use_is_caught
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    surface_invoked: "python scripts/ac_store/scan_ac_store.py --ac-root <tmp> --json"
+    description: "An account fixture edited to state an admission test or an ordering the queue does not use produces a reported disagreement naming the statement that no longer holds and the answer the queue gave — the documentation-side direction."
+  - name: test_changing_the_queue_to_consult_a_further_ordering_key_is_caught
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    surface_invoked: "an isolated copy of the selector consulting an extra ordering key"
+    description: "With the account left exactly as published and an isolated copy of the selector made to consult a further key, the detector reports a disagreement — the code-side direction, and the one that produced the original ACD-400a-1 drift."
+  - name: test_the_detector_is_not_satisfied_by_the_expected_words_being_present
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    angle: seam
+    surface_invoked: "an isolated copy of the selector whose behaviour contradicts the unchanged account"
+    description: "Every word the account is expected to contain is present and unchanged while the behaviour beneath it is wrong, and the detector still goes red — proving the verdict comes from asking the queue rather than from reading text."
+  - name: test_the_detector_reports_nothing_while_the_account_and_the_queue_agree
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    surface_invoked: "python scripts/ac_store/scan_ac_store.py --ac-root <tmp> --json"
+    description: "Against the real committed account and the real committed selector, the detector passes and emits no advisory output, so an undrifted store is not made to look like a drifted one."
+test_rationale: "A drift detector's only failure mode that matters is being inert, and inertness is invisible to any test that exercises only the agreeing case. The three falsification tests are the AC — they are the paired 'prove it can refuse' assertions without which the guarantee is discharged by a detector that always returns success. The quiet-when-agreeing test is the counterweight that stops the refusals being bought with false positives."
+delivers_to: null
+expects_from:
+  ac_id: ACD-400e-1b
+  contract: "The agreement checker returning, per verdict, {statement, predicted, observed, agrees} with all disagreements reported in one run. This AC drives it from both sides — a falsified account against the real selector, and the real account against an isolated falsified selector — and asserts it refuses in each case and stays silent otherwise."
+origin_agent: BrainCandy
+created: 2026-09-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: docs
+risk_surface: contract_boundary
+notes: |
+  AUTHORED 2026-09-08 by BA v3, stage 2 of PO -> BA -> IT-PO. Decomposes ACD-400e.
+
+  WHY "ONE TRUE ACCOUNT" NEEDS THIS AC AND IS NOT FINISHED WITHOUT IT. ACD-400e-1 makes
+  the account true. ACD-400e-2 makes the older records true. Neither keeps anything true.
+  The divergence this whole tree exists to repair was not created by anyone writing
+  something false: ACD-400a-1 was accurate when it was authored, and became false when the
+  urgency key was added to the queue and nothing re-checked the sentence. A repair that
+  does not close that loop buys one accurate day and then decays the same way, and the
+  next person to find it will have the same evidence and the same argument.
+
+  THE BOTH-DIRECTIONS REQUIREMENT IS THE LOAD-BEARING ONE. A check that only validates
+  the prose against the code catches an edit to the account and misses the change that
+  actually caused this incident, which came from the code side. The criteria name one
+  concrete example from each side so that neither can be quietly omitted, and the second
+  example is deliberately the real history — a further ordering key being added.
+
+  THE READ-BY-ASKING CLAUSE. This repo has shipped checks that searched source text for a
+  string and passed on dead code; a check on the agreement between prose and behaviour is
+  an unusually inviting place to make that mistake, because both sides are text. The
+  clause forbids it in both directions at once: the check must fail when the words are
+  right and the behaviour is wrong, and must not be satisfiable by the words alone.
+
+  THE FINAL CLAUSE EXISTS BECAUSE A NOISY CHECK IS DISABLED. A detector that reports a
+  disagreement while the two agree gets switched off, and a switched-off detector is
+  indistinguishable from the absence this AC is closing.
+
+  SCOPE — THIS IS NOT A NEW GATE ON THE QUEUE. The subject is the agreement between the
+  account and the behaviour. It says nothing about what the queue outputs, adds no
+  requirement to any build, and does not touch the ACS-1100-shaped follow-up flagged in
+  ACD-400c's notes.
+
+  AGENT ASSIGNMENT AND TECHNICAL ENRICHMENT DELIBERATELY OMITTED — BA-authored L2. The
+  criteria deliberately do not say WHERE the check runs. Whether it is a test, a commit
+  hook or something else is a surface decision, and freezing one into a behavioural
+  requirement would make this AC pass or fail on a plumbing change rather than on whether
+  drift is caught.

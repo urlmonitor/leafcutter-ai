@@ -1,0 +1,102 @@
+id: ACS-1400a
+components:
+  - ac_store
+  - commit_guardian
+title: "Nothing joins the store unrecorded by the thing it belongs to"
+component: ac-store
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  A new part is recorded by its parent at the moment it lands, or it does not land.
+
+  When someone adds a part to an existing requirement, the requirement's own record
+  of its parts is updated in the same breath — and when it is not, the person is
+  told, every time, rather than only in the cases the check happened to be shown.
+depends_on:
+  - ACS-1400
+doc_links:
+  - path: templates/scripts/commit_guardian/check_ac_parent_covered_by.py
+    relationship: related
+    status: exists
+    relevance: "THE SURFACE, AND IT ALREADY EXISTS — this L1 closes its holes, it does not commission a new guard. THREE distinct escape hatches, and the BA must treat them as three separate behaviours: (1) `_get_staged_ac_paths` reads only the commit's staged set; (2) `_check_file` returns [] unless `derive_parent_id(child_id)` also appears in the child's `depends_on` — measured 2026-09-08, this alone exempts 26 of the 47 and is the BIGGEST of the three; (3) parent-absent-from-index fails open with a WARNING. Do not let a criterion close (1) and declare the L1 met."
+  - path: scripts/ac_store/ac_parent_id.py
+    relationship: related
+    status: exists
+    relevance: "`derive_parent_id` is purely lexical and returns None for a bare PREFIX-NNN id, which makes whole id families structurally invisible to this guard in both directions. ac-schema.md states this outright as consequence 3 of the covered_by scope convention. Any criterion here must say what the guard does when the parent cannot be derived at all — silence is the current answer and it is the wrong one."
+  - path: docs/reference/ac-schema.md
+    relationship: related
+    status: exists
+    relevance: "Its 'Authoring agents — parent covered_by update (mandatory)' section already states the rule this L1 enforces, and its covered_by table asserts the hook is 'blocking'. Both descriptions are currently truer than the code. If the enforcement changes shape, this is the text that must change with it."
+  - path: docs/acceptance-criteria/ac-store/ACS-1200-parked-ideas/ACS-1200a.yaml
+    relationship: related
+    status: exists
+    relevance: "DIRECT COLLISION — READ BEFORE SPECIFYING ANYTHING, AND SEQUENCE WITH IT. ACS-1200a modifies the SAME FILE to add a parked-tree exemption. This L1 makes that file stricter; ACS-1200a makes it more permissive in one specific case. Landing this one first makes the wrong rule fire more reliably against parked trees. ACS-1200's own notes already flag the identical sequencing hazard against GE-120b."
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-09-08
+amended_by: []
+superseded_by: null
+covered_by:
+  - ACS-1400a-1
+  - ACS-1400a-2
+  - ACS-1400a-3
+  - ACS-1400a-4
+  - ACS-1400a-5
+implemented_by: []
+change_target:
+  - code
+risk_surface: contract_boundary
+documentation_triggers:
+  - reference-doc
+notes: |
+  KEEPS THE BACKLOG FROM REFILLING. This L1 is about the moment work lands. The
+  historical population is ACS-1400c and the out-of-band view is ACS-1400b;
+  neither belongs here, and a repair that clears the store while this stays open
+  buys a store that rots again.
+
+  THE CENTRAL INSIGHT, AND IT IS THE ONE MOST LIKELY TO BE LOST IN DECOMPOSITION:
+  the guard's SILENCE currently means three different things — it passed, it was
+  never handed the file, or it declined to look because `depends_on` did not name
+  the structural parent. Only the first is a pass. A criterion that merely makes
+  the check stricter, without making its silence unambiguous, leaves the defect
+  intact in a new shape. GE-120's could_not_check outcome already exists in this
+  very file (`_emit_could_not_check`, OUTCOME_COULD_NOT_CHECK) as the established
+  vocabulary for "did not run" — reuse it rather than inventing a second channel.
+
+  ON THE `depends_on` HATCH SPECIFICALLY. It is not a bug someone left behind; the
+  code comment says it "prevents false positives for cross-branch depends_on
+  entries." That rationale deserves to be engaged rather than deleted. But the
+  measurement says the exemption has swallowed the majority of the real
+  population, and the records it swallowed are not cross-branch curiosities —
+  BP-100b's eleven children each name their SUCCESSOR in depends_on rather than
+  their structural parent, which is a coherent authoring choice that the guard
+  then silently reads as permission. Whatever replaces it must distinguish "this
+  child deliberately depends elsewhere" from "this child's parent link is
+  unrecorded," and it must do so out loud.
+
+  DO NOT MAKE THIS A NEW HOOK. There is one guard for this rule and it should stay
+  one. A second check on the same field is how two readers of the same evidence
+  drift apart, which this repo has already paid for once (EPIC-ComputedQualityGates
+  FP-1).
+
+  VERIFY BEHAVIOURALLY, AND KNOW HOW THIS HOOK IS INVOKED. It reads the git index
+  or HOOK_TEST_FILES, NOT argv, so passing a path on the command line does not
+  make it check that path. A test that hands it nothing and asserts exit 0 proves
+  nothing at all. This trap is already written into ACS-1300a-3's it_requirements
+  and into CLAUDE.md; it has produced false-green results in this repo three times.
+
+  DOCUMENTATION: `[reference-doc]`. ac-schema.md currently describes an
+  unconditional blocking rule that the code does not implement. Whatever this L1
+  settles, the written rule and the enforced rule must agree when it lands —
+  shipping without that leaves the documentation contradicting the behaviour,
+  which is the condition that let the gap persist unnoticed. No how-to: nobody
+  invokes this deliberately, it fires on commit. No sequence-diagram: one check,
+  one file, no multi-actor flow.

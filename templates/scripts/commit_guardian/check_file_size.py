@@ -10,13 +10,24 @@ BUSINESS CONTEXT: Keeps file complexity under control by forcing refactors of
     file already over the line may shrink or stay the same size and commit
     cleanly, but a change that leaves it LONGER than it stood at HEAD is
     refused.
+
+    MERGE COMMITS (KI-CG-20260908-file-size-ratchet-refuses-merge-commits):
+    judging a merge against HEAD alone refused nearly every ordinary
+    `git merge origin/main` that touched an already-oversized file, because
+    the other parent's already-accepted growth of that file looked like NEW
+    growth the merge author had introduced. The permitted previous length
+    during a merge is now the MOST PERMISSIVE length across every parent —
+    see _file_size_ratchet.py's own MERGE COMMITS section for the full
+    reasoning and the octopus-merge (MERGE_HEAD-reading) detail. An
+    ordinary, non-merge commit is judged exactly as before.
 ARCHITECTURE: Delegates previous-length resolution and the shared line
     -counting rule to the sibling module _file_size_ratchet.py (see that
-    module for the HEAD-blob lookup, the two-situation INDETERMINATE
-    fail-closed floor, and why no persisted baseline / new config key is
-    used). An empty previous-length history (unborn HEAD, or a HEAD tree
-    with no covered file) is a legitimate, COMPLETING result named
-    "EMPTY HISTORY" in the run's output, never folded into INDETERMINATE.
+    module for the HEAD-blob lookup, the merge-aware parent-revision
+    resolution, the two-situation INDETERMINATE fail-closed floor, and why
+    no persisted baseline / new config key is used). An empty previous
+    -length history (unborn HEAD, or a HEAD tree with no covered file) is a
+    legitimate, COMPLETING result named "EMPTY HISTORY" in the run's
+    output, never folded into INDETERMINATE.
 
 Pre-commit hook to block files exceeding line limits.
 
@@ -29,7 +40,8 @@ Exit Codes:
         the previous-length history is empty)
     1 - One or more files exceed limits, or grew while already over
     2 - INDETERMINATE: the previous-length source could not be reached at
-        all, or a resolvable HEAD blob could not be interpreted
+        all, a resolvable HEAD blob could not be interpreted, or a staged
+        file's CURRENT content could not be opened or decoded (GE-127a-1-i)
 
 Usage:
     poetry run python scripts/commit_guardian/check_file_size.py
@@ -45,9 +57,11 @@ project_root = find_project_root()
 
 from _file_size_ratchet import (
     EMPTY_HISTORY_REASON,
+    CurrentLengthUnmeasurableError,
     PreviousLengthSourceError,
-    count_content_lines,
+    measure_current_length,
     resolve_head_covered_paths,
+    resolve_parent_revisions,
     resolve_previous_lengths,
 )
 from config import (
@@ -106,28 +120,34 @@ def count_lines(filepath: str) -> int:
     """
     Count all lines in a file (excluding docstrings and block comments).
 
-    Delegates the actual counting rule to count_content_lines(), the same
-    pure function used to measure a file's previous (HEAD blob) length, so
-    the current-length and previous-length measurements can never drift
-    apart by even one line.
+    Delegates the actual counting rule to measure_current_length(), which in
+    turn calls count_content_lines() -- the same pure function used to
+    measure a file's previous (HEAD blob) length, so the current-length and
+    previous-length measurements can never drift apart by even one line.
+
+    A path that does not exist on disk (a staged DELETION) is deliberately
+    NOT one of the two unmeasurable situations -- see GE-127a-1-i's scope
+    boundary -- so it is checked here, before delegating, and reported as
+    0 without raising. This is the ONLY caller-visible zero this function
+    ever returns; every other unmeasurable state raises instead.
 
     Args:
         filepath: Path to the file to count.
 
     Returns:
-        Total number of lines in the file, or 0 if it cannot be read.
+        Total number of lines in the file, or 0 if the path does not exist
+        (a staged deletion, out of this check's scope).
+
+    Raises:
+        CurrentLengthUnmeasurableError: the file exists but cannot be opened
+            at all, or its content cannot be decoded as UTF-8 -- the two
+            situations GE-127a-1-i requires to be named and refused rather
+            than silently measured as zero.
     """
-    path = Path(filepath)
-    if not path.exists():
+    if not Path(filepath).exists():
         return 0
 
-    try:
-        content = path.read_text(encoding="utf-8")
-    except (OSError, UnicodeDecodeError) as exc:
-        print(f"⚠️  Could not read {filepath} to measure its length: {exc}", file=sys.stderr)
-        return 0
-
-    return count_content_lines(content)
+    return measure_current_length(filepath)
 
 
 def get_limit_for_extension(filepath: str) -> int:
@@ -229,6 +249,14 @@ def _resolve_ratchet_or_indeterminate(covered_paths: list[str]) -> tuple[dict[st
     function raised / what it returned, never downstream by inspecting how
     many previous lengths came back.
 
+    While a merge is in progress, the previous length resolved for each
+    path is the MOST PERMISSIVE (maximum) length found across every parent
+    of the commit -- HEAD plus every parent named in MERGE_HEAD -- not
+    HEAD's alone (KI-CG-20260908-file-size-ratchet-refuses-merge-commits).
+    A merge whose parent set cannot be established is itself an
+    INDETERMINATE source, resolved by the same
+    PreviousLengthSourceError floor as any other unreachable source.
+
     Args:
         covered_paths: Staged file paths of a checked extension.
 
@@ -256,7 +284,8 @@ def _resolve_ratchet_or_indeterminate(covered_paths: list[str]) -> tuple[dict[st
         return {}, None
 
     try:
-        previous_lengths = resolve_previous_lengths(covered_paths)
+        parent_revisions = resolve_parent_revisions()
+        previous_lengths = resolve_previous_lengths(covered_paths, parent_revisions)
     except PreviousLengthSourceError as exc:
         print(f"INDETERMINATE: reason={exc.reason}", file=sys.stderr)
         return None, 2
@@ -306,8 +335,9 @@ def main() -> int:
         that shrank/stayed the same, or the previous-length history is
         empty), 1 (a file exceeds its limit or grew while already
         oversized), or 2 (INDETERMINATE — the previous-length source could
-        not be reached at all, or a resolvable HEAD blob could not be
-        interpreted).
+        not be reached at all, a resolvable HEAD blob could not be
+        interpreted, or a staged file's CURRENT content could not be opened
+        or decoded).
     """
     # Ensure header output (emojis) works on Windows
     if sys.stdout.encoding.lower() != "utf-8":
@@ -336,14 +366,18 @@ def main() -> int:
     failed_files: list[tuple[str, int, int]] = []
     passed_files: list[tuple[str, int, bool]] = []  # (path, lines, is_new)
 
-    for filepath, is_new in covered_files.items():
-        verdict, lines, reference = _classify_file(filepath, is_new, previous_lengths)
-        if verdict == "grew":
-            grown_files.append((filepath, reference, lines))
-        elif verdict == "too_large":
-            failed_files.append((filepath, lines, reference))
-        else:
-            passed_files.append((filepath, lines, is_new))
+    try:
+        for filepath, is_new in covered_files.items():
+            verdict, lines, reference = _classify_file(filepath, is_new, previous_lengths)
+            if verdict == "grew":
+                grown_files.append((filepath, reference, lines))
+            elif verdict == "too_large":
+                failed_files.append((filepath, lines, reference))
+            else:
+                passed_files.append((filepath, lines, is_new))
+    except CurrentLengthUnmeasurableError as exc:
+        print(f"INDETERMINATE: reason={exc.reason}", file=sys.stderr)
+        return 2
 
     # Print results
     print("\n📏 File Size Check\n")
@@ -374,6 +408,33 @@ if __name__ == "__main__":
 ====================================================================
 DECISION HISTORY
 ====================================================================
+- 2026-09-08 [python-coder/KI-CG-20260908-file-size-ratchet-refuses-merge-commits]:
+  Made the ratchet merge-aware. _resolve_ratchet_or_indeterminate() now
+  resolves every parent revision of the commit in progress (via
+  _file_size_ratchet.resolve_parent_revisions(), HEAD plus every
+  MERGE_HEAD line) and passes them into resolve_previous_lengths(), which
+  now takes the MAXIMUM previous length found across all of them as each
+  file's permitted previous length -- fixing a defect where an ordinary
+  `git merge origin/main` was refused on every already-oversized file the
+  other side had already (and legitimately) grown, because judging solely
+  against HEAD made that already-accepted growth look newly introduced by
+  the merge. _classify_file()'s own logic is unchanged: it already judged
+  a file against whatever "previous" length it was handed, so a merge with
+  a correctly-resolved permissive baseline now passes without any change
+  to the crossing-refusal / ratchet branching itself.
+- 2026-09-07 [python-coder/GE-127a-1 + GE-127a-1-i]: Registered `check-file
+  -size` in commit_guardian.json's hooks_manifest.hooks (always_run: true,
+  the script resolves its own staged-file set) -- the gate previously had
+  correct comparison logic but ran at no commit at all. Replaced
+  count_lines()'s swallow-and-return-0 behaviour on an unreadable/undecodable
+  CURRENT file with a new CurrentLengthUnmeasurableError (raised by the new
+  sibling measure_current_length() in _file_size_ratchet.py), caught in
+  main() and reported as INDETERMINATE (exit 2) naming which of the two
+  situations occurred ("cannot be opened at all" vs. "not readable as text
+  in the encoding the standard reads") -- reusing BP-100n-4-ii's verdict
+  vocabulary unchanged. A staged deletion (path does not exist) is excluded
+  from this branch explicitly in count_lines() and still reports 0 without
+  raising, per GE-127a-1-i's own out-of-scope carve-out.
 - 2026-09-01 [python-coder/GE-127b-1 + GE-127b-1-i]: Added the ratchet: an
   already-oversized file (previous HEAD length over its limit) that GROWS is
   refused, naming both the previous and new lengths; one that shrinks or

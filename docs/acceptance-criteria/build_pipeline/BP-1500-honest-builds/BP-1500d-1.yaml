@@ -50,7 +50,7 @@ doc_links:
   - path: scripts/build_helpers.py
     relationship: describes
     status: exists
-    relevance: "IT-PO ADDITION. The defect's actual location, per KI-BP-011. Line ~185 computes manifest_path = package_root / '.build_manifest.json' -- always the package, never --target-dir. Lines ~83 and ~95-96 key output_mappings via relative_to(package_root.parent); lines ~193-195 relativize the template keys the same way. Lines ~201-213 swallow the resulting ValueError into a warning and let the build continue. All four symptoms trace to the single package_root.parent anchor. Named as the surface to change, not as a substitute for the behavioural proof."
+    relevance: "BA CORRECTION 2026-09-07 -- EVERY LOCATED FACT IN THE PRIOR TEXT IS NOW FALSE, AND THE HEADLINE CLAIM IS ITS OWN OPPOSITE. The prior text is quoted in full so the change is auditable: 'IT-PO ADDITION. The defect's actual location, per KI-BP-011. Line ~185 computes manifest_path = package_root / \".build_manifest.json\" -- always the package, never --target-dir. Lines ~83 and ~95-96 key output_mappings via relative_to(package_root.parent); lines ~193-195 relativize the template keys the same way. Lines ~201-213 swallow the resulting ValueError into a warning and let the build continue. All four symptoms trace to the single package_root.parent anchor.' Read against current source on 2026-09-07: the manifest's directory is resolved from the target whenever one is supplied and falls back to the package only when it is not, so it is the TARGET by default and the package only in the no-target call shape; the output-mapping keys are computed against the target as their base, not against the package's parent; the template-key relativization no longer raises for a sibling layout, because the package's position is resolved lexically once, up front, and recorded as data (including the null case) rather than recomputed per file; and the broad handler that swallowed the ValueError now sits roughly a thousand lines from the cited line numbers and, crucially, RETURNS the failure to the build's exit path instead of letting the build continue to success. The single package_root.parent anchor the prior text named as the common cause is gone. WHAT IS STILL WORTH READING THIS FILE FOR: the handler still swallows locally, still writes a manifest carrying an empty record, and still prints a success line for that manifest before the failure is reported; and the output-key relativization is purely lexical, which is the subject of BP-1500d-1-ii. Named as context, never as a substitute for the behavioural proof -- no verdict on this AC may be taken from reading it."
   - path: templates/scripts/commit_guardian/check_output_drift.py
     relationship: describes
     status: exists
@@ -92,10 +92,10 @@ estimated_complexity: XL
 declares_side_effect: true
 it_requirements:
   - "THE OUT-OF-PACKAGE HARNESS DOES NOT EXIST AND THIS AC BUILDS IT. BP-900h-1 is an unstarted spec (work_status not_started, zero test hits across the workspace, no consumer-simulation job in ci.yml). Nothing may be reused from it. The harness is in this AC's scope and is the reason its complexity is XL; treating it as pre-existing is how this AC gets estimated at a one-line change and then stalls. Build it to satisfy BP-900h-1's specification so that AC can later adopt it rather than stand up a second one, and parameterise the package-directory name and the deployed output root as inputs rather than constants, because BP-900h-4 and BP-900h-4-i both need to vary them."
-  - "THE HARNESS TARGET MUST BE UNDER A SYSTEM TEMP ROOT, AND A SIBLING PATH IS A FALSE GREEN. Measured 2026-08-25: package_root is <workspace>/leafcutter-ai and the code anchors on package_root.parent, so a scratch target placed at a SIBLING path under <workspace>/ relativizes SUCCESSFULLY and produces 154 mappings -- it exercises the passing path and is green on the exact install that shipped broken. A target under the system temp root raises ValueError instead. Use tempfile / tmp_path (verified safe: pytest.ini declares no --basetemp and no conftest overrides tmp_path_factory) and assert as a fixture precondition that the target's realpath is NOT under package_root.parent. That assertion is load-bearing, not defensive."
-  - "The harness layout is a COPY of the package at <scratch>/leafcutter-ai/ with the TARGET itself empty apart from a minimal skills_config.json. Note that BP-900h-1's own constraint text ('built from an empty directory, NOT from a copy of this repository') reads ambiguously -- it constrains the TARGET, not the package, which must be present as a copy for the build to run at all. Do not silently pick a reading; record which one the harness implements."
+  - "THE HARNESS TARGET MUST BE UNDER A SYSTEM TEMP ROOT, AND A PATH BESIDE THE DEVELOPMENT CHECKOUT IS A FALSE GREEN. Measured 2026-08-25: the REAL package_root is <workspace>/leafcutter-ai and the code anchored on package_root.parent, so a scratch target placed at a SIBLING path under <workspace>/ relativized SUCCESSFULLY and produced 154 mappings -- it exercises the passing path and is green on the exact install that shipped broken. A target under the system temp root raised ValueError instead. Use tempfile / tmp_path (verified safe: pytest.ini declares no --basetemp and no conftest overrides tmp_path_factory). THE PRECONDITION IS TWO RULES AGAINST TWO DIFFERENT PACKAGE ROOTS, AND CONFLATING THEM IS ITSELF A FALSE-GREEN VECTOR. CORRECTED 2026-09-07: this requirement previously read 'assert as a fixture precondition that the target's realpath is NOT under package_root.parent' -- one loose rule naming no particular package root, which taken against the scratch copy forbids the only layout that proves anything. State EQUALITY where equality is meant, and name the root each rule is evaluated against. (1) AGAINST THE REAL PRODUCING PACKAGE -- the development checkout this suite is running from: the target's realpath must be neither EQUAL TO nor a DESCENDANT OF that package root's parent directory. 'Not under', in the equal-or-descendant sense, is CORRECT here and is exactly what the 2026-08-25 measurement above establishes; a target reachable through the development workspace is not an arbitrary consumer install. (2) AGAINST THE SCRATCH PACKAGE COPY the build is actually invoked from (<scratch>/leafcutter-ai): the forbidden case is EQUALITY ALONE -- target == <scratch>, which is target == the scratch package copy's parent, the self-host layout ADR-001 identifies as the one place this whole family of defect looks correct. DESCENDANT-OF IS REQUIRED HERE, NOT FORBIDDEN: the correct layout puts the receiving project at <scratch>/receiving_project as a SIBLING of the package copy (neither nested in the other), so the target IS a descendant of the scratch package copy's parent, by construction, in every correct run. Applying rule (1)'s 'not under' form to the scratch root rejects every correct fixture; applying rule (2)'s equality-only form to the real root admits a target sitting beside the development checkout. Both assertions are load-bearing rather than defensive, and each must name the root it is evaluated against -- an implementation that satisfies the letter of one rule against the other root satisfies neither's intent. LIVE RE-MEASUREMENT 2026-09-07, reported alongside this correction: a real out-of-package build now writes 471 output mappings and 174 template entries into the receiving project with a truthful relative package_root, and the drift gate reads verified=174 where it previously read BLOCKED verified=0. Rule (1) therefore now rests on live evidence as well as the archived measurement, and the archived 2026-08-25 numbers above are KEPT, dated, as the evidence for WHY the rule exists rather than as a description of current behaviour. Note what the live numbers change about the risk: the temp-root venue is now a working, verifiable install, so a fixture misplaced beside the development checkout can no longer be told apart from a correct one by its outcome -- it must be excluded by this precondition, which is the only thing left that distinguishes them. ONE DISCREPANCY, RESOLVED 2026-09-07 AND RECORDED WITH ITS REAL CAUSE: BP-1500d-3 records 472 mappings and 175 template entries where this requirement records 471 and 174. THE FIRST EXPLANATION OFFERED HERE WAS WRONG, AND IS RECORDED AS WRONG BECAUSE IT WAS PLAUSIBLE: it read 'the two counts were taken under different fixture states', the guess being that the harness's own config file was counted in one run and not the other. It was not. Measured against the current tree into a fresh temp target holding NO config file at all: 472 output mappings, 175 template entries, package_root '../../<workspace>/worktrees/followups' -- which is -3's pair exactly, from a target with no config in it. THE ACTUAL CAUSE IS DULLER AND WORSE FOR ANYONE QUOTING A NUMBER: main gained one template and one output BETWEEN the two measurements. 471/174 was taken in the bp-1500d-1 worktree and 472/175 in a later tree, with several PRs merging on that single day. Both counts were accurate when taken. NEITHER IS A GENERAL FACT, and a third measurement an hour later may differ again. THE CONCLUSION IS UNCHANGED AND THE CORRECTED CAUSE SUPPORTS IT BETTER THAN THE GUESS DID: do not copy either count into an assertion. Assert a non-vacuity floor -- the record is non-empty and every entry resolves inside the receiving project -- and re-measure locally if an exact number is ever genuinely needed. A test asserting 471, or 472, is a hostage to the week it was written. WHAT THIS IS AN INSTANCE OF, STATED PLAINLY BECAUSE IT IS THE FOURTH ON ONE DAY: a figure that was TRUE WHEN MEASURED AND FALSE WHEN READ. The other three on 2026-09-07 were the '20 composites' sweep figure in CLAUDE.md carried forward from a six-week-old count; a '549 of 856' ratio shipped by pairing a freshly re-measured numerator with an inherited denominator; and two concurrent branches recounting the known-issues index to 224 and to 237 when the truth at merge was 239. Same failure, four surfaces, one day. Treat EVERY count in this record as dated evidence for a claim and never as a value to assert on -- including the 2026-08-25 archive above, and including this paragraph's own numbers."
+  - "The harness layout is a COPY of the package at <scratch>/leafcutter-ai/ with the TARGET itself empty apart from a minimal config at <target>/.claude/skills_config.json. Note that BP-900h-1's own constraint text ('built from an empty directory, NOT from a copy of this repository') reads ambiguously -- it constrains the TARGET, not the package, which must be present as a copy for the build to run at all. Do not silently pick a reading; record which one the harness implements. CONFIG LOCATION NAMED 2026-09-07, AND IT IS LOAD-BEARING RATHER THAN INCIDENTAL. This requirement previously read 'a minimal skills_config.json' with no path at all, and that silence is what licensed a fixture that configures nothing. The build auto-detects its config ONLY at <target>/<platform_dir>/skills_config.json, iterating .claude, .gemini, .cursor, .github, .cline -- verified at source 2026-09-07, scripts/config_loader.py -- with NO top-level fallback. A config written to <target>/skills_config.json is therefore INERT, and a build run against it uses built-in defaults throughout. WHY AN INERT CONFIG WENT UNNOTICED, WHICH IS THE PART WORTH CARRYING FORWARD: the minimal config sets output_root to the value the build already defaults to (.leafcutter), so a config that was never read and a config that was read produce identical builds. There is no error, no warning, and nothing in the result that differs -- a fixture that configures nothing is indistinguishable from a correctly configured one for exactly as long as the configured value matches the default. THE CONSEQUENCE IS NOT COSMETIC: it_requirements #1 requires the deployed output root to be a PARAMETER of the harness so BP-900h-4 and BP-900h-4-i can vary it, and a caller who varies it through a top-level config is silently ignored -- the harness reports the caller's value while the build uses the default, which is a false green in the harness itself rather than in the code under test. WRITE THE CONFIG TO <target>/.claude/skills_config.json AND PROVE IT WAS READ, not merely written: set at least one value that DIFFERS from the shipped default and assert the build's own output reflects that value. An assertion that the file exists proves nothing this defect does not also satisfy."
   - "The record must be written into the project the build was aimed at -- the build's declared target root. A record written anywhere else does not satisfy this AC, whatever else it contains."
-  - "The record must account for the receiving install: for an out-of-package target it must be non-empty. Measured 2026-08-25: the same build that yields 154 mappings for an in-parent target yields output_mappings {} for a temp-root target, and still exits 0. An install whose record names zero artifacts is portable, readable and useless while satisfying every other clause here, so this is the constraint most likely to be closed accidentally."
+  - "The record must account for the receiving install: for an out-of-package target it must be non-empty. Measured 2026-08-25: the same build that yields 154 mappings for an in-parent target yields output_mappings {} for a temp-root target, and still exits 0. An install whose record names zero artifacts is portable, readable and useless while satisfying every other clause here, so this is the constraint most likely to be closed accidentally. GLOSS TIGHTENED 2026-09-07 -- NON-EMPTINESS IS A FLOOR, NOT THE MEASURE OF 'ACCOUNTS FOR', AND THIS SENTENCE IS NOT A LICENCE FOR AN EXISTENCE-ONLY PROOF. As written it pinned the criterion's 'accounts for the receiving install' clause to a property of QUANTITY (the entry set is non-empty) when the clause is also about LOCATION (each entry names something in THAT project). The two come apart, and the way they come apart is not hypothetical: joining an entry key onto the receiving project's root and asserting the result is_file() answers True for a key that steps back out of the project with a relative parent segment, because the joined path resolves to a real file outside the project whenever the intermediate directories exist -- verified out of process 2026-09-07. So an implementation may satisfy every word of the original sentence with a record whose entries do not describe the receiving install at all. WHAT THIS AC OWES AND WHAT IT DOES NOT: non-emptiness plus per-entry resolution inside the receiving project is the floor this requirement sets on any proof written for it, and a check whose only discriminating power is 'a file exists at the joined path' does not meet it. Whether an entry POINTS OUTSIDE the project it was written into is the subject of BP-1500d-1-ii, authored 2026-09-07, and must NOT be re-specified or re-asserted here; the correction above repairs this requirement's own misleading gloss and adds no behaviour to this AC."
   - "Every path derivation on the record-writing path must be anchored to a root that exists for an arbitrary consumer install. Anchoring to the producing package's parent directory is the defect itself; keeping that anchor and adding a fallback for the case that currently raises is not a fix, because the fallback inherits the same unrepresentative assumption."
   - "The build must not write, modify or delete the producing package's own record when it is aimed at a different project. This is BP-1500a's guarantee and is a hard constraint on this AC's implementation, not a behaviour this AC asserts. The record is gitignored, so a regression here shows in no git status and must be asserted directly."
   - "CALL-SITE AUDIT IS MANDATORY, AND BOTH READERS ARE IN IT. check_build_drift.py and check_output_drift.py each resolve the record from a list of plausible roots derived from the PACKAGE. Relocating the write target without updating both moves the fail-open from consumer installs into this repo. Name every reader in sign-off and state, for each, where it now looks."
@@ -105,7 +105,7 @@ it_requirements:
 delivers_to:
   - agent: python-coder
     ac_id: BP-1500d-2
-    contract: "TWO things, because the second does not yet exist. (1) The out-of-package consumer-simulation harness: a scratch project under a system temp root whose realpath is asserted NOT to be under package_root.parent, holding only a minimal skills_config.json, with a copy of the package at <scratch>/leafcutter-ai/, built via the real build command line. (2) A record file written into that project's own root carrying a non-empty set of entries naming artifacts present under it. BP-1500d-2 relocates that record and reads it at the new location; it neither produces the record nor builds a second harness."
+    contract: "TWO things, because the second does not yet exist. (1) The out-of-package consumer-simulation harness: a scratch project under a system temp root at <scratch>/receiving_project, holding only a minimal config at <scratch>/receiving_project/.claude/skills_config.json, SIBLING to a copy of the package at <scratch>/leafcutter-ai/ with neither nested in the other, built via the real build command line as 'python <scratch>/leafcutter-ai/scripts/build.py --target-dir <scratch>/receiving_project'. PLACEMENT RULE, CORRECTED 2026-09-07 -- it previously read 'whose realpath is asserted NOT to be under package_root.parent', which names no particular package root and, read against the scratch copy, forbids the sibling layout it exists to require: the target's realpath must be neither EQUAL TO nor a DESCENDANT OF the REAL producing package's parent directory, and must not be EQUAL TO the SCRATCH package copy's parent (<scratch>). Against the scratch copy the forbidden case is EQUALITY ALONE; descendant-of is required, because the sibling target is a descendant of <scratch> in every correct run. Consume the rule in that two-rooted form -- see it_requirements #2 -- and do not re-derive it from the single loose sentence this contract used to carry. (2) A record file written into that project's own root carrying a non-empty set of entries naming artifacts present under it. BP-1500d-2 relocates that record and reads it at the new location; it neither produces the record nor builds a second harness. CONFIG PATH NAMED 2026-09-07: this contract previously said only 'holding only a minimal skills_config.json', with no path. The build auto-detects its config ONLY under a platform directory (.claude, .gemini, .cursor, .github, .cline) beneath the target and has NO top-level fallback (verified at source, scripts/config_loader.py), so a config at <target>/skills_config.json is inert and -- because the minimal config's value matches the build's own default -- produces a build byte-identical to a correctly configured one. BP-1500d-2 must consume the harness with the config at <target>/.claude/skills_config.json and must not infer from a passing build that the fixture's config was read; see it_requirements #3."
   - agent: python-coder
     ac_id: BP-1500d-3
     contract: "The same harness, plus the ability to place it in a state where the record CAN be produced. BP-1500d-3's paired success run needs exactly that state to prove its failure verdict is attributable to the unproducible record rather than to a build that refuses every out-of-package target."
@@ -138,8 +138,8 @@ test_spec:
     framework: pytest
     type: behavioral
     angle: reachability
-    surface_invoked: "python <scratch>/leafcutter-ai/scripts/build.py --target-dir <scratch>"
-    description: "PRODUCTION ENTRY POINT, and the entry that cannot be replaced by a cheaper test. write_build_manifest ALREADY accepts a target_root parameter, so a direct-import unit test that passes it the scratch path passes today against the unfixed build -- the defect is that build.py never routes the target to the manifest path. Invoke the build as a SUBPROCESS through the command line a consumer runs, with a working directory that is not the package tree and an interpreter search path containing no path under the package checkout, and assert that property of the child process rather than assuming it. Then assert the record appears in the target."
+    surface_invoked: "python <scratch>/leafcutter-ai/scripts/build.py --target-dir <scratch>/receiving_project"
+    description: "PRODUCTION ENTRY POINT, and the entry that cannot be replaced by a cheaper test. write_build_manifest ALREADY accepts a target_root parameter, so a direct-import unit test that passes it the scratch path passes today against the unfixed build -- the defect is that build.py never routes the target to the manifest path. Invoke the build as a SUBPROCESS through the command line a consumer runs, with a working directory that is not the package tree and an interpreter search path containing no path under the package checkout, and assert that property of the child process rather than assuming it. Then assert the record appears in the target. LAYOUT CORRECTED 2026-09-07: this entry's surface_invoked read '--target-dir <scratch>' alongside a package copy at '<scratch>/leafcutter-ai/', which makes the target EQUAL to the scratch package copy's parent -- the self-host layout ADR-001 identifies as hiding this whole family of defect, not the out-of-package venue this L1 mandates, and a direct contradiction of this record's own it_requirements #2. It now reads the sibling form the other entries and the built harness use: package copy at <scratch>/leafcutter-ai/, target at <scratch>/receiving_project, neither nested in the other. Same defect BP-1500d-3's it-po corrected across all four of its own entries on the same date."
   - name: test_bp_1500d_1_record_entries_name_artifacts_actually_present_in_the_receiving_project
     target_dir: unit_tests/portability/
     framework: pytest
@@ -237,13 +237,237 @@ amended_by:
       the build does rather than to change what is claimed. declares_side_effect stays
       true; both negative controls, the travels-with-the-project clause and the
       no-reading-the-source clause are untouched, as are every it-po field.
+  - reason: record-correction
+    by: business-analyst
+    at: 2026-09-07
+    note: >-
+      doc_links, notes AND covered_by ONLY. criteria, title, level, depends_on,
+      readiness, work_status, priority, component, components, req_status,
+      assigned_agent, estimated_complexity, declares_side_effect,
+      it_requirements, test_spec, test_rationale, delivers_to and expects_from
+      are all exactly as their owners left them.
+
+      ONE doc_link CORRECTED, with its old text quoted in full inside the
+      replacement. The build_helpers.py relevance carried "manifest_path =
+      package_root / '.build_manifest.json' -- always the package, never
+      --target-dir", plus three more located claims and a named common cause.
+      Read against current source today, every one is false and the headline is
+      its own opposite: the record's directory comes from the target whenever
+      one is supplied. Reported second-hand by BP-1500d-3; verified here before
+      changing anything.
+
+      THREE FIELDS FLAGGED IN notes AND DELIBERATELY NOT EDITED, because they
+      are the IT PO's: test_spec entry 3's surface_invoked names the self-host
+      layout (target == package_root.parent), and it_requirements #2 plus the
+      delivers_to contract to BP-1500d-2 both phrase the placement rule as "NOT
+      under package_root.parent" when the forbidden case is EQUALITY -- the
+      loose form rejects the correct sibling layout, in which the target is a
+      descendant of that parent by construction. This is the same ambiguity
+      BP-1500d-3's it-po corrected inside -3 on the same date, and -3 correctly
+      identified this record as where the wording originates. Nothing is red
+      today only because the built harness evaluates the rule against the real
+      package's parent rather than the scratch copy's, where the two readings
+      coincide -- the specification is still ambiguous.
+
+      covered_by gains BP-1500d-1-ii, authored the same day.
+  - reason: technical-correction
+    by: it-po
+    at: 2026-09-07
+    note: >-
+      THE THREE FIELDS THE BA FLAGGED IN notes AND LEFT FOR THIS OWNER, PLUS ONE
+      GLOSS. Only it-po-owned fields were touched: test_spec entry 3
+      (surface_invoked and its description), it_requirements #2, it_requirements
+      #5 and the delivers_to contract to BP-1500d-2. criteria, notes, doc_links,
+      title, level, depends_on, readiness, work_status, priority, component,
+      components, req_status, assigned_agent, estimated_complexity,
+      declares_side_effect, test_rationale, expects_from, covered_by and the
+      other four delivers_to contracts are exactly as their owners left them.
+
+      1. test_spec entry 3's surface_invoked read
+      "--target-dir <scratch>" against a package copy at
+      "<scratch>/leafcutter-ai/", making the target EQUAL to the scratch package
+      copy's parent -- the self-host layout ADR-001 says hides this family of
+      defect. Corrected to "--target-dir <scratch>/receiving_project", the
+      sibling form every other entry and the built harness use, with the old
+      text quoted in the entry's description so the change is auditable.
+      BP-1500d-3 carried the identical error and corrected it on the same date.
+
+      2. it_requirements #2 and the delivers_to contract to BP-1500d-2 both
+      stated the placement rule as "the target's realpath is NOT under
+      package_root.parent" -- one loose rule naming no particular package root.
+      Read against the SCRATCH package copy it forbids the sibling layout it
+      exists to require, because the receiving project is a descendant of
+      <scratch> by construction in every correct run. Both now state TWO rules
+      against TWO named roots: equal-or-descendant is forbidden against the REAL
+      producing package's parent (which is what the 2026-08-25 measurement
+      established), while EQUALITY ALONE is forbidden against the scratch
+      package copy's parent, where descendant-of is required rather than
+      forbidden. Old text quoted in place in both fields.
+
+      NOTHING WAS RED BEFORE THIS CORRECTION AND THAT IS THE POINT. The built
+      harness evaluates the rule against the real package's parent, where the
+      loose and the precise readings coincide, so the ambiguity was masked by an
+      implementer's incidental choice of root rather than resolved by the
+      specification. The next implementer could pick the scratch root in good
+      faith and get a precondition that rejects every correct fixture. No harness
+      change is implied or requested by this amendment: the harness already
+      implements rule (1) correctly and does not evaluate rule (2) at all.
+
+      3. it_requirements #5's gloss tied "accounts for the receiving install" to
+      the entry set being NON-EMPTY -- a property of quantity standing in for a
+      clause that is also about location -- which reads as a licence for an
+      existence-only proof. Tightened to say non-emptiness is a floor and that a
+      check whose only discriminating power is "a file exists at the joined
+      path" does not meet it, because a key with a relative parent segment
+      resolves to a real file outside the project (verified out of process
+      2026-09-07). The behaviour itself is BP-1500d-1-ii's and is explicitly NOT
+      re-specified here; only this record's own misleading gloss is repaired.
+  - reason: technical-correction
+    by: it-po
+    at: 2026-09-07
+    note: >-
+      SECOND IT-PO PASS THE SAME DAY, THREE it-po-owned FIELDS. it_requirements
+      #3, the delivers_to contract to BP-1500d-2, and it_requirements #2 again.
+      criteria, notes, doc_links, work_status, readiness and every other owner's
+      field untouched. No test_spec entry changed in this pass.
+
+      THE CONFIG LOCATION WAS NEVER NAMED, AND THE SILENCE WAS LOAD-BEARING.
+      it_requirements #3 and the -2 contract both said only "a minimal
+      skills_config.json". Verified at source 2026-09-07: the build auto-detects
+      its config ONLY at <target>/<platform_dir>/skills_config.json over
+      [.claude, .gemini, .cursor, .github, .cline], with no top-level fallback,
+      so the harness's <target>/skills_config.json was INERT and every build it
+      ever ran used defaults. BP-1500d-3's it-po reported this and was right.
+      Both fields now name <target>/.claude/skills_config.json and state why the
+      location is load-bearing rather than incidental: the minimal config sets
+      output_root to the build's own default, so an ignored config and a
+      consumed one produce identical builds -- there is no error, no warning,
+      and nothing in the result that differs. The consequence is specific: this
+      AC requires the deployed output root to be a harness PARAMETER for
+      BP-900h-4, and a caller varying it through the inert path is silently
+      ignored while the harness reports the caller's value. Both fields now
+      require the config to be proved READ -- a value differing from the shipped
+      default, reflected in the build's own output -- because an existence check
+      is satisfied by the defect. A coder is relocating the file in this
+      worktree; this amendment is the specification half and touches no test.
+
+      it_requirements #2 GAINS THE LIVE MEASUREMENT it lacked: 471 output
+      mappings, 174 template entries, a truthful relative package_root, and the
+      drift gate at verified=174 where it read BLOCKED verified=0. The archived
+      2026-08-25 numbers are KEPT and dated, as the evidence for why rule (1)
+      exists rather than as current behaviour. Recorded, not averaged: -3 states
+      472 and 175 for the same shape on the same date, taken under a different
+      fixture state; neither count may be copied into an assertion.
+
+      DIRECTORY NAME RECONCILED ACROSS THE FAMILY: <scratch>/receiving_project,
+      taken from the built harness, with BP-1500d-3's "<scratch>/project"
+      brought into line in the same pass. This record already used the harness's
+      name and is unchanged by that decision.
+  - reason: technical-correction
+    by: it-po
+    at: 2026-09-07
+    note: >-
+      ONE FIELD, it_requirements #2, and it corrects THIS AGENT'S OWN ERROR from
+      the pass immediately above. Nothing else touched.
+
+      The earlier entry recorded the 471/174-vs-472/175 disagreement with -3 and
+      attributed it to "different fixture states", the implied mechanism being
+      that the harness's config file was counted in one run and not the other.
+      That was a guess dressed as a finding and it was wrong. Measured against
+      the current tree into a fresh temp target containing NO config file:
+      472 mappings, 175 template entries -- -3's pair exactly, with no config
+      present. The real cause is template-inventory drift on main between the
+      two runs (471/174 from the bp-1500d-1 worktree, 472/175 from a later
+      tree, several PRs merging that day). Both counts were right when taken;
+      neither is a general fact. The wrong explanation is quoted in the
+      requirement rather than deleted, because a plausible-and-wrong cause is
+      worth more to the next reader than a silently corrected one.
+
+      THE CONCLUSION IS UNCHANGED, WHICH IS THE POINT WORTH RECORDING: "do not
+      copy either count into an assertion; assert a non-vacuity floor and
+      re-measure locally" survived the correction and is better supported by
+      the true cause than by the guess. A prediction that DID depend on the
+      wrong cause -- that the coder's config relocation would move the count to
+      472 -- is dropped; it is already 472 with no config at all, so that test
+      would have confirmed the wrong thing.
+
+      The requirement now also names the shape: a figure TRUE WHEN MEASURED AND
+      FALSE WHEN READ, of which 2026-09-07 produced four across four surfaces
+      (this one, CLAUDE.md's six-week-old "20 composites", a "549 of 856" ratio
+      built from a fresh numerator and an inherited denominator, and two
+      branches recounting the known-issues index to 224 and 237 against a truth
+      of 239 at merge). Every count in this record is dated evidence for a
+      claim, never a value to assert on -- the 2026-08-25 archive and the new
+      paragraph's own numbers included.
 superseded_by: null
 covered_by:
   - BP-1500d-1-i
+  - BP-1500d-1-ii
 implemented_by: []
 change_target: pipeline
 risk_surface: contract_boundary
 notes: |
+  THE LAYOUT AMBIGUITY BP-1500d-3 CORRECTED IN ITSELF IS PRESENT HERE TOO, IN
+  THREE FIELDS, AND IS REPORTED RATHER THAN EDITED -- 2026-09-07. It originates
+  in this record's own harness description, which is where -3 said it came from.
+  All three fields are the IT PO's (test_spec, it_requirements, delivers_to), so
+  they are named here with the exact correction each needs rather than rewritten
+  by this agent. None of them is a wording nicety: each admits a reading under
+  which the fixture is stood up in the one layout ADR-001 says hides this whole
+  family of defect, and a fixture built to that reading is green on the exact
+  install that shipped broken.
+
+    1. test_spec entry 3's surface_invoked reads
+       "python <scratch>/leafcutter-ai/scripts/build.py --target-dir <scratch>".
+       With the package copy at <scratch>/leafcutter-ai/, that makes the target
+       EQUAL to package_root.parent -- the self-host layout, not the
+       out-of-package venue this L1 mandates. It also contradicts this record's
+       own it_requirements #2 in the same breath. Correct it to the sibling
+       form the other entries and the built harness actually use:
+       "--target-dir <scratch>/receiving_project", package at
+       <scratch>/leafcutter-ai/. This is the same defect -3's it-po found in
+       its own entry 2 on 2026-09-07 and fixed across all four of its entries.
+
+    2. it_requirements #2 and the delivers_to contract to BP-1500d-2 both phrase
+       the placement rule as "the target's realpath is NOT under
+       package_root.parent". THE LOOSE FORM IS WRONG AND FALSE-FAILS THE CORRECT
+       LAYOUT. The forbidden case is target == package_root.parent, an EQUALITY.
+       "Under" -- descendant-of -- is not forbidden and must not be: the correct
+       sibling layout places the receiving project at <scratch>/receiving_project
+       while the package copy sits at <scratch>/leafcutter-ai, so the target IS a
+       descendant of that package copy's parent, by construction, in every
+       correct run. A precondition written the loose way and evaluated against
+       the SCRATCH package copy rejects the only layout that proves anything.
+
+    3. WHY NOTHING IS RED TODAY, AND WHY THAT IS NOT REASSURANCE. The built
+       harness evaluates the rule against the REAL producing package's parent --
+       the development workspace -- rather than against the scratch copy's
+       parent, and against that root the loose and the precise forms happen to
+       agree, because the temp-root target is neither equal to the workspace nor
+       inside it. So the ambiguity is currently masked by which root the
+       implementer chose, not resolved by the specification. The next person to
+       read these fields without the harness in front of them can pick the other
+       root in good faith and get a precondition that rejects every correct
+       fixture, or the other layout and get one that accepts the layout the
+       defect hides in. Say EQUALITY, and say WHICH package root, in all three
+       places.
+
+  THE MANIFEST-PATH CLAIM IN THIS RECORD'S doc_links WAS STALE AND IS NOW
+  CORRECTED IN PLACE -- 2026-09-07, reported by BP-1500d-3 and verified here
+  against current source before changing anything. The claim was "manifest_path
+  = package_root / '.build_manifest.json' -- always the package, never
+  --target-dir". The build resolves the record's directory from the target
+  whenever one is supplied. The old text is quoted verbatim inside the corrected
+  relevance string so the change is auditable. The same claim also survived in
+  KI-BP-011's Symptom paragraph and was corrected there on the same date; that
+  entry is a known-issues register rather than an AC, and its Status line still
+  reads open against BP-1500d, which its owner should revisit now that a large
+  part of what it documents has been fixed underneath it.
+
+  A NEW CHILD WAS ADDED 2026-09-07: BP-1500d-1-ii, for a record entry that is
+  keyed to the receiving project and still points outside it. See its own notes
+  for why neither this AC's clause nor BP-1500d-3 nor BP-1500d-2 reaches it.
+
   WHAT THIS CHILD OWNS. Points (a) and (b) of the guarantee stated in BP-1500d's
   notes: the record belongs to the project the build wrote into, and it travels
   with that project. (b) is a consequence of (a) rather than a separate mechanism

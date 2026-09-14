@@ -335,6 +335,14 @@ _BASE_RESPONSES: dict = {
         "ac_store_path": "/tmp/fastlane-harness-wt/docs/acceptance-criteria",
         "created": True,
     },
+    "fastlane-worktree-verify": {
+        "worktree_path": "/tmp/fastlane-harness-wt",
+        "raw": (
+            "worktree /tmp/fastlane-harness-wt\n"
+            "HEAD 0000000000000000000000000000000000000000\n"
+            "branch refs/heads/fast-lane/bo-stub-1"
+        ),
+    },
     "resolve-connected": {"ac_ids": ["BO-STUB-1"], "message": "1 to build"},
     "claim-connected": {
         "claimed": ["BO-STUB-1"],

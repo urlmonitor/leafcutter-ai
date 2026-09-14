@@ -6,7 +6,7 @@ components:
 level: L3
 status: active
 req_status: approved
-work_status: todo
+work_status: done
 readiness: approved
 priority: medium
 roadmap_phase: phase_1
@@ -37,8 +37,10 @@ amended_by:
   agent: approve_acs
   date: '2026-09-07'
 superseded_by: null
-covered_by: []
-implemented_by: []
+covered_by:
+- unit_tests/product_truth/test_uxp_700d_1_ii.py
+implemented_by:
+- docs/product-truth/scripts/product_ownership.py
 change_target: code
 risk_surface: internal
 test_required: true
@@ -67,3 +69,4 @@ notes: |
 
   Today leafcutter's own 11 flows under flows/leafcutter/ are the population this record
   protects.
+target_epic: EPIC-TruthfulProjectRecord

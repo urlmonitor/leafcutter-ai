@@ -1,0 +1,109 @@
+id: BO-2500b-1-ii
+components:
+  - build_orchestration
+  - commit_guardian
+title: "A done composite is proven by its children, not by a covers tag it can never legitimately carry"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: done
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given an L0 or L1 composite acceptance criterion whose work_status is done, and whose
+    every child listed in covered_by is itself done and does carry a "# covers: <child-id>"
+    or "// covers: <child-id>" tag somewhere under the test root,
+  When the pre-commit proof-of-done check scans that staged composite record,
+  Then the check treats the composite as proven by its children and reports no violation
+    for it, without demanding a covers tag naming the composite's own id,
+  And a done composite whose children are NOT all done-and-covered is still reported as a
+    violation, naming the unproven children, so composites are never skipped unconditionally,
+  And an L2 or L3 leaf acceptance criterion marked done still requires its own covers tag,
+    reported with the unchanged message, so the leaf path is not weakened,
+  And the bug symptom ("An L0/L1 composite acceptance criterion marked work_status: done is
+    reported as a violation — "no '# covers: <id>' or '// covers: <id>' tag found anywhere
+    under <test_root>" — and blocks the commit, even when every one of its children is itself
+    done and properly covered. Observed live on 2026-09-07 committing GE-127b (an L1 whose
+    only child GE-127b-1 was done and tagged): the commit was refused until a
+    `# covers: GE-127b` tag was hand-added to a test. The same wall was hit again on
+    GE-127a.") must not occur
+depends_on:
+  - BO-2500b-1
+doc_links:
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: related
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from: null
+test_required: true
+test_spec:
+  - name: test_done_composite_with_all_children_covered_is_not_a_violation
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: real_artifact
+    description: "A done L1 whose only child is done and carries a '# covers: <child-id>' tag in the test tree produces NO violation from check_staged_done_proofs, even though no tag names the L1 itself."
+    covers:
+      - BO-2500b-1-ii
+  - name: test_done_composite_with_unproven_child_is_still_a_violation
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: "A done L0/L1 whose covered_by includes a child that is not done, or is done but has no covers tag, still yields a violation whose reason names the unproven child — proving composites are not skipped unconditionally (guards against the ACD-400a falsely-done-composite defect)."
+    covers:
+      - BO-2500b-1-ii
+  - name: test_done_leaf_without_covers_tag_still_violates_with_unchanged_message
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "A done L2 and a done L3 with no covers tag each still produce a violation carrying the existing \"no '# covers: <id>' or '// covers: <id>' tag found anywhere under <test_root>\" reason string — the leaf path is provably unchanged."
+    covers:
+      - BO-2500b-1-ii
+test_rationale: |
+  A direct-import unit test over a helper would not be sufficient. The defect is that
+  check_staged_done_proofs has no notion of level at all, so the fix must be observed
+  through the real entry point against real on-disk AC YAML records and a real test tree
+  containing real covers tags — the same artifacts the hook reads at commit time. The
+  three tests are deliberately a triad rather than one happy path: the pass case alone
+  could be satisfied by skipping composites unconditionally, which is exactly the
+  falsely-done-composite hole this repo has 20 recorded instances of, so the
+  unproven-child case is what makes the fix honest. The leaf case is a regression pin on
+  a required CI gate: it asserts the existing reason string verbatim, so any change that
+  loosens the leaf requirement while making composites pass is caught.
+origin_agent: BrainCandy
+created: 2026-09-07
+amended_by: []
+superseded_by: null
+covered_by:
+  - unit_tests/commit_guardian/test_bo_2500b_1_ii_composite_levels.py
+implemented_by:
+  - "templates/scripts/commit_guardian/check_done_proof.py"
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  Authored by /quick-fix. Root cause: check_done_proof.py has no level-awareness
+  whatsoever — grep for `level` in that file returns only unrelated matches
+  ("top-level import", "module-level attribute"). It demands a direct covers tag for
+  every done AC regardless of level. That contradicts the model ac-fulfillment-gate
+  states and implements, where L0/L1 fulfilment is DERIVED from children and the
+  composite itself is skipped. A composite's implementation lives under its children's
+  covers tags by construction, so the tag this check demands may not legitimately exist.
+  The only exemption the check currently honours is test_required: false, which is the
+  wrong instrument — setting it on a code AC to clear this gate would be a phantom-done
+  dodge. DESIRED: a composite (L0/L1) is done-eligible when the ACs in its covered_by are
+  themselves done and covered, rather than needing its own tag. Leaf ACs (L2/L3) keep the
+  present requirement unchanged — no weakening. A composite whose children are NOT all
+  done must still be refused and must still say why. Do NOT make composites pass by
+  skipping them unconditionally: that would admit the falsely-done-composite defect
+  (ACD-400a) this repo has 20 recorded instances of. This is a required CI gate, so the
+  leaf path must be provably unchanged. Leave the existing hand-added `# covers: GE-127b`
+  and `# covers: GE-127a` workaround tags in place.

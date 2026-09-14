@@ -1,0 +1,421 @@
+id: GE-127e-4
+title: "Everything needed to choose arrives with the refusal, the division is offered as a starting point, and declining it costs nothing"
+component: guardrail-engine
+components:
+  - commit_guardian
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a tracked file of a kind the size standard covers is refused for its
+    length,
+  When the author reads the refusal and nothing else — running no further
+    command, opening no produced report and waiting for no later review,
+  Then what is in that file and where it divides is already in front of them,
+  And the refusal states that the division it names is a starting point taken
+    from the file as it currently stands,
+  And the refusal asserts nothing about the division beyond that: not that it
+    preserves what the file does, not that the things depending on the file were
+    examined, not that it is the only division available, and not that it is the
+    best one,
+  And given the author declines the division that was named and instead makes a
+    change that brings the same file below its permitted length by some entirely
+    different division,
+  When the author performs an ordinary commit,
+  Then the commit completes, and nothing about that file's length and nothing
+    about the division that was declined is reported at all — no warning, no
+    note, and no line naming the file.
+depends_on:
+  - GE-127e
+doc_links:
+  - path: docs/acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/GE-127e.yaml
+    relationship: parent
+    status: exists
+  - path: docs/acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/GE-127e-1.yaml
+    relationship: depends_on
+    status: exists
+    relevance: >-
+      Produces the description and the division whose DELIVERY and whose LIMITS this
+      record constrains. GE-127e-1 says they must exist; this says they must arrive
+      with the refusal itself and must not claim more than they know.
+  - path: docs/acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/GE-127a.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      The economic argument this record's first arm inherits. GE-127a's notes state
+      that reporting the same fact later — in a periodic sweep, a report, or a review
+      comment days after the fact — satisfies the words and destroys the value. The
+      identical reasoning applies to the guidance: guidance that has to be fetched
+      afterwards is a research task with an extra step, which is the state this L1
+      exists to end. Do not restate WHEN the refusal happens; that is GE-127a's.
+  - path: docs/acceptance-criteria/code-review/CR-100-refactoring-guidance/CR-100.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      FENCED, AND THE FIRST ARM IS THE FENCE MADE MECHANICAL. CR-100 owns the
+      prioritised report you go and read across a whole review; this owns the
+      information attached to one refusal at the moment it happens. A refusal that
+      satisfies itself by pointing at a review to be run has handed this obligation
+      to CR-100 without CR-100 accepting it. Reuse what CR-100 produces; do not
+      relocate this into it, and do not widen CR-100 to absorb it.
+  - path: docs/acceptance-criteria/infrastructure/INF-800-safe-restructuring/INF-800.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      FENCED, AND THE THIRD ARM IS THAT FENCE STATED AS AN ACCEPTANCE CLAUSE.
+      INF-800's promise is precisely that every consumer has been identified, every
+      dependency traced and behaviour verified preserved. This record forbids the
+      refusal from making any of those claims, because it has not done that work and
+      must not appear to have. The fourth arm is the same fence from the other side:
+      a gate that insisted on its own division would be performing the restructuring
+      decision, which is INF-800's and the author's, not the gate's.
+  - path: templates/scripts/commit_guardian/check_file_size.py
+    relationship: modifies
+    status: exists
+    relevance: >-
+      The incumbent refusal is already self-contained — it is simply empty of
+      anything about the file. The regression risk this record guards is the natural
+      shape of the fix: computing a rich description, writing it somewhere, and
+      leaving the refusal pointing at it.
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      IT PO. The commit-time invocation shape and the single outcome stream, which is
+      the only surface the first arm permits the guidance to arrive on.
+  - path: docs/pre-commit-hooks.md
+    relationship: related
+    status: exists
+  - path: CLAUDE.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      "Gate / Workflow ACs — Verify Behaviorally, Not by Grep". The fourth arm in
+      particular is an assertion that a commit COMPLETES and that a stream is silent;
+      only an ordinary commit in a real repository can evidence it.
+assigned_agent: python-coder
+estimated_complexity: M
+package_surface: false
+declares_side_effect: false
+it_requirements:
+  - >-
+    NO PACKAGE SURFACE — MEASURED, NOT ASSUMED, AND THIS RECORD IS THE ONE WHERE A NEW
+    SURFACE WOULD BE MOST TEMPTING. WATCHED_REGISTRIES binds two containers on
+    commit_guardian.json: hooks_manifest.hooks (by id) and the document's own top level (by
+    mapping key). This record adds neither; both were read in this worktree, and
+    `check-file-size` and `file_size` already exist. Note the direction of travel: the
+    natural shape of a good implementation here — a report path, an output directory, a
+    "write the analysis to X" setting — WOULD be a new top-level key and would be caught by
+    check-package-surface-declaration. That the correct implementation registers nothing is
+    a consequence of the first arm, not a coincidence. No config_schema_fragment invented to
+    satisfy the structured-spec validator.
+  - >-
+    THE GUIDANCE ARRIVES ON THE ONE OUTCOME STREAM AND NOWHERE ELSE, AND THE PROHIBITION IS
+    ON THE ARTIFACT, NOT ON THE POINTER. It is not enough that the refusal avoids saying
+    "see the report"; the run must not PRODUCE a second artifact at all — no report file, no
+    JSON dump, no cache, no log line carrying the parts, no environment-variable handoff, no
+    entry appended anywhere. A run that writes an artifact nobody points at is one commit
+    away from a refusal that points at it, and it is invisible to every other record in this
+    tree. Everything the author needs is in the text of the refusal itself.
+  - >-
+    NOTHING MAY BE DEFERRED TO A LATER SURFACE THAT ALREADY EXISTS, EITHER. Satisfying this
+    record by citing a review to be run, a periodic sweep, or a report produced elsewhere
+    hands the obligation to CR-100 without CR-100 accepting it, and returns the author to a
+    verdict plus a research task — the exact state this L1 exists to end. Reuse whatever
+    CR-100's work produces as VOCABULARY inside the refusal; never as a destination.
+  - >-
+    THE FRAMING SENTENCE IS PART OF THE OUTPUT AND HAS A CEILING. The refusal must state that
+    the division it names is a starting point taken from the file as it currently stands. It
+    must assert nothing further: not that the division preserves what the file does, not that
+    consumers or dependents were examined, not that it is the only division available, not
+    that it is the best one, not that it is safe. Those are INF-800's claims and this gate has
+    done none of that work. The wording must be provably weaker than the claim, so an
+    implementer who wants to sound helpful cannot reach for "safely split here" — a phrase
+    that is one word away from claiming an analysis that never ran.
+  - >-
+    THE VERDICT REMAINS A FUNCTION OF LENGTH ALONE, AND NOTHING MAY REMEMBER WHAT WAS
+    ADVISED. No persisted record of which division was named, no comparison of the author's
+    actual change against the suggestion, no second finding, no note that the advice was not
+    followed, no repeat refusal because the file was divided differently. The moment the gate
+    can tell whether its own advice was taken, it has acquired an opinion it was never
+    granted and a hard line has become a design mandate. This also means the description must
+    be stateless between runs: computed fresh from the file in hand each time, never diffed
+    against a stored previous suggestion.
+  - >-
+    COST BUDGET, BECAUSE EVERYTHING MUST BE IN THE MESSAGE. Carrying the whole description in
+    the refusal makes message length a real concern for a file with many parts. Bound the
+    printed output so it stays readable in a terminal at the moment of refusal — a bounded
+    set of named parts, with the remainder accounted for as a stated residual rather than
+    enumerated — and never resolve a long message by moving content elsewhere, which is the
+    first arm's mutation. Note the interaction with GE-127e-1's half threshold: the bound must
+    still let the named parts account for at least half the quoted length, so it is a bound on
+    enumeration, not on coverage.
+  - >-
+    Must follow the repo error-handling policy: specific-exception try/except around any file
+    read; log at WARNING or higher or re-raise; no bare or blind excepts. Note the specific
+    interaction with GE-127e-3-i: because there is no second artifact to fall back to, a
+    failure to produce the description must surface as that record's named line on the
+    unchanged refusal — never as a pointer to somewhere the author could go instead.
+  - >-
+    CANONICAL VERSUS BUILD OUTPUT, AND THE BUILD IS PART OF THE CHANGE. Edit
+    templates/scripts/commit_guardian/ only; scripts/commit_guardian/ and the repo-root
+    .pre-commit-config.yaml are untracked build outputs overwritten by build.py, and
+    templates/commit-guardian/commit_guardian.json is a decoy. Re-run `python
+    scripts/build.py --target-dir .`, because the message the author actually reads is
+    printed by the deployed copy.
+test_spec:
+  - name: test_ge_127e_4_reading_the_refusal_alone_shows_the_parts_and_the_division
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: >-
+      Refuse a covered file in a real repository and assert that the captured refusal text,
+      ON ITS OWN, contains what is in that file and where it divides — running no further
+      command, opening no produced report, waiting for no later review. The test may consult
+      nothing but the process output. NAMED MUTATION (mandatory, run it, do not merely
+      describe it — the BA's injection 1): "what is in that file and where it divides is
+      already in front of them" — MUTATION: relocate the named parts and the division out of
+      the refusal into a report written elsewhere during the run, leaving the refusal
+      carrying a pointer to it. Under that injection, reading the refusal alone no longer
+      shows what is in the file; this clause must go RED, and must return to green on revert.
+      Note the property that makes this injection worth running: it leaves GE-127e-1 and
+      GE-127e-2 fully satisfied, so it is invisible to every other record in this tree.
+  - name: test_ge_127e_4_the_run_leaves_no_second_artifact_anywhere_that_could_carry_the_guidance
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: seam
+    description: >-
+      THE MECHANICAL HALF OF THE FIRST ARM, WHICH TEXT ASSERTIONS CANNOT REACH. Snapshot the
+      fixture repository and the process's writable surroundings before the refused commit
+      and compare afterwards: apart from git's own bookkeeping, the run must create and
+      modify nothing — no report, no JSON dump, no cache, no appended log carrying the parts.
+      A refusal whose text happens to be self-contained while the run also writes an analysis
+      somewhere passes the first descriptor and fails here, and it is one commit away from
+      the pointer the first arm's mutation installs.
+  - name: test_ge_127e_4_the_refusal_frames_the_division_as_a_starting_point_from_the_file_as_it_stands
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: >-
+      The refusal states, in the message the author reads, that the division it names is a
+      starting point taken from the file as it currently stands. Asserted against the real
+      emitted text of a real refusal, so a framing sentence added to a helper's return value
+      but never printed does not pass.
+  - name: test_ge_127e_4_the_refusal_claims_no_safety_no_consumer_analysis_and_no_optimality
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: >-
+      The refusal asserts nothing about the division beyond its being a starting point: not
+      that it preserves what the file does, not that the things depending on the file were
+      examined, not that it is the only division available, not that it is the best one.
+      NAMED MUTATION (mandatory, run it — the BA's injection 2): "the refusal asserts nothing
+      about the division beyond that" — MUTATION: append to the refusal one sentence
+      asserting that the named division preserves what the file does, or that nothing
+      depending on the file is affected by it. Under that injection this clause must go RED,
+      and must return to green on revert. Without the injection the clause is an absence and
+      is satisfied by a refusal that says nothing about the division at all.
+  - name: test_ge_127e_4_declining_the_named_division_and_fixing_it_differently_costs_nothing
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: >-
+      Two real commits in sequence. The first is refused and names a division. The author
+      then DECLINES it and brings the same file below its permitted length by an entirely
+      different division, and commits again. The second commit must complete, and nothing
+      about that file's length and nothing about the division that was declined may be
+      reported at all — no warning, no note, no line naming the file. NAMED MUTATION
+      (mandatory, run it — the BA's injection 3): "the commit completes, and nothing about
+      that file's length and nothing about the division that was declined is reported at
+      all" — MUTATION: report a finding whenever a file is brought under its permitted length
+      by a division other than the one that was named. Under that injection this clause must
+      go RED, failing BY THE COMMIT OUTCOME as well as by the text, and must return to green
+      on revert. Without the injection the clause is satisfied by a guard that reports
+      nothing at any commit, which is today's implementation exactly.
+  - name: test_ge_127e_4_the_gate_keeps_no_record_of_what_it_advised_between_runs
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: >-
+      The second run in the declining sequence must be reachable with no state carried from
+      the first: delete anything the first run could have left, or run the second in a fresh
+      process and a fresh environment, and the outcome is identical. This is the descriptor
+      that fails if the gate starts tracking its own advice — the mechanism by which
+      "declining costs nothing" would quietly stop being true, and one the text assertions
+      above cannot see because the finding they forbid would appear only on the third or
+      fourth commit.
+  - name: test_ge_127e_4_the_self_contained_refusal_is_what_the_registered_hook_emits
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: reachability
+    surface_invoked: >-
+      python .leafcutter/scripts/commit_guardian/run_hook.py
+      .leafcutter/scripts/commit_guardian/check_file_size.py
+    description: >-
+      PRODUCTION ENTRY POINT. The text asserted to be self-contained is captured from the
+      registered hook path's own output stream, under the refusal exit status — not from a
+      message-assembling helper called in-process. Guidance assembled correctly and printed
+      on a stream the hook does not surface is exactly as useful to the author as guidance
+      written to a report, and only this descriptor tells the two apart.
+  - name: test_ge_127e_4_the_deployed_copy_carries_the_whole_guidance_in_its_own_refusal
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: deployed
+    description: >-
+      After build.py, the DEPLOYED copy runs in a cold process and its refusal alone shows
+      the parts and the division, with the run still leaving no second artifact. A delivery
+      change written only into the canonical template fails here rather than passing on
+      source-tree greenness, and a module placed outside templates/scripts/commit_guardian/
+      without a deploy-map entry surfaces as ModuleNotFoundError.
+test_rationale: |
+  Three arms of this record assert an ABSENCE and every one of them is green on arrival
+  against today's refusal, which contains nothing to relocate, nothing to overclaim and no
+  advice to decline. All three of the BA's injections are therefore carried into descriptors
+  verbatim rather than restated as prose, and the third is required to fail BY THE COMMIT
+  OUTCOME, because a gate that prints a note and exits 0 is indistinguishable from a passing
+  one to pre-commit, which reads only the status.
+
+  The first arm gets two descriptors, not one, and the second is the important one. A text
+  assertion can only show that the refusal happens to be self-contained; it cannot show that
+  the run did not also write the analysis somewhere. The before-and-after snapshot closes
+  that gap, because the relocation the BA's first injection installs is the natural shape of a
+  good implementation — compute a rich analysis, write it to a report, point at it — and the
+  BA notes precisely why it must be caught here: it leaves GE-127e-1 and GE-127e-2 fully
+  satisfied and is invisible to every other record in this tree.
+
+  The fourth arm likewise gets a companion. Asserting that one particular follow-up commit is
+  silent does not prove the gate keeps no memory of what it advised; a tracker would show
+  itself only on some later commit. Running the second commit with any state the first could
+  have left removed, in a fresh process, is what makes "declining costs nothing" a property of
+  the gate rather than of the sequence the test happened to run.
+
+  Every descriptor performs ordinary commits in a real repository and reads its assertions
+  from the process output and the commit outcome. Per CLAUDE.md "Gate / Workflow ACs — Verify
+  Behaviorally, Not by Grep", the fourth arm in particular is an assertion that a commit
+  COMPLETES and that a stream is silent, and only a real commit can evidence that; the
+  reachability and deployed descriptors then establish that the stream in question is the one
+  the author actually reads.
+delivers_to: null
+expects_from:
+  ac_id: GE-127a-1
+  contract: >-
+    The single outcome stream and the commit verdict. The first arm requires the
+    description and the division to be carried on THAT stream at the moment of the
+    refusal rather than on any second surface; the fourth requires the verdict to
+    remain a function of the file's length alone, unaffected by which division the
+    author actually chose.
+origin_agent: business-analyst
+created: 2026-09-08
+amended_by:
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-09-08
+  note: 'criteria untouched. PACKAGE SURFACE FALSE, AND MEASURED — WITH THE DIRECTION OF TRAVEL
+    RECORDED, BECAUSE THIS IS THE RECORD WHERE A NEW SURFACE WOULD BE MOST TEMPTING: neither
+    watched container on commit_guardian.json (hooks_manifest.hooks by id, the document''s own
+    top level by mapping key) gains an entry, and both were read in this worktree. The natural
+    shape of a "good" implementation here — a report path, an output directory, a write-the
+    -analysis-to-X setting — WOULD be a new top-level key and would be refused by
+    check-package-surface-declaration; that the correct implementation registers nothing is a
+    consequence of the first arm, not a coincidence. COMPLEXITY M. TWO REQUIREMENTS ADDED THAT
+    THE CRITERIA IMPLY BUT DO NOT NAME: the prohibition is on the ARTIFACT, not merely on the
+    pointer (a run that writes an analysis nobody points at is one commit away from a refusal
+    that points at it, and is invisible to every other record in the tree), and the description
+    must be STATELESS between runs, because a gate that can tell whether its own advice was
+    taken has acquired the opinion the fourth arm exists to deny it. A cost budget is added for
+    the consequence of carrying everything in the message — bound the ENUMERATION, never the
+    coverage, so GE-127e-1''s half threshold still holds and a long message is never resolved by
+    moving content elsewhere. declares_side_effect false, and here that is substantive rather
+    than routine: this record positively FORBIDS a durable artifact, so declaring one would
+    contradict its first arm. test_spec: eight executing descriptors, three carrying the BA''s
+    named mutations verbatim (the third failing by the commit outcome), plus two companions the
+    text assertions cannot reach — a before-and-after snapshot proving no second artifact was
+    written, and a fresh-process rerun proving the gate keeps no record of what it advised —
+    then the registered hook entry point and the deployed copy.'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  WHAT "ROUGHLY WHERE" MEANS, TURNED INTO CLAUSES INSTEAD OF RESTATED AS PROSE. The
+  L1's notes set the bar at the point where the author stops investigating and starts
+  choosing. Two things follow, and they pull in opposite directions, which is why
+  they belong in one record. Downward: everything needed to choose must be present
+  at the moment of refusal, or the next step is still research. Upward: nothing may
+  be claimed beyond a starting point, or the gate has begun producing a refactoring
+  plan and has left this goal.
+
+  THE FIRST ARM IS THE MOST LIKELY REGRESSION AND IT IS NOT A STYLE PREFERENCE. The
+  natural shape of a good implementation is to compute a rich analysis, write it to a
+  report, and have the refusal point there. That satisfies every clause of GE-127e-1
+  and GE-127e-2 and returns the author to exactly the position this L1 exists to end:
+  a verdict plus a research task. It is also the shape that quietly relocates the
+  obligation into CR-100. Bind the acceptance to reading the refusal and nothing
+  else.
+
+  THE FOURTH ARM IS THE ONE MOST EASILY DROPPED, AND WITHOUT IT THE GATE ACQUIRES AN
+  OPINION IT WAS NEVER GRANTED. If declining the named division carried any cost — a
+  second finding, a note that the suggestion was not followed, a refusal that repeats
+  because the file was divided differently — then the gate has stopped offering a
+  starting point and started enforcing a design. That is a hard line becoming a
+  design mandate, which is the opposite of the L0's concern and squarely INF-800's
+  and the author's territory. It is also the arm that keeps this record from being
+  satisfiable by a gate that tracks its own advice.
+
+  NAMED MUTATIONS — EXECUTE THEM, DO NOT MERELY DESCRIBE THEM. Three arms here assert
+  an absence and every one of them is green on arrival against today's refusal, which
+  contains nothing to relocate, nothing to overclaim and no advice to decline.
+  Written so the IT PO can lift them verbatim into test descriptors.
+
+  (1) "what is in that file and where it divides is already in front of them" —
+      MUTATION: relocate the named parts and the division out of the refusal into a
+      report written elsewhere during the run, leaving the refusal carrying a pointer
+      to it. Under that injection, reading the refusal alone no longer shows what is
+      in the file; this clause must go RED, and must return to green on revert. Note
+      the property that makes this injection worth running: it leaves GE-127e-1 and
+      GE-127e-2 fully satisfied, so it is invisible to every other record in this
+      tree.
+
+  (2) "the refusal asserts nothing about the division beyond that" — MUTATION: append
+      to the refusal one sentence asserting that the named division preserves what the
+      file does, or that nothing depending on the file is affected by it. Under that
+      injection this clause must go RED, and must return to green on revert. Without
+      the injection the clause is an absence and is satisfied by a refusal that says
+      nothing about the division at all.
+
+  (3) "the commit completes, and nothing about that file's length and nothing about
+      the division that was declined is reported at all" — MUTATION: report a finding
+      whenever a file is brought under its permitted length by a division other than
+      the one that was named. Under that injection this clause must go RED, failing BY
+      THE COMMIT OUTCOME as well as by the text, and must return to green on revert.
+      Without the injection the clause is satisfied by a guard that reports nothing at
+      any commit, which is today's implementation exactly.
+
+  BOUNDARY WITH GE-127a-1's SILENCE ARM, WHICH THIS MUST NOT BREAK. That record
+  already requires a file under its permitted length to produce no interruption. The
+  fourth arm here is narrower and additional: the file was over, the author fixed it
+  their own way, and the fact that they ignored the suggestion is itself not a
+  finding. Do not merge the two — merged, an implementer satisfies the general
+  silence and never notices that advice-adherence became a second axis.
+
+  BOUNDARY WITH GE-127e-3. That record governs whether an offer is honest. This one
+  governs whether it arrives in time and whether it overreaches. A refusal can name
+  only real, runnable actions and still hand the author a research task; it can also
+  be perfectly self-contained while asserting a safety it never established.
+
+  NOT AUTHORED HERE, BY DESIGN: assigned_agent, estimated_complexity,
+  it_requirements, test_spec, test_rationale and declares_side_effect. All three
+  mutations above are written to be turned directly into test descriptors.

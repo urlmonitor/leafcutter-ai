@@ -48,7 +48,8 @@ amended_by:
   date: '2026-09-07'
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260909-UXP-700d-3.md
 change_target:
   - code
   - schema
@@ -91,3 +92,4 @@ notes: |
   existing axis can carry this meaning before minting a second field - but note it is currently
   absent from the acceptance-criteria store entirely, which is the half of the problem that
   matters most here.
+target_epic: EPIC-TruthfulProjectRecord

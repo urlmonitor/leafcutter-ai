@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: 2026-08-18
-last_updated: 2026-08-31
+last_updated: 2026-09-14
 components:
   - ac_driven_dev
 related_docs:
@@ -24,9 +24,23 @@ acceptance criterion for something nobody has decided to build yet.
 **Read it before adding new capability to this component.** Fixing what is already
 broken takes precedence over building more.
 
-**Adding an issue.** Append a new `### KI-ACD-NNN` section using the next free number.
-Nothing here is generated — edit it by hand. Fill in what you actually know; an issue
-recorded with a thin `Evidence` line is far better than one not recorded.
+**Adding an issue.** Append a new `### KI-ACD-YYYYMMDD-HHMM` section, using the UTC time you
+filed it (`date -u "+%Y%m%d-%H%M"`). Nothing here is generated — edit it by hand. Fill in what
+you actually know; an issue recorded with a thin `Evidence` line is far better than one not
+recorded.
+
+**Why datetime ids and not the next free number.** Sequential ids collide whenever two
+sessions file at once. On 2026-08-26 alone, two different defects both landed as `KI-CG-012`,
+a branch's `KI-BP-010`/`KI-BO-016`/`KI-BO-017` all had to be renumbered at merge because main
+had independently minted the same numbers, and a changelog ended up describing `KI-CG-012`
+using what became `KI-CG-013`'s text. Renumbering is worse than it sounds — inbound references
+do not disambiguate, so a rename can silently repoint a citation at the wrong defect. Existing
+`KI-ACD-NNN` entries keep their ids; **do not renumber them.**
+
+This instruction was itself stale until 2026-09-07: the convention changed on 2026-08-26 and
+this file kept prescribing next-free-number for twelve days, while the entries being appended
+to it had already moved to datetime ids. See `docs/known-issues/build-orchestration.md` for the
+canonical wording.
 
 **Hitting an existing issue.** Increment `Occurrences` and update `Last seen`. Do not
 add a duplicate entry. Occurrences is an escalator, not the score — a blocker seen once
@@ -1611,3 +1625,253 @@ not in `depends_on`, and is unaffected.
 
 **Pattern:** an ordering constraint expressed against a proxy (status) for the thing it
 actually requires (an artifact), so it stays unsatisfied after the requirement is met.
+
+---
+
+### KI-ACD-20260907-1555 — Nothing in the pipeline binds a module or symbol name, so whichever agent needs one first invents it and the next agent cannot see the choice
+
+- **Severity:** high
+- **Status:** open
+- **Occurrences:** 3, all within one epic (EPIC-TrustThatAGreenCheckActuallyChecked)
+- **First seen:** 2026-08-31 · **Last seen:** 2026-09-07
+- **Where:** the AC schema (`test_spec` pins the test side; no field pins the implementation
+  side), ticket frontmatter `files_touched`, the `## Agent Contracts` block emitted by
+  `generate_ticket_from_ac.py`, and `templates/agents/test-writer.md:682`
+
+**The pipeline specifies the test side exhaustively and the implementation side not at all.**
+An AC's `test_spec` pins each test's `name`, `target_dir`, `framework` and `type`. For the code
+under test there is **no field anywhere** — not in the AC schema, not in ticket frontmatter —
+that names the module to create or the symbols it must expose.
+
+`test-writer` runs at priority 5, before any coder, so it must import something that does not
+exist yet. Its template tells it to *"Import the module or function that the ticket says should
+exist"* (`test-writer.md:682`). **The ticket routinely says no such thing.** Across this epic
+`files_touched` is a bare package directory on most tickets (`templates/scripts/commit_guardian`)
+and on ticket 36 it is literally `files_touched: []`. So the agent invents a name. The coder,
+reading the same silent ticket, invents a different one.
+
+**Three instances, same epic:**
+
+| test-side name | implementation-side name | caught by |
+|---|---|---|
+| `_authored_change.py` / `get_authored_change` / `AuthoredChange` | `_resolve_change_set.py` / `get_change_set` / `ChangeSet` | `pr-reviewer`, after the coder shipped |
+| `unit_tests.portability.harness` | `unit_tests/portability/_deployed_check_harness.py` | manual, during a later ticket |
+| `build_second_working_copy()` / `stage_carried_in_deletion()` / `run_check()` | `create_second_copy()` / `stage_files()` / `invoke_check()` / `run_sweep()` | manual, during a later ticket |
+
+Note the direction is **not** consistent: in the first row the *test* was authoritative and the
+coder diverged, and reconciling it cost a dedicated commit (`ecd31238d`, whose own message
+records "the first implementation shipped as `_resolve_change_set.py` … and `pr-reviewer`
+blocked it for the divergence"). In the other two the *implementation* was authoritative. There
+is no rule about who wins because there is no binding — only whichever artifact a human happens
+to read first. `test_ge_120e_2_i.py`'s own decision-history block calls its guess
+"a SPECULATIVE harness contract".
+
+**Why the red baseline cannot catch this.** `test-writer.md:684` names `ImportError` as a valid
+red state — correctly, since the code genuinely does not exist yet. But that makes
+*"not implemented"* and *"named something the coder will never create"* produce **the identical
+signal**. The red baseline is this pipeline's evidence that tests constrain the implementation;
+against a misnamed import it is evidence of nothing. GE-120 exists to stop a green check that
+never checked; this is its mirror — a red check that proves nothing — and it cost real time in
+GE-120's own drive, where a fixture bug and a naming divergence both presented as
+"AC not implemented yet".
+
+**The phase that should decide already runs first, and declines the job.** `architect-review`
+is dispatched before `test-writer`. On ticket 35 it produced a genuinely good blast-radius
+analysis — it identified `_authored_change.py`, its `get_authored_change() -> AuthoredChange`
+signature and every attribute both consumers read. It named **no module for the new code**,
+because naming is outside its charter: its own `completion_manifest` records
+`seam_note: not_applicable`, reasoned as *"architect-review performs classification and
+notation only; it makes no code change and introduces no producer/consumer seam of its own."*
+Its template describes it as classifying impact and writing an inline note. So the slot in the
+phase order exists, the right agent is already in it, and it is explicitly defined as not
+deciding this.
+
+**The contract mechanism also already exists, and covers only documentation.** The
+`## Agent Contracts` block on a generated ticket carries a `### documentation-expert`
+subsection listing exact file paths, and a `### Expects From` subsection whose contract is
+**prose** (ticket 35: *"The shared authored-change source, which this AC requires to consult
+the operation record…"* — no symbol in it). There is no `### python-coder` and no
+`### test-writer` subsection. And documentation has an enforcement phase —
+`documentation-verifier` at priority 11.9 blocks the commit when a named doc file is absent
+from the diff. **There is no equivalent asking whether the module the tests import was ever
+created under that name.**
+
+**How it should work.**
+
+1. **`architect-review` binds the names, and that becomes its deliverable.** Widen its charter
+   from classify-and-note to classify-and-bind: for any ticket that creates a module or a new
+   public symbol, it must emit the exact path and the exact public surface (function names,
+   class names, and for a returned object its attribute names — the shape all three failures
+   above turned on). Its existing `seam_note: not_applicable` escape must stop being available
+   when `change_target: code` and the ticket creates a file. It already does the analysis; today
+   it just throws the naming half away.
+2. **The binding lands in a structured field, not prose.** Add a `### code-contract`
+   subsection to `## Agent Contracts` — machine-readable, same pipe-delimited grammar as the
+   documentation rows so one parser serves both. It must be parseable, which is the standing
+   objection in `KI-ACD-20260831-agent-contracts-block-not-pipe-delimited`: fix that first or
+   the new subsection inherits the same defect.
+3. **Both downstream agents read it, and neither may deviate.** `test-writer.md:682` changes
+   from *"the module the ticket says should exist"* to *"the module named in
+   `### code-contract`"*, plus an explicit refusal: **if the ticket creates a module and names
+   no path, emit `(status: blocker)` rather than choosing a name.** The same binding is injected
+   into the coder prompt. An implementation agent inventing a public name is then a defect, not
+   a judgement call — which is the rule this entry is really asking for.
+4. **Verify it the way documentation is verified.** A `code-contract-verifier`, modelled on
+   `documentation-verifier`, asserts every path and symbol in the block exists in the diff.
+   That closes the loop: the red baseline stops being the only thing standing between a guessed
+   name and a merge.
+5. **Cheap partial, worth doing regardless of the above:** make `files_touched` name **files**,
+   never bare directories, and reject an empty `files_touched` on a `change_target: code`
+   ticket. Ticket 36 shipped with `files_touched: []` and is the worst of the three cases. This
+   alone would not have prevented any of them — a path is not a symbol — but it removes the
+   condition under which an agent has nothing at all to go on.
+
+**Related.** `KI-ACD-20260831-agent-contracts-block-not-pipe-delimited` (the same block, already
+unparseable — a prerequisite for fix 2). `KI-BP-20260831-generator-emits-unparseable-doc-contract`
+(the generator side of it). `KI-BO-20260907-1555` shares ticket 36 as its worked example, from
+the dispatcher side.
+
+**Pattern:** a contract between two agents that exists only inside the artifact one of them
+happens to write first — so the second agent is asked to honour a decision it was never told
+about, and the mechanism meant to detect the mismatch reports the same signal as
+not-yet-implemented.
+
+### KI-ACD-20260909-2130 — Two approved ACs in one epic demand opposite verdicts for the same store state, and nothing in the AC store can detect it
+
+- **Severity:** high
+- **Status:** both instances resolved; the CLASS remains open (no gate detects AC-vs-AC contradiction)
+- **Occurrences:** 2 (both found on 2026-09-09 while implementing EPIC-TruthfulProjectRecord)
+- **First seen:** 2026-09-09 · **Last seen:** 2026-09-09
+- **Where:** `docs/acceptance-criteria/ux-prototyping/UXP-700-truthful-project-record/` — `UXP-700b-1-i.yaml` vs `UXP-700b-1-ii.yaml`; `UXP-700a-1-i.yaml` vs `UXP-700b-2-i.yaml`
+
+**Symptom.** Two ACs, both `readiness: approved`, both with tests written by `test-writer`,
+specify opposite required behaviour for a store state that is identical in every observable
+respect. No implementation can make both suites green.
+
+*Pair 1 — resolved 2026-09-10 by user decision.* A store with journeys present but zero mock-data and zero mockups:
+
+- `UXP-700b-1-i`'s test asserts the outcome **is** `checked-and-sound` ("an all-clean store must report outcome 'checked-and-sound'").
+- `UXP-700b-1-ii`'s test asserts the outcome **is not** `checked-and-sound` ("a store with three journeys but zero example data and zero screens must not report the clean-pass outcome").
+
+Both fixtures build the same shape: flows populated, `mock-data/` and `mockups/` created and
+left empty, an empty `classifier/eval.jsonl` seeded, flows carrying `entities: []` and steps
+with no `screen`. There is no field, count or file that separates them.
+
+**Resolved in `UXP-700b-1-i`'s favour**: a record holding journeys but no screens or example
+data yet is young, not defective — everything it holds was checked and was sound, which is
+what the clean pass claims. `UXP-700b-1-ii`'s AC-3 clause and its two assertions were amended
+to match, and both files record why. What `-1-ii` uniquely contributes is untouched and still
+enforced: the report NAMES exactly which artifact types read zero records, in `empty_types`,
+and never names a populated one. Emptiness is reported; it does not change the verdict.
+
+*Pair 2 — resolved by construction.* A zero-artifact store whose `classifier/eval.jsonl` is
+absent: `UXP-700b-2-i` requires exit 0 ("fail open and list the check as not executed"),
+`UXP-700a-1-i` requires non-zero ("a caller consuming this checker's exit code must see a
+BLOCK decision"). These were reconciled by the one incidental difference between their
+fixtures — `UXP-700b-2-i` creates `classifier/` and omits the file, `UXP-700a-1-i` omits the
+directory entirely — read as "not authored yet" (stay open) versus "never installed" (block).
+That distinction is defensible and is now implemented and documented in
+`validate_product_truth.py`'s DECISION HISTORY, but it was **inferred from fixture
+construction, not from either AC's text**.
+
+**Why the store cannot see this.** Every existing gate checks an AC in isolation or against
+its own hierarchy: `check-ac-schema` validates shape, `check-ac-tree-limits` counts children,
+`check-ac-parent-covered-by` checks the `covered_by` relation, `check-ac-circular-deps`
+checks `depends_on`. None compares what two sibling ACs *assert about the same subject*. Two
+ACs can therefore both reach `readiness: approved` while being mutually unsatisfiable, and the
+contradiction surfaces only when a coder tries to make both test suites pass — after the
+tests are written, the tickets generated, and the epic driven.
+
+**Detection.** There is no automated detection today. The manual tell is a red test whose
+assertion is the exact negation of a sibling AC's assertion over a fixture of the same shape:
+
+```bash
+# both green individually against their own AC's intent, unsatisfiable together
+python -m pytest unit_tests/product_truth/test_uxp_700b_1_i.py -k degraded_outcome_vocabulary
+python -m pytest unit_tests/product_truth/test_uxp_700b_1_ii.py -k outcome_is_not_the_clean_pass
+```
+
+**Fix direction.** (1) *Both instances are now closed* — pair 2 by the installed-vs-authored
+distinction, pair 1 by amending `UXP-700b-1-ii`. (2) *The class remains open*: when several ACs constrain one observable (here, the checker's outcome value
+and exit code), that observable's value table belongs in ONE place — an AC, or an ADR the ACs
+cite — rather than being restated per-AC in prose that reads as compatible until two fixtures
+are built. `ADR-042` already declares the outcome vocabulary; it stops short of declaring
+which state maps to which value, which is exactly the gap both pairs fell into.
+
+**Pattern:** the AC store's gates all answer "is this AC well-formed?" and none answers "do
+these ACs agree?" — so approval certifies shape, and contradiction is discovered by
+implementation. **Related:** `ADR-042` (the outcome vocabulary these ACs disagree about),
+`GE-120` (green means it was checked — the thesis both ACs are drawing on, and read
+oppositely).
+
+### KI-ACD-20260914-0657 — Every `Master_Plan.md` the generator writes is rejected by the ticket frontmatter gates, so no generated epic can be committed without a hand patch
+
+- **Severity:** high — it blocks the commit of every epic the generator produces
+- **Status:** open
+- **Occurrences:** 1 confirmed by execution (2026-09-14, BO-400e); by inspection of
+  `generate_master_plan()` the defect is unconditional and affects both the `--ac` and
+  `--ids` routes
+- **First seen:** 2026-09-14 · **Last seen:** 2026-09-14
+- **Where:** `scripts/goal_to_epic.py` — `generate_master_plan()`, the frontmatter block
+  (`f"source_ac: {goal_ac_id}\n"` and the lines around it)
+
+**Symptom.** `goal_to_epic.py` emits a `Master_Plan.md` carrying exactly five frontmatter
+fields: `epic_name`, `created`, `status`, `components`, `source_ac`. The file is written under
+`tickets/`, and both gates that guard that tree validate everything there against the ticket
+schema. Neither knows an epic plan is not a ticket, so both refuse it:
+
+- `check-doc-frontmatter` (pre-commit): `Missing required field: 'title'`,
+  `Missing required field: 'depends_on'`.
+- `ticket_frontmatter_guard` (PostToolUse hook, fires on any edit): `'requires_diagram':
+  field missing`, `'requires_adr': field missing`, `Missing required field:
+  'change_target'`, `Missing required field: 'risk_surface'`.
+
+Ten fields short in total. The commit cannot proceed until a human adds all ten by hand.
+
+**Evidence.** Generating the BO-400e epic on 2026-09-14 and staging it produced the
+`check-doc-frontmatter` failure above; adding `title` and `depends_on` to satisfy it then
+produced the `ticket_frontmatter_guard` failure, which took two further edits to clear. The
+epic landed in `1f3a2ac5b` only with a hand-completed plan.
+
+**Why it has not been noticed before.** Master plans already in the store come in two shapes.
+The older ones (`EPIC-DispatchPreflightGate`, 2026-07-08) have the same five-field generated
+shape and sit in the tree untouched — they were committed before the gates required these
+fields, and nothing re-validates a file that is not being staged. The newer ones
+(`EPIC-TruthfulProjectRecord`, 2026-09-09) carry the full ticket-shaped set — they were
+hand-authored or hand-repaired, not generated. So the store looks like it contains conforming
+plans, and it does; none of them came out of the generator that way.
+
+**Detection.**
+
+```bash
+# Any generated plan: count its frontmatter fields. Five means unpatched.
+python scripts/goal_to_epic.py --ac <L1-ID> --store-root docs/acceptance-criteria \
+  --inbox-dir tickets/00_inbox --approved-only
+grep -c ":" tickets/00_inbox/epics/EPIC-*/Master_Plan.md   # generated == 5-ish, conforming == 15
+```
+
+**Fix direction.** Emit the full set from `generate_master_plan()` rather than patching each
+artifact. The conforming shape is `EPIC-TruthfulProjectRecord`'s: `title`, `type: epic`,
+`status`, `components`, `created`, `depends_on: []`, `priority`, `roadmap_phase`,
+`advances_current_outcome`, `requires_diagram`, `requires_adr`, plus `change_target` and
+`risk_surface`. Most of these are derivable from the records the generator has already
+loaded — `title` from the goal AC's title, `priority` and `roadmap_phase` from the goal AC,
+`change_target` and `risk_surface` as the union over the leaf children, `depends_on: []`
+because a plan depends on nothing. Only `requires_diagram` / `requires_adr` need a judgement,
+and `documentation_triggers` on the goal AC already answers the first.
+
+Worth deciding at the same time, because it is the actual root cause: whether
+`Master_Plan.md` should be subject to the ticket schema at all. It is an index, not a unit of
+work, and `change_target` / `risk_surface` on an index are close to meaningless — the
+alternative fix is to exempt `Master_Plan.md` in both gates and leave the generator's output
+as it is. Either is defensible; what is not is the present state, where the generator writes
+one shape and the gates demand another.
+
+**Pattern:** the third defect found in `run()`'s epic-assembly path in a week, after `TKT-016`
+(absolute `implemented_by` back-references) and `TKT-017` (unresolvable `depends_on`). All
+three share a shape — the generator produces an artifact that no gate sees until a human
+tries to commit it, so the generator's own tests pass and the defect surfaces one commit
+attempt at a time. A test that generates an epic and runs the real frontmatter validators
+over the result would have caught all three at once. **Related:** `TKT-016`, `TKT-017`,
+`KI-ACD-20260831-agent-contracts-block-not-pipe-delimited` (same family: generated ticket
+content that a downstream gate fail-closes on).

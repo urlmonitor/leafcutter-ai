@@ -1,0 +1,69 @@
+id: ACS-1400c-3-i
+components:
+  - ac_store
+title: "Correcting a child list never re-judges whether the parent is finished"
+component: ac-store
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a parent claiming to be finished whose child list omits a child that is
+    not finished,
+  When the one-off adjudicated pass repairs that parent's child list,
+  Then the parent's finished-state value is unchanged from before the run,
+  And no record anywhere in the store has its finished-state value changed by the
+    run,
+  And the parent's newly complete child list is reported, so the now-visible
+    disagreement between the parent's claim and its children is left standing for
+    the separate reader that judges it.
+depends_on:
+  - ACS-1400c-3
+doc_links:
+  - path: scripts/ac_store/mark_ac_done.py
+    relationship: related
+    status: exists
+    relevance: "WHERE THE FINISHED-STATE DECISION STAYS. Flipping that field belongs to this tool and its own evidence gate. This pass corrects the child set; it never uses the set it has just written as the evidence for a claim about what is finished."
+  - path: scripts/ac_store/done_proof.py
+    relationship: related
+    status: exists
+    relevance: "THE SEPARATE READER THE LAST Then HANDS OFF TO. Once a parent's child list is complete, the done-proof reader can see the disagreement between a finished claim and an unfinished child — which is the outcome this whole tree is for. Making the disagreement visible is the deliverable; resolving it is not."
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-09-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - code
+risk_surface: contract_boundary
+notes: |
+  THE L0'S ONE HARD REFUSAL, MADE FALSIFIABLE ON THE RECORD WHERE IT WILL BE MOST
+  TEMPTING. The L0 states it as an inherited refusal so it is not rediscovered;
+  this AC turns it into something a test can fail. Without a criterion, a refusal
+  stated only in notes is a suggestion.
+
+  THE TEMPTATION IS SPECIFIC AND THE BA FELT IT. The motivating investigation was
+  a sweep of composites marked finished with unfinished children, so the moment
+  this pass completes a parent's child list, the obvious next line is "now
+  recompute the badge". It is refused. Correcting the count and re-judging the
+  claim are two acts, and only the first belongs here. Doing both would manufacture
+  a finished claim on the one field the whole phantom-done edifice rests on, using
+  evidence the pass had itself just written — a closed loop.
+
+  THE LAST Then IS WHAT STOPS THIS READING AS TIMIDITY. Leaving the finished-state
+  alone is not the same as leaving the problem alone. A repaired child list makes
+  a previously unreachable disagreement visible to the reader whose job it is, and
+  that visibility is the product. This clause requires the pass to hand that over
+  rather than to swallow it.
+
+  A NOTE ON WHY THE SECOND Then IS STORE-WIDE. Restricting the assertion to the
+  repaired parent would allow a run that leaves its target alone and adjusts a
+  neighbour. The refusal is on the whole run.

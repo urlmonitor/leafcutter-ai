@@ -6,7 +6,7 @@ component: build-pipeline
 level: L1
 status: active
 req_status: draft
-readiness: reviewed
+readiness: approved
 priority: high
 roadmap_phase: phase_1
 work_status: todo
@@ -14,9 +14,19 @@ criteria: |
   Delete it once and it is really gone -- and the build never claims otherwise.
 
   When something is removed from the package, the copy that was previously
-  installed goes with it, so no abandoned file survives to be loaded by mistake.
+  installed goes with it, so no abandoned file survives to be offered, run, or
+  answered to by name after the thing it belonged to is gone. A capability you
+  retired must stop being something your project can still reach for.
+
   If one does survive, the build says so and names it, instead of finishing with
   a clean bill of health that stops anyone looking.
+
+  And when nothing survives, the build says what it examined to reach that
+  conclusion -- which installed copy it looked at, and how much of it. A clean
+  result must be distinguishable from a step that looked at nothing and printed
+  the same words. An all-clear nobody can check is worth less to the reader than
+  no report at all, because it actively stops the check they would have done by
+  hand.
 depends_on:
   - BP-1500
 doc_links:
@@ -28,25 +38,51 @@ doc_links:
     relationship: describes
     status: exists
     relevance: "The stale-file cleanup step and the record of previously deployed files it reads."
+  - path: "docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900g-8-ii.yaml"
+    relationship: describes
+    status: exists
+    relevance: "THE INVERSE, AND THE ONE MOST LIKELY TO BE MISTAKEN FOR THIS. Approved, work_status done, merged 2026-09-07. It makes the build refuse to ship an install when a non-code file a deployed script NEEDS is absent from the deploy declaration. That is INCOMPLETENESS -- a declared or required thing with nothing behind it. This L1 is RESIDUE -- a present thing that nothing declares any more. Neither direction catches the other, and building one does not shorten the other. Read the boundary paragraph in notes before decomposing."
+  - path: "docs/acceptance-criteria/build_pipeline/BP-100-reliable-builds/BP-100b-3.yaml"
+    relationship: describes
+    status: exists
+    relevance: "THE NARROW ALREADY-REOPENED INSTANCE, and the direct explanation of the 2026-09-07 recurrence recorded in notes. Scoped to the workflows output directory only, silent about the build's report, and reopened as KI-BP-010 after being found never to have executed against that directory at all. Reuse it as prior art and as the reason the workflows tree is where the live orphan is; do NOT treat it as coverage of this L1, and do not let a fix for it be presented as satisfying this L1."
 delivers_to: null
 expects_from: null
 origin_agent: BrainCandy
 created: 2026-08-25
 created_by_ticket: null
-amended_by: []
+amended_by:
+  - action: criteria_widened
+    agent: product-owner
+    date: '2026-09-07'
+    reason: "Third live occurrence of the same defect, in a new artifact class, reported by BrainCandy. Two clauses added and readiness dropped reviewed -> draft because the reviewed text no longer covers them. (1) The residue clause now names the harm as the abandoned copy remaining REACHABLE BY NAME, not merely present -- the observed orphan is an executable workflow script that a by-name resolution can still bind to in preference to the current one. (2) A new clause requires the CLEAN result to state what was examined, so 'nothing was left behind' is distinguishable from 'nobody looked'. The pre-existing report clause only required a SURVIVOR to be named; it was fully satisfiable by the current implementation, which finds no survivor because it looks in a fixed list of eleven historical paths and has no notion of orphans. See the 2026-09-07 section in notes for evidence."
+  - action: notes_corrected
+    agent: it-po
+    date: '2026-09-07'
+    reason: "Technical enrichment pass over BP-1500b-1..5. Two notes changes, no criteria change. (1) Removed a dead instruction telling future readers to reuse a reviewed L2 draft at /tmp/selfhost_leaf_orphans.yaml -- the file does not exist and /tmp is not a durable park for reviewed work; the decomposition was re-derived from disk instead. (2) Added an ENFORCEMENT POINTS section enumerating the three candidate sites on disk and naming the load-bearing one. The material correction it records: the source-derived derivation this L1 asks for ALREADY EXISTS (_build_source_manifests at build.py:1784 recomputes from templates/ including workflows-js/*.js; clean_stale_artifacts at build_phases.py:3756 removes anything absent from it) and is simply gated behind `if args.clean:` at build.py:2288, a store_true flag defaulting False. The defect is an uninvoked correct step, not an absent one. Also records that _PRE_CONSOLIDATION_PATHS is destructive rather than inert (KI-BP-009) and must not be grown."
 superseded_by: null
-covered_by: []
+covered_by:
+  - BP-1500b-1
+  - BP-1500b-2
+  - BP-1500b-3
+  - BP-1500b-4
+  - BP-1500b-5
 implemented_by: []
 documentation_triggers:
   - reference-doc
 change_target: pipeline
 risk_surface: contract_boundary
 notes: |
-  A REVIEWED L2 DRAFT ALREADY EXISTS for this L1 at /tmp/selfhost_leaf_orphans.yaml.
-  Its criteria, it_requirements and test_spec were reviewed and verified; only its
-  id and parent are wrong (it was written at BP-900h-5, which is now a live
-  unrelated approved record). Re-id it as the first L2 of BP-1500b and keep its
-  content. Do not re-derive it.
+  DEAD POINTER REMOVED 2026-09-07 (it-po). These notes previously instructed a
+  future agent to reuse "a reviewed L2 draft" parked at
+  /tmp/selfhost_leaf_orphans.yaml and NOT to re-derive it. That file does not
+  exist and cannot be recovered; /tmp is not a durable place to park reviewed
+  work, and the instruction would only have sent each subsequent reader looking
+  for a file even less likely to be there than when it was written. The
+  decomposition was re-derived from disk instead, and BP-1500b-1 through
+  BP-1500b-5 are the result. Nothing was lost that anyone can now identify. If
+  reviewed AC content ever needs parking again, park it in the store as
+  readiness: draft under a real id, never outside the repository.
 
   THE OBSERVED DEFECT. Removing a template dropped its entry from the build's
   record of deployed files and printed "Stale file cleanup: (no stale files
@@ -87,3 +123,201 @@ notes: |
   whose source is missing fails the build): there the record names something
   absent, here something present is named by nothing. Same inversion against
   BP-900g-7. Neither inverse direction is covered today.
+
+  ==========================================================================
+  THIRD OCCURRENCE, 2026-09-07 -- NEW ARTIFACT CLASS, AND WHY THE CRITERIA
+  WERE WIDENED RATHER THAN A NEW RECORD OPENED.
+  ==========================================================================
+  Reported by BrainCandy and verified on the reporting machine. This is the
+  same defect KI-BP-005 describes, in a class the entry had not yet seen, and
+  it is the reason two clauses were added to the criteria above.
+
+  THE EVIDENCE, as gathered.
+    - templates/workflows-js/ holds EIGHT scripts. Two separate deployed trees
+      hold NINE. The extra one is fast-lane-build.js in both.
+    - Its source template was deleted on 2026-09-01 in commit 4de20a797,
+      "refactor(build-orchestration): delete the orphaned second fast-lane
+      runner (#675)".
+    - `build.py --force` run against one of those trees printed
+      `Stale file cleanup: (no stale files found)`.
+    - Six days and an unknown number of builds later, both copies are still
+      there.
+
+  WHAT IS NEW HERE, beyond confirming the entry is still live.
+
+  (1) A NEW ARTIFACT CLASS. KI-BP-005's two recorded reproductions are both
+      commit_guardian scripts. This one is a WORKFLOW, which matters because
+      the entry's own narrowing note argues the registry pattern is the one
+      that works -- deleting an AGENT template does fail the build, so the gap
+      was thought to be scoped to artifact classes with no registry behind
+      them. Workflows DO have output_mappings in .build_manifest.json, and the
+      orphan survived anyway. Do not decompose on the assumption that a
+      manifest-tracked class is safe.
+
+  (2) THE RESIDUE IS REACHABLE, NOT MERELY PRESENT. A deployed workflow script
+      is executable and resolvable BY NAME. A project can go on offering a
+      command the package has dropped, and an agent or workflow that resolves
+      by name can bind to the removed version in preference to the current one.
+      This repository has recorded that exact staleness shape before (a
+      workflow invoked by name running a stale session-cached script even after
+      a redeploy; the recorded workaround is to invoke by explicit script path).
+      That is why the first criteria clause now says "offered, run, or answered
+      to by name" rather than "loaded by mistake" -- the harm is that the dead
+      capability is still SELECTABLE, which is strictly worse than a dead file
+      sitting on disk. Do NOT let this collapse back into "the file is removed";
+      the outcome is that the retired capability stops being reachable.
+
+  (3) THE REPORT CLAUSE AS WRITTEN WAS ALREADY SATISFIED, AND THAT IS THE
+      HEART OF THE DEFECT. The pre-existing clause required a SURVIVING orphan
+      to be named. The current step never has a survivor to name: it iterates
+      a fixed list of eleven paths left over from a historical layout
+      migration and has no notion of orphans at all, so "(no stale files
+      found)" is VACUOUSLY true rather than wrong. An implementation could
+      satisfy the old clause perfectly and change nothing. The added clause
+      therefore constrains the CLEAN path, not the failing one: a clean result
+      must state what was examined, so the reader can tell "nothing was left
+      behind" from "nobody looked". Any L2 that only tests the survivor-named
+      path leaves this defect exactly where it is.
+
+  THE SAME SHAPE HAS NOW BEEN FOUND THREE TIMES IN THIS PROJECT WITH THREE
+  DIFFERENT CHECKS -- a documented pre-drive check whose path had never
+  existed, so a real absence was indistinguishable from the check's own error;
+  a store validator that exited 0 for eight days having globbed zero files;
+  and this one. The pattern is not "the check is weak", it is "the check
+  reports on a scope it never had". That generality is deliberately NOT
+  claimed by this L1 -- see the OPEN STRUCTURAL QUESTION below.
+
+  ==========================================================================
+  ENFORCEMENT POINTS, ENUMERATED ON DISK 2026-09-07 (it-po, technical
+  enrichment). READ THIS BEFORE IMPLEMENTING ANY L2 -- IT CORRECTS THE
+  "THE CHECK HAS NO NOTION OF ORPHANS" FRAMING IN A LOAD-BEARING WAY.
+  ==========================================================================
+  There are THREE places in the build that could carry this behaviour, and
+  only one of them is load-bearing. The derivation this L1 asks for MOSTLY
+  ALREADY EXISTS; it is simply never invoked on the path an adopter uses.
+
+  EP1 -- scripts/build.py:2283-2286. `_heading("Stale file cleanup")` ->
+    `_cleanup_stale_paths(target_root, output_root, dry_run)` (:1844) over
+    `_PRE_CONSOLIDATION_PATHS` (:1769, eleven entries). Runs on EVERY build.
+    This is the step that prints "(no stale files found)" -- the sentence the
+    L1 indicts. It is a layout-migration helper with no notion of orphans, so
+    its all-clear is vacuous rather than wrong, exactly as the notes above
+    say. It is NOT, however, inert: see the safety note below.
+    -> DO NOT EXTEND. Adding a name here is the shortcut BP-1500b-2 forbids.
+
+  EP2 -- scripts/build.py:1968 `_run_migration_report`, a second consumer of
+    the same eleven-entry list, report-only, reachable via the migration
+    report mode. Named for completeness so no one "fixes" the sweep here and
+    believes the default path is covered. -> DO NOT EXTEND.
+
+  EP3 -- scripts/build.py:2288-2292:
+        if args.clean:
+            source_manifests = _build_source_manifests(output_root)
+            clean_stale_artifacts(target_root, source_manifests)
+    `_build_source_manifests` (build.py:1784) ALREADY recomputes the
+    producible set from the package's CURRENT sources on every call --
+    templates/agents/*.md, templates/skills/*/, templates/hooks/*, and
+    templates/workflows-js/*.js. `clean_stale_artifacts`
+    (build_phases.py:3756) ALREADY removes any installed artifact whose name
+    is absent from that recomputed set. That is BP-1500b-2's shape, already
+    written.
+    -> THIS IS THE LOAD-BEARING ENFORCEMENT POINT, and specifically the
+       `if args.clean:` GATE at :2288. `--clean` is `action="store_true"`
+       (:2058), default False, so a plain `build.py --target-dir <root>` --
+       and `--force` -- never reaches it. THAT is why the orphan survived six
+       days of builds, not an absent derivation.
+
+  THE SWEEP THEREFORE SITS BESIDE EP1 AND EXTENDS EP3. It is the promotion of
+  the EP3 call out of the opt-in branch onto the default path, plus the
+  provenance filter (BP-1500b-4), the scope report (BP-1500b-3) and the
+  blast-radius bound (BP-1500b-1-i). `_PRE_CONSOLIDATION_PATHS` gains nothing
+  and must gain nothing.
+
+  A SECOND REASON NOT TO GROW EP1, and a live data-loss finding this L1's
+  decomposition should not have to rediscover: EP1 is DESTRUCTIVE, not inert.
+  KI-BP-009 (high, open, empirically confirmed 2026-08-25) records that
+  `.claude/skills` appears in BOTH `_PRE_CONSOLIDATION_PATHS` and the shim
+  map, so an ordinary no-flag build rmtree's a real `.claude/skills`
+  directory an adopter created, prints "removed stale: .claude/skills" with a
+  green checkmark, and re-shims over it. Under `--clean`, EP3 additionally
+  deletes THROUGH the skills symlink. So the build already destroys adopter
+  work on the default path today. BP-1500b-4's fourth Then clause -- the
+  sweep never satisfies itself by emptying the installed tree and rewriting
+  it -- reaches that behaviour on its face, which is why no sixth L2 was
+  needed for it. It is called out here because an implementer who reads only
+  BP-1500b-1 will add a correct sweep to a build that is still deleting the
+  adopter's directory, and the L1's outcome will not have been delivered.
+
+  ==========================================================================
+  BOUNDARY THE REPORTER ASKED TO BE EXPLICIT: THIS IS NOT BP-900g.
+  ==========================================================================
+  BP-900g-8-ii (approved, done, merged 2026-09-07) makes the build refuse to
+  ship an install when a non-code file a deployed script NEEDS is missing from
+  the deploy declaration. Read the two sentences side by side:
+
+    BP-900g-8-ii  -- something is DECLARED or REQUIRED, and nothing is behind it.
+    BP-1500b      -- something is PRESENT, and nothing declares it any more.
+
+  One is INCOMPLETENESS, the other is RESIDUE. They fail in opposite
+  directions and neither can catch the other: a tree can satisfy every
+  declaration completely and still be carrying ten abandoned files, and a tree
+  can be free of every orphan and still be missing a file its scripts need.
+  Building the first shortens none of the work of the second -- they do not
+  even read the same side of the comparison. Do NOT treat a BP-900g-8-ii
+  fixture, test, or helper as evidence for anything here. The same inversion
+  already applies against BP-900g-9 and BP-900g-7 as recorded above;
+  BP-900g-8-ii is a third instance of it, named here because it is the most
+  recent and therefore the most likely to be mistaken for a re-run of this.
+
+  ==========================================================================
+  DO NOT RE-DERIVE THESE TWO NEIGHBOURS -- SAME FAMILY, DIFFERENT CAUSE.
+  ==========================================================================
+  Both are about an unexamined check not looking like a passing one, which is
+  the family the added clause belongs to. Cite them; do not merge them, and do
+  not satisfy this L1 by pointing at either.
+
+  - BP-1500d-4 (approved) -- a check that CANNOT READ the record it needs says
+    so, rather than returning its all-clear. There the record is absent or
+    unreadable. Here the record is read fine; the check's notion of what to
+    look for is simply unrelated to orphans.
+  - BP-1500e (approved) -- a check that DID NOT RUN, because an earlier one in
+    the chain failed, is reported as not-run rather than left to look like a
+    pass. Here the check ran to completion and reported success.
+
+  ==========================================================================
+  OPEN STRUCTURAL QUESTION FOR THE OWNER -- FLAGGED, NOT TAKEN.
+  ==========================================================================
+  With BP-1500d-4, BP-1500e's final clause, and now this one, the L0 carries
+  three separate records asserting that an unexamined check must not look like
+  a satisfied one, each scoped to a different cause. That is defensible today
+  -- the causes are genuinely different and a fix for one fixes neither other
+  -- but it is the shape a store takes just before the general rule should be
+  lifted out. The general rule would read: every check the build reports on
+  states the scope it examined, so no all-clear is unfalsifiable. BP-1500 has
+  five L1s (a-e) against the hard cap of seven and no child_limit_override, so
+  a sixth L1 is available WITHOUT a waiver, and BP-1500f was confirmed free.
+  It was deliberately NOT authored here: lifting the rule is a scope decision
+  the reporter did not ask for, and doing it silently while amending one L1
+  would be exactly the quiet widening this store keeps warning against. If the
+  owner wants it, it is one L1 and the three existing clauses become citations
+  to it rather than duplicates of it.
+
+  ==========================================================================
+  CAPS AND PLACEMENT, RE-CHECKED ON DISK 2026-09-07 -- NOT TAKEN ON TRUST.
+  ==========================================================================
+  The reporter proposed BP-900 as the likely home. It is not available, and it
+  is also not the right theme:
+    - BP-900 (L0): 8 L1s (a-h) against child_limit_override: 8, itself above
+      the hard cap of 7. FULL. A ninth needs a second waiver.
+    - BP-900g: 10 L2s against child_limit_override: 10, above the hard cap of
+      5. FULL, and its own override note reads "Remove once a PO-owned split
+      rebalances this tree" -- adding to it is the opposite of what that note
+      asks for.
+    - Theme, independent of the caps: BP-900 asks whether everything PROMISED
+      arrived. This is residue from something no longer promised at all, which
+      is BP-1500's question -- is the build's account of its own work complete
+      and true.
+  No cap was hit in the end, because no new record was needed: BP-1500b
+  already IS this defect class, authored 2026-08-25 against KI-BP-005, still
+  readiness-pending with zero L2s. Opening a new L0 or L1 would have
+  duplicated it.

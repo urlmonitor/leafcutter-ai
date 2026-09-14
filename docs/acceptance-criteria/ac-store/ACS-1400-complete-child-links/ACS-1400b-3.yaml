@@ -1,0 +1,71 @@
+id: ACS-1400b-3
+components:
+  - ac_store
+title: "A store-wide run that examined nothing cannot report as clean"
+component: ac-store
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the store-wide check is pointed at a location holding no requirement
+    records,
+  And, separately, the same check is pointed at a store where every parent names
+    every child it has,
+  When each run completes,
+  Then the first reports that it examined no records and does not report the store
+    as healthy,
+  And the second reports the number of records it examined and reports the store
+    as healthy,
+  And the two runs are told apart from their delivered output, not only from their
+    exit status.
+depends_on:
+  - ACS-1400b
+doc_links:
+  - path: scripts/ac_store/validate_ac_schema.py
+    relationship: related
+    status: exists
+    relevance: "THE SCAR THIS AC EXISTS TO AVOID REPEATING, IN THIS SAME COMPONENT AND ON THIS SAME STORE. For eight days a bare-directory argument matched zero files, printed a success message and exited 0 — and the project's own written instruction prescribed exactly that form, so the documented defence against store rot was itself a no-op and reported clean the whole time. The fix made a zero-file run exit non-zero and made the script state the count it validated. Copy both halves."
+  - path: scripts/ac_store/scan_ac_orphans.py
+    relationship: related
+    status: exists
+    relevance: "THE SURFACE THAT INHERITS THE RISK. Once this scan is wired to a recurring job with a root path, a path argument, or a working-directory assumption, the same failure shape is available to it: a run that resolved to no records exits cleanly and the schedule reports green forever. Verified 2026-09-08 that it currently finds 47 across the real store — the point is that nothing about its output would distinguish that from a run that found a store of size zero."
+  - path: docs/acceptance-criteria/ac-store/ACS-1100-honest-coverage-answers/ACS-1100.yaml
+    relationship: related
+    status: exists
+    relevance: "The denominator obligation, inherited. This AC is the degenerate case of it: the answer 'nothing wrong' is only meaningful alongside the size of the set it was computed over."
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-09-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - code
+risk_surface: internal
+notes: |
+  THIS REPO HAS SHIPPED THE SAME DEFECT THREE TIMES AND ITS CLAUDE.md SAYS SO. The
+  feedback-categories path check reported a missing file on every worktree
+  including correct ones; the schema validator's bare-directory glob reported
+  clean while checking nothing for eight days; a post-merge audit reported clean
+  because the reference it compared against was stale. The shared shape is that a
+  run which examined nothing was indistinguishable from a run that found nothing.
+  A recurring, unattended, whole-store job is the single most dangerous place in
+  this codebase for that shape, because nobody is watching it to notice.
+
+  WHY THIS IS SEPARATE FROM ACS-1400b-2. That AC governs the honesty of a report
+  that found things — classification and denominator. This one governs the honesty
+  of a report that found nothing, which is the state the job will be in on almost
+  every run once ACS-1400c has cleared the population, and therefore the state
+  nobody will ever inspect.
+
+  DELIBERATELY DISTINCT FROM ACS-1400a-3, WHICH MAKES THE SAME DEMAND OF THE
+  COMMIT-TIME CHECK. Two instruments, two runs, two places the defect can hide.
+  Neither covers the other.

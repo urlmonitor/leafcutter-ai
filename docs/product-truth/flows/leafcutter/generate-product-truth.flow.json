@@ -28,8 +28,8 @@
       "implements": [
         "UXP-510"
       ],
-      "impl_status": "done",
-      "impl_asof": "2026-07-20"
+      "impl_status": "in_progress",
+      "impl_asof": "2026-09-07"
     },
     {
       "id": "derive",
@@ -39,8 +39,8 @@
       "implements": [
         "UXP-511"
       ],
-      "impl_status": "done",
-      "impl_asof": "2026-07-20"
+      "impl_status": "in_progress",
+      "impl_asof": "2026-09-07"
     },
     {
       "id": "invert",
@@ -50,8 +50,8 @@
       "implements": [
         "UXP-512"
       ],
-      "impl_status": "done",
-      "impl_asof": "2026-07-20"
+      "impl_status": "in_progress",
+      "impl_asof": "2026-09-07"
     },
     {
       "id": "backref",
@@ -61,8 +61,8 @@
       "implements": [
         "UXP-513"
       ],
-      "impl_status": "done",
-      "impl_asof": "2026-07-20"
+      "impl_status": "in_progress",
+      "impl_asof": "2026-09-07"
     },
     {
       "id": "validate",
@@ -72,17 +72,17 @@
       "implements": [
         "UXP-514"
       ],
-      "impl_status": "done",
-      "impl_asof": "2026-07-20"
+      "impl_status": "in_progress",
+      "impl_asof": "2026-09-07"
     }
   ],
   "branches": [],
   "impl_summary": {
-    "done": 5,
-    "in_progress": 0,
+    "done": 0,
+    "in_progress": 5,
     "not_started": 0,
     "total": 5,
-    "asof": "2026-07-20"
+    "asof": "2026-09-07"
   },
   "acceptance_scenarios": [
     {

@@ -38,13 +38,13 @@ doc_links:
   - path: docs/acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/GE-127d.yaml
     relationship: parent
     status: exists
-  - path: docs/acceptance-criteria/build_pipeline/BP-100-reliable-builds/BP-100n-4.yaml
+  - path: docs/acceptance-criteria/build_pipeline/BP-1600-counted-from-reality/BP-1600a-2.yaml
     relationship: depends_on
     status: exists
     relevance: >-
       PRECONDITION, NOT SCOPE — INHERITED AND NOT RESTATED. Reconciling the
       published rule with the applied one only means something once the rule is
-      applied at all; that registration is BP-100n-4's day-one triage. Do not
+      applied at all; that registration is BP-1600a-2's day-one triage. Do not
       restate the census.
   - path: templates/scripts/commit_guardian/README.md
     relationship: modifies
@@ -179,7 +179,7 @@ it_requirements:
     - >-
       A SURFACE THAT CANNOT BE READ IS NOT AGREEMENT. If any listed published surface is missing,
       unreadable or unparseable, report an INDETERMINATE line naming the surface and the reason
-      and exit 2 — the same vocabulary BP-100n-4-ii pins and GE-127a-1-i and GE-127b-1-i reuse.
+      and exit 2 — the same vocabulary BP-1600a-2-ii pins and GE-127a-1-i and GE-127b-1-i reuse.
       Silently skipping an unreadable surface and reporting agreement on the rest is the
       four-times-shipped shape on this component (KI-CG-034, KI-CG-012, KI-CG-018, the AC-store
       validator's bare-directory no-op) and would let the gate certify a state it never examined.
@@ -340,7 +340,7 @@ test_rationale: |
   A fourth descriptor exists that the criteria do not name and that the enrichment decision makes
   necessary: adding a new published surface to the configured list must be caught with no change to
   the check, and the stated surfaces-compared count must move by one. That is the same add-one-item-
-  and-require-the-count-to-move construction BP-100n-4 uses as its decisive anti-grep descriptor,
+  and-require-the-count-to-move construction BP-1600a-2 uses as its decisive anti-grep descriptor,
   and it is the only thing that stops the surface list being a literal inside the gate — which
   would reproduce this exact defect one level up.
 
@@ -402,7 +402,7 @@ amended_by:
     stream and sets an exit status; the documentation correction is a source edit made by the change,
     not a runtime side-effect the criteria assert. test_spec: eight executing descriptors carrying all
     three of the BA''s named mutations, plus an add-a-surface-and-require-the-count-to-move descriptor
-    borrowed in shape from BP-100n-4 so the surface list cannot be a literal, plus the registered hook
+    borrowed in shape from BP-1600a-2 so the surface list cannot be a literal, plus the registered hook
     entry point and the deployed copy in a cold process.'
 superseded_by: null
 covered_by: []

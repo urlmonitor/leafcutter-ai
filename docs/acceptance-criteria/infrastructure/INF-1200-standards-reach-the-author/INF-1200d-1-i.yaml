@@ -1,0 +1,295 @@
+id: INF-1200d-1-i
+title: "A standard that reached nobody is not counted as delivered"
+component: infrastructure
+components:
+  - infrastructure
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a standard is declared for a kind of file that the ownership record
+    assigns to no specialist, so that its audience is empty,
+  When the declared standards are carried outward,
+  Then the outcome of that run does not represent that standard as having
+    reached its audience,
+  And the outcome names that standard and the kind of file it governs as one
+    whose audience was empty,
+  And given instead a standard whose audience is not empty and every one of
+    whose owners is told,
+  When the same run is examined,
+  Then no empty-audience statement is made about it,
+  And given a run in which every declared standard has an empty audience,
+  Then the outcome does not read as a successful delivery.
+depends_on:
+  - INF-1200d-1
+doc_links:
+  - path: docs/acceptance-criteria/infrastructure/INF-1200-standards-reach-the-author/INF-1200d-1.yaml
+    relationship: parent
+    status: exists
+  - path: docs/acceptance-criteria/infrastructure/INF-1200-standards-reach-the-author/INF-1200e.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      ADJACENT AND NON-OVERLAPPING, AND THE DISTINCTION IS WHY THIS RECORD EXISTS AT
+      ALL. INF-1200e counts pairings of a specialist and a kind of file where the
+      specialist was told too little. A standard with an empty audience has NO pairing,
+      so e's census cannot see it however well e is built. This record closes that one
+      hole, on the delivery's own outcome, and specifies no report format and no second
+      census. The reporting SURFACE remains e's.
+  - path: docs/acceptance-criteria/infrastructure/INF-1200-standards-reach-the-author/INF-1200c-1-i.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      THE SAME CONDITION SEEN FROM THE OTHER AXIS, DELIBERATELY NOT MERGED. c-1-i
+      constrains what the delivery must not DO about an unowned kind of file — invent
+      an owner, or fail. This constrains what the delivery must not CLAIM about it.
+      An implementation can decline to guess and still report the standard as
+      delivered; that is the shape this record catches and c-1-i cannot.
+  - path: docs/acceptance-criteria/agent-registry/AR-100-technology-ownership/AR-100.yaml
+    relationship: depends_on
+    status: exists
+    relevance: >-
+      An empty audience is very often AR-100's gap rather than this tree's. Surfacing
+      it accurately is how that gap becomes actionable; absorbing it is how it stays
+      invisible. Nothing here re-decides ownership.
+  - path: templates/scripts/commit_guardian/commit_guardian.json
+    relationship: related
+    status: exists
+    relevance: >-
+      Declares standards per kind of file without reference to owners, so a declared
+      standard with an empty audience is representable today at the cost of one line
+      of fixture.
+  - path: CLAUDE.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      IT PO. THE DIRECT EVIDENTIAL BASIS FOR THE LAST ARM, NOT A CONVENTION IT MERELY
+      OBEYS. The root instructions record three defences that each reported clean while
+      examining nothing — a config path that reported a present file as missing on every
+      worktree, a validator invocation that exited zero having checked zero files for
+      eight days, and a merge audit that compared against a stale ref and agreed with
+      itself — and draw the general conclusion in as many words. The all-empty arm is
+      that conclusion applied to this delivery's own run outcome.
+  - path: docs/architecture/components/template-compiler.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      IT PO. The run whose outcome this record constrains. Because the compile is a
+      single pass, "every declared standard had an empty audience" is a state the run
+      can recognise about itself before it reports anything — which is what makes the
+      last arm implementable rather than aspirational.
+assigned_agent: python-coder
+estimated_complexity: S
+package_surface: false
+declares_side_effect: false
+it_requirements:
+  - >-
+    NO PACKAGE SURFACE — MEASURED, NOT ASSUMED. This record adds no hooks_manifest id, no new
+    top-level key on commit_guardian.json, no agent entry, no skill entry and no paths.json
+    surface. Its fixture — a declared standard whose kind of file is assigned to nobody — is a
+    nested addition inside the existing `file_size` top-level key, invisible to the mapping_keys
+    container bound to dotted path "". Plain-list spec form; no fictional config_schema_fragment.
+  - >-
+    THE OUTCOME IS THE DELIVERY'S OWN, AND THIS RECORD ADDS NO REPORT SURFACE. What is
+    constrained is what the build's own standards-delivery run may CLAIM about itself. It
+    specifies no report format, proposes no second census, and adds no configuration. The
+    reporting surface for uninformed PAIRINGS is INF-1200e's; this closes the one hole e's census
+    structurally cannot see, because a standard with an empty audience has no pairing to count.
+  - >-
+    THE EMPTY-AUDIENCE STATE IS A THIRD OUTCOME, NOT A ZERO. "Zero of zero recipients" is a true
+    statement and a worthless one. The run must represent an empty-audience standard as its own
+    named state, distinct from delivered, and must name the standard and the kind of file it
+    governs. A per-standard success record that happens to carry a count of zero satisfies the
+    arithmetic and fails this record.
+  - >-
+    THE ALL-EMPTY CASE MUST BE RECOGNISED AS A RUN-LEVEL CONDITION, NOT INFERRED FROM PER-STANDARD
+    RESULTS. If every declared standard has an empty audience — because the ownership record
+    failed to load, because a field was renamed, because the join key changed shape — an
+    implementation that reports per-standard success reports total success. The run must decide
+    this about itself before reporting, and the resulting outcome must not read as a successful
+    delivery. This is the same defect the project's root instructions record three times over,
+    applied on the delivery side rather than the reporting side.
+  - >-
+    THE EMPTY-AUDIENCE STATEMENT MUST BE CONDITIONAL, AND THAT IS THE SECOND MUTATION'S SUBJECT.
+    A warning emitted for every declared standard is indistinguishable from no warning and is the
+    standard way a condition like this gets neutralised within a month of shipping. The
+    non-empty-audience case must produce no empty-audience statement at all.
+  - >-
+    FENCED FROM INF-1200c-1-i, WHICH SEES THE SAME CONDITION FROM THE OTHER AXIS. c-1-i constrains
+    what the delivery must not DO about an unowned kind of file — invent an owner, or fail. This
+    constrains what the delivery must not CLAIM about it. An implementation can decline to guess,
+    satisfy c-1-i completely, and still report the standard as delivered; that is the shape this
+    record catches and c-1-i cannot. Neither may be closed as the other.
+  - >-
+    Must follow the repo error-handling policy: specific-exception try/except around the registry
+    and declaration reads; log at WARNING or higher or re-raise; no bare or blind excepts. Note
+    the interaction that makes this record load-bearing: an ownership record that fails to read
+    and degrades to an empty set produces an all-empty run, and it is precisely that path which
+    must not report success.
+test_spec:
+  - name: test_inf_1200d_1_i_a_standard_whose_audience_is_empty_is_not_represented_as_delivered
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: >-
+      Declare a standard for a kind of file the ownership record assigns to no specialist, run
+      the delivery, and read the run's outcome. That standard is NOT represented as having
+      reached its audience, and the outcome names it and the kind of file it governs as one whose
+      audience was empty. Two assertions on one run: the absence of a delivered claim, and the
+      presence of a named empty-audience statement.
+  - name: test_inf_1200d_1_i_a_standard_whose_owners_were_all_told_produces_no_empty_audience_statement
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: seam
+    description: >-
+      THE NEGATIVE ARM. For a standard whose audience is not empty and every one of whose owners
+      is told, the same run makes no empty-audience statement about it. Without this arm the
+      condition is satisfied by a statement emitted for everything, which is indistinguishable
+      from no statement at all.
+  - name: test_inf_1200d_1_i_a_run_in_which_every_standard_had_an_empty_audience_does_not_read_as_a_successful_delivery
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: >-
+      THE CATASTROPHIC CASE. Put the run in a state where every declared standard has an empty
+      audience — the realistic causes are an ownership record that failed to load, a renamed
+      field, or a changed join key, and the descriptor should use one of those rather than an
+      artificially emptied fixture — and read the outcome. It does not read as a successful
+      delivery. This project's root instructions record three defences that each reported clean
+      for days or weeks while examining nothing, and each time the clean result was believed.
+  - name: test_inf_1200d_1_i_the_empty_is_delivered_injection_reds_three_arms_and_leaves_the_non_empty_arm_green
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: >-
+      THE BA's FIRST NAMED MUTATION, CARRIED VERBATIM AND OBSERVED AS ONE FOUR-WAY EXPERIMENT.
+      MUTATION: treat a standard whose audience is empty as delivered, on the grounds that every
+      specialist that had to be told was told. Under that injection: the first arm must go RED,
+      because the standard is represented as delivered; the naming arm must go RED; the
+      non-empty-audience arm must STAY GREEN, so the two cases are shown to be distinguished by
+      the record rather than by the mutation; and the all-empty arm must go RED, reporting a
+      wholly failed run as a success. All four outcomes must be observed together and all must
+      revert.
+  - name: test_inf_1200d_1_i_the_unconditional_statement_injection_reds_only_the_non_empty_arm
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: >-
+      THE BA's SECOND NAMED MUTATION, CARRIED VERBATIM. MUTATION: make the empty-audience
+      statement unconditional, emitted for every declared standard. Under it the non-empty-audience
+      arm goes RED while the first two stay green. All three outcomes observed, all reverted. A
+      warning that always fires is indistinguishable from no warning, and it is the standard way a
+      condition like this gets neutralised within a month of shipping; the two surviving greens are
+      what make the neutralisation look like a working feature.
+test_rationale: |
+  INF-1200d-1 promises that a newly declared standard reaches everyone it applies to. When it
+  applies to nobody, that promise is discharged vacuously and truthfully and the run reports
+  success — zero of zero recipients being a true statement and a worthless one. So no descriptor
+  here asserts a delivery behaviour; each reads what the run CLAIMS about itself on an input where
+  the criterion above it is vacuously satisfied.
+
+  The negative arm and the all-empty arm are the two that carry the record, and they fail opposite
+  implementations: the negative arm fails a statement emitted for everything, the all-empty arm
+  fails a per-standard success report that never asks a run-level question. Both are asserted on
+  the outcome alone, without going and looking at the inputs, because a reader or a downstream
+  consumer has only the outcome.
+
+  The all-empty descriptor is required to reach that state through a realistic cause — an
+  ownership record that failed to load, a renamed field, a changed join key — rather than by
+  emptying a fixture. The three incidents the project's root instructions record all arrived that
+  way, and a synthetically emptied input exercises a path the real failure would not take.
+
+  Both of the BA's mutations are carried verbatim and both are mixed-outcome. The first keeps the
+  non-empty arm GREEN, which is what shows the two cases are distinguished by the record rather
+  than by the injection; the second keeps the first two arms green and reddens only the negative
+  arm. An injection run that reddens everything has destroyed the property the BA built in.
+delivers_to: null
+expects_from:
+  ac_id: INF-1200d-1
+  contract: >-
+    The run outcome of the declaration walk — per-standard results plus the run-level verdict.
+    This record constrains what that outcome may claim on the one input where d-1's criterion is
+    vacuously satisfied: an empty-audience standard is a named third state rather than a
+    delivered one, the statement is conditional, and a run in which every audience was empty does
+    not read as a success.
+origin_agent: business-analyst
+created: 2026-09-09
+amended_by:
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-09-09
+  note: 'criteria untouched. PACKAGE SURFACE FALSE, AND MEASURED: no watched container touched —
+    the fixture is a nested addition inside the existing top-level `file_size` key and
+    mapping_keys on commit_guardian.json is bound to dotted path "" only. No fictional fragment.
+    COMPLEXITY S: no delivery behaviour, only a named third outcome and a run-level verdict.
+    declares_side_effect FALSE, and this is a deliberate split from its siblings: every Then
+    clause here is about what the RUN OUTCOME states, a stream, not about the content of a file
+    the build writes — the same reading GE-127a-1 and GE-127e-2 apply. THE ALL-EMPTY ARM IS
+    REQUIRED TO REACH ITS STATE THROUGH A REALISTIC CAUSE (registry failed to load, renamed field,
+    changed join key) rather than an artificially emptied fixture, because all three incidents
+    CLAUDE.md records arrived that way and a synthetic emptying exercises a path the real failure
+    would not take. THE RUN-LEVEL VERDICT MUST BE DECIDED AS A RUN-LEVEL QUESTION, not inferred
+    from per-standard results, which is the specific shape that turns a wholly failed run into a
+    reported success. BOTH BA MUTATIONS CARRIED VERBATIM WITH THEIR STAY-GREEN HALVES INTACT —
+    the non-empty arm green under empty-is-delivered, the first two arms green under the
+    unconditional statement. FENCED from c-1-i in writing: c-1-i constrains what the delivery DOES
+    about an unowned kind of file, this constrains what it CLAIMS. test_spec: five executing
+    descriptors, two carrying the BA''s mutations.'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  THE FALSIFYING CASE THE L1 TOLD US TO KEEP IN VIEW, MADE INTO A CONSTRAINT. INF-1200d
+  promises that a newly declared standard reaches everyone it applies to. When it
+  applies to nobody, that promise is discharged vacuously and truthfully, and the run
+  reports success. Zero of zero recipients is a true statement and a worthless one — it
+  is the same arithmetic by which a delivery that reached nobody at all looks
+  indistinguishable from a project with no standards, which is the failure mode the L0
+  names as the one this whole tree is exposed to.
+
+  WHY THIS IS AN L3 AND NOT AN L2. It adds no delivery behaviour. It constrains what
+  INF-1200d-1's own run may claim about itself on the one input where the criterion is
+  vacuously satisfied. That is a technical constraint on an already-specified behaviour,
+  which is exactly the L3 shape.
+
+  THE LAST ARM IS THE CATASTROPHIC CASE AND IT IS CHEAP TO GET WRONG. If every declared
+  standard has an empty audience — because the ownership record failed to load, because
+  a field was renamed, because the join key changed shape — an implementation that
+  reports per-standard success will report total success. This project's root
+  instructions record three separate defences that reported clean for days or weeks
+  while examining nothing, and each time the clean result was believed. That is the
+  precedent this arm exists against, applied on the delivery side rather than the
+  reporting side.
+
+  NAMED MUTATION — EXECUTE IT, DO NOT MERELY DESCRIBE IT. Written so the IT PO can lift
+  it verbatim into a test descriptor.
+
+  MUTATION: treat a standard whose audience is empty as delivered, on the grounds that
+  every specialist that had to be told was told. Under that injection:
+    - the first arm must go RED, because the standard is represented as delivered;
+    - the naming arm must go RED;
+    - the non-empty-audience arm must STAY GREEN, so the two cases are shown to be
+      distinguished by the record rather than by the mutation;
+    - the all-empty arm must go RED, reporting a wholly failed run as a success.
+  All four outcomes must be observed together and all must revert.
+
+  A SECOND MUTATION WORTH RUNNING. MUTATION: make the empty-audience statement
+  unconditional, emitted for every declared standard. Under it the non-empty-audience
+  arm goes RED while the first two stay green. A warning that always fires is
+  indistinguishable from no warning, and it is the standard way a condition like this
+  gets neutralised within a month of shipping.
+
+  NOT AUTHORED HERE, BY DESIGN: assigned_agent, estimated_complexity, it_requirements,
+  test_spec, test_rationale and declares_side_effect. Those are the IT PO's. Both
+  mutations above are written to be turned directly into test descriptors.

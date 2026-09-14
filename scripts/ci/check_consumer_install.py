@@ -151,6 +151,14 @@ def _maybe_run_build(package_dir: Path, target_dir: Path, skip_build: bool) -> i
         )
         return 1
 
+    # Forward the underlying build's own stdout on success too (AC
+    # INF-400c-4-v): a caller of this simulation must be able to see
+    # per-build statements build.py itself makes (e.g. the knowledge-sink
+    # declaration notice) rather than only ever seeing them on a failure
+    # path, where they were already included above.
+    if result.stdout:
+        print(result.stdout, end="" if result.stdout.endswith("\n") else "\n")
+
     return 0
 
 
@@ -403,4 +411,10 @@ if __name__ == "__main__":
 #   build_propagation_audit.build_broken_ref_report() unmodified (per the
 #   ticket's Implementation Notes) rather than reimplementing the matching
 #   rules BP-900b-1/BP-900c-1 already built. (#EPIC-DeploymentCompleteness/12)
+# - 2026-09-07 [python-coder]: _maybe_run_build now forwards the underlying
+#   build.py subprocess's own stdout on the SUCCESS path too (previously only
+#   surfaced on failure, inside the FAILED message) -- needed so a caller of
+#   this simulation can see per-build statements build.py itself prints (e.g.
+#   the knowledge-sink declaration NOTE), not only ever on a failing run.
+#   (#TICKETLESS reason=ac-scoped-fastlane-build-INF-400c-4-v)
 # ====================================================================

@@ -1,0 +1,93 @@
+id: ACD-400d-2-i
+components:
+  - ac_driven_dev
+title: "Work whose size is missing or unreadable is ranked after every readable size, and is still offered"
+component: ac-driven-dev
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given four pieces of work are ready to be picked up and all record the same
+    urgency: one records a size of S, one the largest recognised size XL, one records
+    no size at all, and one records a size written in a form outside the recognised
+    set (for example the word "Medium" where the recognised form is "M"),
+  When the queue is asked which work is ready,
+  Then the S piece is offered first and the XL piece second — every recognised size,
+    including the largest, is ranked ahead of both unreadable ones,
+  And the piece with no size and the piece with the unwritable size are offered last,
+    placed relative to each other by identifier alone,
+  And both are offered: a size the queue cannot read moves the work down the offer
+    and never removes it from the offer.
+depends_on: [ACD-400d-2]
+doc_links:
+  - path: scripts/ac_store/scan_ac_store.py
+    relationship: describes
+    status: exists
+    relevance: "Verified by execution 2026-09-08: a temp store holding S, XL, no-size and 'Medium'-size leaves at equal urgency returned them in the order S, XL, no-size, 'Medium' — the two unreadable sizes last and separated by identifier. Both were present in the offer, so an unreadable size does not withhold work. Tagged `describes`, not `modifies`."
+  - path: docs/architecture/components/ac-driven-dev.md
+    relationship: describes
+    status: exists
+    relevance: "Component architecture for the queue whose unreadable-size verdict this AC pins."
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Every pytest invocation used to run or verify this test must set AC_ENFORCE_STRICT=1, or a red result is masked as an xfail and reads green."
+  - "The order must be obtained by executing the scanner over a temporary store through its real command surface; neither a source-text assertion nor a direct call to the private sort helper satisfies this AC."
+  - "The largest recognised size must be present in the fixture as the criteria specify. Without it, 'unreadable sizes rank last' and 'unreadable sizes are treated as the largest size' order the remaining records identically, and the test passes on a rule the AC does not state."
+  - "The missing-size record must omit the field entirely and the unrecognised-size record must carry a value outside the recognised set; they are different author mistakes and the AC asserts they land in the same place, which a single fixture covering only one of them cannot show."
+  - "Both records must be asserted present in the offer, not merely asserted to be ranked last. The still-offered clause is what forbids a future change importing the approval field's harsher withholding posture onto this field on grounds of consistency."
+test_spec:
+  - name: test_unreadable_sizes_rank_after_every_recognised_size_including_the_largest
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    surface_invoked: "python scripts/ac_store/scan_ac_store.py --ac-root <tmp> --json"
+    description: "Four equally-urgent ready leaves recording S, XL, no size, and a size outside the recognised set are offered in the order S, XL, then the two unreadable ones separated by identifier alone."
+  - name: test_an_unreadable_size_demotes_the_work_and_never_withholds_it
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    surface_invoked: "python scripts/ac_store/scan_ac_store.py --ac-root <tmp> --json"
+    description: "Both the size-less and the unrecognised-size records are present in the offered list, distinguishing this field's demotion verdict from the approval field's withholding verdict."
+test_rationale: "Dropping XL from the fixture would leave the assertion satisfied by the plausible alternative rule that an unreadable size is treated as the largest size — a rule that orders every other record identically and would reorder real work the moment an XL piece appeared."
+delivers_to: null
+expects_from:
+  ac_id: ACD-400c-1
+  contract: "The temp-AC-store fixture builder and the scanner-invocation helper; the builder must support omitting the size field entirely and writing an arbitrary unrecognised value into it."
+origin_agent: BrainCandy
+created: 2026-09-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: internal
+notes: |
+  AUTHORED 2026-09-08 by BA v3, stage 2 of PO -> BA -> IT-PO. Refines ACD-400d-2.
+
+  ONE FIXTURE, TWO SEPARATE VERDICTS, AND THE XL PIECE IS WHY IT NEEDS TO BE ONE
+  FIXTURE. A missing size and an unrecognised size are different author mistakes, and it
+  is not obvious from the outside that they land in the same place. The XL piece is in
+  the fixture to make the assertion discriminating: without it, "unreadable sizes come
+  last" is indistinguishable from "unreadable sizes are treated as the largest size",
+  which is a plausible and different rule that would order the list identically among
+  the other three. With XL present, the two rules diverge and only the shipped one passes.
+
+  THE STILL-OFFERED CLAUSE IS THE ONE THAT CARRIES RISK. The queue's two fields behave
+  oppositely on unreadable input — an unreadable size demotes, an unreadable approval
+  withholds entirely (ACD-400c-1-ii). Stating the size verdict as a demotion, explicitly,
+  is what stops a future change from silently importing the approval field's harsher
+  posture on the grounds that it is "more consistent".
+
+  NO PRODUCT QUESTION IS RAISED FOR THIS FIELD. The equivalent question on the urgency
+  field IS escalated (ACD-400d-4), because there a typo demotes work that an author
+  believed they had marked critical. A mistyped size cannot misrepresent urgency, so the
+  consequence is proportionate and the shipped behaviour is simply recorded.
+
+  AGENT ASSIGNMENT AND TECHNICAL ENRICHMENT DELIBERATELY OMITTED — BA-authored L3.

@@ -7,7 +7,7 @@ components:
 level: L2
 status: active
 req_status: approved
-work_status: todo
+work_status: done
 readiness: approved
 priority: medium
 roadmap_phase: phase_1
@@ -43,8 +43,11 @@ amended_by:
   date: '2026-09-07'
 superseded_by: null
 covered_by:
-  - UXP-700b-2-i
-implemented_by: []
+- UXP-700b-2-i
+- unit_tests/product_truth/test_uxp_700b_2.py
+implemented_by:
+- docs/product-truth/scripts/product_truth_outcome.py
+- docs/product-truth/scripts/validate_product_truth.py
 change_target: code
 risk_surface: contract_boundary
 test_required: true
@@ -81,7 +84,8 @@ test_spec:
     angle: boundary
     framework: unittest
 notes: |
-  House style copied from BP-100n-4 per the BA memory note: state the measured populations in
+  House style copied from BP-1600a-2 per the BA memory note: state the measured populations in
   the Given and close with a varying-population clause. This is the record that makes UXP-700b-1
   falsifiable - without per-check figures, "it examined something" is an assertion the checker
   makes about itself with nothing behind it.
+target_epic: EPIC-TruthfulProjectRecord

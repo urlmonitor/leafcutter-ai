@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: 2026-08-18
-last_updated: 2026-08-26
+last_updated: 2026-09-07
 components:
   - build_orchestration
 related_docs:
@@ -3339,14 +3339,92 @@ closed correctly, on a field the other side of its own contract was never told t
 
 ---
 
-### KI-BO-20260831-1520 — The fast lane's green gate runs only the AC's own tests, so a build that breaks 19 other tests reaches review reporting "gates green"
+### KI-BO-20260831-1520 — The fast lane's green gate runs only the AC's own tests, so a build that breaks unrelated suites reaches review — and now a PR — reporting "gates green"
 
 - **Severity:** high
 - **Status:** open — no AC
-- **Occurrences:** 1
-- **First seen:** 2026-08-31 · **Last seen:** 2026-08-31
+- **Occurrences:** 2
+- **First seen:** 2026-08-31 · **Last seen:** 2026-09-07
 - **Where:** `templates/workflows-js/fast-lane-ship.js` — the `greenCoverageInvocation`
-  string, and the absence of any full-suite step anywhere in the lane
+  string, the terminal payload built at `:1518`, and the absence of any full-suite step
+  anywhere in the lane
+
+**Title widened at the second occurrence.** It previously read *"breaks 19 other tests"*.
+Two occurrences now report two different counts, so a count in the title reads as the
+defect's size when it is only the size of one instance. The mechanism is the title now; the
+per-occurrence counts are below. (Grepped 2026-09-07: the id is cited nowhere outside this
+heading, so the rename breaks no reference.)
+
+---
+
+> **SECOND OCCURRENCE, 2026-09-07 — and this one reached a pull request. The first stopped
+> at review.**
+>
+> The lane built `BP-1500d-3` and opened **PR #689** (`fast-lane/bp-1500d-3`, still open).
+> Its terminal payload reported `unsatisfied_required_checks: []` and *"no required check
+> is, to the run's own knowledge, unsatisfied."* CI then failed.
+>
+> **Measured, same command both sides, `unit_tests/portability/`:**
+>
+> ```text
+> control (origin/main + unrelated commits) : 70 passed,  0 failed
+> with the lane's change                    :  7 failed, 11 errors, 56 passed
+> ```
+>
+> 18 regressed outcomes across 6 files — including `test_consumer_simulation.py`, the
+> repo's own consumer-install harness. The first occurrence's damage was a wasted review
+> cycle; this one is a PR that looks landable and is not.
+>
+> **Verification note on the control figure, because it will not reproduce naively.** The
+> 70-outcome total is confirmed at `origin/main` (`e2b1eb7ea`) — measured 2026-09-07,
+> `8 failed, 62 passed in 157.83s`. The eight are `test_ge_120e_2.py` failing on
+> `scripts.commit_guardian.change_set_source` being absent; the module exists at
+> `templates/scripts/commit_guardian/change_set_source.py` and is missing only from the
+> *deployed* `scripts/` tree, so they are the standard un-built-worktree false-RED, not
+> real reds. **Run `build.py` before using this suite as a control** — an unbuilt worktree
+> reports 8 phantom failures and a `70 passed` control is a built one. (The test's own
+> failure message claims it "checked both `templates/…` source and the `scripts/…`
+> deployed copy", which it did not: a dotted `scripts.commit_guardian.…` import can only
+> ever reach the deployed copy.)
+>
+> **What CI caught it with, and what it did not.** Of PR #689's ten checks, **nine were
+> SUCCESS** — including `Consumer install simulation (BP-900h-1)`, which passed while the
+> unit-level consumer-simulation tests were red, because it runs
+> `check_consumer_install.py` rather than that file. The sole failure was
+> `Test suite (pytest)`. One required check out of six stands between this defect and main.
+>
+> **The scope limitation is real, documented, and total — read this before "fixing" the
+> report.** The phrase *"to the run's own knowledge"* is doing real work and should be
+> preserved. It is not a false claim the lane makes; it is a limit the lane states. The
+> docblock at `:438-440` says the parameter carries *"required checks the run itself knows
+> are unsatisfied"*, and the comment at `:1510-1515` names the full extent of that
+> knowledge: *"Every required check this run can evaluate (today: the changelog-presence
+> check)"*. Exactly **one** of the six required checks is evaluable by the run, and it is
+> not the suite.
+>
+> Which makes the call site the thing to look at:
+>
+> ```js
+> const deliveryOutcome = buildFastLaneDeliveryOutcome(prResult.pr_url || null, []);
+> ```
+>
+> `fast-lane-ship.js:1518`, the only call site. The list is a **hard-coded empty array
+> literal**, so `unsatisfied_required_checks: []` is a constant rather than a result, and
+> the `status: "blocked"` branch of that function is unreachable in the shipped lane. That
+> is deliberate and the comment above it explains why — every check the run *can* evaluate
+> already halted earlier, so nothing survives to populate the list. It is still worth
+> stating plainly, because a reader who sees `unsatisfied_required_checks: []` in a payload
+> will read it as "checked, none unsatisfied" rather than "not a computed field".
+>
+> **Do NOT close this by making the message more honest and stopping there.** Fix (2)
+> below (state the scope) is still the floor and is still worth doing. But this occurrence
+> is the demonstration that (2) alone is insufficient: the message here was *already*
+> honest, precisely qualified, and it did not prevent a broken PR. Only fix (1) — one
+> full-suite run after the coder loop settles — would have.
+
+---
+
+**FIRST OCCURRENCE, 2026-08-31.**
 
 **Symptom.** A fast-lane build of `BO-100e-1` / `BO-100e-1-i` widened `build-feature.js`'s
 single planner dispatch into a multi-look loop. Its own new tests passed. The lane's payload
@@ -3924,3 +4002,274 @@ shaping the work rather than judging it.
 **Pattern:** a pipeline whose verification step reads committed state while its commit step
 runs later — so any test that consults git history can never be satisfied by the pipeline that
 is supposed to satisfy it, and the resulting failure is attributed to the last agent that ran.
+
+---
+
+### KI-BO-20260907-1555 — `failed` is a terminal phase state: the dispatcher filters it out, so a phase that exhausted its retries can never be re-run by any later drive
+
+- **Severity:** high
+- **Status:** **RESOLVED 2026-09-07** — fix direction 1 taken, in both twins. Left in the
+  register rather than deleted because the reasoning below is why the predicate is shaped the
+  way it is, and the entry is cited from the code.
+- **Occurrences:** 1 confirmed in detail (GE-120 ticket 36); 6 further tickets in the same
+  epic carried at least one `failed` phase when this was filed
+- **First seen:** 2026-09-07 · **Last seen:** 2026-09-07
+- **Where (before the fix):** `templates/workflows-js/build-ticket.js:1293`
+  (`orderedPhases.filter((p) => p.status === "needed")`), against the planner schema at
+  `:70` whose status enum is `['needed', 'signed_off', 'not_needed', 'failed']`.
+  **TWIN: `build-feature.js:1541` carried the identical filter (verified) — both fixed.**
+
+> **Resolution.** The inline filter in both drivers is replaced by a pure, named
+> `selectDispatchableByStatus(orderedPhases)` selecting `needed` **or** `failed`. It is a
+> function rather than a widened inline filter for two reasons: the `failed` half is a
+> decision that has to be readable at the call site, and a pure top-level function can be
+> extracted and **executed** under `node` by the unit layer — which
+> `unit_tests/workflows/test_ki_bo_20260907_1555_failed_phase_redispatch.py` does, running
+> the real on-disk function from both files against GE-120 ticket 36's actual frontmatter.
+>
+> **Measured before and after** on that ticket's real phase map: the old predicate returned
+> **0** phases, the new one returns **5**.
+>
+> **Why re-dispatch terminates**, which was the load-bearing question: on success a phase
+> agent *sets* `signed_off` (signoff skill §"Update frontmatter" step 1) rather than
+> find-replacing the literal `needed`, so the `failed` row is cleared and the phase does not
+> return on the next drive. On failure it stays `failed`, where it already was. The
+> within-drive retry ladder is untouched. This also makes the driver match the state machine
+> the signoff skill already documented — *"`failed` → `signed_off` after rework"* — which the
+> dispatcher had simply never implemented.
+>
+> **Deliberately not done:** a cross-drive attempt counter (part of fix direction 1 as
+> originally written). Without it a genuinely unfixable phase is retried once per re-drive.
+> That is operator-gated rather than automatic, and strictly better than the dead end it
+> replaces, but it means an unattended epic re-drive now spends one attempt per failed phase.
+> Revisit if that cost shows up.
+>
+> **Fix direction 2 is still open and still worth doing.** The `noPhaseRequired` refusal at
+> `build-ticket.js:902` remains scoped to "absent, empty, or every phase `not_needed`", and
+> its advice still reads *"Do not look for a failed phase"*. That message is now much harder
+> to reach — an all-`failed` ticket dispatches instead of refusing — but if it is ever reached
+> it still misdirects.
+
+**The dispatcher recognises four phase states and will act on exactly one of them.** The
+planner is explicitly asked to report `failed` — it is in the schema enum, and the read-back
+prompt at `:769` names the needed set as "every agent in the frontmatter `agents:` map whose
+value is `needed`". The dispatch set is then computed by the single filter at `:1293`. A phase
+recorded `failed` is therefore *enumerated and discarded*.
+
+Nothing anywhere in the workflow transitions `failed` back to `needed`. The failure-adjudication
+ladder retries **within** a drive; once a phase exhausts that ladder and the state is persisted
+to frontmatter, the only exit is a human editing the `agents:` map by hand. `failed` is
+write-only.
+
+**Observed.** GE-120 ticket 36 (`GE-120e-4-i`) ended a drive with:
+
+```yaml
+agents:
+  ac-fulfillment-gate: failed
+  ac-validator: failed
+  commit: failed
+  pull-request: not_needed
+  python-coder: failed        # signed_off today, by direct dispatch
+  test-runner: failed
+  test-writer: signed_off
+```
+
+Zero phases marked `needed`. Re-driving the ticket through `build-ticket.js` dispatched **no
+phase agent at all** and wrote no code — not as a bug in that run, but by construction: the
+filter at `:1293` had nothing to select. The implementation was produced only by abandoning
+the workflow and dispatching `python-coder` directly, which took it to 4/4 green in a single
+pass. The tokens spent on the no-op re-drive bought nothing, and a second re-drive would have
+bought the same nothing.
+
+**What is NOT wrong here, so that nobody fixes the wrong thing.** The completion side is
+sound and was clearly designed with this hazard in mind:
+
+- With an empty dispatch set, `:1338` still runs `concludeTicket`, and deliberately bases the
+  decision on `claimedPhasesForCompletion` (`:680`) — *every* agent in the map except
+  `not_needed`, which **includes the `failed` ones**.
+- Each of those must be backed by a passing sign-off entry in the record. The `failed` phases
+  have none, so they land in `outstanding` and the verdict is `completed: false`.
+
+The ticket is correctly held `todo`. **This is not a phantom-done.** The driver diagnoses the
+state accurately and then cannot act on it — it reports phases as outstanding that it has no
+mechanism to ever run. That gap between an accurate diagnosis and an impossible remedy is the
+whole defect.
+
+**Why it is worth an entry rather than a shrug.** The state is reached by the ordinary
+failure path — any ticket whose coder or test-runner exhausts the retry ladder lands here — and
+the operator-visible symptom is "I re-ran the drive and it did nothing", which reads like a
+harness fault rather than a state-machine dead end. Six other tickets in this one epic are
+already carrying `failed` phases. In the five of those that still have some `needed` phases the
+symptom is quieter and worse: the drive runs, makes real progress, and silently never retries
+the failed phase, so each re-drive shrinks the `needed` set while the `failed` set stays frozen.
+
+**Fix direction, in preference order.** *(1 taken; the attempt-counter half of it and item 2
+remain open — see the resolution note above.)*
+
+1. **Treat `failed` as re-dispatchable.** Change the filter at `:1293` to select `needed` **or**
+   `failed`, and carry a per-phase attempt counter in the frontmatter so the retry ladder's cap
+   survives across drives rather than resetting. This is the smallest change and matches what
+   an operator means by "re-run the drive". Apply to the `build-feature.js` twin in the same
+   commit.
+2. **Failing that, make the dead end loud.** When the dispatch set is empty *and* the map
+   contains a `failed` phase, refuse with a message that names those phases and states plainly
+   that no drive will retry them until they are flipped to `needed`. The `noPhaseRequired`
+   branch at `:902` is the model — it exists precisely because "an empty set means nothing was
+   looked at, never that everything passed" — but its condition ("absent, empty, or marks every
+   phase it names as `not_needed`") does not cover the all-`failed` case, and its advice
+   actively says *"Do not look for a failed phase"*, which is the wrong instruction for exactly
+   this state.
+3. **At minimum, document it** in the building-epics skill so the manual remedy (flip to
+   `needed`, or dispatch the agent directly) is discoverable without reading the dispatcher.
+
+**Related.** `KI-BO-025` (the build-feature planner schedules only the currently-unblocked set
+and never re-plans) is the same shape one level up: a set computed once, and no path back into
+it. `KI-ACD-20260907-1555` shares this epic's ticket 36 as its worked example, from the
+contract side.
+
+**Pattern:** a state machine that persists a terminal state its own dispatcher does not accept
+as input — so the recorded outcome of a failure permanently removes the work from the only
+mechanism that could address it, while every report about that work continues to list it as
+owed.
+
+---
+
+### KI-BO-20260908-1030 — The fast lane guards its verdicts against fabrication and passes the pointers to their evidence through unchecked, so `tests_written` can name a file that does not contain the tests
+
+**Severity:** medium for `tests_written` (broken audit trail); **high** for `files_modified`,
+which is the same unchecked shape but drives dispatch rather than reporting.
+**Found:** 2026-09-08, on the `INF-400c-4-iv` fast-lane run (PR #755).
+**Component:** build-orchestration (`templates/workflows-js/fast-lane-ship.js`).
+
+**What was observed.** The run's terminal payload reported six tests written to
+`tests/knowledge/test_harvest_learnings.py`, as fully-qualified pytest node ids:
+
+```
+tests/knowledge/test_harvest_learnings.py::TestAbsentSinkExitStatusEqualsTheEmptySinkExitStatus::test_absent_sink_exit_status_equals_the_empty_sink_exit_status
+```
+
+The tests were actually written to a **new** file,
+`tests/knowledge/test_harvest_learnings_inf400c4iv.py`.
+
+This is worse than a dead link, and the difference is the whole point of the entry. The
+reported path **exists** — a real, tracked, 98 KB file — and contains **none** of the six
+reported classes (`grep -c TestAbsentSink` → `0`). So every reported node id is
+unresolvable, and says so only if you actually run it:
+
+```
+$ pytest "tests/knowledge/test_harvest_learnings.py::TestAbsentSinkExitStatus...::test_..."
+ERROR: not found: .../test_harvest_learnings.py::TestAbsentSinkExitStatus...::test_...
+(no match in any of [<Module test_harvest_learnings.py>])
+no tests ran in 0.04s
+```
+
+An auditor who opens the named file finds a large, plausible, entirely unrelated test module
+and concludes the reported tests were never written. The work was real and the tests were
+genuinely red-before/green-after (verified independently by reverting the implementation to
+`origin/main`: all 6 fail). Only the citation was wrong — which is precisely the citation an
+audit of "were these tests really written" depends on.
+
+**Mechanism.** `tests_written` is **self-reported by the test-writer agent** in free-form
+JSON (`fast-lane-ship.js:1056`), and passed straight through to the terminal payload
+(`:1604`):
+
+```js
+tests_written: (testWriterResult && testWriterResult.tests_written) || [],
+```
+
+Nothing between those two lines checks that the paths exist, that the node ids collect, or
+that they appear in the run's own diff.
+
+**The asymmetry is the tell.** The same prompt that requests `tests_written` carries an
+explicit anti-fabrication clause — but only for the verdict:
+
+> `CRITICAL: gate_passed and reason MUST reflect the real gate output — do NOT fabricate
+> them. Fail closed: if the gate's JSON cannot be parsed or "gate_passed" is absent, report
+> gate_passed: false.`
+
+So the run defends *the claim that the gate passed* and leaves *the pointer to the evidence
+for that claim* unguarded. A reader who cannot resolve the citation has no way to check the
+verdict the citation exists to support.
+
+**`files_modified` is the same shape and matters more.** It is likewise self-reported by the
+coder (`:1146`) and passed through unchecked (`:1605`) — but it is not merely reported. It
+**drives dispatch topology** (`:1342-1346`):
+
+```js
+const filesModified = (coderResult && coderResult.files_modified) || [];
+const releasablePaths = filesModified.filter(
+  (p) => !CHANGELOG_EXEMPT_PREFIXES.some((prefix) => p.startsWith(prefix)));
+const changelogRequired = releasablePaths.length > 0;
+```
+
+An under-reported `files_modified` therefore skips the changelog agent entirely, and the run
+opens a PR that fails the required "Changelog entry present" check — `KI-BO-001`, already on
+the register as its own recurring failure. An over-report demands an entry the change does
+not owe. On the observed run `files_modified` happened to be correct; nothing in the workflow
+would have noticed if it were not.
+
+**Trap.** Neither field's wrongness is visible in a green run. Every gate passed on PR #755,
+the review passed, the changelog was correctly required and written, and the payload's
+`status` was `ok`. The defect surfaces only when someone tries to *use* the citation —
+which, by construction, is after the run has been accepted.
+
+**Fix direction.**
+1. Validate `tests_written` before it reaches the payload: each entry must resolve under
+   `pytest --collect-only`, in the run's own worktree. A node id that does not collect is a
+   failed run, not a cosmetic slip.
+2. Prefer deriving both lists from the run's own diff (`git diff --name-only` against the
+   base commit the run already records as `base_commit`) rather than accepting the agent's
+   account of what it did. The workflow already knows the base; the diff is authoritative and
+   free.
+3. Where derivation is not possible, cross-check the self-report against the diff and refuse
+   on disagreement — the same fail-closed posture `gate_passed` already gets.
+4. Extend the prompt's `CRITICAL:` clause to the evidence pointers, as an interim measure
+   only. A prompt instruction is weaker than a check and should not be the resting state for
+   `files_modified`, which is load-bearing.
+
+**Related.** `KI-BO-001` (missing changelog entry fails a required check — the concrete
+downstream failure an unchecked `files_modified` produces). `KI-BO-20260831-1520` (the same
+run's green gate reporting narrower truth than its wording implies). The broader family is
+the repo's standing one: a report whose shape implies verification that never happened.
+
+**Pattern:** a pipeline that fail-closes on the verdict and fail-opens on the citation — so
+the artifact proving the verdict is the one thing nobody checked, and the report stays green
+while its own audit trail points somewhere else.
+
+---
+
+### KI-BO-20260909-worktrees-go-stale-within-minutes — a branch cut from `origin/main` is behind before the work finishes, and nothing rebases it; only a manual audit stands between that and a push that deletes other people's merged work
+
+- **Severity:** high — the failure mode is silent deletion of merged work on `main`, and it is caught today only by a manual command a human or agent has to remember to run. Four occurrences in a single session, one of which would have deleted work merged **earlier in that same session**.
+- **Status:** open — no AC.
+- **Occurrences:** 4, all on 2026-09-09
+- **First seen:** 2026-09-09 · **Last seen:** 2026-09-09
+- **Where:** every worktree-creating path — `scripts/setup_ticket_worktree.py`, the fast-lane's own worktree step, and plain `git worktree add ... origin/main`
+
+**Symptom, four times in one session.** Each branch was cut from a then-current `origin/main`, work proceeded for anywhere from minutes to an hour, and `git diff origin/main --numstat` immediately before push showed large deletion counts on files the branch had never touched:
+
+| branch | what the pre-rebase diff would have deleted |
+|---|---|
+| `fix/ge-127a-1-ordinary-commit-gap` | `TKT-016`'s AC, test and script — 233 lines |
+| `ac-authoring/ge-127e-actionable-refusal` | the whole `ACS-1400` and `BP-1500` trees, the `ACD-400` family, `ADR-041` |
+| `fast-lane/ge-120g-1` | the whole `ACD-2200` and `ACD-2300` trees + 264 lines of known-issues |
+| `ac-authoring/guardrail-injection` | `GE-127e-3-ii`, the `GE-120g` tests and `run_hook.py` changes — **merged earlier in the same session** |
+
+Every one was caught by the additive-only audit and fixed with `git rebase origin/main`. None reached a push.
+
+**Mechanism.** Nothing here is a bug in git. `main` receives merges continuously — this repo has many concurrent sessions — so the window between "cut a worktree" and "push it" is essentially always long enough for `main` to move. A branch that has not rebased carries a tree that lacks whatever landed in that window, and a push followed by a merge presents those absences as deletions.
+
+Two things make it sharper than ordinary staleness:
+
+- **`setup_ticket_worktree.py create-only` roots at LOCAL `main`, not `origin/main`** (its own `_create_worktree()` docstring records this; `create-ac-worktree` and `create-fastlane-worktree` both root at `origin/main`). `/quick-fix` Phase 0.4.2 exists solely to guard that, and it correctly halted on a local `main` 11 commits behind. But in the same session the script then produced a worktree rooted at a commit that was *not* the local `main` the guard had just verified — so passing the guard is not sufficient.
+- **`git fetch origin main` updates `FETCH_HEAD`, not `refs/remotes/origin/main`.** So an audit run right after that fetch compares against a ref that may be hours old and reports clean. This is already recorded in `CLAUDE.md` from a 2026-09-07 incident; it recurred twice more today.
+
+**Why the existing defence is not enough.** The additive-only audit works — it caught all four. But it is a *manual step in a runbook*, and its failure mode is omission, not error. It sits at the end of a long pipeline, after the interesting work is done, at exactly the point where attention is lowest. A defence with a 100% hit rate and a 0% enforcement rate is one forgotten command away from the outcome it prevents.
+
+**Fix direction.** Make the rebase automatic rather than the audit diligent — `fetch --prune` followed by a rebase onto `origin/main` immediately before any push, in the paths that push (`quick-fix` Phase 7.1, the fast lane's close step, `finalize-feature`). Keep the audit as the backstop; it is cheap and it is the thing that would catch a bad rebase. Two lower-effort partial fixes worth doing regardless: have `create-only` root at `origin/main` like its two siblings, and replace every `git fetch origin main` in the runbooks with `git fetch origin --prune`, since the former does not update the ref the audit reads.
+
+**Related.**
+- `CLAUDE.md` → "Post-origin/main-merge diff audit" — the manual defence this entry proposes to automate; its own text already records the stale-ref variant from 2026-09-07.
+- `KI-ACS-20260909-standalone-validator-does-not-derive-declares-side-effect` (`ac-store.md`) — same session, same family: a documented check narrower than it reads.
+
+**Pattern:** a correct defence with no enforcement, positioned at the end of the pipeline where attention is lowest — so its hit rate measures diligence rather than coverage.

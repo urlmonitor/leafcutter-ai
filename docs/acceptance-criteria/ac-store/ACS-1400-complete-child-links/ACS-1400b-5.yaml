@@ -1,0 +1,75 @@
+id: ACS-1400b-5
+components:
+  - ac_store
+title: "A person can run the store-wide check on demand and tell a deliberate exclusion from real drift"
+component: ac-store
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a person who has not worked on the requirement store before and has only
+    the written guide,
+  When they follow it to run the store-wide check on demand against the real store
+    and read what comes back,
+  Then they obtain a report without needing to know which script performs the
+    detection,
+  And for a record classified as a deliberate exclusion they correctly conclude
+    that no action is required and can state the reason the author gave,
+  And for a record classified as unrecorded drift they correctly conclude that
+    action is required and can name the parent whose list is incomplete,
+  And they correctly identify, from the report alone, whether the run examined the
+    whole store or some subset of it.
+depends_on:
+  - ACS-1400b
+  - ACS-1400b-2
+  - ACS-1400b-3
+doc_links:
+  - path: scripts/ac_store/scan_ac_orphans.py
+    relationship: related
+    status: exists
+    relevance: "THE ON-DEMAND ENTRY POINT THE GUIDE MUST COVER. It already runs standalone and exits 1 with a grouped report; what a reader currently cannot do is interpret the result, because nothing in the output distinguishes a deliberate exclusion from drift. The guide is written against the classified report ACS-1400b-2 produces, not against today's raw output."
+  - path: docs/acceptance-criteria/ac-store/ACS-1200-parked-ideas/ACS-1200b.yaml
+    relationship: related
+    status: exists
+    relevance: "The deliberate-versus-drift judgement the guide must teach is the same one ACS-1200 defines. The guide explains how to read the signal; it does not define a second one."
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-09-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - docs
+risk_surface: internal
+notes: |
+  THE DOCUMENTATION AC FOR ACS-1400b'S `how-to` TRIGGER. Intended author is the
+  documentation expert; the agent assignment is left for the IT PO to set.
+
+  THE JUDGEMENT THE GUIDE TEACHES IS THE ONE THIS WHOLE TREE TURNS ON. Telling a
+  deliberate exclusion from real drift is not a detail of reading a report — it is
+  the distinction that, when missed, produced a brief instructing someone to
+  repair all 47 records including six that must never be touched. A guide that
+  explains how to invoke the check and stops there leaves the reader exactly where
+  the originating brief left its author.
+
+  WRITTEN AS AN OUTCOME FOR A READER, NOT AS A CONTENTS LIST. "A guide exists" is
+  satisfied by any page. Requiring that a first-time reader reach the right
+  conclusion for each classification makes the claim falsifiable by handing the
+  guide and the report to someone who has not seen either.
+
+  THE LAST Then CARRIES ACS-1400b-3's OBLIGATION INTO THE PROSE. A reader who
+  cannot tell from the report whether the whole store was examined will read a
+  zero-finding run as a clean bill of health, which is the failure this component
+  has already shipped three times.
+
+  NO COMPONENT DIAGRAM. No new architectural layer is introduced here — this is
+  wiring and reporting for a script that already exists. The reader inventory for
+  the coverage field, which genuinely is undrawn, belongs to ACS-1400d.

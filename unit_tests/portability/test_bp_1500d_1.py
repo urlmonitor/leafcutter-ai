@@ -91,7 +91,7 @@ def test_bp_1500d_1_out_of_package_harness_target_is_not_under_the_package_paren
         f"expected a package copy at {harness.package_dir}"
     )
     assert (harness.package_dir / "scripts" / "build.py").is_file()
-    assert harness.pre_build_target_files == ["skills_config.json"], (
+    assert harness.pre_build_target_files == [".claude/skills_config.json"], (
         "target held more than a minimal skills_config.json before the "
         f"build ran: {harness.pre_build_target_files}"
     )

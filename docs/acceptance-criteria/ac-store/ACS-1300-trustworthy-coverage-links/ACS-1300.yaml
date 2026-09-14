@@ -9,6 +9,7 @@ req_status: draft
 work_status: todo
 readiness: draft
 priority: medium
+roadmap_phase: phase_store_record_health
 criteria: |
   Proof that already exists is on the record, and what the record claims is real.
 
@@ -45,7 +46,7 @@ doc_links:
   - path: docs/acceptance-criteria/ac-driven-dev/ACD-800.yaml
     relationship: related
     status: exists
-    relevance: "CLOSEST SUBJECT MATCH AND THE MOST SERIOUS PLACEMENT CANDIDATE — rejected, reasons in notes. Its L0 criteria commits to discovery 'using text similarity and keyword heuristics' against done tickets and to backfilling '(implemented_by, work_status)'. Both are incompatible with this goal's method and its central safety property."
+    relevance: "CLOSEST SUBJECT MATCH AND THE MOST SERIOUS PLACEMENT CANDIDATE — rejected, reasons in notes; SUBSEQUENTLY RETIRED OUTRIGHT (updated 2026-09-09). Its L0 criteria committed to discovery 'using text similarity and keyword heuristics' against done tickets and to backfilling '(implemented_by, work_status)'. Both are incompatible with this goal's method and its central safety property. On 2026-09-09 the user retired ACD-800 and all ten descendants for those same reasons — status deprecated, no successor. The placement rejection recorded in this tree's notes was correct and is now moot. IMPORTANT: the retirement removed the requirement, NOT the code — scripts/ac_store/cross_reference_audit.py is still deployed and still writes work_status, which is why ACS-1300c-1-i's fixture remains valid and live."
   - path: scripts/ac_store/ac_coverage_resolver.py
     relationship: related
     status: exists
@@ -343,6 +344,16 @@ notes: |
     L0's goal, not amending it. Its children confirm the mismatch: ACD-800a is
     exact-CRITERIA-TEXT matching, ACD-800b is keyword-and-component matching,
     ACD-800c is the --apply backfill.
+    STAMP, 2026-09-09: ACD-800 and all ten descendants were subsequently RETIRED
+    (status deprecated, req_status superseded, no successor) on the user's
+    decision, for substantially the reasons given above plus a second one this
+    evaluation did not reach — its done-ticket evidence does not exist in an
+    adopting project. The rejection recorded here stands and is now moot; nothing
+    in this tree changes. Do NOT read the retirement as vacating the subject:
+    ACS-1300a keeps the tagged-link repair, ACD-2300 keeps propose-a-link-from-
+    evidence, and ACD-2300 is explicitly NOT ACD-800's successor. Do not read it
+    as removing the hazard either — ACD-800's code shipped and is still deployed,
+    which is why ACS-1300c-1-i's fixture remains live.
 
   The ac-store component has minted a sibling root L0 for exactly this situation
   four times — ACS-800, ACS-900, ACS-1100, ACS-1200 — and PROJECT_CONTEXT.md
@@ -381,8 +392,19 @@ notes: |
     - Do NOT re-cut this split at L1. Decompose each of a/b/c into L2 behaviours.
 
   ==========================================================================
-  ROADMAP FLAG (unresolved — for the user at the approval gate)
+  ROADMAP FLAG — RESOLVED 2026-09-08 BY BrainCandy
   ==========================================================================
+  This tree now claims `phase_store_record_health`, a phase added for exactly
+  this subject and shared with ACS-1200, ACS-1400 and ACS-1500. The flag below
+  is kept verbatim: it named the right problem and offered only two answers,
+  and the one that was taken was neither of them.
+
+  Note the flag's own observation that "ACS-1100 claimed phase_1, which reads
+  as over-claiming" — ACS-1100 is NOT moved here. It is `scope: standing` and
+  is inherited rather than parented, so it is a different kind of record; if
+  its phase is wrong that is a separate question this ruling does not settle.
+
+  ORIGINAL FLAG, AS AUTHORED:
   No `roadmap_phase` is claimed. Phase 1's exit criteria are about clean installs,
   build idempotency and truthful build reporting; store-record health does not
   advance them, and the fourth criterion ("no false all-clear") is about the build,

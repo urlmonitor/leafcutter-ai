@@ -1,0 +1,86 @@
+id: ACS-1400a-4
+components:
+  - ac_store
+  - commit_guardian
+title: "A deliberately parked tree is exempt by its own signal, and the stricter rule refuses to ship without that exemption"
+component: ac-store
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a deliberately parked tree whose parent records no children on purpose and
+    which carries the author-set parked signal and the reason the author gave,
+  And an unmarked tree whose parent omits a child it really has,
+  When a commit staging a child from each is checked at the moment it lands,
+  Then no child of the parked tree is reported as a violation,
+  And each child of the parked tree is reported as an exemption naming the record
+    and the parked reason its author gave,
+  And the child of the unmarked tree is reported as a violation in that same run,
+  And when the same commit is checked in a build where the parked signal is not
+    recognised, the check run fails and names the missing parked signal, rather
+    than reporting the parked tree's children as violations.
+depends_on:
+  - ACS-1400a
+  - ACS-1200a
+doc_links:
+  - path: docs/acceptance-criteria/ac-store/ACS-1200-parked-ideas/ACS-1200a.yaml
+    relationship: related
+    status: exists
+    relevance: "THE PREREQUISITE, AND THE REASON THIS AC EXISTS AS A CRITERION RATHER THAN A NOTE. ACS-1200a modifies the SAME surface this L1 makes stricter, adding the exemption. Its BA decomposition settles the signal in ACS-1200a-1: a field pair on the record — a parked flag plus a non-empty parked reason — set by the author, stored on the record itself with no side registry, and explicitly NOT inherited by children (ACS-1200a-2-i). ACS-1200a-4 re-proves the exemption against the real on-disk KM-200 records rather than a fixture; this AC must not re-derive a second way to detect deliberateness."
+  - path: docs/acceptance-criteria/ac-store/ACS-1200-parked-ideas/ACS-1200b.yaml
+    relationship: related
+    status: exists
+    relevance: "States directly that the pre-existing orphans must not be swept up by the exemption, and that an unmarked childless tree must still be blocked and still reported (carried on ACS-1200c-3). The second Given and the third Then here are that constraint applied at commit time: the exemption keys off a positive signal, never off absence."
+  - path: templates/scripts/commit_guardian/check_ac_parent_covered_by.py
+    relationship: related
+    status: exists
+    relevance: "THE SHARED SURFACE, AND THE MEASUREMENT THAT MAKES THE ORDERING URGENT. Verified behaviourally 2026-09-08 by running the real hook once per orphan: it ALREADY reports all six KM-200 children as violations today — they are among the 21 it blocks, not among the 26 it lets through. So the wrong verdict is live now; the KM-200 merge landed only because the check was skipped. Strengthening this file before the exemption exists does not create the problem, it removes the last cheap way around it."
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-09-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - code
+risk_surface: contract_boundary
+notes: |
+  THIS IS WHERE THE SEQUENCING HAZARD IS MADE UNLOSABLE. It is expressed three
+  ways on purpose, because a note alone would not survive decomposition into
+  tickets: (1) as a depends_on edge to ACS-1200a on this record and on
+  ACS-1400a-1, so the dependency is machine-readable and orders the build;
+  (2) as the final Then clause, which FAILS the run when the parked signal is not
+  recognised — so an implementation that lands the stricter rule ahead of the
+  exemption cannot report green; and (3) in this note.
+
+  THE PO'S FRAMING NEEDED ONE CORRECTION AND IT SHARPENS THE CASE. The L1 says
+  landing this L1 first "makes the wrong rule fire more reliably" against parked
+  trees. Measured 2026-09-08, the wrong rule already fires against all six KM-200
+  records — they block today. What landing this L1 first actually does is remove
+  the escape route: the KM-200 tree was merged with the check skipped, and
+  ACS-1400a-3's examined-population reporting plus ACS-1400a-1's wider net make
+  that route conspicuous. The exemption is therefore a prerequisite of this L1 in
+  the strict sense, not a nicety to sequence politely around.
+
+  THE FOURTH Then IS DELIBERATELY A FAILURE, NOT A WARNING. A criterion that said
+  "the exemption should exist" is satisfied by shipping without it and filing a
+  follow-up. A run that fails when the signal is unrecognised is the only shape
+  that makes the ordering enforceable by the build rather than by memory.
+
+  THE SECOND Given IS THE ANTI-VACUITY HALF. An exemption is trivially satisfied
+  by a check that exempts everything. The unmarked tree's child must be reported
+  in the same run, or the exemption is indistinguishable from switching the check
+  off.
+
+  RECOGNITION, NOT SUPPRESSION — inherited verbatim from ACS-1200a and not
+  re-derived here. "Parent lists no children" is also exactly what a half-finished
+  broken tree looks like; an exemption keyed off absence would silence real
+  breakage.

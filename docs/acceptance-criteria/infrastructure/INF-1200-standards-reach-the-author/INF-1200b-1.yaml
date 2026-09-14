@@ -1,0 +1,416 @@
+id: INF-1200b-1
+title: "Covering a kind of file that had no standard is one statement, and the change that does it contains nothing else"
+component: infrastructure
+components:
+  - infrastructure
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a kind of file that carries no standard today, and a specialist the
+    ownership record already assigns that kind of file,
+  When a standard for that kind of file is stated in the one place the project
+    declares standards, and no other tracked material in the project is altered,
+  Then that specialist begins work with that standard stated in its material,
+    against that kind of file,
+  And the entire change that produced this outcome is that one statement — no
+    specialist's own instructions were edited, no per-kind entry was added, no
+    step or case specific to that kind of file was added to whatever carries
+    standards outward, and nothing was registered anywhere a second time,
+  And given the same exercise is then repeated for a further kind of file, also
+    previously uncovered and assigned to a different specialist,
+  When that second statement is made and nothing else is altered,
+  Then that second specialist likewise begins work with the new standard stated
+    in its material, and the change that produced it is again that one statement
+    and nothing else — so the cost of covering a kind of file does not grow with
+    the number of kinds of file already covered.
+depends_on:
+  - INF-1200b
+doc_links:
+  - path: docs/acceptance-criteria/infrastructure/INF-1200-standards-reach-the-author/INF-1200b.yaml
+    relationship: parent
+    status: exists
+  - path: docs/acceptance-criteria/infrastructure/INF-1200-standards-reach-the-author/INF-1200f.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      THE BOUNDARY THE PO REFUSED TO MERGE, AND THIS RECORD'S NAMED MUTATION IS THAT
+      REFUSAL MADE EXECUTABLE. A design in which each specialist's instructions still
+      name the standard they want, with the values filled in from the declaration,
+      satisfies INF-1200f completely and fails this record — because covering a new
+      kind of file still means editing a specialist. The mutation below produces
+      exactly that world and requires this record to go red while the outcome arm
+      stays green. Do not weaken either arm to make them agree.
+  - path: docs/acceptance-criteria/infrastructure/INF-1100-agents-work-in-the-right-place/INF-1100a.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      THE PRECEDENT FOR THIS EXACT PROPERTY ONE SUBJECT OVER — FOLLOW IT, DO NOT
+      RESTATE IT. INF-1100a made a project's own declaration the single source of
+      truth every specialist resolves work LOCATION from. This record makes the same
+      promise about the standards work must MEET. Reuse whatever shape that record's
+      implementation settled on rather than inventing a second one.
+  - path: scripts/build.py
+    relationship: modifies
+    status: exists
+    relevance: >-
+      HOLDS BOTH THE WORKING INSTANCE AND THE EVIDENCE THAT IT DOES NOT GENERALISE.
+      One hand-written step reads one standard for one kind of file out of the
+      declaration; a second hand-written step beside it does the same for an unrelated
+      value. Each further value costs another such step. That per-value step is
+      precisely what the second arm of this record forbids from appearing.
+  - path: templates/scripts/commit_guardian/commit_guardian.json
+    relationship: related
+    status: exists
+    relevance: >-
+      Where standards are declared today, per kind of file, alongside a default. It
+      already has the shape a single source of truth needs. Whether it stays the one
+      place is an enrichment decision; that there is only one is this record's.
+  - path: config/agent_registry.json
+    relationship: related
+    status: exists
+    relevance: >-
+      Consumed as the given that supplies the audience. This record adds nothing to it
+      and requires nothing to be added to it — an implementation in which covering a
+      new kind of file means adding an entry here as well has produced a second place
+      that must agree, which the L1 rules out.
+  - path: CLAUDE.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      "Gate / Workflow ACs — Verify Behaviorally, Not by Grep". The outcome arm must be
+      observed from a real dispatch of the specialist, not from the presence of a token
+      in a compiled template; the change-set arm must be measured over the tracked
+      project, not over a fixture the test authored.
+  - path: docs/architecture/components/template-compiler.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      IT PO. THE SUBTRACTION THE BA'S NOTES CALL THE CRUX IS READ OFF THIS DOCUMENT.
+      It states which artefacts the build legitimately regenerates from templates and
+      config — .claude/agents/, .claude/skills/, .claude/hooks/ — so the change-set arm
+      has a principled exclusion set rather than a widening allowlist. Compiled briefs
+      changing is the point of the feature; templates/agents/*.md changing is the
+      defect.
+  - path: docs/architecture/components/agent-registry.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      IT PO. Consumed as the given that supplies the audience. Its
+      owns_file_extensions field must already assign the newly covered kind of file to
+      an owner BEFORE the covering statement is made — the arm's Given says so — which
+      is what keeps this record from silently requiring a second edit here and
+      producing the second place the L1 rules out.
+assigned_agent: python-coder
+estimated_complexity: L
+package_surface: false
+declares_side_effect: false
+it_requirements:
+  - >-
+    NO PACKAGE SURFACE — MEASURED, NOT ASSUMED, AND THE TRIGGER THAT WOULD CHANGE THAT IS
+    NAMED. On commit_guardian.json, WATCHED_REGISTRIES binds exactly two containers:
+    hooks_manifest.hooks by id, and the document's OWN TOP LEVEL by mapping key. Covering a
+    previously-uncovered kind of file is a NESTED addition — a key inside
+    file_size.line_limits and a member of file_size.checked_extensions — and file_size is
+    already one of this file's thirty-six top-level keys, read in this worktree. Nested
+    additions are invisible to the mapping_keys container, which is bound to dotted path ""
+    only. So package_surface is FALSE. THE TRIGGER, STATED SO IT IS NOT DISCOVERED AT
+    COMMIT TIME: if the chosen design instead declares standards in a NEW top-level section
+    of commit_guardian.json, that IS a watched mapping key, check-package-surface-declaration
+    will refuse the commit, and this record must be re-declared package_surface: true with a
+    real config_schema_fragment before the change lands. Raise it; do not add the key
+    quietly.
+  - >-
+    THIS IS THE KEYSTONE AND IT IS WHERE THE GENERALISED CARRIER IS BUILT. Everything the
+    tree needs begins here: a join between the two machine-readable records that exist and
+    are read by nothing together — config/agent_registry.json's owns_file_extensions (three
+    of sixty agents declare it: python-coder ['.py','.js'], sql-coder ['.sql'],
+    frontend-coder ['.tsx','.jsx','.vue','.svelte','.html','.css','.scss']) and
+    templates/scripts/commit_guardian.json's per-kind declarations. The incumbent shape to
+    REPLACE is scripts/build.py:255-285 `_inject_file_size_limits`, a hand-written step that
+    reads file_size.line_limits['.py'] and sets one config key, sitting beside
+    `_inject_changelogs_dir` doing the same for an unrelated value. A generalisation that
+    leaves either of those per-value steps in place for a STANDARD has not satisfied this
+    record.
+  - >-
+    THE CHANGE-SET ARM IS THE ONE CARRYING THE CRITERION, AND HOW IT IS MEASURED IS THE
+    CRUX. It is the set of TRACKED files whose content differs between the state before the
+    covering statement and the state after the outcome holds — the whole project, including
+    generated and compiled material — MINUS exactly what the build legitimately regenerates
+    from templates and config. Fix that subtraction ONCE, from the template-compiler
+    component doc's own list of build outputs (.claude/**, gemini/**, scripts/** as deployed
+    copies), and never widen it to make the arm pass. Measure over `git status --porcelain`
+    on the tracked project, not over a fixture the test authored. If a design makes compiled
+    output and authored instruction indistinguishable, that is a finding about the design
+    and must be raised rather than papered over.
+  - >-
+    THE ADMISSIBLE CHANGE SET, ENUMERATED. After the single covering statement, the tracked
+    diff must contain exactly one file: templates/scripts/commit_guardian/commit_guardian.json.
+    NOT config/agent_registry.json (the owner is assigned already, by the arm's Given), NOT
+    any templates/agents/*.md, NOT scripts/build.py, NOT scripts/build_phases.py, NOT
+    hooks_manifest.hooks, and NOT a per-kind entry in any mapping the carrier consults. Any
+    second tracked file in that diff fails the arm, and widening this enumeration is the
+    documented way this record gets quietly discharged.
+  - >-
+    THE REPETITION ARM IS AN O(1) CLAIM AND MUST BE ASSERTED AS ONE. Cover a second,
+    different previously-uncovered kind of file assigned to a DIFFERENT owner, and the
+    tracked change set must again be that one file and nothing else. Assert the two change
+    sets are equal in shape — same single path, same kind of edit — rather than asserting
+    each is small. A special case built for the first covering exercise passes a
+    per-exercise smallness check and fails an equality-of-shape check.
+  - >-
+    THE OUTCOME ARM AND THE CHANGE-SET ARM MUST BE ASSERTED AGAINST THE SAME CHANGE, IN ONE
+    RUN. The outcome arm alone is satisfied by every hand-built implementation; the
+    change-set arm alone is satisfied by a one-line config edit that achieves nothing. Two
+    descriptors that each stage their own change prove neither. One staged change, both
+    observations.
+  - >-
+    THE USER'S OWN EXAMPLE IS THE FIXTURE, AND IT IS NOT COVERED TODAY — MEASURED.
+    file_size.checked_extensions is ['.py', '.sql'] and file_size.line_limits is
+    {'.py': 400, '.sql': 600}. The kind of file named in the originating request appears in
+    neither, and the ownership record already assigns it to frontend-coder, which is told
+    nothing. That is exactly the arm's Given, available with no synthetic fixture. The
+    specific figure is the user's decision at approval and is not a criterion here — the
+    descriptor must read whatever figure the declaration carries rather than asserting a
+    literal.
+  - >-
+    Must follow the repo error-handling policy: specific-exception try/except around every
+    config and registry read and every brief write; log at WARNING or higher or re-raise; no
+    bare or blind excepts. A malformed declaration entry must fail loudly rather than being
+    skipped — a skipped entry is a standard that silently stops reaching its audience, which
+    is INF-1200e-2's degraded-path failure arriving through the carrier instead of the
+    examination.
+  - >-
+    CANONICAL VERSUS BUILD OUTPUT, AND THE BUILD IS PART OF THE CHANGE. Edit
+    templates/scripts/commit_guardian/commit_guardian.json only; scripts/commit_guardian/ and
+    .claude/ are untracked build outputs overwritten by build.py, and
+    templates/commit-guardian/commit_guardian.json is a decoy with no file_size section. Re-run
+    `python scripts/build.py --target-dir .` as part of the change (ADR-001), or the covering
+    statement is true in the template and false in every deployed brief.
+test_spec:
+  - name: test_inf_1200b_1_one_declaration_statement_covers_a_new_kind_of_file_and_its_owner_is_told
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: >-
+      THE OUTCOME ARM. In a controlled copy of the package, state a standard for a kind of
+      file that carries none today — the ownership record already assigns it to an owner —
+      in templates/scripts/commit_guardian/commit_guardian.json, alter no other tracked
+      material, run build.py against a temporary target, and read the produced
+      .claude/agents/<owner>.md. That kind of file's standard is stated in its material,
+      attributed to that kind, and the value read matches the declaration rather than a
+      literal the test authored.
+  - name: test_inf_1200b_1_the_only_tracked_file_that_changed_is_the_declaration
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: seam
+    description: >-
+      THE CHANGE-SET ARM, ASSERTED AGAINST THE SAME STAGED CHANGE AS THE OUTCOME ARM AND IN
+      THE SAME RUN. After the outcome above holds, the set of tracked files whose content
+      differs — measured over the tracked project, minus exactly what the build legitimately
+      regenerates from templates and config — contains one path only:
+      templates/scripts/commit_guardian/commit_guardian.json. No specialist's own
+      instructions were edited, no per-kind entry was added to any mapping the carrier
+      consults, no step or case specific to that kind of file appears in scripts/build.py or
+      scripts/build_phases.py, and nothing was registered a second time. The exclusion set is
+      fixed from the template-compiler component doc and is asserted as a constant, so
+      widening it to make the arm pass is visible in the diff.
+  - name: test_inf_1200b_1_a_second_covering_exercise_costs_the_same_change_set_as_the_first
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: >-
+      THE REPETITION ARM. Repeat the exercise for a further previously-uncovered kind of
+      file assigned to a DIFFERENT owner. That owner's brief states the new standard, and
+      the tracked change set is again that one declaration file. The two change sets are
+      asserted EQUAL IN SHAPE — same single path, same kind of edit — not merely each small,
+      because a special case built for the first exercise passes a per-exercise smallness
+      check. This is the only form in which "the cost does not grow with the number of kinds
+      already covered" is observable.
+  - name: test_inf_1200b_1_the_authored_placeholder_injection_keeps_the_outcome_green_and_reds_both_cost_arms
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: >-
+      THE BA's NAMED MUTATION, CARRIED VERBATIM AND OBSERVED AS ONE THREE-WAY EXPERIMENT.
+      MUTATION: alongside the single declaration, also add a reference to the new standard in
+      the owning specialist's own authored instructions — a named placeholder for that kind
+      of file's standard, filled in from the declaration at build time. This is today's
+      shipped design generalised, and it is the design a competent implementer arrives at
+      first. Under that injection: the outcome arm must STAY GREEN, because the specialist is
+      correctly and faithfully informed; the change-set arm must go RED, because a
+      specialist's own instructions were edited to cover a kind of file; and the repetition
+      arm must go RED for the same reason on the second kind of file. All three outcomes must
+      be observed together and all three must revert. AN INJECTION RUN THAT REDDENS THE
+      OUTCOME ARM AS WELL IS A FAILURE OF THIS DESCRIPTOR, NOT A STRONGER RESULT — the whole
+      point is that this mutation produces a world in which the specialist is RIGHT and the
+      promise is still broken. That world is also exactly what INF-1200f-1 accepts, which is
+      why the PO refused to merge b and f.
+  - name: test_inf_1200b_1_covering_a_new_kind_of_file_reaches_the_deployed_brief_after_a_real_build
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: integration
+    angle: deployed
+    description: >-
+      The covering statement is written into the canonical template only, build.py is run,
+      and the DEPLOYED brief under .claude/agents/ carries the new standard in a cold
+      process. A carrier module placed outside the directories the build already copies, and
+      omitted from the deploy map in scripts/build_phases.py, surfaces here as an import
+      failure rather than passing; and a declaration edit that was never built fails here
+      rather than passing on source-tree greenness. config resolution beside the deployed
+      artefact is the same trap GE-127a-1 records for the commit-guardian side.
+test_rationale: |
+  This record has two arms that are individually worthless and jointly decisive, so the
+  descriptors are built to hold them together. The outcome arm — "the specialist is told" —
+  is satisfied by every implementation including every hand-built one; the change-set arm —
+  "and nothing else was touched" — is satisfied by a one-line config edit that achieves
+  nothing. They are therefore asserted against the SAME staged change in the same run, and
+  the descriptor that carries the BA's mutation observes all three arms at once rather than
+  reporting them separately.
+
+  The change-set arm is measured over the tracked project with a FIXED exclusion set read
+  from the template-compiler component doc, not with an allowlist that grows until the arm
+  passes. The BA's notes name that subtraction as the crux and warn about exactly that
+  widening; pinning the exclusion set as a constant makes any widening visible in the diff
+  rather than invisible in a test's setup.
+
+  The BA's mutation is carried verbatim and its stay-green half is preserved as an explicit
+  required observation, with the failure condition stated: an injection run that reddens the
+  outcome arm means the arms are not independent and the record has not been proved. That
+  stay-green half is also the proof that b and f are different records — the injected world
+  satisfies INF-1200f-1 completely while failing this one, which is the negative case the PO
+  recorded when refusing the merge.
+
+  Every descriptor runs the real build into a temporary target and reads the compiled brief.
+  Per CLAUDE.md "Gate / Workflow ACs — Verify Behaviorally, Not by Grep", a test that asserts
+  a placeholder token appears in a template stays green on a build whose output never reaches
+  a dispatched specialist — and would also pass under the very mutation this record exists to
+  fail.
+delivers_to:
+  - agent: python-coder
+    ac_id: INF-1200c-1
+    contract: >-
+      The build-time join between config/agent_registry.json's owns_file_extensions and the
+      per-kind standards declared in
+      templates/scripts/commit_guardian/commit_guardian.json, as a mapping from (specialist
+      id) to the set of (kind of file, standard) pairs that specialist owns — computed at
+      the moment the brief is compiled, from the records as they stand, with no
+      per-specialist and no per-standard enumeration anywhere in the carrier.
+  - agent: python-coder
+    ac_id: INF-1200d-1
+    contract: >-
+      The same join read from the other axis: for each declared standard, the set of
+      specialists the ownership record assigns the kind of file it governs. d-1 requires
+      this to be produced by walking the declaration as it stands, so a standard the
+      carrier has never seen appears in it with no step of its own.
+  - agent: python-coder
+    ac_id: INF-1200e-1
+    contract: >-
+      The set of (specialist, kind of file, standard) pairings the join yields, which is
+      the DENOMINATOR of e-1's examination. e-1 must judge informedness by reading the
+      compiled brief and never by reading this carrier's account of what it emitted; the
+      contract supplies only which pairings ought to exist.
+expects_from: null
+origin_agent: business-analyst
+created: 2026-09-09
+amended_by:
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-09-09
+  note: 'criteria untouched. PACKAGE SURFACE FALSE, AND MEASURED WITH ITS TRIGGER NAMED:
+    covering a new kind of file is a NESTED addition to file_size.line_limits and
+    file_size.checked_extensions, and file_size is already one of commit_guardian.json''s
+    thirty-six top-level keys — the mapping_keys container is bound to dotted path "" only, so
+    nested additions are unwatched. If a design instead adds a NEW top-level standards section
+    this becomes a watched mapping key and the record must be re-declared package_surface true
+    with a real fragment before landing; that is recorded as a raise-it condition, not left to
+    be discovered by check-package-surface-declaration. No fictional fragment minted.
+    COMPLEXITY L: this is where the generalised join is built, replacing scripts/build.py''s
+    _inject_file_size_limits per-value step. THE BA''s MUTATION IS CARRIED VERBATIM WITH ITS
+    STAY-GREEN HALF INTACT — the authored-placeholder injection must keep the outcome arm GREEN
+    while reddening both cost arms, and an injection reddening the outcome arm is recorded as a
+    FAILURE of the descriptor; that green half is also the proof that b and f are separate
+    records. THE CHANGE-SET SUBTRACTION IS FIXED AS A CONSTANT read from the template-compiler
+    component doc, with the admissible change set enumerated to one path, because widening the
+    exclusion list until the arm passes is the documented way this record gets discharged
+    without being met. declares_side_effect true: the outcome arm asserts the content of a file
+    the build writes to .claude/agents/. delivers_to names the join as the single producer for
+    c-1, d-1 and e-1 so the two axes cannot each grow their own. test_spec: five executing
+    descriptors, one carrying the BA''s mutation as a single three-way observation and one on
+    the deployed copy.'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  THIS IS THE KEYSTONE RECORD OF THE KEYSTONE L1, AND IT IS THE ONE THE USER ACTUALLY
+  ASKED FOR. Their words were "it must be easy to control these things from a single
+  source of truth". They meant it operationally: one edit, one place. The example they
+  gave — a limit for a kind of file the project does not currently cover at all — is
+  exactly the previously-uncovered case this record is written around, and it is not
+  covered by any of the other five L1s.
+
+  THE TWO ARMS ARE INDEPENDENT AND BOTH ARE MANDATORY. The outcome arm ("the specialist
+  is told") is satisfied by any number of implementations, including every hand-built
+  one. The change-set arm ("and nothing else was touched") is the one carrying the
+  criterion. A test that asserts only the first has not tested this record at all; a
+  test that asserts only the second is satisfied by a one-line config edit that
+  achieves nothing. They must be asserted against the SAME change.
+
+  THE REPETITION ARM IS NOT PADDING. A single covering exercise can be made to work by
+  a special case. The property the user wants is that the SECOND one costs the same as
+  the first, and the tenth the same as the second. Stating it as a repeated exercise
+  over two different kinds of file with two different owners is the cheapest form in
+  which "does not grow" is observable.
+
+  HOW THE CHANGE SET IS MEASURED, STATED SO IT IS NOT MEASURED THE EASY WAY. It is the
+  set of tracked files whose content differs between the state before the statement was
+  made and the state after the outcome holds — the whole project, including generated
+  and compiled material, minus whatever the project's own build legitimately
+  regenerates from the declaration. That subtraction is the crux and it must be stated
+  explicitly at enrichment: compiled briefs changing is the point of the feature;
+  authored instructions changing is the defect. If the two cannot be told apart in a
+  given design, that is itself a finding about the design and should be raised rather
+  than papered over by widening the exclusion list until the arm passes.
+
+  NAMED MUTATION — EXECUTE IT, DO NOT MERELY DESCRIBE IT. Written so the IT PO can lift
+  it verbatim into a test descriptor.
+
+  MUTATION: alongside the single declaration, also add a reference to the new standard
+  in the owning specialist's own authored instructions — a named placeholder for that
+  kind of file's standard, filled in from the declaration at build time. This is
+  today's shipped design generalised, and it is the design a competent implementer
+  arrives at first. Under that injection:
+    - the outcome arm must STAY GREEN, because the specialist is correctly and
+      faithfully informed;
+    - the change-set arm must go RED, because a specialist's own instructions were
+      edited to cover a kind of file;
+    - the repetition arm must go RED for the same reason on the second kind of file.
+  All three outcomes must be observed together and all three must revert. An injection
+  run that reddens the outcome arm as well means the arms are not independent and the
+  record has not been proved — the whole point is that this mutation produces a world
+  in which the specialist is RIGHT and the promise is still broken.
+
+  MEASURED, 2026-09-09, IN THIS WORKTREE, AND IT IS THE WHOLE ARGUMENT. Carrying a
+  declared standard outward is a purpose-written step per value; naming it is a hand
+  edit per specialist. Two such steps exist for two unrelated values. Nothing walks the
+  standards declaration and nothing walks the ownership record, although both are
+  machine-readable and both are on disk.
+
+  DELIBERATELY NOT NAMED IN THE CRITERIA: any kind of file, any specialist, any figure,
+  and any path. The user's example is a config edit once this record lands, not a
+  criterion.
+
+  NOT AUTHORED HERE, BY DESIGN: assigned_agent, estimated_complexity, it_requirements,
+  test_spec, test_rationale and declares_side_effect. Those are the IT PO's. The
+  mutation above, including which arm must stay green, is written to be turned directly
+  into test descriptors.

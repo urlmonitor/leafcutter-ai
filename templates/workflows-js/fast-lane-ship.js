@@ -76,6 +76,15 @@ const WORKTREE_SCHEMA = {
   },
 };
 
+const WORKTREE_VERIFY_SCHEMA = {
+  type: "object",
+  required: ["worktree_path", "raw"],
+  properties: {
+    worktree_path: { type: "string" },
+    raw: { type: "string" },
+  },
+};
+
 const RESOLVER_SCHEMA = {
   type: "object",
   required: ["ac_ids"],
@@ -679,7 +688,7 @@ if (!worktreeResult || (worktreeResult.outcome !== "opened" && !isPreDiscriminan
   };
 }
 
-const worktreePath = worktreeResult.worktree_path;
+const claimedWorktreePath = worktreeResult.worktree_path;
 const branch = worktreeResult.branch || `fast-lane/${slug}`;
 // BO-2400f-13-iv: carried through to the operator so a green result is never
 // silently ambiguous about which mainline it was measured against.
@@ -690,6 +699,82 @@ const baseMatchesOriginMain =
   typeof worktreeResult.base_matches_origin_main === "boolean"
     ? worktreeResult.base_matches_origin_main
     : null;
+
+// Remove the LLM from the trust path for worktree_path, exactly as the comment
+// below already does for ac_store_path. The worktree phase agent has been
+// observed to echo a fabricated path instead of create-fastlane-worktree's real
+// JSON: 2026-08-11 on BO-2400f (<worktree>/tickets/00_inbox), and again
+// 2026-09-07 on UXP-700d, where it returned <repo_root>/worktrees/<slug> while
+// git had actually placed the worktree at <workspace>/worktrees/<slug>.
+//
+// The location is NOT a fixed convention that could simply be recomputed here.
+// setup_ticket_worktree.py's _resolve_installed_layout() deliberately differs by
+// layout: in the dev layout worktrees_base is the workspace PARENT of the repo,
+// while in a consumer/installed layout it is the consumer project root. Deriving
+// a path here would therefore be correct in one layout and wrong in the other.
+// git is the only authority that knows where the worktree really is in both, so
+// ask git and require the answer to be quoted from its raw output.
+const worktreeVerify = await agent(
+  `Report where git says the fast-lane worktree actually is. Do NOT compute, ` +
+  `infer, guess or normalise a path — only quote what git prints.
+
+` +
+  `Run exactly this one command:
+` +
+  `   git worktree list --porcelain
+
+` +
+  `Find the record whose branch line is refs/heads/${branch}. Return:
+` +
+  `{ "worktree_path": "<that record's worktree line path, verbatim>", ` +
+  `"raw": "<that record's full porcelain text, verbatim>" }
+
+` +
+  `If no record matches that branch, return ` +
+  `{ "worktree_path": "", "raw": "<the command's full output, verbatim>" }.`,
+  {
+    agentType: "worktree-agent",
+    schema: WORKTREE_VERIFY_SCHEMA,
+    label: "fastlane-worktree-verify",
+    phase: "Worktree",
+  }
+);
+
+// Trust git over the agent, but only where git actually answered.
+//
+// Three states, deliberately distinguished:
+//   - git quoted a path      -> use it; it outranks the agent's claim.
+//   - git said nothing       -> fall back to the claim. An unanswered probe is
+//                               not evidence of fabrication, and halting the
+//                               lane every time one extra dispatch hiccups is a
+//                               worse failure mode than the bug this guards.
+//   - git answered, and the reported path is absent from its own raw output
+//                            -> HALT. That path was invented, not quoted, and
+//                               it is the exact failure seen on BO-2400f
+//                               (2026-08-11) and UXP-700d (2026-09-07).
+const gitReportedPath =
+  worktreeVerify && worktreeVerify.worktree_path ? worktreeVerify.worktree_path : "";
+const gitRaw = (worktreeVerify && worktreeVerify.raw) || "";
+
+if (gitReportedPath && !gitRaw.includes(gitReportedPath)) {
+  return {
+    status: "error",
+    message:
+      `The worktree location reported for branch ${branch} does not appear in ` +
+      `the git output it was supposedly read from, so it was composed rather ` +
+      `than quoted. Reported: "${gitReportedPath}". git worktree list ` +
+      `--porcelain returned: ${JSON.stringify(gitRaw)}. The worktree phase ` +
+      `separately claimed "${claimedWorktreePath}". Proceeding on an invented ` +
+      `path is what sent the resolver to a non-existent directory on BO-2400f ` +
+      `and UXP-700d.`,
+    failing_phase: "worktree",
+    claimed_worktree_path: claimedWorktreePath,
+    branch,
+    classification: "halt",
+  };
+}
+
+const worktreePath = gitReportedPath || claimedWorktreePath;
 // Derive the AC store root deterministically from the worktree path — do NOT
 // trust worktreeResult.ac_store_path. The store lives at a fixed convention
 // (<worktree>/docs/acceptance-criteria) inside every worktree cut from

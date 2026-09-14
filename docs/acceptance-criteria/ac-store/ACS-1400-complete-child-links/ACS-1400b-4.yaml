@@ -1,0 +1,82 @@
+id: ACS-1400b-4
+components:
+  - ac_store
+title: "It reports before it blocks, and the switch to blocking is earned rather than scheduled"
+component: ac-store
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a store still holding records classified as unrecorded drift,
+  When the store-wide check runs in its initial posture,
+  Then it reports its findings and does not prevent work from merging,
+  And when the same check is asked to adopt the blocking posture while records
+    classified as unrecorded drift remain, it refuses and names the records that
+    would have to be bypassed,
+  And when it is asked to adopt the blocking posture against a store whose only
+    remaining findings are classified as deliberate exclusions, it adopts it and
+    thereafter prevents a newly introduced unrecorded child link from merging,
+  And in the blocking posture the deliberate exclusions do not prevent work from
+    merging.
+depends_on:
+  - ACS-1400b
+  - ACS-1400b-2
+doc_links:
+  - path: docs/acceptance-criteria/ac-store/ACS-1400-complete-child-links/ACS-1400c.yaml
+    relationship: related
+    status: exists
+    relevance: "THE SEQUENCE THIS AC ENFORCES RATHER THAN ASSUMES. The blocking posture is unshippable until the adjudicated pass has run, because a required gate that fails on pre-existing findings must be bypassed on day one and the bypass becomes the habit. Note that ACS-1400c will deliberately NOT clear every finding — it abstains on the coverage-list-collision population until ACS-1400d settles the field — so the readiness condition here is 'no remaining findings classified as unrecorded drift', never 'no remaining findings'."
+  - path: scripts/ac_store/validate_ac_schema.py
+    relationship: related
+    status: exists
+    relevance: "THE PRECEDENT FOR AN AC-STORE CHECK THAT REACHED REQUIRED-GATE STATUS, and the working model for how the transition is made. Its wiring is the shape to copy; its bare-directory scar is why ACS-1400b-3 exists alongside this AC."
+  - path: docs/acceptance-criteria/ac-store/ACS-1200-parked-ideas/ACS-1200b.yaml
+    relationship: related
+    status: exists
+    relevance: "The last Then depends on this: a blocking posture that fires on deliberately parked trees recreates the exact bypass the KM-200 merge needed, at merge scope rather than commit scope. The parked exemption must be honoured by the gate, not only by the report."
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-09-08
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - code
+  - pipeline
+risk_surface: contract_boundary
+notes: |
+  THE TRANSITION IS MADE EXPLICIT BECAUSE THE L1 ASKED FOR IT TO BE, AND BECAUSE
+  AN IMPLIED TRANSITION IS ONE NOBODY EVER MAKES. Two failure modes sit either
+  side of this criterion. Ship blocking first and the gate fails on 47
+  pre-existing findings, so every merge needs a bypass and the bypass becomes
+  routine — which is precisely how the KM-200 tree entered the store. Ship
+  reporting only and the report joins the long list of things that run and are
+  not read.
+
+  THE SECOND Then IS THE LOAD-BEARING ONE AND IT IS A REFUSAL. A criterion that
+  said "adopt blocking after reconciliation" is satisfied by adopting it whenever
+  someone decides reconciliation is done. Making the check itself refuse, and name
+  the records that would need bypassing, moves the readiness judgement out of a
+  person's head and into an observable condition.
+
+  THE READINESS CONDITION IS NOT ZERO FINDINGS — THIS IS THE TRAP. The L1 and the
+  L0 both state that a store reporting labelled deliberate exclusions is a HEALTHY
+  store. Measured 2026-09-08, six records must never be repaired and a further 25
+  sit on the coverage-list collision ACS-1400d owns, which ACS-1400c will abstain
+  on indefinitely if ACS-1400d is deferred. So a blocking gate whose entry
+  condition is "the scan reports nothing" can never be switched on honestly, and
+  writing it that way would instead force the six wrong repairs to achieve it. The
+  condition is stated in terms of the classification ACS-1400b-2 produces, which
+  is why this AC depends on it.
+
+  THE POSTURE MECHANISM IS NOT SETTLED HERE. Whether the two postures are a flag,
+  two jobs, or a configuration value is an implementation choice; the criterion
+  holds for any of them.

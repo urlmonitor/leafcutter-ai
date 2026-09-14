@@ -69,7 +69,8 @@ origin_agent: BrainCandy
 created: 2026-08-17
 amended_by: []
 superseded_by: null
-covered_by: []
+covered_by:
+- unit_tests/portability/test_ge_120e_4_i.py
 implemented_by:
 - tickets/00_inbox/epics/EPIC-TrustThatAGreenCheckActuallyChecked/36_TICKET-20260825-GE-120e-4-i.md
 change_target: code

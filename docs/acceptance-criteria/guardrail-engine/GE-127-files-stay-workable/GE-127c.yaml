@@ -21,13 +21,13 @@ criteria: |
 depends_on:
   - GE-127
 doc_links:
-  - path: docs/acceptance-criteria/build_pipeline/BP-100-reliable-builds/BP-100n-4.yaml
+  - path: docs/acceptance-criteria/build_pipeline/BP-1600-counted-from-reality/BP-1600a-2.yaml
     relationship: depends_on
     status: exists
     relevance: >-
       PRECONDITION, NOT SCOPE. Widening what the standard covers is worth nothing
       while the guard is invoked by nothing at commit time; that registration is
-      BP-100n-4's day-one triage. Do not restate the census.
+      BP-1600a-2's day-one triage. Do not restate the census.
   - path: templates/scripts/commit_guardian/commit_guardian.json
     relationship: modifies
     status: exists

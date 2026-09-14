@@ -26,11 +26,11 @@ doc_links:
   - path: docs/known-issues/build-pipeline.md
     relationship: describes
     status: exists
-    relevance: "NO entry covers this defect yet -- the evidence in the notes below was reproduced fresh on 2026-08-25 and a KI entry should be opened for it. Read KI-BP-004 and KI-BP-005: those are the two checks that read the record, so they are the ones that cannot run at all in a project where it was never written."
+    relevance: "BA CORRECTION 2026-09-07 -- THE PRIOR TEXT IS FALSE AND IS QUOTED HERE SO THE CHANGE IS AUDITABLE: 'NO entry covers this defect yet -- the evidence in the notes below was reproduced fresh on 2026-08-25 and a KI entry should be opened for it.' KI-BP-011 was opened for exactly this defect, names BP-1500d as its AC, and carries the reproduced evidence. Read it first -- but read it knowing its own Symptom paragraph is now stale in the same direction this L1's evidence was (it still states the record is written to the package's own directory 'never --target-dir'), and see the correction appended to that entry on 2026-09-07. KI-BP-004 and KI-BP-005 remain relevant as the two checks that read the record and therefore have nothing to read in any project that never received one."
   - path: scripts/build.py
     relationship: describes
     status: exists
-    relevance: "The build that writes the record, and the step that gives up on producing it with a single warning line before exiting successfully."
+    relevance: "BA CORRECTION 2026-09-07 -- THE PRIOR TEXT DESCRIBED A STEP THAT NO LONGER BEHAVES THAT WAY, quoted here so the change is auditable: 'The build that writes the record, and the step that gives up on producing it with a single warning line before exiting successfully.' The build still writes the record, but the giving-up half is closed for the reachable trigger: the record-writing step now RETURNS its failure to the build's exit path, which reports the failure naming the record and the target project and then exits non-zero (BP-1500d-3, merged in #689). What survives, and is why this link is still worth reading, is that the warning itself is still emitted and a per-artifact success line for the manifest is still printed immediately BEFORE the failure -- so the record is still announced as written before the reader is told it could not be produced."
   - path: docs/reference/false-green-mechanisms.md
     relationship: describes
     status: exists
@@ -40,7 +40,39 @@ expects_from: null
 origin_agent: product-owner
 created: 2026-08-25
 created_by_ticket: null
-amended_by: []
+amended_by:
+  - reason: record-correction
+    by: business-analyst
+    at: 2026-09-07
+    note: >-
+      EVIDENCE AND doc_links ONLY -- criteria NOT TOUCHED, and deliberately so:
+      an L1's criteria are the product owner's and nothing in this pass needed
+      one changed. The guarantee (a)-(d), the mandatory proof shape and the
+      BP-1500c / BP-1500a boundary paragraphs are all exactly as their author
+      left them, and all three were re-read against current source and still
+      hold.
+
+      WHAT CHANGED AND WHY. BP-1500d-1 and BP-1500d-3 both landed 2026-09-07
+      (#715, #689) and falsified three of the four VERIFIED EVIDENCE points
+      dated 2026-08-25. Each point is kept verbatim and annotated with what is
+      now true rather than deleted, so a fixed defect stays distinguishable
+      from one that was never real. Point 1 (record filed with the producing
+      package): closed by -1. Point 2 (the clobbering): closed with it. Point 3
+      (entries keyed to where the package sat): closed for the deployed-artifact
+      entries only -- the producing-end account is BP-1500d-1-i, still todo, and
+      an entry can now be project-rooted and still point outside the project,
+      which is BP-1500d-1-ii, authored today. Point 4 (warn once, exit zero):
+      its condition is dead and its outcome is closed by -3 for the trigger that
+      remains reachable; guarantee (d) is satisfied there, not withdrawn.
+
+      BOTH doc_links WERE STALE AND BOTH ARE CORRECTED IN PLACE with the old
+      text quoted. The known-issues link claimed "NO entry covers this defect
+      yet" when KI-BP-011 does and names this L1. The build.py link described a
+      step that "gives up ... before exiting successfully", which -3 closed.
+
+      REPORTED, NOT FIXED HERE: KI-BP-011's own Symptom paragraph carried the
+      same stale manifest-path claim. It is a known-issues register rather than
+      an AC, so it was corrected in that file directly on the same date.
 superseded_by: null
 covered_by:
   - BP-1500d-1
@@ -62,6 +94,17 @@ notes: |
   written. So in any project other than the package's own workspace, the record
   the drift checks depend on is simply not there.
 
+  EVIDENCE STATUS 2026-09-07 -- READ THIS BEFORE THE FOUR POINTS BELOW. The
+  block that follows is a 2026-08-25 snapshot and THREE OF ITS FOUR POINTS ARE
+  NOW FALSE. BP-1500d-1 and BP-1500d-3 both landed on 2026-09-07 (merged in
+  #715 and #689) and closed what points 1, 3 and 4 describe. The points are
+  kept verbatim rather than deleted, each annotated with what is now true and
+  how that was observed, so a reader can tell a fixed defect from one that was
+  never real. Nothing below changes this L1's guarantee: (a)-(d), the mandatory
+  proof shape and the BP-1500c / BP-1500a boundaries are all untouched and all
+  still sound. An L1's criteria are the product owner's; only its evidence is
+  corrected here.
+
   VERIFIED EVIDENCE -- all four reproduced 2026-08-25. Stated without paths or
   identifiers on purpose; the BA should re-observe each one rather than trust a
   name.
@@ -71,18 +114,60 @@ notes: |
      project ends up with no record at all, so the two checks that read it have
      nothing to read. They are ABSENT, not degraded -- and an absent check looks
      exactly like a passing one.
+     >> FALSE AS OF 2026-09-07, closed by BP-1500d-1. The build now resolves the
+     record's own directory from the project it was aimed at whenever one is
+     supplied, falling back to the package only when no target is given at all.
+     Observed the way this L1's proof shape demands: a real build invoked
+     through the ordinary command line into a receiving project that is a
+     SIBLING of the producing package under a system temp root wrote the record
+     into the RECEIVING project, and the package copy was left carrying its own.
+     The two checks that read the record therefore have something to read in a
+     consumer install. Point 2 below falls with it, for the same reason.
   2. Because the record is written into the producing package, building into
      someone else's project overwrites the package's own record with facts about
      that other build. See the overlap note below -- this consequence is NOT the
      headline of this L1.
+     >> FALSE AS OF 2026-09-07, as a consequence of point 1. It was never this
+     L1's headline (it is BP-1500a's promise) and it is recorded as closed here
+     only so the overlap note below is not read as still live.
   3. The record's entries are keyed by where the producing package happened to
      sit on disk. A record written in one location cannot be read in another, so
      the same install checked out or moved somewhere else is unreadable even when
      the record file itself travels with it.
+     >> FALSE AS OF 2026-09-07 FOR THE ENTRIES THAT NAME DEPLOYED ARTIFACTS,
+     which is what this point was about: those are now keyed to the receiving
+     project's own root, so they mean the same thing wherever that project sits.
+     TWO THINGS SURVIVE AND MUST NOT BE READ AS CLOSED BY THIS. First, the
+     separate account of the PRODUCING package -- where it stood, and which of
+     its own files the deployment came from -- is still expressed as a position
+     relative to the record, which is BP-1500d-1-i's subject and is still
+     work_status todo. Second, and newly found on 2026-09-07: an entry can now
+     be keyed to the receiving project's root and STILL point outside it, when
+     the build is asked to place a managed file at a location reached by a
+     parent step. That is a record that is produced and untruthful rather than
+     one that cannot be read, so it is a different failure from this point --
+     see BP-1500d-1-ii, authored the same day.
   4. When the record cannot be built for a project outside the producing
      package's own parent folder, the build prints one warning line and exits
      zero, reporting success. This is the fail-open half and it is why nobody has
      noticed: the build's own report is the last place this shows up.
+     >> FALSE AS OF 2026-09-07 IN BOTH HALVES, and the two halves failed for
+     different reasons, which is worth keeping straight. The CONDITION it names
+     -- a project outside the producing package's own parent folder -- is no
+     longer a failing condition at all: BP-1500d-1 made that layout produce a
+     correct record, so it is now the VENUE every child of this L1 is proved in
+     rather than a trigger. The OUTCOME it names -- warn once and exit zero --
+     is closed by BP-1500d-3 for the trigger that remains reachable (a managed
+     file whose configured destination is an absolute path outside the project
+     the build was aimed at): the record-writing step returns its failure, the
+     build reports it naming the record and the project, and exits non-zero.
+     Guarantee (d) is therefore satisfied for that trigger and is NOT withdrawn
+     -- it remains the enforcement floor for the rest of the family, and a
+     future regression of it would falsify this correction rather than this
+     point. Still open and deliberately not claimed here: the failure is
+     reported AFTER a per-artifact success line for the same record, so a reader
+     who stops at the build's first statement about the record is told it was
+     written.
 
   THE GUARANTEE, in the terms the BA must decompose. (a) The record belongs to
   the project the build wrote into. (b) It travels with that project. (c) It

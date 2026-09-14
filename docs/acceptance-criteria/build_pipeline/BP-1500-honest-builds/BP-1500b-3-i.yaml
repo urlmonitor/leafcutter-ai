@@ -1,0 +1,170 @@
+id: BP-1500b-3-i
+title: "A sweep that examined nothing says so, and never borrows the wording of a sweep that found nothing"
+component: build-pipeline
+components:
+  - build_pipeline
+level: L3
+status: active
+req_status: draft
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+work_status: todo
+declares_side_effect: false
+criteria: |
+  Given the sweep is pointed at a location holding no installed artifacts at all
+    -- because the location does not exist, or exists and is empty, or resolved
+    to somewhere other than the installed tree,
+  When the install is rebuilt,
+  Then the build reports that the sweep inspected nothing, stating the location
+    it looked at and a count of zero,
+  And it does not present "nothing was left behind" as the finding, because no
+    installed artifact was inspected to support that conclusion,
+  And a reader shown only the two report texts can tell this run apart from a
+    run that walked a populated installed tree and found no orphans in it,
+  And this outcome is treated as a fault in the sweep's own setup, surfaced
+    where the build's other faults are surfaced, rather than as an ordinary
+    quiet result.
+depends_on:
+  - BP-1500b-3
+doc_links:
+  - path: docs/reference/false-green-mechanisms.md
+    relationship: describes
+    status: exists
+    relevance: "The project's catalogue of checks that report success having examined nothing. This AC is that pattern in the build's sweep; add the instance there rather than describing the pattern afresh."
+  - path: scripts/build.py
+    relationship: describes
+    status: exists
+    relevance: "Prints the clean result today from a scope of eleven historical paths, most of which do not exist in a current install -- so today's build is already an instance of the Given, not a hypothetical one."
+  - path: "docs/acceptance-criteria/build_pipeline/BP-1500-honest-builds/BP-1500d-4.yaml"
+    relationship: describes
+    status: exists
+    relevance: "NEAREST NEIGHBOUR -- cite, do not merge. There the check cannot READ the record it needs, and the record is absent or unreadable. Here every read succeeds and the scope is genuinely, legitimately empty; the fault is reporting that emptiness as an all-clear. Approved."
+  - path: docs/reference/build-telemetry.md
+    relationship: describes
+    status: exists
+    relevance: "Defines where the build surfaces its faults and how they are recorded. The last Then clause -- 'surfaced where the build's other faults are surfaced' -- resolves against this document, not against a new convention."
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "A zero-scope outcome must be reported with the location looked at and an explicit count of zero, in wording that shares no distinguishing phrase with the found-nothing result. The test is a reader shown the two texts side by side with no other context: they must be able to say which run walked a populated tree."
+  - "All three causes named in the Given must reach the same outcome -- the location does not exist, exists and is empty, or resolved somewhere other than the installed tree. Do not implement only the missing-directory branch; the resolved-elsewhere case is the one today's code actually hits and is the hardest to detect from inside the walk."
+  - "Zero scope must be surfaced on the build's fault channel, at the severity the build uses for a warning or failure, not as a dim informational line. Printing `examined 0 files` quietly satisfies the first three Then clauses and remains exactly as easy to scroll past as the sentence it replaces -- the AC's notes name this as the cheap fix to reject."
+  - "A run whose sweep examined nothing must not be summarised as a clean sweep anywhere downstream: not in a build summary line, not in an exit-status message, not in the structured telemetry field BP-1500b-3 emits. The all-clear must be unavailable to that run, not merely accompanied by a caveat."
+  - "Whether zero scope should FAIL the build is an implementation-owner decision this AC does not take. If it does not fail, the fault must still be visible in the fault channel and in telemetry; a non-failing fault is acceptable, an invisible one is not."
+  - "Distinguish this from its two approved neighbours in the implementation as well as in the record: BP-1500d-4 covers a record that cannot be READ, BP-1500e covers a check that did not RUN. Here every read succeeds and the check runs to completion over a legitimately empty scope. Do not route this outcome through either of their code paths -- a shared 'something went wrong' branch would collapse three distinguishable causes into one message and undo all three ACs."
+test_spec:
+  - name: test_bp_1500b_3_i_a_missing_scope_location_is_reported_as_inspected_nothing_with_the_location_and_zero
+    target_dir: unit_tests/build_guards/
+    framework: pytest
+    type: integration
+    angle: failure
+    surface_invoked: "python scripts/build.py --target-dir <root>  (no flags)"
+    description: "Point the sweep at a target whose installed artifact locations do not exist. The report names the location it looked at and states a count of zero, and does not present 'nothing was left behind' as the finding."
+  - name: test_bp_1500b_3_i_an_empty_scope_location_reaches_the_same_outcome_as_a_missing_one
+    target_dir: unit_tests/build_guards/
+    framework: pytest
+    type: integration
+    angle: boundary
+    description: "Location exists and is empty. Same outcome, same channel. Fails an implementation that only guards the missing-directory branch."
+  - name: test_bp_1500b_3_i_a_location_resolving_outside_the_installed_tree_reaches_the_same_outcome
+    target_dir: unit_tests/build_guards/
+    framework: pytest
+    type: integration
+    angle: boundary
+    description: "The third cause, and the one today's build actually hits. A scope location that resolves somewhere other than the installed tree yields the zero-scope fault rather than a quiet pass -- the resolved path is reported so the misconfiguration is diagnosable."
+  - name: test_bp_1500b_3_i_the_zero_scope_text_and_the_clean_sweep_text_are_distinguishable_to_a_reader
+    target_dir: unit_tests/build_guards/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: "Capture both report texts from two real runs, then assert they share no phrase that would let a reader mistake one for the other -- in particular that the zero-scope text does not contain the clean-sweep finding. Asserts the criteria's 'shown only the two report texts' clause literally."
+  - name: test_bp_1500b_3_i_zero_scope_is_emitted_on_the_builds_fault_channel_not_as_a_quiet_line
+    target_dir: unit_tests/build_guards/
+    framework: pytest
+    type: integration
+    angle: seam
+    description: "The zero-scope outcome appears where the build's other faults appear, at warning severity or higher, per docs/reference/build-telemetry.md. A dim informational line fails. This is the entry that blocks the cheap fix."
+  - name: test_bp_1500b_3_i_a_zero_scope_run_is_not_summarised_as_a_clean_sweep_downstream
+    target_dir: unit_tests/build_guards/
+    framework: pytest
+    type: integration
+    angle: reachability
+    surface_invoked: "the build's end-of-run summary and its structured telemetry record"
+    description: "Neither the summary line nor the structured telemetry field records the run as a clean sweep. Catches the split where the sweep's own line is honest and the summary that everybody actually reads is not."
+test_rationale: |
+  THIS IS THE ONE AC IN THE BATCH WHOSE SUBJECT IS THE DIFFERENCE BETWEEN TWO
+  STRINGS, so the contract has to capture both real report texts and compare
+  them, not assert a single expected sentence. Asserting an expected sentence
+  would pin the wording and pass the day someone makes the clean-sweep text
+  identical to it; comparing the two run outputs to each other is what
+  actually encodes "a reader can tell these apart".
+
+  THE FAULT-CHANNEL ENTRY IS WHAT MAKES THE OTHER FIVE WORTH HAVING. The AC's
+  notes are explicit that printing `examined 0 files` in a quiet line
+  satisfies the first three Then clauses while remaining as scroll-past-able
+  as the sentence it replaces. Only a test that asserts the SEVERITY and the
+  CHANNEL rejects that implementation, so it is specified separately rather
+  than folded into the first entry.
+
+  THE THREE-CAUSE SPLIT IS NOT PADDING. The third cause -- a location that
+  resolves somewhere other than the installed tree -- is the one today's build
+  hits, via a scope of eleven historical paths mostly absent from a current
+  install, and it is the only one an implementer will not think of, because
+  from inside the walk it is indistinguishable from an empty directory. Each
+  cause gets its own entry so a partial implementation cannot go green.
+
+  A UNIT TEST OF THE REPORTING FUNCTION WOULD BE INSUFFICIENT for the
+  downstream entry: the defect it guards against is a truthful sweep line
+  paired with a dishonest summary, which by definition only exists at the
+  level of a whole build run.
+delivers_to: null
+expects_from:
+  ac_id: BP-1500b-3
+  contract: "The per-run scope record {examined_root, walked_locations, installed_artifacts_inspected, current_sources_compared}. This AC specifies the record's shape and reporting channel on the single input where installed_artifacts_inspected is zero -- the case BP-1500b-3's 'both counts greater than zero' clause cannot cover, and the case today's build occupies."
+origin_agent: BrainCandy
+created: 2026-09-07
+created_by_ticket: null
+amended_by:
+  - action: technical_enrichment
+    agent: it-po
+    date: '2026-09-07'
+    reason: "Added assigned_agent (python-coder), estimated_complexity (S), it_requirements, test_spec, test_rationale, expects_from, and one reference doc_link (build-telemetry.md, which is what the 'surfaced where the build's other faults are surfaced' clause resolves against). Criteria, title and depends_on unchanged. Two enrichment decisions worth naming: (1) the three Given causes get one test entry each, because the resolved-elsewhere cause is the one today's build actually hits and is indistinguishable from an empty directory from inside the walk, so a partial implementation would otherwise go green; (2) an it_requirement forbids routing this outcome through BP-1500d-4's or BP-1500e's code path -- a shared 'something went wrong' branch would collapse three deliberately distinguished causes into one message and undo all three ACs at once."
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  THIS IS THE SHARPEST FALSIFIABILITY TEST IN THE SET, and the closest thing to
+  a direct restatement of the observed defect. The reporter ran the build
+  against a tree carrying a real orphan and read "(no stale files found)". That
+  line was TRUE. It was produced by walking eleven paths from a historical
+  layout migration, nearly all of which are absent from a current install -- a
+  scope of approximately zero, reported in the words of a clean result. Anything
+  that can print the same sentence from an empty scope has not been fixed.
+
+  WHY IT IS AN L3 UNDER BP-1500b-3 RATHER THAN A SIXTH L2. It is the boundary
+  case of the parent AC's rule: BP-1500b-3 requires the counts to be stated and
+  to be greater than zero for a real install; this specifies what happens on the
+  one input where that cannot hold. Splitting it out keeps BP-1500b-3's criteria
+  about the normal path and gives the zero case somewhere to be tested in its
+  own right, which matters because it is the case today's code hits.
+
+  DISTINCT FROM BOTH APPROVED NEIGHBOURS, deliberately and narrowly:
+    BP-1500d-4  the check CANNOT READ its record        -> read failure
+    BP-1500e    the check DID NOT RUN, an earlier failed -> not reached
+    this AC     the check ran, read everything, and had nothing to look at
+  All three are the same harm (an unexamined check looking like a satisfied one)
+  reached by three different causes, and a fix for any one fixes neither other.
+  The parent L1's notes flag that this triplet is the shape a store takes just
+  before the general rule should be lifted into its own record -- BP-1500f is
+  free and needs no waiver. That lift is a scope decision for the owner and is
+  NOT taken here; if it is taken later, this AC becomes a citation to it rather
+  than a duplicate of it.
+
+  THE LAST Then CLAUSE IS WHAT STOPS THE CHEAP FIX. Printing "examined 0 files"
+  in a quiet line satisfies the first three clauses while remaining just as easy
+  to scroll past as the sentence it replaced. A sweep pointed at nothing is
+  misconfigured, and the report has to place it where misconfiguration is looked
+  for.

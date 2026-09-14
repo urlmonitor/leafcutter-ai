@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: 2026-08-18
-last_updated: 2026-08-31
+last_updated: 2026-09-13
 components:
   - build_pipeline
 related_docs:
@@ -1052,11 +1052,27 @@ project-local skills *into* the shared package. Run against that skill, it would
 that detail into a repo owned outside the adopter. Adopter skills need a home that is
 structurally outside the promotion path, not merely one nobody has promoted yet.
 
-**The concept already exists in the code; the layout contradicts it.**
-`build_phases.py:1930` computes `project_skills_dir = target_root / ".claude" / "skills"` and
-`:2020` uses it as `in_project = (project_skills_dir / skill_id).exists()` to decide whether
-a skill is project-local. Under the symlink that predicate can never distinguish anything —
-every package skill is "project-local" and every project skill is inside the package output.
+**~~The concept already exists in the code; the layout contradicts it.~~ CORRECTED
+2026-09-08 — the code this paragraph sends you to was deleted before the paragraph was
+written.** It read: *"`build_phases.py:1930` computes `project_skills_dir = target_root /
+".claude" / "skills"` and `:2020` uses it as `in_project = (project_skills_dir / skill_id)
+.exists()` to decide whether a skill is project-local. Under the symlink that predicate can
+never distinguish anything."*
+
+The reasoning about the symlink is sound. The premise is not: **that resolution leg no longer
+exists.** It was removed on 2026-08-18 under BP-1300a-1 — six days *before* the
+`RE-VERIFIED 2026-08-25` block above was written — and the only trace of `in_project` left in
+`build_phases.py` is a DECISION HISTORY comment recording the removal, which states the leg
+"could report `in_project = True` for a since-removed skill, masking a genuinely missing
+one."
+
+Left struck through rather than deleted, because the misdirection is the useful part: an
+implementer told "the concept already exists, the layout contradicts it" budgets for a repair
+and finds a build. There is **no** project-local predicate to fix. Whatever distinguishes
+adopter content from package content has to be built, not restored — which is a materially
+larger piece of work than this entry has implied for two weeks.
+
+Found while enriching `BP-1500g`, the AC set that now owns this repair.
 
 **Fix direction.** Symlink **per skill** rather than symlinking the parent. `.claude/skills/`
 becomes a real directory holding one symlink per package-provided skill; `clean_stale_artifacts`
@@ -1207,7 +1223,51 @@ overwrites the shared parent manifest with one that no gate can use. Any fix sho
 "target is a worktree of this repo" as a first-class case, not an exotic one — `/feature`,
 `worktree-agent` and `building-epics` all create worktrees by design.
 
-**Symptom.** The build's own record of what it wrote is not written to the install it
+**SYMPTOM CORRECTED 2026-09-07 — THE WRITE-TARGET CLAIM BELOW IS NO LONGER TRUE, AND THIS
+ENTRY NEEDS RE-SCOPING BY ITS OWNER.** `BP-1500d-1` and `BP-1500d-3` — the ACs this entry
+is filed against, via their parent `BP-1500d` — both landed on 2026-09-07 (merged in #715
+and #689) and closed most of what this entry documents. Read against current source on the
+same date:
+
+- The record's own directory is resolved from the **target** whenever a target is supplied,
+  falling back to the package only in the no-target call shape. It is therefore the target
+  by default, not "always the package's own directory, never `--target-dir`".
+- A real build invoked through the ordinary command line into a receiving project that is a
+  **sibling** of the producing package, under a system temp root, wrote the record into the
+  **receiving** project — the case the Symptom paragraph says produces no manifest at all.
+- The output-mapping keys are computed against the target as their base, not against
+  `package_root.parent`, so the anchor this entry names as the single common cause of all
+  its symptoms is gone.
+- The fail-open half is closed for the trigger that remains reachable: the record-writing
+  step now returns its failure to the build's exit path, which reports it naming the record
+  and the target project and then exits non-zero.
+
+Every line number cited in the **Where** field and in the paragraphs below predates that
+work and no longer locates what it names — the surviving broad handler sits roughly a
+thousand lines from the line this entry cites for it.
+
+**What is still true, and is the only part of this entry that should be relied on:** the
+SHAPE — a record computation that gives up, an empty record written anyway, and a
+per-artifact success line printed for that record before any failure is reported. A reader
+who stops at the build's first statement about the record is still told it was written.
+`KI-BP-008` is the same fail-open shape and is unaffected by any of the above.
+
+Two further findings from the same 2026-09-07 pass, neither closed: the account of the
+**producing** package (where it stood, and which of its own files the deployment came from)
+is still position-relative and is `BP-1500d-1-i`, still open; and a record entry can now be
+keyed to the receiving project's root and **still point outside it**, when a managed file's
+destination is reached by a parent step — exit 0, a full record, an empty failure field.
+That is a record that is produced and untruthful rather than one that could not be
+produced, and it is `BP-1500d-1-ii`, authored 2026-09-07.
+
+**Status line, for the owner:** this entry still reads `open — AC: BP-1500d`. A large part
+of what it documents has been fixed underneath it, so it wants either closing against the
+two merged ACs with the residue re-filed, or amending down to the surviving shape.
+
+The original text is kept verbatim below, as the 2026-08-25 observation it was.
+
+**Symptom (as observed 2026-08-25 — see the correction above before acting on any of it).**
+The build's own record of what it wrote is not written to the install it
 describes. `scripts/build_helpers.py:185` computes
 `manifest_path = package_root / ".build_manifest.json"` — always the package's own
 directory, never `--target-dir`. Running `python3 scripts/build.py --target-dir
@@ -3843,6 +3903,60 @@ treat the runner's environment as private scratch space with weaker guarantees t
 
 ---
 
+### KI-BP-20260908-1140 — `declares_side_effect` derives FALSE for an AC whose Then clause says a file "is gone", because the deriver only recognises engineering vocabulary
+
+- **Severity:** medium
+- **Status:** open
+- **Occurrences:** 1 (15 records in a single commit)
+- **First seen:** 2026-09-08 · **Last seen:** 2026-09-08
+- **Where:** `templates/scripts/commit_guardian/_ac_schema_validators.py` — `_DURABLE_EFFECT_RE`
+  and `derive_declares_side_effect` immediately below it
+
+`BO-2900g-2` requires `declares_side_effect` — the field that non-overridably routes the
+`user-surface-smoker` phase — to be DERIVED from an AC's own Then clause rather than authored
+by opinion. Correct principle. The derivation is a **phrase regex**, and it recognises only
+engineering register: `removed from disk`, `deletes a/the file`, `written to disk`,
+`persisted`, `saved to disk`, `created on disk`.
+
+**So an AC that describes deleting a file in plain language derives FALSE.** `BP-1500b-1`'s
+Then clause reads *"the installed copy … is **gone** from that project's installed tree"* and
+*"the build's report … **names it as something it removed**"*. A durable, observable
+filesystem effect, stated twice. Neither phrasing is in the vocabulary, so the deriver returns
+False and the commit gate then blocks on the disagreement with the authored `true`.
+
+**All 15 records of two AC sets tripped it at once**, which is the useful signal rather than a
+nuisance: those sets were written by a BA under an explicit instruction to use customer
+language and keep filesystem verbs, paths and function names out of `criteria`. The store's
+authoring convention and this deriver's vocabulary are in direct tension, and the convention
+is the one that is written down.
+
+**The gate offers two remedies and both are bad.** Change the authored value — accept a value
+you know is wrong and lose smoker routing on an AC that genuinely removes files. Or change the
+criteria text — reword an approved specification to match a regex, which is writing the spec
+for the tool instead of the reader. The first was taken here, deliberately, and is recorded in
+those records: `criteria` is the durable artifact, routing metadata is not, and the affected
+ACs already carry subprocess-level test contracts, so little coverage is lost. **That
+reasoning does not generalise** to an AC whose only verification would have been the smoker.
+
+**Related, and possibly the same root.** `KI-BP-20260831-0940` records that
+`derive_declares_side_effect` is negation-blind and "forces a FALSE value into the store".
+Both are the deriver answering False when the text says otherwise. Whether they share a cause
+is unestablished — check before fixing either, so the second is not filed a third time.
+
+**Fix direction.** A regex over free prose cannot decide this. Either derive from something
+structured the author already supplies (`change_target` is adjacent), or make the deriver's
+failure legible instead of silent: when a Then clause carries a removal or write verb the
+vocabulary does not cover, answer *"cannot derive"* and require the author to state it, rather
+than returning False as though the question had been answered. A deriver that cannot
+distinguish "no side effect" from "no phrase I recognise" is the same defect this register
+keeps recording in other forms.
+
+**Pattern:** a derivation keyed to one register of language, applied to text that a different
+written convention requires be phrased in another — so the correct answer is unreachable and
+the disagreement is attributed to the author.
+
+---
+
 ### KI-BP-20260907-0940 — There is no orphan sweep, and the step called "Stale file cleanup" says "no stale files found" while one sits in the tree
 
 - **Severity:** medium
@@ -4135,3 +4249,267 @@ A committed index that already contains `os.sep`-flavoured paths means a Windows
 **Fix direction.** Emit POSIX separators at the single construction site — `path.relative_to(STORE).as_posix()` rather than `str(...)`. Store-relative paths inside a JSON manifest are identifiers, not filesystem paths, and should be platform-independent by construction. Audit the sibling loaders (`load_mocks`, and any other `relative_to` in the two scripts) for the same expression before closing. A regression test should assert that every emitted `path` value contains no backslash, which fails today on Windows and passes trivially on POSIX — so it must be written as a string-content assertion, not as a round-trip through `pathlib`, or it will pass vacuously on the platform that cannot reproduce the bug.
 
 **Pattern:** a check that cannot pass is as useless as one that cannot fail, and pushes contributors toward `--no-verify` — which is the mechanism by which one platform-specific defect disables an entire gate set. **Related:** `KI-CG-20260907-0745` is the other defect found the same day whose practical effect is a blanket tool block on Windows; both are cases of POSIX-shaped assumptions reaching a Windows contributor through generated artifacts.
+
+---
+
+### KI-BP-20260907-no-gitignore-for-consumers — `build.py` deploys no `.gitignore` to consumers, so a deployed module's compiled bytecode gets tracked and every import re-fails the next commit
+
+- **Severity:** high — blocks ordinary commits once any hook importing a deployed module is registered as required
+- **Status:** open — no AC. The trigger is suppressed for one caller (see below); the root cause is not.
+- **Occurrences:** 2
+- **First seen:** 2026-09-07 · **Last seen:** 2026-09-07
+- **Where:** `scripts/build.py:405`, `:1147` and `scripts/build_phases.py:2429` (comments *about* the gap, not code that closes it) · `templates/scripts/commit_guardian/check_file_size.py:43` and `check_build_drift.py:84` (`from _resolve_root import find_project_root` — the shared import that triggers the symptom) · `templates/scripts/commit_guardian/run_hook.py:114-125` (docstring stating the mechanism), `:131-132` (`env["PYTHONDONTWRITEBYTECODE"] = "1"`, the suppression) · `docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900h-2.yaml:41` (the same gap worked around for the test harness's own scratch repo)
+
+**Symptom.** `grep -rn "gitignore" scripts/build.py scripts/build_phases.py scripts/build_helpers.py` returns exactly three hits, and all three are comments *about* gitignored paths — none of them deploy code. `find templates -iname "*gitignore*"` returns zero files: there is no `.gitignore` template anywhere under `templates/` for `build.py` to deploy. A fresh consumer install therefore has no rule excluding `__pycache__/` or `*.pyc`.
+
+**Mechanism.** Without that exclusion, a first `git add -A` in a consumer project tracks the `.pyc` files sitting beside deployed Python modules. Any tool that later imports one of those modules causes CPython to rewrite the tracked `.pyc`. Pre-commit judges a hook FAILED when the working tree differs before and after it runs, so the hook fails on that ground alone regardless of its own verdict — on an ordinary commit to an unrelated, well-under-limit file. `run_hook.py`'s own docstring (`:114-125`) states this precisely: "pre-commit decides a hook FAILED when the working tree differs before and after it runs... In a project whose `.gitignore` does not exclude `__pycache__` — which every fresh consumer install is, since `build.py` deploys no `.gitignore` — those `.pyc` files are tracked, so every hook run rewrites tracked files and pre-commit reports 'files were modified by this hook' no matter what the hook itself decided."
+
+Registering the `check-file-size` hook turned this from latent to blocking: an ordinary commit was refused while the gate itself printed `✅ PASSED`. Reproduced independently via a manual `build.py --target-dir <tmp>` + `git init` + `pre-commit run` round trip, and again on `check-build-drift` — both hooks import the same helper module (`check_file_size.py:43`, `check_build_drift.py:84`).
+
+This repo's own `.gitignore` masks the symptom locally — `__pycache__/` and `*.pyc` are present at lines 41-42 — so the condition is invisible in this repo's own development loop and only shows up downstream, in a consumer install that has no `.gitignore` at all.
+
+**PR #728 (branch `fast-lane/ge-127a-1`, this worktree) suppresses the trigger, not the root cause.** `run_hook.py` now sets `PYTHONDONTWRITEBYTECODE=1` on the environment used to delegate to the actual hook script (`:131-132`), which stops commit-guardian's own delegated hook processes specifically from writing bytecode. It does **not** remove the underlying condition — no `.gitignore` is deployed to consumers — and it does **not** help any other tool that imports a deployed module.
+
+**Scope.** Nobody has counted how many other tools import a deployed module the way commit-guardian's hooks do. That unmeasured blast radius is why this is filed as a known-issue rather than an acceptance criterion right now — an AC should follow once the blast radius is counted, so the fix (most likely: ship a `.gitignore` template and deploy it, per `docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness`'s own deployment-completeness framing) can be scoped against the real set of affected callers rather than guessed.
+
+**The gap was already known in one place and never generalised.** `BP-900h-2.yaml:41` — the test harness's own `it_requirements.constraints` list — already reads: "Exclude `__pycache__` and `*.pyc` from the scratch repository via `.gitignore`; compiled bytecode legitimately differs between runs and would make the check permanently red." That is the same gap, worked around locally for a scratch repo the harness controls, without the underlying fix (a deployed `.gitignore`) ever reaching real consumer installs.
+
+**Related.**
+- `KI-BP-20260907-bootstrap-swallows-build-failure` (`docs/known-issues/build-pipeline.md:1990`) — same file, same day, a different way a build can leave a consumer half-provisioned without saying so.
+- `KI-BO-20260907-resume-replays-cached-resolver` (`docs/known-issues/build-orchestration.md:2886`) — different file, cross-referenced here only as a same-day neighbour in the sibling register, not because it shares this defect's mechanism.
+- `KI-CG-012` (`docs/known-issues/commit-guardian.md:800` — the "check-ac-schema fails open on an empty staged set" entry, one of two entries in that register sharing the `KI-CG-012` number by a documented, deliberately-unrepaired collision). Its own `Occurrences` field already reads 5 as of today, per its own "Fifth occurrence, 2026-09-07" note (`commit-guardian.md:920`) — but that occurrence describes an unrelated mechanism (a wrong-cwd root causing a schema-validation fallback), not the bytecode-tracking issue filed here. This entry is **not** a sixth occurrence of `KI-CG-012` and does not add to that count; it is cross-linked only because both surfaced the same day against the same `run_hook.py` delegation path.
+
+**Fix direction.** Ship a `.gitignore` template under `templates/` covering at minimum `__pycache__/` and `*.pyc`, and add it to a deploy phase in `build.py`/`build_phases.py` so every consumer install gets it — the same "deploy list" discipline this repo's own `CLAUDE.md` already requires for new hook/gate dependencies. Before closing, count how many commit-guardian hooks (and any other deployed tooling) import a deployed module, so the fix is verified against the actual blast radius rather than the two occurrences that happened to be observed first.
+
+**Pattern:** a workaround at the one call site that happened to get instrumented, standing in for a fix at the one deploy step that would have prevented it everywhere.
+
+---
+
+### KI-BP-20260907-1620 — The doc-index phase derives the index from the target tree and writes it into the package tree, so every self-hosting build truncates `docs/INDEX.md` by 75%
+
+- **Severity:** high
+- **Status:** open
+- **Occurrences:** 2 (2026-09-07, twice in one session)
+- **First seen:** 2026-09-07 · **Last seen:** 2026-09-07
+- **Where:** the `Doc index` phase of `scripts/build.py` · `scripts/generate_doc_index.py` (`generate_index`) · triggered by any `build.py --target-dir <other-root>`, which is precisely what `build-self.sh` runs
+
+**Symptom.** After `python scripts/build.py --target-dir <workspace>` run from inside the package
+repo, `docs/INDEX.md` **in the package repo** is rewritten from 230 lines to 57, losing the
+Components table and most of the index, and its `created:` stamp is reset from the real creation
+date to today:
+
+```text
+HEAD:     230 lines        working:   57 lines
+created:  2026-08-11   →   2026-09-07
+1 file changed, 11 insertions(+), 184 deletions(-)
+```
+
+**Mechanism.** The index is derived from one root and written to another. Run in-process against
+each root, writing nothing:
+
+```text
+generate_index(<package repo>)  -> 230 lines
+generate_index(<workspace>)     ->  57 lines
+```
+
+The 57-line output is the workspace's own small `docs/` tree. The build computes the index for the
+`--target-dir` it was given and then persists it over the package repo's `docs/INDEX.md`. Both
+halves are individually correct; only the pairing is wrong.
+
+**Why this is worse than an ordinary wrong-file write.** `build-self.sh` is documented as the
+package's own development build and does exactly `build.py --target-dir <parent workspace>`. So
+the corruption is not an edge case reached by an unusual flag — it is what the sanctioned
+self-hosting build does every time it runs.
+
+**Detection.**
+
+```bash
+git diff --stat docs/INDEX.md      # after any build.py --target-dir <other-root>
+grep -c '^## Components' docs/INDEX.md   # 1 when intact, 0 when truncated
+grep '^created:' docs/INDEX.md           # a reset to today is the signature
+```
+
+The `created:` reset is the most reliable tell: a regenerated index stamps today, so a `created:`
+that matches the run date rather than the file's real history means the file was replaced rather
+than updated.
+
+**Confidence.** Empirically confirmed, twice in one session, and the root mismatch is reproduced
+by the two `generate_index` calls above without writing anything. An earlier report of this
+symptom was investigated and wrongly dismissed as unreproducible, because the check ran
+`generate_index` against the package root only — which returns the correct 230 lines and looks
+like a clean bill of health. Reproducing it requires passing the *other* root, which is the whole
+defect. Recorded here because that near-miss is the more useful lesson: a one-root check cannot
+falsify a two-root bug.
+
+**Fix direction.** Make the phase's read root and write root the same value, and assert it: the
+index written to `<X>/docs/INDEX.md` must be the index derived from `<X>/docs/`. A regression test
+should build into a scratch target from inside the package repo and assert the package's own
+`docs/INDEX.md` is byte-identical afterwards — that test fails today and cannot pass vacuously,
+since it names a specific file that must not change. Preserving `created:` across regeneration is
+a separate, smaller fix worth taking at the same time: an auto-generated file that resets its own
+creation date destroys the one field that would otherwise reveal it had been replaced.
+
+**Pattern:** `docs/reference/false-green-mechanisms.md` → M2, the deployed layout differing from
+the source being read, in its cross-root form. **Related:** `KI-BP-20260907-0722` and `KI-BP-009`
+are the same family — a build step whose target is computed from one root and applied to another,
+reported as success.
+
+---
+
+### KI-BP-20260909-declaring-files-tempdir-path — the declaring-files scanner treats any `<anything> / "_name.py"` as a deployed sibling-module load, so a runtime-generated file written into a tempdir is demanded in the deployed tree
+
+- **Severity:** medium — fails closed (a spurious "missing declaring file", never a silent pass), but it blocks two required CI checks at once and the error names a file that is not supposed to exist, so the diagnosis is not obvious from the message.
+- **Status:** open — no AC. Worked around at the call site, not fixed at the scanner.
+- **Occurrences:** 1 · **First seen:** 2026-09-07 (`BO-2900a-1-i`, PR #724, merged 16:01Z) · **Last seen:** 2026-09-07 · **Filed:** 2026-09-09
+- **Where:** `scripts/ci/_declaring_files_scan.py:268-276`, in `_helper_module_declaring_files`.
+
+**The mechanism.** The branch checks `isinstance(node, ast.BinOp) and isinstance(node.op, ast.Div)` and then inspects only `node.right`: if the right operand is a string constant matching `_HELPER_FILENAME_RE` (a leading-underscore `.py` name), the file is recorded as a declaring file that must exist under the deployed root. **The left operand is never examined.**
+
+The comment immediately above it says otherwise:
+
+```python
+# Only a Path-join right operand counts as "loading a sibling
+# file" (Path(__file__).resolve().parent / "_x.py"). A bare
+# string constant elsewhere (e.g. name.endswith("_test.py"))
+# is not a file-load and must not be treated as one.
+```
+
+That comment describes a `__file__`-anchored join, and the parenthetical even spells out the anchored form — but no code tests for it. The distinction the comment claims is the exact distinction the scanner cannot make.
+
+**What it cost.** `done_proof.py`'s `_observe_reachability` materialises a runner script into a `TemporaryDirectory`:
+
+```python
+script_path = Path(tmp_dir) / "_reachability_runner.py"
+```
+
+Identical AST shape to a sibling-module load, so the scanner demanded a deployed `scripts/ac_store/_reachability_runner.py` — a file that never exists, being written fresh per invocation and dying with the tempdir. It failed the consumer-install job (which runs the scanner directly) and four cases in `unit_tests/portability/test_bp_900h_4_i.py` (which reach the same scanner through real `git clone --local` layouts). One cause, two checks, no shared symptom text.
+
+**Workaround applied, and why it is not the fix.** Changed to `Path(tmp_dir, "_reachability_runner.py")`, which yields a `Call` node instead of a `BinOp` and no longer matches. Same path, same behaviour, and it is a syntax dodge: the next person to write `Path(x) / "_y.py"` for a non-sibling reason hits the same wall with no clue why, and nothing in the codebase warns them.
+
+**Fix direction.** Test the left operand for `__file__` anchoring. The module already has exactly such a predicate — `_is_file_anchored_ancestor_walk` at `:99` — and already applies it at `:187`, though there it is handed an `ast.FunctionDef`, so it likely needs adapting rather than calling as-is on a `BinOp`'s left operand. Either way the concept is present in the file and simply is not consulted on this branch. If a tempdir-anchored join must still be distinguishable in some ambiguous case, prefer refusing to classify over classifying wrongly. Whatever is chosen, correct the comment: it currently documents a stricter rule than the code implements, which is what made the defect hard to see while reading the very lines that contain it.
+
+**Related.**
+- `KI-BP-20260909-declaring-files-helper-wrapped-import` (below) — same function's exemption logic, the other direction: an import that IS optional but is not recognised as such.
+- `docs/reference/false-green-mechanisms.md` — not a false green (this one fails closed), but the same root shape: a comment asserting a check that the code does not perform.
+
+**Pattern:** an AST pattern-match that recognises a syntactic shape and infers intent from it, with the comment describing the intent and the code matching only the shape.
+
+---
+
+### KI-BP-20260909-declaring-files-helper-wrapped-import — only an import written lexically inside `try/except ImportError` is treated as optional, so guarding the *call* instead of the *import* reads as a hard dependency
+
+- **Severity:** medium — fails closed, blocks the consumer-install check, and pushes authors toward duplicating an import at every call site rather than factoring it into a helper.
+- **Status:** open — no AC. Worked around by inlining the import; the scanner is unchanged.
+- **Occurrences:** 1 · **First seen:** 2026-09-08 (`BO-2900d-2`, PR #729, merged 05:44Z) · **Last seen:** 2026-09-08 · **Filed:** 2026-09-09
+- **Where:** `scripts/ci/_declaring_files_scan.py:212-231` (`_import_error_guarded_names`), consumed at `:247`.
+
+**The mechanism.** `_import_error_guarded_names` walks for `ast.Try` nodes with an `ImportError` handler and collects import names **inside that node's body**. Exemption is therefore purely lexical: the `import` statement must itself sit within the `try` block. An import inside a helper function whose *call site* is wrapped in `try/except ImportError` is not collected, so the imported module is reported as a declaring file the guardrail cannot run without.
+
+**What it cost.** `done_proof.py` reached the shared BO-2900d reachability seam through a `_load_reachability_seam()` helper. The helper's call was correctly guarded — an absent seam degraded to "no exemptions" exactly as intended — but because the `from _reachability_inventory import ...` sat inside the helper rather than inside the `try`, the scanner demanded `scripts/commit_guardian/_reachability_inventory.py` exist in a consumer install that has no reason to ship it.
+
+**Why this is not simply "write it the other way".** The helper existed for a reason: one import site, one docstring explaining the optionality, one place to change. The scanner's rule quietly forbids that factoring for any optional dependency, and forbids it *silently* — nothing says "your guard is in the wrong place", only "this file is missing". The workaround (inline the import into the `try` at its single call site) happened to be fine here because there was exactly one call site; with two or more, the rule forces duplicated import-and-guard blocks.
+
+**Fix direction, in preference order.** (1) Follow one level of indirection: if a name is imported inside a function whose every call site is `ImportError`-guarded, treat it as guarded. Sound but needs a call-graph walk the module does not currently do. (2) Honour an explicit opt-out marker — a recognised comment or a module-level `__optional_declaring_files__` tuple — so an author can state optionality the scanner cannot infer. Cheaper, and it makes the claim reviewable. (3) At minimum, improve the message: when a leading-underscore sibling import is reported missing, say that a `try/except ImportError` **around the import statement itself** is what marks it optional. That converts the current dead end into a one-line fix for whoever hits it next.
+
+**Related.**
+- `KI-BP-20260909-declaring-files-tempdir-path` (above) — same function, the mirror-image error: a shape that is *not* a dependency being treated as one.
+- The "New Hook / Gate Dependencies Must Be in the Build Deploy-Manifest" convention in `CLAUDE.md` — this scanner is the mechanical enforcement of that rule; both entries are about it over-reaching.
+
+**Pattern:** a static analyser inferring optionality from lexical position, where the property it is actually trying to detect (does this code tolerate the module's absence?) is a runtime one.
+
+### KI-BP-20260910-1240 — build.py writes CRLF on Windows and then cannot see that it did, so every deployed script silently diverges from its template and a plain re-run never repairs it
+
+- **Severity:** high
+- **Status:** partially resolved — the shared writer `_write()` is fixed (BP-1000a-7), which clears the commit-blocking hook-parity case; ~20 other text-mode writers remain (see Fix direction)
+- **Occurrences:** 1 (found 2026-09-10 while landing EPIC-TruthfulProjectRecord)
+- **First seen:** 2026-09-10 · **Last seen:** 2026-09-10
+- **Where:** `scripts/build_phases.py` `_write()` · every `check-hook-parity` / `check-output-drift` consumer
+
+**Symptom.** On Windows, `check-hook-parity` blocks the commit reporting that every script under `.leafcutter/scripts/commit_guardian/` and `scripts/commit_guardian/` diverges from its canonical template in `templates/scripts/commit_guardian/`. Running `python scripts/build.py` — the remedy the hook names — reports `580 files unchanged` and repairs nothing. The commit stays blocked, and no number of re-runs moves it.
+
+**Why the build cannot see it.** `_write()` writes with `Path.write_text(content, encoding="utf-8")`. That opens in text mode with `newline=None`, so Python translates every `\n` to `os.linesep` — `\r\n` on Windows. The canonical templates are LF-only, so every deployed file lands byte-different from its source. The build's own compare-before-write guard then reads the deployed file back with `read_text()`, which applies universal-newline translation on the way in and hands back LF. The comparison is LF-vs-LF, matches, and the file is skipped as up to date. The corruption and the blindness to it are the same line:
+
+```python
+>>> p.write_text("a\nb\n", encoding="utf-8"); p.read_bytes()
+b'a\r\nb\r\n'
+>>> p.read_text(encoding="utf-8")
+'a\nb\n'          # the CRLF is invisible from here
+```
+
+**Why it is worse than a cosmetic diff.** Three consequences compound. (1) The repair the hook advertises is a no-op, so the contributor is told to run a command that cannot work. (2) `--force` does NOT repair it either, despite appearances. A forced run reaches the compare-before-write guard, whose text-mode read normalises the CRLF file to LF, compares equal, and skips the write. (This entry originally claimed `--force` was the working repair; that was wrong. The repairs observed while filing it came from byte-copying templates over the deployed copies by hand, and from `--force` refreshing `.build_manifest.json`, which is a different defect.) (3) `.build_manifest.json` records the hash of what the build believes it wrote; when the build skips a file it never refreshes that entry, so `check-output-drift` later reports the file as hand-edited. A contributor following the error messages is walked toward editing hashes inside a build-integrity manifest to make a drift check pass — which is exactly the action that should never be taken, arrived at by following the tool's own advice.
+
+**Detection.**
+
+```bash
+python -c "import pathlib,tempfile; p=pathlib.Path(tempfile.mkdtemp())/'t'; p.write_text('a\nb\n',encoding='utf-8'); print(p.read_bytes())"
+# b'a\r\nb\r\n' on Windows, b'a\nb\n' on Linux
+python scripts/build.py --target-dir .        # reports "unchanged", repairs nothing
+python scripts/build.py --target-dir . --force # also reports "unchanged": the guard compares decoded text
+```
+
+Any `check-hook-parity` failure that survives a plain `build.py` re-run on Windows is this.
+
+**Fix direction.** *Landed for the shared writer (BP-1000a-7, 2026-09-13):* `_write()` in `scripts/build_phases.py` now encodes once, compares `read_bytes()` against those bytes, and writes with `write_bytes()`, so the guard and the writer act on the same value with no newline translation. Every commit-guardian script, config and manifest is deployed through it, so the hook-parity failure that blocked commits is gone: after the fix a deployed `run_hook.py` holds zero CRLFs and is byte-identical to its template. *Still open:* the build has roughly twenty other text-mode writers with the identical defect that do not route through `_write()` — among them `generate_agent_cards.py` (every tracked `docs/agents/cards/*.card.md`), `build.py`'s `LEAFCUTTER_VERSION` write, the CLAUDE.md glossary and roadmap-phase injections (`build_glossary.py`, `build_roadmap_phase.py`), and the scaffold writers (`build_ac_store_scaffold.py`, `build_architecture_scaffold.py`, `build_config_scaffolds.py`, `build_precommit.py`). On Windows these leave every freshly built checkout showing dozens of tracked files as modified, purely by line endings. The right fix is one shared byte-exact writer that every phase calls, not twenty local patches — which is why it was scoped out of the quick-fix rather than folded in.
+
+**Pattern:** the writer and the change-detector disagree about what a file's content IS, so the component's self-check validates a normalised view of its own output rather than the output. **Related:** `GE-120` (green means it was checked — here the build reports "unchanged" about a file it corrupted), and `docs/reference/false-green-mechanisms.md`.
+
+---
+
+### KI-BP-20260909-injector-falls-back-to-a-literal-400 — the build's file-size injector swallows every read failure and tells every agent 400, whatever the config actually declares
+
+- **Severity:** medium — the failure is silent and the wrong value is plausible, which is what makes it worse than a crash. It cannot corrupt a commit (the GATE still reads the real config), but it can make every agent's brief disagree with the gate that judges it, with nothing anywhere reporting a discrepancy.
+- **Status:** open. Specified but not built: `INF-1200f-1` ("the figure in your brief is the figure your work is judged against") is authored against exactly this shape and records it as must-not-reproduce; `INF-1200b-2`'s derived-delivery mechanism is where the real fix lands.
+- **Occurrences:** 1 (structural — true of every build since the injector was added)
+- **First seen:** 2026-09-09, found while enriching `INF-1200` · **Last seen:** 2026-09-09
+- **Where:** `scripts/build.py:272-285` (`_inject_file_size_limit`)
+
+**Symptom.** There is none. That is the entry.
+
+**Mechanism.** The injector reads `file_size.line_limits['.py']` out of `templates/scripts/commit_guardian/commit_guardian.json` and publishes it to agent templates as `{{config.file_size_limit_py}}`. Its whole body is wrapped:
+
+```python
+py_limit: int = 400  # ultimate fallback
+try:
+    ...
+    py_limit = int(py_limit)
+except (OSError, json.JSONDecodeError, TypeError, ValueError):
+    pass  # Fallback already set to 400
+config["file_size_limit_py"] = py_limit
+```
+
+If the config is unreadable, malformed, or holds a non-integer, every agent template is compiled telling its reader the limit is **400** — with no warning, no build failure, and no marker in the output. The gate itself is unaffected: `check_file_size.py` reads the config directly at commit time. So the two surfaces silently disagree, and the direction of the disagreement is unbounded — if the declared limit were 600, every agent would be told 400 and would split files that never needed splitting.
+
+**Why this is a Rule 3 violation and not a judgement call.** `CLAUDE.md`'s Error Handling Policy Rule 3 requires every `except` block to log at WARNING or higher, or re-raise. `pass` with a comment is neither. Note the precise reading, because it matters for the fix: Rule 2 is NOT violated — exception types are named. The defect is that a failed measurement is converted into a successful-looking value, which is the same shape as `KI-CG-034` (a scanner that examined 169 files, compared none, exited 0) and `GE-127a-1-i` (an unreadable file reported as "0 lines - OK").
+
+**Fix direction.** The fallback constant is the problem, not the try/except. A build that cannot read the declared limit must not publish a number: either fail the build, or publish an explicit unavailability marker the template can render as such. A second literal `400` living in `build.py` is, in `INF-1200f-1`'s terms, a second figure by another name — and note it is a *third* copy, since `file_size.default_limit` is also 400. Whatever replaces it, the number must appear in exactly one place.
+
+**Related.**
+- `INF-1200f-1` and `INF-1200b-2` — the criteria that own this; this entry should be closed by their implementation rather than separately.
+- `KI-CG-034`, `GE-127a-1-i` — same shape (unmeasured reported as measured) on other surfaces.
+- `KI-BP-20260909-standards-declare-no-applicability` (below) — found in the same pass, and the two together are why a generic injector cannot simply be written over the existing config.
+
+**Pattern:** a fallback constant that is indistinguishable, downstream, from a real measurement.
+
+---
+
+### KI-BP-20260909-standards-declare-no-applicability — only one of four configured guardrails says which kinds of file it governs; for the rest it lives in the script's filename
+
+- **Severity:** medium — nothing is broken today, because three of the four never run. It is filed because it is a **precondition** for `INF-1200`: a generic "tell every owner of a file type its standards" mechanism cannot be built over this config, and that is not obvious from reading any one section.
+- **Status:** open — no AC of its own. Promoted into `INF-1200d-1`'s `it_requirements` as a measured constraint on that record's implementation.
+- **Occurrences:** 1 (structural)
+- **First seen:** 2026-09-09, found while enriching `INF-1200` · **Last seen:** 2026-09-09
+- **Where:** `templates/scripts/commit_guardian/commit_guardian.json` — `file_size` (has `checked_extensions`), `complexity:25` (`max_score: 15`), `sql_complexity:33` (`max_score: 75`), `folder_density:141` (`max_files_per_folder: 15`)
+
+**Symptom.** `file_size` declares `checked_extensions: ['.py', '.sql']` and per-extension `line_limits`. The other three declare a threshold and an `excluded_dirs` list and nothing else. There is no field anywhere saying that `complexity` governs Python, or that `sql_complexity` governs SQL. That fact exists only in the scripts' filenames and in each script's own hardcoded extension check.
+
+**Why it matters beyond tidiness.** `INF-1200` is about joining two registries: `agent_registry.json`'s `owns_file_extensions` (which agent owns which file type) against the declared standards (which standard applies to which file type). The first side of that join exists. The second side exists for exactly one of four standards. So a walk that tried to derive "who must be told what" would today produce a correct answer for `file_size` and an empty answer for the other three — not an error, an *empty result*, which is the failure mode this repo has repeatedly found hardest to see.
+
+**Interaction with the registration gap, which is the part that makes this easy to misread.** `complexity`, `sql_complexity` and `folder_density` also have no `hooks_manifest` entry, so they never run (that is `BP-1600a-2`'s census, not this entry). It is tempting to conclude the missing applicability does not matter because the guards are inert. It matters more, not less: when one of them is registered, it starts refusing commits for a standard no agent was ever told about, because there was no way to tell them.
+
+**Fix direction.** Give every standards section the same shape `file_size` already has — an explicit statement of the kinds of file it governs — before anything tries to walk them. Do NOT infer applicability from the script filename: that is the same lexical-inference mistake catalogued two entries above, and it silently breaks the moment a script is renamed or a section governs two kinds of file. This is cheap now and expensive after a generic consumer exists.
+
+**Related.**
+- `INF-1200d-1` — carries this as a measured constraint; the tree cannot be implemented without it.
+- `BP-1600a-2` — owns whether these three are registered. Different question, same three sections; do not conflate the two fixes.
+
+**Pattern:** a registry where one entry carries the field a future consumer needs and its siblings carry it implicitly, in their names.

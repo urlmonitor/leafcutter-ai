@@ -40,11 +40,11 @@ doc_links:
   - path: "docs/acceptance-criteria/guardrail-engine/GE-120-green-means-checked/GE-120f.yaml"
     relationship: parent
     status: exists
-  - path: "docs/acceptance-criteria/build_pipeline/BP-100-reliable-builds/BP-100n-4.yaml"
+  - path: "docs/acceptance-criteria/build_pipeline/BP-1600-counted-from-reality/BP-1600a-2.yaml"
     relationship: context
     status: exists
     relevance: >-
-      BOUNDARY — ENUMERATION, AND THE SHAPE THIS RECORD DELIBERATELY COPIES. BP-100n-4
+      BOUNDARY — ENUMERATION, AND THE SHAPE THIS RECORD DELIBERATELY COPIES. BP-1600a-2
       (approved) owns which guards are in the set at all, taken from what is present on disk
       rather than from the registry, and it is where the population comes from. This record
       does not re-derive that population and must not grow a second census beside it — two
@@ -104,7 +104,7 @@ expects_from:
     contract: >-
       One record per check, written from an observation actually performed. The stated figure
       counts those observations and may count nothing else.
-  - ac_id: BP-100n-4
+  - ac_id: BP-1600a-2
     contract: >-
       The population of protective checks, enumerated at run time from what is present rather
       than from a list inside the check that walks it. This record consumes that population

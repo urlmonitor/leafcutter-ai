@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: 2026-08-18
-last_updated: 2026-08-25
+last_updated: 2026-09-08
 components:
   - documentation_system
 related_docs:
@@ -265,4 +265,64 @@ turns these from checks that *could* fail into checks that *do*.
 **Pattern:** `docs/reference/false-green-mechanisms.md` → a validator that checks a key exists
 rather than that its contents resolve. The check ran on every build for months and could never
 have failed.
+
+---
+
+### KI-DS-20260908-1535 — the documented ADR-index command regenerates `docs/architecture/adrs/README.md` with frontmatter that fails a required gate, so following the instruction breaks the commit
+
+- **Severity:** medium
+- **Status:** open
+- **Occurrences:** 1
+- **First seen:** 2026-09-08 · **Last seen:** 2026-09-08
+- **Where:** `scripts/adr_refs.py`, the `--index` renderer — the hardcoded frontmatter literal
+  it emits for `docs/architecture/adrs/README.md`
+
+**Symptom.** `python scripts/adr_refs.py --index --write` is the registration step prescribed
+by both `docs/how-to/documentation/write-adr.md` §10 and the README's own body text. Running
+it emits a README whose frontmatter is exactly:
+
+```yaml
+title: "Architecture Decision Records"
+description: "Index of all Architecture Decision Records (ADRs) ..."
+type: "reference"
+```
+
+`check-doc-frontmatter` requires four more — `status`, `created`, `last_updated`, `components`
+— which the previous README carried and which the generator does not preserve or re-emit. The
+gate then reports four `Missing required field` violations on a file the project's own
+documented procedure just told you to regenerate.
+
+**Confirmed at source, not only by observation.** The frontmatter is a string literal in the
+`--index` renderer, not derived from the file being replaced, so this is unconditional: every
+invocation drops the four fields regardless of what the README held before.
+
+**Why it survived.** The failure only surfaces when the regenerated README is *staged* — the
+gate reads the index. An author who runs the command, sees the table update correctly, and
+commits other files does not learn anything is wrong. It was found by an ADR author who
+followed the how-to exactly and then ran the gate on its output; the fields were restored by
+hand and the gate re-run green, so the committed README is correct and only the generator is
+broken.
+
+**A second, quieter confusion in the same renderer.** The index's Status column is populated
+from each ADR's *frontmatter* `status:`, while the ADR's own lifecycle (Proposed / Accepted /
+Superseded) lives in the body. `write-adr` §3 mandates `status: "active"` in frontmatter as a
+coarse doc-lifecycle flag and §5 keeps the two explicitly separate — so a correctly-authored
+ADR whose body says **Proposed** renders as **Active** in the index. ADR-022 and ADR-028 render
+"Proposed" only because they set `status: proposed` in frontmatter, contradicting §3. The
+generator conflates two fields the how-to separates, and the index is wrong for every ADR that
+follows the convention.
+
+**Fix direction.** Read the existing README's frontmatter and preserve the fields the generator
+does not own, rewriting only `last_updated`; or emit the full required set and keep it in step
+with the gate's requirements. For the Status column, read the body's ADR lifecycle rather than
+the frontmatter doc-lifecycle flag. Whichever is chosen, a test that runs `--index --write` and
+then feeds the output to `check_doc_frontmatter` is the check that would have caught this — the
+generator and the gate are both green in isolation and disagree only in composition.
+
+**Related.** The generator also backfilled ADR-038, ADR-039 and ADR-040, which were missing
+from the index entirely — so the index had been stale as well as gate-failing.
+
+**Pattern:** a documented procedure whose prescribed command produces output that a required
+gate rejects, so correctness and compliance point in opposite directions and the author has to
+know to undo part of what the instruction told them to do.
 

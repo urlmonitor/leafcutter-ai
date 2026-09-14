@@ -26,13 +26,13 @@ criteria: |
   act on rather than an instruction to go and think about it.
 depends_on: []
 doc_links:
-  - path: docs/acceptance-criteria/build_pipeline/BP-100-reliable-builds/BP-100n-4.yaml
+  - path: docs/acceptance-criteria/build_pipeline/BP-1600-counted-from-reality/BP-1600a-2.yaml
     relationship: depends_on
     status: exists
     relevance: >-
       THE PRECONDITION, AND THE RECORD THAT OWNS THE CENSUS. This goal's whole
       subject is a guard that is present on disk and invoked by nothing at commit
-      time. BP-100n-4 (readiness approved, priority high, phase_1) owns the
+      time. BP-1600a-2 (readiness approved, priority high, phase_1) owns the
       reachability census that finds scripts nobody wired up, and its day-one
       triage explicitly registers or dispositions every such script — this one
       among them. It is also the record that already names this guard as
@@ -196,7 +196,7 @@ notes: |
 
   PRECONDITION, NOT SCOPE — READ THIS BEFORE WRITING ANY L2. Every criterion in
   this tree assumes the guard actually runs at commit time. It does not today, and
-  making it run is BP-100n-4's work, not this tree's. That relationship is
+  making it run is BP-1600a-2's work, not this tree's. That relationship is
   expressed in doc_links as a dependency and must stay there. An L2 here that
   re-specifies the reachability census, restates its counts, or proposes a second
   one is duplicating an approved, high-priority record and will have to be
