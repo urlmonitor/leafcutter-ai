@@ -47,7 +47,7 @@ origin_agent: BrainCandy
 created: 2026-09-14
 amended_by: []
 superseded_by: null
-covered_by: []
+covered_by: [ACS-1600a-1]
 implemented_by: []
 change_target: code
 risk_surface: internal
