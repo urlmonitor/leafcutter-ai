@@ -1,7 +1,7 @@
 id: BO-1800f-2
 components:
   - build_orchestration
-readiness: reviewed
+readiness: approved
 priority: medium
 title: "A delivery that would still take away what the shared branch has does not leave the copy"
 component: build-orchestration

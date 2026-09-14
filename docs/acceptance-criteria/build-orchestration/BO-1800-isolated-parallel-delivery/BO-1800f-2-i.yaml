@@ -1,7 +1,7 @@
 id: BO-1800f-2-i
 components:
   - build_orchestration
-readiness: reviewed
+readiness: approved
 priority: medium
 title: "A declared removal is delivered; an undeclared removal alongside it is not"
 component: build-orchestration

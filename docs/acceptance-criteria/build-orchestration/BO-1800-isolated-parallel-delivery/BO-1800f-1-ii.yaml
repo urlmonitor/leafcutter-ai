@@ -1,7 +1,7 @@
 id: BO-1800f-1-ii
 components:
   - build_orchestration
-readiness: reviewed
+readiness: approved
 priority: medium
 title: "A replay that cannot complete cleanly stops the delivery and restores the copy"
 component: build-orchestration

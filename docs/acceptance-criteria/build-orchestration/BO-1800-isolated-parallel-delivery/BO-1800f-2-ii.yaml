@@ -1,7 +1,7 @@
 id: BO-1800f-2-ii
 components:
   - build_orchestration
-readiness: reviewed
+readiness: approved
 priority: medium
 title: "What the copy's own commits took away is reported apart from what the copy's starting state never had"
 component: build-orchestration
