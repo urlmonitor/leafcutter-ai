@@ -180,6 +180,14 @@ DECISION HISTORY
   sizes of what this run loaded, so they move by exactly one per artifact and never
   carry over. The bookkeeping helpers moved to product_truth_outcome.py to keep
   this file inside its ratchet. (#EPIC-TruthfulProjectRecord/14)
+- 2026-09-14 [python-coder]: UXP-700e-3 -- journeys' component labels are resolved
+  against docs/acceptance-criteria/index.yaml and their tags against a declared
+  shape (product_truth_label_checks.py). Findings warn; the run states
+  resolved_labels. With no index.yaml the check is listed as not executed.
+  (#EPIC-TruthfulProjectRecord/43)
+- 2026-09-14 [python-coder]: UXP-700e-3-i -- branches without an outcome_kind are
+  reported as to-be-filled warnings (product_truth_shapes._check_outcome_kinds),
+  never errors, while the field is introduced. (#EPIC-TruthfulProjectRecord/44)
 """
 from __future__ import annotations
 
@@ -213,6 +221,8 @@ from product_truth_checks import (
     _check_truth_evidence,
 )
 from product_truth_outcome import (  # noqa: F401  # re-exported for callers
+    _log_run_verdict,
+    _log_skipped_entries,
     _OUTCOME_DEGRADED,
     _OUTCOME_ERRORS,
     _OUTCOME_SOUND,
@@ -229,6 +239,12 @@ from product_truth_outcome import (  # noqa: F401  # re-exported for callers
     _compute_empty_types,
     _print_outcome_contract,
     _top_level_outcome,
+)
+from product_truth_shapes import _check_outcome_kinds, count_branches  # noqa: F401
+from product_truth_label_checks import (  # noqa: F401  # re-exported for callers
+    _check_labels,
+    count_labels,
+    load_component_registry,
 )
 
 # jsonschema is a HARD dependency. A missing import used to warn-and-skip, which
@@ -485,6 +501,7 @@ def run_checks() -> dict:
     # the SAME `errors` list every other check already uses, so a broken
     # pointer makes the run exit non-zero exactly like every other error class.
     _check_shape_version_bounds(flows, errors, warnings)
+    _check_outcome_kinds(flows, warnings)
     _check_artifact_paths(index, errors)
     _check_canonical_datasets(mocks, errors)
 
@@ -500,6 +517,13 @@ def run_checks() -> dict:
     # Anti-phantom-done truth-evidence gate: a done/in_progress AC referenced by
     # a BUILT flow must carry real implementation evidence.
     _check_truth_evidence(flows, ac_records, errors, warnings)
+    registry = load_component_registry(AC_STORE / "index.yaml")
+    if registry is None:
+        resolved_labels = 0
+        record_check_not_executed(checks, "labels", f"precondition absent: {AC_STORE / 'index.yaml'} not found")
+    else:
+        resolved_labels = _check_labels(flows, registry, errors, warnings)
+        record_check_executed(checks, "labels", count_labels(flows))
     record_population_checks(checks, {"flows": len(flows), "mock-data": len(mocks), "mockups": len(mockups),
                                       "index": len(index.get("artifacts", [])), "acceptance-criteria": len(ac_records)})
 
@@ -513,72 +537,9 @@ def run_checks() -> dict:
         "unreadable_flows": unreadable_flows,
         "resolved_pointers": resolved_pointers,
         "unresolvable_pointers": unresolvable,
+        "resolved_labels": resolved_labels,
         "empty_types": _compute_empty_types(flows, mocks, mockups),
     }
-
-
-def _log_skipped_entries(checks: list[dict], unreadable_flows: list[str], examined_flows: int) -> None:
-    """Log every not-executed check and every unreadable journey, each with a reason.
-
-    Neither category is ever silently omitted (GE-120): a not-executed check
-    carries its own stated reason; an unreadable journey is named alongside
-    how many of the rest were still examined (UXP-700b-1-i).
-    """
-    for entry in checks:
-        if not entry.get("executed", True):
-            logger.warning("SKIPPED: check '%s' did not execute — %s", entry["name"], entry.get("reason"))
-    for journey in unreadable_flows:
-        logger.warning(
-            "SKIPPED: journey '%s' is unreadable (invalid JSON) — examined the other %d",
-            journey,
-            examined_flows,
-        )
-
-
-def _log_run_verdict(top_outcome: str, examined_flows: int, unreadable_flows: list[str], report: dict) -> None:
-    """Log the single verdict line matching *top_outcome* (assumes no errors).
-
-    Precedence mirrors `_top_level_outcome`: an unreadable journey always logs
-    DEGRADED first (even if `report["outcome"]` — the separate, internal
-    run_checks()-bookkeeping sentinel for UXP-700b-2-i — happens to be sound),
-    then a truly empty store logs NOTHING EXAMINED, then a not-fully-executed
-    but readable run logs the pre-existing DEGRADED-by-unexecuted-check
-    message, and only a fully sound, fully executed run logs OK.
-    """
-    counts, warnings = report["counts"], report["warnings"]
-    if unreadable_flows:
-        logger.warning(
-            "DEGRADED: %d journeys examined, %d unreadable (%s) — the run still completed "
-            "(fail-open, GE-120 / GE-116a-1-iii)",
-            examined_flows,
-            len(unreadable_flows),
-            ", ".join(unreadable_flows),
-        )
-    elif top_outcome == _TOP_OUTCOME_NOTHING:
-        logger.warning(
-            "NOTHING EXAMINED: the record holds no journeys yet — not the same as a "
-            "checked-and-sound run"
-        )
-    elif report["outcome"] != _OUTCOME_SOUND:
-        logger.warning(
-            "DEGRADED: %d flows, %d mock-data, %d mockups valid, but not every check "
-            "executed (%d warnings) — see SKIPPED lines above",
-            counts["flows"],
-            counts["mocks"],
-            counts["mockups"],
-            len(warnings),
-        )
-    elif top_outcome == _TOP_OUTCOME_DEGRADED:
-        logger.warning("DEGRADED: %d pointer(s) could not be classified -- see [pointer-unresolvable] above",
-                       len(report["unresolvable_pointers"]))
-    else:
-        logger.info(
-            "OK: %d flows, %d mock-data, %d mockups, eval + index + derived data valid (%d warnings)",
-            counts["flows"],
-            counts["mocks"],
-            counts["mockups"],
-            len(warnings),
-        )
 
 
 def main() -> int:
@@ -602,7 +563,7 @@ def main() -> int:
     unresolvable = report["unresolvable_pointers"]
     top_outcome = _top_level_outcome(examined_flows, unreadable_flows, bool(errors), empty_types, len(unresolvable))
     contract = (top_outcome, examined_flows, unreadable_flows, empty_types, report["resolved_pointers"], len(unresolvable),
-                examined_by_check(checks))
+                examined_by_check(checks), report["resolved_labels"])
 
     # Stated on EVERY run, zero included (UXP-700c-1): without it a run that
     # resolved none of the pointers it holds is indistinguishable, in the

@@ -56,6 +56,7 @@ from datetime import date
 from pathlib import Path
 
 import yaml
+from product_truth_shapes import combine_statuses, expansion_targets, normalise_flow_shapes
 
 logger = logging.getLogger("generate_product_truth")
 
@@ -135,14 +136,7 @@ def compute_node_impl_status(implements: list[str], ac_map: dict) -> str:
     not_started; anything else (any in_progress, or a done/not_started mix) ->
     in_progress.
     """
-    statuses = [impl_status_for_ac(ac_map.get(ac, {}).get("work_status")) for ac in implements]
-    if not statuses:
-        return "not_started"
-    if all(status == "done" for status in statuses):
-        return "done"
-    if all(status == "not_started" for status in statuses):
-        return "not_started"
-    return "in_progress"
+    return combine_statuses([impl_status_for_ac(ac_map.get(ac, {}).get("work_status")) for ac in implements])
 
 
 def compute_node_status(node: dict, ac_map: dict, flows: dict, _stack: tuple = ()) -> str:
@@ -157,12 +151,12 @@ def compute_node_status(node: dict, ac_map: dict, flows: dict, _stack: tuple = (
     deterministically; the validator ERRORs on both so this never masks a real
     authoring bug. Otherwise the status derives from `implements` via ac_map.
     """
-    child_id = node.get("expands_to")
-    if child_id:
-        child = flows.get(child_id)
-        if child is None or child_id in _stack:
-            return "not_started"
-        return flow_impl_status(compute_flow_impl_summary(child, ac_map, flows, _stack + (child_id,)))
+    child_ids = expansion_targets(node)
+    if child_ids:
+        return combine_statuses([
+            "not_started" if child_id not in flows or child_id in _stack
+            else flow_impl_status(compute_flow_impl_summary(flows[child_id], ac_map, flows, _stack + (child_id,)))
+            for child_id in child_ids])
     return compute_node_impl_status(node.get("implements", []), ac_map)
 
 
@@ -211,9 +205,9 @@ def build_parents_map(flows: dict) -> dict:
     parents: dict[str, list] = {flow_id: [] for flow_id in flows}
     for flow in sorted(flows.values(), key=lambda item: item["id"]):
         for step in flow.get("steps", []):
-            child_id = step.get("expands_to")
-            if child_id in parents:
-                parents[child_id].append({"flow": flow["id"], "step": step["id"]})
+            for child_id in expansion_targets(step):
+                if child_id in parents:
+                    parents[child_id].append({"flow": flow["id"], "step": step["id"]})
     for child_id in parents:
         parents[child_id].sort(key=lambda item: (item["flow"], item["step"]))
     return parents
@@ -222,7 +216,7 @@ def build_parents_map(flows: dict) -> dict:
 def build_expands_map(flows: dict) -> dict:
     """For every flow, the sorted child flow ids its steps drill into."""
     return {
-        flow_id: sorted({step["expands_to"] for step in flow.get("steps", []) if step.get("expands_to")})
+        flow_id: sorted({child for step in flow.get("steps", []) for child in expansion_targets(step)})
         for flow_id, flow in flows.items()
     }
 
@@ -412,7 +406,7 @@ def load_flows(unreadable: list[str] | None = None) -> tuple[dict, dict]:
             if unreadable is not None:
                 unreadable.append(rel)
             continue
-        flows[flow["id"]] = flow
+        flows[flow["id"]] = normalise_flow_shapes(flow)
         paths[flow["id"]] = path.relative_to(STORE).as_posix()
     return flows, paths
 
@@ -661,5 +655,11 @@ DECISION HISTORY
   (the sole other caller) now passes a list to observe which journeys were
   skipped. A genuine OSError still propagates unchanged -- only malformed
   CONTENT degrades instead of failing closed. (#EPIC-TruthfulProjectRecord/12)
+- 2026-09-14 [python-coder]: UXP-700e-3-i -- `expands_to` is read through
+  product_truth_shapes.expansion_targets (one id or a list) and load_flows()
+  normalises it to a list, so write_flows() writes only the new shape. A step
+  expanding into several journeys combines their rollups with the same rule a
+  node's own ACs use (combine_statuses); a dangling or cyclic child counts as
+  not_started, as before. (#EPIC-TruthfulProjectRecord/44)
 ====================================================================
 """
