@@ -1481,6 +1481,22 @@
     {
       "path": ".claude/precommit-autofix.json",
       "ground": "Write-if-absent scaffold (scripts/build_config_scaffolds.py, force=False always) seeding the precommit-autofix routing table skills_config.json points at; the project fills in its own check->fix routes and the deployed file is expected to diverge from the seed template from the first route onward, so its content is never build-determined. Same class as the four scaffolds already registered here - it was simply never declared, so every commit in a built worktree failed this gate on a file no commit can contain (it is gitignored)."
+    },
+    {
+      "path": ".claude/settings.local.json",
+      "ground": "Per-developer, machine-local Claude Code settings (gitignored, .gitignore:33); the adopter edits this file directly on each machine and no build phase writes deterministic content to it, so it can never match a pinned hash (BP-100k-3-iii)."
+    },
+    {
+      "path": ".claude/scheduled_tasks.lock",
+      "ground": "Runtime lock file a scheduled task acquires while running (session id, process id, and an acquisition timestamp that changes on every acquisition); no build phase creates or manages it, and its content is never expected to be stable, let alone build-determined (BP-100k-3-iii)."
+    },
+    {
+      "path": ".claude/skills_config.json",
+      "ground": "The project's own build INPUT, read by config_loader.py to drive every build phase, never a file any phase writes deterministic content TO; it is seeded once by bootstrap_install.py/the onboard wizard and then hand-edited by the project, so no build run can ever be expected to reproduce its content (BP-100k-3-iii)."
+    },
+    {
+      "path": ".claude/changelog_categories.md",
+      "ground": "Write-if-absent scaffold (scripts/build_config_scaffolds.py, force=False always; gitignored, .gitignore:35) the project appends its own changelog categories to on an ongoing basis; content is expected to diverge from the seed template starting at the first appended category, so it is never build-determined. Same class as the .claude/precommit-autofix.json entry above, simply never declared for this sibling scaffold (BP-100k-3-iii)."
     }
   ],
   "__hook_trigger_reachability_exemption_registry_doc": [
