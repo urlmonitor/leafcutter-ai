@@ -63,14 +63,14 @@ MANIFEST_PATH = GUARDIAN_DIR / "commit_guardian.json"
 
 # ---------------------------------------------------------------------------
 # Ratchet baseline — hook scripts that exist on disk with no hooks_manifest
-# entry, as measured on main at 2524993b9 (2026-09-14).
+# entry, as measured on fast-lane/bp-100n-4 at eac2530f0 (2026-09-14).
 #
 # THIS LIST MAY ONLY SHRINK. Every entry is a script that pre-commit never
 # runs. Adding to it would make this test the rubber stamp it exists to
 # prevent; to clear an entry, either register the script in
 # hooks_manifest.hooks or delete it, then remove the line here.
 #
-# The nine marked "settings, no runner" carry a configuration block in
+# The five marked "settings, no runner" carry a configuration block in
 # config.py AND a section in commit_guardian.json while being invoked by
 # nothing — the exact KI-CG-021 shape, where a gate looks registered to a
 # reader because its settings are.
@@ -78,28 +78,12 @@ MANIFEST_PATH = GUARDIAN_DIR / "commit_guardian.json"
 UNREGISTERED_BASELINE: frozenset[str] = frozenset(
     {
         "check_ac_coverage.py",
-        # CALLS scripts/ac_store/mark_ac_done.py; nothing calls it. A first pass
-        # read mark_ac_done.py:6 ("Called by check_ac_done_on_merge.py post-merge
-        # hook") as an invoker and recorded the arrow backwards — the direction of
-        # a grep hit is not evidence. Best register-now candidate of the 18: it
-        # always exits 0, and the post-merge stage is already supported end to end
-        # (build_precommit.py:171-172, install_pre_commit_shims.collect_stages).
-        "check_ac_done_on_merge.py",
         "check_complexity.py",  # settings, no runner
         "check_debug_scripts.py",  # settings, no runner
         "check_doc_coverage.py",  # settings, no runner
-        "check_doc_links.py",  # settings, no runner
         "check_docstrings.py",  # settings, no runner
         "check_documentation.py",  # settings, no runner
-        "check_folder_density.py",  # settings, no runner
         "check_outcome.py",
-        "check_pytest_style.py",
-        "check_root_files.py",  # settings, no runner
-        "check_sql_complexity.py",  # settings, no runner
-        "check_sql_dependencies.py",
-        "check_test_ac_tags.py",
-        "check_test_fixture_bloat.py",
-        "check_ticket_test_requirements.py",
         "check_v2_ac_store_alignment.py",
     }
 )
