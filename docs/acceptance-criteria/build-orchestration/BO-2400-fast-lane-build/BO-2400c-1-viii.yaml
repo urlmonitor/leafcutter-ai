@@ -1,0 +1,138 @@
+id: BO-2400c-1-viii
+components:
+  - build_orchestration
+  - injection_builder
+title: "The bundle the lane acts on is proved to be the bundle that was assembled"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given the lane obtains its context bundle by asking another party to produce it and
+    hand it back,
+  And the only channel back is that party's reply, so the lane never sees the bundle as
+    it was produced and has no way of its own to go and look,
+  When the reply arrives,
+  Then the lane treats the text as usable only after comparing it against a verification
+    value that the producing step states over the exact bytes it produced,
+  And that comparison separates any difference at all — one character re-encoded,
+    re-spaced, inserted or dropped anywhere in the text makes it fail — so an alteration
+    that leaves the length unchanged is caught as surely as one that does not,
+  And the value compared against is the one the producer stated, never one the lane
+    derives from the text it received: a comparison whose two sides both come from the
+    received text compares that text with itself and can only ever agree.
+
+  Given a reply whose text differs from what was produced — for example one in which
+    every angle bracket arrives as its escaped spelling, the shape observed on
+    2026-08-31 —
+  When the lane runs the comparison,
+  Then the run ends and no context-carrying agent is dispatched,
+  And no repaired, re-decoded or otherwise adjusted version of the received text is used
+    in its place unless that adjusted text itself satisfies the same comparison,
+  And the refusal is not softened by the text looking right: content that reads as a
+    plausible bundle, carries the structural landmarks the lane looks for, and is the
+    expected size is still refused when it is not the text that was produced.
+
+  Given a reply that carries content but states no verification value, or states one the
+    lane cannot interpret,
+  When the lane tries to establish that what it holds is what was produced,
+  Then it cannot, and the run ends on that basis rather than proceeding on the assumption
+    that unverifiable content is intact,
+  And that outcome is reached the same way a failed comparison is, so an absent
+    verification value is never a quieter way past the gate than a wrong one.
+depends_on: [BO-2400c-1, BO-2400c-1-iii]
+doc_links:
+  - path: docs/known-issues/build-orchestration.md
+    relationship: describes
+    status: exists
+    relevance: "KI-BO-019, both occurrences. The second one is this record's whole reason for existing: the reply was content rather than a pointer, so every check that distinguishes content from a reference passed, and the payload had still been altered in transit. The entry's own closing finding is that nothing in the lane compares what arrived against what was assembled."
+  - path: docs/reference/workflow-constraints.md
+    relationship: describes
+    status: exists
+    relevance: "Why the content has to arrive in-band and cannot be re-read from where it was produced — the same constraint that makes an unverified reply the only thing the lane has to work from."
+origin_agent: BrainCandy
+created: 2026-09-14
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+test_required: true
+test_rationale: |
+  Every clause here is a property of a run, and the only instrument that can see one is a
+  run. Drive the lane end to end with the producing step's reply controlled, and assert on
+  what the run then did — which agents it dispatched and what it said when it stopped.
+  A test that reads the lane's source for the presence of a comparison passes unchanged on
+  a comparison that is defined and never reached, which is the documented history of this
+  whole family.
+
+  Four shapes, and the second and third are the ones that make this record non-vacuous.
+
+  Deliver an intact bundle — produced by actually running the assembly over real inputs,
+  not hand-written — together with the value the producer stated for it, and assert the run
+  proceeds and the context-carrying dispatches carry that text.
+
+  Deliver the 2026-08-31 shape: the same bundle with its markup escaped, with the value the
+  producer stated for the UNescaped text. Assert the run ends and that no context-carrying
+  dispatch was recorded. This is the test that is red today and cannot be made green by any
+  amount of reference-rejection, because the reply is content.
+
+  Deliver an alteration that changes NO characters of length — one character swapped for
+  another — with the producer's stated value unchanged. Assert the run still ends. This is
+  the test that distinguishes a real comparison from a length comparison; a byte count
+  alone passes the escaped case (escaping lengthens the text) and fails here, so without
+  this test the criterion can be satisfied by something that does not hold.
+
+  Deliver altered content together with a verification value recomputed over the altered
+  content. Assert the run still ends. If the lane derives its own side of the comparison
+  from the received text, this test cannot fail — it is what proves the comparison has two
+  independent sides rather than one.
+
+  Deliver well-formed content with the verification value absent, and again unparseable.
+  Assert both end the run, so the missing-value path is not quietly permissive.
+declares_side_effect: false
+change_target: pipeline
+risk_surface: internal
+notes: |
+  WHY THIS IS A NEW RECORD AND NOT AN AMENDMENT TO BO-2400c-1-iii. That record owns the
+  question "is this content, or is it a reference to content?", and it answers it
+  correctly. The second occurrence of KI-BO-019 arrived as content and was still wrong.
+  Reference-rejection cannot see that and no strengthening of it will: the reply is not a
+  locator, it is the bundle, altered. The missing question is a different one — "is this
+  content the content that was produced?" — and nothing in the lane asks it. Folding it
+  into -iii would put two separable guarantees behind one criterion and make a later
+  regression unattributable to either.
+
+  IT IS ALSO NOT BO-2400c-1-iv. That criterion compares one run's dispatched prompts
+  against EACH OTHER and requires the prefix to be identical across them. Two prompts
+  carrying the same corrupted text satisfy it completely. Cross-dispatch consistency and
+  fidelity-to-source are orthogonal, and the run that failed had the first without the
+  second.
+
+  WHAT THIS RECORD DELIBERATELY DOES NOT RE-SPECIFY. The mitigation KI-BO-019 records as
+  DISPROVED is the third of its three fix options: keep the verbatim contract and enforce
+  it, by refusing a reply that looks like a path and by stating the size expectation in the
+  prompt. Both shipped; run wf_22fae0b9-291 failed anyway, at 18,190 bytes — under the
+  ~20 KB the prompt itself names — with the payload HTML-escaped in transit. So nothing
+  here adds another instruction to the producer, another rejection rule based on what the
+  reply looks like, or another size statement. Those are all judgements about the shape of
+  the received text, and the defect is precisely that a corrupted bundle has the right
+  shape. The only thing that separates the intact case from the corrupted one is a
+  comparison against what was produced.
+
+  WHY THE SINGLE-CHARACTER CLAUSE IS IN THE CRITERION. The known-issue entry proposes
+  "a byte count or digest". A byte count would have caught the observed failure, because
+  escaping lengthens text — and it would miss a same-length substitution entirely, which is
+  a quieter version of the same fault and would hand a silently altered prompt to the coder.
+  Specifying the property (any difference fails) rather than the instrument leaves the
+  choice open while ruling out the one that only appears to work.
+
+  THE FAIL-CLOSED POSTURE IS PRESERVED, NOT RELAXED. The gate that caught both occurrences
+  was right both times and is untouched. This record adds a reason to stop; it removes
+  none. The repair clause is worded to permit a lane that normalises received text and then
+  verifies the result — that is a legitimate implementation — while forbidding one that
+  normalises and proceeds, which would convert this criterion into the leniency it exists
+  to prevent.

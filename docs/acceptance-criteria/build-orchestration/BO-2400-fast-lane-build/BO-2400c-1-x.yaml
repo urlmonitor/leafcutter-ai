@@ -1,0 +1,105 @@
+id: BO-2400c-1-x
+components:
+  - build_orchestration
+  - injection_builder
+title: "The delivery guarantee holds at any bundle size, and a ceiling announces itself"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given the same lane and the same delivery check exercised twice — once with a bundle at
+    the size the design intends, and once with one several times larger,
+  When each is delivered unaltered,
+  Then both are accepted and both are carried into the context-carrying dispatches,
+  And when each is altered on the way, both are refused,
+  So the size at which the guarantee holds is a property of the check rather than a
+    threshold that has to be rediscovered every time the payload grows.
+
+  Given a bundle far smaller than the size the design names,
+  When it arrives altered,
+  Then it is refused exactly as a large one is,
+  And there is no size beneath which the check is skipped, because the failure of
+    2026-08-31 happened at eighteen kilobytes — under the expectation the design itself
+    states — so being small is not evidence of having arrived intact.
+
+  Given a reply carrying only part of what was produced, which is the shape a limit on how
+    much text can cross the boundary produces,
+  When the lane compares what arrived against what was produced,
+  Then the run ends reporting how much was produced against how much arrived,
+  And it names the shortfall as a shortfall rather than as damaged content, so a ceiling on
+    what can cross is discovered as a ceiling,
+  And a decision to make the payload smaller is then one somebody takes knowingly, rather
+    than a wall a run walks into and reports as something else.
+depends_on: [BO-2400c-1, BO-2400c-1-viii]
+doc_links:
+  - path: docs/known-issues/build-orchestration.md
+    relationship: describes
+    status: exists
+    relevance: "KI-BO-019 twice states a size conclusion and twice revises it. Occurrence one concluded the contract was unsound at 149 KB and would fail on comparably sized targets; occurrence two failed at 18 KB and the entry then records that the contract is unsound at any size. This record is written against the corrected conclusion."
+origin_agent: BrainCandy
+created: 2026-09-14
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+test_required: true
+test_rationale: |
+  The claim is that a guarantee is size-independent, and the only way to falsify that is to
+  exercise it at more than one size. A single test at the design size is exactly the
+  evidence that existed before 2026-08-31 and it was not evidence at all.
+
+  Run the same delivery scenarios twice with bundles that differ by close to an order of
+  magnitude, both produced by actually running the assembly rather than hand-written, and
+  assert identical outcomes: intact is used at both sizes, altered is refused at both.
+  Parameterising one test over two sizes is the point — two tests that drift apart stop
+  comparing anything.
+
+  Run the altered case at a size well below the stated expectation — a few kilobytes — and
+  assert it is still refused. This test fails against any implementation that gates the
+  check on a size threshold, which is the optimisation most likely to be reached for once
+  the check exists and the payload is usually small.
+
+  Run a truncation case: deliver a genuine prefix of what was produced, with the producer's
+  stated value for the whole. Assert the run ends and that the terminal output carries both
+  quantities. Truncation is the one alteration a reader can act on directly, and it is the
+  one that gets misreported as corruption if the quantities are not named.
+
+  No test here may assert a byte count found in the lane's source. The size-independence
+  claim is about behaviour at two sizes; a source assertion about a constant is compatible
+  with the check never running at either.
+declares_side_effect: false
+change_target: pipeline
+risk_surface: internal
+notes: |
+  WHY SIZE GETS ITS OWN RECORD RATHER THAN A CLAUSE. Size has been the wrong answer twice in
+  this family's history and the wrong answer has been load-bearing both times. Occurrence
+  one produced "the contract is unsound at this size", which licensed a fix aimed at making
+  the payload smaller. The payload was made smaller — BO-2400c-1-vi cut it from 148,891
+  bytes to roughly 20 KB, correctly and for good independent reasons — and occurrence two
+  then failed at 18,190 bytes. Recording the size-independence of the guarantee as its own
+  criterion is what stops the next reader reaching the same conclusion a third time from the
+  same evidence.
+
+  THIS RECORD DOES NOT ASK FOR A SIZE LIMIT, AND SPECIFICALLY DOES NOT ASK FOR THE PAYLOAD
+  TO BE SMALLER. BO-2400c-1-vi owns composition and states plainly that smallness must be a
+  consequence of what the bundle contains and never of a cap, a truncation or a
+  summarisation step. Nothing here contradicts that: the third scenario is about detecting
+  and naming a shortfall that has already happened, not about imposing one.
+
+  WHAT THE THIRD SCENARIO IS ACTUALLY FOR. Nobody currently knows whether a ceiling on what
+  can cross the boundary exists or where it is. If one does, a run that meets it today
+  produces a truncated reply that reads as corrupted content, and the finding would be filed
+  as a third occurrence of the same mystery. Requiring the quantities to be reported turns
+  an unknown limit into a measurement the first time it is hit. That is the difference
+  between a wall that has been moved and a wall that has been located.
+
+  ON THE 2026-08-31 SIZE READING. The reply reported 18,190 bytes for a bundle the design
+  targets at roughly 20 KB, so the producer was operating exactly where it was asked to. The
+  corruption was introduced by the transport, not by volume — the source document on disk
+  contains no escaped entities at all, confirmed at the time. Any future criterion in this
+  family that reasons from size should cite that measurement before it does.

@@ -1,0 +1,104 @@
+id: BO-2400c-1-ix
+components:
+  - build_orchestration
+  - injection_builder
+title: "A bundle damaged on the way is reported as damaged on the way, not as a bad bundle"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a run that stops because what arrived is not what was produced,
+  When it reports why it stopped,
+  Then its leading statement is that the bundle was produced and then altered between
+    production and arrival — not a detail further down, and not an inference the reader
+    has to make,
+  And it reports both sides of the comparison, the value the producer stated and the value
+    derived from what arrived, so a reader can see the two disagree without re-running
+    anything,
+  And it does not describe the bundle as never produced, as a location standing in for
+    content, or as incompletely composed, because each of those names a different fault
+    and sends the reader somewhere the fault is not.
+
+  Given the alteration also destroyed a structural landmark the lane independently checks
+    for,
+  When the lane decides which of the two findings to report,
+  Then it reports the delivery failure, because the disagreement with what was produced is
+    the finding that explains the missing landmark rather than a second, separate defect,
+  And the run therefore does not present a complaint about the bundle's content whose
+    actual cause is its delivery — the reversal that, on both recorded occurrences, pointed
+    an operator at an assembly that had not failed.
+
+  Given one run driven through each distinct way the bundle can be unusable, in turn,
+  When the messages those runs produced are set side by side,
+  Then the damaged-in-transit message is distinguishable from every other one — no message
+    is a restatement of another and none is a superset of another,
+  And a check written for any one cause is not satisfied by the message for a different
+    one, so the set of causes stays as separable to a reader as it is to the lane.
+depends_on: [BO-2400c-1, BO-2400c-1-iii, BO-2400c-1-viii]
+doc_links:
+  - path: docs/known-issues/build-orchestration.md
+    relationship: describes
+    status: exists
+    relevance: "KI-BO-019. Both occurrences halted with the operator pointed at the bundle's content while the fault was its delivery — occurrence one with a marker-not-found halt against a 47-character path, occurrence two with a marker-not-found halt against content whose marker had been escaped. The entry's standing instruction that a halt must stop saying 'was not obtained' when obtained was true is the same concern one state further on."
+origin_agent: BrainCandy
+created: 2026-09-14
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+test_required: true
+test_rationale: |
+  This record is about wording, and wording is only evidence when it is the wording a real
+  run produced. Drive the lane with the producing step's reply controlled and assert on the
+  run's terminal output — never on a string found in the lane's source, which proves only
+  that a message was authored, not that this run reaches it.
+
+  Three shapes.
+
+  Drive the escaped-content case and assert the terminal output states that the bundle was
+  produced and altered in transit, and carries both compared values. Asserting only that
+  the run halted passes on today's behaviour, which halts for a stated reason that is
+  wrong; the assertion has to be on what it says.
+
+  Drive an alteration that destroys the structural landmark, and assert the output reports
+  the delivery failure and does NOT report the landmark as missing. This is the ordering
+  test: an implementation that checks the landmark first reports the symptom and passes
+  every test written about the symptom.
+
+  Drive every unusable state in ONE test and compare the messages pairwise. Asserting each
+  in isolation is what allows a single undifferentiated wording to satisfy all of them —
+  the same trap BO-2400c-1-iii records for its three states, now with a fourth member.
+declares_side_effect: false
+change_target: pipeline
+risk_surface: internal
+notes: |
+  SCOPE AGAINST BO-2400c-1-iii. That record owns three causes — nothing came back, a
+  reference came back, incomplete content came back — and owns the rule that each halt names
+  its own cause and only its own. This record adds a fourth cause to that set and requires
+  it to join distinctly. It does not restate the three, and it does not relocate ownership
+  of them: if the two records ever disagree, -iii governs its three and this one governs the
+  fourth and the ordering between the fourth and the incomplete-content case.
+
+  THE ORDERING CLAUSE IS THE LOAD-BEARING PART, and it mirrors an existing decision rather
+  than inventing one. -iii already requires reference-rejection to be evaluated before the
+  landmark check, for exactly this reason: evaluated after, a locator that happens to
+  contain the landmark is misfiled as incomplete content and two states collapse into one.
+  The same collapse happens here in the other direction — corrupted content whose landmark
+  did not survive is misfiled as incomplete content — and it is worse, because incomplete
+  content implicates assembly, which is working.
+
+  WHY THIS IS WORTH A CRITERION AT ALL. On 2026-08-31 the landmark check was the only thing
+  that noticed anything was wrong, and it noticed by luck of shape: the landmark happened to
+  contain a character the corruption happened to alter. Its report named the landmark. An
+  operator reading that report goes to look at how the bundle is composed, which is
+  correct, complete, and not the problem. Every hour spent there is a cost this criterion
+  removes, and it is a cost that recurs on every occurrence.
+
+  DELIBERATELY NOT IN SCOPE: the general rule that a halt must not state a reason its own
+  evidence denies. That belongs to the BO-2400f-4-vi family, as -iii already records. This
+  record specifies one instance of truthful diagnosis, not the rule.
