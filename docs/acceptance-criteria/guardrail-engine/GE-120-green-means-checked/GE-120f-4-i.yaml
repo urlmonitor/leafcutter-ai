@@ -8,7 +8,7 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
+readiness: approved
 priority: critical
 roadmap_phase: phase_1
 criteria: |
@@ -73,8 +73,166 @@ doc_links:
   - path: docs/architecture/components/commit-guardian.md
     relationship: related
     status: exists
+  - path: docs/testing/test-angles.md
+    relationship: related
+    status: exists
+    relevance: Source of the `angle` values on the descriptors below.
+  - path: "docs/acceptance-criteria/build_pipeline/BP-1600-counted-from-reality/BP-1600a-2.yaml"
+    relationship: related
+    status: exists
+    relevance: >-
+      BOUNDARY, AND THE PRECEDENT FOR THE GROUND RULE. That AC's own it_requirements state, for
+      the neighbouring register, that "a register ground that says only that triage or
+      registration is deferred is a suppression under another name, not a ground". This record
+      adds two further non-grounds — a fact about WHEN a check was registered, and a record
+      covering a GROUP rather than a check — on the registration surface. Keep one exemption
+      vocabulary across both registers; the two should read alike even where they stay separate.
 assigned_agent: python-coder
 estimated_complexity: S
+it_requirements:
+  - >-
+    THE REQUIREMENT APPLIES TO THE WHOLE REGISTERED POPULATION, NOT TO WHAT COMES NEXT. The
+    parent is fully satisfiable by a gate that polices new registrations and leaves the existing
+    family alone, and that reading is attractive precisely because it makes the first run quiet.
+    It also makes the regime worthless: the checks that cannot refuse are the ones already
+    registered. A rule that applies only to what comes next certifies everything already broken.
+  - >-
+    A GROUND MUST BE A FACT ABOUT WHAT THE CHECK DOES. Refuse a ground that is a fact about when
+    it was registered — that it predates the requirement, that it is inherited, that it is
+    long-standing — in the same way as an exemption stating no ground at all. Today's vocabulary
+    permits any non-empty string, which is the same weakness the postponement rule already has
+    to defeat one form over; a minimum-length rule is not a ground rule.
+  - >-
+    HOLD THE VOCABULARY OF REFUSED GROUNDS AS DATA A FIXTURE CAN EXTEND, NEVER AS A FIXED SET
+    THE TEST ALSO CARRIES. If the test restates the refused-ground set, the test and the
+    implementation agree with each other and with nothing else, and the next form of evasion
+    passes both. Assert instead by extending the fixture's refused-ground data and observing the
+    run's behaviour change with no test edit.
+  - >-
+    AN EXEMPTION IS PER CHECK, WITH ITS OWN GROUND. A record exempting a group at once — by when
+    its members were registered, by where they live, by a shared prefix or directory — is refused,
+    and every check it names stays in the class its own record puts it in. This is the same rule
+    GE-120c-6 already states one axis over: an exemption must be a property read from the
+    candidate or from a declared record, never a match against an identifier written into the
+    thing applying the rule, so nothing inherits an exemption by resemblance. Registration date
+    is resemblance by another name — it says nothing about whether the check can refuse.
+  - >-
+    CONSUME GE-126b-5-i's EXEMPTION VOCABULARY; DO NOT BUILD A SECOND. What a ground is, that a
+    groundless exemption is reported and fails, and that a postponement is not a ground are that
+    record's clauses. This record adds two further groundless forms and adds nothing to the
+    disposition itself. One vocabulary — the schema's `negative_control.not_applicable` +
+    `reason` — across this record, its parent, and BP-1600a-2-i's neighbouring register.
+  - >-
+    THE FIRST REPORT NAMES CHECKS INDIVIDUALLY, NOT AS A SUMMARY. A summarised first report is
+    how a group exemption gets granted afterwards without anyone reading what it covers. Name
+    them; the noise is the correct outcome.
+  - >-
+    DAY-ONE BLAST RADIUS IS MADE MECHANICAL HERE RATHER THAN ADVISORY. It must not be
+    pre-suppressed by seeding exemption records, by a dated cut-off, or by a single record
+    covering everything registered so far. The natural remedy for the noise is to weaken the
+    rule until it goes quiet, and that remedy is the failure mode this whole tree is designed
+    against. Repairing, declaring, or honestly exempting each check is the work, not a follow-up.
+    The component's own known-issues register records a detector that already existed, reported
+    unreachable checks, and was skipped rather than acted on because its verdict arrived as a
+    blocker — which is why a grandfathering hatch is the most likely way this regime is
+    neutralised on the day it lands.
+  - >-
+    AC_ENFORCE_STRICT=1 on every pytest invocation; exercise the DEPLOYED gate out of process,
+    and confirm it saw its input before reading its verdict. Any module imported from outside
+    templates/scripts/commit_guardian/ goes into the scripts/build_phases.py deploy map in the
+    same change.
+  - >-
+    Error-handling policy: specific-exception try/except around registry and file I/O, logged at
+    WARNING or higher or re-raised. A malformed exemption record is a reported finding, never a
+    crash that leaves the rest of the population unexamined.
+test_spec:
+  - name: test_ge120f4i_a_pre_existing_check_is_named_identically_to_one_registered_after_the_requirement
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: >-
+      One run over a fixture surface holding three checks: one registered BEFORE the requirement
+      with no declaration, one registered AFTER with no declaration, and one registered before
+      WITH a declaration whose rejection has not been observed. Assert the first two are named
+      in the same class with the same wording, and the third is named as not demonstrated.
+      Assert nothing in the run's output distinguishes the first two by registration order —
+      identical treatment is the criterion, not merely "both are reported".
+  - name: test_ge120f4i_a_temporal_ground_is_refused_like_no_ground_while_a_real_ground_is_honoured
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: >-
+      PAIRED IN ONE RUN. A claimed exemption whose ground reads that the check predates the
+      requirement, one whose ground reads that it is inherited or long-standing, and one stating
+      no ground at all are ALL refused identically; an exemption whose ground is a fact about
+      what the check does — a census with no pass/fail semantics of its own — is honoured and
+      falls in no failing class. Drive the refused-ground vocabulary from FIXTURE DATA the test
+      extends rather than from a set the test also carries; extend that data with a fourth
+      temporal form and assert the run's behaviour changes with no edit to the test's
+      expectations. NAMED MUTATION (mandatory, run it): accept any ground that is a non-empty
+      statement. Under that injection the temporal grounds are honoured and the checks leave
+      every failing class; this descriptor must go RED, and return to green on revert.
+  - name: test_ge120f4i_a_group_exemption_is_refused_and_every_check_it_names_stays_in_its_own_class
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: >-
+      THE SINGLE INJECTION THAT WOULD MAKE THE WHOLE TREE SHIP GREEN AND USELESS — RUN IT, DO NOT
+      DESCRIBE IT. A record exempting a group of checks at once, keyed by when they were
+      registered (and a second keyed by where they live), is refused, and every check it names
+      remains in the class its own record puts it in. Paired in the same run with a per-check
+      exemption carrying an accepted ground, which IS honoured — so the descriptor cannot be
+      satisfied by a gate that refuses every exemption. NAMED MUTATION: accept a group exemption
+      record naming checks by registration date. Under that injection the entire pre-existing
+      family disappears from the failing classes and the run passes on the commit that lands it;
+      this descriptor must go RED naming the checks the group record covered, and return to green
+      on revert.
+  - name: test_ge120f4i_the_first_report_names_never_demonstrated_checks_individually_rather_than_summarising
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: behavioral
+    angle: seam
+    description: >-
+      Over a fixture population, assert the set of check names present in the report equals the
+      set of checks whose own records read never-demonstrated — set equality against the run's
+      own per-check records, never against a literal list. A report that states a count without
+      naming the members fails, and so does one that names a proper subset. Pair with a
+      population in which one check DID demonstrate, and assert that one is absent from the
+      named set in the same run.
+  - name: test_ge120f4i_the_deployed_gate_applies_the_ground_rules_in_a_cold_process
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: integration
+    angle: deployed
+    description: >-
+      After build.py, the DEPLOYED gate refuses a temporal ground and a group exemption in a cold
+      process with the source tree off the import path — a helper outside
+      templates/scripts/commit_guardian/ without a scripts/build_phases.py deploy-map entry
+      surfaces here as ModuleNotFoundError rather than passing. Confirm the gate saw the fixture
+      surface before reading its exit code. Invoke pytest with AC_ENFORCE_STRICT=1.
+test_rationale: |
+  This is the record most likely to be quietly dropped, because its parent is fully satisfiable
+  by a gate that polices new registrations and leaves the existing family alone — and that
+  reading is attractive precisely because it makes the first run quiet. So every descriptor here
+  is written against a way of making the first run quiet, and each one is paired with a case that
+  must still be honoured, so the fix cannot be "refuse everything".
+
+  The group-exemption injection is the single substitution that would make the whole tree ship
+  green and useless: one record keyed by registration date removes the entire pre-existing family
+  from the failing classes, and the run passes on the commit that lands it. It must be executed.
+
+  The refused-ground vocabulary is held as fixture data the test extends rather than as a set the
+  test restates, for a reason this store has hit before: a test that carries the same list as the
+  implementation agrees with the implementation and with nothing else, and the next form of
+  evasion passes both. Extending the data and observing behaviour change with no test edit is the
+  only form of that assertion worth writing.
+
+  Per CLAUDE.md's grep rule no descriptor reads source text; each executes the gate, first
+  establishing that it saw its input, since several hooks in this component read the git index or
+  HOOK_TEST_FILES and ignore argv entirely. AC_ENFORCE_STRICT=1 on every invocation.
 delivers_to: null
 expects_from:
   ac_id: GE-126b-5-i
@@ -87,7 +245,8 @@ created: 2026-09-01
 amended_by: []
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-AGuardThatHasNeverSaidNoIsNotCountedAs/08_TICKET-20260914-GE-120f-4-i.md
 change_target: code
 risk_surface: contract_boundary
 notes: |
@@ -131,3 +290,4 @@ notes: |
 
   NO COUNT OF INSTANCES IS STATED OR IMPLIED, per the parent's disputed-count rule. How many
   checks the first run names is exactly what the run measures.
+target_epic: EPIC-AGuardThatHasNeverSaidNoIsNotCountedAs
