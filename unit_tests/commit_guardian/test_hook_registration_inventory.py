@@ -64,25 +64,24 @@ MANIFEST_PATH = GUARDIAN_DIR / "commit_guardian.json"
 # ---------------------------------------------------------------------------
 # Ratchet baseline — hook scripts that exist on disk with no hooks_manifest
 # entry. 18 at 2524993b9 (2026-09-14); 16 after check_pytest_style.py and
-# check_sql_dependencies.py were deleted as bybit-trader residue; 14 now that
-# two non-hooks are listed in hook_parity.excluded_scripts.
+# check_sql_dependencies.py were deleted as bybit-trader residue; 14 after two
+# non-hooks were listed in hook_parity.excluded_scripts; 9 now that the five
+# gates needing no code work are registered under GE-120h-3, the criterion that
+# declares the package surface check-package-surface-declaration demanded.
 #
 # THIS LIST MAY ONLY SHRINK. Every entry is a script that pre-commit never
 # runs. Adding to it would make this test the rubber stamp it exists to
 # prevent; to clear an entry, either register the script in
 # hooks_manifest.hooks or delete it, then remove the line here.
 #
-# The remaining fourteen are all KNOWN AND WANTED — none is a candidate for
-# deletion. Five of them (check_folder_density, check_test_fixture_bloat,
-# check_sql_complexity, check_debug_scripts, check_ac_done_on_merge) need no
-# code work and are verified safe to register, but registering them adds
-# package-registry entries, which check-package-surface-declaration refuses
-# unless a cited acceptance criterion carries `package_surface: true`. That
-# criterion does not exist yet, so the registration is queued behind it rather
-# than forced through. The other nine each need real work first — a ratchet over
-# existing violations, a crash fix, or an argv fix — scheduled after the
-# file-length gate is fully integrated. The comments below record what each is
-# waiting on, measured against the tree at this commit.
+# The remaining nine are all KNOWN AND WANTED — none is a candidate for
+# deletion. Each needs real work before it can be registered (a ratchet over
+# existing violations, a crash fix, or an argv fix), scheduled after the
+# file-length gate is fully integrated. GE-120h is the parent for that work;
+# note its L2s deliberately require more than draining this list, because a
+# decomposition that only registers today's orphans leaves the next one free to
+# appear with the same four reassuring signals. The comments below record what
+# each entry is waiting on, measured against the tree at this commit.
 # ---------------------------------------------------------------------------
 UNREGISTERED_BASELINE: frozenset[str] = frozenset(
     {
@@ -90,18 +89,6 @@ UNREGISTERED_BASELINE: frozenset[str] = frozenset(
         # CI). Also near-blind: _ID_REGEX is $-anchored, so a suffixed id like
         # TQ-100b-4-i never matches — it sees 275 of 4,032 records.
         "check_ac_coverage.py",
-        # READY TO REGISTER — blocked only on a package_surface AC. Cannot block
-        # a commit: main() returns 0 unconditionally and the __main__ guard
-        # swallows OSError/ValueError into exit 0. Belongs on the post-merge
-        # stage. Note the call direction: it INVOKES mark_ac_done.py, whose
-        # docstring back-reference to this hook was misread as an invoker once.
-        "check_ac_done_on_merge.py",
-        # READY TO REGISTER — blocked only on a package_surface AC. Fully
-        # config-driven, so portable; vacuous here because debugging/ is
-        # untracked. Must be registered always_run with no files key: a
-        # location-anchored `^debugging/scripts/` regex matching nothing is
-        # classified UNREACHABLE, not NOTHING-TO-MATCH.
-        "check_debug_scripts.py",
         # Wanted. Nothing enforces cyclomatic complexity today (ruff.toml
         # selects only E, F, E722 — no C901). Needs a shrink-only ratchet first:
         # 79 over-limit functions across 50 files at max_score 15.
@@ -122,31 +109,16 @@ UNREGISTERED_BASELINE: frozenset[str] = frozenset(
         # 35 of 50 directories holding tracked .py have no README.md. Has a live
         # caller: doc-enforcer SKILL.md runs it with --report-legacy.
         "check_documentation.py",
-        # READY TO REGISTER — blocked only on a package_surface AC. Safe because
-        # the ratchet is built in: _classify_folders raises a violation only when
-        # a folder crosses the limit IN THIS COMMIT, so the 113 directories
-        # already over 15 report as warnings. Verified against a real staged set.
-        "check_folder_density.py",
         # Concept is general, allowlist is not: it still permits bybit-trader's
         # app_launcher.py while REJECTING ruff.toml, SETUP.md, VERSION,
         # LEAFCUTTER_VERSION, build-self.sh and requirements-dev.txt — and it
         # fires on modify, not just add. Needs its allowlist rewritten.
         # check_documentation.py imports its constants, so it cannot just go.
         "check_root_files.py",
-        # READY TO REGISTER — blocked only on a package_surface AC. Portable and
-        # config-driven (unlike the deleted check_sql_dependencies.py, it
-        # hardcodes no schema); vacuous here with zero tracked .sql, and there
-        # for the consumers README.md line 38 has been promising it to.
-        "check_sql_complexity.py",
         # Substantially superseded by done_proof.py, which reimplements the same
         # three tag positions. Warn mode today; 5,725 untagged test functions in
         # 642 of 644 files, so registering it verbose would be pure noise.
         "check_test_ac_tags.py",
-        # READY TO REGISTER — blocked only on a package_surface AC. Inert by
-        # design once registered: the test_fixture_bloat config key does not
-        # exist, so config resolves to {}, enabled defaults False, and every
-        # violation path returns 0. Arming it is a separate deliberate step.
-        "check_test_fixture_bloat.py",
         # Registering as-is would be theatre: main() ignores argv and reads
         # paths from stdin (:151-152), but pre-commit passes filenames as
         # arguments and leaves stdin empty, so it would check zero files and

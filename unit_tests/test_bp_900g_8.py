@@ -71,9 +71,7 @@ import sys
 import textwrap
 from pathlib import Path
 
-# ---------------------------------------------------------------------------
-# Path setup -- make scripts/ importable regardless of working directory.
-# ---------------------------------------------------------------------------
+# ---- Path setup -- make scripts/ importable regardless of working directory. ----
 _REPO_ROOT = Path(__file__).resolve().parent.parent
 _SCRIPTS_DIR = _REPO_ROOT / "scripts"
 
@@ -149,10 +147,8 @@ def _find_output_root(target_dir: Path) -> Path:
     return candidates[0]
 
 
-# ---------------------------------------------------------------------------
-# Test 1 -- angle: criterion. Pure unit test of the closure computation and the
-# containment/coverage check, using a SYNTHETIC withheld declaration.
-# ---------------------------------------------------------------------------
+# ---- Test 1 -- angle: criterion. Pure unit test of the closure computation and
+# the containment/coverage check, using a SYNTHETIC withheld declaration. ----
 
 
 def test_bp_900g_8_derived_closure_includes_the_sibling_the_deploy_map_omits():
@@ -259,11 +255,11 @@ def test_bp_900g_8_build_subprocess_blocks_when_a_resolved_dependency_is_withhel
     # covers: BP-900g-8
     build_synthetic_full_package = _load_build_synthetic_full_package()
     pkg_root = build_synthetic_full_package(tmp_path / "workspace")
-    scratch_build_phases = pkg_root / "scripts" / "build_phases.py"
+    # AC_STORE_DEPLOY_MAP now lives in build_phases_ac_store.py post-split; build_phases.py only re-exports it.
+    scratch_build_phases = pkg_root / "scripts" / "build_phases_ac_store.py"
     original_text = scratch_build_phases.read_text(encoding="utf-8")
 
-    # Matches a single-line AC_STORE_DEPLOY_MAP tuple entry referencing the
-    # sibling, e.g.
+    # Matches a single-line AC_STORE_DEPLOY_MAP tuple entry referencing the sibling, e.g.
     #   ("scripts/ac_store/_component_migration_map.py", "_component_migration_map.py"),
     # -- the style every other deploy_map entry in build_ac_store() already
     # uses (see unit_tests/test_bp_900g_9.py test 4 for the same anchor form
