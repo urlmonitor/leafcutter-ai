@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: 2026-08-18
-last_updated: 2026-09-08
+last_updated: 2026-09-14
 components:
   - commit_guardian
 related_docs:
@@ -4386,3 +4386,112 @@ The command is real and is deployed. Its step 1 is not: `find` across the whole 
 - `KI-CG-20260908-covers-tag-must-be-inside-a-test-function` (above) — unrelated mechanism, same day, same investigation.
 
 **Pattern:** a pointer chain where every hop but the last resolves, so any check short of carrying the action out reports it healthy.
+
+---
+
+### KI-CG-20260914-done-proof-precommit-ignores-test-required — the pre-commit done-proof gate demands a covers tag from an AC that declares it needs no test, while the CI gate it stands in for exempts that AC
+
+- **Severity:** medium. The gate refuses a correct commit, and nothing a docs-only AC could honestly contain satisfies it. The two easy ways out are to write a synthetic `# covers:` tag or to leave the AC at `todo` after the work is done, and both make the AC store less truthful.
+- **Status:** open
+- **Occurrences:** 1 (hit 2026-09-14 while closing `UXP-700e-4`, a documentation-only AC, and with it its parent `UXP-700e`)
+- **First seen:** 2026-09-14 · **Last seen:** 2026-09-14
+- **Where:** `templates/scripts/commit_guardian/check_done_proof.py`: `check_staged_done_proofs()` (the pre-commit path, around line 586) and `_unproven_composite_children()` (around line 333). Compare with `check_all_done_acs()` (around line 737) and `check_changed_done_acs()` (around line 807), both of which skip `test_required: false`.
+
+**Symptom.** A commit that marks an AC with `test_required: false` as `work_status: done` is refused:
+
+```text
+Check Done Proof (BO-2500b — covers-tag presence gate)....Failed
+[check-done-proof] UXP-700e-4: no '# covers: UXP-700e-4' or '// covers: UXP-700e-4' tag found anywhere under .
+[check-done-proof] UXP-700e: composite UXP-700e is marked done but its covered_by children are not all done-and-covered — unproven: UXP-700e-4
+```
+
+`UXP-700e-4` is `level: L2`, `change_target: docs`, `test_required: false`. Its `test_rationale` explains why a test would be the wrong proof. Its only implementation is a markdown reference.
+
+**Mechanism.** The module has two code paths for the same rule, and they disagree on one condition. The CI paths (`check_all_done_acs`, `check_changed_done_acs`) both begin with `if data.get("test_required") is False: continue`. The fast pre-commit path, `check_staged_done_proofs`, has no such line. Nor does `_unproven_composite_children`, the helper it uses for composites. So the pre-commit gate is *stricter* than the gate it approximates. A fast approximation of a gate should never refuse what the authoritative gate accepts. When it does, the author is blocked locally for something CI would pass.
+
+The composite half compounds it. A parent whose children are all done is refused because one child legitimately has no test. The only way to close the parent is to change the child.
+
+**How it was worked around (and why that is not the fix).** A real test was added (`unit_tests/product_truth/test_uxp_700e_4.py`). It reads `product_truth_bounds.BOUNDS` and asserts the reference lists every declared bound, so it earns its place: it fails if a bound is added without updating the doc. But not every docs-only AC has an assertable relationship to code. The next one will face the same choice between a synthetic tag and a false `todo`.
+
+**Fix direction.** Honour `test_required is False` in `check_staged_done_proofs` for leaves, and in `_unproven_composite_children` for children, exactly as the CI paths do. Keep "the Python boolean `False`, not a string" strictness, so one shared predicate serves all three paths. Add a test that feeds the same staged AC to both the pre-commit path and `check_changed_done_acs` and asserts they reach the same verdict. That test is what stops the paths drifting apart again.
+
+**Related.** `ac-store.md` D-1 (the composite path ignores a child's `test_required: false`) is the same omission in the status-map derivation. The two should be fixed with one shared predicate, not two patches.
+
+**Pattern:** two implementations of one rule, one "fast" and one "authoritative", with an exemption added to only one of them.
+
+---
+
+### KI-CG-20260914-exception-hook-blocks-silently — the PostToolUse exception-handling hook fails every Python write with an empty error when `ruff` is importable but not on PATH
+
+- **Severity:** medium. PostToolUse cannot undo the write, so no work is lost. But every `.py` Write or Edit reports a blocking hook error with no text, the check it exists to run never runs, and an agent learns to ignore the error.
+- **Status:** open
+- **Occurrences:** every Python Write/Edit in one session on 2026-09-14 (dozens)
+- **First seen:** 2026-09-14 · **Last seen:** 2026-09-14
+- **Where:** `.claude/hooks/check_exception_handling_hook.py`, in `_run_ruff()` (which invokes the bare `ruff` executable) and in `main()`'s `FileNotFoundError` branch (which `print()`s to stdout and then `sys.exit(2)`)
+
+**Symptom.** After each Python file write, the harness shows:
+
+```text
+PostToolUse:Write hook blocking error from command: "bash -c '... python "$d/.claude/hooks/check_exception_handling_hook.py"'": No stderr output
+```
+
+**Reproduction.** On this Windows machine, `ruff` is installed as a module but has no console script on PATH:
+
+```text
+$ which ruff                 -> no ruff in (...)
+$ python -m ruff --version   -> ruff 0.15.15
+$ python -c "import json,subprocess,sys; p=r'<abs path to any .py>'; r=subprocess.run([sys.executable,'.claude/hooks/check_exception_handling_hook.py'],input=json.dumps({'tool_name':'Write','tool_input':{'file_path':p}}),capture_output=True,text=True); print(r.returncode, len(r.stderr)); print(r.stdout[:60])"
+2 0
+EXCEPTION HANDLING HOOK: ruff not found on PATH.
+```
+
+**Mechanism.** There are two defects, and either would have been survivable alone.
+1. **The hook's view of ruff.** It asks the OS for a `ruff` binary, but the project's own lint step (`python -m ruff check ...`) and every other hook reach ruff as a module. "Is ruff installed" gets a different answer here than everywhere else.
+2. **The wrong stream.** The hook writes its explanation, including the install instructions, to **stdout** and exits 2. For exit code 2, Claude Code surfaces **stderr** to the model. The message that would have explained the block is discarded, and what remains reads "No stderr output". The reader cannot tell a missing tool from a lint violation from a crash.
+
+**Fix direction.** Run ruff as `[sys.executable, "-m", "ruff", ...]`, falling back to the bare binary only if the module is absent. Send every blocking message (`_build_block_message` and `_build_ruff_not_found_message`) to `sys.stderr`. Add a test that runs the hook as a subprocess with ruff unavailable and asserts the exit code is non-zero *and* the stderr text names the missing tool. The test must not assert on stdout.
+
+**Pattern:** a guard whose failure message is written where its host never reads it, so a blocked action and an unexplained one look identical.
+
+---
+
+### KI-CG-20260914-contract-guard-crashes-on-diff-bytes — the contract-shrinking guard decodes the staged diff in the console code page, crashes on the first non-cp1252 byte, and blocks the commit instead of failing open
+
+- **Severity:** high on Windows. Any commit whose staged diff contains a byte that cp1252 cannot decode is refused, and no content change fixes it. In practice that means most large merges, and any diff touching UTF-8 text such as `…`, `—` or `✓`. The failure also contradicts the guard's own documented disposition: a could-not-check outcome should fail open and announce itself (GE-120a-1).
+- **Status:** open
+- **Occurrences:** 1 (2026-09-14: concluding a merge of `origin/main` into `feature/uxp-700-tranche-2`, 104 staged paths)
+- **First seen:** 2026-09-14 · **Last seen:** 2026-09-14
+- **Where:** `templates/scripts/commit_guardian/check_contract_shrinking.py`. Its `subprocess.run(..., capture_output=True, text=True, ...)` calls (around lines 274, 311 and 352) set no `encoding`. `main()` (around line 528) then calls `diff.strip()` on the result without a guard.
+
+**Symptom.**
+
+```text
+Check Contract Shrinking (TDD Guard).......Failed
+Exception in thread Thread-1 (_readerthread):
+  File "C:\Python314\Lib\subprocess.py", line 1613, in _readerthread
+    buffer.append(fh.read())
+UnicodeDecodeError: 'charmap' codec can't decode byte 0x90 in position 275132: character maps to <undefined>
+  File "...\check_contract_shrinking.py", line 529, in main
+    if not diff.strip():
+AttributeError: 'NoneType' object has no attribute 'strip'
+```
+
+Setting `PYTHONIOENCODING=utf-8` on the outer `git commit` reproduced the crash unchanged. That variable governs Python's standard streams, not the decoding `subprocess` applies to a child's pipe, which with `text=True` and no `encoding` is `locale.getpreferredencoding()`, i.e. cp1252.
+
+**Mechanism.** Two defects stack.
+1. **Wrong encoding.** Git emits the diff as UTF-8 bytes, and the guard decodes them as cp1252. Byte `0x90` is undefined in cp1252, and it occurs inside UTF-8 sequences such as `…` (`E2 80 A6`) or `—` (`E2 80 94`). The decode fails in `subprocess`'s reader thread, and that exception is printed rather than raised, so `proc.stdout` comes back `None` instead of the exception reaching the caller.
+2. **No guard on the result.** `main()` treats the diff as a string unconditionally. The `None` becomes an `AttributeError`, exit 1, and a refused commit. The guard's "could not check" path is never reached, so the crash reads as a verdict.
+
+A small diff rarely contains such a byte; a merge of several PRs almost always does. The guard therefore works for everyday commits and fails exactly when a branch is brought up to date.
+
+**Workaround in use.** The branch's single real commit was replayed onto a fresh branch from `origin/main` (`git cherry-pick --no-commit`), and the generated `docs/INDEX.md` was regenerated. The guard then ran over that commit's own small diff, not the whole merge. Every hook still ran.
+
+**Fix direction.**
+- Pass `encoding="utf-8", errors="replace"` to every `subprocess.run` in the guard, or read bytes and decode explicitly.
+- Treat a `None` or undecodable diff as the could-not-check outcome: announce it, and do not block.
+- Add a test that stages a file containing `…` and runs the guard as a subprocess with `PYTHONIOENCODING` removed from its environment. It must assert a verdict rather than a traceback.
+- Grep the other commit-guardian scripts for `text=True` without `encoding`: the same pattern is likely elsewhere.
+
+**Related.** `KI-BP-20260914-build-crashes-on-a-cp1252-stdout` (`build-pipeline.md`) is the output-side twin of this input-side defect, found the same day. Both come from implicit locale encoding on Windows, which Linux CI can never exercise.
+
+**Pattern:** a guard whose crash path and whose blocking path share an exit code, so a tool failure is indistinguishable from a finding.
