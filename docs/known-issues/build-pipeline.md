@@ -3436,46 +3436,12 @@ commit-worthy truth).
 
 ### KI-BP-20260831-1334 — Every fast-lane worktree bootstrap regenerates ten agent cards as drift, and the lane stages with `git add -A`
 
-- **Severity:** medium
-- **Status:** open — no AC
-- **Occurrences:** 3 (three separate worktrees in one afternoon, identical ten files)
-- **Where:** worktree bootstrap's `build.py` run; `templates/workflows-js/fast-lane-ship.js`
-  Step 2 staging
-
-**Symptom.** Immediately after `create-fastlane-worktree` completes — before any agent has
-done any work — `git status` in the new worktree shows exactly ten modified files:
-
-```
-docs/agents/cards/{architecture-diagram-author, business-analyst, documentation-expert,
-documentation-verifier, it-po, knowledge-harvester, llm-expert, product-owner,
-python-coder, reference-author}.card.md
-```
-
-Reproduced in three independent worktrees created hours apart, same ten files each time. So
-the committed cards and the cards `build.py` generates from the current templates do not
-agree, and every bootstrap surfaces it afresh.
-
-**The reason it matters is the staging rule.** The fast lane's commit step stages with
-`git add -A` (`KI-BO-029`). Any lane that reaches commit therefore sweeps ten unrelated
-regenerated cards into its PR, attributed to whatever AC it was building. In three runs this
-was caught and reverted by hand each time; a run that is not watched will ship them.
-
-**Two defects, and the second is the durable one.** The card/template disagreement is a
-content bug someone can fix by regenerating and committing. The `git add -A` is a
-*mechanism* bug: it guarantees that any pre-existing drift, from any source, is silently
-adopted by the next PR to pass through the lane. Fixing the cards without fixing the staging
-just waits for the next drift.
-
-**Fix direction.** Stage explicitly — the lane knows which files its build set touches, and
-`files_touched` already exists for exactly this. Separately, regenerate and commit the ten
-cards so a fresh bootstrap is clean, and add a bootstrap assertion that a newly created
-worktree has an empty `git status`: a provisioning step that leaves the tree dirty has not
-finished.
-
-**Related.** `KI-BO-029` (the `git add -A` itself). `KI-BP-20260831-1333` (the other
-build-output-state defect found the same day — that one blocks a commit, this one silently
-enlarges it; opposite failure directions, same underlying confusion about which files the
-build owns).
+**Moved** to [`build-pipeline-deploy-tree-ownership.md`](build-pipeline-deploy-tree-ownership.md)
+on 2026-09-14, unchanged, alongside two new entries of the same family (orphaned deploy
+output the cleanup phase never removes; a breaking-change halt that reads as a no-op). A
+fresh fast-lane worktree shows ten modified agent cards before any agent has worked, and the
+lane's `git add -A` sweeps them into whatever PR passes through next. Severity medium, open,
+3 occurrences. **Related:** `KI-BO-029`, `KI-BP-20260831-1333` below.
 
 ---
 
