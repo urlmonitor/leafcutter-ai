@@ -26,6 +26,7 @@ from generate_product_truth import (
     impl_status_for_ac,
     iter_nodes,
 )
+from product_truth_shapes import expansion_targets
 
 # Re-exported, not used here: validate_product_truth imports the whole check
 # set from this one module, so splitting the index checks into a sibling must
@@ -153,7 +154,7 @@ def _check_truth_evidence(flows: dict, ac_records: dict, errors: list[str], warn
 def _find_expands_cycles(flows: dict) -> list[list[str]]:
     """Return every cycle in the step.expands_to graph (edges to registered flows only)."""
     edges = {
-        flow_id: sorted({step["expands_to"] for step in flow.get("steps", []) if step.get("expands_to") in flows})
+        flow_id: sorted({child for step in flow.get("steps", []) for child in expansion_targets(step) if child in flows})
         for flow_id, flow in flows.items()
     }
     white, gray, black = 0, 1, 2
@@ -189,8 +190,7 @@ def _check_expands(flows: dict, index: dict, errors: list[str]) -> None:
     registered = set(flows)
     for flow in flows.values():
         for step in flow.get("steps", []):
-            child_id = step.get("expands_to")
-            if child_id and child_id not in registered:
+            for child_id in [c for c in expansion_targets(step) if c not in registered]:
                 errors.append(
                     f"[expands] {flow['id']} step '{step['id']}': expands_to '{child_id}' "
                     "resolves to no registered flow"
@@ -530,5 +530,8 @@ DECISION HISTORY
   behaviour-preserving by construction. validate_product_truth re-imports the
   whole set, keeping `vpt.<name>` resolvable for the tests that reach for these
   directly. (#EPIC-TruthfulProjectRecord)
+- 2026-09-14 [python-coder]: UXP-700e-3-i -- the cycle and dangling-reference
+  checks read `expands_to` in either shape via expansion_targets, and check
+  every id in a list. (#EPIC-TruthfulProjectRecord/44)
 ====================================================================
 """

@@ -127,6 +127,7 @@ CHECK_READS: dict[str, tuple[str, ...]] = {
     "artifact-paths": ("index",),
     "canonical-datasets": ("mock-data",),
     "truth-evidence": ("flows",),
+    "outcome-kinds": ("flows",),
 }
 
 

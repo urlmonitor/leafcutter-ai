@@ -191,9 +191,21 @@
             "description": "AC ids (docs/acceptance-criteria/) derived from this step's acceptance_scenarios. AUTHORED link — the source of truth for graph↔AC linkage."
           },
           "expands_to": {
-            "type": "string",
-            "pattern": "^[a-z0-9-]+/[a-z0-9-]+$",
-            "description": "id of the child flow this step drills into (C4-style sub-flow). When set, this step's impl_status is DERIVED from the child flow's rollup, taking precedence over `implements`. OPTIONAL."
+            "oneOf": [
+              {
+                "type": "string",
+                "pattern": "^[a-z0-9-]+/[a-z0-9-]+$"
+              },
+              {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "type": "string",
+                  "pattern": "^[a-z0-9-]+/[a-z0-9-]+$"
+                }
+              }
+            ],
+            "description": "ids of the child flows this step drills into (C4-style sub-flows). NEW SHAPE: a list. A single id (the older shape) is still read, as a list of one, and is written back as a list (read-both / write-new, UXP-700e-3-i). When set, this step's impl_status is DERIVED from the child flows' combined rollup, taking precedence over `implements`. OPTIONAL."
           },
           "impl_status": {
             "type": "string",
@@ -288,6 +300,15 @@
           },
           "impl_asof": {
             "type": "string"
+          },
+          "outcome_kind": {
+            "type": "string",
+            "enum": [
+              "alternative",
+              "failure",
+              "exit"
+            ],
+            "description": "What kind of outcome this branch is: another valid route to the goal (alternative), a failure recovered from or reported (failure), or an end to the journey before its goal (exit). Being introduced (UXP-700e-3-i): OPTIONAL, and a branch without one is reported as a field to fill, not as a violation."
           }
         }
       }

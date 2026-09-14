@@ -185,6 +185,9 @@ DECISION HISTORY
   shape (product_truth_label_checks.py). Findings warn; the run states
   resolved_labels. With no index.yaml the check is listed as not executed.
   (#EPIC-TruthfulProjectRecord/43)
+- 2026-09-14 [python-coder]: UXP-700e-3-i -- branches without an outcome_kind are
+  reported as to-be-filled warnings (product_truth_shapes._check_outcome_kinds),
+  never errors, while the field is introduced. (#EPIC-TruthfulProjectRecord/44)
 """
 from __future__ import annotations
 
@@ -237,6 +240,7 @@ from product_truth_outcome import (  # noqa: F401  # re-exported for callers
     _print_outcome_contract,
     _top_level_outcome,
 )
+from product_truth_shapes import _check_outcome_kinds, count_branches  # noqa: F401
 from product_truth_label_checks import (  # noqa: F401  # re-exported for callers
     _check_labels,
     count_labels,
@@ -497,6 +501,7 @@ def run_checks() -> dict:
     # the SAME `errors` list every other check already uses, so a broken
     # pointer makes the run exit non-zero exactly like every other error class.
     _check_shape_version_bounds(flows, errors, warnings)
+    _check_outcome_kinds(flows, warnings)
     _check_artifact_paths(index, errors)
     _check_canonical_datasets(mocks, errors)
 
