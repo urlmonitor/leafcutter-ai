@@ -1,0 +1,342 @@
+id: ACS-1600
+title: "Automation can tell you what it found, but never decide what is finished"
+component: ac-store
+components:
+  - ac_store
+level: L0
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+criteria: |
+  What a tool puts into your requirements record is what it observed.
+
+  Tools that install alongside this project can edit the record of what the
+  project must do and what of it is finished. Some of them choose what to change
+  by noticing that two pieces of text resemble one another. A resemblance is a
+  reason to look closer, not an observation, and the finished-state of a piece
+  of work is the single fact every other honesty check in the project reads as
+  proof. After this goal, automation of that kind may examine, report and
+  propose — and may not award a finished badge, may not act on a requirement
+  that has been retired, may not alter anything without being asked to, and may
+  not record a conclusion it was unable to establish. Whatever it could not
+  establish is reported as unestablished rather than filled in with the most
+  plausible answer.
+depends_on: []
+doc_links:
+  - path: docs/acceptance-criteria/ac-store/ACS-1300-trustworthy-coverage-links/ACS-1300.yaml
+    relationship: depends_on
+    status: exists
+    relevance: >-
+      THE SOURCE OF THE HARD REFUSAL, AND THE REASON THIS TREE EXISTS RATHER THAN
+      AN AMENDMENT TO THAT ONE. ACS-1300's L0 refuses the finished-state write for
+      the ACS-1300 tree and marks the refusal "not to be revisited". That scoping
+      is precisely how a second record came to specify the forbidden thing: the
+      refusal was never store-wide. This tree makes it store-wide for automation
+      acting on a computed likeness. ACS-1300 is NOT widened, NOT amended, and must
+      not be closed as a duplicate of this tree — its subject is repairing one
+      relation by exact mechanical match, and its own notes say "NOT text
+      similarity, NOT keyword heuristics". This tree's subject is the rules any
+      such writer obeys, including one that IS heuristic.
+  - path: docs/acceptance-criteria/ac-driven-dev/ACD-2300-backfill-existing-code/ACD-2300.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      FENCED OFF, DELIBERATELY NOT WIDENED, AND READ THIS BEFORE DECOMPOSING
+      ANYTHING HERE. ACD-2300 is a capability that does not exist yet — proposing
+      criteria and links for code that never had any, for a repository adopting
+      this way of working. This tree governs automation that ALREADY SHIPS. Its
+      notes raised the contradiction this tree settles ("I did not amend ACD-800.
+      Raising it is this record's obligation; deciding it is not") and it inherits
+      the same refusals. Neither may be closed as a duplicate of the other: one is
+      a new capability with no code, the other is a live requirement for code with
+      no requirement. When ACD-2300 is built it should INHERIT this tree rather
+      than restate it.
+  - path: docs/acceptance-criteria/ac-store/ACS-400-ac-governance/ACS-400b.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      THE STANDING RECORD THIS TREE NARROWS, AND THE ONE MOST LIKELY TO BE CITED
+      AS LICENCE AGAINST IT. ACS-400b states that implementation agents "may
+      update work_status, implemented_by, and covered_by to record their
+      progress". That permission is granted to something reporting on work it
+      performed. It is NOT a permission for automation whose only grounds are a
+      likeness it computed, which performed no work and observed no outcome. This
+      tree draws that line explicitly. ACS-400b is not amended and not contradicted
+      — it is read for its purpose. An implementer citing it to justify a
+      heuristic finished-state write has misread it.
+  - path: docs/acceptance-criteria/ac-store/ACS-900-deprecation-hygiene/ACS-900e.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      THE DEPENDENCY THAT MAKES THE GOVERNED TOOL'S CONTINUED EXISTENCE A
+      COMMITMENT RATHER THAN AN ACCIDENT. ACS-900e is specified as reusing the
+      existing audit tool's requirement-to-source traceability resolution and
+      explicitly forbids a second independent traversal. So another tree is built
+      on this tool continuing to work. That is an argument for governing it, and
+      an argument against anyone reading the retirement of its old specification
+      as a decision to delete it. ACS-900e's own subject — code left stranded by a
+      retired requirement — is NOT this tree's and must not be restated here.
+  - path: docs/acceptance-criteria/ac-store/ACS-1100-honest-coverage-answers/ACS-1100.yaml
+    relationship: depends_on
+    status: exists
+    relevance: >-
+      INHERITED, NOT RESTATED. ACS-1100 is a standing contract: every figure an
+      answer reports states the total it was measured against and what it left
+      out. Every count this tree's capability reports is bound by it. ACS-1100's
+      own notes say it is not a home for other surfaces, so this tree inherits and
+      does not parent under it — and no criterion here may re-derive the
+      denominator rule in a competing form.
+  - path: docs/acceptance-criteria/ac-store/ACS-1400-complete-child-links/ACS-1400c.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      THE NEAREST PRECEDENT FOR THE SHAPE OF THIS WHOLE TREE, AND WORTH COPYING.
+      ACS-1400c is described in this component's context file as "a safety problem
+      on an existing tool, not a greenfield build" — an unsafe bulk repair that is
+      one command away. This tree is the same shape applied to a different tool.
+      Reuse its framing and its warning that every safety guarantee is satisfied by
+      a tool that does nothing.
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: related
+    status: exists
+  - path: docs/reference/false-green-mechanisms.md
+    relationship: related
+    status: exists
+    relevance: >-
+      The register of the failure family this tree's whole subject belongs to: an
+      assertion of proof recorded where an observation of evidence belongs.
+  - path: docs/reference/ac-schema.md
+    relationship: related
+    status: exists
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-09-14
+amended_by: []
+superseded_by: null
+covered_by:
+  - ACS-1600a
+  - ACS-1600b
+  - ACS-1600c
+  - ACS-1600d
+  - ACS-1600e
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  ORIGIN (2026-09-14, product-owner, on BrainCandy's brief). The request was
+  framed as "govern the cross-reference audit tool, which currently has no live
+  requirement at all". The framing was accepted; the ALTITUDE was not. See the
+  next section.
+
+  ==========================================================================
+  WHERE I DISAGREED WITH THE BRIEF — THE SUBJECT IS NOT ONE TOOL
+  ==========================================================================
+  The brief describes a single script. A goal whose subject is one script fails
+  the altitude test: if that script were deleted tomorrow the goal would collapse,
+  yet the hazard would not have moved. The hazard is a CLASS, and this store
+  already holds at least three members of it — one tool that flips the
+  finished-state field behind its own evidence gate, one in-drive agent step that
+  repairs evidence links, and the heuristic matcher this brief is about. ACD-2300's
+  notes already observe that "the two that already exist contradict each other".
+  So the goal is stated as the rules any such writer obeys, and the specific tool
+  is the first and currently only instance — named here in notes, and in doc_links,
+  never in a criteria block.
+
+  This is the ACS-800/ACS-900/ACS-1200/ACS-1300/ACS-1400/ACS-1500 pattern applied
+  once more: a sibling L0 stating the class, with the point fixes named as its
+  instances. It is also GE-118-versus-GE-120's rule in this component's own
+  vocabulary — the point fixes and the class they are instances of live in
+  different trees, and the class does not get grafted beneath an instance.
+
+  ==========================================================================
+  WHY A SIBLING L0 AND NOT A GRAFT — FOUR CANDIDATES EXAMINED AND REJECTED
+  ==========================================================================
+  - ACS-900 (deprecation hygiene) is thematically the closest at L0 and was the
+    strongest candidate. Rejected on subject: all five of its L1s are about one
+    commit-time gate that fires when a requirement is retired. Its promise is that
+    retired requirements leave no orphaned code. This tree's promise is that
+    automation writes only what it saw. A retired requirement being ineligible for
+    automatic change (ACS-1600a) is adjacent to ACS-900 but is not that gate, and
+    grafting four further L1s of a different subject onto a five-L1 tree would take
+    it to nine against a cap of seven. ACS-900 is fenced and not widened.
+  - ACS-1300 was rejected by its own written instruction. Its join is exact and
+    mechanical and its notes say so twice; hosting a heuristic matcher there would
+    require rewriting that tree's method boundary, which is the same objection that
+    made ACD-800 the wrong parent for ACS-1300 in the first place.
+  - ACS-1100b ("you can see how the coverage figure was arrived at") is about the
+    METHOD BEHIND A REPORTED FIGURE. ACS-1600e is about a reviewable account of
+    proposed CHANGES. Related but not the same object, and ACS-1100 is a standing
+    contract explicitly not a home for other surfaces.
+  - ACS-400 (who may edit a requirement definition) is the right FAMILY and the
+    wrong AXIS. Its unit is agent identity; this tree's unit is the quality of the
+    evidence behind a write. It is also at five L1s. Critically, ACS-400b actively
+    GRANTS the permission this tree narrows — see doc_links. That made it the most
+    important record to read and the one it would have been most wrong to extend.
+
+  THE GOVERNANCE MAP IS NOW EIGHT TREES: ACS-200 test coverage of live ACs
+  (structurally broken, no L0 file); ACS-400 who may edit a definition; ACS-900
+  code lifecycle of a retired AC; ACS-1200 the parked pre-decomposition state;
+  ACS-1300 the requirement-to-test link; ACS-1400 the parent-to-child link;
+  ACS-1500 the fact that those last two are one field; ACS-1600 what automation is
+  permitted to conclude before it writes anything at all. Do not cross-wire.
+
+  ==========================================================================
+  THE HARD CONSTRAINT, AND MY POSITION ON IT — STATED BECAUSE A RECOMMENDATION
+  WAS ASKED FOR AND NEUTRALITY WOULD HAVE BEEN THE WRONG ANSWER
+  ==========================================================================
+  ACS-1600b encodes the refusal. THE POSITION: the governed tool's change-applying
+  path should LOSE its finished-state write entirely, not narrow it to a higher
+  confidence band, and not gate it behind a second flag.
+
+  Three grounds, in order of weight:
+    1. A text-similarity match against a completed ticket is not an observation
+       that anything was finished. It is a statement that two descriptions read
+       alike. Every confidence band is a band of that same non-observation.
+    2. The finished-state field is the one field the whole phantom-done edifice
+       rests on. Every downstream honesty check reads it as settled. A wrong value
+       there is not one wrong record — it is a false premise every later check
+       answers confidently from.
+    3. The capability is not lost by removing it. The transition already has an
+       owner that gates on its own evidence. A user who wants a record marked
+       finished runs that, and it asks for proof.
+  The counter-argument deserves a hearing and does not survive it: the write is
+  behind an explicit opt-in, so nobody is surprised by it. But an opt-in is consent
+  to the ACT, not to the GROUNDS. The user asking for changes to be applied is
+  consenting to links being recorded, and has no way to consent separately to a
+  done badge being awarded from a resemblance — which is exactly the shape
+  ACS-1600c exists to make impossible at the level of the whole tool.
+
+  NARROWING, NOT REPEALING. The refusal binds automation whose grounds are a
+  computed likeness. It does NOT withdraw ACS-400b's permission from an agent
+  reporting on work it performed and observed. Anyone reading this tree as a
+  blanket ban on progress reporting has read it wrong, and ACS-400b is fenced in
+  doc_links for that reason.
+
+  ==========================================================================
+  THE GOVERNED TOOL — VERIFIED FACTS, SUPPLIED BY THE USER, CARRIED AT THE
+  CONFIDENCE GIVEN. DO NOT UPGRADE THEM AND DO NOT PUT THEM IN A CRITERIA BLOCK.
+  ==========================================================================
+  - Its entire governing specification (a goal, four features and six descendants
+    beneath them) is being retired in an open, unmerged pull request. On this
+    branch those records are still active. The retirement removed a specification;
+    it did not remove code.
+  - The code is built, roughly 594 lines, and is in the build's deploy manifest, so
+    it installs into every consumer project. It is described as the only deployed
+    tool in the repository with no requirement behind it.
+  - It examines without changing anything by default; changing requires an explicit
+    flag. THAT IS ALREADY-SHIPPED BEHAVIOUR and ACS-1600c is therefore green on
+    arrival — see the warning below.
+  - Under that flag it records implementation links AND sets the finished-state
+    field. This is the write ACS-1600b refuses.
+  - It matches requirements to completed tickets using text similarity and keyword
+    heuristics.
+  - Nothing in the templates and nothing in continuous integration invokes it. It
+    is run by hand.
+  - Its candidate selection reads only the finished-state and implementation-link
+    fields. It never reads lifecycle status, so retired records stay eligible.
+    This is ACS-1600a's subject and the queued point fix.
+
+  A RECORD MAY BE AUTHORED GREEN-ON-ARRIVAL — SAY SO OR IT CERTIFIES ITSELF.
+  ACS-1600c describes behaviour that already ships. An ordinary red-baseline run
+  against it will come up GREEN and prove nothing. Whoever decomposes it must
+  carry a falsifying mutation (remove the guard, confirm the test goes red) rather
+  than accepting a green baseline as evidence. The precedent and the reasoning are
+  GE-120g's; this is the second occurrence.
+
+  ==========================================================================
+  L1 CUT — BY GUARANTEE, NOT BY DEFECT. DO NOT RE-CUT AT L1.
+  ==========================================================================
+  - ACS-1600a — ELIGIBILITY: which records are in reach at all. THE HOME FOR THE
+    QUEUED POINT FIX; see the next section.
+  - ACS-1600b — THE REFUSAL: the finished-state field, never from a likeness.
+  - ACS-1600c — CONSENT: examining is the default, altering is asked for.
+  - ACS-1600d — EVIDENCE: what is recorded was established; what was not is
+    reported unestablished.
+  - ACS-1600e — REVIEWABILITY: a durable account of what would change, before and
+    after.
+
+  WHY b AND d ARE SEPARATE, since they will look like one criterion to a reader in
+  a hurry. Neither implies the other. A tool that writes only its highest-confidence
+  matches satisfies d completely and can still award a finished badge on every one
+  of them, so d does not reach b. A tool that never touches the finished-state
+  field satisfies b completely and can still manufacture implementation links from
+  weak evidence, so b does not reach d. Merged, an implementer builds whichever
+  half is cheaper — the standing hazard this component records under GE-127a/b.
+
+  WHY c AND e ARE SEPARATE. c is about the switch: nothing changes unless asked.
+  e is about the artifact: before you throw the switch you can read what would
+  happen. A tool satisfying c with no account at all leaves the user consenting
+  blind, which is consent in form only.
+
+  EVERY GUARANTEE HERE IS SATISFIED BY A TOOL THAT DOES NOTHING. "Awarded no
+  finished badge", "touched no retired record", "changed nothing unasked" are all
+  trivially true of a no-op. Each must be asserted in the SAME run as a change that
+  genuinely happened. Copy ACS-1300a-3's pairing test; ACS-1400's notes state the
+  rule in full and it is inherited verbatim.
+
+  ==========================================================================
+  THE QUEUED POINT FIX AND THE ROOM RESERVED FOR IT
+  ==========================================================================
+  A fix is already queued to make candidate selection exclude retired and
+  superseded records. It belongs beneath ACS-1600a, which holds ZERO children
+  against the five-child cap. Do not author it here — it arrives as its own record
+  and its parent's covered_by is updated at that time. ACS-1600a's criteria was
+  written to be exactly the right size to host it: the guarantee is about which
+  records are in reach, stated in a form that survives the specific fields the
+  current implementation happens to read.
+
+  ==========================================================================
+  INHERITED AND NOT RE-DERIVED
+  ==========================================================================
+  BYTE STABILITY — a record with nothing to repair is never OPENED for writing.
+  TQ-400e-1 owns the rule and its test shape (raw-byte hash before and after, plus
+  an anti-no-op control in the same run). Point at it; do not restate it in a
+  competing form. ACS-1300 and ACS-1400 both inherit it in exactly these words.
+
+  ABSTENTION OVER ACTION — untrustworthy evidence produces a REPORTED abstention,
+  never a silent skip and never a write. ACS-1600d is where it becomes falsifiable
+  in this tree rather than merely written down.
+
+  EVERY FIGURE STATES ITS DENOMINATOR — ACS-1100, standing, inherited.
+
+  ==========================================================================
+  ROADMAP — DELIBERATELY UNPHASED, FOR THE USER AT THE APPROVAL GATE
+  ==========================================================================
+  No roadmap_phase is claimed. Phase 1's exit criteria are clean install,
+  validate-only, build idempotency and truthful self-host reporting; store-record
+  safety advances none of them directly. ACS-1200 and ACS-1300 left themselves
+  unphased on exactly this reasoning and ACS-1300's notes record that ACS-1100's
+  phase_1 claim "reads as over-claiming". The counter-argument is real and is put
+  here rather than acted on: the governed tool SHIPS INTO EVERY CONSUMER PROJECT,
+  so its safety is arguably part of "installs into any project", which is the
+  argument ACD-2200 used to claim phase_1. The component already contradicts
+  itself on this question (1200/1300 unphased, 1400/1500 phase_1). Either answer is
+  fine; it is a one-line decision for the user and this tree does not borrow a
+  claim it cannot argue.
+
+  No roadmap or vision file was modified while authoring this.
+
+  ==========================================================================
+  IDENTIFIER AND CAPS
+  ==========================================================================
+  ACS-1600 established free on 2026-09-14 by four independent checks, none of which
+  is a directory listing (a folder-only listing under-reports taken ids in this
+  store — see KI-ACD-008):
+    (1) every id value across the whole AC store parsed from YAML — the highest ACS
+        root is ACS-1500;
+    (2) a recursive grep for the literal ACS-1600 across the whole worktree
+        excluding .git — no hits;
+    (3) git grep for ACS-1600 against a freshly fetched origin/main — no hits;
+    (4) a grep of the shared main working tree for an uncommitted claim — no hits.
+  RE-VERIFY at merge time rather than trusting this paragraph; id allocation in
+  this store is known-broken.
+
+  Five L1s against a hard cap of seven — two slots of headroom, deliberately
+  preserved. No child_limit_override is authored here and none may be added.
+  Decompose each of a–e into L2 behaviours; do NOT re-cut the L1 split.
+
+  Authored at the PO stage. L0 and L1 only. No L2, no test_spec, no
+  it_requirements and no declares_side_effect, by design.
