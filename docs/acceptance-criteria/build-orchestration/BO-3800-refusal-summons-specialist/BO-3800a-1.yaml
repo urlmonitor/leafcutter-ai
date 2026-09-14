@@ -166,21 +166,24 @@ notes: |
       everything visible has happened and the person waiting for the change is in exactly
       the position they were in before.
 
-  THE OPEN QUESTION THIS RECORD DOES NOT ANSWER, RAISED RATHER THAN NARROWED AWAY. Every
-  arm above begins "Given a ticket is being driven". That scoping is deliberate and it is
-  NOT a quiet narrowing of the L1 — it is a gap this decomposition is reporting upward, and
-  it is an amendment to BO-3800a rather than something to settle here. The reasoning: the
-  hold and the re-offer both need a party that outlives the refusal and can ask for
-  another. Inside a drive that party exists — it is the depth-0 driver that owns the phase
-  loop. Outside one it does not. A hand-run commit at a terminal has no driver at all; and
-  the delivery step itself cannot be the asker, because it runs at depth 1 and ADR-019
-  records that an agent at depth 1 cannot invoke the Agent tool, with calls beyond it
-  SILENTLY DROPPED. So the honest position is that this capability exists only inside a
-  drive, and a refusal outside one is simply refused — today's behaviour, with GE-127e's
-  message as the whole of what the author gets. That may be the right answer; it is not
-  this record's to declare. Until BO-3800a says so, no clause here claims anything about a
-  delivery attempt made outside a drive, and no clause here claims such an attempt is
-  out of scope either.
+  THE QUESTION THIS RECORD ONCE RAISED IS NOW ANSWERED — DO NOT WIDEN THE SCOPING BACK.
+  Every arm above begins "Given a ticket is being driven". When this record was authored
+  that scoping was reported upward as an open question rather than settled here. BO-3800a
+  was amended on 2026-09-14 and now answers it: the L1 promise is bounded to work being
+  driven. A refusal outside a drive is simply refused — today's behaviour, with the refusing
+  standard's own message as the whole of what the author gets, nothing held and no
+  specialist summoned. The arms above are therefore exactly as wide as their parent, not
+  narrower than it, and nothing here is owed a later widening.
+
+  THE REASONING IS KEPT, BECAUSE IT IS WHY THE SCOPING IS CORRECT RATHER THAN TIMID. The
+  hold and the re-offer both need a party that outlives the refusal and can ask for another.
+  Inside a drive that party exists — the depth-0 driver that owns the phase loop. Outside
+  one it does not: a hand-run commit at a terminal has no driver at all. And the delivery
+  step itself cannot be the asker, because it runs at depth 1 and ADR-019 records that an
+  agent at depth 1 cannot invoke the Agent tool, with calls beyond it SILENTLY DROPPED. A
+  reader who mistakes these Givens for an oversight and widens them is specifying a dispatch
+  the platform will drop without raising anything — the same silent-drop failure this tree
+  exists to prevent.
 
   NOT AUTHORED HERE, BY DESIGN: assigned_agent, estimated_complexity, it_requirements,
   test_spec, test_rationale and declares_side_effect. Those are the IT PO's, which runs

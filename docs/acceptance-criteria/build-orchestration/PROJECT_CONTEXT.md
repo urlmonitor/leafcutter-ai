@@ -151,6 +151,16 @@ failable; keep them distinct when decomposing:
   for is unchanged. Without it, the cheapest implementation summons a specialist on
   every refusal, which passes every positive arm and is a serious regression.
 
+**BO-3800a is bounded to work being DRIVEN — decided 2026-09-14, do not re-open.** The
+hold-and-re-offer promise applies inside a drive only. A refusal outside one — a hand-run
+`git commit` at a terminal — is simply refused, with the refusing standard's own message as
+the whole of what the author gets; nothing is held and no specialist is summoned. The reason
+is ADR-019's depth-1 cap: holding a change and re-offering it need a party that outlives the
+refusal, which is the depth-0 driver, and the delivery step itself runs at depth 1 where an
+agent cannot invoke the Agent tool at all — such calls are silently dropped. The alternative
+was rejected because no design for it exists under that constraint. BO-3800a-1's "Given a
+ticket is being driven" Givens are correct under this decision and must not be widened.
+
 **Hard precondition: INF-800f** (infrastructure). The restructuring craft is a slash
 command today, reachable by hand and by nothing else. Nothing in BO-3800 is buildable
 until INF-800f makes it askable. Do not re-specify or decompose it under BO.
