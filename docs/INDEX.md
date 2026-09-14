@@ -223,6 +223,7 @@ task, then pull only those files.
 | EPIC PrecommitSafetyNet | [docs/retrospectives/EPIC-PrecommitSafetyNet.md](docs/retrospectives/EPIC-PrecommitSafetyNet.md) | Epic retrospective for EPIC-PrecommitSafetyNet — pre-commit safety net for the leafcutter-ai package. |
 | EPIC QuickFixWorkflow | [docs/retrospectives/EPIC-QuickFixWorkflow.md](docs/retrospectives/EPIC-QuickFixWorkflow.md) | epic: EPIC-QuickFixWorkflow |
 | EPIC SelfDescribingAgentsCorrections | [docs/retrospectives/EPIC-SelfDescribingAgentsCorrections.md](docs/retrospectives/EPIC-SelfDescribingAgentsCorrections.md) | Retrospective for EPIC-SelfDescribingAgentsCorrections |
+| EPIC StartingNewWorkTheProperWayAlways | [docs/retrospectives/EPIC-StartingNewWorkTheProperWayAlways.md](docs/retrospectives/EPIC-StartingNewWorkTheProperWayAlways.md) | Overview of Retrospective: EPIC-StartingNewWorkTheProperWayAlways. |
 | EPIC TDDWorkflowEnforcement | [docs/retrospectives/EPIC-TDDWorkflowEnforcement.md](docs/retrospectives/EPIC-TDDWorkflowEnforcement.md) | **Date**: 2026-05-27 |
 | EPIC TrustworthyTestGate | [docs/retrospectives/EPIC-TrustworthyTestGate.md](docs/retrospectives/EPIC-TrustworthyTestGate.md) | Retrospective for EPIC-TrustworthyTestGate — AC-status-gated test enforcement gate (PR #172); 8 of 25 tickets completed. |
 | GenReviewFixes | [docs/retrospectives/GenReviewFixes.md](docs/retrospectives/GenReviewFixes.md) | Retrospective for the GenReviewFixes loose-ticket remediation batch (PR |
