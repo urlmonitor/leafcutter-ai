@@ -1334,7 +1334,7 @@
       },
       {
         "id": "check-ac-done-on-merge",
-        "tier": "mechanical",
+        "tier": "transform",
         "name": "Check AC Done On Merge (close source ACs when tickets land)",
         "entry": "python {{config.output_root}}/scripts/commit_guardian/hooks/check_ac_done_on_merge.py",
         "language": "system",
