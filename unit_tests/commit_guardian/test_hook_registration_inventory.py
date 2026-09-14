@@ -78,7 +78,13 @@ MANIFEST_PATH = GUARDIAN_DIR / "commit_guardian.json"
 UNREGISTERED_BASELINE: frozenset[str] = frozenset(
     {
         "check_ac_coverage.py",
-        "check_ac_done_on_merge.py",  # invoked by scripts/ac_store/mark_ac_done.py, not pre-commit
+        # CALLS scripts/ac_store/mark_ac_done.py; nothing calls it. A first pass
+        # read mark_ac_done.py:6 ("Called by check_ac_done_on_merge.py post-merge
+        # hook") as an invoker and recorded the arrow backwards — the direction of
+        # a grep hit is not evidence. Best register-now candidate of the 18: it
+        # always exits 0, and the post-merge stage is already supported end to end
+        # (build_precommit.py:171-172, install_pre_commit_shims.collect_stages).
+        "check_ac_done_on_merge.py",
         "check_complexity.py",  # settings, no runner
         "check_debug_scripts.py",  # settings, no runner
         "check_doc_coverage.py",  # settings, no runner
