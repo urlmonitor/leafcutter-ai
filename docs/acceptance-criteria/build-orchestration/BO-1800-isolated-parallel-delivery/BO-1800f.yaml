@@ -1,0 +1,101 @@
+id: BO-1800f
+components:
+  - build_orchestration
+title: "Delivering your work never quietly removes someone else's"
+component: build-orchestration
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  What you deliver is current, and removes nothing you did not mean to remove.
+
+  When finished work leaves its own copy and heads for the shared main branch,
+  it is first brought up to date with what is actually there at that moment, so
+  it carries everyone else's recent work instead of an older picture of the
+  project. And if a delivery would still take away something the shared branch
+  already has, it does not leave the copy at all until that removal is one you
+  have deliberately declared. Taking things away on purpose stays entirely
+  possible; taking them away by accident stops being possible, and it stops
+  depending on anyone remembering to check.
+depends_on: [BO-1800]
+doc_links:
+  - docs/known-issues/build-orchestration.md
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-09-14
+amended_by: []
+superseded_by: null
+covered_by:
+  - BO-1800f-1
+  - BO-1800f-2
+implemented_by: []
+documentation_triggers:
+  - sequence-diagram
+  - reference-doc
+notes: |
+  Origin: KI-BO-20260909-worktrees-go-stale-within-minutes (severity high,
+  4 occurrences in one session, one of which would have deleted work merged
+  earlier in that same session). Every occurrence was caught only because a
+  human remembered to run a manual additive-only audit -- a defence with a 100%
+  hit rate and a 0% enforcement rate.
+
+  Scope. This L1 governs the boundary where work LEAVES its isolated copy toward
+  the shared branch. It deliberately does NOT promise that every copy is kept
+  continuously current: continuously restating a copy's history underneath
+  running agents trades silent deletion for silent corruption of in-flight work.
+  The guarantee is about the moment of delivery, not the whole lifetime of the
+  copy.
+
+  Two independently-failing properties this L1 is scoped to parent as siblings,
+  not as parent and child:
+    1. Currency -- work reaching the shared branch is replayed onto the state
+       observed at that moment, not the state it was copied from.
+    2. Non-destructiveness -- a delivery that would remove content the shared
+       branch already has does not leave the copy.
+  They must stay siblings because a delivery can be perfectly current and still
+  remove content, via a bad conflict resolution during the replay. Were
+  non-destructiveness nested under currency, it would be vacuous in every test
+  where currency is correctly implemented -- exactly the shape of check that
+  looks green because it examined nothing.
+
+  Deliberate removals remain in scope and remain possible. The value is
+  "undeclared removals are refused", never "removals are refused". A rule that
+  blocked all deletions would be wrong in a way this repo has already been bitten
+  by: CLAUDE.md records an incident where a branch's real, intended removal was
+  read as a dropped hunk and nearly reinstated.
+
+  Placement. Sits under BO-1800 as the complement to BO-1800e: BO-1800e
+  guarantees main can only change THROUGH the reviewed process; this guarantees
+  that what travels through that process does not subtract. All four recorded
+  occurrences were on branches heading for a properly reviewed PR, so BO-1800e
+  can hold completely while the work is still deleted. BO-1800a (isolation) is
+  the cause here rather than the cure -- each isolated copy is a snapshot of a
+  base that keeps moving. BO-900a was rejected as parent: its population is
+  long-running epics and all four occurrences were on non-epic branches; its
+  shape is a warning with a choice to continue, where this needs a refusal.
+
+  roadmap_phase: phase_1, matching BO-1800 and all five existing siblings. The
+  phase_1 outcome is a stable MVP "reliable enough to use across multiple repos";
+  silent deletion of already-merged work when several efforts run at once is a
+  direct threat to that outcome, and it is already occurring, so it is not
+  deferrable to a later phase.
+
+  Related observations for a future decision -- recorded here deliberately, NOT
+  acted on, because both belong to BO-900 and amending them is a separate call:
+    - BO-900a-1 measures "commits AHEAD of origin/main" -- the branch's own
+      output -- which does not measure the shared branch's advance at all. A
+      one-commit branch can be arbitrarily behind and that metric reads 1, so the
+      check cannot detect the condition its own L1 promises to warn about. Text
+      verified directly at authoring time. Latent defect in the existing tree,
+      independent of this L1.
+    - BO-900a-1-i specifies that an unreachable remote counts as zero divergence
+      and the drive continues. That fail-open is defensible for an advisory
+      mid-epic warning and wrong for a delivery gate, where unreachable means
+      unverifiable. The behaviour drafted under this L1 requires the opposite.
+      Both may be correct in their own context -- flagged so that whoever unifies
+      them does so deliberately rather than by accident.

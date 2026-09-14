@@ -1,0 +1,64 @@
+id: BO-1800f-2-i
+components:
+  - build_orchestration
+readiness: draft
+priority: medium
+title: "A declared removal is delivered; an undeclared removal alongside it is not"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+created_by: "docs/acceptance-criteria/build-orchestration/BO-1800-isolated-parallel-delivery/BO-1800f.yaml"
+criteria: |
+  Given a copy that has declared it intends to remove file A,
+    and a delivery, already brought up to date with the shared branch's current
+    state, that removes all 200 lines of A and also removes 12 lines of file B,
+    where B is on the shared branch and no removal of B has been declared,
+  When the workflow examines what the delivery would take away from the shared branch,
+  Then no part of the delivery leaves the copy,
+  And the refusal names B,
+  And the refusal does not name A,
+  And given a second delivery from the same copy that removes A and nothing else,
+    that delivery leaves the copy and A is gone from the result.
+depends_on: [BO-1800f-2]
+doc_links:
+  - path: docs/known-issues/build-orchestration.md
+    relationship: describes
+    status: exists
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-09-14
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: safety
+notes: |
+  This record is the carve-out that keeps BO-1800f honest. A rule that refused every
+  removal would read as strictly safer and would be wrong in a way this repo has
+  already paid for: CLAUDE.md records an occasion where a branch's real, intended
+  removal was read as something dropped by accident and was nearly put back, which
+  would have silently reversed the change the branch existed to make. Taking things
+  away on purpose has to remain possible, or the guarantee is routed around.
+
+  Falsifiability. The single mixed fixture is what makes this record impossible to
+  satisfy by accident, because it separates four behaviours that a one-sided fixture
+  cannot tell apart:
+
+    - refuse every removal            -- fails, because it names A and blocks the
+                                         second delivery
+    - allow every removal             -- fails, because it does not name B
+    - allow all removals once any one -- fails, because it does not name B
+      has been declared
+    - adjudicate each removal against -- the only behaviour that passes
+      what was declared
+
+  The assertions are on which paths the refusal names and on whether A is absent
+  from the delivered result, both observable by running the behaviour over the
+  fixture.

@@ -1,0 +1,60 @@
+id: BO-1800f-2-ii
+components:
+  - build_orchestration
+readiness: draft
+priority: medium
+title: "What the copy's own commits took away is reported apart from what the copy's starting state never had"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+created_by: "docs/acceptance-criteria/build-orchestration/BO-1800-isolated-parallel-delivery/BO-1800f.yaml"
+criteria: |
+  Given a delivery in which file A is absent because one of the copy's own commits
+    took it away,
+    and file B is absent only because the copy started from a state older than the
+    one that introduced B, no commit of the copy's having touched B,
+  When the workflow reports what the delivery would take away from the shared branch,
+  Then A is reported as taken away by the copy's own commits,
+  And B is reported as absent because the copy's starting state predates it,
+  And the two are reported as separate findings rather than as one count of absent
+    lines that does not distinguish them.
+depends_on: [BO-1800f-2]
+doc_links:
+  - path: docs/known-issues/build-orchestration.md
+    relationship: describes
+    status: exists
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-09-14
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: safety
+notes: |
+  This is the criterion that turns a count into something a reader can act on. The
+  two cases are indistinguishable by counting absent lines, and they call for
+  opposite responses:
+
+    - taken away by the copy's own commits -- a decision for whoever owns the copy.
+      It may be exactly what the work set out to do, in which case declaring it is
+      the answer and putting it back is the error CLAUDE.md already records.
+    - absent because the starting state predates it -- never the copy's to take
+      away, and always the defect this tree exists to prevent.
+
+  Reporting both as one number is how a reader arrives at the wrong response, in
+  either direction, and it is why the existing manual audit needs a human to
+  interpret its output before it means anything.
+
+  Falsifiability. One fixture carries both cases at once. An implementation that
+  reports only a count, or that labels both cases the same way, fails on the
+  separation assertion even though it correctly identifies that something is absent
+  -- so a behaviour that detects removals but cannot explain them does not satisfy
+  this record.

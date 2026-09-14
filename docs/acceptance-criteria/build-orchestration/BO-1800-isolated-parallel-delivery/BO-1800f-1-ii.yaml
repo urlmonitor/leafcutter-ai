@@ -1,0 +1,63 @@
+id: BO-1800f-1-ii
+components:
+  - build_orchestration
+readiness: draft
+priority: medium
+title: "A replay that cannot complete cleanly stops the delivery and restores the copy"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+created_by: "docs/acceptance-criteria/build-orchestration/BO-1800-isolated-parallel-delivery/BO-1800f.yaml"
+criteria: |
+  Given a copy whose work is finished and ready to leave,
+    and the shared branch's current state and the copy both changed the same region
+    of the same file, so the copy's commits cannot be replayed onto that state
+    without a decision being made,
+  When the workflow replays the copy's commits onto the shared branch's current state,
+  Then no part of the delivery leaves the copy,
+  And the copy is returned to the state it was in before the replay began, holding
+    the same commits it held beforehand,
+  And no tracked file in the copy contains conflict markers,
+  And the run stops and names every path whose region could not be replayed,
+  And the run does not resolve the overlap on its own.
+depends_on: [BO-1800f-1]
+doc_links:
+  - path: docs/known-issues/build-orchestration.md
+    relationship: describes
+    status: exists
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-09-14
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: safety
+notes: |
+  Why the copy must be restored rather than left mid-replay. A copy abandoned
+  part-way through a replay holds neither the state it started in nor the state it
+  was heading for, and the repair is performed under time pressure by whoever finds
+  it. CLAUDE.md records that the intuitive repair command in exactly that situation
+  takes content from the pre-replay side and silently discards the shared branch's
+  side of the affected paths -- the same 42-line loss this tree exists to prevent,
+  arrived at from the other direction. Leaving no mid-replay state to repair removes
+  the occasion for that mistake.
+
+  Why the run must not resolve the overlap itself. An automatic resolution is the
+  documented origin of the bad-replay case that BO-1800f-2 is scoped to catch. This
+  record keeps the two apart: a replay either completes without a decision or it
+  stops and asks for one.
+
+  Falsifiability. The fixture arranges a genuine overlapping edit between the copy
+  and the shared branch's advanced state. The assertions are observable on the copy
+  afterwards -- its commit set equals the pre-replay set, no tracked file contains
+  conflict markers, and nothing reached the shared branch -- so an implementation
+  that leaves a half-applied replay fails on the first two even if it correctly
+  refuses to deliver.

@@ -1,0 +1,71 @@
+id: BO-1800f-2
+components:
+  - build_orchestration
+readiness: draft
+priority: medium
+title: "A delivery that would still take away what the shared branch has does not leave the copy"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+created_by: "docs/acceptance-criteria/build-orchestration/BO-1800-isolated-parallel-delivery/BO-1800f.yaml"
+criteria: |
+  Given a delivery that has already been brought up to date with the shared branch's
+    current state, so nothing about it is out of date,
+    and the delivery nonetheless takes away 40 lines of a file that the shared branch
+    already has and that none of the copy's own commits set out to change -- the
+    lines were dropped while the copy's work was being fitted onto that state,
+    and the copy has declared no intended removals,
+  When the workflow examines what the delivery would take away from the shared branch,
+  Then no part of the delivery leaves the copy,
+  And the refusal names that file and states that what it takes away was never
+    declared,
+  And given a second delivery identical in every respect except that it only adds
+    lines, that delivery leaves the copy.
+depends_on: [BO-1800f, BO-1800f-1]
+doc_links:
+  - path: docs/known-issues/build-orchestration.md
+    relationship: describes
+    status: exists
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from:
+  ac_id: BO-1800f-1
+  contract: "The up-to-date delivery this record examines. BO-1800f-1 establishes currency; this record is evaluated on the result, which is what makes the guarantee hold even when currency is correct."
+origin_agent: BrainCandy
+created: 2026-09-14
+amended_by: []
+superseded_by: null
+covered_by:
+  - BO-1800f-2-i
+  - BO-1800f-2-ii
+implemented_by: []
+change_target: pipeline
+risk_surface: safety
+notes: |
+  Why this is a sibling of BO-1800f-1 and not nested under it. Currency and
+  non-destructiveness fail independently: a delivery can be perfectly up to date and
+  still take content away, because fitting the copy's work onto a newer state is
+  where content gets dropped. The known issue this tree comes from says the same
+  thing from the other side -- it keeps the manual audit as a backstop precisely
+  because the audit is what would catch a bad replay. Nested under BO-1800f-1, this
+  record would be vacuous in every test where currency is correctly implemented,
+  which is the shape of check that looks green because it examined nothing.
+
+  The ordering in depends_on is deliberate and is not nesting. It records that the
+  examination happens on the post-currency delivery -- the "still" in BO-1800f's own
+  wording -- while leaving both records as direct children of BO-1800f.
+
+  Deliberate removals are not in scope for refusal. The value is that undeclared
+  removals are refused, never that removals are refused; BO-1800f-2-i carries the
+  declared case and is the discriminating half of this pair.
+
+  Falsifiability. The fixture must introduce the removal AFTER the delivery has been
+  brought up to date, so that an implementation which treats "we brought it up to
+  date" as proof of safety proceeds and fails. The paired add-only delivery is required: a
+  behaviour that refuses every delivery passes the first half and fails the second,
+  and a behaviour that refuses nothing does the reverse, so neither can satisfy this
+  record and no source-text inspection can satisfy either half.

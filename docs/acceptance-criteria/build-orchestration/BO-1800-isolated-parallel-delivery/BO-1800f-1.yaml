@@ -1,0 +1,69 @@
+id: BO-1800f-1
+components:
+  - build_orchestration
+readiness: draft
+priority: medium
+title: "A delivery is replayed onto the shared branch as it stands at the moment of delivery"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+created_by: "docs/acceptance-criteria/build-orchestration/BO-1800-isolated-parallel-delivery/BO-1800f.yaml"
+criteria: |
+  Given a copy was made from the shared branch when the shared branch was at state S1,
+    and by the time the copy's work is finished the shared branch is at state S2,
+    and S2 contains a file that S1 did not contain and that this copy has never edited,
+  When the workflow prepares the finished work to leave the copy,
+  Then the state it treats as the shared branch is S2 -- the state the shared branch
+    is actually in at that moment -- and not S1 or any other state recorded earlier
+    in the run, even when such an earlier state is available without consulting the
+    shared branch,
+  And the copy's own commits are replayed on top of S2 before any part of the
+    delivery leaves the copy,
+  And the prepared delivery contains the file that S2 introduced,
+  And every change the copy made is present in the prepared delivery unchanged.
+depends_on: [BO-1800f]
+doc_links:
+  - path: docs/known-issues/build-orchestration.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-018-agent-isolation-topology.md
+    relationship: describes
+    status: exists
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-09-14
+amended_by: []
+superseded_by: null
+covered_by:
+  - BO-1800f-1-i
+  - BO-1800f-1-ii
+implemented_by: []
+change_target: pipeline
+risk_surface: safety
+notes: |
+  Scope. This is the currency half of BO-1800f, and it is scoped to the moment of
+  delivery. It does not ask for the copy to be kept current while work is in
+  progress; BO-1800f's own notes record why (restating a copy's history underneath
+  running agents trades silent deletion for silent corruption of in-flight work).
+
+  Why the criteria insist on the state "at that moment". The recorded failures were
+  not caused by a missing comparison -- they were caused by comparing against a
+  locally-held picture of the shared branch that was itself out of date. CLAUDE.md
+  records an audit that reported clean for exactly this reason: the tree and the
+  picture it was compared against were stale in the same way, so they agreed. A
+  behaviour that re-reads a stale local record satisfies a naively-worded criterion
+  while reproducing the defect, so the clause above rules it out explicitly.
+
+  Falsifiability. The fixture must advance the shared branch between the moment the
+  copy is made and the moment of delivery. Without that advance, a correct
+  implementation and one that reuses a locally-recorded state are indistinguishable,
+  and any test built on such a fixture passes on both. With it, the introduced file
+  is absent from the prepared delivery under the incorrect implementation. The
+  assertions are on the prepared delivery's content and on the copy's history, so
+  no test that only inspects source text can satisfy this record.

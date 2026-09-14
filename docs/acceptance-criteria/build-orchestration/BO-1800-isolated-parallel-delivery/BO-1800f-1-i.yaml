@@ -1,0 +1,68 @@
+id: BO-1800f-1-i
+components:
+  - build_orchestration
+readiness: draft
+priority: medium
+title: "A shared branch whose current state cannot be read stops the delivery"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+created_by: "docs/acceptance-criteria/build-orchestration/BO-1800-isolated-parallel-delivery/BO-1800f.yaml"
+criteria: |
+  Given a copy whose work is finished and ready to leave,
+    and the shared branch cannot be consulted at that moment
+    (the remote does not answer, or answers with an error),
+  When the workflow tries to establish the state the shared branch is currently in,
+  Then no part of the delivery leaves the copy,
+  And the run stops and states that it could not establish the shared branch's
+    current state, distinguishing that from having established it and found nothing
+    wrong,
+  And the copy is left in the state it was in before the attempt, with no partial
+    replay applied and no change to which commits the copy holds,
+  And a state recorded locally at an earlier point is not substituted for the state
+    that could not be read.
+depends_on: [BO-1800f-1]
+doc_links:
+  - path: docs/known-issues/build-orchestration.md
+    relationship: describes
+    status: exists
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-09-14
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: safety
+notes: |
+  Why unverifiable must mean stop here, and why the opposite answer is right
+  elsewhere. This is a deliberate divergence from BO-900a-1-i, which specifies that
+  an unreachable remote counts as zero divergence and the drive continues. Both are
+  correct in their own context, and the difference is what the check is for:
+
+    - BO-900a-1-i guards an advisory mid-epic warning. Its worst failure is a
+      warning that does not appear; the work is unaffected and the user can still
+      act. Failing open there buys uninterrupted progress at negligible cost.
+    - This record guards the last point before work leaves the copy. Here
+      "unreachable" and "nothing to worry about" are not the same answer, and
+      treating them as the same is precisely the shape of defect BO-1800f exists to
+      remove: a check that examined nothing must not be reported as a check that
+      found nothing. Failing open at a delivery gate converts the gate into a
+      formality on exactly the occasions when the shared branch's state is unknown.
+
+  Neither record should be changed to match the other without deciding that question
+  on purpose; BO-1800f's notes carry the same flag so that whoever unifies them does
+  so deliberately.
+
+  Falsifiability. The fixture makes the shared branch unreachable at delivery time
+  while a locally-recorded earlier state is present and usable. An implementation
+  that silently falls back to that local state proceeds and fails this record; the
+  assertions are that nothing left the copy and that the copy's commits are
+  unchanged, both observable on the fixture afterwards.
