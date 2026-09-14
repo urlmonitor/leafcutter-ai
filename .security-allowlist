@@ -240,3 +240,12 @@ ENTROPY_HIGH:unit_tests/commit_guardian/test_ge_127c_1_dividing_advice.py:*
 # scanner this entry suppresses). Glob, not per-line: the class/docstring layout can
 # still shift.
 ENTROPY_HIGH:unit_tests/product_truth/test_uxp_700e_3_i.py:*
+
+# INF-700a-1-i's reachability suite. Its TestCase class names spell out the whole
+# behaviour being reached through the real entry point, so they are long CamelCase
+# identifiers -- the same false-positive pattern as the test-class-name entries
+# above, and not reproduced here for the same reason: quoting it would trip the
+# scanner this entry suppresses. Glob, not per-line: these tests copy real trees
+# into a synthetic package root, so setup helpers get added above the classes and
+# the line numbers move.
+ENTROPY_HIGH:unit_tests/build_guards/test_inf_700a_1_i_reachability.py:*

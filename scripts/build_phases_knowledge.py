@@ -41,8 +41,11 @@ from __future__ import annotations
 import json
 import logging
 import shutil
+import sys
 from pathlib import Path
 from typing import Any
+
+import yaml
 
 _log = logging.getLogger(__name__)
 
@@ -242,6 +245,205 @@ def build_knowledge_sink_declaration(target_root: Path, config: dict[str, Any],
         )
         return 1
     return 0
+
+
+def check_knowledge_routing_wiring(
+    workflows_dir: Path, guardrail_config: dict[str, Any]
+) -> dict[str, list[str]]:
+    """Report which deployed workflow artefacts lack a knowledge-routing declaration.
+
+    Build-time guard for AC INF-700a-1-i ("no way of finishing work is left
+    quietly without a routing step"). Enumerates every ``*.js`` file directly
+    under ``workflows_dir`` (the candidate set is ALWAYS derived from the real
+    artefacts on disk, never from the config -- a candidate set read from the
+    config is the hand-maintained copy the AC forbids, and it goes stale the
+    first time a completion path is added, which is the exact event this
+    guard exists to catch) and checks each name against
+    ``guardrail_config["knowledge_routing_wiring"]``'s two declared lists:
+    ``wired`` (a flat list of file names) and ``excluded`` (a list of
+    ``{"path": ..., "reason": ...}`` dicts, one entry per deliberately-unwired
+    path). Mirrors ``check_command_reachability``'s "verdicts empty means ok"
+    contract, one layer down: here the caller checks ``result["unwired"]``.
+
+    Args:
+        workflows_dir: Absolute path to the directory holding the real
+            workflow ``.js`` artefacts (e.g. ``templates/workflows-js/``).
+        guardrail_config: The parsed ``config/guardrail_gates.yaml`` mapping
+            (or any dict carrying the same ``knowledge_routing_wiring``
+            shape) -- read for its ``wired``/``excluded`` declarations only.
+            An absent or malformed section is treated as declaring nothing
+            wired and nothing excluded, so every real artefact reports as
+            unwired -- fail closed, never fail silent.
+
+    Returns:
+        ``{"examined": [<names examined, sorted>], "unwired": [<names
+        neither wired nor excluded>]}``. An empty ``"unwired"`` list is the
+        "build may proceed" verdict.
+
+    Pure function relative to its arguments: the only filesystem access is
+    listing ``workflows_dir`` (a directory-listing glob, not a content read),
+    matching this module's existing ``check_command_reachability`` precedent
+    of leaving directory enumeration unwrapped and reserving try/except for
+    actual file reads.
+
+    # DECISION HISTORY
+    # - 2026-09-14 [python-coder/INF-700a-1-i]: Added check_knowledge_routing_wiring()
+    #   as the enumerate-from-artefacts half of the anti-partial-wiring guard;
+    #   build.py wires it as a post-deploy abort gate mirroring
+    #   _check_command_reachability_guard's existing shape.
+    #   (#TICKETLESS reason=ac-scoped-fastlane-build-INF-700a-1-i)
+    """
+    examined = sorted(p.name for p in workflows_dir.glob("*.js"))
+
+    section = guardrail_config.get("knowledge_routing_wiring")
+    section = section if isinstance(section, dict) else {}
+
+    wired_names = section.get("wired")
+    wired = set(wired_names) if isinstance(wired_names, list) else set()
+
+    excluded_entries = section.get("excluded")
+    excluded_entries = excluded_entries if isinstance(excluded_entries, list) else []
+    excluded = {
+        entry.get("path")
+        for entry in excluded_entries
+        if isinstance(entry, dict) and entry.get("path")
+    }
+
+    unwired = [name for name in examined if name not in wired and name not in excluded]
+    return {"examined": examined, "unwired": unwired}
+
+
+def describe_knowledge_routing_examination(result: dict[str, list[str]]) -> str:
+    """Render the residual-disclosure message required on a PASSING guard run.
+
+    AC INF-700a-1-i's residual clause: a workflow-artefact-only guard cannot
+    see a completion path shipped only as a skill or only as a command, and
+    "the detection says which kinds of artefact it examined and which kinds
+    it cannot see, in its own output" -- on a PASSING run specifically, so a
+    reader of a green build never concludes every future way of completing
+    work is covered. This guard's candidate set (see
+    ``check_knowledge_routing_wiring`` above) is a glob over
+    ``templates/workflows-js/*.js``; it structurally cannot enumerate a
+    completion path that carries no ``.js`` workflow artefact -- one shipped
+    only as a skill (``templates/skills/*/SKILL.md``) or only as a command
+    (``templates/commands/*.md``).
+
+    Args:
+        result: The dict returned by ``check_knowledge_routing_wiring()``,
+            read here only for its ``"examined"`` list (file names, already
+            sorted).
+
+    Returns:
+        A two-line disclosure string: the examined artefact kind (with its
+        count and names) and the artefact kinds this guard cannot see.
+
+    # DECISION HISTORY
+    # - 2026-09-14 [python-coder/INF-700a-1-i-H1]: Added on pr-reviewer
+    #   finding H-1: the guard printed nothing on its passing path, so a
+    #   green build implied coverage (of skill-only / command-only
+    #   completion paths) it structurally does not have. Kept as its own
+    #   pure function -- and out of scripts/build.py -- because build.py is
+    #   already at its file-size ratchet ceiling; build.py only calls this
+    #   and prints the result.
+    """
+    examined = result.get("examined", [])
+    examined_desc = ", ".join(examined) if examined else "(none found)"
+    return (
+        "[KNOWLEDGE ROUTING GUARD] examined artefact kind: workflow "
+        f"(templates/workflows-js/*.js) -- {len(examined)} examined: {examined_desc}\n"
+        "[KNOWLEDGE ROUTING GUARD] cannot see artefact kinds: skill "
+        "(templates/skills/*/SKILL.md), command (templates/commands/*.md) -- "
+        "a completion path shipped only as one of these carries no workflow "
+        "artefact and is outside this guard's enumeration; this passing run "
+        "does not vouch for that residual."
+    )
+
+
+def check_knowledge_routing_wiring_guard(output_root: Path) -> int:
+    """Post-deploy guard: abort the build when a completion path is neither wired nor excluded (AC INF-700a-1-i).
+
+    Mirrors ``build.py``'s ``_check_command_reachability_guard`` existing
+    shape: enumerate real artefacts, abort on an unlisted one. The candidate
+    set is derived from the PACKAGE SOURCE's ``templates/workflows-js/*.js``
+    (per this AC's own it_requirements: "THE ENUMERATION DERIVES FROM THE
+    ARTEFACTS"), not from any deployed copy -- those artefacts are what a
+    build ships, regardless of which platforms it deploys workflow scripts
+    to. The declared wiring/exclusion lists are read from the DEPLOYED
+    ``<output_root>/config/guardrail_gates.yaml`` so this guard is checking
+    exactly the policy the build just produced.
+
+    Args:
+        output_root: Absolute path to the consolidated, already-deployed
+            output directory (e.g. ``<target>/.leafcutter``).
+
+    Returns:
+        0 if every real workflow artefact is wired or excluded (build may
+        proceed). 1 if one or more artefacts are unwired (build must abort).
+
+    # DECISION HISTORY
+    # - 2026-09-14 [python-coder/INF-700a-1-i]: Added
+    #   _check_knowledge_routing_wiring_guard() in build.py, wired as a
+    #   post-deploy abort gate mirroring _check_command_reachability_guard's
+    #   existing shape.
+    #   (#TICKETLESS reason=ac-scoped-fastlane-build-INF-700a-1-i)
+    # - 2026-09-14 [python-coder/inf-700a-1]: Moved from build.py (unchanged
+    #   behaviour, dropped the leading underscore since it now lives in a
+    #   sibling module) to relieve the GE-127b-1 file-size ratchet blocking
+    #   this ticket -- build.py measured 1976 content lines against a
+    #   1915-line ceiling. Uses the same deferred ``import build_phases as
+    #   _bp`` pattern this module's other functions use for PACKAGE_ROOT, to
+    #   avoid the circular import build_phases.py's own top-level import of
+    #   this module would otherwise create. build.py's ``main()`` keeps the
+    #   call site, now importing this function by name instead of defining
+    #   it locally.
+    #   (#TICKETLESS reason=ac-scoped-fastlane-build-inf-700a-1)
+    """
+    guardrail_config_path = output_root / "config" / "guardrail_gates.yaml"
+    if not guardrail_config_path.is_file():
+        # Nothing deployed to check against yet (e.g. a minimal/partial
+        # build that skips build_ac_store). Fail closed would block builds
+        # that never had this policy file to begin with; there is nothing
+        # for this guard to police in that case.
+        return 0
+
+    try:
+        guardrail_config = yaml.safe_load(
+            guardrail_config_path.read_text(encoding="utf-8")
+        ) or {}
+    except (OSError, yaml.YAMLError) as exc:
+        print(
+            f"[KNOWLEDGE ROUTING GUARD] Could not read {guardrail_config_path}: {exc}",
+            file=sys.stderr,
+        )
+        return 1
+
+    import build_phases as _bp
+
+    workflows_dir = _bp.PACKAGE_ROOT / "templates" / "workflows-js"
+    if not workflows_dir.is_dir():
+        return 0
+
+    result = check_knowledge_routing_wiring(workflows_dir, guardrail_config)
+    unwired = result.get("unwired", [])
+    if not unwired:
+        # AC INF-700a-1-i residual clause: disclose on the PASSING path too.
+        print(describe_knowledge_routing_examination(result))
+        return 0
+
+    print(
+        "[KNOWLEDGE ROUTING GUARD] Build aborted: workflow artefact(s) with "
+        "no knowledge-routing declaration detected.",
+        file=sys.stderr,
+    )
+    for name in unwired:
+        print(
+            f"[KNOWLEDGE ROUTING GUARD]  artefact: templates/workflows-js/{name}\n"
+            "[KNOWLEDGE ROUTING GUARD]  reason:   neither listed under "
+            "knowledge_routing_wiring.wired nor knowledge_routing_wiring.excluded "
+            "in config/guardrail_gates.yaml",
+            file=sys.stderr,
+        )
+    return 1
 
 
 # ===========================================================================

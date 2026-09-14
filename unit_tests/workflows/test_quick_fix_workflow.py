@@ -1938,6 +1938,14 @@ class TestBP600WorkflowFullRunTopology:
             "green-verify/strict",
             "related-tests/strict",
             "mutation-proof",
+            # INF-700a-1: the knowledge-routing step is dispatched immediately
+            # before this path's FIRST (fix) commit, so any learning it routes
+            # is carried by a commit the path already makes -- ADR-040. It is
+            # deliberately NOT anchored to the later "commit/changelog" call;
+            # INF-700a-5's it_requirements name the fix commit specifically,
+            # and attaching it to the changelog commit was called out there as
+            # the wrong anchor.
+            "knowledge-routing-step",
             "commit",
             "changelog-author",
             "commit/changelog",

@@ -3143,13 +3143,17 @@ def build_workflow_tools(target_root: Path, config: dict[str, Any],
     return written
 
 
-# Re-export build_knowledge_scripts / build_knowledge_sink_declaration so
-# callers (build.py, tests) can import them from either module. Extracted to
-# build_phases_knowledge.py 2026-09-09 to relieve the GE-127b-1 file-size
-# ratchet (see this module's own DECISION HISTORY, bottom of file, for why).
+# Re-export build_knowledge_scripts / build_knowledge_sink_declaration /
+# check_knowledge_routing_wiring so callers (build.py, tests) can import them
+# from either module. Extracted to build_phases_knowledge.py 2026-09-09 to
+# relieve the GE-127b-1 file-size ratchet (see this module's own DECISION
+# HISTORY, bottom of file, for why). check_knowledge_routing_wiring
+# (INF-700a-1-i) was added directly to the sibling module rather than here,
+# for the same file-size reason.
 from build_phases_knowledge import (  # noqa: E402, F401  # re-exported for callers
     build_knowledge_scripts,
     build_knowledge_sink_declaration,
+    check_knowledge_routing_wiring,
 )
 
 # Re-export build_product_truth so build.py and every other caller keep
