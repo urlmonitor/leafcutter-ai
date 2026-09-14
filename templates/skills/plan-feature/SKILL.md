@@ -627,6 +627,78 @@ the branch detection succeeding.
 
 ---
 
+## §RS — Resuming a Paused Run (ACD-2100c-1 / ACD-2100c-4)
+
+### §RS.1 — What `paused_awaiting_input` means
+
+When a gate along the pipeline needs a decision no live answerer can supply,
+the workflow's terminal payload carries:
+
+```json
+{ "status": "paused_awaiting_input", "run_id": "<run>", "gate_id": "<gate>", "question": { ... } }
+```
+
+The run is waiting on **one specific decision**, identified by the pair
+`run_id` + `gate_id` — both are required to resume it. The drafted work up to
+that point is intact on disk: committed stages stay committed, and the
+decision the run is waiting on is not applied until a genuine answer arrives.
+
+**The `reason` field.** When present, `reason` explains WHY a supplied answer
+was **not applied** — for example the provenance refusal in §RS.3 below, or a
+`resume_answer.gate_id` that does not match the gate the run is actually
+paused at. `reason` only appears on a refused resume attempt; a fresh pause
+(nothing supplied yet) carries `question` instead. Surface `reason` verbatim
+to the person — do not summarize, reword, or drop it. Swallowing it is the
+KI-ACD-005 defect this AC exists to close: a run that refused an answer for
+provenance reasons must never be reported as one that "could not understand"
+the answer, because the answer was perfectly well formed.
+
+### §RS.2 — How to resume
+
+Re-invoke the workflow, passing the person's decision as `args.resume_answer`:
+
+```json
+{
+  "gate_id": "<the gate_id from the paused terminal payload>",
+  "type": "single_choice",
+  "action": "approve",
+  "channel": "person"
+}
+```
+
+- `gate_id` — must match the gate the run is actually paused at; `resolveGate()`
+  refuses a mismatch and the run stays paused.
+- `type` — matches the gate's own question type (`single_choice`,
+  `priority_choice`, `free_text`), read from `question.type` in the paused
+  payload.
+- `action` (or `choice`) — the decision itself: `approve` / `edit` / `cancel` /
+  `defer`, or the free-text/priority payload the gate's question asked for.
+- `channel` — the provenance marker; see the obligation below.
+
+### §RS.3 — The provenance obligation (binding on whoever constructs this object)
+
+Set `channel: "person"` **only** when the value in `action` is the decision
+the actual human running the route gave. Never set it to relay a guess, a
+default, a retry, or an answer an agent composed on the human's behalf —
+provenance must be a true fact about where the answer came from, not a label
+that makes the answer look accepted.
+
+`resolveGate()` treats any `channel` other than exactly `"person"` — including
+its absence — as a refusal, by design: the run stays at the decision point
+and stays waiting, the named choice is not carried out, and the terminal
+payload's `reason` names provenance rather than a shape or parse problem.
+**That is the intended behaviour, not a bug to work around.**
+
+Stamping `channel: "person"` on an answer the person did not actually give
+defeats the gate this AC exists to enforce, and is **prohibited** — it puts
+an agent's own guess in place of the human decision the gate exists to wait
+for. If you are not relaying a decision the person made in this session,
+omit `channel` (or leave any other value in it) and let the run keep waiting;
+do not synthesize `"person"` to get past a wait it is legitimately still
+owed.
+
+---
+
 ## Related
 
 - `templates/agents/ac-triage.md` — Haiku-pinned triage agent.
@@ -648,11 +720,26 @@ the branch detection succeeding.
 - `docs/architecture/adrs/ADR-030-dual-engine-workflow-support.md` —
   documents the E2 injected-globals sandbox that forced §WSP out of the
   workflow body and into this skill.
+- `docs/architecture/adrs/ADR-024-interactive-pause-resume.md` — the
+  pause-resume mechanism; `resolveGate()`/`pauseAtGate()` implement it, and
+  §RS documents the producer (skill/caller) side of the same contract.
 
 <!--
 ====================================================================
 DECISION HISTORY
 ====================================================================
+- 2026-09-14 [TICKET-20260826-ACD-2100c-4/llm-expert]:
+  Added §RS (Resuming a Paused Run) documenting the resume_answer contract's
+  skill-side half: what a `paused_awaiting_input` terminal payload means
+  (run_id/gate_id identify the wait; drafted work stays on disk; `reason`
+  explains a refused resume attempt and must be surfaced, never swallowed),
+  how to construct `args.resume_answer` (gate_id/type/action/channel), and
+  the provenance obligation on `channel: "person"` (set only when relaying
+  the actual human's own decision; never to relay a guess, default, retry,
+  or agent-composed answer — doing so defeats the ACD-2100c-4 gate in
+  templates/workflows-js/plan-feature.js's resolveGate() by design).
+  Before this ticket, `channel` had no producer anywhere in the skill/command
+  surface, so the accept path was unreachable from documented behaviour.
 - 2026-06-29 [TICKET-20260629-CompleteACD1100c-MigrateCreateAcToplanFeature/llm-expert]:
   Migrated §PRR (Partial-Run Recovery Pre-flight), §1–§3 (Stage Pipeline with
   Commit-Before-Next-Stage Invariant), and §MP (Main-Branch Invocation) from

@@ -516,7 +516,12 @@ def test_resume_in_a_new_process_continues_from_the_decision_point():
         # Run 2: a brand-new process (a fresh Node child_process invocation --
         # NOT the same process as run 1) supplying the answer for the decision
         # point the first run paused at.
-        resume_answer = {"gate_id": gate_id, "type": "single_choice", "action": "approve"}
+        resume_answer = {
+            "gate_id": gate_id,
+            "type": "single_choice",
+            "action": "approve",
+            "channel": "person",
+        }
         payload2 = _run_plan_feature_real(
             fixture["worktree_path"],
             label_responses={},
@@ -607,8 +612,18 @@ def test_supplied_answer_is_the_one_applied_to_that_decision():
             f"gate). Got {gate_id_a!r} and {gate_id_b!r}."
         )
 
-        approve_answer = {"gate_id": gate_id_a, "type": "single_choice", "action": "approve"}
-        cancel_answer = {"gate_id": gate_id_b, "type": "single_choice", "action": "cancel"}
+        approve_answer = {
+            "gate_id": gate_id_a,
+            "type": "single_choice",
+            "action": "approve",
+            "channel": "person",
+        }
+        cancel_answer = {
+            "gate_id": gate_id_b,
+            "type": "single_choice",
+            "action": "cancel",
+            "channel": "person",
+        }
 
         payload_approve = _run_plan_feature_real(
             fixture["worktree_path"],
@@ -670,7 +685,12 @@ def test_no_waiting_record_remains_after_the_resumed_run_passes_the_gate():
         run_id = "acd2100c3-seam-run"
         _payload1, gate_id = _pause_headless(fixture["worktree_path"], fixture["project_dir"], run_id)
 
-        resume_answer = {"gate_id": gate_id, "type": "single_choice", "action": "approve"}
+        resume_answer = {
+            "gate_id": gate_id,
+            "type": "single_choice",
+            "action": "approve",
+            "channel": "person",
+        }
         payload2 = _run_plan_feature_real(
             fixture["worktree_path"],
             label_responses={},
@@ -726,7 +746,12 @@ def test_acd_2100c_3_reachable_from_entry_point():
             f"of the production entry point must report the paused status. Got: {payload1.get('result')}"
         )
 
-        resume_answer = {"gate_id": gate_id, "type": "single_choice", "action": "approve"}
+        resume_answer = {
+            "gate_id": gate_id,
+            "type": "single_choice",
+            "action": "approve",
+            "channel": "person",
+        }
         payload2 = _run_plan_feature_real(
             fixture["worktree_path"],
             label_responses={},
@@ -875,6 +900,7 @@ def test_h2_duplicate_ac_ids_when_multistage_route_resumes_at_final_gate():
                     "gate_id": "final-gate",
                     "type": "priority_choice",
                     "priority": "medium",
+                    "channel": "person",
                 },
             ),
         )
@@ -1022,7 +1048,12 @@ def test_h1_itpo_author_skipped_when_resume_answer_targets_an_earlier_gate():
         # end the pipeline -- the SAME process's `for` loop advances into the
         # "itpo" step's own iteration, with `args.resume_answer` unchanged
         # from what was supplied for "gate-ba".
-        resume_answer = {"gate_id": gate_id, "type": "single_choice", "action": "approve"}
+        resume_answer = {
+            "gate_id": gate_id,
+            "type": "single_choice",
+            "action": "approve",
+            "channel": "person",
+        }
         label_responses = {
             "stage-0-triage": behavioral_triage_stub,
             # commitStageOutput()'s internal branch-check + commit dispatch,

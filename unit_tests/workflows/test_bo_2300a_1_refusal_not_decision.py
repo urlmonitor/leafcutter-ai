@@ -96,7 +96,7 @@ _STATUS_CHECKER_REFUSAL = {
 # not — is ever consulted. The value is retained and now delivered via
 # args.resume_answer (the one channel ACD-2100c-1 leaves in place), by the
 # rewritten control below.
-_GENUINE_APPROVE_ANSWER = {"action": "approve", "priority": "high"}
+_GENUINE_APPROVE_ANSWER = {"action": "approve", "priority": "high", "channel": "person"}
 
 
 def _pause_calls(result: HarnessResult) -> list:

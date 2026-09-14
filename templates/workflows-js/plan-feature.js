@@ -1573,7 +1573,32 @@ async function resolveGate(gateId, liveGateFn, args, context, descriptor, runId)
       // Wrong/malformed shape or action not in valid options: stay paused.
       return { status: "paused_awaiting_input", run_id: runId, gate_id: gateId };
     }
-    // Shape valid: consult the durable record via agent dispatch (body has no fs access per ADR-024).
+    // ACD-2100c-4: shape-valid is not the same as person-authored. A
+    // well-formed, enum-valid answer can be constructed by anything with
+    // write access to args.resume_answer (an automated agent, a stale
+    // replay, a test) -- validateAnswerShape() cannot and must not be asked
+    // to tell the difference, because that would put content back in charge
+    // of the decision this AC exists to gate. Provenance is checked as a
+    // property of the answer itself (`channel`), never inferred from its
+    // content: only `channel === "person"` is treated as the person's own
+    // decision. Anything else -- a different value, or the field's absence
+    // -- is refused exactly like an unanswered gate (same
+    // "paused_awaiting_input" status, same gate_id, record left untouched
+    // below), except the terminal payload also names WHY: provenance, never
+    // a shape/parse complaint, so the journal cannot read this refusal as
+    // "could not understand the answer" (KI-ACD-005).
+    if (args.resume_answer.channel !== "person") {
+      return {
+        status: "paused_awaiting_input",
+        run_id: runId,
+        gate_id: gateId,
+        reason:
+          "This answer did not come from the person running the route, " +
+          "so it was not treated as their decision and the choice it " +
+          "named was not carried out.",
+      };
+    }
+    // Shape valid and person-attributed: consult the durable record via agent dispatch (body has no fs access per ADR-024).
     // Repository-anchored (ACD-2100a-4): resolves the script AND passes an
     // explicit --store-dir in the SAME dispatched command, never the raw
     // `{{config.output_root}}`-relative placeholder (see buildPauseStoreCommand()).

@@ -617,7 +617,12 @@ def test_run_remains_paused_with_its_record_intact_after_a_mismatch():
         # Recovery: a THIRD, independent real subprocess supplying the RIGHT
         # answer for the decision actually being waited on must still work --
         # the mistyped resume must not have turned recovery into a full re-run.
-        correct_answer = {"gate_id": "final-gate", "type": "priority_choice", "priority": "medium"}
+        correct_answer = {
+            "gate_id": "final-gate",
+            "type": "priority_choice",
+            "priority": "medium",
+            "channel": "person",
+        }
         payload3 = _run_plan_feature_real(
             fixture["worktree_path"],
             label_responses={},

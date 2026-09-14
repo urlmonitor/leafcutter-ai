@@ -109,7 +109,12 @@ def test_ac2_midgate_cancel_status_is_distinct_from_ok():
     }
     args = {
         "run_id": "test-ac2-midgate-cancel",
-        "resume_answer": {"gate_id": "gate-ba", "type": "single_choice", "action": "cancel"},
+        "resume_answer": {
+            "gate_id": "gate-ba",
+            "type": "single_choice",
+            "action": "cancel",
+            "channel": "person",
+        },
     }
 
     result = run_workflow_under_e2(
@@ -174,7 +179,12 @@ def test_ac2_pt_gate_cancel_status_is_distinct_from_ok():
     distinct-status behaviour BO-2300a-2 exists to establish, now proven via
     the one channel that can still reach a decision.
     """
-    cancel_answer = {"gate_id": "pt-gate-mockdata", "type": "single_choice", "action": "cancel"}
+    cancel_answer = {
+        "gate_id": "pt-gate-mockdata",
+        "type": "single_choice",
+        "action": "cancel",
+        "channel": "person",
+    }
     label_responses = {
         "pt-classify": {
             "outcome": "mock-data-only",

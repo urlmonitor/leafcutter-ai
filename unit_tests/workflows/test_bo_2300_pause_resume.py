@@ -334,7 +334,12 @@ def test_paused_state_distinct_from_cancelled():
     # Cancelled run: a genuine cancel decision delivered on the ONLY channel
     # that can resolve a gate under ACD-2100c-1 (args.resume_answer) → no
     # pause-persist.
-    cancel_answer = {"gate_id": "final-gate", "type": "single_choice", "action": "cancel"}
+    cancel_answer = {
+        "gate_id": "final-gate",
+        "type": "single_choice",
+        "action": "cancel",
+        "channel": "person",
+    }
     cancelled_result = run_workflow_under_e2(
         _PLAN_FEATURE_JS,
         timeout=_TIMEOUT,
@@ -660,7 +665,12 @@ def test_valid_answer_applied_by_type_and_resumes_from_pause():
     run_id = rec1.get("run_id", "default-run")
 
     # Valid single_choice approve answer.
-    approve_answer = {"gate_id": gate_id, "type": "single_choice", "action": "approve"}
+    approve_answer = {
+        "gate_id": gate_id,
+        "type": "single_choice",
+        "action": "approve",
+        "channel": "person",
+    }
 
     # Fail-closed mock: read-pause-record must return exists:true to apply the answer.
     result2 = run_workflow_under_e2(
@@ -742,7 +752,12 @@ def test_resume_preserves_committed_earlier_stages():
     )
 
     # Run 2: approve with fail-closed mock.
-    approve_answer = {"gate_id": gate_id, "type": "single_choice", "action": "approve"}
+    approve_answer = {
+        "gate_id": gate_id,
+        "type": "single_choice",
+        "action": "approve",
+        "channel": "person",
+    }
     result2 = run_workflow_under_e2(
         _PLAN_FEATURE_JS,
         timeout=_TIMEOUT,
@@ -883,7 +898,12 @@ def test_paused_state_durable_across_process_exit():
 
     # Run 2: "new process" — agent-mocked record read returns {exists: true, stale: false}.
     # Simulates the durable record being present after the first process exited.
-    approve_answer = {"gate_id": gate_id, "type": "single_choice", "action": "approve"}
+    approve_answer = {
+        "gate_id": gate_id,
+        "type": "single_choice",
+        "action": "approve",
+        "channel": "person",
+    }
     result2 = run_workflow_under_e2(
         _PLAN_FEATURE_JS,
         timeout=_TIMEOUT,
@@ -982,7 +1002,12 @@ def test_resume_with_no_pending_pause_is_noop():
     Agent-mediated read contract (ADR-024): no real file is created or accessed.
     The gate wrapper dispatches read-pause-record; exists:false → nothing_to_resume.
     """
-    resume_answer = {"gate_id": "final-gate", "type": "single_choice", "action": "approve"}
+    resume_answer = {
+        "gate_id": "final-gate",
+        "type": "single_choice",
+        "action": "approve",
+        "channel": "person",
+    }
     result = run_workflow_under_e2(
         _PLAN_FEATURE_JS,
         timeout=_TIMEOUT,
@@ -1311,6 +1336,7 @@ def test_edit_answer_preserves_feedback_through_resume():
                 "type": "single_choice",
                 "action": "edit",
                 "feedback": feedback_text,
+                "channel": "person",
             },
         },
     )
