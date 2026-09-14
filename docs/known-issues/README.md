@@ -65,6 +65,7 @@ the number.
 | `build_orchestration`, `doc_compliance` | [build-orchestration.md](build-orchestration.md) | 52 |
 | `build_pipeline` | [build-pipeline.md](build-pipeline.md) | 51 |
 | `ac_driven_dev` | [ac-driven-dev.md](ac-driven-dev.md) | 27 |
+| `ac_driven_dev` (from 2026-09-14) | [ac-driven-dev-2026-09.md](ac-driven-dev-2026-09.md) | 1 |
 | `ac_store` | [ac-store.md](ac-store.md) | 24 |
 | `testing_quality` | [testing-quality.md](testing-quality.md) | 21 |
 | `knowledge_management` | [knowledge-management.md](knowledge-management.md) | 12 |
@@ -74,7 +75,7 @@ the number.
 | `feedback_collector` | [feedback-collector.md](feedback-collector.md) | 3 |
 | `changelog` | [changelog.md](changelog.md) | 2 |
 | `security_scanner` | [security-scanner.md](security-scanner.md) | 1 |
-| | **total** | **273** |
+| | **total** | **274** |
 
 Two id conventions are in use — `KI-CG-035` and `KI-CG-20260826-1612`. A count that
 matches only the first undercounts; the date form is the newer of the two and is the
