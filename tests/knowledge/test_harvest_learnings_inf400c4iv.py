@@ -225,11 +225,17 @@ class TestAbsentSinkDoesNotWidenIntoTheOperationalStream(unittest.TestCase):
                 "the absent declared sink must not be papered over by "
                 f"reading the 28-record operational stream instead; report={report!r}",
             )
+            # Search the report with the tmpdir path masked out. mkdtemp names
+            # are random, so a bare `assertNotIn("28", report)` fails whenever
+            # the suffix happens to contain "28" -- observed in CI as
+            # /tmp/tmpju9p28ci/..., a green-to-red flake with nothing to do
+            # with the record count this assertion is about.
+            counts_only = report.replace(str(tmp), "<tmp>")
             self.assertNotIn(
                 "28",
-                report,
+                counts_only,
                 "the operational stream's 28 records must never be reflected "
-                f"in this run's report; report={report!r}",
+                f"in this run's report; report={counts_only!r}",
             )
             for ev in events:
                 dest = tmp / ev["destination"]

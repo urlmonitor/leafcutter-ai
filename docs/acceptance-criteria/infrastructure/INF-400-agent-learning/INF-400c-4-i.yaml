@@ -8,7 +8,7 @@ component: infrastructure
 level: L3
 status: active
 req_status: active
-work_status: todo
+work_status: done
 priority: high
 readiness: reviewed
 created_by: "docs/acceptance-criteria/infrastructure/INF-400-agent-learning/INF-400c-4.yaml"
@@ -91,8 +91,15 @@ amended_by:
     by: business-analyst
     at: 2026-09-07
 superseded_by: null
-covered_by: []
-implemented_by: []
+covered_by:
+- unit_tests/portability/test_inf_400c_4_i.py
+implemented_by:
+- scripts/ci/check_sink_parity.py
+- scripts/knowledge/harvest_learnings.py
+- templates/skills/signoff/SKILL.md
+- templates/agents/product-owner.md
+- templates/agents/business-analyst.md
+- templates/agents/it-po.md
 test_spec:
   - name: test_all_four_deployed_emit_surfaces_resolve_to_the_declared_sink
     target_dir: unit_tests/portability/

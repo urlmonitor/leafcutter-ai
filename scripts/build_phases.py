@@ -1372,6 +1372,12 @@ AC_STORE_DEPLOY_MAP: tuple[tuple[str, str], ...] = (
     ("scripts/ac_store/ac_triage.py",                 "ac_triage.py"),
     ("scripts/ac_store/create_ac_workflow.py",        "create_ac_workflow.py"),
     ("scripts/ac_store/cross_reference_audit.py",     "cross_reference_audit.py"),
+    # cross_reference_audit.py's own sibling modules (BP-900a-1-style gap: MUST deploy or it crashes with ModuleNotFoundError).
+    ("scripts/ac_store/_xref_ac_store.py",            "_xref_ac_store.py"),
+    ("scripts/ac_store/_xref_tickets.py",             "_xref_tickets.py"),
+    ("scripts/ac_store/_xref_matching.py",            "_xref_matching.py"),
+    ("scripts/ac_store/_xref_report.py",              "_xref_report.py"),
+    ("scripts/ac_store/_xref_apply.py",               "_xref_apply.py"),
     ("scripts/ac_store/backfill_readiness.py",        "backfill_readiness.py"),
     ("scripts/ac_store/fix_ac_orphans.py",            "fix_ac_orphans.py"),
     ("scripts/ac_store/__init__.py",                  "__init__.py"),
@@ -1422,6 +1428,16 @@ def build_ac_store(target_root: Path, config: dict[str, Any],
       → ``<output_root>/scripts/ac_store/create_ac_workflow.py``
     - ``scripts/ac_store/cross_reference_audit.py``
       → ``<output_root>/scripts/ac_store/cross_reference_audit.py``
+    - ``scripts/ac_store/_xref_ac_store.py``
+      → ``<output_root>/scripts/ac_store/_xref_ac_store.py``
+    - ``scripts/ac_store/_xref_tickets.py``
+      → ``<output_root>/scripts/ac_store/_xref_tickets.py``
+    - ``scripts/ac_store/_xref_matching.py``
+      → ``<output_root>/scripts/ac_store/_xref_matching.py``
+    - ``scripts/ac_store/_xref_report.py``
+      → ``<output_root>/scripts/ac_store/_xref_report.py``
+    - ``scripts/ac_store/_xref_apply.py``
+      → ``<output_root>/scripts/ac_store/_xref_apply.py``
     - ``scripts/ac_store/backfill_readiness.py``
       → ``<output_root>/scripts/ac_store/backfill_readiness.py``
     - ``scripts/ac_store/fix_ac_orphans.py``

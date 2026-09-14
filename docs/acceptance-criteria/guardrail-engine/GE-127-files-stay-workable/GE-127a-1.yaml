@@ -278,17 +278,26 @@ test_rationale: |
   on precisely the unreached gate this record exists to make observable — and would also
   duplicate BP-1600a-2, which owns that census and forbids a second one.
 
-  AS SHIPPED, NO DESCRIPTOR DOES THIS, AND THE SENTENCE ABOVE READ AS THOUGH THEY ALL DID
-  UNTIL 2026-09-08. The paragraph was written in the present indicative before the
-  descriptors existed, and was never reconciled against them. What
-  unit_tests/commit_guardian/test_ge_127a_1.py actually does is invoke
-  `pre-commit run check-file-size` — its own module docstring says so and gives the reason:
-  a full round-trip in a nested build target trips an unrelated `check-build-drift` failure
-  that would hold every descriptor here permanently red for a cause that has nothing to do
-  with file size. That reason is real and the substitution was deliberate. It is recorded in
-  the notes below as an open coverage gap rather than left implied, because the descriptors'
-  own assertion messages read "An ordinary commit ... must be refused" while making no
-  commit — so the file states, in the place a reader would check, something it does not do.
+  TRUE SINCE 2026-09-14, AND NOT BEFORE. The paragraph above was written in the present
+  indicative before the descriptors existed and went unreconciled against them for six days:
+  all five actually invoked `pre-commit run check-file-size`, which is an extra command
+  invoked by hand and therefore the one thing the criteria forbid. That was recorded here
+  and in the notes as an open gap rather than left implied. It is now closed. Every
+  descriptor drives a real `git commit` in a real temporary repository seeded with the real
+  check_file_size.py and its imports, against a `.pre-commit-config.yaml` that wires
+  check-file-size through run_hook.py AND NOTHING ELSE — which is what dissolves the
+  original obstacle, since the unrelated `check-build-drift` failure that forced the
+  substitution cannot occur in a config that does not contain it. The fixture is
+  `unit_tests/commit_guardian/_ge_127a_1_ordinary_commit_fixture.py`, modelled on the one
+  GE-120g-1 shipped for the same reason.
+
+  THE ABLATION IS THE EVIDENCE, AND IT WAS RUN. Setting the fixture's
+  INCLUDE_CHECK_FILE_SIZE_HOOK to False removes check-file-size from the generated config —
+  the gate registered but never wired into the commit chain — and the crossing and deployed
+  descriptors go RED (`AssertionError`, the commit silently completing). Restored, all five
+  pass. That world passed all five of the old descriptors, which is precisely why the
+  substitution mattered and why a reader should not treat "the gate is registered" and "an
+  ordinary commit reaches it" as the same claim.
 
   The deployed descriptor is not redundant with the reachability one: the reachability
   descriptor proves the hook path executes, the deployed descriptor proves the built copy
@@ -430,45 +439,49 @@ notes: |
   delivers_to is null because nothing is enriched yet, not because this record is
   terminal.
 
-  OPEN COVERAGE GAP, RECORDED 2026-09-08 — THE ONE CLAUSE THAT DISCRIMINATES THIS
-  CRITERION IS THE ONE NO DESCRIPTOR EXERCISES. The criteria say the refusal must
-  happen when the author "performs an ordinary commit — no extra command, no extra
-  flag, and nothing invoked by hand". Every descriptor in
-  unit_tests/commit_guardian/test_ge_127a_1.py instead invokes
-  `pre-commit run check-file-size`, which is precisely an extra command invoked by
-  hand. What the descriptors prove is that the hook is registered under that id and
-  behaves correctly when run — real repository, real deployed config, real exit
-  status, and that is genuinely more than a source-grep. What they do not prove is
-  the clause that separates this record from a registration fact: that the ordinary
-  commit path reaches the gate at all. A world in which the manifest entry exists but
-  the hook is never wired into the commit hook chain passes all five.
+  COVERAGE GAP RECORDED 2026-09-08, CLOSED 2026-09-14. Retained in full because the
+  shape recurs and the closing argument is only legible against the original one.
 
-  WHY THIS IS A GAP AND NOT A FALSE work_status. The behaviour itself is real and has
-  been observed repeatedly in production use: on 2026-09-07/08 `check-file-size`
-  refused an ordinary commit of a 467-line test file, and ran and passed on every
-  ordinary commit made in this repository since PR #728 — including merge 928e53ad9.
-  So the criterion is met; what is missing is a test that would notice if it stopped
-  being met. Do not "fix" this by flipping work_status to todo — that would assert
-  the behaviour is absent, which is false, and would be a second wrong statement
-  rather than a correction of the first. The gap is coverage, and coverage is what
-  the route below closes.
+  WHAT THE GAP WAS. The criteria say the refusal must happen when the author
+  "performs an ordinary commit — no extra command, no extra flag, and nothing invoked
+  by hand". Every descriptor instead invoked `pre-commit run check-file-size`, which
+  is precisely an extra command invoked by hand. What they proved was that the hook is
+  registered under that id and behaves correctly when run — real repository, real
+  deployed config, real exit status, and genuinely more than a source-grep. What they
+  did not prove was the clause that separates this record from a registration fact:
+  that the ordinary commit path reaches the gate at all. A world in which the manifest
+  entry exists but the hook is never wired into the commit chain passed all five.
 
-  THE ROUTE, AND WHY IT IS BLOCKED ON A FIXTURE RATHER THAN ON JUDGEMENT. The stated
-  obstacle is collateral: a full commit round-trip in a nested build target runs the
-  whole hook suite, and `check-build-drift` fails there for reasons unrelated to file
-  size. The fix is a temporary repository whose `.pre-commit-config.yaml` carries the
-  file-size hook ALONE, so an ordinary commit exercises this gate and nothing else.
-  That fixture is the same one GE-120g's descriptors need — GE-120g governs what a
-  check may do to the working copy and what may cause a refusal, both of which are
-  only observable across a real commit — so build it once, there, and consume it
-  here. Sequence this after GE-120g for that reason and no other. Nothing about this
-  gap requires a product decision: the criterion already says what must be true, the
-  descriptors already know what to assert, and only the harness is missing.
+  WHY IT WAS A GAP AND NOT A FALSE work_status — THE REASONING THAT STILL BINDS. The
+  behaviour was real throughout and was observed repeatedly in production: on
+  2026-09-07/08 `check-file-size` refused an ordinary commit of a 467-line test file,
+  and ran on every ordinary commit made in this repository since PR #728, including
+  merge 928e53ad9. So the criterion was met; what was missing was a test that would
+  notice if it stopped being met. Flipping work_status to todo would have asserted the
+  behaviour was absent, which was false — a second wrong statement rather than a
+  correction of the first. Keep this distinction available: "unproven" and "untrue"
+  are different findings and the store has exactly one field for each.
 
-  WHAT MUST CHANGE IN THE DESCRIPTORS WHEN IT IS CLOSED. Two of them currently assert
-  in their own failure messages that "an ordinary commit ... must be refused" while
-  making no commit. Whichever change lands, those messages and the file's module
-  docstring must end up describing what the code does. A descriptor that overstates
-  its own method is the phantom-done shape one level up — it is the artifact a
-  reviewer reads instead of re-deriving, and this record was marked done with it in
-  place.
+  HOW IT WAS CLOSED. The obstacle was always collateral, never judgement: a full
+  commit round-trip in a nested build target ran the whole hook suite, and
+  `check-build-drift` failed there for reasons unrelated to file size. GE-120g-1
+  shipped the answer on 2026-09-09 — a temporary repository whose
+  `.pre-commit-config.yaml` carries ONE hook, so the suite that would have failed is
+  never assembled. `_ge_127a_1_ordinary_commit_fixture.py` applies that shape here,
+  seeding the real check_file_size.py plus `_resolve_root`, `_file_size_ratchet`,
+  `config`, `run_hook` and `check_outcome`, wiring check-file-size alone, running a
+  real `pre-commit install`, and driving a real `git commit`. The predicted
+  sequencing held exactly: this was blocked on GE-120g and on nothing else.
+
+  THE ABLATION, WHICH IS THE ACTUAL PROOF. `INCLUDE_CHECK_FILE_SIZE_HOOK = False`
+  removes the hook from the generated config — registered, never wired — and the
+  crossing and deployed descriptors go RED with the commit silently completing.
+  Restored, all five pass. Verified independently of the authoring agent. Any future
+  change to this file must keep that ablation reddening something, or the descriptors
+  have drifted back to proving registration rather than reach.
+
+  THE DESCRIPTORS NOW DESCRIBE WHAT THEY DO. Two of them previously asserted in their
+  own failure messages that "an ordinary commit ... must be refused" while making no
+  commit. That is the phantom-done shape one level up — the artifact a reviewer reads
+  instead of re-deriving — and it is what let this record sit `done` with the gap in
+  place for six days.

@@ -333,10 +333,15 @@ If the output contains the `target_file` path (on any line beginning with
 
 ```
 Halt: '<target_file>' has uncommitted changes in <WORKTREE_ROOT>.
-Commit or stash your current work before running /quick-fix.
+Commit or set aside your current work before running /quick-fix.
 
-Option A — stash:
-  git -C "<WORKTREE_ROOT>" stash
+Option A — labelled stash. Never a bare `git stash` / `git stash pop` pair:
+the stack is shared with every other session here, and an unlabelled entry
+cannot be told from theirs when you pop it back (BP-600c-3-ii).
+  git -C "<WORKTREE_ROOT>" stash push -m "pre-quickfix <target_file>"
+  # to restore, find YOUR entry by its label and pop that ref, not the top:
+  git -C "<WORKTREE_ROOT>" stash list
+  git -C "<WORKTREE_ROOT>" stash pop "stash@{<index-of-your-labelled-entry>}"
 
 Option B — commit in two steps:
   git -C "<WORKTREE_ROOT>" add <target_file>
@@ -748,40 +753,75 @@ repo's own doctrine ("Gate / Workflow ACs — Verify Behaviorally, Not by Grep"
 and "Real-artifact behavioral spot-check before declaring done" in
 `CLAUDE.md`):
 
+**Do not use `git stash` for this (BP-600c-3-ii).** The stash stack is shared
+by every session and every agent in the repository, and `git stash pop` with no
+argument pops whatever entry is on *top* of it — not necessarily the one you
+pushed. Following the old stash recipe here destroyed a concurrent session's
+uncommitted work. Revert through two files outside the repo instead; nothing
+below touches shared state, and both versions survive a crash mid-proof.
+
+Save the fixed copy, and materialise HEAD's pre-fix content **into a temp file
+of its own** — never redirect `git show` straight over the target, because the
+shell truncates the target before git runs, so a failed lookup would destroy the
+very fix this step exists to protect:
+
 ```bash
-git -C "<WORKTREE_ROOT>" stash push -- "<target_file>"
+cp "<WORKTREE_ROOT>/<target_file>" "/tmp/quickfix-<AC-ID>-fixed.bak"
+```
+
+```bash
+git -C "<WORKTREE_ROOT>" show "HEAD:<target_file>" > "/tmp/quickfix-<AC-ID>-head.orig"
+```
+
+That second command must exit 0 and produce a non-empty file. If it does not,
+halt — `<target_file>` is not in `HEAD`, which contradicts Guard BP-600a-3, and
+nothing has been overwritten yet. Now revert and re-run:
+
+```bash
+cp "/tmp/quickfix-<AC-ID>-head.orig" "<WORKTREE_ROOT>/<target_file>"
 ```
 
 ```bash
 AC_ENFORCE_STRICT=1 python -m pytest "<TEST_FILE>" -v
 ```
 
-**Expected: exits non-zero (FAIL)** — with the fix stashed away, the bug is
-back. If this instead still PASSES, halt:
+**Expected: exits non-zero (FAIL)** — with the fix reverted, the bug is back.
+If this instead still PASSES, restore the fix (next command) and then halt:
 
 ```
-Halt: the test remains GREEN with the fix stashed away (target_file reverted
-to its unmodified state). The test is not actually coupled to the bug fix —
-it may be passing for an unrelated reason.
+Halt: the test remains GREEN with the fix reverted (target_file restored to its
+HEAD content). The test is not actually coupled to the bug fix — it may be
+passing for an unrelated reason.
 
 Do NOT mark this AC done. Options:
   1. Rewrite the test so it genuinely exercises the fixed code path.
   2. Re-diagnose: the fix may not be addressing the real root cause.
 ```
 
-If it correctly fails, restore the fix and confirm green one more time before
-proceeding:
+Either way — proof passed or halting — restore the fix:
 
 ```bash
-git -C "<WORKTREE_ROOT>" stash pop
+cp "/tmp/quickfix-<AC-ID>-fixed.bak" "<WORKTREE_ROOT>/<target_file>"
 ```
+
+Prove the restore by byte-comparison, not by reading `git status`. A path
+showing as modified only tells you it differs from `HEAD`, which is equally
+true of a partial or corrupted restore:
+
+```bash
+diff -q "/tmp/quickfix-<AC-ID>-fixed.bak" "<WORKTREE_ROOT>/<target_file>"
+```
+
+**Expected: exits 0, no output.** If it does not, halt and say so explicitly,
+naming `/tmp/quickfix-<AC-ID>-fixed.bak` as the file that holds the fix — never
+leave the run with the fix reverted. Then confirm green one more time:
 
 ```bash
 AC_ENFORCE_STRICT=1 python -m pytest "<TEST_FILE>" -v
 ```
 
 **Expected: exits 0 (PASS) again.** Record this whole red→green,
-stash-revert→red, stash-pop→green sequence as `MUTATION_PROOF_OUTPUT` for the
+revert→red, restore→green sequence as `MUTATION_PROOF_OUTPUT` for the
 close-phase summary. Do not proceed to Phase 5 until this final PASS is
 confirmed.
 

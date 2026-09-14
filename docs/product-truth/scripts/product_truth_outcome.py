@@ -123,7 +123,7 @@ CHECK_READS: dict[str, tuple[str, ...]] = {
     "derived-indexes": ("flows", "mock-data", "acceptance-criteria"),
     "screen-refs": ("flows",),
     "expansions": ("flows",),
-    "shape-bounds": ("flows",),
+    "shape-bounds": ("flows", "mock-data", "mockups"),
     "artifact-paths": ("index",),
     "canonical-datasets": ("mock-data",),
     "truth-evidence": ("flows",),
@@ -201,7 +201,7 @@ def _top_level_outcome(
 def _print_outcome_contract(
     outcome: str, examined: int, unreadable: list[str], empty_types: list[str],
     resolved_pointers: int = 0, unresolvable_pointers: int = 0,
-    examined_by_check: dict[str, int] | None = None, resolved_labels: int = 0,
+    examined_by_check: dict[str, int] | None = None, resolved_labels: int = 0, bounds: dict | None = None,
 ) -> None:
     """Print the LAST stdout line: the machine-readable outcome contract.
 
@@ -221,6 +221,8 @@ def _print_outcome_contract(
         "unresolvable_pointers": unresolvable_pointers,
         "examined_by_check": examined_by_check or {},
         "resolved_labels": resolved_labels,
+        "bounds": {name: {key: (len(value) if key == "holdouts" else value) for key, value in entry.items()}
+                   for name, entry in (bounds or {}).items()},
     }))
 
 

@@ -19,6 +19,7 @@
     "superseded_by": { "type": ["string", "null"], "description": "id of the artifact replacing this one when status=deprecated." },
     "readiness": { "type": "string", "enum": ["draft", "reviewed", "approved"], "description": "Review state: has a persona approved it yet." },
     "version": { "type": "integer", "minimum": 1 },
+    "shape_version": {"type": "integer", "minimum": 1, "description": "Which iteration of the record's shape conventions this screen declares it is written to. Optional: one that omits it predates every size bound and is only warned about, never blocked; a bound blocks every screen only once none is left on an older version (product_truth_bounds, UXP-700e-1-ii)."},
     "tags": { "type": "array", "items": { "type": "string" } },
     "mock_data_ref": { "type": "string", "pattern": "^[a-z0-9-]+/[a-z0-9-]+$", "description": "id of the Mock Data artifact whose records populate this screen." },
     "provenance": {

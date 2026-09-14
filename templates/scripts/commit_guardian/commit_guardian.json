@@ -11,15 +11,25 @@
     "templates"
   ],
   "file_size": {
-    "_comment": "check_file_size.py — Line limits for NEW files only",
+    "_comment": "check_file_size.py — Line limits per checked extension (GE-127c-1 pinned scope, 2026-09-14). IN SCOPE, each with an explicit limit so none silently inherits default_limit: .py 400 (unchanged), .sql 600 (unchanged), .js 1000 (new — top of the empty 600-1000 band across the 13 tracked files, catching the six oversized workflow bodies while leaving 43% headroom on the largest compliant file), .mjs 1000 (new, same limit as .js so a rename cannot dodge the gate), .ts 400 (new), .tsx 400 (new), .sh 400 (new). OUT OF SCOPE, each for a stated reason, not by omission: .md (already governed by check-doc-length over docs/; a second length gate over the same files would be drift), .yaml/.json (machine-authored/registry-shaped; length carries no comprehension cost), .css/.html (no first-party file over any candidate limit).",
     "line_limits": {
       ".py": 400,
-      ".sql": 600
+      ".sql": 600,
+      ".js": 1000,
+      ".mjs": 1000,
+      ".ts": 400,
+      ".tsx": 400,
+      ".sh": 400
     },
     "default_limit": 400,
     "checked_extensions": [
       ".py",
-      ".sql"
+      ".sql",
+      ".js",
+      ".mjs",
+      ".ts",
+      ".tsx",
+      ".sh"
     ]
   },
   "complexity": {

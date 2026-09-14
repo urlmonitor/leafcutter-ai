@@ -1,0 +1,106 @@
+id: ACS-1600b
+title: "Nothing is marked finished because it looks like something that was"
+component: ac-store
+components:
+  - ac_store
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+criteria: |
+  No tool awards a finished badge on the strength of a resemblance.
+
+  Automation whose grounds are a likeness it computed may record what it found and
+  must stop there. Judging that a piece of work is finished stays with the one
+  place that holds that judgement to its own evidence. Where a tool can make that
+  judgement from a likeness today, the ability is removed outright rather than
+  narrowed to a higher confidence band — every band is a band of the same
+  non-observation.
+depends_on:
+  - ACS-1600
+doc_links:
+  - path: docs/acceptance-criteria/ac-store/ACS-1300-trustworthy-coverage-links/ACS-1300.yaml
+    relationship: depends_on
+    status: exists
+    relevance: >-
+      WHERE THE REFUSAL WAS FIRST WRITTEN AND WHY IT NEEDED RE-STATING WIDER. That
+      L0 refuses the finished-state write for its own tree and marks the refusal
+      not to be revisited. Scoped to one tree, it left a second record free to
+      specify exactly the forbidden thing. This criterion carries the same refusal
+      with the same force to automation acting on a likeness, wherever it lives.
+      Read that record's reasoning; do NOT restate it in a competing form and do
+      NOT weaken it here.
+  - path: docs/acceptance-criteria/ac-store/ACS-400-ac-governance/ACS-400b.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      THE PERMISSION THIS NARROWS, FENCED SO IT IS NOT MISREAD AS CONTRADICTED.
+      ACS-400b permits an implementation agent to update progress fields for work
+      it performed. This criterion does not withdraw that. It denies the same
+      permission to automation that performed no work and observed no outcome. An
+      implementer citing ACS-400b as licence for a heuristic finished-state write
+      has read a permission about doing the work as a permission about guessing at
+      it.
+  - path: docs/reference/false-green-mechanisms.md
+    relationship: related
+    status: exists
+    relevance: >-
+      The register of the failure family. An unearned finished badge is the
+      canonical member: an assertion of proof recorded where an observation of
+      evidence belongs.
+delivers_to: null
+expects_from: null
+documentation_triggers:
+  - reference-doc
+origin_agent: BrainCandy
+created: 2026-09-14
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  THE POSITION, STATED AS A POSITION AND NOT AS A PREFERENCE. The governed tool's
+  change-applying path should LOSE its finished-state write entirely. Not gate it
+  behind a second flag, not raise the confidence threshold, not restrict it to
+  exact matches. Remove it. The full argument is in the L0's notes under "THE HARD
+  CONSTRAINT, AND MY POSITION ON IT" and is not repeated here; the three grounds
+  are that a resemblance is not an observation, that this is the one field every
+  downstream honesty check treats as settled, and that nothing is lost because the
+  transition already has an owner with a real evidence gate.
+
+  THE COUNTER-ARGUMENT, RECORDED SO IT IS NOT RE-DISCOVERED AS IF IT WERE NEW. The
+  write is already behind an explicit opt-in, so it can be argued that nobody is
+  surprised by it. An opt-in is consent to the ACT, not to the GROUNDS. A user
+  asking for discovered links to be applied is consenting to links; there is no
+  separate place to consent to a done badge being awarded from a text similarity,
+  and the two travel together today.
+
+  THIS IS A REFUSAL, NOT A PHASING DECISION. It must not be softened at
+  decomposition into "writes it only at high confidence" or "writes it behind a
+  further flag". If a decomposition produces an L2 that writes the field under any
+  condition, that L2 is out of scope and must be withdrawn rather than approved.
+  The precedent for a criterion being closed unbuilt for approaching this line is
+  TQ-400f, closed 2026-09-01.
+
+  MANDATORY NEGATIVE ARM, AND IT IS THE WHOLE CRITERION. Every positive reading is
+  satisfied by a tool that writes nothing. The arm that proves the refusal is live
+  is a run that DOES apply changes — links genuinely recorded — in which the
+  finished-state of every record it touched is byte-identical to what it was
+  before. Assert both halves in the same invocation. A run that changed nothing
+  proves nothing.
+
+  A SECOND NEGATIVE ARM WORTH ASKING FOR. The removal must be verified by mutation
+  rather than by reading the source: restore the write, confirm the test goes red.
+  A grep for the absence of a field name passes on dead code and on a renamed
+  constant alike.
+
+  BOUNDARY WITH ACS-1600d, DELIBERATE AND LOAD-BEARING. That criterion says what is
+  recorded was established. This one says one particular field is never recorded by
+  this class of tool at all, however well established the match. Neither implies
+  the other — a tool writing only its best matches satisfies d and can still award
+  a badge on every one of them. Merged, an implementer satisfies whichever half is
+  cheaper.

@@ -361,6 +361,37 @@ answered, with a grep and not from memory:
 appears in the deployed `.pre-commit-config.yaml` and that its script resolves. That is a
 three-line test which would have failed on day one of the epic and saved six rounds.
 
+**Partially addressed, 2026-09-14 — and the remedy above needed correcting twice.**
+`unit_tests/commit_guardian/test_hook_registration_inventory.py` now makes the unasked question
+a standing assertion. Two corrections to the fix direction as originally written:
+
+1. **Do not assert against `.pre-commit-config.yaml`.** It is **gitignored build output** emitted
+   by `build.py` (`git status --ignored` → `!!`; no git history; absent in a fresh clone).
+   Asserting against it verifies the generator's last local run, not the committed registry —
+   the same class of mistake as the entry it is meant to prevent. The source of truth is
+   `hooks_manifest.hooks` in `templates/scripts/commit_guardian/commit_guardian.json`. A first
+   pass of this work did measure against the deployed file and reported 5 phantom "unregistered"
+   ids that were only local build staleness.
+2. **Per-AC is the wrong unit.** A registration test attached to each hook AC has to be
+   remembered by the author of hook nineteen, and not remembering is the defect class. The test
+   is an inventory over the whole guardian directory instead, scoped by the repo's own
+   `hook_parity.hook_script_patterns` so it cannot drift from `check_hook_parity.py`.
+
+**What it measured on `main` at `2524993b9`: 18 hook scripts on disk that no `hooks_manifest`
+entry invokes.** Nine of those (`check_complexity`, `check_docstrings`, `check_documentation`,
+`check_doc_coverage`, `check_doc_links`, `check_folder_density`, `check_root_files`,
+`check_sql_complexity`, `check_debug_scripts`) carry a settings block in **both** `config.py`
+and `commit_guardian.json` while being invoked by nothing — `KI-CG-021`'s shape exactly, and
+worse for a reader, because the presence of configuration reads as evidence of registration.
+They are held in a shrink-only ratchet baseline; the test is green today and red on the
+nineteenth. Triaging the 18 is **not** done and is the remaining work on this entry.
+
+Neither existing gate covered this, which is why the orphans survived: `check_hook_trigger_reachability.py`
+iterates the *registry* asking whether any tracked path can fire each gate, so a script absent
+from the registry is invisible to it; `check_hook_parity.py` compares scripts across
+*directories* and ids across *manifests*, and never asks whether a script on disk is named by
+any entry. The unasked question was disk → manifest.
+
 **The general form:** *"does the code work"* and *"is the code reachable"* are different
 questions, and a test suite answers only the first. Nothing in 3,772 passing tests could
 distinguish this gate from a gate that had never been wired up, because nothing in it looked

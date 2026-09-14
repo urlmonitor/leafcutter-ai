@@ -1,0 +1,104 @@
+id: ACD-1200b-5-ii
+components:
+  - ac_driven_dev
+readiness: approved
+priority: high
+title: "Promotion preserves a multi-line amended_by history, and success is never reported for output the mechanism cannot itself parse"
+component: ac-driven-dev
+level: L3
+status: active
+req_status: draft
+work_status: done
+roadmap_phase: phase_1
+created_by: "docs/acceptance-criteria/ac-driven-dev/ACD-1200-goal-to-epic/ACD-1200b-5.yaml"
+criteria: |
+  Given a stored leaf AC at readiness: reviewed whose amended_by list already
+    holds a multi-line entry — an entry whose value spans several lines and
+    contains blank lines between its paragraphs, serialized exactly as the store
+    writes such records today (the GE-123a-4 record of 2026-08-31 is one),
+  When the approval mechanism promotes that leaf,
+  Then the record written to disk parses as a single YAML document,
+  And its amended_by list holds every entry it held before the run plus exactly
+    one new approval entry,
+  And each pre-existing multi-line entry still carries its full text, blank
+    lines included,
+  And readiness is the only other field whose value differs from the record as
+    it stood before the run,
+  And the run exits with status 0.
+
+  Given the same reviewed leaf,
+  And the text the mechanism is about to store for that leaf does not parse as
+    YAML,
+  When the approval mechanism runs,
+  Then the record left on disk is byte-identical to the record as it stood
+    before the run,
+  And the run names that record as a failure,
+  And the run exits with a non-zero status,
+  And no line describing that record as promoted appears anywhere in the run's
+    report.
+depends_on: [ACD-1200b-5]
+doc_links:
+  - path: scripts/ac_store/approve_acs.py
+    relationship: modifies
+    status: exists
+    relevance: "The approval mechanism whose write path this AC constrains; its promotion write is the behaviour under specification."
+  - path: docs/known-issues/ac-store.md
+    relationship: describes
+    status: exists
+    relevance: "KI-ACS-017 records the 2026-08-31 run that destroyed five GE-123 records while reporting rc=0 for all thirty-one — the evidence this AC exists to close."
+  - path: docs/acceptance-criteria/ac-driven-dev/ACD-1200-goal-to-epic/ACD-1200b-5.yaml
+    relationship: specifies
+    status: exists
+    relevance: "The parent L2 whose append-only / no-other-field-altered clause this AC makes survivable on records with a multi-line history."
+  - path: docs/reference/ac-schema.md
+    relationship: specifies
+    status: exists
+    relevance: "Defines the record shape — including amended_by — that the promotion must leave parseable."
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-09-14
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+- scripts/ac_store/approve_acs.py
+- unit_tests/ac_store/test_acd_1200b_5_ii.py
+change_target: code
+risk_surface: internal
+declares_side_effect: true
+test_spec:
+  - name: test_multiline_amended_by_record_survives_promotion_and_reparses
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: behavioral
+    angle: real_artifact
+    description: "Promote a reviewed leaf whose amended_by already holds a multi-line entry containing blank lines, written the way the store itself serializes such a record (shape taken from the real on-disk GE-123a-4 record, not a hand-indented literal); assert the file re-parses as a single YAML document afterwards."
+  - name: test_promotion_appends_one_entry_and_preserves_prior_multiline_text
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "After promoting such a record, assert amended_by holds every prior entry with its full text and blank lines intact plus exactly one new approval entry, and that readiness is the only other changed field."
+  - name: test_unparseable_output_restores_original_bytes_and_exits_nonzero
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: behavioral
+    angle: failure
+    description: "Regression: when the text the mechanism would store does not parse, assert the file on disk is byte-identical to its pre-run content and the run exits non-zero."
+  - name: test_no_promoted_line_reported_for_a_record_left_unwritten
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: behavioral
+    angle: failure
+    description: "Assert the report for an unparseable-output record names it as a failure and contains no line describing it as promoted, so the report can be read as proof of the write."
+  - name: test_cli_run_over_a_multiline_history_tree_exits_zero_and_all_records_parse
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: behavioral
+    angle: reachability
+    surface_invoked: "python scripts/ac_store/approve_acs.py"
+    description: "Invoke the approval mechanism as a process over a tree whose reviewed leaves carry multi-line amended_by histories; assert exit status 0 and that every touched record re-parses, so the guarantee is reachable from the entry point people actually run."
+test_rationale: "A direct-import unit test over a synthetic, hand-indented fixture is exactly the shape that let KI-ACS-017 through: the defect only appears on a record whose amended_by holds a multi-line scalar with blank lines as the store serializes it. The contract therefore fixes the artifact shape (real on-disk serialization) and pairs it with a process-level run, because the second half of the bug — a success-shaped exit code over a destroyed file — is only observable from the outside."

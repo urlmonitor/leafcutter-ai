@@ -6,7 +6,7 @@ components:
 level: L2
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: reviewed
 priority: medium
 roadmap_phase: phase_1
@@ -405,8 +405,14 @@ amended_by:
     tracked over-limit file rather than a generated fixture, one through the registered hook
     entry point and one on the deployed copy in a cold process.'
 superseded_by: null
-covered_by: []
-implemented_by: []
+covered_by:
+  - "unit_tests/commit_guardian/test_ge_127e_1_parts_and_half_length.py"
+  - "unit_tests/commit_guardian/test_ge_127e_1_division_and_single_part.py"
+  - "unit_tests/commit_guardian/test_ge_127e_1_real_artifact.py"
+  - "unit_tests/commit_guardian/test_ge_127e_1_reachability_and_deployed.py"
+implemented_by:
+  - "templates/scripts/commit_guardian/_file_description.py"
+  - "templates/scripts/commit_guardian/check_file_size.py"
 change_target: code
 risk_surface: contract_boundary
 notes: |

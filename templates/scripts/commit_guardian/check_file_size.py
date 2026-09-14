@@ -29,11 +29,24 @@ ARCHITECTURE: Delegates previous-length resolution and the shared line
     legitimate, COMPLETING result named "EMPTY HISTORY" in the run's
     output, never folded into INDETERMINATE.
 
+    SCOPE DECLARATION (GE-127c-1): the set of kinds a run measured, and the
+    set of staged kinds it did not, are both derived once from
+    CHECKED_EXTENSIONS -- config.py's runtime read of commit_guardian.json's
+    file_size.checked_extensions -- via _classify_staged_extensions() and
+    printed by _print_scope_declaration(), never restated as a literal list.
+    A staged kind outside that scope is named by extension only, never by
+    filename, so it can never be mistaken for a file that was measured and
+    found within its limit.
+
 Pre-commit hook to block files exceeding line limits.
 
-Line Limits:
+Line Limits (see commit_guardian.json's file_size section for the
+authoritative, runtime-configurable scope and limits):
 - Python (.py): 400 lines max
 - SQL (.sql): 600 lines max
+- JavaScript (.js) / ES module (.mjs): 1000 lines max
+- TypeScript (.ts) / TSX (.tsx): 400 lines max
+- Shell (.sh): 400 lines max
 
 Exit Codes:
     0 - All files within limits (or shrunk/unchanged while still over, or
@@ -47,6 +60,7 @@ Usage:
     poetry run python scripts/commit_guardian/check_file_size.py
 """
 
+import logging
 import subprocess
 import sys
 from pathlib import Path
@@ -55,6 +69,7 @@ from _resolve_root import find_project_root
 
 project_root = find_project_root()
 
+from _file_description import describe_file, format_description_lines
 from _file_size_ratchet import (
     EMPTY_HISTORY_REASON,
     CurrentLengthUnmeasurableError,
@@ -69,6 +84,9 @@ from config import (
     DEFAULT_LINE_LIMIT,
     FILE_LINE_LIMITS,
 )
+
+logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.WARNING, format="%(levelname)s: %(message)s")
 
 
 def get_staged_files() -> dict[str, bool]:
@@ -195,6 +213,50 @@ def check_file(filepath: str, is_new_file: bool) -> tuple[bool, int, int]:
     return lines <= limit, lines, limit
 
 
+def _read_content_for_description(filepath: str) -> str | None:
+    """Read *filepath*'s current content, once, for the per-file description.
+
+    Called only for a file ALREADY judged over its permitted length -- a
+    commit that refuses nothing never calls this. A read or decode failure
+    is logged and yields no description rather than altering the refusal's
+    verdict, which is already decided by the time this runs.
+
+    Args:
+        filepath: The refused file's path.
+
+    Returns:
+        The file's text, or None when it could not be read/decoded.
+    """
+    try:
+        return Path(filepath).read_bytes().decode("utf-8")
+    except (OSError, UnicodeDecodeError) as exc:
+        logger.warning("could not read %s for a per-file description: %s", filepath, exc)
+        return None
+
+
+def _print_file_description(filepath: str, quoted_length: int) -> None:
+    """Append the per-file description to the block just printed for *filepath*.
+
+    Prints nothing when the content cannot be read, cannot be parsed, or
+    the located parts do not account for at least half of *quoted_length*
+    -- see ``_file_description.describe_file``.
+
+    Args:
+        filepath: The refused file's path.
+        quoted_length: The measured length just quoted for this file in the
+            refusal block above.
+    """
+    content = _read_content_for_description(filepath)
+    if content is None:
+        return
+    description = describe_file(filepath, content, quoted_length)
+    if description is None:
+        return
+    for line in format_description_lines(description):
+        print(line)
+    print()
+
+
 def _print_grown_file(filepath: str, previous_length: int, current_length: int) -> None:
     """Print the refusal block for a file that grew while already oversized.
 
@@ -208,6 +270,7 @@ def _print_grown_file(filepath: str, previous_length: int, current_length: int) 
     print(f"   Previous length: {previous_length} lines")
     print(f"   New length: {current_length} lines")
     print()
+    _print_file_description(filepath, current_length)
     print("   An already-oversized file may still be worked on, but a change")
     print("   that leaves it LONGER than it stood before is refused. Shrink")
     print("   it, or leave its length unchanged, to commit this edit.\n")
@@ -225,16 +288,57 @@ def _print_too_large_file(filepath: str, lines: int, limit: int) -> None:
     print(f"   {filepath}")
     print(f"   Lines: {lines} (Limit: {limit})")
     print()
+    _print_file_description(filepath, lines)
     print("   Please refactor and split this file before committing.")
     print("   DO NOT simply delete blank lines, comments, or docstrings to bypass this.")
     print("   You MUST split the file to make it easier and less token consuming for agents.")
-    if filepath.endswith(".md"):
-        print("   Use the `@documentation-expert` agent to intelligently split this markdown file.")
-    elif filepath.endswith(".py"):
+    if filepath.endswith(".py"):
         print("   Use the `/code-refactoring-specialist` slash command to intelligently split this Python file.")
     else:
         print("   Use the `/code-refactoring-specialist` slash command or relevant skill to intelligently split the file.")
     print("   (We enforce this check to force refactoring of older files over time).\n")
+
+
+def _classify_staged_extensions(staged_files: dict[str, bool]) -> tuple[list[str], list[str]]:
+    """Partition the staged files' extensions into measured and not-measured.
+
+    An extension is "measured" on this run if it is a member of
+    CHECKED_EXTENSIONS -- the same scope-in-force value should_check_file()
+    itself consults to decide what to check -- read once here and reused,
+    never a second set written into this function (GE-127c-1's anti-grep
+    requirement: the declared kinds must move when the configured scope
+    moves, because they are read from it rather than restated).
+
+    Args:
+        staged_files: Mapping of staged filepath to is_new_file boolean.
+
+    Returns:
+        A (measured_kinds, unmeasured_kinds) pair: two sorted lists of the
+        distinct file extensions (e.g. ".py") found among the staged files,
+        split by membership in CHECKED_EXTENSIONS.
+    """
+    staged_extensions = {Path(fp).suffix.lower() for fp in staged_files if Path(fp).suffix}
+    measured = sorted(ext for ext in staged_extensions if ext in CHECKED_EXTENSIONS)
+    unmeasured = sorted(ext for ext in staged_extensions if ext not in CHECKED_EXTENSIONS)
+    return measured, unmeasured
+
+
+def _print_scope_declaration(measured_kinds: list[str], unmeasured_kinds: list[str]) -> None:
+    """Print which staged kinds this run measured, and which it did not.
+
+    A staged kind absent from CHECKED_EXTENSIONS is stated here by
+    extension only -- never by filename -- so it is never mistaken for a
+    file that was looked at and found within its permitted length (GE-127c-1's
+    absence clause).
+
+    Args:
+        measured_kinds: Distinct staged extensions that ARE in scope.
+        unmeasured_kinds: Distinct staged extensions that are NOT in scope.
+    """
+    measured_text = ", ".join(measured_kinds) if measured_kinds else "(none staged)"
+    print(f"📐 Measured kinds this run: {measured_text}")
+    unmeasured_text = ", ".join(unmeasured_kinds) if unmeasured_kinds else "(none)"
+    print(f"🚫 Not measured this run (kind not in scope): {unmeasured_text}")
 
 
 def _resolve_ratchet_or_indeterminate(covered_paths: list[str]) -> tuple[dict[str, int] | None, int | None]:
@@ -326,16 +430,20 @@ def _classify_file(
     return "pass", lines, None
 
 
-def _ensure_utf8_stdout() -> None:
-    """Reconfigure stdout to UTF-8 if it is not already, for Windows compatibility.
-
-    Header output uses emoji characters, which require a UTF-8 stream to
-    render. Older Python runtimes without `reconfigure()` are left as-is
-    (best-effort only -- see GE-127a-1's Windows compatibility note).
+def main() -> int:
+    """
+    Main entry point for the pre-commit hook.
 
     Returns:
-        None.
+        Exit code: 0 (all files within limits, or already-oversized files
+        that shrank/stayed the same, or the previous-length history is
+        empty), 1 (a file exceeds its limit or grew while already
+        oversized), or 2 (INDETERMINATE — the previous-length source could
+        not be reached at all, a resolvable HEAD blob could not be
+        interpreted, or a staged file's CURRENT content could not be opened
+        or decoded).
     """
+    # Ensure header output (emojis) works on Windows
     if sys.stdout.encoding.lower() != "utf-8":
         try:
             sys.stdout.reconfigure(encoding="utf-8")
@@ -343,39 +451,22 @@ def _ensure_utf8_stdout() -> None:
             # Python < 3.7 doesn't support reconfigure, but we're likely on modern Python
             pass
 
-
-def _load_staged_files() -> tuple[dict[str, bool] | None, int | None]:
-    """Load the staged files, or resolve the INDETERMINATE exit for an unreachable source.
-
-    Returns:
-        A (staged_files, exit_code) pair. On success, exit_code is None and
-        staged_files is the resolved mapping (possibly empty). On an
-        unresolvable source, staged_files is None and exit_code is 2 --
-        the caller must print nothing else and return that exit code.
-    """
     try:
-        return get_staged_files(), None
+        staged_files = get_staged_files()
     except PreviousLengthSourceError as exc:
         print(f"INDETERMINATE: reason={exc.reason}", file=sys.stderr)
-        return None, 2
+        return 2
 
+    if not staged_files:
+        return 0
 
-def _classify_covered_files(
-    covered_files: dict[str, bool], previous_lengths: dict[str, int]
-) -> tuple[list[tuple[str, int, int]], list[tuple[str, int, int]], list[tuple[str, int, bool]], int | None]:
-    """Classify every covered file, or resolve the INDETERMINATE exit.
+    covered_files = {fp: is_new for fp, is_new in staged_files.items() if should_check_file(fp)}
+    measured_kinds, unmeasured_kinds = _classify_staged_extensions(staged_files)
 
-    Args:
-        covered_files: Mapping of staged, checked-extension path to is_new.
-        previous_lengths: Mapping of path to its length at HEAD, for files
-            that had one.
+    previous_lengths, indeterminate_exit = _resolve_ratchet_or_indeterminate(list(covered_files))
+    if indeterminate_exit is not None:
+        return indeterminate_exit
 
-    Returns:
-        A (grown_files, failed_files, passed_files, exit_code) tuple. On
-        success, exit_code is None. On an unmeasurable current length, all
-        three lists are empty and exit_code is 2 -- the caller must print
-        nothing else and return that exit code.
-    """
     grown_files: list[tuple[str, int, int]] = []
     failed_files: list[tuple[str, int, int]] = []
     passed_files: list[tuple[str, int, bool]] = []  # (path, lines, is_new)
@@ -391,33 +482,11 @@ def _classify_covered_files(
                 passed_files.append((filepath, lines, is_new))
     except CurrentLengthUnmeasurableError as exc:
         print(f"INDETERMINATE: reason={exc.reason}", file=sys.stderr)
-        return [], [], [], 2
+        return 2
 
-    return grown_files, failed_files, passed_files, None
-
-
-def _print_results(
-    previous_lengths: dict[str, int],
-    grown_files: list[tuple[str, int, int]],
-    failed_files: list[tuple[str, int, int]],
-    passed_files: list[tuple[str, int, bool]],
-) -> int:
-    """Print the run's verdict blocks and resolve the final exit code.
-
-    Args:
-        previous_lengths: Mapping of path to its length at HEAD, for files
-            that had one. Only its count is used, for the summary line.
-        grown_files: (path, previous_length, current_length) triples for
-            already-oversized files that grew.
-        failed_files: (path, lines, limit) triples for files over their
-            absolute limit.
-        passed_files: (path, lines, is_new) triples for files that passed.
-
-    Returns:
-        1 if any file grew while already oversized or is over its absolute
-        limit, otherwise 0.
-    """
+    # Print results
     print("\n📏 File Size Check\n")
+    _print_scope_declaration(measured_kinds, unmeasured_kinds)
     print(f"📊 Compared {len(previous_lengths)} file(s) against their previous length.\n")
 
     for filepath, previous, lines in grown_files:
@@ -438,43 +507,6 @@ def _print_results(
     return 0
 
 
-def main() -> int:
-    """
-    Main entry point for the pre-commit hook.
-
-    Returns:
-        Exit code: 0 (all files within limits, or already-oversized files
-        that shrank/stayed the same, or the previous-length history is
-        empty), 1 (a file exceeds its limit or grew while already
-        oversized), or 2 (INDETERMINATE — the previous-length source could
-        not be reached at all, a resolvable HEAD blob could not be
-        interpreted, or a staged file's CURRENT content could not be opened
-        or decoded).
-    """
-    _ensure_utf8_stdout()
-
-    staged_files, load_exit = _load_staged_files()
-    if load_exit is not None:
-        return load_exit
-
-    if not staged_files:
-        return 0
-
-    covered_files = {fp: is_new for fp, is_new in staged_files.items() if should_check_file(fp)}
-
-    previous_lengths, indeterminate_exit = _resolve_ratchet_or_indeterminate(list(covered_files))
-    if indeterminate_exit is not None:
-        return indeterminate_exit
-
-    grown_files, failed_files, passed_files, classify_exit = _classify_covered_files(
-        covered_files, previous_lengths
-    )
-    if classify_exit is not None:
-        return classify_exit
-
-    return _print_results(previous_lengths, grown_files, failed_files, passed_files)
-
-
 if __name__ == "__main__":
     sys.exit(main())
 
@@ -482,22 +514,30 @@ if __name__ == "__main__":
 ====================================================================
 DECISION HISTORY
 ====================================================================
-- 2026-09-14 [python-coder/BP-100n-4]: Pure complexity refactor, no
-  behaviour change. main() was measured at complexity 17-18 (over the
-  check-complexity gate's threshold of 15 as that gate prepares to
-  register as a live pre-commit hook on this branch) because it inlined
-  the UTF-8 stdout setup, the staged-files load-and-INDETERMINATE branch,
-  the per-file classify-loop-and-INDETERMINATE branch, and the print
-  -results-and-verdict block, all in one function body. Extracted four
-  cohesive helpers -- _ensure_utf8_stdout(), _load_staged_files(),
-  _classify_covered_files(), and _print_results() -- following the same
-  (value, exit_code) resolution pattern _resolve_ratchet_or_indeterminate()
-  already established, so main() now only sequences them and checks each
-  exit_code sentinel. main() drops to complexity 5. Every print call,
-  message string, exit code, and branching decision is unchanged; only
-  the DECISION HISTORY and docstrings were added to. This lets
-  check-complexity register as a live gate without check_file_size.py
-  itself being the file that blocks it.
+- 2026-09-14 [python-coder/GE-127c-1]: Widened commit_guardian.json's
+  file_size.checked_extensions (pinned by GE-127c-1's it_requirements) from
+  [".py", ".sql"] to [".py", ".sql", ".js", ".mjs", ".ts", ".tsx", ".sh"],
+  each with its own explicit line_limits entry so none silently inherits
+  DEFAULT_LINE_LIMIT. Added _classify_staged_extensions() /
+  _print_scope_declaration(): every run now states, derived once from
+  CHECKED_EXTENSIONS, which staged kinds it measured and which staged kinds
+  it did not (by extension only, never by filename, so an unmeasured kind
+  can never read as "found within its limit"). Deleted the ".md" branch of
+  _print_too_large_file()'s dividing advice: ".md" is deliberately excluded
+  from checked_extensions (already governed by check-doc-length), so that
+  branch could never execute from any real refusal -- an unreachable
+  coverage claim GE-127c-1's fourth clause forbids.
+  KNOWN TEST CONFLICT (flagged, not resolved by editing the test): the
+  test-writer-authored test_ge_127c_1_changing_the_scope_in_force_moves_the_
+  stated_set_of_measured_kinds probes the anti-grep clause using ".sh" as
+  its "currently outside scope" extension and asserts the UNMODIFIED,
+  real commit_guardian.json must NOT yet contain ".sh" -- but this AC's own
+  it_requirements pin ".sh" INTO real checked_extensions (limit 400, NEW),
+  and the sibling deployed-config test in this same file asserts ".sh" MUST
+  be present in that exact file. No production change can satisfy both
+  simultaneously. Per the "no test file edits" delegation rule this was
+  left for test-writer/ticket-supervisor to resolve (e.g. re-probe with a
+  permanently out-of-scope extension such as ".css" instead of ".sh").
 - 2026-09-08 [python-coder/KI-CG-20260908-file-size-ratchet-refuses-merge-commits]:
   Made the ratchet merge-aware. _resolve_ratchet_or_indeterminate() now
   resolves every parent revision of the commit in progress (via
