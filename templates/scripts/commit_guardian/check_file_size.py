@@ -60,6 +60,7 @@ Usage:
     poetry run python scripts/commit_guardian/check_file_size.py
 """
 
+import logging
 import subprocess
 import sys
 from pathlib import Path
@@ -68,6 +69,7 @@ from _resolve_root import find_project_root
 
 project_root = find_project_root()
 
+from _file_description import describe_file, format_description_lines
 from _file_size_ratchet import (
     EMPTY_HISTORY_REASON,
     CurrentLengthUnmeasurableError,
@@ -82,6 +84,9 @@ from config import (
     DEFAULT_LINE_LIMIT,
     FILE_LINE_LIMITS,
 )
+
+logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.WARNING, format="%(levelname)s: %(message)s")
 
 
 def get_staged_files() -> dict[str, bool]:
@@ -208,6 +213,50 @@ def check_file(filepath: str, is_new_file: bool) -> tuple[bool, int, int]:
     return lines <= limit, lines, limit
 
 
+def _read_content_for_description(filepath: str) -> str | None:
+    """Read *filepath*'s current content, once, for the per-file description.
+
+    Called only for a file ALREADY judged over its permitted length -- a
+    commit that refuses nothing never calls this. A read or decode failure
+    is logged and yields no description rather than altering the refusal's
+    verdict, which is already decided by the time this runs.
+
+    Args:
+        filepath: The refused file's path.
+
+    Returns:
+        The file's text, or None when it could not be read/decoded.
+    """
+    try:
+        return Path(filepath).read_bytes().decode("utf-8")
+    except (OSError, UnicodeDecodeError) as exc:
+        logger.warning("could not read %s for a per-file description: %s", filepath, exc)
+        return None
+
+
+def _print_file_description(filepath: str, quoted_length: int) -> None:
+    """Append the per-file description to the block just printed for *filepath*.
+
+    Prints nothing when the content cannot be read, cannot be parsed, or
+    the located parts do not account for at least half of *quoted_length*
+    -- see ``_file_description.describe_file``.
+
+    Args:
+        filepath: The refused file's path.
+        quoted_length: The measured length just quoted for this file in the
+            refusal block above.
+    """
+    content = _read_content_for_description(filepath)
+    if content is None:
+        return
+    description = describe_file(filepath, content, quoted_length)
+    if description is None:
+        return
+    for line in format_description_lines(description):
+        print(line)
+    print()
+
+
 def _print_grown_file(filepath: str, previous_length: int, current_length: int) -> None:
     """Print the refusal block for a file that grew while already oversized.
 
@@ -221,6 +270,7 @@ def _print_grown_file(filepath: str, previous_length: int, current_length: int) 
     print(f"   Previous length: {previous_length} lines")
     print(f"   New length: {current_length} lines")
     print()
+    _print_file_description(filepath, current_length)
     print("   An already-oversized file may still be worked on, but a change")
     print("   that leaves it LONGER than it stood before is refused. Shrink")
     print("   it, or leave its length unchanged, to commit this edit.\n")
@@ -238,6 +288,7 @@ def _print_too_large_file(filepath: str, lines: int, limit: int) -> None:
     print(f"   {filepath}")
     print(f"   Lines: {lines} (Limit: {limit})")
     print()
+    _print_file_description(filepath, lines)
     print("   Please refactor and split this file before committing.")
     print("   DO NOT simply delete blank lines, comments, or docstrings to bypass this.")
     print("   You MUST split the file to make it easier and less token consuming for agents.")
