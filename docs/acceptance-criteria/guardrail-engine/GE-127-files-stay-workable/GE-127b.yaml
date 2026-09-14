@@ -40,6 +40,22 @@ doc_links:
   - path: docs/pre-commit-hooks.md
     relationship: related
     status: exists
+  - path: docs/acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/GE-127f.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      NARROWS THIS RECORD — READ BEFORE TREATING ITS ALLOW-ARM AS FINAL. GE-127f
+      ("Adding to an oversized file leaves it smaller than you found it") stacks a
+      convergence requirement on top of this ratchet: an oversized file must end
+      at or below whichever is less demanding of the size limit and (previous
+      length minus lines added). This record's allow-arm — same size or shorter
+      commits — survives unchanged ONLY for a change that adds nothing. A
+      same-length edit that adds lines and removes as many is allowed here and
+      refused there, and GE-127b-1's boundary descriptor
+      (test_..._left_at_exactly_its_previous_length_commits, pinning
+      strictly-greater-than) must be reconciled with that when GE-127f is built.
+      GE-127f is built ON this record's comparison, not beside it. This record's
+      own promise and delivery stand: nothing here is withdrawn or re-opened.
 delivers_to: null
 expects_from: null
 documentation_triggers:
@@ -47,7 +63,25 @@ documentation_triggers:
   - reference-doc
 origin_agent: BrainCandy
 created: 2026-09-01
-amended_by: []
+amended_by:
+  - reason: narrowed-by-later-sibling
+    by: product-owner-v3
+    at: 2026-09-14
+    note: 'criteria, title, req_status and depends_on UNTOUCHED — no requirement-defining
+      field was written. Only doc_links and this audit entry were added. Recorded so a
+      reader of this delivered record is told that GE-127f narrows its allow-arm: after
+      GE-127f lands, "same size or shorter is allowed" holds only for a change that adds
+      nothing, because GE-127f requires an oversized file to end at or below the less
+      demanding of the size limit and (previous length minus lines added). GE-127b was
+      examined as the host for that requirement and rejected on four grounds recorded in
+      full in GE-127f''s notes — the two promises are priced in opposite directions (this
+      one sells costing nothing, that one deliberately prices growth); this record is
+      delivered and rewriting it would convert completed work into partial work; the
+      separation-of-duties clause is not a property of a size comparison and carries a hard
+      INF-800f dependency this record should not acquire; and this record''s own fence
+      reserves an explicit EXCEPTION, while its claim is bounded to "monotonically
+      non-increasing", which is not a decrease claim. The ratchet is the floor GE-127f
+      raises and must be reused, never re-implemented.'
 superseded_by: null
 covered_by:
   - GE-127b-1

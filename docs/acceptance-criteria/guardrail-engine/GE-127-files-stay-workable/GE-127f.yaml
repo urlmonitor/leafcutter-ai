@@ -1,0 +1,265 @@
+id: GE-127f
+title: "Adding to an oversized file leaves it smaller than you found it"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - build_orchestration
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Add to an oversized file and it comes back smaller than it started.
+
+  A file that is already too large no longer merely stops growing — it gets
+  smaller by about twice what the change adds to it, so what you pay tracks
+  what you are doing rather than how large the file already was. Adding
+  nothing costs nothing, which keeps an urgent one-line correction in a very
+  large file as cheap as it is today. The obligation is capped by the size
+  standard itself and ends the moment the file is back within it — nobody is
+  asked to take out two hundred lines when twenty would bring it home. And the
+  tidying is not asked of the author mid-change: it goes to someone whose
+  craft is restructuring code, so the file is genuinely reorganised and new
+  work is given a home of its own from the start, rather than existing content
+  being shuffled into a neighbouring file to make a number fall.
+depends_on:
+  - GE-127
+  - GE-127b
+  - INF-800f
+doc_links:
+  - path: docs/acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/GE-127b.yaml
+    relationship: depends_on
+    status: exists
+    relevance: >-
+      THE FLOOR THIS RECORD RAISES, AND THE RECORD THIS ONE NARROWS. GE-127b is
+      delivered (work_status done) and sells survivability: an oversized file may
+      be worked on but not made bigger, so the standard can be switched on without
+      stopping work. This record sells the opposite half of the economics —
+      convergence — and it is deliberately NOT an amendment to GE-127b; see the
+      notes for the full argument. Two consequences the BA must carry. First, this
+      record is built ON GE-127b's comparison, not beside it: the before-versus-
+      after measurement already exists and must be reused, never re-implemented.
+      Second, this record NARROWS GE-127b's allow-arm — GE-127b-1 pins the
+      boundary at strictly-greater-than and asserts that a file left at exactly
+      its previous length commits; once this lands that is true only of a change
+      that adds nothing. That narrowing is recorded on GE-127b's amended_by and
+      must be reconciled with GE-127b-1's boundary descriptor rather than
+      discovered when it goes red.
+  - path: docs/acceptance-criteria/infrastructure/INF-800-safe-restructuring/INF-800f.yaml
+    relationship: depends_on
+    status: exists
+    relevance: >-
+      HARD PRECONDITION — THIS RECORD CANNOT BE BUILT BEFORE IT. INF-800f
+      ("Refactoring specialist recognized as a first-class agent", readiness
+      reviewed, covered_by empty, nothing built) is what makes the restructuring
+      specialist DISPATCHABLE; its own criteria say "supervisors can dispatch it
+      as part of a ticket workflow", which is exactly the capability this record's
+      last clause consumes. Today the specialist exists only as a slash command in
+      templates/workflows/code-refactoring-specialist.md, reachable by hand and by
+      nothing else. Build the economic rule without INF-800f and the author
+      performs its own shrinking, which reinstates precisely the line-shuffling
+      failure the multiplier was raised to twice in order to avoid. Do not
+      re-specify INF-800f here and do not decompose it — take it as a
+      prerequisite and sequence behind it.
+  - path: docs/acceptance-criteria/build_pipeline/BP-1600-counted-from-reality/BP-1600a-2.yaml
+    relationship: depends_on
+    status: exists
+    relevance: >-
+      PRECONDITION, NOT SCOPE — INHERITED FROM THE WHOLE TREE AND NOT RESTATED.
+      Every clause here is a commit outcome and presupposes the guard is reached
+      at commit time, which is BP-1600a-2's day-one triage. Do not restate the
+      census or its counts.
+  - path: templates/scripts/commit_guardian/_file_size_ratchet.py
+    relationship: modifies
+    status: exists
+    relevance: >-
+      Holds GE-127b's shipped before-versus-after comparison and the single
+      measurement function. The requirement this record adds is a change to the
+      threshold that comparison is judged against, not a second comparison and not
+      a second counting rule.
+  - path: templates/scripts/commit_guardian/check_file_size.py
+    relationship: modifies
+    status: exists
+  - path: docs/acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/GE-127d.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      CONSUMED, NEVER RESTATED. GE-127d owns what counts as a line. This record
+      inherits that answer wholesale and its arithmetic is expressed entirely in
+      that unit. The interaction is sharper here than it was for GE-127b and is
+      recorded in the notes: the smaller the set of lines that counts, the cheaper
+      it is to satisfy this record without improving anything.
+  - path: docs/acceptance-criteria/infrastructure/INF-800-safe-restructuring/INF-800.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      FENCED, NOT WIDENED. INF-800 owns performing a split SAFELY once one is
+      decided on. This record owns the obligation to make the file smaller and the
+      fact that the author is not the one who does it. Neither closes the other.
+  - path: docs/pre-commit-hooks.md
+    relationship: related
+    status: exists
+delivers_to: null
+expects_from: null
+documentation_triggers:
+  - how-to
+  - sequence-diagram
+origin_agent: product-owner-v3
+created: 2026-09-14
+amended_by: []
+superseded_by: null
+covered_by:
+  - GE-127f-1
+  - GE-127f-2
+  - GE-127f-3
+implemented_by: []
+change_target:
+  - code
+  - pipeline
+risk_surface: contract_boundary
+notes: |
+  WHY THIS IS A NEW SIBLING L1 AND NOT AN AMENDMENT TO GE-127b. GE-127b was
+  examined as the host and rejected on four grounds, each independently
+  sufficient. It is the closest record in the store and the argument is recorded
+  in full so it is not re-litigated:
+
+    - THE TWO PROMISES ARE PRICED IN OPPOSITE DIRECTIONS. GE-127b's entire
+      selling point is that it costs the author NOTHING: that is what makes the
+      standard switchable on the day it lands over a population of 212 files,
+      and its own notes call the allow-arm "not a concession, it is the
+      mechanism". This record deliberately puts a PRICE on growth in order to
+      force convergence. Folding a price into the record whose value proposition
+      is "free" makes that record's own tagline false and gives an implementer a
+      pair it can satisfy by building whichever half is cheaper — the exact
+      failure the L0 fences GE-127a and GE-127b apart to prevent.
+
+    - GE-127b IS DELIVERED. work_status is done, _file_size_ratchet.py exists,
+      and GE-127b-1's suite is green. Rewriting a delivered criterion converts
+      completed work into partial work and destroys the evidence that the
+      ratchet landed. The ratchet is the FLOOR this record raises; keeping it
+      whole is also how the work must be sequenced.
+
+    - THE FOURTH REQUIREMENT DOES NOT FIT INSIDE A SIZE COMPARISON AT ALL. "The
+      author is not the one who shrinks the file" is not a property of a
+      before-versus-after measurement; it is a property of who does the work when
+      the measurement refuses. It also carries a hard dependency on INF-800f, in
+      another component, which GE-127b has no business acquiring.
+
+    - GE-127b's OWN FENCE POINTS THE OTHER WAY. Its notes reserve the right to
+      record an explicit EXCEPTION — a weakening — and say one must never be
+      defaulted into existence. They say nothing about silently strengthening the
+      rule inside the same record, and its claim is precisely bounded: the
+      oversized population is "monotonically NON-INCREASING". Non-increasing is
+      not decreasing. A decrease requirement is a new claim, not a clarification
+      of an old one.
+
+  THE COUNTER-ARGUMENT, AND HOW IT IS ANSWERED. This record does not merely add
+  to GE-127b, it NARROWS it: a change that replaces five lines with five
+  different lines was allowed by GE-127b and is refused here. That is handled the
+  way the store handles a later record narrowing an earlier one — an amended_by
+  entry on GE-127b pointing forward, with its criteria left untouched — and not
+  by a rewrite. GE-127a already narrows GE-127b the same way by refusing
+  crossings GE-127b would permit.
+
+  THE USER'S FOUR DECISIONS, TAKEN 2026-09-14, NOT RE-OPENABLE AT DECOMPOSITION.
+  These were argued to a conclusion in conversation and are recorded so the BA and
+  IT PO implement them rather than rediscover them:
+
+    (1) THE MULTIPLIER IS TWO TIMES WHAT THE CHANGE ADDS, NOT A PERCENTAGE OF THE
+        FILE. A percentage-of-file rule was proposed first and REJECTED, because
+        it prices the change by the accumulated sins of the file rather than by
+        what the author is doing. The user also rejected 1.2x as too slow by
+        their own reasoning ("I would increase that to a higher number, probably
+        double").
+    (2) ZERO ADDITION COSTS NOTHING. This is the property that makes the rule
+        survivable and it is load-bearing, not a courtesy.
+    (3) THE REQUIREMENT IS CAPPED AT THE LIMIT. Nobody removes two hundred lines
+        when twenty would bring the file under. The clean expression is an END
+        STATE, not a removal quota: the change must leave the file at or below
+        whichever is the LESS demanding of the size limit and (previous length
+        minus lines added). Once a file reaches the limit it leaves this regime
+        entirely and is governed by GE-127a's threshold alone.
+    (4) THE AUTHOR DOES NOT DO THE SHRINKING. A dedicated restructuring
+        specialist does. The user's stated reason is the whole point: an agent
+        racing a gate moves lines to a sibling file to satisfy a quota; a
+        specialist optimises for structure instead.
+
+  WHY TWO TIMES AND NOT 1.2 — MEASURED IN THIS WORKTREE, 2026-09-14, UNDER THE
+  GUARD'S OWN COUNTING RULE, TRACKED FILES ONLY. 212 of 988 tracked .py files
+  stand above the 400-line limit, carrying 62,524 excess lines. Distribution:
+  78 at 400-500, 77 at 500-700, 29 at 700-1000, 19 at 1000-1500, 9 above 1500.
+  Median oversized file 551 counted lines. 73% of the backlog therefore sits
+  within about 300 lines of compliance, which is why a 2x rule converges in one
+  or two growth-shaped changes for most of it while a 1.2x rule needs roughly ten
+  and in practice never arrives. Carry the corollary honestly rather than
+  implying otherwise: the 9 files above 1500 will NOT be fixed incidentally at
+  any multiplier, and nothing in this record claims they will.
+
+  THE RISK THE USER IDENTIFIED, WHICH MUST SURVIVE INTO THE L2s. At 2x the
+  cheapest way to satisfy the rule stops being "delete dead code" and becomes
+  "move a hundred lines into a sibling file". That passes and improves nothing.
+  The subtlety cuts both ways and the decomposition MUST distinguish the two,
+  because a gate sees them identically:
+    - moving NEW work out of an oversized file into a home of its own is the
+      DESIRED behaviour and must not be penalised;
+    - moving EXISTING content out purely to make a number fall is the FAILURE.
+  Requirement (4) is the user's answer to this and is why it is in the criteria
+  rather than in an implementation note. An L2 set that delivers the arithmetic
+  and drops the separation of duties has shipped the failure mode, not the
+  feature.
+
+  A SECOND GAMING ROUTE THAT IS NOT CLOSED — MEASURED, NOT ASSUMED. It is
+  tempting to say the counting rule already defeats content-stripping. It does
+  not, and the BA must not assume it does. count_content_lines strips
+  triple-quoted regions and block comments only; a probe of a 7-line sample
+  containing a docstring, a hash comment and two blank lines counted 5, so BLANK
+  LINES AND HASH COMMENTS STILL COUNT and deleting them still satisfies this
+  record. That is a live incentive to make files worse, it grows with the
+  multiplier, and it is the cheapest available response to a 2x demand. Whether
+  the counting rule should change is GE-127d's call and must NOT be settled here
+  by writing a second rule into this comparison — but this record is the reason
+  the question becomes urgent, and the interaction must be named rather than
+  inherited silently.
+
+  THE BOUNDARY BETWEEN THE RULE AND THE HANDOFF — STATE IT OR IT WILL BE BUILT IN
+  THE WRONG PLACE. A commit-time gate can only REFUSE; it cannot summon anyone.
+  So the RULE — the end-state comparison and its refusal — belongs in the
+  guardrail tree and is this record's subject. The HANDOFF — author hits the
+  rule, work passes to the restructuring specialist, the specialist restructures,
+  the commit is retried — lives in the supervisor / build-orchestration layer and
+  is NOT decomposed here. That is why this record's components list names
+  build_orchestration alongside commit_guardian: the promise spans both layers
+  even though its L2s must not. An L2 beneath this record that specifies dispatch
+  mechanics inside the hook is at the wrong address and must be rewritten rather
+  than approved.
+
+  AN UNRESOLVED EDGE THE BA MUST SETTLE EXPLICITLY, FLAGGED RATHER THAN DECIDED.
+  Decisions (1) and (2) do not by themselves fix the behaviour at very small
+  additions, and the arithmetic is unforgiving there. "Added" has to mean GROSS
+  lines added by the change, not net growth, or the rule is self-referential and
+  has no solution. Under gross counting, a one-line correction that REPLACES a
+  line adds 1, so the required end state is one line below where the file
+  started, and the change is not free. The user's stated intent — an emergency
+  one-line fix in a 2,677-line file stays free — and the literal rule therefore
+  diverge at the smallest changes. Settle this deliberately: either a threshold
+  below which the rule does not engage, or an explicit acceptance that a tiny
+  addition costs a tiny removal. Do not default it, and note that dispatching a
+  restructuring specialist to remove two lines for a typo fix is a real cost, not
+  a rounding error.
+
+  BOUNDARIES WITH THE SIBLINGS, ALL FOUR DELIBERATE AND NONE TO BE ABSORBED.
+  GE-127a owns the CROSSING event, under the line to over it; this record's
+  population is files already over. GE-127d owns the COUNTING rule; this record
+  consumes it and must never restate it. GE-127e owns what a refusal SAYS; a
+  refusal under this record will need a message, and that message's quality is
+  GE-127e's subject, not this one's. GE-127c owns WHICH kinds of file are in
+  scope; widening that list widens this record's population automatically and
+  neither record may pin the other's answer.
+
+  Authored at the PO stage; L1 only. No L2, no it_requirements, no test_spec and
+  no declares_side_effect were written here, by design. delivers_to and
+  expects_from are null because nothing is enriched yet, not because this record
+  is terminal — it plainly is not.
