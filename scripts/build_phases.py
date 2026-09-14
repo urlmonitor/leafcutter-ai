@@ -1316,7 +1316,6 @@ def build_workflow_scripts(target_root: Path, config: dict[str, Any],
 # deployed it -- a guard whose view of "deployed" was really "exists in the
 # source directory" could never detect a file present in source but absent
 # from this map, which is exactly the defect class BP-900g-8 exists to close.
-#
 # `_component_migration_map.py` is included here per AC BP-900g-8: it is
 # resolved by generate_ticket_from_ac.py's `_load_migration_map()` via
 # `importlib.util.spec_from_file_location` at import time, but was never
@@ -1335,13 +1334,14 @@ AC_STORE_DEPLOY_MAP: tuple[tuple[str, str], ...] = (
     ("scripts/ac_store/mark_ac_done.py",              "mark_ac_done.py"),
     ("scripts/ac_store/scan_ac_orphans.py",           "scan_ac_orphans.py"),
     # done_proof.py backs the check_done_proof commit-guardian hook and the
-    # fast-lane green+coverage gate; it MUST deploy or the (required) CI
-    # done-proof check crashes with ModuleNotFoundError in the deployed layout.
+    # fast-lane gate; MUST deploy or the REQUIRED CI done-proof check crashes with ModuleNotFoundError in the deployed layout.
     ("scripts/ac_store/done_proof.py",                "done_proof.py"),
     # test_enforcement.py is imported by done_proof.py (shared COVERS_TAG_RE seam,
     # BO-2500e-1).  It MUST deploy alongside done_proof.py — if absent, the
     # deployed check_done_proof hook crashes with ModuleNotFoundError at runtime.
     ("scripts/ac_store/test_enforcement.py",          "test_enforcement.py"),
+    # done_proof.py imports this at top level (BP-100n-4-ii); must deploy alongside it.
+    ("scripts/ac_store/_done_proof_phase_helpers.py", "_done_proof_phase_helpers.py"),
     # ac_parent_id.py provides derive_parent_id, imported at module scope by
     # scripts/build_orchestration/fast_lane.py. Without it the deployed
     # fast_lane.py exists but dies at import with ModuleNotFoundError, so
@@ -1432,6 +1432,8 @@ def build_ac_store(target_root: Path, config: dict[str, Any],
       → ``<output_root>/scripts/ac_store/done_proof.py``
     - ``scripts/ac_store/test_enforcement.py``
       → ``<output_root>/scripts/ac_store/test_enforcement.py``
+    - ``scripts/ac_store/_done_proof_phase_helpers.py``
+      → ``<output_root>/scripts/ac_store/_done_proof_phase_helpers.py``
     - ``scripts/ac_store/ac_parent_id.py``
       → ``<output_root>/scripts/ac_store/ac_parent_id.py``
     - ``scripts/build_ac_mode_detection.py``
