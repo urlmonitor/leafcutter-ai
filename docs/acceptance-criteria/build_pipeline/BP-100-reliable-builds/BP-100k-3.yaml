@@ -143,6 +143,7 @@ superseded_by: null
 covered_by:
   - BP-100k-3-i
   - BP-100k-3-ii
+  - BP-100k-3-iii
   - unit_tests/commit_guardian/test_bp_100k_3.py
 implemented_by:
   - tickets/00_inbox/epics/EPIC-BuildPipelinePhantomRemediation/08_bp100k3_drift_gates_report_gaps_not_passes.md

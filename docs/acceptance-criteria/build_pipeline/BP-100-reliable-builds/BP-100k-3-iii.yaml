@@ -1,0 +1,224 @@
+id: BP-100k-3-iii
+components:
+  - build_pipeline
+title: "The known never-build-determined files in a worked-in tree are declared exempt with distinct grounds, and a stale orphan with no template left to produce it is removed rather than exempted"
+component: build-pipeline
+level: L3
+status: active
+req_status: active
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+work_status: done
+criteria: |
+  Given a fully built workspace, worked in rather than freshly cloned, holding
+    four files inside a directory check-output-drift scans that no run of the
+    build can ever produce deterministic content for — a machine-local
+    settings file the adopter edits on this machine, a lock file a scheduled
+    task writes at run time carrying a session id and a timestamp that
+    changes on every acquisition, the project's own build-input configuration
+    file (the file every build phase reads FROM, never one a phase writes
+    deterministic content TO), and a write-if-absent scaffold the project
+    appends its own content to after seeding — and each is present on disk
+    and recorded in neither the build manifest nor the exemption registry,
+  When check-output-drift is run over that workspace,
+  Then each of the four is reported as a declared exemption naming a
+    non-blank ground, the four grounds are pairwise distinct rather than one
+    copy-pasted ground reused four times, and none of the four is counted
+    among the run's gaps,
+  And given, in a directory the same gate scans, a file that WAS once
+    deployed by a template this package shipped but whose template no longer
+    exists to produce it — a stale artifact left behind after its source was
+    deprecated or deleted outright, present on disk and recorded in neither
+    the build manifest nor the exemption registry,
+  When that file is classified,
+  Then it is never added to the exemption registry on the strength of being
+    unrecorded — an orphaned artifact with no template able to produce it is
+    the "candidate for manual deletion" class the registry's own governing
+    comment already warns against exempting, not a hand-maintained file the
+    build deliberately leaves alone — and the file is removed from disk
+    instead, so that a subsequent run finds nothing there to report,
+  And a check-output-drift run over the same workspace, after the four
+    exemption entries are declared and every such orphan is removed, reports
+    gaps=0, drifted=0, missing=0, and unreadable=0, and exits 0,
+  And this is shown by running the deployed gate as a subprocess and reading
+    its RESULT line and per-artifact UNCOMPARABLE lines, never by reading the
+    exemption registry's JSON for the presence of a well-worded entry.
+depends_on:
+  - BP-100k-3
+doc_links:
+  - path: "docs/acceptance-criteria/build_pipeline/BP-100-reliable-builds/BP-100k-3.yaml"
+    relationship: parent
+    status: exists
+    relevance: "The L2 whose first clause already settles the classification rule this AC applies: a hand-maintained, build-unmanaged artifact is a declared exemption naming its ground. This AC does not add a new verdict or a new mechanism — it supplies the missing data (four grounded entries) and the missing negative rule (an orphan with no template is never one of them) on a real, previously-blocking worked-in tree."
+  - path: "docs/acceptance-criteria/build_pipeline/BP-100-reliable-builds/BP-100k-3-ii.yaml"
+    relationship: related
+    status: exists
+    relevance: "The sibling L3 that governs what the gate SAYS while a never-build-determined file remains undeclared — still todo, and NOT superseded or narrowed by this AC. This AC closes the four concrete instances measured on the reporting machine by declaring them exempt, which removes them from -ii's scope entirely (a declared-exempt file is never a gap, so -ii's misdirected-advice complaint no longer applies to these four); -ii's broader mechanism — correctly advising on the NEXT, currently-unknown never-build-determined file before anyone declares it — remains open and is not attempted here. Its own notes state this exact intended division: 'the remedy for the classification half is three entries in the exemption registry with their grounds stated, not a new acceptance criterion.'"
+  - path: "docs/acceptance-criteria/build_pipeline/BP-1500-honest-builds/BP-1500b-4.yaml"
+    relationship: related
+    status: exists
+    relevance: "Independent confirmation, from the build's stale-file sweep rather than from this gate, that a machine-local settings file and a scheduled-task lock file are never-build-determined and must survive rebuilds untouched: its own verified negative control names the identical two files, measured on the identical machine, and rejects the naive rule that would delete or flag them. Two different guardrails converging on the same classification for the same files."
+  - path: "templates/scripts/commit_guardian/check_output_drift.py"
+    relationship: modifies
+    status: exists
+    relevance: "The gate this AC's evidence is read from — read only, not edited by this AC (it already implements the four-verdict vocabulary BP-100k-3 specified)."
+  - path: "templates/scripts/commit_guardian/commit_guardian.json"
+    relationship: modifies
+    status: exists
+    relevance: "The registration surface. This AC adds four entries to drift_gate_exemption_registry and adds no code."
+  - path: "templates/scripts/commit_guardian/_drift_exemptions.py"
+    relationship: describes
+    status: exists
+    relevance: "Its own __drift_gate_exemption_registry_doc documents the exact class this AC's orphan half must not join: a prior version of this registry held orphaned artifacts whose own ground text read 'Candidate for manual deletion', converting a one-time cleanup into a permanent blind spot. This AC is the same temptation arising again on two different files and declines it the same way."
+  - path: "scripts/build_phases.py"
+    relationship: describes
+    status: exists
+    relevance: "_skill_is_deprecated() and build_skills()'s deprecated-skill skip are why one orphan instance exists: frontend-design was marked deprecated, so this phase and the manifest computation both stopped producing it, leaving a previously-deployed .gemini/skills/frontend-design/SKILL.md with no template behind it."
+  - path: "scripts/build_propagation_audit.py"
+    relationship: describes
+    status: exists
+    relevance: "Its DECISION HISTORY (2026-08-18) records the second orphan instance: scripts/commit_guardian/known_failing_tests.py's template was deleted outright as dead code once TQ-100d-1 specified its replacement, leaving a previously-deployed copy with no template behind it either."
+  - path: "docs/known-issues/build-pipeline.md"
+    relationship: describes
+    status: exists
+    relevance: "KI-BP-20260831-1333 records the same failure shape on a fifth, gitignored-cache instance, still open with no AC — cited so this AC's scope (four concrete grounded entries plus the never-exempt-an-orphan rule) is not mistaken for closing that broader, still-open class."
+assigned_agent: python-coder
+estimated_complexity: S
+declares_side_effect: true
+it_requirements:
+  - "The four exemption entries are DATA in commit_guardian.json's drift_gate_exemption_registry, never a hardcoded filename check inside check_output_drift.py or _drift_exemptions.py — matching BP-100k-3's own constraint that the registry stay data-driven."
+  - "Each of the four grounds must be specific to its own file's reason for being never-build-determined (adopter-owned machine settings; runtime-written lock state; the project's own build input rather than a build output; a write-if-absent scaffold appended to after seeding) — a single generic ground copy-pasted four times would pass a test that only checks non-blank but fails the intent of BP-100k-3's per-artifact ground requirement."
+  - "The two orphaned artifacts (a deprecated skill's stale deploy, a deleted script's stale deploy) must NOT appear as keys in drift_gate_exemption_registry, before or after this AC — verified by loading the real registry and asserting their absence, not merely by their absence from a diff."
+  - "Verify behaviorally: the deployed check-output-drift hook is invoked as a subprocess over a synthesized tree carrying the real commit_guardian.json (no HOOK_TEST_CONFIG override) for the exemption assertions, so the evidence is the actual registration surface a real commit would read, not a stand-in."
+  - "Must follow the repo error-handling policy: specific-exception try/except around file and JSON I/O, log at WARNING or higher or re-raise; no bare or silent excepts. (No new I/O is introduced by this AC — it is a data-only change to an existing registry — so this constraint is satisfied by leaving the existing, already-compliant I/O in check_output_drift.py and _drift_exemptions.py untouched.)"
+test_spec:
+  - name: test_bp_100k_3_iii_the_four_never_build_determined_files_are_exempt_with_distinct_grounds
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: real_artifact
+    surface_invoked: "the deployed check_output_drift.py, run as a subprocess with the real commit_guardian.json (no HOOK_TEST_CONFIG)"
+    description: "Deploys the real templates/scripts/commit_guardian/ tree (including the real commit_guardian.json) into a synthetic workspace, plants the four named files under .claude/ unregistered in the manifest, runs the gate as a subprocess, and asserts each is reported as UNCOMPARABLE: EXEMPT with a non-blank ground, that the four grounds are pairwise distinct, and that the RESULT line reports gaps=0."
+  - name: test_bp_100k_3_iii_the_orphaned_pair_are_reported_as_gaps_never_silently_exempted
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    surface_invoked: "the deployed check_output_drift.py, run as a subprocess with the real commit_guardian.json"
+    description: "Plants a file at each of the two real orphan paths (.gemini/skills/frontend-design/SKILL.md, scripts/commit_guardian/known_failing_tests.py), unregistered in the manifest, and asserts the real registry reports both as UNCOMPARABLE: GAP — never EXEMPT — proving the four-entry fix did not overreach into exempting these two, and that the exit code is the gap-only verdict."
+  - name: test_bp_100k_3_iii_the_real_registry_entries_load_and_validate_with_non_blank_grounds
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "Loads the real commit_guardian.json via _drift_exemptions.load_exemption_registry and validate_exemption_registry (the same functions the gate calls, not a hand-rolled JSON read) and asserts the four paths resolve to non-blank, pairwise-distinct grounds, and that the two orphan paths are absent from the resolved map."
+  - name: test_bp_100k_3_iii_frontend_design_is_deprecated_so_no_template_can_produce_its_gemini_output
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: real_artifact
+    description: "Calls the real build_phases._skill_is_deprecated() against templates/skills/frontend-design/ and asserts True, and separately asserts templates/scripts/commit_guardian/known_failing_tests.py does not exist on disk — the executable evidence for why each orphan is correctly classified as removable rather than exemptible, run against the real template tree rather than asserted from prose."
+  - name: test_bp_100k_3_iii_end_to_end_after_the_fix_the_gate_reports_gaps_zero_and_exits_zero
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    surface_invoked: "the deployed check_output_drift.py, run as a subprocess with the real commit_guardian.json"
+    description: "Combines both fixtures in one synthesized tree — the four exempt files present and unregistered, the two orphan paths absent (as they are once removed from disk) — and asserts the single RESULT line reads gaps=0 drifted=0 missing=0 unreadable=0 and the process exits 0."
+test_rationale: |
+  THE DEFECT HERE IS A DATA GAP, NOT A LOGIC GAP, SO THE TESTS ASSERT ON REAL
+  DATA. BP-100k-3 already built the exemption mechanism and BP-100k-3-i already
+  proved a freshly built tree reports clean; the untested seam is what happens
+  on a tree that has actually been used, where these four files come into
+  existence through use rather than through the build. A test that only checks
+  the mechanism (a HOOK_TEST_CONFIG fixture, as BP-100k-3's own suite already
+  does) cannot catch a missing DATA entry — the mechanism was never broken. Every
+  descriptor here therefore either runs the deployed gate against the REAL
+  commit_guardian.json (no test-only override) or loads that real file through
+  the same loader the gate uses, so the evidence is the artifact a real commit
+  would actually be judged against.
+
+  THE ORPHAN-VS-EXEMPT DISTINCTION IS THE LOAD-BEARING HALF, NOT A FOOTNOTE. The
+  cheapest way to clear all six originally-reported gaps is to declare all six
+  exempt. That would pass every clause about the four real never-build-determined
+  files while quietly creating the exact blind spot _drift_exemptions.py's own
+  governing comment warns against for the other two — an orphan with no template
+  is a real, correctly-found gap, and exempting it means nobody is ever told
+  again if that same orphan file is hand-edited in place. The second test
+  descriptor exists specifically to fail an implementation that took the
+  six-for-six shortcut: it re-plants the two orphan paths and requires the real
+  registry to still gap them.
+
+  RUNTIME. Five descriptors, all synthesized-tree subprocess or direct-import
+  runs over small trees — no live network, no real build.py invocation.
+  Comfortably inside the done-proof pytest budget.
+delivers_to: null
+expects_from:
+  ac_id: BP-100k-3
+  contract: "The four-verdict vocabulary (compared-and-matched / compared-and-drifted / declared-exempt / could-not-compare) and the drift_gate_exemption_registry mechanism with its stated-ground requirement. This AC adds no verdict and no mechanism — it supplies grounded data for four real instances and asserts two other real instances correctly fall outside that data."
+origin_agent: BrainCandy
+created: 2026-09-14
+created_by_ticket: null
+amended_by: []
+superseded_by: null
+covered_by:
+  - unit_tests/commit_guardian/test_bp_100k_3_iii.py
+implemented_by:
+  - templates/scripts/commit_guardian/commit_guardian.json
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  MEASURED ON THE REPORTING MACHINE, 2026-09-14, IMMEDIATELY AFTER A SUCCESSFUL
+  FULL build.py RUN: check-output-drift reported
+  `RESULT verified=474 uncomparable=7 exempt=1 gaps=6 drifted=0 missing=0
+  unreadable=0` with six named gaps: `.claude/changelog_categories.md`,
+  `.claude/scheduled_tasks.lock`, `.claude/settings.local.json`,
+  `.claude/skills_config.json`, `.gemini/skills/frontend-design/SKILL.md`, and
+  `scripts/commit_guardian/known_failing_tests.py`. The gate's own remediation
+  text ("action=run build.py to register it") is demonstrably wrong for at
+  least two of the six: build.py had just run to completion and left them as
+  gaps regardless, because no template exists that could ever produce them.
+
+  WHY FOUR ARE EXEMPT AND TWO ARE NOT, PER FILE:
+    .claude/settings.local.json — gitignored (.gitignore:33); adopter-owned
+      machine-local settings; same class as the four scaffolds already in the
+      registry.
+    .claude/scheduled_tasks.lock — a runtime lock a scheduled task acquires,
+      its content a session id, a pid, and an acquisition timestamp that is
+      different every time it is written; no template anywhere produces this
+      shape of content.
+    .claude/skills_config.json — the build's own INPUT, read by config_loader.py
+      to drive every phase; no build phase writes deterministic content here,
+      because the whole build reads FROM this file rather than TO it.
+    .claude/changelog_categories.md — gitignored (.gitignore:35); the exact
+      write-if-absent-then-hand-appended class the `.claude/precommit-
+      autofix.json` entry already covers, simply never declared for this
+      sibling scaffold (both are seeded by build_config_scaffolds.py with
+      force=False).
+    .gemini/skills/frontend-design/SKILL.md — NOT a registration gap. Its
+      template (templates/skills/frontend-design/SKILL.md) carries
+      `deprecated: true`; build_skills() and the manifest's
+      _compute_output_mappings() both call the shared
+      build_phases._skill_is_deprecated() and skip it identically, by design,
+      since the skill was deprecated and its principles migrated into
+      templates/agents/frontend-coder.md. The file on disk on the reporting
+      machine dates from 2026-06-02, before deprecation — a stale leftover
+      with no template able to reproduce it today. Registering or exempting it
+      would either misdescribe the build (it does not produce this file) or
+      create the exact orphan blind spot the registry's own history warns
+      against. Correct remedy: delete the file.
+    scripts/commit_guardian/known_failing_tests.py — NOT a registration gap
+      either, and for a related but distinct reason: scripts/
+      build_propagation_audit.py's own DECISION HISTORY (2026-08-18 entry)
+      records that this script's TEMPLATE was deleted outright as dead code
+      once TQ-100d-1 specified its replacement — "the dead script was deleted
+      outright rather than wired up as a weaker competitor." No template
+      under templates/scripts/commit_guardian/ produces this filename at all
+      today. Same remedy: delete the deployed leftover.
+
+  THIS DIRECTLY CONTRADICTS THE INCOMING HYPOTHESIS THAT BOTH OF THESE WERE
+  "genuine deploy-manifest omissions" needing registration. Both are orphans
+  of intentional deprecation/deletion decisions already recorded elsewhere in
+  this repository's own history; registering either would assert the build
+  produces something it was deliberately changed to stop producing.
