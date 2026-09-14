@@ -37,17 +37,16 @@ import hashlib
 import importlib.util
 import json
 import os
-import shutil
-import subprocess
 import sys
 from pathlib import Path
 from typing import Any
 
 from build_colors import dry_run as _dry_run
-from build_colors import error as _error
 from build_colors import info as _info
 from build_colors import success as _success
 from build_colors import warn as _warn
+from build_ownership import resolve_shim_ownership_veto
+from build_precommit_install import install_hooks  # noqa: F401 — re-exported for build.py's existing import
 
 # ---------------------------------------------------------------------------
 # Canonical (shimmed) output directory table — the SINGLE source of truth for
@@ -1426,6 +1425,14 @@ def install_shims(
             continue
 
         if canonical_path.exists() or canonical_path.is_symlink():
+            # BP-1500g-1: the ownership veto only applies when the build is
+            # about to replace the path with a symlink (see
+            # resolve_shim_ownership_veto's docstring for the "copy"
+            # strategy carve-out).
+            veto = resolve_shim_ownership_veto(canonical_path, strategy, canonical_rel, output_rel)
+            if veto is not None:
+                results.append(veto)
+                continue
             if not force:
                 results.append({
                     "canonical": canonical_rel,
@@ -1434,11 +1441,15 @@ def install_shims(
                 })
                 continue
             if not dry_run:
-                if canonical_path.is_symlink() or canonical_path.is_file():
-                    canonical_path.unlink()
-                elif canonical_path.is_dir():
-                    import shutil
-                    shutil.rmtree(canonical_path)
+                try:
+                    if canonical_path.is_symlink() or canonical_path.is_file():
+                        canonical_path.unlink()
+                    elif canonical_path.is_dir():
+                        import shutil
+                        shutil.rmtree(canonical_path)
+                except OSError as exc:
+                    _warn(f"Failed to remove {canonical_path} before shim install: {exc}")
+                    raise
 
         if dry_run:
             method = "symlink" if strategy != "copy" else "copy"
@@ -1473,6 +1484,12 @@ def install_shims(
             continue
 
         if canonical_path.exists() or canonical_path.is_symlink():
+            veto = resolve_shim_ownership_veto(
+                canonical_path, strategy, canonical_rel, output_rel, kind="file"
+            )
+            if veto is not None:
+                results.append(veto)
+                continue
             if not force:
                 results.append({
                     "canonical": canonical_rel,
@@ -1481,7 +1498,11 @@ def install_shims(
                 })
                 continue
             if not dry_run:
-                canonical_path.unlink()
+                try:
+                    canonical_path.unlink()
+                except OSError as exc:
+                    _warn(f"Failed to remove {canonical_path} before shim install: {exc}")
+                    raise
 
         if dry_run:
             method = "symlink" if strategy != "copy" else "copy"
@@ -1585,152 +1606,6 @@ def _create_file_shim(canonical: Path, source: Path, strategy: str) -> str:
         return "copy (symlink failed)"
     else:
         return "symlink"
-
-
-def _resolve_precommit_cmd():
-    """Return the command list to invoke pre-commit, or None if unavailable.
-
-    Three-tier detection:
-    1. ``shutil.which("pre-commit")`` — binary on PATH.
-    2. ``importlib.util.find_spec("pre_commit")`` — installed as a Python
-       package in the same environment running build.py (handles the common
-       case where pip installed it but the Scripts/ dir isn't on PATH).
-    3. Probe known pip/pipx install locations — handles non-interactive shells
-       where ~/.local/bin or Scripts/ aren't in PATH.
-    """
-    if shutil.which("pre-commit"):
-        return ["pre-commit"]
-    if importlib.util.find_spec("pre_commit"):
-        return [sys.executable, "-m", "pre_commit"]
-    for candidate in _precommit_known_paths():
-        if not candidate.is_file():
-            continue
-        try:
-            probe = subprocess.run(
-                [str(candidate), "--version"],
-                capture_output=True,
-                timeout=5,
-            )
-            if probe.returncode == 0:
-                return [str(candidate)]
-        except (OSError, subprocess.TimeoutExpired):
-            continue
-    return None
-
-
-def _precommit_known_paths():
-    """Yield common install locations for the pre-commit binary."""
-    home = Path.home()
-    yield home / ".local" / "bin" / "pre-commit"
-    exe_dir = Path(sys.executable).parent
-    yield exe_dir / "pre-commit"
-    if sys.platform == "win32":
-        yield exe_dir / "Scripts" / "pre-commit.exe"
-    else:
-        yield exe_dir / "Scripts" / "pre-commit"
-
-
-def install_hooks(target_root, dry_run=False):
-    """Run ``pre-commit install`` after build.py writes .pre-commit-config.yaml.
-
-    Closes the "last mile" gap: the generated config exists on disk but
-    ``pre-commit install`` must be run to wire ``.git/hooks/pre-commit`` to it.
-    This function is idempotent — calling it multiple times on the same project
-    is safe.
-
-    Args:
-        target_root: Absolute path to the target project root.
-        dry_run: When True, prints the action but does not run any subprocess.
-
-    Returns:
-        One of "installed", "dry-run", "failed",
-        "skipped (pre-commit not found)", "skipped (custom hooksPath)",
-        or "skipped (not a git repo)".
-    """
-    # 1. Resolve pre-commit binary (PATH lookup, then Python module fallback).
-    precommit_cmd = _resolve_precommit_cmd()
-    if precommit_cmd is None:
-        _warn("pre-commit not found; skipping hook install")
-        _info("         Pre-commit runs code-quality checks automatically before")
-        _info("         each commit. Install it with:")
-        _info("")
-        _info("           pip install pre-commit")
-        _info("")
-        _info("         Then re-run this build to complete hook setup.")
-        return "skipped (pre-commit not found)"
-
-    # 2. Dry-run guard (before any subprocess calls that mutate state).
-    if dry_run:
-        _dry_run("would run pre-commit install")
-        return "dry-run"
-
-    # 3. Check core.hooksPath git config.
-    try:
-        hooks_path_result = subprocess.run(
-            ["git", "-C", str(target_root), "config", "--get", "core.hooksPath"],
-            capture_output=True,
-            text=True,
-        )
-    except OSError as exc:
-        # git binary not found — degrade safely rather than hard-failing.
-        _warn(f"hooks: could not read core.hooksPath (git not found): {exc}")
-        hooks_path_result = None
-    if hooks_path_result is not None and hooks_path_result.returncode == 0:
-        hooks_path_value = hooks_path_result.stdout.strip()
-        default_hooks = Path(target_root) / ".git" / "hooks"
-        is_default = (
-            hooks_path_value.lower() in (".git/hooks", ".git\\hooks")
-            or Path(hooks_path_value).resolve() == default_hooks.resolve()
-        )
-        if is_default:
-            try:
-                subprocess.run(
-                    ["git", "-C", str(target_root), "config", "--unset", "core.hooksPath"],
-                    capture_output=True,
-                )
-            except OSError as exc:
-                _warn(f"hooks: could not unset core.hooksPath (git not found): {exc}")
-            else:
-                _info("hooks: cleared redundant core.hooksPath (.git/hooks)")
-        elif hooks_path_value:
-            _warn(
-                f"core.hooksPath is set to '{hooks_path_value}' "
-                "(non-default); skipping pre-commit install"
-            )
-            return "skipped (custom hooksPath)"
-
-    # 3.5. Guard: verify target_root is inside a git working tree.
-    # Using `git rev-parse --git-dir` is more robust than checking for a .git
-    # directory directly: it also handles worktrees and nested repos correctly.
-    try:
-        git_check = subprocess.run(
-            ["git", "-C", str(target_root), "rev-parse", "--git-dir"],
-            capture_output=True,
-        )
-    except OSError as exc:
-        # git binary not found — degrade safely rather than hard-failing.
-        _warn(f"hooks: could not verify git repo (git not found): {exc}")
-        git_check = None
-
-    if git_check is not None and git_check.returncode != 0:
-        _info("hooks: skipping pre-commit install (target is not a git repo)")
-        return "skipped (not a git repo)"
-
-    # 4. Run pre-commit install.
-    try:
-        subprocess.run(
-            [*precommit_cmd, "install"],
-            cwd=str(target_root),
-            check=True,
-            capture_output=True,
-        )
-    except subprocess.CalledProcessError as exc:
-        stderr = exc.stderr.decode("utf-8", errors="replace") if exc.stderr else ""
-        _error(f"pre-commit install failed: {stderr.strip()}")
-        return "failed"
-
-    _success("hooks: pre-commit install OK")
-    return "installed"
 
 
 # ====================================================================
@@ -1964,4 +1839,15 @@ def install_hooks(target_root, dry_run=False):
 #   position left truthful but the template account emptied, both fall
 #   through to the pre-existing `verified == 0` floor (BP-100k-3/B-1(a)) and
 #   are correctly reported as not clean rather than as an absence.
+# - 2026-09-14 [python-coder]: Moved owns_installed_path to the new
+#   build_ownership.py (ADR-041) so this file shrinks back under the
+#   check-file-size ratchet; install_shims' two loops now share a
+#   deduplicated resolve_shim_ownership_veto() there instead of repeating
+#   the ownership-check block. Pure move, no behaviour change.
+#   (#BP-1500g-1/extract)
+# - 2026-09-14 [python-coder]: Moved install_hooks, _resolve_precommit_cmd,
+#   and _precommit_known_paths to the new build_precommit_install.py so this
+#   file shrinks further under the ratchet; install_hooks re-imported here
+#   for build.py's existing import. Pure move, no behaviour change.
+#   (#BP-1500g-1/extract-unrelated-headroom)
 # ====================================================================

@@ -27,6 +27,18 @@ import sys
 from pathlib import Path
 
 from config_loader import load_config, validate_config, _JSONSCHEMA_AVAILABLE  # noqa: F401
+from build_deploy_manifest_helpers import (
+    _manifest_ac_store_scripts,
+    _manifest_commit_guardian_scripts,
+    _manifest_feedback_scripts,
+    _manifest_workflow_tool_scripts,
+    _manifest_knowledge_scripts,
+    _manifest_build_orchestration_scripts,
+    _manifest_agent_support_scripts,
+    _manifest_template_standalone_scripts,
+    _manifest_doc_compliance_scripts,
+    _manifest_sync_platforms_scripts,
+)
 from build_phases import (
     DeployDeclarationError,
     raise_if_deploy_failures,
@@ -80,6 +92,11 @@ from build_helpers import (
     install_shims as _install_shims,
     install_hooks as _install_hooks,
     write_build_manifest,
+)
+from build_ownership import (  # noqa: F401 — re-exported for callers (unit_tests/build_guards/test_bp_1500g_1.py calls build.paths_scheduled_for_both_removal_and_claim)
+    _PRE_CONSOLIDATION_PATHS,
+    paths_scheduled_for_both_removal_and_claim,
+    resolve_removal_verdict,
 )
 from build_glossary import build_glossary
 from build_propagation_audit import (
@@ -335,286 +352,6 @@ def _validate_all(config: dict, package_root: Path, validate_only: bool, dry_run
         if _handle_registry_errors(registry_errors, dry_run):
             return 1
     return 0
-
-
-def _manifest_ac_store_scripts(package_root: Path) -> set[str]:  # noqa: ARG001
-    """Return ``scripts/ac_store/<name>`` entries for every AC_STORE_DEPLOY_MAP entry.
-
-    Derives Set C (the guard's model of what has been deployed) directly from
-    ``build_phases.AC_STORE_DEPLOY_MAP`` -- the SAME constant ``build_ac_store``
-    iterates to perform the actual copy -- per BP-900g-5's fifth
-    it_requirement: "Make the manifest derive FROM the deploy_map so the two
-    cannot diverge."
-
-    Before this (BP-900g-8), this function scanned every file physically
-    present in ``package_root/scripts/ac_store/`` regardless of whether
-    ``build_ac_store`` actually deployed it. That made the guard's view of
-    "deployed" really mean "exists in the source directory" -- structurally
-    incapable of detecting a file present in source but absent from the deploy
-    map, which is exactly the defect class BP-900g-8 closes
-    (``_component_migration_map.py`` was such a file).
-
-    Args:
-        package_root: Present for interface parity with the other
-            ``_manifest_*`` helpers; unused because ``AC_STORE_DEPLOY_MAP`` is
-            already resolved relative to ``build_phases.PACKAGE_ROOT``.
-
-    Returns:
-        Set of ``scripts/ac_store/<name>`` strings, one per
-        ``AC_STORE_DEPLOY_MAP`` entry.
-    """
-    return {f"scripts/ac_store/{dest_name}" for _src_rel, dest_name in AC_STORE_DEPLOY_MAP}
-
-
-def _manifest_commit_guardian_scripts(package_root: Path) -> set[str]:
-    """Return ``scripts/commit_guardian/<rel>`` entries for all template .py files.
-
-    Scans ``templates/scripts/commit_guardian/`` (canonical) and returns one
-    manifest entry per ``.py`` file, matching what ``build_commit_guardian``
-    deploys to the target project.
-
-    Args:
-        package_root: Absolute path to the leafcutter package root.
-
-    Returns:
-        Set of ``scripts/commit_guardian/<rel>`` strings, or empty set when
-        the source directory is absent.
-    """
-    result: set[str] = set()
-    src = package_root / "templates" / "scripts" / "commit_guardian"
-    if src.is_dir():
-        for f in src.rglob("*"):
-            if f.is_file() and f.suffix == ".py":
-                result.add(f"scripts/commit_guardian/{f.relative_to(src).as_posix()}")
-        # AC BP-900g-8-ii: commit_guardian.json is deployed verbatim alongside
-        # the .py files (build_commit_guardian's rglob copies every file in
-        # this directory, .json included) and is read at runtime by several
-        # of them (e.g. check_hook_parity.py). The .py-only filter above never
-        # registered it, so the widened intra-package closure -- which now
-        # sees this read the same way it sees a module import -- reported it
-        # as an undeployed dependency even though the phase already ships it.
-        if (src / "commit_guardian.json").is_file():
-            result.add("scripts/commit_guardian/commit_guardian.json")
-    return result
-
-
-def _manifest_feedback_scripts(package_root: Path) -> set[str]:
-    """Return ``scripts/feedback/<name>`` entries for all source .py files.
-
-    Scans ``templates/scripts/feedback/`` (the canonical tracked source
-    introduced in ADR-016) so that the manifest is correct on a fresh clone
-    where ``scripts/feedback/`` (a gitignored build output) does not yet exist.
-    This mirrors ``_manifest_commit_guardian_scripts``, which scans
-    ``templates/scripts/commit_guardian/`` for the same reason.
-
-    Args:
-        package_root: Absolute path to the leafcutter package root.
-
-    Returns:
-        Set of ``scripts/feedback/<name>`` strings, or empty set when absent.
-    """
-    result: set[str] = set()
-    src = package_root / "templates" / "scripts" / "feedback"
-    if src.is_dir():
-        for f in src.rglob("*"):
-            if f.is_file() and f.suffix == ".py":
-                result.add(f"scripts/feedback/{f.relative_to(src).as_posix()}")
-    return result
-
-
-def _manifest_workflow_tool_scripts(package_root: Path) -> set[str]:
-    """Return ``scripts/<name>`` entries for workflow-tool scripts deployed by build_workflow_tools.
-
-    Scans the package source for the workflow-tool scripts and returns
-    manifest entries for those that exist.  Must be kept in parity with the
-    ``deploy_scripts`` list inside ``build_workflow_tools()`` in
-    ``build_phases.py`` — a mismatch trips the manifest/deploy parity guard.
-
-    Args:
-        package_root: Absolute path to the leafcutter package root.
-
-    Returns:
-        Set of ``scripts/<name>`` strings for deployable workflow-tool scripts.
-    """
-    result: set[str] = set()
-    scripts_src = package_root / "scripts"
-    for fname in (
-        "add_component.py",
-        "knowledge_query.py",
-        "set_ticket_status.py",
-        "ticket_prioritizer.py",
-        "port_registry.py",
-        "live_surface_startup.py",
-        "generate_doc_index.py",
-    ):
-        if (scripts_src / fname).is_file():
-            result.add(f"scripts/{fname}")
-    return result
-
-
-def _manifest_knowledge_scripts(package_root: Path) -> set[str]:
-    """Return ``scripts/knowledge/<name>`` entries for knowledge scripts deployed by build_knowledge_scripts.
-
-    Args:
-        package_root: Absolute path to the leafcutter package root.
-
-    Returns:
-        Set of ``scripts/knowledge/<name>`` strings for deployable knowledge scripts.
-    """
-    result: set[str] = set()
-    knowledge_src = package_root / "scripts" / "knowledge"
-    for fname in ("harvest_learnings.py",):
-        if (knowledge_src / fname).is_file():
-            result.add(f"scripts/knowledge/{fname}")
-    return result
-
-
-def _manifest_build_orchestration_scripts(package_root: Path) -> set[str]:
-    """Return ``scripts/build_orchestration/<name>`` entries for all source ``.py`` files.
-
-    Scans ``package_root/scripts/build_orchestration/`` and returns one manifest
-    entry per Python file, matching what ``build_build_orchestration_scripts``
-    deploys to the target project.  The scan is dynamic (rather than a hardcoded
-    file list) so a module added to that directory cannot silently drop out of the
-    deployable set and reintroduce the BP-900g-4 gap.
-
-    Args:
-        package_root: Absolute path to the leafcutter package root.
-
-    Returns:
-        Set of ``scripts/build_orchestration/<name>`` strings, or empty set when
-        the directory is absent.
-    """
-    result: set[str] = set()
-    src = package_root / "scripts" / "build_orchestration"
-    if src.is_dir():
-        for f in src.glob("*.py"):
-            if f.is_file():
-                result.add(f"scripts/build_orchestration/{f.name}")
-    return result
-
-
-def _manifest_agent_support_scripts(package_root: Path) -> set[str]:
-    """Return ``scripts/<rel>`` entries for the scripts ``build_agent_support_scripts`` deploys.
-
-    Derived from the SAME module-level spec the deploy phase iterates
-    (``AGENT_SUPPORT_SCRIPT_DIRS`` / ``AGENT_SUPPORT_SCRIPT_FILES`` in
-    build_phases), so the declared set and the deployed set cannot drift apart.
-    A manifest that disagrees with what is actually deployed is the BP-900g-4
-    defect; deriving both from one spec removes the opportunity.
-
-    Args:
-        package_root: Absolute path to the leafcutter package root.
-
-    Returns:
-        Set of ``scripts/<rel>`` strings, or empty set when the sources are absent.
-    """
-    result: set[str] = set()
-    scripts_src = package_root / "scripts"
-
-    for dir_name in AGENT_SUPPORT_SCRIPT_DIRS:
-        src_dir = scripts_src / dir_name
-        if src_dir.is_dir():
-            for f in src_dir.rglob("*.py"):
-                if f.is_file():
-                    result.add(f"scripts/{f.relative_to(scripts_src).as_posix()}")
-
-    for file_name in AGENT_SUPPORT_SCRIPT_FILES:
-        if (scripts_src / file_name).is_file():
-            result.add(f"scripts/{file_name}")
-
-    return result
-
-
-def _manifest_template_standalone_scripts(package_root: Path) -> set[str]:
-    """Return ``scripts/<name>`` entries for standalone scripts from ``templates/scripts/``.
-
-    Scans the top-level ``templates/scripts/`` directory (non-recursive) for
-    ``.py`` files and returns manifest entries.  These are deployed by
-    ``build_template_standalone_scripts``.
-
-    Args:
-        package_root: Absolute path to the leafcutter package root.
-
-    Returns:
-        Set of ``scripts/<name>`` strings for deployable template-standalone scripts.
-    """
-    result: set[str] = set()
-    templates_scripts = package_root / "templates" / "scripts"
-    if templates_scripts.is_dir():
-        for f in templates_scripts.glob("*.py"):
-            if f.is_file():
-                result.add(f"scripts/{f.name}")
-    return result
-
-
-def _manifest_doc_compliance_scripts(package_root: Path) -> set[str]:
-    """Return ``scripts/doc_compliance/<rel>`` entries for the doc-compliance package.
-
-    Mirrors ``build_phases.build_doc_compliance``, which rglobs
-    ``templates/doc-compliance/`` and copies every file to
-    ``<target>/scripts/doc_compliance/`` preserving relative structure.
-
-    KI-BP-023: this phase had no manifest helper, so none of its files entered
-    Set B and the closure loop never called the analyser on any of them --
-    an entire deployed Python package (``cli.py`` alone has five sibling
-    imports) sat outside the guard with no warning and no error.
-
-    Args:
-        package_root: Absolute path to the leafcutter package root.
-
-    Returns:
-        Set of ``scripts/doc_compliance/<rel>`` strings, empty when the source
-        directory is absent.
-    """
-    result: set[str] = set()
-    dc_dir = package_root / "templates" / "doc-compliance"
-    if dc_dir.is_dir():
-        for f in dc_dir.rglob("*.py"):
-            if f.is_file():
-                rel = f.relative_to(dc_dir).as_posix()
-                result.add(f"scripts/doc_compliance/{rel}")
-        # AC BP-900g-8-ii: doc_compliance.json is deployed verbatim alongside
-        # the .py files (build_doc_compliance's rglob copies every file in
-        # this directory) and is read at runtime by config.py. The .py-only
-        # filter above never registered it -- same shape as the
-        # commit_guardian.json fix just above.
-        if (dc_dir / "doc_compliance.json").is_file():
-            result.add("scripts/doc_compliance/doc_compliance.json")
-    return result
-
-
-def _manifest_sync_platforms_scripts(package_root: Path) -> set[str]:
-    """Return ``scripts/sync_platforms/<rel>`` entries for the sync-platforms package.
-
-    Mirrors ``build_phases.build_sync_platforms``, which rglobs
-    ``templates/scripts/sync_platforms/`` into
-    ``<target>/scripts/sync_platforms/``.
-
-    KI-BP-023 originally proposed fixing this by switching
-    ``_manifest_template_standalone_scripts`` from ``glob`` to ``rglob``. That
-    would have been wrong: ``build_template_standalone_scripts`` is
-    deliberately non-recursive ("excluding subdirectories"), so its manifest's
-    shallow glob correctly mirrors it. Widening the glob would have registered
-    ``scripts/<name>`` deploy paths for files that phase never writes, adding
-    FALSE entries to Set B and generating spurious findings. A manifest helper
-    must mirror its phase, not its directory -- so this is a separate helper.
-
-    Args:
-        package_root: Absolute path to the leafcutter package root.
-
-    Returns:
-        Set of ``scripts/sync_platforms/<rel>`` strings, empty when the source
-        directory is absent.
-    """
-    result: set[str] = set()
-    sp_dir = package_root / "templates" / "scripts" / "sync_platforms"
-    if sp_dir.is_dir():
-        for f in sp_dir.rglob("*.py"):
-            if f.is_file():
-                rel = f.relative_to(sp_dir).as_posix()
-                result.add(f"scripts/sync_platforms/{rel}")
-    return result
 
 
 def _get_source_deployable_scripts(package_root: Path) -> set[str]:
@@ -1791,21 +1528,6 @@ def _run_phases(
     return total
 
 
-_PRE_CONSOLIDATION_PATHS = [
-    ".claude/agents",
-    ".claude/skills",
-    ".claude/commands",
-    ".claude/hooks",
-    ".claude/settings.json",
-    ".pre-commit-config.yaml",
-    ".gemini",
-    "scripts/commit_guardian",
-    "scripts/doc_compliance",
-    "scripts/feedback",
-    "scripts/sync_platforms",
-]
-
-
 def _build_source_manifests(output_root: Path) -> dict:
     """Compute the set of artifact names that build.py currently manages.
 
@@ -1866,34 +1588,64 @@ def _build_source_manifests(output_root: Path) -> dict:
     }
 
 
-def _cleanup_stale_paths(target_root: Path, output_root: Path, dry_run: bool) -> int:
+def _cleanup_stale_paths(
+    target_root: Path,
+    output_root: Path,
+    dry_run: bool,
+    blocked_paths: list[str] | None = None,
+) -> int:
     """Auto-remove stale pre-consolidation files that have moved into .leafcutter/.
 
-    Only removes paths that are real directories/files (not symlinks pointing
-    into the output root — those are shims we created).
+    Only removes a path when BP-1500g-1's recomputed ownership verdict
+    (``owns_installed_path``) says ``"package_produced"`` — a symlink
+    (harmless to replace, it never touches its target's content) or a real,
+    empty directory/file. A real path holding content the build cannot
+    attribute to itself is left untouched and its relative path is appended
+    to *blocked_paths* (when provided) rather than removed — non-attribution
+    is treated as keep, never as stale.
 
-    Returns count of paths removed.
+    Args:
+        target_root: Root of the target project.
+        output_root: The consolidated output directory (symlinks resolving
+            here are always safe to replace).
+        dry_run: When True, prints intent but removes nothing.
+        blocked_paths: Optional list to append the relative path of any
+            entry whose content could not be removed because it is not
+            ``package_produced``.
+
+    Returns:
+        Count of paths removed.
     """
     import shutil
 
     removed = 0
     for rel_path in _PRE_CONSOLIDATION_PATHS:
         full = target_root / rel_path
-        if not full.exists() and not full.is_symlink():
+        verdict = resolve_removal_verdict(full, output_root)
+        if verdict is None:
             continue
-        if full.is_symlink():
-            link_target = full.resolve()
-            if str(link_target).startswith(str(output_root.resolve())):
-                continue
+        if verdict != "package_produced":
+            _error(
+                f"cannot remove stale path {rel_path}: it holds content this "
+                f"build did not produce and cannot verify is safe to discard "
+                f"({verdict}). Leaving it in place."
+            )
+            if blocked_paths is not None:
+                blocked_paths.append(rel_path)
+            continue
         if dry_run:
             kind = "directory" if full.is_dir() else "file"
             _dry_run_msg(f"would remove stale {kind}: {rel_path}")
             removed += 1
             continue
-        if full.is_symlink() or full.is_file():
-            full.unlink()
-        elif full.is_dir():
-            shutil.rmtree(full)
+        try:
+            if full.is_symlink() or full.is_file():
+                full.unlink()
+            elif full.is_dir():
+                shutil.rmtree(full)
+        except OSError as exc:
+            _warn(f"Failed to remove stale path {full}: {exc}")
+            raise
         _success(f"removed stale: {rel_path}")
         removed += 1
     return removed
@@ -1993,8 +1745,16 @@ def _migrate_skills_config(
 def _run_migration_report(target_root: Path, output_root: Path) -> int:
     """Scan for stale pre-consolidation files and print a migration report.
 
-    Checks known pre-consolidation output paths. If a path exists and is NOT
-    a symlink pointing into the output root, it is reported as stale.
+    Checks known pre-consolidation output paths. A path already shimmed
+    correctly (symlink into the output root) is not stale. Of the
+    remainder, only paths BP-1500g-1's ownership verdict (``owns_installed_path``)
+    calls ``"package_produced"`` (a foreign symlink, or a real empty
+    directory/file) are suggested for removal via an ``rm``/``rm -rf``
+    instruction — the fifth enforcement point this AC governs. A path
+    holding content the build cannot attribute to itself is listed
+    separately as PROTECTED and is never named in a removal instruction:
+    a migration report must not instruct the adopter to delete their own
+    content by hand.
 
     Returns 0 always (report-only, no deletions).
     """
@@ -2002,33 +1762,45 @@ def _run_migration_report(target_root: Path, output_root: Path) -> int:
     print(f"Output root: {output_root}\n")
 
     stale: list[str] = []
+    protected: list[str] = []
     for rel_path in _PRE_CONSOLIDATION_PATHS:
         full = target_root / rel_path
-        if not full.exists() and not full.is_symlink():
+        verdict = resolve_removal_verdict(full, output_root)
+        if verdict is None:
             continue
-        if full.is_symlink():
-            link_target = full.resolve()
-            if str(link_target).startswith(str(output_root.resolve())):
-                continue
-        stale.append(rel_path)
+        if verdict == "package_produced":
+            stale.append(rel_path)
+        else:
+            protected.append(rel_path)
 
-    if not stale:
+    if not stale and not protected:
         print("No stale pre-consolidation files found. Migration complete.")
         return 0
 
-    print(f"Found {len(stale)} stale pre-consolidation path(s):\n")
-    for p in stale:
-        full = target_root / p
-        kind = "directory" if full.is_dir() else "file"
-        print(f"  STALE: {p} ({kind})")
+    if stale:
+        print(f"Found {len(stale)} stale pre-consolidation path(s):\n")
+        for p in stale:
+            full = target_root / p
+            kind = "directory" if full.is_dir() else "file"
+            print(f"  STALE: {p} ({kind})")
 
-    print("\nTo remove stale files, run:")
-    for p in stale:
-        full = target_root / p
-        if full.is_dir():
-            print(f"  rm -rf {p}")
-        else:
-            print(f"  rm {p}")
+        print("\nTo remove stale files, run:")
+        for p in stale:
+            full = target_root / p
+            if full.is_dir():
+                print(f"  rm -rf {p}")
+            else:
+                print(f"  rm {p}")
+    else:
+        print("No stale pre-consolidation files are safe to remove automatically.")
+
+    if protected:
+        print(
+            f"\n{len(protected)} path(s) hold content this build did not "
+            "produce and will NOT be suggested for removal:\n"
+        )
+        for p in protected:
+            print(f"  PROTECTED: {p} (adopter-owned or unattributable content)")
 
     print(f"\nThen re-run: python {Path(__file__).name} --target-dir {target_root}")
     return 0
@@ -2319,28 +2091,43 @@ def main(argv: list[str] | None = None) -> int:
         if pkg_sha:
             write_lock_file(target_root, pkg_sha)
 
+    # BP-1500g-1-ii: paths BP-1500g-1's ownership verdict blocked from
+    # removal or re-claim, collected across both the stale-cleanup and
+    # shim-install steps. A non-empty set at the end of the run means the
+    # build reached a step it could not complete without taking adopter-
+    # owned (or unattributable) content — the backstop this AC specifies:
+    # the content survives, but the run does not report success.
+    _blocked_conflicts: list[str] = []
+
     print()
     _heading("Stale file cleanup")
-    stale_count = _cleanup_stale_paths(target_root, output_root, args.dry_run)
-    if stale_count == 0:
+    stale_count = _cleanup_stale_paths(
+        target_root, output_root, args.dry_run, _blocked_conflicts
+    )
+    if stale_count == 0 and not _blocked_conflicts:
         print(f"  {DIM}(no stale files found){RESET}")
 
     if args.clean:
         print()
         _heading("Clean mode")
         source_manifests = _build_source_manifests(output_root)
-        clean_stale_artifacts(target_root, source_manifests)
+        clean_stale_artifacts(
+            target_root, source_manifests, dry_run=args.dry_run, output_root=output_root
+        )
 
     if not args.no_shims:
         print()
         _heading("Shim install")
-        _install_shims(
+        shim_results = _install_shims(
             target_root,
             output_root=output_root,
             config=config,
             dry_run=args.dry_run,
             force=effective_force,
         )
+        for _shim_result in shim_results:
+            if _shim_result["method"].startswith("blocked"):
+                _blocked_conflicts.append(_shim_result["canonical"])
 
         print()
         _heading("Hook install")
@@ -2357,6 +2144,18 @@ def main(argv: list[str] | None = None) -> int:
         if integrity_missing:
             print()
             print(format_integrity_report(integrity_missing))
+
+    if _blocked_conflicts and not args.dry_run:
+        print()
+        _error(
+            "Build cannot complete cleanly: the following path(s) hold "
+            "content this build did not produce and were left untouched "
+            f"rather than removed or overwritten: {sorted(set(_blocked_conflicts))}. "
+            "This is not a successful build — resolve the conflict (move "
+            "your content to a location the build does not claim, or "
+            "confirm it is safe and remove it yourself) and re-run."
+        )
+        return 1
 
     return 0
 
@@ -2564,4 +2363,17 @@ if __name__ == "__main__":
 #   scripts" in _run_phases, and added its config file name to
 #   _CONFIG_FILE_PHASE_BY_NAME for the existing diagnostic remediation-hint map.
 #   (#TICKETLESS reason=ac-scoped-fastlane-build-INF-400c-4-v)
+# - 2026-09-14 [python-coder]: Moved owns_installed_path,
+#   _PRE_CONSOLIDATION_PATHS, and paths_scheduled_for_both_removal_and_claim
+#   to the new build_ownership.py (ADR-041) so this file shrinks back under
+#   the check-file-size ratchet; re-imported here for existing callers,
+#   including the test that reads build.paths_scheduled_for_both_removal_and_claim
+#   by name. Pure move, no behaviour change. (#BP-1500g-1/extract)
+# - 2026-09-14 [python-coder]: Moved the ten _manifest_*_scripts helpers to
+#   the new build_deploy_manifest_helpers.py so this file shrinks further
+#   under the ratchet. _get_source_deployable_scripts and
+#   _get_source_paths_for_guard stayed here unchanged (see the new module's
+#   docstring: unit_tests/test_bp_900g_8_ii.py counts a text anchor inside
+#   those two functions' own on-disk copy in this file). Pure move, no
+#   behaviour change. (#BP-1500g-1/extract-unrelated-headroom)
 # ====================================================================
