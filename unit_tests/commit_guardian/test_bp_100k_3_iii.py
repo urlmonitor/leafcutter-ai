@@ -34,11 +34,34 @@ RED BASELINE (expected, captured before the registry entries are added):
 
 from __future__ import annotations
 
+import re
 import tempfile
 import unittest
 from pathlib import Path
 
 from . import _bp_100k_3_iii_harness as h
+
+
+def _require_result_line(combined: str) -> re.Match[str]:
+    """Return the gate's RESULT-line match, failing loudly if it is absent.
+
+    A missing RESULT line means the gate did not run to completion, which is a
+    different outcome from a gate that ran and disagreed — so it gets its own
+    error rather than an AttributeError on None further down.
+
+    Args:
+        combined: Captured stdout+stderr from a gate run.
+
+    Returns:
+        The RESULT-line match object.
+
+    Raises:
+        AssertionError: If the output carries no RESULT line.
+    """
+    match = h.RESULT_LINE_RE.search(combined)
+    if match is None:
+        raise AssertionError(f"No RESULT line found. Output:\n{combined}")
+    return match
 
 
 class TestExemptionHalf(unittest.TestCase):
@@ -61,11 +84,11 @@ class TestExemptionHalf(unittest.TestCase):
         grounds: dict[str, str] = {}
         for rel_path in h.FOUR_EXEMPT_PATHS:
             ground = h.extract_exempt_ground(combined, rel_path)
-            self.assertIsNotNone(
-                ground,
-                msg=f"{rel_path} not reported as exempt with a ground. Output:\n{combined}",
-            )
-            self.assertTrue(ground, msg=f"{rel_path}'s ground is blank. Output:\n{combined}")
+            if not ground:
+                self.fail(
+                    f"{rel_path} not reported as exempt with a non-blank ground. "
+                    f"Output:\n{combined}"
+                )
             grounds[rel_path] = ground
 
         self.assertEqual(
@@ -74,8 +97,7 @@ class TestExemptionHalf(unittest.TestCase):
             msg=f"The four grounds are not pairwise distinct: {grounds}",
         )
 
-        match = h.RESULT_LINE_RE.search(combined)
-        self.assertIsNotNone(match, msg=f"No RESULT line found. Output:\n{combined}")
+        match = _require_result_line(combined)
         self.assertEqual(0, int(match.group(4)), msg=f"Expected zero gaps. Output:\n{combined}")
         self.assertEqual(0, result.returncode, msg=f"Expected a clean exit. Output:\n{combined}")
 
@@ -143,8 +165,7 @@ class TestOrphanHalf(unittest.TestCase):
                 msg=f"{rel_path} was silently exempted. Output:\n{combined}",
             )
 
-        match = h.RESULT_LINE_RE.search(combined)
-        self.assertIsNotNone(match, msg=f"No RESULT line found. Output:\n{combined}")
+        match = _require_result_line(combined)
         self.assertEqual(2, int(match.group(4)), msg=f"Output:\n{combined}")
         self.assertEqual(2, result.returncode, msg=f"Output:\n{combined}")
 
@@ -190,8 +211,7 @@ class TestEndToEnd(unittest.TestCase):
             result = h.run_gate_with_real_registry(hook, Path(td))
         combined = result.stdout + result.stderr
 
-        match = h.RESULT_LINE_RE.search(combined)
-        self.assertIsNotNone(match, msg=f"No RESULT line found. Output:\n{combined}")
+        match = _require_result_line(combined)
         verified, uncomparable, exempt, gaps, drifted, missing, unreadable = (
             int(g) for g in match.groups()
         )
