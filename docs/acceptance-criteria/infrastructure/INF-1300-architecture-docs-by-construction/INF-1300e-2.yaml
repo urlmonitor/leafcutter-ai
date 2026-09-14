@@ -1,0 +1,249 @@
+id: INF-1300e-2
+title: "The instruction that arrives and the means that arrives describe the same act"
+component: infrastructure
+components:
+  - documentation_system
+  - build_pipeline
+  - infrastructure
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+created_by: "docs/acceptance-criteria/infrastructure/INF-1300-architecture-docs-by-construction/INF-1300e.yaml"
+criteria: |
+  Given both the instruction and the means have arrived in an adopting project,
+  When the invocation the arrived instruction tells the author to perform is
+    compared with the invocation the arrived means accepts,
+  Then every argument the instruction names is accepted, the means requires no
+    argument the instruction does not name, and the place the instruction says the
+    means occupies is the place it occupies,
+  And where more than one arrived surface carries the instruction, those surfaces
+    state the same invocation as each other,
+  And the comparison is made against the copies that arrived in the adopting
+    project, not the copies held in this package,
+  And a difference between any two of them fails this criterion even when each,
+    read on its own, is internally consistent and works.
+depends_on:
+  - INF-1300e
+doc_links:
+  - path: docs/acceptance-criteria/infrastructure/INF-1300-architecture-docs-by-construction/INF-1300e.yaml
+    relationship: parent
+    status: exists
+  - path: templates/skills/write-c4-diagram/SKILL.md
+    relationship: specifies
+    status: exists
+    relevance: >-
+      Carries the invocation in section 4 and again, with the listing flag, in section 8,
+      and makes the date argument required with a stated reason.
+  - path: templates/agents/architecture-diagram-author.md
+    relationship: specifies
+    status: exists
+    relevance: >-
+      MEASURED DISAGREEMENT, PRESENT TODAY. Its step 4 pins the same invocation without the
+      date argument the skill makes required. Two surfaces carrying one mandatory step
+      already disagree about how to perform it, before anything new is built — which is why
+      the second clause here is a clause and not an assumption.
+  - path: docs/acceptance-criteria/infrastructure/INF-1300-architecture-docs-by-construction/INF-1300b-4.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      FENCED AGAINST, AND THE FENCE IS THE LAYOUT. b-4 requires the surfaces in this package
+      to agree with what is produced. This record requires the copies that ARRIVED in an
+      adopting project to agree with the means that arrived there. The two can differ: a
+      surface corrected here and not delivered, or delivered from a stale copy, satisfies
+      b-4 and fails this record, and that gap is the one that reaches adopters.
+  - path: docs/acceptance-criteria/infrastructure/INF-1300-architecture-docs-by-construction/INF-1300a-2.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      Widens the invocation with the document above and the originating ticket. Any widening
+      that reaches the means and not the instructions recreates the present failure one
+      version later, so this record is what keeps the widening honest for adopters.
+  - path: docs/architecture/components/template-compiler.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      How a template becomes an arrived copy, including config injection. The gap between the
+      path a template writes and the path that template's reader must actually use is created
+      here, which is where the third clause's failure is manufactured.
+  - path: docs/reference/architecture-docs-layout.md
+    relationship: specifies
+    status: exists
+    relevance: >-
+      Where architecture documents live. The --output value the arrived instruction tells an
+      author to pass must be expressible in the adopting project's own layout, not only in this
+      package's.
+  - path: docs/reference/false-green-mechanisms.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      Names the failure the fourth clause guards: two documents agreeing with each other while
+      neither matches the behaviour. A consistency check that never touches the means is one of
+      the catalogued ways silence gets mistaken for a pass.
+assigned_agent: llm-expert
+estimated_complexity: M
+change_target:
+  - prompt
+  - code
+risk_surface: contract_boundary
+test_required: true
+it_requirements:
+  - >-
+    MEASURED 2026-09-14 — THE TWO SURFACES DISAGREE TODAY, BEFORE ANYTHING IS BUILT.
+    templates/skills/write-c4-diagram/SKILL.md §4 pins the invocation WITH --date and gives the
+    reason inline ("the agent runtime may be in UTC while the project convention is local
+    date"); templates/agents/architecture-diagram-author.md Step 4 pins the same invocation
+    WITHOUT it. Whichever way this settles — keep --date required, or make it optional and
+    delete the requirement from the skill — it must settle IDENTICALLY on both surfaces in the
+    same change, and both must then be what arrives. Silently correcting one is the exact
+    successor defect this record exists to catch.
+  - >-
+    MEASURED 2026-09-14 (consumer simulation into an empty target) — THE INSTRUCTED PATH DOES
+    NOT RESOLVE. Both arrived surfaces instruct the bare relative path
+    scripts/scaffold/new_arch_doc.py, while a real build deploys scripts under the output root
+    (observed: <target>/.leafcutter/scripts/). The same defect is already live one section away
+    in the same template: architecture-diagram-author.md instructs
+    "python leafcutter/scripts/next_diagram_seq.py" while that script is deployed at
+    <output_root>/scripts/next_diagram_seq.py. The path clause must be settled against the real
+    deployed layout, and the fix must be applied consistently rather than only to the scaffold
+    line.
+  - >-
+    The invocation must be stated using the project's output-root placeholder rather than a
+    hard-coded prefix, so it renders correctly for an adopter whose output_root differs from
+    this package's. A literal ".leafcutter/" written into a template is a second portability
+    defect wearing the first one's fix.
+  - >-
+    THE COMPARISON MUST BE MECHANICAL, NOT EDITORIAL. Whatever establishes this must parse the
+    argument set out of each arrived surface and compare it against the sets the arrived
+    script's parser accepts and requires. A reviewer reading two documents and finding them
+    mutually consistent is explicitly insufficient — the criteria are falsified by the case
+    where both surfaces agree with each other and neither matches the means, and only a check
+    that touches the means can see that case.
+  - >-
+    The widening owned by INF-1300a-2 must reach BOTH surfaces in the same change that reaches
+    the means. A widening that lands on the means alone reproduces the present failure one
+    version later, with the harder diagnosis: everything is present and the author still gets
+    an error.
+  - >-
+    Whatever establishes the agreement must run on every build, alongside the existing
+    consumer-install and propagation checks, rather than being a one-time reconciliation. A
+    divergence introduced later must be reported, not rediscovered by the next adopter.
+  - >-
+    SCOPE FENCE, DO NOT CROSS. This record covers agreement between the ARRIVED copies only. It
+    must not restate or re-decide INF-1300b-4 (surfaces-vs-produced-document agreement inside
+    this package), and it must not touch the false ADR-015 legend attribution, which the sibling
+    handling INF-1300b-4 owns. Where this record's corrections touch the same lines, they must
+    be compatible with that retirement, not a competing edit to it.
+test_spec:
+  - name: test_arrived_surfaces_state_one_identical_invocation
+    target_dir: unit_tests/portability/
+    framework: pytest
+    type: integration
+    angle: deployed
+    description: >-
+      Parsing the mandatory invocation out of both deployed copies (the skill and the agent
+      template) in a real consumer install yields the same script path and the same flag set.
+      Fails today on --date.
+  - name: test_every_flag_the_arrived_surfaces_name_is_accepted_by_the_arrived_means
+    target_dir: unit_tests/portability/
+    framework: pytest
+    type: integration
+    angle: seam
+    description: >-
+      Each flag named by an arrived surface is accepted by the deployed script's parser —
+      invoked as a subprocess in the consumer layout, asserting no "unrecognized arguments".
+  - name: test_arrived_means_requires_no_flag_the_arrived_surfaces_omit
+    target_dir: unit_tests/portability/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: >-
+      Running exactly the invocation an arrived surface states, and nothing more, exits 0 — no
+      "the following arguments are required" from a flag no instruction mentions.
+  - name: test_path_the_arrived_instruction_states_resolves_from_the_authors_working_directory
+    target_dir: unit_tests/portability/
+    framework: pytest
+    type: integration
+    angle: reachability
+    surface_invoked: "the literal script path string extracted from the arrived write-c4-diagram SKILL.md section 4"
+    description: >-
+      The path string lifted verbatim out of the arrived instruction resolves to an existing
+      executable file when interpreted from where that project's authors work. This is the
+      clause the 2026-09-14 measurement already falsifies.
+test_rationale: >-
+  The three failure modes in the criteria are asymmetric and no single test sees all of them, so
+  the contract is a set cover rather than a list of restatements: surface-vs-surface (descriptor
+  1), surface-vs-means for arguments in both directions (2 and 3, which are genuinely different
+  — an unaccepted flag and an unmentioned required flag fail on different sides), and
+  surface-vs-layout for the path (4). Every one runs against the copies a real build deposited
+  in a consumer project, because the record is falsified as an OBSERVATION if it is performed
+  against this package's files: this repository has recorded a hook whose helper was undeployed
+  and crashed on import in every consumer while passing every test here, and in that case the
+  package's own copies agreed with each other perfectly. Descriptor 1 alone is the trap the
+  criteria call out by name — two arrived documents can be perfectly consistent with each other
+  and both wrong, which is why 2, 3 and 4 all reach past the text to the means and the layout.
+delivers_to:
+  agent: architecture-diagram-author
+  contract: >-
+    One mandatory invocation, stated identically in both arrived surfaces and accepted verbatim
+    by the arrived means: the script path written output-root-relative via the project's
+    placeholder, the seven pinned flags with their exact names and meanings
+    (--tier --diagram-type --component --title --output --date --update-readme), and the three
+    widened flags (--parent <path>, --root, --source-ticket <id>), with the --date question
+    settled the same way on both surfaces.
+expects_from:
+  - ac_id: INF-1300e-1
+    contract: >-
+      The deployed location of the means in a consumer layout as an output-root-relative path,
+      plus the accepted and required flag sets of the deployed script's parser. This record
+      compares the arrived surfaces against exactly those two facts.
+  - ac_id: INF-1300a-2
+    contract: >-
+      The widened argument contract (--parent, --root, --source-ticket) as finally settled, so
+      the surfaces are corrected once to the final shape rather than twice.
+origin_agent: BrainCandy
+created: 2026-09-14
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-09-14'
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  THE FAILURE THIS RECORD ANTICIPATES IS THE ONE THAT ALREADY HAPPENED, ONE LEVEL UP. The
+  present defect is an instruction shipped without its means. The natural successor defect is
+  an instruction shipped with a means it no longer describes — the arguments were widened,
+  the surfaces were corrected in the package, and one of them did not travel. Both produce an
+  author who does exactly what they were told and gets an error, and the second is harder to
+  diagnose because everything is present.
+
+  THE THIRD CLAUSE IS THE WHOLE RECORD AND IT IS WHY THIS IS NOT A CLAUSE OF INF-1300b-4.
+  Comparing the surfaces against the means inside this package is a different observation
+  from comparing the copies that arrived. This project's recorded history includes a hook
+  whose helper module was not in the deploy list and crashed on import in every consuming
+  project while passing every test here, and a validator that was lost from the deployed tree
+  and silently disabled all enforcement in every consumer. In both cases the package's own
+  copies agreed with each other perfectly.
+
+  FALSIFIABILITY. Adopt the package into an empty project. In that project, extract from each
+  arrived surface the invocation it instructs — the path and the arguments — and compare the
+  set of arguments each names against the set the arrived means accepts and the set it
+  requires. The record is falsified by an argument an instruction names that the means
+  rejects, by an argument the means requires that no instruction names, by a path that does
+  not hold what the instruction says it holds, and by the two arrived surfaces stating
+  different invocations. It is falsified as an OBSERVATION if it is performed against this
+  package's files. Note that the comparison must be of the arrived text against the arrived
+  behaviour: reading two arrived documents and finding them consistent with each other says
+  nothing if neither matches the means.
+
+  A DISAGREEMENT TO SETTLE BEFORE THIS CAN PASS, RECORDED SO IT IS NOT FOUND LATE. The two
+  surfaces already state different invocations today — one requires a date argument with a
+  stated reason and the other omits it. Whichever way that is resolved, it must be resolved
+  on both, and both must then be what arrives.
+
+  NOT AUTHORED HERE, BY DESIGN: assigned_agent, estimated_complexity, it_requirements,
+  test_spec, test_rationale, delivers_to and expects_from. Those are the IT PO's.

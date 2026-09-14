@@ -1,0 +1,152 @@
+id: INF-1300a-2-i
+title: "A document with nothing above it says so, and no parent is invented for it"
+component: infrastructure
+components:
+  - documentation_system
+  - doc_compliance
+  - infrastructure
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+created_by: "docs/acceptance-criteria/infrastructure/INF-1300-architecture-docs-by-construction/INF-1300a.yaml"
+criteria: |
+  Given a request for a document that sits at the top of the tiers, with no
+    document above it, and which therefore names no parent,
+  When the document is produced,
+  Then it declares itself to be at the top rather than naming any parent, and it
+    carries no prose reference to a document above it,
+  And no parent is inferred from the folder it was placed in, from its tier, from
+    the document most recently added to the collection, or from any source other
+    than the request,
+  And no other document in the collection has its list of the documents below it
+    altered,
+  And the project's check on the two-directional link passes over the produced
+    document, run as the project runs it,
+  And a request that names no parent for a document which is NOT at the top of
+    the tiers is refused rather than quietly produced as a top-level document.
+depends_on:
+  - INF-1300a-2
+doc_links:
+  - path: docs/acceptance-criteria/infrastructure/INF-1300-architecture-docs-by-construction/INF-1300a-2.yaml
+    relationship: parent
+    status: exists
+  - path: scripts/commit_guardian/check_mermaid_parent_link.py
+    relationship: describes
+    status: exists
+    relevance: >-
+      The check offers exactly one way out of the parent requirement — a document that
+      declares itself root — and treats a missing parent on any other document carrying a
+      picture as a named violation. Those two facts together are why the last clause here
+      matters: declaring root is not merely an alternative, it is a claim, and a producer
+      that reaches for it whenever no parent was supplied would make every document at
+      every tier pass the check while destroying the hierarchy the check exists to protect.
+  - path: docs/reference/architecture-docs-layout.md
+    relationship: specifies
+    status: exists
+    relevance: "The tier structure that decides which documents are genuinely at the top and therefore may declare themselves root."
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+    relevance: "The angle taxonomy this record's test_spec classifies against; the failure angle carries the second run, which is the arm with teeth."
+origin_agent: BrainCandy
+created: 2026-09-14
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-09-14'
+superseded_by: null
+covered_by: []
+implemented_by: []
+assigned_agent: python-coder
+estimated_complexity: S
+change_target: code
+risk_surface: safety
+test_required: true
+it_requirements:
+  - "ROOT IS A CLAIM THE CALLER MAKES, NEVER A FALLBACK. `--root` is an explicit self-declaration flag. The absence of `--parent` must never be treated as an implicit root. MEASURED: check_mermaid_parent_link returns an empty violation list the moment `fm.get('root')` is truthy, before it looks at anything else — so declare-root-whenever-no-parent-was-supplied passes the real check on every document at every tier, passes INF-1300a-1 and INF-1300a-2 in every case, and reads in review as 'handling the top-level case'. It is the cheapest wrong implementation available and the only clause that can fail on it is the refusal clause."
+  - "`--parent` AND `--root` ARE MUTUALLY EXCLUSIVE, and supplying neither for a document below the top tier is a refusal, not a default. The tier at which root is permissible must be derived from the project's declared tier structure, not hard-coded to a literal tier name, so the rule survives a change to that structure."
+  - "NO PARENT MAY BE INFERRED FROM ANY SOURCE OTHER THAN THE REQUEST — not the output directory, not the tier, not the most recently created sibling, not the highest-numbered document, not a directory README. State this as an absolute: any derivation path from ambient filesystem state to a `parent:` value is a defect."
+  - "A ROOT PRODUCTION MUST NOT TOUCH ANY OTHER DOCUMENT. No neighbour's `children:` list may gain an entry and no neighbour may be rewritten. Verify with a whole-collection snapshot taken before and after, not by inspecting a single likely candidate."
+  - "The produced root document must carry NO prose `Parent:` line at all — not an empty one, not a placeholder, not a commented-out one. A stray token containing a neighbouring document's basename after the first mermaid fence is invisible to check_mermaid_parent_link (it exits early on `root`) but is a false statement in the document."
+  - "All of INF-1300a-1's vacuous-green guards apply. The root path is the one where a silent no-op is most plausible, because the real hook genuinely returns early — a green from it proves only that `root:` is set, never that the rest of the record holds."
+  - "Error handling per the project error-handling policy (CLAUDE.md rules 1-4)."
+test_spec:
+  - name: test_root_request_declares_root_and_carries_no_prose_parent_line
+    target_dir: unit_tests/docs/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    description: "A top-tier request with no parent named produces a document whose frontmatter declares it root, whose frontmatter carries no parent: key at all, and whose body contains no Parent: prose line."
+  - name: test_root_production_leaves_every_other_document_untouched
+    target_dir: unit_tests/docs/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "A hash snapshot of every document in the scratch collection taken before and after the root production is identical; no neighbour's children: list gained an entry."
+  - name: test_parent_link_check_passes_over_the_root_document_and_examined_it
+    target_dir: unit_tests/docs/
+    framework: pytest
+    type: integration
+    angle: reachability
+    surface_invoked: "scripts/commit_guardian/check_mermaid_parent_link.py"
+    description: "check_mermaid_parent_link exits 0 over the staged root document; the paired negative control strips the root declaration from the same file at the same staged path and requires exit 1 naming ARCH-PARENT-MISSING, proving the hook read the file rather than resolving it to a path that does not exist."
+  - name: test_lower_tier_request_without_a_parent_is_refused_not_silently_rooted
+    target_dir: unit_tests/docs/
+    framework: pytest
+    type: integration
+    angle: failure
+    description: "THE ARM WITH TEETH — a request for a document below the top tier supplying neither --parent nor --root exits non-zero and writes no file; a produced document, root-declaring or otherwise, falsifies the record."
+  - name: test_no_parent_is_inferred_from_directory_tier_or_recency
+    target_dir: unit_tests/docs/
+    framework: pytest
+    type: integration
+    angle: boundary
+    description: "A root request issued into a directory that already holds an obvious higher-tier candidate parent and a just-created sibling produces a document that names neither, and names nothing at all in parent:."
+  - name: test_parent_and_root_together_are_refused
+    target_dir: unit_tests/docs/
+    framework: pytest
+    type: integration
+    angle: failure
+    description: "Supplying both --parent and --root exits non-zero and writes nothing, rather than silently preferring one."
+test_rationale: >-
+  A single-run observation of the happy path cannot distinguish this record's behaviour
+  from the wrong implementation it exists to exclude. Declare-root-whenever-no-parent-was-
+  supplied produces a passing document on the first run, passes the real hook every time —
+  check_mermaid_parent_link returns early on a truthy root: before examining anything else
+  — and silently manufactures a collection of orphans, which is the decay already present
+  in this repository. The discriminating descriptor is therefore the SECOND run: a
+  below-top-tier request with no parent, where producing any file at all is the failure.
+  The whole-collection snapshot is the second irreplaceable arm, because "no other document
+  changed" cannot be established by inspecting the one neighbour the test author guessed at.
+delivers_to: null
+expects_from:
+  ac_id: INF-1300a-2
+  contract: "The parent-link writer and its refusal contract from INF-1300a-2's delivers_to. This record constrains the same writer on the one input where there is nothing to link to: it adds the mutually-exclusive --root self-declaration, forbids any inference of a parent from ambient state, and makes a missing parent below the top tier a refusal rather than an implicit root."
+notes: |
+  WHY THIS IS AN L3 AND NOT AN L2. It adds no behaviour of its own. It constrains how
+  INF-1300a-2's already-specified linking behaves on the one input where there is nothing
+  to link to — and that input is where the cheapest wrong implementation lives.
+
+  THE WRONG ANSWER THIS EXCLUDES, AND WHY IT IS ATTRACTIVE. The check that demands a parent
+  accepts a document that declares itself root. So the cheapest way to make every document
+  pass, including the ones whose parent the caller forgot to name, is to declare root
+  whenever no parent was supplied. That implementation passes INF-1300a-1 and INF-1300a-2
+  in every case, passes the real check every time, is defensible in review as "handling the
+  top-level case", and silently produces a collection of orphans — which is precisely the
+  decay already recorded in this collection, where a document that declares no parent has
+  become a model for the next author. The last clause is the only one that can fail on it.
+
+  FALSIFIABILITY. Two runs. First, request a top-tier document with no parent named: the
+  produced document declares itself top-level, the check passes, and no other document in
+  the scratch collection has changed — falsified if any neighbour's list of children gained
+  an entry, or if a parent appears that the request never named. Second, request a
+  lower-tier document and supply no parent: the record is falsified if a document is
+  produced at all. The second run is the one with teeth; an observation that runs only the
+  first cannot distinguish this record's behaviour from the declare-root-always answer.
+
+  NOT AUTHORED HERE, BY DESIGN: assigned_agent, estimated_complexity, it_requirements,
+  test_spec, test_rationale, delivers_to and expects_from. Those are the IT PO's.

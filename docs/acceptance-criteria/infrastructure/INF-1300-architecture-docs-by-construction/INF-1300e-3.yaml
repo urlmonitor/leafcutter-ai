@@ -1,0 +1,250 @@
+id: INF-1300e-3
+title: "The document produced in an adopting project is accepted by that project's own checks"
+component: infrastructure
+components:
+  - documentation_system
+  - doc_compliance
+  - infrastructure
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+created_by: "docs/acceptance-criteria/infrastructure/INF-1300-architecture-docs-by-construction/INF-1300e.yaml"
+criteria: |
+  Given a document produced in an adopting project by the mandatory step,
+  When that project's own commit-time document checks are run over it, unmodified,
+  Then they pass,
+  And the checks run are the copies that arrived in that project, run the way that
+    project runs them, from where that project's authors work,
+  And a pass obtained by running this package's copies of those checks over the
+    adopting project's document does not satisfy this criterion,
+  And each check is confirmed to have examined the produced document: a check that
+    reported nothing because it was never given the document counts as a failure,
+    not as a pass.
+depends_on:
+  - INF-1300e
+doc_links:
+  - path: docs/acceptance-criteria/infrastructure/INF-1300-architecture-docs-by-construction/INF-1300e.yaml
+    relationship: parent
+    status: exists
+  - path: docs/acceptance-criteria/infrastructure/INF-1300-architecture-docs-by-construction/INF-1300a-1.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      The same property, established in this repository. The two are not duplicates: a-1
+      settles that what is produced is acceptable, and this settles that the acceptance
+      survives the journey into a project laid out differently, where the checks are
+      deployed copies resolving their own configuration from their own tree.
+  - path: scripts/commit_guardian/check_doc_frontmatter.py
+    relationship: describes
+    status: exists
+    relevance: >-
+      MEASURED, AND THE REASON THIS RECORD IS NOT REDUNDANT. This check resolves its project
+      root and its required-field configuration by walking the tree it finds itself in, and
+      it reads the component registry and the kind vocabulary from files it locates the same
+      way. Every one of those resolutions can land differently in an adopting project, so
+      "the document passes" is a claim about a layout, not only about a document.
+  - path: templates/scripts/commit_guardian/diagram_type_validators.py
+    relationship: describes
+    status: exists
+    relevance: >-
+      The recorded precedent for this record's last clause. Its own history states it was
+      once lost from the deployed tree, which made the frontmatter check crash on import and
+      SILENTLY DISABLE ALL enforcement in every consumer project. A check that is not there
+      reports nothing, and nothing looks exactly like a pass.
+  - path: CLAUDE.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      Records that several of these hooks read the staged index rather than a path handed to
+      them, so invoking one with a filename does not guarantee it examined that file. That
+      is the second way silence can be mistaken for a pass, and it is why the last clause is
+      stated rather than assumed.
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      The component that owns the checks this record runs. How a check resolves its root, how
+      it is registered in .pre-commit-config.yaml, and which checks read the index rather than
+      argv are all settled here — and all three determine whether a silence means anything.
+  - path: docs/architecture/components/doc-compliance.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      The second deployed Python package that participates in document acceptance. It is a
+      multi-module package deployed as a unit, so it is a live instance of the import-time
+      failure mode the last clause is written against.
+  - path: docs/reference/false-green-mechanisms.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      The catalogue of ways a check reports nothing without having looked. The last criterion
+      is this document applied to one artifact; the corruption probe in the test contract is the
+      cheapest catalogued remedy.
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      Source of the angles used below. This record needs `deployed` and `failure` together —
+      `failure` is what turns a silent check into evidence, and a suite without it is satisfied
+      most perfectly by a project with no checks at all.
+assigned_agent: python-coder
+estimated_complexity: M
+change_target:
+  - code
+  - pipeline
+risk_surface: contract_boundary
+test_required: true
+it_requirements:
+  - >-
+    THE CHECKS EXERCISED MUST BE THE DEPLOYED COPIES. In a real consumer install the checks land
+    under <output_root>/scripts/commit_guardian/ (observed 2026-09-14: 100+ modules, plus a
+    .pre-commit-config.yaml with 57 package hooks merged). Importing this package's own
+    scripts/commit_guardian/ modules into the test process does not satisfy this record and must
+    not be how the observation is built — that is the precise substitution the criteria exclude.
+  - >-
+    THE ADOPTING PROJECT USED FOR THE OBSERVATION MUST BE A REAL GIT REPOSITORY WITH THE
+    PRODUCED DOCUMENT STAGED. Several commit-guardian checks read the staged index (or
+    HOOK_TEST_FILES) rather than argv, so handing a check a filename on the command line does
+    not make it examine that file. A check invoked with a path it ignores, against an empty
+    index, reports nothing — and nothing is indistinguishable from a pass. Note the deployed
+    build reports "hooks: skipping pre-commit install (target is not a git repo)" for a
+    non-repo target, which is itself the tell that a non-repo fixture tests nothing here.
+  - >-
+    EACH CHECK MUST BE PROVEN TO HAVE EXAMINED THE DOCUMENT BEFORE ITS SILENCE COUNTS. The
+    sufficient proof is a deliberate-corruption probe: the same check, deployed the same way,
+    run the same way, must REPORT when the document is broken in the way that check exists to
+    catch. A check silent on both the good and the corrupted document has not been shown to run
+    and must be treated as a failure of this record.
+  - >-
+    EVERY MODULE A DEPLOYED CHECK IMPORTS MUST BE IN THE DEPLOY MANIFEST, AND AN IMPORT-TIME
+    FAILURE COUNTS AS A FAILURE, NEVER AS A PASS. Recorded precedent: diagram_type_validators.py
+    was once absent from the deployed tree, which made check_doc_frontmatter crash on import and
+    silently disabled ALL frontmatter enforcement in every consumer project while every test
+    here stayed green.
+  - >-
+    THE CHECK SET MUST BE DERIVED FROM THE ADOPTING PROJECT'S OWN DEPLOYED
+    .pre-commit-config.yaml, NOT HARD-CODED. A hard-coded list silently stops covering a check
+    added later, which is the same "the rule shipped, the means did not" asymmetry one level
+    down. At minimum the derived set must include the checks a new architecture document is
+    actually subject to: check_doc_frontmatter, check_diagram_naming, check_mermaid_parent_link,
+    check_mermaid_complexity and check_doc_links.
+  - >-
+    check_doc_frontmatter resolves its project root, its required-field configuration, the
+    component registry and the diagram-kind vocabulary by walking the tree it finds itself in.
+    All four resolutions must land in the ADOPTING project's own files. A pass obtained because
+    one of them fell back to this package's configuration is a false green and fails this
+    record.
+  - >-
+    The observation must be performed with no copy of this package's working tree reachable from
+    the adopting project, for the same reason INF-1300e-1 states it.
+  - >-
+    NO CHECK MAY BE WEAKENED, EXEMPTED OR SUPPRESSED TO MAKE THE PRODUCED DOCUMENT PASS. If a
+    deployed check rejects what the means produces, the means changes. The L0's scope fence is
+    explicit that placing the producer inside the namespace of its own judges makes it easy to
+    weaken a check to pass a generator, and that is the wrong direction of accommodation. Adding
+    an entry to any drift-exemption or reachability-exemption file in service of this record is
+    a violation of it.
+test_spec:
+  - name: test_produced_document_passes_the_deployed_checks_in_a_consumer_git_repo
+    target_dir: unit_tests/portability/
+    framework: pytest
+    type: integration
+    angle: deployed
+    description: >-
+      A document produced by the mandatory step in an adopting project, staged in that
+      project's own git index, is accepted unmodified by that project's deployed checks run the
+      way that project runs them.
+  - name: test_each_deployed_check_reports_when_the_produced_document_is_deliberately_broken
+    target_dir: unit_tests/portability/
+    framework: pytest
+    type: integration
+    angle: failure
+    description: >-
+      The corruption probe. For each check in the derived set, breaking the document in the way
+      that check exists to catch makes that same check report — establishing it looked, so its
+      silence in the passing run means something.
+  - name: test_check_set_is_derived_from_the_consumer_precommit_config_not_hardcoded
+    target_dir: unit_tests/portability/
+    framework: pytest
+    type: integration
+    angle: seam
+    description: >-
+      The set of checks exercised is read out of the adopting project's own deployed
+      .pre-commit-config.yaml, so a check added to the package later is covered without editing
+      the test.
+  - name: test_no_deployed_document_check_fails_to_import_in_the_consumer_layout
+    target_dir: unit_tests/portability/
+    framework: pytest
+    type: integration
+    angle: reachability
+    surface_invoked: "each deployed commit-guardian check entrypoint named in the adopting project's .pre-commit-config.yaml"
+    description: >-
+      Every check in the derived set imports and executes in the consumer layout. An
+      ImportError or a non-executing hook is reported as a failure, not absorbed as a clean run.
+test_rationale: >-
+  Descriptor 1 on its own is the exact evidence shape this repository has twice recorded as
+  worthless: it is satisfied most perfectly by an adopting project where the checks are absent,
+  crashed on import, or read an empty index — all three of which present as silence, and all
+  three of which have actually happened here. So the contract is deliberately three-quarters
+  negative. Descriptor 2 makes each check demonstrate it was looking before its silence is
+  allowed to count; descriptor 4 separates "reported no violation" from "never ran"; descriptor
+  3 stops the set of checks under observation from quietly narrowing as the package grows. A
+  direct-import unit test over this package's own check modules would be a strictly different
+  proposition — it is INF-1300a-1's, and it was green throughout both recorded incidents in
+  which the deployed enforcement was entirely disabled.
+delivers_to: null
+expects_from:
+  - ac_id: INF-1300e-1
+    contract: >-
+      An adopting project in its own layout — built by the real installer, with no copy of this
+      package's working tree reachable — containing the deployed means, its deployed
+      commit-guardian checks, and its own .pre-commit-config.yaml. This record consumes that
+      project as its fixture and adds a git index to it.
+  - ac_id: INF-1300a-1
+    contract: >-
+      A document that is committable exactly as produced, with nothing added by hand: complete
+      frontmatter, a conforming filename, the legend block, and the mermaid skeleton. This
+      record asserts that acceptance survives the journey; it does not establish the acceptance
+      itself.
+origin_agent: BrainCandy
+created: 2026-09-14
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-09-14'
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  WHY THIS IS NOT INF-1300a-1 REPEATED. a-1 asks whether the producer emits an acceptable
+  document. This asks whether the whole arrangement — producer, checks, configuration,
+  registries — still agrees with itself once it has been installed somewhere else. Those come
+  apart in practice and this project has the scar tissue to prove it: a helper missing from
+  the deploy list crashed a hook on import in every consumer while every test here passed,
+  and a lost validator silently disabled all frontmatter enforcement in every consuming
+  project. In both cases the source tree was healthy.
+
+  THE LAST CLAUSE IS THE ONE THAT PREVENTS A FALSE GREEN, AND IT IS THE SHARPEST THING IN
+  THIS RECORD. Both of the failures above present as silence. A check that crashed on import
+  and was skipped, a check that read an empty staged index, a check that was never deployed —
+  each reports no violation, and an observation looking only for violations reports a pass.
+  So the observation has to establish that each check actually saw the document before its
+  silence is allowed to mean anything. Without that clause this record is satisfied most
+  perfectly by a project where the checks are entirely absent, which is the precise inverse
+  of what it is for.
+
+  FALSIFIABILITY. In the adopting project of INF-1300e-1, produce a document by the mandatory
+  step, then run that project's deployed checks over it the way that project runs them. The
+  record is falsified by any check reporting a violation, by any check failing to run, and by
+  any check whose examination of the document cannot be demonstrated — for instance by
+  showing it reports a violation when the document is deliberately broken, which is the
+  cheapest way to prove it was looking. It is falsified as an observation if this package's
+  copies of the checks were used, or if the adopting project still had this package's tree
+  beside it.
+
+  NOT AUTHORED HERE, BY DESIGN: assigned_agent, estimated_complexity, it_requirements,
+  test_spec, test_rationale, delivers_to and expects_from. Those are the IT PO's.

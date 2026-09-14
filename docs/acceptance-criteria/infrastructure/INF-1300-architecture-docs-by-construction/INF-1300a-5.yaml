@@ -1,0 +1,277 @@
+id: INF-1300a-5
+title: "An author who has been refused can read what to supply, and doing what they read gets the document accepted"
+component: infrastructure
+components:
+  - documentation_system
+  - doc_compliance
+  - infrastructure
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+created_by: "docs/acceptance-criteria/infrastructure/INF-1300-architecture-docs-by-construction/INF-1300a.yaml"
+criteria: |
+  Given the means of starting a new architecture document, and the authoring
+    how-to that tells an author how to start one,
+  When every command the how-to publishes is executed exactly as published,
+  Then each of them runs and does what the surrounding text says it does: a
+    command the means rejects, or one that silently requires something the how-to
+    does not tell the author to supply, is a failure of this record,
+  And for every reason the means can refuse a request, the how-to holds an entry
+    that names that reason and says what to supply instead, with the set of
+    reasons taken from the means itself at the moment of the reading rather than
+    from a list written into the observation — a reason the means produces with
+    no entry, and an entry for a reason the means cannot produce, are both
+    failures,
+  And for each such entry, starting from the refused request, supplying exactly
+    what the entry says to supply, and repeating the request yields a document
+    that passes the project's full set of commit-time document checks unmodified,
+  And the how-to tells the author which parts of the produced document are theirs
+    to write and which are not theirs to rewrite by naming where that split is
+    defined, rather than by defining it a second time here,
+  And nothing the how-to says about the invocation, about the fields a document
+    must carry, or about how to verify one, is a second copy of what an authoring
+    surface already publishes: each is referenced, so a correction made on that
+    surface cannot leave a stale duplicate standing here.
+depends_on:
+  - INF-1300a
+  - INF-1300a-1
+  - INF-1300b-3
+  - INF-1300b-4
+  - INF-1300d-3
+doc_links:
+  - path: docs/acceptance-criteria/infrastructure/INF-1300-architecture-docs-by-construction/INF-1300a.yaml
+    relationship: parent
+    status: exists
+    relevance: >-
+      The L1 whose documentation_triggers names how-to, and whose closing note designates
+      this document as the home for INF-1300d's refusal troubleshooting rather than a
+      separate troubleshooting document of its own.
+  - path: docs/how-to/start-a-new-architecture-document.md
+    relationship: implements
+    status: planned
+    relevance: >-
+      The document this record brings into existence. Placed in docs/how-to/ rather than a
+      topical folder because its audience is any contributor about to write an architecture
+      document, and named with a verb phrase per the how-to naming rule.
+  - path: docs/acceptance-criteria/infrastructure/INF-1300-architecture-docs-by-construction/INF-1300d.yaml
+    relationship: specifies
+    status: exists
+    relevance: >-
+      Its documentation_rationale is the instruction this record obeys: the refusal messages
+      carry the duty of saying what to supply, and the troubleshooting ENTRY POINT belongs in
+      this how-to because a separate troubleshooting document would restate the messages and
+      then drift out of step with them.
+  - path: docs/acceptance-criteria/infrastructure/INF-1300-architecture-docs-by-construction/INF-1300d-3.yaml
+    relationship: specifies
+    status: exists
+    relevance: >-
+      Owns the shared refusal path and, in its own test_spec, the rule that the refusal-reason
+      set is derived from that path rather than from a list in a test. This record's
+      correspondence clause consumes that same derivation, which is what keeps the how-to
+      complete after a reason is added.
+  - path: docs/acceptance-criteria/infrastructure/INF-1300-architecture-docs-by-construction/INF-1300b-3.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      Defines the produced-versus-authored split inside the document itself. The how-to points
+      at that split; it must not define it again, or an author reading the page and an author
+      reading the document will be told two things that can diverge.
+  - path: docs/acceptance-criteria/infrastructure/INF-1300-architecture-docs-by-construction/INF-1300b-4.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      Owns retiring the four measured defects on the two authoring surfaces — the ADR-015
+      attribution, the unrunnable --files verification command, the frontmatter checklist that
+      omits description:, and the --date disagreement between the surfaces. This record must
+      not fork any of that content: a second corrected copy is a second thing to keep in step.
+  - path: templates/skills/write-c4-diagram/SKILL.md
+    relationship: specifies
+    status: exists
+    relevance: >-
+      One of the two surfaces the last clause forbids duplicating. Its section 6 is also the
+      measured precedent for why this record's first clause EXECUTES rather than reads: the
+      verification command it publishes uses --files, the script defines --file, and the
+      published form has never run.
+  - path: templates/agents/architecture-diagram-author.md
+    relationship: specifies
+    status: exists
+    relevance: >-
+      The other surface. It instructs an agent rather than a human, so the how-to is a third
+      surface with its own audience — which is why it needs its own executed-command guard
+      rather than riding on INF-1300b-4's.
+  - path: templates/agents/how-to-author.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      The agent that will write this page, and the source of its required section list —
+      Prerequisites, Steps, Verification, Troubleshooting, See Also. Named here because its
+      step 1 instructs it to load a canonical convention file that does not exist in this
+      worktree; see it_requirements.
+  - path: docs/how-to/documentation/write-reference.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      The surviving sibling genre guide. Its Step 1 table is the genre boundary this record
+      sits on the other side of: the consumer question here is "how do I do X", so this is a
+      how-to and the lookup content belongs in INF-1300b-5's reference.
+  - path: CLAUDE.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      "Gate / Workflow ACs — Verify Behaviorally, Not by Grep". A documentation page is not
+      exempt when its content is derivable from a declaration: the refusal set this page must
+      cover is derivable, so the correspondence is asserted against the means rather than by
+      searching the page for strings.
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+    relevance: "The angle taxonomy this record's test_spec classifies against; the remedy arm is real_artifact and the correspondence arm is reachability."
+origin_agent: BrainCandy
+created: 2026-09-14
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-09-14'
+superseded_by: null
+covered_by: []
+implemented_by: []
+assigned_agent: documentation-expert
+estimated_complexity: M
+change_target:
+  - code
+  - docs
+risk_surface: contract_boundary
+test_required: true
+it_requirements:
+  - "MEASURED 2026-09-14 — THE CANONICAL HOW-TO CONVENTION FILE DOES NOT EXIST, AND THE AGENT THAT WRITES THIS PAGE IS INSTRUCTED NOT TO PROCEED WITHOUT IT. templates/agents/how-to-author.md opens with 'load and read docs/how-to/documentation/write-how-to.md in full' and its step 1 says 'Do not proceed without doing this'. That path is absent: docs/how-to/documentation/ contains write-adr.md and write-reference.md only. Until that gap is closed, take the genre conventions from the required-section list inside how-to-author.md itself (frontmatter, H1 'How to <Verb Phrase>', one-sentence overview, Prerequisites, Steps, Verification, Troubleshooting, See Also) and from the structure of the surviving sibling guides. Authoring the missing convention file is NOT this record's work and must not be smuggled into it — record the gap and proceed."
+  - "PLACEMENT AND NAME. docs/how-to/start-a-new-architecture-document.md. General-contributor audience, so the flat docs/how-to/ folder rather than a topical one; verb-phrase filename, which is the how-to naming rule and the opposite of the noun-phrase rule INF-1300b-5's reference follows. Do not place it under docs/how-to/documentation/ — that folder holds guides about writing each DOC GENRE, and this guide is about writing one particular document."
+  - "THE PAGE IS ITSELF A docs/**/*.md AND MUST SATISFY THE SAME JUDGMENT-TIER HOOKS IT TEACHES ABOUT. In particular check_description_field requires a non-empty `description:` frontmatter field, which SKILL.md section 6's checklist omits — so the very defect INF-1300b-4 retires is one this page can reproduce on itself. Run the manifest-matched judgment hooks over the page with the transform tier disabled; a description injected by a repair step does not count."
+  - "REFERENCE, DO NOT FORK. INF-1300b-4 owns the corrections to the two authoring surfaces: the ADR-015 attribution for the key, the published --files verification command that argparse rejects (the script defines --file and a positional), the section 6 checklist that omits description:, and the --date disagreement between the skill and the agent template. This page must LINK to the corrected surfaces for the invocation, the field list and the verification command. Reproducing any of them here creates a second copy that the next correction will not reach, which is the exact failure mode this tree exists to end, one surface further out."
+  - "THE REFUSAL-REASON SET IS DERIVED FROM THE MEANS, NEVER WRITTEN INTO THE PAGE'S CHECK. Consume the same enumeration INF-1300d-3's shared refusal path exposes. A fixed list in the observation stops discriminating the first time a reason is added — the count-pinned failure this project has recorded elsewhere — and would leave the page silently incomplete while its test stayed green. The correspondence must be asserted in BOTH directions: a reason with no entry is an incomplete page, and an entry for a reason the means cannot produce is a page teaching a remedy for something that cannot happen."
+  - "THE REMEDY ARM EXECUTES; IT DOES NOT READ. For each reason: provoke the real refusal, apply exactly what the entry instructs and nothing more, re-run, and put the result through INF-1300a-1's in-tree scratch harness. Applying 'exactly what the entry instructs and nothing more' is the load-bearing part — an observation that fills in the rest of a well-formed request by hand proves the harness works, not that the entry is sufficient."
+  - "ALL OF INF-1300a-1's VACUOUS-GREEN GUARDS APPLY to every hook invocation in the remedy arm: the argv-blind hooks that read the staged index, check_mermaid_parent_link's module-level REPO_ROOT taken from its own file's grandparent, and the [NO-ARCH-UPDATE] bypass token read from the last commit subject and COMMIT_EDITMSG. Use a-1's harness; never a bare tmpdir."
+  - "THE PAGE MUST NOT TELL AN AUTHOR TO WORK AROUND A CHECK. No step may instruct the reader to skip a hook, pass a bypass token, or stage a hand-repaired document. If following the page requires any of those, the means is wrong and the finding belongs on the means' record, not in a workaround here."
+  - "TASK-ORIENTED, NOT CONCEPTUAL. Steps are actions in the order an author performs them, each with a full command and a stated expected outcome. WHY the collection has these conventions belongs in an explanation doc, and WHAT the parts of a document are belongs in INF-1300b-5's reference; link to both rather than absorbing either."
+  - "Error handling per the project error-handling policy (CLAUDE.md rules 1-4) applies to the test harness this record adds, not to the page: every subprocess and filesystem boundary wrapped with a named exception type, nothing swallowed."
+test_spec:
+  - name: test_every_command_the_how_to_publishes_runs_as_published
+    target_dir: unit_tests/docs/
+    framework: pytest
+    type: integration
+    angle: deployed
+    surface_invoked: "scripts/scaffold/new_arch_doc.py"
+    description: "Extract every fenced command from the how-to and EXECUTE it unchanged; each must run and produce what the surrounding text claims, and the means must require nothing the page fails to tell the author to supply. The unrunnable --files command published for months on SKILL.md section 6 is the measured precedent for executing rather than reading."
+  - name: test_troubleshooting_entries_and_the_means_refusal_reasons_correspond_both_ways
+    target_dir: unit_tests/docs/
+    framework: pytest
+    type: integration
+    angle: reachability
+    surface_invoked: "scripts/scaffold/new_arch_doc.py"
+    description: "Derive the refusal-reason set from INF-1300d-3's shared refusal path at run time and require a bijection with the page's troubleshooting entries: a reason with no entry fails, and an entry for a reason the means cannot produce fails. A list of reasons written into the test fails this descriptor's purpose and is itself a defect."
+  - name: test_following_each_documented_remedy_yields_an_accepted_document
+    target_dir: unit_tests/docs/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    description: "THE ARM WITH TEETH — per reason: provoke the real refusal, apply exactly what the entry says to supply and nothing else, repeat the request, stage the result in INF-1300a-1's in-tree harness, and require every manifest-matched judgment hook to exit 0 with per-hook examination evidence."
+  - name: test_a_reason_added_to_the_means_reddens_this_suite
+    target_dir: unit_tests/docs/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    description: "Add a synthetic refusal reason to the shared refusal path and change nothing else; the correspondence descriptor must fail. This is what stops the page becoming a claim about the reasons that happened to exist when it was written."
+  - name: test_no_fenced_block_on_the_page_duplicates_one_an_authoring_surface_publishes
+    target_dir: unit_tests/docs/
+    framework: pytest
+    type: integration
+    angle: boundary
+    description: "Compare every fenced block and field enumeration on the page against the blocks published on templates/skills/write-c4-diagram/SKILL.md and templates/agents/architecture-diagram-author.md; a block either surface owns must be referenced by link here, not reproduced. Artifact-against-artifact, not a search for strings."
+  - name: test_the_produced_versus_authored_split_is_referenced_not_redefined
+    target_dir: unit_tests/docs/
+    framework: pytest
+    type: unit
+    angle: boundary
+    description: "The page names where the produced-versus-authored split is defined and carries no second definition of it, so an author reading the page and an author reading the produced document cannot be told two things that diverge."
+  - name: test_the_page_itself_passes_the_document_checks_that_apply_to_it
+    target_dir: unit_tests/docs/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "With the transform tier disabled, every judgment-tier hook whose manifest files-regex matches docs/how-to/start-a-new-architecture-document.md exits 0 over the staged page — including check_description_field, whose field the checklist this page links to currently omits."
+test_rationale: >-
+  A documentation page is the easiest artifact in this tree to satisfy falsely, because
+  every naive observation of one is a search for text it contains, and a search passes on a
+  page that is complete about a world that has moved. Both halves of this record are
+  derivable from something runnable, so CLAUDE.md's gate-and-workflow rule applies with full
+  force: the refusal set is derivable from the shared refusal path, and whether a remedy
+  works is decided by the project's own checks. Hence the two irreplaceable arms are a
+  both-directions correspondence taken from the means at run time, and an execution of each
+  documented remedy through INF-1300a-1's real-hook harness. The published-command arm is
+  separate and is not redundant with INF-1300b-4's: this page is a THIRD surface with its own
+  audience, and the measured precedent for the failure — a verification command published
+  with --files against a script defining --file, unnoticed for months — is exactly what a
+  reading test cannot see. The reason-added descriptor exists because a bijection asserted
+  once is a claim about today; only reddening on a new reason makes it a contract.
+delivers_to:
+  agent: documentation-expert
+  contract: "The authoring how-to at docs/how-to/start-a-new-architecture-document.md: the ordered steps for starting a new architecture document, a Verification section whose command actually runs, and a Troubleshooting section holding one entry per refusal reason the means can produce, each naming the reason and what to supply instead. INF-1300b-5's reference links to this page as its task guide, and this page links to that reference for the anatomy of a produced document rather than restating it."
+expects_from:
+  - ac_id: INF-1300a-1
+    contract: "The generator CLI as implemented — its accepted argument set including the widened --parent / --root / --source-ticket — and the in-tree scratch harness returning the per-hook {hook_id, exit_code, examined, stderr} record, without which a remedy that appears to work cannot be distinguished from a hook that never looked."
+  - ac_id: INF-1300d-3
+    contract: "The shared refusal path and the run-time enumeration of its refusal reasons, each with the message halves it emits. The page's troubleshooting section is a bijection onto this set; a reason added later without an entry must redden this record's suite."
+  - ac_id: INF-1300b-3
+    contract: "The produced-versus-authored split as it is marked in the document itself, so the page can point at it rather than define it a second time."
+  - ac_id: INF-1300b-4
+    contract: "The two authoring surfaces after their four measured defects are retired, so this page links to a correct invocation, a complete field checklist and a verification command that runs — rather than forking a corrected copy of any of them."
+notes: |
+  WHY THIS DOCUMENT AND NOT A TROUBLESHOOTING DOCUMENT OF ITS OWN. INF-1300a's notes name
+  this how-to as the natural home for INF-1300d's refusal troubleshooting, and INF-1300d's
+  documentation_rationale gives the reason in terms: the refusal MESSAGES carry the duty of
+  saying what to supply, so a separate troubleshooting document would restate them and then
+  drift. This record honours that by making the page's entries a bijection onto the means'
+  own reason set rather than an independently maintained catalogue — the page tells the
+  reader where to stand, the message tells them what to type, and the correspondence between
+  them is checked rather than trusted.
+
+  FALSIFIABILITY. Three runs, none of which can be satisfied by a stub or by a search of the
+  page. First: execute every command the page publishes, exactly as published. Falsified by
+  any that the means rejects, and equally by one that runs only because the observer supplied
+  an argument the page never mentioned. Second: derive the refusal-reason set from the means
+  at the moment of the reading and require a bijection with the page's entries — falsified by
+  a reason with no entry, and falsified by an entry for a reason that cannot occur, which is
+  the drift a page acquires when the means narrows and nobody reopens the page. Third, and
+  the arm with teeth: for each entry, provoke the real refusal, do exactly what the entry says
+  and nothing more, repeat the request, and put the result through the project's own checks —
+  falsified by any remedy that leaves the document still refused. A page that is complete,
+  accurate about the reasons, and whose remedies do not actually work is the failure this
+  third arm exists to catch, and it is the likeliest one, because a remedy is written from
+  what the author of the page believes the means needs.
+
+  WHAT WILL NOT FALSIFY IT, STATED BECAUSE IT IS THE TEMPTING CONSTRUCTION. Searching the
+  page for the name of each refusal, or for a Troubleshooting heading, or asserting a minimum
+  number of entries. All three pass on a page listing remedies that do not work, and the
+  repo's own rule — "Gate / Workflow ACs — Verify Behaviorally, Not by Grep" — is not
+  suspended because the artifact is markdown. The content of this page is derivable from a
+  declaration and from a runnable path, so it is checkable against them.
+
+  THE DUPLICATION FENCE IS A CRITERION, NOT A STYLE NOTE. INF-1300b-4 is retiring four
+  measured falsehoods from the two authoring surfaces. If this page reproduces the corrected
+  invocation, the corrected field checklist or the corrected verification command, the project
+  acquires a third place where each of those must be kept in step, and the next correction
+  will reach two of the three. That is how the present situation was built. The page
+  references; it does not copy.
+
+  A GAP FOUND WHILE SPECIFYING THIS AND DELIBERATELY NOT CLOSED HERE. The agent that will
+  write this page is instructed to load docs/how-to/documentation/write-how-to.md before
+  writing anything and told not to proceed without it. That file does not exist in this
+  worktree — the folder holds write-adr.md and write-reference.md only. So the how-to genre
+  has no canonical convention document while the reference and ADR genres do, and the
+  instruction to load it cannot be followed. This is the same shape as the defect the whole
+  tree is about: a mandatory step whose means is absent. It is recorded here rather than
+  fixed, because authoring a genre convention for the whole project is not a child of
+  INF-1300a and folding it in would hide it.
