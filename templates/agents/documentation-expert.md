@@ -138,7 +138,7 @@ for later", "we should write this down", or similar.
      written."
 
    - For any other `target_surface` (e.g. `memory-user`, `memory-project`,
-     `CLAUDE.md-inline`, `CLAUDE.md-toc`, `per-folder-readme`,
+     `claude-md-inline`, `claude-md-toc`, `per-folder-readme`,
      `agent-frontmatter`, `glossary`, `settings-json`, `ticket-body`,
      `skills-config`, `unknown`):
      → do NOT dispatch a Diataxis writer.
