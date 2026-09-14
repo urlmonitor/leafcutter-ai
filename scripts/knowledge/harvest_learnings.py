@@ -441,11 +441,17 @@ def _stale_declaration_message(output_root: Path) -> str | None:
     AC INF-400c-4-v: a declared path whose install was moved by hand is
     reported as STALE, distinctly from a sink that has simply never been
     written to -- and without inventing a new exit status. Returns ``None``
-    when there is no declaration to go stale, or when the declared value
-    still matches what this layout would produce right now.
+    when there is no declaration to go stale, when the declared value is not
+    an absolute path (AC INF-400c-4's own parity check is what rejects a
+    non-absolute declaration outright; this staleness comparison is only
+    meaningful for an absolute path that used to match this layout and no
+    longer does -- a relative declared value never "used to match" an
+    absolute recomputation, so treating it as stale would misreport a
+    resolution-hazard case as an install-moved case), or when the declared
+    value still matches what this layout would produce right now.
     """
     declared = _read_sink_declaration(output_root)
-    if declared is None:
+    if declared is None or not Path(declared).is_absolute():
         return None
     if Path(declared) == _recomputed_sink_for_output_root(output_root):
         return None
@@ -1103,19 +1109,19 @@ if __name__ == "__main__":
 #   pre-existing accumulation differs from the newly adopted declaration.
 #   No behaviour change for existing callers that pass --sink explicitly.
 #   (#TICKETLESS reason=ac-scoped-fastlane-build-INF-400c-4-v)
-# - 2026-09-14 [python-coder/INF-400c-4-i]: Hardened `--print-sink` specifically:
-#   with no build-time declaration present it now REFUSES (exit 1, message on
-#   stderr naming the missing declaration, nothing printed to stdout) instead
-#   of falling back to `_resolve_default_sink`'s CWD-relative default. The four
-#   shipped emit surfaces are being repointed (this same AC) to depend on
-#   `--print-sink` as their single source of truth for an install-wide
-#   destination; the CWD fallback that flag inherited from INF-400c-4-v would
-#   have handed each surface a different absolute-looking path depending on
-#   where the invoking agent stood, reproducing the exact corpus split those
-#   surfaces exist to prevent. Deliberately scoped to `_handle_print_sink`
-#   only: `_resolve_default_sink` / `_resolve_sink_or_log_stale` (the ordinary,
-#   non-print-sink run's `--sink` default) are UNCHANGED, so INF-400c-4-v's own
-#   documented un-built-source-tree fallback for ordinary `harvest` runs still
-#   works exactly as before. No new exit code: reuses 1, already the sink-
-#   resolution-failure code for the ordinary run. (#TICKETLESS
-#   reason=ac-scoped-fastlane-build-INF-400c-4-i)
+# - 2026-09-14 [python-coder/INF-400c-4-i]: Hardened `--print-sink`: with no
+#   build-time declaration present it now REFUSES (exit 1, stderr message,
+#   nothing on stdout) instead of falling back to `_resolve_default_sink`'s
+#   CWD-relative default -- the four shipped emit surfaces depend on
+#   `--print-sink` as their single source of truth, so a CWD fallback would
+#   reproduce the corpus split those surfaces exist to prevent. Scoped to
+#   `_handle_print_sink` only; the ordinary `harvest` run's `--sink` default
+#   (INF-400c-4-v) is unchanged. Reuses exit 1, no new code.
+#   (#TICKETLESS reason=ac-scoped-fastlane-build-INF-400c-4-i)
+# - 2026-09-14 15:10 [python-coder/INF-400c-4]: `_stale_declaration_message`
+#   now treats a non-absolute declared value as "nothing to report" instead
+#   of misreporting it as install-moved -- that shape is the different
+#   resolution-hazard defect INF-400c-4's own parity check already rejects,
+#   and never "used to match" an absolute recomputation. Ordinary relative
+#   -value handling (resolve against CWD) is unchanged.
+#   (#TICKETLESS reason=ac-scoped-fastlane-build-INF-400c-4)
