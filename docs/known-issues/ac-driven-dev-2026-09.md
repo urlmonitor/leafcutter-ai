@@ -14,6 +14,7 @@ related_docs:
   - docs/known-issues/README.md
 ---
 
+
 # Known issues — ac-driven-dev (from 2026-09-14)
 
 Observed defects in this component that are **not yet fixed**, recorded from 2026-09-14
@@ -45,67 +46,27 @@ exempted, and the old register was not touched. The proper split of
 
 ---
 
-### KI-ACD-20260914-generated-implemented-by-records-the-staging-path — the generator has a flag whose whole purpose is to name the ticket's final location, and the one field that stores a durable path ignores it
+## How this register is stored
 
-- **Severity:** medium. Nothing is corrupted and the ticket itself is correct. The cost is that `implemented_by` — the field the coverage resolver reads — is written pointing at a path that will never exist, and nothing in the repo notices. It is a phantom citation manufactured by the tooling whose purpose is to prevent phantom-done.
-- **Status:** open — **confirmed by observation**, 2026-09-14.
-- **Occurrences:** 9 of 9 epic-member tickets generated for `EPIC-FilesStayWorkable`. Structural: every epic-member ticket, every time.
-- **Where:** `scripts/ac_store/generate_ticket_from_ac.py` lines 3834–3847.
+This file is an **index**. Each known issue is its own file under [`ac-driven-dev-2026-09/`](ac-driven-dev-2026-09/), named `<status>-<severity>-<ki-id>.md`, so the directory listing answers "is anything open, and how bad" without opening anything:
 
-**Symptom.** Nine tickets were generated into an epic folder and renamed to the epic
-convention (`01_TICKET-…`, `02_TICKET-…`). Every source AC came back carrying:
-
-```yaml
-implemented_by:
-- tickets/00_inbox/epics/EPIC-FilesStayWorkable/TICKET-20260914-GE-127d-1.md
+```
+ls docs/known-issues/ac-driven-dev-2026-09/open-blocker-*   # anything critical open?
+ls docs/known-issues/ac-driven-dev-2026-09/open-*           # everything still live
 ```
 
-No such file exists. The file on disk is `01_TICKET-20260914-GE-127d-1.md`.
+Severity in the **filename** is a three-level index bucket (`blocker` / `high` / `low`). The original grading is preserved verbatim on each entry's own `**Severity:**` line — the bucket never overwrites it. `critical` indexes as `blocker`; `medium` indexes as `low`.
 
-**Mechanism.** The back-reference is derived from the path actually written:
+Fixed issues move to [`ac-driven-dev-2026-09/resolved/`](ac-driven-dev-2026-09/resolved/) and are no longer listed as open. They are kept, not deleted.
 
-```python
-ticket_path = tickets_root / _ticket_filename(ac_id)
-relative_ticket_path = str(ticket_path.relative_to(worktree)) ...
-_write_implemented_by(ac_path, relative_ticket_path, ac_id, worktree=worktree)
-```
+**Open: 1** (0 blocker, 0 high, 1 low) · **Resolved: 0**
 
-`_ticket_filename(ac_id)` has no notion of ordinal prefixes, because at write time there is
-no epic order to know. That part is reasonable. What makes this a defect rather than a
-limitation is that **the generator already accepts the right answer and does not use it
-here.** `--resolved-destination` exists precisely to carry *"the ticket's FINAL
-repo-relative location, distinct from `--tickets-root` which may be a staging root a later
-step moves the file out of"* — its own help text. It is consumed for phase-deferral
-classification (`_location_kind_for_destination`) and nowhere else. The one field that
-persists a path beyond this process reads `tickets_root` instead.
+## Open
 
-**Why nothing catches it, which is the worse half.** The AC hooks read the git index, and a
-freshly generated ticket and its AC are both untracked at generation time, so their silence
-proves nothing — the same blind spot as *"AC-store commits — stage the parent alongside the
-child"* in `CLAUDE.md`. `validate_ac_schema.py` checks that `implemented_by` is a list of
-strings, not that the strings resolve. So the store passes every gate while holding nine
-citations to files that were never created.
+| Severity | Issue | File |
+|---|---|---|
+| `low` | KI-ACD-20260914-generated-implemented-by-records-the-staging-path — the generator has a flag whose whole purpose is to name the ticket's final location, and the one field that stores a durable path ignores it | [open-low-ki-acd-20260914-generated-implemented-by-records-the-staging-path.md](ac-driven-dev-2026-09/open-low-ki-acd-20260914-generated-implemented-by-records-the-staging-path.md) |
 
-**Workaround in use.** After renaming into epic order, repoint every entry by hand and
-confirm with a store-wide grep for the unprefixed form. Done for all nine in the
-`EPIC-FilesStayWorkable` scaffold.
+## Resolved
 
-**Fix direction.**
-- Prefer `resolved_destination` in the back-reference call, falling back to `ticket_path`
-  only when it was not supplied. The value is already in scope and already validated
-  against `--location-kind`.
-- Consider requiring `--resolved-destination` for `--location-kind epic_member` — an epic
-  member's final name is never the one the generator picks.
-- Add a store-level check that every `implemented_by` path resolves. That is the general
-  defence and would have caught this class on the first run. It must read the working tree,
-  not the index, or it inherits the blind spot above.
-
-**Related.** `KI-ACD-20260831-agent-contracts-block-not-pipe-delimited` and
-`KI-ACD-20260914-0657` in [ac-driven-dev.md](ac-driven-dev.md) — same family: generated
-content a downstream reader cannot use.
-`KI-TQ-20260914-test-fixtures-hand-enumerate-their-production-dependencies` in
-[testing-quality.md](testing-quality.md) — same session, same shape: a derived value nothing
-checks against reality.
-
-**Pattern:** a tool that is handed the correct value, uses it for a secondary purpose, and
-derives the primary one from a path it happens to be holding.
+None yet.

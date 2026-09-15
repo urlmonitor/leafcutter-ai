@@ -59,33 +59,74 @@ landed. That is the failure mode this table has, and no recount fixes it, becaus
 defect is that a hand-maintained total races every append. Re-run the count; do not read
 the number.
 
-| Component | File | Open entries |
+**The counting problem above is now answered by the filesystem.** On 2026-09-14 every
+register was split into one file per issue, named `<status>-<severity>-<ki-id>.md` under a
+per-component directory. Nothing is hand-counted any more — ask the directory:
+
+```bash
+ls docs/known-issues/*/open-blocker-* | wc -l     # blockers, everywhere
+ls docs/known-issues/commit-guardian/open-* | wc -l
+ls docs/known-issues/commit-guardian/open-blocker-*   # is anything critical open here?
+```
+
+A count taken this way cannot race an append, because there is no shared line for two
+branches to edit: a new issue is a new file. Two branches filing at once produce two files,
+not a conflict and not a wrong total. The table below is therefore a **map, not a tally** —
+the per-component numbers are in each component's own index, which is generated from the
+directory rather than maintained by hand.
+
+| Component | Index | Entries |
 |---|---|---|
-| `commit_guardian`, `precommit_hooks` | [commit-guardian.md](commit-guardian.md) | 67 |
-| `build_orchestration`, `doc_compliance` | [build-orchestration.md](build-orchestration.md) | 52 |
-| `build_pipeline` | [build-pipeline.md](build-pipeline.md) | 51 |
-| `ac_driven_dev` | [ac-driven-dev.md](ac-driven-dev.md) | 27 |
-| `ac_driven_dev` (from 2026-09-14) | [ac-driven-dev-2026-09.md](ac-driven-dev-2026-09.md) | 1 |
-| `ac_store` | [ac-store.md](ac-store.md) | 24 |
-| `testing_quality` | [testing-quality.md](testing-quality.md) | 21 |
-| `knowledge_management` | [knowledge-management.md](knowledge-management.md) | 12 |
-| `supervisor_system` | [supervisor-system.md](supervisor-system.md) | 6 |
-| `agent_registry` | [agent-registry.md](agent-registry.md) | 3 |
-| `documentation_system` | [documentation-system.md](documentation-system.md) | 4 |
-| `feedback_collector` | [feedback-collector.md](feedback-collector.md) | 3 |
-| `changelog` | [changelog.md](changelog.md) | 2 |
-| `security_scanner` | [security-scanner.md](security-scanner.md) | 1 |
-| | **total** | **274** |
+| `commit_guardian`, `precommit_hooks` | [commit-guardian.md](commit-guardian.md) | [`commit-guardian/`](commit-guardian/) |
+| `build_orchestration`, `doc_compliance` | [build-orchestration.md](build-orchestration.md) | [`build-orchestration/`](build-orchestration/) |
+| `build_pipeline` | [build-pipeline.md](build-pipeline.md) | [`build-pipeline/`](build-pipeline/) |
+| `ac_driven_dev` | [ac-driven-dev.md](ac-driven-dev.md) | [`ac-driven-dev/`](ac-driven-dev/) |
+| `ac_driven_dev` (from 2026-09-14) | [ac-driven-dev-2026-09.md](ac-driven-dev-2026-09.md) | [`ac-driven-dev-2026-09/`](ac-driven-dev-2026-09/) |
+| `ac_store` | [ac-store.md](ac-store.md) | [`ac-store/`](ac-store/) |
+| `testing_quality` | [testing-quality.md](testing-quality.md) | [`testing-quality/`](testing-quality/) |
+| `knowledge_management` | [knowledge-management.md](knowledge-management.md) | [`knowledge-management/`](knowledge-management/) |
+| `supervisor_system` | [supervisor-system.md](supervisor-system.md) | [`supervisor-system/`](supervisor-system/) |
+| `agent_registry` | [agent-registry.md](agent-registry.md) | [`agent-registry/`](agent-registry/) |
+| `documentation_system` | [documentation-system.md](documentation-system.md) | [`documentation-system/`](documentation-system/) |
+| `feedback_collector` | [feedback-collector.md](feedback-collector.md) | [`feedback-collector/`](feedback-collector/) |
+| `changelog` | [changelog.md](changelog.md) | [`changelog/`](changelog/) |
+| `security_scanner` | [security-scanner.md](security-scanner.md) | [`security-scanner/`](security-scanner/) |
 
-Two id conventions are in use — `KI-CG-035` and `KI-CG-20260826-1612`. A count that
-matches only the first undercounts; the date form is the newer of the two and is the
-one that cannot collide.
+At the split: **255 open** (18 blocker, 129 high, 108 low) and **32 resolved**. That is a
+snapshot, not a maintained figure — run the `ls` above.
 
-**Known id collision, unrepaired:** `commit-guardian.md` carries **two** distinct entries
+## Filing a new issue
+
+Write a new file in the component's directory. Do **not** append to the index; it is
+generated, and the registers it replaced grew to 1,900–4,500 lines against a 300-line limit,
+at which point `check-doc-length` correctly refused every further append and the
+record-on-sight path closed. One file per issue is what keeps that from recurring.
+
+```
+docs/known-issues/<component>/open-<severity>-KI-<COMP>-<YYYYMMDD>-<slug>.md
+```
+
+**Severity in the filename** is a three-level index bucket: `blocker` / `high` / `low`.
+The registers themselves graded on five levels, and that original grading is preserved
+verbatim on each entry's own `**Severity:**` line — the bucket is an index, and it never
+overwrites the entry's own words. `critical` indexes as `blocker`; `medium` indexes as `low`.
+Where an entry named two levels ("medium for X, high for Y"), the bucket takes the **worst**:
+over-grading surfaces an issue, under-grading hides one.
+
+**When it is fixed**, move the file to `<component>/resolved/` and rename the `open-` prefix
+to `resolved-`. Fixed issues are kept, not deleted — a resolved entry is how a future reader
+learns why present code is shaped the way it is.
+
+Two id conventions are in use — `KI-CG-035` and `KI-CG-20260826-1612`. The date form is the
+newer of the two and is the one that cannot collide; prefer it.
+
+**Known id collision, unrepaired:** `commit-guardian` carries **two** distinct entries
 numbered `KI-CG-012` — one on hook test seams, one on `check-ac-schema` failing open on an
-empty staged set. Both are cited elsewhere by that id, so neither can be silently renumbered
-without breaking references; repairing it means choosing which keeps the number and updating
-every citation to the other.
+empty staged set. `testing-quality` carries the same problem on `KI-TQ-012`. Both are cited
+elsewhere by those ids, so neither can be silently renumbered without breaking references.
+The split did **not** repair this and did not renumber anything: each colliding pair keeps
+its id in the filename and is told apart by a trailing slug. The collision is still there to
+be fixed; it is now visible in `ls` rather than only in this paragraph.
 
 ## Highest severity first
 
