@@ -2,7 +2,8 @@
 MODULE: build_phases_knowledge
 GOAL: Deploy the knowledge-plane build phases (knowledge scripts + the
     knowledge-emission sink declaration) that were previously defined inline
-    in build_phases.py.
+    in build_phases.py, and hold the deploy-manifest helpers that describe
+    what those phases (plus one other) ship.
 BUSINESS CONTEXT: build_phases.py is grandfathered ~7x over the 400-content-line
     check-file-size limit (2753 lines at the time of this extraction), and the
     GE-127b-1 ratchet refuses any change that leaves an already-oversized file
@@ -11,6 +12,17 @@ BUSINESS CONTEXT: build_phases.py is grandfathered ~7x over the 400-content-line
     deploy-manifest entry) in the same file. This module carries the two most
     recently added, thematically-adjacent knowledge-plane phase functions out
     of build_phases.py to restore headroom, with no behaviour change.
+
+    scripts/build.py (a SEPARATE file, also grandfathered over its own
+    check-file-size limit) later hit the same GE-127b-1 refusal for a
+    legitimate +18-line deploy-manifest fix (AC INF-400c-5, H-1). That fix
+    could not fund its own growth from budget elsewhere, so
+    ``_manifest_knowledge_scripts`` -- the deploy-manifest helper describing
+    exactly what ``build_knowledge_scripts`` above ships -- moved here
+    alongside the phase it describes (its natural home, not merely a place to
+    shed lines). ``_manifest_workflow_tool_scripts`` moved in the SAME commit,
+    as a whole, self-contained function of the same kind, because the
+    knowledge helper alone did not recover enough of build.py's own budget.
 ARCHITECTURE: Two public phase functions, re-exported from build_phases.py so
     every existing caller (notably build.py, which imports
     ``build_knowledge_scripts`` and ``build_knowledge_sink_declaration`` from
@@ -34,6 +46,15 @@ ARCHITECTURE: Two public phase functions, re-exported from build_phases.py so
     re-export work). So this module ships and resolves at import time exactly
     the way build_precommit.py already does, with no deploy-manifest entry
     required.
+
+    ``_manifest_knowledge_scripts`` and ``_manifest_workflow_tool_scripts``
+    are imported DIRECTLY by build.py (``from build_phases_knowledge import
+    _manifest_knowledge_scripts, _manifest_workflow_tool_scripts``), not
+    re-exported through build_phases.py — scripts/build_phases.py was
+    intentionally left untouched by this extraction. Both are self-contained
+    (package_root in, a set[str] out; no dependency on build_phases's private
+    state), so unlike the two phase functions above they need no deferred
+    import to avoid a circular-import at module load time.
 """
 
 from __future__ import annotations
@@ -49,12 +70,29 @@ _log = logging.getLogger(__name__)
 
 def build_knowledge_scripts(target_root: Path, config: dict[str, Any],
                              dry_run: bool, force: bool) -> int:
-    """Deploy knowledge scripts to ``<target_root>/scripts/knowledge/``.
+    """Deploy knowledge scripts + the entry_kind vocabulary config.
 
-    Copies ``scripts/knowledge/harvest_learnings.py`` from the package source
-    to the consumer project. This script is referenced by the knowledge-harvester
-    agent but was not previously deployed by any build phase (Class B gap,
-    EPIC-BuildGuardFalsePositive/03).
+    Copies ``scripts/knowledge/harvest_learnings.py``,
+    ``scripts/knowledge/emit_knowledge.py``, and
+    ``scripts/knowledge/entry_kind_vocabulary.py`` from the package source to
+    the consumer project's ``<target_root>/scripts/knowledge/``, then copies
+    the static ``config/entry_kind_vocabulary.json`` declaration to
+    ``<target_root>/config/entry_kind_vocabulary.json`` -- mirroring
+    ``build_feedback``'s ``config/feedback_categories.yaml`` deployment (a
+    static asset copied alongside its scripts in the same phase), NOT
+    ``build_knowledge_sink_declaration``'s pattern (which GENERATES its JSON
+    content per-install; this vocabulary file is a fixed, tracked source
+    asset with no install-specific values, so a verbatim copy is correct).
+
+    ``harvest_learnings.py`` was previously the only script deployed here
+    (Class B gap, EPIC-BuildGuardFalsePositive/03). ``emit_knowledge.py`` and
+    ``entry_kind_vocabulary.py`` are added per AC INF-400c-5's H-1 fix: a
+    fast-lane pr-review found both new scripts AND their JSON config were
+    absent from every deploy manifest, so a fresh ``build.py`` run left a
+    shipped emit surface invoking ``emit_knowledge.py`` failing on a missing
+    file, or ImportError-ing on its missing sibling module, or silently
+    rejecting every ``entry_kind`` once ``load_vocabulary()`` found no config
+    and returned ``{}``.
 
     Files are copied verbatim (no template compilation). The compare-before-write
     guard prevents mtime churn on unchanged files.
@@ -66,7 +104,8 @@ def build_knowledge_scripts(target_root: Path, config: dict[str, Any],
         force: When True, overwrites existing files.
 
     Returns:
-        Count of files written (or that would be written in dry-run mode).
+        Count of files written (or that would be written in dry-run mode),
+        across both the scripts/knowledge/ scripts and the vocabulary config.
 
     # DECISION HISTORY
     # - 2026-06-17 [python-coder/EPIC-BuildGuardFalsePositive/03]:
@@ -79,11 +118,37 @@ def build_knowledge_scripts(target_root: Path, config: dict[str, Any],
     #   GE-127b-1 file-size ratchet blocking INF-400c-4-iii and INF-400c-4-i.
     #   Re-exported from build_phases.py so build.py's existing import keeps
     #   working. (#INF-400c-4-iii, #INF-400c-4-i)
+    # - 2026-09-14 [python-coder/INF-400c-5, H-1 fix]: A fast-lane pr-review
+    #   found the fast-lane build of INF-400c-5/-i/-iii had authored
+    #   scripts/knowledge/emit_knowledge.py, scripts/knowledge/
+    #   entry_kind_vocabulary.py, and config/entry_kind_vocabulary.json but
+    #   never added any of the three to a deploy manifest, so all three were
+    #   silently absent after any ``build.py`` run -- invisible to the 120
+    #   green tests because every one of them resolved these paths via
+    #   ``_REPO_ROOT`` (the source tree), never a deployed ``target_root``.
+    #   Added the two new scripts to this phase's deploy list and the JSON
+    #   config as a static-asset copy (build_feedback's
+    #   config/feedback_categories.yaml pattern), and registered all three in
+    #   scripts/build.py's ``_manifest_knowledge_scripts()`` and
+    #   ``_get_source_deployable_scripts`` / ``_get_source_paths_for_guard``
+    #   core-config tuples (the closure guard would otherwise abort every
+    #   build once it started analysing ``entry_kind_vocabulary.py``'s own
+    #   ``Path(__file__)``-rooted reference to the JSON file -- see build.py's
+    #   own DECISION HISTORY for that half of the fix).
+    #   (#TICKETLESS reason=fast-lane-pr-review-fix-INF-400c-5-H1)
     """
     import build_phases as _bp
 
     knowledge_src = _bp.PACKAGE_ROOT / "scripts" / "knowledge"
-    deploy_scripts = ["harvest_learnings.py"]
+    deploy_scripts = [
+        "harvest_learnings.py",
+        "emit_knowledge.py",
+        "entry_kind_vocabulary.py",
+        "harvest_result.py",
+        "sink_resolution.py",
+        "capture_write.py",
+        "harvest_cli.py",
+    ]
     output_dir = target_root / "scripts" / "knowledge"
     written = 0
 
@@ -120,6 +185,25 @@ def build_knowledge_scripts(target_root: Path, config: dict[str, Any],
                 raise
             print(f"  scripts/knowledge/{script_name}")
             written += 1
+
+    # AC INF-400c-5, H-1 fix: the static entry_kind vocabulary declaration --
+    # a fixed, tracked source asset with no install-specific values (unlike
+    # config/knowledge_sink.json, which build_knowledge_sink_declaration()
+    # GENERATES per-install) -- so it is copied verbatim, mirroring
+    # build_feedback's config/feedback_categories.yaml deployment.
+    vocab_src = _bp.PACKAGE_ROOT / "config" / "entry_kind_vocabulary.json"
+    if vocab_src.is_file():
+        vocab_output = target_root / "config" / "entry_kind_vocabulary.json"
+        vocab_text = vocab_src.read_text(encoding="utf-8")
+        if _bp._write(vocab_output, vocab_text, dry_run, force):
+            written += 1
+            if not dry_run:
+                print("  config/entry_kind_vocabulary.json")
+    else:
+        # BP-900g-9 (n_location_rule: all).
+        _bp.record_deploy_failure(
+            "build_knowledge_scripts", "entry_kind_vocabulary.json", vocab_src
+        )
 
     return written
 
@@ -244,6 +328,107 @@ def build_knowledge_sink_declaration(target_root: Path, config: dict[str, Any],
     return 0
 
 
+def _manifest_knowledge_scripts(package_root: Path) -> set[str]:
+    """Return ``scripts/knowledge/<name>`` entries for knowledge scripts deployed by build_knowledge_scripts.
+
+    AC INF-400c-5, H-1 fix: ``emit_knowledge.py`` and
+    ``entry_kind_vocabulary.py`` were authored alongside ``harvest_learnings.py``
+    but never added here, so a fast-lane pr-review found both silently absent
+    from every deployed install. Must be kept in parity with
+    ``build_knowledge_scripts()``'s own ``deploy_scripts`` list above -- a
+    mismatch trips the manifest/deploy parity guard.
+
+    Args:
+        package_root: Absolute path to the leafcutter package root.
+
+    Returns:
+        Set of ``scripts/knowledge/<name>`` strings for deployable knowledge scripts.
+
+    # DECISION HISTORY
+    # - 2026-06-17 [python-coder/EPIC-BuildGuardFalsePositive/03]: Added to
+    #   scripts/build.py, deriving the deployable-scripts manifest entry for
+    #   harvest_learnings.py.
+    # - 2026-09-14 [python-coder/INF-400c-5, H-1 fix]: Extended with
+    #   emit_knowledge.py and entry_kind_vocabulary.py, matching
+    #   build_knowledge_scripts()'s own deploy_scripts list.
+    # - 2026-09-14 [python-coder/GE-127b-1 fix]: Moved from scripts/build.py
+    #   (unchanged) into this sibling module, alongside the
+    #   build_knowledge_scripts() phase it describes -- its natural home, not
+    #   merely a place to shed lines. scripts/build.py had grown +18 content
+    #   lines for a legitimate deploy-manifest fix (this same AC INF-400c-5,
+    #   H-1) while already over its own check-file-size limit, and the
+    #   GE-127b-1 ratchet refuses any growth of an already-oversized file --
+    #   the fix could not fund its own growth from budget elsewhere in that
+    #   file. build.py now imports this function directly
+    #   (``from build_phases_knowledge import _manifest_knowledge_scripts``)
+    #   rather than through a build_phases.py re-export, since
+    #   scripts/build_phases.py was intentionally left untouched by this
+    #   extraction. (#INF-400c-5)
+    """
+    result: set[str] = set()
+    knowledge_src = package_root / "scripts" / "knowledge"
+    for fname in (
+        "harvest_learnings.py",
+        "emit_knowledge.py",
+        "entry_kind_vocabulary.py",
+        "harvest_result.py",
+        "sink_resolution.py",
+        "capture_write.py",
+        "harvest_cli.py",
+    ):
+        if (knowledge_src / fname).is_file():
+            result.add(f"scripts/knowledge/{fname}")
+    return result
+
+
+def _manifest_workflow_tool_scripts(package_root: Path) -> set[str]:
+    """Return ``scripts/<name>`` entries for workflow-tool scripts deployed by build_workflow_tools.
+
+    Scans the package source for the workflow-tool scripts and returns
+    manifest entries for those that exist.  Must be kept in parity with the
+    ``deploy_scripts`` list inside ``build_workflow_tools()`` in
+    ``build_phases.py`` — a mismatch trips the manifest/deploy parity guard.
+
+    Args:
+        package_root: Absolute path to the leafcutter package root.
+
+    Returns:
+        Set of ``scripts/<name>`` strings for deployable workflow-tool scripts.
+
+    # DECISION HISTORY
+    # - 2026-09-14 [python-coder/GE-127b-1 fix]: Moved from scripts/build.py
+    #   (unchanged) into this sibling module as the second, self-contained
+    #   ``_manifest_*`` function extracted alongside
+    #   ``_manifest_knowledge_scripts`` -- that helper alone did not recover
+    #   enough of scripts/build.py's own check-file-size budget to fund the
+    #   AC INF-400c-5, H-1 deploy-manifest fix's +18-line growth while
+    #   build.py was already over its GE-127b-1 ratchet limit. This function
+    #   has no thematic relationship to the knowledge plane; it moved here
+    #   purely because it is "the same kind of thing" as
+    #   ``_manifest_knowledge_scripts`` (an ordinary, self-contained
+    #   deploy-manifest helper with no dependency on build_phases's private
+    #   state) and moving one complete function is preferable to shaving
+    #   pieces of several. build.py imports it directly from this module
+    #   (``from build_phases_knowledge import _manifest_workflow_tool_scripts``),
+    #   not through a build_phases.py re-export, since scripts/build_phases.py
+    #   was intentionally left untouched by this extraction. (#INF-400c-5)
+    """
+    result: set[str] = set()
+    scripts_src = package_root / "scripts"
+    for fname in (
+        "add_component.py",
+        "knowledge_query.py",
+        "set_ticket_status.py",
+        "ticket_prioritizer.py",
+        "port_registry.py",
+        "live_surface_startup.py",
+        "generate_doc_index.py",
+    ):
+        if (scripts_src / fname).is_file():
+            result.add(f"scripts/{fname}")
+    return result
+
+
 # ===========================================================================
 # DECISION HISTORY
 # ===========================================================================
@@ -260,4 +445,15 @@ def build_knowledge_sink_declaration(target_root: Path, config: dict[str, Any],
 #   ``from build_phases import build_knowledge_scripts,
 #   build_knowledge_sink_declaration`` keeps working unchanged.
 #   (#INF-400c-4-iii, #INF-400c-4-i)
+# - 2026-09-14 [python-coder/GE-127b-1 fix]: Added _manifest_knowledge_scripts
+#   and _manifest_workflow_tool_scripts, moved verbatim from scripts/build.py,
+#   to fund that file's own +18-line legitimate growth (AC INF-400c-5, H-1
+#   deploy-manifest fix) while it was already over the GE-127b-1
+#   check-file-size ratchet limit. build.py now imports both names directly
+#   from this module rather than through a build_phases.py re-export (that
+#   file was intentionally left untouched). Behaviour-preserving: same
+#   functions, same signatures, same call sites in build.py's
+#   ``_get_source_deployable_scripts`` and (for the knowledge script names
+#   only, via ``build_knowledge_scripts``'s own deploy_scripts list, unrelated
+#   to this move) ``_get_source_paths_for_guard``. (#INF-400c-5)
 # ===========================================================================
