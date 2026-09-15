@@ -238,6 +238,9 @@ from build_phases_self_description import (  # noqa: E402, F401  # re-exported
 from build_phases_knowledge import (  # noqa: E402, F401  # re-exported for callers
     build_knowledge_scripts,
     build_knowledge_sink_declaration,
+    # INF-700a-1-i. Authored directly in the sibling module, never here, for the
+    # same file-size reason that produced the extraction above.
+    check_knowledge_routing_wiring,
 )
 from build_phases_product_truth import (  # noqa: E402, F401  # re-exported for callers
     build_product_truth,

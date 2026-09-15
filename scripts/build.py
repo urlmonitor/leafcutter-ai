@@ -69,7 +69,11 @@ from build_phases import (
     check_command_reachability,
     AC_STORE_DEPLOY_MAP,
 )
-from build_phases_knowledge import _manifest_knowledge_scripts, _manifest_workflow_tool_scripts
+from build_phases_knowledge import (
+    _manifest_knowledge_scripts,
+    _manifest_workflow_tool_scripts,
+    check_knowledge_routing_wiring_guard,
+)
 from registry_validator import validate_agent_registry
 from project_context_discovery import (  # noqa: F401 — re-exported for callers
     find_project_contexts,
@@ -2244,6 +2248,14 @@ def main(argv: list[str] | None = None) -> int:
     # Skipped under --dry-run, where no files were actually written to
     # output_root to scan.
     if not args.dry_run and _check_command_reachability_guard(output_root, config):
+        return 1
+
+    # Knowledge-routing wiring guard (AC INF-700a-1-i): after the deploy
+    # phases have written config/guardrail_gates.yaml, abort the build if any
+    # real templates/workflows-js/*.js artefact is neither declared wired nor
+    # declared excluded. Skipped under --dry-run for the same reason as the
+    # reachability guard above (no files were written to scan).
+    if not args.dry_run and check_knowledge_routing_wiring_guard(output_root):
         return 1
 
     uptodate = get_uptodate_count()
