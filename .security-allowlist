@@ -259,3 +259,20 @@ ENTROPY_HIGH:unit_tests/commit_guardian/test_ge_127c_1_dividing_advice.py:*
 # scanner this entry suppresses). Glob, not per-line: the class/docstring layout can
 # still shift.
 ENTROPY_HIGH:unit_tests/product_truth/test_uxp_700e_3_i.py:*
+
+# The known-issues split (2026-09-14) put each issue's id in its filename, its
+# frontmatter title, its description and its H1. A long kebab-case KI id reads to
+# the entropy detector as a high-entropy string, so the same slug trips it three
+# or four times in one file. These are ids, not secrets, and there is no credential
+# of any kind in a known-issues register.
+#
+# Glob, not per-line: these files are regenerated (the index) or will gain lines as
+# an issue is updated, so a line number would silently stop matching. Only the two
+# files that actually trip it are listed -- the rest of the 302-file tree scans
+# clean, and a blanket entry over the directory would be wider than the evidence.
+#
+# The underlying false positive is worth fixing at source rather than suppressing
+# forever: the detector has no notion that a hyphen-separated identifier is not a
+# key. Until then these two entries stop it blocking the register.
+ENTROPY_HIGH:docs/known-issues/commit-guardian.md:*
+ENTROPY_HIGH:docs/known-issues/testing-quality/open-high-ki-tq-20260831-mutation-probe-lands-in-the-wrong-copy.md:*
