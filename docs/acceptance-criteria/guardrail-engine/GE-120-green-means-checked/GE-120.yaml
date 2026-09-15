@@ -35,6 +35,7 @@ doc_links:
     relationship: context
     status: exists
     relevance: "Prior art. GE-118 is two landed point fixes for this class of defect (one check's helper lookup, one manifest path). This goal is the structural generalisation across the whole family."
+child_limit_override: 8
 delivers_to: null
 expects_from: null
 origin_agent: BrainCandy
@@ -49,10 +50,33 @@ covered_by:
   - GE-120e
   - GE-120f
   - GE-120g
+  - GE-120h
 implemented_by: []
 change_target: code
 risk_surface: contract_boundary
 notes: |
+  CHILD-LIMIT WAIVER — `child_limit_override: 8`, granted 2026-09-14.
+    WHAT WAS WAIVED, AND BY WHOM. The ACS-100c-1 hard cap is seven L1s per L0
+    (check_ac_limits._MAX_L1_PER_L0). GE-120a..g filled it, all status: active,
+    none superseded, so none cap-exempt under ACS-100c-6. GE-120h is the eighth.
+    The bump to 8 was granted by BrainCandy at a confirmation gate, in the same
+    audited form as GE-120a's own `child_limit_override: 6`; the authoring agent
+    flagged the cap and explicitly declined to self-grant it.
+
+    WHY HERE RATHER THAN ELSEWHERE. Two alternatives were checked, not skipped.
+    GE-126 ("checks answer truthfully") has two free L1 slots and was rejected
+    on SUBJECT: it owns the interrogation surface — what a check tells you when
+    you hand it a file or run a copy yourself — whereas GE-120h fires during an
+    ordinary commit with nobody interrogating anything. Free capacity under the
+    wrong parent is not capacity. A sibling L0 for the registration axis was
+    also considered and rejected as splitting a theme this L0 already owns: a
+    check that is registered nowhere is the degenerate end of "green means
+    checked", where the misreport is the silence of a check never invited to run.
+
+    DO NOT READ THIS AS ROOM TO GROW. Eight is the ceiling this waiver bought,
+    for one record with a stated reason. A ninth L1 is a signal that this L0 is
+    carrying two goals and should be split, not waived again.
+
   ADD-VS-CREATE — a NEW sibling L0 was chosen over grafting onto GE-118a.
     - Triage suggested GE-118a as the parent. Rejected: GE-118a is an L1 whose
       SUBJECT is one check ("check-secrets resolves its scanner scripts dir"),

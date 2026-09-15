@@ -1,0 +1,225 @@
+id: GE-120h-3-i
+title: "A check that works out for itself what to examine is switched on without a condition it never reads, because a filter the check ignores is a promise nothing keeps"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - precommit_hooks
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a check that works out for itself which of the author's changes to examine and
+    never consults the list of filenames the commit path would hand it,
+  When that check is switched on,
+  Then it is switched on to run whatever the change contains, rather than under a
+    condition naming which changes would activate it,
+  And it is switched on so that no list of filenames is handed to it, since it would be
+    ignored,
+  And its entry declares that the check derives its own change set, so that the fact is
+    readable from the list itself rather than only from the check's own code,
+
+  And given instead the same check switched on to run whatever the change contains AND
+    carrying a condition on which changes activate it,
+  When the judgement of whether each switched-on check can ever be reached is made,
+  Then that entry is reported as one that contradicts itself and the run fails,
+
+  And given instead a check switched on under a condition naming a location this
+    repository holds no file under,
+  When that judgement is made,
+  Then the entry is reported as one no checkout could activate — which is a stronger
+    verdict than a condition that merely matches nothing today, and it fails the run,
+
+  And given every check switched on by the change this record governs,
+  When that judgement is made over the whole list,
+  Then no entry the change added is reported in either of those two classes.
+
+  Coverage note: the two failing arms are covered by constructing the contradictory entry
+  and the location-anchored entry and running the reachability judgement over them, and
+  the last arm by running that judgement over the real list after the registration. A test
+  that reads the added entries as text and asserts which keys are present stays green on
+  an entry whose condition is satisfied by nothing.
+depends_on:
+  - GE-120h-3
+doc_links:
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-120-green-means-checked/GE-120h-3.yaml"
+    relationship: parent
+    status: exists
+  - path: templates/scripts/commit_guardian/check_hook_trigger_reachability.py
+    relationship: related
+    status: exists
+    relevance: >-
+      THE JUDGEMENT THIS RECORD IS WRITTEN AGAINST, IN ITS OWN VOCABULARY. Its documented
+      rules are explicit: a whole-tree entry that also carries a files condition is
+      UNREACHABLE; a whole-tree entry carrying no files condition is reachable; and a
+      condition anchored on a location no checkout holds is UNREACHABLE rather than the
+      softer NOTHING-TO-MATCH. That last distinction is the entire reason the third arm is
+      written separately — for check_debug_scripts, whose subject lives under a directory
+      this repository does not track, a location-anchored condition matching nothing would
+      be classified UNREACHABLE and would fail the run, where no condition at all is
+      correct and silent. The check is also itself registered whole-tree with no condition,
+      so the shape this record requires is the shape it already uses.
+  - path: templates/scripts/commit_guardian/commit_guardian.json
+    relationship: modifies
+    status: exists
+    relevance: >-
+      WHERE THE SHAPE IS EXPRESSED, AND THE EXISTING VOCABULARY FOR THE THIRD CLAUSE. The
+      list already carries a per-entry declaration of where a check's change set comes
+      from, with two values in use — handed by the commit path, and derived by the check
+      itself (60 and 2 respectively, measured in this worktree 2026-09-14). The five
+      entries this record governs take the derived value; re-measure rather than citing
+      those figures.
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-120-green-means-checked/GE-120e-2.yaml"
+    relationship: related
+    status: exists
+    relevance: >-
+      THE POPULATION THESE FIVE JOIN. GE-120e-1 established one shared source for the
+      author's own change set and its sibling enumerates the checks that consume it.
+      Four of the five work out their own change set by consulting the staged changes
+      directly (verified 2026-09-14; the fifth runs after a merge and consults neither
+      argv nor the staged set), so registering them enlarges that population. Declaring
+      the fact on the entry is what makes the enlargement visible to whoever maintains
+      that enumeration instead of leaving it to be rediscovered.
+  - path: docs/acceptance-criteria/build_pipeline/BP-100-reliable-builds/BP-100k-4-ii.yaml
+    relationship: context
+    status: exists
+    relevance: >-
+      WHY THE THIRD ARM'S DISTINCTION IS LOAD-BEARING AND NOT PEDANTRY. That record drew
+      the line between a condition matching nothing today and one no checkout could ever
+      activate, precisely because the stronger verdict was being applied to both and was
+      blocking every commit in a fresh consumer install. Choosing a location-anchored
+      condition for a check whose subject this repository does not hold would walk
+      straight back into that blocker.
+  - path: docs/how-to/managing-pre-commit-hooks.md
+    relationship: related
+    status: exists
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "SHAPE, FOR ALL FIVE: always_run: true, pass_filenames: false, and NO files key. This is the shape check-file-size, check-build-drift, check-identifier-uniqueness and check-hook-trigger-reachability already carry (all four read from the manifest 2026-09-14). Do not add a files regex to any of them."
+  - "THE SECOND ARM IS ALREADY ENFORCED BY A REGISTERED, RUNNING GATE — DO NOT BUILD A SECOND ONE. check_hook_trigger_reachability.py reports an always_run entry that also carries a files filter as a self-contradiction and fails the run, and it is registered (always_run, pass_filenames: false, no files key) so it judges the new entries on the same commit that adds them. This AC's job is to make the added entries pass that existing judgement and to cover the two failing arms with constructed fixtures, not to reimplement the reachability rule."
+  - "THE THIRD ARM'S DISTINCTION IS THE REASON THE DEBUG-SCRIPTS ENTRY TAKES NO CONDITION. A kind-based pattern matching nothing today is NOTHING-TO-MATCH (non-blocking); a location-anchored pattern matching nothing is UNREACHABLE (blocking). `^debugging/scripts/` is location-anchored and this checkout tracks no file under debugging/, so that regex would fail the run where no regex at all is correct and silent. The rule and its escape hatch live in commit_guardian.json's __hook_trigger_reachability_nothing_to_match_doc and in _hook_trigger_reachability_helpers.has_location_anchor(); read them rather than re-deriving the distinction."
+  - "THE THIRD CLAUSE CANNOT TRUTHFULLY BE SATISFIED WITH change_set_source: self_derived AS THE FIVE SCRIPTS STAND, AND THIS IS THE ONE FINDING THAT CONTRADICTS THE OBVIOUS READING. The field is not a free label. change_set_source._classify_hook() credits self_derived ONLY when the entry's own script text contains `get_authored_change` or `_authored_change` (_SHARED_SOURCE_MARKERS, read 2026-09-14); an entry that claims self_derived without one is placed in DeterminationResult.failures, and GE-120e-2's own test_spec names that case explicitly. All five scripts were grepped for both markers: zero hits. The two genuine self_derived entries are check-doc-frontmatter and check-contract-shrinking, which do import the shared source."
+  - "SO THERE ARE EXACTLY TWO HONEST ROUTES, AND THE IMPLEMENTER MUST PICK ONE DELIBERATELY. (a) Declare handed_by_commit_path on all five — truthful today, the value the four structurally identical always_run entries already carry, and no code work; the criterion's third clause is then only partly served and that must be said out loud rather than papered over. (b) Migrate the four staged-set-deriving scripts onto the shared authored-change source first, which makes self_derived a verified claim — but that is code work, and GE-120h-3 is scoped to the five that need none, so it belongs in its own change. check_ac_done_on_merge.py can take neither route honestly: it runs post-merge over `git diff HEAD~1 HEAD` and is not an authored-change consumer at all. Do NOT take the third route of writing self_derived and moving on."
+  - "THE LIVE SUITE WILL NOT CATCH A FALSE self_derived, WHICH IS WHY IT IS CALLED OUT HERE. test_ge_120e_2.py's real-manifest assertion only checks that every entry's value is a member of the allowed set; determine_change_set_sources() is exercised against fixtures, never against the installed manifest. A false declaration would therefore pass a green suite — the same declaration-checked-for-shape-not-for-truth shape as KI-CG-20260831-fictional-config-schema-fragment, one field along. If route (a) is taken, consider whether the real manifest should be put through determine_change_set_sources() too, and raise it rather than doing it silently under this AC."
+  - "THIS AC ADDS NO MANIFEST ENTRY AND REMOVES NONE. It constrains the shape of entries GE-120h-3 adds. It therefore registers no package surface and carries no package_surface declaration; if an implementer finds themselves adding an entry here, they are building the parent."
+  - "ADR-001 PARITY. The shape is expressed in templates/scripts/commit_guardian/commit_guardian.json, the canonical source. Verify through build.py that the deployed copies and the generated .pre-commit-config.yaml carry the same shape — a correct template beside a stale deployed copy is the condition GE-120c exists for."
+test_spec:
+  - name: test_ge120h3i_always_run_entry_carrying_a_files_filter_is_reported_and_fails
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: "A constructed entry that is always_run and also carries a files condition is reported by the reachability judgement as self-contradictory and the run fails."
+  - name: test_ge120h3i_location_anchored_entry_matching_nothing_is_unreachable_not_nothing_to_match
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: "A constructed entry anchored on a location the checkout holds no file under is classified UNREACHABLE and fails the run — the stronger verdict, distinct from NOTHING-TO-MATCH."
+  - name: test_ge120h3i_no_entry_added_by_the_registration_is_in_either_failing_class
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: real_artifact
+    surface_invoked: "check_hook_trigger_reachability.py via run_hook.py"
+    description: "The reachability judgement run over the real manifest after registration reports none of the five in either failing class."
+  - name: test_ge120h3i_each_new_entry_declares_a_change_set_source_the_determination_credits
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "determine_change_set_sources over the real manifest places each of the five in a governed bucket and none in .failures — a declared source the determination will not credit fails this test."
+test_rationale: >-
+  The two failing arms need constructed entries because the real manifest must not
+  contain either shape; they are exercised by running the existing reachability
+  judgement over fixtures rather than by reimplementing its rules. The last arm is
+  run over the real manifest because that is the only artifact whose correctness the
+  criterion is about. The change_set_source test is the one this enrichment added
+  beyond the literal clauses, and it is the load-bearing one: the criterion asks the
+  entry to declare that the check derives its own change set, the manifest has a field
+  that says exactly that, and the field is verified against the script's source — so
+  the declaration can be written, look right, read right, and be false, with the
+  current suite green. Asserting through determine_change_set_sources rather than
+  against the literal string is what makes the declaration answerable to the code it
+  describes.
+declares_side_effect: false
+delivers_to: null
+expects_from:
+  - ac_id: GE-120h-3
+    contract: >-
+      The five entries added to the executing list. This record constrains their shape;
+      it adds none of its own and is not satisfied by adding any.
+origin_agent: business-analyst
+created: 2026-09-14
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  WHY THIS EDGE CASE NEEDED ITS OWN RECORD RATHER THAN A CLAUSE ON ITS PARENT. The
+  obvious, well-intentioned registration is the wrong one. Every one of these five has a
+  natural-looking subject — SQL files, scripts under a debugging directory, test fixtures
+  — and the natural instinct is to write that subject into the entry as a condition, both
+  to be tidy and to save time on unrelated commits. For these five that condition is a
+  filter the check never reads, because each resolves its own set; and for the
+  debugging-directory case it is worse than useless, because a condition anchored on a
+  location this checkout holds no file under is classified as unreachable and fails the
+  run. The parent's clauses are all about the checks RUNNING and every one of them can be
+  green while a sixth reader of the list is being lied to about what activates them.
+
+  THE THIRD CLAUSE — DECLARING THAT THE CHECK DERIVES ITS OWN CHANGE SET — IS NOT
+  DECORATION. Without it the only way to know that a whole-tree entry with no condition
+  is correct rather than careless is to read the check's source, which is the habit that
+  produced the four-signal problem in the first place. The declaration already exists in
+  the list's own vocabulary, so this costs one field and makes the entry self-describing.
+
+  THIS RECORD ADDS NO ENTRY AND REMOVES NONE. It constrains the shape of entries its
+  parent adds. If it is built first it has nothing to assert; if the parent is built
+  without it, the likely outcome is entries that the existing reachability judgement
+  refuses on the same commit — which is a same-day discovery rather than a latent defect,
+  but only because that judgement is already registered and already runs.
+
+  NOT AUTHORED HERE, BY DESIGN: assigned_agent, estimated_complexity, it_requirements,
+  test_spec, test_rationale and declares_side_effect. Those are the IT PO's fields.
+
+  ---- IT PO ENRICHMENT, 2026-09-14 ----
+
+  THE ONE PLACE THIS RECORD'S TECHNICAL GROUND DIVERGES FROM ITS OWN doc_link, AND HOW
+  IT WAS VERIFIED. The doc_link on commit_guardian.json says "The five entries this
+  record governs take the derived value". That was measured as the count of the two
+  values in use (60 / 2, correct), but the field's SEMANTICS were not: self_derived is
+  not a description an author supplies, it is a claim the code checks.
+  change_set_source.py was read in full on 2026-09-14 — _SHARED_SOURCE_MARKERS =
+  ("get_authored_change", "_authored_change"), and _classify_hook() sends a
+  self_derived entry to .failures unless the entry's resolved script text contains one
+  of them. All five scripts were then grepped for both markers and none matched; the
+  only files under templates/scripts/commit_guardian/ that do are
+  check_contract_shrinking.py, check_doc_frontmatter.py, frontmatter_validators.py and
+  the shared module itself — which is exactly the two self_derived entries in the
+  manifest. GE-120e-2's test_spec names this case directly ("a fixture entry recorded
+  as self-deriving whose check obtains its change set by other means is named and the
+  determination exits non-zero"), so the rule is asserted, not incidental.
+
+  The criterion is NOT amended for this — criteria are the BA's. The two honest routes
+  are recorded in it_requirements and the choice is raised as a caveat for the user,
+  because route (b) adds code work to a tree whose parent is explicitly scoped to the
+  five checks that need none.
+
+  WHY A change_set_source TEST WAS ADDED BEYOND THE LITERAL CLAUSES. The clause "its
+  entry declares that the check derives its own change set" is satisfiable by typing a
+  string, and the installed suite would stay green on a false one:
+  test_ge_120e_2.py's real-manifest assertion checks only membership in the allowed
+  value set, and determine_change_set_sources() is never run over the installed
+  manifest. That is the same shape as
+  KI-CG-20260831-fictional-config-schema-fragment — a declaration validated for form
+  and never against the thing it describes — so the test asserts through the
+  determination rather than against the literal value.

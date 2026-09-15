@@ -6,8 +6,8 @@ priority: medium
 title: "Exact-criteria text matching discovers high-confidence implementations"
 component: ac-driven-dev
 level: L1
-status: active
-req_status: active
+status: deprecated
+req_status: superseded
 work_status: todo
 criteria: |
   Given an AC has work_status: todo and implemented_by: [],
@@ -32,12 +32,39 @@ delivers_to:
 expects_from: null
 origin_agent: business-analyst-v3
 created: 2026-06-05
-amended_by: []
+amended_by:
+  - reason: "RETIRED 2026-09-09 with the whole ACD-800 tree, on BrainCandy's decision ('retire as it will not work properly'). Reasoning in ACD-800's notes; this record's own reason in notes below."
+    by: product-owner
 superseded_by: null
 covered_by: [ACD-800a-1, ACD-800a-2]
 implemented_by: []
 change_target: code
 risk_surface: contract_boundary
+notes: |
+  RETIRED 2026-09-09 with the whole ACD-800 tree. Decision, mechanism and the
+  live-code hazard are recorded once, in ACD-800's notes — read those.
+
+  THIS RECORD'S OWN REASON. The 90%-similarity match is against a done ticket's
+  "## Acceptance Criteria" section, so its evidence is a ticket history an
+  adopting project does not have (retirement reason 2). It is also the source of
+  the "high confidence" label that ACD-800c then treats as sufficient to write
+  the finished-state field — a text-similarity score is not an observation that
+  the behaviour was implemented, and calling it "high confidence" is what makes
+  the downstream write look justified.
+
+  NOTE FOR ANYONE READING THIS AS AN UNBUILT SPEC: it is built. This L1 is
+  implemented by `_pass1_similarity` and `_find_matches` in
+  scripts/ac_store/cross_reference_audit.py and covered by green tests
+  (tests/ac_store/test_cross_reference_audit.py, `# covers: ACD-800a-1` /
+  `ACD-800a-2`). The `work_status: todo` and `implemented_by: []` on this record
+  are inaccurate and knowingly left so — see ACD-800's notes.
+
+  DANGLING PRODUCT-TRUTH REFERENCE, NOT FIXED HERE. The `product_truth` block
+  below still binds this record to node `backfill` of flow
+  leafcutter/ac-lifecycle (docs/product-truth/flows/leafcutter/ac-lifecycle.flow.json,
+  which names ACD-800 directly). That store is outside this retirement's write
+  scope. The flow node now points at a deprecated record and needs its own
+  decision.
 product_truth:
   - flow: leafcutter/ac-lifecycle
     node: backfill

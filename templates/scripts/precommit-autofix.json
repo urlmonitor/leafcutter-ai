@@ -154,20 +154,6 @@
       "description": "SQL complexity score exceeds threshold. Refactor the flagged SQL procedure/function."
     },
     {
-      "hook_id": "check-sql-dependencies",
-      "category": "structural",
-      "model": "sonnet",
-      "subagent_type": "sql-coder",
-      "description": "SQL dependency violation. Resolve the flagged dependency issue."
-    },
-    {
-      "hook_id": "check-pytest-style",
-      "category": "mechanical",
-      "model": "haiku",
-      "subagent_type": "general-purpose",
-      "description": "pytest style violation (e.g. bare assert without message). Fix per pytest style conventions."
-    },
-    {
       "hook_id": "check-commit-scope",
       "category": "mechanical",
       "model": "haiku",

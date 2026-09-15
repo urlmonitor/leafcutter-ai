@@ -2,19 +2,42 @@
 MODULE: scripts/ac_store/approve_acs.py
 GOAL: Promote reviewed leaf ACs of a goal to readiness: approved without
     hand-editing YAML.
-BUSINESS CONTEXT: AC ACD-1200b-5. After reviewing leaf ACs under a goal, this
-    script promotes each reviewed leaf from readiness: reviewed to approved
-    in-place. The mutation is append-only (exactly one amended_by entry is
-    added per leaf) and idempotent: leaves already at readiness: approved are
-    not written at all, ensuring byte-stability on re-run.
+BUSINESS CONTEXT: AC ACD-1200b-5 (and ACD-1200b-5-ii / KI-ACS-017 hardening).
+    After reviewing leaf ACs under a goal, this script promotes each reviewed
+    leaf from readiness: reviewed to approved in-place. The mutation is
+    append-only (exactly one amended_by entry is added per leaf) and
+    idempotent: leaves already at readiness: approved are not written at all,
+    ensuring byte-stability on re-run.
 ARCHITECTURE: Standalone CLI script. Two modes:
     --goal <GOAL_AC_ID>: find goal AC by id, promote all reviewed leaf children.
     --ac <AC_ID>: directly promote a single AC to approved.
-    Uses targeted string replacement (not full yaml.dump round-trip) to preserve
-    field order and comments. Follows the same store-mutation convention as the
+    Uses targeted string replacement (not full yaml.dump round-trip of the
+    whole document) to preserve field order and comments outside the
+    amended_by field. Follows the same store-mutation convention as the
     sibling scripts/ac_store/mark_ac_done.py.
-    Exit codes: 0 (success or no-op), 1 (not found or read error),
-    2 (unexpected readiness value).
+
+    The amended_by block itself IS re-rendered via yaml.dump (a full
+    round-trip of just that field's parsed value plus the new entry) rather
+    than re-emitting the prior entries' original bytes — the block's span in
+    the raw text is located by _find_amended_by_block, which walks forward
+    from the amended_by: key line to the next TOP-LEVEL key (a line starting
+    with an identifier character in column 0) or end of document. Blank
+    lines and indented/column-0 list-item continuations inside a multi-line
+    scalar can never be mistaken for that boundary, because they are never
+    mistaken for a top-level key line. This replaces the previous
+    _AMENDED_BY_RE line-shape regex (KI-ACS-017), which stopped at the first
+    continuation line that was neither indented nor a dash — a blank line
+    inside a multi-line folded scalar matched neither, truncating the match
+    and stranding the rest of the real block as invalid top-level text.
+
+    _promote_leaf re-reads and re-parses the file immediately after writing
+    it, before printing any success line or returning 0. If the write does
+    not parse back as YAML, the original bytes are restored exactly and the
+    run reports a failure and returns non-zero — a writer that cannot verify
+    its own output must never report success for it.
+
+    Exit codes: 0 (success or no-op), 1 (not found, read error, or write
+    self-validation failure), 2 (unexpected readiness value).
 """
 from __future__ import annotations
 
@@ -28,14 +51,19 @@ from typing import Optional
 import yaml
 
 
-# Matches the complete amended_by YAML block: the key line (including any
-# inline value such as "[]") plus all continuation lines that start with
-# a space/tab (nested mappings) or a dash (block list items), stopping before
-# the first line that begins with an identifier character (next top-level key).
-_AMENDED_BY_RE = re.compile(
-    r"^amended_by:.*\n(?:[ \t][^\n]*\n|-[^\n]*\n)*",
-    re.MULTILINE,
-)
+# Matches the amended_by key line itself, including any inline value such as
+# "[]". Deliberately does NOT try to also match the continuation lines of a
+# block sequence — see _find_amended_by_block for why that must be done by
+# locating the block's END (the next top-level key) rather than by matching
+# every interior line's shape (KI-ACS-017: a blank line inside a multi-line
+# folded scalar has no line-shape that a per-line regex can recognize).
+_AMENDED_BY_KEY_RE = re.compile(r"^amended_by:[^\n]*(?:\n|\Z)", re.MULTILINE)
+
+# Matches a top-level (column 0) "key:" line — the only reliable signal that
+# a preceding block (such as amended_by) has ended. A blank line, an indented
+# continuation line, or a column-0 block-sequence dash ("-") can never match
+# this pattern, so none of them can be mistaken for the block's end.
+_TOP_LEVEL_KEY_RE = re.compile(r"^[A-Za-z_][\w-]*:", re.MULTILINE)
 
 
 # ---------------------------------------------------------------------------
@@ -68,8 +96,56 @@ def _find_ac_file(ac_root: Path, ac_id: str) -> Optional[Path]:
 # ---------------------------------------------------------------------------
 
 
+def _find_amended_by_block(text: str) -> Optional[tuple[int, int]]:
+    """Locate the character span of the complete ``amended_by:`` block.
+
+    Fixes KI-ACS-017. The previous approach (``_AMENDED_BY_RE``) tried to
+    match the block by recognizing the *shape* of every continuation line
+    (indented, or a dash) — but a blank line inside a multi-line quoted or
+    folded scalar has neither shape, so the match ended early and the
+    remainder of the real block was stranded as invalid top-level text.
+
+    This function instead finds the block's END directly: the next line
+    that begins with an identifier character in column 0 (a top-level key),
+    or end of document if there is none. Every other line shape — blank,
+    indented, or a column-0 block-sequence dash — is therefore always
+    interior to the block, regardless of what it contains.
+
+    Handles all on-disk shapes seen in the store: a multi-line block
+    sequence of entries, the inline empty form ``amended_by: []``, and the
+    field being entirely absent.
+
+    Args:
+        text: The full raw text of the AC YAML file.
+
+    Returns:
+        A ``(start, end)`` tuple of character offsets spanning the
+        ``amended_by:`` key line through (but excluding) the next
+        top-level key line, or end of document when there is no following
+        key. ``None`` when no ``amended_by:`` key line is present at all
+        (the field is absent from the record).
+    """
+    key_match = _AMENDED_BY_KEY_RE.search(text)
+    if key_match is None:
+        return None
+    scan_from = key_match.end()
+    next_key_match = _TOP_LEVEL_KEY_RE.search(text, scan_from)
+    block_end = next_key_match.start() if next_key_match else len(text)
+    return key_match.start(), block_end
+
+
 def _build_amended_by_block(existing: list, new_entry: dict) -> str:
     """Render the YAML block for amended_by with new_entry appended.
+
+    Re-serializes the full amended_by value (prior entries plus new_entry)
+    via yaml.dump rather than re-emitting the prior entries' original bytes.
+    This is safe for the guarantees this module must preserve: a
+    dump-then-load round trip is a semantics-preserving identity for the
+    parsed value (every prior entry's text, including embedded blank lines,
+    reads back identical), even though the exact byte rendering of an
+    already-existing multi-line scalar may differ from how it was written
+    before. The span this block replaces is located by
+    _find_amended_by_block, not by this function.
 
     Args:
         existing: Current list of amended_by entries (may be empty).
@@ -95,12 +171,19 @@ def _promote_leaf(ac_file: Path, dry_run: bool = False) -> int:
     value and appends one entry to ``amended_by``. If readiness is already
     ``approved``, the file is not written at all (byte-stable idempotency).
 
+    After writing, re-reads and re-parses the file before reporting success
+    (KI-ACS-017): if the write does not parse back as YAML, the original
+    bytes are restored exactly and a failure is reported instead — no
+    "promoted" line is ever printed for a record left unparseable.
+
     Args:
         ac_file: Path to the leaf AC YAML file.
         dry_run: When True, log what would happen but do not write files.
 
     Returns:
-        0 on success or no-op, 1 on read/write error, 2 on unexpected readiness.
+        0 on success or no-op, 1 on read/write error or on a write that
+        fails self-validation (post-write re-parse), 2 on unexpected
+        readiness.
     """
     try:
         raw_text = ac_file.read_text(encoding="utf-8")
@@ -155,9 +238,10 @@ def _promote_leaf(ac_file: Path, dry_run: bool = False) -> int:
     new_entry = {"action": "approved", "agent": "approve_acs", "date": today_str}
     new_block = _build_amended_by_block(existing_amended_by, new_entry)
 
-    match = _AMENDED_BY_RE.search(updated)
-    if match:
-        updated = updated[: match.start()] + new_block + updated[match.end() :]
+    block_span = _find_amended_by_block(updated)
+    if block_span is not None:
+        block_start, block_end = block_span
+        updated = updated[:block_start] + new_block + updated[block_end:]
     else:
         # amended_by field absent — append at end of file
         updated = updated.rstrip("\n") + "\n" + new_block
@@ -166,6 +250,30 @@ def _promote_leaf(ac_file: Path, dry_run: bool = False) -> int:
         ac_file.write_text(updated, encoding="utf-8")
     except OSError as exc:
         print(f"ERROR: Cannot write AC file {ac_file}: {exc}", file=sys.stderr)
+        return 1
+
+    # Self-validation (KI-ACS-017 part 2): re-read and re-parse the file we
+    # just wrote BEFORE reporting success. A writer that cannot tell whether
+    # its own output is valid must not report success for it.
+    try:
+        written_text = ac_file.read_text(encoding="utf-8")
+        yaml.safe_load(written_text)
+    except (OSError, yaml.YAMLError) as exc:
+        try:
+            ac_file.write_text(raw_text, encoding="utf-8")
+        except OSError as restore_exc:
+            print(
+                f"ERROR: {ac_file} failed self-validation ({exc}) AND the "
+                f"restore of its original content also failed: {restore_exc}. "
+                "The file on disk may be corrupted — restore it from git.",
+                file=sys.stderr,
+            )
+            return 1
+        print(
+            f"ERROR: {ac_file} write did not re-parse as YAML after "
+            f"promotion; original content restored, promotion aborted: {exc}",
+            file=sys.stderr,
+        )
         return 1
 
     print(f"promoted {ac_id} readiness reviewed -> approved")
@@ -336,3 +444,29 @@ if __name__ == "__main__":
     except (OSError, ValueError) as exc:
         print(f"[approve-acs] unexpected error, skipping: {exc}", file=sys.stderr)
         sys.exit(0)
+
+
+# ====================================================================
+# DECISION HISTORY
+# ====================================================================
+# - 2026-09-14 [python-coder/ACD-1200b-5-ii]: (KI-ACS-017)
+#   Replaced the module-level _AMENDED_BY_RE line-shape regex with
+#   _find_amended_by_block, which delimits the amended_by block by finding
+#   its END (the next top-level, column-0 "key:" line, or end of document)
+#   rather than by matching the shape of every interior line. The previous
+#   regex stopped at the first continuation line that was neither indented
+#   nor a dash; a blank line inside a multi-line quoted/folded scalar
+#   matched neither, truncating the match and stranding the remainder of
+#   the real block as invalid top-level text. This was the root cause of
+#   the 2026-08-31 run that corrupted 5 of 31 GE-123 records.
+#   _promote_leaf now re-reads and re-parses the file immediately after
+#   writing it, before printing any "promoted" line or returning 0. On a
+#   post-write parse failure the original bytes are restored exactly and
+#   the run reports a failure (exit 1) instead — a destroyed file can no
+#   longer be reported as promoted with rc=0, which was the second half of
+#   KI-ACS-017. _build_amended_by_block's full yaml.dump round-trip of the
+#   amended_by value (rather than re-emitting prior entries' original
+#   bytes) was already in place and is unchanged; it is documented in its
+#   own docstring as an intentional semantics-preserving (not byte-
+#   preserving) round trip.
+# ====================================================================

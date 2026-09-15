@@ -6,8 +6,8 @@ priority: medium
 title: "The --apply flag atomically backfills high-confidence matches into AC metadata"
 component: ac-driven-dev
 level: L1
-status: active
-req_status: active
+status: deprecated
+req_status: superseded
 work_status: todo
 criteria: |
   Given the audit has identified matches at high and medium confidence,
@@ -32,9 +32,47 @@ expects_from:
   contract: "High-confidence matches from the audit report"
 origin_agent: business-analyst-v3
 created: 2026-06-05
-amended_by: []
+amended_by:
+  - reason: "RETIRED 2026-09-09 with the whole ACD-800 tree, on BrainCandy's decision ('retire as it will not work properly'). This is the record that specifies the phantom-done write, and the strongest case for retirement in the tree. See notes."
+    by: product-owner
 superseded_by: null
 covered_by: [ACD-800c-1, ACD-800c-2]
 implemented_by: []
 change_target: code
 risk_surface: contract_boundary
+declares_side_effect: true
+notes: |
+  RETIRED 2026-09-09 with the whole ACD-800 tree. Decision, mechanism and the
+  live-code hazard are recorded once, in ACD-800's notes — read those.
+
+  THIS IS THE RECORD THE RETIREMENT IS REALLY ABOUT. Retirement reason 1 lands
+  here in its purest form. The criterion says a high-confidence match causes
+  "implemented_by receives the ticket path, work_status becomes done". A
+  difflib similarity ratio of 0.90 between two blocks of prose is being
+  converted, with no human in the loop, into a claim that a behaviour was built
+  and proven. That is an assertion of proof written where an observation of
+  evidence belongs — the mechanism catalogued in
+  docs/reference/false-green-mechanisms.md, and the specific defect
+  ACS-1300c-1-i measured in the shipped code on 2026-09-01 and labelled "THE
+  CONCRETE TRAP".
+  Note the honest framing, per ACD-800's notes: ACS-1300's refusal to write the
+  finished-state field is scoped to ACS-1300's own tree, so it never bound this
+  record and this was not a literal contradiction. It was two trees holding
+  incompatible philosophies about one field. This retirement settles which
+  philosophy the store keeps.
+
+  WHAT THIS RECORD GOT RIGHT, RECORDED SO IT IS NOT LOST. Its safeguards were
+  real and well-chosen — medium-confidence matches never auto-applied,
+  idempotency, read-only by default, a summary count. They are simply
+  safeguards on an operation that should not happen at any confidence level.
+  Their generalised successor is ACD-2300d: nothing marks work finished, and
+  nothing records evidence it did not observe.
+
+  BUILT, AND IT ALREADY VIOLATED ITS OWN it_requirements. `_apply_backfill` in
+  scripts/ac_store/cross_reference_audit.py implements this L1; line 457 is
+  `ac_data["work_status"] = "done"`. Separately, the it_requirement above
+  demanding that "YAML writes must preserve field ordering and comments
+  (ruamel.yaml round-trip mode)" was NOT met — the implementation re-serialises
+  the whole record with `yaml.dump(...)`, destroying comments and reformatting
+  the file. So the shipped tool breaks byte stability as well as the
+  finished-state refusal, on every record it touches.

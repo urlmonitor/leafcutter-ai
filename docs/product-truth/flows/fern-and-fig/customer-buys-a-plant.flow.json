@@ -104,7 +104,9 @@
       "implements": [
         "UXP-210d"
       ],
-      "expands_to": "fern-and-fig/checkout-and-pay",
+      "expands_to": [
+        "fern-and-fig/checkout-and-pay"
+      ],
       "impl_status": "not_started",
       "impl_asof": "2026-07-20"
     },

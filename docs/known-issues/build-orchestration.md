@@ -4223,3 +4223,99 @@ Two things make it sharper than ordinary staleness:
 - `KI-ACS-20260909-standalone-validator-does-not-derive-declares-side-effect` (`ac-store.md`) — same session, same family: a documented check narrower than it reads.
 
 **Pattern:** a correct defence with no enforcement, positioned at the end of the pipeline where attention is lowest — so its hit rate measures diligence rather than coverage.
+
+---
+
+### KI-BO-20260914-commit-agent-rewrites-co-author-trailer — the commit agent replaces the caller's `Co-Authored-By` trailer with its own model name, so a commit misattributes which model did the work
+
+- **Severity:** low. No code is affected, but git history now states something false about provenance, and the only repair for a pushed commit is to rewrite history.
+- **Status:** open
+- **Occurrences:** 1 confirmed (commit `6a537708`, 2026-09-14, now on `main` via #780)
+- **First seen:** 2026-09-14 · **Last seen:** 2026-09-14
+- **Where:** `templates/agents/commit.md`, around line 214. Its message-format rules name the footer as `Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>` "(the harness adds this; do not duplicate)".
+
+**Symptom.** The calling session wrote a commit message file ending `Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>`, naming the model that authored the change. It dispatched the commit agent with `git commit -F <file>`. The agent reported: *"Attribution line correction: the message file had `Claude Opus 5`, but this session's attribution instruction specifies `Claude Sonnet 5`. I edited the scratchpad file to match before committing."* The resulting commit names the commit agent's model, which only ran `git commit`.
+
+**Mechanism.** The template tells the agent the footer belongs to "the harness", meaning whichever session is running the commit agent. That session's attribution names the commit agent's own model tier, which differs from the model that wrote the code. So the agent treats a caller-supplied trailer as an error to reconcile against its own attribution, not as part of a message the caller authored. The template's example footer names a third model, which shows it has no notion of who authored the change.
+
+**Workaround in use.** State in the dispatch prompt: "use the message file EXACTLY as written; do NOT change its Co-Authored-By trailer." Two later commits (`f7fd79de`, `d4fcb274`) kept the correct trailer under that instruction.
+
+**Fix direction.**
+- In `commit.md`, when the caller supplies a message (`-F` or `-m`), treat it as authoritative. The agent adds a trailer only when none is present, and never rewrites an existing one.
+- Remove the hardcoded model name from the template footer.
+- Add a template-contract test: the commit agent's instructions contain no literal model name, and they state that a caller-supplied trailer is preserved.
+
+**Pattern:** a delegate that normalises metadata it was handed, substituting its own identity for its principal's.
+
+---
+
+### KI-BO-20260914-a-cached-bad-path-makes-a-workflow-run-permanently-unresumable — resume replays the poisoned agent result in 32ms, so the only escape from a caught hallucination is a fresh run id
+
+- **Severity:** medium — nothing is corrupted and the guard that triggers it is working correctly. The cost is that `resumeFromRunId`, the documented recovery path, is a guaranteed no-op for this class, and its failure is fast and silent enough to look like the resume "just didn't help".
+- **Status:** open — no AC.
+- **Occurrences:** 1 (2026-09-14, `GE-127e-1`), but structural for any guard that validates an agent's own reported value
+- **First seen:** 2026-09-14 · **Last seen:** 2026-09-14
+- **Where:** `templates/workflows-js/fast-lane-ship.js` worktree phase; the Workflow tool's `resumeFromRunId` result cache
+
+**Symptom.** A `fast-lane-ship` run on `GE-127e-1` halted at the worktree phase:
+
+```text
+The worktree location reported for branch fast-lane/ge-127e-1 does not appear in the git
+output it was supposedly read from, so it was composed rather than quoted.
+Reported: "/home/henzeh/projects/leafcutter/leafcutter-ai"
+git worktree list --porcelain returned: ".../worktrees/ge-127e-1"
+```
+
+The guard is **right** and is a good guard — it caught an agent stating a path that was not in the command output it claimed to be quoting, which is the failure that sent the resolver to a non-existent directory on `BO-2400f` and `UXP-700d`. The worktree itself was created correctly and verified present in `git worktree list`.
+
+Resuming produced the identical halt in **32 milliseconds with 0 subagent tokens** — the cached agent result, containing the bad path, was replayed verbatim. A second resume would do the same forever.
+
+**Mechanism.** `resumeFromRunId` caches completed `agent()` calls keyed on `(prompt, opts)` and replays their return values. That is the right behaviour for an agent that succeeded expensively. But when the *content* of a cached result is what failed validation, replay reproduces the failure deterministically and cannot clear it. The cache has no notion of "this result was rejected downstream".
+
+So the recovery matrix is inverted from what the tooling suggests: resume is cheapest and always correct for a transient failure, and is *guaranteed useless* for a validated-content failure — which is exactly the case where a halt message tempts you to retry.
+
+**What actually works.** A fresh run (new run id), which re-dispatches the agent and may produce a correct path, or abandoning the workflow and driving the phases directly. The second was chosen here: the worktree existed and was correct, so `test-writer` and `python-coder` were dispatched by hand against it and the AC shipped normally.
+
+**Fix direction.** Either let a halting guard mark the specific cached result as poisoned so a resume re-runs that one agent, or make the halt message say plainly that resume will not help for this class and name the fresh-run escape. The second is cheap and would have saved the wasted resume. Do NOT fix it by disabling the guard — the guard is the valuable part, and a composed path reaching the resolver is the more expensive failure.
+
+**Related.**
+- `KI-BO-20260909-worktrees-go-stale-within-minutes` (above) — same component, same session family.
+- `docs/reference/false-green-mechanisms.md` — adjacent but distinct: this is a true negative that cannot be cleared, not a false positive.
+
+**Pattern:** a result cache that cannot distinguish "expensive and correct" from "cheap and rejected", so the documented recovery path is deterministically the wrong one.
+
+---
+
+### KI-BO-20260914-autofix-re-dispatch-is-specified-at-a-depth-that-cannot-execute — the commit agent is told to spawn the originating coder, and ADR-019 says that call is silently dropped
+
+- **Severity:** high. Not because anything is corrupted, but because the failure is silent by construction and the mechanism is a *recovery* path — the place where nobody is watching. If it is dead, every judgment-tier hook failure since the skill shipped has fallen through to "the fix did not happen" with no error distinguishing that from "the fixer tried and failed". It also makes a baseline BO-3800e-1 depends on a bug-shaped baseline.
+- **Status:** open — **unconfirmed at runtime.** Everything below is read from source and from ADR-019; no run was instrumented. Confirming or refuting it by measurement is step one, and it is cheap.
+- **Occurrences:** 0 observed. Found by inspection on 2026-09-14 during IT PO enrichment of BO-3800.
+- **First seen:** 2026-09-14 · **Last seen:** 2026-09-14
+- **Where:** `templates/skills/precommit-autofix/SKILL.md` Step 4a.3 (the `Agent` tool dispatch, around line 100) and its re-dispatch prompt constraint 4 (lines 136–140). Specified by `BO-210c`.
+
+**The contradiction, in the skill's own words.** Step 4a.3 instructs the commit agent to call the `Agent` tool with `subagent_type` set to the originating coder. The prompt it hands that coder says:
+
+```text
+4. **Spawn NO sub-agents.** You are running at depth 2 in the dispatch chain
+   (ticket-supervisor → commit → you). Claude Code's hard depth-1 Agent-tool
+   nesting limit means any `Agent` tool call you make will be silently dropped.
+```
+
+The chain it names is right. The conclusion it draws from it is one level off. `ADR-019` records that *"an agent running at depth 1 cannot itself invoke the Agent tool. Any call beyond depth 1 is silently dropped — no error is raised, the tool call simply does not execute."* Under `ADR-006`'s flattened chain `ticket-supervisor` is depth 0 and the commit agent is depth 1 — so **the Step 4a.3 dispatch is itself the dropped call.** The document warns the depth-2 fixer not to spawn a depth-3, while presupposing a depth-2 agent that by its own stated rule cannot exist.
+
+**Why it is plausible this has never been noticed.** `BO-210c` is `readiness: approved`, `req_status: active`, `work_status: todo`, `implemented_by: []` — the behaviour was never claimed done, so no test asserts it and no sign-off ever depended on it. But the skill is *deployed*, so the instruction is live in the commit agent's prompt on every judgment-tier failure. A capability that was never built and a capability that runs and silently no-ops look identical from outside, and this one is both at once.
+
+**This is the exact incident ADR-019 was written about, one component over.** There, `/build-feature` dispatched `ticket-supervisor` at depth 1, its phase-agent calls sat at depth 2 and were dropped, and no phase template ever applied on any run — each ticket appeared to progress while nothing happened on disk. The shape recurred here because the depth arithmetic is done in prose inside a prompt, where nothing checks it.
+
+**How to confirm, before fixing anything.** Drive a ticket to a judgment-tier hook failure with `check-file-size` or `check-complexity` and record what the driver actually dispatches. Do not infer it from `SKILL.md`; the whole point is that the text and the behaviour may disagree.
+
+**Fix direction (only after confirming).** The re-dispatch has to be issued by a party that can issue it — the depth-0 driver — with the commit agent *returning* a structured "this hook failed, this agent should fix it" rather than trying to spawn the fixer itself. That is the same correction `ADR-019` applied to phase dispatch. Do not fix it by deleting constraint 4 from the prompt; the constraint is correct, it is the dispatch above it that is misplaced. Worth a mechanical guard too: nothing today checks a template's claimed depth against the dispatch chain that reaches it, so this class is invisible to every gate in the repo.
+
+**Related.**
+- `docs/architecture/adrs/ADR-019-build-feature-inline-phase-dispatch.md` — the cap, and the first time it bit.
+- `docs/architecture/adrs/ADR-006-flatten-supervisor-chain.md` — why `ticket-supervisor` is depth 0, which is what puts the commit agent at depth 1.
+- `BO-3800b-2` — carries this as an escalation; its Given assumes the driver can observe the originating coder being engaged, which is exactly what is in doubt.
+- `BO-3800e-1` — promises today's behaviour is preserved. If today's behaviour is "nobody is engaged", that promise is measuring a defect.
+
+**Pattern:** depth arithmetic done in prose inside a prompt, where no gate can check it, producing a recovery path that fails by doing nothing.

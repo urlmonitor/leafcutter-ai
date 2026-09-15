@@ -1,0 +1,163 @@
+id: BO-1800f
+components:
+  - build_orchestration
+title: "Delivering your work never quietly removes someone else's"
+component: build-orchestration
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  What you deliver is current, and removes nothing you did not mean to remove.
+
+  When finished work leaves its own copy and heads for the shared main branch,
+  it is first brought up to date with what is actually there at that moment, so
+  it carries everyone else's recent work instead of an older picture of the
+  project. And if a delivery would still take away something the shared branch
+  already has, it does not leave the copy at all until that removal is one you
+  have deliberately declared. Taking things away on purpose stays entirely
+  possible; taking them away by accident stops being possible, and it stops
+  depending on anyone remembering to check.
+depends_on: [BO-1800]
+doc_links:
+  - docs/known-issues/build-orchestration.md
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-09-14
+amended_by: []
+superseded_by: null
+covered_by:
+  - BO-1800f-1
+  - BO-1800f-2
+  - BO-1800f-3
+  - BO-1800f-4
+implemented_by: []
+documentation_triggers:
+  - sequence-diagram
+  - reference-doc
+notes: |
+  Origin: KI-BO-20260909-worktrees-go-stale-within-minutes (severity high,
+  4 occurrences in one session, one of which would have deleted work merged
+  earlier in that same session). Every occurrence was caught only because a
+  human remembered to run a manual additive-only audit -- a defence with a 100%
+  hit rate and a 0% enforcement rate.
+
+  PRIORITY: high, set by the user (BrainCandy) at approval on 2026-09-14,
+  raised from the medium authoring default. The grounds are the origin entry's
+  own: severity high, four occurrences in a single session, and one near-miss
+  against work merged earlier in that same session. The harm is silent loss of
+  work that was already delivered, which is not a defect that degrades
+  gracefully while it waits.
+
+  THE TWO DOCUMENTATION SLOTS WERE HELD, THEN FILLED. This record carries
+  documentation_triggers (sequence-diagram, reference-doc), which imply
+  documentation criteria. They were deliberately NOT authored when this L1 was
+  written, by the user's decision on 2026-09-14: writing them then would have
+  spent both free slots on documentation before the IT PO had settled the
+  behaviour's shape, and a documentation criterion written against an unsettled
+  shape documents the wrong thing. An empty slot there was a decision that was
+  taken, not one that was missed.
+
+  The hold was released on 2026-09-14 once BO-1800f-1 and BO-1800f-2 and their
+  L3s had been enriched and the shape was settled. BO-1800f-3 covers the
+  sequence-diagram trigger and BO-1800f-4 the reference-doc trigger, bringing
+  this L1 to four L2 children.
+
+  THE OPEN QUESTION ON BO-1800f-3 IS RESOLVED (BA, 2026-09-14): the diagram has
+  FOUR end points, not three. The IT PO had raised that BO-1800f-1-ii (a replay
+  that cannot complete cleanly stops the delivery and restores the copy) is a
+  fourth terminal disposition of the same boundary and that BO-1800f-2-ii was
+  never mentioned either, leaving the count short by one or the picture short of
+  a branch. The count was short. The decisive point is not that BO-1800f-1-ii
+  exists as a separate record — that alone would not make it part of this
+  picture — but that the diagram already draws the replay as one of its three
+  steps, and BO-1800f-1-ii is a terminal disposition OF THAT STEP, not of a
+  separate operation. Drawing the replay with a single outcome would have
+  asserted that the replay always completes, at the one step where this tree
+  says a human decision may be required. The alternative — keeping three and
+  scoping the replay failure out — was considered and rejected because no reason
+  could be given for it that did not also exclude BO-1800f-1-i, whose failure is
+  an end point on identical grounds one step earlier.
+
+  What moved with the decision, all inside BO-1800f-3: its criteria now fix four
+  end points, three decision branches each drawn with both outcomes, and eight
+  labelled elements; they require the three refusal terminals to be told apart in
+  the reader's terms (how far the boundary got, and what was done to the copy —
+  not touched, put back to its pre-replay commits, or needing no putting back);
+  and they reference all six behavioural criteria under this L1.
+  test_the_diagram_has_exactly_three_end_points is renamed
+  test_the_diagram_has_exactly_four_end_points and now names the four
+  dispositions, with four further descriptors added — refusal
+  distinguishability, no-delivery-after-an-incomplete-replay, the report's
+  emission points, and a behavioural-completeness check over this L1's children.
+  That last one is the mechanism that would have surfaced this drift on its own;
+  the IT PO had withheld it only because it would have been red on arrival
+  against the two unreferenced siblings, and that objection is now gone.
+
+  BO-1800f-2-ii is handled differently on purpose: it is referenced by the
+  diagram but is NOT a fifth end point, because it produces no terminal. Its own
+  requirements have the report produced on the refusal path and the clean path
+  alike, so it decorates both outcomes of the adjudication. The diagram shows
+  WHERE it is emitted — on both adjudication outcomes and on neither earlier
+  halt, since from those the examination is never reached — and deliberately not
+  what it contains, which is the reference doc's subject under BO-1800f-4.
+
+  Scope. This L1 governs the boundary where work LEAVES its isolated copy toward
+  the shared branch. It deliberately does NOT promise that every copy is kept
+  continuously current: continuously restating a copy's history underneath
+  running agents trades silent deletion for silent corruption of in-flight work.
+  The guarantee is about the moment of delivery, not the whole lifetime of the
+  copy.
+
+  Two independently-failing properties this L1 is scoped to parent as siblings,
+  not as parent and child:
+    1. Currency -- work reaching the shared branch is replayed onto the state
+       observed at that moment, not the state it was copied from.
+    2. Non-destructiveness -- a delivery that would remove content the shared
+       branch already has does not leave the copy.
+  They must stay siblings because a delivery can be perfectly current and still
+  remove content, via a bad conflict resolution during the replay. Were
+  non-destructiveness nested under currency, it would be vacuous in every test
+  where currency is correctly implemented -- exactly the shape of check that
+  looks green because it examined nothing.
+
+  Deliberate removals remain in scope and remain possible. The value is
+  "undeclared removals are refused", never "removals are refused". A rule that
+  blocked all deletions would be wrong in a way this repo has already been bitten
+  by: CLAUDE.md records an incident where a branch's real, intended removal was
+  read as a dropped hunk and nearly reinstated.
+
+  Placement. Sits under BO-1800 as the complement to BO-1800e: BO-1800e
+  guarantees main can only change THROUGH the reviewed process; this guarantees
+  that what travels through that process does not subtract. All four recorded
+  occurrences were on branches heading for a properly reviewed PR, so BO-1800e
+  can hold completely while the work is still deleted. BO-1800a (isolation) is
+  the cause here rather than the cure -- each isolated copy is a snapshot of a
+  base that keeps moving. BO-900a was rejected as parent: its population is
+  long-running epics and all four occurrences were on non-epic branches; its
+  shape is a warning with a choice to continue, where this needs a refusal.
+
+  roadmap_phase: phase_1, matching BO-1800 and all five existing siblings. The
+  phase_1 outcome is a stable MVP "reliable enough to use across multiple repos";
+  silent deletion of already-merged work when several efforts run at once is a
+  direct threat to that outcome, and it is already occurring, so it is not
+  deferrable to a later phase.
+
+  Related observations for a future decision -- recorded here deliberately, NOT
+  acted on, because both belong to BO-900 and amending them is a separate call:
+    - BO-900a-1 measures "commits AHEAD of origin/main" -- the branch's own
+      output -- which does not measure the shared branch's advance at all. A
+      one-commit branch can be arbitrarily behind and that metric reads 1, so the
+      check cannot detect the condition its own L1 promises to warn about. Text
+      verified directly at authoring time. Latent defect in the existing tree,
+      independent of this L1.
+    - BO-900a-1-i specifies that an unreachable remote counts as zero divergence
+      and the drive continues. That fail-open is defensible for an advisory
+      mid-epic warning and wrong for a delivery gate, where unreachable means
+      unverifiable. The behaviour drafted under this L1 requires the opposite.
+      Both may be correct in their own context -- flagged so that whoever unifies
+      them does so deliberately rather than by accident.

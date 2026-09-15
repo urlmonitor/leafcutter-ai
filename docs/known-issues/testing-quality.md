@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: 2026-08-18
-last_updated: 2026-09-07
+last_updated: 2026-09-14
 components:
   - testing_quality
 related_docs:
@@ -360,6 +360,37 @@ answered, with a grep and not from memory:
 **Fix direction (pattern).** Every hook AC should carry a registration test: assert the hook's id
 appears in the deployed `.pre-commit-config.yaml` and that its script resolves. That is a
 three-line test which would have failed on day one of the epic and saved six rounds.
+
+**Partially addressed, 2026-09-14 — and the remedy above needed correcting twice.**
+`unit_tests/commit_guardian/test_hook_registration_inventory.py` now makes the unasked question
+a standing assertion. Two corrections to the fix direction as originally written:
+
+1. **Do not assert against `.pre-commit-config.yaml`.** It is **gitignored build output** emitted
+   by `build.py` (`git status --ignored` → `!!`; no git history; absent in a fresh clone).
+   Asserting against it verifies the generator's last local run, not the committed registry —
+   the same class of mistake as the entry it is meant to prevent. The source of truth is
+   `hooks_manifest.hooks` in `templates/scripts/commit_guardian/commit_guardian.json`. A first
+   pass of this work did measure against the deployed file and reported 5 phantom "unregistered"
+   ids that were only local build staleness.
+2. **Per-AC is the wrong unit.** A registration test attached to each hook AC has to be
+   remembered by the author of hook nineteen, and not remembering is the defect class. The test
+   is an inventory over the whole guardian directory instead, scoped by the repo's own
+   `hook_parity.hook_script_patterns` so it cannot drift from `check_hook_parity.py`.
+
+**What it measured on `main` at `2524993b9`: 18 hook scripts on disk that no `hooks_manifest`
+entry invokes.** Nine of those (`check_complexity`, `check_docstrings`, `check_documentation`,
+`check_doc_coverage`, `check_doc_links`, `check_folder_density`, `check_root_files`,
+`check_sql_complexity`, `check_debug_scripts`) carry a settings block in **both** `config.py`
+and `commit_guardian.json` while being invoked by nothing — `KI-CG-021`'s shape exactly, and
+worse for a reader, because the presence of configuration reads as evidence of registration.
+They are held in a shrink-only ratchet baseline; the test is green today and red on the
+nineteenth. Triaging the 18 is **not** done and is the remaining work on this entry.
+
+Neither existing gate covered this, which is why the orphans survived: `check_hook_trigger_reachability.py`
+iterates the *registry* asking whether any tracked path can fire each gate, so a script absent
+from the registry is invisible to it; `check_hook_parity.py` compares scripts across
+*directories* and ids across *manifests*, and never asks whether a script on disk is named by
+any entry. The unasked question was disk → manifest.
 
 **The general form:** *"does the code work"* and *"is the code reachable"* are different
 questions, and a test suite answers only the first. Nothing in 3,772 passing tests could
@@ -1536,3 +1567,45 @@ AC_ENFORCE_STRICT=1 python -m pytest unit_tests/workflows/test_bp_600d_5.py -v
 **Related.** `BP-600d-5` (the AC whose tests were masked here) · `KI-TQ-011` above (the same plugin's masking disagreeing with CI's global opt-out — a different angle on the same mechanism) · `KI-BP-20260907-bootstrap-swallows-build-failure` and `KI-BO-20260907-resume-replays-cached-resolver` (same 2026-09-07/08 window, same shape: a loud-looking failure path that a nearby mechanism silently absorbs).
 
 **Pattern:** a check that examined the wrong parse path, and a check that could not distinguish "not built yet" from "silently broken," stacked on the same change — two green surfaces, neither of which was evidence of what the reader assumed it proved.
+
+---
+
+### KI-TQ-20260914-test-fixtures-hand-enumerate-their-production-dependencies — the deploy-manifest failure mode one layer down, where the error message names something other than its cause
+
+- **Severity:** medium — it cannot reach production, because the only thing that breaks is a test fixture. What it costs is diagnosis time and false attribution: the failure surfaces on descriptors belonging to *other* ACs, phrased as something unrelated to the real fault.
+- **Status:** open — no AC. The two known instances are annotated in place; nothing checks the general case.
+- **Occurrences:** 1 (2026-09-14), hitting 6 descriptors across 2 fixtures simultaneously
+- **First seen:** 2026-09-14 · **Last seen:** 2026-09-14
+- **Where:** `unit_tests/commit_guardian/_ge_127a_1_ordinary_commit_fixture.py` (`PRODUCTION_MODULES`) and `unit_tests/commit_guardian/_ge_127c_1_scope_fixture.py` (`CHECK_FILE_SIZE_SIBLINGS`)
+
+**Symptom.** `GE-127e-1` added `_file_description.py` and a new import of it to `check_file_size.py`. After rebasing that branch onto a main that had just taken `GE-127a-1` (#777) and `GE-127c-1` (#781), **six descriptors went red** — none of them `GE-127e-1`'s own, all of them belonging to the two ACs whose fixtures had just merged.
+
+The message named the wrong thing:
+
+```text
+AssertionError: 0 != 1 : baseline commit failed: Check File Size...Failed
+- hook id: check-file-size
+- exit code: 1
+```
+
+The actual cause appeared only inside the captured traceback the assertion happened to embed:
+
+```text
+ModuleNotFoundError: No module named '_file_description'
+```
+
+**Mechanism.** Both fixtures build a real temporary git repository and copy `check_file_size.py` into it alongside a **hand-enumerated list** of the modules it imports. The source tree resolves the new import fine — only the copied temp repo is missing it. Nothing anywhere compares either list against the real import graph, so adding an import to `check_file_size.py` silently invalidates both.
+
+This is structurally the same defect as the build's deploy map (CLAUDE.md, "New Hook / Gate Dependencies Must Be in the Build Deploy-Manifest"), one layer down — and worse in one respect: the deploy-map version at least fails as a recognisable `ModuleNotFoundError` at hook runtime, whereas here it is wrapped in a commit failure attributed to the gate.
+
+**Why no amount of care on the new AC would have caught it.** `GE-127e-1`'s own seven descriptors were green throughout, including its deployed and reachability arms. The fixtures that break belong to *other* records. It was caught only by rebasing onto main and running the whole `unit_tests/commit_guardian/` suite — 1459 tests — which is not something a focused AC build does by default.
+
+**Fix direction.** Derive the copied set rather than enumerate it: walk `check_file_size.py`'s imports and copy what it actually needs, so the fixture cannot drift from the module. Failing that, a single shared helper both fixtures call, with one list to maintain instead of two. The weakest acceptable option — done today as a stopgap — is a comment on each list saying nothing checks it; that records the hazard without removing it.
+
+Note this generalises beyond these two: any fixture that copies production modules into a temp tree by name has the same exposure, and `commit_guardian` has several.
+
+**Related.**
+- CLAUDE.md "New Hook / Gate Dependencies Must Be in the Build Deploy-Manifest" — the same defect at the build layer, already documented.
+- `GE-127f-1` / `-2` / `-2-i` `it_requirements` — carry this hazard forward explicitly, since that tree's implementation is likely to add another import.
+
+**Pattern:** a hand-maintained mirror of a dependency graph, with no check that the mirror still matches — surfacing as a failure attributed to whatever was running when it broke.

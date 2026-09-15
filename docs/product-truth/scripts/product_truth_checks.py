@@ -26,6 +26,8 @@ from generate_product_truth import (
     impl_status_for_ac,
     iter_nodes,
 )
+from product_truth_bounds import bound_named, check_bounds
+from product_truth_shapes import expansion_targets
 
 # Re-exported, not used here: validate_product_truth imports the whole check
 # set from this one module, so splitting the index checks into a sibling must
@@ -153,7 +155,7 @@ def _check_truth_evidence(flows: dict, ac_records: dict, errors: list[str], warn
 def _find_expands_cycles(flows: dict) -> list[list[str]]:
     """Return every cycle in the step.expands_to graph (edges to registered flows only)."""
     edges = {
-        flow_id: sorted({step["expands_to"] for step in flow.get("steps", []) if step.get("expands_to") in flows})
+        flow_id: sorted({child for step in flow.get("steps", []) for child in expansion_targets(step) if child in flows})
         for flow_id, flow in flows.items()
     }
     white, gray, black = 0, 1, 2
@@ -189,8 +191,7 @@ def _check_expands(flows: dict, index: dict, errors: list[str]) -> None:
     registered = set(flows)
     for flow in flows.values():
         for step in flow.get("steps", []):
-            child_id = step.get("expands_to")
-            if child_id and child_id not in registered:
+            for child_id in [c for c in expansion_targets(step) if c not in registered]:
                 errors.append(
                     f"[expands] {flow['id']} step '{step['id']}': expands_to '{child_id}' "
                     "resolves to no registered flow"
@@ -313,18 +314,10 @@ def _check_mock_invariants(mock: dict, errors: list[str], warnings: list[str]) -
             )
 
 
-#: The longest a journey `summary` may run once a journey declares it is
-#: shaped to the current conventions. A record that keeps growing stops being
-#: readable at a glance, which is the whole point of holding one.
-_DESCRIPTION_LENGTH_BOUND = 120
-
-
-#: The shape_version at which _DESCRIPTION_LENGTH_BOUND became binding. A
-#: journey declaring THIS version or later is held to the bound; one declaring
-#: an earlier version -- or none at all -- predates it and is only warned
-#: about, so introducing a bound never retroactively blocks a record written
-#: before it existed.
-_DESCRIPTION_BOUND_EFFECTIVE_SHAPE_VERSION = 2
+#: The journey description bound UXP-700e-1-i introduced, now declared in
+#: product_truth_bounds.BOUNDS; kept here under its original names for callers.
+_DESCRIPTION_LENGTH_BOUND = bound_named("journey-description-length").limit
+_DESCRIPTION_BOUND_EFFECTIVE_SHAPE_VERSION = bound_named("journey-description-length").effective_shape_version
 
 
 def _check_artifact_paths(index: dict, errors: list[str]) -> None:
@@ -386,84 +379,105 @@ def _check_canonical_datasets(mocks: dict, errors: list[str]) -> None:
 
 
 def _check_shape_version_bounds(flows: dict, errors: list[str], warnings: list[str]) -> None:
-    """Hold each journey to the size bound its declared shape_version opts into.
+    """Hold each journey to the description bound its declared shape_version opts into.
 
     Only journeys whose `summary` exceeds :data:`_DESCRIPTION_LENGTH_BOUND` are
-    considered at all; one within the bound is never reported whatever version
-    it declares. An over-long journey is then classified by its declared
-    shape_version, and the classification decides which list it lands in:
+    reported, and the declared shape_version decides which list each lands in:
 
     * declares >= the effective version -> `errors` (blocks: it opted in)
     * declares an earlier version       -> `warnings` (predates the bound)
     * declares none                     -> `warnings` (needs a shape_version)
 
-    Only the first case reaches `errors`, so a bound introduced today cannot
-    retroactively block a record written before it -- the grandfathered cases
-    stay visible as warnings instead of being silently dropped (GE-120).
+    The journey-description slice of product_truth_bounds.check_bounds(), which
+    the checker runs over every declared bound (UXP-700e-1).
 
     Args:
         flows: ``{flow_id -> flow}``.
         errors: Shared error list; appended to for a real violation.
         warnings: Shared warning list; appended to for a grandfathered finding.
     """
-    for flow_id, flow in flows.items():
-        summary = flow.get("summary") or ""
-        if len(summary) <= _DESCRIPTION_LENGTH_BOUND:
-            continue
-
-        shape_version = flow.get("shape_version")
-        if shape_version is None:
-            warnings.append(
-                f"[shape] {flow_id}: summary is {len(summary)} characters, over the "
-                f"{_DESCRIPTION_LENGTH_BOUND}-character bound, but the journey declares no "
-                f"shape_version — it needs a shape_version before the bound can be applied to it"
-            )
-        elif shape_version < _DESCRIPTION_BOUND_EFFECTIVE_SHAPE_VERSION:
-            warnings.append(
-                f"[shape] {flow_id}: summary is {len(summary)} characters, over the "
-                f"{_DESCRIPTION_LENGTH_BOUND}-character bound, but the journey declares "
-                f"shape_version {shape_version}, which predates the bound "
-                f"(effective at shape_version {_DESCRIPTION_BOUND_EFFECTIVE_SHAPE_VERSION}) — not blocked"
-            )
-        else:
-            errors.append(
-                f"[shape] {flow_id}: summary is {len(summary)} characters, over the "
-                f"{_DESCRIPTION_LENGTH_BOUND}-character bound this journey is held to at "
-                f"shape_version {shape_version}"
-            )
+    check_bounds({"flows": flows}, errors, warnings, (bound_named("journey-description-length"),))
 
 
-def _check_pointers(flows: dict, ac_ids: set[str], mockups: dict, errors: list[str]) -> int:
-    """Resolve every AC `implements` pointer across all flow steps and branches.
+#: The one pointer-target kind the checker knows how to resolve: an acceptance-
+#: criterion id. Checked against every id in the AC store (4016 at the time of
+#: writing, including multi-segment prefixes such as KM-ADM-001) so that no real
+#: AC id is ever misread as unrecognised -- which would silently turn a genuinely
+#: broken pointer into a non-blocking unresolvable one (ADR-042 Amendment 1).
+_RECOGNISED_AC_ID = re.compile(r"^[A-Z]{2,6}(?:-[A-Z]{2,6})*-\d+[a-z0-9]*(?:-[a-z0-9]+)*$")
+
+
+def is_resolvable_pointer_target(target: object) -> bool:
+    """Return True when *target* is a kind of pointer target the checker can resolve.
+
+    The single classification predicate ADR-042 §A4 requires. It decides by the
+    target's KIND, before any lookup: a well-formed AC id that is absent from the
+    store is still a recognised kind (so it is broken, not unresolvable), and
+    only a target that is not an AC id at all -- a screen reference, a path, a
+    URL, free text -- is unresolvable.
+
+    Args:
+        target: One entry of a node's ``implements`` list.
+
+    Returns:
+        True iff *target* is shaped like an acceptance-criterion id.
+    """
+    return isinstance(target, str) and bool(_RECOGNISED_AC_ID.match(target))
+
+
+def _check_pointers(
+    flows: dict, ac_ids: set[str], mockups: dict, errors: list[str],
+    unresolvable: list[str] | None = None,
+) -> int:
+    """Classify every `implements` pointer as resolved, broken or unresolvable.
 
     This is the TIER-1 FLOOR of the citations sub-surface (UXP-700c-1): it asks
-    only "does the target exist", against the project as it stands right now —
-    no content comparison (that is UXP-700c-2). It mutates the SAME `errors`
-    list every other `_check_*` helper already uses, so a broken pointer makes
-    the run exit non-zero exactly like every other error class.
+    only "does the target exist", against the project as it stands right now --
+    no content comparison (that is UXP-700c-2).
 
-    Returns the number of pointers that resolved (their target AC id is a
-    member of ``ac_ids``). Every pointer whose target is NOT in ``ac_ids`` is
-    appended to ``errors`` as one message naming, in the message text:
-      1. the artifact holding the pointer  -> flow['id']
-      2. the position within that artifact  -> the step/branch id
-      3. the target that did not resolve    -> the AC id
-    An intact pointer produces NO entry in `errors` -- only a broken one is
-    reported. `mockups` is accepted (and currently unused) so this helper's
-    signature can grow to cover screen/mockup pointers without a breaking
-    change to its callers.
+    Each pointer gets exactly one of three verdicts (ADR-042 Amendment 1):
+
+    * resolved -- its target is an AC id present in ``ac_ids``; counted in the
+      return value.
+    * broken -- its target is an AC id absent from ``ac_ids``; appended to
+      ``errors``, which makes the run exit non-zero like every other error.
+    * unresolvable -- its target is not a kind the checker can resolve at all
+      (see :func:`is_resolvable_pointer_target`); appended to ``unresolvable``
+      when the caller supplies it, and NEVER counted as resolved nor reported as
+      broken (UXP-700c-1-i). The caller decides what it does to the outcome.
+
+    Every report names the artifact holding the pointer, its position (step or
+    branch id) and the target; an unresolvable one also names why it could not
+    be classified, under a prefix distinct from a broken pointer's.
+
+    Args:
+        flows: ``{flow_id -> flow}``.
+        ac_ids: Every AC id present in the store.
+        mockups: Accepted so the signature can grow to screen pointers.
+        errors: Shared error list; broken pointers are appended.
+        unresolvable: Optional out-list; unresolvable pointer reports are appended.
+
+    Returns:
+        The number of pointers that resolved.
     """
     resolved = 0
     for flow in flows.values():
         for node, kind in iter_nodes(flow):
             node_id = node["id"]
-            for ac_id in node.get("implements", []):
-                if ac_id in ac_ids:
+            for target in node.get("implements", []):
+                if not is_resolvable_pointer_target(target):
+                    if unresolvable is not None:
+                        unresolvable.append(
+                            f"[pointer-unresolvable] {flow['id']} {kind} '{node_id}': target "
+                            f"{target!r} is not an acceptance-criterion id (PREFIX-NUMBER...), the "
+                            f"only pointer kind this checker can resolve, so it could not be classified"
+                        )
+                elif target in ac_ids:
                     resolved += 1
                 else:
                     errors.append(
                         f"[pointer] {flow['id']} {kind} '{node_id}': "
-                        f"AC pointer '{ac_id}' does not resolve in the AC store"
+                        f"AC pointer '{target}' does not resolve in the AC store"
                     )
     return resolved
 
@@ -482,5 +496,12 @@ DECISION HISTORY
   behaviour-preserving by construction. validate_product_truth re-imports the
   whole set, keeping `vpt.<name>` resolvable for the tests that reach for these
   directly. (#EPIC-TruthfulProjectRecord)
+- 2026-09-14 [python-coder]: UXP-700e-3-i -- the cycle and dangling-reference
+  checks read `expands_to` in either shape via expansion_targets, and check
+  every id in a list. (#EPIC-TruthfulProjectRecord/44)
+- 2026-09-14 [python-coder]: UXP-700e-1 -- the description bound and its
+  shape-version rule move into product_truth_bounds.BOUNDS;
+  _check_shape_version_bounds and its two constants stay as the journey-
+  description slice of it. (#EPIC-TruthfulProjectRecord/38)
 ====================================================================
 """

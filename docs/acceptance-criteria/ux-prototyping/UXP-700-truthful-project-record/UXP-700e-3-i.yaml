@@ -6,7 +6,7 @@ components:
 level: L3
 status: active
 req_status: approved
-work_status: todo
+work_status: done
 readiness: approved
 priority: medium
 criteria: |
@@ -39,9 +39,15 @@ amended_by:
   agent: approve_acs
   date: '2026-09-07'
 superseded_by: null
-covered_by: []
+covered_by:
+- unit_tests/product_truth/test_uxp_700e_3_i.py
 implemented_by:
-- tickets/00_inbox/TICKET-20260909-UXP-700e-3-i.md
+- docs/product-truth/scripts/product_truth_shapes.py
+- docs/product-truth/scripts/generate_product_truth.py
+- docs/product-truth/scripts/product_truth_checks.py
+- docs/product-truth/scripts/validate_product_truth.py
+- docs/product-truth/schemas/flow.schema.json
+- leafcutter-web/lib/data/flows.ts
 change_target:
   - code
   - schema

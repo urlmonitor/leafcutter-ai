@@ -1,0 +1,277 @@
+id: INF-1300e-1
+title: "In a project that has only adopted this way of working, the mandatory step can be performed"
+component: infrastructure
+components:
+  - documentation_system
+  - build_pipeline
+  - infrastructure
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+created_by: "docs/acceptance-criteria/infrastructure/INF-1300-architecture-docs-by-construction/INF-1300e.yaml"
+criteria: |
+  Given a project that has taken this way of working by the ordinary means of
+    adopting it, and which contains no copy of this package's own working tree,
+  When an author in that project performs the mandatory step exactly as the
+    instruction that project received states it — the same invocation, the same
+    arguments, run from where that project's authors work,
+  Then the step succeeds there and a document is produced,
+  And the adopting project needed to add nothing of its own, and to copy nothing
+    from anywhere else, to make that possible,
+  And the observation is made in the adopting project's own layout: a success
+    obtained in this package's working tree does not satisfy this criterion, and
+    neither does one obtained in a project that still has this package's source
+    tree beside it,
+  And the same holds after the adopting project takes a later version of the
+    package by the same ordinary means — the step does not stop working because
+    the project updated.
+depends_on:
+  - INF-1300e
+doc_links:
+  - path: docs/acceptance-criteria/infrastructure/INF-1300-architecture-docs-by-construction/INF-1300e.yaml
+    relationship: parent
+    status: exists
+  - path: templates/skills/write-c4-diagram/SKILL.md
+    relationship: specifies
+    status: exists
+    relevance: >-
+      One of the two surfaces that carries the mandatory step into every adopting project.
+      It is a package template, so it arrives whether or not the means does — which is the
+      asymmetry the L1 names and the reason this record exists.
+  - path: templates/agents/architecture-diagram-author.md
+    relationship: specifies
+    status: exists
+    relevance: >-
+      The other. Both arrive; the criterion is that what they instruct can be done where
+      they arrive.
+  - path: scripts/build_propagation_audit.py
+    relationship: describes
+    status: exists
+    relevance: >-
+      The guard whose purpose is to notice an instruction referring to something the
+      adopting project will not receive, and which has carried this exact reference in its
+      exception list since 2026-06-17 with a comment conceding it causes a hard user-visible
+      failure. The comment is the clearest existing statement of what this record delivers.
+  - path: CLAUDE.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      "New Hook / Gate Dependencies Must Be in the Build Deploy-Manifest" and the repeated
+      instruction to verify against the deployed layout rather than the source tree. This
+      project's own history records more than one artifact that worked in the source tree
+      and was unreachable in a consuming one; this record's third clause is written against
+      exactly that.
+  - path: docs/architecture/components/template-compiler.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      The build/deploy component this record's delivery lands in. Its "External-Dependency
+      Allowlist" section is the documented home of the propagation audit whose manifest set
+      a new deploy phase must join.
+  - path: docs/architecture/components/bootstrap-installer.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      How a project adopts the package. The "ordinary means of adopting it" in this record's
+      Given clause is the flow described here, and the layout it produces is the layout the
+      observation must be made in.
+  - path: docs/reference/false-green-mechanisms.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      The catalogue this record's negative half draws on — an observation that cannot tell
+      the source layout from the deployed one is one of the listed mechanisms, not a pass.
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      The set-cover taxonomy the test_spec angles below are drawn from. This record is
+      dominated by the `deployed` and `reachability` angles; a `criterion`-only suite would
+      pass in the source tree and prove nothing about an adopter.
+assigned_agent: python-coder
+estimated_complexity: M
+change_target:
+  - code
+  - pipeline
+risk_surface: contract_boundary
+test_required: true
+it_requirements:
+  - >-
+    MEASURED 2026-09-14 — THE DEPLOY PHASE GLOBS FLAT. The only phase that deploys from
+    templates/scripts/ is build_template_standalone_scripts (scripts/build_phases.py), and it
+    scans with templates_scripts_src.glob("*.py") under the comment "Shallow scan — only
+    top-level .py files; subdirectories have their own phases". A source committed at
+    templates/scripts/scaffold/new_arch_doc.py is therefore deployed by NO existing phase.
+    Delivery requires a new, dedicated deploy phase. A consumer simulation run on 2026-09-14
+    confirmed this empirically: the "Template standalone scripts" section deployed seven flat
+    files and no scaffold/ subtree.
+  - >-
+    THE EXISTING GLOB MUST NOT BE WIDENED TO rglob. scripts/build.py's
+    _manifest_sync_platforms_scripts documents this exact fix as already considered and
+    rejected (KI-BP-023): widening would register scripts/<name> deploy keys for files the
+    phase never writes, adding FALSE entries to the propagation-audit manifest and generating
+    spurious findings. The sanctioned shape is the build_sync_platforms /
+    _manifest_sync_platforms_scripts pairing — one deploy phase plus one manifest helper that
+    mirrors that phase, not its directory.
+  - >-
+    A NEW DEPLOY PHASE MUST SHIP WITH ITS MANIFEST HELPER IN THE SAME CHANGE. A phase with no
+    corresponding _manifest_* helper registered into the propagation-audit manifest set puts
+    its entire deployed subtree outside the guard with no warning and no error — the KI-BP-023
+    defect, in which a whole deployed Python package sat unguarded.
+  - >-
+    The manifest helper must emit the key exactly as the authoring surfaces reference it —
+    "scripts/scaffold/new_arch_doc.py". That string is the key space the propagation audit
+    resolves references in, and INF-1300e-4's two-run construction resolves against this exact
+    key and nothing else.
+  - >-
+    MEASURED 2026-09-14 — THE INSTRUCTED PATH IS NOT THE DEPLOYED PATH. A real build into an
+    empty target deploys scripts under the output root (observed: <target>/.leafcutter/scripts/).
+    The means will therefore land at <output_root>/scripts/scaffold/new_arch_doc.py, while both
+    arrived surfaces instruct the bare relative path scripts/scaffold/new_arch_doc.py. Resolution
+    in the guard's layout-agnostic scripts/<rel> key space does NOT establish that the instructed
+    path resolves from where an adopting project's authors work. Settling that is INF-1300e-2's;
+    this record must not assume it, and its arrival test must invoke the real deployed path.
+  - >-
+    The observation must be performed with no copy of this package's working tree reachable
+    from the adopting project. unit_tests/portability/_bp900h4_layout_helpers.py already
+    provides make_package_checkout / remove_package_checkout for exactly this negative half;
+    reuse them rather than reinventing a weaker isolation.
+  - >-
+    The second-install clause must be exercised by running the real build twice into the same
+    target directory. The update path is genuinely different code — _should_overwrite, the
+    force flag and the compare-before-write guard only engage on a run where the file already
+    exists — so a single build does not test it.
+  - >-
+    The script source must be committed under templates/scripts/ (the tracked deploy-source
+    mirror). A copy placed only under scripts/ is build output, is unreachable by a fresh
+    install, and is precisely the failure this record exists to prevent.
+  - >-
+    The new phase must be idempotent: a second build over unchanged sources must write nothing
+    and must not churn mtimes, matching the compare-before-write contract every sibling phase
+    already honours.
+  - >-
+    Must not regress the existing consumer-install CI gate — scripts/ci/check_consumer_install.py
+    must still exit 0 for a real build into an empty scratch directory (BP-900h-1).
+test_spec:
+  - name: test_scaffold_means_arrives_in_a_consumer_install
+    target_dir: unit_tests/portability/
+    framework: pytest
+    type: integration
+    angle: deployed
+    description: >-
+      After a real build.py into an empty temp target with no package tree beside it, the
+      scaffold script is present under that project's deployed output root. Asserted against
+      the deployed tree read back off disk, never against templates/.
+  - name: test_author_in_consumer_layout_runs_the_mandatory_step_and_gets_a_document
+    target_dir: unit_tests/portability/
+    framework: pytest
+    type: integration
+    angle: reachability
+    surface_invoked: "the deployed new_arch_doc.py CLI, invoked as a subprocess with cwd set to the adopting project root"
+    description: >-
+      Invoking the deployed means with the full pinned + widened argument set, from where that
+      project's authors work, exits 0 and the --output path exists afterwards.
+  - name: test_consumer_run_succeeds_with_the_package_checkout_removed
+    target_dir: unit_tests/portability/
+    framework: pytest
+    type: integration
+    angle: boundary
+    description: >-
+      The negative half. With the package checkout removed via
+      _bp900h4_layout_helpers.remove_package_checkout and nothing copied into the project by
+      hand, the same invocation still succeeds — proving the success was not borrowed from the
+      source tree.
+  - name: test_scaffold_means_survives_a_second_install_of_a_later_package_version
+    target_dir: unit_tests/portability/
+    framework: pytest
+    type: integration
+    angle: deployed
+    description: >-
+      Building twice into the same target (the update path) leaves the means reachable and the
+      invocation still succeeding, so delivery is durable rather than a one-time placement.
+test_rationale: >-
+  Every descriptor here executes the behaviour in a real consumer layout produced by the real
+  build, and reads its verdict off that layout. That is not decoration: this record's entire
+  subject is the difference between the source tree and the deployed one, so the obvious cheap
+  test — asserting templates/scripts/scaffold/new_arch_doc.py exists, or importing the module
+  directly — is not a weaker version of the right test, it is a test of a different and already
+  true proposition. It would have passed on 2026-09-14, when the measured deploy phase globs
+  flat and the file reaches no adopter at all. The isolation (removing the package checkout) and
+  the second build are each a named clause of the criteria and each closes a false-green path
+  this repository has recorded: an artifact reachable only because the source tree was beside
+  it, and an artifact that arrives on first adoption through a path a later update does not
+  repeat.
+delivers_to:
+  - agent: llm-expert
+    contract: >-
+      The two facts INF-1300e-2 compares the arrived surfaces against: (a) the deployed
+      location of the means in a consumer layout, as an output-root-relative path
+      "<output_root>/scripts/scaffold/new_arch_doc.py"; and (b) the argument sets the deployed
+      script's parser ACCEPTS and REQUIRES, as two explicit sets of flag names covering the
+      seven pinned flags (--tier --diagram-type --component --title --output --date
+      --update-readme) plus --parent, --root and --source-ticket.
+  - agent: python-coder
+    contract: >-
+      A propagation-audit manifest key of exactly the string "scripts/scaffold/new_arch_doc.py",
+      emitted by a manifest helper in scripts/build.py that mirrors the new deploy phase and is
+      registered into the manifest set the audit unions. INF-1300e-4's allowlist removal is only
+      correct if this key is what resolves the reference.
+expects_from:
+  - ac_id: INF-1300a-1
+    contract: >-
+      An executable Python CLI committed at templates/scripts/scaffold/new_arch_doc.py that
+      writes a committable architecture document to the path given by --output and exits 0 on
+      success, non-zero on refusal.
+  - ac_id: INF-1300a-2
+    contract: >-
+      The widened argument contract — --parent <path>, --root (flag, top-tier self-declaration)
+      and --source-ticket <id> alongside the seven pinned flags — so the arrival test invokes
+      the final contract rather than a superseded one.
+origin_agent: BrainCandy
+created: 2026-09-14
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-09-14'
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  THIS IS THE L1's PROMISE STATED AT ITS PLAINEST AND IT IS NOT A RESTATEMENT OF INF-1300a.
+  a's subject is what the produced document is like; this record's subject is whether the
+  production can happen where the instruction lands. A producer can satisfy every criterion
+  under a, b, c and d in this repository and reach no adopting project at all — which is
+  precisely the present state of the instruction it accompanies.
+
+  THE FALSIFIABILITY CONSTRUCTION, AND WHY THE NEGATIVE HALF IS PART OF IT. Create an empty
+  project with none of this package's source. Adopt the package into it the way an adopter
+  does, taking nothing else. Read the instruction as it arrived in that project, and run
+  exactly what it says, from where that project's authors would run it. The record is
+  falsified if the step fails, if it requires the adopter to supply or copy anything, or if
+  the invocation the arrived instruction states is not one the arrived means accepts. It is
+  ALSO falsified by an observation performed anywhere this package's working tree is
+  reachable — that is the negative half, and it is not pedantry: the L1 says in terms that
+  verifying in the source tree proves nothing about the deployed one, and this repository's
+  recorded history contains several artifacts that passed in the source tree and were
+  missing, or crashed on import, in a consuming project. An observation that cannot tell the
+  two layouts apart has not tested this record.
+
+  THE LAST CLAUSE IS ABOUT THE SECOND INSTALL, WHICH IS THE ONE NOBODY TESTS. An artifact can
+  arrive on a first adoption through a path that a later update does not repeat, leaving
+  projects that updated worse off than projects that did not. Requiring the step to still
+  work after the adopting project takes a later version is what makes the delivery durable
+  rather than a one-time placement.
+
+  FENCED, AND THE FENCE IS THE L1's OWN. This record is about the means being PRESENT AND
+  USABLE where the rule lands. It is deliberately not about build phases, manifests or
+  deployment mechanics — those are the how, and the L1 warns against writing criteria about
+  them. Whether the two surfaces and the means agree about the invocation is INF-1300e-2's;
+  whether the document produced there survives that project's own checks is INF-1300e-3's;
+  whether the guard that should have caught all this tells the truth is INF-1300e-4's.
+
+  NOT AUTHORED HERE, BY DESIGN: assigned_agent, estimated_complexity, it_requirements,
+  test_spec, test_rationale, delivers_to and expects_from. Those are the IT PO's.

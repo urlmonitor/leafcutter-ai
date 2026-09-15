@@ -1,0 +1,78 @@
+id: ACS-1600e
+title: "See what a tool would change before you let it change anything"
+component: ac-store
+components:
+  - ac_store
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+criteria: |
+  Every run leaves an account you can read of what it examined and would alter.
+
+  A run produces a durable account naming what it looked at, what it would change,
+  and on what grounds — so the decision to let it proceed is made on evidence you
+  have actually read rather than on trust in the tool. The same account is
+  available after a change has been applied, so what happened can be checked
+  instead of assumed.
+depends_on:
+  - ACS-1600
+doc_links:
+  - path: docs/acceptance-criteria/ac-store/ACS-1100-honest-coverage-answers/ACS-1100.yaml
+    relationship: depends_on
+    status: exists
+    relevance: >-
+      INHERITED AND NOT RESTATED — READ BEFORE DECOMPOSING THIS ONE. ACS-1100 is a
+      standing contract that every figure states the total it was measured against
+      and what it deliberately excluded. Every count in this account is bound by it.
+      ACS-1100's own notes say it is not a home for other surfaces, so this record
+      inherits rather than parents under it, and no L2 here may re-derive the
+      denominator rule in a competing form.
+  - path: docs/acceptance-criteria/ac-store/ACS-1100-honest-coverage-answers/ACS-1100b.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      THE NEAREST NEIGHBOUR AND THE ONE THIS WAS CHECKED AGAINST FOR OVERLAP.
+      ACS-1100b owns how a reported FIGURE was arrived at. This record owns a
+      reviewable account of proposed CHANGES. Related objects, different ones: a
+      figure can be perfectly explained by a tool that never says which records it
+      would rewrite. Neither may be closed as a duplicate of the other.
+delivers_to: null
+expects_from: null
+documentation_triggers:
+  - how-to
+origin_agent: BrainCandy
+created: 2026-09-14
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: internal
+notes: |
+  PARTLY GREEN ON ARRIVAL — CHECK BEFORE ASSUMING A RED BASELINE. The governed
+  tool already produces a persistent report of each run; that behaviour was
+  specified by one of the records being retired and the code for it survives the
+  retirement. This record re-homes the guarantee rather than commissioning it.
+  Decomposition must establish which half is already true before writing a test
+  that comes up green and proves nothing. The two halves are not equally likely to
+  be present: an account of what a run FOUND is common, an account of what it
+  WOULD CHANGE, produced before the change, is the part that usually is not there.
+
+  THE LOAD-BEARING HALF IS THE BEFORE, NOT THE AFTER. An after-the-fact log makes a
+  change auditable. A before-the-fact account makes it REFUSABLE, and refusable is
+  the property that turns ACS-1600c's opt-in from a formality into a decision. If
+  decomposition can only carry one, carry the before.
+
+  DO NOT SPECIFY A FORMAT IN A CRITERIA BLOCK. Where the account lives, what shape
+  it takes and whether it is machine-readable are technical enrichment decisions.
+  A criterion naming a file location or a serialisation is at the wrong altitude
+  and must be rewritten rather than approved.
+
+  MANDATORY NEGATIVE ARM. A tool that examines nothing produces a perfectly honest
+  empty account. The arm that distinguishes a real account from a vacuous one is a
+  run over a store with known changes pending: the account names them, the count
+  matches what a subsequent applying run actually alters, and neither figure is
+  reported without its denominator.

@@ -1,0 +1,91 @@
+id: ACS-1600a-1
+components:
+  - ac_store
+title: "A retired requirement is not offered as something to change"
+component: ac-store
+level: L2
+status: active
+req_status: draft
+work_status: done
+readiness: approved
+priority: medium
+criteria: |
+  Given the project holds both a requirement still in force and one that has
+    been retired,
+  And neither has yet been linked to the code that implements it,
+  When a tool assembles the set of requirements it will propose changes to,
+  Then the retired requirement is absent from that set,
+  And the requirement still in force is present,
+  And the retired one is left out on the grounds of its retirement alone —
+    not because anything else about it happens to differ.
+depends_on:
+  - ACS-1600a
+doc_links:
+  - path: scripts/ac_store/cross_reference_audit.py
+    relationship: modifies
+    status: exists
+  - path: docs/acceptance-criteria/ac-store/ACS-1600-proposals-not-verdicts/ACS-1600a.yaml
+    relationship: specifies
+    status: exists
+    relevance: >-
+      The parent guarantee this makes falsifiable. ACS-1600a states that
+      retiring a requirement is on its own enough to put it beyond the reach
+      of automation; this record is the first concrete population where that
+      was not true. Read the parent for why the guarantee is phrased as
+      "which records are in reach" rather than "read this field" — a
+      criterion pinned to the fields today's implementation happens to
+      consult would be falsified by the next refactor rather than by a
+      behaviour change.
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-09-14
+amended_by: []
+superseded_by: null
+covered_by:
+  - tests/ac_store/test_acs_1600a_1_retired_not_candidate.py::TestRetiredRequirementIsNotAnEligibleCandidate::test_retired_requirement_is_not_an_eligible_candidate
+implemented_by:
+  - scripts/ac_store/cross_reference_audit.py
+change_target: code
+risk_surface: internal
+declares_side_effect: false
+test_spec:
+  - name: test_retired_requirement_is_not_an_eligible_candidate
+    target_dir: tests/ac_store
+    framework: pytest
+    type: unit
+    description: >-
+      Builds a candidate population holding one active record and one retired
+      record that are otherwise identical in the fields the selector reads
+      today (both unfinished, both unlinked to code), runs the selection, and
+      asserts the active record is returned while the retired one is not. The
+      two records differ ONLY by lifecycle status, so a selector that ignores
+      that field cannot pass and a selector that excludes the retired record
+      for any other reason cannot pass either.
+notes: |
+  THE DEFECT THIS CLOSES. The tool's candidate selection reads the
+  finished-state field and the implementation-link field, and never reads
+  lifecycle status. A retired record keeps both of the fields it does read in
+  their eligible state — nothing about retirement changes them — so retiring a
+  requirement does not remove it from consideration. It becomes eligible input
+  to the very tool whose own governing requirement was retired.
+
+  This is not hypothetical. The ACD-800 tree is being retired to eleven
+  deprecated records in PR #768, and every one of them keeps work_status: todo
+  and implemented_by: [] — so on the day that lands, all eleven become
+  candidates unless this is fixed first.
+
+  THE NEGATIVE ARM IS THE LOAD-BEARING HALF. A test that only asserts "the
+  retired record is absent" passes against a selector that returns nothing at
+  all, and against one that excludes the record for an unrelated reason. The
+  two fixture records must therefore be identical in every field the selector
+  reads today and differ only by lifecycle status, and the active one must be
+  asserted present in the same run. Stated here so it is not discovered as a
+  gap during review.
+
+  SCOPE. This narrows the candidate set and never widens it. It is not a
+  position on whether the tool should write the finished-state field at all —
+  that is ACS-1600b, which takes the position that the ability should be
+  removed outright.

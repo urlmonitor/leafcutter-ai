@@ -1,0 +1,95 @@
+id: ACS-1600d
+title: "A conclusion a tool could not reach is reported, never guessed"
+component: ac-store
+components:
+  - ac_store
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+criteria: |
+  What cannot be established is left unclaimed, and said out loud.
+
+  Every entry a tool adds to your requirements record reflects something it
+  actually established. Where the evidence falls short, the record is left exactly
+  as it was and the gap is reported as a gap, rather than being filled with the
+  most plausible answer available. A record that says something false is worse
+  than one that says nothing, and a shortfall passed over in silence is
+  indistinguishable from a shortfall that was never there.
+depends_on:
+  - ACS-1600
+doc_links:
+  - path: docs/acceptance-criteria/ac-driven-dev/ACD-2300-backfill-existing-code/ACD-2300d.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      THE SAME GUARANTEE FOR A CAPABILITY THAT DOES NOT EXIST YET — FENCED, NOT
+      DUPLICATED. ACD-2300d states this property for a future tool that PROPOSES
+      criteria and links for code that never had any. This states it for automation
+      that already ships. Both are needed and neither may be closed as a duplicate
+      of the other; per-tree trust envelopes are this store's established
+      convention precisely because a guarantee stated only in a neighbouring tree
+      binds nobody. When that capability is built it should inherit this record
+      rather than restate it a third time.
+  - path: docs/acceptance-criteria/ac-store/ACS-1300-trustworthy-coverage-links/ACS-1300c.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      THE IN-COMPONENT PRECEDENT AND THE TEST SHAPE TO COPY. The trust envelope for
+      the exact-match repair: awards nothing, rewrites nothing already correct,
+      abstains out loud. Same shape, different tool and much weaker evidence here.
+      Reuse its pairing discipline — each guarantee asserted in the same run as a
+      change that genuinely happened.
+  - path: docs/reference/false-green-mechanisms.md
+    relationship: related
+    status: exists
+delivers_to: null
+expects_from: null
+documentation_triggers:
+  - reference-doc
+origin_agent: BrainCandy
+created: 2026-09-14
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  ABSTENTION OVER ACTION, MADE FALSIFIABLE RATHER THAN MERELY WRITTEN DOWN. The
+  rule is inherited from ACS-1300 and ACD-2300 in their own form and must not be
+  re-derived in a competing one: untrustworthy evidence produces a REPORTED
+  abstention — never a silent skip, and never a write. This record is where it
+  becomes checkable for this class of tool.
+
+  TWO HALVES, BOTH REQUIRED, AND THE SECOND IS THE ONE THAT GETS LOST. The first is
+  "does not write what it could not establish". The second is "says which records
+  it passed over and why". An implementation with only the first is a tool whose
+  silence means three different things — nothing matched, something matched and was
+  rejected, or the tool never looked — and the user cannot tell them apart. This
+  component has been caught by exactly that shape repeatedly enough that it has its
+  own register entry family; treat a silent skip as a defect, not as a conservative
+  choice.
+
+  THE EVIDENCE THIS TOOL ACTUALLY HAS, STATED PLAINLY SO THE BAR IS SET HONESTLY.
+  It matches by text similarity and keyword heuristics against completed tickets.
+  That is weak evidence and it is allowed to remain weak — this criterion does not
+  demand a better matcher. It demands that what the matcher produces is recorded as
+  what it is. A proposal recorded as a proposal is useful; a proposal recorded as a
+  finding is the whole defect.
+
+  MANDATORY NEGATIVE ARM. Every positive reading is satisfied by a tool that writes
+  nothing and reports nothing. The arm that distinguishes real abstention from
+  inactivity is a single run containing BOTH an established match that was recorded
+  AND an unestablished one that was left alone and named in the report. Both halves,
+  one invocation.
+
+  INHERITED, NOT RESTATED: every figure this tool reports states the total it was
+  measured against (ACS-1100, standing), and a record with nothing to repair is
+  never opened for writing (TQ-400e-1 owns that rule and its test shape).
+
+  BOUNDARY WITH ACS-1600b. That one refuses one field absolutely, whatever the
+  confidence. This one governs every other field by the strength of the evidence.
+  Read the L0's notes for why neither implies the other before merging them.

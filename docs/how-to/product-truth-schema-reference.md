@@ -89,7 +89,7 @@ A reviewable user journey; machine-readable for agents and human-readable via
 | `consumes` | string[] | Named artifacts/fields required from UPSTREAM. A `consumes` with no matching upstream `produces` is a broken handoff. |
 | `reads` / `writes` | string[] | Entities the step touches. |
 | `implements` | string[] | **AUTHORED** link: AC ids derived from this step's `acceptance_scenarios`. Source of truth for flow↔AC linkage. |
-| `expands_to` | string | Id of a child flow this step drills into (C4-style). When set, `impl_status` derives from the child flow's rollup, taking precedence over `implements`. |
+| `expands_to` | string[] (a single string is still read) | Ids of the child flows this step drills into (C4-style). Being reshaped from one id to a list: a single id is read as a list of one, and the generator writes it back as a list, so the older shape disappears as journeys are regenerated (UXP-700e-3-i). When set, `impl_status` derives from the child flows' combined rollup (all done → done, none started → not_started, otherwise in_progress), taking precedence over `implements`. |
 | `impl_status` | enum | **DERIVED** (`not_started` \| `in_progress` \| `done`) from the `work_status` of every AC in `implements` (or the child flow's rollup). Never hand-edited. |
 | `impl_asof` | string | Date `impl_status` was last recomputed. |
 
@@ -99,6 +99,10 @@ A reviewable user journey; machine-readable for agents and human-readable via
 carries the same `human`, `screen`, `agent`, `produces`, `consumes`, `reads`,
 `writes`, `implements`, `impl_status`, `impl_asof` fields, plus `from` (the step
 id it branches from) and `condition`.
+
+| Field | Type | Notes |
+|---|---|---|
+| `outcome_kind` | enum `alternative` \| `failure` \| `exit` | What the branch leads to: another valid route to the goal, a failure that is recovered from or reported, or an end to the journey before its goal. Being introduced (UXP-700e-3-i): optional, and a branch without one is reported by the validator as a `[to-be-filled]` warning, never as an error. |
 
 ### `acceptance_scenarios[]`
 
@@ -211,6 +215,13 @@ that reading a value on one axis can never be mistaken for the other.
 | `outcome` | enum | `checked-and-sound` (every journey read and no problems found) \| `nothing-examined` (zero journeys were read) \| `degraded` (at least one journey exists but could not be read — see `unreadable`) \| `failed` (a real validation failure was found). |
 | `examined` | int | Count of journeys the run actually read. |
 | `unreadable` | string[] | Store-relative path of each journey file that could not be parsed (empty when nothing was unreadable). |
+| `resolved_labels` | int | How many journey labels (one component each, plus tags) resolved against `docs/acceptance-criteria/index.yaml` and the tag shape (UXP-700e-3). `0` for a record with no labels. |
+| `bounds` | object | One entry per declared size bound (`product_truth_bounds.BOUNDS`), keyed by bound name: `measured` (artifacts measured against it), `exceeded`, `holdouts` (artifacts still on a shape version older than the bound's), and `enforcement` — `warning-period` while any holdout remains, `blocking` once none does. Derived from the artifacts on every run; no date or flag changes it (UXP-700e-1, UXP-700e-1-ii). |
+
+`--tighten BOUND` asks the validator to hold a bound as blocking. While any
+artifact is still on an older shape version, the request is refused: the run
+exits `1` and a `REFUSED:` line names the holdouts. Once none remains, the run
+proceeds, and any artifact over the bound fails it.
 
 The exit code is `0` for every outcome except `failed` — one malformed journey
 file degrades the run and is named in `unreadable`, but does not stop it

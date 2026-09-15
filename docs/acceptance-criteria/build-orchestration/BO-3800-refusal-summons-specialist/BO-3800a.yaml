@@ -1,0 +1,130 @@
+id: BO-3800a
+title: "Your change is held while the file is put right, and lands once it is"
+component: build-orchestration
+components:
+  - build_orchestration
+  - supervisor_system
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Turned away is not lost — during a drive, the change waits then goes through.
+
+  When a standard refuses work that is being driven, the change is kept exactly
+  as it was left while the file is put right, and it is delivered afterwards
+  without anyone having to start again, re-do the work by hand, or push it past
+  the standard.
+
+  This promise covers work that is being driven, and only that. A refusal met by
+  someone running delivery by hand is simply a refusal, as it is today: the
+  refusing standard's own message is the whole of what the author gets, nothing
+  is held on their behalf and no specialist is brought in.
+depends_on:
+  - BO-3800
+doc_links:
+  - path: docs/acceptance-criteria/build-orchestration/BO-3800-refusal-summons-specialist/BO-3800.yaml
+    relationship: parent
+    status: exists
+  - path: docs/acceptance-criteria/build-orchestration/BO-3000a.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      THE SHIPPED SHAPE TO REUSE. BO-3000a already establishes that a handoff re-dispatches
+      its target BEFORE any later phase runs, that the handing-off phase is not recorded as
+      completed, and that the run does not advance past it. That is the same "held, not
+      abandoned and not advanced past" property this record needs. Reuse it; do not build a
+      second holding mechanism beside it.
+  - path: docs/architecture/agent_delivery_workflows.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      Documents the phase loop and the adjudication ladder in which the holding and the
+      retry must sit, including the existing respawn-and-retry rung.
+delivers_to: null
+expects_from: null
+documentation_triggers:
+  - sequence-diagram
+origin_agent: product-owner-v3
+created: 2026-09-14
+amended_by:
+  - reason: scope-narrowed-by-product-decision
+    by: product-owner-v3
+    at: 2026-09-14
+    note: 'criteria rewritten to bound the promise to work being DRIVEN. title, covered_by,
+      depends_on, readiness, priority and req_status UNTOUCHED. The held-and-re-offered
+      promise is unchanged in substance — only its population narrows. Recorded even though
+      this record is readiness draft / req_status draft, because its only child BO-3800a-1
+      was authored against the wider wording and raised the narrowing upward as an explicit
+      open question rather than settling it. The product owner settled it: BO-3800a covers
+      a refusal met inside a drive only. A refusal outside a drive is simply refused —
+      today''s behaviour, with the refusing standard''s own message as the whole of what the
+      author gets. The reason is ADR-019''s depth-1 cap: the hold and the re-offer need a
+      party that outlives the refusal and can ask for another, which is the depth-0 driver;
+      the delivery step itself runs at depth 1 and an agent at depth 1 cannot invoke the
+      Agent tool, with such calls SILENTLY DROPPED. The rejected alternative — a hand-run
+      commit also summoning a specialist — has no design under that constraint and would be
+      specifying something the platform cannot express. BO-3800a-1''s Gherkin arms, its three
+      named mutations and their must-go-red / must-stay-green lists are correct under this
+      decision and were NOT altered; only its open-question section was replaced with the
+      answer. Title judged still TRUE and left as authored.'
+superseded_by: null
+covered_by:
+  - BO-3800a-1
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+notes: |
+  WHAT THIS RECORD OWNS: the fate of the change. Not who does the tidying (BO-3800b),
+  not what they are told (BO-3800c), not what happens when it still fails (BO-3800d).
+
+  THE TWO FAILURES IT EXCLUDES, BOTH OF WHICH LOOK LIKE SUCCESS FROM A DISTANCE. The
+  change discarded or rolled back so the restructuring starts from a clean file and the
+  author's work is silently gone; and the change forced through unchanged once someone
+  has "dealt with" the refusal. Either satisfies a naive reading of "the handoff
+  happened" while destroying the reason for having one.
+
+  THE RETRY IS PART OF THIS PROMISE, NOT A SEPARATE ONE. Holding a change that is never
+  re-offered is the same outcome as losing it, from the point of view of the person
+  waiting for it to land. Decomposition must keep the two halves in one record so an
+  implementation cannot satisfy the hold and quietly drop the retry.
+
+  THE POPULATION THIS PROMISE COVERS: WORK BEING DRIVEN, AND ONLY THAT. DECIDED, NOT
+  DEFAULTED. Everything above holds when the delivery attempt is part of a drive. A refusal
+  outside a drive — a hand-run `git commit` at a terminal — is simply refused, exactly as it
+  is today: the refusing standard's own message is the whole of what the author gets, the
+  change is not held on anyone's behalf and no specialist is summoned. That is unchanged
+  behaviour, not a regression, and not a gap left for a later reader to fill in by default.
+
+  WHY THE BOUNDARY IS WHERE IT IS. Holding a change and re-offering it both need a party
+  that outlives the refusal and can ask for another. Inside a drive that party exists — the
+  depth-0 driver that owns the phase loop. Outside one there is no such party at all. The
+  delivery step cannot be it, because ADR-019 records that "an agent running at depth 1
+  cannot itself invoke the Agent tool. Any call beyond depth 1 is silently dropped — no
+  error is raised, the tool call simply does not execute", and the delivery step IS a
+  depth-1 agent. The alternative — that a hand-run commit must also summon a specialist —
+  was considered and REJECTED, because no design for it exists under that constraint;
+  specifying it would be promising something the platform cannot express.
+
+  ADR-019 EXISTS BECAUSE THE DEPTH-1 CAP ALREADY BIT THIS REPO ONCE (verified in that ADR's
+  Context section before being repeated here). /build-feature dispatched ticket-supervisor
+  via the Agent tool, putting it at depth 1; it then tried to spawn its phase agents, whose
+  calls sat at depth 2 and were silently dropped. No phase template ever applied on any run
+  — each ticket appeared to progress while no implementation work happened on disk, no tests
+  ran, and the TDD red/green cycle never fired. A specification that ignores the cap does not
+  fail loudly; it ships a capability that quietly never runs, which is the same silent-drop
+  shape this whole tree exists to prevent, one layer down.
+
+  THIS WAS A PRODUCT DECISION TAKEN ON 2026-09-14, NOT AN IMPLEMENTATION CONVENIENCE. The
+  child BO-3800a-1 was authored against the wider wording and deliberately raised the
+  narrowing upward as an open question rather than settling it. The product owner settled it
+  in this record; see the amended_by entry. The title is unchanged and remains true — it
+  promises what happens to a change that is held, and never claimed a population.
+
+  HOW IT IS PROVABLE. By observing a run: the change is still present and unaltered after
+  the refusal, delivery is attempted again after the restructuring, and no later step ran
+  in between. Per CLAUDE.md, a test that reads a workflow file for the presence of a retry
+  branch is not coverage — it stays green on a branch nothing reaches.

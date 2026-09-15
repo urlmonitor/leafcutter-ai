@@ -178,7 +178,20 @@ const RECORD_READBACK_SCHEMA = {
       type: "array",
       items: {
         type: "object",
-        properties: { agent: { type: "string" }, status: { type: "string" } },
+        properties: {
+          agent: { type: "string" },
+          status: { type: "string" },
+          // handoff_target (BO-400e-1-i): present ONLY on an entry whose
+          // status is "handoff" — the name of the agent that entry's OWN
+          // comment text names as the recipient. The signoff skill requires
+          // a handoff comment to name who it is handing off to, so this is
+          // read FROM the comment, not supplied by any caller. Optional, on
+          // the same footing as depends_on below: an older record, or a
+          // reader that predates this field, simply omits it, and
+          // isHandoffResolved() treats an absent target as UNRESOLVED rather
+          // than falling back to any proxy — see that function's docstring.
+          handoff_target: { type: "string" },
+        },
       },
     },
     signed_off_agents: { type: "array", items: { type: "string" } },
@@ -707,6 +720,113 @@ function isPassingSignoff(entry) {
 }
 
 /**
+ * Whether a handing phase's `handoff` counts as accounted for (BO-400e-1-i).
+ *
+ * CONDITIONAL BY DESIGN — resist the urge to fold this into
+ * POSITIVE_SIGNOFF_STATUSES. `handoff` records that the phase moved its work
+ * to a named sibling, not that the work is done. Accepting it unconditionally
+ * lets a DANGLING handover — one nobody ever picked up — pass the close with
+ * real work missing, trading a visible (and recoverable, by dispatching the
+ * sibling) deadlock for a silent, unrecoverable phantom-done. That trade is
+ * the exact failure this whole BO-400e family exists to prevent, so the
+ * condition below is the point of this function, not an obstacle to simplify
+ * away.
+ *
+ * NAMED, NOT STRUCTURAL. An earlier version of this function resolved the
+ * recipient by position — "whoever the record's last entry belongs to" —
+ * rather than by name. That is a phantom-done hole of its own: a handoff to
+ * test-writer that test-writer never picks up, followed by some UNRELATED
+ * later phase (documentation-expert, say) recording `ok`, would read as
+ * resolved, because the last entry in the whole record happens to pass and
+ * happens to belong to someone else. The last entry being a pass proves
+ * nothing about THIS handoff unless it is also the recipient THIS handoff
+ * named. So resolution here is anchored to `latest.handoff_target` — the
+ * name the handing phase's own comment recorded — never to "whoever spoke
+ * last".
+ *
+ * FAIL CLOSED ON AN UNNAMED TARGET. `handoff_target` is optional in the
+ * schema (an older record, or a reader that predates the field, omits it).
+ * Absent means UNRESOLVED, never "fall back to the old proxy" — a handover
+ * whose recipient cannot be determined has not been shown to be resolved,
+ * and guessing one back in would reopen the exact hole this rewrite closes.
+ *
+ * ORDER, AND REOPENING. The named recipient must carry a PASSING entry
+ * STRICTLY AFTER the handover — existing anywhere is not enough (a sibling
+ * that passed on unrelated earlier work has not discharged this handoff).
+ * And a later reopening is checked for explicitly: after the handover, any
+ * entry that is ITSELF a handoff naming this phase as ITS target (a reviewer
+ * handing work back) means the record's own last word about this phase is
+ * "more was wanted" — so the search below takes the LATEST of (a) the named
+ * recipient's entries after the handover and (b) any later hand-back-to-this-
+ * phase entries, and only resolves when that latest relevant event is (a).
+ *
+ * Only ever called once a caller has already established that `agentName`'s
+ * OWN latest entry reads `handoff` — see the two call sites.
+ *
+ * TWIN: mirrors build-ticket.js. Keep in sync with that file.
+ *
+ * @param {object} record — a `record.readable === true` reply
+ * @param {string} agentName — the handing phase
+ * @param {{status: string, handoff_target: (string|undefined)}} latest —
+ *        agentName's own latest signoff entry (already known to be a handoff)
+ * @returns {boolean}
+ */
+function isHandoffResolved(record, agentName, latest) {
+  const all = record.signoffs;
+  if (!Array.isArray(all) || all.length === 0 || !latest) {
+    return false;
+  }
+  const target = latest.handoff_target;
+  if (!target) {
+    // FAIL CLOSED — see docstring. No named recipient, no resolution.
+    return false;
+  }
+  const handoffIndex = all.indexOf(latest);
+  if (handoffIndex === -1) {
+    return false;
+  }
+
+  // The recipient's own entries after the handover — candidates for having
+  // discharged it.
+  const recipientEntriesAfter = all.filter(
+    (entry, index) => index > handoffIndex && entry && entry.agent === target
+  );
+  // Anyone handing work BACK to agentName after the handover — candidates
+  // for having reopened it, however the recipient's own entries turned out.
+  const handbackEntriesAfter = all.filter(
+    (entry, index) =>
+      index > handoffIndex &&
+      entry &&
+      String(entry.status) === "handoff" &&
+      entry.handoff_target === agentName
+  );
+
+  const candidates = recipientEntriesAfter.concat(handbackEntriesAfter);
+  if (candidates.length === 0) {
+    return false; // dangling — nothing followed the handover at all
+  }
+
+  // The record's own LAST word relevant to this handoff decides it: find the
+  // candidate with the greatest position in `all` (ties cannot occur — every
+  // entry in `all` is a distinct array slot).
+  let lastRelevant = candidates[0];
+  let lastRelevantIndex = all.indexOf(lastRelevant);
+  for (const candidate of candidates) {
+    const index = all.indexOf(candidate);
+    if (index > lastRelevantIndex) {
+      lastRelevant = candidate;
+      lastRelevantIndex = index;
+    }
+  }
+
+  return (
+    isPassingSignoff(lastRelevant) &&
+    lastRelevant.agent === target &&
+    lastRelevant.agent !== agentName
+  );
+}
+
+/**
  * Adjudicate ONE dispatched gate against the record that was read back.
  *
  * This is the single generic post-dispatch verification (BO-2900f-1-iii): it
@@ -745,6 +865,9 @@ function adjudicatePhaseAgainstRecord(record, phaseName) {
   }
   const latest = entries[entries.length - 1];
   if (!isPassingSignoff(latest)) {
+    if (String(latest.status) === "handoff" && isHandoffResolved(record, phaseName, latest)) {
+      return { verified: true, entries: entries.length, reason: null };
+    }
     return {
       verified: false,
       entries: entries.length,
@@ -876,6 +999,13 @@ function completionVerdictFromRecord(record, ctx) {
     }
     const latest = entries[entries.length - 1];
     if (!isPassingSignoff(latest)) {
+      // BO-400e-1-i — a `handoff` is not automatically a failure to prove:
+      // check whether the record's own last word resolves it (see
+      // isHandoffResolved's docstring for why the condition is conditional)
+      // before naming this phase outstanding.
+      if (String(latest.status) === "handoff" && isHandoffResolved(record, agentName, latest)) {
+        continue;
+      }
       outstanding.push({
         agent: agentName,
         reason:
@@ -1129,8 +1259,9 @@ async function readTicketRecordBack(recordPath) {
     `"depends_on" (the frontmatter depends_on: list, as an array of ticket paths verbatim, or [] if the key is absent — do not resolve or interpret the paths), ` +
     `and "signoffs": one entry per sign-off heading in the ## Comments section, in the order they appear, as {"agent": "<name>", "status": "<status>"} ` +
     `(heading form: "### YYYY-MM-DD HH:MM — <agent> (status: <status>)"). List EVERY matching heading, including repeats — do not de-duplicate them. ` +
+    `For any entry whose status is "handoff", ALSO report "handoff_target": "<name>" — the agent that entry's OWN comment text names as the one it is handing off to (the signoff skill requires a handoff comment to name its recipient in its own prose; report exactly who that comment names, verbatim). Omit the "handoff_target" key entirely on that entry if the comment does not name a recipient — do not guess one. ` +
     `If the record cannot be opened for any reason, return {"readable": false, "error": "<what went wrong>"} — an unreadable record is a real answer and will be treated as a failure, so never guess its contents. ` +
-    `Otherwise return {"readable": true, "ticket_path": "${recordPath}", "lifecycle_status": "...", "needed_phases": [...], "failed_phases": [...], "depends_on": [...], "signoffs": [...], "signed_off_agents": [...]}. ` +
+    `Otherwise return {"readable": true, "ticket_path": "${recordPath}", "lifecycle_status": "...", "needed_phases": [...], "failed_phases": [...], "depends_on": [...], "signoffs": [{"agent": "...", "status": "...", "handoff_target": "..."}, ...], "signed_off_agents": [...]}. ` +
     `Return ONLY the JSON object, no prose.`,
     {
       agentType: "status-checker",

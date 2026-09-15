@@ -124,7 +124,7 @@ def read_file_header(filepath: str, lines: int = 20) -> str:
         str: Joined header content.
     """
     try:
-        p = _project_root / filepath
+        p = project_root / filepath
         raw = p.read_text(encoding="utf-8", errors="replace")
         return "\n".join(raw.split("\n")[:lines])
     except OSError:
@@ -321,7 +321,7 @@ def main() -> int:
     )
     parser.add_argument(
         "--knowledge-graph",
-        default=str(_project_root / "knowledge_graph.json"),
+        default=str(project_root / "knowledge_graph.json"),
         help="Path to knowledge_graph.json for DOC_LINKS coverage lookup.",
     )
     args = parser.parse_args()

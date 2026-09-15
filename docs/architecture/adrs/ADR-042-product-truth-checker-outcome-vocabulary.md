@@ -4,7 +4,7 @@ description: "The product-truth checker emits a four-value outcome vocabulary pl
 type: "adr"
 status: "active"
 created: "2026-09-09"
-last_updated: "2026-09-09"
+last_updated: "2026-09-14"
 deciders:
   - BrainCandy
 components:
@@ -29,9 +29,9 @@ related_code:
 
 | Field | Value |
 |---|---|
-| Status | Proposed, amended |
+| Status | Accepted, amended twice |
 | Date | 2026-09-09 |
-| Amended | 2026-09-09 — Amendment 1 (`checked-and-sound` is withheld when any pointer is unresolvable; two pointer-count keys added to the payload). See [Amendment 1](#amendment-1--2026-09-09--checked-and-sound-is-withheld-when-any-pointer-is-unresolvable). |
+| Amended | 2026-09-09 — Amendment 1 (`checked-and-sound` is withheld when any pointer is unresolvable; two pointer-count keys added to the payload). See [Amendment 1](#amendment-1--2026-09-09--checked-and-sound-is-withheld-when-any-pointer-is-unresolvable). 2026-09-14 — Amendment 2 (implemented; partial emptiness no longer demotes; code locations). See [Amendment 2](#amendment-2--2026-09-14--implemented-with-one-clause-superseded). |
 | Deciders | BrainCandy |
 | Author | Recorded during the UXP-700b-1 outcome-vocabulary pass of 2026-09-09 |
 | Supersedes | None |
@@ -235,7 +235,7 @@ reporting `checked-and-sound` for a run that examined nothing is not.
 | Field | Value |
 |---|---|
 | Amends | §1's derivation of the four values (a third input condition), §2's reservation rule for `checked-and-sound`, and §3's stdout payload shape (two additive keys) |
-| Status | Proposed |
+| Status | Accepted — implemented 2026-09-14, see Amendment 2 |
 | Deciders | BrainCandy |
 | Driven by | `UXP-700c-1-i` ("A pointer the checker cannot classify is reported as unresolvable, never as sound"), extending `UXP-700c-1` |
 | Supersedes this ADR? | No. The vocabulary stays closed at four values, and every alternative rejected above stays rejected. |
@@ -441,6 +441,56 @@ amendment, and it MUST be preserved by any future extension of the payload.
   making the line harder to eyeball. Counts are the machine-readable part (§A6); the
   naming requirement is met on stderr (§A5).
 
+## Amendment 2 — 2026-09-14 — implemented, with one clause superseded
+
+| Field | Value |
+|---|---|
+| Amends | Amendment 1 §A2 (one condition removed), §A2 and §A4 (code locations) |
+| Status | Accepted |
+| Deciders | BrainCandy |
+| Driven by | `UXP-700c-1-i` implementation; the `UXP-700b-1-i` / `UXP-700b-1-ii` user decision recorded in `KI-ACD-20260909-2130` |
+
+Amendment 1 is implemented. Three things in it no longer match the code, and a reader
+should believe the code, for the reasons below.
+
+**Partial emptiness does not demote the outcome.** §A2's step 3 withheld
+`checked-and-sound` when *some* artifact type was empty. Two approved ACs contradicted each
+other on exactly that state over identical fixtures, and the user resolved it in
+`UXP-700b-1-i`'s favour: a record holding journeys but no screens or example data yet is
+young, not defective. The implemented precedence is:
+
+1. one or more entries in `errors` → `failed`
+2. otherwise, one or more unreadable journeys → `degraded` (`UXP-700b-1-i`)
+3. otherwise, every artifact type empty with nothing examined → `nothing-examined`
+4. otherwise, one or more unresolvable pointers → `degraded`
+5. otherwise → `checked-and-sound`
+
+`empty_types` is still reported on every run; it no longer affects the verdict. The
+`Negative` consequence that "`degraded` now means two different things" therefore still
+holds, but the two things are an unreadable journey and an unclassifiable pointer.
+
+**The outcome function is `_top_level_outcome`, in its own module.** §A2 names
+`_compute_outcome` in `validate_product_truth.py`. That function was folded into
+`_top_level_outcome` when the checker was split to stay within its file-size ratchet, and
+the outcome vocabulary, `_top_level_outcome`, `_compute_empty_types` and
+`_print_outcome_contract` now live in `docs/product-truth/scripts/product_truth_outcome.py`,
+re-exported by `validate_product_truth.py`. The unresolvable count is its explicit fifth
+argument, as §A2 requires.
+
+**The predicate lives beside the pointer check.** §A4 places the single classification
+predicate in `validate_product_truth.py`; the checks moved to
+`docs/product-truth/scripts/product_truth_checks.py`, and the predicate is
+`is_resolvable_pointer_target` there, next to `_check_pointers`, still the only one. It
+recognises exactly one kind — an acceptance-criterion id — and was checked against every id
+in the AC store (4016, including multi-segment prefixes such as `KM-ADM-001`) so that no
+real id is misread as unrecognised, the silent failure §A4's consequences warn about.
+
+`_check_pointers` keeps its integer return and takes the unresolvable reports through an
+optional `unresolvable` out-list, so `UXP-700c-1`'s tests are unchanged. Under the named
+mutation — folding unresolvable into resolved — all three `test_uxp_700c_1_i.py` tests fail
+while all four `test_uxp_700c_1.py` tests still pass, which is the asymmetry `UXP-700c-1-i`
+was split out to catch.
+
 ## References
 
 - Originating ticket: `EPIC-TruthfulProjectRecord/11_TICKET-20260909-UXP-700b-1.md`
@@ -456,3 +506,4 @@ amendment, and it MUST be preserved by any future extension of the payload.
   (AC `UXP-700c-1-i`), extending `19_TICKET-20260909-UXP-700c-1.md` (AC `UXP-700c-1`,
   the two-valued pointer verdict this amendment adds a third value to).
 - Amendment 1 is pinned by `unit_tests/product_truth/test_uxp_700c_1_i.py`.
+- Amendment 2's partial-emptiness decision: `docs/known-issues/ac-driven-dev.md`, `KI-ACD-20260909-2130`.

@@ -47,6 +47,16 @@ Options
     exit 0. Reads the build-time declaration only -- never opens, creates,
     or stats the sink file itself or its parent directories (AC
     INF-400c-4-v: obtainable without emitting or harvesting).
+    AC INF-400c-4-i: when no build-time declaration is present, this REFUSES
+    (exit 1, message naming the missing declaration on stderr, nothing on
+    stdout) rather than falling back to the historical CWD-relative default.
+    This is a deliberate divergence from the ordinary (non-print-sink) run's
+    ``--sink`` default, which keeps that fallback -- see the ordinary-run
+    Notes below. The four emit surfaces this flag now backs are about to
+    depend on it to resolve a single, install-wide destination; a CWD
+    fallback here would hand each of them a different answer depending on
+    where the invoking agent happens to be standing, which is exactly the
+    corpus split those surfaces exist to prevent.
 
 --dry-run
     Read events and decide routing but do not write to any knowledge surface.
@@ -431,11 +441,17 @@ def _stale_declaration_message(output_root: Path) -> str | None:
     AC INF-400c-4-v: a declared path whose install was moved by hand is
     reported as STALE, distinctly from a sink that has simply never been
     written to -- and without inventing a new exit status. Returns ``None``
-    when there is no declaration to go stale, or when the declared value
-    still matches what this layout would produce right now.
+    when there is no declaration to go stale, when the declared value is not
+    an absolute path (AC INF-400c-4's own parity check is what rejects a
+    non-absolute declaration outright; this staleness comparison is only
+    meaningful for an absolute path that used to match this layout and no
+    longer does -- a relative declared value never "used to match" an
+    absolute recomputation, so treating it as stale would misreport a
+    resolution-hazard case as an install-moved case), or when the declared
+    value still matches what this layout would produce right now.
     """
     declared = _read_sink_declaration(output_root)
-    if declared is None:
+    if declared is None or not Path(declared).is_absolute():
         return None
     if Path(declared) == _recomputed_sink_for_output_root(output_root):
         return None
@@ -449,16 +465,39 @@ def _stale_declaration_message(output_root: Path) -> str | None:
 
 
 def _handle_print_sink(output_root: Path) -> int:
-    """Print the resolved absolute sink path and return 0 (AC INF-400c-4-v).
+    """Print the resolved absolute sink path, or refuse (AC INF-400c-4-i).
 
-    Side-effect free: reads the declaration only, or falls back to the
-    historical default resolved (but never created) via ``.resolve()``.
+    Side-effect free: reads the declaration only.
+
+    AC INF-400c-4-v established this flag and, at the time, had it fall back
+    to a CWD-relative default when no declaration was present -- the same
+    fallback the ordinary (non-print-sink) run still uses today, on purpose,
+    for un-built source-tree runs (see ``_resolve_default_sink``). AC
+    INF-400c-4-i hardens THIS flag specifically: the four shipped emit
+    surfaces are being repointed to depend on ``--print-sink`` as their
+    single source of truth for an install-wide destination, so a fallback
+    that resolves against wherever the calling process happens to stand
+    would silently hand different agents different files -- the exact
+    corpus split those surfaces exist to prevent. This is therefore a
+    REFUSAL, not a warning: no path is printed to stdout on this path, only
+    a message on stderr naming the missing declaration, and the ordinary
+    run's fallback for un-built source trees is left untouched.
     """
     declared = _read_sink_declaration(output_root)
-    if declared is not None:
-        print(declared)
-    else:
-        print(str(_resolve_default_sink(output_root).resolve()))
+    if declared is None:
+        declaration_path = output_root / "config" / "knowledge_sink.json"
+        print(
+            "ERROR: no build-time knowledge-emission-sink declaration found "
+            f"at {declaration_path}. Refusing to resolve --print-sink "
+            "against the current working directory -- that would hand a "
+            "different answer to every caller depending on where it is "
+            "standing, which is the corpus split this refusal exists to "
+            "prevent. Rebuild (python scripts/build.py --target-dir "
+            "<project-root>) to declare the sink for this install.",
+            file=sys.stderr,
+        )
+        return 1
+    print(declared)
     return 0
 
 
@@ -1070,3 +1109,19 @@ if __name__ == "__main__":
 #   pre-existing accumulation differs from the newly adopted declaration.
 #   No behaviour change for existing callers that pass --sink explicitly.
 #   (#TICKETLESS reason=ac-scoped-fastlane-build-INF-400c-4-v)
+# - 2026-09-14 [python-coder/INF-400c-4-i]: Hardened `--print-sink`: with no
+#   build-time declaration present it now REFUSES (exit 1, stderr message,
+#   nothing on stdout) instead of falling back to `_resolve_default_sink`'s
+#   CWD-relative default -- the four shipped emit surfaces depend on
+#   `--print-sink` as their single source of truth, so a CWD fallback would
+#   reproduce the corpus split those surfaces exist to prevent. Scoped to
+#   `_handle_print_sink` only; the ordinary `harvest` run's `--sink` default
+#   (INF-400c-4-v) is unchanged. Reuses exit 1, no new code.
+#   (#TICKETLESS reason=ac-scoped-fastlane-build-INF-400c-4-i)
+# - 2026-09-14 15:10 [python-coder/INF-400c-4]: `_stale_declaration_message`
+#   now treats a non-absolute declared value as "nothing to report" instead
+#   of misreporting it as install-moved -- that shape is the different
+#   resolution-hazard defect INF-400c-4's own parity check already rejects,
+#   and never "used to match" an absolute recomputation. Ordinary relative
+#   -value handling (resolve against CWD) is unchanged.
+#   (#TICKETLESS reason=ac-scoped-fastlane-build-INF-400c-4)

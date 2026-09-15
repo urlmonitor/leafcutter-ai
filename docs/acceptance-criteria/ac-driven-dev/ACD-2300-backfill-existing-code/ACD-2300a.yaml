@@ -24,15 +24,22 @@ doc_links:
     relationship: related
     status: exists
     relevance: >-
-      THE NEAREST EXISTING PROMISE AND THE ONE THIS L1 MUST NOT BECOME. ACD-800
-      discovers matches between EXISTING criteria and DONE TICKETS by text
-      similarity and keyword heuristics. Two things make it the wrong tool for this
-      job rather than a competitor: its evidence is a ticket history that an
-      adopting project does not have, and it matches to criteria that already exist
-      whereas this L1's whole subject is that they do not. It also promises to write
-      the finished-state field, which this tree refuses. Do not extend ACD-800 to
-      cover this and do not close either as a duplicate of the other. Its status is
-      raised for a user decision in ACD-2300's notes.
+      THE NEAREST PRIOR PROMISE AND THE ONE THIS L1 MUST NOT BECOME — NOW RETIRED.
+      UPDATED 2026-09-09. ACD-800 discovered matches between EXISTING criteria and
+      DONE TICKETS by text similarity and keyword heuristics. Two things made it
+      the wrong tool for this job rather than a competitor: its evidence is a
+      ticket history that an adopting project does not have, and it matched to
+      criteria that already exist whereas this L1's whole subject is that they do
+      not. It also promised to write the finished-state field, which this tree
+      refuses. The user retired it and its whole tree on 2026-09-09 (status
+      deprecated, no successor) on exactly those grounds — so the instruction
+      "do not extend ACD-800 to cover this" is now moot in the only direction that
+      mattered: there is nothing live to extend, and this L1 must still not become
+      what it described. This L1 is NOT its successor and inherits none of its
+      promises. Kept in doc_links as the worked negative example, and because its
+      notes carry the reasoning for the refusal this L1 depends on. Note ACD-800's
+      code SHIPPED and is still deployed — see its notes before reusing anything
+      from scripts/ac_store/cross_reference_audit.py.
   - path: docs/reference/ac-schema.md
     relationship: related
     status: exists

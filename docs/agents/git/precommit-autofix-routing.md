@@ -3,7 +3,7 @@ title: Precommit-Autofix Routing Reference
 type: reference
 status: active
 created: 2026-05-07
-last_updated: 2026-05-07
+last_updated: 2026-09-14
 components:
 - infrastructure
 related_docs:
@@ -44,7 +44,6 @@ Audit date: 2026-05-07. Source: `.pre-commit-config.yaml` (14 active hooks, 1 co
 | `check-debug-scripts` | mechanical | haiku | Add three required metadata fields (purpose/category/owner) to a script header — fixed recipe. |
 | `check-doc-frontmatter` | mechanical | haiku | Fix YAML frontmatter fields on `docs/*.md` — dates, required keys, types. Schema-driven, no prose. |
 | `check-doc-links` | mechanical | haiku | Add or repair `DOC_LINKS` trace links. **Note: this hook always exits 0 (advisory-only)** — it never blocks a commit so the agent entry is a no-op in practice. Classified mechanical so that if the hook is ever promoted to blocking, routing is pre-set correctly. |
-| `check-sql-dependencies` | mechanical | haiku | Add the mandatory `-- dependencies:` tag to SQL views/matviews. Fixed one-liner addition. |
 | `check-docstrings` | mechanical | haiku | Add or repair Google-style docstrings to Python functions/classes. Template-driven, no design. |
 | `check-infra-docs` | mechanical | haiku | Add inline comments to docker-compose/Dockerfile/init-db.sh/.env.* files. Fixed comment format. |
 | `check-documentation` | structural | sonnet | Generate or update READMEs and SQL headers. Requires reading neighbouring code and writing real prose. Cannot be template-filled from the error message alone. |

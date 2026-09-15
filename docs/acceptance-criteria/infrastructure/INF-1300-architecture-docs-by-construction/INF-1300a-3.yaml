@@ -1,0 +1,208 @@
+id: INF-1300a-3
+title: "Every value in the produced document traces to something the request supplied or the project declares — nothing is filled in with a placeholder"
+component: infrastructure
+components:
+  - documentation_system
+  - doc_compliance
+  - infrastructure
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+created_by: "docs/acceptance-criteria/infrastructure/INF-1300-architecture-docs-by-construction/INF-1300a.yaml"
+criteria: |
+  Given a request naming a tier, a kind of picture, a component, a title, a
+    destination, a date and an originating ticket,
+  When the document is produced,
+  Then each of those inputs appears in the produced document as the value it was
+    given: the declared tier is the requested tier, and the tier digit in the name
+    of the file agrees with it; the declared kind is the requested kind; the
+    declared components contain the requested component and contain only
+    identifiers the project's component registry declares; the document's heading
+    and its declared title are both the requested title; the creation date and the
+    last-changed date are both the supplied date and neither is later than it; and
+    the originating ticket is recorded as supplied, or recorded as explicitly
+    absent when the request states there is none,
+  And a request whose component is not one the registry declares produces nothing
+    and is refused, rather than producing a document that declares it,
+  And no field of the produced document holds a value the request did not supply
+    and the project does not itself define — in particular no field whose values
+    the project requires to point at something real is written with a placeholder,
+    an example, a sample path or an empty entry,
+  And changing one input and repeating the request changes that value in the
+    produced document and changes nothing else in it.
+depends_on:
+  - INF-1300a
+doc_links:
+  - path: docs/acceptance-criteria/infrastructure/INF-1300-architecture-docs-by-construction/INF-1300a.yaml
+    relationship: parent
+    status: exists
+  - path: scripts/commit_guardian/check_doc_frontmatter.py
+    relationship: describes
+    status: exists
+    relevance: >-
+      MEASURED IN THIS WORKTREE, AND THE REASON THE PLACEHOLDER CLAUSE IS A CLAUSE RATHER
+      THAN A NOTE. This check blocks on any entry in a path-valued field that does not
+      exist on disk. So a producer that helpfully writes a sample path into such a field
+      turns a document that would have been accepted into one that is refused — the exact
+      inversion of INF-1300a's promise, produced by the very habit that looks most helpful.
+  - path: scripts/commit_guardian/check_diagram_naming.py
+    relationship: describes
+    status: exists
+    relevance: >-
+      Enforces the second half of the first clause: the tier digit in the filename must
+      agree with the declared tier. The two can disagree while each is independently
+      plausible, which is why agreement is asserted rather than each value separately.
+  - path: config/diagram_types.json
+    relationship: specifies
+    status: exists
+    relevance: >-
+      The declared vocabulary the requested kind is drawn from. Named here for the value
+      that is written into the document; whether a requested name is recognised at all,
+      and what happens when it is not, is INF-1300d-1's subject and is not re-decided here.
+  - path: docs/components.json
+    relationship: specifies
+    status: exists
+    relevance: >-
+      The registry the declared components must come from. A component identifier that no
+      registry entry declares is refused rather than written, because a document declaring
+      an unknown component is a plausible-looking wrong document — it reads correctly and
+      is wrong about what it describes.
+  - path: templates/scripts/commit_guardian/commit_guardian.json
+    relationship: describes
+    status: exists
+    relevance: >-
+      The hooks manifest. Two judgment-tier entries beyond the ones this record's doc_links
+      already name also match a produced document's path and constrain the values written:
+      check-description-field requires a non-empty `description:` on every `docs/**/*.md`,
+      and check-surface-components-e2 requires a non-empty `components:`. The manifest also
+      carries the transform-tier hooks that would otherwise repair a missing value and mask
+      the defect.
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+    relevance: "The angle taxonomy this record's test_spec classifies against; the real_artifact angle carries the movement pair."
+origin_agent: BrainCandy
+created: 2026-09-14
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-09-14'
+superseded_by: null
+covered_by: []
+implemented_by: []
+assigned_agent: python-coder
+estimated_complexity: M
+change_target: code
+risk_surface: contract_boundary
+test_required: true
+it_requirements:
+  - "EVERY EMITTED VALUE MUST TRACE TO EXACTLY ONE OF TWO ORIGINS: a request input, or a project declaration read at run time (config/diagram_types.json, docs/components.json, the tier structure). No third origin — no literal baked into the emitter that duplicates something a declaration already states, no value derived from ambient filesystem state, no value derived from the wall clock when --date was supplied."
+  - "THE PLACEHOLDER PROHIBITION IS ABSOLUTE FOR PATH-VALUED FIELDS, AND IT IS MEASURED. check_doc_frontmatter blocks on any entry in `related_docs`, `related_code` or `architecture_diagrams` that does not exist on disk. A sample path written to make the document 'look complete' converts an acceptable document into a refused one. The correct behaviour when a value is unavailable is to omit the field, or to refuse (INF-1300d-4) where the kind obliges it — never to invent an entry."
+  - "A NON-PATH-VALUED REQUIRED FIELD IS NOT EXEMPT FROM THE SAME RULE, AND THERE IS ONE MEASURED CASE. `description:` is required on every `docs/**/*.md` by check_description_field and is NOT in SKILL.md section 6's frontmatter checklist. Because it is not path-valued, any non-empty string passes the hook — so the hook cannot protect this record's no-placeholder clause here. Decide explicitly and record the decision: either the value is derived from a request input (and the movement pair below must show it moving with that input), or it is an author prompt marked per INF-1300b-3. An unmarked constant stub satisfies every check and violates this record."
+  - "COMPONENT VALIDATION IS A REFUSAL, NOT A WARNING. Every value written to `components:` must be an id declared in docs/components.json (canonical ids plus documented aliases, matching how check_doc_frontmatter's load_components_registry reads that file). A component the registry does not declare produces nothing and exits non-zero. A document declaring an unknown component reads correctly and is wrong about what it describes, which is worse than a refusal."
+  - "TIER AGREEMENT IS ONE ASSERTION, NOT TWO. The tier digit in the emitted filename and the emitted `flight_level` value must be derived from the SAME single source — the `--tier` input — so they cannot disagree. check_diagram_naming compares them (`c<digit>-` against its flight-level map) and each is independently plausible on its own."
+  - "DATES: `created` and `last_updated` are both the supplied `--date`, and neither may exceed it. Never read the wall clock when `--date` is supplied; the agent runtime may be in UTC while the project convention is the local date, which is the stated reason SKILL.md section 4 makes the flag required."
+  - "THE MOVEMENT PAIR IS THE LOAD-BEARING OBSERVATION AND IT MUST BE RUN PER INPUT, NOT ONCE. Produce twice, differing in exactly one input, and require the two documents to differ in exactly the places that input controls and nowhere else. A producer that writes a constant, or that derives a value from something other than the input it claims to derive it from, passes every single-run assertion and fails this pair. Reuse the construction INF-1200c-1 and BP-900c-4-i already settle; do not reinvent it."
+  - "All of INF-1300a-1's vacuous-green guards apply to any hook invoked by this record's observations."
+  - "Error handling per the project error-handling policy (CLAUDE.md rules 1-4)."
+test_spec:
+  - name: test_every_supplied_input_appears_in_the_produced_document_as_given
+    target_dir: unit_tests/docs/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "A fully specified request is read back value by value out of the produced file: declared tier, declared kind, components containing the requested component, H1 heading and title: both the requested title, and source_ticket as supplied."
+  - name: test_filename_tier_digit_agrees_with_declared_flight_level
+    target_dir: unit_tests/docs/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "check_diagram_naming exits 0 over the staged produced file, with a paired negative control that alters only the flight_level value and must exit 1 reporting the level mismatch."
+  - name: test_unregistered_component_is_refused_and_writes_nothing
+    target_dir: unit_tests/docs/
+    framework: pytest
+    type: integration
+    angle: failure
+    description: "A request naming a component id absent from docs/components.json exits non-zero and leaves no file at --output, rather than producing a document that declares it."
+  - name: test_no_path_valued_field_carries_a_nonexistent_entry
+    target_dir: unit_tests/docs/
+    framework: pytest
+    type: integration
+    angle: boundary
+    description: "Every entry the produced document writes into related_docs, related_code or architecture_diagrams resolves on disk, and check_doc_frontmatter exits 0 over the staged file with a PASSED count of at least one; the executable arm of the placeholder clause."
+  - name: test_changing_one_input_changes_exactly_one_value
+    target_dir: unit_tests/docs/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    description: "THE MOVEMENT PAIR — produce twice differing only in --title, then twice differing only in --component, then twice differing only in --date; each unified diff of the two outputs touches only the lines that input controls, proving the value is derived rather than written."
+  - name: test_dates_equal_the_supplied_date_and_never_exceed_it
+    target_dir: unit_tests/docs/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "created and last_updated both equal --date, including when the run's wall-clock date differs from the supplied one."
+  - name: test_description_field_is_emitted_and_is_not_an_unmarked_constant
+    target_dir: unit_tests/docs/
+    framework: pytest
+    type: integration
+    angle: boundary
+    description: "check_description_field exits 0 over the produced file with the transform tier disabled, and the emitted description: is either shown to move with a request input under the movement pair or is a prompt marked per INF-1300b-3 — never the same constant string across two differing requests."
+test_rationale: >-
+  Acceptance and fidelity are different properties and no check observes the second: the
+  project's checks never see the request that produced the document, so a valid document
+  describing the wrong component, at the wrong tier, bearing a date nobody supplied passes
+  all of them. Only a comparison against the request can catch that, and a single-run
+  comparison still cannot: a producer that writes a constant, or derives a value from
+  something other than the input it claims, satisfies every value-by-value assertion on one
+  run. The movement pair is therefore irreplaceable and is run once per input rather than
+  once overall. The placeholder clause needs an executed check rather than an inspection
+  because its harm is measured at the hook: check_doc_frontmatter blocks on a path-valued
+  entry that does not exist, so a helpful sample path inverts this tree's promise — while
+  for the non-path-valued `description:` field no hook can distinguish a real value from a
+  constant stub, which is why that descriptor routes through the movement pair instead.
+delivers_to: null
+expects_from:
+  ac_id: INF-1300a-1
+  contract: "The generator CLI and the in-tree scratch harness from INF-1300a-1's delivers_to. This record additionally requires the CLI to expose --source-ticket and to accept an explicit no-ticket value, so the absent case is recorded as explicitly absent rather than omitted."
+notes: |
+  ACCEPTANCE AND FIDELITY ARE DIFFERENT PROPERTIES AND THIS RECORD OWNS THE SECOND.
+  INF-1300a-1 requires the produced document to survive the project's checks. A document
+  can survive every one of them and still be about the wrong component, carry the wrong
+  tier, or bear a date the author never supplied — every one of those values is
+  individually well-formed. Nothing in the check set compares the document against the
+  request that produced it, because the checks never see the request. Only this record
+  does, and without it "accepted first time" is satisfiable by a producer that emits a
+  valid document describing something else.
+
+  FALSIFIABILITY. Produce a document from a fully specified request and read the produced
+  file against the request, value by value. The record is falsified by any supplied value
+  not appearing, by the tier digit in the filename disagreeing with the declared tier, by
+  a date later than the one supplied, or by any field holding content the request did not
+  supply and the project does not define. The last clause is the one that cannot be
+  satisfied by a fixture: produce twice, differing in exactly one input, and require the
+  two documents to differ in exactly the place that input controls. A producer that writes
+  a constant, or that derives a value from something other than the input it claims to
+  derive it from, passes every single-run assertion and fails this pair. This construction
+  is not invented here — it is the one INF-1200c-1 and BP-900c-4-i already settle for a
+  different subject, and it is reused rather than reinvented.
+
+  THE PLACEHOLDER CLAUSE IS THE SHARPEST ONE AND IT IS MEASURED, NOT ASSUMED. The
+  frontmatter check in this worktree blocks on a path-valued field whose paths do not
+  exist. A producer that fills such a field with a sample so the document "looks complete"
+  produces a document the project refuses. That is worse than leaving the field out, and
+  it is what an implementer reaches for when told a field is required and given no value
+  for it. The correct behaviour when a kind of picture obliges a field nobody supplied is
+  to refuse, and that refusal is INF-1300d-4's — the two records are the two halves of one
+  boundary and neither is complete alone.
+
+  DELIBERATELY NOT OWNED HERE: what the refusals in this record's criteria say and what
+  they leave behind. INF-1300d-3 owns the shape of every refusal in this tree; this record
+  owns only that a refusal is the outcome rather than a wrong document.
+
+  NOT AUTHORED HERE, BY DESIGN: assigned_agent, estimated_complexity, it_requirements,
+  test_spec, test_rationale, delivers_to and expects_from. Those are the IT PO's.
