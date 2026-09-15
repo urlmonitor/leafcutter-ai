@@ -1333,6 +1333,73 @@
         "_comment": "GE-120h-3: documented live at README.md line 32 and fully configured (debug_scripts.valid_categories / .required_tags / .exempt_dirs) but named by no hooks_manifest entry. always_run with no files key because get_staged_debug_scripts() resolves and filters the staged set itself. This also avoids the trap a path-anchored `files: ^debugging/scripts/` regex would create here (GE-120h-3-i): debugging/ is untracked in this repository, and a LOCATION-ANCHORED zero-match is classified UNREACHABLE by check-hook-trigger-reachability, not NOTHING-TO-MATCH. Vacuous here, portable and valuable in a consumer that keeps a debug-script convention."
       },
       {
+        "id": "check-doc-links",
+        "tier": "judgment",
+        "name": "Check Doc Links Bidirectional Traceability",
+        "entry": "python {{config.output_root}}/scripts/commit_guardian/run_hook.py {{config.output_root}}/scripts/commit_guardian/check_doc_links.py",
+        "language": "system",
+        "stages": [
+          "pre-commit"
+        ],
+        "pass_filenames": false,
+        "change_set_source": "handed_by_commit_path",
+        "_comment": "BP-100n-4 day-one triage: enforces DOC_LINKS traceability between code and docs. Already carries a dedicated 'doc_links' config section."
+      },
+      {
+        "id": "check-root-files",
+        "tier": "judgment",
+        "name": "Check Root Directory Files",
+        "entry": "python {{config.output_root}}/scripts/commit_guardian/run_hook.py {{config.output_root}}/scripts/commit_guardian/check_root_files.py",
+        "language": "system",
+        "stages": [
+          "pre-commit"
+        ],
+        "pass_filenames": false,
+        "change_set_source": "handed_by_commit_path",
+        "_comment": "BP-100n-4 day-one triage: blocks commits that add unauthorized new files to the project root. Already carries a dedicated 'root_files' config section."
+      },
+      {
+        "id": "check-test-ac-tags",
+        "tier": "judgment",
+        "name": "Check Test AC Tags",
+        "entry": "python {{config.output_root}}/scripts/commit_guardian/run_hook.py {{config.output_root}}/scripts/commit_guardian/check_test_ac_tags.py",
+        "language": "system",
+        "stages": [
+          "pre-commit"
+        ],
+        "pass_filenames": true,
+        "change_set_source": "handed_by_commit_path",
+        "_comment": "BP-100n-4 day-one triage: verifies every test function in a staged test file carries a '# covers: XX-NNN' tag. Needs staged filenames as positional args (no internal git-diff fallback), so pass_filenames:true; non-test files are skipped internally by is_test_file()."
+      },
+      {
+        "id": "check-ticket-ac-limits",
+        "tier": "judgment",
+        "name": "Check Ticket AC Count Limits",
+        "entry": "python {{config.output_root}}/scripts/commit_guardian/run_hook.py {{config.output_root}}/scripts/commit_guardian/hooks/check_ac_limits.py",
+        "language": "system",
+        "files": "^tickets/.*\\.md$",
+        "stages": [
+          "pre-commit"
+        ],
+        "pass_filenames": false,
+        "change_set_source": "handed_by_commit_path",
+        "_comment": "BP-100n-4 day-one triage: enforces acceptance-criteria count limits on staged ticket files (max 7 ACs per agent block, max 20 ACs per ticket total). Distinct from check-ac-tree-limits, which enforces AC TREE depth limits on docs/acceptance-criteria/ YAML files via the top-level check_ac_limits.py -- a genuine filename collision between two unrelated, real gates, one of which (this one) had a dedicated test file (test_check_ac_count_limits.py) but had never been wired into hooks_manifest.hooks at all. Self-scans via git diff --cached; files filter scopes it to staged tickets."
+      },
+      {
+        "id": "check-ticket-test-requirements",
+        "tier": "judgment",
+        "name": "Check Ticket Test Requirements",
+        "entry": "python {{config.output_root}}/scripts/commit_guardian/run_hook.py {{config.output_root}}/scripts/commit_guardian/check_ticket_test_requirements.py",
+        "language": "system",
+        "files": "^tickets/.*\\.md$",
+        "stages": [
+          "pre-commit"
+        ],
+        "pass_filenames": false,
+        "change_set_source": "handed_by_commit_path",
+        "_comment": "BP-100n-4 day-one triage: verifies staged tickets declare test requirements. Scoped to staged tickets only, mirroring check-ticket-ac-status-parity's own files trigger."
+      },
+      {
         "id": "check-ac-done-on-merge",
         "tier": "transform",
         "name": "Check AC Done On Merge (close source ACs when tickets land)",
@@ -1672,6 +1739,34 @@
     "never sets this variable."
   ],
   "hook_trigger_reachability_exemption_registry": [
+    {
+      "script": "check_ac_coverage.py",
+      "ground": "BP-100n-4 correction: NOT a declared non-gate -- this is a BROKEN, TRACKED gate withheld from registration, not something legitimately exempt from being one. Probed by invoking it the way pre-commit actually will (positional staged filenames, since pass_filenames defaults true with no files/always_run set): argparse rejects the positional filename with 'error: unrecognized arguments: <path>' (exit 2), because its parser only defines --ac-dir/--test-dir with no positional or *_FILES-style catch-all. Registering it as-is would block every commit in this repository and in every consumer install (KI-CG-20260831-0713). It is intended to become a real gate once its CLI accepts (or ignores) staged-filename arguments; an AC is being authored to fix the argparse setup and re-register it."
+    },
+    {
+      "script": "check_doc_coverage.py",
+      "ground": "BP-100n-4 correction: NOT a declared non-gate -- a BROKEN, TRACKED gate withheld from registration. Probed via positional staged-filename invocation (pass_filenames defaults true, no files/always_run set): raises 'NameError: name '_project_root' is not defined' at argparse setup time (exit 1) -- a default= expression in the argument parser references '_project_root' where only 'project_root' exists in module scope, so the script crashes before it can even parse its arguments, let alone run. This is a hard crash, not the advisory-only, always-exit-0 behavior its own module docstring describes for its intended steady state. Registering it as-is would block every commit here and downstream (KI-CG-20260831-0713). It is intended to become a real gate once the NameError is fixed; an AC is being authored to fix the undefined name and re-register it."
+    },
+    {
+      "script": "check_docstrings.py",
+      "ground": "BP-100n-4 correction: NOT a declared non-gate -- a BROKEN, TRACKED gate withheld from registration. Probed via positional staged-filename invocation (pass_filenames defaults true, no files/always_run set): argparse rejects the positional filename with 'error: unrecognized arguments: <path>' (exit 2) -- its parser only defines an optional --file flag, not a positional or repeated-argument form pre-commit's default invocation shape requires. Registering it as-is would block every commit here and downstream (KI-CG-20260831-0713). It is intended to become a real gate once its CLI accepts pre-commit's positional filename list; an AC is being authored to fix the argparse setup and re-register it."
+    },
+    {
+      "script": "check_documentation.py",
+      "ground": "BP-100n-4 correction: NOT a declared non-gate -- a BROKEN, TRACKED gate withheld from registration. Probed via positional staged-filename invocation (pass_filenames defaults true, no files/always_run set): argparse rejects the positional filename with 'error: unrecognized arguments: <path>' (exit 2) -- its parser only defines optional --file/--report-legacy flags, not a positional or repeated-argument form pre-commit's default invocation shape requires. Registering it as-is would block every commit here and downstream (KI-CG-20260831-0713). It is intended to become a real gate once its CLI accepts pre-commit's positional filename list; an AC is being authored to fix the argparse setup and re-register it."
+    },
+    {
+      "script": "check_v2_ac_store_alignment.py",
+      "ground": "BP-100n-4 correction: NOT a declared non-gate -- a BROKEN, TRACKED gate withheld from registration. Probed by invoking it the way pre-commit actually will (positional staged filenames, since pass_filenames defaults true with no always_run set -- its 'files' trigger only scopes WHICH commits run it, not whether pre-commit still passes matched filenames positionally): argparse rejects the positional filename with 'error: unrecognized arguments: <path>' (exit 2), because its parser only defines --ticket/--ac-store with no positional or catch-all form. Registering it as-is would block every commit touching a staged ticket, here and downstream (KI-CG-20260831-0713). It is intended to become a real gate once its CLI accepts (or ignores) staged-filename arguments; an AC is being authored to fix the argparse setup and re-register it."
+    },
+    {
+      "script": "check_outcome.py",
+      "ground": "BP-100n-4-i declared non-gate: a shared library module (declares the INDETERMINATE/reason= outcome vocabulary other commit_guardian checks emit) with no __main__ entry point; it is imported by other checks, never itself invoked as a gate."
+    },
+    {
+      "script": "check_complexity.py",
+      "ground": "BP-100n-4 correction: FUNCTIONAL, not broken -- distinct from the six argparse/NameError crashes above. It would run cleanly if registered: invoked positionally (pass_filenames defaults true, no files/always_run set) it parses staged filenames and reports without crashing. It is withheld from registration solely because this repository currently carries 65 functions over the complexity.max_score threshold (15) across scripts/ and templates/scripts/commit_guardian/, including _build_agents_map (76, generate_ticket_from_ac.py), _compute_output_mappings (70, build_helpers.py), _check_file (47, check_ac_governance.py), _collect_all (44, knowledge_query.py), and validate_agent_self_description (43, which lived in build_phases.py when that count was taken and moved to build_phases_agent_validation.py in main's #806 size split -- the function and its score are unchanged, only its home). The hook scans `git diff --cached`, so registering it now would block ANY commit that merely stages one of those 65 files, even when the commit does not touch the offending function -- and several are high-traffic modules this branch itself repeatedly commits to. This branch already paid down the 7 over-threshold functions in the four files the reachability census itself depends on, but the remaining 65 are pre-existing debt tracked as separate work, not a permanent exemption: once that debt is paid down (or the threshold/scope is otherwise reconciled), this entry should be removed and check-complexity registered as a real gate. Note the 65 count predates #806's split, which moved functions between files without changing their complexity."
+    },
     {
       "id": "check-paths-integrity",
       "ground": "Targets config/paths.json, one of this package's own internal files. A consumer install may vendor leafcutter-ai/ as an untracked directory or git submodule, in which case this path is never part of the consumer's own tracked tree even though the trigger pattern (^(leafcutter-ai/)?config/paths\\.json$) is correct for both the self-hosted and the tracked-vendor layout."

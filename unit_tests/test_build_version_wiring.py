@@ -10,6 +10,21 @@ ARCHITECTURE: Tests import build.py helpers directly (avoiding subprocess
     overhead) and mock filesystem writes using tmp_path. The main() function is
     tested with monkeypatching to stub out expensive build phases while leaving
     the version-wiring logic under test.
+
+    PATCH TARGETS (BP-100n-4): a stub only intercepts if it replaces the name
+    at the module whose globals the CALL SITE reads. ``main()`` still lives in
+    build.py, but BP-100n-4 moved most of its inline steps into
+    ``build_main_helpers``; the steps that call ``write_build_manifest``,
+    ``check_halt_guard``, ``write_lock_file``, ``_resolve_package_sha``,
+    ``scan_for_placeholders`` and ``check_referential_integrity`` now resolve
+    those names through ``build_main_helpers``' globals, so those six are
+    patched on ``_bmh``. The remaining stubs stay on ``_build`` because
+    ``main()`` still reads them from build.py's own globals (``_run_phases``
+    directly; ``_cleanup_stale_paths`` / ``_check_script_reference_guard`` are
+    read there and passed into the helpers as parameters). Patching the wrong
+    module is silent: the attribute is rebound, nobody reads it, and the test
+    goes green while asserting nothing — see
+    ``test_write_build_manifest_stub_actually_intercepts``.
 """
 
 from __future__ import annotations
@@ -29,6 +44,7 @@ if str(_SCRIPTS_DIR) not in sys.path:
     sys.path.insert(0, str(_SCRIPTS_DIR))
 
 import build as _build  # noqa: E402 — after sys.path setup
+import build_main_helpers as _bmh  # noqa: E402 — after sys.path setup
 
 
 # ---------------------------------------------------------------------------
@@ -96,13 +112,13 @@ def test_version_printed_in_build_output(target_root: Path, capsys: pytest.Captu
     """
     with (
         patch.object(_build, "_run_phases", _noop_run_phases),
-        patch.object(_build, "write_build_manifest", _noop_write_manifest),
-        patch.object(_build, "check_halt_guard", _noop_check_halt),
+        patch.object(_bmh, "write_build_manifest", _noop_write_manifest),
+        patch.object(_bmh, "check_halt_guard", _noop_check_halt),
         patch.object(_build, "_cleanup_stale_paths", _noop_cleanup),
-        patch.object(_build, "write_lock_file", lambda *a, **k: None),
-        patch.object(_build, "_resolve_package_sha", lambda *a: "abc123"),
-        patch.object(_build, "scan_for_placeholders", lambda *a: []),
-        patch.object(_build, "check_referential_integrity", lambda *a, **k: []),
+        patch.object(_bmh, "write_lock_file", lambda *a, **k: None),
+        patch.object(_bmh, "_resolve_package_sha", lambda *a: "abc123"),
+        patch.object(_bmh, "scan_for_placeholders", lambda *a: []),
+        patch.object(_bmh, "check_referential_integrity", lambda *a, **k: []),
         patch.object(_build, "_check_script_reference_guard", lambda *a, **k: 0),
     ):
         rc = _build.main(_make_argv(target_root))
@@ -127,13 +143,13 @@ def test_version_file_written(target_root: Path) -> None:
 
     with (
         patch.object(_build, "_run_phases", _noop_run_phases),
-        patch.object(_build, "write_build_manifest", _noop_write_manifest),
-        patch.object(_build, "check_halt_guard", _noop_check_halt),
+        patch.object(_bmh, "write_build_manifest", _noop_write_manifest),
+        patch.object(_bmh, "check_halt_guard", _noop_check_halt),
         patch.object(_build, "_cleanup_stale_paths", _noop_cleanup),
-        patch.object(_build, "write_lock_file", lambda *a, **k: None),
-        patch.object(_build, "_resolve_package_sha", lambda *a: "abc123"),
-        patch.object(_build, "scan_for_placeholders", lambda *a: []),
-        patch.object(_build, "check_referential_integrity", lambda *a, **k: []),
+        patch.object(_bmh, "write_lock_file", lambda *a, **k: None),
+        patch.object(_bmh, "_resolve_package_sha", lambda *a: "abc123"),
+        patch.object(_bmh, "scan_for_placeholders", lambda *a: []),
+        patch.object(_bmh, "check_referential_integrity", lambda *a, **k: []),
         patch.object(_build, "_check_script_reference_guard", lambda *a, **k: 0),
     ):
         rc = _build.main(_make_argv(target_root))
@@ -158,13 +174,13 @@ def test_dry_run_no_version_file(target_root: Path, capsys: pytest.CaptureFixtur
 
     with (
         patch.object(_build, "_run_phases", _noop_run_phases),
-        patch.object(_build, "write_build_manifest", _noop_write_manifest),
-        patch.object(_build, "check_halt_guard", _noop_check_halt),
+        patch.object(_bmh, "write_build_manifest", _noop_write_manifest),
+        patch.object(_bmh, "check_halt_guard", _noop_check_halt),
         patch.object(_build, "_cleanup_stale_paths", _noop_cleanup),
-        patch.object(_build, "write_lock_file", lambda *a, **k: None),
-        patch.object(_build, "_resolve_package_sha", lambda *a: "abc123"),
-        patch.object(_build, "scan_for_placeholders", lambda *a: []),
-        patch.object(_build, "check_referential_integrity", lambda *a, **k: []),
+        patch.object(_bmh, "write_lock_file", lambda *a, **k: None),
+        patch.object(_bmh, "_resolve_package_sha", lambda *a: "abc123"),
+        patch.object(_bmh, "scan_for_placeholders", lambda *a: []),
+        patch.object(_bmh, "check_referential_integrity", lambda *a, **k: []),
         patch.object(_build, "_check_script_reference_guard", lambda *a, **k: 0),
     ):
         rc = _build.main(_make_argv(target_root, extra=["--dry-run"]))
@@ -203,11 +219,11 @@ def test_validate_only_skips_version(target_root: Path, capsys: pytest.CaptureFi
     # present as a safety net but may not be called.
     with (
         patch.object(_build, "_run_phases", _noop_run_phases),
-        patch.object(_build, "write_build_manifest", _noop_write_manifest),
-        patch.object(_build, "check_halt_guard", _noop_check_halt),
+        patch.object(_bmh, "write_build_manifest", _noop_write_manifest),
+        patch.object(_bmh, "check_halt_guard", _noop_check_halt),
         patch.object(_build, "_cleanup_stale_paths", _noop_cleanup),
-        patch.object(_build, "write_lock_file", lambda *a, **k: None),
-        patch.object(_build, "_resolve_package_sha", lambda *a: "abc123"),
+        patch.object(_bmh, "write_lock_file", lambda *a, **k: None),
+        patch.object(_bmh, "_resolve_package_sha", lambda *a: "abc123"),
         patch.object(_build, "_check_script_reference_guard", lambda *a, **k: 0),
     ):
         rc = _build.main(_make_argv(target_root, extra=["--validate-only"]))
@@ -234,9 +250,69 @@ def test_validate_only_skips_version(target_root: Path, capsys: pytest.CaptureFi
     )
 
 
+def test_write_build_manifest_stub_actually_intercepts(target_root: Path) -> None:
+    """The manifest stub must be installed where main() RESOLVES the name.
+
+    Regression guard for the BP-100n-4 refactor. Every test above stubs
+    ``write_build_manifest`` so ``main()`` stays fast and writes no real
+    manifest. A stub installed on the WRONG module is silent: it rebinds a
+    name nobody reads, no AttributeError is raised, the suite goes green — and
+    the real manifest step runs anyway, unasserted. ``patch.object`` only
+    protects against the name being ABSENT; it cannot tell you the name is the
+    one the call site reads.
+
+    Asserting the spy was actually called is what distinguishes "stubbed" from
+    "merely rebound", so it also pins the correct patch module for the sibling
+    stubs in this file and in test_build_package_version.py.
+    """
+    spy = MagicMock(return_value=None)
+    with (
+        patch.object(_build, "_run_phases", _noop_run_phases),
+        patch.object(_bmh, "write_build_manifest", spy),
+        patch.object(_bmh, "check_halt_guard", _noop_check_halt),
+        patch.object(_build, "_cleanup_stale_paths", _noop_cleanup),
+        patch.object(_bmh, "write_lock_file", lambda *a, **k: None),
+        patch.object(_bmh, "_resolve_package_sha", lambda *a: "abc123"),
+        patch.object(_bmh, "scan_for_placeholders", lambda *a: []),
+        patch.object(_bmh, "check_referential_integrity", lambda *a, **k: []),
+        patch.object(_build, "_check_script_reference_guard", lambda *a, **k: 0),
+    ):
+        rc = _build.main(_make_argv(target_root))
+
+    assert rc == 0, f"build.main returned {rc}"
+    assert spy.call_count == 1, (
+        "write_build_manifest stub was never called, so every stub in this "
+        "module is patching a name main() does not resolve — the tests are "
+        "vacuous and the real manifest step ran unasserted. Patch the module "
+        "whose globals hold the call site (build_main_helpers), not build."
+    )
+
+
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-09-14 [python-coder/BP-100n-4]: Retargeted six stubs from `_build` to (#BP-100n-4)
+#   `_bmh` (build_main_helpers) and added
+#   test_write_build_manifest_stub_actually_intercepts.
+#   BP-100n-4 moved main()'s inline steps into build_main_helpers, taking the
+#   calls to write_build_manifest, check_halt_guard, write_lock_file,
+#   _resolve_package_sha, scan_for_placeholders and check_referential_integrity
+#   with them; those names are no longer bound in build.py's globals, so
+#   patch.object(_build, ...) raised AttributeError (8 CI failures across this
+#   file and test_build_package_version.py).
+#   Rejected the cheaper fix — re-adding `from build_helpers import
+#   write_build_manifest` to build.py so the attribute exists again. It clears
+#   the AttributeError WITHOUT fixing anything: build_main_helpers resolves the
+#   name through its OWN globals, so the patch rebinds a name nobody reads and
+#   the real manifest step runs unasserted. Measured, not assumed: running
+#   main() with a MagicMock installed on build_main_helpers gives call_count=1;
+#   the same spy installed on build (create=True) gives call_count=0.
+#   Rejected passing the six in as parameters from main() (the pattern used for
+#   build.py's own locals) — that adds real branching to main() purely to
+#   preserve a patch target, fighting the complexity paydown this ticket exists
+#   for. These names were never build.py's contract; they were imports that
+#   happened to sit in the module main()'s body lived in. The contract is
+#   main()'s behaviour, and that is unchanged.
 # - 2026-05-27 12:30 [test-writer/TICKET-20260527-WireVersionIntoBuild]: (#TICKETLESS reason=standalone-ticket-closeout)
 #   Created module. Four tests cover the four acceptance criteria: version
 #   printed, VERSION file written, dry-run skips write, validate-only skips
