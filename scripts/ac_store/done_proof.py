@@ -239,18 +239,12 @@ _PYTEST_PER_FILE_BUDGET_SECONDS = 300.0
 # otherwise. See _resolve_pytest_timeout_seconds.
 _ENV_TIMEOUT_OVERRIDE_VAR = "LEAFCUTTER_DONE_PROOF_PYTEST_TIMEOUT_SECONDS"
 
-# Sentinel key stored in the dict _run_pytest_and_parse returns on a genuine
-# subprocess timeout. Deliberately shaped so it can never collide with a real
-# pytest nodeid: every real nodeid contains "::" and ends in a "test_..."
-# segment (see _nodeid_function_name), so both this module's own
-# _classify_outcomes/_find_nodeid_for_test and fast_lane.py's
-# _resolve_tag_outcome look it up by nodeid, miss it, and fall through to
-# their existing "no result found" handling — identical to what they already
-# do for a genuinely empty dict. Only the two call sites that build the
-# operator-facing eligibility reason (verify_done_eligible's leaf path and
-# _verify_composite_eligible) read this key directly, to make a timeout
-# distinguishable from "no test found" (KI-TQ-20260901-1310 bullet 2).
-_PYTEST_TIMEOUT_SENTINEL = "__done_proof_pytest_timeout__"
+# Sentinel key _run_pytest_and_parse returns whenever the run did not finish
+# -- a subprocess timeout OR a completed-but-truncated process, e.g. killed by
+# machine/OOM/scheduler contention (BO-2500a-7). Shaped so it never collides
+# with a real nodeid (every real nodeid contains "::"); only the two
+# eligibility-reason call sites read it directly (KI-TQ-20260901-1310 bullet 2).
+_PYTEST_RUN_INCOMPLETE_SENTINEL = "__done_proof_pytest_timeout__"
 
 
 def _resolve_pytest_timeout_seconds(test_files: list[Path]) -> float:
@@ -1257,10 +1251,20 @@ def _run_pytest_and_parse(test_files: list[Path]) -> dict[str, str]:
 
     A genuine timeout still fails closed exactly as before — no test can be
     reported as passing — but the returned dict now carries
-    :data:`_PYTEST_TIMEOUT_SENTINEL` instead of being silently empty, so a
-    caller building the operator-facing reason can name the budget and the
-    command instead of the ambiguous bare "not run" phrasing (bullet 2 of the
-    KI; see :func:`verify_done_eligible` and :func:`_verify_composite_eligible`).
+    :data:`_PYTEST_RUN_INCOMPLETE_SENTINEL` instead of being silently empty,
+    so a caller building the operator-facing reason can name the budget and
+    the command instead of the ambiguous bare "not run" phrasing (bullet 2 of
+    the KI; see :func:`verify_done_eligible` and
+    :func:`_verify_composite_eligible`).
+
+    BO-2500a-7 generalises this beyond the timeout path: a subprocess that
+    ends WITHOUT raising ``TimeoutExpired`` — killed outright by the OS
+    (OOM, scheduler contention, any signal) — returns a normal
+    ``CompletedProcess`` with partial stdout and a returncode that is not one
+    of pytest's two "ran every collected test to conclusion" codes (``0`` all
+    passed, ``1`` some failed). That case is detected the same way and
+    reported with the same sentinel, so a killed run is never mistaken for a
+    completed run whose named tests genuinely failed.
 
     Args:
         test_files: Absolute paths to Python test files to execute.
@@ -1268,8 +1272,9 @@ def _run_pytest_and_parse(test_files: list[Path]) -> dict[str, str]:
     Returns:
         Dict mapping pytest nodeid strings to outcome strings.  Returns an
         empty dict when *test_files* is empty or the subprocess cannot be
-        started.  Returns ``{_PYTEST_TIMEOUT_SENTINEL: <message>}`` — never a
-        real nodeid — when the subprocess exceeds its computed budget.
+        started.  Returns ``{_PYTEST_RUN_INCOMPLETE_SENTINEL: <message>}`` —
+        never a real nodeid — when the subprocess exceeds its computed
+        budget, or ends with a returncode inconsistent with a completed run.
     """
     if not test_files:
         return {}
@@ -1291,13 +1296,17 @@ def _run_pytest_and_parse(test_files: list[Path]) -> dict[str, str]:
             f"its {timeout_seconds:.1f}s timeout budget (command: pytest): {exc}"
         )
         print(f"WARNING: done_proof: {message}", file=sys.stderr)
-        return {_PYTEST_TIMEOUT_SENTINEL: message}
+        return {_PYTEST_RUN_INCOMPLETE_SENTINEL: message}
     except OSError as exc:
         print(
             f"WARNING: done_proof: cannot run pytest: {exc}",
             file=sys.stderr,
         )
         return {}
+    if proc.returncode not in (0, 1):
+        message = f"pytest run unfinished: {len(test_files)} file(s), returncode {proc.returncode}"
+        print(f"WARNING: done_proof: {message}", file=sys.stderr)
+        return {_PYTEST_RUN_INCOMPLETE_SENTINEL: message}
     return _parse_pytest_verbose_output(proc.stdout)
 
 
@@ -1509,33 +1518,35 @@ def _describe_non_passing(nodeid: str, pytest_results: dict[str, str]) -> str:
     return f"linked test {label}: {nodeid}"
 
 
-def _pytest_timeout_reason(ac_id: str, pytest_results: dict[str, str]) -> str | None:
-    """Return a distinguishable timeout reason, or ``None`` when no timeout occurred.
+def _pytest_incomplete_run_reason(ac_id: str, pytest_results: dict[str, str]) -> str | None:
+    """Return a distinguishable "run did not finish" reason, or ``None``.
 
-    KI-TQ-20260901-1310 bullet 2: a genuine pytest timeout must not read like
-    "the tests do not exist" — ``_describe_non_passing``'s bare ``"not run"``
-    fallback is exactly that ambiguous phrase, and a timeout empties
-    *pytest_results* of every real nodeid, so every linked test would
-    otherwise report it. Checking for :data:`_PYTEST_TIMEOUT_SENTINEL` here
-    lets both call sites (:func:`verify_done_eligible`'s leaf path and
+    KI-TQ-20260901-1310 bullet 2 (generalised by BO-2500a-7 beyond the
+    timeout-only case): a run that did not finish — whether via a genuine
+    pytest timeout or a subprocess killed outright by the OS — must not read
+    like "the tests do not exist" or "these tests failed".
+    ``_describe_non_passing``'s bare ``"not run"`` fallback is exactly that
+    ambiguous phrase, and an incomplete run empties *pytest_results* of every
+    real nodeid, so every linked test would otherwise report it as if it had
+    individually failed. Checking for :data:`_PYTEST_RUN_INCOMPLETE_SENTINEL`
+    here lets both call sites (:func:`verify_done_eligible`'s leaf path and
     :func:`_verify_composite_eligible`) short-circuit to a reason that names
-    the AC, the budget, and the command *before* any per-test classification
-    runs.
+    the AC and the run failure *before* any per-test classification runs.
 
     Args:
         ac_id: The AC identifier being evaluated (leaf) or the composite's own
             identifier — folded into the reason for operator context.
         pytest_results: ``{nodeid: outcome}`` from :func:`_run_pytest_and_parse`,
-            or the sentinel-only dict it returns on timeout.
+            or the sentinel-only dict it returns when the run did not finish.
 
     Returns:
         The operator-facing reason string when *pytest_results* is the
-        timeout sentinel dict; ``None`` otherwise.
+        incomplete-run sentinel dict; ``None`` otherwise.
     """
-    message = pytest_results.get(_PYTEST_TIMEOUT_SENTINEL)
+    message = pytest_results.get(_PYTEST_RUN_INCOMPLETE_SENTINEL)
     if message is None:
         return None
-    return f"could not verify {ac_id}: {message}"
+    return f"could not verify {ac_id}: the run did not finish -- {message}"
 
 
 def _classify_outcomes(
@@ -1644,11 +1655,11 @@ def _verify_composite_eligible(
     all_child_tests = [test for tests in per_child_tests.values() for test in tests]
     test_files = list({t["file"] for t in all_child_tests})
     pytest_results = _run_pytest_and_parse(test_files)
-    timeout_reason = _pytest_timeout_reason(ac_id, pytest_results)
-    if timeout_reason is not None:
+    incomplete_reason = _pytest_incomplete_run_reason(ac_id, pytest_results)
+    if incomplete_reason is not None:
         return {
             "eligible": False,
-            "reason": timeout_reason,
+            "reason": incomplete_reason,
             "passing_tests": [],
             "failing_tests": [],
             "dangling_tags": dangling_tags,
@@ -2167,11 +2178,11 @@ def verify_done_eligible(
     if py_linked:
         py_files = list({t["file"] for t in py_linked})
         pytest_results = _run_pytest_and_parse(py_files)
-        timeout_reason = _pytest_timeout_reason(ac_id, pytest_results)
-        if timeout_reason is not None:
+        incomplete_reason = _pytest_incomplete_run_reason(ac_id, pytest_results)
+        if incomplete_reason is not None:
             return {
                 "eligible": False,
-                "reason": timeout_reason,
+                "reason": incomplete_reason,
                 "passing_tests": [],
                 "failing_tests": [],
                 "dangling_tags": dangling_tags,

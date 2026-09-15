@@ -1,0 +1,82 @@
+id: BO-2500a-7
+components:
+  - build_orchestration
+title: "A proof run that did not finish is reported as unfinished, never as a list of tests that failed"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: done
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given an acceptance criterion whose linked tests are asked to run as proof,
+  When the run does not reach the end -- because it exceeded its time budget, or
+    was killed by the machine, or ended for any other reason before every linked
+    test had reported an outcome,
+  Then the verdict says the run did not finish,
+  And it does not name any test as not passing on the strength of a result it
+    never received,
+  And a reader can tell that outcome apart from a run that completed and found
+    real failures, without inspecting the code that produced it.
+depends_on:
+  - BO-2500a
+doc_links:
+  - path: scripts/ac_store/done_proof.py
+    relationship: modifies
+    status: exists
+  - path: docs/known-issues/testing-quality.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-09-15
+amended_by: []
+superseded_by: null
+covered_by:
+  - unit_tests/ac_store/test_bo_2500a_7.py
+implemented_by:
+  - scripts/ac_store/done_proof.py
+change_target: code
+risk_surface: internal
+test_spec:
+  - name: test_bo_2500a_7_a_truncated_run_is_reported_as_unfinished_not_as_failing_tests
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: unit
+    description: "Drive _run_pytest_and_parse against a subprocess that exits before reporting every linked test, and assert the verdict says the run did not finish rather than naming the unreported tests as non-passing. The truncation must come from the run genuinely ending early, not from a hand-built results dict -- a dict fixture would pass against the current code, which is exactly the bias that let this ship."
+  - name: test_bo_2500a_7_a_completed_run_with_real_failures_still_names_them
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: unit
+    description: "The control, and the reason this AC is not satisfiable by suppressing failure reporting. A run that finishes and contains genuinely failing tests must still name those tests as failing. Without this entry, returning 'did not finish' unconditionally would satisfy the entry above."
+test_rationale: |
+  THE TWO ENTRIES ARE A PAIR AND NEITHER IS SUFFICIENT ALONE. The first proves a
+  truncated run stops lying; the second proves the fix did not buy that by going
+  quiet about real failures. A fix that reports "unfinished" whenever anything is
+  missing would pass the first and fail the second.
+
+  THE TRUNCATION MUST BE REAL. done_proof parses pytest's stdout, so a test that
+  hands _run_pytest_and_parse a pre-built dict is testing the parser's caller, not
+  the parser's blind spot. The observed defect is precisely that partial stdout is
+  indistinguishable from complete stdout, so the fixture has to produce partial
+  stdout from a subprocess that actually ended early.
+notes: |
+  WHY THIS IS AN L2 AND NOT A CONSTRAINT ON BO-2500a-2. BO-2500a-2 says an AC whose
+  linked test FAILS cannot be marked done, and that remains true and unchanged. This
+  AC is about a different question the same machinery answers badly: whether the run
+  that produced the verdict finished at all. A truncated run currently resolves to
+  "these named tests did not pass", which is a claim about the tests rather than
+  about the run, and BO-2500a-2's correctness does not depend on it.
+
+  THE BUDGET IS ONE TRIGGER, NOT THE DEFECT. A timeout sentinel already exists for
+  the TimeoutExpired path. It covers a budget overrun and nothing else -- an OOM, a
+  scheduler kill or plain machine contention produce the same truncated stdout with
+  no timeout raised, and none of those are tunable by raising a budget. Observed both
+  ways on BP-1500g-1: once as a genuine 630s-budget overrun on an 806s run, and once
+  at 440.6s under a 3600s override, where the machine was simply busy. Recorded in
+  KI-TQ-20260914-1050.
