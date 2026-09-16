@@ -1,0 +1,79 @@
+id: KM-KGS-100a-3-i
+components:
+  - knowledge_management
+readiness: approved
+priority: high
+title: "Column-zero block lists are read, not silently dropped"
+component: knowledge-management
+level: L3
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+created_by: "docs/acceptance-criteria/knowledge-management/KM-KGS-100-knowledge-graph-surfaces/KM-KGS-100a-3.yaml"
+criteria: |
+  Given an acceptance-criterion record whose implemented_by field is declared as a
+    block list with its dash items at column zero:
+      implemented_by:
+      - scripts/example_module.py
+      - templates/agents/example-agent.md
+  When that record's frontmatter is read for relationship extraction
+  Then the value obtained for implemented_by is the two-item list
+    ["scripts/example_module.py", "templates/agents/example-agent.md"]
+  And that value is not an empty list
+  And a record declaring covered_by in the same column-zero form yields its items
+    in the same way
+depends_on:
+  - KM-KGS-100a-3
+doc_links:
+  - path: scripts/knowledge_query.py
+    relationship: describes
+    status: exists
+  - path: docs/reference/ac-schema.md
+    relationship: context
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Measured evidence (2026-09-16, 4109 store files): the hand parser's block-list reader requires each item line to begin with two spaces, so a column-zero dash list returns an empty list. The store writes column-zero block lists routinely (its own serializer emits them) — ACD-300a.yaml is one concrete on-disk example. Disagreement with a reference YAML reader was measured on 841 files for implemented_by and 394 files for covered_by."
+  - "Indentation of a YAML block list under a mapping key is not significant for membership: zero, two, and four space indents all denote the same sequence. The reader must accept any indentation the YAML spec permits rather than one hard-coded prefix."
+  - "The fix must remain standard-library-only. PyYAML is banned in the shipped script by KM-KQS-007 and by the stdlib-only assertion that greps scripts/knowledge_query.py for third-party imports."
+  - "SCOPE-NEUTRAL: this criterion is about the value read into the field, before any edge-target resolution. Whether such a value later resolves to a graph node or stays a raw path string is a separate, deferred decision and must not be asserted here."
+test_spec:
+  - name: test_column_zero_implemented_by_block_list_reads_both_items
+    target_dir: unit_tests/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: "An AC file written to disk with implemented_by as a column-zero block list, read through the acs-surface file reader, yields the value ['scripts/example_module.py', 'templates/agents/example-agent.md']"
+  - name: test_column_zero_implemented_by_block_list_is_not_empty
+    target_dir: unit_tests/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: "The implemented_by value read from the column-zero block-list file is not an empty list"
+  - name: test_column_zero_covered_by_block_list_reads_items
+    target_dir: unit_tests/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: "An AC file declaring covered_by as a column-zero block list, read from disk, yields all of its items in declared order"
+test_required: true
+test_rationale: >-
+  Each test writes a real AC file in the column-zero form and obtains the field value
+  through the same file-reading step the acs surface uses; a pre-built field dict would
+  bypass the exact line reader that drops column-zero items, so it cannot prove this
+  criterion. Assertions are on the parsed field value only and say nothing about edge
+  targets or node resolution (deferred decision).
+delivers_to: null
+expects_from:
+  ac_id: KM-KGS-100a-3
+  contract: "The frontmatter field values of a single acceptance-criterion record, read from disk prior to any edge-target resolution"
+origin_agent: business-analyst
+created: 2026-09-16
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary

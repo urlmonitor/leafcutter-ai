@@ -1,0 +1,85 @@
+id: KM-KGS-100a-3-ii
+components:
+  - knowledge_management
+readiness: approved
+priority: high
+title: "Zero-, two- and four-space indented block lists all read to the same value"
+component: knowledge-management
+level: L3
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+created_by: "docs/acceptance-criteria/knowledge-management/KM-KGS-100-knowledge-graph-surfaces/KM-KGS-100a-3.yaml"
+criteria: |
+  Given three acceptance-criterion records that declare covered_by as a block list
+    holding the single item unit_tests/test_example.py, differing only in the
+    indentation of the dash — column zero in the first, two spaces in the second,
+    four spaces in the third
+  When each record's frontmatter is read for relationship extraction
+  Then the value obtained for covered_by is the one-item list
+    ["unit_tests/test_example.py"] for each of the three records
+  And the three values are equal to one another
+  And the same three-way equality holds for the implemented_by field declared the
+    same three ways
+depends_on:
+  - KM-KGS-100a-3
+  - KM-KGS-100a-3-i
+doc_links:
+  - path: scripts/knowledge_query.py
+    relationship: describes
+    status: exists
+  - path: docs/reference/ac-schema.md
+    relationship: context
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "This is the indentation-invariance counterpart to KM-KGS-100a-3-i: that criterion pins the column-zero case that currently returns empty; this one pins that no single indentation is privileged. Both must hold, and a fix that merely swaps a two-space prefix check for a zero-space one satisfies neither."
+  - "The block-list scan must terminate on the next key at or above the field's own indentation level, so a deeper-indented list belonging to a different key is not absorbed."
+  - "Standard-library-only constraint applies (KM-KQS-007)."
+  - "SCOPE-NEUTRAL: assert only the values read into the field dict, never what those values later resolve to."
+test_spec:
+  - name: test_covered_by_block_list_reads_one_item_at_indent_0_2_and_4
+    target_dir: unit_tests/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: "Three AC files declaring covered_by as a block list indented 0, 2 and 4 spaces each read to ['unit_tests/test_example.py']"
+  - name: test_covered_by_block_list_values_equal_across_indents
+    target_dir: unit_tests/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: "The covered_by values read from the three indentation variants are equal to one another"
+  - name: test_implemented_by_block_list_values_equal_across_indents
+    target_dir: unit_tests/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: "implemented_by declared as a block list at 0, 2 and 4 space indents reads to the same one-item value in all three files"
+  - name: test_indented_block_list_does_not_absorb_list_of_following_key
+    target_dir: unit_tests/
+    framework: pytest
+    type: unit
+    angle: boundary
+    description: "When covered_by is immediately followed by another key with its own deeper-indented block list, the covered_by value contains only its own items"
+test_required: true
+test_rationale: >-
+  Indentation invariance is only provable by reading the same list written three ways
+  from real files and comparing the results to each other, so a fix that just moves the
+  privileged indent from two spaces to zero still fails. The boundary test pins the
+  it_requirement that the scan stops at the next key. All assertions are on parsed field
+  values, not edge targets.
+delivers_to: null
+expects_from:
+  ac_id: KM-KGS-100a-3
+  contract: "The frontmatter field values of a single acceptance-criterion record, read from disk prior to any edge-target resolution"
+origin_agent: business-analyst
+created: 2026-09-16
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary

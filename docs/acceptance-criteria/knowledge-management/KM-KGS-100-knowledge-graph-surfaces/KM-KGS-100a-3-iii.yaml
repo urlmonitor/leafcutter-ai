@@ -1,0 +1,84 @@
+id: KM-KGS-100a-3-iii
+components:
+  - knowledge_management
+readiness: approved
+priority: high
+title: "Quoted block-list items lose their quotes, matching the inline-sequence result"
+component: knowledge-management
+level: L3
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+created_by: "docs/acceptance-criteria/knowledge-management/KM-KGS-100-knowledge-graph-surfaces/KM-KGS-100a-3.yaml"
+criteria: |
+  Given an acceptance-criterion record whose covered_by field is declared as a block
+    list holding one double-quoted item "unit_tests/test_alpha.py" and one
+    single-quoted item 'unit_tests/test_beta.py'
+  When that record's frontmatter is read for relationship extraction
+  Then the value obtained for covered_by is the two-item list
+    ["unit_tests/test_alpha.py", "unit_tests/test_beta.py"]
+  And no item in that value begins or ends with a quote character
+  And a second record declaring the same two items as an inline sequence on one line
+    yields a value equal to the first record's value
+depends_on:
+  - KM-KGS-100a-3
+doc_links:
+  - path: scripts/knowledge_query.py
+    relationship: describes
+    status: exists
+  - path: docs/reference/ac-schema.md
+    relationship: context
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Measured evidence (2026-09-16): the block-list reader strips the dash and surrounding whitespace but never the quote characters, so a quoted item keeps its quotes in the value. 281 implemented_by items and 324 covered_by items in the store retain stray quotes today."
+  - "The inline-sequence path already strips quotes. The defect is an INCONSISTENCY between the two paths, not a missing feature — the final And clause is the load-bearing assertion and must compare the two paths against each other, not against a hand-typed expectation only."
+  - "Strip only a matched surrounding pair of quotes. A quote character interior to the value must survive."
+  - "Standard-library-only constraint applies (KM-KQS-007)."
+  - "SCOPE-NEUTRAL: a value that still carries quotes could never match anything downstream, but this criterion asserts only the parsed value, not the downstream match."
+test_spec:
+  - name: test_quoted_block_list_items_read_without_quotes
+    target_dir: unit_tests/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: "A covered_by block list holding a double-quoted and a single-quoted item reads to ['unit_tests/test_alpha.py', 'unit_tests/test_beta.py']"
+  - name: test_quoted_block_list_items_have_no_leading_or_trailing_quote
+    target_dir: unit_tests/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: "No item in the value read from the quoted block list begins or ends with a single or double quote character"
+  - name: test_quoted_block_list_value_equals_inline_sequence_value
+    target_dir: unit_tests/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: "The value read from the quoted block-list file equals the value read from a second file declaring the same two items as an inline sequence (read-path against read-path, not only against a literal)"
+  - name: test_interior_quote_character_in_block_list_item_survives
+    target_dir: unit_tests/
+    framework: pytest
+    type: unit
+    angle: boundary
+    description: "Only a matched surrounding quote pair is stripped; a quote character inside the item text is preserved in the value"
+test_required: true
+test_rationale: >-
+  The defect is an inconsistency between the block-list and inline-sequence read paths, so
+  the load-bearing test compares the two paths against each other from real files rather
+  than trusting a hand-typed expectation alone. The interior-quote case guards against
+  over-stripping. Parsed field values only; nothing about downstream matching or node
+  resolution.
+delivers_to: null
+expects_from:
+  ac_id: KM-KGS-100a-3
+  contract: "The frontmatter field values of a single acceptance-criterion record, read from disk prior to any edge-target resolution"
+origin_agent: business-analyst
+created: 2026-09-16
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary

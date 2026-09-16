@@ -1,0 +1,85 @@
+id: KM-KGS-100a-3-v
+components:
+  - knowledge_management
+readiness: approved
+priority: high
+title: "A symbol anchor on an implementation item is not mistaken for a comment"
+component: knowledge-management
+level: L3
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+created_by: "docs/acceptance-criteria/knowledge-management/KM-KGS-100-knowledge-graph-surfaces/KM-KGS-100a-3.yaml"
+criteria: |
+  Given an acceptance-criterion record whose implemented_by field is declared as a
+    block list holding the single unquoted item
+    scripts/example_module.py#example_function
+  And a second record declaring that same item double-quoted
+  When each record's frontmatter is read for relationship extraction
+  Then the value obtained for implemented_by is the one-item list
+    ["scripts/example_module.py#example_function"] for both records
+  And the #example_function portion appears in full in that item
+  And the item is not truncated at the # character
+  And no item of the value is the empty string
+depends_on:
+  - KM-KGS-100a-3
+  - KM-KGS-100a-3-iii
+doc_links:
+  - path: scripts/knowledge_query.py
+    relationship: describes
+    status: exists
+  - path: docs/reference/ac-schema.md
+    relationship: context
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "The AC schema states implemented_by items may carry an optional #anchor, so the hash is part of the declared value space. In YAML a # only begins a comment when preceded by whitespace or at the start of a token, so an unquoted path#symbol is one scalar — a reader that strips everything from the first # onward would silently empty or truncate the value."
+  - "The parent criterion KM-KGS-100a-3 already carries an it_requirement about the anchor not corrupting a resolved target id. This L3 is deliberately narrower and upstream of that: it pins only that the anchor survives into the field value. Do not restate the resolution requirement here."
+  - "Standard-library-only constraint applies (KM-KQS-007)."
+  - "SCOPE-NEUTRAL: no assertion about what the anchored value later resolves to."
+test_spec:
+  - name: test_unquoted_implemented_by_item_keeps_symbol_anchor
+    target_dir: unit_tests/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: "An unquoted block-list item scripts/example_module.py#example_function reads to exactly that one-item list"
+  - name: test_double_quoted_implemented_by_item_keeps_symbol_anchor
+    target_dir: unit_tests/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: "The same item declared double-quoted reads to the same one-item list with #example_function present in full"
+  - name: test_symbol_anchor_item_not_truncated_at_hash
+    target_dir: unit_tests/
+    framework: pytest
+    type: unit
+    angle: boundary
+    description: "For both files the single item is not truncated at the # character (it is not scripts/example_module.py)"
+  - name: test_symbol_anchor_value_has_no_empty_string_item
+    target_dir: unit_tests/
+    framework: pytest
+    type: unit
+    angle: boundary
+    description: "No item of the implemented_by value read from either file is the empty string"
+test_required: true
+test_rationale: >-
+  A # without preceding whitespace is part of the YAML scalar, and a reader that treats it as a
+  comment start either truncates or empties the item, so the full-text, no-truncation and
+  no-empty-item checks are asserted separately for both the quoted and unquoted forms read
+  from real files. Parsed field value only; the anchor's effect on any resolved target id
+  belongs to the parent and is not asserted here.
+delivers_to: null
+expects_from:
+  ac_id: KM-KGS-100a-3
+  contract: "The frontmatter field values of a single acceptance-criterion record, read from disk prior to any edge-target resolution"
+origin_agent: business-analyst
+created: 2026-09-16
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary

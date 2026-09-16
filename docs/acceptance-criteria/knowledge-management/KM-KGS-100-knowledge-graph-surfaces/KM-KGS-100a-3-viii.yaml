@@ -1,0 +1,92 @@
+id: KM-KGS-100a-3-viii
+components:
+  - knowledge_management
+readiness: approved
+priority: high
+title: "Relationship reading is proven against real store records, not a hand-built dictionary"
+component: knowledge-management
+level: L3
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+created_by: "docs/acceptance-criteria/knowledge-management/KM-KGS-100-knowledge-graph-surfaces/KM-KGS-100a-3.yaml"
+criteria: |
+  Given the acceptance-criteria store on disk contains records declaring their
+    implemented_by and covered_by fields in every form the store actually uses —
+    column-zero and indented block lists, quoted and unquoted items, test-function
+    suffixes and symbol anchors
+  When the automated checks for acceptance-criterion relationship reading run
+  Then those checks obtain the field values by reading real acceptance-criterion
+    files from the store through the same file-reading entry point the knowledge
+    map itself uses
+  And no check in the group substitutes a pre-built field dictionary for that
+    reading step
+  And the set of real records exercised covers each of the declared forms listed
+    above, with at least one record per form
+  And for every record exercised, the values obtained match the values an
+    independent reference reader obtains from the same bytes
+  And the check group reports a failure whenever those two disagree on any record
+depends_on:
+  - KM-KGS-100a-3
+  - KM-KGS-100a-3-i
+  - KM-KGS-100a-3-iii
+doc_links:
+  - path: unit_tests/test_ac_edge_relationships.py
+    relationship: describes
+    status: exists
+  - path: scripts/knowledge_query.py
+    relationship: context
+    status: exists
+  - path: docs/testing/test-angles.md
+    relationship: context
+    status: exists
+assigned_agent: test-writer
+estimated_complexity: M
+it_requirements:
+  - "Measured evidence (2026-09-16): the existing checks for this behaviour build their fixture in the single formatting variant the reader happens to support (two-space indent, unquoted), and most assertions are made against a pre-built field dictionary, bypassing the file-reading step entirely. The component that fails in production is therefore never exercised — a phantom-done shape (green checks, broken behaviour)."
+  - "REFERENCE-READER VERIFICATION (performed, do not re-derive): the stdlib-only gate for this component is a single assertion that greps the text of scripts/knowledge_query.py for third-party import statements including 'import yaml'. It inspects only that one shipped script and does not scan test files. 163 test files under unit_tests/ already import yaml today. PyYAML is therefore permitted as a test-side reference oracle and use of it here does not violate KM-KQS-007 or the forbidden-imports assertion. The ban applies to the shipped script only, and the fix for the sibling criteria must remain standard-library-only."
+  - "The differential must run over a sample of REAL store records, not a regenerated copy — the store's own serializer and its hand-edited records are the two producers whose output shape matters. This matches the established project convention that a hand-typed fixture reproduces the exact bias that hides the bug (see BO-2500c-1, TQ-400a-1, GE-124c-2)."
+  - "Selecting the per-form example records by scanning the store is preferred over hard-coding paths, so the check does not rot when a named record changes shape. If specific records are named, the check must fail loudly when a named record no longer exhibits the form it was chosen for, rather than passing vacuously."
+  - "SCOPE-NEUTRAL: the differential compares parsed FIELD VALUES only. It must not assert anything about whether a value resolves to a graph node or remains a raw path string."
+test_spec:
+  - name: test_real_store_sample_covers_every_declared_relationship_form
+    target_dir: unit_tests/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    description: "Scanning the real docs/acceptance-criteria store selects at least one record per form (column-zero block list, indented block list, quoted item, unquoted item, ::test_function suffix, #symbol anchor); the check fails loudly naming any form with no exemplar instead of passing vacuously"
+  - name: test_real_store_relationship_values_match_reference_reader
+    target_dir: unit_tests/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    description: "For every selected real record, implemented_by and covered_by obtained by passing the file path to the knowledge map's own file-reading entry point (never a pre-built field dict) equal the values PyYAML safe_load obtains from the same bytes, with absent or null normalised to an empty list; a mismatch fails naming the record path and the field"
+  - name: test_relationship_differential_reports_failure_on_disagreement
+    target_dir: unit_tests/
+    framework: pytest
+    type: unit
+    angle: failure
+    description: "The differential's comparison step, fed a record where the reader value and the reference value differ, reports a failure naming that record and field (the check cannot pass silently on disagreement)"
+test_required: true
+test_rationale: >-
+  The existing checks passed on broken behaviour because they used a single hand-built fixture
+  and pre-built field dicts, so this contract requires a differential over real store records
+  read through the production file-reading entry point, with PyYAML as the test-side reference
+  oracle (allowed: the stdlib-only gate inspects only scripts/knowledge_query.py). The
+  form-coverage test prevents a vacuous pass, and the failure test proves the differential can
+  go red. Only field values are compared; nothing is asserted about node resolution of targets.
+delivers_to:
+  agent: python-coder
+  contract: "A failing differential over real store records that names each record where the reader and the reference reader disagree, and the field they disagree on"
+expects_from:
+  ac_id: KM-KGS-100a-3
+  contract: "The file-reading entry point that turns an acceptance-criterion file into its frontmatter field values"
+origin_agent: business-analyst
+created: 2026-09-16
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
