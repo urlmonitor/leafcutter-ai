@@ -8,7 +8,7 @@ component: knowledge-management
 level: L2
 status: active
 req_status: draft
-work_status: done
+work_status: in_progress
 roadmap_phase: phase_1
 created_by: "docs/acceptance-criteria/knowledge-management/KM-KGS-100-knowledge-graph-surfaces/KM-KGS-100a.yaml"
 criteria: |
@@ -40,15 +40,74 @@ it_requirements:
   - "The components field must continue to emit the component_membership edge type (existing _COMPONENT_FIELDS behavior), while implemented_by, covered_by, and depends_on emit edges whose type equals the field name"
   - "Target-id resolution for file-path edge fields (implemented_by source files, covered_by test files) must reduce a path value to the same node-id form used for those target nodes, consistent with the existing depends_on path-stem resolution, so the edge lands on the real target node rather than a phantom id"
   - "implemented_by values may carry an optional #symbol anchor per the AC schema; the anchor must not corrupt the resolved target node id (resolve to the file/path node, ignoring or stripping the anchor for edge-target purposes)"
+test_spec:
+  - name: test_acs_file_implemented_by_yields_implemented_by_edges
+    target_dir: unit_tests/
+    framework: pytest
+    type: integration
+    angle: seam
+    description: "For KM-EX-010 written as a real file in a temporary acs store, the candidate edges extracted for that node before edge-target validation include one edge of type implemented_by per implemented_by value read from the file, each with source KM-EX-010 and a non-empty, quote-free target string; target form and node existence are not asserted"
+  - name: test_acs_file_covered_by_yields_covered_by_edges
+    target_dir: unit_tests/
+    framework: pytest
+    type: integration
+    angle: seam
+    description: "Same file: one candidate edge of type covered_by per covered_by value read, each with source KM-EX-010 and a non-empty, quote-free target string; target form and node existence are not asserted"
+  - name: test_acs_file_depends_on_yields_depends_on_edge_to_criterion
+    target_dir: unit_tests/
+    framework: pytest
+    type: integration
+    angle: seam
+    description: "Same file: an edge of type depends_on runs from KM-EX-010 to node KM-EX-009"
+  - name: test_acs_file_components_yields_component_membership_edge_to_hub
+    target_dir: unit_tests/
+    framework: pytest
+    type: integration
+    angle: seam
+    description: "Same file: the components value produces an edge typed component_membership (not components) from KM-EX-010 to the build-pipeline component hub node"
+  - name: test_acs_edge_types_follow_declared_edge_fields
+    target_dir: unit_tests/
+    framework: pytest
+    type: integration
+    angle: reachability
+    description: "The edge types produced for an acs node are exactly those derived from the acs surface's edge_fields declared in paths.json (components mapped to component_membership), so changing the declaration changes the produced types with no acs-specific code branch"
+test_required: true
+test_rationale: >-
+  This is the L2 composite over KM-KGS-100a-3-i..-viii, so its tests stay at edge-production
+  level: one per relationship field, read from a real store file rather than a pre-built dict,
+  plus the declaration-driven invariant. For implemented_by and covered_by the tests assert edge
+  type, source and a one-to-one count with the values as read, on candidate edges before
+  target validation. They deliberately do not compare the target to the raw path literal or to
+  a resolved node id, and do not check node existence, because that is the deferred decision.
+  The criteria wording 'the node for scripts/foo.py' and the shipped raw-path assertion in
+  unit_tests/test_ac_edge_relationships.py disagree on it.
 delivers_to: null
 expects_from:
   ac_id: KM-KGS-100a-2
   contract: "One acs-surface node per acceptance-criterion file, keyed by the criterion id, with the criterion's frontmatter available for edge extraction"
 origin_agent: business-analyst
 created: 2026-06-22
+notes: |
+  2026-09-16 measurement: this criterion was marked work_status: done but is not
+  satisfied. The AC store declares 1454 implemented_by values and the knowledge map
+  emits 641 edges; it declares 4541 covered_by values and emits 4333. Root cause is in
+  the block-list reader used by the acs surface: column-zero list items are read as an
+  empty list (841 files disagree with a reference reader for implemented_by, 394 for
+  covered_by) and quoted items keep their quote characters (281 implemented_by, 324
+  covered_by). The existing checks did not catch either, because they exercise a single
+  indented-and-unquoted fixture and largely bypass the reader with a pre-built field
+  dictionary. Reset done -> in_progress pending KM-KGS-100a-3-i..-viii.
 amended_by: []
 superseded_by: null
-covered_by: []
+covered_by:
+  - KM-KGS-100a-3-i
+  - KM-KGS-100a-3-ii
+  - KM-KGS-100a-3-iii
+  - KM-KGS-100a-3-iv
+  - KM-KGS-100a-3-v
+  - KM-KGS-100a-3-vi
+  - KM-KGS-100a-3-vii
+  - KM-KGS-100a-3-viii
 implemented_by:
 - tickets/00_inbox/epics/EPIC-ACCodeTraceabilityGraph/04_TICKET-20260622-KM-KGS-100a-3.md
 change_target: code

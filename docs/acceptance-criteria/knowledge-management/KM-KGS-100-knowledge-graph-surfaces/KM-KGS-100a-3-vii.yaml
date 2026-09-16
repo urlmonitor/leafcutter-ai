@@ -1,0 +1,81 @@
+id: KM-KGS-100a-3-vii
+components:
+  - knowledge_management
+readiness: approved
+priority: medium
+title: "An explicitly empty list and an absent field both read as no values"
+component: knowledge-management
+level: L3
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+created_by: "docs/acceptance-criteria/knowledge-management/KM-KGS-100-knowledge-graph-surfaces/KM-KGS-100a-3.yaml"
+criteria: |
+  Given one acceptance-criterion record declaring covered_by: [] and
+    implemented_by: [], and a second record that declares neither field
+  When each record's frontmatter is read for relationship extraction
+  Then the value obtained for covered_by has no items, for both records
+  And the value obtained for implemented_by has no items, for both records
+  And neither value contains an empty string, the literal text [], or the literal
+    text "[]"
+  And reading the second record completes without raising an error
+depends_on:
+  - KM-KGS-100a-3
+doc_links:
+  - path: scripts/knowledge_query.py
+    relationship: describes
+    status: exists
+  - path: docs/reference/ac-schema.md
+    relationship: context
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: XS
+it_requirements:
+  - "This criterion is the boundary guard for the other reading criteria in this group: a fix that makes column-zero lists read correctly must not make an explicitly empty list read as a one-item list holding the empty string or the literal bracket text. Both empty forms are common in the store."
+  - "Absent field and empty list must be indistinguishable in the resulting value — the AC schema gives both the same meaning (default: [])."
+  - "Standard-library-only constraint applies (KM-KQS-007)."
+  - "SCOPE-NEUTRAL: assert only that the parsed value is empty."
+test_spec:
+  - name: test_explicit_empty_lists_read_as_no_items
+    target_dir: unit_tests/
+    framework: pytest
+    type: unit
+    angle: boundary
+    description: "A file declaring covered_by: [] and implemented_by: [] yields an empty value for both fields"
+  - name: test_absent_relationship_fields_read_as_no_items
+    target_dir: unit_tests/
+    framework: pytest
+    type: unit
+    angle: boundary
+    description: "A file declaring neither field yields an empty value for both covered_by and implemented_by, indistinguishable from the explicit empty list"
+  - name: test_empty_relationship_values_contain_no_placeholder_text
+    target_dir: unit_tests/
+    framework: pytest
+    type: unit
+    angle: boundary
+    description: "For both files neither value contains the empty string, the bare text [] or the quoted text '[]'"
+  - name: test_reading_record_without_relationship_fields_does_not_raise
+    target_dir: unit_tests/
+    framework: pytest
+    type: unit
+    angle: failure
+    description: "Reading the file that omits both fields completes without raising"
+test_required: true
+test_rationale: >-
+  This is the boundary guard for the sibling reading fixes: each empty form is read from a real
+  file and checked for the placeholder values a loosened block-list reader would produce, and
+  absent and explicit-empty are asserted to give the same result, as the schema requires. Only
+  the emptiness of the parsed value is asserted.
+delivers_to: null
+expects_from:
+  ac_id: KM-KGS-100a-3
+  contract: "The frontmatter field values of a single acceptance-criterion record, read from disk prior to any edge-target resolution"
+origin_agent: business-analyst
+created: 2026-09-16
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: internal
