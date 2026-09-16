@@ -61,7 +61,7 @@ it_requirements:
   - "The resolution must be shared with the other four cwd-relative sites (ACD-2100a-3 and ACD-2100a-4) rather than patched here alone; a per-site fix is what left three sites standing after the known issues were filed."
   - "Must satisfy the repository error-handling policy: the resolution is external I/O, so a failure to resolve must raise a typed error or log at WARNING and re-raise -- never be swallowed into a silent fallback."
   - "Must not change the setup step's existing command-line contract; callers that already pass an explicit location must behave exactly as they do today."
-  - "The startup path up to and including this step must complete with no network available."
+  - "EVIDENCE IS GATHERED WITH NO LIVE MODEL OR NETWORK TRANSPORT. The startup path up to and including this step is driven under the repository's workflow engine harness, with executor dispatches answered by BO-3200f-1's stand-in running the real capture locally in the directory each dispatch names, and every other dispatch scripted -- so a transport failure cannot be mistaken for a wrong-copy or resolution failure. This constrains the test environment, not production: in a live run every dispatch on this path is a round-trip, and an executor dispatch that does not complete is a could-not-check outcome (BO-3200f-1-i), never a resolution failure."
 test_spec:
   - name: test_worktree_step_runs_the_in_repo_copy_from_an_untracked_cwd
     target_dir: unit_tests/workflows/
@@ -106,7 +106,25 @@ delivers_to:
 expects_from: null
 origin_agent: business-analyst
 created: 2026-08-25
-amended_by: []
+amended_by:
+- reason: premise-review-chartered-executor
+  by: it-po
+  at: 2026-09-16
+  note: |
+    Premise review after the 2026-09-16 chartered-executor decision (BO-3200f). Verdict: FIXED
+    (IT PO FIELDS). criteria untouched and compatible.
+
+    OLD it_requirements[6] (verbatim): "The startup path up to and including this step must
+    complete with no network available."
+
+    WHY IT CHANGED. "The startup path" here is the workflow run up to and including the
+    worktree step, not the setup script on its own -- the other it_requirements and all three
+    test_spec entries drive the plan-feature workflow. Read as a property of a live run, the
+    clause is unsatisfiable: every agent() call on that path is a round-trip, including the
+    executor dispatches the decision now prescribes (and the worktree-agent dispatch, which was
+    already one). Its purpose was evidential -- keep transport failures out of a resolution
+    verdict -- and that purpose is kept, restated as a test-environment constraint with the
+    executor stand-in. No change to scope; readiness left as approved for the user to confirm.
 superseded_by: null
 covered_by: []
 implemented_by:

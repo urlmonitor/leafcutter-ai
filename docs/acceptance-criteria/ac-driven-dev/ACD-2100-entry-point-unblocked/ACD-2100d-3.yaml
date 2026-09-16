@@ -61,7 +61,7 @@ it_requirements:
   - "Reuse ACD-2100d-1's harness -- install into a temporary target project and observe how far a run started there gets -- rather than writing a second one. Two harnesses observing 'how far the run got' by different means will eventually disagree, and when they do one of these two records reports green on the condition the other reports red. The temporary target must be created and torn down by the harness so the check is repeatable and leaves nothing behind; it must never be run against a developer's own project."
   - "Both observations must be taken on the same project under the same starting directory conditions. The only variable is that the installer ran in between -- ACD-2100a's behaviours are directory-sensitive and varying two things at once makes a regression unattributable."
   - "The observation must be the run's own recorded stopping point, not its exit code. A run can exit zero having halted at a startup check, and which check stopped it is this record's entire subject."
-  - "Both runs must complete their startup path with no network available, so a transport failure in one of the two measurements cannot be read as an install-induced regression."
+  - "EVIDENCE IS GATHERED WITH NO LIVE MODEL OR NETWORK TRANSPORT. Both measurements are taken through ACD-2100d-1's probe under the repository's workflow engine harness, with executor dispatches answered by BO-3200f-1's stand-in running the project's own installed capture locally, so a transport failure in one of the two measurements cannot be read as an install-induced regression. This constrains the evidence, not production: a live run makes round-trips."
   - "The finding must be produced by starting a run in the project after the install. An assertion over what the installer copied, a file manifest or a checksum is not evidence -- the same real-artifact rule ACD-2100d-1 is held to, for the same reason."
   - "STANDING GUARANTEE MEANS IT HAS TO KEEP RUNNING. Wire the check where a change to the startup path or to the installer will re-run it, and have its verdict read by whatever decides that change is deliverable. A script that proved the property once and is never invoked again satisfies the words and not the record -- the inert-gate shape this repo keeps rediscovering."
   - "Must satisfy the repository error-handling policy in any harness code that ships under scripts/ or unit_tests/."
@@ -132,7 +132,22 @@ expects_from:
     contract: "A repeatable harness that installs into a temporary target project and starts a run there in a fresh process, returning that run's own recorded stopping point -- reached-the-first-question, or the named startup check that halted it. This record calls that harness twice against one project and compares the two results; the observation vocabulary must therefore be stable enough to compare."
 origin_agent: business-analyst
 created: 2026-08-25
-amended_by: []
+amended_by:
+- reason: premise-review-chartered-executor
+  by: it-po
+  at: 2026-09-16
+  note: |
+    Premise review after the 2026-09-16 chartered-executor decision (BO-3200f). Verdict: FIXED
+    (IT PO FIELDS). criteria untouched and compatible.
+
+    OLD it_requirements[5] (verbatim): "Both runs must complete their startup path with no
+    network available, so a transport failure in one of the two measurements cannot be read as
+    an install-induced regression."
+
+    WHY IT CHANGED. Both measurements are whole workflow runs to the first user question; as a
+    live-run property "no network" is unsatisfiable under the executor decision. Restated as a
+    test-environment constraint through ACD-2100d-1's probe and the executor stand-in. readiness
+    left as approved for the user to confirm.
 superseded_by: null
 covered_by: []
 implemented_by:

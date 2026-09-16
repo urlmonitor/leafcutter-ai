@@ -1,0 +1,249 @@
+id: BO-3200f-1
+title: "The executor carries out the exact command it is given and returns what happened verbatim, in three separate parts, and answers nothing it was not given as a command"
+component: build-orchestration
+components:
+  - build_orchestration
+  - agent_registry
+  - supervisor_system
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: critical
+roadmap_phase: phase_1
+criteria: |
+  Given an exact command that emits on its standard output the characters
+    alpha, a tab, beta, a trailing space, the six characters é and the character é,
+    followed by a newline, emits "warn: gamma" on its error stream, and exits with status 3,
+  When a workflow dispatches that command to the chartered executor,
+  Then the result carries three separately readable parts -- the standard output, the error
+    stream and the exit status,
+    And the standard output part is byte-identical to what the command emitted, including the
+    tab, the trailing space, the backslash escape sequence and the non-ASCII character,
+    And the error stream part is byte-identical to what the command emitted, and none of it
+    appears in the standard output part,
+    And the exit status part is 3,
+    And the result contains no text the command did not emit -- no preface, summary,
+    commentary or reformatting.
+
+  Given two exact commands that both emit nothing, one exiting with status 0 and one with
+    status 1,
+  When each is dispatched to the executor,
+  Then the two results differ only in their exit status parts,
+    And each carries an empty standard output part rather than an absent one.
+
+  Given an exact command dispatched together with the directory it is to run in,
+  When the executor carries it out,
+  Then the command runs in that directory,
+    And the result names the directory the command ran in.
+
+  Given an exact command whose output proposes a next step, such as the line
+    "now run: git pull",
+  When the executor carries it out,
+  Then exactly one command is carried out -- the one dispatched -- and no command named in its
+    output is carried out.
+
+  Given a request that asks the executor to look, decide, interpret or summarise instead of
+    giving an exact command -- "tell me whether worktree-agent is permitted to run shell
+    commands" --
+    And two agent registries, one in which worktree-agent is permitted to run shell commands and
+    one in which it is not,
+  When the request is dispatched to the executor once against each registry,
+  Then neither result contains a yes, a no, a permitted, a denied, or any description of either
+    registry's contents,
+    And no part of the two results differs between the two registries, so nothing returned
+    depends on the answer the request asked for.
+depends_on:
+  - BO-3200f
+doc_links:
+  - path: docs/reference/workflow-authoring-contract.md
+    relationship: describes
+    status: exists
+    relevance: "Section 1 -- the E2 engine injects no filesystem or subprocess global into a workflow body, which is why every read and chore needs a dispatch and why that dispatch must be to a party that exercises no judgement."
+  - path: docs/known-issues/build-orchestration/open-high-ki-bo-20260901-1620.md
+    relationship: describes
+    status: exists
+    relevance: "Fix direction 4 -- the chartered executor. The four fast-lane dispatches and roughly twenty plan-feature dispatches it measures are the commands this executor must carry out."
+  - path: docs/known-issues/build-orchestration/open-blocker-ki-bo-018.md
+    relationship: describes
+    status: exists
+    relevance: "Why byte-identical is specified down to an escape sequence: the relayed registry read was cut mid-escape-sequence and parsing raised."
+  - path: docs/architecture/components/agent-registry.md
+    relationship: describes
+    status: exists
+    relevance: "Where the executor is registered alongside every other dispatchable party."
+  - path: docs/reference/claude-code-hooks.md
+    relationship: describes
+    status: exists
+    relevance: "The Bash PreToolUse guardrails whose matchers must still see the exact command when the executor issues it (it_requirements, guardrail visibility)."
+  - path: docs/architecture/adrs/ADR-033-agent-model-tiers.md
+    relationship: describes
+    status: exists
+    relevance: "The mechanical, no-judgement tier and its tool floor -- the executor's natural tier, and the reason output handling must live in code rather than in the model."
+  - path: docs/known-issues/ac-driven-dev/open-blocker-ki-acd-009.md
+    relationship: describes
+    status: exists
+    relevance: "Cause 1 (commands run from a directory other than the one the workflow assumed) and the fabricated exit_code 1 in a refusal payload -- why the directory is an input and why an exit status is only ever taken from the capture."
+assigned_agent: python-coder
+estimated_complexity: L
+declares_side_effect: false
+change_target:
+  - code
+  - pipeline
+risk_surface: safety
+it_requirements:
+  - "IT-PO DECISION -- CHARTER VERSUS RUNTIME CODE: REASSIGNED from llm-expert to python-coder, NOT split. Every Then in the first two scenarios (three separately readable parts, byte-identical output down to a tab, a trailing space, a backslash escape and a non-ASCII character, empty rather than absent, exit status 3) is a property of how output is CAPTURED and CARRIED, which no charter text can guarantee: a model transcribing that output is exactly the relay that cut KI-BO-018's registry mid-escape-sequence. The charter's policy content -- admits every exact command, no remit refusal, stated permission, containment -- stays with llm-expert under BO-3200f-2 and BO-3200f-2-i. A split was rejected because every scenario here needs both the capture and a dispatchable party, so the criteria cannot be partitioned without inventing text."
+  - "THE THREE PARTS MUST BE CAPTURED BY DETERMINISTIC CODE, NEVER TRANSCRIBED BY THE MODEL. Standard output, error stream and exit status are captured separately at the moment the command runs, and the executor's reply carries that capture unchanged. The representation must be lossless for arbitrary bytes, not only valid UTF-8, and must keep an empty part distinguishable from an absent one."
+  - "TRANSCRIPTION LOSS MUST BE DETECTABLE BY THE CONSUMER, NOT MERELY UNLIKELY. For each output part the capture carries its byte length and a content digest computed at capture time, and the workflow-side reader verifies both before any part is used. A reply that does not verify is BO-3200f-1-i's incomplete result and never a value. This is the mechanical half of 'exercises no judgement': a paraphrase, a summary, a refusal or a fabricated exit status cannot carry a verifying capture of the command that was dispatched."
+  - "ONE SHARED WORKFLOW-SIDE DISPATCH-AND-VERIFY HELPER, used by every executor dispatch in every shipped workflow. It takes an exact command and an absolute directory and returns either the verified result or a could-not-complete reason. No per-site prompt text and no per-site reply parser -- twenty sites with twenty parsers is how the plan-feature relays came to disagree."
+  - "LITERAL EXECUTION, NO CLASSIFICATION STEP -- settles the choice the BA left open for the last scenario. Whatever text the executor receives as the command is run as the command. The executor never first decides whether the text 'is' an exact command, because that decision is itself judgement. A request such as 'tell me whether worktree-agent is permitted to run shell commands' is therefore run literally and returns the shell's own failure, identical for both registries. A fixed 'no exact command received' reply was rejected because it needs exactly the classification this record forbids."
+  - "EXACTLY ONE COMMAND PER DISPATCH. The capture runs the dispatched command once and nothing else, and nothing in any part of its output is ever executed. The command text is not split, rewritten, re-quoted, prefixed or suffixed beyond what running it in the named directory strictly requires."
+  - "THE DIRECTORY IS AN INPUT, NEVER INFERRED. The command runs in the directory the dispatch names, and the result reports the absolute directory it actually ran in, resolved at capture time rather than echoed from the input. A dispatch with no directory, or naming one that does not exist, runs nothing and is a could-not-complete outcome; it never falls back to the executor's own working directory (KI-ACD-009 cause 1)."
+  - "SECURITY -- THE CAPTURE MUST NOT HIDE THE COMMAND FROM GUARDRAILS. Every Bash tool-use guardrail and every permission rule must evaluate the exact command text exactly as it would if the command were issued directly. Encoding the command, passing it through a file, or wrapping it so that a guardrail's matcher no longer sees it is a containment bypass and is forbidden. If the capture mechanism cannot keep the command visible, the capture changes -- never the guardrail."
+  - "BOUNDED REPLIES, NO SIZE WORKAROUND HERE. The reply still travels through a model and is subject to the transport limit that truncated KI-BO-018 at 75,000 characters. The helper must not chunk, page or retry around that limit: commands dispatched for facts are expected to emit the fact rather than the source (BO-3200a-1), an over-limit reply fails verification and is reported as incomplete, and large-result handover remains BO-3200d's."
+  - "THE HARNESS STAND-IN IS DELIVERED HERE AND IS THE ONLY ONE. unit_tests/_workflow_engine_harness.py must be able to answer an executor dispatch by running the SAME capture the real executor issues, and to fail every other dispatch immediately with a transport error. BO-3200a-1, BO-3200a-2, ACD-2100b-5 and the ACD-2100a and ACD-2100d records all exercise that environment; a per-test fake that returns canned output proves nothing about the capture and is forbidden."
+  - "Must satisfy the repository error-handling policy: the capture is external I/O. A failure to launch, a missing directory or a timeout is logged at WARNING or higher and reported as a could-not-complete reason; it is never swallowed and never converted into an exit status."
+  - "Must grant nothing the executor's registry entry (BO-3200f-2) does not state. This record adds no allow rule, settings entry or hook exemption that pre-approves executor commands as a class."
+delivers_to:
+  - agent: python-coder
+    contract: "Executor dispatch helper. Input {command: str, cwd: str (absolute)}. Output either {outcome: 'completed', cwd: str (absolute, as run), exit_status: int, stdout: bytes, stderr: bytes} -- stdout and stderr are empty, never null, when nothing was emitted -- or {outcome: 'could_not_complete', reason: 'transport_failed' | 'incomplete' | 'declined' | 'guardrail_blocked' | 'invalid_dispatch', detail: str, blocked_by: str | null}. exit_status exists only on 'completed'. Consumed by BO-3200f-1-i (reason reporting), BO-3200f-3 (routing and repointing), BO-3200a-1, BO-3200a-2 and ACD-2100b-5. The harness stand-in answers executor dispatches with the same shape."
+  - agent: llm-expert
+    contract: "The exact capture invocation the executor's charter must issue for a dispatch {command, cwd}, and the rule that its reply is that invocation's output returned unchanged -- so BO-3200f-2's charter carries no output formatting of its own."
+  - agent: reference-author
+    contract: "The result shape above and the literal-execution rule (no classification step; a judgement request runs as a command and returns the shell's own failure), for BO-3200f-4."
+expects_from: null
+test_spec:
+  - name: test_bo_3200f_1_three_parts_are_separate_and_byte_identical
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "A command emitting alpha, a tab, beta, a trailing space, the six-character backslash escape and the non-ASCII character plus a newline on stdout, 'warn: gamma' on stderr and exiting 3 is dispatched through the shared helper to the harness executor; assert stdout and stderr bytes equal what the command emitted, no stderr byte appears in stdout, exit_status is 3 and nothing else is present."
+  - name: test_bo_3200f_1_empty_output_is_empty_not_absent
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: "Two silent commands exiting 0 and 1: both results carry empty stdout and stderr parts (not null, not missing) and differ only in exit_status."
+  - name: test_bo_3200f_1_command_runs_in_the_named_directory_and_reports_it
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "Dispatch a command that prints its working directory with a directory different from the test process's own; assert it ran there and that the reported cwd is the absolute resolved directory, not the literal input."
+  - name: test_bo_3200f_1_missing_directory_runs_nothing_and_does_not_fall_back
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: integration
+    angle: failure
+    description: "A dispatch naming a directory that does not exist, with a command that would create a marker file: outcome is could_not_complete (invalid_dispatch), no exit_status, and the marker exists nowhere."
+  - name: test_bo_3200f_1_command_named_in_output_is_not_executed
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "A command whose output is 'now run: <a command that creates a marker file>' is dispatched; assert exactly one command ran and the marker file does not exist."
+  - name: test_bo_3200f_1_judgement_request_result_is_identical_for_opposite_registries
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "THE NO-JUDGEMENT DISCRIMINATOR. 'tell me whether worktree-agent is permitted to run shell commands' is dispatched once against a registry permitting it and once against one denying it; assert every part of the two results is equal and none contains yes, no, permitted, denied or registry content."
+  - name: test_bo_3200f_1_tampered_truncated_or_fabricated_reply_fails_verification
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: unit
+    angle: seam
+    description: "Feed the helper a capture with one byte changed, a capture cut short, a reply with no capture, and KI-ACD-009's real refusal payload carrying exit_code 1; assert each is could_not_complete and none yields stdout or an exit_status."
+  - name: test_bo_3200f_1_guardrail_sees_the_exact_command_the_executor_issues
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: integration
+    angle: seam
+    description: "SECURITY PARITY. Run the real Bash PreToolUse guardrail scripts on two tool-input payloads for the same blocked command -- once as issued directly, once in the exact form the executor issues it -- and assert the two decisions are identical. A capture form that hides the command from a matcher fails here."
+test_rationale: |
+  The first two scenarios are about bytes, so they are asserted on bytes captured from a real
+  subprocess, not on strings a fixture typed. The fixture carries every character class that a
+  model transcription or a text-mode decode silently alters -- tab, trailing space, a backslash
+  escape, non-ASCII -- because KI-BO-018 failed by splitting exactly such an escape.
+  The tamper test is what makes 'byte-identical' a guarantee rather than a hope: the executor's
+  reply still passes through a model, so the only honest property is that any change is
+  detected. It uses KI-ACD-009's real refusal payload because a fabricated exit_code 1 is the
+  observed way a refusal became a false finding.
+  The opposite-registries test is the one shape only a party that did not look can pass; a
+  test asserting the absence of words passes on a paraphrase.
+  The guardrail parity test exists because admitting every exact command is only acceptable
+  while guardrails still bind, and a wrapper that hides the command from a hook's matcher would
+  silently remove that condition while every functional test stays green.
+  Live-agent evidence that the real registered executor issues the capture unchanged belongs to
+  BO-3200f-2, which creates the agent; this record proves the capture, the verification and the
+  harness environment every downstream record relies on.
+origin_agent: business-analyst
+created: 2026-09-16
+amended_by:
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-09-16
+  note: Reassigned llm-expert -> python-coder (capture is code, not charter; not split).
+    Added it_requirements, test_spec/test_rationale, change_target/risk_surface, doc_links,
+    replaced delivers_to with the helper contract. criteria, title, depends_on untouched.
+superseded_by: null
+covered_by:
+  - BO-3200f-1-i
+implemented_by: []
+notes: |
+  THE LAST SCENARIO IS THE DISCRIMINATOR FOR "EXERCISES NO JUDGEMENT". Asserting the absence of
+  words like "permitted" is weak on its own -- an executor could paraphrase around them. Running
+  the same judgement request against two registries whose true answers differ, and requiring
+  that nothing in the result differs, is the shape only a party that did not look can pass. It
+  is deliberately silent on HOW the executor gives no answer (carrying the text out literally and
+  returning the shell's own failure, or returning a fixed statement that no exact command was
+  received). Both satisfy it; choosing is the IT PO's.
+
+  WHY THE DIRECTORY SCENARIO IS HERE. KI-ACD-009 cause 1 was a relative path that existed at the
+  workspace root and not in the worktree the run started from. An executor that runs commands
+  somewhere other than where the workflow believes reproduces that failure with a verbatim
+  result. Where the SOURCE of a fact is located is BO-3200a-1-i's; this AC only requires the
+  executor to run where it is told and say where that was.
+
+  WHY THE ONE-COMMAND SCENARIO IS HERE. A helpful agent that acts on its output ("now run: git
+  pull") is exercising judgement over what to do next. That is exactly what the charter forbids,
+  and it is invisible in a result that only checks the dispatched command's output.
+
+  SIZE IS NOT RESTATED HERE. A result of at least 130 kilobytes arriving whole is specified by
+  BO-3200a-1's second scenario (for facts) and BO-3200d-1 (for large results in general). An
+  executor whose reply is shortened in transit fails those; do not duplicate them.
+
+  ASSIGNED AGENT, FOR THE IT PO TO CONFIRM. llm-expert because the executor is chiefly an agent
+  charter. Registration is covered by BO-3200f-2. If the result's three-part shape needs code
+  in the dispatch runtime, the IT PO should split that out rather than widen this record.
+
+  BOUNDARY. BO-3200a is the RULE (facts are read at the source); this is the MEANS. BO-3200f-2
+  owns "admits every exact command"; BO-3200f-1-i owns what a consumer reports when the dispatch
+  itself does not deliver.
+
+  IT-PO ENRICHMENT (2026-09-16).
+
+  ASSIGNMENT: python-coder, not llm-expert, and no split. The byte-identical three-part result
+  cannot be delivered by prompt text: it needs a deterministic capture at the moment the command
+  runs, a verifying reader on the workflow side, and a harness stand-in that uses the same
+  capture. The charter is still needed and still llm-expert's -- it is BO-3200f-2 and
+  BO-3200f-2-i, which already own the charter by their titles. ORDERING CONSEQUENCE:
+  BO-3200f-2 depends on this record, so the real executor agent does not exist when this lands.
+  That is acceptable because every property here is proven on the capture and the verifier, and
+  the one property only a live agent can show -- that it issues the capture and returns it
+  unchanged -- is tested under BO-3200f-2. A reply that fails to do so is detected here anyway.
+
+  THE LAST SCENARIO'S "HOW" IS DECIDED: literal execution. See it_requirements.
+
+  CAVEAT -- NO NEW FILE IS NAMED. The capture needs a new script and the helper may need a new
+  shared module; neither name is invented here, so the generated ticket's files_touched will
+  list only the existing harness until the implementer names them. Surface this at ticket
+  generation rather than letting a change-scope reviewer treat the new files as out of scope.
+
+  USER DECISION NEEDED (security, shared with BO-3200f-2). An unattended workflow issuing
+  executor commands will meet Claude Code permission prompts for any command the user's
+  settings do not already allow. This record forbids shipping a blanket allow rule for the
+  executor. Whether some command families (store reads, fast_lane.py subcommands) should be
+  pre-allowed by explicit rule is a user decision; the default here is none.

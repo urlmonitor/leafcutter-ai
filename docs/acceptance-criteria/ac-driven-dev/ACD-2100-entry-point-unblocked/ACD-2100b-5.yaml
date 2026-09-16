@@ -2,7 +2,7 @@ id: ACD-2100b-5
 components:
   - ac_driven_dev
   - agent_registry
-readiness: draft
+readiness: reviewed
 priority: medium
 title: "The startup check reads the registry through an exact command instead of asking an agent to judge it"
 component: ac-driven-dev
@@ -34,7 +34,7 @@ doc_links:
   - path: docs/reference/plan-feature-layout-and-startup-checks.md
     relationship: describes
     status: planned
-    relevance: "The reference page authored by ACD-2100d-4 must state that the startup check is a local read, so an operator hitting a transport error knows it is not this check."
+    relevance: "The reference page authored by ACD-2100d-4 must state that the startup check reads the registry through one exact command to the chartered executor, and that an executor dispatch which fails in transit is reported as could-not-check -- never as a permission problem -- so an operator hitting a transport error knows what the report means."
   - path: docs/known-issues/ac-driven-dev.md
     relationship: describes
     status: exists
@@ -55,61 +55,98 @@ assigned_agent: python-coder
 estimated_complexity: M
 it_requirements:
   - "The change must land under templates/. The deployed workflow is build output and does not carry this step at all today."
-  - "The verdict must be a function of the registry contents alone. It must be identical whether dispatch is available or not -- 'skip the check when dispatch is unavailable' is a fail-open regression wearing this record's clothes and is explicitly forbidden."
-  - "The startup path must reach this check and pass it with no network available."
-  - "Removing the round-trip must not remove the halt: the four outcomes ACD-2100b-1 through -3 specify still stop the run, and ACD-2100b-4 still holds over them."
-  - "If a helper that dispatches for this purpose remains in the source for another caller, this behaviour is not satisfied by its absence from the file -- what must be observable is that no dispatch is made on the check's behalf during a run."
-  - "Must satisfy the repository error-handling policy: the local read replaces a network call, so its failure paths are the ones ACD-2100b-1 and ACD-2100b-2 own and must not be swallowed."
-  - "Must not add a per-run cost beyond a single local file read -- this record removes latency from startup and must not reintroduce it elsewhere."
+  - "The verdict must be a function of the registry contents alone. It must be identical whether or not a party that could judge is available. 'Skip the check when the executor cannot be reached' is a fail-open regression, and 'ask a specialist when one is available' is the relay this record removes; both are explicitly forbidden."
+  - "FAIL CLOSED WHEN THE EXECUTOR DISPATCH DOES NOT COMPLETE. An executor dispatch is a round-trip, so a transport failure remains possible on this path. When the dispatch fails in transit, comes back incomplete, is declined or is blocked by a guardrail, the check reports that it could not check, with BO-3200f-1-i's reason -- BO-3200e's undetermined outcome -- and the run stops exactly as ACD-2100b-1 and ACD-2100b-4 require. It never reports a permission verdict on the strength of a failed dispatch and never proceeds past the check."
+  - "Removing the judging relay must not remove the halt: the four outcomes ACD-2100b-1 through -3 specify still stop the run, and ACD-2100b-4 still holds over them."
+  - "THE EVIDENCE IS THE RUN'S OWN DISPATCH RECORD: every dispatch it attributes to the check is addressed to the chartered executor and carries an exact command, in both the no-judgement environment and the every-party-dispatchable one. If a helper that asks another party to read the registry remains in the source for another caller, this behaviour is judged by the record, not by that helper's absence from the file."
+  - "Must satisfy the repository error-handling policy: the executor dispatch is external I/O; its could-not-complete paths and the command's own failure paths are logged at WARNING or higher and reported through ACD-2100b-1, ACD-2100b-2 and BO-3200f-1-i, never swallowed."
+  - "Must not add a per-run cost beyond one executor dispatch, whose command reads the registry once and emits only what the check needs -- whether the agent is listed and its declared permits_shell value. Emitting the whole registry through the executor's reply would reintroduce KI-BO-018's truncation by a new route."
+  - "THE COMMAND EMITS THE DECLARED VALUE, NOT THE VERDICT. The check computes the verdict from that value, so ACD-2100b-2's uninterpretable, ACD-2100b-3's absent and denied remain distinguishable; a registry that is missing or unreadable arrives as the command's non-zero exit status and error stream and maps to ACD-2100b-1's outcome."
+  - "Coverage must use unit_tests/_workflow_engine_harness.py with BO-3200f-1's executor stand-in: executor dispatches are answered by running the same capture the real executor issues, and every other dispatch fails immediately with a transport error, as the criteria's Given states."
 test_spec:
-  - name: test_startup_check_passes_with_every_dispatch_attempt_failing
+  - name: test_startup_check_passes_when_only_the_executor_can_answer
     target_dir: unit_tests/workflows/
     framework: unittest
     type: integration
     angle: criterion
     description: >-
-      Dispatch made impossible -- every attempt fails immediately with a transport
-      error -- and a registry that permits the worktree-creation agent; the check
-      completes with the permitted verdict and the run proceeds to the next step.
-  - name: test_no_dispatch_is_made_on_the_checks_behalf_during_a_run
+      Executor dispatches answered through the real capture, every other dispatch
+      failing immediately with a transport error, and a registry that permits the
+      worktree-creation agent; the check completes with the permitted verdict and the
+      run proceeds to the next step.
+  - name: test_every_dispatch_attributed_to_the_check_is_an_exact_command_to_the_executor
     target_dir: unit_tests/workflows/
     framework: unittest
     type: integration
     angle: reachability
     surface_invoked: "the plan-feature workflow driven through the workflow runner, with the run's own dispatch record read back afterwards"
     description: >-
-      The run's record of what it dispatched contains no entry attributable to the
-      startup check -- observed from the record the run produced, not from the absence
-      of a call in the source.
-  - name: test_verdict_is_identical_with_and_without_dispatch_available
+      The run's record of what it dispatched attributes to the startup check only
+      dispatches addressed to the chartered executor carrying an exact command, and none
+      addressed to any other party -- observed from the record the run produced, not
+      from the source.
+  - name: test_verdict_and_dispatches_are_identical_with_every_party_dispatchable
     target_dir: unit_tests/workflows/
     framework: unittest
     type: integration
     angle: seam
     description: >-
-      The same registry produces the same verdict in two runs, one with dispatch made
-      impossible and one with dispatch available -- so the verdict comes from the file
-      rather than from the transport.
-  - name: test_removing_the_round_trip_does_not_remove_the_halt
+      The same registry is checked twice: once with only the executor answering, once
+      with every party dispatchable and a judging party scripted to answer the opposite
+      verdict. Both runs reach the same verdict, and in both the check's dispatches are
+      only exact commands to the executor -- so the verdict comes from the file, not
+      from whoever is available to answer.
+  - name: test_removing_the_judging_relay_does_not_remove_the_halt
     target_dir: unit_tests/workflows/
     framework: unittest
     type: integration
     angle: failure
     description: >-
-      With dispatch impossible and a registry that withholds permission, the run still
-      stops at the check -- the local read is not a bypass.
+      With only the executor answering and a registry that withholds permission, the run
+      still stops at the check -- reading through the executor is not a bypass.
+  - name: test_executor_dispatch_that_does_not_complete_reports_could_not_check_and_stops
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: integration
+    angle: failure
+    description: >-
+      A permitting registry, with the check's executor dispatch made to fail in transit,
+      then to return an incomplete capture, then to be declined. Each run stops at the
+      check reporting could-not-check with the distinct BO-3200f-1-i reason, reports no
+      permission verdict, and dispatches no authoring agent.
+  - name: test_executor_reply_for_the_real_registry_is_bounded_and_matches_a_whole_read
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    description: >-
+      Against the repository's actual agent registry (over 130 KB), the command's
+      standard output carries only the agent's listing and declared permission, stays
+      well under the 75,000-character transport limit, and yields the same verdict as
+      reading the whole file directly.
 test_rationale: >-
-  Making dispatch impossible and requiring the run to get past the check anyway is the
-  only Given that cannot be satisfied by a source scan. A test that greps for the
-  absence of a dispatch call passes on a call that is present but unreachable, and fails
-  on a correct implementation that keeps the helper for another purpose -- so the
-  evidence has to be the run's own dispatch record. The third assertion is what stops
-  the fix being "skip the check when dispatch is unavailable": the verdict must be the
-  same either way because it comes from the file, not from the transport. The fourth
-  keeps the halt, because a local read that always returns permitted would pass the
-  first three.
+  Only the executor answering, and requiring the run to get past the check anyway, is the
+  Given that cannot be satisfied by a check that still asks a party to read and interpret
+  the registry -- a literal-command executor gives such a request nothing usable. The
+  evidence is the run's own dispatch record, because a source scan passes on a present but
+  unreachable call and fails on a correct implementation that keeps an old helper. The
+  seam test runs a second time with a judging party available and scripted to answer the
+  OPPOSITE verdict: a check that consults it whenever it can changes its verdict or its
+  dispatch record there, and nowhere else. The halt test stops an implementation that
+  always returns permitted. The could-not-check test replaces the old no-network
+  requirement, which the executor decision made unsatisfiable: a transport failure can
+  still happen, so what must be proven is that it fails closed and is labelled for what it
+  is. The real-registry test pins the size hazard: the registry is larger than the
+  transport limit that truncated KI-BO-018, so the command must emit the entry, not the
+  file.
 delivers_to: null
-expects_from: null
+expects_from:
+  - ac_id: BO-3200f-1
+    contract: "The executor dispatch helper ({command, cwd} -> verified {outcome: 'completed', cwd, exit_status, stdout, stderr} or {outcome: 'could_not_complete', reason, detail, blocked_by}) and the harness stand-in that answers executor dispatches through the same capture while every other dispatch fails immediately."
+  - ac_id: BO-3200f-1-i
+    contract: "The could-not-check mapping: an executor dispatch that fails in transit, comes back incomplete, is declined or is blocked becomes BO-3200e-1's undetermined outcome with a distinct reason and no exit status."
+  - ac_id: BO-3200f-2
+    contract: "The executor's agent id, registered with permits_shell: true, so the check's own dispatch is to a party the registry permits."
 origin_agent: business-analyst
 created: 2026-08-25
 amended_by:
@@ -190,6 +227,48 @@ amended_by:
       - notes paragraphs "THE FIRST GIVEN IS THE TEST" and "THE FOURTH CAUSE IS AVOIDABLE".
     The generated ticket in implemented_by was built from the OLD criteria and is stale too;
     it was not edited.
+- reason: technical-re-enrichment-after-premise-narrowing
+  by: it-po
+  at: 2026-09-16
+  note: |
+    Rewrote every IT PO field the BA's 2026-09-16 entry listed as stale. criteria, title,
+    depends_on and req_status untouched. readiness draft -> reviewed. implemented_by ticket not
+    edited (tickets out of scope); it must be regenerated from this record.
+
+    OLD it_requirements[1] (verbatim): "The verdict must be a function of the registry contents
+    alone. It must be identical whether dispatch is available or not -- 'skip the check when
+    dispatch is unavailable' is a fail-open regression wearing this record's clothes and is
+    explicitly forbidden."
+    OLD it_requirements[2] (verbatim, UNSATISFIABLE under the executor decision): "The startup
+    path must reach this check and pass it with no network available."
+    OLD it_requirements[3] (verbatim): "Removing the round-trip must not remove the halt: the four
+    outcomes ACD-2100b-1 through -3 specify still stop the run, and ACD-2100b-4 still holds over
+    them."
+    OLD it_requirements[4] (verbatim): "If a helper that dispatches for this purpose remains in
+    the source for another caller, this behaviour is not satisfied by its absence from the file
+    -- what must be observable is that no dispatch is made on the check's behalf during a run."
+    OLD it_requirements[5] (verbatim): "Must satisfy the repository error-handling policy: the
+    local read replaces a network call, so its failure paths are the ones ACD-2100b-1 and
+    ACD-2100b-2 own and must not be swallowed."
+    OLD it_requirements[6] (verbatim): "Must not add a per-run cost beyond a single local file
+    read -- this record removes latency from startup and must not reintroduce it elsewhere."
+    OLD test_spec names (descriptions superseded in full): test_startup_check_passes_with_every_
+    dispatch_attempt_failing; test_no_dispatch_is_made_on_the_checks_behalf_during_a_run;
+    test_verdict_is_identical_with_and_without_dispatch_available;
+    test_removing_the_round_trip_does_not_remove_the_halt.
+    OLD test_rationale first sentence (verbatim): "Making dispatch impossible and requiring the
+    run to get past the check anyway is the only Given that cannot be satisfied by a source
+    scan."
+    OLD expects_from: null. OLD doc_links[0].relevance (verbatim): "The reference page authored
+    by ACD-2100d-4 must state that the startup check is a local read, so an operator hitting a
+    transport error knows it is not this check."
+
+    WHAT REPLACED THEM: it_requirements[2] is now the fail-closed behaviour -- an executor
+    dispatch that fails in transit makes the check report could-not-check (ACD-2100b-1 / b-4,
+    BO-3200e, BO-3200f-1-i) and stop. Two it_requirements added: the command emits the declared
+    value rather than the verdict or the whole registry, and coverage uses the executor stand-in.
+    Six test_spec entries replace four; expects_from set to BO-3200f-1, BO-3200f-1-i and
+    BO-3200f-2.
 superseded_by: null
 covered_by: []
 implemented_by:
@@ -238,4 +317,26 @@ notes: |
   edge with no depends_on mirror would create a contract the build sequencer cannot see
   (KI-ACD-015, open) and that nothing enforces. The interactions are stated in
   it_requirements instead, where the coder will actually read them.
-target_epic: EPIC-StartingNewWorkTheProperWayAlways
+
+  2026-09-16 (it-po) -- RE-ENRICHMENT AFTER THE PREMISE NARROWING. READ THIS BEFORE THE
+  PARAGRAPHS ABOVE.
+
+  WHAT THE NARROWING GIVES UP, STATED FOR THE TECHNICAL LAYER. The old record removed the live
+  round-trip and with it KI-ACD-009's TRANSPORT cause ("Connection lost mid-response"). A
+  dispatch to the chartered executor is still a round-trip, so this record NO LONGER removes that
+  cause. It removes only the REFUSAL cause -- a party declining a registry read on charter
+  grounds. The transport cause is now handled, not removed: the check fails closed and reports
+  could-not-check with the reason named, instead of printing a permission verdict. The
+  paragraphs "THE FOURTH CAUSE IS AVOIDABLE" and "THE FIRST GIVEN IS THE TEST" above describe the
+  superseded premise and are no longer delivered; the paragraph "ORDER OF LANDING" is also
+  superseded in one respect -- ACD-2100b-1 through -3 do NOT lose the dispatch-failure cause, it
+  becomes a could-not-check outcome that ACD-2100b-4's halt must cover.
+
+  expects_from IS NOW SET, reversing the 2026-08-25 it-po paragraph above, because the user
+  directed it and the dependency is real: this record cannot be built without the executor. The
+  KI-ACD-015 hazard that paragraph names is live -- depends_on carries only ACD-2100b.
+  RECOMMENDED BA EDIT: add BO-3200f-1, BO-3200f-1-i and BO-3200f-2 to depends_on.
+
+  SIZE. The real registry is larger than the 75,000-character limit that truncated KI-BO-018. The
+  check's command must therefore emit the one entry it needs, not the file; a command that prints
+  the registry for the workflow to parse reproduces KI-BO-018 through the executor.

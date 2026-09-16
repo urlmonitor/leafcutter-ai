@@ -54,7 +54,7 @@ it_requirements:
   - "The change must land under templates/. This record's evidence must be gathered against the source copy; ACD-2100d-1 is where the deployed copy is exercised."
   - "The class must be closed by a single resolution used by every support-file access on the startup path -- not by five per-site repairs. A per-site repair leaves the sixth site to be added the same way the last five were written."
   - "The last Then clause must be established from what the process actually did -- the files it opened or the commands it issued, as recorded by the run itself or by the operating system -- never from a source scan. A scan for the literal string passes on a path that is never executed and fails on a correct path built by concatenation."
-  - "All three runs must complete their startup path with no network available, so a transport failure cannot be mistaken for a resolution failure."
+  - "EVIDENCE IS GATHERED WITH NO LIVE MODEL OR NETWORK TRANSPORT. All three runs are driven under the repository's workflow engine harness, with executor dispatches answered by BO-3200f-1's stand-in running the real capture locally in the directory each dispatch names -- so a transport failure cannot be mistaken for a resolution failure, and files opened by executor-issued commands are observable like any other. This constrains the test environment, not production: in a live run executor dispatches are round-trips, and one that does not complete is a could-not-check outcome (BO-3200f-1-i), not a resolution failure."
   - "Must satisfy the repository error-handling policy across every resolution site touched."
   - "The startup path must reach its first question in under 2 seconds from each of the three directories on a cold run, so that a resolution built on a filesystem search does not become the new startup cost."
 test_spec:
@@ -112,7 +112,23 @@ expects_from:
     contract: "A pause store whose read, write and read-back all resolve to the project's own store from any working directory."
 origin_agent: business-analyst
 created: 2026-08-25
-amended_by: []
+amended_by:
+- reason: premise-review-chartered-executor
+  by: it-po
+  at: 2026-09-16
+  note: |
+    Premise review after the 2026-09-16 chartered-executor decision (BO-3200f). Verdict: FIXED
+    (IT PO FIELDS). criteria untouched and compatible.
+
+    OLD it_requirements[3] (verbatim): "All three runs must complete their startup path with no
+    network available, so a transport failure cannot be mistaken for a resolution failure."
+
+    WHY IT CHANGED. "Startup path" here is the whole workflow run to its first user question,
+    not the setup script alone. As a property of a live run it is unsatisfiable -- every agent()
+    call is a round-trip. Its purpose (keep transport failures out of a resolution verdict) is
+    kept, restated as a test-environment constraint with the executor stand-in, and the clause
+    now states that files opened by executor-issued commands count toward the last Then.
+    readiness left as approved for the user to confirm.
 superseded_by: null
 covered_by: []
 implemented_by:

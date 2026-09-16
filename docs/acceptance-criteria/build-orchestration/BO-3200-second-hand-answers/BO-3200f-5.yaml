@@ -1,0 +1,95 @@
+id: BO-3200f-5
+title: "A component diagram shows the executor as the only party that carries out exact commands for a workflow, and specialists reached only for judgement"
+component: build-orchestration
+components:
+  - documentation_system
+  - build_orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: critical
+roadmap_phase: phase_1
+criteria: |
+  Given a reader tracing how a workflow obtains a recorded fact or carries out a chore,
+  When they open the component diagram for dispatch from a workflow,
+  Then it shows the workflow body with no direct access to files or commands, the chartered
+    executor as the only party that carries out exact commands on the workflow's behalf,
+    specialists reached only for judgement, and the agent registry as the source of the
+    executor's stated permission,
+    And no reporting specialist is shown carrying out an exact command.
+
+  Given the diagram,
+  When its parties and connections are compared with the shipped workflows and the agent
+    registry,
+  Then every party and connection it shows exists there,
+    And every exact-command dispatch in the shipped workflows corresponds to a connection the
+    diagram shows to the executor.
+depends_on:
+  - BO-3200f
+  - BO-3200f-1
+  - BO-3200f-2
+  - BO-3200f-3
+doc_links:
+  - path: docs/architecture/diagrams/
+    relationship: describes
+    status: exists
+    relevance: "Where the component diagram lands."
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: modifies
+    status: exists
+    relevance: "The component page the diagram must be reachable from."
+  - path: docs/architecture/components/agent-registry.md
+    relationship: describes
+    status: exists
+    relevance: "The registry the diagram shows as the source of the executor's stated permission."
+  - path: docs/architecture/diagrams/c3-008-workflow-dispatch-executor-components.md
+    relationship: creates
+    status: planned
+    relevance: "THE TARGET DIAGRAM. Next free c3 sequence number at enrichment time; if taken when authored, use the next free one and update this link in the same commit."
+assigned_agent: architecture-diagram-author
+estimated_complexity: S
+declares_side_effect: false
+change_target: docs
+risk_surface: internal
+it_requirements:
+  - "IT-PO: ASSIGNMENT CONFIRMED architecture-diagram-author, via the write-c4-diagram skill. TARGET: a C3 component diagram at docs/architecture/diagrams/c3-008-workflow-dispatch-executor-components.md, reachable from the build-orchestration component page."
+  - "DRAW THE CURRENT STATE FROM BO-3200f-3's LISTING, NOT FROM INTENT. Every exact-command connection shown must correspond to a site in the routing check's report, and every such site must appear. If the diagram is authored while mis-addressed sites remain, they are drawn as they are and marked as such, not omitted -- the second scenario's second clause exists to stop the target state being taught as the current one."
+  - "SHOW THE CONTAINMENT BOUNDARY: the guardrails and permission rules sit between the executor and the commands it runs, so a reader does not take 'the only party that carries out exact commands' to mean an unguarded one."
+  - "SHOW the agent registry as the source of the executor's stated permission, and specialists reached only for judgement dispatches."
+  - "Tracked architecture doc subject to check-doc-frontmatter and check-doc-links in the same commit; frontmatter components use graph ids (build_orchestration)."
+test_required: false
+test_rationale: >-
+  A diagram has no executable surface. Its one mechanically checkable claim -- that its
+  connections match the shipped dispatch set -- is discharged by requiring it to be drawn from
+  BO-3200f-3's per-site listing, which is produced by an executing check with its own tests. A
+  test over the diagram text could only assert that names appear in it, which passes on a
+  diagram of the target state that omits the mis-addressed sites, the exact failure the
+  criteria guard against. Frontmatter and links are covered by live commit gates.
+delivers_to: null
+expects_from:
+  - ac_id: BO-3200f-3
+    contract: "The routing check's per-site listing {examined, sites: [{workflow, step, addressed_to, result_use, stated_permission, addressing_verdict}]}, read for the second scenario's comparison instead of re-deriving the dispatch set."
+  - ac_id: BO-3200f-2
+    contract: "The executor's registry entry as the source of its stated permission."
+origin_agent: business-analyst
+created: 2026-09-16
+amended_by:
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-09-16
+  note: Assignment confirmed architecture-diagram-author. Named the target diagram (creates,
+    planned), added it_requirements, test_required false with rationale, change_target/
+    risk_surface, expects_from BO-3200f-2 (in depends_on); f-3 contract made specific.
+    criteria, title, depends_on untouched.
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Satisfies BO-3200f's `component-diagram` documentation trigger.
+
+  THE SECOND CLAUSE OF THE SECOND SCENARIO IS WHAT KEEPS THE DIAGRAM HONEST. A diagram that shows
+  the executor correctly but omits the twenty-odd dispatches still addressed to status-checker
+  passes the first scenario and teaches the target state as if it were the current one. Reading
+  BO-3200f-3's listing makes the comparison mechanical.

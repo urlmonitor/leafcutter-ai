@@ -1,5 +1,5 @@
 id: BO-3200a-2
-title: "Every path that needs a project fact still works with specialists unavailable, and one that does not is named"
+title: "Every path that needs a project fact still works when no one can be asked to judge it, and one that does not is named"
 component: build-orchestration
 components:
   - build_orchestration
@@ -8,20 +8,35 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: approved
+readiness: reviewed
 priority: medium
 roadmap_phase: phase_1
 criteria: |
   Given every path through which a build resolves a fact about the project that it then
     branches on,
-  When each is exercised in an environment where dispatching a specialist is impossible,
+  When each is exercised in an environment in which no party can be asked to judge anything --
+    the only party that can be dispatched is one chartered to carry out an exact command and
+    return its output verbatim, whose charter admits every exact command so it has no grounds to
+    decline one, and which gives no answer to a request to look, decide, interpret or summarise;
+    every dispatch to any other party fails immediately,
   Then every one of them obtains its value and proceeds.
 
-  Given one such path restored to obtaining its fact by dispatching a specialist, while every
-    other path reads directly,
+  Given one such path restored to obtaining its fact by asking a specialist to read, decide or
+    interpret it, while every other path obtains its fact with no judgement requested of anyone,
   When all paths are exercised in that same environment,
   Then the restored path is reported as depending on a relayed fact and is named,
     And the fact that every other path succeeds does not suppress the report.
+
+  Given a path that obtains its fact through a dispatch to that chartered party carrying an exact
+    command, and takes the value from the output returned,
+  When the paths are exercised,
+  Then that path is not reported as depending on a relayed fact.
+
+  Given a path that first asks another party to read, decide or interpret the fact and, when that
+    dispatch fails, obtains the value through an exact command to the chartered party,
+  When the paths are exercised in that same environment,
+  Then the path is reported as depending on a relayed fact and is named, although it obtains its
+    value and proceeds.
 
   Given a path that dispatches a specialist for a judgement rather than for a fact — the value
     it returns being an opinion the build records rather than a value it branches on,
@@ -52,48 +67,68 @@ change_target:
 risk_surface: contract_boundary
 it_requirements:
   - "IT-PO DECISION — THE DECLARATION MECHANISM FOR A JUDGEMENT PATH. The BA recorded this as the open residual: without it the sweep either false-positives on every judgement dispatch or is quietly narrowed until it means nothing. Settled as follows, and all five parts are required together."
-  - "(1) WHERE IT LIVES. Every dispatch site carries an explicit `result_use` field on the dispatch options object itself — the same object the runtime already reads for agent type and label. Permitted values: `fact` and `judgement`. A `judgement` declaration must also carry a non-empty `judgement_reason` string. It is NOT a separate registry, allowlist or config file: a second surface drifts from the code, and the drift is invisible because both look correct in isolation."
+  - "(1) WHERE IT LIVES. Every dispatch site carries an explicit `result_use` field on the dispatch options object itself — the same object the runtime already reads for agent type and label. Permitted values: `fact`, `chore` and `judgement`. `chore` (added 2026-09-16 with BO-3200f-3) marks a side effect such as a claim or a release: it is addressed to the executor like a fact, but it is not a value the build branches on, so this record does not exercise it for a value. A `judgement` declaration must also carry a non-empty `judgement_reason` string. It is NOT a separate registry, allowlist or config file: a second surface drifts from the code, and the drift is invisible because both look correct in isolation."
   - "(2) ABSENCE MEANS `fact`, AND AN UNDECLARED SITE FAILS THE SWEEP. The exemption is opt-OUT by explicit declaration, never opt-in by omission. If a missing declaration were tolerated, the sweep's scope would shrink silently with every dispatch anyone adds — which is precisely how building-epics §2.1-R1 stopped applying to the agent that stalled."
   - "(3) THE DECLARATION IS NEVER INFERRED. Not from the prompt text, not from the agent name, not from the label, not from the returning value's shape. Any of those is the text heuristic the BA correctly rejected."
-  - "(4) THE DECLARATION IS VERIFIED, NOT TRUSTED — this is what stops 'declare everything judgement' being the cheap way out. A declared-judgement path is still EXERCISED with specialists unavailable. It is not required to obtain its value; it IS required to reach a terminal outcome, recording the judgement as unobtained in BO-3200e's vocabulary. If the run cannot terminate without the value, the build BRANCHES on it — so it was a fact, the declaration is contradicted by observation, and the path is reported as a falsely-declared judgement. The declaration therefore selects WHICH assertion applies, never whether the path is examined. Every path is examined either way."
+  - "(4) THE DECLARATION IS VERIFIED, NOT TRUSTED — this is what stops 'declare everything judgement' being the cheap way out. A declared-judgement path is still EXERCISED in the no-judgement environment — only the chartered executor answers, and only as a literal command; every other dispatch fails immediately. It is not required to obtain its value; it IS required to reach a terminal outcome, recording the judgement as unobtained in BO-3200e's vocabulary. If the run cannot terminate without the value, the build BRANCHES on it — so it was a fact, the declaration is contradicted by observation, and the path is reported as a falsely-declared judgement. The declaration therefore selects WHICH assertion applies, never whether the path is examined. Every path is examined either way."
   - "(5) THE EXEMPT SET IS REPORTED ON EVERY RUN, clean or not: the count and the list of declared-judgement dispatches with their stated reasons. A silently growing exemption set is how a sweep is narrowed until it means nothing, and it is invisible unless the exemptions are enumerated."
   - "THE PATH SET MUST BE DERIVED FROM THE DEPLOYED SURFACE, not hard-coded. A path added later must be swept without editing the sweep. The parent L0's count of roughly 69 errand-runner dispatches is evidence to re-measure, never a list to encode."
   - "A VIOLATION MUST NOT BE SUPPRESSED BY SUCCESS ELSEWHERE: per-path verdicts, an aggregate report, no early return, no summarisation that collapses several named paths into one line."
   - "A SWEEP THAT EXERCISED NO PATHS MUST FAIL, not report clean, and a path that could not be exercised must be reported as not-exercised rather than omitted (KI-ACS-001)."
-  - "Coverage must use unit_tests/_workflow_engine_harness.py to produce the specialists-unavailable environment by withholding the dispatch surface from the real workflows."
+  - "Coverage must use unit_tests/_workflow_engine_harness.py with BO-3200f-1's executor stand-in to produce the no-judgement environment: executor dispatches are answered by running the same capture the real executor issues, and every other dispatch fails immediately with a transport error. Withholding the dispatch surface entirely is no longer the environment -- it makes every read impossible once reads go through the executor."
+  - "IT-PO DECISION (2026-09-16) -- A FACT DISPATCH ADDRESSED TO A NON-EXECUTOR PARTY IS NOT A VIOLATION IN ITSELF IN THIS RECORD. This record's verdict is OBSERVATIONAL: a path is reported from what exercising it shows, never from how its dispatch is addressed in the source. The static addressing violation is BO-3200f-3's verdict on the same site in the same report. So a fact dispatch to status-checker is reported twice, for two different reasons -- mis_addressed there (from the source, without running), relayed_fact here (from the run) -- and a correctly addressed path that still relays by another route is caught only here."
+  - "SCENARIO 3 -- AN EXACT COMMAND TO THE EXECUTOR IS NOT A RELAY. A path whose resolution dispatches only to the executor, carrying an exact command, and takes its value from a reply that verified as BO-3200f-1's capture, is `completed`. It is recognised from the run's dispatch record -- addressee and verification -- never from the prompt text."
+  - "SCENARIO 4 -- A FALLBACK IS A RELAY EVEN WHEN IT SUCCEEDS. A path whose dispatch record for the resolution contains any dispatch to a party other than the executor is reported relayed_fact although it obtained its value. The report distinguishes relay_kind 'direct' (the path could not obtain its value without the judging party) from 'fallback' (it obtained it only after the judging party's dispatch failed), because the remedies differ: build the executor read, versus delete the judging-party attempt."
+  - "ONE INVENTORY, SHARED WITH BO-3200f-3. The path set is the fact- and judgement-declared sites of BO-3200f-3's dispatch-site inventory, and the exercise verdict is added to that record's report per site. No second walker and no second report; whichever of the two records lands second extends the first. This is how the path set stays derived from the deployed surface (requirement above) without a second derivation."
 delivers_to:
   - agent: python-coder
-    contract: "The `result_use` dispatch-site declaration ({result_use: 'fact' | 'judgement', judgement_reason: str}) and the relay sweep's report: {paths: [{name: str, state: 'completed' | 'relayed_fact' | 'falsely_declared_judgement' | 'not_exercised', declaration: str}], exempt: [{name: str, reason: str}], total: int}."
+    contract: "The `result_use` dispatch-site declaration ({result_use: 'fact' | 'chore' | 'judgement', judgement_reason: str}) and the exercise verdict added per site to BO-3200f-3's shared report: {exercise_verdict: 'completed' | 'relayed_fact' | 'falsely_declared_judgement' | 'not_exercised' | 'not_applicable', relay_kind: 'direct' | 'fallback' | null, dispatches_observed: [{addressed_to: str, exact_command: bool, verified: bool}]}, plus exempt: [{name: str, reason: str}] and total: int. 'not_applicable' is used only for chore sites."
   - agent: reference-author
-    contract: "The sweep's discriminating rule stated as a question an author can apply to their own dispatch before the sweep does — 'would the build still reach a terminal outcome with no specialist available' — plus the declaration's field names, so BO-3200a-3's documentation and this enforcement cannot diverge."
+    contract: "The sweep's discriminating rule stated as a question an author can apply to their own dispatch before the sweep does — 'would the build still reach a terminal outcome if nobody could be asked to judge, with only the executor carrying out exact commands' — plus the declaration's field names and its three values, so BO-3200a-3's documentation and this enforcement cannot diverge."
 expects_from:
   - ac_id: BO-3200a-1
-    contract: "The direct source-read resolver {value, outcome, source_path, looked_in}. BO-3200a-1 proves one path reads directly; this AC proves no path still relays."
+    contract: "The source-read resolver {value, outcome, source_path, looked_in, uninspectable_reason} whose call path makes only exact-command dispatches to the executor. BO-3200a-1 proves one path requests no judgement; this AC proves no path still relays."
+  - ac_id: BO-3200f-1
+    contract: "The executor dispatch helper and the harness stand-in that answers executor dispatches through the real capture while every other dispatch fails immediately -- the environment every scenario here runs in."
+  - ac_id: BO-3200f-3
+    contract: "The shared dispatch-site inventory and report {examined, sites: [{workflow, step, addressed_to, result_use, stated_permission, addressing_verdict}]}, which this record extends with exercise_verdict rather than re-deriving."
 test_spec:
-  - name: test_bo_3200a_2_every_fact_path_completes_with_specialists_unavailable
+  - name: test_bo_3200a_2_every_fact_path_completes_when_no_party_can_be_asked_to_judge
     target_dir: unit_tests/workflows/
     framework: unittest
     type: integration
     angle: criterion
-    description: "Exercise every derived path in an environment where dispatch is impossible; assert each obtains its value and proceeds, and that the report accounts for every path with an explicit state."
+    description: "Exercise every fact-declared path from the shared inventory in the no-judgement environment (executor answers through the real capture, every other dispatch fails immediately); assert each obtains its value and proceeds, and that the report accounts for every path with an explicit exercise_verdict."
   - name: test_bo_3200a_2_one_restored_relay_is_named_despite_the_others_passing
     target_dir: unit_tests/workflows/
     framework: unittest
     type: integration
     angle: seam
-    description: "THE PARTIAL-FIX TEST. Restore exactly one path to obtaining its fact by dispatch while every other reads directly; assert that path is named as relayed and the other paths' success does not suppress or summarise the report away."
+    description: "THE PARTIAL-FIX TEST. Restore exactly one path to asking a specialist to read or interpret its fact while every other obtains its fact through the executor; assert that path is named relayed_fact with relay_kind 'direct' and the other paths' success does not suppress or summarise the report away."
   - name: test_bo_3200a_2_declared_judgement_path_is_not_reported_as_a_relay
     target_dir: unit_tests/workflows/
     framework: unittest
     type: integration
     angle: boundary
-    description: "A path declaring result_use: judgement with a reason, whose returned value the build records rather than branches on, reaches a terminal outcome with specialists unavailable (recording the judgement unobtained) and is NOT reported. Keeps judgement delegation available."
+    description: "A path declaring result_use: judgement with a reason, whose returned value the build records rather than branches on, reaches a terminal outcome in the no-judgement environment (recording the judgement unobtained) and is NOT reported. Keeps judgement delegation available."
   - name: test_bo_3200a_2_falsely_declared_judgement_is_caught_by_observation
     target_dir: unit_tests/workflows/
     framework: unittest
     type: integration
     angle: seam
-    description: "THE ANTI-ABUSE TEST. A path declares result_use: judgement but actually branches on the returned value, so with specialists unavailable it cannot reach a terminal outcome. Assert the sweep reports it as a falsely-declared judgement and names it. Without this test, declaring everything judgement empties the sweep."
+    description: "THE ANTI-ABUSE TEST. A path declares result_use: judgement but actually branches on the returned value, so in the no-judgement environment it cannot reach a terminal outcome. Assert the sweep reports it as a falsely-declared judgement and names it. Without this test, declaring everything judgement empties the sweep."
+  - name: test_bo_3200a_2_exact_command_to_the_executor_is_not_reported_as_a_relay
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: "SCENARIO 3. A path that obtains its fact through one dispatch to the executor carrying an exact command, taking the value from the verified capture, is reported completed and not relayed_fact -- asserted from the run's dispatch record, not the prompt text."
+  - name: test_bo_3200a_2_judging_party_first_then_executor_fallback_is_reported
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: integration
+    angle: seam
+    description: "SCENARIO 4. A path first dispatches a specialist to interpret the fact and, when that dispatch fails, obtains the value through the executor. Assert it obtains its value AND is reported relayed_fact with relay_kind 'fallback', named, with both dispatches listed in dispatches_observed -- so scenario 3's exemption does not absorb it."
   - name: test_bo_3200a_2_undeclared_dispatch_site_fails_the_sweep
     target_dir: unit_tests/workflows/
     framework: unittest
@@ -113,10 +148,17 @@ test_spec:
     angle: failure
     description: "Adding a path to the deployed surface fixture makes it appear in the report with the sweep unmodified; and a sweep that exercises zero paths exits non-zero rather than reporting clean."
 test_rationale: |
-  Fact-versus-judgement cannot be decided by looking at a dispatch, which is why the BA made the
-  observable property "the path still completes with no specialist available". That leaves one
-  residual — a genuine judgement path legitimately cannot complete — and the tests here close it
-  from both sides rather than by narrowing the sweep.
+  Fact-versus-judgement cannot be decided by looking at a dispatch, which is why the observable
+  property is "the path still completes when nobody can be asked to judge, with only the executor
+  carrying out exact commands". That leaves one residual — a genuine judgement path legitimately
+  cannot complete — and the tests here close it from both sides rather than by narrowing the
+  sweep.
+  Scenarios 3 and 4 are a pair in the same way. The executor-path test keeps the sweep from
+  reporting the very reads the chartered-executor decision prescribes; the fallback test keeps
+  that exemption from absorbing a path that asks a judging party first and only succeeds by
+  falling back -- which passes scenario 1 in this environment and relays in production. Both are
+  asserted from the run's dispatch record, since the prompt text of a fallback and of a clean
+  executor read can look identical.
   The pair that matters is the declared-judgement test and the falsely-declared test. The first
   keeps judgement delegation available; the second makes the declaration a claim that OBSERVATION
   can contradict, so declaring everything judgement fails rather than exempting. Without the
@@ -139,10 +181,139 @@ amended_by:
 - action: approved
   agent: approve_acs
   date: '2026-08-26'
+- reason: premise-narrowed-from-no-dispatch-to-no-judgement-criteria-changed-reapproval-required
+  by: business-analyst
+  at: 2026-09-16
+  note: |
+    A REAL NARROWING OF AN APPROVED AC, NOT A WORDING TIDY-UP. Authorised by the user
+    (BrainCandy) on 2026-09-16, explicitly for this record, following the chartered-executor
+    decision recorded in BO-3200f's notes and the knock-on flagged in BO-3200a-1's 2026-09-16
+    amended_by entry. readiness demoted approved -> draft so the approval gate is re-run rather
+    than silently inherited (ACS-1300a-1-i / ACS-1300a-1 precedent: criteria changed on an
+    already-approved record).
+
+    WHAT THE CRITERIA SAID BEFORE (verbatim):
+      Given every path through which a build resolves a fact about the project that it then
+        branches on,
+      When each is exercised in an environment where dispatching a specialist is impossible,
+      Then every one of them obtains its value and proceeds.
+
+      Given one such path restored to obtaining its fact by dispatching a specialist, while every
+        other path reads directly,
+      When all paths are exercised in that same environment,
+      Then the restored path is reported as depending on a relayed fact and is named,
+        And the fact that every other path succeeds does not suppress the report.
+
+      Given a path that dispatches a specialist for a judgement rather than for a fact — the value
+        it returns being an opinion the build records rather than a value it branches on,
+      When the paths are exercised,
+      Then that path is not reported, so asking a specialist for judgement remains available.
+    OLD TITLE (verbatim): "Every path that needs a project fact still works with specialists
+    unavailable, and one that does not is named"
+
+    WHAT IT SAYS NOW: the environment is "no party can be asked to judge anything" -- the only
+    dispatchable party is one chartered to carry out an exact command and return its output
+    verbatim, which cannot decline an exact command on charter grounds and gives no answer to a
+    request to look, decide, interpret or summarise; every dispatch to any other party fails
+    immediately. This is the same premise, in the same words, as BO-3200a-1 and ACD-2100b-5 now
+    carry. The first scenario is otherwise unchanged. The second scenario's restored path is now
+    "asking a specialist to read, decide or interpret it" (was "dispatching a specialist") and its
+    comparison set is "every other path obtains its fact with no judgement requested of anyone"
+    (was "reads directly"). TWO SCENARIOS ADDED: (3) a path obtaining its fact through an exact
+    command to the chartered party is NOT reported as a relayed fact; (4) a path that asks a
+    judging party first and falls back to the chartered party IS reported, although it succeeds.
+    The judgement scenario (now fifth) is unchanged.
+
+    WHY. The E2 workflow engine injects only agent, parallel, pipeline, phase, log, args,
+    workflow and budget into a workflow body (docs/reference/workflow-authoring-contract.md
+    section 1) -- no filesystem, no subprocess -- so every read goes through an agent() call and
+    "dispatching a specialist is impossible" reads, once the chartered executor exists, as
+    "every read is impossible". Under the old wording this sweep would report every executor
+    dispatch as a relay, which contradicts the decision it is meant to enforce. BO-3200's
+    standing rule -- only JUDGEMENT is delegable to a specialist -- is unchanged by this.
+
+    WHY SCENARIO 4 WAS ADDED RATHER THAN LEFT IMPLICIT. It is the sweep-level form of the
+    fallback the IT PO warned about on BO-3200a-1: a path that tries a judging party and falls
+    back to the executor passes scenario 1 in this environment and relays in production. Without
+    it, scenario 3's exemption would absorb it.
+
+    CRITERIA-ONLY CHANGE -- THE TECHNICAL LAYER IS NOW STALE AND IS THE IT PO'S TO REDO. Not
+    edited here (outside the BA's remit):
+      - it_requirements[1] -- result_use permits only `fact` and `judgement`. An executor
+        dispatch is presumably `fact`, but whether a fact-declared dispatch to a party other than
+        the executor is itself the violation (scenario 2) or only observed as one needs deciding;
+      - it_requirements[4] -- "A declared-judgement path is still EXERCISED with specialists
+        unavailable";
+      - it_requirements[9] -- "withholding the dispatch surface from the real workflows";
+      - delivers_to[0] -- the report's `state` enum has no way to distinguish a path that
+        fell back from one that relayed outright; confirm `relayed_fact` covers scenario 4;
+      - delivers_to[1] -- the reference-author contract's discriminating question "would the
+        build still reach a terminal outcome with no specialist available";
+      - test_spec[0], [1], [2], [3] -- each describes the environment as dispatch impossible or
+        specialists unavailable; and no test_spec entry covers scenarios 3 or 4;
+      - test_rationale -- "the path still completes with no specialist available";
+      - the BA and IT-PO paragraphs of notes below, which use the superseded premise.
+- reason: technical-re-enrichment-after-premise-narrowing
+  by: it-po
+  at: 2026-09-16
+  note: |
+    Rewrote every IT PO field the BA's 2026-09-16 entry listed as stale; resolved the BA's open
+    question (a fact dispatch to a non-executor party is not a violation in itself HERE -- this
+    record's verdict is observational; the static addressing violation is BO-3200f-3's).
+    criteria, title, depends_on and req_status untouched. readiness draft -> reviewed.
+
+    OLD it_requirements[1], changed text only (verbatim): "Permitted values: `fact` and
+    `judgement`."
+    OLD it_requirements[4], changed text only (verbatim): "A declared-judgement path is still
+    EXERCISED with specialists unavailable."
+    OLD it_requirements[9] (verbatim): "Coverage must use unit_tests/_workflow_engine_harness.py
+    to produce the specialists-unavailable environment by withholding the dispatch surface from
+    the real workflows."
+    OLD delivers_to[0].contract (verbatim): "The `result_use` dispatch-site declaration
+    ({result_use: 'fact' | 'judgement', judgement_reason: str}) and the relay sweep's report:
+    {paths: [{name: str, state: 'completed' | 'relayed_fact' | 'falsely_declared_judgement' |
+    'not_exercised', declaration: str}], exempt: [{name: str, reason: str}], total: int}."
+    OLD delivers_to[1].contract, changed text only (verbatim): "'would the build still reach a
+    terminal outcome with no specialist available' — plus the declaration's field names"
+    OLD expects_from[0].contract (verbatim): "The direct source-read resolver {value, outcome,
+    source_path, looked_in}. BO-3200a-1 proves one path reads directly; this AC proves no path
+    still relays."
+    OLD test_spec[0] name test_bo_3200a_2_every_fact_path_completes_with_specialists_unavailable,
+    description (verbatim): "Exercise every derived path in an environment where dispatch is
+    impossible; assert each obtains its value and proceeds, and that the report accounts for
+    every path with an explicit state."
+    OLD test_spec[1] description (verbatim): "THE PARTIAL-FIX TEST. Restore exactly one path to
+    obtaining its fact by dispatch while every other reads directly; assert that path is named
+    as relayed and the other paths' success does not suppress or summarise the report away."
+    OLD test_spec[2] description, changed text only (verbatim): "reaches a terminal outcome with
+    specialists unavailable (recording the judgement unobtained)"
+    OLD test_spec[3] description, changed text only (verbatim): "so with specialists unavailable
+    it cannot reach a terminal outcome"
+    OLD test_rationale first sentence, changed text only (verbatim): which is why the BA made
+    the observable property "the path still completes with no specialist available".
+
+    ADDED: it_requirements for the observational-verdict decision, scenario 3, scenario 4
+    (relay_kind direct|fallback) and the shared inventory with BO-3200f-3; `chore` as a third
+    result_use value; exercise_verdict / relay_kind / dispatches_observed in the report
+    contract; expects_from BO-3200f-1 and BO-3200f-3; two test_spec entries for scenarios 3
+    and 4.
 superseded_by: null
 covered_by: []
 implemented_by: []
 notes: |
+  2026-09-16 (business-analyst) -- PREMISE NARROWED, READ THIS FIRST. The environment changed
+  from "dispatching a specialist is impossible" to "no party can be asked to judge anything"
+  (only a chartered executor of exact commands is dispatchable), and two scenarios were added: an
+  exact-command dispatch to that executor is not a relay, and a judging-party-first fallback is.
+  Authorised by the user on 2026-09-16; the old wording, the reason and the list of now-stale
+  technical fields are in amended_by. Where the paragraphs below speak of "specialists
+  unavailable" or "no specialist available", they describe the SUPERSEDED premise; read them as
+  "no one available to judge".
+
+  COMPOSITION WITH BO-3200f-3, added 2026-09-16. This sweep proves every FACT path requests no
+  judgement, by exercising it. BO-3200f-3 proves every exact-command dispatch -- facts AND
+  chores -- is addressed to the executor. They overlap on fact reads only.
+
   The parent L0 records the starting state to be re-measured rather than trusted: roughly 69
   dispatches currently use a read-only reporting specialist as a general-purpose errand runner.
   This AC is the absence half — BO-3200a-1 proves one path reads directly; without this one, a
@@ -182,3 +353,36 @@ notes: |
   the false declaration fails DIFFERENTLY rather than silently. The reported exempt set is the
   second line of defence: even a correctly-declared judgement path stays visible and countable,
   so growth in the exemption set is something a reader can notice.
+
+  IT-PO RE-ENRICHMENT (2026-09-16) -- READ WITH THE BA'S PREMISE NOTE AT THE TOP. Where the two
+  paragraphs above say "specialists unavailable", the environment is now: only the chartered
+  executor answers, as a literal command, and every other dispatch fails immediately. The
+  declaration mechanism is unchanged except for a third value, `chore`.
+
+  BOUNDARY WITH BO-3200f-3 -- ONE SWEEP, TWO VERDICTS (recorded identically in BO-3200f-3's
+  notes, so an implementer builds one sweep, not two).
+    - ONE INVENTORY, owned by BO-3200f-3: every dispatch site in the canonical workflow sources
+      with its result_use and addressee, static and complete over the source.
+    - ADDRESSING VERDICT, owned by BO-3200f-3: fact and chore -> executor; judgement -> not the
+      executor; undeclared, unresolvable or bypass-carrying -> reported.
+    - EXERCISE VERDICT, owned HERE: every fact path, run in the no-judgement environment,
+      obtains its value; a path that relays -- outright or by falling back -- is reported by
+      observation; a judgement declaration is verified by observation.
+    - ONE REPORT with both verdicts per site.
+  AR-200c's notes and KI-BO-20260901-1620 pointed the whole routing sweep at this record. The
+  user placed the addressing half under BO-3200f-3; this boundary is the reconciliation.
+
+  THE BA'S OPEN QUESTION, ANSWERED. Is a fact-declared dispatch to a party other than the
+  executor a violation in itself? Not in THIS record: this verdict is observational, which is
+  what lets it catch a correctly addressed path that relays by another route. It IS a violation
+  in itself in BO-3200f-3, statically. In the no-judgement environment such a dispatch always
+  fails and is always in the dispatch record, so here it surfaces as relayed_fact (direct or
+  fallback) whenever the path is exercised.
+
+  CONFIRMING `relayed_fact` COVERS SCENARIO 4: yes, with a new relay_kind field distinguishing
+  'fallback' from 'direct', because a path that succeeded only by falling back needs a different
+  fix from one that cannot succeed at all.
+
+  ORDER OF LANDING -- RECOMMENDED BA EDIT. expects_from now names BO-3200f-1 and BO-3200f-3,
+  neither of which is in depends_on (KI-ACD-015: expects_from alone orders nothing).
+  Recommended: add BO-3200f-1 and BO-3200f-3 to depends_on.

@@ -1,0 +1,113 @@
+id: BO-3200f-4
+title: "Reference documentation tells a workflow author what the chartered executor does, what it will not do, and when to use it instead of a specialist"
+component: build-orchestration
+components:
+  - documentation_system
+  - build_orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: critical
+roadmap_phase: phase_1
+criteria: |
+  Given a workflow author whose step needs to read something recorded in the project or carry
+    out a chore,
+  When they open the reference documentation for the chartered executor,
+  Then it states that the executor carries out one exact command and returns its standard
+    output, error stream and exit status verbatim as three separate parts, together with the
+    directory the command ran in,
+    And it states that the executor gives no answer to a request to look, decide, interpret or
+    summarise, and that its charter admits every exact command,
+    And it states how a check reports an executor dispatch that fails, comes back incomplete or
+    is declined, as distinct from a command that ran and exited non-zero,
+    And it states that a step needing judgement is still sent to a specialist, and links to the
+    reference that says which questions a specialist may be asked,
+    And it states why no step reads the project or runs a command without a dispatch -- the
+    workflow engine gives a workflow body no file or command access -- and names the two
+    rejected alternatives, an engine-level primitive and resolving facts before the run starts,
+    each with its reason.
+
+  Given the reference documentation,
+  When each behaviour it states about the executor is exercised against the executor,
+  Then the executor behaves as the documentation states.
+depends_on:
+  - BO-3200f
+  - BO-3200f-1
+  - BO-3200f-1-i
+  - BO-3200f-2
+  - BO-3200f-3
+doc_links:
+  - path: docs/reference/workflow-authoring-contract.md
+    relationship: modifies
+    status: exists
+    relevance: "Section 1's list of injected globals is where an author first meets the constraint; it must point to the executor reference."
+  - path: docs/reference/
+    relationship: describes
+    status: exists
+    relevance: "Where the executor reference page lands."
+  - path: docs/acceptance-criteria/build-orchestration/BO-3200-second-hand-answers/BO-3200a-3.yaml
+    relationship: describes
+    status: exists
+    relevance: "The sibling reference on which questions a specialist may be asked; link to it, do not restate it."
+  - path: docs/reference/chartered-executor.md
+    relationship: creates
+    status: planned
+    relevance: "THE TARGET PAGE and this record's sole new deliverable. Named here so the generated ticket's surface contains it; a not-yet-existing page enters files_touched only through a creates link."
+assigned_agent: reference-author
+estimated_complexity: S
+declares_side_effect: false
+change_target: docs
+risk_surface: internal
+it_requirements:
+  - "IT-PO: ASSIGNMENT CONFIRMED reference-author, matching every other documentation child in the BO-3200 tree. TARGET: a new reference page at docs/reference/chartered-executor.md, plus a pointer to it from section 1 of the workflow authoring contract. Publishing under another name leaves the creates link dangling."
+  - "EVERY STATEMENT DESCRIBES DELIVERED BEHAVIOUR AND NAMES THE RECORD THAT DELIVERS IT -- result shape and literal execution from BO-3200f-1, the five could-not-check reasons from BO-3200f-1-i, the stated permission and containment from BO-3200f-2. Nothing is written ahead of the behaviour landing."
+  - "STATE THE CONTAINMENT, NOT ONLY THE CAPABILITY. 'Its charter admits every exact command' must be accompanied, in the same section, by what still binds it: guardrails and permission prompts apply unchanged, a guardrail block is reported as a guardrail refusal and not as the executor declining, guardrail bypass variables are rejected, and nothing is pre-approved. A page that states the capability alone teaches the executor as a way around guardrails."
+  - "STATE THE FIVE REASONS, NOT THREE. The criteria name failed, incomplete and declined as distinct from a non-zero exit; the page also names the guardrail-blocked reason BO-3200f-1-i delivers, quoting each reason's report verbatim."
+  - "STATE THE result_use DECLARATION AUTHORS MUST WRITE (fact, chore, judgement) and that BO-3200f-3's check fails an undeclared or mis-addressed dispatch -- this is what an author needs at the moment they add a step."
+  - "LINK TO BO-3200a-3's PAGE FOR WHICH QUESTIONS A SPECIALIST MAY BE ASKED; do not restate it. Cross-link both ways."
+  - "Tracked reference subject to check-doc-frontmatter, check-doc-length and check-doc-links in the same commit. The frontmatter components list uses graph ids from the components registry (build_orchestration), not the AC-store namespace spelling."
+test_required: false
+test_rationale: >-
+  The deliverable is a prose reference page. Every behaviour it states is owned and tested by
+  the record that delivers it -- the capture and literal execution by BO-3200f-1, the reasons by
+  BO-3200f-1-i, permission and containment by BO-3200f-2 -- and the criteria's second scenario
+  ('the executor behaves as the documentation states') is satisfied by requiring each statement
+  to name its delivering record, whose tests are the check. A test over the page could only
+  assert words appear in it, the presence-shaped proof this tree rejects. Frontmatter, length and
+  links are covered by live commit gates.
+delivers_to: null
+expects_from:
+  - ac_id: BO-3200f-1
+    contract: "The executor dispatch helper result shape and the literal-execution rule, as built."
+  - ac_id: BO-3200f-1-i
+    contract: "The five could-not-check reasons with their verbatim reports: executor_transport_failed, executor_result_incomplete, executor_declined, guardrail_blocked, command_exited_nonzero."
+  - ac_id: BO-3200f-2
+    contract: "The executor's stated permission and its six containment rules, as built."
+  - ac_id: BO-3200f-3
+    contract: "The result_use values (fact, chore, judgement) and the addressing rules the routing check enforces."
+origin_agent: business-analyst
+created: 2026-09-16
+amended_by:
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-09-16
+  note: Assignment confirmed reference-author. Named the target page (creates, planned), added
+    it_requirements, test_required false with rationale, change_target/risk_surface, and
+    expects_from edges for f-2 and f-3 (both in depends_on). criteria, title, depends_on
+    untouched.
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Satisfies BO-3200f's `reference-doc` documentation trigger. reference-author rather than
+  documentation-expert, matching every other documentation child in the BO-3200 tree.
+
+  THE REJECTED ALTERNATIVES ARE REQUIRED CONTENT, not background. "Just call the CLI directly"
+  is the obvious suggestion and cannot be done (KI-BO-20260901-1620); a reference that omits why
+  invites the next author to re-derive it or to pre-resolve facts in a wrapper, which is the
+  relay this L0 removes.
+
+  BOUNDARY WITH BO-3200a-3. That page answers "which questions may a specialist be asked"; this
+  one answers "what do I use when the answer is none". Cross-link both ways; do not merge.

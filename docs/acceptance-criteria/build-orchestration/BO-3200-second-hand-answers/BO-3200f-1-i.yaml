@@ -1,0 +1,190 @@
+id: BO-3200f-1-i
+title: "An executor dispatch that fails, comes back incomplete or is declined is reported as could not check, never as the command's outcome or a finding about the subject"
+component: build-orchestration
+components:
+  - build_orchestration
+  - supervisor_system
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: critical
+roadmap_phase: phase_1
+criteria: |
+  Given a check that reads the agent registry through the chartered executor, where the registry
+    is present, readable, and permits the agent the check asks about,
+    And the dispatch to the executor fails with a transport error before any result returns,
+  When the check reports,
+  Then it reports that it could not tell, and names the executor dispatch as what could not be
+    completed and the transport error as why,
+    And it reports no exit status for the command, because none was returned,
+    And it does not report that the agent is denied, nor that the registry is missing,
+    unreadable or malformed.
+
+  Given the same check, where the executor's reply has no exit status part, or its standard
+    output part is cut short of what the command emitted,
+  When the check reports,
+  Then it reports that it could not tell, names the incomplete result as why, and reports no
+    finding about the registry.
+
+  Given the same check, where the executor replies that it declines to carry out the command,
+  When the check reports,
+  Then it reports that it could not tell, and states that the executor declined rather than that
+    the command ran and failed,
+    And it reports no exit status for the command and does not name the registry as missing,
+    unreadable or malformed.
+
+  Given the same check, where the executor carries out the command and the command itself exits
+    with status 1 because no registry is at the path given,
+  When the check reports,
+  Then it reports that it could not tell, and gives as why the path, the command's exit status
+    of 1 and its error stream,
+    And the reason it gives differs from the reason given in each of the three cases above.
+depends_on:
+  - BO-3200f-1
+  - BO-3200e-1
+  - BO-3200g
+doc_links:
+  - path: docs/known-issues/ac-driven-dev/open-blocker-ki-acd-009.md
+    relationship: describes
+    status: exists
+    relevance: "The refusal payload carried a fabricated exit_code 1 and was reported as an unreadable file; the first and third scenarios forbid inventing an exit status for a command that never ran."
+  - path: docs/known-issues/build-orchestration/open-blocker-ki-bo-018.md
+    relationship: describes
+    status: exists
+    relevance: "The truncated relay that fail-closed into a false permission verdict; the second scenario is that case arriving through the executor instead."
+  - path: docs/architecture/components/phantom-done-prevention.md
+    relationship: describes
+    status: exists
+    relevance: "Where the could-not-tell vocabulary this record reuses is described."
+  - path: docs/reference/claude-code-hooks.md
+    relationship: describes
+    status: exists
+    relevance: "How a PreToolUse guardrail blocks a tool call and what message comes back -- the source of the guardrail_blocked reason this record keeps distinct from an executor decline."
+assigned_agent: python-coder
+estimated_complexity: M
+declares_side_effect: false
+change_target:
+  - code
+  - pipeline
+risk_surface: contract_boundary
+it_requirements:
+  - "FIVE REASONS, NOT FOUR. The criteria separate a transport failure, an incomplete result, an executor decline and a command that ran and exited non-zero. A guardrail or permission-rule block is a FIFTH and must be reported as a refusal BY THAT GUARDRAIL, naming it wherever the block message names it (BO-3200g) -- never as the executor declining, never as the command failing, and never with an exit status. Folding it into 'declined' sends the reader to the executor's charter, which is not what stopped the command. Each of the five reasons must differ from the other four in the report."
+  - "THE OUTCOME IS BO-3200e-1's `undetermined` IN ALL FIVE CASES; ONLY THE REASON DIFFERS. Reuse the shared undetermined value the runtime already refuses to count as success (PR #565). No per-reason status value."
+  - "AN EXIT STATUS IS REPORTED ONLY WHEN BO-3200f-1's CAPTURE PRODUCED IT AND IT VERIFIED. A reply asserting an exit status without a verifying capture -- KI-ACD-009's refusal payload carrying exit_code 1 -- is reported as incomplete or declined, never as an exit status."
+  - "CLASSIFICATION IS MECHANICAL. The reason comes from the dispatch helper's could-not-complete reason, never from reading the executor's prose for words such as 'cannot' or 'out of scope'. A keyword scan is the judgement this tree removes, moved into the consumer."
+  - "NO FINDING ABOUT THE SUBJECT in the first three cases or the guardrail case: no permission verdict, and no statement that the registry is missing, unreadable or malformed. Only in the fourth scenario are the path, the command's exit status and its error stream quoted -- verbatim -- as the reason."
+  - "ONE CONSUMER-SIDE MAPPING shared by every check that reads through the executor, not re-implemented per check. The plan-feature startup check (ACD-2100b-5) is the first consumer, not the only one; BO-3200f-3 routes the rest through the same mapping."
+  - "RETRIES, IF ANY, ARE BOUNDED AND DO NOT CHANGE THE MEANING: a transport failure that succeeds on retry is a completed result; one that does not is reported with the last failure as its reason. A retry must never turn a decline or a guardrail block into a transport failure."
+  - "Must satisfy the repository error-handling policy: every could-not-complete path is logged at WARNING or higher before the could-not-tell report is emitted."
+delivers_to:
+  - agent: python-coder
+    contract: "The could-not-check mapping for executor-backed checks: given the dispatch helper's result, returns BO-3200e-1's outcome with outcome 'undetermined' and uninspectable_reason one of 'executor_transport_failed' | 'executor_result_incomplete' | 'executor_declined' | 'guardrail_blocked' | 'command_exited_nonzero', plus {detail: str, exit_status: int | null, stderr: str | null, blocked_by: str | null}; exit_status and stderr are non-null only for 'command_exited_nonzero'. Consumed by ACD-2100b-5, BO-3200a-1 and every site BO-3200f-3 repoints."
+  - agent: reference-author
+    contract: "The five reasons, what each means and what it does not mean, and the rule that only 'command_exited_nonzero' carries an exit status -- for BO-3200f-4's third Then."
+expects_from:
+  - ac_id: BO-3200f-1
+    contract: "The executor dispatch helper result: {outcome: 'completed', cwd, exit_status, stdout, stderr} or {outcome: 'could_not_complete', reason: 'transport_failed' | 'incomplete' | 'declined' | 'guardrail_blocked' | 'invalid_dispatch', detail, blocked_by}, with verification already applied."
+  - ac_id: BO-3200e-1
+    contract: "The three-valued check outcome {outcome: 'in_order' | 'problem_found' | 'undetermined', subject, finding, uninspectable_reason, advice} reusing PR #565's undetermined vocabulary."
+test_spec:
+  - name: test_bo_3200f_1_i_transport_failure_reports_could_not_tell_and_no_exit_status
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "Registry present, readable and permitting; the executor dispatch fails with a transport error. Assert undetermined, the reason names the executor dispatch and the transport error, no exit status, and no denied or missing/unreadable/malformed wording."
+  - name: test_bo_3200f_1_i_incomplete_result_reports_incomplete_and_no_registry_finding
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "Two replies -- one with no exit status part, one whose stdout is cut short of what the command emitted. Assert both are undetermined with the incomplete reason and no finding about the registry."
+  - name: test_bo_3200f_1_i_executor_decline_is_declined_not_a_failed_command
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "The executor replies with KI-ACD-009's real refusal payload including its fabricated exit_code 1. Assert the reason states the executor declined, no exit status is reported, and the registry is not named missing, unreadable or malformed."
+  - name: test_bo_3200f_1_i_command_nonzero_quotes_path_status_and_stderr
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "The command runs and exits 1 because no registry is at the given path. Assert undetermined with the path, exit status 1 and the error stream quoted verbatim."
+  - name: test_bo_3200f_1_i_guardrail_block_is_reported_as_a_guardrail_refusal
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: integration
+    angle: failure
+    description: "The executor's tool call is blocked by a PreToolUse guardrail. Assert the reason is guardrail_blocked naming the guardrail from its block message, not declined, not a failed command, and no exit status."
+  - name: test_bo_3200f_1_i_all_five_reasons_are_pairwise_distinct
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: "Produce all five cases against the same permitting registry and assert the five reported reasons are pairwise different -- the KI-ACD-009 defect was four causes printing one message."
+  - name: test_bo_3200f_1_i_permitting_registry_is_never_reported_denied_on_any_failure
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: integration
+    angle: seam
+    description: "Drive the real plan-feature startup check under the harness with a permitting registry and each executor failure injected in turn; assert the run never reports the agent as denied and stops as could-not-tell (KI-BO-018's false verdict)."
+test_rationale: |
+  Every scenario holds the registry constant and permitting and varies only how the executor
+  dispatch failed, so a report that still says 'denied' or 'unreadable' can only come from the
+  failure path -- the KI-BO-018 and KI-ACD-009 shape. The decline test uses the real refusal
+  payload, fabricated exit_code 1 included, because that exact payload is how a refusal became
+  'exit code 1, no stdout' in production.
+  The guardrail test is added beyond the four written scenarios because an executor that cannot
+  decline makes guardrail blocks the most likely non-transport stop, and without its own reason
+  it would be reported as the executor declining -- pointing the reader at a charter that did
+  nothing wrong.
+  The pairwise-distinct test closes the cheap implementation: one honest-sounding 'could not
+  check' message for every case, which satisfies each single-case test and recreates the
+  one-message-for-four-causes defect.
+origin_agent: business-analyst
+created: 2026-09-16
+amended_by:
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-09-16
+  note: Assignment confirmed python-coder. Added the guardrail_blocked fifth reason as an
+    it_requirement, it_requirements, test_spec/test_rationale, change_target/risk_surface,
+    delivers_to, a second expects_from (BO-3200e-1, mirrored in depends_on), doc_links.
+    criteria, title, depends_on untouched.
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  COMPOSES, DOES NOT RESTATE. The three-answer vocabulary and "could not tell stops the work"
+  are BO-3200e-1 and BO-3200e-2. "A refusal is reported as a refusal and not as a damaged file"
+  is BO-3200g. This record is the one dispatch site those rules must now hold at: the chartered
+  executor becomes the transport for every read, so its failure modes are the failure modes of
+  every check that reads through it.
+
+  WHY AN L3 AND NOT AN L2. It is the "what could go wrong" of BO-3200f-1 -- a consumer of the
+  executor's result -- and BO-3200f is at its five-L2 cap with the two documentation children
+  its triggers require.
+
+  WHY THE FOURTH SCENARIO. A command that ran and exited non-zero IS a real result, and the
+  outcome is still could-not-tell (the registry could not be read, per BO-3200e-1). What must
+  differ is the reason, because the remedy differs: fix the path, versus restore the dispatch.
+  Collapsing the four reasons into one message is exactly the KI-ACD-009 defect of four causes
+  printing one permissions message.
+
+  WHY "DECLINES" IS STILL A CASE when BO-3200f-2 says the charter admits every exact command.
+  A charter is a prompt, and KI-BO-20260901-1620 records that the agent that refused did so by
+  judgement, not mechanism. The consumer must not trust BO-3200f-2 to make this path
+  unreachable.
+
+  IT-PO ENRICHMENT (2026-09-16). A GUARDRAIL BLOCK IS A FIFTH REASON, added as an it_requirement
+  and a test rather than as criteria (criteria are the BA's). With the executor admitting every
+  exact command, the most likely non-transport stop is a PreToolUse guardrail or a permission
+  rule, and BO-3200g requires a refusal to be reported as a refusal BY WHOM. The BA may want to
+  promote it to a fifth scenario on the next pass; nothing here depends on that.
+
+  ORDER OF LANDING. This mapping is consumed by ACD-2100b-5, whose depends_on does not name this
+  record (KI-ACD-015: expects_from alone orders nothing). Recommended BA edit: add BO-3200f-1-i
+  to ACD-2100b-5's depends_on.

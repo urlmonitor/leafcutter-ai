@@ -1,0 +1,242 @@
+id: BO-3200f-3
+title: "Every workflow step that carries out an exact command with no judgement is sent to the executor, and one sent anywhere else is named"
+component: build-orchestration
+components:
+  - build_orchestration
+  - supervisor_system
+  - agent_registry
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: critical
+roadmap_phase: phase_1
+criteria: |
+  Given every dispatch in the workflows shipped with the package whose request is an exact
+    command to carry out and whose result is used without anyone's judgement over it -- reads of
+    recorded project state, and chores such as claiming or releasing work,
+  When the routing check examines them,
+  Then every one is addressed to the chartered executor,
+    And the check lists each by workflow and step together with the party it is addressed to.
+
+  Given one such dispatch addressed to a party other than the executor -- the reporting
+    specialist status-checker, as measured on 2026-09-16 -- while every other is addressed to
+    the executor,
+  When the routing check runs,
+  Then that dispatch is reported by workflow and step, with the party it is addressed to and the
+    permission that party's registry entry states,
+    And every other dispatch being correct does not suppress the report or merge it with any
+    other.
+
+  Given a dispatch that asks a specialist to read, decide or interpret, whose returned opinion
+    the build records rather than branches on,
+  When the routing check runs,
+  Then that dispatch is not reported, and is not required to be addressed to the executor.
+
+  Given a workflow step added after the check was written that sends an exact command to a party
+    other than the executor,
+  When the check runs with nothing in it changed,
+  Then the new step is named.
+
+  Given a run of the routing check that examined no dispatches,
+  When it reports,
+  Then it reports a failure, not a clean result.
+depends_on:
+  - BO-3200f
+  - BO-3200f-1
+  - BO-3200f-2
+doc_links:
+  - path: docs/known-issues/build-orchestration/open-high-ki-bo-20260901-1620.md
+    relationship: describes
+    status: exists
+    relevance: "Fix direction 2 (a check that walks each workflow for dispatches whose prompt runs a command) and the measured mis-routings: fast-lane-ship resolve, producibility and claim to status-checker."
+  - path: docs/known-issues/ac-driven-dev/open-blocker-ki-acd-009.md
+    relationship: describes
+    status: exists
+    relevance: "Roughly twenty plan-feature shell steps dispatched to status-checker; two reproduced halts on 2026-09-16."
+  - path: docs/known-issues/ac-store.md
+    relationship: describes
+    status: exists
+    relevance: "KI-ACS-001 -- a sweep that reported clean having examined nothing; the fifth scenario."
+  - path: docs/architecture/components/agent-registry.md
+    relationship: describes
+    status: exists
+    relevance: "The stated permission the report quotes for a mis-addressed dispatch."
+  - path: docs/architecture/adrs/ADR-035-fast-lane-closed-producer-roster.md
+    relationship: describes
+    status: exists
+    relevance: "Records the fast-lane dispatch sites and the dead status-checker release path; the executor is not a producer and is not added to the closed roster by repointing."
+  - path: docs/reference/workflow-authoring-contract.md
+    relationship: describes
+    status: exists
+    relevance: "Section 1 -- why every read and chore is an agent() dispatch at all, which is what makes an addressing check meaningful."
+assigned_agent: python-coder
+estimated_complexity: L
+declares_side_effect: false
+change_target:
+  - code
+  - pipeline
+risk_surface: contract_boundary
+it_requirements:
+  - "IT-PO DECISION -- PLACEMENT: ONE SWEEP, TWO VERDICTS. This record and BO-3200a-2 share ONE dispatch-site inventory over every agent() dispatch in the canonical workflow sources and ONE report. This record owns the inventory and the ADDRESSING verdict: static -- is every fact or chore dispatch addressed to the executor. BO-3200a-2 owns the EXERCISE verdict: behavioural -- does every fact path obtain its value when no party can be asked to judge. Neither builds a second walker or a second report; whichever lands second extends the first."
+  - "DECLARED, NEVER INFERRED. Whether a dispatch carries an exact command comes from the result_use declaration BO-3200a-2 put on the dispatch options, widened to three values: `fact` (a read the build branches on), `chore` (a side effect such as a claim or a release) and `judgement` (with its judgement_reason). A dispatch site with no declaration fails the check and is named. Prompt text, agent name and step label are never used to decide -- KI-BO-20260901-1620 fix direction 2's prompt-text heuristic is rejected here exactly as it was on BO-3200a-2."
+  - "ADDRESSING RULES. `fact` and `chore` dispatches must be addressed to the executor. A `judgement` dispatch must NOT be addressed to the executor, which gives no answer to a judgement request, so such a site is always wrong. An addressee that cannot be resolved from the source (built from a variable) is reported as unresolved and never skipped."
+  - "THE STARTING INVENTORY IS EVIDENCE TO RE-MEASURE, NOT A LIST TO ENCODE: roughly twenty plan-feature shell steps addressed to status-checker; the fast-lane-ship resolve, producibility and claim steps addressed to status-checker; AND the fast-lane-ship release step addressed to python-coder -- the KI-BO-020 fix. The release step IS in scope and MUST be reported until it is addressed to the executor: the user's 2026-09-16 decision rejected repointing chores at any party other than the executor, and python-coder's registry entry states no shell permission. The check must not special-case it by name in either direction."
+  - "THE FIRST SCENARIO REQUIRES THE REPOINTING, NOT ONLY THE CHECK. Every mis-addressed site found is moved to the executor through BO-3200f-1's shared dispatch helper, and its result is read through BO-3200f-1-i's could-not-check mapping -- no per-site prompt and no per-site parser. Sites owned by a named record are verified here, not re-implemented: the plan-feature startup registry read is ACD-2100b-5's, and the fact resolver is BO-3200a-1's."
+  - "THE CLAIM STEP'S MUTUAL-EXCLUSION GUARANTEE SURVIVES THE MOVE. A claim that could not be completed through the executor stops the lane as could-not-tell and is never treated as claimed; a release that could not be completed is reported, never assumed."
+  - "THE REPORT QUOTES THE ADDRESSEE'S STATED PERMISSION as `true`, `false` or `unstated`. Absence is reported as unstated, never as either value, consistent with AR-200c."
+  - "PER-SITE VERDICTS, NO EARLY RETURN, NO MERGING. The report states how many sites were examined, and a run that examined zero sites fails rather than reporting clean (KI-ACS-001)."
+  - "COMPLETE OVER THE SOURCE, NOT OVER ONE RUN. The inventory covers every dispatch site in every canonical workflow source, including branches no single run reaches; a run-time trace alone misses an unreached mis-addressed site. It reads the canonical sources, never the deployed build output."
+  - "ENFORCE WHERE IT RUNS. The check is wired to a gate whose verdict is consumed on any change to the workflow sources -- a commit-guardian hook or a required CI job. If it is a hook, every module it imports is added to the build deploy manifest (CLAUDE.md). A script that nothing invokes does not satisfy the fourth scenario."
+  - "SECURITY CONTAINMENT AT AUTHORING TIME. The check also fails an executor dispatch whose command text sets a guardrail bypass variable (the commit-agent mode and the guard overrides listed in the Claude Code hooks reference), because the executor cannot decline one. This is BO-3200f-2 containment 4's authoring-time enforcement point."
+  - "The executor is a utility, not a producer: repointing fast-lane-ship's dispatches must not enter it into the lane's closed producer roster (ADR-035)."
+  - "Must satisfy the repository error-handling policy: reading the workflow sources and the registry is external I/O; a source that cannot be read or parsed is reported by name as not examined, never skipped."
+delivers_to:
+  - agent: python-coder
+    contract: "The shared dispatch-site inventory and report, extended by BO-3200a-2: {examined: int, sites: [{workflow: str, step: str, addressed_to: str | null, result_use: 'fact' | 'chore' | 'judgement' | null, stated_permission: true | false | 'unstated' | null, addressing_verdict: 'correct' | 'mis_addressed' | 'undeclared' | 'unresolved_addressee' | 'judgement_to_executor' | 'bypass_variable' | 'not_examined'}]}. BO-3200a-2 adds exercise_verdict per site; it does not build a second inventory."
+  - agent: architecture-diagram-author
+    contract: "The same per-site listing (workflow, step, addressed party), which BO-3200f-5's second scenario reads instead of re-deriving the dispatch set."
+expects_from:
+  - ac_id: BO-3200f-2
+    contract: "The executor's agent id and registry entry, with permits_shell: true stated literally."
+  - ac_id: BO-3200f-1
+    contract: "The shared executor dispatch helper every repointed site must use."
+test_spec:
+  - name: test_bo_3200f_3_every_fact_and_chore_dispatch_in_shipped_workflows_is_addressed_to_executor
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    description: "Run the check over the real canonical workflow sources; assert every site declared fact or chore is addressed to the executor, the report lists each by workflow and step with its addressee, and examined is non-zero."
+  - name: test_bo_3200f_3_one_site_addressed_to_status_checker_is_named_with_its_stated_permission
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: integration
+    angle: seam
+    description: "THE PARTIAL-FIX TEST. Copy the sources, readdress exactly one fact site to status-checker, run the check; assert that site is reported by workflow and step with stated_permission false, and every other correct site neither suppresses nor merges the report."
+  - name: test_bo_3200f_3_chore_addressed_to_python_coder_is_reported_with_unstated_permission
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: "A release chore addressed to python-coder -- the KI-BO-020 fix shape -- is reported as mis_addressed with stated_permission 'unstated', not skipped because the release works in practice."
+  - name: test_bo_3200f_3_judgement_dispatch_is_not_reported_and_judgement_to_executor_is
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: "A judgement-declared dispatch to a specialist is not reported; the same dispatch addressed to the executor is reported as judgement_to_executor."
+  - name: test_bo_3200f_3_step_added_after_the_check_was_written_is_named
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: integration
+    angle: failure
+    description: "With the check unchanged, add to a copied source (a) an undeclared dispatch and (b) a fact-declared dispatch to status-checker; assert both are named."
+  - name: test_bo_3200f_3_zero_sites_examined_fails_and_unreadable_source_is_named
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: unit
+    angle: failure
+    description: "Pointed at a directory with no workflow sources, the check exits non-zero rather than reporting clean; a source that cannot be parsed is reported as not_examined by name."
+  - name: test_bo_3200f_3_unresolved_addressee_and_bypass_variable_are_reported
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: integration
+    angle: failure
+    description: "A dispatch whose addressee is built from a variable is reported unresolved_addressee; an executor dispatch whose command sets the commit-agent bypass variable is reported bypass_variable."
+  - name: test_bo_3200f_3_check_verdict_is_consumed_by_the_gate_that_runs
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: integration
+    angle: reachability
+    description: "Invoke the gate the check is wired into (the hook entry point or the CI job's command) against a source with one mis-addressed site and assert that gate fails -- not merely that the check function returns a violation."
+  - name: test_bo_3200f_3_claim_that_cannot_complete_through_executor_stops_the_lane
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: integration
+    angle: failure
+    description: "Drive fast-lane-ship under the harness with the claim's executor dispatch failing; assert the lane stops as could-not-tell, nothing is built, and the item is not treated as claimed."
+test_rationale: |
+  The addressing check is a static property of the source, so its evidence is the real canonical
+  workflow files plus planted copies -- a hand-written miniature workflow proves the walker
+  parses the miniature. The partial-fix test mirrors BO-3200a-2's and exists for the same
+  reason: twenty-odd correct sites must not hide one wrong one.
+  The release-to-python-coder test is its own descriptor because that site WORKS in practice,
+  which is precisely what makes it tempting to exempt; the user's decision says it is still
+  mis-addressed, and the test pins that.
+  The gate test is the reachability angle: a check that returns the right verdict and is never
+  run satisfies every other descriptor. The claim test covers the one behavioural hazard the
+  repointing introduces -- the lane's only mutual-exclusion step now depends on an executor
+  dispatch that can fail.
+origin_agent: business-analyst
+created: 2026-09-16
+amended_by:
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-09-16
+  note: Assignment confirmed python-coder. Settled placement against BO-3200a-2 (one inventory,
+    two verdicts); widened result_use with `chore`; confirmed the python-coder release site is
+    in scope. Added it_requirements, test_spec/test_rationale, change_target/risk_surface,
+    delivers_to, doc_links, expects_from BO-3200f-1. criteria, title, depends_on untouched.
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  STARTING STATE, TO BE RE-MEASURED NOT ENCODED: about 20 shell steps in plan-feature and 3 in
+  fast-lane-ship addressed to status-checker; the fast-lane release step addressed to
+  python-coder (the KI-BO-020 fix). Under the user's 2026-09-16 decision that release step is
+  also mis-addressed -- repointing chores at a party other than the executor was rejected -- so
+  the first scenario reports it too.
+
+  PLACEMENT, RECORDED BECAUSE TWO RECORDS POINT ELSEWHERE. AR-200c's notes and
+  KI-BO-20260901-1620's status line both say this check belongs under BO-3200a as an extension
+  of BO-3200a-2. It was placed here at the user's direction for this decomposition, and the split
+  is coherent: BO-3200a-2 (as amended 2026-09-16) proves every FACT path requests no judgement,
+  observed by exercising it; this record proves every exact-command dispatch, facts AND chores,
+  is ADDRESSED to the executor. Chores are not facts, so BO-3200a-2 cannot catch a claim or
+  release sent to a specialist. The two overlap on fact reads only, and there they agree.
+
+  HOW A DISPATCH IS KNOWN TO BE JUDGEMENT-FREE IS THE IT PO'S. BO-3200a-2's IT PO decision
+  already puts a result_use declaration on every dispatch site, verified by observation rather
+  than trusted. Reusing it is the obvious route and avoids a second declaration surface; a
+  prompt-text heuristic was rejected there and should be rejected here.
+
+  THE REPORT QUOTES THE PARTY'S STATED PERMISSION because that is the remedy a reader needs.
+  Whether an unstated permission is reported as "unstated" rather than "not permitted" follows
+  AR-200c.
+
+  IT-PO DECISION (2026-09-16) -- PLACEMENT AND BOUNDARY WITH BO-3200a-2. The two records OVERLAP
+  (both examine fact dispatches) but do not DUPLICATE: they answer different questions about the
+  same sites. The boundary, recorded identically in BO-3200a-2's notes:
+
+    - ONE INVENTORY, OWNED HERE. The list of every dispatch site in the canonical workflow
+      sources, with its declared result_use and its addressee. Static and complete over the
+      source.
+    - ADDRESSING VERDICT, OWNED HERE. fact and chore -> executor; judgement -> not the executor;
+      undeclared, unresolvable or bypass-carrying -> reported.
+    - EXERCISE VERDICT, OWNED BY BO-3200a-2. Every fact path, run in the no-judgement
+      environment, obtains its value; a path that relays -- outright or by falling back -- is
+      reported by observation.
+    - ONE REPORT with both verdicts per site. An implementer builds one walker and one report.
+
+  A fact dispatch addressed to status-checker is therefore reported by BOTH: here as
+  mis_addressed (from the source), and there as relayed_fact (from the run). That is intended --
+  the addressing verdict catches it without running anything, the exercise verdict catches a
+  correctly addressed path that still relays by another route. AR-200c's notes and
+  KI-BO-20260901-1620 pointed the sweep at BO-3200a; the user placed the addressing half here,
+  and this boundary is what keeps the two from being built twice.
+
+  CHORE IS A NEW result_use VALUE. BO-3200a-2 declared only fact and judgement. A claim or a
+  release is neither a value the build branches on nor an opinion, and declaring it `fact` would
+  put it in BO-3200a-2's exercise set, where "obtains its value" is meaningless. BO-3200a-2's
+  it_requirements are updated to the three-value form in the same pass.
+
+  ORDER OF LANDING -- RECOMMENDED BA EDIT. BO-3200a-2 now consumes this record's inventory but
+  its depends_on does not name BO-3200f-3, and the build sequencer reads depends_on only
+  (KI-ACD-015). Recommended: add BO-3200f-3 to BO-3200a-2's depends_on. Without it, "whichever
+  lands second extends the first" is the fallback rule, stated in both records.
+
+  THE RELEASE STEP (KI-BO-020's fix) IS IN SCOPE, CONFIRMED. It works today, which is exactly
+  why it needs naming: under the user's decision a chore addressed to any non-executor party is
+  mis-addressed, and python-coder's entry states no shell permission.

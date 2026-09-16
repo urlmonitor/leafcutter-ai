@@ -1,0 +1,224 @@
+id: BO-3200f-2
+title: "The executor's charter and its registry entry both admit every exact command, so it has no grounds to decline one"
+component: build-orchestration
+components:
+  - build_orchestration
+  - agent_registry
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: critical
+roadmap_phase: phase_1
+criteria: |
+  Given exact commands of each kind the shipped workflows carry out today -- a read of the
+    acceptance-criteria store, a claim that moves an item from todo to in progress, a git command
+    run inside a worktree, and a repository script run with arguments,
+  When each is dispatched to the chartered executor,
+  Then each is carried out and its result returned in the three parts BO-3200f-1 specifies,
+    And no result is a refusal, a request for confirmation, or a statement that the command is
+    outside the executor's remit.
+
+  Given the agent registry,
+  When the executor's entry is read for whether it may run repository commands,
+  Then the entry states that it may, as an explicit value rather than by leaving the permission
+    unstated,
+    And the permission gate that the entry workflow already consults before dispatching a shell
+    step classifies the executor as permitted.
+
+  Given the same four exact commands and the executor's registry entry,
+  When each command is compared with the permission the entry states,
+  Then no command the executor carries out is one its stated permission excludes.
+depends_on:
+  - BO-3200f
+  - BO-3200f-1
+  - AR-200c
+doc_links:
+  - path: docs/known-issues/build-orchestration/open-high-ki-bo-20260901-1620.md
+    relationship: describes
+    status: exists
+    relevance: "The defect being fixed is a charter refusal: status-checker declares shell not permitted and declines by judgement. Also the tri-state field this entry must state explicitly."
+  - path: docs/known-issues/build-orchestration.md
+    relationship: describes
+    status: exists
+    relevance: "KI-BO-020 -- a required release dispatched to a specialist that correctly refused the role."
+  - path: docs/architecture/components/agent-registry.md
+    relationship: describes
+    status: exists
+    relevance: "Where the executor's permission declaration lives."
+  - path: docs/architecture/adrs/ADR-033-agent-model-tiers.md
+    relationship: describes
+    status: exists
+    relevance: "Model tier and tool-allowlist floor for a mechanical, no-judgement agent -- the executor's tier and the ceiling on its tools."
+  - path: docs/reference/claude-code-hooks.md
+    relationship: describes
+    status: exists
+    relevance: "The Bash guardrails that still bind the executor, and their documented bypass variables, which must not become reachable through a party that cannot decline."
+  - path: docs/reference/agent-template-frontmatter.md
+    relationship: describes
+    status: exists
+    relevance: "Template frontmatter the executor's charter declares (tools, model, spawn rules) and that must agree with its registry entry."
+  - path: docs/architecture/adrs/ADR-035-fast-lane-closed-producer-roster.md
+    relationship: describes
+    status: exists
+    relevance: "The fast lane's producer roster stays closed; the executor is a utility, not a producer, and is not entered into it."
+assigned_agent: llm-expert
+estimated_complexity: M
+declares_side_effect: false
+change_target:
+  - prompt
+  - config
+risk_surface: auth
+it_requirements:
+  - "IT-PO DECISION -- ASSIGNMENT CONFIRMED llm-expert. The deliverable is the executor's agent template and its registry entry, registered through the add-agent-to-package skill llm-expert already carries. Output capture and verification are NOT here: they are BO-3200f-1's code. The charter issues BO-3200f-1's capture invocation for the dispatched {command, directory} and returns its output unchanged; it describes no output formatting of its own."
+  - "PERMISSION STATED AS A LITERAL VALUE. The executor's registry entry carries permits_shell: true. The live gate reads permits_shell === true, so an absent field is read-only today. How absence is interpreted registry-wide remains AR-200c's decision and is not pre-empted here."
+  - "CHARTER AND REGISTRY AGREE MECHANICALLY. Registry validation must fail the build when the executor's template and its registry entry disagree on the shell permission, the tool list, the model tier or the spawn rules. Agreement asserted only by reading both files by eye is not delivered."
+  - "SECURITY CONTAINMENT 1 -- TOOLS. The executor's tool list is no broader than ADR-033's tier floor for mechanical agents and contains no Edit, Write, Agent/Task, web or MCP tool. It carries out the command it was given and nothing else; it cannot author files by another route and cannot dispatch anyone."
+  - "SECURITY CONTAINMENT 2 -- NO ONWARD DISPATCH, NARROW CALLERS. spawn_allowlist is empty. The executor is dispatched by shipped workflow scripts. It must not be added to any agent's spawn_allowlist without a recorded user decision, because every agent permitted to spawn it acquires unrestricted shell by proxy."
+  - "SECURITY CONTAINMENT 3 -- GUARDRAILS AND PERMISSION PROMPTS STILL BIND. 'Admits every exact command' is a statement about the CHARTER only. Every tool-use guardrail and every permission rule that applies to a command issued directly applies identically to one the executor issues. The package must not ship an allow rule, settings entry or hook exemption that pre-approves the executor's commands as a class."
+  - "SECURITY CONTAINMENT 4 -- GUARDRAIL ESCAPE HATCHES ARE NOT REACHABLE THROUGH THE EXECUTOR. Several guardrails honour a bypass environment variable (the commit-agent mode, and the documentation and inline-work guard overrides). The executor cannot decline, so a dispatched command carrying such a variable must be stopped mechanically and reported as a guardrail refusal. Two enforcement points exist: authoring time (BO-3200f-3's routing check rejects an executor dispatch whose command sets a bypass variable) and run time (the guardrail refuses the bypass when the caller is the executor). At least one must be load-bearing and tested; which one is a USER DECISION (see notes)."
+  - "SECURITY CONTAINMENT 5 -- A BLOCK IS REPORTED AS A BLOCK. When the executor's tool call is blocked by a guardrail or a permission rule, the charter returns the block message verbatim as a not-executed result with no exit status. It never restates the block as its own decline and never invents an exit status (BO-3200f-1-i reason guardrail_blocked; BO-3200g)."
+  - "SECURITY CONTAINMENT 6 -- NO INJECTED JUDGEMENT CONTEXT. The executor loads no skills and no agent memory. Its charter states that project instructions about command SHAPE (for example the single-simple-command shell convention) are enforced by guardrails and by the workflow author, not by the executor: it neither rewrites a non-conforming command nor declines it. A command that violates such an instruction is an authoring defect caught upstream, not a reason for the executor to judge."
+  - "THE PERMISSION GATE'S VERDICT IS PROVEN ON THE REAL REGISTRY. The classifier plan-feature already uses for its workspace-setup agent must classify the executor's id as permitted when fed the repository's actual registry file, not a fixture."
+  - "CHARTER BEHAVIOUR IS PROVEN BY DISPATCH, NOT BY READING THE CHARTER. A test that finds 'every exact command' in the template is dead-prose evidence, rejected by the BO-3100/BO-3200 mechanical-enforcement rule. The first scenario is proven by dispatching the registered executor; see the caveat on the missing live-dispatch surface."
+  - "MODEL TIER: haiku per ADR-033 section 2.1 (mechanical, no judgement). If live-dispatch evidence shows that tier refuses or reformats in the first scenario, the tier change is recorded in this record's notes, not made silently."
+  - "The executor is a utility, not a producer, and is not added to the fast lane's closed producer roster (ADR-035)."
+delivers_to:
+  - agent: python-coder
+    contract: "The executor's agent id and registry entry {id: str, permits_shell: true, tools: [str], spawn_allowlist: [], model: 'haiku'}, which BO-3200f-3's routing check treats as the only valid addressee of fact and chore dispatches and whose permits_shell it quotes."
+  - agent: architecture-diagram-author
+    contract: "The executor's registry entry as the source of its stated permission, for BO-3200f-5's diagram."
+expects_from:
+  - ac_id: BO-3200f-1
+    contract: "The capture invocation the charter issues for a dispatch {command, cwd} and the rule that its reply is returned unchanged; the dispatch helper result shape the four command kinds are asserted against."
+test_spec:
+  - name: test_bo_3200f_2_registry_entry_states_shell_permission_explicitly
+    target_dir: unit_tests/agents/
+    framework: unittest
+    type: unit
+    angle: real_artifact
+    description: "Load the repository's actual config/agent_registry.json and assert the executor's entry carries permits_shell as the literal value true, not absent."
+  - name: test_bo_3200f_2_workspace_setup_gate_classifies_executor_as_permitted
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: integration
+    angle: seam
+    description: "Run plan-feature's own permission classifier against the real registry with the executor's id; assert the verdict is permitted."
+  - name: test_bo_3200f_2_template_and_registry_disagreement_fails_validation
+    target_dir: unit_tests/agents/
+    framework: unittest
+    type: integration
+    angle: failure
+    description: "Copy the real template and registry into a temp tree, flip the permission (then the tool list, then the spawn rules) in one of them, run the real registry validation, and assert each disagreement fails it."
+  - name: test_bo_3200f_2_executor_tools_and_spawn_rules_are_contained
+    target_dir: unit_tests/agents/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: "Assert the executor's tools contain no Edit, Write, Agent/Task, web or MCP tool and stay within the ADR-033 floor, its spawn_allowlist is empty, and no other registry entry lists it in a spawn_allowlist."
+  - name: test_bo_3200f_2_no_shipped_setting_preapproves_executor_commands
+    target_dir: unit_tests/agents/
+    framework: unittest
+    type: unit
+    angle: failure
+    description: "Scan every settings and hook configuration the build ships and assert none contains an allow rule or exemption keyed to the executor or to its capture invocation as a class."
+  - name: test_bo_3200f_2_bypass_variable_dispatched_to_executor_is_stopped_as_guardrail_refusal
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: integration
+    angle: failure
+    description: "Dispatch a command setting the commit-agent bypass variable in front of a commit through the executor path; assert it is stopped at the load-bearing enforcement point chosen by the user and reported as a guardrail refusal, never carried out."
+  - name: test_bo_3200f_2_four_command_kinds_are_carried_out_by_the_registered_executor
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: e2e
+    angle: deployed
+    description: "LIVE DISPATCH. Against a temporary project, dispatch to the real registered executor an AC-store read, a todo-to-in-progress claim, a git command inside a worktree and a repository script with arguments; assert each reply verifies as a BO-3200f-1 capture and none is a refusal, a confirmation request or an out-of-remit statement."
+  - name: test_bo_3200f_2_no_executed_command_is_one_the_stated_permission_excludes
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "For each of the four commands, compare its kind (read, store mutation, git, script) with what permits_shell: true admits under the registry schema's own wording; assert none is excluded."
+test_rationale: |
+  The registry half is deterministic and is asserted on the real registry file, because the
+  defect this tree came from was a field read wrongly from the real file, never from a fixture.
+  The disagreement test runs the real validator with a planted mismatch, since agreement that is
+  only described is agreement nothing enforces.
+  The four containment tests are the price of 'admits every exact command': tools, callers,
+  shipped settings and bypass variables are the four ways a party that cannot decline becomes
+  more capable than intended, and each has to fail a build when it drifts.
+  The live-dispatch descriptor is the only honest evidence for the first scenario -- whether the
+  registered agent carries a claim out rather than refusing it is behaviour of a model under its
+  charter, and a grep of the charter is exactly the dead-prose proof the BO-3100/BO-3200
+  constraint rejects. It is listed even though no live-dispatch test surface exists yet (see
+  notes), so the gap is visible rather than silently filled with a template grep.
+origin_agent: business-analyst
+created: 2026-09-16
+amended_by:
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-09-16
+  note: Assignment confirmed llm-expert; complexity S -> M for the containment surface. Added
+    six security-containment it_requirements, test_spec/test_rationale, change_target/
+    risk_surface, delivers_to, doc_links; expects_from made specific. criteria, title,
+    depends_on untouched.
+superseded_by: null
+covered_by:
+  - BO-3200f-2-i
+implemented_by: []
+notes: |
+  THE DEFECT BEING FIXED IS A CHARTER REFUSAL, so the first scenario uses the kinds of command
+  that were actually refused or are at risk: store reads (fast-lane resolve and producibility),
+  a store-mutating claim (fast-lane claim, dispatched today to the one agent that forbids it),
+  git, and a script. A charter that admits reads but reserves mutations passes a reads-only test
+  and fails the claim path.
+
+  COMPOSES WITH AR-200c, DOES NOT DUPLICATE IT. AR-200c is that EVERY specialist states its
+  limits, so absence is never read. This record needs only the executor's own entry to state its
+  permission explicitly and to agree with its charter. How absence is interpreted registry-wide
+  stays AR-200c's decision, and this record must not pre-empt it.
+
+  A RISK THE IT PO SHOULD WEIGH, not decided here. "Admits every exact command" makes the
+  executor the most capable party in the registry. The user's decision accepts that on the
+  grounds that it exercises no judgement. Project guardrails and permission prompts still bind
+  it; a command a guardrail blocks is a guardrail refusal (BO-3800's layer) and must be reported
+  as that, not as the executor declining -- see BO-3200g.
+
+  IT-PO ENRICHMENT (2026-09-16) -- THE RISK, WEIGHED.
+
+  Accepted, with containment. "Admits every exact command" is acceptable only while four things
+  hold, and each is now an it_requirement with a test: the executor's own tools are minimal and
+  it cannot dispatch anyone (1, 2); every guardrail and permission rule binds it exactly as it
+  binds a direct command, and nothing the package ships pre-approves its commands (3, and
+  BO-3200f-1's guardrail-visibility parity test); guardrail escape hatches are not reachable
+  through it (4); and a block is reported as a block, not a decline (5). Containment 6 keeps
+  memory and skills from re-introducing judgement.
+
+  A NOTE ON BO-3800. BO-3800 is a COMMIT-TIME standard summoning a craft. A PreToolUse block on
+  an executor command is a different refusal at a different layer; what it shares with BO-3800
+  is only BO-3200g's rule that a refusal is reported as a refusal by whom. Nothing here depends
+  on BO-3800 or INF-800f.
+
+  USER DECISIONS NEEDED.
+    (a) Containment 4's load-bearing enforcement point. Authoring-time rejection by BO-3200f-3
+        is fully within this package and testable today, but only covers commands written into
+        shipped workflows. Run-time refusal at the guardrail covers every command, but depends
+        on a hook being able to tell that the caller is the executor, which the hook payload
+        may not expose. Recommendation: authoring time as load-bearing now, run time added if
+        the payload supports it.
+    (b) Permission prompts in unattended runs. Default here: no pre-approval of any kind. If
+        fast-lane or plan-feature must run without prompts, the user decides which command
+        FAMILIES get explicit allow rules; a rule keyed to the executor or its capture
+        invocation is forbidden by containment 3.
+    (c) Who may spawn the executor. Default here: workflow scripts only, spawn by any agent
+        forbidden.
+
+  CAVEAT -- NO LIVE-DISPATCH TEST SURFACE EXISTS. The unit suite drives workflows through
+  unit_tests/_workflow_engine_harness.py with scripted agent replies; nothing in the repository
+  dispatches a real agent in a test. The first scenario here and both scenarios of BO-3200f-2-i
+  are model behaviour under a charter, so their e2e descriptors cannot run until such a surface
+  exists. Recommended: a follow-up AC for an opt-in live-dispatch harness, or an explicit user
+  decision to accept a recorded manual live run as the evidence for these three scenarios. Until
+  one of those exists, these records must not be marked done on harness evidence alone.

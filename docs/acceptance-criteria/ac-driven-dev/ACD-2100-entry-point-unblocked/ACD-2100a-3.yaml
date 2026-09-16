@@ -54,7 +54,7 @@ estimated_complexity: S
 it_requirements:
   - "The change must land under templates/. The deployed workflow under .leafcutter/workflows/ is build output."
   - "Must use the same resolution ACD-2100a-1 establishes rather than a second, independent one. Two resolvers on the same startup path is how the five sites came to disagree in the first place."
-  - "The registry must be read from the local filesystem only. Adding a network or agent round-trip to satisfy this read reintroduces the failure class ACD-2100b-5 removes."
+  - "THE REGISTRY IS READ THROUGH ONE EXACT COMMAND TO THE CHARTERED EXECUTOR (BO-3200f-1), never by asking any party to read or interpret it. The command runs in the directory the shared repository-anchored resolution names -- not in whatever directory the executor or the run happens to start in -- and emits only the entry the check needs, not the whole registry (ACD-2100b-5). A read that cannot complete through the executor is reported as could-not-check with BO-3200f-1-i's reason, never as a missing or unreadable registry."
   - "A worktree that happens to hold its own installed support directory must still resolve to a registry -- the behaviour must not depend on the worktree being empty of one, only on the run reaching a real registry."
   - "Must satisfy the repository error-handling policy: the read is external I/O; a failure must be reported through the outcomes ACD-2100b-1 and ACD-2100b-2 specify, never swallowed into a false verdict."
   - "The read must add no measurable startup cost beyond a single file open -- no directory tree walk over the project on every run."
@@ -101,7 +101,25 @@ delivers_to:
 expects_from: null
 origin_agent: business-analyst
 created: 2026-08-25
-amended_by: []
+amended_by:
+- reason: premise-review-chartered-executor
+  by: it-po
+  at: 2026-09-16
+  note: |
+    Premise review after the 2026-09-16 chartered-executor decision (BO-3200f). Verdict: FIXED
+    (IT PO FIELDS). criteria untouched and compatible: "the check reads the project's registry
+    and returns a verdict derived from its contents" does not say how the read is carried.
+
+    OLD it_requirements[2] (verbatim): "The registry must be read from the local filesystem only.
+    Adding a network or agent round-trip to satisfy this read reintroduces the failure class
+    ACD-2100b-5 removes."
+
+    WHY IT CHANGED. The workflow body has no filesystem access (workflow authoring contract,
+    section 1), so "local filesystem only, no agent round-trip" is unbuildable, and ACD-2100b-5
+    no longer removes the round-trip -- it removes the refusal. The replacement keeps what the
+    clause protected: the read carries no judgement, reads from the resolved location, and a
+    failed carriage is could-not-check rather than a false verdict. readiness left as approved
+    for the user to confirm.
 superseded_by: null
 covered_by: []
 implemented_by:
@@ -140,4 +158,10 @@ notes: |
   The shared-resolution requirement is therefore stated as an it_requirement, which the
   coder does see. Same reasoning applies to the a-3/b-1..b-3 relationship: those are
   refinements of this read's failure reporting, not prerequisites of it.
-target_epic: EPIC-StartingNewWorkTheProperWayAlways
+
+  2026-09-16 (it-po): THE "RELATED" PARAGRAPH ABOVE IS SUPERSEDED. ACD-2100b-5 no longer removes
+  the agent round-trip; under the chartered-executor decision this read is carried by an exact
+  command to the executor. The observable outcome stated in the criteria is unchanged. The
+  resolution this record shares with ACD-2100a-1 now has a second job: it supplies the directory
+  the executor dispatch names, because the executor runs where it is told and never infers a
+  directory (BO-3200f-1).

@@ -57,7 +57,12 @@ origin_agent: product-owner
 created: 2026-09-16
 amended_by: []
 superseded_by: null
-covered_by: []
+covered_by:
+  - BO-3200f-1
+  - BO-3200f-2
+  - BO-3200f-3
+  - BO-3200f-4
+  - BO-3200f-5
 implemented_by: []
 change_target: pipeline
 risk_surface: contract_boundary

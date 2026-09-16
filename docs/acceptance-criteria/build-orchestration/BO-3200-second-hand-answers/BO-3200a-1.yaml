@@ -8,7 +8,7 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
+readiness: reviewed
 priority: medium
 roadmap_phase: phase_1
 criteria: |
@@ -57,31 +57,37 @@ change_target:
   - pipeline
 risk_surface: contract_boundary
 it_requirements:
-  - "THE READ MUST BE PERFORMED BY THE LAYER THAT NEEDS THE VALUE, from the recorded source, with no dispatch in the path. This is testable only by removing the ability to dispatch — an assertion on the returned value cannot distinguish a direct read from a relay that happened to return the right thing."
+  - "THE FACT IS OBTAINED WITH NO JUDGEMENT REQUESTED OF ANYONE. The layer that needs the value obtains it by dispatching an exact command to the chartered executor through BO-3200f-1's shared helper and taking the value from the verified output -- or by making no dispatch at all. It never asks any party to read, decide, interpret or summarise the source. This is testable only in the environment the criteria describe -- executor dispatches answered through BO-3200f-1's real capture, every other dispatch failing immediately -- because an assertion on the returned value cannot distinguish an exact-command read from a relay that happened to return the right thing."
   - "THE FIXTURE MUST BE AT OR ABOVE THE REAL FAILING SIZE (130 KB), per CLAUDE.md 'Real-artifact behavioral spot-check'. A smaller fixture passes on an implementation that still relays, because the truncation only appears above the transport's limit. Prefer exercising the repository's ACTUAL registry file over a synthetic one of the same size."
   - "The fixture must contain a value that survives only if the whole source is read — placed beyond the truncation point and, ideally, immediately after an escape sequence, because the anchor case failed by splitting one."
   - "THE ASSERTION MUST REACH THE OUTCOME, not stop at the parsed value. The third criterion is about the build PERMITTING the action; a test that asserts the value parsed correctly passes on a downstream branch that still refuses."
   - "A read that fails must produce BO-3200e's `undetermined` outcome, not a substantive verdict. This is the other half of KI-BO-018 and it is not fixed by reading directly — a direct read can also fail."
   - "The source location must be resolved the way BO-3200a-1-i requires (see that AC), not by an upward walk from the process's starting directory."
   - "No new caching layer between the source and the reader. A cache is a second copy, and a value read from the wrong copy is the same defect as a truncated one."
-  - "Coverage must use unit_tests/_workflow_engine_harness.py so the no-specialist-available environment can be produced by withholding the dispatch surface from the real workflow."
+  - "Coverage must use unit_tests/_workflow_engine_harness.py with BO-3200f-1's executor stand-in: executor dispatches are answered by running the same capture the real executor issues, and every other dispatch fails immediately with a transport error. Withholding the dispatch surface entirely is no longer the environment -- under the chartered-executor decision it makes every read impossible -- and a per-test fake returning canned output is not the environment either."
+  - "THE COMMAND EMITS THE FACT, NOT THE SOURCE. The exact command reads the whole source on the executor's side and emits only the value the build branches on. This is what keeps the second scenario satisfiable through a dispatch: a 130 KB source returned as command output would meet the same transport limit that truncated KI-BO-018. A command that prints the source for the workflow to parse is a relay by another name."
+  - "NO FALLBACK TO A JUDGING PARTY, WHETHER OR NOT ONE IS AVAILABLE. With every party dispatchable the resolver still makes only exact-command dispatches to the executor. A resolver that asks a specialist first, or asks one when the executor dispatch fails, passes the first scenario in the test environment and relays in production. An executor dispatch that fails in transit, comes back incomplete, is declined or is blocked by a guardrail produces BO-3200e's undetermined with BO-3200f-1-i's reason -- never a value and never a refusal verdict."
 delivers_to:
   - agent: python-coder
-    contract: "A direct source-read resolver for project facts: given a fact identifier, returns {value: Any, outcome: 'read' | 'undetermined', source_path: str, looked_in: list[str]} with no dispatch in its call path. BO-3200a-1-i constrains how source_path is resolved and what `looked_in` must contain; BO-3200a-2's sweep asserts every fact-resolving path uses a resolver of this kind."
-expects_from: null
+    contract: "A source-read resolver for project facts: given a fact identifier, returns {value: Any, outcome: 'read' | 'undetermined', source_path: str, looked_in: list[str], uninspectable_reason: str | null}. Its call path makes only exact-command dispatches to the chartered executor through BO-3200f-1's helper -- none to any other party and none requesting judgement; uninspectable_reason carries BO-3200f-1-i's reason when outcome is undetermined. BO-3200a-1-i constrains how source_path is resolved and what `looked_in` must contain; BO-3200a-2's exercise verdict asserts every fact-resolving path behaves this way."
+expects_from:
+  - ac_id: BO-3200f-1
+    contract: "The executor dispatch helper: {command, cwd} -> {outcome: 'completed', cwd, exit_status, stdout, stderr} | {outcome: 'could_not_complete', reason, detail, blocked_by}, verified; and the harness stand-in that answers executor dispatches through the same capture."
+  - ac_id: BO-3200f-1-i
+    contract: "The could-not-check mapping from a could-not-complete or non-zero result to BO-3200e-1's undetermined outcome with one of five distinct reasons."
 test_spec:
-  - name: test_bo_3200a_1_fact_resolves_with_dispatch_impossible
+  - name: test_bo_3200a_1_fact_resolves_when_no_party_can_be_asked_to_judge
     target_dir: unit_tests/workflows/
     framework: unittest
     type: integration
     angle: criterion
-    description: "THE DISCRIMINATOR. Run the real entry workflow under the harness with the dispatch surface withheld entirely; assert the fact is obtained, its value is correct, and the workflow proceeds. Only a build that no longer relays can pass."
+    description: "THE DISCRIMINATOR. Run the real entry workflow under the harness with executor dispatches answered through BO-3200f-1's capture and every other dispatch failing immediately; assert the fact is obtained, its value is correct, and the workflow proceeds. A build that still asks a party to look and report back gets no usable answer and cannot pass."
   - name: test_bo_3200a_1_value_beyond_the_truncation_point_is_read_whole
     target_dir: unit_tests/workflows/
     framework: unittest
     type: integration
     angle: real_artifact
-    description: "Source of at least 130 KB with the needed value placed after the 75,000-character mark and immediately following an escape sequence; assert the resolved value is complete and the decision made from it matches the decision made from the source read whole."
+    description: "Source of at least 130 KB with the needed value placed after the 75,000-character mark and immediately following an escape sequence, resolved through the executor; assert the resolved value is complete and the decision made from it matches the decision made from the source read whole."
   - name: test_bo_3200a_1_permitting_value_produces_a_permit_not_a_refusal
     target_dir: unit_tests/workflows/
     framework: unittest
@@ -94,18 +100,25 @@ test_spec:
     type: integration
     angle: failure
     description: "With the source unreadable, assert the outcome is `undetermined` and that the workflow does not emit a substantive claim about the permission. The other half of KI-BO-018, which reading directly does not fix."
-  - name: test_bo_3200a_1_resolver_has_no_dispatch_in_its_call_path
+  - name: test_bo_3200a_1_every_dispatch_while_resolving_is_an_exact_command_to_the_executor
     target_dir: unit_tests/workflows/
     framework: unittest
     type: integration
     angle: seam
-    description: "Assert zero agent() calls are recorded by the harness while the fact is resolved. A resolver that falls back to a dispatch when the direct read is slow or fails would otherwise pass every value assertion."
+    description: "Read the harness's dispatch record for the resolution, once in the no-judgement environment and once with every party dispatchable and a judging party that would answer; assert in both runs that every recorded dispatch is addressed to the executor and carries an exact command, and none is addressed to any other party. Zero dispatches also passes. Catches a resolver that consults a judging party whenever one is available."
+  - name: test_bo_3200a_1_executor_dispatch_failure_is_undetermined_not_a_refusal
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: integration
+    angle: failure
+    description: "With the executor dispatch made to fail in transit, then to return an incomplete capture, assert the outcome is undetermined with BO-3200f-1-i's reason, no value is reported, no permission is refused on the strength of it, and no other party is dispatched as a fallback."
 test_rationale: |
-  "Reads the fact directly" is a claim about HOW, and no assertion on the returned value can
-  distinguish it from a relay that returned the right thing — which a relay does most of the
-  time. Removing the ability to dispatch and requiring success is the only shape that can only
-  be passed by a build that no longer relays. It is the same technique BO-3100c-4 applies to
-  the dispatch-mode option.
+  "Obtains the fact with no judgement requested" is a claim about HOW, and no assertion on the
+  returned value can distinguish it from a relay that returned the right thing -- which a relay
+  does most of the time. Removing the ability to obtain JUDGEMENT -- only the executor answers,
+  and it answers only as a literal command -- and requiring success is the only shape that can
+  only be passed by a build that no longer relays. The old shape, removing dispatch entirely,
+  became unsatisfiable once every read is an executor dispatch.
   The 130 KB fixture size is not a round number: it is the real failing size from KI-BO-018,
   and a smaller fixture would pass on the broken implementation because the truncation only
   appears above the transport's limit. Placing the needed value after an escape sequence past
@@ -188,6 +201,49 @@ amended_by:
     or judgement; a dispatch to the chartered executor has no declared home in that scheme.
     BO-3200f's notes say five approved L2s are affected; only this record and ACD-2100b-5 were
     authorised for reword.
+- reason: technical-re-enrichment-after-premise-narrowing
+  by: it-po
+  at: 2026-09-16
+  note: |
+    Rewrote every IT PO field the BA's 2026-09-16 entry listed as stale. criteria, title,
+    depends_on and req_status untouched. readiness draft -> reviewed (IT PO review; user
+    approval still required).
+
+    OLD it_requirements[0] (verbatim): "THE READ MUST BE PERFORMED BY THE LAYER THAT NEEDS THE
+    VALUE, from the recorded source, with no dispatch in the path. This is testable only by
+    removing the ability to dispatch — an assertion on the returned value cannot distinguish a
+    direct read from a relay that happened to return the right thing."
+    OLD it_requirements[7] (verbatim): "Coverage must use unit_tests/_workflow_engine_harness.py
+    so the no-specialist-available environment can be produced by withholding the dispatch
+    surface from the real workflow."
+    OLD delivers_to[0].contract (verbatim): "A direct source-read resolver for project facts:
+    given a fact identifier, returns {value: Any, outcome: 'read' | 'undetermined', source_path:
+    str, looked_in: list[str]} with no dispatch in its call path. BO-3200a-1-i constrains how
+    source_path is resolved and what `looked_in` must contain; BO-3200a-2's sweep asserts every
+    fact-resolving path uses a resolver of this kind."
+    OLD expects_from: null.
+    OLD test_spec test_bo_3200a_1_fact_resolves_with_dispatch_impossible, description
+    (verbatim): "THE DISCRIMINATOR. Run the real entry workflow under the harness with the
+    dispatch surface withheld entirely; assert the fact is obtained, its value is correct, and
+    the workflow proceeds. Only a build that no longer relays can pass."
+    OLD test_spec test_bo_3200a_1_resolver_has_no_dispatch_in_its_call_path, description
+    (verbatim): "Assert zero agent() calls are recorded by the harness while the fact is
+    resolved. A resolver that falls back to a dispatch when the direct read is slow or fails
+    would otherwise pass every value assertion."
+    OLD test_rationale first paragraph (verbatim, between the markers):
+      >>> "Reads the fact directly" is a claim about HOW, and no assertion on the returned value
+      can distinguish it from a relay that returned the right thing — which a relay does most of
+      the time. Removing the ability to dispatch and requiring success is the only shape that can
+      only be passed by a build that no longer relays. It is the same technique BO-3100c-4
+      applies to the dispatch-mode option. <<<
+
+    WHAT REPLACED THEM: it_requirements[0] and [7] restated for the no-judgement environment;
+    two it_requirements ADDED (the command emits the fact, not the source -- which is what
+    keeps the 130 KB scenario satisfiable through a dispatch; and no fallback to a judging
+    party); delivers_to carries uninspectable_reason and the executor-only call path;
+    expects_from set to BO-3200f-1 and BO-3200f-1-i; the zero-dispatch test replaced by a
+    dispatch-record test run in both environments; a failure test added for an executor
+    dispatch that does not complete; the size test now resolves through the executor.
 superseded_by: null
 covered_by:
   - BO-3200a-1-i
@@ -233,3 +289,18 @@ notes: |
   does not prove a specialist is not consulted when one IS available. A resolver with a
   dispatch fallback on slow or failing reads would pass the first scenario in the test
   environment and relay in production, which is the worst of both.
+
+  IT-PO RE-ENRICHMENT NOTE (2026-09-16), SUPERSEDING THE PARAGRAPH ABOVE AND "THE FIRST SCENARIO
+  IS THE DISCRIMINATING TEST". The discriminating technique is now removing JUDGEMENT, not
+  dispatch: only the executor answers, and it runs whatever it is given as a literal command, so
+  a build that asks anyone to look gets nothing usable. The fallback point survives in a sharper
+  form and is now a test run in both environments: with every party dispatchable, the resolver
+  must STILL make only exact-command dispatches to the executor.
+
+  SIZE THROUGH A DISPATCH. The second scenario stays satisfiable only because the command emits
+  the fact rather than the source. If a future resolver needs the whole source in the workflow,
+  that is BO-3200d's handover, not a larger executor reply.
+
+  ORDER OF LANDING -- RECOMMENDED BA EDIT. expects_from now names BO-3200f-1 and BO-3200f-1-i,
+  but depends_on carries only BO-3200a, and the build sequencer reads depends_on only
+  (KI-ACD-015). Recommended: add BO-3200f-1 and BO-3200f-1-i to depends_on.
