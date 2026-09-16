@@ -1,0 +1,59 @@
+id: TQ-100b-4-iii
+components:
+  - testing_quality
+title: "The tag gate reads a docstring-first test function on every supported Python version without crashing"
+component: testing-quality
+level: L3
+status: active
+req_status: draft
+work_status: done
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a staged test file containing a test function whose first body statement is a
+    docstring
+  And the check-test-ac-tags hook running on Python 3.14, where `ast.Constant` no
+    longer has the removed `.s` alias
+  When the hook evaluates the file
+  Then it reaches a verdict on that function instead of raising
+  And a covers tag the hook already recognises in that position is still recognised
+  And the verdict is the same one the hook reaches on Python 3.13
+  And the bug symptom ("AttributeError: 'Constant' object has no attribute 's'", exit 1)
+    must not occur
+depends_on: [TQ-100b-4]
+doc_links:
+  - path: templates/scripts/commit_guardian/check_test_ac_tags.py
+    relationship: modifies
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-09-16
+amended_by: []
+superseded_by: null
+covered_by:
+  - unit_tests/commit_guardian/test_check_test_ac_tags_docstring_first.py
+implemented_by:
+  - templates/scripts/commit_guardian/check_test_ac_tags.py
+change_target: code
+risk_surface: internal
+test_spec:
+  - name: test_docstring_first_test_function_is_evaluated_without_crashing
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "Running check_test_ac_tags.py as a subprocess over a file whose test function opens with a docstring carrying a covers tag exits 0 with no traceback, and a docstring-first function with no tag anywhere is still reported."
+notes: |
+  FOUND 2026-09-16: the hook blocked a commit on Python 3.14.2 with
+  `AttributeError: 'Constant' object has no attribute 's'` at has_covers_tag()'s
+  docstring branch. `ast.Constant.s` and `.n` were deprecated aliases and are removed in
+  Python 3.14. Earlier commits touching test files passed only because none of their
+  test functions opened with a docstring.
+
+  SCOPE: this record is only about the gate not crashing and keeping its current
+  verdict. Whether a covers phrase inside a docstring should count as a tag is
+  TQ-100b-4-ii's subject and is not decided here.
