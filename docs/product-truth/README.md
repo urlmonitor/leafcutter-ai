@@ -11,6 +11,7 @@ related_docs:
   - docs/how-to/authoring-product-truth-artifacts.md
   - docs/how-to/product-truth-schema-reference.md
   - docs/architecture/components/ux-prototyping.md
+  - docs/reference/product-truth-checker-outcomes.md
 ---
 
 # Product-Truth Store
