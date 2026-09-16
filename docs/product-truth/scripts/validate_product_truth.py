@@ -193,6 +193,13 @@ DECISION HISTORY
   the contract line states each bound's measured count and enforcement. --tighten
   BOUND is refused, naming the holdouts, while any artifact is on an older shape
   version. (#EPIC-TruthfulProjectRecord/38, /40)
+- 2026-09-16 [python-coder]: UXP-700d-4 -- run_checks() now states, per artifact
+  type, how many of its records belong to the project versus the example
+  product (product_truth_outcome.compute_type_population, built on UXP-700d-1's
+  is_example_artifact_id). main() derives example_only_types from it and both
+  land on the existing stdout contract line. A both-zero type is never reported
+  example-only -- it stays in the pre-existing empty_types vocabulary instead.
+  (#EPIC-TruthfulProjectRecord/36)
 """
 from __future__ import annotations
 
@@ -244,6 +251,8 @@ from product_truth_outcome import (  # noqa: F401  # re-exported for callers
     _compute_empty_types,
     _print_outcome_contract,
     _top_level_outcome,
+    compute_example_only_types,
+    compute_type_population,
 )
 from product_truth_bounds import check_bounds, tighten_refusal
 from product_truth_shapes import _check_outcome_kinds, count_branches  # noqa: F401
@@ -546,6 +555,7 @@ def run_checks() -> dict:
         "resolved_labels": resolved_labels,
         "bounds": bounds,
         "empty_types": _compute_empty_types(flows, mocks, mockups),
+        "type_population": compute_type_population(flows, mocks, mockups),
     }
 
 
@@ -573,9 +583,11 @@ def main() -> int:
     examined_flows, unreadable_flows = report["examined_flows"], report["unreadable_flows"]
     empty_types = report["empty_types"]
     unresolvable = report["unresolvable_pointers"]
+    type_population = report["type_population"]
+    example_only_types = compute_example_only_types(type_population)
     top_outcome = _top_level_outcome(examined_flows, unreadable_flows, bool(errors), empty_types, len(unresolvable))
     contract = (top_outcome, examined_flows, unreadable_flows, empty_types, report["resolved_pointers"], len(unresolvable),
-                examined_by_check(checks), report["resolved_labels"], report["bounds"])
+                examined_by_check(checks), report["resolved_labels"], report["bounds"], type_population, example_only_types)
 
     # Stated on EVERY run, zero included (UXP-700c-1): without it a run that
     # resolved none of the pointers it holds is indistinguishable, in the
