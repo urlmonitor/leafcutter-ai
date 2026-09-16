@@ -6,7 +6,7 @@ components:
 level: L2
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -227,7 +227,10 @@ covered_by:
   - BO-3900b
   - BO-3900c
   - BO-3900d
-implemented_by: []
+implemented_by:
+  - templates/workflows-js/build-feature.js
+  - templates/workflows-js/plan-feature.js
+  - templates/workflows-js/build-epic.js
 origin_agent: business-analyst
 created: 2026-09-14
 amended_by:

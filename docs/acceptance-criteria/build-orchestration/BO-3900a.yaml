@@ -7,7 +7,7 @@ components:
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -106,8 +106,11 @@ test_rationale: |
   runner CI actually has. The reachability entry repeats the incident replay on that same
   runner, because a helper can classify correctly in isolation while the workflow body
   never calls it.
-covered_by: []
-implemented_by: []
+covered_by:
+  - unit_tests/portability/test_bo3900a_host_independent_path_classification.py
+  - unit_tests/portability/_bo3900a_js_classifier.py
+implemented_by:
+  - templates/workflows-js/build-feature.js
 origin_agent: business-analyst
 created: 2026-09-14
 amended_by:

@@ -1452,53 +1452,136 @@ if (!realWorktreePath) {
 // resolved target carries it and no longer reads as undetermined.
 resolvedTarget.worktree_path = realWorktreePath;
 
+// BO-3900-PATH-HELPERS-START
+/**
+ * Cross-platform path handling (BO-3900). Every rule below is decided from
+ * the path STRING's own form only — never from process.platform or any
+ * other host signal (BO-3900a). This block is a deliberate, self-contained
+ * COPY: the E2 engine injects no module loader (ADR-030; KI-BO-028), so a
+ * workflow script cannot require/import Node's `path`, `os`, or `fs`
+ * modules, or reach for a shared helper file outside itself. Every script
+ * that needs this logic carries its own copy (BO-3900's it_requirements
+ * names this explicitly); all copies must reach identical outcomes for
+ * identical inputs, and each script's own harness run is the guard.
+ */
+
+/**
+ * Classify a path STRING's form: "absolute", "relative", or "unrecognised".
+ *
+ * Absolute: drive-lettered (either letter case, either or mixed separators),
+ * UNC (\\server\share, or //server/share via the leading "/" rule), or a
+ * leading "/" (POSIX).
+ * Relative: no root and no drive.
+ * Unrecognised (never resolved, never joined — BO-3900c): drive-relative
+ * ("C:foo"), rooted-without-drive ("\foo"), empty/blank, or a value already
+ * carrying a second root after its first segment. A second drive root
+ * anywhere after the string's own start means the value is already
+ * (mis-)joined — refused, never repaired.
+ *
+ * @param {*} input
+ * @returns {"absolute"|"relative"|"unrecognised"}
+ */
+function classifyPathForm(input) {
+  if (typeof input !== "string" || input.trim() === "") return "unrecognised";
+  if ((input.match(/[A-Za-z]:[\\/]/g) || []).length >= 2) return "unrecognised";
+  if (/^(\\\\[^\\/]|[A-Za-z]:[\\/]|\/)/.test(input)) return "absolute";
+  if (/^([A-Za-z]:|\\(?!\\))/.test(input)) return "unrecognised";
+  return "relative";
+}
+
+/**
+ * Normalise separator spelling to "/" and apply "." and ".." segments,
+ * anchored on the path's own root (if it has one) so a ".." can never climb
+ * above it. Content-preserving otherwise: letter case is never changed here.
+ * The root is a drive ("C:/"), a UNC share ("//server/share/"), or "/".
+ *
+ * @param {string} input
+ * @returns {string}
+ */
+function normalizePathForm(input) {
+  const slashed = String(input).replace(/\\/g, "/");
+  const rootMatch = /^([A-Za-z]:\/|\/\/[^/]+\/[^/]+(\/|$)|\/)/.exec(slashed);
+  const root = rootMatch ? rootMatch[0].replace(/\/?$/, "/") : "";
+  const stack = [];
+  for (const seg of slashed.slice(root.length).split("/")) {
+    if (seg === "" || seg === ".") continue;
+    if (seg !== "..") stack.push(seg);
+    else if (stack.length > 0) stack.pop();
+    else if (root === "") stack.push("..");
+  }
+  return root + stack.join("/");
+}
+
+/**
+ * Resolve `input` onto `root` (BO-3900's delivers_to point 4). An absolute
+ * input is normalised and returned unchanged in content — never joined onto
+ * anything, inside the root or not. A relative input is joined onto the
+ * normalised root exactly once. An unrecognised input is refused: its exact
+ * value comes back verbatim, still unjoined, still unrepaired (BO-3900c).
+ *
+ * @param {string} root
+ * @param {*} input
+ * @returns {{ok: true, form: string, path: string}|{ok: false, form: "unrecognised", value: *}}
+ */
+function resolvePathOntoRoot(root, input) {
+  const form = classifyPathForm(input);
+  if (form === "unrecognised") return { ok: false, form, value: input };
+  const path = normalizePathForm(input);
+  if (form === "absolute") return { ok: true, form, path };
+  return { ok: true, form, path: normalizePathForm(root).replace(/\/$/, "") + "/" + path };
+}
+// BO-3900-PATH-HELPERS-END
+
 // ---------------------------------------------------------------------------
 // Derive worktree-resident paths from resolve output
 //
 // resolve may return epic_path / ticket_path as an absolute main-clone path
-// (e.g. /home/user/leafcutter-ai/tickets/…) or as a repo-relative path
-// (e.g. tickets/00_inbox/epics/EPIC-X).  Either way we must land inside
-// realWorktreePath before passing paths to the planner or phase agents.
-//
-// Algorithm:
-//   1. If the path is already inside realWorktreePath → use as-is.
-//   2. If absolute → strip to the repo-relative portion via known directory
-//      anchors (tickets/, templates/, docs/, unit_tests/), then join under
-//      realWorktreePath.
-//   3. If repo-relative (no leading slash) → join directly under realWorktreePath.
+// (e.g. /home/user/leafcutter-ai/tickets/…), a repo-relative path (e.g.
+// tickets/00_inbox/epics/EPIC-X), or an absolute Windows path in any
+// separator spelling. Either way we must land inside realWorktreePath before
+// passing paths to the planner or phase agents.
 // ---------------------------------------------------------------------------
 
+/**
+ * Algorithm (BO-3900): classify the path's FORM from the string alone.
+ *   - absolute  → normalised and returned as-is; NEVER joined onto anything,
+ *                 whether it names a location inside realWorktreePath or
+ *                 outside it (BO-3900's own delivers_to contract, point 4).
+ *   - relative  → joined onto the normalised realWorktreePath exactly once.
+ *   - unrecognised (drive-relative, rooted-without-drive, blank, or already
+ *     carrying a second root) → the value is returned verbatim, still
+ *     unjoined and unrepaired (BO-3900c). Call sites that must REFUSE
+ *     dispatch for a ticket with such a value check classifyPathForm()
+ *     directly, before ever reaching this function — see the chunk-dispatch
+ *     and single-ticket call sites below.
+ */
 function toWorktreePath(resolvedPath, worktreePath) {
   if (!resolvedPath) return null;
+  const resolved = resolvePathOntoRoot(worktreePath, resolvedPath);
+  return resolved.ok ? resolved.path : resolved.value;
+}
 
-  // Case 1: already inside the worktree
-  if (
-    resolvedPath === worktreePath ||
-    resolvedPath.startsWith(worktreePath + "/")
-  ) {
-    return resolvedPath;
-  }
-
-  // Case 2: absolute path — strip to repo-relative using known anchors
-  if (resolvedPath.startsWith("/")) {
-    const anchors = ["tickets/", "templates/", "docs/", "unit_tests/"];
-    for (const anchor of anchors) {
-      const idx = resolvedPath.indexOf("/" + anchor);
-      if (idx !== -1) {
-        return worktreePath + "/" + resolvedPath.slice(idx + 1);
-      }
-    }
-    // Fallback: try anchor without requiring a leading slash
-    for (const anchor of anchors) {
-      const idx = resolvedPath.indexOf(anchor);
-      if (idx !== -1) {
-        return worktreePath + "/" + resolvedPath.slice(idx);
-      }
-    }
-  }
-
-  // Case 3: repo-relative (no leading slash) — join directly
-  return worktreePath + "/" + resolvedPath;
+/**
+ * The BO-3900c refusal record for a ticket path whose FORM is neither
+ * recognisably absolute nor recognisably relative. Shared by the epic
+ * chunk-dispatch and single-ticket call sites so both refuse identically.
+ * Nothing is repaired: the reason quotes EXACTLY the value given, verbatim,
+ * never trimmed, never resolved against a guessed root.
+ *
+ * @param {*} ticketPath - The unrecognised value, reproduced verbatim.
+ * @param {string} dispatchNote - Appended to "No phase agent was dispatched".
+ * @returns {{status: "blocked", ticket_path: *, classification: string, message: string}}
+ */
+function pathFormRefusal(ticketPath, dispatchNote) {
+  return {
+    status: "blocked",
+    ticket_path: ticketPath,
+    classification: "path-form-unrecognised",
+    message:
+      `Ticket path "${ticketPath}" is not a recognised absolute or relative path. ` +
+      `No phase agent was dispatched${dispatchNote}. The value above is reproduced verbatim — ` +
+      `it was not joined onto the worktree, not trimmed into some other path, and not guessed at.`,
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -2917,6 +3000,24 @@ if (target_type === "epic") {
         // run already performs, not to pretend the dispatch is not happening.
         const chunkOutcomesByPath = {};
         const chunkThunks = chunk.map((ticket) => {
+          /*
+           * BO-3900c — a path whose FORM is neither recognisably absolute
+           * nor recognisably relative is refused by name, before any agent
+           * is dispatched for it. This ticket alone is blocked; well-formed
+           * siblings in the same batch/chunk are unaffected (this check runs
+           * per ticket, inside the same parallel chunk every other ticket
+           * goes through). Nothing is repaired (see pathFormRefusal).
+           */
+          if (classifyPathForm(ticket.path) === "unrecognised") {
+            const refusedOutcome = Promise.resolve({
+              ticket_path: ticket.path,
+              status: "blocked",
+              result: pathFormRefusal(ticket.path, " for it"),
+            });
+            chunkOutcomesByPath[ticket.path] = refusedOutcome;
+            return () => refusedOutcome;
+          }
+
           const worktreeTicketPath = toWorktreePath(ticket.path, realWorktreePath);
 
           const outcomePromise = (async () => {
@@ -3348,6 +3449,19 @@ if (target_type === "epic") {
   // the planner reads accurate (post-drive) frontmatter statuses.
   // -----------------------------------------------------------------------
   const singleTicketPath = ticket_path || target;
+
+  /*
+   * BO-3900c — refuse an unrecognised path form before spawning any phase
+   * agent for it, exactly as the epic batch path does.
+   */
+  if (classifyPathForm(singleTicketPath) === "unrecognised") {
+    return {
+      status: "blocked",
+      resolved_target: resolvedTarget,
+      ...pathFormRefusal(singleTicketPath, ""),
+    };
+  }
+
   const worktreeTicketPath = toWorktreePath(singleTicketPath, realWorktreePath);
 
   const ticketResult = await driveTicketPhases(worktreeTicketPath);

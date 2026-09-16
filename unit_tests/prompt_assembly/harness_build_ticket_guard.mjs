@@ -435,9 +435,22 @@ function deleteRecord(path) {
 
 /** Longest ticket path that appears in the prompt (handles parallel epics). */
 function ticketFromPrompt(prompt) {
+  // BO-3900: the drivers under test now normalise separator spelling to "/"
+  // before a dispatched prompt ever embeds a ticket path (one separator
+  // spelling throughout — see build-feature.js's toWorktreePath()). The
+  // scenario's own ticketPaths keys are still the ORIGINAL, real on-disk
+  // path strings this harness wrote (Windows-backslash on a Windows host,
+  // via os.path.join on the Python side), so matching must compare both
+  // sides with the same separator spelling. The match still RETURNS the
+  // original key `p`, unchanged, so every `ticketConfigs[ticketPath]`
+  // lookup elsewhere in this file keeps using the same dict key it always
+  // has — only the COMPARISON is separator-insensitive.
+  if (typeof prompt !== "string") return null;
+  const normalizedPrompt = prompt.replace(/\\/g, "/");
   let best = null;
   for (const p of ticketPaths) {
-    if (typeof prompt === "string" && prompt.includes(p)) {
+    const normalizedP = p.replace(/\\/g, "/");
+    if (normalizedPrompt.includes(normalizedP)) {
       if (best === null || p.length > best.length) best = p;
     }
   }

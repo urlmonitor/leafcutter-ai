@@ -6,7 +6,7 @@ components:
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -101,8 +101,10 @@ test_rationale: |
   recognition rule covers. Refusing per ticket, not per run, is asserted with well-formed
   siblings in the same batch. Otherwise halting the whole run would pass as refusing the
   bad ticket.
-covered_by: []
-implemented_by: []
+covered_by:
+  - unit_tests/workflows/test_bo3900c_unrecognised_path_refusal.py
+implemented_by:
+  - templates/workflows-js/build-feature.js
 origin_agent: business-analyst
 created: 2026-09-14
 amended_by:

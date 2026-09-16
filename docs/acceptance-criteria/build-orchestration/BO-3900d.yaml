@@ -7,7 +7,7 @@ components:
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -118,8 +118,11 @@ test_rationale: |
   text-based on purpose. That is why it is kept out of BO-3900's coverage: this repo has
   repeatedly let source-text assertions stand in for behaviour (KI-BO-028, M1 in
   docs/reference/false-green-mechanisms.md).
-covered_by: []
-implemented_by: []
+covered_by:
+  - unit_tests/workflows/test_bo3900d_leading_slash_scanner.py
+  - unit_tests/workflows/_bo3900d_scanner.py
+implemented_by:
+  - unit_tests/workflows/_bo3900d_scanner.py
 origin_agent: business-analyst
 created: 2026-09-14
 amended_by:

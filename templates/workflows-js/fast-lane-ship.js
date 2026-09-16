@@ -206,12 +206,17 @@ const CONTEXT_BUNDLE_STATE_USABLE = "usable";
 /**
  * isContextBundleLocatorString — deterministic, scheme-agnostic locator test
  * on the returned string itself: a `file:` URI scheme, a leading `/`
- * (absolute POSIX path), or a drive-letter root (`C:\`, `C:/`). Never a
- * plausibility heuristic and never a length threshold — a 47-character path
- * and a 47-character bundle fragment must be separable by this rule alone
- * (BO-2400c-1-iii's LANE-RECEIVES constraint). The observed production
- * failure value, `file:/tmp/bo2400f13-bundle/bundle_output.txt`, matches the
- * first branch.
+ * (absolute POSIX path), a drive-letter root (`C:\`, `C:/`), or a UNC root
+ * (`\\server\share`, `//server/share`). Never a plausibility heuristic and
+ * never a length threshold — a 47-character path and a 47-character bundle
+ * fragment must be separable by this rule alone (BO-2400c-1-iii's
+ * LANE-RECEIVES constraint). The observed production failure value,
+ * `file:/tmp/bo2400f13-bundle/bundle_output.txt`, matches the first branch.
+ * The UNC branch was added under BO-3900d: this is the shared classification
+ * its leading-`/` test sits inside — it recognises drive-letter AND UNC
+ * forms alongside it, the property BO-3900d's scanner derives its
+ * permitted-home exemption from. A `//server/share` root already satisfies
+ * the leading-`/` branch, so the UNC alternative only adds `\\server\share`.
  *
  * Pure function: no agent(), no I/O — safe to extract and execute directly.
  *
@@ -224,7 +229,7 @@ function isContextBundleLocatorString(text) {
   return (
     /^file:/i.test(trimmed) ||
     /^\//.test(trimmed) ||
-    /^[a-zA-Z]:[\\/]/.test(trimmed)
+    /^([a-zA-Z]:[\\/]|\\\\[^\\/])/.test(trimmed)
   );
 }
 
