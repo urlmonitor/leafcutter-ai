@@ -44,6 +44,20 @@ Not repaired here, and worth knowing before a driver picks these up:
 - **`files_touched` is empty on `19`, `21` and `22`.** An empty `files_touched` is a phantom-done vector — it drives the surface that `change-scope-reviewer` and the fulfillment gate reason about. Fill it before building those three.
 - **`ACD-2100d-3` has no `delivers_to` in its AC record.** No AC owns the consumer that reads its verdict; where that verdict lands (finalize, the build, or a required CI check) is still an open decision.
 
+## Held back from the 2026-09-16 drive
+
+User decision 2026-09-16: the chartered-executor route (BO-3200f) was chosen because the E2 workflow engine gives a workflow body no filesystem or subprocess access (docs/reference/workflow-authoring-contract.md, section 1). No executor exists yet (BO-3200f covered_by: []). Seven tickets are held; the other 18 were screened for the superseded premise and are built. Held tickets keep `status: todo` because the ticket tooling and the proof-promise gate treat an unstarted ticket as `todo`; the build drive does not exclude tickets by status, so a held ticket dispatched by the planner is stopped by the operator.
+
+- [01](./01_TICKET-20260826-ACD-2100a-1.md) — held (status stays `todo`). Implementation Notes require the startup path up to and including this step to complete with no network available. Under the chartered-executor decision the startup check is a dispatch round-trip, and the business-analyst marked the identical clause on ACD-2100b-5 unsatisfiable. Whether 'startup path' here means the setup script alone or the full workflow run is an it-po decision. Held pending that review.
+- [04](./04_TICKET-20260826-ACD-2100a-3.md) — held (status stays `todo`). Implementation Notes require the registry to be read from the local filesystem only and forbid an agent round-trip. That contradicts the chartered-executor decision and is not implementable in a workflow body. Held pending it-po review of ACD-2100a-3 and the executor's L2s under BO-3200f.
+- [06](./06_TICKET-20260826-ACD-2100a-5.md) — held (status stays `todo`). Depends on 01 and 04, both held. Also carries the 'startup path with no network available' clause pending it-po review.
+- [12](./12_TICKET-20260826-ACD-2100b-5.md) — held (status stays `todo`). Generated from ACD-2100b-5's pre-2026-09-16 criteria. The AC was reworded by the business-analyst (no dispatch -> no judgement requested) and demoted to readiness: draft; its it_requirements and test_spec still assert the old premise, including the now unsatisfiable 'pass it with no network available'. Needs it-po re-enrichment, the executor, and regeneration from the reworded AC before it can be built.
+- [19](./19_TICKET-20260826-ACD-2100d-1.md) — held (status stays `todo`). Depends on 06, held. Also carries the 'startup path with no network available' clause pending it-po review.
+- [22](./22_TICKET-20260826-ACD-2100d-3.md) — held (status stays `todo`). Depends on 19, held. Also carries the 'startup path with no network available' clause pending it-po review.
+- [23](./23_TICKET-20260826-ACD-2100d-4.md) — held (status stays `todo`). Depends on 06 and 19, both held.
+
+The `files_touched` gap listed above for 19, 21 and 22 was re-checked on 2026-09-16: all three now list files.
+
 ## Tickets
 
 | # | File | Title | Source AC | Depends On |
