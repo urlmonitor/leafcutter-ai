@@ -8,7 +8,7 @@ components:
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -137,8 +137,11 @@ test_rationale: |
   behind and ahead, and assert both numbers. Every other entry goes through the workflow
   body, because the defect was a decision the run made (check the branch out as it stood),
   not a wrong number returned by some helper.
-covered_by: []
-implemented_by: []
+covered_by:
+  - unit_tests/workflows/test_bo4000b_branch_staleness_decision.py
+implemented_by:
+  - templates/workflows-js/build-feature.js
+  - templates/scripts/worktree_repo_facts.py
 origin_agent: business-analyst
 created: 2026-09-14
 amended_by:

@@ -7,7 +7,7 @@ components:
 level: L2
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -172,7 +172,9 @@ covered_by:
   - BO-4000a
   - BO-4000b
   - BO-4000c
-implemented_by: []
+implemented_by:
+  - templates/workflows-js/build-feature.js
+  - templates/scripts/worktree_repo_facts.py
 origin_agent: business-analyst
 created: 2026-09-14
 amended_by:

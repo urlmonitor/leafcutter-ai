@@ -17,6 +17,7 @@ ARCHITECTURE: Every path constant here is a Python string literal typed by
 """
 from __future__ import annotations
 
+import json
 from typing import Any
 
 # ---------------------------------------------------------------------------
@@ -95,14 +96,33 @@ DOUBLE_ROOT = (
 )
 
 
-def epic_resolve_response(epic_path: str) -> dict[str, Any]:
-    """label_responses["resolve-target"] value for an epic drive."""
+def epic_resolve_response(epic_path: str, worktree_path: str) -> dict[str, Any]:
+    """label_responses["resolve-target"] value for an epic drive.
+
+    BO-4000: build-feature.js now checks THIS field's own worktree_path via a
+    repo-facts call (label "worktree-facts-resolved", see
+    worktree_facts_resolved_response()) before deciding reuse, rather than
+    discarding it in favour of a separate worktree-setup dispatch. Passing
+    the SAME worktree_path this fixture module's caller wants as the run's
+    final worktree here reproduces every pre-BO-4000 test's outcome
+    unchanged, with one fewer agent dispatch.
+    """
     return {
         "target_type": "epic",
         "epic_path": epic_path,
         "ticket_path": None,
-        "worktree_path": "/ignored-by-build-feature",
+        "worktree_path": worktree_path,
     }
+
+
+def worktree_facts_resolved_response() -> dict[str, Any]:
+    """label_responses["worktree-facts-resolved"] value: reusable facts.
+
+    Paired with epic_resolve_response()'s real worktree_path so BO-4000's
+    reuse check accepts it, matching every pre-BO-4000 test's outcome.
+    """
+    facts = {"exists": True, "is_git_toplevel": True, "is_linked_worktree": True, "is_main_checkout": False, "same_repository": True, "branch": "fixture-default"}
+    return {"output": json.dumps(facts), "exit_code": 0}
 
 
 def worktree_setup_response(worktree_path: str) -> dict[str, Any]:
@@ -162,7 +182,8 @@ def base_epic_label_responses(
 ) -> dict[str, Any]:
     """The full label_responses dict needed to reach per-ticket dispatch."""
     return {
-        "resolve-target": epic_resolve_response(epic_path),
+        "resolve-target": epic_resolve_response(epic_path, worktree_path),
+        "worktree-facts-resolved": worktree_facts_resolved_response(),
         "worktree-setup": worktree_setup_response(worktree_path),
         "epic-planner": epic_planner_response(epic_path, ticket_paths),
         "signoff-readback": signoff_readback_response(depends_on),

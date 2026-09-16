@@ -125,6 +125,17 @@ const WORKTREE_SCHEMA = {
 };
 
 /**
+ * The "run a command, relay raw stdout" envelope (BO-4000's repository-facts
+ * dispatch; same shape plan-feature.js already uses for its registry read).
+ * The workflow validates and parses `output` itself — this schema only
+ * guards the envelope, never the facts payload inside it.
+ */
+const REPO_FACTS_ENVELOPE_SCHEMA = {
+  type: "object",
+  required: ["output", "exit_code"],
+  properties: { output: { type: "string" }, exit_code: { type: "number" } },
+};
+/**
  * Completion-time re-read of the epic's set of work (BO-300a-5).
  *
  * `readable: false` is a first-class answer: a re-read that FAILED must never
@@ -1388,69 +1399,57 @@ const resolvedTarget = {
   worktree_path: null,
 };
 
-// Establish the isolated worktree (create or reuse) before any build work.
-const worktreeTarget = target_type === "epic"
-  ? (epic_path || target)
-  : (ticket_path || target);
-
-const worktreeResult = await agent(
-  `Create or reuse the isolated git worktree for the build target.\n\n` +
-  `Target: "${worktreeTarget}"\n` +
-  `Target type: "${target_type}"\n\n` +
-  `Instructions:\n` +
-  `1. Run 'git worktree list --porcelain' to check if a worktree for this target already exists.\n` +
-  `2. If it exists: REUSE it — report the existing absolute path as worktree_path, status "reused".\n` +
-  `3. If it does not exist: CREATE it from origin/main.\n` +
-  `   For epics: 'git worktree add <path> -b <branch-name> origin/main'\n` +
-  `   Report the new absolute path as worktree_path, status "created".\n` +
-  `4. On any error: report status "failed" with an error message.\n\n` +
-  `IMPORTANT: After creating, bootstrap the worktree: copy/symlink .leafcutter from the main clone so hooks are present.\n\n` +
-  `Return JSON: { "worktree_path": "<absolute path>", "status": "created"|"reused", "error": "<if failed, else omit>" }`,
-  {
-    agentType: "worktree-agent",
-    schema: WORKTREE_SCHEMA,
-    label: "worktree-setup",
-    phase: "Resolve Target",
-  }
-);
-
-if (!worktreeResult || worktreeResult.status === "failed" || worktreeResult.error) {
-  return {
-    status: "error",
-    worktree_undetermined: true,
-    resolved_target: resolvedTarget,
-    message:
-      `The isolated working copy for "${worktreeTarget}" is UNDETERMINED: ` +
-      `worktree-agent failed to create or reuse one. ` +
-      `Error: ${(worktreeResult && worktreeResult.error) || "worktree-agent returned null or failed"}. ` +
-      `No phase agent has been spawned. Safety abort: /build-feature will NOT ` +
-      `fall back to the epic's work-store folder, to the directory the process ` +
-      `happens to be running in, or to any other existing location — an agent ` +
-      `sent to the wrong working copy commits in the wrong repository, and that ` +
-      `is discovered only after the fact. Fix the worktree issue and re-run.`,
-    abort_reason: "worktree-undetermined",
-    action_required: "establish_worktree",
-  };
+// Establish the isolated worktree (reuse or open) before any build work.
+const worktreeTarget = target_type === "epic" ? (epic_path || target) : (ticket_path || target);
+/**
+ * Run WORKTREE_REPO_FACTS_SCRIPT and relay its parsed JSON. Never itself
+ * decides reuse/open/refuse — every caller below reads structured facts,
+ * never the resolver's or an agent's own word (BO-4000).
+ */
+async function repoFactsCall(command, label) {
+  const r = await agent(`Run the following command and return ONLY its raw stdout:\n${command}\nReturn JSON: { "output": "<raw stdout>", "exit_code": <number> }`, { agentType: "status-checker", schema: REPO_FACTS_ENVELOPE_SCHEMA, label, phase: "Resolve Target" });
+  if (!r || typeof r.output !== "string" || Number(r.exit_code) !== 0) return null;
+  try { return JSON.parse(r.output); } catch (_e) { return null; }
 }
-
-const realWorktreePath = worktreeResult.worktree_path;
+/** A worktree-undetermined abort payload (BO-4000's abort shape), extended per refusal kind. */
+function undetermined(extra) { return Object.assign({ status: "error", worktree_undetermined: true, resolved_target: resolvedTarget, action_required: "establish_worktree" }, extra); }
+let realWorktreePath = null, stalenessReport = null;
+// Scenario 1: reuse the resolved worktree IFF facts confirm it; otherwise not used — proceed as if unresolved (scenario 2).
+if (resolveResult.worktree_path) {
+  const rf = await repoFactsCall(`python {{config.output_root}}/scripts/worktree_repo_facts.py facts "${resolveResult.worktree_path}"`, "worktree-facts-resolved");
+  if (rf && rf.exists && rf.is_linked_worktree && !rf.is_main_checkout && rf.same_repository) realWorktreePath = resolveResult.worktree_path;
+}
 if (!realWorktreePath) {
-  return {
-    status: "error",
-    worktree_undetermined: true,
-    resolved_target: resolvedTarget,
-    message:
-      "The isolated working copy for this drive is UNDETERMINED: worktree-agent " +
-      "returned no worktree_path. No phase agent has been spawned, and no " +
-      "substitute location is used in its place.",
-    abort_reason: "worktree-undetermined",
-    action_required: "establish_worktree",
-  };
+  const base = await repoFactsCall("python {{config.output_root}}/scripts/worktree_repo_facts.py base", "worktree-base");
+  if (!base || !base.worktree_base) return undetermined({ abort_reason: "worktree-base-unavailable", message: "The repository's worktree base could not be established. No phase agent has been spawned." });
+  const identity = normalizePathForm(worktreeTarget).replace(/\/$/, "").split("/").filter(Boolean).pop() || worktreeTarget;
+  const instructedLocation = normalizePathForm(base.worktree_base).replace(/\/$/, "") + "/" + identity;
+  const targetBranch = (target_type === "epic" ? "epic/" : "ticket/") + identity.replace(/^EPIC-/, "").replace(/([a-z0-9])([A-Z])/g, "$1-$2").toLowerCase();
+  const locFacts = await repoFactsCall(`python {{config.output_root}}/scripts/worktree_repo_facts.py facts "${instructedLocation}"`, "worktree-facts-location");
+  if (locFacts && locFacts.exists) {
+    // scenario 2 — reuse a worktree of this repo already on the target's branch; refuse any other occupant.
+    if (locFacts.is_linked_worktree && !locFacts.is_main_checkout && locFacts.same_repository && locFacts.branch === targetBranch) realWorktreePath = instructedLocation;
+    else return undetermined({ abort_reason: "worktree-location-occupied", location: instructedLocation, occupant: locFacts, message: `The named worktree location "${instructedLocation}" is occupied by something other than the target's own worktree. No phase agent has been spawned; nothing there was changed.` });
+  } else {
+    const standing = await repoFactsCall(`python {{config.output_root}}/scripts/worktree_repo_facts.py branch-standing "${targetBranch}"`, "branch-standing");
+    let startRef = "origin/main";
+    if (standing && standing.exists) {
+      if (!standing.fetch_ok) return undetermined({ abort_reason: "branch-standing-unverifiable", branch: targetBranch, message: `The standing of branch "${targetBranch}" against origin/main could not be checked (fetch failed). No phase agent has been spawned.` });
+      if (standing.behind > 0 && standing.ahead > 0) return undetermined({ abort_reason: "branch-has-unique-commits", branch: targetBranch, ahead: standing.ahead, behind: standing.behind, message: `Branch "${targetBranch}" is ${standing.ahead} commit(s) ahead and ${standing.behind} behind origin/main. No worktree was opened. Bring the branch up to date, remove it, or aim the run at a different branch.` });
+      if (standing.behind > 0) stalenessReport = { branch: targetBranch, behind: standing.behind, started_from: "origin/main" };
+      else startRef = targetBranch;
+    }
+    const worktreeResult = await agent(`Open a NEW git worktree at the EXACT location "${instructedLocation}" on branch "${targetBranch}", starting from "${startRef}". Do not choose any other location. Bootstrap it (copy/symlink .leafcutter so hooks are present). On any error report status "failed".\nReturn JSON: { "worktree_path": "<absolute path>", "status": "created"|"reused", "error": "<if failed, else omit>" }`, { agentType: "worktree-agent", schema: WORKTREE_SCHEMA, label: "worktree-setup", phase: "Resolve Target" });
+    if (!worktreeResult || worktreeResult.status === "failed" || worktreeResult.error || typeof worktreeResult.worktree_path !== "string") return undetermined({ abort_reason: "worktree-report-unusable", instructed_location: instructedLocation, message: `The worktree-opening agent returned no usable result for "${instructedLocation}". No phase agent has been spawned.` });
+    if (!pathsEquivalent(instructedLocation, worktreeResult.worktree_path)) return undetermined({ abort_reason: "worktree-location-mismatch", instructed_location: instructedLocation, reported_location: worktreeResult.worktree_path, message: `The worktree-opening agent reported "${worktreeResult.worktree_path}", not the instructed location "${instructedLocation}". No phase agent has been spawned, and the run's worktree was not replaced.` });
+    realWorktreePath = instructedLocation;
+  }
 }
-
+if (!realWorktreePath) return undetermined({ message: "The isolated working copy for this drive is UNDETERMINED. No phase agent has been spawned, and no substitute location is used in its place." });
 // The later step has now established the isolated working copy, so the
 // resolved target carries it and no longer reads as undetermined.
 resolvedTarget.worktree_path = realWorktreePath;
+if (stalenessReport) resolvedTarget.worktree_staleness = stalenessReport; // BO-4000b
 
 // BO-3900-PATH-HELPERS-START
 /**
@@ -1529,6 +1528,24 @@ function resolvePathOntoRoot(root, input) {
   const path = normalizePathForm(input);
   if (form === "absolute") return { ok: true, form, path };
   return { ok: true, form, path: normalizePathForm(root).replace(/\/$/, "") + "/" + path };
+}
+
+/**
+ * A comparison key for an absolute path (BO-4000's equivalence rule, reusing
+ * BO-3900b's own case policy): separators and a trailing separator are
+ * ignored; letter case is ignored ONLY for drive-lettered ("C:/...") and UNC
+ * ("//server/...") forms, and preserved for a POSIX ("/...") form.
+ *
+ * @param {string} input
+ * @returns {string}
+ */
+function pathComparableKey(input) {
+  const norm = normalizePathForm(input).replace(/\/$/, "");
+  return /^([A-Za-z]:\/|\/\/)/.test(norm) ? norm.toLowerCase() : norm;
+}
+/** Do `a` and `b` name the same location, per pathComparableKey()? */
+function pathsEquivalent(a, b) {
+  return pathComparableKey(a) === pathComparableKey(b);
 }
 // BO-3900-PATH-HELPERS-END
 

@@ -7,7 +7,7 @@ components:
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -117,8 +117,11 @@ test_rationale: |
   way around an occupied path is a suffix. That would make the location no longer derived
   only from base and target, and BO-4000's determinism test would not notice, since it
   never occupies the location.
-covered_by: []
-implemented_by: []
+covered_by:
+  - unit_tests/workflows/test_bo4000c_start_location_and_occupancy.py
+implemented_by:
+  - templates/workflows-js/build-feature.js
+  - templates/scripts/worktree_repo_facts.py
 origin_agent: business-analyst
 created: 2026-09-14
 amended_by:
