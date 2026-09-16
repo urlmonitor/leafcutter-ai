@@ -1600,6 +1600,32 @@ function pathFormRefusal(ticketPath, dispatchNote) {
       `it was not joined onto the worktree, not trimmed into some other path, and not guessed at.`,
   };
 }
+/**
+ * BO-3900e: resolve one depends_on ENTRY where the ticket frontmatter hook
+ * resolves it (ticket-authoring SKILL.md, "depends_on Resolution") — beside
+ * the dependant's OWN ticket, never joined onto the worktree root. Order:
+ * <ticket_dir>/<entry>, <ticket_dir>/done/<entry>, and (only when the
+ * ticket itself sits inside done/) <ticket_dir>/../<entry>. An entry
+ * beginning "tickets/" still resolves against the worktree root; an
+ * absolute entry is used as written — both single-candidate, no sibling
+ * search. Existence is decided by the SAME readTicketRecordBack dispatch
+ * every other reader uses — no new file-system call. Both depends_on
+ * readers (run-set membership check, per-ticket release gate) call this
+ * ONE function so they can never disagree about where a prerequisite
+ * lives. An AC-id entry (e.g. "TKT-500f") is not a path; it is not
+ * detected specially and simply falls through this same search unresolved.
+ *
+ * @returns {Promise<{resolved: string|null, reported: string, record: object|null}>}
+ *   `reported` is the first sibling candidate when nothing resolves —
+ *   never the worktree-root join the old code produced.
+ */
+async function resolveDependsOnPath(entry, ticketWorktreePath, worktreePath) {
+  const form = classifyPathForm(entry);
+  if (form === "unrecognised") return { resolved: null, reported: entry, record: null };
+  const dir = normalizePathForm(ticketWorktreePath).replace(/\/[^/]*$/, "");
+  const candidates = form === "absolute" || /^tickets\//.test(normalizePathForm(entry)) ? [toWorktreePath(entry, worktreePath)] : [dir, `${dir}/done`, ...(/\/done$/.test(dir) ? [`${dir}/..`] : [])].map((root) => resolvePathOntoRoot(root, entry).path);
+  for (const candidate of candidates) { const record = await readTicketRecordBack(candidate); if (record && record.readable) return { resolved: candidate, reported: candidate, record }; }
+  return { resolved: null, reported: candidates[0], record: null }; }
 
 // ---------------------------------------------------------------------------
 // driveTicketPhases — flattened per-ticket phase driver
@@ -2841,12 +2867,8 @@ if (target_type === "epic") {
             // and the drive absorbs new work silently. A partial guard beats
             // both. When the planner answers question (7) this branch is dead.
             const dependencyRecord = await readTicketRecordBack(normalized);
-            const dependsOn = Array.isArray(dependencyRecord && dependencyRecord.depends_on)
-              ? dependencyRecord.depends_on.map((p) => toWorktreePath(p, realWorktreePath))
-              : [];
-            const linksIntoRunSet = dependsOn.some(
-              (p) => p && (plannedTicketPaths.indexOf(p) !== -1 || priorCompletedPaths.has(p))
-            );
+            const dependsOn = (await Promise.all((Array.isArray(dependencyRecord && dependencyRecord.depends_on) ? dependencyRecord.depends_on : []).map((p) => resolveDependsOnPath(p, normalized, realWorktreePath)))).map((r) => r.resolved || r.reported);
+            const linksIntoRunSet = dependsOn.some((p) => p && (plannedTicketPaths.indexOf(p) !== -1 || priorCompletedPaths.has(p)));
             if (!linksIntoRunSet) {
               continue;
             }
@@ -3039,11 +3061,7 @@ if (target_type === "epic") {
 
           const outcomePromise = (async () => {
             const dependencyRecord = await readTicketRecordBack(worktreeTicketPath);
-            const dependsOn = Array.isArray(dependencyRecord && dependencyRecord.depends_on)
-              ? dependencyRecord.depends_on
-                  .map((p) => toWorktreePath(p, realWorktreePath))
-                  .filter((p) => p && p !== worktreeTicketPath)
-              : [];
+            const dependsOn = (await Promise.all((Array.isArray(dependencyRecord && dependencyRecord.depends_on) ? dependencyRecord.depends_on : []).map((p) => resolveDependsOnPath(p, worktreeTicketPath, realWorktreePath)))).map((r) => r.resolved || r.reported).filter((p) => p && p !== worktreeTicketPath);
 
             const withheldBy = [];
             const prerequisiteStates = {};
