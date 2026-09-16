@@ -97,8 +97,9 @@ def _read_decoded(stream: io.TextIOWrapper) -> str:
         The decoded text content written to the stream so far.
     """
     stream.flush()
-    raw = stream.buffer.getvalue()
-    return raw.decode(stream.encoding)
+    buffer = stream.buffer
+    assert isinstance(buffer, io.BytesIO)
+    return buffer.getvalue().decode(stream.encoding)
 
 
 class TestSuccessDoesNotCrashOnCp1252Stdout(unittest.TestCase):
