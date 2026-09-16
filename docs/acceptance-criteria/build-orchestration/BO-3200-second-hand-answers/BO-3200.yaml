@@ -56,6 +56,8 @@ covered_by:
   - BO-3200c
   - BO-3200d
   - BO-3200e
+  - BO-3200f
+  - BO-3200g
 implemented_by: []
 notes: |
   Authored 2026-08-25 from a user (BrainCandy) request. Sibling of BO-3100; see
@@ -102,6 +104,23 @@ notes: |
   correctly refused a role outside its remit. What failed was asking it for
   something no specialist can reliably provide. Decompose these as contract
   defects, not as agent-obedience problems.
+
+  AT THE HARD CAP AS OF 2026-09-16 -- READ THIS BEFORE ADDING AN EIGHTH L1.
+  BO-3200f and BO-3200g were added by the Product Owner on 2026-09-16 with the
+  user's explicit approval, taking this L0 to SEVEN L1 children, which is the
+  default hard cap enforced by check-ac-limits. There is no child_limit_override on
+  this record and none should be added: the user was shown the cap when approving
+  and accepted it knowingly. The next L1 that belongs under this goal forces an
+  ac-tree-split (Pattern A sibling L0, or Pattern C intermediate), not a cap bump.
+  The two additions were:
+    - BO-3200f -- the CAPABILITY this whole tree presumes and nothing delivered.
+      Five approved L2s across this tree and ACD-2100 are written against a runtime
+      that cannot satisfy them, because the E2 workflow engine injects no filesystem
+      or subprocess primitive into a workflow body. Chartered executor chosen.
+    - BO-3200g -- a refusal is reported as a refusal and not as a damaged file.
+      Considered as a fifth L2 under BO-3200e and promoted to L1 instead, because
+      "you are not sent to repair a healthy file" is a distinct benefit from
+      "a check that could not look says so".
 
   IT-PO ENRICHMENT NOTE (2026-08-26). risk_surface is contract_boundary at L0
   rather than internal, unlike BO-3100: every child of this tree changes the

@@ -1,5 +1,5 @@
 id: BO-3200a-1
-title: "A fact the build depends on is still obtained when no specialist can be dispatched at all"
+title: "A fact the build depends on is still obtained when no one can be asked to judge it"
 component: build-orchestration
 components:
   - build_orchestration
@@ -8,16 +8,23 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: approved
+readiness: draft
 priority: medium
 roadmap_phase: phase_1
 criteria: |
   Given a build that must know a recorded fact about the project before it can decide what to
     do next,
-    And an environment in which dispatching a specialist is impossible,
+    And an environment in which no party can be asked to judge anything -- the only party that
+    can be dispatched is one chartered to carry out an exact command and return its output
+    verbatim, whose charter admits every exact command so it has no grounds to decline one, and
+    which treats whatever it receives as a literal command and so gives no answer to a request
+    to look, decide, interpret or summarise; every dispatch to any other party fails
+    immediately,
   When the build resolves that fact,
-  Then it obtains the correct value and proceeds, so the value did not come through a
-    specialist.
+  Then it obtains the correct value and proceeds, so no judgement over the value was requested
+    of anyone,
+    And every dispatch made while resolving the fact went to that chartered party and carried
+    an exact command, and none was addressed to any other party.
 
   Given the same fact recorded in a source larger than the size at which a relayed reply is
     shortened — at least 130 kilobytes,
@@ -116,11 +123,84 @@ amended_by:
 - action: approved
   agent: approve_acs
   date: '2026-08-26'
+- reason: premise-narrowed-from-no-dispatch-to-no-judgement-criteria-changed-reapproval-required
+  by: business-analyst
+  at: 2026-09-16
+  note: |
+    A REAL NARROWING OF AN APPROVED AC, NOT A WORDING TIDY-UP. Authorised by the user
+    (BrainCandy) on 2026-09-16 through the chartered-executor decision recorded in
+    BO-3200f's notes ("STANDING INSTRUCTION FOR THE BUSINESS ANALYST"). readiness demoted
+    approved -> draft so the approval gate is re-run rather than silently inherited
+    (ACS-1300a-1-i / ACS-1300a-1 precedent: criteria changed on an already-approved record).
+
+    WHAT THE FIRST SCENARIO SAID BEFORE (verbatim):
+      Given a build that must know a recorded fact about the project before it can decide what to
+        do next,
+        And an environment in which dispatching a specialist is impossible,
+      When the build resolves that fact,
+      Then it obtains the correct value and proceeds, so the value did not come through a
+        specialist.
+    OLD TITLE (verbatim): "A fact the build depends on is still obtained when no specialist can
+    be dispatched at all"
+
+    WHAT IT SAYS NOW: the premise is "no party can be asked to judge anything" -- the only
+    dispatchable party is one chartered to carry out an exact command and return its output
+    verbatim, which cannot decline an exact command on charter grounds and gives no answer to a
+    request to look, decide, interpret or summarise; every dispatch to any other party fails. The
+    Then requires the correct value and progress (so no judgement was requested), AND that every
+    dispatch made while resolving the fact went to that chartered party carrying an exact command,
+    with none addressed to any other party. The second and third scenarios are UNCHANGED.
+
+    WHY. The E2 workflow engine injects only agent, parallel, pipeline, phase, log, args,
+    workflow and budget into a workflow body (docs/reference/workflow-authoring-contract.md
+    section 1) -- no filesystem, no subprocess -- so every read goes through an agent() call and
+    the old premise could never hold. An engine-level primitive was rejected as upstream (the
+    engine is Claude Code's); pre-resolving facts into args was rejected as second-hand by
+    another route. The value may now arrive through a dispatch, provided the dispatched party
+    exercises no judgement over it and cannot decline it on charter grounds. BO-3200's standing
+    rule -- only JUDGEMENT is delegable to a specialist -- is unchanged by this.
+
+    HOW THE NEW PREMISE STAYS DISCRIMINATING. The old test removed dispatch entirely. The new one
+    removes JUDGEMENT: a party that treats its input as a literal command returns nothing usable
+    to "tell me whether X is permitted", so a build that still asks a specialist to look and
+    report back cannot pass the first Then. The second Then catches a build that tries a judging
+    party first and falls back to the chartered one -- that fallback still fails immediately in
+    this environment but is visible in the dispatch record. A build making zero dispatches passes
+    too, which is correct: it requests no judgement either.
+
+    CRITERIA-ONLY CHANGE -- THE TECHNICAL LAYER IS NOW STALE AND IS THE IT PO'S TO REDO. Not
+    edited here (outside the BA's remit), but each item below was written against the old
+    premise and contradicts the new criteria:
+      - it_requirements[0] "with no dispatch in the path ... testable only by removing the
+        ability to dispatch";
+      - it_requirements[7] "withholding the dispatch surface from the real workflow";
+      - delivers_to contract "with no dispatch in its call path";
+      - test_spec test_bo_3200a_1_fact_resolves_with_dispatch_impossible (dispatch surface
+        withheld entirely) and test_bo_3200a_1_resolver_has_no_dispatch_in_its_call_path (zero
+        agent() calls) -- both assert the old premise;
+      - test_rationale's first paragraph and the first paragraph of notes below.
+    The IT-PO enrichment note's point survives in a new form: with every party dispatchable, the
+    resolver must still not consult a judging party -- a fallback that does so would pass in the
+    test environment and relay in production.
+
+    KNOWN KNOCK-ON, NOT AUTHORISED HERE. BO-3200a-2 (approved) carries the same "dispatching a
+    specialist is impossible" premise and its result_use sweep classifies every dispatch as fact
+    or judgement; a dispatch to the chartered executor has no declared home in that scheme.
+    BO-3200f's notes say five approved L2s are affected; only this record and ACD-2100b-5 were
+    authorised for reword.
 superseded_by: null
 covered_by:
   - BO-3200a-1-i
 implemented_by: []
 notes: |
+  2026-09-16 (business-analyst) -- PREMISE NARROWED, READ THIS FIRST. The first scenario's
+  premise changed from "dispatching a specialist is impossible" to "no party can be asked to
+  judge anything" (only a chartered executor of exact commands is dispatchable). Authorised by
+  the user via BO-3200f's chartered-executor decision; the old wording, the reason and the list
+  of now-stale technical fields are in amended_by. Where the paragraphs below speak of
+  "removing the ability to dispatch", they describe the SUPERSEDED premise; read them as
+  "removing the ability to obtain judgement".
+
   THE FIRST SCENARIO IS THE DISCRIMINATING TEST and it is the reason this AC is testable at
   all. "Reads the fact directly" is a claim about how, which no assertion on the returned value
   can distinguish — a relayed read returns the right value most of the time. Removing the

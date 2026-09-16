@@ -2,9 +2,9 @@ id: ACD-2100b-5
 components:
   - ac_driven_dev
   - agent_registry
-readiness: approved
+readiness: draft
 priority: medium
-title: "The startup check reads the registry itself instead of asking an agent to read it"
+title: "The startup check reads the registry through an exact command instead of asking an agent to judge it"
 component: ac-driven-dev
 level: L2
 status: active
@@ -12,16 +12,23 @@ req_status: draft
 work_status: todo
 roadmap_phase: phase_1
 criteria: |
-  Given an environment in which no agent can be dispatched -- every dispatch
-    attempt fails immediately with a transport error,
+  Given an environment in which no party can be asked to judge anything -- the only
+    party that can be dispatched is one chartered to carry out an exact command and
+    return its output verbatim, whose charter admits every exact command so it has
+    no grounds to decline one, and which treats whatever it receives as a literal
+    command and so gives no answer to a request to look, decide, interpret or
+    summarise; every dispatch attempt to any other party fails immediately with a
+    transport error,
   And an agent registry that is present readable and lists the agent the route
     uses to create the authoring worktree with permission to run repository
     commands,
   When a run starts and reaches the startup check,
   Then the check completes with the permitted verdict and the run proceeds past it,
-  And the run's record of what it dispatched contains no dispatch made on behalf of
-    the check,
-  And repeating the run with dispatch available reaches the same verdict.
+  And every dispatch the run's record attributes to the check went to that chartered
+    party and carried an exact command, and none was addressed to any other party,
+  And repeating the run with every party dispatchable reaches the same verdict, and
+    the dispatches the run's record attributes to the check are again only exact
+    commands to that chartered party.
 depends_on: [ACD-2100b]
 doc_links:
   - path: docs/reference/plan-feature-layout-and-startup-checks.md
@@ -105,7 +112,84 @@ delivers_to: null
 expects_from: null
 origin_agent: business-analyst
 created: 2026-08-25
-amended_by: []
+amended_by:
+- reason: premise-narrowed-from-no-dispatch-to-no-judgement-criteria-changed-reapproval-required
+  by: business-analyst
+  at: 2026-09-16
+  note: |
+    A REAL NARROWING OF AN APPROVED AC, NOT A WORDING TIDY-UP. Authorised by the user
+    (BrainCandy) on 2026-09-16 through the chartered-executor decision recorded in
+    BO-3200f's notes, and flagged for this record by the product-owner in ACD-2100b's
+    second amended_by entry. readiness demoted approved -> draft so the approval gate is
+    re-run rather than silently inherited (ACS-1300a-1-i / ACS-1300a-1 precedent: criteria
+    changed on an already-approved record).
+
+    WHAT THE CRITERIA SAID BEFORE (verbatim):
+      Given an environment in which no agent can be dispatched -- every dispatch
+        attempt fails immediately with a transport error,
+      And an agent registry that is present readable and lists the agent the route
+        uses to create the authoring worktree with permission to run repository
+        commands,
+      When a run starts and reaches the startup check,
+      Then the check completes with the permitted verdict and the run proceeds past it,
+      And the run's record of what it dispatched contains no dispatch made on behalf of
+        the check,
+      And repeating the run with dispatch available reaches the same verdict.
+    OLD TITLE (verbatim): "The startup check reads the registry itself instead of asking an
+    agent to read it"
+
+    WHAT IT SAYS NOW: the premise is "no party can be asked to judge anything" -- the only
+    dispatchable party is one chartered to carry out an exact command and return its output
+    verbatim, which cannot decline an exact command on charter grounds and gives no answer to a
+    request to look, decide, interpret or summarise; every dispatch to any other party fails
+    immediately with a transport error. The registry Given and the When are unchanged. The
+    first Then is unchanged. "The record contains no dispatch made on behalf of the check" is
+    REPLACED by "every dispatch the record attributes to the check went to that chartered party
+    and carried an exact command, and none was addressed to any other party". The repeat clause
+    now also requires that, with every party dispatchable, the check's dispatches are again only
+    exact commands to the chartered party.
+
+    WHY. The E2 workflow engine injects only agent, parallel, pipeline, phase, log, args,
+    workflow and budget into a workflow body (docs/reference/workflow-authoring-contract.md
+    section 1) -- no filesystem, no subprocess -- so reading the registry requires an agent()
+    call and the old Given could never be met. An engine-level primitive was rejected as
+    upstream (the engine is Claude Code's); pre-resolving the registry into args was rejected as
+    second-hand by another route. See BO-3200f's notes. BO-3200's standing rule -- only
+    JUDGEMENT is delegable to a specialist -- is what the new Thens enforce.
+
+    WHY THE NEW THENS ARE NOT VACUOUS. (1) A party that treats its input as a literal command
+    returns nothing usable to "is worktree-agent permitted shell?", so a check that still asks
+    an agent to read and interpret the registry cannot reach the permitted verdict -- the first
+    Then fails. (2) A check that tries a judging agent first and falls back to the executor
+    passes (1) but is caught by the record assertion. (3) With every party dispatchable a judging
+    agent WOULD answer, so the repeat clause is what catches a check that consults one whenever
+    one is available -- the dispatch-fallback case the old "same verdict" clause already guarded
+    against. (4) ACD-2100b-4 and this record's fail-closed test still stop an implementation that
+    always returns permitted. A check making zero dispatches passes, which is correct.
+
+    WHAT THIS NARROWING GIVES UP -- STATED PLAINLY. The old record removed the live round-trip
+    and with it KI-ACD-009's transport-failure cause ("Connection lost mid-response"). A dispatch
+    to the chartered executor is still a round-trip, so that cause is NO LONGER REMOVED by this
+    record; it removes the refusal cause (a party declining on charter grounds) instead. A
+    transport failure of the executor dispatch must then fail closed and be reported as "could
+    not check", which is ACD-2100b-1 / ACD-2100b-4 territory and BO-3200e's `undetermined`
+    outcome -- not covered by a new clause here. The notes paragraph "THE FOURTH CAUSE IS
+    AVOIDABLE" below is therefore no longer delivered by this record.
+
+    CRITERIA-ONLY CHANGE -- THE TECHNICAL LAYER IS NOW STALE AND IS THE IT PO'S TO REDO. Not
+    edited here (outside the BA's remit), but each item below was written against the old
+    premise:
+      - it_requirements[1] "identical whether dispatch is available or not" (still sound if read
+        as "whether judging parties are available or not");
+      - it_requirements[2] "pass it with no network available" -- now UNSATISFIABLE;
+      - it_requirements[4] "no dispatch is made on the check's behalf during a run";
+      - it_requirements[6] "no per-run cost beyond a single local file read" -- one executor
+        dispatch is now the expected cost;
+      - all four test_spec entries (each assumes dispatch made impossible or zero dispatches)
+        and test_rationale;
+      - notes paragraphs "THE FIRST GIVEN IS THE TEST" and "THE FOURTH CAUSE IS AVOIDABLE".
+    The generated ticket in implemented_by was built from the OLD criteria and is stale too;
+    it was not edited.
 superseded_by: null
 covered_by: []
 implemented_by:
@@ -113,6 +197,15 @@ implemented_by:
 change_target: pipeline
 risk_surface: internal
 notes: |
+  2026-09-16 (business-analyst) -- PREMISE NARROWED, READ THIS FIRST. The Given changed
+  from "no agent can be dispatched" to "no party can be asked to judge anything" (only a
+  chartered executor of exact commands is dispatchable), and the "no dispatch on behalf of
+  the check" Then became "only exact commands to that chartered party". Authorised by the
+  user via BO-3200f's chartered-executor decision; the old wording, the reason, what the
+  narrowing gives up and the list of now-stale technical fields are in amended_by. The two
+  paragraphs below that depend on removing the round-trip entirely describe the SUPERSEDED
+  premise.
+
   THE FOURTH CAUSE IS AVOIDABLE, NOT MERELY REPORTABLE -- this is the record that
   removes it rather than labelling it. The observed run recorded
   `[resolve-workspace-setup-permission] failed: API Error: Connection lost

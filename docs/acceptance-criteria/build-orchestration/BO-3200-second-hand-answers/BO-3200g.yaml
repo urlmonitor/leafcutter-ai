@@ -1,0 +1,103 @@
+id: BO-3200g
+title: "You are never sent to repair something that is not broken"
+component: build-orchestration
+components:
+  - build_orchestration
+  - ac_driven_dev
+  - agent_registry
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  A refusal is reported as a refusal, not as a damaged file.
+
+  When a request is turned down rather than attempted, you are told it was turned
+  down and by whom. A decline never arrives dressed up as a missing file, a broken
+  file or a failed command, so the remedy you are handed is the real one instead of
+  a hunt through files that are perfectly healthy.
+depends_on: [BO-3200]
+documentation_triggers: [reference-doc]
+doc_links:
+  - path: docs/known-issues/ac-driven-dev/open-blocker-ki-acd-009.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      The entry this L1 adds a cause to. Its two recorded causes are worktree
+      path-absence and a transient API error. The 2026-09-16 reproductions show a
+      third: a charter refusal. In run 2 the refusing agent returned
+      {"output":"","exit_code":1,"error":"out-of-scope..."} -- a fabricated exit code
+      inside a refusal payload, which the run then reported as "exit code 1, no
+      stdout", indistinguishable from a genuinely unreadable file.
+  - path: docs/known-issues/build-orchestration/open-blocker-ki-bo-018.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      The same shape one layer out -- a 130 KB config relayed through an agent,
+      truncated mid-escape-sequence, and the parse failure fail-closed into a
+      substantive and false verdict about an agent's permissions. A truncation is not a
+      refusal, but both are transport failures rendered as findings about the subject.
+  - path: docs/known-issues/ac-driven-dev/open-blocker-ki-acd-005.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      The sibling misparse: the same out-of-scope refusal read as the user choosing to
+      cancel. Same family, different victim. BO-3200c owns that one; this L1 must not
+      absorb it.
+  - path: docs/reference/false-green-mechanisms.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      M8 inverted, one level out from ACD-2100b: not a check asserting a cause it did
+      not establish, but a transport laundering a refusal into an I/O failure before
+      any check gets to see it.
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: product-owner
+created: 2026-09-16
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  BOUNDARY WITH BO-3200e, and it is a fine one that was argued before the record was
+  written. BO-3200e is about what a CHECK reports when its own inspection could not be
+  performed -- its three answers are "in order", "has a problem", "could not tell".
+  This L1 sits one layer beneath: the check cannot choose the third answer if the
+  layer feeding it has already converted a refusal into a read failure. BO-3200e-1's
+  second Given enumerates exactly two ways an inspection can fail -- "the subject
+  cannot be read, or what it read cannot be interpreted." A refusal is neither. The
+  user considered folding this in as a fifth L2 under BO-3200e and chose a full L1
+  on 2026-09-16, on the grounds that "you are not sent to repair a healthy file" is a
+  distinct benefit from "a check that could not look says so".
+
+  BOUNDARY WITH BO-3200c-2 AND ACD-2100c. Those cover a refusal misread as the USER'S
+  CONSENT (KI-ACD-005). This covers a refusal misread as an I/O FAILURE (KI-ACD-009,
+  KI-BO-018). Both must exist; neither is a special case of the other, and the
+  remedies differ -- one is about provenance of an answer, this is about the class of
+  an outcome.
+
+  BOUNDARY WITH ACD-2100b. That L1 enumerates four startup-check outcomes: registry
+  unreadable, uninterpretable, agent absent, agent denied. A refusal is a FIFTH and is
+  not among them. ACD-2100b-3-i already demonstrates the enumeration is not closed,
+  and ACD-2100b-4's it_requirements warn against implementing the guard as a
+  four-branch table. ACD-2100b has been amended to name the fifth outcome rather than
+  having it annexed here: this L1 is the general rule, that tree is the one startup
+  path that must obey it.
+
+  WHY high AND NOT critical. This is the misdiagnosis rather than the blockage. With
+  BO-3200f built the run no longer halts here at all; with only this built the run
+  still halts, but it says something true about why. It cost this session two full
+  runs of operator time and pointed at a 131 KB file that was present and readable at
+  both candidate locations, which is why it is not medium.
+
+  WHY NOT A FIFTH KNOWN ISSUE. Four open entries already describe this family --
+  KI-ACD-009, KI-ACD-005, KI-BO-018, KI-BO-20260901-1620. The user directed that they
+  be updated and cross-referenced rather than joined by another.

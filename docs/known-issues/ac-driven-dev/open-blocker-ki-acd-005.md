@@ -57,4 +57,18 @@ real user, or persist a pause record and exit with a status that says "awaiting 
 Separately, harden the answer parser: an unrecognised or refusal-shaped reply must
 never resolve to `cancel`; fail to `pause`, never to `discard`.
 
+**CROSS-REFERENCE, 2026-09-16 — the sibling misparse now has an AC.** This entry is one
+of two ways the same `status-checker` out-of-scope refusal is misread. Here the refusal
+is parsed as **the user's consent** (a choice to cancel). In `KI-ACD-009` the identical
+refusal is parsed as an **I/O failure** (a registry that could not be read), which sends
+the operator to repair a file that is present and healthy. Same cause, two victims, two
+remedies — do not fold them together:
+
+- consent provenance → `BO-3200c` / `BO-3200c-2` and `ACD-2100c` (already authored)
+- outcome class → `BO-3200g` "You are never sent to repair something that is not
+  broken" (authored 2026-09-16)
+
+Both are downstream of `BO-3200f`, which removes the need to ask a read-only reporting
+agent for a mechanical errand in the first place.
+
 ---

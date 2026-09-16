@@ -22,8 +22,8 @@ related_docs:
 
 - **Severity:** blocker
 - **Status:** open
-- **Occurrences:** 1
-- **First seen:** 2026-08-19 · **Last seen:** 2026-08-19
+- **Occurrences:** 3
+- **First seen:** 2026-08-19 · **Last seen:** 2026-09-16
 - **Where:** `templates/workflows-js/plan-feature.js:1745-1790` — the `resolve-workspace-setup-permission` step and the `permitsShell` fail-closed branch
 
 **Symptom.** Every run halts with:
@@ -91,9 +91,63 @@ $ find <workspace> -name agent_registry.json -not -path '*/worktrees/*'
 - **Resolve the registry path, do not hardcode a relative one.** Use the same root
   resolution the guardian hooks use, so the read works from a worktree as well as the
   workspace root.
-- **Do not gate startup on a live agent dispatch to read a static local file.** The
-  workflow runtime can read it directly; routing it through a `status-checker` adds an
-  API round-trip whose failure mode is a false halt.
+- **Do not gate startup on a live agent dispatch to read a static local file.**
+  Routing it through a `status-checker` adds a round-trip whose failure modes are all
+  false halts. **CORRECTION, 2026-09-16 — the sentence that stood here was wrong.** It
+  read "the workflow runtime can read it directly". It cannot:
+  `docs/reference/workflow-authoring-contract.md` §1 enumerates the globals the E2
+  engine injects into a workflow body (`agent`, `parallel`, `pipeline`, `phase`, `log`,
+  `args`, `workflow`, `budget`) and there is **no filesystem and no subprocess
+  primitive**. `KI-BO-20260901-1620` records the same constraint independently. The
+  correction matters because `ACD-2100b-5` (readiness `approved`, unbuilt) is written
+  against that false premise: its Given is "an environment in which no agent can be
+  dispatched" and its Then requires the check to complete anyway, which no
+  implementation can satisfy today. The user chose a **chartered executor** on
+  2026-09-16 — an agent whose whole charter is to run one exact command and return its
+  output verbatim, exercising no judgement — over an engine-level primitive, which is
+  upstream in Claude Code and not this project's to add. See `BO-3200f`.
+
+**THIRD CAUSE, ADDED 2026-09-16 — A CHARTER REFUSAL, NOT AN I/O FAILURE.** The two
+causes recorded above (worktree path-absence, and a transient API error) are both
+genuine and neither was what happened in the two reproductions of 2026-09-16
+(`wf_6e6de02b-3f9`, `wf_82e1655d-e68`). Both halted at
+`resolve-workspace-setup-permission` before any authoring agent was dispatched, with
+zero ACs produced, reporting that the registry could not be **read**. The file was
+present and readable at *both* candidate locations — 131 KB, at
+`leafcutter-ai/.leafcutter/config/` and `leafcutter-ai/config/`, verified by direct
+`ls`. What actually failed is that the step reads the registry by dispatching
+`status-checker` to `cat` it, and `status-checker` declares `permits_shell: false` and
+refuses arbitrary file reads by charter. It refused both times:
+
+```
+run 1: {"status":"failed","payload":{"blocker_summary":"out-of-scope-request: arbitrary cat command with no ticket context"}}
+run 2: {"output":"","exit_code":1,"error":"out-of-scope: status-checker only executes commands within the ticket-investigation protocol... I will not run arbitrary file-read commands outside that scope."}
+```
+
+The circularity is the point: **the workflow cannot read the registry to determine
+whether shell is permitted, because doing so requires a shell dispatch to an agent that
+is not permitted shell.** The permission check is the step that fails.
+
+Note run 2 in particular — the refusing agent fabricated `exit_code: 1` *inside* its
+refusal payload, so the workflow reported "exit code 1, no stdout", which is
+indistinguishable from a genuinely unreadable file and sends the operator to inspect a
+path that is fine. The first fix direction below ("distinguish the four outcomes") has
+**partially landed** — the halt now correctly says "This is a lookup failure, not a
+permissions verdict" — but it still cannot tell a **refusal** from an **I/O error**,
+and a refusal is a *fifth* outcome that the four-outcome enumeration never contained.
+
+**SCALE.** `plan-feature.js` dispatches roughly **20** shell steps to `status-checker`
+(git status, git log, `cat`, file deletes, git restore, telemetry appends, script runs).
+Exactly **1 of 60** registered agents declares `permits_shell: true`, and it is
+`worktree-agent`.
+
+**AC coverage as of 2026-09-16.** `BO-3200f` (chartered executor — removes the need to
+ask a specialist for a mechanical errand at all), `BO-3200g` (a refusal is reported as a
+refusal, not as a damaged file), `AR-200c` (every agent states its limits). `ACD-2100b`
+amended to require the fifth outcome on this startup path. The path fix
+(`ACD-2100a-3`) and the round-trip removal (`ACD-2100b-5`) were already approved and
+unbuilt before this reproduction, in
+`tickets/00_inbox/epics/EPIC-StartingNewWorkTheProperWayAlways/`.
 
 **Why it matters beyond the message.** `/plan-feature` is the mandated entry point for
 all new work (`CLAUDE.md`, "New Work Goes Through ACs"). While this holds, that path is

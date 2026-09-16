@@ -66,4 +66,19 @@ file-read primitive) rather than round-tripping it through an agent's text respo
 any parse failure, report "could not determine" rather than asserting the charter denies
 permission. Not implemented — this entry records the defect and the proposed direction only.
 
+**CROSS-REFERENCE, 2026-09-16 — now covered by `BO-3200g`.** The shape recorded here —
+a relayed config read whose **transport** failure is fail-closed into a **substantive and
+false verdict** about an agent's permissions — recurred on 2026-09-16 in
+`/plan-feature` with a different transport failure: not truncation, but a **charter
+refusal**. `status-checker` declined the read as out of scope and fabricated
+`exit_code: 1` inside its refusal payload, so the run reported "exit code 1, no stdout"
+and blamed an unreadable 131 KB file that was present and readable at both candidate
+locations. See `KI-ACD-009`.
+
+The generalisation is that a failure in the **layer carrying the answer** must never be
+rendered as a finding about the **subject**. That is now `BO-3200g`; the removal of the
+relay itself is `BO-3200f`. `BO-3200e` remains the adjacent-but-distinct record — it
+governs what a *check* reports once it knows its inspection did not happen, whereas these
+two govern whether the check is ever told the truth about that.
+
 ---

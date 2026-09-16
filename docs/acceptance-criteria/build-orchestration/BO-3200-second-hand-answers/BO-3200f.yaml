@@ -1,0 +1,127 @@
+id: BO-3200f
+title: "The automation does its own routine work instead of asking someone who may say no"
+component: build-orchestration
+components:
+  - build_orchestration
+  - supervisor_system
+  - build_pipeline
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: critical
+roadmap_phase: phase_1
+criteria: |
+  Routine lookups and routine chores get done, not requested.
+
+  When the automation needs to read something already recorded in your project, or
+  carry out a mechanical chore such as noting what it did or tidying up after
+  itself, it does that itself. It no longer depends on a specialist agreeing to do
+  a favour outside that specialist's remit, so a run can never be stopped by a
+  polite and entirely correct refusal to do housekeeping.
+depends_on: [BO-3200]
+documentation_triggers: [reference-doc, component-diagram]
+doc_links:
+  - path: docs/reference/workflow-authoring-contract.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      THE CONSTRAINT THIS L1 EXISTS TO RESOLVE. Section 1 enumerates the globals the
+      E2 engine injects into a workflow body -- agent, parallel, pipeline, phase, log,
+      args, workflow, budget. There is no filesystem and no subprocess primitive, so
+      today every read and every side effect must go through an agent() call. Until
+      that changes, BO-3200a-1 and ACD-2100b-5 (both readiness approved) are
+      unbuildable as written: both require a run to obtain a value with dispatch
+      impossible.
+  - path: docs/known-issues/build-orchestration/open-high-ki-bo-20260901-1620.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      Records the same constraint and flags it by name -- "just call the CLI directly
+      is the obvious suggestion and it cannot be done". Its fix direction 4 proposes a
+      chartered executor instead. That entry was Status "open -- no AC"; this L1 is its
+      home.
+  - path: docs/known-issues/ac-driven-dev/open-blocker-ki-acd-009.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      The blocker whose third cause this L1 removes at the root: the startup check
+      cannot read the registry that says whether shell is permitted, because reading it
+      requires a shell dispatch to an agent that is not permitted shell.
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: product-owner
+created: 2026-09-16
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  WHY THIS IS AN L1 AND NOT A NEW L0. BO-3200 already owns the principle, in the
+  user's own words on the L0: "only JUDGEMENT is delegable to a specialist. I/O,
+  control flow, and consent are not." Nothing here restates that. This L1 supplies
+  the CAPABILITY that rule presumes and that nothing in the tree currently delivers.
+  Five approved L2s across two components are written against a runtime that cannot
+  satisfy them; this record is where that is fixed, rather than discovered by a coder
+  mid-ticket.
+
+  THE MECHANISM IS DECIDED. The user chose a CHARTERED EXECUTOR on 2026-09-16: one
+  agent whose entire charter is to carry out one exact command and return its output
+  verbatim, exercising no judgement. Two alternatives were considered and rejected,
+  recorded here so a later reader does not re-derive them:
+
+    - AN ENGINE-LEVEL READ/EXEC PRIMITIVE. Rejected as UPSTREAM. The E2 workflow
+      engine is Claude Code's, not leafcutter's, so adding a filesystem or subprocess
+      global to the workflow body is not a change this project can make. This is the
+      option that would have made BO-3200a-1 literally true as written, and it is the
+      reason that AC needs the reword below rather than simply waiting.
+    - PRE-RESOLVING THE FACTS INTO args BEFORE THE RUN STARTS. Rejected as
+      second-hand by another route. It works within the engine, but it moves a
+      load-bearing read into an LLM-mediated prelude in the slash-command wrapper,
+      which is the same class of relay this whole L0 exists to eliminate -- only
+      earlier, and with no record of it in the run.
+
+  Repointing the dispatches at worktree-agent and widening permits_shell were both
+  rejected outright: the first loads roughly twenty unrelated errands onto a charter
+  scoped to worktree lifecycle, and the second contradicts this L0's standing rule.
+
+  STANDING INSTRUCTION FOR THE BUSINESS ANALYST -- AN AUTHORISED REWORD THIS RECORD
+  MAY NOT PERFORM ITSELF. BO-3200a-1's first Given is "an environment in which
+  dispatching a specialist is impossible" and its Then is "it obtains the correct
+  value and proceeds, so the value did not come through a specialist." Under the
+  chartered-executor decision that premise can never hold, so the record as written is
+  unsatisfiable. The user authorised narrowing it to "no JUDGEMENT is requested" --
+  the value may arrive through a dispatch, provided the dispatched party exercises no
+  judgement over it and cannot decline on charter grounds. This IS a real narrowing of
+  an approved AC and must be recorded as an explicit amended_by entry carrying that
+  framing, never as a silent edit. The Product Owner's jurisdiction ends at L1, so the
+  amendment is the BA's to make; it is recorded here so the authorisation is not lost.
+  ACD-2100b-5 carries the identical impossible premise in another component's tree and
+  needs the same treatment.
+
+  WHY critical. While this is unbuilt, the mandated route into new work has no
+  sanctioned path. ADR-012 retires /create-ticket and makes /plan-feature the only
+  entry point; CLAUDE.md mandates that every code change be ticket-driven. The two
+  therefore fail together, which blocks every new piece of work rather than degrading
+  one surface.
+
+  EVIDENCE, 2026-09-16: two reproductions of the /plan-feature halt (wf_6e6de02b-3f9,
+  wf_82e1655d-e68), both stopping at resolve-workspace-setup-permission before any
+  authoring agent was dispatched, zero ACs produced. Roughly 20 shell steps in
+  plan-feature.js are dispatched to status-checker, which declares permits_shell false
+  and refuses by charter. Exactly 1 of 60 registered agents declares permits_shell
+  true, and it is worktree-agent.
+
+  BOUNDARIES -- four neighbours this must not absorb:
+    - BO-3200a -- facts are read at the source. That is the RULE. This is the MEANS.
+      An implementer who satisfies one has not satisfied the other.
+    - BO-3200b -- required actions are performed. Same relationship.
+    - ACD-2100b-5 -- the same means applied to one specific read on one specific
+      startup path. That record stays: it is the instance, this is the capability.
+    - BO-3800 -- a GUARDRAIL refusal summoning a craft. Different refusal, different
+      layer, and it depends on INF-800f rather than on this.
