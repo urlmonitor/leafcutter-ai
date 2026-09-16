@@ -49,6 +49,7 @@ from build_helpers import (
     install_hooks as _install_hooks,
     write_build_manifest,
 )
+from seed_example_product import run_as_build_step as _seed_example_product
 from build_halt_guard import (
     check_halt_guard,
     format_migration_notice,
@@ -100,6 +101,13 @@ def _build_arg_parser() -> argparse.ArgumentParser:
                             "{paths.docs.architecture} with missing-only semantics. "
                             "Existing files are never overwritten. "
                             "See leafcutter/scripts/seed_project_docs.py."
+                        ))
+    parser.add_argument("--seed-example-product", metavar="NAME", default=None,
+                        help=(
+                            "Seed the named example product's worked-example artifacts "
+                            "(flows/mock-data/mockups) into docs/product-truth/, by name. "
+                            "Not seeded by default; missing-only semantics. "
+                            "See leafcutter/scripts/seed_example_product.py."
                         ))
     parser.add_argument("--clean", action="store_true",
                         help=(
@@ -218,12 +226,18 @@ def _run_halt_guard(target_root: Path, package_root: Path, args: argparse.Namesp
 def _run_optional_pre_deploy_steps(
     args: argparse.Namespace, package_root: Path, target_root: Path
 ) -> None:
-    """Run optional --update-diagrams and --seed-docs steps (BP-100n-4 split)."""
+    """Run optional --update-diagrams, --seed-docs, --seed-example-product steps.
+
+    (BP-100n-4 split of main(); --seed-example-product added by UXP-700a-3.)
+    """
     if args.update_diagrams:
         _update_diagrams(package_root)
 
     if args.seed_docs:
         _seed_docs(target_root, args.dry_run)
+
+    if args.seed_example_product:
+        _seed_example_product(target_root, args.seed_example_product, args.dry_run)
 
 
 def _warn_if_conflicting_overwrite_flags(args: argparse.Namespace) -> None:
