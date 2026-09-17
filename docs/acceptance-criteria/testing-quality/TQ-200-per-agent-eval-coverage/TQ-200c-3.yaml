@@ -9,14 +9,14 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: reviewed
+readiness: draft
 priority: high
 roadmap_phase: phase_1
 criteria: |
   Given one piece of work with two things to prove — that its declaration is
     well-formed and consistent with the registry it must agree with, which an
-    assertion settles, and that it actually elicits the intended behaviour from a
-    model, which only a judgment settles,
+    assertion settles, and that it reliably elicits the intended behaviour from a
+    model across many cases, which only a score settles,
   When the proof it will be asked for is written down and handed on,
   Then both demands are present in the same plan for that one piece of work,
   And each is legible as its own kind, so the deterministic demand is not read as
@@ -167,6 +167,28 @@ amended_by:
       the schema and test-writer template links stay describes because TQ-200c-1 owns those edits
       and this AC only requires the demands to survive transit between them. criteria, title and
       notes untouched."
+  - reason: criteria-reworded-to-amended-proof-kind-boundary
+    by: business-analyst
+    at: 2026-09-17
+    note: |
+      Follows the user's (BrainCandy) 2026-09-17 decision recorded on TQ-200c: a proof is
+      ASSERTED when one definite check decides it (including a check on a real agent's
+      reply) and JUDGED when only a score across many examples against a bar decides it.
+      The judged half of the mixed example is therefore described by how its pass is
+      decided, not by a model being involved.
+      CHANGED: criteria first Given (judged half) reworded; one sentence of notes section
+      "WHY THIS IS ITS OWN AC AND NOT A CLAUSE OF c-2" reworded; readiness reviewed -> draft
+      (user decision 2026-09-17, Q5). UNCHANGED: title, every other criteria clause,
+      depends_on, doc_links, every other notes section and every IT PO field.
+      OLD CRITERIA FIRST GIVEN, changed lines only (verbatim):
+        well-formed and consistent with the registry it must agree with, which an
+        assertion settles, and that it actually elicits the intended behaviour from a
+        model, which only a judgment settles,
+      OLD NOTES SENTENCE (verbatim): "most of them need both: the frontmatter rule IS
+        mechanically checkable and the prompt's effect on a model is NOT."
+      STALE IT PO FIELDS (not edited, IT PO to refresh): test_spec[0] description ("a
+      registry-parity assertion and a model-behaviour judgment" — the judged half should
+      read as a score across many cases); test_rationale is still accurate.
 superseded_by: null
 covered_by: []
 implemented_by: []
@@ -181,7 +203,8 @@ notes: |
   is the shape the existing code already has, merely with a better-informed
   condition. That implementation satisfies every clause of c-2 and is wrong for most
   real llm-expert requirements, because most of them need both: the frontmatter rule
-  IS mechanically checkable and the prompt's effect on a model is NOT. Stating
+  IS mechanically checkable, and whether the prompt reliably elicits the intended
+  behaviour across many cases is NOT — only a score settles that. Stating
   simultaneity separately means an implementer cannot ship the exclusive version and
   claim the routing AC.
 

@@ -9,13 +9,13 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: reviewed
+readiness: draft
 priority: high
 roadmap_phase: phase_1
 criteria: |
-  Given three pieces of work: one whose behaviour is settled entirely by assertion,
-    one whose behaviour is settled entirely by judgment about a model's output, and
-    one that needs both,
+  Given three pieces of work: one whose behaviour is settled entirely by definite
+    checks, one whose behaviour no single check can settle and only a score across
+    many examples decides, and one that needs both,
   When the proof each will be asked for is decided,
   Then each is asked for the kinds of proof its own description implies, derived
     from what the work and its producer already declare about themselves,
@@ -185,9 +185,31 @@ amended_by:
       describes -> modifies. config/agent_registry.json deliberately LEFT as describes: adding a
       name there is the fix this AC's clauses reject, so it must not enter files_touched.
       criteria, title and notes untouched."
+  - reason: criteria-reworded-to-amended-proof-kind-boundary
+    by: business-analyst
+    at: 2026-09-17
+    note: |
+      Vocabulary alignment only, following the user's (BrainCandy) 2026-09-17 decision
+      recorded on TQ-200c: a proof is ASSERTED when one definite check decides it (including
+      a check on a real agent's reply) and JUDGED when only a score across many examples
+      against a bar decides it. No change in what this router must do.
+      CHANGED: criteria first Given reworded; covered_by gains TQ-200c-2-ii (new L3, the
+      routing rule for charter work settled by one definite check on the real agent's
+      reply); readiness reviewed -> draft (user decision 2026-09-17, Q5). UNCHANGED: title,
+      every other criteria clause, depends_on, doc_links, notes and every IT PO field.
+      OLD CRITERIA FIRST GIVEN (verbatim):
+        Given three pieces of work: one whose behaviour is settled entirely by assertion,
+          one whose behaviour is settled entirely by judgment about a model's output, and
+          one that needs both,
+      STALE IT PO FIELDS (not edited, IT PO to refresh): test_spec[0] description
+      ("assertion-settled, judgment-settled, and both" — re-word to the pass-decision
+      boundary); it_requirements.constraints last item ("Must not route every
+      prompt-producing requirement to a judged proof") should cross-reference TQ-200c-2-ii;
+      delivers_to contract (add TQ-200c-2-ii as a consumer of the routing answer).
 superseded_by: null
 covered_by:
   - TQ-200c-2-i
+  - TQ-200c-2-ii
 implemented_by: []
 change_target:
   - code

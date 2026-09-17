@@ -1,0 +1,93 @@
+id: TQ-600a-1-ii
+components:
+  - testing_quality
+  - agent_registry
+title: "Switched on but unable to ask the agent, a case fails naming why -- never skipped, never not run, never passed"
+component: testing-quality
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: critical
+roadmap_phase: phase_1
+criteria: |
+  Given the live-dispatch switch set, and a request to a real agent that cannot be made --
+    because no credentials for the model service are available, because the agent the case
+    names is not registered, because the request fails in transit, or because a permission
+    request is raised that no one is present to answer --
+  When the cases that ask a real agent run,
+  Then each case that could not ask its agent is reported as failed, naming which of those
+    four stopped it,
+    And none of them is reported as skipped, not run or passed,
+    And the run as a whole is reported as failed.
+
+  Given the live-dispatch switch set, and a request whose agent could not be launched or
+    whose reply could not be read,
+  When the case's own check would otherwise run,
+  Then the case is reported as failed naming the cause that stopped the request,
+    And its check is not run against an empty reply, so the failure is never reported as
+    the check accepting or rejecting an answer the agent did not give.
+depends_on:
+  - TQ-600a-1
+doc_links:
+  - path: docs/acceptance-criteria/testing-quality/TQ-600-real-agent-proof/TQ-600a-1.yaml
+    relationship: describes
+    status: exists
+    relevance: "Parent L2: the mechanism that asks the real agent."
+  - path: docs/acceptance-criteria/build-orchestration/BO-3200-second-hand-answers/BO-3200f-2-ii.yaml
+    relationship: describes
+    status: exists
+    relevance: "Origin of the first scenario (its scenario 5) and of the second (IT PO it_requirement A DISPATCH THAT CANNOT BE MADE IS NEVER AN ANSWER)."
+  - path: docs/known-issues/testing-quality/open-high-ki-tq-20260908-0900.md
+    relationship: describes
+    status: exists
+    relevance: "The eval runner's transport turns a launch failure into an empty prediction that scores; the second scenario forbids inheriting that."
+  - path: docs/reference/false-green-mechanisms.md
+    relationship: describes
+    status: exists
+    relevance: "M6 -- a scorer that treats 'no answer' as an answer."
+  - path: docs/reference/claude-code-hooks.md
+    relationship: describes
+    status: exists
+    relevance: "Why an unattended run meets permission requests when nothing is pre-approved."
+assigned_agent: python-coder
+estimated_complexity: M
+declares_side_effect: false
+delivers_to: null
+expects_from:
+  ac_id: TQ-600a-1
+  contract: "The mechanism that asks a real agent, whose own signals (launch outcome, structured output, recorded permission denials, registry lookup) this record classifies into four named causes."
+origin_agent: business-analyst
+created: 2026-09-17
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - code
+  - pipeline
+risk_surface: cost
+notes: |
+  RELOCATED FROM BO-3200f-2-ii SCENARIO 5 (user decision, BrainCandy, 2026-09-17). The
+  first scenario is carried over with "the executor is not registered" generalised to
+  "the agent the case names is not registered" and "the three live scenarios" to "the cases
+  that ask a real agent". The four causes and the three outcomes are unchanged.
+
+  WHAT WAS ADDED. The second scenario moves BO-3200f-2-ii's IT PO decision that a launch
+  or parse failure must never reach a scenario's check as an empty reply into criteria.
+  Reason: the transport this mechanism reuses already has that defect (false-green M6,
+  KI-TQ-20260908-0900), so it is the most likely way the first scenario is quietly broken,
+  and it is an observable outcome rather than a design choice.
+
+  WHY A SKIP IS A FAILURE HERE. Switched on and unable to ask is the case test frameworks
+  most often report as a skip, because that is what they do with missing credentials. A
+  skip under an explicit switch is a silent pass by another name.
+
+  WHY THE PERMISSION CAUSE IS LISTED. Nothing is pre-approved (user decision 2026-09-16):
+  no permission-skipping flag, no allowed-tools list, no settings overlay. An unattended
+  run WILL meet permission requests. It must fail naming them, at once, rather than wait.
+
+  CLASSIFICATION IS MECHANICAL. Causes are told apart from the request's own signals,
+  never by scanning the agent's prose for words (BO-3200f-2-ii IT PO decision; for the IT
+  PO to carry over).

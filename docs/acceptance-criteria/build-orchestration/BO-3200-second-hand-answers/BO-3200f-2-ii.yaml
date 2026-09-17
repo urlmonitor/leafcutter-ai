@@ -1,5 +1,5 @@
 id: BO-3200f-2-ii
-title: "The executor's live scenarios are proven by dispatching the real registered agent -- only when explicitly switched on, leaving evidence behind, and failing by name when switched on but unable to dispatch"
+title: "The executor's three live scenarios are cases that ask the real registered executor, each settled by capture verification, and a declining charter makes the first one fail by name"
 component: build-orchestration
 components:
   - build_orchestration
@@ -9,51 +9,36 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: reviewed
+readiness: draft
 priority: critical
 roadmap_phase: phase_1
 criteria: |
-  Given the test suite run the way it runs by default, and the way continuous integration runs
-    it, with the live-dispatch switch not set,
-  When the run reaches the three live scenarios -- BO-3200f-2's first scenario and both
-    scenarios of BO-3200f-2-i --
-  Then no agent is dispatched on behalf of any of them,
-    And each is reported as not run because the live-dispatch switch is off, naming the switch,
-    And none of them is reported as passed.
-
-  Given the live-dispatch switch set explicitly for one run, locally or in continuous integration,
-  When the three live scenarios run,
-  Then each dispatches the executor as the repository registers it -- under the charter and the
-    registry entry the package ships, not a stand-in, a scripted reply or a copy prepared for the
-    test --
-    And each scenario passes or fails on the reply that its own dispatch returned.
+  Given the executor's three live scenarios -- BO-3200f-2's first scenario and both scenarios
+    of BO-3200f-2-i --
+  When they run with the live-dispatch switch set, as cases of the mechanism TQ-600a-1
+    specifies,
+  Then each case asks the executor as the repository registers it and names the acceptance
+    criterion it proves,
+    And each passes or fails on one definite check of its own reply: whether that reply verifies
+    as BO-3200f-1's capture of the exact command the case dispatched,
+    And the run's evidence record (TQ-600a-2) names all three scenarios, with the executor as
+    the agent asked.
 
   Given the executor's charter as the repository holds it, changed so that it declines every
     command,
     And the live-dispatch switch set,
   When the three live scenarios run,
-  Then BO-3200f-2's first live scenario fails, and its failure names the decline.
-
-  Given a switched-on run in which the three live scenarios ran,
-  When the run ends,
-  Then an evidence record is written for that run naming, for each live scenario: the scenario,
-    the acceptance criterion it proves, whether it passed or failed, the agent dispatched, the
-    model that answered, when it ran, the exact charter and registry entry content it ran under,
-    and the reply received,
-    And a done-proof that cites that record can tell a scenario that passed from one that failed
-    or was not run.
-
-  Given the live-dispatch switch set, and a live dispatch that cannot be made -- because no
-    credentials for the model service are available, because the executor is not registered,
-    because the dispatch fails in transit, or because a permission request is raised that no one
-    is present to answer --
-  When the three live scenarios run,
-  Then each scenario that could not dispatch is reported as failed, naming which of those four
-    stopped it,
-    And none of them is reported as skipped, not run or passed,
-    And the run as a whole is reported as failed.
+  Then BO-3200f-2's first live scenario fails, and its failure names the decline,
+    And that failure comes from the scenario's own check on the executor's reply, with no change
+    made to the mechanism that asks the executor.
 depends_on:
   - BO-3200f-2
+  - BO-3200f-1
+  - BO-3200f-2-i
+  - TQ-600a-1
+  - TQ-600a-1-i
+  - TQ-600a-1-ii
+  - TQ-600a-2
 doc_links:
   - path: docs/acceptance-criteria/build-orchestration/BO-3200-second-hand-answers/BO-3200f-2.yaml
     relationship: describes
@@ -99,9 +84,17 @@ doc_links:
     relationship: creates
     status: planned
     relevance: "Added by it-po. The tracked directory each switched-on run writes its evidence record into."
+  - path: docs/acceptance-criteria/testing-quality/TQ-600-real-agent-proof/TQ-600a-1.yaml
+    relationship: describes
+    status: exists
+    relevance: "Added by business-analyst 2026-09-17. The general mechanism this record's scenarios are cases of: asking the registered agent as shipped, pass/fail on one check, agent-agnostic. Its children TQ-600a-1-i (switched off) and TQ-600a-1-ii (unable to ask) carry this record's former scenarios 1 and 5."
+  - path: docs/acceptance-criteria/testing-quality/TQ-600-real-agent-proof/TQ-600a-2.yaml
+    relationship: describes
+    status: exists
+    relevance: "Added by business-analyst 2026-09-17. The evidence record, formerly this record's scenario 4."
 assigned_agent: python-coder
 estimated_complexity: L
-declares_side_effect: true
+declares_side_effect: false
 change_target:
   - code
   - pipeline
@@ -262,16 +255,140 @@ amended_by:
     and expects_from: null. Decided the BA's four open items (switch, TQ-200b reuse and the
     TQ-200c boundary, evidence location and shape, the retired proof kind) -- see notes.
     criteria, title, depends_on and req_status untouched. readiness draft -> reviewed.
+- reason: narrowed-to-executor-consumer-after-relocation-to-TQ-600a
+  by: business-analyst
+  at: 2026-09-17
+  note: |
+    Authorised by the user (BrainCandy) on 2026-09-17: the live-dispatch harness is homed in
+    testing-quality now, under TQ-600a. The general mechanism moved to new records; this record
+    keeps only what is specific to the executor and is now a CONSUMER of TQ-600a. Not superseded,
+    because two executor-specific behaviours remain (which three scenarios run and what check
+    settles them; the declining-charter discriminator).
+    WHERE EACH OLD SCENARIO WENT (substance carried over without loss, generalised from "the
+    executor / the three live scenarios" to "the agent a case declares / the cases"):
+      scenario 1 (switched off)                 -> TQ-600a-1-i
+      scenario 2 (the real agent, own reply)    -> TQ-600a-1 (first scenario); for the executor,
+                                                   restated here as the first scenario
+      scenario 3 (declining charter)            -> STAYS HERE, second scenario
+      scenario 4 (evidence record)              -> TQ-600a-2
+      scenario 5 (switched on, cannot dispatch) -> TQ-600a-1-ii
+    CHANGED: title; criteria (rewritten to two scenarios); depends_on widened from [BO-3200f-2]
+    to [BO-3200f-2, BO-3200f-1, BO-3200f-2-i, TQ-600a-1, TQ-600a-1-i, TQ-600a-1-ii, TQ-600a-2]
+    (BO-3200f-2-i's reverse edge to this record removed in the same pass, so no cycle);
+    declares_side_effect true -> false, derived from the new Then clauses, which no longer
+    assert that a record is written (the evidence write is TQ-600a-2's); two doc_links appended
+    (TQ-600a-1, TQ-600a-2); readiness reviewed -> draft because the criteria changed under the
+    IT PO enrichment; notes: a SUPERSEDED marker added to the PLACEMENT, WHY THE CRITERIA NAME
+    THE THREE SCENARIOS, THE FIVE SCENARIOS and ORDERING sections, and a RELOCATION section
+    appended. UNCHANGED: id, component, components, assigned_agent, priority, req_status, parent
+    (still an L3 under BO-3200f-2, still in its covered_by) and every other IT PO field.
+    OLD TITLE (verbatim): "The executor's live scenarios are proven by dispatching the real
+    registered agent -- only when explicitly switched on, leaving evidence behind, and failing
+    by name when switched on but unable to dispatch"
+    OLD CRITERIA (verbatim):
+      Given the test suite run the way it runs by default, and the way continuous integration runs
+        it, with the live-dispatch switch not set,
+      When the run reaches the three live scenarios -- BO-3200f-2's first scenario and both
+        scenarios of BO-3200f-2-i --
+      Then no agent is dispatched on behalf of any of them,
+        And each is reported as not run because the live-dispatch switch is off, naming the switch,
+        And none of them is reported as passed.
+
+      Given the live-dispatch switch set explicitly for one run, locally or in continuous integration,
+      When the three live scenarios run,
+      Then each dispatches the executor as the repository registers it -- under the charter and the
+        registry entry the package ships, not a stand-in, a scripted reply or a copy prepared for the
+        test --
+        And each scenario passes or fails on the reply that its own dispatch returned.
+
+      Given the executor's charter as the repository holds it, changed so that it declines every
+        command,
+        And the live-dispatch switch set,
+      When the three live scenarios run,
+      Then BO-3200f-2's first live scenario fails, and its failure names the decline.
+
+      Given a switched-on run in which the three live scenarios ran,
+      When the run ends,
+      Then an evidence record is written for that run naming, for each live scenario: the scenario,
+        the acceptance criterion it proves, whether it passed or failed, the agent dispatched, the
+        model that answered, when it ran, the exact charter and registry entry content it ran under,
+        and the reply received,
+        And a done-proof that cites that record can tell a scenario that passed from one that failed
+        or was not run.
+
+      Given the live-dispatch switch set, and a live dispatch that cannot be made -- because no
+        credentials for the model service are available, because the executor is not registered,
+        because the dispatch fails in transit, or because a permission request is raised that no one
+        is present to answer --
+      When the three live scenarios run,
+      Then each scenario that could not dispatch is reported as failed, naming which of those four
+        stopped it,
+        And none of them is reported as skipped, not run or passed,
+        And the run as a whole is reported as failed.
+    OLD depends_on (verbatim): [BO-3200f-2]
+    OLD declares_side_effect: true
+    STALE IT PO FIELDS ON THIS RECORD -- TO MOVE TO THE NEW RECORDS OR NARROW HERE (not edited by
+    the BA; IT PO to carry over without loss):
+      it_requirements[0] ASSIGNMENT (deliverable "a switch, a live-dispatch entry point, dispatch-
+        failure classification and an evidence writer") -> TQ-600a-1 / -1-i / -1-ii / -2; here only
+        the executor's scenario declarations and the discriminator remain.
+      it_requirements[1] REUSE THE TRANSPORT, NOT THE RUNNER -> TQ-600a-1.
+      it_requirements[2] PASS/FAIL PER SCENARIO, NO SCORE -> TQ-600a-1 (general); the capture-
+        verification pass condition for the executor stays here.
+      it_requirements[3] DISPATCH THE AGENT AS REGISTERED -> TQ-600a-1.
+      it_requirements[4] A DISPATCH THAT CANNOT BE MADE IS NEVER AN ANSWER -> TQ-600a-1-ii.
+      it_requirements[5] THE SWITCH IS ONE ENVIRONMENT VARIABLE -> TQ-600a-1-i.
+      it_requirements[6] NO PRE-APPROVAL -> TQ-600a-1-ii (and TQ-600a-3 how-to).
+      it_requirements[7] NO CI JOB SHIPS -> TQ-600a-1-i.
+      it_requirements[8] EVIDENCE RECORD -- LOCATION -> TQ-600a-2.
+      it_requirements[9] EVIDENCE RECORD -- SHAPE -> TQ-600a-2 (and TQ-600a-5 reference page).
+      it_requirements[10] NOT THE RETIRED PROOF KIND -> TQ-600a-1 (and consumers keep e2e/deployed).
+      it_requirements[11] BOUNDARY WITH TQ-200b AND TQ-200c -> TQ-600a-1; its "see notes for what
+        TQ-200c would need to change" is now made (TQ-200c amended 2026-09-17).
+      it_requirements[12] AGENT-AGNOSTIC MECHANISM -> TQ-600a-1 (now also a criteria scenario).
+      it_requirements[13] error-handling policy and deploy manifest -> TQ-600a-1 / -1-ii / -2.
+      delivers_to (llm-expert, test-writer entry point contract) -> TQ-600a-1; here, re-point to
+        TQ-600a-1's entry point.
+      expects_from BO-3200f-2 and BO-3200f-1 -> stay here (executor-specific).
+      test_spec, by destination:
+        switch_off_dispatches_nothing..., ci_and_default_suite_do_not_set_the_switch,
+          unrecognised_switch_value_fails_the_run_naming_it -> TQ-600a-1-i;
+        dispatch_resolves_the_shipped_charter_and_registry_entry_at_dispatch_time,
+          eval_runner_behaviour_is_unchanged_by_the_transport_extraction,
+          shared_transport_resolves_in_the_deployed_layout,
+          no_live_dispatch_proof_kind_value_is_reintroduced -> TQ-600a-1;
+        each_dispatch_failure_cause_is_a_named_failure_never_a_skip,
+          launch_failure_is_not_scored_as_an_empty_reply -> TQ-600a-1-ii;
+        evidence_record_carries_every_field_for_every_scenario,
+          done_proof_reading_the_record_tells_passed_from_failed_and_not_run,
+          switched_on_run_that_cannot_write_evidence_fails -> TQ-600a-2;
+        declining_charter_fails_the_first_live_scenario_naming_the_decline,
+          switched_on_live_run_writes_evidence_for_the_three_scenarios -> STAY HERE; re-point
+          surface_invoked to TQ-600a-1 and rename the second (it now asserts the evidence record
+          names the three scenarios, not that the write happens).
+        New test names under TQ-600a-* should drop the bo_3200f_2_ii prefix.
+      test_rationale -> split accordingly.
+      doc_links added by it-po (KI-TQ-20260908-0900, false-green-mechanisms, claude-code-hooks,
+        BO-2900g-3, TQ-200c, docs/testing/live-dispatch-evidence/) -> carry to the TQ-600a records;
+        the TQ-200c relevance ("the TQ-200c change it implies is flagged, not made") is stale.
+      estimated_complexity L -> likely S now; change_target [code, pipeline] and risk_surface cost
+        -> re-assess for the narrowed record.
 superseded_by: null
 covered_by: []
 implemented_by: []
 notes: |
+  [PARTLY SUPERSEDED 2026-09-17 -- "this record specifies that harness's observable contract"
+  no longer holds: the contract is TQ-600a-1, TQ-600a-1-i, TQ-600a-1-ii and TQ-600a-2. This
+  record now specifies the executor's use of it.]
   WHY THIS RECORD EXISTS. On 2026-09-16 the user decided that the scenarios only a real dispatch
   can prove -- BO-3200f-2's first scenario and both scenarios of BO-3200f-2-i -- are proven by an
   opt-in live-dispatch test harness, not by a recorded manual run. Nothing in the unit suite
   dispatches a real agent today (BO-3200f-2's caveat). This record specifies that harness's
   observable contract; it does not restate what the three live scenarios assert.
 
+  [SUPERSEDED 2026-09-17 -- the "no testing-quality L1 fits" conclusion below no longer holds:
+  the user opened TQ-600a and the general mechanism moved there. Kept as history. See
+  RELOCATION 2026-09-17 at the end of these notes.]
   PLACEMENT -- AN L3 UNDER BO-3200f-2, NOT A TESTING-QUALITY RECORD. Checked against the caps:
   BO-3200f is at 5 of 5 L2s and BO-3200 at 7 of 7 L1s, so neither can take a sibling. L3s under
   an L2 are not capped. The harness is test infrastructure in kind, so testing-quality was
@@ -289,11 +406,16 @@ notes: |
   will look. If a second agent's charter needs live proof, that is the signal for the Product
   Owner to open a testing-quality L1 and move the general mechanism there.
 
+  [SUPERSEDED 2026-09-17 -- the general criteria now say "a case / the agent it declares" under
+  TQ-600a-1; this record names the three scenarios because it is now the executor's consumer.]
   WHY THE CRITERIA NAME THE THREE SCENARIOS rather than "any agent". Criteria must be testable
   now, and the executor's three live scenarios are the only live-dispatch proof this tree asks
   for. Nothing here requires the mechanism to be executor-specific, and the IT PO should
   not let it become so.
 
+  [SUPERSEDED 2026-09-17 -- scenarios 1, 2, 4 and 5 moved to TQ-600a-1-i, TQ-600a-1, TQ-600a-2
+  and TQ-600a-1-ii; only scenario 3 remains here. The reasoning below still applies at its new
+  home.]
   THE FIVE SCENARIOS AND THE SHORTCUT EACH ONE CLOSES.
     1. Opt-in. A harness that dispatches by default puts model cost, credentials and
        non-determinism into every local run and every CI run. A switched-off scenario that
@@ -315,9 +437,14 @@ notes: |
        notes), so an unattended live run WILL meet permission requests; it must fail naming
        them rather than wait.
 
+  [SUPERSEDED 2026-09-17 -- declares_side_effect is now false; the evidence-write scenario moved
+  to TQ-600a-2, which carries true.]
   declares_side_effect: true -- derived from the fourth scenario's Then ("an evidence record is
   written"), and honest: the record is a durable artifact a done-proof cites.
 
+  [SUPERSEDED 2026-09-17 -- the harness guarantee now lives in TQ-600a-1, TQ-600a-1-i,
+  TQ-600a-1-ii and TQ-600a-2, which BO-3200f-2-i depends on directly. BO-3200f-2-i no longer
+  depends on this record; this record depends on BO-3200f-2-i. See RELOCATION below.]
   ORDERING. BO-3200f-2 and BO-3200f-2-i are "not done until this record is satisfied".
   BO-3200f-2-i now carries a depends_on edge to this record (a sibling edge, no cycle). BO-3200f-2
   cannot: it is this record's parent, so the reverse edge would be a cycle. For BO-3200f-2 the
@@ -396,3 +523,26 @@ notes: |
   CAVEAT -- FIRST RUN COST. The declining-charter and failure-cause tests make real dispatches
   (some fail before reaching the model). risk_surface is cost for that reason; the switch is the
   only control and must stay off by default.
+
+  RELOCATION 2026-09-17 (business-analyst, user decision BrainCandy 2026-09-17). The user chose
+  to home the live-dispatch harness in testing-quality now, under TQ-600a ("Check what an agent
+  actually does by asking the real agent, only when you choose to"). Shape chosen, as TQ-600a's
+  notes recommended:
+    - GENERAL MECHANISM -> testing-quality:
+        TQ-600a-1    switched on, the agent is asked as shipped, pass/fail on one check, the
+                     same mechanism for any registered agent;
+        TQ-600a-1-i  switched off (default and CI), and an unrecognised switch value;
+        TQ-600a-1-ii switched on but unable to ask: four named failures, never an empty reply;
+        TQ-600a-2    the evidence record.
+    - EXECUTOR-SPECIFIC CONSUMER -> stays here: the three live scenarios are cases of that
+      mechanism, settled by BO-3200f-1's capture verification; and the declining-charter
+      discriminator for BO-3200f-2's first scenario.
+  Why narrow rather than supersede: two behaviours only the executor tree can state remain, and
+  BO-3200f-2's notes and three test_spec descriptors already point here for them.
+  ORDERING NOW. This record depends on the four TQ-600a records, on BO-3200f-1 (capture
+  verification) and on BO-3200f-2-i (its two scenarios are among the three cases).
+  BO-3200f-2-i's edge to this record was removed and replaced by edges to the TQ-600a records,
+  so there is no cycle. BO-3200f-2 still cannot depend on this record (its child); it stays in
+  BO-3200f-2's covered_by.
+  IT PO: see this record's 2026-09-17 business-analyst amendment for where each IT PO field
+  goes.

@@ -8,21 +8,21 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: reviewed
+readiness: draft
 priority: high
 roadmap_phase: phase_1
 criteria: |
   Given a piece of prompt-shaped work whose whole behaviour is settled by
     deterministic checks — a declaration is well-formed, a rule is obeyed, two
-    records agree, a step really was dispatched — with no question about a model's
-    output remaining,
+    records agree, a step really was dispatched — with nothing remaining that no
+    single check can settle,
   When the proof it will be asked for is decided,
   Then it is asked only for deterministic proof, and no judged proof is demanded of
     it,
   And an existing deterministic proof of that kind is not rewritten, re-homed or
     reclassified as judged in order to satisfy the new demand,
-  And in the mirror case — work whose whole behaviour is a question about a model's
-    output, with no deterministic surface to check — only judged proof is demanded,
+  And in the mirror case — work whose whole behaviour is a question no single check
+    can settle, with no deterministic surface to check — only judged proof is demanded,
     and no deterministic proof is invented to accompany it,
   And a demand that a piece of work carries no proof of any kind remains reachable
     only in the way TQ-200c-2 permits, so preventing over-demand here does not
@@ -154,6 +154,35 @@ amended_by:
       'related' deliberately: this AC asserts they are UNCHANGED, so they must not enter
       files_touched — naming a protected file as an edit surface is the BP-1100a-4-i inversion.
       criteria, title and notes untouched."
+  - reason: criteria-reworded-to-amended-proof-kind-boundary
+    by: business-analyst
+    at: 2026-09-17
+    note: |
+      Follows the user's (BrainCandy) 2026-09-17 decision recorded on TQ-200c: a proof is
+      ASSERTED when one definite check decides it (including a check on a real agent's
+      reply) and JUDGED when no single check can settle it and only a score across many
+      examples against a bar decides it. "A question about a model's output" no longer marks
+      judged work, because a model's reply can be settled by one definite check.
+      CHANGED: criteria first Given and the mirror-case clause reworded; readiness reviewed
+      -> draft (user decision 2026-09-17, Q5); a notes paragraph appended. The rule that
+      charter work settled by one definite check on the real agent's reply is asked for
+      asserted proof, not judged proof alone, was NOT added here: TQ-200c-2-i is about over-
+      demand, that rule is about classification, so it is its own record TQ-200c-2-ii.
+      UNCHANGED: title, the other two And clauses, depends_on, doc_links and every IT PO
+      field.
+      OLD CRITERIA FIRST GIVEN (verbatim):
+        Given a piece of prompt-shaped work whose whole behaviour is settled by
+          deterministic checks — a declaration is well-formed, a rule is obeyed, two
+          records agree, a step really was dispatched — with no question about a model's
+          output remaining,
+      OLD MIRROR-CASE CLAUSE, changed lines only (verbatim):
+        And in the mirror case — work whose whole behaviour is a question about a model's
+          output, with no deterministic surface to check — only judged proof is demanded,
+      STALE IT PO FIELDS (not edited, IT PO to refresh): test_spec[1] description ("A record
+      whose whole behaviour is a question about a model's output receives the judged kind
+      alone"); test_spec[0] description should say a structural fact OR one definite check;
+      it_requirements.constraints item 3 ("Judgment-only work") wording; notes section "THE
+      MIRROR CLAUSE" uses "purely judgment-shaped question" (still accurate, optional).
 superseded_by: null
 covered_by: []
 implemented_by: []
@@ -198,3 +227,10 @@ notes: |
   which is generate_ticket_from_ac.py:2773 again. Restraint here is bounded by
   TQ-200c-2's fourth clause, and the boundary is stated so an implementer cannot cite
   this L3 as licence for a default of silence.
+
+  AMENDMENT 2026-09-17 (business-analyst, user decision on TQ-200c). "Question about a
+  model's output" was the old marker of judged work and is gone from the criteria: a
+  real agent's reply accepted or rejected by one definite check is asserted proof. The
+  mirror case is now work that no single check can settle. The sibling rule for charter
+  work proved by one definite check on the real agent's reply lives in TQ-200c-2-ii,
+  because it is a classification rule, not an over-demand rule.

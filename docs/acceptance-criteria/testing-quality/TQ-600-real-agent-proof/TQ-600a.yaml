@@ -47,7 +47,12 @@ origin_agent: product-owner
 created: 2026-09-17
 amended_by: []
 superseded_by: null
-covered_by: []
+covered_by:
+  - TQ-600a-1
+  - TQ-600a-2
+  - TQ-600a-3
+  - TQ-600a-4
+  - TQ-600a-5
 implemented_by: []
 change_target:
   - code

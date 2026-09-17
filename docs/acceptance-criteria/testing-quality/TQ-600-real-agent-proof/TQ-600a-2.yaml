@@ -1,0 +1,107 @@
+id: TQ-600a-2
+components:
+  - testing_quality
+  - agent_registry
+title: "Every switched-on run leaves an evidence record that a later done-proof can cite and read correctly"
+component: testing-quality
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: critical
+roadmap_phase: phase_1
+criteria: |
+  Given a switched-on run in which cases that ask a real agent ran,
+  When the run ends,
+  Then an evidence record is written for that run naming, for each case: the case, the
+    acceptance criterion it proves, whether it passed, failed or was not run, the agent
+    asked, the model that answered, when it ran, the exact instructions and registry entry
+    content it ran under, and the reply received,
+    And a done-proof that cites that record can tell a case that passed from one that failed
+    or was not run.
+
+  Given a switched-on run in which one or more cases could not ask their agent,
+  When the run ends,
+  Then its evidence record is still kept, naming for each such case that it failed and which
+    cause stopped it,
+    And the run as a whole reads as failed in the record.
+
+  Given an evidence record kept by an earlier switched-on run,
+  When a later switched-on run ends,
+  Then the later run adds its own new record and the earlier one is left unchanged.
+
+  Given a switched-on run in which every case passed, but whose evidence record cannot be
+    kept,
+  When the run ends,
+  Then the run is reported as failed, naming that its evidence could not be kept.
+
+  Given an evidence record whose recorded instructions or registry entry differ from the
+    ones the project ships now,
+  When a done-proof reads that record,
+  Then the record is reported as out of date for that agent.
+depends_on:
+  - TQ-600a
+  - TQ-600a-1
+doc_links:
+  - path: docs/acceptance-criteria/testing-quality/TQ-600-real-agent-proof/TQ-600a.yaml
+    relationship: describes
+    status: exists
+    relevance: "Parent L1: '...leaving a record of what was asked, what came back and whether it passed'."
+  - path: docs/acceptance-criteria/build-orchestration/BO-3200-second-hand-answers/BO-3200f-2-ii.yaml
+    relationship: describes
+    status: exists
+    relevance: "Origin of the first scenario (its scenario 4) and of the others (IT PO it_requirements EVIDENCE RECORD -- LOCATION and EVIDENCE RECORD -- SHAPE)."
+  - path: docs/known-issues/testing-quality/open-high-ki-tq-20260908-0900.md
+    relationship: describes
+    status: exists
+    relevance: "Why the eval runner's results directory (gitignored, missing in every fresh worktree) cannot be where the evidence is kept."
+  - path: docs/acceptance-criteria/testing-quality/TQ-400-durable-done-proof/TQ-400a.yaml
+    relationship: related
+    status: exists
+    relevance: "Whether an out-of-date record loses its standing as done-proof over time is TQ-400's axis. This record only makes staleness visible."
+assigned_agent: python-coder
+estimated_complexity: M
+declares_side_effect: true
+delivers_to:
+  - agent: python-coder
+    contract: "One new evidence record per switched-on run, readable by a done-proof, with per-case verdict (passed | failed | not_run), failure cause, agent, model as reported by the service, time, instructions and registry entry content with digests, and reply; plus a reader that reports a record out of date when its digests differ from what is shipped."
+expects_from:
+  ac_id: TQ-600a-1
+  contract: "Per case: the agent asked, the acceptance criterion it proves, the instructions and registry entry the request ran under, the reply, and the verdict of the case's own check; and from TQ-600a-1-ii the named cause for a case that could not ask its agent."
+origin_agent: business-analyst
+created: 2026-09-17
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - code
+  - pipeline
+risk_surface: cost
+notes: |
+  RELOCATED FROM BO-3200f-2-ii SCENARIO 4 (user decision, BrainCandy, 2026-09-17). The
+  first scenario is carried over with "each live scenario" generalised to "each case",
+  "the executor"/"the agent dispatched" to "the agent asked", and "charter" to
+  "instructions". Nothing was dropped.
+
+  WHAT WAS ADDED, ALL FROM BO-3200f-2-ii's IT PO it_requirements, MOVED INTO CRITERIA
+  BECAUSE EACH IS AN OBSERVABLE OUTCOME A DONE-PROOF DEPENDS ON:
+    - kept for failed runs too, including runs where no request could be made;
+    - never overwritten;
+    - a run whose evidence cannot be kept is failed, even when every case passed;
+    - a record whose instructions or registry entry digest differs from the files shipped
+      now is visibly out of date.
+  The location (a tracked directory, docs/testing/live-dispatch-evidence/), the file name
+  (run start time and short commit SHA) and the JSON shape stay IT PO decisions.
+
+  WHY A SEPARATE L2 FROM TQ-600a-1. Asking the agent and keeping the evidence fail
+  independently: a mechanism can ask correctly and leave nothing behind, and a live run
+  that leaves nothing behind cannot be told from one that never ran. The two are also built
+  by different code (the request versus the writer and reader).
+
+  declares_side_effect: true -- derived from the first scenario's Then ("an evidence
+  record is written"), and honest: the record is a durable artifact a done-proof cites.
+
+  BOUNDARY. Whether stale evidence loses its standing over time is TQ-400's, not decided
+  here. No evidence field value named live_dispatch (BO-2900g-3).

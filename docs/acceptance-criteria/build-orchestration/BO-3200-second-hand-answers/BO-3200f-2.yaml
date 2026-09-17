@@ -197,6 +197,26 @@ amended_by:
 
     it_requirements[10] and test_rationale were not in the update request but repeated the same
     stale "missing live-dispatch surface" statement, so they were brought in line in the same pass.
+- reason: notes-updated-for-live-dispatch-harness-relocation
+  by: business-analyst
+  at: 2026-09-17
+  note: |
+    Follows the user's (BrainCandy) 2026-09-17 decision to home the live-dispatch harness in
+    testing-quality under TQ-600a. Notes only: SUPERSEDED IN PART markers added to the 2026-09-16
+    LIVE-DISPATCH HARNESS DECIDED paragraph and to the IT-PO UPDATE (2026-09-17) paragraph, and a
+    2026-09-17 RELOCATION paragraph appended. UNCHANGED: criteria, title, depends_on,
+    covered_by (BO-3200f-2-ii stays a child), readiness (reviewed) and every IT PO field.
+    OLD NOTES TEXT now marked superseded, verbatim: "The harness is specified by BO-3200f-2-ii.
+    This record's first scenario is NOT DONE until BO-3200f-2-ii is satisfied and a switched-on
+    run's evidence record shows that scenario passing." and "BO-3200f-2-ii is this record's child,
+    so the ordering cannot be a depends_on edge (it would be a cycle); it is held by this note and
+    by covered_by." and "The live descriptor names BO-3200f-2-ii's harness in surface_invoked."
+    STALE IT PO FIELDS (not edited, IT PO to refresh): it_requirements[10] ("through
+    BO-3200f-2-ii's opt-in live-dispatch harness"); test_spec[6]
+    test_bo_3200f_2_four_command_kinds_are_carried_out_by_the_registered_executor surface_invoked
+    ("BO-3200f-2-ii live-dispatch harness, switched on by LEAFCUTTER_LIVE_DISPATCH=1") and
+    description ("LIVE DISPATCH through BO-3200f-2-ii's harness") -> TQ-600a-1, keep type e2e and
+    angle deployed; test_rationale ("It runs through BO-3200f-2-ii's opt-in harness").
 superseded_by: null
 covered_by:
   - BO-3200f-2-i
@@ -270,6 +290,11 @@ notes: |
   Recorded as a note only: criteria, readiness and every IT PO field are unchanged. The later
   run-time enforcement point has no acceptance criterion yet.
 
+  [SUPERSEDED IN PART 2026-09-17 -- "The harness is specified by BO-3200f-2-ii", "NOT DONE until
+  BO-3200f-2-ii is satisfied" and "BO-3200f-2-ii is this record's child, so the ordering cannot be
+  a depends_on edge" no longer describe where the harness lives; see the 2026-09-17 RELOCATION
+  paragraph at the end of these notes. The decision itself (live harness, not a manual run)
+  stands.]
   2026-09-16 (business-analyst) -- LIVE-DISPATCH HARNESS DECIDED; THE FIRST SCENARIO IS NOT DONE
   WITHOUT IT. The user decided on 2026-09-16 that the scenarios only a real dispatch can prove --
   this record's first scenario and both scenarios of BO-3200f-2-i -- are proven by an opt-in
@@ -285,3 +310,19 @@ notes: |
   BO-3200f-2-iii (deferred, low). The live descriptor names BO-3200f-2-ii's harness in
   surface_invoked. USER DECISIONS NEEDED (a)-(c) above are answered by the 2026-09-16 note and are
   no longer open.
+  [SUPERSEDED IN PART 2026-09-17 -- the live descriptor's surface_invoked should now name TQ-600a-1,
+  not BO-3200f-2-ii; IT PO to re-point.]
+
+  2026-09-17 (business-analyst) -- RELOCATION OF THE LIVE-DISPATCH HARNESS (user decision,
+  BrainCandy, 2026-09-17). The harness is now homed in testing-quality under TQ-600a. The general
+  mechanism is TQ-600a-1 (asking the registered agent as shipped, pass/fail on one check),
+  TQ-600a-1-i (switched off), TQ-600a-1-ii (switched on but unable to ask) and TQ-600a-2 (the
+  evidence record). BO-3200f-2-ii stays this record's child, narrowed to the executor-specific
+  consumer: the three live scenarios as cases of that mechanism settled by capture verification,
+  and the declining-charter discriminator. It stays in covered_by.
+  This record's first scenario is NOT DONE until TQ-600a-1, TQ-600a-1-i, TQ-600a-1-ii,
+  TQ-600a-2 and BO-3200f-2-ii are satisfied and a switched-on run's evidence record shows that
+  scenario passing. The TQ-600a records are not this record's children, so that ordering COULD
+  now be a depends_on edge without a cycle. It was deliberately NOT added: it would hold the
+  registry, containment and permission-gate work of the other two scenarios behind the harness,
+  which is a sequencing decision for the user. Until decided, the rule is held by this note.

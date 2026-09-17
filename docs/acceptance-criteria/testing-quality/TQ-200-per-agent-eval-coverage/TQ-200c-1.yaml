@@ -8,20 +8,23 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: reviewed
+readiness: draft
 priority: high
 roadmap_phase: phase_1
 criteria: |
-  Given a piece of work whose behaviour can only be settled by a judgment about a
-    model's output — for example, whether a prompt elicits the intended behaviour —
-    and which today can only be written down as a deterministic assertion or not at
-    all,
+  Given a piece of work whose behaviour no single check can settle — for example,
+    whether a prompt reliably elicits the intended behaviour from a model, which only
+    a score across many examples held against a bar decides — and which today can
+    only be written down as a deterministic assertion or not at all,
   When its author writes down the proof it needs,
   Then the author can state that this proof is settled by judgment rather than by
     assertion, and can do so in the same place, and in the same shape, as a
     deterministic proof is stated,
   And the same statement can also say that a proof is settled by assertion, so the
     two are alternatives within one vocabulary rather than two unrelated notations,
+  And a proof decided by one definite check on a real agent's reply — the agent
+    actually asked, and that one check accepting or rejecting what it gave back — is
+    stated as asserted, not as judged, and stating it needs no word beyond those two,
   And the word chosen for a judged proof means the same thing to whatever produces
     the plan for the work and to whatever consumes that plan: a plan carrying a
     judged proof is accepted by the consumer as a judged proof, without translation
@@ -168,6 +171,33 @@ amended_by:
       is llm-expert's file type and the generator routes agents from assigned_agent alone, so the
       python-coder ticket spawns no llm-expert phase. The template edit is pinned as a constraint
       and required_skills lists llm-expert; a reviewer must confirm that half landed."
+  - reason: criteria-reworded-to-amended-proof-kind-boundary
+    by: business-analyst
+    at: 2026-09-17
+    note: |
+      Follows the user's (BrainCandy) 2026-09-17 decision recorded on TQ-200c: the kind of
+      a proof follows HOW ITS PASS IS DECIDED, not whether a model is involved. ASSERTED =
+      one definite check decides it, including a check on a real agent's reply. JUDGED = a
+      score across many examples against a bar. Asking the real agent is not a third kind;
+      the retired proof kind live_dispatch (BO-2900g-3) is not reintroduced.
+      CHANGED: criteria first Given reworded; one And clause added after the "alternatives
+      within one vocabulary" clause (a proof decided by one definite check on a real agent's
+      reply is stated as asserted); readiness reviewed -> draft (user decision 2026-09-17,
+      Q5); a notes paragraph appended. UNCHANGED: title, every other criteria clause,
+      depends_on, covered_by, doc_links and every IT PO field.
+      OLD CRITERIA FIRST GIVEN (verbatim):
+        Given a piece of work whose behaviour can only be settled by a judgment about a
+          model's output — for example, whether a prompt elicits the intended behaviour —
+          and which today can only be written down as a deterministic assertion or not at
+          all,
+      OLD CRITERIA: the added And clause did not exist.
+      STALE IT PO FIELDS (not edited, IT PO to refresh): it_requirements.config_schema_fragment
+      proof_mode description ("`asserted` = a deterministic assertion decides it. `judged` = a
+      judgment about a model's output decides it."); it_requirements.constraints item on
+      reconciling judged with scoring_mode (still valid, re-check wording); test_spec has no
+      entry for the new clause (a test_spec entry whose proof decides on one check over a real
+      agent's reply validates as asserted, and no third value is accepted for it); delivers_to
+      contract wording; test_rationale.
 superseded_by: null
 covered_by:
   - TQ-200c-1-i
@@ -224,3 +254,11 @@ notes: |
   BOUNDARY. This AC does not decide WHO gets a judged proof (that is c-2), does not
   require both kinds at once (c-3), does not register anything with the runner (c-4)
   and produces no verdict or gate (c-5). It only makes the sentence sayable.
+
+  AMENDMENT 2026-09-17 (business-analyst, user decision on TQ-200c). The first Given no
+  longer says "a judgment about a model's output": a model being involved does not make
+  a proof judged. What makes it judged is that no single check can settle it and only a
+  score across many examples against a bar decides it. The added clause pins the case
+  that collided with BO-3200f-2-ii: asking the real agent and accepting or rejecting its
+  reply with one definite check is an ASSERTED proof, and the vocabulary needs no third
+  word for it. Where such a proof is run is TQ-600a; this record only makes it sayable.

@@ -1,0 +1,87 @@
+id: TQ-600a-1-i
+components:
+  - testing_quality
+title: "Left switched off -- the default and every CI run -- no real agent is asked and no such case counts as passed"
+component: testing-quality
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: critical
+roadmap_phase: phase_1
+criteria: |
+  Given the test suite run the way it runs by default, and the way continuous integration
+    runs it, with the live-dispatch switch not set,
+  When the run reaches the cases that ask a real agent,
+  Then no agent is asked on behalf of any of them,
+    And each is reported as not run because the live-dispatch switch is off, naming the
+    switch,
+    And none of them is reported as passed.
+
+  Given the live-dispatch switch set explicitly to its off value,
+  When the run reaches the same cases,
+  Then the outcome is the same as with the switch not set: nothing is asked, each case is
+    reported not run naming the switch, and none is reported passed.
+
+  Given the live-dispatch switch set to a value that is neither its on value nor its off
+    value, for example "true" or "yes",
+  When the run starts,
+  Then the run fails with a message naming the switch and the value it was given,
+    And no agent is asked,
+    And no case that asks a real agent is reported as not run or as passed.
+depends_on:
+  - TQ-600a-1
+doc_links:
+  - path: docs/acceptance-criteria/testing-quality/TQ-600-real-agent-proof/TQ-600a-1.yaml
+    relationship: describes
+    status: exists
+    relevance: "Parent L2: what happens when the switch is on."
+  - path: docs/acceptance-criteria/build-orchestration/BO-3200-second-hand-answers/BO-3200f-2-ii.yaml
+    relationship: describes
+    status: exists
+    relevance: "Origin of the first scenario (its scenario 1) and of the switch decisions (IT PO it_requirements THE SWITCH IS ONE ENVIRONMENT VARIABLE and NO CI JOB SHIPS WITH THIS RECORD)."
+  - path: unit_tests/_workflow_engine_harness.py
+    relationship: describes
+    status: exists
+    relevance: "The scripted-reply harness the default run stays on; switched off, nothing reaches a real agent."
+assigned_agent: python-coder
+estimated_complexity: S
+declares_side_effect: false
+delivers_to: null
+expects_from:
+  ac_id: TQ-600a-1
+  contract: "The mechanism that asks a real agent, which this record keeps from running unless the switch is on."
+origin_agent: business-analyst
+created: 2026-09-17
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - code
+  - pipeline
+risk_surface: cost
+notes: |
+  RELOCATED FROM BO-3200f-2-ii SCENARIO 1 (user decision, BrainCandy, 2026-09-17).
+  Generalised from "the three live scenarios -- BO-3200f-2's first scenario and both
+  scenarios of BO-3200f-2-i" to "the cases that ask a real agent". Everything else is
+  carried over word for word.
+
+  WHY AN EDGE CASE AND NOT AN L2. Off is the default and the safe state; the L2 describes
+  what the switch turns on. TQ-600a's cap (5 L2s) is kept for the behaviours and the three
+  documentation records its triggers require.
+
+  WHAT WAS ADDED. The second and third scenarios come from BO-3200f-2-ii's IT PO
+  it_requirement THE SWITCH IS ONE ENVIRONMENT VARIABLE ("unset or '0' is off; any other
+  value fails the run naming the variable and the value, so a typo never reads as off").
+  They are criteria here because a typo read as off is the silent-skip failure this L1
+  forbids, seen from the other side. The exact on and off values (the IT PO chose '1' and
+  '0' for LEAFCUTTER_LIVE_DISPATCH) stay in IT PO fields.
+
+  WHY "NOT RUN" AND NOT "PASSED". A case that asked no agent and reads as passed is the
+  phantom-done shape. Switched OFF, "not run" is honest. Switched ON, "not run" is not
+  available -- see TQ-600a-1-ii.
+
+  DECISION ALREADY MADE -- NO CI JOB NOW (user decision 2026-09-17). The first scenario
+  covers CI as it is today: the switch unset.

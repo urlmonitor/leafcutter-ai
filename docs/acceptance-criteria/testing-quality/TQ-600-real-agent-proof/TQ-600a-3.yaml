@@ -1,0 +1,70 @@
+id: TQ-600a-3
+components:
+  - testing_quality
+  - documentation_system
+title: "How-to: run proofs that ask the real agent, deliberately, and read what they leave behind"
+component: testing-quality
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: critical
+roadmap_phase: phase_1
+criteria: |
+  Given the behaviour defined by TQ-600a-1 (switched on, the real agent is asked as shipped),
+    TQ-600a-1-i (switched off, nothing is asked), TQ-600a-1-ii (unable to ask, the case fails
+    by name) and TQ-600a-2 (the evidence record),
+  When an operator who has never run such a proof follows the how-to guide for it,
+  Then the guide tells them how to switch it on for one run and how to confirm it is off
+    by default,
+    And it lists the access the run needs -- model-service credentials, and permission
+    settings of their own under which the cases' requests are allowed, since nothing is
+    pre-approved --
+    And for each of the four named failures it says what the operator sees and what to
+    change before running again,
+    And it tells them where the run's evidence record is kept and how to tell from it
+    whether each case passed, failed or was not run,
+    And it states that each run costs model usage and that no CI job runs these proofs.
+depends_on:
+  - TQ-600a
+  - TQ-600a-1
+  - TQ-600a-1-i
+  - TQ-600a-1-ii
+  - TQ-600a-2
+doc_links:
+  - path: docs/acceptance-criteria/testing-quality/TQ-600-real-agent-proof/TQ-600a.yaml
+    relationship: describes
+    status: exists
+    relevance: "Parent L1; documentation_triggers: how-to ('an operator deliberately runs real-agent proofs and needs to know how to switch them on and what access they need')."
+  - path: docs/acceptance-criteria/testing-quality/TQ-600-real-agent-proof/TQ-600a-1-ii.yaml
+    relationship: describes
+    status: exists
+    relevance: "The four named failures the guide explains."
+  - path: docs/acceptance-criteria/testing-quality/TQ-600-real-agent-proof/TQ-600a-2.yaml
+    relationship: describes
+    status: exists
+    relevance: "The evidence record the guide tells the operator how to read."
+assigned_agent: documentation-expert
+estimated_complexity: S
+declares_side_effect: false
+delivers_to: null
+expects_from:
+  ac_id: TQ-600a-1
+  contract: "The switch's name and on/off values, the access a switched-on run needs, and the command an operator runs."
+origin_agent: business-analyst
+created: 2026-09-17
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: docs
+notes: |
+  Satisfies TQ-600a documentation_triggers: [how-to]. Depends on all four behavioural
+  records because the guide describes each of them; it cannot be finished before they
+  exist.
+
+  WHY THE PERMISSION POINT IS IN CRITERIA. With nothing pre-approved (user decision
+  2026-09-16), an operator whose own settings do not allow a case's commands gets a
+  permission_request_unanswered failure on the first run. A guide that omits this sends
+  the operator to debug a correct failure.

@@ -1,0 +1,66 @@
+id: TQ-600a-4
+components:
+  - testing_quality
+  - documentation_system
+title: "Component diagram: asking the real agent shares only the way of reaching the model with the eval runner"
+component: testing-quality
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: critical
+roadmap_phase: phase_1
+criteria: |
+  Given the mechanism defined by TQ-600a-1 and TQ-600a-2, and the existing eval runner
+    (TQ-200b),
+  When a component diagram is authored for asking the real agent,
+  Then the diagram shows the cases that ask a real agent, the switch that gates them, the
+    shared way of reaching the model service, the registered agent's shipped instructions
+    and registry entry, and the evidence record,
+    And it shows the eval runner reaching the model service through that same shared part,
+    And it shows no connection from asking the real agent to the eval runner's scoring,
+    thresholds, results directory or required CI gate,
+    And a maintainer can read from the diagram which parts the two share and which they do
+    not.
+depends_on:
+  - TQ-600a
+  - TQ-600a-1
+  - TQ-600a-2
+doc_links:
+  - path: docs/acceptance-criteria/testing-quality/TQ-600-real-agent-proof/TQ-600a.yaml
+    relationship: describes
+    status: exists
+    relevance: "Parent L1; documentation_triggers: component-diagram ('a new testing surface shared with the eval runner's way of reaching the model')."
+  - path: docs/acceptance-criteria/testing-quality/TQ-600-real-agent-proof/TQ-600a-1.yaml
+    relationship: describes
+    status: exists
+    relevance: "The mechanism the diagram depicts."
+  - path: scripts/evals/run_agent_eval.py
+    relationship: describes
+    status: exists
+    relevance: "The eval runner whose transport is shared and whose scoring is not."
+assigned_agent: architecture-diagram-author
+estimated_complexity: S
+declares_side_effect: false
+delivers_to: null
+expects_from:
+  ac_id: TQ-600a-1
+  contract: "The shared transport module and the harness's entry point, as built."
+origin_agent: business-analyst
+created: 2026-09-17
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: docs
+notes: |
+  Satisfies TQ-600a documentation_triggers: [component-diagram].
+
+  WHY THE "NO CONNECTION" CLAUSE. The reuse decision on BO-3200f-2-ii (transport yes,
+  runner no) is the one most likely to drift: a later change that imports the runner's
+  scoring into this mechanism turns pass/fail proof into judged proof. The diagram makes
+  the boundary visible to whoever makes that change.
+
+  ASSUMPTION. The shared transport is built as BO-3200f-2-ii's IT PO decided. If the IT PO
+  re-decides on TQ-600a-1, this diagram follows that decision.

@@ -29,7 +29,10 @@ criteria: |
     said.
 depends_on:
   - BO-3200f-2
-  - BO-3200f-2-ii
+  - TQ-600a-1
+  - TQ-600a-1-i
+  - TQ-600a-1-ii
+  - TQ-600a-2
 doc_links:
   - path: docs/known-issues/build-orchestration.md
     relationship: describes
@@ -129,6 +132,26 @@ amended_by:
 
     test_rationale was not in the update request but carried the same stale statement, so it was
     brought in line in the same pass.
+- reason: depends-on-rewired-to-relocated-live-dispatch-harness
+  by: business-analyst
+  at: 2026-09-17
+  note: |
+    Follows the user's (BrainCandy) 2026-09-17 decision to home the live-dispatch harness in
+    testing-quality under TQ-600a. The harness guarantee this record's two scenarios need now
+    lives in TQ-600a-1 (asking the registered agent as shipped), TQ-600a-1-i (switched off),
+    TQ-600a-1-ii (unable to ask, failed by name) and TQ-600a-2 (evidence record).
+    BO-3200f-2-ii was narrowed to the executor-specific consumer and now depends on THIS record,
+    so the old edge to it was removed to keep the graph acyclic.
+    CHANGED: depends_on from [BO-3200f-2, BO-3200f-2-ii] to [BO-3200f-2, TQ-600a-1, TQ-600a-1-i,
+    TQ-600a-1-ii, TQ-600a-2]; a SUPERSEDED marker added to the 2026-09-16 business-analyst notes
+    paragraph. UNCHANGED: criteria, title, readiness (reviewed) and every IT PO field.
+    OLD depends_on (verbatim): [BO-3200f-2, BO-3200f-2-ii]
+    STALE IT PO FIELDS (not edited, IT PO to refresh): it_requirements[0] ("through
+    BO-3200f-2-ii's opt-in live-dispatch harness"); test_spec[0] and test_spec[1] surface_invoked
+    ("BO-3200f-2-ii live-dispatch harness, switched on by LEAFCUTTER_LIVE_DISPATCH=1") and
+    description ("LIVE DISPATCH through BO-3200f-2-ii's harness") -> re-point to TQ-600a-1, keep
+    type e2e and angle deployed; test_rationale ("they run through BO-3200f-2-ii's opt-in
+    harness").
 superseded_by: null
 covered_by: []
 implemented_by: []
@@ -149,9 +172,19 @@ notes: |
   (BO-3200f-1-i) and never read as a result. That is containment, not proof of the charter; this
   record must not be marked done on the companion test alone.
 
+  [SUPERSEDED IN PART 2026-09-17 -- "The harness is specified by BO-3200f-2-ii" and "until
+  BO-3200f-2-ii is satisfied" no longer hold; see the 2026-09-17 paragraph below.]
   2026-09-16 (business-analyst) -- LIVE-DISPATCH HARNESS DECIDED; NOT DONE WITHOUT IT. The user
   decided on 2026-09-16 that both scenarios here are proven by an opt-in live-dispatch test
   harness, not by a recorded manual run. The harness is specified by BO-3200f-2-ii. Neither
   scenario is DONE until BO-3200f-2-ii is satisfied and a switched-on run's evidence record shows
   both scenarios passing; the deterministic companion test alone remains insufficient, as the
   IT-PO paragraph above already states.
+
+  2026-09-17 (business-analyst) -- HARNESS RELOCATED TO TQ-600a. By user decision the
+  live-dispatch harness now lives in testing-quality: TQ-600a-1, TQ-600a-1-i, TQ-600a-1-ii and
+  TQ-600a-2. Neither scenario here is DONE until those four are satisfied and a switched-on
+  run's evidence record shows both scenarios passing. BO-3200f-2-ii keeps the executor-specific
+  part (the three live scenarios as cases, settled by capture verification, and the declining-
+  charter discriminator) and depends on this record. The deterministic companion test alone
+  remains insufficient.

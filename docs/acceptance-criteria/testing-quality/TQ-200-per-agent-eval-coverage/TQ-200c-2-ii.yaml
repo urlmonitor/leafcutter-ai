@@ -1,0 +1,105 @@
+id: TQ-200c-2-ii
+components:
+  - testing_quality
+  - ac_store
+  - llm_authoring
+title: "Charter work settled by one definite check on the real agent's reply is asked for asserted proof, not judged proof alone"
+component: testing-quality
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a piece of charter work — an agent's instructions — whose behaviour is settled
+    by asking the real agent once per case and accepting or rejecting its reply with one
+    definite check, for example that the agent, sent the exact command
+    echo "hello", returns that command's unchanged output rather than a refusal,
+  When the proof it will be asked for is decided,
+  Then it is asked for asserted proof,
+  And it is never asked for judged proof alone, and no score, threshold or set of
+    scored examples is demanded in place of that one check,
+  And the demand names only the two proof kinds asserted and judged — asking the real
+    agent is how that asserted proof is run, not a third kind of proof.
+
+  Given a second piece of charter work whose behaviour is whether the agent does
+    something reliably across many examples, which no single check can settle and only
+    a score against a bar decides,
+  When the proof it will be asked for is decided,
+  Then it is asked for judged proof, so the rule for the first piece of work does not
+    take judged proof away from work that needs it.
+depends_on:
+  - TQ-200c-2
+  - TQ-200c-1
+doc_links:
+  - path: docs/acceptance-criteria/testing-quality/TQ-200-per-agent-eval-coverage/TQ-200c.yaml
+    relationship: describes
+    status: exists
+    relevance: "The 2026-09-17 amendment this record makes testable: proof kind follows how a pass is decided, and asking the real agent is not a third kind."
+  - path: docs/acceptance-criteria/testing-quality/TQ-200-per-agent-eval-coverage/TQ-200c-2.yaml
+    relationship: describes
+    status: exists
+    relevance: "The router whose answer this L3 constrains."
+  - path: docs/acceptance-criteria/build-orchestration/BO-3200-second-hand-answers/BO-3200f-2.yaml
+    relationship: related
+    status: exists
+    relevance: "The concrete instance of the first scenario: charter work (the executor's charter) whose first scenario is settled by one definite check on the real agent's reply. An implementer reading the old TQ-200c wording could have demanded eval rows for it."
+  - path: docs/acceptance-criteria/testing-quality/TQ-600-real-agent-proof/TQ-600a.yaml
+    relationship: related
+    status: exists
+    relevance: "Where an asserted proof that needs the real agent is run. This record only decides that such a proof is asked for; it runs nothing."
+  - path: docs/acceptance-criteria/build-orchestration/BO-2900-runtime-reachability-guard/BO-2900g-3.yaml
+    relationship: related
+    status: exists
+    relevance: "Retired the proof kind live_dispatch; the third And clause keeps it retired on the routing side."
+  - path: docs/testing/test-angles.md
+    relationship: relates-to
+    status: exists
+    relevance: "The shared proof vocabulary page where asserted and judged are defined (TQ-200c-1)."
+assigned_agent: python-coder
+estimated_complexity: S
+declares_side_effect: false
+delivers_to: null
+expects_from:
+  ac_id: TQ-200c-2
+  contract: "The derived routing answer of TQ-200c-2 — the set of required proof kinds and what it was derived from. This L3 constrains which kind charter work proved by one definite check on the real agent's reply receives; it adds no structure."
+origin_agent: business-analyst
+created: 2026-09-17
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - code
+risk_surface: contract_boundary
+notes: |
+  WHY THIS RECORD EXISTS (user decision, BrainCandy, 2026-09-17). TQ-200c was amended so
+  that a proof's kind follows how its pass is decided, not whether a model is involved.
+  The collision it resolved was BO-3200f-2-ii: the executor's live scenarios ask whether
+  its charter gets a command carried out, and each passes or fails on one definite check
+  of the real reply. Under the old wording a router could reasonably send that work to
+  the eval harness only. This L3 makes the corrected routing testable.
+
+  WHY AN L3 AND NOT A CLAUSE OF TQ-200c-2-i. TQ-200c is at 5 of 5 L2s. TQ-200c-2-i is
+  about OVER-DEMAND (work needing one kind is not made to carry the other); this record
+  is about CLASSIFICATION (which kind charter work proved on a real reply is). The two
+  fail independently: a router can avoid over-demand and still classify this work as
+  judged-only.
+
+  WHY "NOT JUDGED PROOF ALONE" AND NOT "NEVER JUDGED". Charter work can need both: one
+  definite check that the agent carried out a command in one case, and a score for how
+  reliably it does so across many. TQ-200c-3 allows both at once. What this record
+  forbids is replacing the definite check with a score. The second scenario is the
+  negative control so an implementer cannot satisfy the first by routing all charter
+  work to asserted only.
+
+  BOUNDARY. This record decides what is ASKED FOR. Running an asserted proof against the
+  real agent is TQ-600a's. No proof kind, angle or schema value named live_dispatch may
+  be introduced (BO-2900g-3).
+
+  ASSUMPTION. The router can tell "one definite check on the real reply" from "a score
+  across many examples" from what the work says about itself (TQ-200c-2's derivation
+  rule). If it cannot, that is a gap in TQ-200c-2's self-description signals, to be
+  raised by the IT PO, not solved by a per-AC routing field (which TQ-200c-2 forbids).

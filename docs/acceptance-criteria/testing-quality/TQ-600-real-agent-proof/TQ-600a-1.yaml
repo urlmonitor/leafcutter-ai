@@ -1,0 +1,139 @@
+id: TQ-600a-1
+components:
+  - testing_quality
+  - agent_registry
+title: "Switched on, each case asks the agent exactly as the project ships it and passes or fails on one definite check of its own reply"
+component: testing-quality
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: critical
+roadmap_phase: phase_1
+criteria: |
+  Given the live-dispatch switch set explicitly for one run, locally or in continuous
+    integration,
+    And a case that declares which registered agent it asks, which acceptance criterion
+    it proves, and the request it sends,
+  When the case runs,
+  Then the request goes to that agent as the repository registers it -- under the
+    instructions and the registry entry the project ships, read from the repository when
+    the case runs, not a stand-in, a scripted reply or a copy prepared for the test --
+    And the case passes or fails on one definite check of the reply that its own request
+    returned,
+    And no score, threshold, or averaging across cases or repeated runs turns a failed
+    case into a passed one.
+
+  Given two switched-on cases that ask the same agent,
+    And that agent's shipped instructions changed in place in the repository between the
+    first case and the second, with nothing about the mechanism that asks the agent
+    changed,
+  When the second case runs,
+  Then its request is made under the changed instructions, not the instructions the first
+    case ran under.
+
+  Given two switched-on cases that ask two different registered agents,
+  When both cases run,
+  Then both agents are asked through the same mechanism, with no handling that names
+    either agent,
+    And each case's verdict follows only the reply to its own request.
+depends_on:
+  - TQ-600a
+doc_links:
+  - path: docs/acceptance-criteria/testing-quality/TQ-600-real-agent-proof/TQ-600a.yaml
+    relationship: describes
+    status: exists
+    relevance: "Parent L1: ask the real agent, get a clear pass or fail, keep the record."
+  - path: docs/acceptance-criteria/build-orchestration/BO-3200-second-hand-answers/BO-3200f-2-ii.yaml
+    relationship: describes
+    status: exists
+    relevance: "Where this mechanism was first specified (its second scenario, and the IT PO's dispatch-as-registered, transport-reuse, pass/fail-per-scenario and agent-agnostic it_requirements). Its general part moved here on 2026-09-17; the executor-specific part stays there as the first consumer."
+  - path: scripts/evals/run_agent_eval.py
+    relationship: describes
+    status: exists
+    relevance: "The one place that already asks a real agent (TQ-200b's eval runner). BO-3200f-2-ii's IT PO decision: reuse its transport through one shared module, not its scoring, thresholds, results directory, selector, staleness guard or required CI gate."
+  - path: docs/known-issues/testing-quality/open-high-ki-tq-20260908-0900.md
+    relationship: describes
+    status: exists
+    relevance: "The eval runner's transport turns a launch failure into an empty prediction that scores. The transport is reused; that handling must not be inherited (see TQ-600a-1-ii)."
+  - path: docs/reference/claude-code-hooks.md
+    relationship: describes
+    status: exists
+    relevance: "The project's hooks and permission settings that stay in force when the real agent is asked."
+  - path: docs/acceptance-criteria/testing-quality/TQ-200-per-agent-eval-coverage/TQ-200c.yaml
+    relationship: related
+    status: exists
+    relevance: "Boundary: a proof decided by one definite check on a real agent's reply is asserted (amended 2026-09-17). Scores across many examples are judged and belong to the eval harness, never here."
+  - path: docs/acceptance-criteria/build-orchestration/BO-2900-runtime-reachability-guard/BO-2900g-3.yaml
+    relationship: related
+    status: exists
+    relevance: "Retired proof kind live_dispatch; not reintroduced as any value by this record."
+  - path: docs/testing/test-angles.md
+    relationship: relates-to
+    status: exists
+    relevance: "The deployed angle the consumers' live descriptors declare."
+assigned_agent: python-coder
+estimated_complexity: L
+declares_side_effect: false
+delivers_to:
+  - agent: python-coder
+    contract: "An agent-agnostic way for a test case to ask a real registered agent: the case declares {scenario, ac_id, agent, request, cwd} and receives the real agent's reply to judge with its own single check, or a named failure (TQ-600a-1-ii); gated by the live-dispatch switch (TQ-600a-1-i); every switched-on run's evidence kept per TQ-600a-2."
+expects_from: null
+origin_agent: business-analyst
+created: 2026-09-17
+amended_by: []
+superseded_by: null
+covered_by:
+  - TQ-600a-1-i
+  - TQ-600a-1-ii
+implemented_by: []
+change_target:
+  - code
+  - pipeline
+risk_surface: cost
+notes: |
+  RELOCATED FROM BO-3200f-2-ii (user decision, BrainCandy, 2026-09-17). The user chose to
+  home the live-dispatch harness in testing-quality now. BO-3200f-2-ii's five scenarios
+  split along the line TQ-600a's notes drew: scenarios 1, 2, 4 and 5 name no agent and
+  moved here; scenario 3 (the executor's declining charter makes BO-3200f-2's first live
+  scenario fail) and the list of the executor's live scenarios stay in build-
+  orchestration as the first consumer.
+    - BO-3200f-2-ii scenario 2 (the real agent, pass/fail on its own reply) -> this record,
+      first scenario, generalised from "the three live scenarios / the executor" to "a
+      case / the agent it declares".
+    - BO-3200f-2-ii scenario 1 (switched off) -> TQ-600a-1-i.
+    - BO-3200f-2-ii scenario 5 (switched on, cannot ask) -> TQ-600a-1-ii.
+    - BO-3200f-2-ii scenario 4 (evidence record) -> TQ-600a-2.
+
+  WHAT WAS ADDED IN GENERALISING, AND WHY.
+    - "no score, threshold or averaging" was an IT PO it_requirement on BO-3200f-2-ii
+      (PASS/FAIL PER SCENARIO, NO SCORE). It moves into criteria because it is now the
+      defining boundary of this L1 against TQ-200 (TQ-200c amendment 2026-09-17).
+    - The changed-instructions scenario is the general form of BO-3200f-2-ii's
+      discriminator. The executor's version asserts a verdict (the scenario fails naming
+      the decline) and stays in BO-3200f-2-ii. The general version asserts only that the
+      second request runs under the changed instructions, which any agent can show,
+      and which the old seam test on the invocation already specified.
+    - The two-agents scenario is BO-3200f-2-ii's AGENT-AGNOSTIC MECHANISM it_requirement,
+      moved into criteria because generality is the reason this record lives here. The
+      executor is the first user, not a special case. BO-3200f-2-ii's WHY THE CRITERIA
+      NAME THE THREE SCENARIOS note said the mechanism must not become executor-specific;
+      this scenario makes that testable.
+
+  WHY THE WORD "live-dispatch switch" SURVIVES. "Live dispatch" stays plain words; it is
+  not a proof kind, angle or schema value (BO-2900g-3). Keeping the phrase lets the
+  consumers' existing descriptors read unchanged.
+
+  declares_side_effect: false -- no Then clause here asserts a durable effect. The
+  evidence record is TQ-600a-2's.
+
+  NOT COVERED, DELIBERATELY. How often an agent passes across many runs: a reliability
+  rate is a scored question and belongs to TQ-200 (TQ-600 BOUNDARIES). Which agents and
+  which cases are asked: declared by each consumer (today BO-3200f-2-ii).
+
+  FOR THE IT PO. BO-3200f-2-ii carries a full IT PO enrichment for this mechanism
+  (it_requirements, delivers_to, expects_from, test_spec, test_rationale, six added
+  doc_links). It is NOT copied here, on purpose: IT PO fields are the IT PO's to carry
+  over. See BO-3200f-2-ii's 2026-09-17 business-analyst amendment for the item-by-item
+  list of what goes to which new record.
