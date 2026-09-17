@@ -28,7 +28,6 @@ from __future__ import annotations
 import datetime
 import subprocess
 import sys
-import tempfile
 from pathlib import Path
 
 import pytest
