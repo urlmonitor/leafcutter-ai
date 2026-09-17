@@ -165,3 +165,7 @@ notes: |
   resolution this record shares with ACD-2100a-1 now has a second job: it supplies the directory
   the executor dispatch names, because the executor runs where it is told and never infers a
   directory (BO-3200f-1).
+
+  2026-09-16 (business-analyst) -- USER REVIEW RECORDED. On 2026-09-16 the user reviewed the IT
+  PO's requirement changes to this record (amended_by entry premise-review-chartered-executor,
+  2026-09-16) and chose to keep readiness: approved. Recorded as a note only; no field changed.

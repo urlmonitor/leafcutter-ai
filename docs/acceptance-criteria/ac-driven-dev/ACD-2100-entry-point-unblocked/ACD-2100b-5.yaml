@@ -29,7 +29,7 @@ criteria: |
   And repeating the run with every party dispatchable reaches the same verdict, and
     the dispatches the run's record attributes to the check are again only exact
     commands to that chartered party.
-depends_on: [ACD-2100b]
+depends_on: [ACD-2100b, BO-3200f-1, BO-3200f-1-i, BO-3200f-2]
 doc_links:
   - path: docs/reference/plan-feature-layout-and-startup-checks.md
     relationship: describes
@@ -269,6 +269,16 @@ amended_by:
     value rather than the verdict or the whole registry, and coverage uses the executor stand-in.
     Six test_spec entries replace four; expects_from set to BO-3200f-1, BO-3200f-1-i and
     BO-3200f-2.
+- reason: depends-on-edges-added-for-landing-order
+  by: business-analyst
+  at: 2026-09-16
+  note: |
+    depends_on widened from [ACD-2100b] to [ACD-2100b, BO-3200f-1, BO-3200f-1-i, BO-3200f-2]. Authorised by the user (BrainCandy) on
+    2026-09-16, acting on the IT PO's "ORDER OF LANDING -- RECOMMENDED BA EDIT" paragraph in
+    this record's notes. expects_from already names BO-3200f-1 (helper and stand-in), BO-3200f-1-i (could-not-check mapping) and BO-3200f-2 (the registered executor), and BO-3200f-1-i's own notes recommend the same edge, but the build sequencer reads
+    depends_on only (KI-ACD-015: expects_from alone orders nothing), so without these edges this
+    record could be scheduled before the parts it consumes exist. Ordering only: criteria, title,
+    readiness and every IT PO field unchanged. check_ac_circular_deps.py was run after the edit.
 superseded_by: null
 covered_by: []
 implemented_by:

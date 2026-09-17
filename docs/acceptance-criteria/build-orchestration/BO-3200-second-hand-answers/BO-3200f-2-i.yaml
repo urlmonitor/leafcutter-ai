@@ -29,6 +29,7 @@ criteria: |
     said.
 depends_on:
   - BO-3200f-2
+  - BO-3200f-2-ii
 doc_links:
   - path: docs/known-issues/build-orchestration.md
     relationship: describes
@@ -91,6 +92,15 @@ amended_by:
   note: Assignment confirmed llm-expert. Added it_requirements, test_spec/test_rationale
     (live e2e plus a deterministic verification seam), change_target/risk_surface; expects_from
     made specific. criteria, title, depends_on untouched.
+- reason: depends-on-edge-added-for-live-dispatch-harness
+  by: business-analyst
+  at: 2026-09-16
+  note: |
+    depends_on widened from [BO-3200f-2] to [BO-3200f-2, BO-3200f-2-ii]. Follows the user's
+    2026-09-16 decision that both scenarios here are proven by the opt-in live-dispatch harness
+    BO-3200f-2-ii specifies. Both LIVE DISPATCH descriptors in test_spec cannot run before that
+    harness exists, and the build sequencer reads depends_on only (KI-ACD-015). Ordering only:
+    criteria, title, readiness and every IT PO field unchanged.
 superseded_by: null
 covered_by: []
 implemented_by: []
@@ -110,3 +120,10 @@ notes: |
   obeys or refuses cannot verify as a capture, so it is reported as could-not-check
   (BO-3200f-1-i) and never read as a result. That is containment, not proof of the charter; this
   record must not be marked done on the companion test alone.
+
+  2026-09-16 (business-analyst) -- LIVE-DISPATCH HARNESS DECIDED; NOT DONE WITHOUT IT. The user
+  decided on 2026-09-16 that both scenarios here are proven by an opt-in live-dispatch test
+  harness, not by a recorded manual run. The harness is specified by BO-3200f-2-ii. Neither
+  scenario is DONE until BO-3200f-2-ii is satisfied and a switched-on run's evidence record shows
+  both scenarios passing; the deterministic companion test alone remains insufficient, as the
+  IT-PO paragraph above already states.

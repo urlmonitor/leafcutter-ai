@@ -37,6 +37,8 @@ criteria: |
   Then the build permits that action, and does not refuse it.
 depends_on:
   - BO-3200a
+  - BO-3200f-1
+  - BO-3200f-1-i
 doc_links:
   - path: docs/known-issues/build-orchestration.md
     relationship: describes
@@ -244,6 +246,16 @@ amended_by:
     expects_from set to BO-3200f-1 and BO-3200f-1-i; the zero-dispatch test replaced by a
     dispatch-record test run in both environments; a failure test added for an executor
     dispatch that does not complete; the size test now resolves through the executor.
+- reason: depends-on-edges-added-for-landing-order
+  by: business-analyst
+  at: 2026-09-16
+  note: |
+    depends_on widened from [BO-3200a] to [BO-3200a, BO-3200f-1, BO-3200f-1-i]. Authorised by the user (BrainCandy) on
+    2026-09-16, acting on the IT PO's "ORDER OF LANDING -- RECOMMENDED BA EDIT" paragraph in
+    this record's notes. expects_from already names BO-3200f-1 (the executor dispatch helper and harness stand-in) and BO-3200f-1-i (the could-not-check mapping), but the build sequencer reads
+    depends_on only (KI-ACD-015: expects_from alone orders nothing), so without these edges this
+    record could be scheduled before the parts it consumes exist. Ordering only: criteria, title,
+    readiness and every IT PO field unchanged. check_ac_circular_deps.py was run after the edit.
 superseded_by: null
 covered_by:
   - BO-3200a-1-i

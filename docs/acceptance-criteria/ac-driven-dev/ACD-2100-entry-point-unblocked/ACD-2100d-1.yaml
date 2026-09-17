@@ -253,4 +253,8 @@ notes: |
   directories such as "templates/" or "unit_tests/". Illustrative path mentions therefore
   leak into files_touched. The prose above is written to name only the paths that belong
   in the surface; everything else is referred to descriptively on purpose.
+
+  2026-09-16 (business-analyst) -- USER REVIEW RECORDED. On 2026-09-16 the user reviewed the IT
+  PO's requirement changes to this record (amended_by entry premise-review-chartered-executor,
+  2026-09-16) and chose to keep readiness: approved. Recorded as a note only; no field changed.
 target_epic: EPIC-StartingNewWorkTheProperWayAlways

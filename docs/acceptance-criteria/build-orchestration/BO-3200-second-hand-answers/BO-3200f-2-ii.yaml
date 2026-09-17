@@ -1,0 +1,155 @@
+id: BO-3200f-2-ii
+title: "The executor's live scenarios are proven by really dispatching it -- only when explicitly switched on, leaving evidence behind, and failing by name when switched on but unable to dispatch"
+component: build-orchestration
+components:
+  - build_orchestration
+  - testing_quality
+  - agent_registry
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: critical
+roadmap_phase: phase_1
+criteria: |
+  Given the test suite run the way it runs by default, and the way continuous integration runs
+    it, with the live-dispatch switch not set,
+  When the run reaches the three live scenarios -- BO-3200f-2's first scenario and both
+    scenarios of BO-3200f-2-i --
+  Then no agent is dispatched on behalf of any of them,
+    And each is reported as not run because the live-dispatch switch is off, naming the switch,
+    And none of them is reported as passed.
+
+  Given the live-dispatch switch set explicitly for one run, locally or in continuous integration,
+  When the three live scenarios run,
+  Then each dispatches the executor as the repository registers it -- under the charter and the
+    registry entry the package ships, not a stand-in, a scripted reply or a copy prepared for the
+    test --
+    And each scenario passes or fails on the reply that its own dispatch returned.
+
+  Given the executor's charter as the repository holds it, changed so that it declines every
+    command,
+    And the live-dispatch switch set,
+  When the three live scenarios run,
+  Then BO-3200f-2's first live scenario fails, and its failure names the decline.
+
+  Given a switched-on run in which the three live scenarios ran,
+  When the run ends,
+  Then an evidence record is written for that run naming, for each live scenario: the scenario,
+    the acceptance criterion it proves, whether it passed or failed, the agent dispatched, the
+    model that answered, when it ran, the exact charter and registry entry content it ran under,
+    and the reply received,
+    And a done-proof that cites that record can tell a scenario that passed from one that failed
+    or was not run.
+
+  Given the live-dispatch switch set, and a live dispatch that cannot be made -- because no
+    credentials for the model service are available, because the executor is not registered,
+    because the dispatch fails in transit, or because a permission request is raised that no one
+    is present to answer --
+  When the three live scenarios run,
+  Then each scenario that could not dispatch is reported as failed, naming which of those four
+    stopped it,
+    And none of them is reported as skipped, not run or passed,
+    And the run as a whole is reported as failed.
+depends_on:
+  - BO-3200f-2
+doc_links:
+  - path: docs/acceptance-criteria/build-orchestration/BO-3200-second-hand-answers/BO-3200f-2.yaml
+    relationship: describes
+    status: exists
+    relevance: "The caveat 'NO LIVE-DISPATCH TEST SURFACE EXISTS' and the LIVE DISPATCH test_spec descriptor this record makes runnable; its first scenario is one of the three live scenarios."
+  - path: docs/acceptance-criteria/build-orchestration/BO-3200-second-hand-answers/BO-3200f-2-i.yaml
+    relationship: describes
+    status: exists
+    relevance: "Both scenarios are live scenarios; its two LIVE DISPATCH descriptors and its deterministic companion, which is containment and not proof."
+  - path: unit_tests/_workflow_engine_harness.py
+    relationship: describes
+    status: exists
+    relevance: "The scripted-reply harness every other BO-3200f record runs under. The second scenario forbids this stand-in for the live scenarios; the first requires the default run to stay on it."
+  - path: scripts/evals/run_agent_eval.py
+    relationship: describes
+    status: exists
+    relevance: "The one place in the repository that already dispatches a real agent (TQ-200b's eval runner, per TQ-200b-4's implemented_by). Not a test, and scored against a threshold rather than pass/fail -- but the obvious candidate to reuse for dispatch rather than building a second mechanism. The IT PO's call."
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+    relevance: "The deployed angle the three LIVE DISPATCH descriptors already declare; the evidence record is what lets a done-proof cite that angle."
+assigned_agent: python-coder
+declares_side_effect: true
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-09-16
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  WHY THIS RECORD EXISTS. On 2026-09-16 the user decided that the scenarios only a real dispatch
+  can prove -- BO-3200f-2's first scenario and both scenarios of BO-3200f-2-i -- are proven by an
+  opt-in live-dispatch test harness, not by a recorded manual run. Nothing in the unit suite
+  dispatches a real agent today (BO-3200f-2's caveat). This record specifies that harness's
+  observable contract; it does not restate what the three live scenarios assert.
+
+  PLACEMENT -- AN L3 UNDER BO-3200f-2, NOT A TESTING-QUALITY RECORD. Checked against the caps:
+  BO-3200f is at 5 of 5 L2s and BO-3200 at 7 of 7 L1s, so neither can take a sibling. L3s under
+  an L2 are not capped. The harness is test infrastructure in kind, so testing-quality was
+  checked first, and no L1 there hosts it without distortion:
+    - TQ-200b (the shared eval runner) is the nearest neighbour and has one free L2 slot, but its
+      subject is SCORED evals against a noise-absorbing threshold, wired as a REQUIRED merge gate
+      (TQ-200b-2, TQ-200b-4). This harness is pass/fail per scenario and must NEVER run by
+      default -- the opposite on both axes. Its free slot is also the last one under an L1
+      whose how-to and reference-doc triggers have no documentation children yet.
+    - TQ-200c (judged proof routed to the eval harness) is full at 5 of 5.
+    - TQ-100 (which tests gate main), TQ-400 (proof re-checked over time) and TQ-500 (a test
+      shown able to fail) are adjacent axes, not homes.
+  The BA cannot author an L1, so a dedicated testing-quality L1 is not available in this pass.
+  Under BO-3200f-2 the record sits next to its only consumers, which is where an implementer
+  will look. If a second agent's charter needs live proof, that is the signal for the Product
+  Owner to open a testing-quality L1 and move the general mechanism there.
+
+  WHY THE CRITERIA NAME THE THREE SCENARIOS rather than "any agent". Criteria must be testable
+  now, and the executor's three live scenarios are the only live-dispatch proof this tree asks
+  for. Nothing here requires the mechanism to be executor-specific, and the IT PO should
+  not let it become so.
+
+  THE FIVE SCENARIOS AND THE SHORTCUT EACH ONE CLOSES.
+    1. Opt-in. A harness that dispatches by default puts model cost, credentials and
+       non-determinism into every local run and every CI run. A switched-off scenario that
+       reports as passed is the phantom-done shape; it must read as not run.
+    2. The real agent. A harness that loads a fixture charter, or answers with a scripted reply,
+       proves the fixture. "As the repository registers it" is the whole point of going live.
+    3. The discriminator for 2. Asserting "the shipped charter was used" passes on a harness
+       that reads a frozen copy that happens to match today. Changing the charter in place and
+       requiring the live scenario to fail is the shape only a harness reading the real charter
+       can pass.
+    4. Evidence. A live run leaves nothing behind unless the record is written, and a done-proof
+       cannot cite a terminal scrollback. The charter and registry entry content are recorded so
+       a later change to either makes the evidence visibly out of date. Whether stale evidence
+       loses its standing over time is TQ-400's axis and is not claimed here.
+    5. Fail loudly. Switched on and unable to dispatch is the case most likely to be reported as
+       a skip, because that is what test frameworks do with missing credentials. A skip under
+       an explicit switch is a silent pass by another name. The permission-request cause is
+       listed because the user decided on 2026-09-16 that nothing is pre-approved (BO-3200f-2
+       notes), so an unattended live run WILL meet permission requests; it must fail naming
+       them rather than wait.
+
+  declares_side_effect: true -- derived from the fourth scenario's Then ("an evidence record is
+  written"), and honest: the record is a durable artifact a done-proof cites.
+
+  ORDERING. BO-3200f-2 and BO-3200f-2-i are "not done until this record is satisfied".
+  BO-3200f-2-i now carries a depends_on edge to this record (a sibling edge, no cycle). BO-3200f-2
+  cannot: it is this record's parent, so the reverse edge would be a cycle. For BO-3200f-2 the
+  rule is held by its notes and by this record being in its covered_by only.
+
+  FOR THE IT PO -- OPEN, NOT DECIDED HERE.
+    - What the switch is, and whether a CI job that sets it should exist at all (the first
+      scenario only forbids CI running it WITHOUT the switch).
+    - Whether dispatch reuses TQ-200b's eval runner mechanism (see doc_links) or not; and how
+      this sits with TQ-200c, which routes proof of prompt behaviour to the eval harness.
+    - Where the evidence record lives and its shape; how a done-proof cites it.
+    - BO-2900g-3 retires the ticket-facing proof kind named "live_dispatch"; this record uses
+      "live dispatch" only as plain words and must not revive that value.
+    - The three LIVE DISPATCH descriptors on BO-3200f-2 and BO-3200f-2-i should name this
+      record's harness as their entry point once it exists.

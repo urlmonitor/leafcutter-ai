@@ -169,4 +169,8 @@ notes: |
   ACD-2100a-2's fallback is a filesystem search, and a search re-run at every one of
   the five sites turns a resolution fix into a startup regression that nobody would
   attribute to this tree.
+
+  2026-09-16 (business-analyst) -- USER REVIEW RECORDED. On 2026-09-16 the user reviewed the IT
+  PO's requirement changes to this record (amended_by entry premise-review-chartered-executor,
+  2026-09-16) and chose to keep readiness: approved. Recorded as a note only; no field changed.
 target_epic: EPIC-StartingNewWorkTheProperWayAlways

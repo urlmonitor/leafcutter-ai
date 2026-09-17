@@ -8,7 +8,7 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: approved
+readiness: draft
 priority: medium
 roadmap_phase: phase_1
 criteria: |
@@ -16,18 +16,26 @@ criteria: |
   When they open the reference documentation for obtaining facts,
   Then it states that a value the build branches on is read at its source, states that a
     judgement may be asked of a specialist, gives the test that separates the two — whether the
-    build would still work with no specialist available — and states how to read a value
-    directly.
+    build would still work if no party could be asked to judge anything, with only the chartered
+    executor carrying out exact commands — and states how to obtain such a value with no
+    judgement requested: through an exact command carried out by the chartered executor, linking
+    to the reference that describes the executor rather than restating it.
 
   Given the reference documentation,
   When each rule it states about what is permitted is applied to a path and that path is
-    exercised with specialists unavailable,
+    exercised in an environment in which no party can be asked to judge anything -- the only party that
+    can be dispatched is one chartered to carry out an exact command and return its output
+    verbatim, whose charter admits every exact command so it has no grounds to decline one, and
+    which treats whatever it receives as a literal command and so gives no answer to a request
+    to look, decide, interpret or summarise; every dispatch to any other party fails
+    immediately,
   Then a path the documentation calls permitted completes, and a path it calls forbidden is
     reported by the sweep.
 depends_on:
   - BO-3200a
   - BO-3200a-1
   - BO-3200a-2
+  - BO-3200f-4
 doc_links:
   - path: docs/reference/
     relationship: describes
@@ -113,10 +121,89 @@ amended_by:
 - action: approved
   agent: approve_acs
   date: '2026-08-26'
+- reason: premise-narrowed-from-no-dispatch-to-no-judgement-criteria-changed-reapproval-required
+  by: business-analyst
+  at: 2026-09-16
+  note: |
+    A REAL NARROWING OF AN APPROVED AC, NOT A WORDING TIDY-UP. Authorised by the user
+    (BrainCandy) on 2026-09-16, explicitly for this record, following the chartered-executor
+    decision recorded in BO-3200f's notes; the same treatment BO-3200a-1, BO-3200a-2 and
+    ACD-2100b-5 received. readiness demoted approved -> draft so the approval gate is re-run
+    rather than silently inherited (ACS-1300a-1-i / ACS-1300a-1 precedent: criteria changed on
+    an already-approved record).
+
+    WHAT THE CRITERIA SAID BEFORE (verbatim):
+      Given an author adding a step that needs to know something about the project,
+      When they open the reference documentation for obtaining facts,
+      Then it states that a value the build branches on is read at its source, states that a
+        judgement may be asked of a specialist, gives the test that separates the two — whether the
+        build would still work with no specialist available — and states how to read a value
+        directly.
+
+      Given the reference documentation,
+      When each rule it states about what is permitted is applied to a path and that path is
+        exercised with specialists unavailable,
+      Then a path the documentation calls permitted completes, and a path it calls forbidden is
+        reported by the sweep.
+    TITLE: unchanged -- it never carried the premise.
+
+    WHAT IT SAYS NOW. First scenario: the separating test is "whether the build would still work
+    if no party could be asked to judge anything, with only the chartered executor carrying out
+    exact commands" (was "with no specialist available"), and "how to read a value directly" is
+    now "how to obtain such a value with no judgement requested: through an exact command carried
+    out by the chartered executor, linking to the reference that describes the executor rather
+    than restating it". Second scenario: the environment is the no-judgement premise in the same
+    words BO-3200a-1 and ACD-2100b-5 carry (was "with specialists unavailable"). The
+    rest of both scenarios is unchanged.
+
+    WHY. The E2 workflow engine injects only agent, parallel, pipeline, phase, log, args,
+    workflow and budget into a workflow body (docs/reference/workflow-authoring-contract.md
+    section 1) -- no filesystem, no subprocess -- so every read and every chore goes through an
+    agent() call and the old premise could never hold. An engine-level primitive was rejected as
+    upstream (the engine is Claude Code's); pre-resolving into args was rejected as second-hand
+    by another route. See BO-3200f's notes. BO-3200's standing rule -- only JUDGEMENT is
+    delegable to a specialist -- is unchanged by this.
+
+    WHAT THIS RECORD STILL PROVES. The page carries BO-3200a-2's sweep's own discriminating
+    question, so guidance and enforcement cannot diverge. BO-3200a-2 changed its question on
+    2026-09-16; left alone, this page would teach the superseded one and diverge by
+    construction. "How to read a value directly" had become advice no author can follow -- a
+    workflow body cannot read a file -- and following it literally invites the pre-resolve-into-
+    args route BO-3200f rejected. The new link to the executor reference keeps the two pages
+    from restating each other: BO-3200f-4 answers "what do I use when no judgement is needed",
+    this page answers "which questions may a specialist be asked" (the cross-link BO-3200f-4
+    already requires in the other direction).
+
+    DEPENDS_ON. BO-3200f-4 added: the first scenario now links to the page BO-3200f-4 creates,
+    so this page cannot land first without a dangling link.
+
+    CRITERIA-ONLY CHANGE -- THE TECHNICAL LAYER IS NOW STALE AND IS THE IT PO'S TO REDO. Not
+    edited here (outside the BA's remit):
+      - it_requirements[1] -- the discriminating question quoted as "would the build still reach
+        a terminal outcome with no specialist available" (BO-3200a-2's delivers_to[1] now words
+        it for the no-judgement environment);
+      - it_requirements[2] -- "its two permitted values"; result_use now has three (fact, chore,
+        judgement) per BO-3200a-2's 2026-09-16 re-enrichment;
+      - it_requirements[5] -- "how to read a value directly, naming the resolver from
+        BO-3200a-1"; the resolver now makes exact-command dispatches to the executor;
+      - expects_from[1].contract -- "The direct source-read resolver ... so 'how to read a value
+        directly' names something that exists"; and no expects_from edge names BO-3200f-4;
+      - test_spec[0] description -- "how to read directly";
+      - test_spec[1] description -- "exercise it with specialists unavailable";
+      - test_spec[3] description -- "guidance to 'read it directly this way'";
+      - notes paragraphs below that speak of "no specialist available".
 superseded_by: null
 covered_by: []
 implemented_by: []
 notes: |
+  2026-09-16 (business-analyst) -- PREMISE NARROWED, READ THIS FIRST. The separating test and
+  the second scenario's environment changed from "no specialist available" to "no party can be
+  asked to judge anything" (only a chartered executor of exact commands is dispatchable), and
+  "how to read a value directly" became "how to obtain it through an exact command carried out
+  by the chartered executor", linking to BO-3200f-4's page. Authorised by the user on
+  2026-09-16; the old wording, the reason and the list of now-stale technical fields are in
+  amended_by.
+
   Satisfies the reference-doc entry in BO-3200a's documentation_triggers.
 
   THE DOCUMENTATION MUST CARRY THE TEST, NOT THE PROHIBITION. "Do not use a specialist as an

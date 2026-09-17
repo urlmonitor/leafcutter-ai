@@ -255,4 +255,8 @@ notes: |
   tooling like every other CI gate here. An it_requirement has been added stating that
   reading and naming the two acceptable resolutions, so the implementer does not resolve
   it by writing a second probe.
+
+  2026-09-16 (business-analyst) -- USER REVIEW RECORDED. On 2026-09-16 the user reviewed the IT
+  PO's requirement changes to this record (amended_by entry premise-review-chartered-executor,
+  2026-09-16) and chose to keep readiness: approved. Recorded as a note only; no field changed.
 target_epic: EPIC-StartingNewWorkTheProperWayAlways

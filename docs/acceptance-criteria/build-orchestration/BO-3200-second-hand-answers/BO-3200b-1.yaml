@@ -8,15 +8,22 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: approved
+readiness: draft
 priority: medium
 roadmap_phase: phase_1
 criteria: |
   Given a run that has claimed work in a store that outlives the run,
     And the run then stops because a later step failed,
-    And an environment in which dispatching a specialist is impossible,
+    And an environment in which no party can be asked to judge anything -- the only party that
+    can be dispatched is one chartered to carry out an exact command and return its output
+    verbatim, whose charter admits every exact command so it has no grounds to decline one, and
+    which treats whatever it receives as a literal command and so gives no answer to a request
+    to look, decide, interpret or summarise; every dispatch to any other party fails
+    immediately,
   When the run ends,
-  Then every item it claimed is back in its unclaimed state in that same store.
+  Then every item it claimed is back in its unclaimed state in that same store,
+    And every dispatch made while releasing the claim went to that chartered party and carried
+    an exact command, and none was addressed to any other party.
 
   Given that ended run,
   When a new run selects work from that store,
@@ -28,6 +35,7 @@ criteria: |
   Then every item it claimed is back in its unclaimed state after each one.
 depends_on:
   - BO-3200b
+  - BO-3200f-1
 doc_links:
   - path: docs/known-issues/build-orchestration.md
     relationship: describes
@@ -122,11 +130,90 @@ amended_by:
 - action: approved
   agent: approve_acs
   date: '2026-08-26'
+- reason: premise-narrowed-from-no-dispatch-to-no-judgement-criteria-changed-reapproval-required
+  by: business-analyst
+  at: 2026-09-16
+  note: |
+    A REAL NARROWING OF AN APPROVED AC, NOT A WORDING TIDY-UP. Authorised by the user
+    (BrainCandy) on 2026-09-16, explicitly for this record, following the chartered-executor
+    decision recorded in BO-3200f's notes; the same treatment BO-3200a-1, BO-3200a-2 and
+    ACD-2100b-5 received. readiness demoted approved -> draft so the approval gate is re-run
+    rather than silently inherited (ACS-1300a-1-i / ACS-1300a-1 precedent: criteria changed on
+    an already-approved record).
+
+    WHAT THE FIRST SCENARIO SAID BEFORE (verbatim):
+      Given a run that has claimed work in a store that outlives the run,
+        And the run then stops because a later step failed,
+        And an environment in which dispatching a specialist is impossible,
+      When the run ends,
+      Then every item it claimed is back in its unclaimed state in that same store.
+    TITLE: unchanged -- it never carried the premise.
+
+    WHAT IT SAYS NOW: the environment is "no party can be asked to judge anything", in the same
+    words BO-3200a-1 and ACD-2100b-5 carry -- the only dispatchable party is one
+    chartered to carry out an exact command and return its output verbatim, which cannot decline
+    an exact command on charter grounds and gives no answer to a request to look, decide,
+    interpret or summarise; every dispatch to any other party fails immediately. The first Then
+    is unchanged. ONE And ADDED: every dispatch made while releasing the claim went to that
+    chartered party carrying an exact command, and none to any other party. The second and third
+    scenarios are UNCHANGED.
+
+    WHY. The E2 workflow engine injects only agent, parallel, pipeline, phase, log, args,
+    workflow and budget into a workflow body (docs/reference/workflow-authoring-contract.md
+    section 1) -- no filesystem, no subprocess -- so every read and every chore goes through an
+    agent() call and the old premise could never hold. An engine-level primitive was rejected as
+    upstream (the engine is Claude Code's); pre-resolving into args was rejected as second-hand
+    by another route. See BO-3200f's notes. BO-3200's standing rule -- only JUDGEMENT is
+    delegable to a specialist -- is unchanged by this.
+
+    WHAT THIS RECORD STILL PROVES. BO-3200b's point: a required release is carried out and never
+    left to a party that may decline it. The old proof was "nobody can be dispatched, yet the
+    claim is released". A release is a chore, and under the decision a chore is an exact command
+    carried out by the executor (BO-3200f-3 addresses every release there, including the
+    fast-lane release now addressed to python-coder). So the proof becomes "nobody who could
+    decline or judge can be dispatched, yet the claim is released". A run that still sends
+    KI-BO-020's "You are the release-phase agent" prompt to a specialist gets an immediate
+    transport failure; the same prompt sent to the executor is run as a literal command and
+    releases nothing. Either way the first Then fails. The added And catches the one shape that
+    passes the first Then anyway: a run that tries a specialist first and falls back to the
+    executor, which passes here and relays in production (BO-3200a-1's precedent). A release
+    making no dispatch at all also passes, which is correct.
+
+    DEPENDS_ON. BO-3200f-1 added: the environment is BO-3200f-1's harness stand-in and the
+    release is carried through its shared dispatch helper, so this record cannot land first.
+
+    CRITERIA-ONLY CHANGE -- THE TECHNICAL LAYER IS NOW STALE AND IS THE IT PO'S TO REDO. Not
+    edited here (outside the BA's remit); each item was written against the old premise:
+      - it_requirements[0] "THE RELEASE MUST BE PERFORMED INLINE ... with no dispatch in its
+        path. Testable only by removing the ability to dispatch";
+      - it_requirements[7] "use unit_tests/_workflow_engine_harness.py to withhold the dispatch
+        surface";
+      - delivers_to[0].contract "An inline release operation with no dispatch in its path";
+      - delivers_to[1].contract "release performed inline" in the failure-path trace;
+      - expects_from null -- the release now consumes BO-3200f-1's helper and stand-in, and a
+        release that cannot complete through the executor needs BO-3200f-1-i's reason
+        (BO-3200f-3 it_requirements: "a release that could not be completed is reported, never
+        assumed");
+      - test_spec[0] test_bo_3200b_1_claim_is_released_with_dispatch_impossible ("dispatch
+        surface withheld entirely"), and no test_spec entry covers the added dispatch-record And;
+      - test_spec[5] description "Performing the action inline";
+      - test_rationale first paragraph ("Removing the ability to dispatch");
+      - estimated_complexity may change now that the release routes through the executor.
+    The notes paragraph "THE UNAVAILABLE-SPECIALIST CLAUSE IS THE DISCRIMINATOR" describes the
+    SUPERSEDED premise.
 superseded_by: null
 covered_by:
   - BO-3200b-1-i
 implemented_by: []
 notes: |
+  2026-09-16 (business-analyst) -- PREMISE NARROWED, READ THIS FIRST. The first scenario's
+  environment changed from "dispatching a specialist is impossible" to "no party can be asked to
+  judge anything" (only a chartered executor of exact commands is dispatchable), and an And was
+  added requiring every dispatch made while releasing to be an exact command to that executor.
+  Authorised by the user on 2026-09-16; the old wording, the reason and the list of now-stale
+  technical fields are in amended_by. Where the paragraphs below speak of "no specialist
+  available" or "performs it itself", read them as "no one available who could decline or judge".
+
   Anchor case KI-BO-020: every failure path released its claim by dispatching a reporting
   specialist under a role name that was not its own. The specialist refused — correctly, since
   reassigning its role is out of scope — the reply was discarded because the release is
