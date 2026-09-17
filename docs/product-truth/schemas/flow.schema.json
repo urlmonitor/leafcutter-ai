@@ -29,6 +29,11 @@
     "product": {
       "type": "string"
     },
+    "example_product": {
+      "type": "string",
+      "pattern": "^[a-z0-9-]+$",
+      "description": "ADR-044: self-declared example-product marker. Set ONLY on an example artifact (today: fern-and-fig), to the product-root slug it belongs to -- never a display name, never the project's own product root. Absent on every artifact of the project's own record; absence, not an empty/null value, is what 'not an example' means. OPTIONAL and never required -- distinct from the `product` display-name field above, and never used to decide ownership (product_ownership.py's id/path-derived root remains the sole authority)."
+    },
     "name": {
       "type": "string"
     },

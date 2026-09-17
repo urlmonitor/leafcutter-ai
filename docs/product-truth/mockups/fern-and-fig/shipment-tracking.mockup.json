@@ -1,6 +1,7 @@
 {
   "id": "fern-and-fig/shipment-tracking",
   "component": "ux-prototyping",
+  "example_product": "fern-and-fig",
   "screen": "shipment-tracking",
   "title": "Track shipment",
   "summary": "STUB — registered so the track-an-order flow's `track` step resolves. Shows the current delivery stage for an order. Not yet drawn; see plant-listing for the gold-reference shape.",

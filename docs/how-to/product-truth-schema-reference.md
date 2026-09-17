@@ -4,7 +4,7 @@ description: "Field-by-field reference for the four product-truth schemas — Fl
 type: how-to
 status: active
 created: 2026-07-14
-last_updated: 2026-09-16
+last_updated: 2026-09-17
 components:
   - ux_prototyping
 related_docs:
@@ -42,6 +42,7 @@ For the authoring workflow (including the mandatory add-vs-create protocol), see
 | `version` | Integer ≥ 1; bumped (not replaced) when an artifact is extended. |
 | `superseded_by` | Id of the replacing artifact when `status: deprecated`; else `null`. |
 | `provenance[]` | Append-only history: `{ action, by, date, note }`, `action` ∈ `authored` \| `reviewed` \| `approved` \| `extended` \| `deprecated` \| `superseded`. |
+| `example_product` | Optional string, pattern `^[a-z0-9-]+$`, on Flow/Mockup/Mock-Data. ADR-044 self-declared example-product marker — absent on the project's own record; never `PROJECT_PRODUCT`. See "Ownership predicate" below. |
 
 ---
 
@@ -301,8 +302,7 @@ module's own DECISION HISTORY block for the rationale.
 
 ## See Also
 
-- [How to author a Flow, Mockup, or Mock Data artifact by hand](authoring-product-truth-artifacts.md)
-- [UX Prototyping component](../architecture/components/ux-prototyping.md)
+- [How to author a Flow, Mockup, or Mock Data artifact by hand](authoring-product-truth-artifacts.md). [UX Prototyping component](../architecture/components/ux-prototyping.md).
 - [ADR-023](../architecture/adrs/ADR-023-product-truth-flow-first-upstream-layer.md)
 - [ADR-022 — Mockups are the real application in mock mode](../architecture/adrs/ADR-022-mockups-are-the-real-app-in-mock-mode.md) — the hard constraint the ownership predicate implements (separation, never deletion, of example content).
 - [UXP-554 — fixture drift guard](../acceptance-criteria/ux-prototyping/UXP-550-atlas-mock-mode/UXP-554.yaml) — mock mode's own dependency on the example content staying resolvable by name.

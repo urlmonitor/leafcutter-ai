@@ -46,8 +46,18 @@ amended_by:
 - action: approved
   agent: approve_acs
   date: '2026-09-07'
+- reason: split-from-parent
+  date: 2026-09-16
+  by: claude
+  changes: 'Split into UXP-700d-3-i (registers and backfills the example_product
+    marker) and UXP-700d-3-ii (adds the disagreement-reporting cross-check) after
+    the /build-feature run found the unsplit work spans about 38 files. This
+    record''s own criteria are unchanged; work_status stays todo until both
+    children are done.'
 superseded_by: null
-covered_by: []
+covered_by:
+- UXP-700d-3-i
+- UXP-700d-3-ii
 implemented_by:
 - tickets/00_inbox/TICKET-20260909-UXP-700d-3.md
 change_target:
