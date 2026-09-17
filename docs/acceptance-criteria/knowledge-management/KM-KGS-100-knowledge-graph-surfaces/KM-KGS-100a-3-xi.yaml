@@ -138,13 +138,13 @@ test_spec:
     framework: pytest
     type: integration
     angle: criterion
-    description: "count_content_lines of the working-tree scripts/knowledge_query.py is less than or equal to count_content_lines of the text from 'git show origin/main:scripts/knowledge_query.py' (1013 on 2026-09-17). If origin/main or that blob cannot be resolved the test FAILS naming the git error, it never skips. RED before the extraction (1104 > 1013)"
+    description: "count_content_lines of the working-tree scripts/knowledge_query.py is less than or equal to a pinned pre-extraction baseline measured on main via count_content_lines (1013 on 2026-09-17, see _MAIN_BASELINE_CONTENT_LINES). No git ref is read at test time -- a CI checkout has no origin/main ref and, once this change merges, HEAD itself becomes main, so a live comparison would stop meaning anything. RED before the extraction (1104 > 1013)"
   - name: test_over_limit_build_wiring_files_do_not_grow_vs_main
     target_dir: unit_tests/
     framework: pytest
     type: integration
     angle: boundary
-    description: "For each of scripts/build.py, scripts/build_phases_knowledge.py, scripts/build_phases_workflows.py and scripts/build_helpers.py (the files that deploy, list or drift-map knowledge_query.py), when count_content_lines of the origin/main blob exceeds get_limit_for_extension for that path, the working-tree count_content_lines is no greater than the origin/main count; files under their limit on main are only required to stay within the limit. All violations are listed in one failure. An unresolvable origin/main blob fails the test, never skips"
+    description: "For each of scripts/build.py, scripts/build_phases_knowledge.py, scripts/build_phases_workflows.py and scripts/build_helpers.py (the files that deploy, list or drift-map knowledge_query.py), when a pinned pre-extraction main baseline for that path (_MAIN_BASELINE_CONTENT_LINES, measured 2026-09-17 via count_content_lines) exceeds get_limit_for_extension for that path, the working-tree count_content_lines is no greater than that pinned baseline; files under their limit on main are only required to stay within the limit. All violations are listed in one failure. No git ref is read at test time"
   - name: test_deploy_manifests_list_reader_module_alongside_knowledge_query
     target_dir: unit_tests/
     framework: pytest

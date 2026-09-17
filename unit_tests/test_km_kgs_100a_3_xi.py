@@ -91,21 +91,22 @@ def _discover_reader_module(kq_module):
     return reader_module
 
 
-def _git_show_origin_main(rel_path):
-    """Read a blob from origin/main. Fails the test, never skips, when the
-    revision or blob cannot be resolved."""
-    result = subprocess.run(
-        ["git", "show", f"origin/main:{rel_path}"],
-        cwd=str(_REPO_ROOT),
-        capture_output=True,
-        text=True,
-        encoding="utf-8",
-        errors="replace",
-    )
-    assert result.returncode == 0, (
-        f"could not resolve origin/main:{rel_path} -- git error: {result.stderr.strip()}"
-    )
-    return result.stdout
+# Pinned pre-extraction baselines, measured 2026-09-17 immediately before
+# the KM-KGS-100a-3-xi extraction, via count_content_lines against the
+# a6dc837a~1 blob -- main's state at that point -- for each path below.
+# These replace a live `git show origin/main:<path>` lookup: a CI checkout
+# (actions/checkout@v4 defaults) is a shallow, single-branch clone of the PR
+# merge ref with no origin/main ref available at all, and once this change
+# merges HEAD itself BECOMES main, so a live comparison would stop meaning
+# anything the moment it could finally run. A fixed ceiling is the correct
+# long-term shape for this ratchet, not a workaround for the CI gap.
+_MAIN_BASELINE_CONTENT_LINES = {
+    "scripts/knowledge_query.py": 1013,
+    "scripts/build.py": 1803,
+    "scripts/build_phases_knowledge.py": 190,
+    "scripts/build_phases_workflows.py": 312,
+    "scripts/build_helpers.py": 1465,
+}
 
 
 # ---------------------------------------------------------------------------
@@ -238,10 +239,12 @@ def test_knowledge_query_code_length_not_greater_than_main():
     # covers: KM-KGS-100a-3-xi
     # angle: criterion
     """count_content_lines of the working-tree knowledge_query.py must not
-    exceed count_content_lines of the origin/main blob (1013 on
-    2026-09-17). RED before the extraction (1104 > 1013)."""
-    main_text = _git_show_origin_main("scripts/knowledge_query.py")
-    main_length = count_content_lines(main_text)
+    exceed the pinned pre-extraction baseline measured on main (1013, see
+    _MAIN_BASELINE_CONTENT_LINES). RED before the extraction (1104 > 1013).
+    Pinned rather than read live from origin/main: a CI checkout has no
+    origin/main ref at all, and after this change lands HEAD becomes main,
+    so a live comparison would stop meaning anything anyway."""
+    main_length = _MAIN_BASELINE_CONTENT_LINES["scripts/knowledge_query.py"]
     working_text = (_SCRIPTS_DIR / "knowledge_query.py").read_text(encoding="utf-8")
     working_length = count_content_lines(working_text)
     assert working_length <= main_length, (
@@ -262,12 +265,16 @@ def test_over_limit_build_wiring_files_do_not_grow_vs_main():
     # covers: KM-KGS-100a-3-xi
     # angle: boundary
     """For each deploy/manifest/drift wiring file already over its limit on
-    main, the working-tree length must not exceed main's. All violations are
-    listed together; an unresolvable origin/main blob fails, never skips."""
+    the pinned pre-extraction main baseline (_MAIN_BASELINE_CONTENT_LINES),
+    the working-tree length must not exceed that pinned baseline. All
+    violations are listed together. Files under their limit on main only
+    need to stay within the limit, which is the existing behaviour. Pinned
+    rather than read live from origin/main: a CI checkout has no
+    origin/main ref at all, and after this change lands HEAD becomes main,
+    so a live comparison would stop meaning anything anyway."""
     violations = []
     for rel in _WIRING_FILES:
-        main_text = _git_show_origin_main(rel)
-        main_length = count_content_lines(main_text)
+        main_length = _MAIN_BASELINE_CONTENT_LINES[rel]
         limit = get_limit_for_extension(rel)
         if main_length <= limit:
             continue
