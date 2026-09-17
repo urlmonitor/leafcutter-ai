@@ -392,6 +392,58 @@
           }
         }
       }
+    },
+    "behind": {
+      "type": "object",
+      "description": "ADR-043: durable, per-journey freshness mark. Presence of this key IS the mark -- a journey carrying it is behind; a journey without it is not. Written/removed by validate_product_truth.py's _sync_behind_marks; MUST NOT be hand-edited (derived data).",
+      "additionalProperties": false,
+      "required": [
+        "confirmed_against",
+        "changed",
+        "since"
+      ],
+      "properties": {
+        "confirmed_against": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Stable string identity of the confirmation this journey was last checked at (ADR-043 SS2/SS3). Copied verbatim from the confirmation record -- never re-derived or synthesised."
+        },
+        "changed": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string"
+          },
+          "description": "id of each described thing (AC id or project file path) that has moved since confirmed_against, in deterministic (sorted) order (ADR-043 SS2)."
+        },
+        "since": {
+          "type": "string",
+          "description": "ISO-8601 YYYY-MM-DD date this journey was first found behind at the current confirmed_against. Preserved across re-marks while confirmed_against is unchanged; re-stamped when it changes (ADR-043 SS7)."
+        }
+      }
+    },
+    "confirmed": {
+      "type": "object",
+      "description": "UXP-700c-2: the journey's own confirmation record -- what it was last confirmed against, and a per-described-thing content snapshot taken at that moment. AUTHORED by whoever confirmed the journey (a human or agent) -- validate_product_truth.py's _check_freshness only READS this to compute a behind/current verdict; it MUST NOT write or synthesise it.",
+      "additionalProperties": false,
+      "required": [
+        "against",
+        "state"
+      ],
+      "properties": {
+        "against": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Explicit, caller-supplied string identity of the confirmation event (e.g. a commit SHA or an explicit confirmation id) -- NEVER a hash or fingerprint synthesised by the checker (ADR-043 SS3). Copied verbatim into behind.confirmed_against when a described thing has since moved."
+        },
+        "state": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "One content signature per described thing (today: AC id) as of `against`, keyed by that thing's id. Compared against its CURRENT signature (_ac_content_signature) to decide behind vs. current."
+        }
+      }
     }
   }
 }
