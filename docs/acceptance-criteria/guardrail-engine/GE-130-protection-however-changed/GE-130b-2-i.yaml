@@ -1,0 +1,60 @@
+id: GE-130b-2-i
+title: A request naming no agent is the top-level session and keeps its overrides on both paths; it is
+  never treated as a caller who cannot be identified
+component: guardrail-engine
+components:
+- commit_guardian
+- precommit_hooks
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a tool call carrying no agent identity, which GE-129a decides is the top-level session,
+  And the documentation override, the guide-check override and the task-lock guard's warn
+    setting each in effect in turn,
+  When the top-level session makes a change each guard refuses without its override, once with
+    the editing tools and once with a shell command,
+  Then the change is let through on both paths under the override, and no statement that the
+    caller could not be identified is made,
+  And in the same run a tool call whose identity GE-129a counts as not established has the same
+    override refused on both paths, so a call naming no agent and a call whose caller cannot be
+    identified reach different outcomes.
+depends_on:
+- GE-130b-2
+- GE-129a
+doc_links:
+- path: docs/acceptance-criteria/guardrail-engine/GE-130-protection-however-changed/GE-130b.yaml
+  relationship: parent
+  status: exists
+- path: docs/acceptance-criteria/guardrail-engine/GE-129-who-acts-not-what-typed/GE-129a.yaml
+  relationship: context
+  status: exists
+  relevance: 'Owns caller identity: agent_id together with agent_type; absence of agent_id is the top-level
+    session. Cited, not re-specified.'
+- path: docs/acceptance-criteria/build-orchestration/BO-3200-second-hand-answers/BO-3200f-2-iii.yaml
+  relationship: context
+  status: exists
+  relevance: Owns the single bypass-variable declaration and the executor refusal. Reused here; no second
+    declaration.
+delivers_to: null
+expects_from: null
+assigned_agent: python-coder
+declares_side_effect: false
+origin_agent: business-analyst
+created: '2026-09-17'
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  GE-130b notes: once widened, a top-level session could lose CLAUDE_NO_DOC_UPDATE and
+  CLAUDE_NO_README_CHECK if "no agent named" is read as an unidentified caller. GE-129a's notes
+  settle it: absence of agent_id means the top-level session. Named mutation that turns ONLY this
+  record red: treat a payload with no agent_id as unidentified (GE-130b-2's executor and
+  unidentified cases stay green).
+
+  declares_side_effect: false.

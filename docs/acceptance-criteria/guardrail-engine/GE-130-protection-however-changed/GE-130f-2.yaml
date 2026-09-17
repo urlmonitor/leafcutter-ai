@@ -1,0 +1,79 @@
+id: GE-130f-2
+title: The guide-read guard is seen to stop an edit to a gated folder whose guide has not been read, through
+  the way a session invokes it
+component: guardrail-engine
+components:
+- commit_guardian
+- precommit_hooks
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the guide-read guard's declared known-bad input, in the declaration form GE-120f-1
+    defines: an edit made with the editing tools to a file inside a folder the guard gates,
+    whose nearest guide has not been read in this session, with no guide-check override in
+    effect,
+  And its declared acceptable input: the same edit made after that guide has been read in this
+    session with the reading tool,
+  When both inputs are put through the entry point a Claude Code session invokes the guard by,
+    in the main working copy of a project where the gated folders are reached through links
+    into the installed copy of the package, in the way GE-120c-1's harness runs checks,
+  Then the known-bad edit is not carried out and the refusal names the file and the guide that
+    must be read first,
+  And the acceptable edit is carried out with no refusal, in the same run,
+  And the guard's liveness record, as GE-120f-1 defines it, says the rejection was observed,
+  And every folder the guard gates is either present in the project it is installed in or named
+    by the run as gating nothing in that project, so a gated folder that matches no path is
+    never counted as protection.
+depends_on:
+- GE-130f
+doc_links:
+- path: docs/acceptance-criteria/guardrail-engine/GE-130-protection-however-changed/GE-130f.yaml
+  relationship: parent
+  status: exists
+- path: templates/hooks/readme_read_guard.py
+  relationship: related
+  status: exists
+- path: templates/hooks/readme_marker_recorder.py
+  relationship: related
+  status: exists
+- path: docs/acceptance-criteria/guardrail-engine/GE-120-green-means-checked/GE-120f-1.yaml
+  relationship: context
+  status: exists
+  relevance: Owns the known-bad-input declaration, the entry-point rule and the four-value liveness record
+    (reusing config/verification_flow.schema.json). Cited, never restated.
+- path: docs/acceptance-criteria/guardrail-engine/GE-120-green-means-checked/GE-120c-1.yaml
+  relationship: context
+  status: exists
+  relevance: The out-of-process harness over a real separate working copy. Extend it; do not grow a second
+    one.
+- path: docs/reference/claude-code-hooks.md
+  relationship: related
+  status: exists
+delivers_to: null
+expects_from: null
+assigned_agent: python-coder
+declares_side_effect: false
+origin_agent: business-analyst
+created: '2026-09-17'
+amended_by: []
+superseded_by: null
+covered_by:
+- GE-130f-2-i
+- GE-130f-2-ii
+implemented_by: []
+notes: |
+  FINDINGS THIS RECORD CLOSES (GE-120f evidence, re-derived 2026-09-01; GE-130f notes): three of
+  the four gated folders resolve through links out from under the prefix match and never match;
+  the fourth (a migrations folder) does not exist in this repository. The last clause does not
+  require every gated folder to exist -- the package installs into projects that may have one --
+  only that one matching nothing is named rather than counted.
+
+  Linked-working-copy layout and whole-file writes are separate records (GE-130f-2-ii,
+  GE-130f-2-i) because a repair can fix this record and leave either inert.
+
+  declares_side_effect: false.

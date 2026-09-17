@@ -1,0 +1,108 @@
+id: GE-130c-2-i
+title: When the check sees a protected file changed but cannot tell whose change it was, it says so and
+  why, blames no one, and lets the run continue
+component: guardrail-engine
+components:
+- commit_guardian
+- precommit_hooks
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a watched file changed, in a way its protection's rule refuses, while this caller's command
+    was running,
+  And whether this caller's command or another agent in the same working copy made that change
+    cannot be established,
+  When this caller's command finishes,
+  Then the protection names the file and itself, and states that it could not tell whose change
+    it was,
+  And it states why: it names the other tracked command or edit that overlapped this caller's
+    command in the same working copy, or it states that the change came from something the
+    protection does not see,
+  And the run is not stopped, and the next tool call in it is carried out,
+  And it does not state that this caller made the change,
+  And it states that the file remains changed in the working copy, and that if the change was this
+    caller's own, this caller must put the file back or make the change in a way the protection's
+    rule allows,
+  And the statement is distinguishable from both a stop GE-130c-2 attributes to this caller and a
+    stop GE-130c-1-i makes when the files could not be examined, so a reader can tell "your command
+    changed this", "this changed and it is not known who changed it" and "the files could not be
+    examined" apart,
+  And given, in the same run, this caller's command changes a different watched file in a way the
+    rule refuses and that change is positively attributed to this caller,
+  When that command finishes,
+  Then the run is stopped naming that file, so the unattributed change going through is not the
+    result of a check that stops nothing.
+depends_on:
+- GE-130c-2
+- GE-130c-1-i
+doc_links:
+- path: docs/acceptance-criteria/guardrail-engine/GE-130-protection-however-changed/GE-130c.yaml
+  relationship: parent
+  status: exists
+- path: docs/acceptance-criteria/guardrail-engine/GE-120-green-means-checked/GE-120e.yaml
+  relationship: context
+  status: exists
+  relevance: A block is always about something you actually did. The after-the-fact check applies the
+    same promise to a shared working copy.
+delivers_to: null
+expects_from: null
+assigned_agent: python-coder
+declares_side_effect: false
+origin_agent: business-analyst
+created: '2026-09-17'
+amended_by:
+- reason: user-decision-attribution-policy
+  by: business-analyst
+  at: 2026-09-17
+  note: |
+    Applies the user's (BrainCandy) 2026-09-17 decision "Stop only on positive attribution; never
+    stop on 'can't tell'." The OPEN question in notes is closed: an unattributable change is named
+    and explained but no longer stops the run. CHANGED: title; the Then clauses (Given unchanged);
+    depends_on gains GE-130c-1-i (the three-way distinction cites its stop). Added the reason
+    clause, the file-remains-changed clause, the three-way distinction and a same-run negative
+    control (a positively attributed change still stops). UNCHANGED: Given clauses, assigned_agent,
+    declares_side_effect (false, re-derived), readiness draft.
+    OLD title (verbatim): When the check cannot tell whether this caller or another agent changed a
+    protected file, it says so rather than blaming either or staying quiet
+    OLD criteria (verbatim):
+      Given a watched file changed, in a way its protection's rule refuses, while this caller's command
+        was running,
+      And whether this caller's command or another agent in the same working copy made that change
+        cannot be established,
+      When this caller's command finishes,
+      Then the protection names the file, states that it could not tell whose change it was, and
+        stops the run,
+      And it does not state that this caller made the change,
+      And the statement is distinguishable from a stop GE-130c-2 attributes to this caller, so a reader
+        can tell "your command changed this" from "this changed and it is not known who changed it".
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  DECIDED 2026-09-17 (user) -- STOP ONLY ON POSITIVE ATTRIBUTION; NEVER STOP ON "CAN'T TELL".
+  Three outcomes, kept apart:
+    positively attributed to this caller   -> stops (GE-130c-2)
+    looked, could not attribute            -> named, explained, run continues (this record)
+    could not look at the files at all     -> stops (GE-130c-1-i)
+  Resolves the earlier tension with GE-120e ("a block is always about something you actually
+  did"): this caller is never stopped for a change that may be another agent's. The finding is
+  not lost in a long unattended run -- GE-130c-2-ii persists it and lists it at the end of the
+  drive. Whether weak attribution is acceptable at all is gated by GE-130d-3's rollout threshold.
+
+  SCOPE: this policy applies to the documentation guard and the guide-read guard only. The
+  task-lock guard (inline_work_guard) is unaffected: under the build lock it stops any writing
+  command regardless of attribution, except the build workflow's own dispatched agents
+  identified by caller identity (GE-130a-4).
+
+  Named mutation that turns ONLY this record red: stop the run on an unattributed finding
+  (GE-130c-2 and GE-130c-1-i stay green).
+
+  SUPERSEDED 2026-09-17: the earlier OPEN paragraph (fail closed on an unattributable change) is
+  replaced by the decision above; the old text is quoted in amended_by.
+
+  declares_side_effect: false.

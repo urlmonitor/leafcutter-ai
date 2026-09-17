@@ -1,0 +1,57 @@
+id: GE-130f-2-ii
+title: The guide-read guard refuses the same edit in a linked working copy as in the main one, and a guard
+  that refuses in only one layout is named with the layout it failed in
+component: guardrail-engine
+components:
+- commit_guardian
+- precommit_hooks
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a linked working copy of the project, in which the links to the gated folders stay inside
+    that working copy rather than leading out of it,
+  And the known-bad and acceptable inputs GE-130f-2 declares,
+  When both inputs are put through the guard's entry point from inside the linked working copy
+    and, in the same run, from inside the main working copy,
+  Then in both layouts the known-bad edit is not carried out and the acceptable edit is,
+  And the run reports the outcome for each layout and each gated folder side by side,
+  And a gated folder for which the known-bad edit was carried out in one layout is named
+    together with that layout, and the run fails.
+depends_on:
+- GE-130f-2
+doc_links:
+- path: docs/acceptance-criteria/guardrail-engine/GE-130-protection-however-changed/GE-130f.yaml
+  relationship: parent
+  status: exists
+- path: templates/hooks/readme_read_guard.py
+  relationship: related
+  status: exists
+- path: docs/acceptance-criteria/guardrail-engine/GE-120-green-means-checked/GE-120c-1.yaml
+  relationship: context
+  status: exists
+  relevance: The out-of-process harness over a real separate working copy. Extend it; do not grow a second
+    one.
+delivers_to: null
+expects_from: null
+assigned_agent: python-coder
+declares_side_effect: false
+origin_agent: business-analyst
+created: '2026-09-17'
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  WHY A SEPARATE RECORD (BA memory, guard-liveness placement 2026-09-01): the guard is inert by TWO
+  mechanisms -- in the main workspace resolving the path leaves the project and the containment
+  test raises; in a worktree it does not raise, the resolved path simply fails the prefix test.
+  A repair that handles only the first leaves every worktree inert, and worktrees are where the
+  drives run. Named mutation that turns ONLY this record red: fix only the leaves-the-project
+  case.
+
+  declares_side_effect: false.

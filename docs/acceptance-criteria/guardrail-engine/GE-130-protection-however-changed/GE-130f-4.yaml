@@ -1,0 +1,61 @@
+id: GE-130f-4
+title: The hooks reference states one way a session guard refuses, and it is the way the repaired guards
+  use
+component: guardrail-engine
+components:
+- commit_guardian
+- precommit_hooks
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the hooks reference, which today says in one place that a guard's non-zero ending never
+    blocks a session tool call, and in its escape-hatch table that guards block with one,
+  When a reader looks up how a session-time guard refuses a tool call,
+  Then the reference states one way a guard refuses, and it is the way the repaired
+    documentation guard and guide-read guard refuse,
+  And no other passage in the reference states a different way,
+  And the catalogue entry for the documentation guard states that the folders it watches come
+    from the project it is installed in,
+  And the catalogue entry for the guide-read guard states that whole-file writes are checked and
+    that gated folders are matched in main and linked working copies alike,
+  And the reference points to where each guard's liveness record is read, rather than asserting
+    in its own words that the guard works.
+depends_on:
+- GE-130f
+- GE-130f-1
+- GE-130f-2
+doc_links:
+- path: docs/acceptance-criteria/guardrail-engine/GE-130-protection-however-changed/GE-130f.yaml
+  relationship: parent
+  status: exists
+- path: docs/reference/claude-code-hooks.md
+  relationship: related
+  status: exists
+- path: templates/hooks/documentation_guard.py
+  relationship: related
+  status: exists
+- path: templates/hooks/readme_read_guard.py
+  relationship: related
+  status: exists
+delivers_to: null
+expects_from: null
+assigned_agent: documentation-expert
+declares_side_effect: false
+origin_agent: business-analyst
+created: '2026-09-17'
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Documentation AC for GE-130f's reference-doc trigger. The contradiction is recorded in GE-130f's
+  doc_links relevance: the stdout contract says a non-zero exit is treated as allow, while the
+  escape-hatch table and two shipped guards block with exit 2. The second clause is the one that
+  can be skipped quietly -- cover it by reading the whole reference, not the edited paragraph.
+
+  declares_side_effect: false.

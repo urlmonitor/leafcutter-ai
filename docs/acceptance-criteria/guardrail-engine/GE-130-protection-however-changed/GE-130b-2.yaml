@@ -1,0 +1,69 @@
+id: GE-130b-2
+title: An override refused for a caller is refused on every path that caller can use, and a caller who
+  cannot be identified gets the same answer on both paths
+component: guardrail-engine
+components:
+- commit_guardian
+- precommit_hooks
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a caller for whom BO-3200f-2-iii refuses a guard's override -- the chartered executor --
+    and a caller whose identity cannot be established, identity being decided as GE-129a
+    decides it,
+  And the override for the documentation guard, the guide-read guard or the task-lock guard set,
+  When either caller makes a change that guard refuses without the override, on every path that
+    caller holds -- the editing tools, shell commands, or both,
+  Then the change is refused on each of those paths, and each refusal names the guard and the
+    override it refused,
+  And the unidentified-caller policy applied on the shell path is the one the declaration states
+    for that override, identical to the editing path,
+  And in the same run a caller for whom the override is honoured has the same change let through
+    on both paths, so no path refuses an override the other honours.
+depends_on:
+- GE-130b
+- BO-3200f-2-iii
+- GE-129a
+doc_links:
+- path: docs/acceptance-criteria/guardrail-engine/GE-130-protection-however-changed/GE-130b.yaml
+  relationship: parent
+  status: exists
+- path: docs/acceptance-criteria/build-orchestration/BO-3200-second-hand-answers/BO-3200f-2-iii.yaml
+  relationship: context
+  status: exists
+  relevance: Owns the single bypass-variable declaration and the executor refusal. Reused here; no second
+    declaration.
+- path: docs/acceptance-criteria/guardrail-engine/GE-129-who-acts-not-what-typed/GE-129a.yaml
+  relationship: context
+  status: exists
+  relevance: 'Owns caller identity: agent_id together with agent_type; absence of agent_id is the top-level
+    session. Cited, not re-specified.'
+- path: docs/reference/claude-code-hooks.md
+  relationship: related
+  status: exists
+delivers_to: null
+expects_from: null
+assigned_agent: python-coder
+declares_side_effect: false
+origin_agent: business-analyst
+created: '2026-09-17'
+amended_by: []
+superseded_by: null
+covered_by:
+- GE-130b-2-i
+implemented_by: []
+notes: |
+  CITED, NOT RESOLVED HERE: who counts as the executor and who counts as unidentified is GE-129a's
+  (agent_id together with agent_type). The per-override unidentified-caller policy (BLOCK for these
+  three) is BO-3200f-2-iii's declaration. This record only requires that the shell path applies
+  the same answer the editing path does.
+
+  BO-3200f-2-iii's caveat ("two of the three named guardrails may never see an executor command")
+  is discharged by GE-130a; the executor holds shell only, so for it "every path" is the shell path.
+
+  declares_side_effect: false.

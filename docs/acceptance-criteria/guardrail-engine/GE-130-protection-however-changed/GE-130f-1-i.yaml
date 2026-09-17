@@ -1,0 +1,63 @@
+id: GE-130f-1-i
+title: A refusal counts only when the change is not carried out -- a guard that announces a block while
+  the edit goes through has refused nothing
+component: guardrail-engine
+components:
+- commit_guardian
+- precommit_hooks
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a file protection whose response to its declared known-bad edit announces a refusal and
+    names the file, but ends in the way a Claude Code session treats as allowing the call,
+  When that edit is put through the entry point a session invokes the protection by,
+  Then the edit is found to have been carried out, the protection's liveness record says the
+    rejection was not observed, and the protection is named as one that announced a refusal
+    the session did not act on,
+  And given the same protection is changed only so that it ends in the way the session treats
+    as a refusal, with its message word for word unchanged,
+  When the same edit is put through again,
+  Then the edit is found not carried out and the record says the rejection was observed,
+  And in neither run is the record decided from the protection's message or from how it ended
+    alone, only from whether the edit was carried out.
+depends_on:
+- GE-130f-1
+doc_links:
+- path: docs/acceptance-criteria/guardrail-engine/GE-130-protection-however-changed/GE-130f.yaml
+  relationship: parent
+  status: exists
+- path: templates/hooks/documentation_guard.py
+  relationship: related
+  status: exists
+- path: docs/acceptance-criteria/guardrail-engine/GE-120-green-means-checked/GE-120f-1.yaml
+  relationship: context
+  status: exists
+  relevance: Owns the known-bad-input declaration, the entry-point rule and the four-value liveness record
+    (reusing config/verification_flow.schema.json). Cited, never restated.
+- path: docs/reference/claude-code-hooks.md
+  relationship: related
+  status: exists
+delivers_to: null
+expects_from: null
+assigned_agent: python-coder
+declares_side_effect: false
+origin_agent: business-analyst
+created: '2026-09-17'
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  WHY A SEPARATE RECORD. The documentation guard's defect is exactly this shape: it blocks in a
+  form Claude Code does not act on. An observation that reads the guard's own "blocked" text, or
+  any non-zero ending, records "observed" for the unrepaired guard and still passes GE-130f-1
+  once the guard is repaired. Named mutation that turns ONLY this record red: decide the
+  liveness record from the guard's message or ending status instead of from whether the edit
+  landed.
+
+  declares_side_effect: false.

@@ -1,0 +1,124 @@
+id: GE-130a-4
+title: While the build lock is in place, a shell command that writes a file is stopped unless one of the
+  build workflow's own dispatched agents issues it, and reading commands are not
+component: guardrail-engine
+components:
+- commit_guardian
+- precommit_hooks
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the lock the /build-feature workflow holds while it dispatches work is in place in a
+    working copy, and the task-lock guard's command coverage is in its blocking stage (GE-130d-3),
+  When a command issued from the session's shell clearly writes a file in that working copy --
+    redirecting output into a file, editing a file in place, copying or moving a file onto
+    another, or creating a new file -- and its caller is the top-level session or any agent that
+    workflow did not itself dispatch,
+  Then it is not carried out, and the refusal names the guard, the lock and the file,
+  And the same writing command, issued by an agent that workflow itself dispatched while its lock
+    is in place, is carried out with no refusal, in the same run,
+  And that exemption is decided only from the caller identity the harness supplies with the call,
+    as GE-129a establishes it: a writing command whose text, environment or prompt claims to come
+    from one of that workflow's dispatched agents, issued by a caller the harness does not identify
+    as one, is not carried out, and the refusal names the guard, the lock and the file,
+  And a writing command whose caller identity cannot be established is not carried out,
+  And commands that only look at files -- status, difference and history listings, printing a
+    file, listing a folder, searching file contents, running the tests -- are carried out with no
+    refusal while the lock is in place, whoever the caller, in the same run,
+  And with no lock in place, this guard refuses no command.
+depends_on:
+- GE-130a
+- GE-129a
+doc_links:
+- path: docs/acceptance-criteria/guardrail-engine/GE-129-who-acts-not-what-typed/GE-129a.yaml
+  relationship: context
+  status: exists
+  relevance: 'Owns caller identity: agent_id together with agent_type; absence of agent_id is the top-level
+    session. Cited, not re-specified.'
+- path: docs/acceptance-criteria/guardrail-engine/GE-130-protection-however-changed/GE-130a.yaml
+  relationship: parent
+  status: exists
+- path: templates/hooks/inline_work_guard.py
+  relationship: related
+  status: exists
+- path: templates/workflows-js/build-feature.js
+  relationship: related
+  status: exists
+  relevance: The workflow that holds the task lock and issues its own shell steps under it.
+- path: templates/settings.json
+  relationship: related
+  status: exists
+- path: docs/reference/claude-code-hooks.md
+  relationship: related
+  status: exists
+delivers_to: null
+expects_from: null
+assigned_agent: python-coder
+declares_side_effect: false
+origin_agent: business-analyst
+created: '2026-09-17'
+amended_by:
+- reason: user-decision-caller-identity-exemption
+  by: business-analyst
+  at: 2026-09-17
+  note: |
+    Applies the user's (BrainCandy) 2026-09-17 decisions: inline_work_guard keeps "anyone under the
+    lock is stopped", except the build workflow's own dispatched agents, exempted by caller
+    identity. Replaces the earlier "name the refused workflow step, no exemption" default.
+    CHANGED: title; the first When names the refused callers; the "every shell step the workflow
+    issues ... any step refused is named" clause is replaced by the dispatched-agent exemption, the
+    identity-source clause (harness-supplied identity per GE-129a, never command text,
+    environment or prompt) and the unidentified-caller refusal; the looking-only clause gains
+    "whoever the caller"; depends_on gains GE-129a; a GE-129a context doc_link added.
+    UNCHANGED: Given, the refusal wording, the no-lock clause, assigned_agent,
+    declares_side_effect (false, re-derived), readiness draft.
+    OLD title (verbatim): While the build lock is in place, a shell command that writes a file is
+    stopped, and reading commands and the build workflow's own steps are not
+    OLD criteria (verbatim):
+      Given the lock the /build-feature workflow holds while it dispatches work is in place in a
+        working copy, and the task-lock guard's command coverage is in its blocking stage (GE-130d-3),
+      When a command issued from the session's shell clearly writes a file in that working copy --
+        redirecting output into a file, editing a file in place, copying or moving a file onto
+        another, or creating a new file,
+      Then it is not carried out, and the refusal names the guard, the lock and the file,
+      And commands that only look at files -- status, difference and history listings, printing a
+        file, listing a folder, searching file contents, running the tests -- are carried out with no
+        refusal while the lock is in place, in the same run,
+      And every shell step the shipped /build-feature workflow itself issues while its lock is in
+        place is carried out with no refusal, established by running that workflow's steps under the
+        lock with the guard in its blocking stage, and any step refused is named,
+      And with no lock in place, this guard refuses no command.
+    OLD depends_on (verbatim): [GE-130a]
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  USER DECISION Q5: the task-lock guard may be widened immediately; no GE-130f dependency.
+  GE-130d notes: blocking every shell command under the lock would stop the workflow it protects.
+
+  DECIDED 2026-09-17 (user) -- CALLER-IDENTITY EXEMPTION. The build workflow's own dispatched
+  agents may write under the lock; every other caller's writing command is stopped (including the
+  top-level session); reading commands pass. The exemption comes only from harness-supplied
+  identity (GE-129a), never from command text, environment or prompt; if identity cannot be
+  established the command is stopped.
+  DEPENDENCY RISK: GE-129a's live probe records whether an agent dispatched by a workflow script's
+  agent() call carries usable identity (its case 3). If it does not, this exemption cannot be
+  met as written and returns to the user.
+
+  ATTRIBUTION POLICY DOES NOT APPLY HERE. The 2026-09-17 "stop only on positive attribution"
+  policy (GE-130c-2, GE-130c-2-i, GE-130c-2-ii) covers the documentation guard and the guide-read
+  guard only. This guard stops any non-exempt writing command under the lock regardless of whose
+  change it was; its lock semantics are unaffected by the GE-130c records.
+
+  SUPERSEDED 2026-09-17: the earlier OPEN paragraph (name any refused /build-feature step, no
+  exemption invented) is replaced by the decision above; old criteria are quoted in amended_by.
+
+  The existing INLINE_WORK_GUARD_MODE=warn is a per-call override (GE-130b), distinct from the
+  project-wide warn-only rollout stage (GE-130d-3).
+
+  declares_side_effect: false.

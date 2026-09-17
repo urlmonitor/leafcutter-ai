@@ -1,0 +1,76 @@
+id: GE-130b-1
+title: An override lets a change through on the shell path exactly when it lets the same change through
+  with the editing tools, read from the one bypass declaration
+component: guardrail-engine
+components:
+- commit_guardian
+- precommit_hooks
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the single bypass-variable declaration BO-3200f-2-iii delivers, naming for each of the
+    documentation guard, the guide-read guard and the task-lock guard its override variable and
+    the value that bypasses it,
+  And a caller for whom each guard honours its override on the editing path today,
+  When that caller makes the same protected change once with the editing tools and once with a
+    shell command, first with the override set in the environment the call runs in and then
+    with it absent,
+  Then for each of the three guards both changes are let through with the override set, and both
+    are refused without it,
+  And the command path recognises overrides from the same declaration the editing path reads, so
+    no override variable or bypass value is honoured on one path and not on the other,
+  And an override set only in the command's own text, for that command alone, is honoured for
+    that caller exactly as the same override set in the environment is.
+depends_on:
+- GE-130b
+- BO-3200f-2-iii
+doc_links:
+- path: docs/acceptance-criteria/guardrail-engine/GE-130-protection-however-changed/GE-130b.yaml
+  relationship: parent
+  status: exists
+- path: docs/acceptance-criteria/build-orchestration/BO-3200-second-hand-answers/BO-3200f-2-iii.yaml
+  relationship: context
+  status: exists
+  relevance: Owns the single bypass-variable declaration and the executor refusal. Reused here; no second
+    declaration.
+- path: docs/reference/claude-code-hooks.md
+  relationship: related
+  status: exists
+- path: templates/settings.json
+  relationship: related
+  status: exists
+delivers_to: null
+expects_from: null
+assigned_agent: python-coder
+declares_side_effect: false
+origin_agent: business-analyst
+created: '2026-09-17'
+amended_by:
+- reason: user-decision-accepted-default
+  by: business-analyst
+  at: 2026-09-17
+  note: |
+    Records the user's (BrainCandy) 2026-09-17 acceptance of the typed-override default. CHANGED:
+    notes only ("OPEN (in anomalies -- needs the user) ... Default taken" -> "DECIDED 2026-09-17").
+    UNCHANGED: title, criteria, depends_on, declares_side_effect (false, re-derived), readiness
+    draft.
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  REUSE: BO-3200f-2-iii's it_requirements own "one declared set of bypass variables, read by every
+  enforcement point"; this record adds the path-parity behaviour only and creates no second list.
+
+  DECIDED 2026-09-17 (user): the last clause. On the editing path an override can only come from
+  the environment; on the shell path a caller can also type it in front of the command. For a
+  caller the override is honoured for, typing it is equivalent to setting it (the caller controls
+  both). Not chosen: refusing text-set overrides for everyone, which is closer to GE-129's "no
+  typed word opens it" and would narrow today's escape hatches. A caller for whom the override is
+  refused (GE-130b-2) gains nothing by typing it.
+
+  declares_side_effect: false.

@@ -1,0 +1,58 @@
+id: GE-130b-3
+title: The escape-hatch reference states, for every override, that it applies on both paths and for whom
+  it is refused, matching the declaration
+component: guardrail-engine
+components:
+- commit_guardian
+- precommit_hooks
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the escape-hatch table in the hooks reference and the single bypass-variable declaration
+    BO-3200f-2-iii delivers,
+  When a reader looks up the override for the documentation guard, the guide-read guard or the
+    task-lock guard,
+  Then the table states that the override has the same effect on a change made with the editing
+    tools and on one made by a shell command,
+  And it states for whom the override is refused and what happens when the caller cannot be
+    identified, and that a call naming no agent is the top-level session,
+  And it states whether an override typed in front of a single command is honoured,
+  And every override variable and bypass value in the table is one the declaration holds, and
+    every one the declaration holds for these guards is in the table, established by reading
+    both.
+depends_on:
+- GE-130b
+- GE-130b-1
+- GE-130b-2
+doc_links:
+- path: docs/acceptance-criteria/guardrail-engine/GE-130-protection-however-changed/GE-130b.yaml
+  relationship: parent
+  status: exists
+- path: docs/reference/claude-code-hooks.md
+  relationship: related
+  status: exists
+- path: docs/acceptance-criteria/build-orchestration/BO-3200-second-hand-answers/BO-3200f-2-iii.yaml
+  relationship: context
+  status: exists
+  relevance: Owns the single bypass-variable declaration and the executor refusal. Reused here; no second
+    declaration.
+delivers_to: null
+expects_from: null
+assigned_agent: documentation-expert
+declares_side_effect: false
+origin_agent: business-analyst
+created: '2026-09-17'
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Documentation AC for GE-130b's reference-doc trigger. The last clause is mechanical agreement,
+  not prose; BO-3200f-2-iii already records the table is stale against the declaration.
+
+  declares_side_effect: false.

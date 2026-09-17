@@ -1,0 +1,50 @@
+id: GE-130d-1-i
+title: Cache files a reading command or a test run leaves behind never stop the run, while a source file
+  changed in the same folder does
+component: guardrail-engine
+components:
+- commit_guardian
+- precommit_hooks
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a folder a protection watches,
+  When the test suite is run and, as a by-product, compiled-code caches and test-runner caches are
+    created or updated inside that folder,
+  Then the run is not stopped and no cache file is named,
+  And given, in the same run, a command changes a source file in that same folder in a way the
+    protection's rule refuses,
+  When that command finishes,
+  Then the run is stopped naming that source file, and no cache file is named beside it.
+depends_on:
+- GE-130d-1
+doc_links:
+- path: docs/acceptance-criteria/guardrail-engine/GE-130-protection-however-changed/GE-130d.yaml
+  relationship: parent
+  status: exists
+- path: docs/reference/claude-code-hooks.md
+  relationship: related
+  status: exists
+delivers_to: null
+expects_from: null
+assigned_agent: python-coder
+declares_side_effect: false
+origin_agent: business-analyst
+created: '2026-09-17'
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Edge case the user's read-only list implies: pytest is read-only for the user's purposes but
+  writes __pycache__ and .pytest_cache on disk. An after-the-fact comparison that counts every
+  changed path stops every test run. Named mutation that turns ONLY this record red: count every
+  changed path under a watched folder. GE-130d-1's own pairing uses printing/listing commands too,
+  so the by-product rule is isolated here.
+
+  declares_side_effect: false.

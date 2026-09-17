@@ -1,0 +1,74 @@
+id: GE-130a-3
+title: A guide read with a shell command counts as read, and merely naming or listing the guide does not
+component: guardrail-engine
+components:
+- commit_guardian
+- precommit_hooks
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a guide inside a folder the guide-read guard gates, not yet read in this session,
+  When a command issued from the session's shell prints the guide's whole content,
+  Then the guide counts as read for the guard exactly as a read of it with the reading tool does,
+    so a following edit or command writing in that folder is not refused for an unread guide,
+  And a command that prints part of the guide counts as read on the same terms as a
+    reading-tool read of the same part,
+  And a command that only names the guide -- listing the folder, finding files by name, or
+    testing that the guide is present -- does not count as reading it, and a following write in
+    that folder is refused, in the same run,
+  And when the guide's content changes after a read by command, it counts as unread on the same
+    terms as after a reading-tool read.
+depends_on:
+- GE-130a
+- GE-130f-2
+doc_links:
+- path: docs/acceptance-criteria/guardrail-engine/GE-130-protection-however-changed/GE-130a.yaml
+  relationship: parent
+  status: exists
+- path: templates/hooks/readme_read_guard.py
+  relationship: related
+  status: exists
+- path: templates/hooks/readme_marker_recorder.py
+  relationship: related
+  status: exists
+- path: docs/reference/claude-code-hooks.md
+  relationship: related
+  status: exists
+delivers_to:
+  agent: python-coder
+  contract: Shell-command guide reads recorded in the same per-session read record the reading tool feeds,
+    consumed by GE-130a-2.
+expects_from: null
+assigned_agent: python-coder
+declares_side_effect: false
+origin_agent: business-analyst
+created: '2026-09-17'
+amended_by:
+- reason: user-decision-accepted-default
+  by: business-analyst
+  at: 2026-09-17
+  note: |
+    Records the user's (BrainCandy) 2026-09-17 acceptance of the grep-as-partial-read default.
+    CHANGED: notes only ("OPEN (in anomalies) ... Default:" -> "DECIDED 2026-09-17"). UNCHANGED:
+    title, criteria, depends_on, declares_side_effect (false, re-derived), readiness draft.
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  GE-130a criteria: "anything a protection accepts as done first (such as having read the
+  folder's guide) counts however it was done." Today only the reading tool feeds the session's
+  read record (readme_marker_recorder, PostToolUse on Read).
+
+  Concrete inputs: cat README.md; Get-Content README.md; head -n 40 README.md (partial);
+  ls <folder>; find . -name README.md; test -f README.md (naming only).
+
+  DECIDED 2026-09-17 (user): a content search that prints a few matching lines of the guide
+  (grep pattern README.md) is a partial read, on the same terms as a reading-tool read of those
+  lines.
+
+  declares_side_effect: false.

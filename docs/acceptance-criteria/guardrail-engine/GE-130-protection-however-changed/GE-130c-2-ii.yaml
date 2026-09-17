@@ -1,0 +1,83 @@
+id: GE-130c-2-ii
+title: Every change the check could not attribute is kept as a record and listed in the report the drive
+  ends with, so a long unattended run does not lose it
+component: guardrail-engine
+components:
+- commit_guardian
+- precommit_hooks
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given an unattended drive in which the after-the-fact check, on three separate commands, sees a
+    protected file changed that it cannot attribute (GE-130c-2-i), each time a different file,
+  And the drive continues past each of those statements,
+  When each statement is made,
+  Then a record is persisted for that finding, naming the file, the protection, the command
+    whose check found it, the time, and why attribution failed,
+  And the record can still be read after the session that made it has ended,
+  And when the drive finishes, the report it ends with lists every such finding from that drive
+    with its file, protection and reason, and states how many there were,
+  And given the same drive with one more unattributed finding and nothing else changed, the stated
+    count is one greater and the added file is listed,
+  And a drive with no unattributed finding states in its report that it had none, rather than
+    leaving the listing out,
+  And a change positively attributed to a caller and stopped (GE-130c-2), and a check that could
+    not examine the files (GE-130c-1-i), are not listed among the unattributed findings.
+depends_on:
+- GE-130c-2
+- GE-130c-2-i
+doc_links:
+- path: docs/acceptance-criteria/guardrail-engine/GE-130-protection-however-changed/GE-130c.yaml
+  relationship: parent
+  status: exists
+- path: docs/acceptance-criteria/guardrail-engine/GE-130-protection-however-changed/GE-130c-2-i.yaml
+  relationship: context
+  status: exists
+  relevance: Defines the unattributed finding this record persists and reports.
+- path: docs/acceptance-criteria/build-orchestration/BO-300-completion-output/BO-300.yaml
+  relationship: context
+  status: exists
+  relevance: Owns what a drive reports when it finishes; the unattributed-findings listing is one more
+    entry in that report.
+- path: docs/reference/claude-code-hooks.md
+  relationship: related
+  status: exists
+delivers_to:
+  agent: python-coder
+  contract: Persisted unattributed-finding records, one per finding, readable after the session ends;
+    consumed by the drive's final report and by GE-130d-3's unattributed-share measurement.
+expects_from:
+  ac_id: GE-130c-2-i
+  contract: The unattributed finding (file, protection, command, reason) the after-the-fact check states.
+assigned_agent: python-coder
+declares_side_effect: true
+origin_agent: business-analyst
+created: '2026-09-17'
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  DECIDED 2026-09-17 (user): every unattributed finding is persisted so it is not lost in a long
+  unattended run, and the end-of-drive report lists them. Follows from GE-130c-2-i no longer
+  stopping the run -- without a record, a finding made hours into a drive scrolls away unseen.
+
+  The varying-count and none-found clauses are this component's standing anti-vacuity shape: a
+  report with a fixed count, or one that silently omits the listing, passes every other clause.
+  Named mutation that turns ONLY this record red: state the finding on session output without
+  writing the record (GE-130c-2-i stays green).
+
+  Where the records live and their format are the IT PO's. Precedents for per-worktree records:
+  inline_work_guard.jsonl, readme_markers/. The same records are a natural data source for
+  GE-130d-3's unattributed-share threshold.
+
+  SCOPE: documentation guard and guide-read guard only. The task-lock guard (inline_work_guard)
+  makes no unattributed finding -- under the build lock it stops any writing command regardless
+  of attribution (GE-130a-4); its lock semantics are unaffected.
+
+  declares_side_effect: true -- "a record is persisted" in the Then clause.

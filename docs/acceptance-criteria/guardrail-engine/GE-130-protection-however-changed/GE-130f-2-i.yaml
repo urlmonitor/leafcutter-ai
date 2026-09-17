@@ -1,0 +1,53 @@
+id: GE-130f-2-i
+title: A whole-file write into a gated folder is checked -- the small-edit allowance never applies to
+  a change that carries no before-and-after text
+component: guardrail-engine
+components:
+- commit_guardian
+- precommit_hooks
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a folder the guide-read guard gates, whose nearest guide has not been read in this session,
+  When a new file inside it is created with the whole-file writing tool, and separately an
+    existing file inside it is replaced whole with that tool,
+  Then neither change is carried out, and each refusal names the file and the guide,
+  And the allowance that lets a small edit through without the guide being read applies only to
+    a change whose size the guard can measure from the request, so a whole-file write is never
+    let through as a small edit because it carries no before-and-after text,
+  And given the guide is then read in the same session with the reading tool,
+  When the same two writes are made again,
+  Then both are carried out with no refusal.
+depends_on:
+- GE-130f-2
+doc_links:
+- path: docs/acceptance-criteria/guardrail-engine/GE-130-protection-however-changed/GE-130f.yaml
+  relationship: parent
+  status: exists
+- path: templates/hooks/readme_read_guard.py
+  relationship: related
+  status: exists
+- path: docs/reference/claude-code-hooks.md
+  relationship: related
+  status: exists
+delivers_to: null
+expects_from: null
+assigned_agent: python-coder
+declares_side_effect: false
+origin_agent: business-analyst
+created: '2026-09-17'
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  FINDING (GE-130f notes): a Write carries no old_string/new_string, so the trivial-edit skip is
+  always true and a Write is never checked. Named mutation that turns ONLY this record red:
+  restore "no before/after text means trivial". GE-130f-2 uses the Edit tool and stays green.
+
+  declares_side_effect: false.

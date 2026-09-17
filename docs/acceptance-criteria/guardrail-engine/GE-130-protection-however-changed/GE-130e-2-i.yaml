@@ -1,0 +1,55 @@
+id: GE-130e-2-i
+title: A hook that watches file changes cannot leave the rule by not declaring itself a protection, or
+  by declaring itself out without a ground about what it does
+component: guardrail-engine
+components:
+- commit_guardian
+- precommit_hooks
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a hook registered for the editing tools or for shell commands,
+  When the coverage check runs,
+  Then a hook that carries no declaration either way is named as undeclared, and the check fails,
+  And a hook declaring itself not a protection against changing files is accepted only when the
+    declaration states a ground about what the hook does -- it only records, or it only reminds
+    and never refuses,
+  And a declaration stating no ground, or a ground about when the hook was added or that it
+    predates the rule, is named and the check fails,
+  And a hook accepted under a ground is reported with that ground, so the exemption is visible
+    rather than silent.
+depends_on:
+- GE-130e-2
+doc_links:
+- path: docs/acceptance-criteria/guardrail-engine/GE-130-protection-however-changed/GE-130e.yaml
+  relationship: parent
+  status: exists
+- path: templates/settings.json
+  relationship: related
+  status: exists
+- path: docs/acceptance-criteria/guardrail-engine/GE-120-green-means-checked/GE-120f-4-i.yaml
+  relationship: context
+  status: exists
+  relevance: 'Same rule for commit-time checks: a ground must be about what the check does, never when
+    it was registered.'
+delivers_to: null
+expects_from: null
+assigned_agent: python-coder
+declares_side_effect: false
+origin_agent: business-analyst
+created: '2026-09-17'
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Named mutation that turns ONLY this record red: treat a missing declaration as "not a
+  protection". GE-130e-2's fixtures always declare, so it stays green. Ground wording mirrors
+  GE-120f-4-i and is cited rather than restated for the commit-time family.
+
+  declares_side_effect: false.

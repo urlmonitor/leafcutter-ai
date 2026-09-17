@@ -1,0 +1,87 @@
+id: GE-130f-1
+title: The documentation guard is seen to stop an edit it exists to stop, through the way a session invokes
+  it, in whichever project it is installed in
+component: guardrail-engine
+components:
+- commit_guardian
+- precommit_hooks
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the documentation guard's declared known-bad input, in the declaration form GE-120f-1
+    defines: an edit made with the editing tools to a code file in a folder of the project the
+    guard is installed in, where an architecture document of a level the guard blocks for
+    describes that folder, with no documentation override in effect,
+  And its declared acceptable input: the same kind of edit to a code file in a folder that no
+    architecture document describes,
+  When both inputs are put through the entry point a Claude Code session invokes the guard by,
+    from a separate working copy in the way GE-120c-1's harness runs checks,
+  Then the known-bad edit is not carried out, and the refusal names the file and the
+    architecture document that describes its folder,
+  And the acceptable edit is carried out with no refusal, in the same run,
+  And the guard's liveness record, as GE-120f-1 defines it, says the rejection was observed,
+  And given the guard is installed in a second project whose code folders and architecture
+    documents are laid out differently from this repository's, with nothing else changed,
+  When the equivalent known-bad edit in that project is put through the same entry point,
+  Then that edit is not carried out either, so the folders the guard watches come from the
+    project it is installed in and not from a list naming one project's folders.
+depends_on:
+- GE-130f
+doc_links:
+- path: docs/acceptance-criteria/guardrail-engine/GE-130-protection-however-changed/GE-130f.yaml
+  relationship: parent
+  status: exists
+- path: templates/hooks/documentation_guard.py
+  relationship: related
+  status: exists
+- path: docs/acceptance-criteria/guardrail-engine/GE-120-green-means-checked/GE-120f-1.yaml
+  relationship: context
+  status: exists
+  relevance: Owns the known-bad-input declaration, the entry-point rule and the four-value liveness record
+    (reusing config/verification_flow.schema.json). Cited, never restated.
+- path: docs/acceptance-criteria/guardrail-engine/GE-120-green-means-checked/GE-120c-1.yaml
+  relationship: context
+  status: exists
+  relevance: The out-of-process harness over a real separate working copy. Extend it; do not grow a second
+    one.
+- path: config/verification_flow.schema.json
+  relationship: describes
+  status: exists
+  relevance: The vocabulary for the declared known-bad input and its observed state. Reuse, never mint
+    a second.
+- path: docs/reference/claude-code-hooks.md
+  relationship: related
+  status: exists
+delivers_to: null
+expects_from: null
+assigned_agent: python-coder
+declares_side_effect: false
+origin_agent: business-analyst
+created: '2026-09-17'
+amended_by: []
+superseded_by: null
+covered_by:
+- GE-130f-1-i
+implemented_by: []
+notes: |
+  FINDINGS THIS RECORD CLOSES (GE-130f notes, observed 2026-09-17): the guard signals its block
+  in a form a PreToolUse call does not treat as a block, and its folder mapping names another
+  project's folders, so nothing in this repository matches. Both must be fixed for the first
+  Then clause to hold; the second project clause is the discriminator for the mapping fix (a
+  mapping rewritten to this repository's folder names passes the first scenario and fails the
+  second -- this is a portable package).
+
+  REUSE, DO NOT RESTATE: the declaration shape, the entry-point rule and the four-value record
+  are GE-120f-1's; the separate-working-copy harness is GE-120c-1's. This record only names the
+  two inputs for this guard and requires the observed refusal.
+
+  PAIRING: the acceptable input is in the same run on purpose -- a guard repaired into refusing
+  every code edit satisfies the first Then clause alone (GE-120f-1-ii's shape).
+
+  declares_side_effect: false -- the Then clauses assert that an edit is or is not carried out
+  and what a refusal and a record say; no durable-effect phrase from the derivation list.

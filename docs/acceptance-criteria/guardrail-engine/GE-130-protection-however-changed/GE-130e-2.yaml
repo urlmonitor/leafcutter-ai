@@ -1,0 +1,61 @@
+id: GE-130e-2
+title: A session-time protection against changing files that watches only the editing tools or only shell
+  commands is refused, including one added later
+component: guardrail-engine
+components:
+- commit_guardian
+- precommit_hooks
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the census GE-130e-1 produces,
+  When the coverage check runs,
+  Then a hook declaring itself a protection against changing files that is registered for the
+    editing tools but not for shell commands, or for shell commands but not for the editing tools,
+    is named with the way of changing a file it does not watch, and the check fails,
+  And a hook so declared that is registered for both is not named, established in the same run,
+  And a commit-time check enforcing the same rule does not count as watching either way,
+  And given a new hook declaring itself a protection against changing files is added, registered
+    only for the editing tools, and nothing else changes,
+  When the coverage check runs again,
+  Then that hook is named without any change having been made to the coverage check.
+depends_on:
+- GE-130e
+- GE-130e-1
+doc_links:
+- path: docs/acceptance-criteria/guardrail-engine/GE-130-protection-however-changed/GE-130e.yaml
+  relationship: parent
+  status: exists
+- path: templates/settings.json
+  relationship: related
+  status: exists
+- path: docs/reference/claude-code-hooks.md
+  relationship: related
+  status: exists
+delivers_to: null
+expects_from:
+  ac_id: GE-130e-1
+  contract: Census of registered session hooks with event, tools and file-protection declaration.
+assigned_agent: python-coder
+declares_side_effect: false
+origin_agent: business-analyst
+created: '2026-09-17'
+amended_by: []
+superseded_by: null
+covered_by:
+- GE-130e-2-i
+implemented_by: []
+notes: |
+  USER DECISION Q4 (2026-09-17): commit-time checks are not counted as covering these rules.
+
+  DAY-ONE BLAST RADIUS (for the IT PO): ticket_frontmatter_guard is a PostToolUse Edit|Write
+  validator of ticket files; if it declares itself a file protection this check names it until it
+  also watches shell writes to tickets. That is the correct outcome, not a reason to narrow the
+  rule; declaring it out requires a ground under GE-130e-2-i.
+
+  declares_side_effect: false.

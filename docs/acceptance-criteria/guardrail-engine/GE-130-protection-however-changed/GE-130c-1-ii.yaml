@@ -1,0 +1,48 @@
+id: GE-130c-1-ii
+title: A stop after the fact says the change is still there -- it is never read as an undo
+component: guardrail-engine
+components:
+- commit_guardian
+- precommit_hooks
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a command the before-check could not judge has changed a watched file that its
+    protection's rule refuses,
+  When the after-the-fact check stops the run,
+  Then the stop states that each named file remains changed in the working copy and has not been
+    put back,
+  And it states what the caller must do before continuing: put the file back, or make the change
+    in a way the protection's rule allows,
+  And the named files' content after the stop is identical to their content when the command
+    finished.
+depends_on:
+- GE-130c-1
+doc_links:
+- path: docs/acceptance-criteria/guardrail-engine/GE-130-protection-however-changed/GE-130c.yaml
+  relationship: parent
+  status: exists
+- path: docs/reference/claude-code-hooks.md
+  relationship: related
+  status: exists
+delivers_to: null
+expects_from: null
+assigned_agent: python-coder
+declares_side_effect: false
+origin_agent: business-analyst
+created: '2026-09-17'
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  GE-130c notes: "It cannot undo a change; stopping the run is the enforcement." The last clause
+  also forbids a silent auto-revert, which could destroy another agent's work in a shared working
+  copy (GE-130c-2).
+
+  declares_side_effect: false.

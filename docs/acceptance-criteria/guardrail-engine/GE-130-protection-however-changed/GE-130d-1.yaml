@@ -1,0 +1,60 @@
+id: GE-130d-1
+title: Commands that only look at files are never stopped by a file protection, even when they look at
+  protected files, while a writing command on the same files is
+component: guardrail-engine
+components:
+- commit_guardian
+- precommit_hooks
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the documentation guard, the guide-read guard and the task-lock guard each in its blocking
+    stage on the command path, the build lock in place, and a guide in a gated folder not yet read,
+  When commands that only look at files are issued: git status, git diff, git log; printing a
+    file, including a file inside the gated folder and a code file an architecture document
+    describes; listing a folder; searching file contents in both folders; running the test
+    suite,
+  Then every one is carried out with no refusal beforehand from any of the three protections,
+  And none of them is followed by a stop from the after-the-fact check,
+  And in the same run a command that clearly writes to one of those same files is refused, so the
+    absence of refusals is not the result of protections that refuse nothing.
+depends_on:
+- GE-130d
+doc_links:
+- path: docs/acceptance-criteria/guardrail-engine/GE-130-protection-however-changed/GE-130d.yaml
+  relationship: parent
+  status: exists
+- path: templates/hooks/documentation_guard.py
+  relationship: related
+  status: exists
+- path: templates/hooks/readme_read_guard.py
+  relationship: related
+  status: exists
+- path: templates/hooks/inline_work_guard.py
+  relationship: related
+  status: exists
+- path: docs/reference/claude-code-hooks.md
+  relationship: related
+  status: exists
+delivers_to: null
+expects_from: null
+assigned_agent: python-coder
+declares_side_effect: false
+origin_agent: business-analyst
+created: '2026-09-17'
+amended_by: []
+superseded_by: null
+covered_by:
+- GE-130d-1-i
+implemented_by: []
+notes: |
+  USER DECISION Q2 (2026-09-17): zero blocks on read-only commands, by design. The named commands
+  are the user's list (git status/diff/log, cat, ls, grep, pytest). Test runs create cache files
+  as a by-product -- GE-130d-1-i owns that edge so this record's pairing is not weakened to pass.
+
+  declares_side_effect: false.

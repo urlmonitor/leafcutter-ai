@@ -15,9 +15,12 @@ criteria: |
   No silent pass for a change the protection could not see.
 
   Where a command's effect on protected files cannot be told in advance, the
-  protection finds out afterwards what actually changed, names any protected file
-  that changed, and stops the run, so a quiet result is never mistaken for a
-  checked one.
+  protection finds out afterwards what actually changed and names any protected
+  file that changed. If the change was yours, the run stops. If it cannot tell
+  whose change it was, it names the file, says it could not tell and why, and
+  keeps a record, without silently passing it and without blaming anyone, so a
+  quiet result is never mistaken for a checked one. If it could not look at the
+  files at all, the run stops.
 depends_on:
   - GE-130
 doc_links:
@@ -35,9 +38,29 @@ documentation_triggers:
   - reference-doc
 origin_agent: BrainCandy
 created: 2026-09-17
-amended_by: []
+amended_by:
+  - reason: stop-only-on-positive-attribution-user-decision-2026-09-17
+    by: product-owner
+    at: 2026-09-17
+    note: >-
+      Narrowed the "stops the run" promise to match the user's attribution policy.
+      Old criteria text (verbatim): "Where a command's effect on protected files
+      cannot be told in advance, the protection finds out afterwards what actually
+      changed, names any protected file that changed, and stops the run, so a quiet
+      result is never mistaken for a checked one."
+      USER DECISION (2026-09-17), after-the-fact check attribution policy: stop
+      only on a change positively attributed to this caller; when the check
+      examined the files but cannot tell whose change it was, it names the file,
+      says it could not tell and why, records the finding, and lets the run
+      continue; when it could not examine the files at all, it still stops.
+      inline_work_guard is unaffected (under the build lock it still stops any
+      writing command except the build's own agents). Children: GE-130c-2-i
+      reworded, GE-130c-2-ii added for the persisted record (BA).
 superseded_by: null
-covered_by: []
+covered_by:
+  - GE-130c-1
+  - GE-130c-2
+  - GE-130c-3
 implemented_by: []
 change_target: code
 risk_surface: contract_boundary
@@ -47,3 +70,11 @@ notes: |
   changed protected files by name and stops the run. It cannot undo a change;
   stopping the run is the enforcement. Attribution to the calling agent is the
   open design risk (GE-120e).
+  [SUPERSEDED 2026-09-17 in part: "and stops the run" no longer holds
+  unconditionally -- see the attribution policy decision below.]
+
+  USER DECISION ATTRIBUTION POLICY (2026-09-17): the after-the-fact check stops
+  the run only for a change positively attributed to this caller. A changed
+  protected file it examined but cannot attribute is named, with the reason it
+  could not tell, recorded, and the run continues. If the check could not examine
+  the files at all, it stops the run. inline_work_guard is unaffected.

@@ -1,0 +1,51 @@
+id: GE-130e-3
+title: The procedure for adding a session-time hook says a file protection must watch every way a file
+  is changed, and matches what the check refuses
+component: guardrail-engine
+components:
+- commit_guardian
+- precommit_hooks
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the documentation an author of a new session-time hook is directed to read,
+  When that author reads it,
+  Then it states that a hook protecting against changing files is registered for both the editing
+    tools and shell commands, and that a commit-time check does not count as covering it,
+  And it states that every hook registered for either declares whether it is such a protection,
+    and the grounds on which it may declare itself not one,
+  And it states that a command whose effect cannot be told beforehand must reach the
+    after-the-fact check,
+  And an author who follows the written procedure exactly and registers a file protection for
+    the editing tools only is refused by the coverage check, so the written and enforced
+    procedures agree.
+depends_on:
+- GE-130e
+- GE-130e-2
+doc_links:
+- path: docs/acceptance-criteria/guardrail-engine/GE-130-protection-however-changed/GE-130e.yaml
+  relationship: parent
+  status: exists
+- path: docs/reference/claude-code-hooks.md
+  relationship: related
+  status: exists
+delivers_to: null
+expects_from: null
+assigned_agent: documentation-expert
+declares_side_effect: false
+origin_agent: business-analyst
+created: '2026-09-17'
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Documentation AC for GE-130e's reference-doc trigger. Shape copied from GE-120f-5 (written and
+  enforced procedure agree at the point where they could disagree).
+
+  declares_side_effect: false.

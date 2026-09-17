@@ -1,0 +1,61 @@
+id: GE-130c-1-i
+title: When the after-the-fact check cannot tell what a command changed, it says so and stops the run
+  instead of reporting nothing changed
+component: guardrail-engine
+components:
+- commit_guardian
+- precommit_hooks
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a command the before-check could not judge,
+  And the state of the watched files immediately before or after that command cannot be
+    established -- it could not be read, or the comparison did not complete,
+  When the command finishes,
+  Then the protection states that it could not tell which watched files the command changed,
+    names itself and the command, and stops the run,
+  And it does not report the command as having changed no watched file,
+  And in the same run a command for which the comparison did complete and found no watched file
+    changed finishes with no stop, so "could not tell" and "nothing changed" reach different
+    outcomes.
+depends_on:
+- GE-130c-1
+doc_links:
+- path: docs/acceptance-criteria/guardrail-engine/GE-130-protection-however-changed/GE-130c.yaml
+  relationship: parent
+  status: exists
+- path: docs/acceptance-criteria/guardrail-engine/GE-120-green-means-checked/GE-120a.yaml
+  relationship: context
+  status: exists
+delivers_to: null
+expects_from: null
+assigned_agent: python-coder
+declares_side_effect: false
+origin_agent: business-analyst
+created: '2026-09-17'
+amended_by:
+- reason: user-decision-attribution-policy
+  by: business-analyst
+  at: 2026-09-17
+  note: |
+    Applies the user's (BrainCandy) 2026-09-17 attribution decision. CHANGED: notes only (the
+    could-not-look / could-not-attribute line). UNCHANGED: title, criteria, depends_on,
+    declares_side_effect (false, re-derived), readiness draft.
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  DECIDED 2026-09-17 (user): could not look -> stops; looked but could not attribute -> continues
+  (GE-130c-2-i).
+
+  GE-130 L0: "when a protection cannot tell what a change touched it says so instead of staying
+  quiet." Named mutation that turns ONLY this record red: treat an empty or failed comparison as
+  "no watched file changed" (the component's fail-open convention applied here). GE-130c-1 stays
+  green because its fixtures always compare successfully.
+
+  declares_side_effect: false.

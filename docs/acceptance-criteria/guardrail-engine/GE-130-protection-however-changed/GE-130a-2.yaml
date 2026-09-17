@@ -1,0 +1,81 @@
+id: GE-130a-2
+title: A shell command that clearly writes into a gated folder whose guide is unread is stopped the way
+  the same edit is stopped
+component: guardrail-engine
+components:
+- commit_guardian
+- precommit_hooks
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the guide-read guard's command coverage has been accepted by GE-130f-3 and is in its
+    blocking stage (GE-130d-3),
+  And a folder the guard gates whose nearest guide has not been read in this session,
+  And a command issued from the session's shell that clearly writes a file inside that folder:
+    redirecting output into a file there, editing a file there in place, copying or moving a
+    file into it, or creating a new file in it,
+  And no guide-check override in effect,
+  When the command is issued,
+  Then it is not carried out, and the refusal names the file and the guide that must be read
+    first, in the same wording the editing-path refusal uses,
+  And after the guide has been read -- with the reading tool or with a command, as GE-130a-3
+    specifies -- the same command is carried out with no refusal, in the same run,
+  And the small-edit allowance never lets a command through, because a command carries no
+    before-and-after text the guard can measure, which is the rule GE-130f-2-i sets for
+    whole-file writes,
+  And a command whose effect on the folder cannot be told before it runs is not refused
+    beforehand and is left to the after-the-fact check GE-130c-1 specifies.
+depends_on:
+- GE-130a
+- GE-130f-2
+- GE-130f-3
+- GE-130a-3
+doc_links:
+- path: docs/acceptance-criteria/guardrail-engine/GE-130-protection-however-changed/GE-130a.yaml
+  relationship: parent
+  status: exists
+- path: templates/hooks/readme_read_guard.py
+  relationship: related
+  status: exists
+- path: templates/settings.json
+  relationship: related
+  status: exists
+- path: docs/reference/claude-code-hooks.md
+  relationship: related
+  status: exists
+delivers_to: null
+expects_from:
+  ac_id: GE-130a-3
+  contract: A guide read with a shell command counts as read in the same session record the reading tool
+    feeds.
+assigned_agent: python-coder
+declares_side_effect: false
+origin_agent: business-analyst
+created: '2026-09-17'
+amended_by:
+- reason: user-decision-accepted-default
+  by: business-analyst
+  at: 2026-09-17
+  note: |
+    Records the user's (BrainCandy) 2026-09-17 acceptance of the one-word sed -i default. CHANGED:
+    notes only ("ASSUMPTION (flagged to the user)" -> "DECIDED 2026-09-17"). UNCHANGED: title,
+    criteria, depends_on, declares_side_effect (false, re-derived), readiness draft.
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  DECIDED 2026-09-17 (user): a small in-place command edit (sed -i on one word) in a gated folder
+  is refused while the guide is unread, even though the same one-word change through the Edit tool
+  would pass the small-edit allowance. Follows GE-130f-2-i's Write rule (no measurable
+  before/after text => not small). Size parity on the command path would need a measured
+  before/after, which would push it into GE-130c's after-the-fact check; not chosen.
+
+  READ SIDE FIRST: depends on GE-130a-3. Widening the write side without the read side creates
+  false blocks for any agent that reads guides with cat (GE-130a notes).
+
+  declares_side_effect: false.

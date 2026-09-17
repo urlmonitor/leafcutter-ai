@@ -1,0 +1,62 @@
+id: GE-130a-5
+title: The hooks reference shows each of the three guards covering editing tools and shell commands, matching
+  the shipped settings
+component: guardrail-engine
+components:
+- commit_guardian
+- precommit_hooks
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the hooks reference catalogue and the shipped hook settings,
+  When a reader looks up the documentation guard, the guide-read guard or the task-lock guard,
+  Then each catalogue entry's matcher shows the editing tools and shell commands, identical to
+    the matcher that guard is registered with in the shipped settings, established by reading
+    both,
+  And each entry states which command forms it refuses before they run, and that a command whose
+    effect cannot be told beforehand is examined afterwards and stops the run rather than being
+    refused,
+  And the guide-read guard's entry states that a guide printed by a shell command counts as read
+    and that listing or naming it does not,
+  And the task-lock guard's entry states that reading commands and the build workflow's own
+    steps are not refused under the lock,
+  And each entry states which rollout stage, warn-only or blocking, the guard is in on the
+    command path.
+depends_on:
+- GE-130a
+- GE-130a-1
+- GE-130a-2
+- GE-130a-3
+- GE-130a-4
+doc_links:
+- path: docs/acceptance-criteria/guardrail-engine/GE-130-protection-however-changed/GE-130a.yaml
+  relationship: parent
+  status: exists
+- path: docs/reference/claude-code-hooks.md
+  relationship: related
+  status: exists
+- path: templates/settings.json
+  relationship: related
+  status: exists
+delivers_to: null
+expects_from: null
+assigned_agent: documentation-expert
+declares_side_effect: false
+origin_agent: business-analyst
+created: '2026-09-17'
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Documentation AC for GE-130a's reference-doc trigger ("the hooks reference catalogue matcher
+  column must reflect the widening"). The first clause is a mechanical agreement with the shipped
+  settings, not a prose check -- a catalogue that is already stale (it omits
+  enforce_commit_delegation, per BO-3200f-2-iii notes) is the reason.
+
+  declares_side_effect: false.

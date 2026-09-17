@@ -1,0 +1,58 @@
+id: GE-130c-3
+title: The hooks reference explains what is refused beforehand, what is caught afterwards, and what a
+  stop afterwards does not do
+component: guardrail-engine
+components:
+- commit_guardian
+- precommit_hooks
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the hooks reference,
+  When a reader looks up how a file protection treats a shell command,
+  Then it states that a command clearly writing a protected file is refused before it runs, and
+    that a command whose effect cannot be told beforehand runs and is examined afterwards,
+  And it states that a stop afterwards names the changed protected files and leaves them changed,
+    and what the caller must do to continue,
+  And it states that a caller is stopped only for its own command's changes, and what the reader
+    sees when the protection cannot tell whose change it was,
+  And it states that the protection says so and stops when it cannot tell what a command
+    changed.
+depends_on:
+- GE-130c
+- GE-130c-1
+- GE-130c-2
+doc_links:
+- path: docs/acceptance-criteria/guardrail-engine/GE-130-protection-however-changed/GE-130c.yaml
+  relationship: parent
+  status: exists
+- path: docs/reference/claude-code-hooks.md
+  relationship: related
+  status: exists
+delivers_to: null
+expects_from: null
+assigned_agent: documentation-expert
+declares_side_effect: false
+origin_agent: business-analyst
+created: '2026-09-17'
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Documentation AC for GE-130c's reference-doc trigger.
+
+  2026-09-17 (business-analyst, user decision) -- "a caller is stopped only for its own command's
+  changes" and "what the reader sees when the protection cannot tell whose change it was" describe
+  the documentation guard and the guide-read guard: an unattributed change is named, explained and
+  does not stop the run (GE-130c-2-i), and is listed at the end of the drive (GE-130c-2-ii). The
+  task-lock guard's lock semantics are unaffected -- under the build lock it stops any writing
+  command regardless of attribution, except the build workflow's own dispatched agents
+  (GE-130a-4). Criteria not amended here; see the report to the user.
+
+  declares_side_effect: false.

@@ -1,0 +1,93 @@
+id: GE-130c-2
+title: The after-the-fact check stops a caller only for what that caller's command changed, never for
+  another agent working in the same copy
+component: guardrail-engine
+components:
+- commit_guardian
+- precommit_hooks
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given two agents working in the same working copy,
+  And while this caller's command, which the before-check could not judge, is running, the other
+    agent changes a watched file in a way its protection's rule refuses, and this caller's
+    command changes no watched file,
+  When this caller's command finishes,
+  Then this caller's run is not stopped for that change, and no statement names this caller as
+    having made it,
+  And given, in the same run, this caller's command itself changes a different watched file in a
+    way the rule refuses while the other agent's change is also present,
+  When this caller's command finishes,
+  Then this caller's run is stopped naming this caller's file, and the other agent's file is not
+    named in this caller's stop.
+depends_on:
+- GE-130c
+- GE-130c-1
+doc_links:
+- path: docs/acceptance-criteria/guardrail-engine/GE-130-protection-however-changed/GE-130c.yaml
+  relationship: parent
+  status: exists
+- path: docs/acceptance-criteria/guardrail-engine/GE-120-green-means-checked/GE-120e.yaml
+  relationship: context
+  status: exists
+  relevance: A block is always about something you actually did. The after-the-fact check applies the
+    same promise to a shared working copy.
+delivers_to: null
+expects_from: null
+assigned_agent: python-coder
+declares_side_effect: false
+origin_agent: business-analyst
+created: '2026-09-17'
+amended_by:
+- reason: user-decision-attribution-policy
+  by: business-analyst
+  at: 2026-09-17
+  note: |
+    Applies the user's (BrainCandy) 2026-09-17 attribution decision. CHANGED: covered_by gains
+    GE-130c-2-ii; notes gain ATTRIBUTION MUST BE POSITIVE, FIXTURE, RECOMMENDED SOURCES and SCOPE
+    paragraphs. UNCHANGED: title, criteria, depends_on, assigned_agent, declares_side_effect
+    (false, re-derived), readiness draft.
+superseded_by: null
+covered_by:
+- GE-130c-2-i
+- GE-130c-2-ii
+implemented_by: []
+notes: |
+  GE-130c notes: attribution to the calling agent is the open design risk (GE-120e). The multi-agent
+  case is the real operating condition -- five agents were writing in this worktree during this
+  BA run. How attribution is established is the IT PO's; this record fixes only the observable
+  outcome. The undeterminable case is GE-130c-2-i.
+
+  DECIDED 2026-09-17 (user) -- ATTRIBUTION MUST BE POSITIVE, BY DESIGN. A stop is made only when
+  the change is positively attributed to this caller's command. "Could not tell" never stops
+  (GE-130c-2-i, persisted and reported by GE-130c-2-ii); "could not look" still stops
+  (GE-130c-1-i).
+
+  FIXTURE: the "other agent" in this record's scenarios must act through the hooks (its edits and
+  commands pass the same PreToolUse/PostToolUse hooks) so its change is attributable to it. A
+  change made outside the hooks cannot be positively attributed and falls to GE-130c-2-i -- a
+  fixture that writes the other agent's file directly from the test would exercise c-2-i, not
+  this record.
+
+  RECOMMENDED ATTRIBUTION SOURCES FOR THE IT PO (not binding):
+    (a) a per-worktree append-only ledger of hooked Edit/Write allowances and shell PostToolUse
+        after-hashes, keyed by GE-129's caller identity (agent_id / session) with a
+        per-invocation token fallback;
+    (b) an in-flight command registry written at PreToolUse and cleared at PostToolUse, so overlap
+        between commands is detectable even without identity;
+    (c) GE-130d's looking-only classification as a tie-breaker (an overlapping command that only
+        looks at files cannot be the author).
+  Precedents for per-worktree records: inline_work_guard.jsonl, readme_markers/.
+
+  SCOPE: this attribution policy applies to the documentation guard and the guide-read guard only.
+  The task-lock guard (inline_work_guard) keeps "anyone under the lock is stopped": it stops any
+  writing command under the build lock regardless of attribution, except the build workflow's own
+  dispatched agents identified by caller identity (GE-130a-4). Its lock semantics are unaffected
+  by this record.
+
+  declares_side_effect: false.

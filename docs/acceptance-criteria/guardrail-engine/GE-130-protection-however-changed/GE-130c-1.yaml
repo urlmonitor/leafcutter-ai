@@ -1,0 +1,82 @@
+id: GE-130c-1
+title: When a command the before-check could not judge changes a protected file, the file is named afterwards
+  and the run stops
+component: guardrail-engine
+components:
+- commit_guardian
+- precommit_hooks
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a command issued from the session's shell whose effect on files a protection watches
+    could not be told before it ran -- running a script, a build step, or a program handed a list
+    of files -- so it was not refused beforehand,
+  And each protection's rule: the documentation guard's for a code file in a folder an
+    architecture document describes, the guide-read guard's for a file in a gated folder whose
+    guide is unread, and the task-lock guard's for any file while the lock is in place,
+  When the command finishes,
+  Then every watched file that differs on disk from its state immediately before the command and
+    that the protection's rule would have refused is named, with the protection whose rule
+    covers it,
+  And the run is stopped, no further tool call in it is carried out, and the stop names the
+    protection and every file it named,
+  And a watched file that already differed before the command began, and that the command did not
+    change, is not named,
+  And in the same run a command of the same kind that changed no watched file finishes with no
+    stop and no statement.
+depends_on:
+- GE-130c
+doc_links:
+- path: docs/acceptance-criteria/guardrail-engine/GE-130-protection-however-changed/GE-130c.yaml
+  relationship: parent
+  status: exists
+- path: docs/reference/claude-code-hooks.md
+  relationship: related
+  status: exists
+- path: templates/settings.json
+  relationship: related
+  status: exists
+- path: docs/acceptance-criteria/guardrail-engine/GE-120-green-means-checked/GE-120a.yaml
+  relationship: context
+  status: exists
+  relevance: Same promise -- a check that cannot do its job says so -- applied to commands.
+delivers_to:
+  agent: python-coder
+  contract: After-the-fact check receiving every command GE-130a-1, GE-130a-2 and GE-130a-4 were not certain
+    about.
+expects_from: null
+assigned_agent: python-coder
+declares_side_effect: false
+origin_agent: business-analyst
+created: '2026-09-17'
+amended_by: []
+superseded_by: null
+covered_by:
+- GE-130c-1-i
+- GE-130c-1-ii
+implemented_by: []
+notes: |
+  USER DECISION Q1 (2026-09-17): both. The before-check refuses only when certain; this record is
+  where everything else is enforced. It cannot undo a change -- stopping the run is the
+  enforcement (GE-130c notes; stated to the reader by GE-130c-1-ii).
+
+  Concrete inputs: python tools/rewrite.py (writes a watched code file);
+  python -c "open('<gated>/x.md','w').write('x')"; make docs.
+
+  The pre-existing-change clause is the one an implementation comparing against the last commit
+  instead of the state just before the command fails.
+
+  2026-09-17 (business-analyst, user decision) -- ATTRIBUTION. For the documentation guard and the
+  guide-read guard, the stop this record requires is made only when the change is positively
+  attributed to this caller (GE-130c-2); a change the check looked at but could not attribute is
+  named without a stop (GE-130c-2-i). The task-lock guard's rule named in the Given is unaffected:
+  under the build lock it stops any writing command regardless of attribution, except the build
+  workflow's own dispatched agents identified by caller identity (GE-130a-4).
+
+  declares_side_effect: false -- the Then clauses name files and stop the run; nothing is
+  asserted to be persisted.

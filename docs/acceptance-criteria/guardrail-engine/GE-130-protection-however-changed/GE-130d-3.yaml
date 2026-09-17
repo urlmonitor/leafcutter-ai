@@ -1,0 +1,123 @@
+id: GE-130d-3
+title: Each protection runs warn-only on the command path for every caller first, and moves to blocking
+  only after its measurement shows no false block and few changes it could not attribute
+component: guardrail-engine
+components:
+- commit_guardian
+- precommit_hooks
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a protection whose command coverage is in its warn-only stage,
+  When a shell command it would refuse or stop is issued, by any caller,
+  Then the command is carried out and the run continues, and the protection states on the
+    session's visible output the protection, the command and the file it would have refused,
+    in the wording its refusal will use,
+  And the stage applies to every caller alike: no caller meets the blocking stage while another
+    meets the warn-only stage for the same protection,
+  And when the stage is checked, a protection whose command coverage is in its blocking stage
+    without a measurement from GE-130d-2 for it reporting no false block is named and the check
+    fails,
+  And for the documentation guard and the guide-read guard, a protection whose command coverage is
+    in its blocking stage without a stated limit on the share of its after-the-fact findings it
+    could not attribute (GE-130c-2-i), or whose share measured over real runs in which more than
+    one agent worked in the same working copy at once exceeds that limit, is named with the
+    measured share and the limit, and the check fails,
+  And such a measurement states how many of those parallel runs and how many after-the-fact
+    findings it counted, and a measurement over no parallel run reaches no verdict on the share
+    and does not let the protection into its blocking stage,
+  And a protection still in its warn-only stage whose measured share exceeds its stated limit
+    stays in its warn-only stage, and the check states that it stays warn-only because the share
+    exceeds the limit, naming both,
+  And a protection in its blocking stage whose most recent measurement reports no false block,
+    and, for those two guards, whose measured share of unattributed findings is within its stated
+    limit, is not named, established in the same run.
+depends_on:
+- GE-130d
+- GE-130d-2
+- GE-130c-2-ii
+doc_links:
+- path: docs/acceptance-criteria/guardrail-engine/GE-130-protection-however-changed/GE-130c-2-i.yaml
+  relationship: context
+  status: exists
+  relevance: Defines the "could not attribute" finding whose share gates the blocking stage.
+- path: docs/acceptance-criteria/guardrail-engine/GE-130-protection-however-changed/GE-130d.yaml
+  relationship: parent
+  status: exists
+- path: templates/settings.json
+  relationship: related
+  status: exists
+- path: docs/reference/claude-code-hooks.md
+  relationship: related
+  status: exists
+delivers_to: null
+expects_from:
+- ac_id: GE-130d-2
+  contract: Per-protection measurement reporting false blocks or none.
+- ac_id: GE-130c-2-ii
+  contract: Persisted unattributed-finding records from which the unattributed share over real parallel
+    runs is measured.
+assigned_agent: python-coder
+declares_side_effect: false
+origin_agent: business-analyst
+created: '2026-09-17'
+amended_by:
+- reason: user-decision-rollout-gate-attribution
+  by: business-analyst
+  at: 2026-09-17
+  note: |
+    Applies the user's (BrainCandy) 2026-09-17 decision: blocking switches on only when real
+    parallel runs show BOTH zero false blocks on read-only commands AND a low rate of "could not
+    attribute" findings, so weak attribution keeps the rollout warn-only. CHANGED: title; three
+    clauses added (stated limit exists and is met, measurement counts and no-verdict on zero
+    parallel runs, over-limit stays warn-only and says so); the last clause gains the share
+    condition; depends_on gains GE-130c-2-ii; expects_from becomes a list adding GE-130c-2-ii; a
+    GE-130c-2-i context doc_link added. UNCHANGED: Given, the warn-only behaviour clause, the
+    every-caller clause, the false-block gate clause, assigned_agent, declares_side_effect (false,
+    re-derived), readiness draft. The limit's value is the IT PO's; the criterion requires only
+    that a stated limit exists and is met.
+    OLD title (verbatim): Each protection runs warn-only on the command path for every caller first,
+    and moves to blocking only after its measurement shows no false block
+    OLD criteria (verbatim):
+      Given a protection whose command coverage is in its warn-only stage,
+      When a shell command it would refuse or stop is issued, by any caller,
+      Then the command is carried out and the run continues, and the protection states on the
+        session's visible output the protection, the command and the file it would have refused,
+        in the wording its refusal will use,
+      And the stage applies to every caller alike: no caller meets the blocking stage while another
+        meets the warn-only stage for the same protection,
+      And when the stage is checked, a protection whose command coverage is in its blocking stage
+        without a measurement from GE-130d-2 for it reporting no false block is named and the check
+        fails,
+      And a protection in its blocking stage whose most recent measurement reports no false block is
+        not named, established in the same run.
+    OLD depends_on (verbatim): [GE-130d, GE-130d-2]
+    OLD expects_from (verbatim): {ac_id: GE-130d-2, contract: Per-protection measurement reporting
+    false blocks or none.}
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  USER DECISION Q3 (2026-09-17): all callers, warn-only first, then blocking after the Q2
+  measurement. inline_work_guard already has a warn mode; the other two gain the same. Note the
+  existing INLINE_WORK_GUARD_MODE=warn is a per-call OVERRIDE governed by GE-130b; this record is
+  the project-wide ROLLOUT STAGE. The two must stay distinguishable -- an override that sets the
+  rollout stage for everyone would be a bypass with no caller rule.
+
+  The warn-only stage applies to the command path only; the editing path of the task-lock guard
+  already blocks and does not regress to warn.
+
+  DECIDED 2026-09-17 (user) -- SECOND GATE: UNATTRIBUTED SHARE. Because an unattributed change no
+  longer stops the run (GE-130c-2-i), weak attribution would silently weaken enforcement; the
+  share gate keeps such a protection warn-only until attribution is good enough. The threshold
+  VALUE is for the IT PO to set; the criteria require that it is stated and met. The share applies
+  to the documentation guard and the guide-read guard only -- the task-lock guard makes no
+  unattributed finding (it stops any non-exempt writing command under the lock regardless of
+  attribution, GE-130a-4), so its gate remains the false-block measurement alone.
+
+  declares_side_effect: false.

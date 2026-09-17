@@ -1,0 +1,72 @@
+id: GE-130a-1
+title: A shell command that clearly writes a code file the documentation guard watches is stopped the
+  way the same edit is stopped
+component: guardrail-engine
+components:
+- commit_guardian
+- precommit_hooks
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the documentation guard's command coverage has been accepted by GE-130f-3 and is in its
+    blocking stage (GE-130d-3),
+  And a command issued from the session's shell that clearly writes a code file in a folder an
+    architecture document of a level the guard blocks for describes: redirecting output into
+    the file, editing the file in place with a stream editor, copying or moving another file
+    onto it, or piping into a program told to write that file,
+  And no documentation override in effect,
+  When the command is issued,
+  Then it is not carried out, and the refusal names the guard, the file and the architecture
+    document, in the same wording the editing-path refusal uses,
+  And each of the same command forms aimed at a code file in a folder no architecture document
+    describes is carried out with no refusal, in the same run,
+  And a command whose effect on such a file cannot be told before it runs -- running a script,
+    a build step, or a program handed a list of files -- is not refused beforehand and is left
+    to the after-the-fact check GE-130c-1 specifies.
+depends_on:
+- GE-130a
+- GE-130f-1
+- GE-130f-3
+doc_links:
+- path: docs/acceptance-criteria/guardrail-engine/GE-130-protection-however-changed/GE-130a.yaml
+  relationship: parent
+  status: exists
+- path: templates/hooks/documentation_guard.py
+  relationship: related
+  status: exists
+- path: templates/settings.json
+  relationship: related
+  status: exists
+- path: docs/reference/claude-code-hooks.md
+  relationship: related
+  status: exists
+delivers_to: null
+expects_from:
+  ac_id: GE-130c-1
+  contract: After-the-fact check that receives every command this before-check was not certain about.
+assigned_agent: python-coder
+declares_side_effect: false
+origin_agent: business-analyst
+created: '2026-09-17'
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  USER DECISION Q1 (2026-09-17): block beforehand only when certain. The four clear-write forms are
+  the minimum population, not a closed list; the before-check's certainty boundary is the IT PO's
+  to set, but anything outside it must reach GE-130c-1 rather than pass unexamined.
+
+  Concrete command inputs for the test author (examples, not an exhaustive grammar):
+    echo x > <file>;  sed -i 's/a/b/' <file>;  cp other.py <file>;  mv other.py <file>;
+    printf x | tee <file>.
+
+  ORDER (Q5): depends on GE-130f-1 and GE-130f-3 -- this guard is widened only after its
+  editing-path refusal is observed.
+
+  declares_side_effect: false.
