@@ -1,0 +1,110 @@
+id: TQ-600
+components:
+  - testing_quality
+  - agent_registry
+title: "Know an agent really behaves the way its instructions promise, because the real agent was asked"
+component: testing-quality
+level: L0
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: critical
+roadmap_phase: phase_1
+criteria: |
+  Proof of an agent's behaviour comes from the agent itself, not from a stand-in.
+
+  Today, when a requirement says "this agent does X", the only tests that can run
+  answer with a scripted reply written for the test — so they prove the script,
+  not the agent. A change to the agent's instructions can quietly stop it doing X
+  and every one of those tests stays green. After this goal, a behaviour that only
+  the real agent can show is proven by actually asking the real agent, as the
+  project ships it, and checking what it gives back. You choose when that happens,
+  because asking the real agent costs money and needs access; when you do, the
+  result is a clear pass or fail for each case, a record is left behind that later
+  work can point to, and a run that could not ask the agent at all is reported as a
+  failure — never as a pass and never as quietly skipped.
+depends_on: []
+doc_links:
+  - path: docs/acceptance-criteria/build-orchestration/BO-3200-second-hand-answers/BO-3200f-2-ii.yaml
+    relationship: related
+    status: exists
+    relevance: "The first and, today, only concrete specification under this goal: the opt-in harness that proves the executor's three live scenarios against the real registered agent. Authored under BO-3200f-2 because no testing-quality home existed; its relocation under TQ-600a is BA work (see notes)."
+  - path: docs/acceptance-criteria/testing-quality/TQ-200-per-agent-eval-coverage/TQ-200c.yaml
+    relationship: related
+    status: exists
+    relevance: "Decides WHICH KINDS of proof work is asked for. Amended 2026-09-17: a proof decided by one definite check over a real agent's reply is asserted, not judged. This goal is where such an asserted proof is run."
+  - path: docs/acceptance-criteria/build-orchestration/BO-2900-runtime-reachability-guard/BO-2900g-3.yaml
+    relationship: related
+    status: exists
+    relevance: "Retired the ticket-facing proof kind 'live_dispatch'. Nothing under this goal may reintroduce it as a proof kind, angle, schema value or record value; 'asking the real agent' stays plain words."
+  - path: docs/testing/test-angles.md
+    relationship: relates-to
+    status: exists
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: product-owner
+created: 2026-09-17
+amended_by: []
+superseded_by: null
+covered_by:
+  - TQ-600a
+implemented_by: []
+change_target:
+  - code
+  - pipeline
+risk_surface: cost
+notes: |
+  WHY THIS GOAL EXISTS NOW (user decision, BrainCandy, 2026-09-17). The user chose
+  on 2026-09-16 that the executor's live scenarios are proven by an opt-in harness
+  that asks the real registered agent (BO-3200f-2-ii), and on 2026-09-17 chose to
+  give that mechanism a testing-quality home NOW rather than wait for a second
+  consumer. The product-owner recommended waiting; the user decided otherwise. This
+  goal is that home.
+
+  PLAINLY: ONE L1 TODAY, AND THAT IS DELIBERATE. The 3-7 L1 guideline is not met and
+  the tree-limits hook will print a sparse-parent advisory; that is expected, not an
+  error. No L1s were invented to pad it. What else belongs here as it arrives:
+    - a second agent whose instructions make a promise only the real agent can show
+      (the next charter needing live proof is the trigger to decompose further);
+    - proving an agent under the model the project actually ships it with, when that
+      model changes;
+    - a recurring, deliberately scheduled run of real-agent proofs, if the user ever
+      decides such a run should exist (no automated job exists or is planned today —
+      user decision 2026-09-17, no CI job now);
+    - citing a real-agent record as done-proof, as and when TQ-400 decides how
+      recorded evidence keeps its standing over time.
+  If none of these arrive, this goal should be folded rather than kept as a shell.
+
+  PLACEMENT — WHY A NEW L0 AND NOT AN L1 UNDER AN EXISTING GOAL. Checked 2026-09-17
+  against every testing-quality L0 and its cap (7 L1s per L0):
+    - TQ-100 (5/7) — which tests gate main. This goal is opt-in and must NEVER gate by
+      default; the opposite axis.
+    - TQ-200 (3/7) — "guarded by an eval set": scored sets against a threshold, a
+      required merge gate. Asking the real agent here is pass/fail per case and never
+      runs by default. TQ-200c (amended the same day) says which kind of proof work
+      needs; it does not run anything, and it is at 5 of 5 L2s anyway.
+    - TQ-300 (3/7) — tests for the package's own tooling. Wrong subject.
+    - TQ-400 (5/7) — done-proof re-checked over time. The evidence record this goal
+      leaves behind is an input TQ-400 may use; TQ-400 is not where the proof is taken.
+    - TQ-500 (5/7) — a pass counts only once the test is shown able to fail. The
+      closest neighbour: the harness's changed-instructions scenario IS such a
+      demonstration. But TQ-500 is a check ON proofs; this goal is a new way of TAKING
+      a proof. Filing it there would make TQ-500 own a proof surface it only audits.
+  Litmus: the goal still matters if the executor, the harness or the switch were
+  swapped for any other way of asking the real agent — its subject is generic.
+
+  BOUNDARIES.
+    - Not an eval. No scores, thresholds, rows or aggregate. A behaviour that needs a
+      score across many examples is judged and belongs to TQ-200.
+    - Not a reliability rate. One passing run is one observed answer; how often an
+      agent passes across many runs is a scored question (TQ-200).
+    - Not pre-approval. The user decided on 2026-09-16 that nothing the real agent
+      asks to do is pre-approved; an unattended run that meets a permission request
+      fails by name.
+    - Not the retired proof kind live_dispatch (BO-2900g-3).
+
+  RELOCATION IS BA WORK, NOT DONE HERE. BO-3200f-2-ii stays where it is until the BA
+  pass. See TQ-600a notes for the exact list.

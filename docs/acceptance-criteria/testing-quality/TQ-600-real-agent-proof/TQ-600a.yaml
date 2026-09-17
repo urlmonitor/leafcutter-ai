@@ -1,0 +1,108 @@
+id: TQ-600a
+components:
+  - testing_quality
+  - agent_registry
+title: "Check what an agent actually does by asking the real agent, only when you choose to"
+component: testing-quality
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: critical
+roadmap_phase: phase_1
+criteria: |
+  Ask the real agent, get a clear pass or fail, and keep the record.
+
+  When you switch it on, each case asks the agent exactly as the project ships it
+  and passes or fails on one definite check of its reply, leaving a record of what
+  was asked, what came back and whether it passed; left off, nothing is asked and
+  nothing is counted as passed, and a switched-on run that cannot reach the agent
+  fails by name.
+depends_on:
+  - TQ-600
+doc_links:
+  - path: docs/acceptance-criteria/build-orchestration/BO-3200-second-hand-answers/BO-3200f-2-ii.yaml
+    relationship: related
+    status: exists
+    relevance: "The existing, IT-PO-enriched specification of this capability (switch, real registered agent, pass/fail per scenario, evidence record, four named reasons a run could not ask the agent). Its mechanism is already agent-agnostic by it_requirements; the executor is its first user. To be relocated under this L1 by the BA."
+  - path: docs/acceptance-criteria/testing-quality/TQ-200-per-agent-eval-coverage/TQ-200c.yaml
+    relationship: related
+    status: exists
+    relevance: "Boundary: TQ-200c decides that a proof decided by one definite check over a real agent's reply is asserted; this L1 is where that proof is run. Nothing here scores."
+  - path: docs/acceptance-criteria/build-orchestration/BO-2900-runtime-reachability-guard/BO-2900g-3.yaml
+    relationship: related
+    status: exists
+    relevance: "Retired proof kind 'live_dispatch'; must not be reintroduced by anything under this L1."
+documentation_triggers:
+  - how-to
+  - component-diagram
+  - reference-doc
+documentation_rationale: null
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: product-owner
+created: 2026-09-17
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - code
+  - pipeline
+risk_surface: cost
+notes: |
+  WHAT THIS L1 IS. The general, agent-agnostic capability specified today by
+  BO-3200f-2-ii: an opt-in way to prove an agent's behaviour by asking the real
+  registered agent and checking its reply. Opened 2026-09-17 by user decision
+  (BrainCandy) so the mechanism has a testing-quality home now rather than after a
+  second consumer. See TQ-600 notes for placement reasoning and what else belongs
+  under the goal.
+
+  covered_by IS EMPTY ON PURPOSE. No L2 has been authored under this L1 yet; the
+  behaviour already exists as BO-3200f-2-ii and the BA decides how it lands here.
+  When the BA adds children, they must be appended to covered_by (direct children
+  only).
+
+  DOCUMENTATION TRIGGERS. how-to: an operator deliberately runs real-agent proofs
+  and needs to know how to switch them on and what access they need. component-
+  diagram: a new testing surface shared with the eval runner's way of reaching the
+  model. reference-doc: the record each run leaves behind is cited by later
+  done-proofs, so its contents must be written down.
+
+  DECISIONS ALREADY MADE — DO NOT RELITIGATE.
+    - No CI job now (user decision 2026-09-17). Default and CI runs keep it switched
+      off.
+    - Nothing is pre-approved (user decision 2026-09-16).
+    - A run that could not ask the agent is a failure, never a skip or a pass.
+    - Pass/fail per case, no score (TQ-200c amendment 2026-09-17: this is asserted
+      proof).
+    - The retired proof kind live_dispatch stays retired (BO-2900g-3).
+
+  BA WORK — RELOCATION (not done by the product-owner; BO-3200f-2-ii was not moved).
+    1. Decide the shape under this L1. Recommended: the general mechanism (switch,
+       asking the registered agent as shipped, failure-by-name, evidence record) as
+       L2(s) under TQ-600a; the executor-specific part (which three scenarios run and
+       that BO-3200f-2's first live scenario fails under a declining charter) stays in
+       build-orchestration as a consumer. The five scenarios of BO-3200f-2-ii already
+       divide along that line: scenario 3 names the executor, the others do not.
+    2. Author the new TQ-600a-N record(s) and append their IDs to TQ-600a covered_by.
+    3. Supersede or rewrite BO-3200f-2-ii (superseded_by the new ID, or narrow it to
+       the executor-specific consumer part) and remove it from BO-3200f-2 covered_by
+       if it no longer covers that parent.
+    4. Rewire BO-3200f-2-i depends_on (currently has an edge to BO-3200f-2-ii) to the
+       new TQ-600a-N record, keeping the graph acyclic.
+    5. Update BO-3200f-2's notes, which state that its first scenario "is NOT DONE
+       until BO-3200f-2-ii is satisfied" and that BO-3200f-2-ii is its child; and
+       BO-3200f-2-ii's own PLACEMENT note, which says no testing-quality L1 fits.
+    6. The LIVE DISPATCH test_spec descriptors on BO-3200f-2 (surface_invoked and
+       description name "BO-3200f-2-ii live-dispatch harness"), BO-3200f-2-i (two
+       descriptors naming "BO-3200f-2-ii's harness") and BO-3200f-2-iii (one LIVE
+       DISPATCH descriptor) keep type e2e and angle deployed; the IT PO re-points
+       their harness references to the new record ID.
+  IT PO WORK AFTER THE BA: carry BO-3200f-2-ii's it_requirements, delivers_to,
+  expects_from, test_spec and doc_links onto the new record(s) without loss; update
+  its TQ-200c boundary note and doc_link relevance to record the TQ-200c amendment as
+  made (2026-09-17) rather than an open user decision.

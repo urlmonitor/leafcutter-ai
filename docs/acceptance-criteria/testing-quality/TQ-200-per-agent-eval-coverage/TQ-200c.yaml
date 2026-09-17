@@ -25,19 +25,23 @@ criteria: |
   test contract asked of them, and how 115 proofs their authors DID name were never
   written.
 
-  The fix is not to demand ordinary unit tests of prompt work. Prompt, template and
-  skill work splits into two layers that need different kinds of proof. Some of it
-  is mechanically checkable — a declaration is well-formed, a rule is obeyed, a
-  registry agrees with a template, a step really got dispatched — and the repository
-  already writes those by hand as ordinary deterministic tests. The rest is
-  judgment: does the prompt actually elicit the intended behaviour from a model. No
-  assertion settles that; it is an eval. Most real prompt work needs BOTH.
+  The fix is not to demand ordinary unit tests of prompt work, and it is not to send
+  everything a model touches off to be scored. What makes a proof one kind or the
+  other is how its pass is decided, not whether a model is involved. A proof is
+  ASSERTED when one definite check decides it: a declaration is well-formed, a rule
+  is obeyed, a registry agrees with a template, a step really got dispatched — or
+  the real agent, actually asked, gave back a reply that one definite check accepts
+  or rejects. A proof is JUDGED when no single check can decide it and the answer is
+  a score across many examples held against a bar: does the prompt reliably elicit
+  the intended behaviour from a model. Asking the real agent is a way of running an
+  asserted proof, not a third kind of proof. Most real prompt work needs BOTH kinds.
 
-  After this, the pipeline can tell which layers a piece of work needs, can ask for
-  both at once, has words for "this proof is judged" that mean the same thing to
-  whoever writes the plan and whoever runs it, lands the judged half in the eval
-  harness that already exists, and refuses to report a proof it could not honour as
-  a pass.
+  After this, the pipeline can tell which kinds a piece of work needs, never asks for
+  a score alone where one definite check settles the question, can ask for both kinds
+  at once, has words for "this proof is asserted" and "this proof is judged" that
+  mean the same thing to whoever writes the plan and whoever runs it, lands the
+  judged half in the eval harness that already exists, and refuses to report a proof
+  it could not honour as a pass.
 depends_on:
   - TQ-200
   - TQ-200a
@@ -83,6 +87,18 @@ doc_links:
     relationship: describes
     status: exists
     relevance: "The existing shared vocabulary for what a proof is FOR (the seven angles). The judged/asserted distinction TQ-200c-1 introduces is orthogonal to it and must be added without disturbing it — an angle says what question a proof answers, the new word says how the answer is settled."
+  - path: docs/acceptance-criteria/build-orchestration/BO-3200-second-hand-answers/BO-3200f-2-ii.yaml
+    relationship: related
+    status: exists
+    relevance: "The first asserted proof over a live agent dispatch: an opt-in harness that dispatches the real registered agent and passes or fails each scenario on one deterministic check of its reply, writing an evidence record. Chosen by the user on 2026-09-16 over a recorded manual run; its IT PO notes drew the pass-decision boundary this L1 adopted on 2026-09-17. It takes no scores, thresholds or eval rows."
+  - path: docs/acceptance-criteria/build-orchestration/BO-2900-runtime-reachability-guard/BO-2900g-3.yaml
+    relationship: related
+    status: exists
+    relevance: "Retired the ticket-facing proof kind 'live_dispatch'. Why this L1 says asking the real agent is a way of running an asserted proof and not a third kind: no proof kind, schema value or angle of that name may come back through this tree."
+  - path: docs/acceptance-criteria/testing-quality/TQ-600-real-agent-proof/TQ-600a.yaml
+    relationship: related
+    status: exists
+    relevance: "The testing-quality home, opened 2026-09-17 by user decision, for asserted proof taken by asking the real agent. Boundary: TQ-200c decides WHICH KINDS of proof work is asked for; TQ-600a is where an asserted proof that needs the real agent is run."
 documentation_triggers: []
 documentation_rationale: |
   No separate documentation AC is authored, deliberately. The vocabulary this L1
@@ -97,7 +113,48 @@ documentation_rationale: |
   surface.
 origin_agent: BrainCandy
 created: 2026-08-18
-amended_by: []
+amended_by:
+  - reason: product-decision
+    by: product-owner
+    at: 2026-09-17
+    note: |
+      Criteria paragraphs 3 and 4 reworded; notes layers (a) and (b) reworded and an
+      AMENDMENT 2026-09-17 section appended; three doc_links appended (BO-3200f-2-ii,
+      BO-2900g-3, TQ-600a). Authorised by the user (BrainCandy) on 2026-09-17 to resolve
+      the conflict with BO-3200f-2-ii, the opt-in live-dispatch harness the user chose on
+      2026-09-16 over a recorded manual run.
+      CHANGE IN MEANING: the kind of a proof is decided by HOW ITS PASS IS DECIDED, not
+      by whether a model is in the loop. One definite check over one real agent reply
+      is ASSERTED. A score over a set of rows held against a threshold is JUDGED and
+      still lands in the eval harness. Asking the real agent is not a third kind of
+      proof; the retired proof kind live_dispatch (BO-2900g-3) is not reintroduced.
+      UNCHANGED: title, criteria paragraphs 1 and 2, depends_on, covered_by (5 of 5, at
+      cap; no child added), readiness (draft), documentation_triggers and
+      documentation_rationale, and every other field.
+      DOWNSTREAM, NOT DONE HERE: BA rewording of TQ-200c-1, TQ-200c-2-i and TQ-200c-3
+      criteria (review TQ-200c-2); those records may drop reviewed -> draft during that
+      pass (user decision 2026-09-17). IT PO re-enrichment of TQ-200c-1, TQ-200c-2,
+      TQ-200c-2-i and TQ-200c-3; IT PO refresh of BO-3200f-2-ii's notes and TQ-200c
+      doc_link relevance, which still record this change as an open user decision.
+      OLD CRITERIA PARAGRAPH 3 (verbatim):
+        The fix is not to demand ordinary unit tests of prompt work. Prompt, template and
+        skill work splits into two layers that need different kinds of proof. Some of it
+        is mechanically checkable — a declaration is well-formed, a rule is obeyed, a
+        registry agrees with a template, a step really got dispatched — and the repository
+        already writes those by hand as ordinary deterministic tests. The rest is
+        judgment: does the prompt actually elicit the intended behaviour from a model. No
+        assertion settles that; it is an eval. Most real prompt work needs BOTH.
+      OLD CRITERIA PARAGRAPH 4 (verbatim):
+        After this, the pipeline can tell which layers a piece of work needs, can ask for
+        both at once, has words for "this proof is judged" that mean the same thing to
+        whoever writes the plan and whoever runs it, lands the judged half in the eval
+        harness that already exists, and refuses to report a proof it could not honour as
+        a pass.
+      OLD NOTES LAYER (a), LAST ITEM (verbatim): "deploy-manifest
+        presence, a captured dispatch sequence. Ordinary deterministic tests."
+      OLD NOTES LAYER (b) (verbatim):
+        (b) JUDGMENT — does the prompt actually elicit the intended behaviour from a
+            model. No deterministic assertion settles this. This is an eval.
 superseded_by: null
 covered_by:
   - TQ-200c-1
@@ -168,13 +225,15 @@ notes: |
   template and skill work splits into two layers:
     (a) MECHANICALLY CHECKABLE — frontmatter validity, the requires_verification
         rule, registry/template parity, phaseOrder membership, deploy-manifest
-        presence, a captured dispatch sequence. Ordinary deterministic tests. The
+        presence, a captured dispatch sequence, one definite check over the reply of a
+        real registered agent (BO-3200f-2-ii). Ordinary deterministic tests. The
         repository ALREADY writes these by hand: unit_tests/agents/
         test_test_writer_seam_rule_scope.py and unit_tests/test_bo_2100a_3_phase_
         order_gates.py are both present and both cheap. Nothing in this tree may
         convert that class of proof into an eval.
-    (b) JUDGMENT — does the prompt actually elicit the intended behaviour from a
-        model. No deterministic assertion settles this. This is an eval.
+    (b) JUDGMENT — does the prompt RELIABLY elicit the intended behaviour, settled
+        by a score over a set of rows held against a threshold. No single assertion
+        settles this. This is an eval.
   Most real llm-expert ACs need BOTH. The missing capability is therefore a ROUTER,
   not a rule: given a piece of work, decide which layer(s) of proof it needs and ask
   for each in the right form. That is why this is a new L1 rather than a leaf under
@@ -231,3 +290,20 @@ notes: |
       runner can score; it says nothing about the scoring itself.
     - CONVERTING EXISTING DETERMINISTIC PROMPT TESTS INTO EVALS is prohibited by
       TQ-200c-2-i and is not a licence granted anywhere in this tree.
+
+  AMENDMENT 2026-09-17 — ASSERTED PROOF OVER A LIVE DISPATCH (user decision).
+  The original text treated "a model is in the loop" as meaning "judged". That
+  collided with BO-3200f-2-ii, whose live scenarios ask whether the executor's
+  charter gets a command carried out and settle it with one deterministic check of
+  the real reply. The boundary, adopted from that record's IT PO notes: a proof is
+  judged when its pass is a score over rows against a threshold, and asserted when
+  its pass is one definite check — with or without a live model reply. Consequences
+  for this tree: proof_mode keeps exactly two values; asserted proofs that need a
+  live dispatch are NOT routed to the eval harness only; judged proofs still are.
+  No proof kind, angle or schema value named live_dispatch may be introduced
+  (BO-2900g-3). The live-dispatch mechanism's home is TQ-600a (opened the same day
+  by user decision); this L1 does not own running such proofs, only asking for them.
+  KNOWN ALTITUDE GAP, RECORDED NOT FIXED (user decision 2026-09-17): the parent L0
+  TQ-200 reads "guarded by an eval set", while this L1 already asks for asserted,
+  non-eval proof and now says so explicitly. TQ-200 is deliberately not amended;
+  revisit if TQ-200 gains another L1 whose proof is not an eval.
