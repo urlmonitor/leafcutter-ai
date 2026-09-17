@@ -4,7 +4,7 @@ description: "The baseline business information every product rests on -- Mock D
 type: reference
 status: active
 created: 2026-07-10
-last_updated: 2026-09-16
+last_updated: 2026-09-17
 components:
   - ux_prototyping
 related_docs:
@@ -111,9 +111,12 @@ described AC, taken at `against`) is recompared against that AC's *current* cont
 a journey where something changed is reported as `behind`, naming the journey and
 every described thing that moved, as a WARNING — never a build failure, since
 staleness alone is not a defect. A journey with no `confirmed` record yet is
-never-confirmed and is skipped entirely — neither current nor behind. The run always
-states `compared N journey(s) for freshness`, so a run that compared none is
-distinguishable from one that compared some and found them all current. See the
+never-confirmed: it is reported as such, by name, on that same WARNING channel
+(`[freshness-never-confirmed]`, UXP-700c-2-i) — but it is not judged current or
+behind (there is no earlier confirmation for it to be judged against), and it is
+not counted in the `compared` figure. The run always states `compared N
+journey(s) for freshness`, so a run that compared none is distinguishable from
+one that compared some and found them all current. See the
 [how-to's freshness section](../how-to/authoring-product-truth-artifacts.md#part-6--confirm-a-journey-against-what-it-describes-freshness)
 for how to author a `confirmed` record by hand.
 

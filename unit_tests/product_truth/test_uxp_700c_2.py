@@ -308,7 +308,10 @@ class TestCheckFreshnessBoundary(unittest.TestCase):
         # A journey with no `confirmed` record at all is never-confirmed: it
         # must not appear as a key in verdicts (per the contract
         # UXP-700c-2-ii's _sync_behind_marks already consumes) and must not
-        # be counted in `compared`.
+        # be counted in `compared`. It IS named on `warnings` with a distinct
+        # `[freshness-never-confirmed]` prefix (UXP-700c-2-i, extending this
+        # ticket's own scope, which only pinned the compared/verdicts
+        # accounting) -- but never with the `[freshness]` (behind) prefix.
         flow = _base_flow(
             "fixture-product/never-confirmed-journey",
             steps=[_step("browse", implements=["AC-REAL-1"], order=1)],
@@ -325,7 +328,10 @@ class TestCheckFreshnessBoundary(unittest.TestCase):
             verdicts,
             "a never-confirmed journey must be OMITTED from verdicts entirely, not included with a None value",
         )
-        self.assertEqual(warnings, [])
+        self.assertFalse(
+            any(w.startswith("[freshness]") for w in warnings),
+            f"a never-confirmed journey must never be reported as behind, got {warnings!r}",
+        )
 
 
 class TestFreshnessSurvivesAVanishedCitationTarget(unittest.TestCase):
