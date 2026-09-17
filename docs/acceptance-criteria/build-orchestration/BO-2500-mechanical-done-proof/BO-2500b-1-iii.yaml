@@ -1,0 +1,136 @@
+id: BO-2500b-1-iii
+components:
+  - build_orchestration
+  - commit_guardian
+title: "Any done AC with a non-empty covered_by is proven by its children, whatever its level"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: done
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a done acceptance criterion at level L2 (or any level) whose covered_by is
+    non-empty, and whose every child listed in covered_by is itself done and carries a
+    "# covers: <child-id>" or "// covers: <child-id>" tag somewhere under the test root,
+  When the pre-commit proof-of-done check scans that staged record,
+  Then the check treats the AC as a composite proven by its children and reports no
+    violation for it, without demanding a covers tag naming the AC's own id,
+  And a done AC with a non-empty covered_by whose children are NOT all done-and-covered
+    is still reported as a violation naming the unproven children,
+  And a done AC with an empty covered_by (a true leaf) still requires its own covers tag,
+    reported with the unchanged message,
+  And the bug symptom ("A done L2 AC with a non-empty covered_by (e.g. UXP-700d-3, whose
+    children UXP-700d-3-i and -ii are both done and covered) is refused by
+    check-done-proof as lacking its own '# covers: <id>' tag, so an L2 composite can
+    never be committed as done; check-ticket-ac-status-parity then also blocks its ticket
+    from closing.") must not occur,
+  And a covered_by entry that is a test-file path (identified by a path separator, a
+    file extension, or by not resolving to an AC record in the store) is never treated
+    as an AC-id child: it does not make an otherwise-leaf AC a composite, and it is
+    never reported as an unproven child — an AC whose covered_by holds only such
+    test-path entries is a leaf and still requires its own covers tag
+depends_on:
+  - BO-2500b-1
+  - BO-2500b-1-ii
+doc_links:
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: related
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+test_required: true
+test_spec:
+  - name: test_done_l2_with_all_children_covered_is_not_a_violation
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: real_artifact
+    description: "A done L2 whose covered_by lists L3 children that are each done and carry a '# covers: <child-id>' tag produces NO violation from check_staged_done_proofs, even though no tag names the L2 itself."
+    covers:
+      - BO-2500b-1-iii
+  - name: test_done_l2_with_unproven_child_is_still_a_violation
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: "A done L2 whose covered_by includes a child that is not done, or is done without a covers tag, still yields a violation whose reason names the unproven child."
+    covers:
+      - BO-2500b-1-iii
+  - name: test_done_l2_with_empty_covered_by_still_requires_own_tag
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "A done L2 with an empty covered_by and no covers tag still produces a violation carrying the existing \"no '# covers: <id>' or '// covers: <id>' tag found anywhere under <test_root>\" reason string."
+    covers:
+      - BO-2500b-1-iii
+  - name: test_done_leaf_with_test_path_covered_by_and_own_tag_is_not_a_violation
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: "A done AC whose covered_by holds ONLY a test-file path (this store's own convention for recording a leaf's proving test file) is a leaf, not a composite; with its own covers tag present, it produces NO violation."
+    covers:
+      - BO-2500b-1-iii
+  - name: test_done_l2_with_ac_children_and_test_path_mixed_covered_by_is_not_a_violation
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: "A done L2 whose covered_by mixes a done-and-covered AC-id child with a test-file path produces NO violation — the test-path entry is ignored for compositeness and the composite is proven by its real AC-id child alone."
+    covers:
+      - BO-2500b-1-iii
+test_rationale: |
+  The defect is a classification mismatch between the static pre-commit hook (composite
+  decided by level) and done_proof.py::_verify_composite_eligible (composite decided by
+  non-empty covered_by), so the tests must drive the real check_staged_done_proofs entry
+  point over real on-disk AC YAML and a real test tree. The triad mirrors BO-2500b-1-ii:
+  the pass case alone could be met by skipping any AC with covered_by, so the
+  unproven-child case keeps the composite path honest, and the empty-covered_by L2 case
+  pins the leaf path and its exact reason string on this required gate. Two further
+  boundary tests guard against the regression the first fix introduced: this store also
+  uses covered_by on a LEAF to record its own proving test-file path(s) (this very AC's
+  own record is the real-world example), so "composite" must be decided by AC-id
+  children specifically, never by mere non-emptiness — one test pins the pure-test-path
+  leaf case, the other pins a mixed AC-id-plus-test-path composite still resolving
+  correctly.
+origin_agent: BrainCandy
+created: 2026-09-17
+amended_by: []
+superseded_by: null
+covered_by:
+  - unit_tests/commit_guardian/test_bo_2500b_1_iii_covered_by_composite.py
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  Authored by /quick-fix. Root cause: The static pre-commit scan decides 'composite' by
+  level (L0/L1 only) instead of by non-empty covered_by, contradicting
+  scripts/ac_store/done_proof.py::_verify_composite_eligible (BO-2500a-6), which
+  mark_ac_done.py uses and which treats any AC with non-empty covered_by as a composite.
+  Fix: treat an AC as a composite when its covered_by is non-empty (any level), in both
+  places, keeping the existing guard that every child must be done-and-covered.
+
+  Follow-up correction (same day, in-progress /quick-fix): the first fix over-widened
+  "composite" to mean "covered_by is non-empty", but this store ALSO uses covered_by on
+  a LEAF to record the covers-tagged test file path(s) that prove it (this AC's own
+  record is a real example: covered_by names its unit test file, not a child AC).
+  Treating every non-empty covered_by as composite therefore misread every such leaf's
+  test path as an unresolved child AC id and reported it as an unproven child — the
+  pre-commit hook then refused to commit this very ticket's own staged files. Fix:
+  compositeness (in both check_staged_done_proofs and _unproven_composite_children) is
+  now decided by "covered_by contains at least one AC-id-shaped entry" via the shared
+  _composite_child_ids/_looks_like_test_path helpers — an entry is excluded as a test
+  path when it contains a path separator or ends in a recognised test-file extension
+  (.py/.ts/.tsx), mirroring (in spirit) scripts/ac_store/done_proof.py's own
+  store-resolvability convention (_has_resolvable_child/_resolve_all_child_ids). An AC
+  whose covered_by holds only test paths is now correctly classified as a leaf and still
+  requires its own covers tag.
