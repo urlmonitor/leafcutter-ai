@@ -4,7 +4,7 @@ description: "Step-by-step guide for authoring product-truth artifacts by hand, 
 type: how-to
 status: active
 created: 2026-07-14
-last_updated: 2026-09-16
+last_updated: 2026-09-17
 components:
   - ux_prototyping
 related_docs:
@@ -195,8 +195,10 @@ the `.md`.**
 A journey can additionally carry a top-level `confirmed` record — the statement of
 what it was last confirmed against, and the state of the things it described at that
 moment (UXP-700c-2). This is **opt-in**: a journey with no `confirmed` record is
-never-confirmed, and the freshness check skips it entirely (neither current nor
-behind).
+never-confirmed. It is named as such on the freshness check's own WARNING channel
+(`[freshness-never-confirmed]`, UXP-700c-2-i), but it is judged neither current nor
+behind — there is no earlier confirmation for it to be judged against — and it is not
+counted in the run's `compared` figure.
 
 1. Confirm the journey by hand (or via whatever tool walked it) and add:
 

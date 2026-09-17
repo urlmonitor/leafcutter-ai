@@ -371,12 +371,17 @@ def _ac_content_signature(ac_record: dict) -> str:
 def _check_freshness(flows: dict, ac_records: dict, warnings: list[str]) -> tuple[dict, int]:
     """TIER-2 content check (UXP-700c-2): has a confirmed journey's described
     AC ids moved since `confirmed.state` was recorded? A never-confirmed
-    journey is skipped (UXP-700c-2-i). An id absent from `ac_records`
-    (vanished) is UNRESOLVABLE, not behind -- a distinct `[freshness-unresolvable]`
-    warning, never folded into `changed` (bug fix: the prior `ac_records.get(id,
-    {})` fallback hashed an empty record that could never match, wrongly
-    reporting BEHIND for a vanished target -- mirrors `_check_pointers`'
-    unresolvable/broken split).
+    journey is OMITTED from `verdicts` and `compared` -- neither current nor
+    behind, because there is no earlier confirmation for it to be judged
+    against -- but IS named on `warnings` with a distinct `[freshness-never-
+    confirmed]` prefix (UXP-700c-2-i), so it is reported rather than silently
+    skipped: a checker that says nothing about the journeys it declined to
+    compare is indistinguishable from one that found them sound. An id absent
+    from `ac_records` (vanished) is UNRESOLVABLE, not behind -- a distinct
+    `[freshness-unresolvable]` warning, never folded into `changed` (bug fix:
+    the prior `ac_records.get(id, {})` fallback hashed an empty record that
+    could never match, wrongly reporting BEHIND for a vanished target --
+    mirrors `_check_pointers`' unresolvable/broken split).
 
     Returns (verdicts, compared): verdicts is {flow_id -> None | {confirmed_against,
     changed}}, never-confirmed OMITTED entirely (key presence = "examined",
@@ -389,6 +394,7 @@ def _check_freshness(flows: dict, ac_records: dict, warnings: list[str]) -> tupl
     for flow_id, flow in flows.items():
         confirmed = flow.get("confirmed")
         if not confirmed:
+            warnings.append(f"[freshness-never-confirmed] {flow_id}: never confirmed")
             continue
         compared += 1
         changed: list[str] = []
