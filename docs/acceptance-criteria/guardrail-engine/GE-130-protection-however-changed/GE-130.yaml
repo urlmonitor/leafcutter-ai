@@ -1,0 +1,91 @@
+id: GE-130
+title: "Trust that a protection on your files holds however they are changed"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - precommit_hooks
+level: L0
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  A protection on your files holds however the file gets changed.
+
+  The safeguards that watch over your files today only notice a change made one
+  particular way, so the same change made another way walks straight past them.
+  After this goal, a protection that applies to changing a file applies whichever
+  way the change is made, its override rules are the same whichever way the
+  change is made, and when a protection cannot tell what a change touched it says
+  so instead of staying quiet. Looking at your files is never mistaken for
+  changing them.
+depends_on: []
+doc_links:
+  - path: docs/reference/claude-code-hooks.md
+    relationship: related
+    status: exists
+  - path: docs/acceptance-criteria/build-orchestration/BO-3200-second-hand-answers/BO-3200f-2-iii.yaml
+    relationship: context
+    status: exists
+    relevance: "Where this gap surfaced. Owns refusing bypass variables for the chartered executor and the single bypass-variable declaration. Its checks on documentation_guard, inline_work_guard and readme_read_guard only mean something once GE-130a lands."
+  - path: docs/acceptance-criteria/guardrail-engine/GE-120-green-means-checked/GE-120f.yaml
+    relationship: context
+    status: exists
+    relevance: "Owns detecting a guard that can never refuse. Widening a guard that cannot refuse gives a second path that also refuses nothing; the repair itself is GE-130f."
+  - path: docs/known-issues/commit-guardian/open-high-ki-cg-20260907-0745.md
+    relationship: context
+    status: exists
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-09-17
+amended_by: []
+superseded_by: null
+covered_by:
+  - GE-130a
+  - GE-130b
+  - GE-130c
+  - GE-130d
+  - GE-130e
+  - GE-130f
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  USER DECISION 2026-09-17: widen documentation_guard, inline_work_guard and
+  readme_read_guard to shell commands, not only Edit/Write. The gap exists for
+  every agent with a shell; the chartered executor (BO-3200f) is only where it
+  surfaced.
+
+  PARENT CHOICE -- new L0. GE-120 is at its 8-child override ceiling and its notes
+  say a ninth L1 is a signal to split, not to waive again. GE-120b is about which
+  working copy you are in, not how a file is changed. GE-126 owns the
+  interrogation surface. BO-3200f is executor-only. No existing L0/L1 owned any of
+  the three guards (they predate the AC store: EPIC-ArchitectureDocs ticket 24,
+  TICKET-20260527-BuildFeatureInlineWorkGuard, EPIC-AgentKnowledgeSystem ticket 01).
+  Numbered GE-130 because a parallel GE-129 (commit caller identity) holds 129.
+
+  USER DECISIONS RECORDED 2026-09-17 (all PO recommendations accepted):
+    Q1 DETECTION = BOTH. Before a command runs, a protection blocks only when the
+      command clearly writes to a protected file. Everything uncertain goes to an
+      after-the-fact check of what actually changed on disk, which reports the
+      changed protected files by name and stops the run. (GE-130a, GE-130c)
+    Q2 FALSE BLOCKS = ZERO on read-only commands, by design (block beforehand only
+      when certain), measured against a sample of real agent shell commands before
+      blocking is switched on. (GE-130d)
+    Q3 SCOPE = ALL CALLERS, not executor-first. Rolled out warn-only first, then
+      blocking after the Q2 measurement. inline_work_guard already has a warn mode;
+      the other two gain the same for the rollout window.
+    Q4 COMMIT TIME = NOT COUNTED. The in-session guards own these three rules;
+      commit-time checks are not counted as covering them (none of the three rules
+      is reconstructible at commit). FOLLOW-UP OUT OF SCOPE: whether skipping
+      commit-time checks from a shell (git commit --no-verify) is refused belongs
+      to the commit-delegation guard, not to GE-130.
+    Q5 ORDER = FIX FIRST. documentation_guard and readme_read_guard must be shown
+      to block a known-bad edit on the edit path before they are widened.
+      inline_work_guard may be widened immediately. REPAIR PLACEMENT: GE-120f was
+      checked and has no room -- it holds five L2s (GE-120f-1..5) against the
+      five-L2 cap -- and its subject is detecting a guard that cannot refuse, not
+      repairing named guards. The repair is GE-130f (6 of 7 L1s).

@@ -1,0 +1,49 @@
+id: GE-130c
+title: "When a protection cannot see what a command changed, it tells you"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - precommit_hooks
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  No silent pass for a change the protection could not see.
+
+  Where a command's effect on protected files cannot be told in advance, the
+  protection finds out afterwards what actually changed, names any protected file
+  that changed, and stops the run, so a quiet result is never mistaken for a
+  checked one.
+depends_on:
+  - GE-130
+doc_links:
+  - path: docs/acceptance-criteria/guardrail-engine/GE-120-green-means-checked/GE-120a.yaml
+    relationship: context
+    status: exists
+    relevance: "Same promise ('a check that cannot do its job says so'), applied here to changes made by commands."
+  - path: docs/acceptance-criteria/guardrail-engine/GE-120-green-means-checked/GE-120e.yaml
+    relationship: context
+    status: exists
+    relevance: "A block is always about something you actually did -- the after-the-fact check must attribute changes to this caller, not to another agent in the same working copy."
+delivers_to: null
+expects_from: null
+documentation_triggers:
+  - reference-doc
+origin_agent: BrainCandy
+created: 2026-09-17
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  USER DECISION Q1 (2026-09-17): both. Commands the before-check is not certain
+  about go to an after-the-fact check of what changed on disk, which reports the
+  changed protected files by name and stops the run. It cannot undo a change;
+  stopping the run is the enforcement. Attribution to the calling agent is the
+  open design risk (GE-120e).

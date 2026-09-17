@@ -1,0 +1,54 @@
+id: GE-130b
+title: "An override works the same way on both paths, and nowhere it should not"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - precommit_hooks
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  One set of override rules, whichever way the file is changed.
+
+  An escape hatch that lets a change through when made with the editing tools
+  lets it through when a command makes it, and one that is refused for a
+  particular caller is refused on both paths, so the way a change is made is
+  never a way around the rules.
+depends_on:
+  - GE-130
+doc_links:
+  - path: docs/acceptance-criteria/build-orchestration/BO-3200-second-hand-answers/BO-3200f-2-iii.yaml
+    relationship: context
+    status: exists
+    relevance: "Owns the single bypass-variable declaration and the executor refusal. This L1 reuses that declaration; it must not create a second one."
+  - path: docs/reference/claude-code-hooks.md
+    relationship: related
+    status: exists
+delivers_to: null
+expects_from: null
+documentation_triggers:
+  - reference-doc
+origin_agent: BrainCandy
+created: 2026-09-17
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  CROSS-TREE -- CALLER IDENTITY IS GE-129's, CITED NOT RESOLVED HERE.
+    BO-3200f-2-iii blocks a bypass when the caller cannot be identified, for exactly
+    these three guards. Today that never triggers on the shell path because they
+    never see it. Once widened, a top-level session whose request names no agent
+    could lose CLAUDE_NO_DOC_UPDATE and CLAUDE_NO_README_CHECK if "no agent named"
+    is read as an unidentified caller rather than as the top-level session. The
+    parallel GE-129 (commit caller identity, authored 2026-09-17) retires
+    COMMIT_AGENT_MODE and establishes caller identity from agent_id/agent_type; the
+    point that "no agent named = the top-level session, not an unidentified caller"
+    applies under that design and is to be settled there. This L1 inherits GE-129's
+    answer on both paths and does not define its own.

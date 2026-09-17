@@ -1,0 +1,59 @@
+id: GE-130a
+title: "A protected file is protected whether it is edited directly or changed by a command"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - precommit_hooks
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Same protection, whichever way the file is changed.
+
+  A change that a protection would stop when made with the editing tools is
+  stopped the same way when a command makes it, and anything a protection accepts
+  as done first (such as having read the folder's guide) counts however it was
+  done.
+depends_on:
+  - GE-130
+  - GE-130f
+doc_links:
+  - path: templates/hooks/documentation_guard.py
+    relationship: related
+    status: exists
+  - path: templates/hooks/inline_work_guard.py
+    relationship: related
+    status: exists
+  - path: templates/hooks/readme_read_guard.py
+    relationship: related
+    status: exists
+  - path: templates/settings.json
+    relationship: related
+    status: exists
+delivers_to: null
+expects_from: null
+documentation_triggers:
+  - reference-doc
+origin_agent: BrainCandy
+created: 2026-09-17
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  Population: the three guards named in the user decision of 2026-09-17.
+  DETECTION (user decision Q1, 2026-09-17): before a command runs, block only when
+  the command clearly writes to a protected file; uncertain commands are left to
+  GE-130c's after-the-fact check.
+  ROLLOUT (Q3): all callers, warn-only first, blocking after GE-130d's measurement.
+  ORDER (Q5): inline_work_guard may be widened immediately; documentation_guard and
+  readme_read_guard only after GE-130f shows each blocking a known-bad edit.
+  READ SIDE: readme_read_guard must accept a guide read with a command as read, or
+  widening the write side alone creates new false blocks.
+  The hooks reference catalogue matcher column must reflect the widening.

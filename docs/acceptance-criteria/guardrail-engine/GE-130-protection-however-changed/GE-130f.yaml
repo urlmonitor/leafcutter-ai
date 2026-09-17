@@ -1,0 +1,65 @@
+id: GE-130f
+title: "A file protection is seen to stop what it exists to stop before its reach is widened"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - precommit_hooks
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Repair a protection that stops nothing before giving it more to watch.
+
+  A file protection that cannot stop anything today is repaired, and seen to stop
+  a change it exists to stop, before it is extended to more ways of changing a
+  file, so wider reach never means more places that only look protected.
+depends_on:
+  - GE-130
+doc_links:
+  - path: templates/hooks/documentation_guard.py
+    relationship: related
+    status: exists
+  - path: templates/hooks/readme_read_guard.py
+    relationship: related
+    status: exists
+  - path: docs/reference/claude-code-hooks.md
+    relationship: related
+    status: exists
+    relevance: "Contradicts itself on which exit code blocks; must agree with the repaired guards."
+  - path: docs/acceptance-criteria/guardrail-engine/GE-120-green-means-checked/GE-120f.yaml
+    relationship: context
+    status: exists
+    relevance: "Owns DETECTING a guard that has never refused, store-wide. This L1 owns REPAIRING two named guards. GE-120f had no room (five L2s at the cap) and a different subject."
+delivers_to: null
+expects_from: null
+documentation_triggers:
+  - reference-doc
+origin_agent: BrainCandy
+created: 2026-09-17
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  USER DECISION Q5 (2026-09-17): fix first. documentation_guard and
+  readme_read_guard must be shown to block a known-bad edit before GE-130a widens
+  them. inline_work_guard already blocks and is out of this L1.
+
+  FINDINGS THIS L1 EXISTS FOR (observed 2026-09-17 at HEAD 9845d253):
+    - documentation_guard signals a block with exit 1, which does not block a
+      PreToolUse call, and its DOC_MAPPING names another project's folders
+      (live_trader/, collector/, models/, sql_functions/ ...), so it matches no
+      path in this repository.
+    - readme_read_guard never checks a Write: a Write carries no old_string or
+      new_string, so the trivial-edit skip is always true. Its gated prefixes also
+      never match through symlinks and alembic/versions/ does not exist here
+      (recorded in GE-120f).
+    - docs/reference/claude-code-hooks.md says a non-zero exit never blocks, while
+      its own escape-hatch table and two shipped guards block with exit 2.
+  Suggested known issues for the IT PO to file: the three findings above.

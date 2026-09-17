@@ -1,0 +1,41 @@
+id: GE-130e
+title: "A new file protection covers every way of changing a file from day one"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - precommit_hooks
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  A new protection cannot quietly watch only one way of changing a file.
+
+  A protection added later that guards against changing files is not accepted
+  while it watches only some of the ways a file can be changed, so this gap does
+  not reopen with the next protection.
+depends_on:
+  - GE-130
+doc_links:
+  - path: docs/reference/claude-code-hooks.md
+    relationship: related
+    status: exists
+delivers_to: null
+expects_from: null
+documentation_triggers:
+  - reference-doc
+origin_agent: BrainCandy
+created: 2026-09-17
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  GE-120f's 2026-09-07 amendment recorded that no AC takes a census of the
+  templates/hooks/ + settings.json surface. This L1 needs that list; the BA should
+  check whether GE-120f or BP-1600a-2 can supply it before building another one.

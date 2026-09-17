@@ -1,0 +1,43 @@
+id: GE-130d
+title: "Looking at your files is never mistaken for changing them"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - precommit_hooks
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Reading, listing and searching are never blocked.
+
+  Commands that only look at files go through without being stopped by a file
+  protection, and this is shown on real everyday commands before any protection
+  starts blocking, so wider protection does not get in the way of finding out
+  what is there.
+depends_on:
+  - GE-130
+doc_links: []
+delivers_to: null
+expects_from: null
+documentation_triggers: []
+documentation_rationale: "Guarantees that nothing changes for commands that only read; the behaviour worth documenting is covered by GE-130a's reference entry."
+origin_agent: BrainCandy
+created: 2026-09-17
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  USER DECISION Q2 (2026-09-17): zero blocks on read-only commands, by design
+  (block beforehand only when certain), measured against a sample of real agent
+  shell commands before blocking is switched on. This measurement is the gate
+  between the warn-only and blocking stages of the Q3 rollout.
+  Sharpest case: inline_work_guard. /build-feature runs its own shell steps while
+  its lock is in place, so blocking every shell command under the lock would stop
+  the workflow it protects.
