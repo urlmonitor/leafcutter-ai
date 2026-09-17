@@ -1,0 +1,60 @@
+id: GE-129b-2-ii
+title: "A git command whose subcommand cannot be read from its text is refused with that reason, not let through unnoticed"
+component: guardrail-engine
+components:
+  - commit_guardian
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given identity enforcement in force, a staged change, a subagent named python-coder, and each of
+    these commands, whose git subcommand is not written literally in the command:
+    (a) `SUB=commit; git $SUB -m "x"`,
+    (b) `git "$(echo commit)" -m "x"`,
+    (c) `xargs git < args.txt`,
+  And, for contrast, `SUB=status; git status` whose subcommand is written literally,
+  When each is issued,
+  Then (a), (b) and (c) are each refused, no commit is added, and each refusal quotes the command
+    and states that it could not be ruled out as a commit,
+    And the contrast command runs and is not refused.
+depends_on:
+  - GE-129b-2
+doc_links:
+  - path: docs/acceptance-criteria/guardrail-engine/GE-129-who-acts-not-what-typed/GE-129b-2.yaml
+    relationship: parent
+    status: exists
+  - path: docs/acceptance-criteria/guardrail-engine/GE-129-who-acts-not-what-typed/GE-129b.yaml
+    relationship: context
+    status: exists
+    relevance: "L1: 'a reworded command cannot slip past unnoticed'."
+assigned_agent: python-coder
+estimated_complexity: null
+declares_side_effect: false
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-09-17
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  WHY REFUSE AND NOT MERELY STATE. For a non-specialist subagent there is no legitimate need to
+  commit, so refusing an undeterminable git subcommand costs nothing on the commit path; a
+  statement-only outcome would let the reworded commit through, which the L1 forbids. The
+  contrast command pins that the rule is about an unreadable subcommand, not about variables in
+  a command.
+
+  DECIDED 2026-09-17 (user, default accepted) -- REFUSE. A git command whose subcommand cannot be
+  read from its text is refused, not merely stated. From the top-level session the same rule puts
+  (a)-(c) to the person's prompt (or refuses them where no person is reached). Stating instead of
+  refusing is not an accepted fallback; changing it needs a new user decision.
+
+  Out of reach by design: a commit made by a program the command starts (a script file, an alias
+  defined outside the command). Stated as a limit in GE-129b-3 and GE-129e-4.
+
+  declares_side_effect: false -- the Then clauses assert refusal, run and absence of a commit.

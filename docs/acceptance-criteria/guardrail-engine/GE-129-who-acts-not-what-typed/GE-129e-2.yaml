@@ -1,0 +1,68 @@
+id: GE-129e-2
+title: "The hooks reference documents the caller identity a guard really receives, lists the commit guard, and states who may commit"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - documentation_system
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the probe findings of GE-129a-1 and the behaviours of GE-129a-2, GE-129a-2-i, GE-129a-3,
+    GE-129d-1 and GE-129d-2,
+  When a reader opens the hooks reference,
+  Then its hook input contract lists the agent identifier (agent_id) and the agent name
+    (agent_type), and the permission mode, each with when it is present as the probe observed it,
+    for the top-level session, an Agent-tool subagent, a workflow-dispatched agent, a nested
+    subagent and a session launched by name, and the Claude Code version observed,
+    And its hook catalogue has an entry for the commit guard naming what it matches and what it
+    decides,
+    And it holds one table of callers -- commit specialist subagent, any other subagent, top-level
+    session in each observed permission mode, session launched under the commit specialist's name,
+    caller whose identity cannot be established -- each with its outcome for a commit: goes ahead,
+    prompted, or refused,
+    And its Bypass / Escape Hatches table no longer lists any way to authorise a commit.
+depends_on:
+  - GE-129e
+  - GE-129a-1
+doc_links:
+  - path: docs/acceptance-criteria/guardrail-engine/GE-129-who-acts-not-what-typed/GE-129e.yaml
+    relationship: parent
+    status: exists
+    relevance: "The hooks reference stdin contract (missing agent_id/agent_type) and catalogue (missing enforce_commit_delegation)."
+  - path: docs/reference/claude-code-hooks.md
+    relationship: modifies
+    status: exists
+    relevance: "Stdin contract lists tool_name, tool_input and session_id only."
+  - path: docs/acceptance-criteria/guardrail-engine/GE-129-who-acts-not-what-typed/GE-129a-5.yaml
+    relationship: context
+    status: exists
+    relevance: "GE-129a's reference-doc trigger is discharged here and in GE-129e-4."
+assigned_agent: documentation-expert
+estimated_complexity: null
+declares_side_effect: false
+delivers_to:
+  - agent: python-coder
+    contract: "The caller table, in a form GE-129e-3's agreement check can put to the guard row by row."
+expects_from:
+  - ac_id: GE-129a-1
+    contract: "The probe findings: identity presence per caller, prompt behaviour and mode value per permission mode, Claude Code version."
+origin_agent: business-analyst
+created: 2026-09-17
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  DISCHARGES GE-129a's reference-doc trigger together with GE-129e-4 (placement decision recorded
+  on GE-129a-5). Also the home of the probe finding that replaces BO-3200f-2-iii's "establish from
+  the live payload" clause (GE-129a notes).
+
+  The command-example table (what counts as a commit) is GE-129b-3's; this record holds the caller
+  table. Both are checked against the guard by GE-129e-3.
+
+  declares_side_effect: false -- the Then clauses describe reference content.

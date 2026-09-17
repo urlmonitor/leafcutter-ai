@@ -1,0 +1,68 @@
+id: GE-129c-4
+title: "A commit refused inside an unattended run fails that step visibly, and the run does not report the work as complete"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - build_orchestration
+  - supervisor_system
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given identity enforcement in force, a staged change, and an unattended run whose commit is
+    refused, in three forms:
+    (a) a fast lane run whose commit step issues the commit from an agent other than the commit
+        specialist,
+    (b) a ticket-supervisor drive whose commit phase is refused because the caller identity cannot
+        be established (GE-129a-2-i),
+    (c) a finalize-feature run whose closure step issues the commit from the status checker,
+  When the run reaches that commit,
+  Then the step is reported as failed, naming the step, the agent that was refused and the
+    guard's refusal text,
+    And the run does not report the acceptance criterion, ticket or feature as complete,
+    And no later step that requires the commit runs,
+    And the staged change is still present in the working tree, neither added to the history nor
+    discarded.
+depends_on:
+  - GE-129c
+  - GE-129a-1
+doc_links:
+  - path: docs/acceptance-criteria/guardrail-engine/GE-129-who-acts-not-what-typed/GE-129c.yaml
+    relationship: parent
+    status: exists
+    relevance: "VISIBLE FAILURE: a refused commit inside a run is a failed step (BO-3100 'every step either really runs or visibly fails'), never a silently skipped one."
+  - path: docs/acceptance-criteria/build-orchestration/BO-3200-second-hand-answers/BO-3200f-1-i.yaml
+    relationship: context
+    status: exists
+    relevance: "The guardrail_blocked reason a guard refusal maps to; reuse it rather than minting a second failure vocabulary."
+assigned_agent: python-coder
+estimated_complexity: null
+declares_side_effect: false
+delivers_to: null
+expects_from:
+  - ac_id: GE-129b-2
+    contract: "The refusal text quoting the recognised commit command, surfaced in the failed step."
+origin_agent: business-analyst
+created: 2026-09-17
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  WHY ALL THREE RUN KINDS. Each reports step outcomes through a different surface (fast-lane-ship,
+  ticket-supervisor's comment/status protocol, finalize-feature's step log). A fix in one does not
+  carry to the others.
+
+  (c) is the pre-reroute state of step 3.5: under identity enforcement without GE-129c-1, this is
+  what must happen -- a visible failure, never the closure quietly skipped. It is the Q6 coupling
+  seen from the failure side.
+
+  The general "every step really runs or visibly fails" rule is BO-3100's; this record pins the
+  commit refusal as an instance and does not restate BO-3100's retry or evidence rules.
+
+  declares_side_effect: false -- the Then clauses assert a failure report and an unchanged working
+  tree.

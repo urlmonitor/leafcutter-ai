@@ -1,0 +1,68 @@
+id: GE-129c-1-i
+title: "A commit specialist dispatched by an unattended run without a ticket path does not wait for a person's confirmation"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - supervisor_system
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the commit specialist dispatched by finalize-feature's closure step with no ticket path,
+    and a staged change,
+  When it reaches its confirmation step,
+  Then it does not ask for a person's confirmation, does not return a question status, and does
+    not wait for a reply,
+    And it either commits the change under the dispatching run's approval, leaving the audit
+    record of GE-129c-3, or ends with the failed step of GE-129c-4,
+    And it never ends with the change neither committed nor reported as failed.
+depends_on:
+  - GE-129c-1
+doc_links:
+  - path: docs/acceptance-criteria/guardrail-engine/GE-129-who-acts-not-what-typed/GE-129c-1.yaml
+    relationship: parent
+    status: exists
+  - path: templates/agents/commit.md
+    relationship: describes
+    status: exists
+    relevance: "Step 3's confirmation gate branches on ticket_path: without one it asks the user 'Commit this?' -- a question a dispatched agent can never receive an answer to."
+  - path: docs/agents/conventions.md
+    relationship: describes
+    status: exists
+    relevance: "Section 3.2.1: a spawned confirmation-gated agent has no human channel; the action deadlocks."
+assigned_agent: llm-expert
+estimated_complexity: null
+declares_side_effect: true
+delivers_to: null
+expects_from:
+  - ac_id: GE-129c-1
+    contract: "The closure step's dispatch of the commit specialist, and what it passes in place of a ticket path."
+origin_agent: business-analyst
+created: 2026-09-17
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  WHY AN L3. GE-129c-1 is met by a test that stubs the specialist. The live failure is that the
+  specialist's gate, finding no ticket path, takes the interactive branch and waits: the step
+  neither commits nor fails. Only this record turns red under "reroute done, gate unchanged".
+
+  Q1 (2026-09-17): a dispatched commit specialist is unattended by definition; approval is the
+  dispatching run plus an audit record. The GE-129c notes record that the token only ever
+  satisfied the guard, so retiring it does not change the gate -- but routing a new, ticket-less
+  caller to the specialist does reach the gate's interactive branch.
+
+  DECIDED 2026-09-17 (user) -- THE GAP Q1 OPENED IS CLOSED BY REFUSAL. A top-level session in a
+  mode that reaches no person is refused when it dispatches the commit specialist (GE-129d-2-i);
+  how that dispatch is told from an unattended run's is taken from harness-supplied context only
+  (GE-129a-1's third scenario). This record stays scoped to an unattended run's dispatch.
+
+  declares_side_effect: true -- derived from "commits the change".
+
+  ASSIGNMENT (BA proposal): llm-expert -- the edit surface is the commit specialist's agent
+  definition (its confirmation step).

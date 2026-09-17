@@ -35,7 +35,10 @@ origin_agent: BrainCandy
 created: 2026-09-17
 amended_by: []
 superseded_by: null
-covered_by: []
+covered_by:
+  - GE-129d-1
+  - GE-129d-2
+  - GE-129d-3
 implemented_by: []
 notes: |
   DECIDED 2026-09-17 (Q2). The top-level session (no agent_id) hands each commit

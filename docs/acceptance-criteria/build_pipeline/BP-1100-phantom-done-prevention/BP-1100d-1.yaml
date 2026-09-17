@@ -18,8 +18,12 @@ criteria: |
   Then the commit is blocked,
   And the guard's message names the offending file and the prohibited
   agentType/git-commit pairing,
-  And a workflow step that dispatches agentType "commit" for its git commit, or runs
-  under COMMIT_AGENT_MODE=1, is not blocked.
+  And a workflow step that dispatches agentType "commit" for its git commit is not
+  blocked,
+  And a workflow step that pairs a non-commit agentType with a git commit instruction
+  is blocked even when that instruction sets COMMIT_AGENT_MODE=1, because only a
+  dispatch to the commit agent satisfies the rule (GE-129).
+declares_side_effect: false
 depends_on:
   - BP-1100d
 doc_links:
@@ -42,7 +46,24 @@ delivers_to:
 expects_from: null
 origin_agent: BrainCandy
 created: 2026-06-22
-amended_by: []
+amended_by:
+- reason: commit-agent-mode-no-longer-an-accepted-alternative-per-ge-129
+  by: business-analyst
+  at: 2026-09-17
+  note: |
+    Authorised by the user (BrainCandy) on 2026-09-17 through GE-129: commits are authorised by
+    who is calling, so COMMIT_AGENT_MODE=1 grants nothing and is no longer an accepted
+    alternative to dispatching the commit agent. The exemption for a step running under
+    COMMIT_AGENT_MODE=1 is removed, and a scenario line is added so the retired exemption
+    cannot survive in the guard unnoticed. readiness was draft and stays draft. title and
+    depends_on unchanged.
+
+    OLD LAST And CLAUSE (verbatim):
+      And a workflow step that dispatches agentType "commit" for its git commit, or runs
+      under COMMIT_AGENT_MODE=1, is not blocked.
+
+    IT PO FIELDS NOW STALE (not edited): it_requirements[2] ("it must pass when agentType is
+    'commit' or when COMMIT_AGENT_MODE=1 is used").
 superseded_by: null
 covered_by:
   - BP-1100d-1-i

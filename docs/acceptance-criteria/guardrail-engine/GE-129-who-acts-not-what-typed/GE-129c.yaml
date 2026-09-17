@@ -42,7 +42,12 @@ origin_agent: BrainCandy
 created: 2026-09-17
 amended_by: []
 superseded_by: null
-covered_by: []
+covered_by:
+  - GE-129c-1
+  - GE-129c-2
+  - GE-129c-3
+  - GE-129c-4
+  - GE-129c-5
 implemented_by: []
 notes: |
   DECIDED 2026-09-17 (Q1) -- A DISPATCHED COMMIT SPECIALIST IS UNATTENDED BY

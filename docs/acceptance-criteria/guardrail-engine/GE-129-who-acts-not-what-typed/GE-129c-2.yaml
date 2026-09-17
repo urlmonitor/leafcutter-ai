@@ -1,0 +1,71 @@
+id: GE-129c-2
+title: "The fast lane and a supervised ticket still commit through the commit specialist, with no token in any command they issue"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - git_vcs_operations
+  - build_orchestration
+  - supervisor_system
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given identity enforcement in force and a scratch repository holding one ready acceptance
+    criterion and one ready ticket,
+  When the fast lane is run end to end on the acceptance criterion, and a ticket-supervisor drive is
+    run end to end on the ticket,
+  Then in each run the commit specialist commits the change at the run's commit step, and the run
+    reports that step complete,
+    And the commit is recognised by the guard as a commit (GE-129b-2), including the fast lane's
+    git -C form,
+    And no command issued by any agent in either run contains COMMIT_AGENT_MODE.
+depends_on:
+  - GE-129c
+  - GE-129a-1
+doc_links:
+  - path: docs/acceptance-criteria/guardrail-engine/GE-129-who-acts-not-what-typed/GE-129c.yaml
+    relationship: parent
+    status: exists
+    relevance: "Inventory of legitimate unattended committers: fast lane commit step, ticket-supervisor commit phase, finalize-feature step 3.5 (GE-129c-1)."
+  - path: docs/how-to/fast-lane-build.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/diagrams/c3-fast-lane-build-loop-sequence.md
+    relationship: describes
+    status: exists
+  - path: templates/skills/building-epics/SKILL.md
+    relationship: describes
+    status: exists
+    relevance: "Ticket-supervisor's commit phase and gated-agent table."
+assigned_agent: python-coder
+estimated_complexity: null
+declares_side_effect: true
+delivers_to: null
+expects_from:
+  - ac_id: GE-129a-1
+    contract: "Cases (2) and (3): agents dispatched through the Agent tool and by workflow scripts carry agent_id and agent_type."
+origin_agent: business-analyst
+created: 2026-09-17
+amended_by: []
+superseded_by: null
+covered_by:
+  - GE-129c-2-i
+implemented_by: []
+notes: |
+  WHY "RECOGNISED AS A COMMIT". The fast lane's token has been inert because `git -C <path>
+  commit` was never recognised (GE-129b notes). A fast lane that "still commits" after this change
+  could be doing so only because the guard still misses its form. The clause makes this record go
+  red unless GE-129b-2 is in force too -- the Q6 "ship together" coupling, stated as a test.
+
+  WHY END TO END. Both committers already dispatch the specialist. What could break is the token
+  leaving their command text and the guard switching to identity; only a real run shows the
+  commit still lands.
+
+  The inventory claim ("these are all the committers") is checked mechanically in
+  GE-129c-2-i, not trusted from the GE-129c notes.
+
+  declares_side_effect: true -- derived from "commits the change".

@@ -1,0 +1,71 @@
+id: GE-129c-3
+title: "Every commit by a dispatched commit specialist leaves an audit record naming the run that approved it"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - supervisor_system
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given identity enforcement in force, and the commit specialist dispatched in three runs:
+    (a) by ticket-supervisor with a ticket path,
+    (b) by the fast lane,
+    (c) by finalize-feature's closure step,
+  When it commits in each run,
+  Then for each commit an audit record is persisted that names the commit's identifier, the
+    dispatching run (the workflow or supervisor, and the ticket or acceptance criterion where the
+    run has one), the caller identity the guard accepted, the commit subject and the files in the
+    commit,
+    And each record can still be read after its run has ended and the run's worktree has been
+    removed,
+    And searching the audit records for any one of the three commit identifiers returns exactly
+    one record,
+    And no record states a person's confirmation or a token as the approval.
+depends_on:
+  - GE-129c
+  - GE-129a-1
+doc_links:
+  - path: docs/acceptance-criteria/guardrail-engine/GE-129-who-acts-not-what-typed/GE-129c.yaml
+    relationship: parent
+    status: exists
+    relevance: "Q1: a dispatched commit specialist's approval comes from the run that dispatched it plus an audit record. No token."
+  - path: templates/agents/commit.md
+    relationship: describes
+    status: exists
+    relevance: "The supervised path today appends an 'Auto-authorized commit gate' entry to the ticket's Comments -- the precedent, but only for runs with a ticket path, and it names neither the dispatching run nor the accepted identity."
+assigned_agent: python-coder
+estimated_complexity: null
+declares_side_effect: true
+delivers_to: null
+expects_from:
+  - ac_id: GE-129a-2
+    contract: "The caller identity the guard accepted for the commit."
+origin_agent: business-analyst
+created: 2026-09-17
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  WHY (b) AND (c). The existing audit entry lives in a ticket's Comments, so runs without a ticket
+  file -- the fast lane on an acceptance criterion, a closure over many tickets -- would leave
+  none. That is the gap this record closes.
+
+  WHY "AFTER THE WORKTREE IS REMOVED". A record kept only in the worktree disappears at
+  finalize-feature's last step, which is exactly when step 3.5's commit happens.
+
+  FOR THE IT PO. Where the records live, and whether they are also written into the commit
+  itself (trailer) or kept beside it, is not decided here.
+
+  DECIDED 2026-09-17 (user) -- THE GAP Q1 OPENED IS CLOSED BY REFUSAL. "Dispatched means
+  unattended, approved by its dispatching run" also covered a top-level session dispatching the
+  commit specialist through the Agent tool in auto-accept or bypass-permissions mode. The user
+  chose to refuse that dispatch (GE-129d-2-i) rather than accept it with this audit record as the
+  only control. This record's three runs -- all unattended workflow runs -- are unaffected.
+
+  declares_side_effect: true -- derived from "an audit record is persisted".

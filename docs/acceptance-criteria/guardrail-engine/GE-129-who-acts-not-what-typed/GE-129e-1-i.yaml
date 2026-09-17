@@ -1,0 +1,50 @@
+id: GE-129e-1-i
+title: "An exemption cannot excuse a shipped instruction surface, and an exemption without a reason fails the check"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - documentation_system
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the retired-token check of GE-129e-1 and its declared exemption list,
+  When the check runs with, in turn:
+    (a) an exemption entry naming the commit specialist's agent definition,
+    (b) an exemption entry naming a whole directory that contains a shipped skill,
+    (c) an exemption entry naming a known-issue record, with no stated reason,
+    (d) an exemption entry naming a known-issue record, with a stated reason,
+  Then (a) and (b) fail, naming the entry and the shipped surface it would have excused,
+    And (c) fails, naming the entry and stating that it has no reason,
+    And (d) passes, and COMMIT_AGENT_MODE in that known-issue record produces no finding.
+depends_on:
+  - GE-129e-1
+doc_links:
+  - path: docs/acceptance-criteria/guardrail-engine/GE-129-who-acts-not-what-typed/GE-129e-1.yaml
+    relationship: parent
+    status: exists
+  - path: docs/known-issues/commit-guardian/open-high-ki-cg-20260907-commit-delegation-is-a-password-not-an-identity.md
+    relationship: describes
+    status: exists
+    relevance: "A historical record that must keep quoting the token."
+assigned_agent: python-coder
+estimated_complexity: null
+declares_side_effect: false
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-09-17
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  WHY AN L3. The parent passes on the corrected tree whether or not the exemption list can
+  swallow a shipped surface. The mutation "exempt the file that still fails" turns only this
+  record red. (b) closes the directory-wide variant of the same escape.
+
+  declares_side_effect: false -- the Then clauses assert pass and fail.

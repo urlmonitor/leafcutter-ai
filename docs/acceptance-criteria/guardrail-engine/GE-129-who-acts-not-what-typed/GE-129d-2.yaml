@@ -1,0 +1,75 @@
+id: GE-129d-2
+title: "Where no person can be asked, a commit from your own session is refused and the refusal says why"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - git_vcs_operations
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given identity enforcement in force, a staged change, and a top-level session (no agent_id) in
+    each permission mode that the probe findings (GE-129a-1) record as showing no prompt to a
+    person -- among auto-accept of edits, bypass-permissions and a headless print run,
+  When the session issues `git commit -m "x"`,
+  Then the commit is refused and no commit is added to the history,
+    And the refusal names the permission mode it received and states that a commit from the
+    session needs a person at the permission prompt,
+    And the refusal names no token, environment setting or flag as a way to let the commit through.
+
+  Given a mode among those three that the probe findings record as showing a prompt to a person,
+  When the session issues the same command,
+  Then the commit follows GE-129d-1 in that mode and is not refused for its mode.
+
+  Given a top-level session whose permission mode is absent from what the guard receives, or is a
+    value the probe findings do not list,
+  When the session issues the same command,
+  Then the commit is refused, and the refusal states that the permission mode could not be
+    established.
+depends_on:
+  - GE-129d
+  - GE-129a-1
+doc_links:
+  - path: docs/acceptance-criteria/guardrail-engine/GE-129-who-acts-not-what-typed/GE-129d.yaml
+    relationship: parent
+    status: exists
+    relevance: "Q2: where no prompt reaches a person -- auto-accept, bypass-permissions or headless -- the commit is refused. Rejected alternatives recorded there."
+  - path: docs/known-issues/commit-guardian/open-high-ki-cg-20260907-commit-delegation-is-a-password-not-an-identity.md
+    relationship: describes
+    status: exists
+    relevance: "The practical exposure: an unattended caller can commit without a human gate."
+assigned_agent: python-coder
+estimated_complexity: null
+declares_side_effect: false
+delivers_to: null
+expects_from:
+  - ac_id: GE-129a-1
+    contract: "Per permission mode: prompt shown to a person yes/no, and the mode value the guard receives."
+origin_agent: business-analyst
+created: 2026-09-17
+amended_by: []
+superseded_by: null
+covered_by:
+  - GE-129d-2-i
+implemented_by: []
+notes: |
+  WHY THE REFUSAL SET IS THE PROBE'S, NOT A LIST OF NAMES. GE-129d's notes require "no prompt
+  reaches a person" to be decided by observation. Auto-accept of edits may still prompt for shell
+  commands; if so, the second scenario keeps it on the prompt path rather than refusing it by name.
+
+  WHY THE THIRD SCENARIO. A guard that refuses only named modes lets through a new or unreported
+  mode. Unknown means refused -- the same fail-closed stance as GE-129a-2-i.
+
+  WHY "NAMES NO TOKEN". The cheapest helpful refusal would tell the reader how to get past it.
+  Q6: no transitional token wording anywhere.
+
+  DECIDED 2026-09-17 (user) -- THE DISPATCH PATH IS REFUSED TOO. In these modes the session could
+  dispatch the commit specialist through the Agent tool, which Q1 treats as approved by the
+  dispatching run. The user chose to refuse that dispatch; unattended workflow runs are not
+  affected. Specified in GE-129d-2-i, not here.
+
+  declares_side_effect: false -- the Then clauses assert refusal and absence of a commit.

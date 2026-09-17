@@ -40,7 +40,12 @@ origin_agent: BrainCandy
 created: 2026-09-17
 amended_by: []
 superseded_by: null
-covered_by: []
+covered_by:
+  - GE-129a-1
+  - GE-129a-2
+  - GE-129a-3
+  - GE-129a-4
+  - GE-129a-5
 implemented_by: []
 notes: |
   DECIDED 2026-09-17 -- LIVE PROBE IS THE FIRST L2 UNDER THIS L1 AND BLOCKS EVERY

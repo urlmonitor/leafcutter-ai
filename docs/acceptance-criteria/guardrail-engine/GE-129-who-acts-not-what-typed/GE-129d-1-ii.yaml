@@ -1,0 +1,53 @@
+id: GE-129d-1-ii
+title: "A session launched under the commit specialist's name is still your own session and is asked like one"
+component: guardrail-engine
+components:
+  - commit_guardian
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given identity enforcement in force, a staged change, and a top-level session launched with
+    --agent set to the commit specialist's name, whose tool calls carry agent_type naming the
+    commit specialist and no agent_id,
+  When the session issues `git commit -m "x"` in the default interactive mode,
+  Then the permission prompt is shown to the person and the command does not run before the person
+    answers, exactly as for a session launched without --agent.
+
+  Given the same launch in each mode GE-129a-1 found to reach no person,
+  When the session issues the same command,
+  Then the commit is refused as in GE-129d-2 and no commit is added to the history.
+depends_on:
+  - GE-129d-1
+doc_links:
+  - path: docs/acceptance-criteria/guardrail-engine/GE-129-who-acts-not-what-typed/GE-129d-1.yaml
+    relationship: parent
+    status: exists
+  - path: docs/acceptance-criteria/guardrail-engine/GE-129-who-acts-not-what-typed/GE-129a-2.yaml
+    relationship: context
+    status: exists
+    relevance: "Pins that the name alone never earns the commit specialist's go-ahead; this record pins what happens instead."
+assigned_agent: python-coder
+estimated_complexity: null
+declares_side_effect: false
+delivers_to: null
+expects_from:
+  - ac_id: GE-129a-1
+    contract: "Case (5): the identity a --agent top-level session arrives with."
+origin_agent: business-analyst
+created: 2026-09-17
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  WHY AN L3. The mutation "agent_type names the specialist, so go ahead" passes GE-129d-1 (which
+  launches without --agent) and GE-129d-2. Probe case (5) is the reason the Q3 rule requires
+  agent_id together with agent_type. A headless `claude -p --agent commit` run is the concrete
+  shortcut this closes.
+
+  declares_side_effect: false -- the Then clauses assert a prompt or a refusal.

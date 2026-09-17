@@ -38,7 +38,10 @@ origin_agent: BrainCandy
 created: 2026-09-17
 amended_by: []
 superseded_by: null
-covered_by: []
+covered_by:
+  - GE-129b-1
+  - GE-129b-2
+  - GE-129b-3
 implemented_by: []
 notes: |
   BOTH DIRECTIONS ARE ONE L1 -- one root cause (command text used as a proxy for

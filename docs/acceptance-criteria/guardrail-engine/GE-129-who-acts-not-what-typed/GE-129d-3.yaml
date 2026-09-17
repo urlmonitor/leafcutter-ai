@@ -1,0 +1,58 @@
+id: GE-129d-3
+title: "A how-to explains committing from your own session: the prompt you answer, when it is refused, and what to do instead"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - documentation_system
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the behaviours of GE-129d-1 and GE-129d-2 and the probe findings of GE-129a-1,
+  When a person reads the how-to for committing from their own session,
+  Then it states that each commit the assistant issues is shown at Claude Code's permission prompt,
+    that only the person's answer there lets it through, and that a reply typed in the conversation
+    does not,
+    And it lists every permission mode the probe findings record, each with its outcome for a
+    commit (prompted or refused), matching those findings,
+    And for a refused mode it gives the steps to commit instead: switch the session to the default
+    mode, or run the commit yourself in your own terminal,
+    And it states that allow rules and "don't ask again" do not pre-approve commits,
+    And it mentions no token, environment setting or flag as a way to commit.
+depends_on:
+  - GE-129d
+  - GE-129a-1
+  - GE-129d-1
+  - GE-129d-2
+doc_links:
+  - path: docs/acceptance-criteria/guardrail-engine/GE-129-who-acts-not-what-typed/GE-129d.yaml
+    relationship: parent
+    status: exists
+    relevance: "documentation_triggers: [how-to]."
+assigned_agent: documentation-expert
+estimated_complexity: null
+declares_side_effect: false
+delivers_to: null
+expects_from:
+  - ac_id: GE-129a-1
+    contract: "The per-mode prompt findings the how-to's mode list must match."
+origin_agent: business-analyst
+created: 2026-09-17
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  The "match the findings" clause is what keeps this how-to from asserting a mode's behaviour the
+  probe did not observe. The absence of token wording is checked mechanically by GE-129e-1.
+
+  The how-to does not recommend dispatching the commit specialist from a no-person mode: the user
+  decided on 2026-09-17 that this dispatch is refused (GE-129d-2-i), so it is not a workaround.
+  This record's criteria were not changed by that decision; saying so in the how-to is allowed but
+  not yet required.
+
+  declares_side_effect: false -- the Then clauses describe how-to content.

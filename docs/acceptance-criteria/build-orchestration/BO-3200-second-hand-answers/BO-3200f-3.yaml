@@ -9,13 +9,14 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: reviewed
+readiness: draft
 priority: critical
 roadmap_phase: phase_1
 criteria: |
   Given every dispatch in the workflows shipped with the package whose request is an exact
     command to carry out and whose result is used without anyone's judgement over it -- reads of
-    recorded project state, and chores such as claiming or releasing work,
+    recorded project state, and chores such as claiming or releasing work -- other than a
+    dispatch whose request records a commit in the project's history,
   When the routing check examines them,
   Then every one is addressed to the chartered executor,
     And the check lists each by workflow and step together with the party it is addressed to.
@@ -33,6 +34,15 @@ criteria: |
     the build records rather than branches on,
   When the routing check runs,
   Then that dispatch is not reported, and is not required to be addressed to the executor.
+
+  Given a dispatch whose request records a commit in the project's history -- including
+    finalize-feature's step-3.5 closure commit, addressed to status-checker as measured on
+    2026-09-17 --
+  When the routing check runs,
+  Then that dispatch is never counted as a chore and is never listed among the dispatches that
+    must be addressed to the executor, because commits go to the commit agent (GE-129c),
+    And the same dispatch addressed to the chartered executor is reported by workflow and step
+    as a commit sent to the executor, whatever result declaration it carries.
 
   Given a workflow step added after the check was written that sends an exact command to a party
     other than the executor,
@@ -179,6 +189,39 @@ amended_by:
     two verdicts); widened result_use with `chore`; confirmed the python-coder release site is
     in scope. Added it_requirements, test_spec/test_rationale, change_target/risk_surface,
     delivers_to, doc_links, expects_from BO-3200f-1. criteria, title, depends_on untouched.
+- reason: commit-excluded-from-executor-chores-by-ge-129-criteria-changed-re-review-required
+  by: business-analyst
+  at: 2026-09-17
+  note: |
+    Authorised by the user (BrainCandy) on 2026-09-17 -- GE-129 Q5: finalize-feature step 3.5's
+    closure commit is routed to the commit agent, and this record receives an explicit exclusion
+    so a commit is never an executor chore. readiness demoted reviewed -> draft because criteria
+    changed.
+
+    WHAT CHANGED:
+      - First scenario: its Given now excludes a dispatch whose request records a commit, so the
+        rule "every exact-command dispatch goes to the executor" can no longer be read as
+        requiring a commit to go there.
+      - New fourth scenario: a commit dispatch, including the step-3.5 closure commit, is never a
+        chore and never required at the executor; one addressed to the executor is reported.
+        Where commits do go is cited to GE-129c, not restated.
+    title and depends_on unchanged.
+
+    WHAT THE FIRST SCENARIO'S GIVEN SAID BEFORE (verbatim):
+      Given every dispatch in the workflows shipped with the package whose request is an exact
+        command to carry out and whose result is used without anyone's judgement over it -- reads of
+        recorded project state, and chores such as claiming or releasing work,
+    No scenario was removed; the other four scenarios are unchanged.
+    OLD readiness: reviewed
+
+    IT PO FIELDS NOW STALE (not edited): it_requirements "DECLARED, NEVER INFERRED" (result_use
+    has three values, none of which fits a commit dispatch, so an undeclared-or-misdeclared commit
+    site fails the check as written), "ADDRESSING RULES" (no rule for commits),
+    "SECURITY CONTAINMENT AT AUTHORING TIME" (names the commit-agent mode as a bypass variable,
+    retired by GE-129), "THE FIRST SCENARIO REQUIRES THE REPOINTING" (must not repoint a commit to
+    the executor); delivers_to[0] addressing_verdict enum (no commit-to-executor verdict);
+    test_spec unresolved_addressee_and_bypass_variable_are_reported (uses the commit-agent bypass
+    variable as its example) and no descriptor for the new scenario; test_rationale.
 superseded_by: null
 covered_by: []
 implemented_by: []
@@ -240,3 +283,25 @@ notes: |
   THE RELEASE STEP (KI-BO-020's fix) IS IN SCOPE, CONFIRMED. It works today, which is exactly
   why it needs naming: under the user's decision a chore addressed to any non-executor party is
   mis-addressed, and python-coder's entry states no shell permission.
+
+  AMENDMENT 2026-09-17 (business-analyst) -- A COMMIT IS NEVER AN EXECUTOR CHORE (GE-129 Q5).
+  SEE amended_by.
+
+  WHY AN EXCLUSION AND NOT A REPOINTING. A commit is an exact command whose result nobody judges,
+  so the first scenario as written would have pulled it to the executor. Under GE-129 commits are
+  authorised by who is calling, and the executor is not the commit agent (GE-129a) -- a commit
+  sent there is refused, and a run that relied on it would fail. The step-3.5 closure commit,
+  dispatched to status-checker today, is exactly the site a well-meaning repointing under this
+  record would have moved to the executor.
+
+  BOUNDARY -- WHAT THIS RECORD DOES NOT CHECK. It does not require a commit dispatch to be
+  addressed to the commit agent, and does not report step 3.5's current addressing to
+  status-checker. Rerouting commits to the commit agent is GE-129c's, and the static
+  "non-commit agent paired with a commit" check is BP-1100d-1's (with BP-1100d-2 at review). Had
+  this record reported commit-to-status-checker, its gate would fail on the real sources until
+  GE-129c lands, putting a critical phase_1 record behind a draft tree; depends_on is therefore
+  NOT extended to GE-129c. If the user wants the addressing verdict to also require the commit
+  agent, that is a one-scenario addition plus a depends_on edge on GE-129c.
+
+  declares_side_effect: false -- re-derived after the amendment. The new Then clauses state what
+  the check counts and reports; nothing durable is asserted.

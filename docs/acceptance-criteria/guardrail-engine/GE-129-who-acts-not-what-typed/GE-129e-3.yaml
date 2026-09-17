@@ -1,0 +1,78 @@
+id: GE-129e-3
+title: "Every outcome the hooks reference states for a caller or an example command is checked against what the commit guard actually decides"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - documentation_system
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the hooks reference's caller table (GE-129e-2) and example-command table (GE-129b-3),
+    each row stating a caller or a command and an outcome,
+    And the hook catalogue in the same reference, and the hooks registered in the package's shipped
+    settings,
+  When the rules-agreement check runs,
+  Then every caller row is put to the commit guard with that caller's identity and permission
+    mode and `git commit -m "x"`, and every command row is put to the guard as issued by a subagent
+    named python-coder,
+    And a row whose stated outcome differs from the guard's decision fails, naming the row, the
+    stated outcome and the guard's decision,
+    And a hook registered in the shipped settings with no entry in the hook catalogue fails,
+    naming the hook,
+    And changing one row's stated outcome, with no change to the guard, produces exactly one
+    failure naming that row.
+
+  Given the project rules' Commit Delegation section, section 3.2.1 of the agent conventions and
+    the commit specialist's instructions,
+  When the same check runs,
+  Then each of the three links to the caller table, and a link that does not resolve to that
+    table fails, naming the surface.
+depends_on:
+  - GE-129e
+  - GE-129a-1
+  - GE-129e-2
+  - GE-129b-3
+doc_links:
+  - path: docs/acceptance-criteria/guardrail-engine/GE-129-who-acts-not-what-typed/GE-129e.yaml
+    relationship: parent
+    status: exists
+    relevance: "MECHANICAL, NOT PROSE (BO-3100/3200 standing rule)."
+  - path: docs/reference/claude-code-hooks.md
+    relationship: describes
+    status: exists
+  - path: templates/settings.json
+    relationship: describes
+    status: exists
+    relevance: "Shipped hook registrations the catalogue must agree with."
+assigned_agent: python-coder
+estimated_complexity: null
+declares_side_effect: false
+delivers_to: null
+expects_from:
+  - ac_id: GE-129e-2
+    contract: "Caller table rows: caller identity, permission mode, stated outcome."
+  - ac_id: GE-129b-3
+    contract: "Command table rows: command, stated outcome."
+origin_agent: business-analyst
+created: 2026-09-17
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  WHY THIS IS THE MECHANICAL FORM. "Every written promise matches what is enforced" (L1) cannot be
+  checked by reading wording. It can be checked by making the promise executable: each stated
+  outcome is a test input and expected result. A guard change that is not reflected in the
+  reference, or a reference edit not reflected in the guard, fails.
+
+  WHY THE SECOND SCENARIO IS LINKS, NOT WORDING. The three rule surfaces state who may commit in
+  prose. Checking that prose would be the grep-for-a-sentence the standing rule rejects. Pointing
+  them at the checked table single-sources the outcomes; the link check is weaker than the table
+  check and is stated as such. Their token-free wording is GE-129e-1's.
+
+  declares_side_effect: false -- the Then clauses assert failures and passes.

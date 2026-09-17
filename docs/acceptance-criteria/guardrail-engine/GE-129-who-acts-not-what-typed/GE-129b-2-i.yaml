@@ -1,0 +1,55 @@
+id: GE-129b-2-i
+title: "The same quoted text is a mention when it is passed as an argument and a commit when a shell runs it"
+component: guardrail-engine
+components:
+  - commit_guardian
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given identity enforcement in force, a staged change, a subagent named python-coder, and these
+    pairs of commands carrying identical quoted text:
+    (a) `echo 'git commit -m x'` and `bash -c 'git commit -m x'`,
+    (b) `gh pr comment 12 --body "git -C ../wt commit"` and `sh -c "git -C ../wt commit -m x"`,
+    (c) `printf '%s\n' "git commit -m x"` and `eval "git commit -m x"`,
+    (d) a here-document containing `git commit -m x` redirected into notes.md, and the same
+        here-document fed to `bash`,
+  And two commands that run a commit in a nested shell without quoting it as an argument:
+    (e) `(git commit -m x)` and `echo $(git commit -m x)`,
+  When each is issued,
+  Then the first command of each pair (a) to (d) runs and is not refused,
+    And the second command of each pair (a) to (d) is refused as a commit and no commit is added,
+    And both commands of (e) are refused as commits and no commit is added.
+depends_on:
+  - GE-129b-2
+doc_links:
+  - path: docs/acceptance-criteria/guardrail-engine/GE-129-who-acts-not-what-typed/GE-129b-2.yaml
+    relationship: parent
+    status: exists
+  - path: docs/acceptance-criteria/guardrail-engine/GE-129-who-acts-not-what-typed/GE-129b-1.yaml
+    relationship: context
+    status: exists
+    relevance: "The mention direction this record's first halves also exercise."
+assigned_agent: python-coder
+estimated_complexity: null
+declares_side_effect: false
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-09-17
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  WHY AN L3. GE-129b-1 and GE-129b-2 are both satisfiable by "ignore everything inside quotes":
+  every mention in b-1 is quoted, every commit in b-2 is not. That implementation makes
+  `bash -c 'git commit'` a free pass. Only the second halves of (a)-(d) turn red under it. The
+  opposite mutation -- "any quoted git commit is a commit" -- turns only the first halves red.
+  The pairing is the discriminator.
+
+  declares_side_effect: false -- the Then clauses assert run, refusal and absence of a commit.

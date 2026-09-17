@@ -1,0 +1,77 @@
+id: GE-129a-2
+title: "A commit from a subagent goes ahead only when the caller carries an agent identifier together with the commit specialist's name"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - git_vcs_operations
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given identity enforcement in force, a staged change, and the command
+    `git commit -m "chore: identity rule"`,
+  When the command is issued by each of:
+    (a) the commit specialist dispatched as a subagent, arriving with agent_id present and
+        agent_type naming the commit specialist as recorded by the probe (GE-129a-1),
+    (b) a subagent named python-coder, arriving with agent_id present,
+    (c) a subagent named status-checker, arriving with agent_id present,
+    (d) a subagent defined by the project whose name is commit-helper, arriving with agent_id
+        present,
+  Then in (a) the commit specialist commits the change,
+    And in (b), (c) and (d) the commit is refused and no commit is added to the history,
+    And each refusal names the agent name that was received and states that only the commit
+    specialist may commit.
+
+  Given a caller arriving with agent_type naming the commit specialist and no agent_id,
+  When it issues the same command,
+  Then it is not treated as the commit specialist: the go-ahead given in (a) is not given, and the
+    decision is the one GE-129d makes for the top-level session.
+depends_on:
+  - GE-129a
+  - GE-129a-1
+doc_links:
+  - path: docs/acceptance-criteria/guardrail-engine/GE-129-who-acts-not-what-typed/GE-129a.yaml
+    relationship: parent
+    status: exists
+    relevance: "Q3 identity rule: agent_id must be present together with agent_type naming the commit specialist; a name alone does not count."
+  - path: docs/known-issues/commit-guardian/open-high-ki-cg-20260907-commit-delegation-is-a-password-not-an-identity.md
+    relationship: describes
+    status: exists
+  - path: docs/reference/claude-code-hooks.md
+    relationship: describes
+    status: exists
+    relevance: "Hook input contract; agent_id and agent_type as established by GE-129a-1."
+assigned_agent: python-coder
+estimated_complexity: null
+declares_side_effect: true
+delivers_to: null
+expects_from:
+  - ac_id: GE-129a-1
+    contract: "The agent_type value the commit specialist actually arrives with, and confirmation that agent_id is present for subagent callers."
+origin_agent: business-analyst
+created: 2026-09-17
+amended_by: []
+superseded_by: null
+covered_by:
+  - GE-129a-2-i
+implemented_by: []
+notes: |
+  WHY (c) STATUS-CHECKER. It is the agent finalize-feature's step 3.5 dispatches for the closure
+  commit today (GE-129c). Naming it here pins that the reroute is required, not optional.
+
+  WHY (d) COMMIT-HELPER. A name that merely contains "commit" must not match. An implementation
+  that tests "name contains commit" passes (a)-(c) and fails (d).
+
+  THE SECOND SCENARIO. Case (5) of the probe: `--agent commit` gives a top-level session an
+  agent_type with no agent_id. This record pins only that the name alone never earns the
+  specialist's go-ahead; what does happen (prompt or refusal) is GE-129d-1-ii, not restated.
+
+  Unestablishable identity (agent_id without agent_type, unreadable input, internal failure) is
+  GE-129a-2-i. Caller-mintable signals (token, environment, marker files, working directory,
+  prompt) are GE-129a-3.
+
+  declares_side_effect: true -- derived from "the commit specialist commits the change".

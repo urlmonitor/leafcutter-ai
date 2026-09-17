@@ -1,0 +1,55 @@
+id: GE-129c-5
+title: "A sequence diagram shows each unattended committer handing its commit to the commit specialist, and the refused path"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - documentation_system
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the behaviours of GE-129c-1, GE-129c-2, GE-129c-3 and GE-129c-4,
+  When a reader opens the unattended-commit sequence diagram,
+  Then it shows, for the fast lane, a ticket-supervisor drive and finalize-feature's closure step,
+    the run dispatching the commit specialist, the specialist issuing the commit, the guard
+    receiving the caller identity from the harness, the guard's go-ahead, and the audit record,
+    And it shows the refused path: a non-specialist caller's commit refused by the guard and the
+    run reporting the step as failed,
+    And no message in the diagram carries a token or an environment setting as authorisation,
+    And the existing fast lane sequence diagram agrees with it on the commit step.
+depends_on:
+  - GE-129c
+  - GE-129a-1
+  - GE-129c-1
+  - GE-129c-2
+  - GE-129c-3
+  - GE-129c-4
+doc_links:
+  - path: docs/acceptance-criteria/guardrail-engine/GE-129-who-acts-not-what-typed/GE-129c.yaml
+    relationship: parent
+    status: exists
+    relevance: "documentation_triggers: [sequence-diagram]."
+  - path: docs/architecture/diagrams/c3-fast-lane-build-loop-sequence.md
+    relationship: modifies
+    status: exists
+    relevance: "Carries the token on its commit step today (GE-129e notes)."
+assigned_agent: architecture-diagram-author
+estimated_complexity: null
+declares_side_effect: false
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-09-17
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  The token-free wording of existing diagrams is checked mechanically by GE-129e-1; this record
+  specifies the new diagram's content and its agreement with the fast lane diagram.
+
+  declares_side_effect: false -- the Then clauses describe what a reader sees.

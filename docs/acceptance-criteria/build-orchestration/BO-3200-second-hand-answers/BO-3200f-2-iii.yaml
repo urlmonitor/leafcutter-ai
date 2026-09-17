@@ -9,12 +9,12 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: reviewed
+readiness: draft
 priority: low
 criteria: |
-  Given each guardrail that honours a bypass variable -- COMMIT_AGENT_MODE, CLAUDE_NO_DOC_UPDATE
-    and INLINE_WORK_GUARD_MODE -- and, for each, a command that guardrail blocks when the command
-    is issued without the variable,
+  Given each guardrail that honours a bypass variable -- CLAUDE_NO_DOC_UPDATE,
+    INLINE_WORK_GUARD_MODE and CLAUDE_NO_README_CHECK -- and, for each, a command that guardrail
+    blocks when the command is issued without the variable,
     And that command dispatched to the chartered executor with the variable set in the command
     text, at the value that bypasses the guardrail for any other caller,
   When the executor carries the dispatch out,
@@ -35,11 +35,21 @@ criteria: |
   Then the guardrail blocks the command and it is not carried out, so the refusal does not depend
     on BO-3200f-3 having seen the command.
 
-  Given the same blocked command carrying the same bypass variable at the same value, issued by a
-    caller that is not the executor and for which that guardrail honours the variable today,
+  Given the same blocked command carrying the same bypass variable at the same value -- one of
+    CLAUDE_NO_DOC_UPDATE, INLINE_WORK_GUARD_MODE or CLAUDE_NO_README_CHECK -- issued by a caller
+    that is not the executor and for which that guardrail honours the variable today,
   When the command is issued,
   Then the bypass takes effect for that caller exactly as it does today, so the refusal applies
     to the executor as caller and does not remove the escape hatch for anyone else.
+
+  Given a command that records a commit in the project's history, dispatched to the chartered
+    executor, in three forms: with COMMIT_AGENT_MODE=1 in its text, with COMMIT_AGENT_MODE=1 set
+    in the environment the executor runs in, and with neither,
+  When the executor carries each dispatch out,
+  Then in all three forms the commit is refused and no commit is added to the history, because
+    the executor is not the commit agent (GE-129a),
+    And the three refusals are identical: COMMIT_AGENT_MODE is not named as a refused bypass
+    variable, since under GE-129 it grants nothing to any caller.
 
   Given a guardrail that gains a bypass variable after this rule is in force,
     And a command that guardrail blocks, carrying that new variable, dispatched to the executor,
@@ -48,7 +58,8 @@ criteria: |
     refusal that names the new variable.
 
   Given a guardrail that receives a command carrying one of its bypass variables and cannot
-    establish from what it receives whether the caller is the executor,
+    establish whether the caller is the executor from the caller identity the harness supplies,
+    as found by GE-129a's live identity probe,
   When the guardrail decides,
   Then it does not let the command through under the bypass without saying so: either it blocks
     the command as it would for the executor, or, if it lets the command through under the
@@ -58,6 +69,8 @@ criteria: |
 depends_on:
   - BO-3200f-2
   - BO-3200f-1
+  - GE-129a
+  - GE-130a
 doc_links:
   - path: docs/acceptance-criteria/build-orchestration/BO-3200-second-hand-answers/BO-3200f-2.yaml
     relationship: describes
@@ -236,6 +249,100 @@ amended_by:
     BLOCK, COMMIT_AGENT_MODE STATE) and wrote the non-removal rule for the COMMIT_AGENT_MODE
     conflict with BO-3200f-3. criteria, title, depends_on, req_status and priority (low)
     untouched; roadmap_phase left unset. readiness draft -> reviewed.
+- reason: commit-agent-mode-retired-by-ge-129-criteria-changed-re-review-required
+  by: business-analyst
+  at: 2026-09-17
+  note: |
+    A REAL CHANGE OF SCOPE, NOT A WORDING TIDY-UP. Authorised by the user (BrainCandy) on
+    2026-09-17 through the decisions recorded in GE-129's notes (Q4: this record's
+    COMMIT_AGENT_MODE exception is retired; Q6: no grace period). Commits are authorised by who
+    is calling (GE-129a), so COMMIT_AGENT_MODE grants nothing to any caller and there is no bypass
+    left to refuse or to preserve. readiness demoted reviewed -> draft so the IT PO re-runs
+    enrichment rather than silently inheriting a pass made on the retired premise.
+
+    WHAT CHANGED:
+      - COMMIT_AGENT_MODE removed from the set of bypass variables this record refuses; the first
+        scenario now names CLAUDE_NO_DOC_UPDATE, INLINE_WORK_GUARD_MODE and CLAUDE_NO_README_CHECK.
+      - The fourth scenario (non-executor caller keeps the bypass) is scoped to those three
+        variables; it no longer preserves a COMMIT_AGENT_MODE path for anyone.
+      - New scenario: a commit dispatched to the executor is refused in every form, with or
+        without COMMIT_AGENT_MODE, because the executor is not the commit agent -- cited to
+        GE-129a, not restated.
+      - The unidentified-caller scenario keeps its rule (block, or let through only with the
+        statement) unchanged; its Given now takes the caller identity from GE-129a's live identity
+        probe instead of leaving each guardrail to establish it on its own.
+      - depends_on gains GE-129a.
+    title unchanged.
+
+    WHAT THE CRITERIA SAID BEFORE (verbatim):
+      Given each guardrail that honours a bypass variable -- COMMIT_AGENT_MODE, CLAUDE_NO_DOC_UPDATE
+        and INLINE_WORK_GUARD_MODE -- and, for each, a command that guardrail blocks when the command
+        is issued without the variable,
+        And that command dispatched to the chartered executor with the variable set in the command
+        text, at the value that bypasses the guardrail for any other caller,
+      When the executor carries the dispatch out,
+      Then the guardrail blocks the command exactly as it blocks it without the variable,
+        And the command is not carried out,
+        And the block names the guardrail and the bypass variable it refused.
+
+      Given the same command without the variable in its text, dispatched to the executor while the
+        same bypass variable is set in the environment the executor runs in,
+      When the executor carries the dispatch out,
+      Then the guardrail blocks the command, the command is not carried out, and the block names the
+        guardrail and the variable.
+
+      Given a command that appears in no workflow shipped with the package -- composed while a run is
+        in progress -- carrying one of the three bypass variables, dispatched to the executor,
+        And the authoring-time routing check of BO-3200f-3 never having examined that command,
+      When the executor carries the dispatch out,
+      Then the guardrail blocks the command and it is not carried out, so the refusal does not depend
+        on BO-3200f-3 having seen the command.
+
+      Given the same blocked command carrying the same bypass variable at the same value, issued by a
+        caller that is not the executor and for which that guardrail honours the variable today,
+      When the command is issued,
+      Then the bypass takes effect for that caller exactly as it does today, so the refusal applies
+        to the executor as caller and does not remove the escape hatch for anyone else.
+
+      Given a guardrail that gains a bypass variable after this rule is in force,
+        And a command that guardrail blocks, carrying that new variable, dispatched to the executor,
+      When the executor carries the dispatch out,
+      Then the guardrail blocks the command and it is not carried out, with no change made to the
+        refusal that names the new variable.
+
+      Given a guardrail that receives a command carrying one of its bypass variables and cannot
+        establish from what it receives whether the caller is the executor,
+      When the guardrail decides,
+      Then it does not let the command through under the bypass without saying so: either it blocks
+        the command as it would for the executor, or, if it lets the command through under the
+        bypass, it states on its error output, in the same decision, the guardrail, the bypass
+        variable and that the caller could not be identified,
+        And in no case is the command carried out under the bypass with no such statement.
+    OLD depends_on (verbatim): [BO-3200f-2, BO-3200f-1]
+    OLD readiness: reviewed
+
+    IT PO FIELDS NOW STALE (not edited; the BA does not own them): it_requirements on the
+    four-variable declaration, caller identity from the live payload, the per-guardrail
+    STATE/BLOCK policy and the COMMIT_AGENT_MODE non-removal rule; delivers_to's example reason
+    text; test_spec descriptors non_executor_caller_keeps_the_bypass,
+    fast_lane_commit_step_still_commits_through_the_guardrail,
+    unidentified_caller_is_blocked_or_stated_never_silently_allowed (STATE branch),
+    deployed_guardrails_refuse_the_bypass and live_executor_commit_with_bypass; test_rationale's
+    fast-lane paragraph; the relevance text of four doc_links that cite the fourth scenario
+    keeping COMMIT_AGENT_MODE.
+- reason: depends-on-edges-added-for-landing-order
+  by: business-analyst
+  at: 2026-09-17
+  note: |
+    User decision 2026-09-17. depends_on gains GE-130a. The three bypass variables this record
+    still covers (CLAUDE_NO_DOC_UPDATE, INLINE_WORK_GUARD_MODE, CLAUDE_NO_README_CHECK) belong to
+    guardrails that see shell commands only once GE-130a widens them; without it the executor
+    (shell only) issues nothing those guardrails see, and the scenarios have nothing to exercise.
+    This answers the matcher caveat carried forward in the notes. No other field changed:
+    criteria, title, readiness, priority and declares_side_effect (false) untouched. Cycle check
+    2026-09-17: GE-130a depends on GE-130 and GE-130f, GE-130f on GE-130, GE-130 on nothing; no
+    path back to this record.
+    OLD depends_on (verbatim): [BO-3200f-2, BO-3200f-1, GE-129a]
 superseded_by: null
 covered_by: []
 implemented_by: []
@@ -345,3 +452,41 @@ notes: |
   or those guardrails are widened to shell commands, which is a scope decision for the user and is
   not taken here. The catalogue is also stale in the other direction -- it does not list the
   commit-delegation guardrail at all -- so the implementer reads the shipped settings.
+
+  AMENDMENT 2026-09-17 (business-analyst) -- COMMIT_AGENT_MODE RETIRED BY GE-129. SEE amended_by.
+
+  LANDING ORDER -- MUST LAND WITH OR AFTER GE-129a IS BUILT, NEVER BEFORE. Before GE-129a ships,
+  COMMIT_AGENT_MODE is still the live authorisation for the fast lane's commit step, the
+  ticket-supervisor commit phase and the top-level session. Built ahead of GE-129a, this amended
+  record would no longer refuse COMMIT_AGENT_MODE for the executor while nothing yet refuses the
+  executor a commit by identity -- an executor dispatch carrying the token would commit, and the
+  commit scenario could only be met by inventing a second caller check. depends_on names GE-129a
+  so the sequencer enforces this (KI-ACD-015: the sequencer reads depends_on only).
+
+  WHAT THIS SUPERSEDES IN THE NOTES ABOVE (kept for history, no longer in force):
+    - "WHY THE FOURTH SCENARIO": the fast lane's COMMIT_AGENT_MODE=1 git commit is no longer a
+      legitimate bypass to preserve. How an automated run gets a commit made is GE-129c's
+      (dispatch to the commit agent), cited here and not restated.
+    - "THE KNOWN RISK" and "FOR THE IT PO": whether the caller can be identified is no longer
+      open for this record; GE-129a's live identity probe is the one place that finding is made,
+      and the unidentified-caller scenario reads it.
+    - "IT-PO ENRICHMENT": the STATE policy for COMMIT_AGENT_MODE and "THE COMMIT_AGENT_MODE
+      CONFLICT" (the non-removal rule) have no variable left to apply to. The BLOCK policy for
+      the other three is untouched by this amendment.
+    - "FOR THE IT PO" second bullet (repointing the fast lane's commit step to the executor):
+      moot. A commit is never an executor chore (BO-3200f-3, amended the same day).
+
+  THE COMMIT SCENARIO DOES NOT RESTATE GE-129a. It asserts only the executor-as-caller outcome
+  this record already owned (the executor cannot commit) and that COMMIT_AGENT_MODE no longer
+  changes it. Who may commit, and how that is recognised, stays GE-129a's.
+
+  CAVEAT CARRIED FORWARD, NOW SHARPER. With COMMIT_AGENT_MODE gone, the three remaining
+  variables all belong to guardrails the hook catalogue lists with matcher Edit|Write, while the
+  executor holds shell only (IT PO caveat above). If the shipped settings confirm that, the
+  first, second, third and fourth scenarios may have no command to exercise at all. That is a
+  scope decision for the user (qualify the criteria, widen the matchers, or retire the record),
+  not taken in this amendment.
+
+  declares_side_effect: false -- re-derived after the amendment. The Then clauses state that a
+  command is blocked or refused, that nothing is added to the history, and that a statement
+  appears on an error stream; nothing durable is asserted.

@@ -1,0 +1,63 @@
+id: GE-129a-2-i
+title: "A commit whose caller identity cannot be established is refused, including when the guard itself fails"
+component: guardrail-engine
+components:
+  - commit_guardian
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given identity enforcement in force, a staged change, and `git commit -m "chore: unidentified"`
+    reaching the guard in each of these conditions:
+    (a) agent_id present and agent_type absent,
+    (b) agent_id present and agent_type an empty string,
+    (c) the tool-call input the guard receives cannot be read as the harness's input structure,
+    (d) the guard fails internally while deciding,
+  When the guard decides,
+  Then in each of (a)-(d) the commit is refused and no commit is added to the history,
+    And the refusal states that the caller's identity could not be established and names which of
+    the four conditions occurred,
+    And in none of them does the commit go ahead because the guard could not decide.
+depends_on:
+  - GE-129a-2
+doc_links:
+  - path: docs/acceptance-criteria/guardrail-engine/GE-129-who-acts-not-what-typed/GE-129a-2.yaml
+    relationship: parent
+    status: exists
+  - path: docs/acceptance-criteria/guardrail-engine/GE-129-who-acts-not-what-typed/GE-129a.yaml
+    relationship: context
+    status: exists
+    relevance: "L1 criteria: 'a caller whose identity cannot be established is refused rather than waved through'."
+  - path: docs/reference/claude-code-hooks.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: null
+declares_side_effect: false
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-09-17
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  WHY AN L3. The parent's discriminating cases all carry a readable identity. The mutation that
+  turns only this record red is "on an exception or unreadable input, allow" -- the common hook
+  convention of exiting cleanly on internal error. That convention must not apply to this guard.
+
+  DECIDED 2026-09-17 (user, default accepted) -- FAIL CLOSED FOR COMMIT COMMANDS ONLY. The hooks
+  convention elsewhere is fail-open on internal error (a broken hook must not block unrelated
+  work). This guard departs from it for commit commands: if it fails while deciding on a commit,
+  the commit is refused (condition (d)). For commands that are not commits the guard stays
+  fail-open.
+
+  (a)/(b) are distinct from the top-level session: absence of agent_id means the top-level
+  session (GE-129d). agent_id present with no usable name is a subagent whose name is unknown.
+
+  declares_side_effect: false -- the Then clauses assert a refusal and the absence of a commit.

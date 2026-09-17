@@ -1,0 +1,70 @@
+id: GE-129c-1
+title: "finalize-feature's closure step hands its commit to the commit specialist instead of the status checker"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - git_vcs_operations
+  - build_orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given identity enforcement in force, and a finished feature whose finalize-feature run reaches
+    the ticket closure step (step 3.5) with ticket closure changes staged for the history,
+  When the closure step runs,
+  Then the closure step dispatches the commit specialist,
+    And the commit specialist commits the change,
+    And no other agent issues a commit command during the closure step -- neither the status
+    checker that performs the closure today nor the chartered executor,
+    And the closure step's report names the commit specialist as the agent that made the closure
+    commit and quotes the commit's identifier.
+depends_on:
+  - GE-129c
+  - GE-129a-1
+doc_links:
+  - path: docs/acceptance-criteria/guardrail-engine/GE-129-who-acts-not-what-typed/GE-129c.yaml
+    relationship: parent
+    status: exists
+    relevance: "Q5: step 3.5's closure commit is routed to the commit specialist. Verified 2026-09-17: the step dispatches status-checker (label step-3.5-closure), which identity enforcement would refuse."
+  - path: templates/workflows-js/finalize-feature.js
+    relationship: modifies
+    status: exists
+    relevance: "Step 3.5 closure dispatch, around line 1661."
+  - path: docs/acceptance-criteria/build-orchestration/BO-3200-second-hand-answers/BO-3200f-3.yaml
+    relationship: context
+    status: exists
+    relevance: "Receives an explicit exclusion (downstream amendment, not performed here): a commit is never an executor chore."
+assigned_agent: python-coder
+estimated_complexity: null
+declares_side_effect: true
+delivers_to: null
+expects_from:
+  - ac_id: GE-129a-1
+    contract: "Case (3): an agent dispatched by a workflow script carries agent_id and agent_type. If not, this record cannot be met (probe stop rule)."
+origin_agent: business-analyst
+created: 2026-09-17
+amended_by: []
+superseded_by: null
+covered_by:
+  - GE-129c-1-i
+implemented_by: []
+notes: |
+  WHY "NEITHER THE STATUS CHECKER NOR THE CHARTERED EXECUTOR". Two cheap reroutes exist: keep
+  status-checker and exempt it (re-opens the defect for a named non-specialist), or hand the
+  commit to the executor as a chore (Q5 forbids it; BO-3200f-3 gets the exclusion). Both pass a
+  "the closure commit lands" test.
+
+  The status checker's own part of the closure (deciding which tickets close) is unchanged and
+  not specified here; only the commit moves.
+
+  A dispatched commit specialist has no ticket path in this step and must not wait for a person:
+  GE-129c-1-i. Its audit record: GE-129c-3. A refused closure commit: GE-129c-4.
+
+  declares_side_effect: true -- derived from "the commit specialist commits the change".
+
+  ASSIGNMENT (BA proposal): python-coder, the store's majority owner for workflows-js edits;
+  the IT PO may prefer workflow-architect.

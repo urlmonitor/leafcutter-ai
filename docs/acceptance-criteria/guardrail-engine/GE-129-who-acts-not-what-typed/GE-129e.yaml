@@ -37,7 +37,11 @@ origin_agent: BrainCandy
 created: 2026-09-17
 amended_by: []
 superseded_by: null
-covered_by: []
+covered_by:
+  - GE-129e-1
+  - GE-129e-2
+  - GE-129e-3
+  - GE-129e-4
 implemented_by: []
 notes: |
   SURFACES FOUND CARRYING THE TOKEN OR THE STALE PROMISE (re-measure; list is from

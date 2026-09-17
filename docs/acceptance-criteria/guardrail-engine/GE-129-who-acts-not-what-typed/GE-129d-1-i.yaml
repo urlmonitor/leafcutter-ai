@@ -1,0 +1,61 @@
+id: GE-129d-1-i
+title: "A standing permission rule that pre-approves commit commands does not skip the person's prompt for a commit"
+component: guardrail-engine
+components:
+  - commit_guardian
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given identity enforcement in force, a top-level session in the default interactive mode, a
+    staged change, and in turn each of:
+    (a) project settings carrying the allow rule `Bash(git commit:*)`,
+    (b) user settings carrying the same allow rule,
+    (c) the person having chosen the prompt's "don't ask again for this command" option on an
+        earlier commit in the same session,
+  When the session issues `git commit -m "x"`,
+  Then in each of (a) to (c) the permission prompt is shown to the person and the command does not
+    run before the person answers,
+    Or, where the probe findings (GE-129a-1) show the harness cannot show the prompt over that
+    rule, the commit is refused as in GE-129d-2 and the refusal names the rule that would have
+    skipped the prompt.
+depends_on:
+  - GE-129d-1
+doc_links:
+  - path: docs/acceptance-criteria/guardrail-engine/GE-129-who-acts-not-what-typed/GE-129d-1.yaml
+    relationship: parent
+    status: exists
+  - path: templates/settings.json
+    relationship: context
+    status: exists
+    relevance: "Shipped permission settings; an allow rule there would pre-approve commits for every installed project."
+assigned_agent: python-coder
+estimated_complexity: null
+declares_side_effect: false
+delivers_to: null
+expects_from:
+  - ac_id: GE-129a-1
+    contract: "Whether a guard's ask decision still produces a prompt when an allow rule matches the command."
+origin_agent: business-analyst
+created: 2026-09-17
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  WHY AN L3. The parent is met in a clean environment. A settings allow rule, or one "don't ask
+  again" click, would turn the person's gate into a one-time gate for every later commit -- the
+  mutation "leave the decision to the ordinary permission system" passes the parent and fails
+  here.
+
+  The "Or" clause is deliberate: whether an ask decision overrides an allow rule is harness
+  behaviour, settled by observation. Fail-closed is the fallback, never pass-through.
+
+  FOR THE IT PO. The probe's second scenario (GE-129a-1) should include one attempt with an allow
+  rule present, so this record's branch is known before build.
+
+  declares_side_effect: false -- the Then clauses assert a prompt or a refusal.

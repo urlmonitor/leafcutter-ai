@@ -1,0 +1,87 @@
+id: GE-129a-4
+title: "A commit specialist definition that differs from the shipped one, or a second definition under the same name, is flagged"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - agent_registry
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the commit specialist definition shipped by the package, and five installed projects:
+    (a) the installed definition is byte-identical to the shipped one and no other definition
+        declares the commit specialist's name,
+    (b) the installed definition differs from the shipped one in one line of its instructions,
+    (c) the installed definition matches, and a second definition declaring the same name exists
+        at user scope,
+    (d) the installed definition matches, and a second definition declaring the same name is
+        provided by an installed plugin,
+    (e) the installed definition matches, and the project holds a second definition file under a
+        different file name that declares the same name,
+  When the commit specialist parity check runs on each project,
+  Then (a) passes with no finding,
+    And each of (b) to (e) fails, naming the location and scope of every definition involved,
+    And the failure for (b) quotes the first differing line of the installed definition and the
+    shipped line it replaced,
+    And the failures for (c) to (e) list every location that declares the commit specialist's
+    name,
+    And adding one more same-named definition to project (e) adds exactly one location to its
+    failure.
+depends_on:
+  - GE-129a
+  - GE-129a-1
+doc_links:
+  - path: docs/acceptance-criteria/guardrail-engine/GE-129-who-acts-not-what-typed/GE-129a.yaml
+    relationship: parent
+    status: exists
+    relevance: "Q3 safeguard: a BP-1000-family parity check flags a divergent or duplicate commit agent definition."
+  - path: docs/acceptance-criteria/build_pipeline/BP-1000-source-template-parity/BP-1000.yaml
+    relationship: context
+    status: exists
+    relevance: "Family precedent for byte parity between a shipped template and its deployed copy. This record is a named-agent parity check, not a script-pair diff; it reuses the family's vocabulary without extending BP-1000's scope."
+  - path: templates/agents/commit.md
+    relationship: describes
+    status: exists
+    relevance: "The shipped commit specialist definition the check compares against."
+assigned_agent: python-coder
+estimated_complexity: null
+declares_side_effect: false
+delivers_to: null
+expects_from:
+  - ac_id: GE-129a-1
+    contract: "Case (6): whether the harness distinguishes a user- or plugin-scope definition of the same name at run time. If it does not, this check is the only safeguard."
+origin_agent: business-analyst
+created: 2026-09-17
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  PLACEMENT (coordinator instruction, Q3): under GE-129a because it fits the 5-L2 cap. The
+  cap forced a trade -- see GE-129a-5's notes: GE-129a's reference-doc trigger is discharged by
+  GE-129e-2 and GE-129e-4 rather than by a sixth L2 here.
+
+  WHY (e). A duplicate is declared by the name inside the definition, not by the file name. A
+  check that only looks for a second commit.md passes (c)/(d) in the usual layout and misses (e).
+
+  WHY THE LAST CLAUSE. A check that stops at the first duplicate satisfies "fails" for (c)-(e).
+  The varying-population clause is the only form a first-hit implementation cannot meet.
+
+  DECIDED 2026-09-17 (user, defaults accepted).
+    - WHEN IT RUNS: at session start in the developer's environment AND at install. User scope and
+      plugin definitions live outside the repository, so a commit-time check on a CI machine
+      cannot see (c) or (d); both points are required.
+    - CUSTOMISATION: a project may customise its commit specialist only with a recorded exemption.
+      Without one, any divergence (b) is a failure, matching the user's "flags a divergent
+      definition".
+    - The stated limit (GE-129e-4): this narrows, but does not close, the gap for someone who can
+      write agent definitions.
+  Recorded as notes only, per the user's instruction; the criteria were not changed. Neither
+  decision is yet pinned by a scenario here (no session-start/install case, no exempted-divergence
+  case) -- a follow-up criteria amendment or IT PO test_spec should carry them.
+
+  declares_side_effect: false -- the Then clauses assert a pass or a failure with named findings.

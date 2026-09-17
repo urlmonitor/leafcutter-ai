@@ -1,0 +1,80 @@
+id: GE-129e-1
+title: "No shipped surface still carries the retired commit token, checked mechanically and named by file and line"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - documentation_system
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the package's shipped surfaces -- project rules, agent definitions, skills, workflow
+    scripts and the prompts they send, how-to, reference and architecture documents including
+    diagrams, and the messages the guards print -- and a declared list of historical records that
+    are exempt, each exemption carrying a stated reason,
+  When the retired-token check runs,
+  Then it fails, naming file and line, for every occurrence of COMMIT_AGENT_MODE on a shipped
+    surface not covered by an exemption, and passes when there is none,
+    And run against the tree as it stood at GE-129's authoring it names an occurrence in each of:
+    the project rules' Commit Delegation section, section 3.2.1 of the agent conventions, the
+    commit specialist's Step 4, the building-epics gated-agent table, the ac-audit skill, the
+    fast-lane-ship commit prompt, the fast-lane-build how-to, the agent delivery workflows
+    document, the fast lane component and sequence diagrams, and the commit guard's own refusal
+    message,
+    And adding one occurrence to one shipped surface adds exactly one named finding.
+depends_on:
+  - GE-129e
+  - GE-129a-1
+doc_links:
+  - path: docs/acceptance-criteria/guardrail-engine/GE-129-who-acts-not-what-typed/GE-129e.yaml
+    relationship: parent
+    status: exists
+    relevance: "Surfaces found carrying the token (re-measure, not exhaustive); MECHANICAL, NOT PROSE; Q6 no transitional token wording."
+  - path: CLAUDE.md
+    relationship: modifies
+    status: exists
+  - path: docs/agents/conventions.md
+    relationship: modifies
+    status: exists
+  - path: templates/agents/commit.md
+    relationship: modifies
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: null
+declares_side_effect: false
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-09-17
+amended_by: []
+superseded_by: null
+covered_by:
+  - GE-129e-1-i
+implemented_by: []
+notes: |
+  WHY A TOKEN CHECK AND NOT A SENTENCE CHECK. The BO-3100/3200 standing rule forbids verifying
+  documentation by grepping for an instruction sentence. This check is the inverse: it asserts
+  the absence of one retired, exact identifier across a declared population, with a
+  varying-population clause. No literal-carrying implementation can satisfy it.
+
+  WHY THE "AS IT STOOD AT AUTHORING" CLAUSE. It pins the check's reach to the surfaces the GE-129e
+  notes found (docs, templates, workflow prompts, the guard's own message). A check that scans
+  only Markdown would miss the workflow prompt and the guard message and still pass on today's
+  corrected docs. The list is a floor: any further occurrence found is reported too.
+
+  WHAT IS NOT CHECKED HERE. The stale promise without the token ("the hook blocks any direct git
+  commit") is checked by agreement with the guard's behaviour (GE-129e-3), not by wording.
+
+  EXEMPTIONS. Historical records -- known issues, changelogs, ADRs, the AC store -- keep their
+  mentions; they record what was. How an exemption cannot swallow a shipped surface: GE-129e-1-i.
+
+  declares_side_effect: false -- the Then clauses assert findings, pass and fail.
+
+  ASSIGNMENT (BA proposal): python-coder builds the check. The corrections to each surface are
+  edits the IT PO may split by surface (llm-expert for agent and skill prompts,
+  documentation-expert for docs, architecture-diagram-author for diagrams); this record is met
+  only when the check passes on the corrected tree.

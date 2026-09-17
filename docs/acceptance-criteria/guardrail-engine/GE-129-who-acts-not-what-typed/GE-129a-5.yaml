@@ -1,0 +1,66 @@
+id: GE-129a-5
+title: "A component diagram shows that caller identity enters the commit guard only from the harness, and the three decisions it reaches"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - documentation_system
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the identity rule of GE-129a-2 and GE-129a-3, the parity check of GE-129a-4, and the probe
+    findings of GE-129a-1,
+  When a reader opens the commit guard's component diagram,
+  Then the diagram shows the harness as the only source of caller identity entering the guard,
+    labelled with the two identity values the guard reads,
+    And it shows the guard's three outcomes for a commit: the commit specialist goes ahead; the
+    top-level session is put to the person's permission prompt or refused where no person is
+    reached; any other or unidentifiable caller is refused,
+    And it shows command text, environment, files in the repository, working directory and
+    dispatch prompt outside the decision, each marked as not feeding it,
+    And it shows the parity check comparing the installed commit specialist definition with the
+    shipped one and with same-named definitions at other scopes,
+    And every guard, check and agent named in the diagram exists in the shipped package under the
+    name the diagram uses.
+depends_on:
+  - GE-129a
+  - GE-129a-1
+  - GE-129a-2
+  - GE-129a-3
+  - GE-129a-4
+doc_links:
+  - path: docs/acceptance-criteria/guardrail-engine/GE-129-who-acts-not-what-typed/GE-129a.yaml
+    relationship: parent
+    status: exists
+    relevance: "documentation_triggers: [reference-doc, component-diagram]. This record is the component-diagram."
+  - path: docs/architecture/diagrams/c2-fast-lane-build-path-components.md
+    relationship: context
+    status: exists
+    relevance: "Existing component diagram that shows the token path today; GE-129e-1 removes the token from it."
+assigned_agent: architecture-diagram-author
+estimated_complexity: null
+declares_side_effect: false
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-09-17
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  DOCUMENTATION TRIGGERS ON GE-129a -- HOW BOTH ARE MET.
+    - component-diagram: this record.
+    - reference-doc: DISCHARGED BY GE-129e-2 (hooks reference stdin contract carrying the identity
+      values and the probe finding) and GE-129e-4 (the stated limit of identity). GE-129e exists
+      for exactly that reference content; a sixth L2 here would duplicate it and break the 5-L2
+      cap. Recorded as a placement decision, not an omission.
+
+  The last clause keeps the diagram from naming components that do not exist (a stale diagram
+  is one of the surfaces GE-129e lists).
+
+  declares_side_effect: false -- the Then clauses describe what a reader sees.

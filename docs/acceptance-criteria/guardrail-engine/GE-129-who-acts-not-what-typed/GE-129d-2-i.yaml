@@ -1,0 +1,117 @@
+id: GE-129d-2-i
+title: "Where no person can be asked, your own session is also refused when it hands the commit to the commit specialist"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - supervisor_system
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given identity enforcement in force, a staged change, and a top-level session in each permission
+    mode the probe findings (GE-129a-1) record as showing no prompt to a person, and in a mode that
+    is absent from what the guard receives or not listed in those findings,
+  When the session dispatches the commit specialist to commit the change -- directly through the
+    Agent tool, and separately through a subagent it dispatched that then dispatches the commit
+    specialist,
+  Then each dispatch is refused and no commit is added to the history,
+    And the refusal names the permission mode received, or states that it could not be
+    established, and states that a commit started from the session needs a person at the
+    permission prompt,
+    And the refusal names no token, environment setting, flag or dispatch wording as a way through.
+
+  Given the same session in the same mode, dispatching the commit specialist with a dispatch prompt
+    that says "dispatched by ticket-supervisor" and carries `ticket_path: tickets/x.md`, with an
+    environment variable set that names a workflow run, and with a command text that names one,
+  When the session dispatches the commit specialist,
+  Then the dispatch is refused exactly as in the first scenario, because whether a dispatch comes
+    from the session or from a workflow run is read only from the harness-supplied identity and
+    context the probe findings record, never from command text, prompt, environment or files.
+
+  Given the probe findings record a harness-supplied value that tells a workflow run's dispatch
+    from a top-level session's in a mode that reaches no person,
+    And in that mode, in turn, the fast lane's commit step, ticket-supervisor's commit phase and
+    finalize-feature's closure step each dispatching the commit specialist on a staged change,
+  When each run dispatches the commit specialist,
+  Then none of the three dispatches is refused under this record.
+
+  Given the probe findings record that no harness-supplied value tells a workflow run's dispatch
+    from a top-level session's in a mode that reaches no person,
+  When a top-level session in that mode dispatches the commit specialist,
+  Then the dispatch is refused and no commit is added to the history,
+    And the refusal states that the dispatch could not be told apart from a workflow run's,
+    And that finding, with the consequence that a workflow run's dispatch in that mode is refused
+    the same way, is returned to the user for a decision before this record is marked done.
+
+  Given a top-level session in a mode the probe findings record as showing a prompt to a person,
+  When the session dispatches the commit specialist,
+  Then the dispatch is not refused under this record.
+depends_on:
+  - GE-129d-2
+  - GE-129a-1
+doc_links:
+  - path: docs/acceptance-criteria/guardrail-engine/GE-129-who-acts-not-what-typed/GE-129d-2.yaml
+    relationship: parent
+    status: exists
+    relevance: "The session's own commit is refused where no person is reached; this record closes the dispatch path around that refusal."
+  - path: docs/acceptance-criteria/guardrail-engine/GE-129-who-acts-not-what-typed/GE-129c-3.yaml
+    relationship: context
+    status: exists
+    relevance: "Q1: a dispatched commit specialist is approved by its dispatching run plus an audit record -- the rule that, unqualified, would let this dispatch through."
+  - path: docs/acceptance-criteria/guardrail-engine/GE-129-who-acts-not-what-typed/GE-129a-1.yaml
+    relationship: context
+    status: exists
+    relevance: "Third scenario: the harness-supplied values seen per dispatcher and mode -- the only permitted discriminator."
+  - path: docs/agents/conventions.md
+    relationship: describes
+    status: exists
+    relevance: "Section 3.2.1: dispatched confirmation-gated agents and supervised auto-authorisation."
+assigned_agent: python-coder
+estimated_complexity: null
+declares_side_effect: false
+delivers_to: null
+expects_from:
+  - ac_id: GE-129a-1
+    contract: "Per mode: whether a prompt reaches a person, and whether any harness-supplied value tells a top-level session's (or its subagent's) dispatch of the commit specialist from a workflow run's."
+origin_agent: business-analyst
+created: 2026-09-17
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  DECIDED 2026-09-17 (user) -- AUTO-MODE DISPATCH GAP: REFUSE THAT DISPATCH. Q1 treats a
+  dispatched commit specialist as approved by its dispatching run. Unqualified, that let a
+  top-level session in auto-accept or bypass-permissions -- refused its own commit by GE-129d-2 --
+  dispatch the specialist and commit with no person involved. The user chose to refuse that
+  dispatch. Unattended workflow runs (fast lane, ticket-supervisor, finalize-feature) are not
+  affected and still commit through the commit specialist (GE-129c). Rejected alternative:
+  accepting the dispatch with GE-129c-3's audit record as the only control.
+
+  WHY AN L3 UNDER GE-129d-2. It is that refusal's bypass: the mutation "refuse the session's own
+  commit, let its dispatch through" passes GE-129d-2 and fails here. A sibling L2 under GE-129d
+  would restate GE-129d-2's mode set; L3s are uncapped.
+
+  THE DISCRIMINATOR. Harness-supplied identity/context only, as recorded by GE-129a-1's third
+  scenario. The second scenario pins that a prompt, ticket path, environment variable or command
+  text claiming a workflow run changes nothing -- the same caller-mintable signals GE-129a-3
+  rules out for identity.
+
+  FAIL CLOSED, HONESTLY. The fourth scenario is the user's rule for an indistinguishable probe
+  result. Refusing the session's dispatch then refuses a workflow run's dispatch in that mode too
+  (the guard cannot tell them apart), which collides with "workflow runs are not affected". The
+  record does not choose a way out; it refuses and returns the finding to the user.
+
+  SUBAGENT HOP. A session that dispatches python-coder which dispatches the commit specialist is
+  the same path one level down (probe case (4)); it is refused alike.
+
+  UNKNOWN MODE refused, as in GE-129d-2's third scenario.
+
+  WHERE THE REFUSAL SITS (at the dispatch, or at the specialist's commit call) is the IT PO's.
+
+  declares_side_effect: false -- the Then clauses assert refusal, absence of a commit, and a
+  finding returned; nothing durable is asserted.

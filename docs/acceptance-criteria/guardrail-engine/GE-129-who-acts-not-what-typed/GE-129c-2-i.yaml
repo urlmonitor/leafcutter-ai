@@ -1,0 +1,59 @@
+id: GE-129c-2-i
+title: "Every shipped step that commits is found, and any that is not made by the commit specialist fails a check naming the step"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - build_orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given every workflow script, supervisor runbook, skill and agent definition shipped by the
+    package,
+  When the committer inventory check runs,
+  Then it lists every step that issues a commit or dispatches an agent to commit, each with the
+    agent that issues the commit,
+    And the list contains at least the fast lane's commit step, ticket-supervisor's commit phase
+    and finalize-feature's closure step,
+    And it fails, naming the step and the agent, for every step whose commit is issued by an agent
+    other than the commit specialist,
+    And adding one such step to one shipped workflow adds exactly one named failure.
+depends_on:
+  - GE-129c-2
+doc_links:
+  - path: docs/acceptance-criteria/guardrail-engine/GE-129-who-acts-not-what-typed/GE-129c-2.yaml
+    relationship: parent
+    status: exists
+  - path: docs/acceptance-criteria/guardrail-engine/GE-129-who-acts-not-what-typed/GE-129c.yaml
+    relationship: context
+    status: exists
+    relevance: "'INVENTORY OF LEGITIMATE UNATTENDED COMMITTERS (to be re-measured by the BA, not trusted)'."
+  - path: docs/acceptance-criteria/build-orchestration/BO-3200-second-hand-answers/BO-3200f-3.yaml
+    relationship: context
+    status: exists
+    relevance: "Authoring-time routing check over shipped workflow sources. This check is committer-specific; if the IT PO can extend BO-3200f-3's inventory instead of building a second walker, prefer that."
+assigned_agent: python-coder
+estimated_complexity: null
+declares_side_effect: false
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-09-17
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  WHY AN L3 UNDER c-2. The GE-129c notes ask for the committer inventory to be re-measured, not
+  trusted. A hand-written list of three is what went stale at step 3.5. Before the reroute
+  (GE-129c-1) this check must fail on finalize-feature's closure step naming status-checker --
+  that is its first honest finding.
+
+  The "at least" clause rules out an empty walker that passes by finding nothing; the
+  varying-population clause rules out a hard-coded list.
+
+  declares_side_effect: false -- the Then clauses assert a list and failures.

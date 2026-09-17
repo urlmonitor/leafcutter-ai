@@ -1,0 +1,118 @@
+id: GE-129e-4
+title: "The limit of the commit protection is stated where the protection is promised, and no surface promises more"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - documentation_system
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the project rules' Commit Delegation section, section 3.2.1 of the agent conventions, the
+    commit specialist's instructions and the hooks reference,
+  When a reader looks for what the commit protection guarantees,
+  Then the hooks reference states that a commit is recognised as the commit specialist's from the
+    agent identifier and agent name the harness supplies together, never from anything the caller
+    types, sets or says,
+    And it states that this protects against automation taking a shortcut, and not against someone
+    who can change the project's agent definitions, who could equally change or remove the guard,
+    And it states that the parity check for divergent or duplicate commit specialist definitions
+    narrows that gap and does not close it,
+    And it states that a commit made by a program a command starts is not recognised from the
+    command text,
+    And it states that the protection covers the `commit` subcommand only: pushing and opening
+    pull requests are not covered, and these git subcommands, which also add or rewrite commits,
+    are not guarded: merge, pull, cherry-pick, revert, rebase, am, commit-tree, stash, notes,
+    fast-import, filter-branch and replay,
+    And the project rules, the agent conventions and the commit specialist's instructions each
+    describe the top-level session's commit as going to the person's permission prompt and being
+    refused where no person is reached, and each link to that statement of the limit,
+    And none of the four says a commit is impossible for any other caller without that link.
+depends_on:
+  - GE-129e
+  - GE-129a-1
+  - GE-129e-2
+doc_links:
+  - path: docs/acceptance-criteria/guardrail-engine/GE-129-who-acts-not-what-typed/GE-129e.yaml
+    relationship: parent
+    status: exists
+    relevance: "Q3 THE STATED LIMIT must be written down; a guarantee stated stronger than it is is the defect this tree closes. Q2, Q6, Q7."
+  - path: CLAUDE.md
+    relationship: modifies
+    status: exists
+    relevance: "'Commit Delegation -- MANDATORY' promises the hook blocks any commit not originating within the commit agent."
+  - path: docs/agents/conventions.md
+    relationship: modifies
+    status: exists
+  - path: templates/agents/commit.md
+    relationship: modifies
+    status: exists
+  - path: docs/reference/claude-code-hooks.md
+    relationship: modifies
+    status: exists
+assigned_agent: documentation-expert
+estimated_complexity: null
+declares_side_effect: false
+delivers_to: null
+expects_from:
+  - ac_id: GE-129a-1
+    contract: "Whether same-named definitions at other scopes are distinguishable at run time -- sets how strongly the parity-check sentence may be worded."
+origin_agent: business-analyst
+created: 2026-09-17
+amended_by:
+- reason: git-operation-scope-commit-only-user-decision-2026-09-17
+  by: business-analyst
+  at: 2026-09-17
+  note: |
+    User decision 2026-09-17: commit only, for now. The scope clause said "commits only, and not
+    pushing, opening pull requests or merging", which left cherry-pick, revert, rebase, pull, am and
+    the rest unnamed -- a limit stated narrower than it is. It now names every unguarded
+    history-writing subcommand (same list as GE-129b-3). title, depends_on unchanged.
+    declares_side_effect unchanged (false).
+
+    WHAT THE CRITERIA SAID BEFORE (verbatim):
+      Given the project rules' Commit Delegation section, section 3.2.1 of the agent conventions, the
+        commit specialist's instructions and the hooks reference,
+      When a reader looks for what the commit protection guarantees,
+      Then the hooks reference states that a commit is recognised as the commit specialist's from the
+        agent identifier and agent name the harness supplies together, never from anything the caller
+        types, sets or says,
+        And it states that this protects against automation taking a shortcut, and not against someone
+        who can change the project's agent definitions, who could equally change or remove the guard,
+        And it states that the parity check for divergent or duplicate commit specialist definitions
+        narrows that gap and does not close it,
+        And it states that a commit made by a program a command starts is not recognised from the
+        command text,
+        And it states that the protection covers commits only, and not pushing, opening pull requests
+        or merging,
+        And the project rules, the agent conventions and the commit specialist's instructions each
+        describe the top-level session's commit as going to the person's permission prompt and being
+        refused where no person is reached, and each link to that statement of the limit,
+        And none of the four says a commit is impossible for any other caller without that link.
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  DISCHARGES GE-129a's reference-doc trigger together with GE-129e-2.
+
+  MECHANICAL WHERE POSSIBLE, AND WHERE IT IS NOT. The links in the second-to-last clause are
+  checkable (GE-129e-3 checks the links to the caller table; the IT PO may extend that check to
+  this section). The limit's own sentences are prose and are verified by review, not by a
+  sentence grep -- the standing rule's "where possible" is not reachable for a statement of what
+  is NOT protected. Recorded so it is not mistaken for an oversight.
+
+  THE LAST CLAUSE is the one that matters: the defect was a documented guarantee stronger than the
+  enforced one. The fix's own documentation must not reintroduce it (GE-129e notes).
+
+  DECIDED 2026-09-17 (user) -- COMMIT ONLY, FOR NOW. The scope clause names the unguarded
+  history-writing subcommands; the verified list and what was left out (ref-moving commands that
+  create no commit) are recorded on GE-129b-3's notes.
+
+  Commit specialist Step 4's token removal is GE-129e-1's; its Step 3 gate for ticket-less
+  dispatch is GE-129c-1-i's.
+
+  declares_side_effect: false -- the Then clauses describe document content.

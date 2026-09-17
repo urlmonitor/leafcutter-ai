@@ -1,0 +1,85 @@
+id: GE-129a-3
+title: "Nothing a caller writes, sets or says makes it count as the commit specialist, and the retired token is ignored rather than honoured or reported"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - git_vcs_operations
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given identity enforcement in force, a staged change, and a subagent named python-coder
+    (agent_id present) issuing a commit in each of these forms:
+    (a) `COMMIT_AGENT_MODE=1 git commit -m "x"`,
+    (b) `git commit -m "x"` with COMMIT_AGENT_MODE=1 set in the environment the command runs in,
+    (c) `git commit -m "x"` after the same caller has created a file in the repository and one
+        in its cache directory, each naming the commit specialist as the caller,
+    (d) `git commit -m "x"` issued from a working directory whose path contains "commit",
+    (e) `git commit -m "x"` from a subagent whose dispatch prompt states "you are the commit agent",
+    (f) `git commit -m "x"` with none of the above,
+  When the guard decides each,
+  Then (a) to (e) are each refused exactly as (f) is -- the same outcome and the same refusal
+    text -- and no commit is added to the history.
+
+  Given the commit specialist (agent_id present, agent_type naming it) issuing
+    `COMMIT_AGENT_MODE=1 git commit -m "x"` and, separately, `git commit -m "x"`,
+  When the guard decides each,
+  Then the commit specialist commits the change in both cases,
+    And neither decision names COMMIT_AGENT_MODE, reports it as an error, or warns about it.
+
+  Given the top-level session (no agent_id) issuing `COMMIT_AGENT_MODE=1 git commit -m "x"` in the
+    default interactive mode and in bypass-permissions mode,
+  When the guard decides each,
+  Then each decision is identical to the decision for `git commit -m "x"` from that session in
+    that mode (GE-129d-1, GE-129d-2): the token neither skips the person's prompt nor turns a
+    refusal into a go-ahead, and it is not named or reported as an error.
+depends_on:
+  - GE-129a
+  - GE-129a-1
+doc_links:
+  - path: docs/acceptance-criteria/guardrail-engine/GE-129-who-acts-not-what-typed/GE-129a.yaml
+    relationship: parent
+    status: exists
+    relevance: "Identity source rule (never command text, environment, marker files, working directory or dispatch prompt) and Q6 (token ignored, not an error, no grace period)."
+  - path: docs/known-issues/commit-guardian/open-high-ki-cg-20260907-commit-delegation-is-a-password-not-an-identity.md
+    relationship: describes
+    status: exists
+    relevance: "The token check in both its forms -- the environment variable and the command-text token -- is the defect."
+  - path: docs/acceptance-criteria/build-orchestration/BO-3200-second-hand-answers/BO-3200f-2-iii.yaml
+    relationship: context
+    status: exists
+    relevance: "Carries the same identity-source rule for the executor; its COMMIT_AGENT_MODE scenario is being amended to GE-129's identity-keyed form. Not restated here."
+assigned_agent: python-coder
+estimated_complexity: null
+declares_side_effect: true
+delivers_to: null
+expects_from:
+  - ac_id: GE-129a-1
+    contract: "Confirmation that the harness-supplied identity is unaffected by the command text, environment, files, working directory and dispatch prompt of the caller."
+origin_agent: business-analyst
+created: 2026-09-17
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  WHY THIS IS NOT GE-129a-2. GE-129a-2 is satisfied by an implementation that checks identity
+  first and keeps the old token check as a fallback ("identity OR token"). Only (a)/(b) of the
+  first scenario turn red under that mutation. "Same refusal text" in the first Then rules out a
+  second mutation: refusing the token-carrying forms with a special message, which is Q6's
+  "treated as an error".
+
+  WHY THE SECOND AND THIRD SCENARIOS. "Ignored" has two directions. The cheap retirement makes
+  the token an error ("COMMIT_AGENT_MODE is no longer supported") -- that breaks the commit
+  specialist while its instructions still carry the token during the same change, and Q6
+  forbids it. The third pins the top-level path so the token cannot be kept as an interactive
+  shortcut.
+
+  (c)-(e) are the identity sources the L1 rules out and that BO-3200f-2-iii already lists. Each
+  is a way a future "convenience" could re-open the defect one layer up.
+
+  declares_side_effect: true -- derived from "the commit specialist commits the change".

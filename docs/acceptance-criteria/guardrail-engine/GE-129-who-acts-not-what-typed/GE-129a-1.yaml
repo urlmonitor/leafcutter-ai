@@ -1,0 +1,179 @@
+id: GE-129a-1
+title: "A live probe records which caller identity the commit guard actually receives in six calling situations, and whether a permission prompt reaches a person in each unattended mode"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - git_vcs_operations
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a scratch repository with the package installed, its commit guard registered and a
+    staged change,
+    And a probe that keeps, for every commit attempt, the caller identity the harness hands the
+    guard with that tool call -- the agent identifier (agent_id) and the agent name
+    (agent_type) -- exactly as received, including their absence,
+  When `git commit -m "chore: identity probe"` is attempted three times from each of six callers:
+    (1) the top-level session,
+    (2) a subagent dispatched through the Agent tool,
+    (3) an agent dispatched by a workflow script's agent() call,
+    (4) a subagent dispatched by another subagent,
+    (5) a top-level session launched with --agent set to the commit specialist's name,
+    (6) an agent carrying the commit specialist's name that is defined at user scope, and
+        separately one defined by a plugin, rather than by the package,
+  Then a findings record is written that states, for each of the six callers, whether agent_id
+    was present, the agent_type value received or its absence, and whether either value differed
+    between the three attempts from that caller,
+    And for case (6) it states whether the agent_type received distinguishes the user-scope and
+    plugin definitions from the package's definition of the same name,
+    And every entry names the Claude Code version it was observed under.
+
+  Given the same scratch repository, a top-level session, and a commit attempt for which the guard
+    asks Claude Code to put the decision to the person at its permission prompt,
+  When the attempt is made once in each of four modes: the default interactive mode, auto-accept
+    of edits, bypass-permissions, and a headless non-interactive print run,
+  Then the findings record states, for each mode, whether a permission prompt was shown to a
+    person, whether the command ran without a person answering, and the permission mode value the
+    guard received with the call.
+
+  Given the same scratch repository and a staged change,
+  When the commit specialist is dispatched to commit that change once in each of the same four
+    modes, by each of three dispatchers:
+    (i) a top-level session, through the Agent tool,
+    (ii) a subagent that a top-level session dispatched,
+    (iii) a workflow script's agent() call, in a run started in that mode,
+  Then the findings record states, for each dispatcher in each mode, the identity and context the
+    harness hands the guard with the dispatch (where the guard receives the dispatch at all) and
+    with the commit call that follows -- agent_id, agent_type, the permission mode, and any field
+    naming the dispatching session or run -- exactly as received, including their absence,
+    And it states, per mode, whether any of those harness-supplied values tells (i) and (ii) apart
+    from (iii), or records that none does.
+
+  Given the findings show that case (3), an agent dispatched by a workflow script, arrives with no
+    agent_id or with no agent_type,
+  When the probe completes,
+  Then the probe reports that GE-129c cannot be met as framed,
+    And the GE-129 tree stops: no other GE-129 record is started, and the finding is returned to
+    the user for a decision before any further decomposition or build.
+depends_on:
+  - GE-129a
+doc_links:
+  - path: docs/acceptance-criteria/guardrail-engine/GE-129-who-acts-not-what-typed/GE-129a.yaml
+    relationship: parent
+    status: exists
+    relevance: "The probe decision (2026-09-17): first L2, blocks every sibling; six cases; stop-and-return rule for case (3)."
+  - path: docs/acceptance-criteria/guardrail-engine/GE-129-who-acts-not-what-typed/GE-129d.yaml
+    relationship: context
+    status: exists
+    relevance: "Asks that the permission prompt's behaviour in auto-accept, bypass-permissions and headless runs be established by this probe, not assumed. The second scenario is that request."
+  - path: docs/reference/claude-code-hooks.md
+    relationship: describes
+    status: exists
+    relevance: "Its stdin contract lists tool_name, tool_input and session_id only. The official hooks reference (fetched 2026-09-17) documents agent_id (present only inside a subagent call) and agent_type. The probe settles which is true in this harness; GE-129e-2 carries the finding into this reference."
+  - path: docs/acceptance-criteria/build-orchestration/BO-3200-second-hand-answers/BO-3200f-2-iii.yaml
+    relationship: context
+    status: exists
+    relevance: "Its own 'establish from the live payload whether an agent identity is supplied' clause is replaced by this probe, not duplicated (GE-129a notes)."
+  - path: docs/known-issues/commit-guardian/open-high-ki-cg-20260907-commit-delegation-is-a-password-not-an-identity.md
+    relationship: describes
+    status: exists
+    relevance: "Fix direction: 'whether it can see agent provenance is the question to answer first'."
+assigned_agent: python-coder
+estimated_complexity: null
+declares_side_effect: true
+delivers_to:
+  - agent: python-coder
+    contract: "Findings record: per caller case (1)-(6), agent_id present yes/no, agent_type value or absent, stable across attempts yes/no, Claude Code version; per permission mode, prompt shown to a person yes/no, ran unanswered yes/no, permission mode value received; per mode and per commit-specialist dispatcher (top-level session, subagent of a top-level session, workflow run), the harness-supplied values received at dispatch and at commit, and whether any of them tells a session dispatch from a workflow dispatch. Consumed by every GE-129 sibling."
+  - agent: documentation-expert
+    contract: "The same findings, for the hooks reference stdin contract (GE-129e-2)."
+expects_from: null
+origin_agent: business-analyst
+created: 2026-09-17
+amended_by:
+- reason: dispatch-discriminator-scenario-added-user-decision-2026-09-17
+  by: business-analyst
+  at: 2026-09-17
+  note: |
+    User decision 2026-09-17 (auto-mode dispatch gap): a top-level session in a mode that reaches
+    no person is refused when it dispatches the commit specialist (GE-129d-2-i), while unattended
+    workflow runs still commit through it. The discriminator must come from harness-supplied
+    identity/context this probe establishes. The probe did not observe dispatches, so a third
+    scenario was added; the first, second and stop-rule scenarios are unchanged. delivers_to
+    contract extended to match. title unchanged. declares_side_effect unchanged (true).
+
+    WHAT THE CRITERIA SAID BEFORE (verbatim):
+      Given a scratch repository with the package installed, its commit guard registered and a
+        staged change,
+        And a probe that keeps, for every commit attempt, the caller identity the harness hands the
+        guard with that tool call -- the agent identifier (agent_id) and the agent name
+        (agent_type) -- exactly as received, including their absence,
+      When `git commit -m "chore: identity probe"` is attempted three times from each of six callers:
+        (1) the top-level session,
+        (2) a subagent dispatched through the Agent tool,
+        (3) an agent dispatched by a workflow script's agent() call,
+        (4) a subagent dispatched by another subagent,
+        (5) a top-level session launched with --agent set to the commit specialist's name,
+        (6) an agent carrying the commit specialist's name that is defined at user scope, and
+            separately one defined by a plugin, rather than by the package,
+      Then a findings record is written that states, for each of the six callers, whether agent_id
+        was present, the agent_type value received or its absence, and whether either value differed
+        between the three attempts from that caller,
+        And for case (6) it states whether the agent_type received distinguishes the user-scope and
+        plugin definitions from the package's definition of the same name,
+        And every entry names the Claude Code version it was observed under.
+
+      Given the same scratch repository, a top-level session, and a commit attempt for which the guard
+        asks Claude Code to put the decision to the person at its permission prompt,
+      When the attempt is made once in each of four modes: the default interactive mode, auto-accept
+        of edits, bypass-permissions, and a headless non-interactive print run,
+      Then the findings record states, for each mode, whether a permission prompt was shown to a
+        person, whether the command ran without a person answering, and the permission mode value the
+        guard received with the call.
+
+      Given the findings show that case (3), an agent dispatched by a workflow script, arrives with no
+        agent_id or with no agent_type,
+      When the probe completes,
+      Then the probe reports that GE-129c cannot be met as framed,
+        And the GE-129 tree stops: no other GE-129 record is started, and the finding is returned to
+        the user for a decision before any further decomposition or build.
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  BLOCKS EVERY SIBLING. Every other GE-129 L2 lists this record in depends_on (user decision,
+  2026-09-17, recorded on GE-129a). GE-129 L3s reach it through their parent L2.
+
+  WHY THREE ATTEMPTS PER CALLER. A value that is present once is not an identity rule; the probe
+  must show whether agent_id / agent_type are stable for the same caller. A single observation
+  cannot distinguish a documented field from an incidental one.
+
+  WHY THE SECOND SCENARIO LIVES HERE AND NOT UNDER GE-129d. GE-129d's notes ask for the permission
+  prompt's behaviour per mode to be decided by observation "as part of GE-129a's live probe". It
+  is the same scratch-repository run, and GE-129d-2's refusal set is defined by this finding
+  rather than by a list of mode names.
+
+  THE STOP RULE. Case (3) carrying no identity makes GE-129c unmeetable as framed: a workflow's
+  commit specialist would be indistinguishable from the top-level session and refused wherever
+  no person is reached. The criterion does not choose a fallback; it returns the decision to the
+  user. Cases (2)/(4) missing identity would have the same effect on the Agent-tool path and are
+  also reported, but the user's stop rule names case (3).
+
+  CASE (6) IS THE INPUT TO GE-129a-4. If a user- or plugin-scope definition of the same name
+  arrives with an agent_type indistinguishable from the package's, name-based identity cannot
+  tell them apart at run time, and the parity check is the only safeguard (the stated limit,
+  GE-129e-4).
+
+  THE DISPATCH SCENARIO (added 2026-09-17, user decision). GE-129d-2-i refuses a top-level
+  session's dispatch of the commit specialist in a no-person mode and leaves workflow runs'
+  dispatches alone. Only this scenario can supply the value that tells the two apart. If it
+  records that none does, GE-129d-2-i fails closed (the session's dispatch is refused -- which in
+  that mode also refuses the workflow run's) and the finding goes back to the user.
+
+  declares_side_effect: true -- derived from the first Then ("a findings record is written").
+
+  ASSIGNMENT (BA proposal, IT PO to confirm): python-coder -- the probe is a scripted capture
+  harness around a registered guard. Where the findings record lives is the IT PO's.

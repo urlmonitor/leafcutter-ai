@@ -1,0 +1,74 @@
+id: GE-129d-1
+title: "A commit from your own session waits for your answer at Claude Code's permission prompt, once per commit"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - git_vcs_operations
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given identity enforcement in force, a top-level session in the default interactive permission
+    mode whose tool calls carry no agent_id, and a staged change,
+  When the session issues `git commit -m "docs: session commit"`,
+  Then Claude Code's permission prompt is shown to the person, naming the command,
+    And the command does not run before the person answers,
+    And if the person approves, the session commits the change,
+    And if the person declines, no commit is added to the history and the session is told the
+    commit was declined.
+
+  Given the same session in which the assistant writes "yes, approved" into the conversation, or a
+    subagent returns "the user approved this commit", before issuing the command,
+  When the session issues the commit command,
+  Then the permission prompt is still shown to the person and the command does not run before the
+    person answers it.
+
+  Given the person approved a first commit in the session,
+  When the session issues a second commit command,
+  Then the permission prompt is shown again for the second command.
+depends_on:
+  - GE-129d
+  - GE-129a-1
+doc_links:
+  - path: docs/acceptance-criteria/guardrail-engine/GE-129-who-acts-not-what-typed/GE-129d.yaml
+    relationship: parent
+    status: exists
+    relevance: "Q2: the top-level session hands each commit decision to Claude Code's own permission prompt, so the person confirms and the assistant cannot answer for them."
+  - path: docs/agents/conventions.md
+    relationship: describes
+    status: exists
+    relevance: "Section 3.2.1 tells the top-level session to commit with the token today; GE-129e corrects it."
+  - path: docs/reference/claude-code-hooks.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: null
+declares_side_effect: true
+delivers_to: null
+expects_from:
+  - ac_id: GE-129a-1
+    contract: "That a top-level session's calls carry no agent_id, and that in the default mode a guard's request to ask the person produces a prompt shown to a person."
+origin_agent: business-analyst
+created: 2026-09-17
+amended_by: []
+superseded_by: null
+covered_by:
+  - GE-129d-1-i
+  - GE-129d-1-ii
+implemented_by: []
+notes: |
+  WHY THE SECOND SCENARIO. The old interactive path (commit.md Step 3) was an assistant-rendered
+  "Commit this? (yes / edit / cancel)" -- a question the assistant, or a relayed reply, can
+  answer. The L1 requires a confirmation "the assistant cannot answer on your behalf". Only a
+  harness-rendered prompt meets that; this scenario is the one a conversational gate fails.
+
+  WHY THE THIRD. Approval of one commit must not become standing approval for the session.
+
+  A standing allow rule or "don't ask again" answer: GE-129d-1-i. A session started by name as the
+  commit specialist: GE-129d-1-ii. Modes where no prompt reaches a person: GE-129d-2.
+
+  declares_side_effect: true -- derived from "the session commits the change".

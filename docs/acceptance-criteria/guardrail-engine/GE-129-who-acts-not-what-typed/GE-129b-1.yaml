@@ -1,0 +1,70 @@
+id: GE-129b-1
+title: "Commands that only mention committing run without being stopped or prompted by the commit guard"
+component: guardrail-engine
+components:
+  - commit_guardian
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given identity enforcement in force, a subagent named python-coder (not the commit specialist),
+    and each of these commands, none of which records a commit:
+    (a) `gh pr create --title "docs: rule" --body "git commit must never be called directly"`,
+    (b) `grep -rn "git commit" docs/`,
+    (c) `awk '/git commit/ {print FILENAME}' CLAUDE.md`,
+    (d) `git log --grep "git commit" --oneline`,
+    (e) `echo "then run git -C ../wt commit -F msg.txt" > handover.txt`,
+    (f) `git status && echo "next step: git commit"`,
+    (g) `git commit-graph verify`,
+  When each is issued,
+  Then none is refused by the commit guard: each runs and its output is returned to the caller,
+    And no refusal or warning naming the commit rule is produced for any of them.
+
+  Given the same seven commands issued by the top-level session in the default interactive mode,
+  When each is issued,
+  Then the commit guard raises no commit permission prompt for any of them.
+depends_on:
+  - GE-129b
+  - GE-129a-1
+doc_links:
+  - path: docs/acceptance-criteria/guardrail-engine/GE-129-who-acts-not-what-typed/GE-129b.yaml
+    relationship: parent
+    status: exists
+    relevance: "Both directions are one L1; observed false positives (gh pr create body; read-only awk/grep search blocked 2026-09-17)."
+  - path: docs/known-issues/commit-guardian/open-high-ki-cg-20260907-commit-delegation-is-a-password-not-an-identity.md
+    relationship: describes
+    status: exists
+    relevance: "False-positive half: 'The hook blocked the attempt to document the hook.'"
+  - path: docs/acceptance-criteria/guardrail-engine/GE-123-suppression-narrows-never-disables/GE-123d.yaml
+    relationship: context
+    status: exists
+    relevance: "Precedent in this component: describing a risk is not committing one."
+assigned_agent: python-coder
+estimated_complexity: null
+declares_side_effect: false
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-09-17
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  (a) and (c) are the two observed false positives, verbatim in shape. (e) carries the fast lane's
+  own commit form as text, so a fix to GE-129b-2 that recognises `git -C <path> commit` anywhere in
+  the string reddens this record. (g) is a git subcommand whose name begins with "commit" but does
+  not record a commit; a prefix match reddens it.
+
+  The second scenario matters because GE-129d turns every recognised top-level commit into a
+  person's prompt. A mention mistaken for a commit there costs a prompt on every search, which is
+  the regime that gets switched off.
+
+  Where the quoted text is run by a shell (`bash -c '...'`) it is a commit, not a mention:
+  GE-129b-2-i.
+
+  declares_side_effect: false -- the Then clauses assert that commands run and nothing is refused.
