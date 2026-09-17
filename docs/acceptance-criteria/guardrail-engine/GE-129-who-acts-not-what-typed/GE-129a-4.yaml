@@ -15,7 +15,8 @@ criteria: |
   Given the commit specialist definition shipped by the package, and five installed projects:
     (a) the installed definition is byte-identical to the shipped one and no other definition
         declares the commit specialist's name,
-    (b) the installed definition differs from the shipped one in one line of its instructions,
+    (b) the installed definition differs from the shipped one in one line of its instructions, and
+        the project records no exemption for its commit specialist,
     (c) the installed definition matches, and a second definition declaring the same name exists
         at user scope,
     (d) the installed definition matches, and a second definition declaring the same name is
@@ -56,9 +57,27 @@ expects_from:
     contract: "Case (6): whether the harness distinguishes a user- or plugin-scope definition of the same name at run time. If it does not, this check is the only safeguard."
 origin_agent: business-analyst
 created: 2026-09-17
-amended_by: []
+amended_by:
+  - reason: user-decision-parity-check-run-points-and-exemption
+    by: business-analyst
+    at: 2026-09-17
+    note: |
+      Makes the user's (BrainCandy) 2026-09-17 defaults, recorded in this record's notes, testable.
+      The criteria could not absorb both without becoming three behaviours in one record, so:
+      the run points (session start AND install, each a named case) are GE-129a-4-i; the recorded
+      exemption with a stated reason is GE-129a-4-ii. Here only case (b) is qualified so that it
+      stays true once an exemption can make a divergence pass.
+      CHANGED: case (b) gains "and the project records no exemption for its commit specialist";
+      covered_by gains GE-129a-4-i and GE-129a-4-ii; the notes paragraph saying neither decision was
+      pinned by a scenario is replaced.
+      UNCHANGED: title, cases (a) and (c) to (e), When, every Then clause, depends_on,
+      assigned_agent, declares_side_effect (false, re-derived), readiness draft.
+      OLD case (b) (verbatim):
+        (b) the installed definition differs from the shipped one in one line of its instructions,
 superseded_by: null
-covered_by: []
+covered_by:
+  - GE-129a-4-i
+  - GE-129a-4-ii
 implemented_by: []
 notes: |
   PLACEMENT (coordinator instruction, Q3): under GE-129a because it fits the 5-L2 cap. The
@@ -80,8 +99,7 @@ notes: |
       definition".
     - The stated limit (GE-129e-4): this narrows, but does not close, the gap for someone who can
       write agent definitions.
-  Recorded as notes only, per the user's instruction; the criteria were not changed. Neither
-  decision is yet pinned by a scenario here (no session-start/install case, no exempted-divergence
-  case) -- a follow-up criteria amendment or IT PO test_spec should carry them.
+  Both decisions are now pinned by scenarios (2026-09-17 amendment): run points in GE-129a-4-i,
+  the exemption in GE-129a-4-ii. Case (b) here is qualified "no exemption" so the two agree.
 
   declares_side_effect: false -- the Then clauses assert a pass or a failure with named findings.

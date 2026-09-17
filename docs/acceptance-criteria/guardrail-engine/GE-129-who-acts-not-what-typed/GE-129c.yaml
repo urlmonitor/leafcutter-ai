@@ -56,6 +56,9 @@ notes: |
   token. Verified 2026-09-17: templates/agents/commit.md Step 3's confirmation gate
   branches on ticket_path; the token only ever satisfied the guard, so retiring it
   does not change the gate.
+  [QUALIFIED 2026-09-17 by D1 and D2 below: a dispatch by a top-level session in
+  a mode where no person is reached is refused, whatever its dispatch prompt
+  claims.]
 
   DECIDED 2026-09-17 (Q5) -- finalize-feature step 3.5's closure commit is routed
   to the commit specialist. Verified 2026-09-17: finalize-feature.js dispatches the
@@ -77,3 +80,26 @@ notes: |
   step either really runs or visibly fails'), never a silently skipped one.
 
   Q6 (no grace period): this reroute ships together with GE-129a's enforcement.
+
+  DECIDED 2026-09-17 (user, after this L1 was written) -- D1 DISPATCH REFUSAL. In a
+  mode where no person is reached (auto-accept, bypass-permissions, headless, or a
+  mode missing from the probe findings), the top-level session is refused not only
+  its own commit (GE-129d-2) but also dispatching the commit specialist, directly
+  or through a subagent, whatever the dispatch prompt claims (GE-129d-2-i). The
+  unattended runs inventoried above (fast lane, ticket-supervisor,
+  finalize-feature) are not refused where harness-supplied context distinguishes
+  them (GE-129a-1, third scenario).
+
+  DECIDED 2026-09-17 (user) -- D2 FAIL CLOSED ON COLLISION. If the probe finds
+  nothing the harness supplies that distinguishes a session's dispatch from a
+  workflow run's in such a mode, both are refused -- these runs' commits in that
+  mode included -- and the finding returns to the user, who decides with the
+  probe's evidence (GE-129d-2-i, fourth scenario). Known tension: until that
+  decision, this L1's "every unattended run still commits" does not hold in such a
+  mode. The criteria are unchanged, by instruction.
+
+  DECIDED 2026-09-17 (user) -- D3 GIT SCOPE: COMMITS ONLY, FOR NOW. The runs above
+  are in scope for their commits only. The out-of-scope history-writing operations
+  are named: merge, pull, cherry-pick, revert, rebase, am, commit-tree, stash,
+  notes, fast-import, filter-branch, replay (GE-129b-3, GE-129e-4). The user
+  confirmed the 12-item list.

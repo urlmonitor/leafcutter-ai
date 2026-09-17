@@ -62,6 +62,9 @@ notes: |
     Q2 -- The top-level session hands each commit decision to Claude Code's own
           permission prompt. Where no prompt reaches a person (auto-accept,
           bypass-permissions, headless), the commit is refused. (GE-129d)
+          [EXTENDED 2026-09-17 by D1 and D2 below: the refusal also covers the
+          session dispatching the commit specialist, and a mode missing from the
+          probe findings.]
     Q3 -- agent_type is accepted as sufficient identity, with the limit stated in
           writing, plus two safeguards: agent_id must be present together with
           agent_type, and a BP-1000-family parity check flags a divergent or
@@ -76,6 +79,8 @@ notes: |
           erroring on it.
     Q7 -- Commits only. Opening pull requests, merging and pushing are candidate
           future L1s under this L0 and are out of scope now.
+          [SUPERSEDED IN PART 2026-09-17 by D3 below: "merging" did not name the
+          out-of-scope history-writing operations; D3 names all twelve.]
     PROBE -- the live identity probe is the FIRST L2 under GE-129a and blocks every
           sibling.
 
@@ -106,3 +111,30 @@ notes: |
     - BO-3200f-3: explicit exclusion -- a commit is never an executor chore.
     - BP-1100d, BP-1100d-1, BP-1100d-2: remove 'or COMMIT_AGENT_MODE=1' as an
       accepted alternative.
+
+  DECISIONS TAKEN AFTER THE L1s WERE WRITTEN, 2026-09-17 (user):
+    D1 -- Dispatch refusal. In a mode where no person is reached (auto-accept,
+          bypass-permissions, headless, or a mode missing from the probe
+          findings), the top-level session is refused not only its own commit
+          (GE-129d-2) but also dispatching the commit specialist, directly or
+          through a subagent, whatever the dispatch prompt claims (GE-129d-2-i).
+          Unattended workflow runs (fast lane, ticket-supervisor,
+          finalize-feature) are not refused where harness-supplied context
+          distinguishes them (GE-129a-1, third scenario).
+    D2 -- Fail closed on collision. If the probe finds nothing the harness
+          supplies that distinguishes a session's dispatch from a workflow run's
+          in such a mode, both are refused and the finding returns to the user,
+          who decides with the probe's evidence (GE-129d-2-i, fourth scenario).
+    D3 -- Git scope: commits only, for now. The out-of-scope history-writing
+          operations are named: merge, pull, cherry-pick, revert, rebase, am,
+          commit-tree, stash, notes, fast-import, filter-branch, replay
+          (GE-129b-3, GE-129e-4). The user confirmed the 12-item list.
+
+  ACCEPTED DEFAULTS -- DECIDED 2026-09-17 (user; no longer open):
+    - A git command whose subcommand cannot be read is refused (GE-129b-2-ii).
+    - A guard crash fails closed for commit commands only; commands that are not
+      commits stay fail-open (GE-129a-2-i).
+    - The commit-specialist parity check runs at session start and at install
+      (GE-129a-4 notes).
+    - A project may customise its commit specialist only with a recorded
+      exemption (GE-129a-4 notes).

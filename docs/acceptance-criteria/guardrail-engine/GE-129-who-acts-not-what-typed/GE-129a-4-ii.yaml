@@ -1,0 +1,88 @@
+id: GE-129a-4-ii
+title: "A customised commit specialist definition passes the parity check only with a recorded exemption that states a reason, and the exemption never excuses a duplicate"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - agent_registry
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given five installed projects whose commit specialist definition differs from the shipped one in
+    the same one line of its instructions, and in which no other definition declares the commit
+    specialist's name unless stated:
+    (x) the project records an exemption for its commit specialist with the reason "adds the team's
+        sign-off trailer to every commit message",
+    (y) the project records no exemption,
+    (z) the project records an exemption for its commit specialist whose reason is empty,
+    (w) the project records an exemption for its commit specialist whose reason is three spaces,
+    (v) the project records the same exemption as (x), and a second definition declaring the commit
+        specialist's name exists at user scope,
+  When the commit specialist parity check runs on each project,
+  Then (x) passes, and its result states that the definition differs from the shipped one under an
+    exemption and quotes the stated reason,
+    And (y) fails as GE-129a-4's case (b) does, quoting the first differing line and the shipped
+    line it replaced,
+    And (z) and (w) each fail, stating that the exemption gives no reason, and quote the first
+    differing line,
+    And (v) fails, naming the installed location and the user-scope location that declare the
+    commit specialist's name, so an exemption for a customised definition does not excuse a second
+    definition of the same name.
+
+  Given project (x) with its exemption removed and nothing else changed,
+  When the commit specialist parity check runs on it,
+  Then it fails as (y) does.
+depends_on:
+  - GE-129a-4
+doc_links:
+  - path: docs/acceptance-criteria/guardrail-engine/GE-129-who-acts-not-what-typed/GE-129a-4.yaml
+    relationship: parent
+    status: exists
+    relevance: "The check this record qualifies; its notes record the user's default: customisation only with a recorded exemption."
+  - path: docs/acceptance-criteria/guardrail-engine/GE-129-who-acts-not-what-typed/GE-129a.yaml
+    relationship: context
+    status: exists
+    relevance: "Q3 safeguard: a BP-1000-family parity check flags a divergent or duplicate commit agent definition."
+  - path: templates/agents/commit.md
+    relationship: describes
+    status: exists
+    relevance: "The shipped commit specialist definition the check compares against."
+assigned_agent: python-coder
+estimated_complexity: null
+declares_side_effect: false
+delivers_to: null
+expects_from:
+  - ac_id: GE-129a-4
+    contract: "The parity check's divergence and duplicate findings, which an exemption qualifies."
+origin_agent: business-analyst
+created: 2026-09-17
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  DECIDED 2026-09-17 (user, default accepted; recorded on GE-129a-4) -- CUSTOMISATION: a project may
+  customise its commit specialist only with a recorded exemption. Without one, any divergence is a
+  failure, matching the user's "flags a divergent definition". "With a stated reason" is part of the
+  decision as relayed on 2026-09-17: an exemption with no reason fails.
+
+  WHY (w). A check that tests only for an empty reason lets a blank one through; whitespace is the
+  cheapest way to satisfy "a reason field exists".
+
+  WHY (v). The exemption is for customising the definition, not for shadowing it. The mutation "an
+  exemption silences every parity finding for the project" passes (x) and fails only (v).
+
+  WHY THE LAST SCENARIO. A check that passes every divergent definition passes (x); removing the
+  exemption and seeing the failure return is the only form that implementation cannot meet.
+
+  WHY (x) STATES THE EXEMPTION. A pass that says nothing is indistinguishable from a check that did
+  not compare (GE-120 "green means checked").
+
+  Where and in what form the exemption is recorded is the IT PO's. The stated limit (GE-129e-4)
+  still holds: anyone who can write the exemption can also write the definition.
+
+  declares_side_effect: false -- the Then clauses assert a pass or a failure with named findings.

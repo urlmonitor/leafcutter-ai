@@ -18,13 +18,22 @@ criteria: |
   Then each catalogue entry's matcher shows the editing tools and shell commands, identical to
     the matcher that guard is registered with in the shipped settings, established by reading
     both,
-  And each entry states which command forms it refuses before they run, and that a command whose
-    effect cannot be told beforehand is examined afterwards and stops the run rather than being
-    refused,
+  And each entry states which command forms it refuses before they run,
+  And the documentation guard's and the guide-read guard's entries each state that a command whose
+    effect cannot be told beforehand runs and is examined afterwards, with three outcomes: a change
+    to a protected file positively attributed to this caller's command stops the run; a changed
+    protected file the examination cannot attribute is named, with the reason whose change it was
+    could not be told, is recorded and listed at the end of the drive, and the run continues; and
+    when the files could not be examined at all, the run stops,
   And the guide-read guard's entry states that a guide printed by a shell command counts as read
     and that listing or naming it does not,
-  And the task-lock guard's entry states that reading commands and the build workflow's own
-    steps are not refused under the lock,
+  And the task-lock guard's entry states that, under the lock, commands that only look at files are
+    not refused; that a writing command is refused unless its caller is one of the build workflow's
+    own dispatched agents; that this exemption is decided only from the caller identity the harness
+    supplies with the call, never from command text, environment or prompt; and that a writing
+    command whose caller identity cannot be established is refused,
+  And the task-lock guard's entry does not state that whose change it was affects whether a writing
+    command under the lock is refused,
   And each entry states which rollout stage, warn-only or blocking, the guard is in on the
     command path.
 depends_on:
@@ -33,6 +42,10 @@ depends_on:
 - GE-130a-2
 - GE-130a-3
 - GE-130a-4
+- GE-130c-1-i
+- GE-130c-2-i
+- GE-130c-2-ii
+- GE-129a
 doc_links:
 - path: docs/acceptance-criteria/guardrail-engine/GE-130-protection-however-changed/GE-130a.yaml
   relationship: parent
@@ -43,13 +56,59 @@ doc_links:
 - path: templates/settings.json
   relationship: related
   status: exists
+- path: docs/acceptance-criteria/guardrail-engine/GE-130-protection-however-changed/GE-130a-4.yaml
+  relationship: context
+  status: exists
+  relevance: The task-lock guard's dispatched-agent exemption by caller identity, which its entry
+    must state.
+- path: docs/acceptance-criteria/guardrail-engine/GE-130-protection-however-changed/GE-130c-2-i.yaml
+  relationship: context
+  status: exists
+  relevance: The three after-the-fact outcomes (attributed stops, could not attribute continues,
+    could not examine stops) the documentation guard's and guide-read guard's entries must state.
 delivers_to: null
 expects_from: null
 assigned_agent: documentation-expert
 declares_side_effect: false
 origin_agent: business-analyst
 created: '2026-09-17'
-amended_by: []
+amended_by:
+- reason: user-decisions-caller-identity-exemption-and-attribution-policy
+  by: business-analyst
+  at: 2026-09-17
+  note: |
+    Applies the user's (BrainCandy) 2026-09-17 decisions, already recorded on GE-130a-4, GE-130c,
+    GE-130c-2-i and GE-130c-2-ii, to this reference entry. (1) The build lock exempts the build
+    workflow's own DISPATCHED AGENTS, identified by harness-supplied caller identity (GE-129a,
+    GE-130a-4), not "the build workflow's own steps". (2) An after-the-fact finding stops the run
+    only when positively attributed to this caller; an unattributable change is named, explained,
+    recorded and the run continues (GE-130c-2-i, GE-130c-2-ii); could-not-examine still stops
+    (GE-130c-1-i). (3) The attribution policy applies to the documentation guard and the guide-read
+    guard, not to the task-lock guard.
+    CHANGED: the "examined afterwards and stops the run" half of the second Then clause is moved
+    into a clause scoped to the documentation guard and guide-read guard stating the three outcomes;
+    the task-lock guard clause now states the dispatched-agent exemption, its identity source and
+    the unidentified-caller refusal; a clause added that the task-lock guard's entry does not make
+    its refusal depend on attribution; depends_on gains GE-130c-1-i, GE-130c-2-i, GE-130c-2-ii and
+    GE-129a; two context doc_links added.
+    UNCHANGED: title, Given/When, the matcher-agreement clause, the guide-read clause, the rollout
+    stage clause, assigned_agent, declares_side_effect (false, re-derived), readiness draft.
+    OLD criteria (verbatim):
+      Given the hooks reference catalogue and the shipped hook settings,
+      When a reader looks up the documentation guard, the guide-read guard or the task-lock guard,
+      Then each catalogue entry's matcher shows the editing tools and shell commands, identical to
+        the matcher that guard is registered with in the shipped settings, established by reading
+        both,
+      And each entry states which command forms it refuses before they run, and that a command whose
+        effect cannot be told beforehand is examined afterwards and stops the run rather than being
+        refused,
+      And the guide-read guard's entry states that a guide printed by a shell command counts as read
+        and that listing or naming it does not,
+      And the task-lock guard's entry states that reading commands and the build workflow's own
+        steps are not refused under the lock,
+      And each entry states which rollout stage, warn-only or blocking, the guard is in on the
+        command path.
+    OLD depends_on (verbatim): [GE-130a, GE-130a-1, GE-130a-2, GE-130a-3, GE-130a-4]
 superseded_by: null
 covered_by: []
 implemented_by: []
@@ -58,5 +117,11 @@ notes: |
   column must reflect the widening"). The first clause is a mechanical agreement with the shipped
   settings, not a prose check -- a catalogue that is already stale (it omits
   enforce_commit_delegation, per BO-3200f-2-iii notes) is the reason.
+
+  2026-09-17 (user decisions): the task-lock guard's entry describes the caller-identity exemption
+  of GE-130a-4, not "the workflow's own steps"; the three after-the-fact outcomes are described for
+  the documentation guard and guide-read guard only (GE-130c-2 SCOPE). The negative clause keeps a
+  writer from copying the attribution wording into the task-lock guard's entry. Old criteria
+  quoted in amended_by.
 
   declares_side_effect: false.

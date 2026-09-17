@@ -17,16 +17,32 @@ criteria: |
   When a reader looks up how a file protection treats a shell command,
   Then it states that a command clearly writing a protected file is refused before it runs, and
     that a command whose effect cannot be told beforehand runs and is examined afterwards,
-  And it states that a stop afterwards names the changed protected files and leaves them changed,
-    and what the caller must do to continue,
-  And it states that a caller is stopped only for its own command's changes, and what the reader
-    sees when the protection cannot tell whose change it was,
-  And it states that the protection says so and stops when it cannot tell what a command
-    changed.
+  And for the documentation guard and the guide-read guard it states the three outcomes of that
+    examination, each with what the reader sees:
+    (attributed) a change to a protected file positively attributed to this caller's command stops
+    the run, naming the changed file, which is left changed, and stating what the caller must do
+    to continue;
+    (could not examine) when the files could not be examined at all, the protection states that it
+    could not tell what the command changed and stops the run;
+    (could not attribute) a changed protected file the examination cannot attribute is named with
+    the protection and the reason whose change it was could not be told, no caller is named as
+    having made it, the file is left changed and a caller whose change it was must put it back or
+    make the change in a way the rule allows, the finding is recorded, still readable after the
+    session ends, and listed in the report the drive ends with, and the run continues,
+  And it states that a caller is never stopped for a change that is not positively attributed to it,
+    except when the files could not be examined at all,
+  And it states that the task-lock guard is outside these three outcomes and its lock semantics are
+    unchanged: under the build lock it refuses a writing command whoever's change it was, unless the
+    caller is one of the build workflow's own dispatched agents as identified by the caller identity
+    the harness supplies.
 depends_on:
 - GE-130c
 - GE-130c-1
 - GE-130c-2
+- GE-130c-1-i
+- GE-130c-2-i
+- GE-130c-2-ii
+- GE-130a-4
 doc_links:
 - path: docs/acceptance-criteria/guardrail-engine/GE-130-protection-however-changed/GE-130c.yaml
   relationship: parent
@@ -34,13 +50,54 @@ doc_links:
 - path: docs/reference/claude-code-hooks.md
   relationship: related
   status: exists
+- path: docs/acceptance-criteria/guardrail-engine/GE-130-protection-however-changed/GE-130c-2-i.yaml
+  relationship: context
+  status: exists
+  relevance: The could-not-attribute outcome and the three-way distinction the reference must explain.
+- path: docs/acceptance-criteria/guardrail-engine/GE-130-protection-however-changed/GE-130c-2-ii.yaml
+  relationship: context
+  status: exists
+  relevance: The kept record and end-of-drive listing of unattributed findings.
+- path: docs/acceptance-criteria/guardrail-engine/GE-130-protection-however-changed/GE-130a-4.yaml
+  relationship: context
+  status: exists
+  relevance: The task-lock guard's lock semantics, unaffected by the attribution policy.
 delivers_to: null
 expects_from: null
 assigned_agent: documentation-expert
 declares_side_effect: false
 origin_agent: business-analyst
 created: '2026-09-17'
-amended_by: []
+amended_by:
+- reason: user-decision-attribution-policy
+  by: business-analyst
+  at: 2026-09-17
+  note: |
+    Applies the user's (BrainCandy) 2026-09-17 attribution decision (GE-130c, GE-130c-2-i,
+    GE-130c-2-ii) to the reference entry. "A caller is stopped only for its own command's changes"
+    held only for the documentation guard and the guide-read guard, and the persisted record of an
+    unattributed finding was missing.
+    CHANGED: the stop-afterwards, own-changes and could-not-tell clauses are replaced by one clause
+    scoped to the documentation guard and guide-read guard stating the three outcomes (attributed
+    -> stop; could not examine -> stop; could not attribute -> named, explained, recorded, listed at
+    the end of the drive, run continues); a clause states that no caller is stopped for an
+    unattributed change; a clause states the task-lock guard's lock semantics are unaffected;
+    depends_on gains GE-130c-1-i, GE-130c-2-i, GE-130c-2-ii and GE-130a-4; three context doc_links
+    added.
+    UNCHANGED: title, Given/When, the before/after split clause, assigned_agent,
+    declares_side_effect (false, re-derived), readiness draft.
+    OLD criteria (verbatim):
+      Given the hooks reference,
+      When a reader looks up how a file protection treats a shell command,
+      Then it states that a command clearly writing a protected file is refused before it runs, and
+        that a command whose effect cannot be told beforehand runs and is examined afterwards,
+      And it states that a stop afterwards names the changed protected files and leaves them changed,
+        and what the caller must do to continue,
+      And it states that a caller is stopped only for its own command's changes, and what the reader
+        sees when the protection cannot tell whose change it was,
+      And it states that the protection says so and stops when it cannot tell what a command
+        changed.
+    OLD depends_on (verbatim): [GE-130c, GE-130c-1, GE-130c-2]
 superseded_by: null
 covered_by: []
 implemented_by: []
@@ -53,6 +110,6 @@ notes: |
   does not stop the run (GE-130c-2-i), and is listed at the end of the drive (GE-130c-2-ii). The
   task-lock guard's lock semantics are unaffected -- under the build lock it stops any writing
   command regardless of attribution, except the build workflow's own dispatched agents
-  (GE-130a-4). Criteria not amended here; see the report to the user.
+  (GE-130a-4). Criteria amended the same day to state this; old criteria quoted in amended_by.
 
   declares_side_effect: false.

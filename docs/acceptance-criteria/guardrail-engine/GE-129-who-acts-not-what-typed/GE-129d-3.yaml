@@ -12,7 +12,7 @@ readiness: draft
 priority: medium
 roadmap_phase: phase_1
 criteria: |
-  Given the behaviours of GE-129d-1 and GE-129d-2 and the probe findings of GE-129a-1,
+  Given the behaviours of GE-129d-1, GE-129d-2 and GE-129d-2-i and the probe findings of GE-129a-1,
   When a person reads the how-to for committing from their own session,
   Then it states that each commit the assistant issues is shown at Claude Code's permission prompt,
     that only the person's answer there lets it through, and that a reply typed in the conversation
@@ -21,6 +21,15 @@ criteria: |
     commit (prompted or refused), matching those findings,
     And for a refused mode it gives the steps to commit instead: switch the session to the default
     mode, or run the commit yourself in your own terminal,
+    And it states that in a mode where no person is reached, having the session hand the commit to
+    the commit specialist -- directly, or through an agent the session dispatched -- is refused too,
+    And it states why: that hand-off would otherwise put a commit into the history with no person
+    confirming it, the same gap the session's own refused commit closes,
+    And for that refused hand-off it gives the same steps to commit instead as for a refused mode,
+    and does not present the hand-off as a way to commit in such a mode,
+    And every statement it makes about what happens in a named permission mode, for the session's
+    own commit and for a hand-off to the commit specialist, matches the probe findings, and it makes
+    no such statement about a mode those findings do not record,
     And it states that allow rules and "don't ask again" do not pre-approve commits,
     And it mentions no token, environment setting or flag as a way to commit.
 depends_on:
@@ -28,11 +37,16 @@ depends_on:
   - GE-129a-1
   - GE-129d-1
   - GE-129d-2
+  - GE-129d-2-i
 doc_links:
   - path: docs/acceptance-criteria/guardrail-engine/GE-129-who-acts-not-what-typed/GE-129d.yaml
     relationship: parent
     status: exists
     relevance: "documentation_triggers: [how-to]."
+  - path: docs/acceptance-criteria/guardrail-engine/GE-129-who-acts-not-what-typed/GE-129d-2-i.yaml
+    relationship: context
+    status: exists
+    relevance: "The session's hand-off to the commit specialist is refused where no person is reached; the how-to explains it."
 assigned_agent: documentation-expert
 estimated_complexity: null
 declares_side_effect: false
@@ -42,7 +56,34 @@ expects_from:
     contract: "The per-mode prompt findings the how-to's mode list must match."
 origin_agent: business-analyst
 created: 2026-09-17
-amended_by: []
+amended_by:
+  - reason: user-decision-session-dispatch-refused
+    by: business-analyst
+    at: 2026-09-17
+    note: |
+      Applies the user's (BrainCandy) 2026-09-17 decision (GE-129d-2-i): where no person is reached,
+      the session's dispatch of the commit specialist is refused too. The how-to must now say so,
+      why, and what to do instead, and every per-mode statement must match the probe findings.
+      CHANGED: Given names GE-129d-2-i; four Then clauses added (the hand-off is refused, why, what to
+      do instead and not presenting the hand-off as a workaround, per-mode statements match the probe
+      findings and none is made about an unrecorded mode); depends_on gains GE-129d-2-i; a context
+      doc_link added; the notes paragraph saying this was "allowed but not yet required" replaced.
+      UNCHANGED: title, When, the prompt clause, the mode-list clause, the refused-mode steps, the
+      allow-rules clause, the no-token clause, assigned_agent, declares_side_effect (false,
+      re-derived), readiness draft.
+      OLD criteria (verbatim):
+        Given the behaviours of GE-129d-1 and GE-129d-2 and the probe findings of GE-129a-1,
+        When a person reads the how-to for committing from their own session,
+        Then it states that each commit the assistant issues is shown at Claude Code's permission prompt,
+          that only the person's answer there lets it through, and that a reply typed in the conversation
+          does not,
+          And it lists every permission mode the probe findings record, each with its outcome for a
+          commit (prompted or refused), matching those findings,
+          And for a refused mode it gives the steps to commit instead: switch the session to the default
+          mode, or run the commit yourself in your own terminal,
+          And it states that allow rules and "don't ask again" do not pre-approve commits,
+          And it mentions no token, environment setting or flag as a way to commit.
+      OLD depends_on (verbatim): [GE-129d, GE-129a-1, GE-129d-1, GE-129d-2]
 superseded_by: null
 covered_by: []
 implemented_by: []
@@ -52,7 +93,11 @@ notes: |
 
   The how-to does not recommend dispatching the commit specialist from a no-person mode: the user
   decided on 2026-09-17 that this dispatch is refused (GE-129d-2-i), so it is not a workaround.
-  This record's criteria were not changed by that decision; saying so in the how-to is allowed but
-  not yet required.
+  Amended the same day: the how-to is now required to say so, why, and what to do instead.
+
+  OPEN ON THE PROBE: if GE-129a-1 finds no harness value telling a workflow run's dispatch from the
+  session's (GE-129d-2-i fourth scenario), that finding goes to the user before GE-129d-2-i is done;
+  the how-to's per-mode statements follow whatever the probe and that decision settle, by the
+  "match the probe findings" clause.
 
   declares_side_effect: false -- the Then clauses describe how-to content.

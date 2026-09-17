@@ -1,0 +1,91 @@
+id: GE-129a-4-i
+title: "The commit specialist parity check runs when a session starts and when the package is installed, and sees same-named definitions outside the project"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - agent_registry
+  - bootstrap_installer
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a developer environment with three projects that have the package installed:
+    (p1) the installed commit specialist definition is byte-identical to the shipped one, a second
+         definition declaring the commit specialist's name exists at user scope, and a third is
+         provided by an installed plugin,
+    (p2) the installed definition differs from the shipped one in one line of its instructions,
+         the project records no exemption, and no other definition declares the name,
+    (p3) the installed definition is byte-identical to the shipped one and no other definition
+         declares the name,
+  When, as the session-start case, the developer starts a new session in each project and issues
+    no commit in it,
+  Then for (p1) the session shows the parity failure naming the user-scope location and the plugin
+    location, without the person asking for the check,
+    And for (p2) the session shows the parity failure quoting the first differing line and the
+    shipped line it replaced,
+    And for (p3) the session shows no parity finding.
+
+  Given the same developer environment and the same three projects,
+  When, as the install case, the package is installed again into each project from that
+    environment, with no session started and no commit issued,
+  Then the install's report shows the parity failure for (p1) naming the user-scope location and
+    the plugin location,
+    And the install's report shows the parity failure for (p2) quoting the first differing line,
+    And the install's report for (p3) shows no parity finding.
+
+  Given (p1) with its user-scope definition removed and nothing else changed,
+  When the session-start case and the install case are each repeated,
+  Then each failure names the plugin location and no longer names a user-scope location.
+depends_on:
+  - GE-129a-4
+  - GE-129a-1
+doc_links:
+  - path: docs/acceptance-criteria/guardrail-engine/GE-129-who-acts-not-what-typed/GE-129a-4.yaml
+    relationship: parent
+    status: exists
+    relevance: "The check whose run points this record pins; its notes record the user's default: session start AND install."
+  - path: docs/acceptance-criteria/guardrail-engine/GE-129-who-acts-not-what-typed/GE-129a.yaml
+    relationship: context
+    status: exists
+    relevance: "Q3 safeguard: a BP-1000-family parity check flags a divergent or duplicate commit agent definition."
+  - path: templates/agents/commit.md
+    relationship: describes
+    status: exists
+    relevance: "The shipped commit specialist definition the check compares against."
+assigned_agent: python-coder
+estimated_complexity: null
+declares_side_effect: false
+delivers_to: null
+expects_from:
+  - ac_id: GE-129a-4
+    contract: "The parity check's pass/fail result with named locations and the quoted differing line."
+origin_agent: business-analyst
+created: 2026-09-17
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  DECIDED 2026-09-17 (user, default accepted; recorded on GE-129a-4) -- WHEN IT RUNS: at session start
+  in the developer's environment AND at install. User-scope and plugin definitions live outside the
+  repository, so a check that runs only at commit time, or on a CI machine, cannot see (p1)'s
+  duplicates. Both run points are required; each is its own named scenario so dropping either one
+  turns this record red.
+
+  WHY "ISSUES NO COMMIT" / "NO SESSION STARTED". A check wired only to commit time, or only to the
+  session, would pass a scenario that also committed or opened a session. Excluding those makes
+  each case attributable to its own run point.
+
+  WHY (p1) HAS BOTH SCOPES AND THE THIRD SCENARIO. A check that reads only user scope, or reports a
+  fixed location, passes a single-scope fixture. Removing one location and seeing exactly that
+  location disappear is the anti-vacuity shape GE-129a-4 uses for duplicates.
+
+  OPEN, NOT DECIDED HERE: whether a failure at session start or at install also blocks the session
+  or the install, or is shown only. This record requires the failure to be shown; blocking is not
+  asserted either way. Return to the user if the IT PO needs it decided.
+
+  declares_side_effect: false -- the Then clauses assert what a session and an install report show.

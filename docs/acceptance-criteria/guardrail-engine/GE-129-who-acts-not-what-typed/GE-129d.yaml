@@ -45,6 +45,8 @@ notes: |
   decision to Claude Code's own permission prompt, so the person confirms and the
   assistant cannot answer for them. Where no prompt reaches a person --
   auto-accept, bypass-permissions or headless runs -- the commit is refused.
+  [EXTENDED 2026-09-17 by D1 and D2 below: the refusal also covers dispatching
+  the commit specialist, and a mode missing from the probe findings.]
 
   Rejected alternatives, recorded so they are not re-derived: letting the
   top-level session commit freely (an auto-mode session would commit with no gate
@@ -55,3 +57,26 @@ notes: |
   FOR THE BA/IT PO: establish how the permission prompt behaves in each of those
   modes as part of GE-129a's live probe, so 'no prompt reaches a person' is decided
   by observation, not assumed.
+  [SUPERSEDED IN PART 2026-09-17 by D1 below: a mode the probe findings do not
+  record is no longer left open -- it counts as reaching no person and is
+  refused.]
+
+  DECIDED 2026-09-17 (user, after this L1 was written) -- D1 DISPATCH REFUSAL. In a
+  mode where no person is reached (auto-accept, bypass-permissions, headless, or a
+  mode missing from the probe findings), the top-level session is refused not only
+  its own commit (GE-129d-2) but also dispatching the commit specialist, directly
+  or through a subagent, whatever the dispatch prompt claims (GE-129d-2-i).
+  Unattended workflow runs (fast lane, ticket-supervisor, finalize-feature) are not
+  refused where harness-supplied context distinguishes them (GE-129a-1, third
+  scenario).
+
+  DECIDED 2026-09-17 (user) -- D2 FAIL CLOSED ON COLLISION. If the probe finds
+  nothing the harness supplies that distinguishes a session's dispatch from a
+  workflow run's in such a mode, both are refused and the finding returns to the
+  user, who decides with the probe's evidence (GE-129d-2-i, fourth scenario).
+
+  DECIDED 2026-09-17 (user) -- D3 GIT SCOPE: COMMITS ONLY, FOR NOW. The session's
+  person-confirmed go-ahead covers commits only. The out-of-scope history-writing
+  operations are named: merge, pull, cherry-pick, revert, rebase, am, commit-tree,
+  stash, notes, fast-import, filter-branch, replay (GE-129b-3, GE-129e-4). The user
+  confirmed the 12-item list.
