@@ -1,0 +1,347 @@
+id: BO-3200f-2-iii
+title: "A guardrail bypass variable carried by a command the executor runs does not bypass the guardrail, for any command, and a guardrail that cannot tell who is calling does not silently honour it"
+component: build-orchestration
+components:
+  - build_orchestration
+  - agent_registry
+  - commit_guardian
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: low
+criteria: |
+  Given each guardrail that honours a bypass variable -- COMMIT_AGENT_MODE, CLAUDE_NO_DOC_UPDATE
+    and INLINE_WORK_GUARD_MODE -- and, for each, a command that guardrail blocks when the command
+    is issued without the variable,
+    And that command dispatched to the chartered executor with the variable set in the command
+    text, at the value that bypasses the guardrail for any other caller,
+  When the executor carries the dispatch out,
+  Then the guardrail blocks the command exactly as it blocks it without the variable,
+    And the command is not carried out,
+    And the block names the guardrail and the bypass variable it refused.
+
+  Given the same command without the variable in its text, dispatched to the executor while the
+    same bypass variable is set in the environment the executor runs in,
+  When the executor carries the dispatch out,
+  Then the guardrail blocks the command, the command is not carried out, and the block names the
+    guardrail and the variable.
+
+  Given a command that appears in no workflow shipped with the package -- composed while a run is
+    in progress -- carrying one of the three bypass variables, dispatched to the executor,
+    And the authoring-time routing check of BO-3200f-3 never having examined that command,
+  When the executor carries the dispatch out,
+  Then the guardrail blocks the command and it is not carried out, so the refusal does not depend
+    on BO-3200f-3 having seen the command.
+
+  Given the same blocked command carrying the same bypass variable at the same value, issued by a
+    caller that is not the executor and for which that guardrail honours the variable today,
+  When the command is issued,
+  Then the bypass takes effect for that caller exactly as it does today, so the refusal applies
+    to the executor as caller and does not remove the escape hatch for anyone else.
+
+  Given a guardrail that gains a bypass variable after this rule is in force,
+    And a command that guardrail blocks, carrying that new variable, dispatched to the executor,
+  When the executor carries the dispatch out,
+  Then the guardrail blocks the command and it is not carried out, with no change made to the
+    refusal that names the new variable.
+
+  Given a guardrail that receives a command carrying one of its bypass variables and cannot
+    establish from what it receives whether the caller is the executor,
+  When the guardrail decides,
+  Then it does not let the command through under the bypass without saying so: either it blocks
+    the command as it would for the executor, or, if it lets the command through under the
+    bypass, it states on its error output, in the same decision, the guardrail, the bypass
+    variable and that the caller could not be identified,
+    And in no case is the command carried out under the bypass with no such statement.
+depends_on:
+  - BO-3200f-2
+  - BO-3200f-1
+doc_links:
+  - path: docs/acceptance-criteria/build-orchestration/BO-3200-second-hand-answers/BO-3200f-2.yaml
+    relationship: describes
+    status: exists
+    relevance: "Security containment 4 names the two enforcement points; the 2026-09-16 notes record the user's decision that authoring time is load-bearing now and run time comes later, and that the run-time half had no acceptance criterion. This record is that half."
+  - path: docs/acceptance-criteria/build-orchestration/BO-3200-second-hand-answers/BO-3200f-3.yaml
+    relationship: describes
+    status: exists
+    relevance: "The authoring-time half: the routing check fails an executor dispatch whose command text sets a bypass variable, over shipped workflow sources only. Cited, not duplicated -- the third scenario here is the case that check cannot see."
+  - path: docs/reference/claude-code-hooks.md
+    relationship: describes
+    status: exists
+    relevance: "The Bypass / Escape Hatches table (CLAUDE_NO_DOC_UPDATE, INLINE_WORK_GUARD_MODE, CLAUDE_NO_README_CHECK) and the PreToolUse payload a guardrail receives -- the source of the caller-identity risk in the last scenario."
+  - path: docs/architecture/agent_delivery_workflows.md
+    relationship: describes
+    status: exists
+    relevance: "Where COMMIT_AGENT_MODE=1 is described as the commit agent's legitimate authorisation -- the caller the fourth scenario keeps working."
+  - path: docs/architecture/diagrams/c2-fast-lane-build-path-components.md
+    relationship: describes
+    status: exists
+    relevance: "The fast lane's commit phase issues COMMIT_AGENT_MODE=1 git commit today -- a live, legitimate use of a bypass variable by a non-executor caller."
+  - path: docs/known-issues/commit-guardian/open-high-ki-cg-20260907-commit-delegation-is-a-password-not-an-identity.md
+    relationship: describes
+    status: exists
+    relevance: "Added by it-po. The commit-delegation guardrail authorises by a token match on the command string and has no caller binding -- the caller-identity problem the last scenario is about, and the evidence that command text can never identify a caller."
+  - path: docs/agents/conventions.md
+    relationship: describes
+    status: exists
+    relevance: "Added by it-po. The top-level session's sanctioned COMMIT_AGENT_MODE=1 commit when the human authorises directly -- a second non-executor caller the fourth scenario keeps working."
+  - path: docs/acceptance-criteria/build-orchestration/BO-3200-second-hand-answers/BO-3200f-1-i.yaml
+    relationship: describes
+    status: exists
+    relevance: "Added by it-po. The guardrail_blocked reason and blocked_by field a block raised here must be extractable into."
+  - path: docs/acceptance-criteria/build-orchestration/BO-3200-second-hand-answers/BO-3200f-2-ii.yaml
+    relationship: describes
+    status: exists
+    relevance: "Added by it-po. The opt-in live-dispatch harness the one live descriptor here runs under."
+assigned_agent: python-coder
+estimated_complexity: L
+declares_side_effect: false
+change_target:
+  - code
+  - config
+risk_surface: auth
+it_requirements:
+  - "IT-PO DECISION -- ASSIGNMENT CONFIRMED python-coder. The surface is the Claude Code guardrail hook scripts, a machine-readable bypass-variable declaration they read, and the hooks reference table that must agree with it. Hook sources and their deployed copies are edited together and verified through the build round-trip (ADR-001)."
+  - "DEFERRED, LOW PRIORITY, NOT DROPPED. User decision (a), 2026-09-16: BO-3200f-3's authoring-time check is the load-bearing enforcement point now and this run-time half comes later. priority stays low and roadmap_phase stays unset; scheduling is the user's or the Product Owner's call."
+  - "ONE DECLARED SET OF BYPASS VARIABLES, READ BY EVERY ENFORCEMENT POINT. Each guardrail bypass variable is declared once, in machine-readable form, with the guardrail that honours it, the value that bypasses, and its unidentified-caller policy. The run-time refusal reads that declaration and hard-codes no variable name. Today the declaration holds four: COMMIT_AGENT_MODE (enforce_commit_delegation), CLAUDE_NO_DOC_UPDATE (documentation_guard), INLINE_WORK_GUARD_MODE (inline_work_guard) and CLAUDE_NO_README_CHECK (readme_read_guard) -- the fourth is in the hooks reference's escape-hatch table and enters through the fifth scenario from day one. The Bypass / Escape Hatches table in docs/reference/claude-code-hooks.md must agree with the declaration mechanically (it currently omits COMMIT_AGENT_MODE and enforce_commit_delegation is absent from the hook catalogue); BO-3200f-3's authoring-time check should read the same declaration rather than the prose table (recommended follow-up on BO-3200f-3, not edited here)."
+  - "A NEW ESCAPE HATCH IS REFUSED BY DECLARING IT, WITH NO CHANGE TO THE REFUSAL. The fifth scenario is met only if adding a variable to the declaration is the whole change. A guardrail that honours a bypass variable absent from the declaration must fail a coverage check at commit time, so a new escape hatch cannot be added outside the declaration and escape the rule silently."
+  - "BOTH ROUTES ARE REFUSED FOR THE EXECUTOR: the variable set for the command in its text, in any shell form that sets it for that command (not only a leading whitespace-separated token, the match KI-CG-20260907 records), and the variable present in the environment the executor's command runs in."
+  - "CALLER IDENTITY COMES ONLY FROM WHAT THE HARNESS SUPPLIES AND A COMMAND CANNOT SET. Never from the command text, an environment variable, a marker file, a working directory or the dispatch prompt: each is mintable by the caller, which is the whole defect KI-CG-20260907 records. The PreToolUse payload documented today carries tool_name, tool_input and session_id and names no agent. The implementer must establish from the live payload whether an agent identity is supplied and record the finding in the stdin contract of docs/reference/claude-code-hooks.md. If none is supplied, every call is an unidentified caller and the policy below applies to all callers of that guardrail; that consequence is reported to the user before this record is marked done."
+  - "IT-PO DECISION -- THE LAST SCENARIO, RESOLVED PER GUARDRAIL, declared as data next to each variable (policy 'block' or 'state'): CLAUDE_NO_DOC_UPDATE (documentation_guard) -> BLOCK; INLINE_WORK_GUARD_MODE (inline_work_guard) -> BLOCK; CLAUDE_NO_README_CHECK (readme_read_guard) -> BLOCK; COMMIT_AGENT_MODE (enforce_commit_delegation) -> STATE. Reasons: the first three are convenience or debugging overrides whose fail-closed cost is re-running without them. COMMIT_AGENT_MODE has live, unattended, legitimate non-executor callers (the fast lane's commit phase, ticket-supervisor auto-authorisation, the top-level session under docs/agents/conventions.md); blocking every unidentified caller would break the fourth scenario wherever the payload names no agent, and the pre-commit hook chain still runs on the commit itself (KI-CG-20260907). A STATE decision lets the command through only while writing, in the same decision on the guardrail's error output, the guardrail, the variable and that the caller could not be identified. Any variable declared later defaults to BLOCK; STATE requires a recorded user decision on that declaration."
+  - "NO SILENT ALLOW, INCLUDING ON INTERNAL ERROR. The hooks convention of exiting cleanly on an internal error must not honour a bypass: if the guardrail cannot read its payload or the declaration while a bypass variable is present, it proceeds as though the variable were absent -- its ordinary check decides -- and writes the error to its error output."
+  - "COMMIT_AGENT_MODE CONFLICT -- THE NON-REMOVAL RULE. Neither this record nor BO-3200f-3 may remove, rename or narrow a bypass variable for non-executor callers, strip one from a shipped command, or repoint the fast lane's commit step (COMMIT_AGENT_MODE=1 git commit, issued by the commit agent in Phase 5) to the executor. If BO-3200f-3's inventory reports that step -- as a mis-addressed chore, or as bypass_variable after someone repoints it -- the report stands until a recorded user decision on how the commit step is authorised (KI-CG-20260907); it is never cleared by repointing the step and never by deleting the variable from its command. The fourth scenario is pinned on that exact shipped command shape, so removing the bypass fails a test rather than degrading silently."
+  - "GUARDRAILS THAT DO NOT SEE THE EXECUTOR'S TOOLS ARE NOT WIDENED BY THIS RECORD. The executor holds shell only (BO-3200f-2 containment 1); per the hook catalogue, documentation_guard, inline_work_guard and readme_read_guard match Edit|Write. Which guardrails a shell command reaches is read from the shipped hook settings, not from the catalogue. Where a guardrail's matcher covers no tool the executor holds, the implementer reports it as a caveat (see notes) and does not widen the matcher inside this record."
+  - "ENFORCE WHERE IT RUNS. The refusal lives in the guardrail hooks registered in the shipped settings, not in a helper nothing calls; any shared module a hook imports is added to the build deploy manifest in the same change (CLAUDE.md). The block uses the documented PreToolUse block outcome with a message that names the guardrail and the variable, in a form BO-3200f-1-i's mapping reads as guardrail_blocked with blocked_by set."
+  - "NO EXEMPTION KEYED TO THE EXECUTOR (BO-3200f-2 containment 3; user decision (b)): the change adds no allow rule, settings entry or hook exemption for the executor or its capture invocation. Identifying the executor may only ever make a guardrail stricter."
+  - "Must not add perceptible latency to tool calls: the bypass decision completes in under 100 ms per call on a typical payload, measured on the deployed hook."
+delivers_to:
+  - agent: python-coder
+    contract: "A guardrail block for an executor call carrying a bypass variable, delivered through the documented PreToolUse block outcome with reason text naming the guardrail id and the variable (for example 'enforce_commit_delegation refused COMMIT_AGENT_MODE for the chartered executor'), which BO-3200f-1-i maps to uninspectable_reason 'guardrail_blocked' with blocked_by the guardrail id; and the bypass-variable declaration [{variable: str, bypass_value: str, guardrail: str, unidentified_caller: 'block' | 'state', decision_ref: str | null}] which BO-3200f-3's authoring-time check can read instead of the prose table."
+  - agent: reference-author
+    contract: "The per-guardrail unidentified-caller policy and the finding on whether the hook payload identifies the calling agent, for BO-3200f-4's containment section and the hooks reference."
+expects_from:
+  - ac_id: BO-3200f-2
+    contract: "The executor's agent id as registered (the identity a guardrail compares a supplied caller against) and its tool list (which guardrail matchers can see its calls)."
+  - ac_id: BO-3200f-1
+    contract: "The exact form in which the executor issues a dispatched command to the shell tool, so the guardrail evaluates the same command text a direct call would carry (BO-3200f-1's guardrail-visibility parity)."
+test_spec:
+  - name: test_bo_3200f_2_iii_bypass_in_command_text_is_refused_for_the_executor_per_declared_variable
+    target_dir: unit_tests/hooks/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "For every declared variable whose guardrail's shipped matcher covers a tool the executor holds -- enumerated from the declaration and the shipped settings, not a hand list -- run the real hook script on a payload identifying the executor with a command that guardrail blocks, carrying the variable at its bypass value in the text; assert block, the command is not allowed, and the reason names the guardrail and the variable."
+  - name: test_bo_3200f_2_iii_inherited_environment_bypass_is_refused_for_the_executor
+    target_dir: unit_tests/hooks/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "Same commands without the variable in the text, the hook process run with the variable set in its environment and the payload identifying the executor; assert block naming the guardrail and the variable."
+  - name: test_bo_3200f_2_iii_refusal_holds_for_a_command_no_shipped_workflow_contains
+    target_dir: unit_tests/hooks/
+    framework: unittest
+    type: integration
+    angle: seam
+    description: "THE DISCRIMINATOR AGAINST BO-3200f-3. A command composed by the test, present in no workflow source, carrying each declared variable, with BO-3200f-3's routing check not run and its module unavailable; assert the guardrail still blocks."
+  - name: test_bo_3200f_2_iii_non_executor_caller_keeps_the_bypass
+    target_dir: unit_tests/hooks/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "The same blocked commands carrying the same variables from a payload identifying a non-executor caller; assert the bypass takes effect exactly as it does today."
+  - name: test_bo_3200f_2_iii_fast_lane_commit_step_still_commits_through_the_guardrail
+    target_dir: unit_tests/hooks/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    description: "Read the fast lane's shipped commit-step command (COMMIT_AGENT_MODE=1 git commit) from the real workflow source, run the real commit-delegation guardrail on it from the commit agent and from an unidentified caller; assert it is allowed in both, with the unidentified-caller statement on the error output in the second. Removing the variable or repointing the step fails here."
+  - name: test_bo_3200f_2_iii_newly_declared_variable_is_refused_with_no_change_to_the_refusal
+    target_dir: unit_tests/hooks/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: "In a temporary copy, add a new variable for a guardrail to the declaration only; assert the executor's command carrying it is blocked with a reason naming it, and that no hook source file differs from the shipped copy."
+  - name: test_bo_3200f_2_iii_bypass_honoured_outside_the_declaration_fails_coverage
+    target_dir: unit_tests/hooks/
+    framework: unittest
+    type: integration
+    angle: failure
+    description: "Plant a guardrail copy that honours an undeclared environment variable; assert the coverage check fails naming the guardrail and the variable."
+  - name: test_bo_3200f_2_iii_unidentified_caller_is_blocked_or_stated_never_silently_allowed
+    target_dir: unit_tests/hooks/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "For every declared variable, run its real guardrail on a payload that identifies no caller; assert BLOCK variables block, STATE variables allow only with the guardrail, variable and 'caller could not be identified' written to the error output in the same decision, and no variable allows with empty error output."
+  - name: test_bo_3200f_2_iii_caller_identity_cannot_be_minted_by_command_or_environment
+    target_dir: unit_tests/hooks/
+    framework: unittest
+    type: unit
+    angle: failure
+    description: "Payloads with no harness-supplied identity but a command text, environment variable or marker file claiming either the executor or a non-executor caller; assert each is treated as unidentified."
+  - name: test_bo_3200f_2_iii_internal_error_does_not_honour_the_bypass
+    target_dir: unit_tests/hooks/
+    framework: unittest
+    type: unit
+    angle: failure
+    description: "With the declaration unreadable and a bypass variable present, the guardrail's ordinary check decides (a command it blocks without the variable is blocked) and the error is written to its error output."
+  - name: test_bo_3200f_2_iii_declaration_and_hooks_reference_table_agree
+    target_dir: unit_tests/hooks/
+    framework: unittest
+    type: unit
+    angle: real_artifact
+    description: "Parse the Bypass / Escape Hatches table in the real docs/reference/claude-code-hooks.md and the real declaration; assert the same set of (guardrail, variable) pairs."
+  - name: test_bo_3200f_2_iii_deployed_guardrails_refuse_the_bypass
+    target_dir: unit_tests/hooks/
+    framework: unittest
+    type: integration
+    angle: deployed
+    description: "Build into a temporary target directory and run the deployed commit-delegation guardrail on an executor payload carrying COMMIT_AGENT_MODE=1; assert block, and that every module it imports resolves."
+  - name: test_bo_3200f_2_iii_live_executor_commit_with_bypass_is_reported_as_a_guardrail_refusal
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: e2e
+    angle: deployed
+    surface_invoked: "BO-3200f-2-ii live-dispatch harness, switched on by LEAFCUTTER_LIVE_DISPATCH=1"
+    description: "LIVE DISPATCH. In a temporary repository, dispatch 'COMMIT_AGENT_MODE=1 git commit --allow-empty -m probe' to the real registered executor; assert no commit was created and BO-3200f-1-i reports guardrail_blocked naming the commit-delegation guardrail. Meaningful only if the live payload identifies the executor; otherwise the unidentified-caller STATE path applies and the test records that finding instead of passing."
+test_rationale: |
+  Most of this record is a guardrail's decision on a payload, so it is proven by running the real
+  hook scripts on real payloads -- cheap, deterministic, and the same process the harness runs.
+  Every per-variable test enumerates from the declaration and the shipped settings, because a test
+  that lists four variables by hand passes on a refusal that also lists four by hand and fails
+  the fifth scenario the day a fifth variable arrives.
+  The seam test with BO-3200f-3's module unavailable is the discriminator the BA wrote the third
+  scenario for: it can only pass if the refusal happens at the guardrail.
+  The fast-lane commit test reads the real shipped command because the cheap fix -- deleting the
+  bypass -- passes every executor test and breaks that step; it is the test that makes the
+  non-removal rule mechanical rather than a sentence.
+  The identity tests exist because the known defect in this area is identity by token match;
+  without a mintability test the new check could reproduce it one layer up.
+  The single live descriptor is last and conditional: whether the live payload identifies the
+  executor is unknown today, and the test must report that finding rather than pass by accident.
+origin_agent: business-analyst
+created: 2026-09-17
+amended_by:
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-09-17
+  note: |
+    First IT PO pass on this record. Assignment confirmed python-coder. Added
+    estimated_complexity L, change_target [code, config], risk_surface auth, it_requirements,
+    delivers_to (python-coder, reference-author), expects_from (BO-3200f-2, BO-3200f-1),
+    test_spec and test_rationale, and four doc_links (the BA's five kept unchanged). Replaced
+    delivers_to: null and expects_from: null. Resolved the last scenario per guardrail (three
+    BLOCK, COMMIT_AGENT_MODE STATE) and wrote the non-removal rule for the COMMIT_AGENT_MODE
+    conflict with BO-3200f-3. criteria, title, depends_on, req_status and priority (low)
+    untouched; roadmap_phase left unset. readiness draft -> reviewed.
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  DEFERRED BY THE USER -- "LATER". On 2026-09-16 the user accepted the IT PO's containment
+  default for BO-3200f-2 containment 4: guardrail bypass variables are refused at AUTHORING TIME
+  now, by BO-3200f-3's routing check over shipped workflows, and RUN-TIME enforcement at the
+  guardrail comes later. This record specifies that later half so it is not lost. priority is
+  `low` (the parent is critical) to reflect that deferral, and roadmap_phase is deliberately
+  left unset: which phase "later" means is the user's or the Product Owner's call, not the BA's.
+  readiness draft.
+
+  HOW THIS DIFFERS FROM BO-3200f-3, AND WHY BOTH EXIST. BO-3200f-3 is a static check over the
+  canonical workflow sources: it sees a bypass variable written into an executor dispatch in a
+  shipped workflow and fails the gate. It cannot see a command composed while a run is in
+  progress, one whose variable is inherited from the environment rather than written in the
+  text, or one sent to the executor from anywhere other than a shipped workflow. This record is
+  enforcement at the guardrail itself, for every command the executor issues. The third scenario
+  is the discriminator between the two: it holds only if the refusal happens at run time.
+  Nothing here restates BO-3200f-3's check.
+
+  PLACEMENT -- AN L3 UNDER BO-3200f-2, NOT UNDER BO-3200f-3. BO-3200f is at 5 of 5 L2s and BO-3200
+  at 7 of 7 L1s, so a sibling was not available; L3s are uncapped. BO-3200f-2 is the home because
+  it OWNS containment 4 and names both enforcement points; its notes record the user's decision
+  and state that the run-time point has no acceptance criterion. BO-3200f-3 owns only the static
+  addressing check over shipped sources -- placing a guardrail behaviour under it would read as
+  an extension of that sweep, which is exactly the confusion the third scenario exists to rule
+  out, and would set this record's depends_on edge on a check it must work without.
+
+  THE KNOWN RISK, FROM THE IT PO (BO-3200f-2 notes, user decision (a)): the guardrail hook may
+  not be able to tell from its input that the caller is the executor. The last scenario does not
+  assume the answer. It requires that inability to fail closed (block) or to be stated in the
+  same decision -- never a silent allow. Which of the two is chosen, and whether it may differ by
+  guardrail, is the IT PO's. If the payload genuinely cannot identify the caller, blocking every
+  bypass would break the fourth scenario for legitimate callers, so "stated" is the likely
+  outcome for some guardrails; that trade is the reason the criterion admits both.
+
+  WHY THE FOURTH SCENARIO. The cheap implementation removes the bypass variables altogether.
+  That passes the first three scenarios and breaks the fast lane's commit phase, which issues
+  COMMIT_AGENT_MODE=1 git commit today as a non-executor caller. The refusal must be scoped to
+  the executor as caller.
+
+  WHY "ANY FUTURE VARIABLE OF THAT KIND". A hand-written list of three is stale the day a fourth
+  guardrail gains an escape hatch. CLAUDE_NO_README_CHECK, in the hooks reference's escape-hatch
+  table, is already a fourth variable of this kind; the user named three, so the first scenario
+  names three, and the fifth scenario covers it and every later one.
+
+  BOUNDARY. That the capture does not hide a command from a guardrail's matcher is BO-3200f-1's
+  (guardrail visibility parity). How a block is reported to the workflow -- a guardrail refusal,
+  not an executor decline, no exit status -- is BO-3200f-1-i's guardrail_blocked reason and
+  BO-3200f-2 containment 5. This record requires only that the block happens and names the
+  guardrail and variable.
+
+  declares_side_effect: false -- derived from the Then clauses, which state that a command is
+  blocked and not carried out and that a statement appears on the guardrail's error output
+  (a transient stream); nothing durable is asserted.
+
+  FOR THE IT PO -- OPEN, NOT DECIDED HERE.
+    - Whether the hook payload exposes the caller at all, and if not, per guardrail, whether the
+      last scenario resolves to block or to state.
+    - If BO-3200f-3's repointing ever moves the fast lane's commit step to the executor, that step
+      loses COMMIT_AGENT_MODE under this record; the two must not be enabled together without a
+      decision on how the commit step is authorised.
+    - estimated_complexity, change_target, risk_surface, it_requirements, test_spec.
+
+  IT-PO ENRICHMENT (2026-09-17) -- THE OPEN ITEMS ABOVE, DECIDED.
+
+  CALLER IDENTITY. The hooks reference documents a PreToolUse payload of tool_name, tool_input
+  and session_id -- nothing that names the calling agent. Whether the live harness supplies an
+  agent identity is not settled by any document in this repository, so it is made the
+  implementer's first finding, recorded in the hooks reference. Command text, environment and
+  marker files are ruled out as identity because the caller can set all three; that is precisely
+  why COMMIT_AGENT_MODE is "a password, not an identity" today (KI-CG-20260907).
+
+  THE LAST SCENARIO, PER GUARDRAIL. BLOCK for CLAUDE_NO_DOC_UPDATE, INLINE_WORK_GUARD_MODE and
+  CLAUDE_NO_README_CHECK; STATE for COMMIT_AGENT_MODE; BLOCK by default for any variable declared
+  later. The asymmetry is deliberate: COMMIT_AGENT_MODE is the only one of the four with
+  unattended legitimate callers today, so it is the only one where failing closed on an
+  unidentified caller breaks the fourth scenario. If the payload turns out to identify the
+  executor, STATE is reached only by callers that genuinely cannot be identified, and the
+  exposure is small. If it does not, STATE applies to every COMMIT_AGENT_MODE caller, the
+  executor included -- which means run-time enforcement for that variable reduces to a stated
+  warning and BO-3200f-3's authoring-time check stays the only thing that stops a shipped
+  executor dispatch from committing without the gate. That consequence is the user's to accept
+  and is to be reported before this record is marked done.
+
+  THE COMMIT_AGENT_MODE CONFLICT. The rule is in it_requirements: no record in this tree removes
+  or narrows a bypass variable for non-executor callers, strips one from a shipped command, or
+  repoints the fast lane's commit step to the executor. A report about that step from
+  BO-3200f-3's inventory is held open for a user decision on commit authorisation. This makes the
+  BA's warning -- "the two must not be enabled together without a decision" -- a tested rule: the
+  fast-lane commit test fails the moment the step loses its bypass.
+
+  RECOMMENDED FOLLOW-UP (not edited here). BO-3200f-3's it_requirements take the bypass variables
+  from "the guard overrides listed in the Claude Code hooks reference", a prose table that already
+  omits COMMIT_AGENT_MODE. Pointing that check at the declaration delivered here gives both
+  enforcement points one source. The fast lane's commit step also needs a result_use declaration
+  under BO-3200f-3's "declared, never inferred" rule, and none of fact, chore or judgement fits it
+  cleanly; how BO-3200f-3 should classify it is part of the same user decision.
+
+  CAVEAT FOR THE BA -- TWO OF THE THREE NAMED GUARDRAILS MAY NEVER SEE AN EXECUTOR COMMAND. The
+  hook catalogue lists documentation_guard and inline_work_guard (and readme_read_guard) with
+  matcher Edit|Write, and the executor holds shell only. If the shipped settings confirm that, the
+  first two scenarios have no command to exercise for CLAUDE_NO_DOC_UPDATE and
+  INLINE_WORK_GUARD_MODE: nothing those guardrails block can be dispatched to the executor. Either
+  the criteria gain a qualifier ("for each guardrail whose matcher covers the executor's tool"),
+  or those guardrails are widened to shell commands, which is a scope decision for the user and is
+  not taken here. The catalogue is also stale in the other direction -- it does not list the
+  commit-delegation guardrail at all -- so the implementer reads the shipped settings.

@@ -1,5 +1,5 @@
 id: BO-3200f-2-ii
-title: "The executor's live scenarios are proven by really dispatching it -- only when explicitly switched on, leaving evidence behind, and failing by name when switched on but unable to dispatch"
+title: "The executor's live scenarios are proven by dispatching the real registered agent -- only when explicitly switched on, leaving evidence behind, and failing by name when switched on but unable to dispatch"
 component: build-orchestration
 components:
   - build_orchestration
@@ -9,7 +9,7 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
+readiness: reviewed
 priority: critical
 roadmap_phase: phase_1
 criteria: |
@@ -75,13 +75,193 @@ doc_links:
     relationship: describes
     status: exists
     relevance: "The deployed angle the three LIVE DISPATCH descriptors already declare; the evidence record is what lets a done-proof cite that angle."
+  - path: docs/known-issues/testing-quality/open-high-ki-tq-20260908-0900.md
+    relationship: describes
+    status: exists
+    relevance: "Added by it-po. The eval runner's transport already invokes the agent CLI headless, and its scorer turns a launch failure into an empty prediction that scores 22%. The transport is reused; that failure handling is exactly what the fifth scenario forbids this harness to inherit. Also why results under scripts/evals/results (gitignored) cannot be the evidence location."
+  - path: docs/reference/false-green-mechanisms.md
+    relationship: describes
+    status: exists
+    relevance: "Added by it-po. M6 -- a scorer that treats 'no answer' as an answer; the named mechanism the harness's failure classification must defeat."
+  - path: docs/reference/claude-code-hooks.md
+    relationship: describes
+    status: exists
+    relevance: "Added by it-po. The guardrails and permission behaviour that must be in force during a live dispatch (BO-3200f-2 containment 3), and the reason an unattended run meets permission requests."
+  - path: docs/acceptance-criteria/build-orchestration/BO-2900-runtime-reachability-guard/BO-2900g-3.yaml
+    relationship: describes
+    status: exists
+    relevance: "Added by it-po. Retired the ticket-facing proof kind 'live_dispatch'; this record must not reintroduce it as a value anywhere."
+  - path: docs/acceptance-criteria/testing-quality/TQ-200-per-agent-eval-coverage/TQ-200c.yaml
+    relationship: describes
+    status: exists
+    relevance: "Added by it-po. Routes judged proof of prompt behaviour to the eval harness; the boundary with this pass/fail harness is recorded in notes and it_requirements, and the TQ-200c change it implies is flagged, not made."
+  - path: docs/testing/live-dispatch-evidence/
+    relationship: creates
+    status: planned
+    relevance: "Added by it-po. The tracked directory each switched-on run writes its evidence record into."
 assigned_agent: python-coder
+estimated_complexity: L
 declares_side_effect: true
-delivers_to: null
-expects_from: null
+change_target:
+  - code
+  - pipeline
+risk_surface: cost
+it_requirements:
+  - "IT-PO DECISION -- ASSIGNMENT CONFIRMED python-coder. The deliverable is test infrastructure and a dispatch transport: a switch, a live-dispatch entry point the three live descriptors call, dispatch-failure classification and an evidence writer. No charter text is in scope; the three scenarios this harness runs are owned by BO-3200f-2 and BO-3200f-2-i."
+  - "IT-PO DECISION -- REUSE THE TRANSPORT, NOT THE RUNNER. scripts/evals/run_agent_eval.py already dispatches a real agent through the headless agent CLI (KI-TQ-20260908-0900). The harness dispatches through that same transport, extracted into ONE shared module under scripts/evals/ that both the runner and the harness import -- never by importing the runner's command line and never by copying it. The extraction must leave the runner's report shape, scoring, thresholds, results location and exit behaviour unchanged, proven by the existing unit_tests/evals/ suite. NOT reused: scoring against a threshold, the aggregate score, the results directory, the eval selector and trigger closure, the eval-staleness pre-commit guard and the required CI gate. If the transport cannot be extracted without changing the runner's observable behaviour, the implementer stops and reports a blocker; a second, private transport is not an acceptable fallback."
+  - "PASS/FAIL PER SCENARIO, NO SCORE. Each live scenario passes or fails on the reply its own dispatch returned, judged by a deterministic assertion -- for the executor's scenarios, that the reply verifies as BO-3200f-1's capture of the dispatched command. No threshold, no aggregate, and no averaging across scenarios or repeats can turn a failed scenario into a pass. One passing run is one observed sample of model behaviour; the evidence record says so by recording the model and time, and nothing here claims a reliability rate."
+  - "DISPATCH THE AGENT AS REGISTERED. The live dispatch resolves the agent from the repository's shipped agent definition and its registry entry, read at dispatch time from their repository paths, with the project's hooks and permission settings in force. Passing charter text from a copy as a system prompt, loading a fixture charter, caching the charter across scenarios, or answering with a scripted reply are all the stand-in the second scenario forbids. The third scenario's changed charter must therefore be what the dispatch uses, with no code change in the harness."
+  - "A DISPATCH THAT CANNOT BE MADE IS NEVER AN ANSWER. Four causes, each reported under its own name: missing_credentials, agent_not_registered, dispatch_failed_in_transit, permission_request_unanswered. Each makes its scenario FAILED and the run FAILED; none may be reported as skipped, not run, passed, or as an empty reply that a scenario assertion then scores. The eval runner's current handling (a launch or parse failure becomes an empty prediction; false-green M6) must not be inherited through the shared transport. Classification comes from the transport's own signals -- process exit, structured output, recorded permission denials, registry lookup -- never from scanning the model's prose for words."
+  - "THE SWITCH IS ONE ENVIRONMENT VARIABLE: LEAFCUTTER_LIVE_DISPATCH. Exactly '1' is on; unset or '0' is off; any other value fails the run naming the variable and the value, so a typo never reads as off. Switched off, each live scenario is reported not run through the test framework's skip outcome with a reason that names LEAFCUTTER_LIVE_DISPATCH, and no dispatch is attempted. Switched on, the skip outcome is unavailable to live scenarios. This variable is not a guardrail bypass variable and no guardrail may honour it."
+  - "NO PRE-APPROVAL (user decision (b), 2026-09-16). The harness passes no permission-skipping flag, no allowed-tools list and no settings overlay that pre-approves the dispatched agent's commands. A permission request met by an unattended run is the permission_request_unanswered failure, reported at once rather than waited on. Consequence, recorded rather than worked around: a switched-on run in an environment whose own settings do not already allow the scenario's commands fails by name."
+  - "NO CI JOB SHIPS WITH THIS RECORD. The default local suite and every CI job run with the switch unset; the first scenario is proven against that default. A CI job that sets the switch needs a model-service credential and a permission arrangement compatible with 'nothing is pre-approved'; both are user decisions and are not made here."
+  - "EVIDENCE RECORD -- LOCATION. Every switched-on run writes one new JSON file to docs/testing/live-dispatch-evidence/, a tracked directory, named by run start time (UTC) and short commit SHA; a record is never overwritten and never written to scripts/evals/results/, which is gitignored and so missing in every fresh worktree (KI-TQ-20260908-0900). The record is written for failed runs too -- including runs where no dispatch could be made -- and a switched-on run whose record cannot be written is itself reported as failed. The directory must pass the repository's doc gates; if a gate rejects non-Markdown files there, that is reported as a blocker, not solved by moving the record somewhere untracked."
+  - "EVIDENCE RECORD -- SHAPE. {run_id: str, started_at: ISO-8601 UTC, commit_sha: str, switch: 'LEAFCUTTER_LIVE_DISPATCH=1', overall: 'passed' | 'failed', scenarios: [{scenario: str (test id), ac_id: str, verdict: 'passed' | 'failed' | 'not_run', failure_cause: null | 'missing_credentials' | 'agent_not_registered' | 'dispatch_failed_in_transit' | 'permission_request_unanswered' | 'assertion_failed', agent: str, model: str | null (as reported by the service, not as requested), ran_at: ISO-8601 UTC, charter_path: str, charter_sha256: str, charter_content: str, registry_entry_sha256: str, registry_entry: object, reply: str}]}. overall is 'failed' whenever any scenario is not 'passed'. A done-proof reads verdict per scenario; a record whose charter or registry-entry digest differs from the files now shipped is visibly out of date, and whether that removes its standing is TQ-400's, not decided here."
+  - "NOT THE RETIRED PROOF KIND. No schema enum value, test_spec angle or type, ticket Test Requirements kind or evidence-record field value named live_dispatch is introduced (BO-2900g-3). Live descriptors keep type e2e and angle deployed and name this harness in surface_invoked. 'Live dispatch' stays plain words."
+  - "BOUNDARY WITH TQ-200b AND TQ-200c. This harness holds proofs whose pass condition is a deterministic assertion over one real dispatch's reply (asserted, in TQ-200c-1's proof_mode words). A proof whose pass condition is a score over a set of rows against a threshold (judged) belongs in the eval harness, and this harness must not grow scoring, thresholds or eval rows. See notes for what TQ-200c would need to change."
+  - "AGENT-AGNOSTIC MECHANISM. The switch, transport use, failure classification and evidence shape name no agent; which agent a scenario dispatches and which acceptance criterion it proves are declared by the scenario. The executor is the first user, not a special case."
+  - "Must satisfy the repository error-handling policy: dispatch, registry read and evidence write are external I/O; each failure is logged at WARNING or higher and surfaces as a named failure, never swallowed. Any new module under scripts/ that the deployed eval runner imports is added to the build deploy manifest in the same change (CLAUDE.md, new hook and gate dependencies)."
+delivers_to:
+  - agent: llm-expert
+    contract: "The live-dispatch entry point for BO-3200f-2's first scenario and both scenarios of BO-3200f-2-i: a scenario declares {scenario: str, ac_id: str, agent: str, command: str, cwd: str} and receives the real registered agent's reply, verified through BO-3200f-1's helper, or a named dispatch failure (missing_credentials | agent_not_registered | dispatch_failed_in_transit | permission_request_unanswered); gated by LEAFCUTTER_LIVE_DISPATCH=1; each run's evidence written to docs/testing/live-dispatch-evidence/ in the shape stated in it_requirements."
+  - agent: test-writer
+    contract: "The same entry point and switch, so the LIVE DISPATCH descriptors on BO-3200f-2, BO-3200f-2-i and BO-3200f-2-iii are authored against it and name it in surface_invoked, and so a switched-off run reports them not run rather than passed."
+expects_from:
+  - ac_id: BO-3200f-2
+    contract: "The registered executor: its shipped agent definition path and its registry entry {id: str, permits_shell: true, tools: [str], spawn_allowlist: [], model: 'haiku'}, which the harness resolves at dispatch time and whose content and digests it records."
+  - ac_id: BO-3200f-1
+    contract: "The dispatch helper's verification of a reply as the capture of the dispatched command -- {outcome: 'completed', cwd, exit_status, stdout, stderr} or {outcome: 'could_not_complete', reason, detail, blocked_by} -- which is the pass condition each executor scenario asserts on."
+test_spec:
+  - name: test_bo_3200f_2_ii_switch_off_dispatches_nothing_and_reports_not_run_naming_the_switch
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "Run the three live descriptors through the real test runner in a subprocess with LEAFCUTTER_LIVE_DISPATCH unset, then set to '0', with the shared transport's process launch observed; assert no launch occurred, each descriptor's outcome is skipped with a reason naming LEAFCUTTER_LIVE_DISPATCH, and none is counted passed."
+  - name: test_bo_3200f_2_ii_ci_and_default_suite_do_not_set_the_switch
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: unit
+    angle: real_artifact
+    description: "Read the repository's real CI workflow files and default test invocation; assert none sets LEAFCUTTER_LIVE_DISPATCH, so the default and CI runs are the switched-off case the first scenario describes."
+  - name: test_bo_3200f_2_ii_unrecognised_switch_value_fails_the_run_naming_it
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: "LEAFCUTTER_LIVE_DISPATCH set to 'true' fails the run with a message naming the variable and the value; nothing is dispatched and nothing is reported skipped or passed."
+  - name: test_bo_3200f_2_ii_dispatch_resolves_the_shipped_charter_and_registry_entry_at_dispatch_time
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: integration
+    angle: seam
+    description: "With the transport's process launch recorded at its boundary (no reply is fabricated; the test ends at the invocation), assert the invocation addresses the agent through the repository's shipped definition and registry entry rather than injected charter text, carries no permission-skipping flag or allowed-tools list, and that editing the charter in a temporary copy of the repository between two dispatches changes what the second invocation uses."
+  - name: test_bo_3200f_2_ii_declining_charter_fails_the_first_live_scenario_naming_the_decline
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: e2e
+    angle: deployed
+    surface_invoked: "BO-3200f-2-ii live-dispatch harness, switched on by LEAFCUTTER_LIVE_DISPATCH=1"
+    description: "LIVE DISPATCH, THE DISCRIMINATOR. In a temporary clone of the repository, change the executor's charter so it declines every command, switch on, run the three live scenarios; assert BO-3200f-2's first live scenario is failed and its failure names the decline, with no change to the harness."
+  - name: test_bo_3200f_2_ii_each_dispatch_failure_cause_is_a_named_failure_never_a_skip
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: e2e
+    angle: failure
+    surface_invoked: "BO-3200f-2-ii live-dispatch harness, switched on by LEAFCUTTER_LIVE_DISPATCH=1"
+    description: "Switched on, produce each cause for real in turn -- credentials removed from the environment, the executor removed from a temporary registry copy, the transport pointed at an unreachable service, and settings under which the executor's shell command raises a permission request; assert each affected scenario is failed with its own cause, none is skipped, not run or passed, the run is failed, and the four causes are pairwise distinct."
+  - name: test_bo_3200f_2_ii_launch_failure_is_not_scored_as_an_empty_reply
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: unit
+    angle: failure
+    description: "Feed the harness's result classification the shared transport's launch-failure and parse-failure outcomes; assert each yields a named dispatch failure and never an empty reply handed to a scenario assertion (false-green M6)."
+  - name: test_bo_3200f_2_ii_evidence_record_carries_every_field_for_every_scenario
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "Drive the real evidence writer over a run with one passed, one failed and one not-run scenario into a temporary evidence directory; assert one new file whose scenarios each carry scenario, ac_id, verdict, failure_cause, agent, model, ran_at, charter content and digest, registry entry and digest, and reply, overall is failed, and an earlier record is not overwritten."
+  - name: test_bo_3200f_2_ii_done_proof_reading_the_record_tells_passed_from_failed_and_not_run
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: "Given records in which the same scenario is passed, failed, and not run, the record reader a done-proof uses returns three different verdicts; a record whose charter digest differs from the shipped charter is reported out of date."
+  - name: test_bo_3200f_2_ii_switched_on_run_that_cannot_write_evidence_fails
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: integration
+    angle: failure
+    description: "With the evidence directory unwritable, a switched-on run is reported failed naming the evidence write, even when every scenario passed."
+  - name: test_bo_3200f_2_ii_switched_on_live_run_writes_evidence_for_the_three_scenarios
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: e2e
+    angle: deployed
+    surface_invoked: "BO-3200f-2-ii live-dispatch harness, switched on by LEAFCUTTER_LIVE_DISPATCH=1"
+    description: "LIVE DISPATCH. Switched on against the real registered executor, run the three live scenarios; assert each dispatch reached the real agent, each scenario's verdict follows its own reply, and one evidence record naming all three scenarios and the model that answered was written."
+  - name: test_bo_3200f_2_ii_eval_runner_behaviour_is_unchanged_by_the_transport_extraction
+    target_dir: unit_tests/evals/
+    framework: unittest
+    type: integration
+    angle: seam
+    description: "The existing eval runner imports the shared transport module and no private copy remains; its report shape, scoring and exit behaviour for a recorded run are identical before and after the extraction."
+  - name: test_bo_3200f_2_ii_shared_transport_resolves_in_the_deployed_layout
+    target_dir: unit_tests/evals/
+    framework: unittest
+    type: integration
+    angle: deployed
+    description: "Build into a temporary target directory and assert the deployed eval runner imports the shared transport module without ModuleNotFoundError."
+  - name: test_bo_3200f_2_ii_no_live_dispatch_proof_kind_value_is_reintroduced
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    angle: real_artifact
+    description: "Scan the AC store schema, the test requirements schema and the evidence-record verdict and cause vocabularies; assert none carries 'live_dispatch' as a permitted value (BO-2900g-3)."
+test_rationale: |
+  The first scenario is proven where it matters -- the default and CI invocations as they really
+  are -- because a harness that dispatches by default is only visible in the real CI files. The
+  seam test on the invocation is the cheap, deterministic half of the second scenario: it stops at
+  the process boundary and fabricates no reply, so it proves the harness addresses the registered
+  agent without pretending to prove the agent's behaviour.
+  The declining-charter test is the discriminator the BA wrote the third scenario for, and it runs
+  in a temporary clone so the repository's own charter is never edited by a test.
+  The failure-cause test induces each cause for real rather than mocking the transport, because
+  the observed defect in the transport being reused is precisely a real launch failure read as an
+  answer; the unit test on classification pins that the shared transport's failure outcomes cannot
+  reach a scenario assertion as an empty reply.
+  Evidence is tested for content, for no-overwrite and for its own write failure, because a live
+  run that leaves nothing behind is indistinguishable from one that never ran.
+  The transport extraction carries a regression and a deployed-layout test because reusing the
+  runner's transport is the decision most likely to break the runner silently.
+  Deliberately NOT covered: how often the executor passes across many runs. That is a reliability
+  question, and a scored one; it is outside this record.
 origin_agent: business-analyst
 created: 2026-09-16
-amended_by: []
+amended_by:
+- reason: title-reworded
+  by: business-analyst
+  at: 2026-09-17
+  note: |
+    Title only. Authorised by the user (BrainCandy) on 2026-09-17. "really dispatching it"
+    replaced by "dispatching the real registered agent", which says what the second scenario
+    requires (the executor as the repository registers it, not a stand-in). Meaning otherwise
+    unchanged. criteria, depends_on, readiness (already draft) and every other field unchanged.
+    OLD TITLE (verbatim): "The executor's live scenarios are proven by really dispatching it --
+    only when explicitly switched on, leaving evidence behind, and failing by name when switched
+    on but unable to dispatch"
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-09-17
+  note: |
+    First IT PO pass on this record. Assignment confirmed python-coder. Added
+    estimated_complexity L, change_target [code, pipeline], risk_surface cost, it_requirements,
+    delivers_to (llm-expert, test-writer), expects_from (BO-3200f-2, BO-3200f-1), test_spec and
+    test_rationale, and six doc_links (the BA's five kept unchanged). Replaced delivers_to: null
+    and expects_from: null. Decided the BA's four open items (switch, TQ-200b reuse and the
+    TQ-200c boundary, evidence location and shape, the retired proof kind) -- see notes.
+    criteria, title, depends_on and req_status untouched. readiness draft -> reviewed.
 superseded_by: null
 covered_by: []
 implemented_by: []
@@ -153,3 +333,66 @@ notes: |
       "live dispatch" only as plain words and must not revive that value.
     - The three LIVE DISPATCH descriptors on BO-3200f-2 and BO-3200f-2-i should name this
       record's harness as their entry point once it exists.
+
+  IT-PO ENRICHMENT (2026-09-17) -- THE OPEN ITEMS ABOVE, DECIDED.
+
+  THE SWITCH. One environment variable, LEAFCUTTER_LIVE_DISPATCH; '1' on, unset or '0' off, any
+  other value a named failure. No CI job that sets it ships with this record: a switched-on CI job
+  needs a model-service credential and a permission arrangement that does not contradict the
+  user's "nothing is pre-approved" decision, and both are the user's to decide.
+
+  REUSE OF TQ-200b's RUNNER -- THE TRANSPORT YES, THE RUNNER NO. scripts/evals/run_agent_eval.py
+  dispatches a real agent through the headless agent CLI. Building a second way to reach the model
+  service would fork credentials handling, model selection and launch-failure handling, so the
+  transport is extracted into one shared module both use, with a regression test pinning the
+  runner's behaviour. Everything that makes the runner an EVAL runner is not reused: its per-row
+  scoring against a threshold that absorbs noise, its gitignored results directory, its trigger
+  selector, its staleness guard and its required CI gate. The two differ on every axis the BA
+  named -- scored versus pass/fail per scenario, always required versus never by default -- and on
+  evidence: the runner overwrites a local, untracked result per agent; this harness appends a
+  tracked, per-run record that a done-proof can cite. One warning carries over from the reuse: the
+  runner today turns a launch failure into an empty prediction that scores (false-green M6,
+  KI-TQ-20260908-0900). The harness must not inherit that through the shared transport; fixing it
+  inside the runner stays with the testing-quality known issue and is not claimed here.
+
+  THE TQ-200c BOUNDARY -- AND WHAT TQ-200c WOULD NEED TO CHANGE. TQ-200c's L1 says model behaviour
+  under a prompt ("does the prompt actually elicit the intended behaviour") is judgement and that
+  judged proof lands in the eval harness. Read literally, the three live scenarios fall on the
+  judged side, because each asks whether the executor's charter elicits carrying a command out.
+  The user chose a pass/fail harness instead. The boundary drawn here, so the two do not
+  contradict: what decides whether a proof is judged is HOW ITS PASS IS DECIDED, not whether a
+  model is in the loop. Each live scenario passes or fails on one deterministic assertion over one
+  real reply -- the reply verifies as BO-3200f-1's capture of the dispatched command, or it does
+  not -- so it is an ASSERTED proof that happens to need a live dispatch, and it lives here. A
+  proof whose pass is a score over a set of rows against a threshold is JUDGED and lives in the
+  eval harness; this harness takes no scores, thresholds or rows. TQ-200c's records are not
+  edited here (outside this pass). For the two to agree in writing, TQ-200c would need: (1) its L1
+  narrative to stop equating "model in the loop" with "judged" and to name this third case -- an
+  asserted proof over a real dispatch; (2) TQ-200c-1's proof_mode definitions to say that
+  'asserted' covers an assertion over a live model reply, not only a deterministic test with no
+  model; (3) TQ-200c-2's router, which derives the kinds of proof from what the work says about
+  itself, not to route charter work whose criteria are exact-output assertions to the eval
+  harness only. Until then an implementer reading TQ-200c could reasonably demand eval rows for
+  BO-3200f-2's first scenario. USER DECISION NEEDED on whether to amend TQ-200c accordingly.
+
+  THE RETIRED PROOF KIND. BO-2900g-3 removed 'live_dispatch' as a ticket-facing proof kind in
+  favour of the reachability angle plus surface_invoked. Live descriptors here and in the three
+  records that use this harness keep type e2e and angle deployed and name the harness in
+  surface_invoked; no schema, ticket or evidence value called live_dispatch is introduced, and a
+  test pins that.
+
+  EVIDENCE. A tracked directory, docs/testing/live-dispatch-evidence/, one new record per
+  switched-on run, written for failed runs too. Tracked because a done-proof must be able to cite
+  it from a fresh worktree; the eval runner's untracked results directory is the counter-example.
+  The record stores charter and registry-entry content and digests so a later change to either
+  makes the evidence visibly out of date; whether it then loses its standing stays TQ-400's.
+
+  CAVEAT -- PERMISSION REQUESTS WILL FAIL UNATTENDED RUNS. With nothing pre-approved, a headless
+  dispatch whose shell command is not already allowed by the operator's own settings meets a
+  permission request and fails as permission_request_unanswered. That is the honest outcome under
+  the user's decision and is why no CI job is shipped; an operator running the harness locally
+  does so under their own settings.
+
+  CAVEAT -- FIRST RUN COST. The declining-charter and failure-cause tests make real dispatches
+  (some fail before reaching the model). risk_surface is cost for that reason; the switch is the
+  only control and must stay off by default.

@@ -8,7 +8,7 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
+readiness: reviewed
 priority: medium
 roadmap_phase: phase_1
 criteria: |
@@ -36,6 +36,7 @@ criteria: |
 depends_on:
   - BO-3200b
   - BO-3200f-1
+  - BO-3200f-1-i
 doc_links:
   - path: docs/known-issues/build-orchestration.md
     relationship: describes
@@ -49,6 +50,14 @@ doc_links:
     relationship: describes
     status: exists
     relevance: "The claim/selection guard that correctly refuses occupied work — the mechanism that turns a stranded claim into permanent exclusion."
+  - path: docs/acceptance-criteria/build-orchestration/BO-3200-second-hand-answers/BO-3200f-1.yaml
+    relationship: describes
+    status: exists
+    relevance: "Added by it-po 2026-09-17. The chartered executor, the shared dispatch helper every release goes through, and the harness stand-in that is the no-judgement environment of the first scenario."
+  - path: docs/acceptance-criteria/build-orchestration/BO-3200-second-hand-answers/BO-3200f-3.yaml
+    relationship: describes
+    status: exists
+    relevance: "Added by it-po 2026-09-17. Addresses every release dispatch to the executor, including the fast-lane release step now addressed to python-coder, and requires that a release that could not be completed is reported, never assumed."
 assigned_agent: python-coder
 estimated_complexity: L
 change_target:
@@ -56,27 +65,39 @@ change_target:
   - pipeline
 risk_surface: internal
 it_requirements:
-  - "THE RELEASE MUST BE PERFORMED INLINE BY THE LAYER THAT MUST GUARANTEE IT, with no dispatch in its path. Testable only by removing the ability to dispatch — an assertion that the claim was released passes on a run that got lucky with a cooperative specialist."
+  - "THE RELEASE IS CARRIED OUT BY THE LAYER THAT MUST GUARANTEE IT AND IS NEVER LEFT TO A PARTY THAT MAY DECLINE OR JUDGE. The guaranteeing layer issues each release as an exact release command to the chartered executor through BO-3200f-1's shared dispatch helper -- the addressing BO-3200f-3 requires of every release -- and reads each result itself. No release dispatch goes to any other party, none asks anyone whether, what or how to release, and there is no path that tries a specialist first and falls back to the executor. Testable only in the environment where no party can be asked to judge: an assertion that the claim was released passes on a run that got lucky with a cooperative specialist."
   - "THE TEST STORE MUST OUTLIVE THE RUN. Asserting against a fast-lane run's throwaway copy proves nothing: that copy being discarded is the accident that made the first sighting cheap, and the parent L1 is explicit that the severity must not be set by it. Exercise a store the run does not own."
   - "EVERY DISTINCT STOP POINT AFTER THE CLAIM MUST BE COVERED, and the set of stop points must be DERIVED from the run's structure rather than listed by hand. KI-BO-020 records nine release dispatches with the same defect; fixing the first found and testing only that one leaves eight live, and a hand-written list of nine will be eight the next time a stop point is added."
   - "RELEASE MUST RUN ON ABNORMAL TERMINATION TOO, not only on the paths that reach an orderly halt. An exception escaping the claim/release region strands exactly the records this AC is about — see KI-BO-022, which is adjacent and not adopted here, but whose shape must not be re-created."
   - "RELEASE MUST BE IDEMPOTENT: releasing an already-unclaimed item is a no-op, not an error. Otherwise a run that releases on both an inner and an outer path fails on the second."
   - "THE ASSERTION MUST REACH RE-CLAIMABILITY, not stop at the field value. A store whose field reads unclaimed but which the selection guard still refuses has not been released in the sense that matters."
   - "The release's outcome must be produced in the shape BO-3200b-2 consumes, so the halt report can state whether it succeeded — performing the action inline does not, by itself, mean anyone read the result."
-  - "Coverage must use unit_tests/_workflow_engine_harness.py to withhold the dispatch surface, and must exercise the real lane rather than a re-implementation of its claim logic."
+  - "Coverage must use unit_tests/_workflow_engine_harness.py with BO-3200f-1's stand-in -- executor dispatches answered through the real capture, every other dispatch failing immediately -- and must exercise the real lane rather than a re-implementation of its claim logic. A per-test fake that answers the release dispatch with canned output is forbidden (BO-3200f-1)."
+  - "THE ADDED And IS ASSERTED FROM OBSERVATION, NOT SELF-REPORT. Every dispatch attempted while releasing -- including ones that failed -- is taken from the harness's own record of dispatches, with its addressee and whether it carried an exact command, never from the lane's log or its returned text."
+  - "A RELEASE THAT CANNOT BE COMPLETED THROUGH THE EXECUTOR IS REPORTED, NEVER ASSUMED. A could-not-complete or non-zero result from a release dispatch makes that item released: false, with BO-3200f-1-i's reason as its reason; it is never counted released and never retried by addressing another party. How partial and per-item failures are constrained stays BO-3200b-1-i's."
 delivers_to:
   - agent: python-coder
-    contract: "An inline release operation with no dispatch in its path, returning a per-item outcome list [{item_id: str, released: bool, reason: str | null}] plus an aggregate {attempted: int, released: int, failed: [item_id]}. BO-3200b-2 places this aggregate in the halt report; BO-3200b-1-i constrains its partial-claim and per-item-failure behaviour."
+    contract: "A release operation carried out by the guaranteeing layer through exact-command dispatches to the chartered executor via BO-3200f-1's helper -- never to any other party -- returning a per-item outcome list [{item_id: str, released: bool, reason: str | null}] plus an aggregate {attempted: int, released: int, failed: [item_id]}; reason carries BO-3200f-1-i's uninspectable_reason when a release dispatch could not complete or the command exited non-zero. BO-3200b-2 places this aggregate in the halt report; BO-3200b-1-i constrains its partial-claim and per-item-failure behaviour."
   - agent: architecture-diagram-author
-    contract: "The ordered failure-path trace of a real run driven to a failure after the claim — claim recorded, later step fails, release performed inline, outcome read, halt reported — so BO-3200b-4's diagram can be compared against it."
-expects_from: null
+    contract: "The ordered failure-path trace of a real run driven to a failure after the claim -- claim recorded, later step fails, release carried out through exact-command dispatches to the chartered executor, outcome read, halt reported -- with every dispatch made while releasing recorded as {addressed_to: str, exact_command: bool, outcome: str}, so BO-3200b-4's diagram can be compared against it."
+expects_from:
+  - ac_id: BO-3200f-1
+    contract: "The executor dispatch helper {command, cwd} -> {outcome: 'completed', cwd, exit_status, stdout, stderr} | {outcome: 'could_not_complete', reason, detail, blocked_by}, verified; and the harness stand-in that answers executor dispatches through the same capture while every other dispatch fails immediately -- the environment of the first scenario."
+  - ac_id: BO-3200f-1-i
+    contract: "The could-not-check mapping from a could-not-complete or non-zero release result to one of five distinct reasons (executor_transport_failed | executor_result_incomplete | executor_declined | guardrail_blocked | command_exited_nonzero), carried as the item's release reason."
 test_spec:
-  - name: test_bo_3200b_1_claim_is_released_with_dispatch_impossible
+  - name: test_bo_3200b_1_claim_is_released_when_no_party_can_be_asked_to_judge
     target_dir: unit_tests/build_orchestration/
     framework: unittest
     type: integration
     angle: criterion
-    description: "THE DISCRIMINATOR. Drive the real lane against a store that outlives the run, claim items, force a later step to fail, with the dispatch surface withheld entirely; assert every claimed item is back in its unclaimed state in that same store."
+    description: "THE DISCRIMINATOR. Drive the real lane against a store that outlives the run, claim items, force a later step to fail, under BO-3200f-1's stand-in (executor dispatches answered through the real capture, every other dispatch failing immediately); assert every claimed item is back in its unclaimed state in that same store."
+  - name: test_bo_3200b_1_every_release_dispatch_is_an_exact_command_to_the_executor
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: integration
+    angle: seam
+    description: "From the harness's own dispatch record for the same run, assert every dispatch made while releasing was addressed to the executor and carried an exact command. Negative controls on planted lane copies: a release sent to python-coder, and a release that first sends KI-BO-020's 'You are the release-phase agent' prompt to a specialist and then falls back to the executor, both fail this test -- the second even though the claim ends up released."
   - name: test_bo_3200b_1_released_items_are_re_claimable_by_a_new_run
     target_dir: unit_tests/build_orchestration/
     framework: unittest
@@ -101,16 +122,26 @@ test_spec:
     type: unit
     angle: boundary
     description: "Releasing an already-unclaimed item is a no-op rather than an error, so a run that releases on both an inner and an outer path does not fail on the second."
+  - name: test_bo_3200b_1_release_that_cannot_complete_through_the_executor_is_reported_not_assumed
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: integration
+    angle: failure
+    description: "With the stand-in failing the release's executor dispatch in transit, and separately returning a release command that exits non-zero, assert each affected item is released: false with BO-3200f-1-i's matching reason, the aggregate counts it failed, and no further dispatch to any other party is attempted."
   - name: test_bo_3200b_1_release_outcome_is_produced_for_the_halt_report
     target_dir: unit_tests/build_orchestration/
     framework: unittest
     type: integration
     angle: seam
-    description: "Assert the release produces the per-item and aggregate outcome BO-3200b-2 consumes. Performing the action inline does not by itself mean anyone reads the result — that was the second, independent defect in KI-BO-020."
+    description: "Assert the release produces the per-item and aggregate outcome BO-3200b-2 consumes. Carrying the release out does not by itself mean anyone reads the result -- that was the second, independent defect in KI-BO-020."
 test_rationale: |
-  "Performs the release itself" is a claim about HOW, and a run with a cooperative specialist
-  releases correctly too. Removing the ability to dispatch is the only shape that can only be
-  passed by a run that does it inline — the same technique as BO-3200a-1.
+  "Carries out the release itself" is a claim about HOW, and a run with a cooperative specialist
+  releases correctly too. Removing every party that could decline or judge -- leaving only the
+  executor, which carries out exact commands -- is the only shape that can only be passed by a
+  run that issues the release itself, the same technique as BO-3200a-1. The dispatch-record test
+  closes the one shape that still passes: a specialist asked first, the executor used as the
+  fallback. It reads the harness's record rather than the lane's own account, because a lane that
+  reports what it meant to dispatch is the self-report this tree does not accept.
   Two choices here are deliberate and load-bearing. Asserting RE-CLAIMABILITY rather than the
   field value ties the test to the actual damage: a stranded claim is permanently excluded from
   selection by a guard that is behaving correctly. And using a store that outlives the run
@@ -201,6 +232,60 @@ amended_by:
       - estimated_complexity may change now that the release routes through the executor.
     The notes paragraph "THE UNAVAILABLE-SPECIALIST CLAUSE IS THE DISCRIMINATOR" describes the
     SUPERSEDED premise.
+- reason: technical-re-enrichment-after-premise-narrowing
+  by: it-po
+  at: 2026-09-17
+  note: |
+    Rewrote every IT PO field the BA's 2026-09-16 entry listed as stale. criteria, title,
+    depends_on and req_status untouched. readiness draft -> reviewed. assigned_agent python-coder,
+    change_target and risk_surface unchanged; estimated_complexity re-checked and kept L (the
+    release now routes through the shared helper and the stand-in, which replaces rather than adds
+    to the inline path; the derived stop-point coverage still dominates).
+
+    OLD it_requirements[0] (verbatim): "THE RELEASE MUST BE PERFORMED INLINE BY THE LAYER THAT
+    MUST GUARANTEE IT, with no dispatch in its path. Testable only by removing the ability to
+    dispatch — an assertion that the claim was released passes on a run that got lucky with a
+    cooperative specialist."
+    OLD it_requirements[7] (verbatim): "Coverage must use unit_tests/_workflow_engine_harness.py
+    to withhold the dispatch surface, and must exercise the real lane rather than a
+    re-implementation of its claim logic."
+    OLD delivers_to[0].contract (verbatim): "An inline release operation with no dispatch in its
+    path, returning a per-item outcome list [{item_id: str, released: bool, reason: str | null}]
+    plus an aggregate {attempted: int, released: int, failed: [item_id]}. BO-3200b-2 places this
+    aggregate in the halt report; BO-3200b-1-i constrains its partial-claim and per-item-failure
+    behaviour."
+    OLD delivers_to[1].contract (verbatim): "The ordered failure-path trace of a real run driven
+    to a failure after the claim — claim recorded, later step fails, release performed inline,
+    outcome read, halt reported — so BO-3200b-4's diagram can be compared against it."
+    OLD expects_from (verbatim): null
+    OLD test_spec[0] name test_bo_3200b_1_claim_is_released_with_dispatch_impossible, description
+    (verbatim): "THE DISCRIMINATOR. Drive the real lane against a store that outlives the run,
+    claim items, force a later step to fail, with the dispatch surface withheld entirely; assert
+    every claimed item is back in its unclaimed state in that same store."
+    OLD test_spec[5] description (verbatim): "Assert the release produces the per-item and
+    aggregate outcome BO-3200b-2 consumes. Performing the action inline does not by itself mean
+    anyone reads the result — that was the second, independent defect in KI-BO-020."
+    OLD test_rationale first paragraph (verbatim): ""Performs the release itself" is a claim about
+    HOW, and a run with a cooperative specialist releases correctly too. Removing the ability to
+    dispatch is the only shape that can only be passed by a run that does it inline — the same
+    technique as BO-3200a-1."
+
+    ADDED: it_requirements [8] (the added And asserted from the harness's dispatch record) and
+    [9] (a release that cannot complete through the executor is reported, never assumed);
+    expects_from BO-3200f-1 and BO-3200f-1-i; test_spec
+    test_bo_3200b_1_every_release_dispatch_is_an_exact_command_to_the_executor (the dispatch-record
+    And) and test_bo_3200b_1_release_that_cannot_complete_through_the_executor_is_reported_not_assumed;
+    doc_links to BO-3200f-1 and BO-3200f-3. Existing test_spec entries were renumbered by the two
+    insertions; the old [5] is now the last entry.
+- reason: depends-on-edges-added-for-landing-order
+  by: business-analyst
+  at: 2026-09-17
+  note: |
+    Added BO-3200f-1-i to depends_on. Authorised by the user (BrainCandy) on 2026-09-17. Source: the
+    IT PO finding recorded in notes (CAVEAT -- ORDERING): expects_from already names BO-3200f-1-i,
+    whose reason vocabulary a failed release carries, but depends_on named only BO-3200b and
+    BO-3200f-1, and the sequencer reads depends_on only (KI-ACD-015). No other field changed;
+    readiness unchanged.
 superseded_by: null
 covered_by:
   - BO-3200b-1-i
@@ -246,3 +331,18 @@ notes: |
   way to satisfy "release from every stop point" is a release call on several nested paths, and
   a non-idempotent release then fails on the second one, which would be a new failure introduced
   by the fix.
+
+  IT-PO RE-ENRICHMENT NOTE (2026-09-17). The release is no longer "inline with no dispatch": it is an
+  exact command the guaranteeing layer sends to the chartered executor and reads the result of.
+  The idempotency and abnormal-termination requirements above are unchanged and now also cover
+  the executor path -- a release command issued on both an inner and an outer path must be a no-op
+  the second time.
+
+  CAVEAT -- ORDERING. expects_from now names BO-3200f-1-i, whose reason vocabulary a failed release
+  carries, but depends_on names only BO-3200b and BO-3200f-1 (depends_on is the BA's, and the
+  sequencer reads depends_on only, KI-ACD-015). Recommended BA edit: add BO-3200f-1-i to
+  depends_on.
+
+  CAVEAT -- A SIBLING IS NOW STALE. BO-3200b-2's expects_from on this record still reads "The
+  inline release's per-item outcome list and aggregate"; the shape is unchanged but "inline" no
+  longer holds. Not edited in this pass.

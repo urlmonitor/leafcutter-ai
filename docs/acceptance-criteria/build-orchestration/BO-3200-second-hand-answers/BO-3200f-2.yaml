@@ -77,11 +77,11 @@ it_requirements:
   - "SECURITY CONTAINMENT 1 -- TOOLS. The executor's tool list is no broader than ADR-033's tier floor for mechanical agents and contains no Edit, Write, Agent/Task, web or MCP tool. It carries out the command it was given and nothing else; it cannot author files by another route and cannot dispatch anyone."
   - "SECURITY CONTAINMENT 2 -- NO ONWARD DISPATCH, NARROW CALLERS. spawn_allowlist is empty. The executor is dispatched by shipped workflow scripts. It must not be added to any agent's spawn_allowlist without a recorded user decision, because every agent permitted to spawn it acquires unrestricted shell by proxy."
   - "SECURITY CONTAINMENT 3 -- GUARDRAILS AND PERMISSION PROMPTS STILL BIND. 'Admits every exact command' is a statement about the CHARTER only. Every tool-use guardrail and every permission rule that applies to a command issued directly applies identically to one the executor issues. The package must not ship an allow rule, settings entry or hook exemption that pre-approves the executor's commands as a class."
-  - "SECURITY CONTAINMENT 4 -- GUARDRAIL ESCAPE HATCHES ARE NOT REACHABLE THROUGH THE EXECUTOR. Several guardrails honour a bypass environment variable (the commit-agent mode, and the documentation and inline-work guard overrides). The executor cannot decline, so a dispatched command carrying such a variable must be stopped mechanically and reported as a guardrail refusal. Two enforcement points exist: authoring time (BO-3200f-3's routing check rejects an executor dispatch whose command sets a bypass variable) and run time (the guardrail refuses the bypass when the caller is the executor). At least one must be load-bearing and tested; which one is a USER DECISION (see notes)."
+  - "SECURITY CONTAINMENT 4 -- GUARDRAIL ESCAPE HATCHES ARE NOT REACHABLE THROUGH THE EXECUTOR. Several guardrails honour a bypass environment variable (the commit-agent mode, and the documentation, inline-work and README-check guard overrides). The executor cannot decline, so a command carrying such a variable must be stopped mechanically. ENFORCEMENT POINT, PINNED (user decision (a), 2026-09-16): AUTHORING TIME is load-bearing now -- BO-3200f-3's routing check, through the gate it is wired into, fails any executor dispatch in the shipped workflow sources whose command sets a bypass variable, so such a command never ships. RUN TIME -- the guardrail itself refusing the bypass when the caller is the executor, including for commands no shipped workflow contains -- is BO-3200f-2-iii's, deferred at priority low, and is not claimed or tested here. This record must not be read as done on the strength of run-time behaviour, and BO-3200f-2-iii's absence does not weaken the authoring-time requirement."
   - "SECURITY CONTAINMENT 5 -- A BLOCK IS REPORTED AS A BLOCK. When the executor's tool call is blocked by a guardrail or a permission rule, the charter returns the block message verbatim as a not-executed result with no exit status. It never restates the block as its own decline and never invents an exit status (BO-3200f-1-i reason guardrail_blocked; BO-3200g)."
   - "SECURITY CONTAINMENT 6 -- NO INJECTED JUDGEMENT CONTEXT. The executor loads no skills and no agent memory. Its charter states that project instructions about command SHAPE (for example the single-simple-command shell convention) are enforced by guardrails and by the workflow author, not by the executor: it neither rewrites a non-conforming command nor declines it. A command that violates such an instruction is an authoring defect caught upstream, not a reason for the executor to judge."
   - "THE PERMISSION GATE'S VERDICT IS PROVEN ON THE REAL REGISTRY. The classifier plan-feature already uses for its workspace-setup agent must classify the executor's id as permitted when fed the repository's actual registry file, not a fixture."
-  - "CHARTER BEHAVIOUR IS PROVEN BY DISPATCH, NOT BY READING THE CHARTER. A test that finds 'every exact command' in the template is dead-prose evidence, rejected by the BO-3100/BO-3200 mechanical-enforcement rule. The first scenario is proven by dispatching the registered executor; see the caveat on the missing live-dispatch surface."
+  - "CHARTER BEHAVIOUR IS PROVEN BY DISPATCH, NOT BY READING THE CHARTER. A test that finds 'every exact command' in the template is dead-prose evidence, rejected by the BO-3100/BO-3200 mechanical-enforcement rule. The first scenario is proven by dispatching the registered executor through BO-3200f-2-ii's opt-in live-dispatch harness, and is not done until a switched-on run's evidence record shows it passing."
   - "MODEL TIER: haiku per ADR-033 section 2.1 (mechanical, no judgement). If live-dispatch evidence shows that tier refuses or reformats in the first scenario, the tier change is recorded in this record's notes, not made silently."
   - "The executor is a utility, not a producer, and is not added to the fast lane's closed producer roster (ADR-035)."
 delivers_to:
@@ -123,18 +123,19 @@ test_spec:
     type: unit
     angle: failure
     description: "Scan every settings and hook configuration the build ships and assert none contains an allow rule or exemption keyed to the executor or to its capture invocation as a class."
-  - name: test_bo_3200f_2_bypass_variable_dispatched_to_executor_is_stopped_as_guardrail_refusal
+  - name: test_bo_3200f_2_bypass_variable_in_an_executor_dispatch_fails_the_authoring_time_routing_check
     target_dir: unit_tests/workflows/
     framework: unittest
     type: integration
     angle: failure
-    description: "Dispatch a command setting the commit-agent bypass variable in front of a commit through the executor path; assert it is stopped at the load-bearing enforcement point chosen by the user and reported as a guardrail refusal, never carried out."
+    description: "AUTHORING-TIME ENFORCEMENT (BO-3200f-3). In a copy of the shipped workflow sources, add an executor dispatch whose command sets the commit-agent bypass variable in front of a commit; invoke the gate BO-3200f-3's routing check is wired into and assert it fails naming that site as bypass_variable, and that a copy without the variable passes. Run-time refusal at the guardrail is BO-3200f-2-iii's and is not asserted here."
   - name: test_bo_3200f_2_four_command_kinds_are_carried_out_by_the_registered_executor
     target_dir: unit_tests/workflows/
     framework: unittest
     type: e2e
     angle: deployed
-    description: "LIVE DISPATCH. Against a temporary project, dispatch to the real registered executor an AC-store read, a todo-to-in-progress claim, a git command inside a worktree and a repository script with arguments; assert each reply verifies as a BO-3200f-1 capture and none is a refusal, a confirmation request or an out-of-remit statement."
+    surface_invoked: "BO-3200f-2-ii live-dispatch harness, switched on by LEAFCUTTER_LIVE_DISPATCH=1"
+    description: "LIVE DISPATCH through BO-3200f-2-ii's harness; reported not run while LEAFCUTTER_LIVE_DISPATCH is off. Against a temporary project, dispatch to the real registered executor an AC-store read, a todo-to-in-progress claim, a git command inside a worktree and a repository script with arguments; assert each reply verifies as a BO-3200f-1 capture and none is a refusal, a confirmation request or an out-of-remit statement."
   - name: test_bo_3200f_2_no_executed_command_is_one_the_stated_permission_excludes
     target_dir: unit_tests/workflows/
     framework: unittest
@@ -152,8 +153,11 @@ test_rationale: |
   The live-dispatch descriptor is the only honest evidence for the first scenario -- whether the
   registered agent carries a claim out rather than refusing it is behaviour of a model under its
   charter, and a grep of the charter is exactly the dead-prose proof the BO-3100/BO-3200
-  constraint rejects. It is listed even though no live-dispatch test surface exists yet (see
-  notes), so the gap is visible rather than silently filled with a template grep.
+  constraint rejects. It runs through BO-3200f-2-ii's opt-in harness, so the default suite reports
+  it not run rather than silently filling the gap with a template grep.
+  The bypass-variable test is pinned to the authoring-time gate because that is the enforcement
+  point the user made load-bearing; the run-time guardrail refusal has its own record
+  (BO-3200f-2-iii) and its own tests.
 origin_agent: business-analyst
 created: 2026-09-16
 amended_by:
@@ -164,10 +168,40 @@ amended_by:
     six security-containment it_requirements, test_spec/test_rationale, change_target/
     risk_surface, delivers_to, doc_links; expects_from made specific. criteria, title,
     depends_on untouched.
+- reason: technical-update-enforcement-point-and-live-harness
+  by: it-po
+  at: 2026-09-17
+  note: |
+    Applied the user's 2026-09-16 decisions (a) and the live-dispatch harness decision to the IT PO
+    fields. criteria, title, depends_on, req_status and readiness (reviewed) untouched.
+
+    OLD it_requirements[6] (verbatim): "SECURITY CONTAINMENT 4 -- GUARDRAIL ESCAPE HATCHES ARE NOT
+    REACHABLE THROUGH THE EXECUTOR. Several guardrails honour a bypass environment variable (the
+    commit-agent mode, and the documentation and inline-work guard overrides). The executor cannot
+    decline, so a dispatched command carrying such a variable must be stopped mechanically and
+    reported as a guardrail refusal. Two enforcement points exist: authoring time (BO-3200f-3's
+    routing check rejects an executor dispatch whose command sets a bypass variable) and run time
+    (the guardrail refuses the bypass when the caller is the executor). At least one must be
+    load-bearing and tested; which one is a USER DECISION (see notes)."
+    OLD it_requirements[10], changed text only (verbatim): "The first scenario is proven by
+    dispatching the registered executor; see the caveat on the missing live-dispatch surface."
+    OLD test_spec[5] name test_bo_3200f_2_bypass_variable_dispatched_to_executor_is_stopped_as_guardrail_refusal,
+    description (verbatim): "Dispatch a command setting the commit-agent bypass variable in front
+    of a commit through the executor path; assert it is stopped at the load-bearing enforcement
+    point chosen by the user and reported as a guardrail refusal, never carried out."
+    OLD test_spec[6] description, changed text only (verbatim): "LIVE DISPATCH. Against a
+    temporary project," -- and no surface_invoked.
+    OLD test_rationale, changed text only (verbatim): "It is listed even though no live-dispatch
+    test surface exists yet (see notes), so the gap is visible rather than silently filled with a
+    template grep."
+
+    it_requirements[10] and test_rationale were not in the update request but repeated the same
+    stale "missing live-dispatch surface" statement, so they were brought in line in the same pass.
 superseded_by: null
 covered_by:
   - BO-3200f-2-i
   - BO-3200f-2-ii
+  - BO-3200f-2-iii
 implemented_by: []
 notes: |
   THE DEFECT BEING FIXED IS A CHARTER REFUSAL, so the first scenario uses the kinds of command
@@ -245,3 +279,9 @@ notes: |
   alternative in the caveat above is withdrawn. BO-3200f-2-ii is this record's child, so the
   ordering cannot be a depends_on edge (it would be a cycle); it is held by this note and by
   covered_by.
+
+  IT-PO UPDATE (2026-09-17). Containment 4's enforcement point is now pinned in it_requirements:
+  authoring time through BO-3200f-3 is load-bearing and tested here; run time belongs to
+  BO-3200f-2-iii (deferred, low). The live descriptor names BO-3200f-2-ii's harness in
+  surface_invoked. USER DECISIONS NEEDED (a)-(c) above are answered by the 2026-09-16 note and are
+  no longer open.

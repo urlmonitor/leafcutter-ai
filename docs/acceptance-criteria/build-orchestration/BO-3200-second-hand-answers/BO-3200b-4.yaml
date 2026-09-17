@@ -8,25 +8,35 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: approved
+readiness: reviewed
 priority: medium
 roadmap_phase: phase_1
 criteria: |
   Given a reader tracing what happens to claimed work when a run stops early,
   When they open the sequence diagram for the failure path,
   Then it shows, in order: the claim being recorded in a store that outlives the run, a later
-    step failing, the release being performed by the layer that must guarantee it rather than
-    by a specialist, the outcome of that release being read, and both the triggering failure
-    and the release outcome appearing in the halt report.
+    step failing, the release being performed by the layer that must guarantee it, the outcome
+    of that release being read, and both the triggering failure and the release outcome
+    appearing in the halt report,
+    And where that layer performs the release by dispatching an exact release command to the
+    chartered executor -- the party that carries out the exact command it is given, verbatim,
+    exercising no judgement -- the diagram shows that dispatch as the guaranteeing layer
+    performing the release, with the executor carrying out that command on its behalf, and not
+    as the release being delegated to a specialist.
 
   Given the diagram,
   When it is compared against a real run driven to a failure after the claim,
-  Then every interaction it shows occurred in that run, in the order shown, and no specialist
-    appears in it as the performer of the release.
+  Then every interaction it shows occurred in that run, in the order shown,
+    And no specialist appears in it as the performer of the release,
+    And neither the diagram nor that run contains a dispatch asking any specialist to decide or
+    interpret the release -- whether to release, what to release or how -- while a dispatch to
+    the chartered executor carrying the exact release command does not fail this criterion.
 depends_on:
   - BO-3200b
   - BO-3200b-1
   - BO-3200b-2
+  - BO-3200f-1
+  - BO-3200f-2
 doc_links:
   - path: docs/architecture/diagrams/
     relationship: describes
@@ -40,6 +50,18 @@ doc_links:
     relationship: modifies
     status: exists
     relevance: "The component page the new diagram must be reachable from."
+  - path: docs/acceptance-criteria/build-orchestration/BO-3200-second-hand-answers/BO-3200f-1.yaml
+    relationship: describes
+    status: exists
+    relevance: "Added by it-po 2026-09-17. The chartered executor the release is dispatched to, its dispatch helper, and the harness stand-in whose executor-dispatching release path is the real run the coherence check compares against."
+  - path: docs/acceptance-criteria/build-orchestration/BO-3200-second-hand-answers/BO-3200f-2.yaml
+    relationship: describes
+    status: exists
+    relevance: "Added by it-po 2026-09-17. The executor's registry entry -- the source the drawing and the coherence test use to tell the executor from a specialist."
+  - path: docs/reference/chartered-executor.md
+    relationship: describes
+    status: planned
+    relevance: "Added by it-po 2026-09-17. BO-3200f-4's reference page for the executor; the diagram links to it for what the executor is rather than restating it."
 assigned_agent: architecture-diagram-author
 estimated_complexity: M
 change_target: docs
@@ -48,15 +70,19 @@ it_requirements:
   - "AGENT CHOICE IS DELIBERATE: architecture-diagram-author, the leaf author, not documentation-expert — the same rule applied to every documentation child in these two trees."
   - "THE OUTCOME BEING READ MUST BE ITS OWN INTERACTION. In the arrangement this replaces, the release was dispatched and the diagram would have looked complete; the missing element was a return arrow nobody consumed, which is invisible unless it is drawn. A diagram that stops at 'release performed' reproduces exactly the belief that let KI-BO-020 survive."
   - "THE STORE MUST BE DRAWN AS ONE THAT OUTLIVES THE RUN, distinct from the run's own scratch state. The observed harmlessness came entirely from the claim landing in a throwaway copy; a diagram that does not distinguish the two teaches the reader the accident rather than the rule."
-  - "NO SPECIALIST MAY APPEAR AS THE PERFORMER OF THE RELEASE, as a declared property of the drawing, so it cannot be redrawn later into the shape this tree removed."
+  - "NO PARTY THAT EXERCISES JUDGEMENT MAY PERFORM OR DECIDE THE RELEASE, as a declared property of the drawing, so it cannot be redrawn later into the shape this tree removed. The machine-readable declaration gives every participant a role -- guaranteeing layer, chartered executor, specialist, outliving store, halt report. Where the release is carried out through the executor, the interaction is declared as initiated by the guaranteeing layer with the executor carrying out the exact release command on its behalf, and it MUST be drawn: hiding the executor dispatch fails. No specialist is declared as the performer of the release, and no interaction is a dispatch asking a specialist to decide or interpret the release -- whether to release, what to release or how."
   - "BOTH the triggering failure AND the release outcome must appear as reaching the halt report, as two distinct contributions — that pairing is BO-3200b-2's whole content and is the thing a reader comes to this diagram for."
   - "The coherence claim must be enforced by an executable test comparing the diagram's declared interaction sequence, in order and in both directions, against the trace of a REAL run driven to a failure after the claim."
   - "The diagram page must declare its participants and ordered interactions in a machine-readable form so the coherence test reads data, not a picture."
   - "Must satisfy the repository's existing doc front-matter and component-vocabulary rules unchanged."
+  - "WHO IS THE EXECUTOR IS READ, NEVER RETYPED. The drawing's executor participant and the coherence test's classification of each dispatch in the real run take the executor's identity from its registry entry (BO-3200f-2) and the addressee recorded for the dispatch, never from a name typed into the diagram test or a match on prompt wording."
+  - "THE NO-DECIDE-OR-INTERPRET CLAUSE IS CHECKED ON BOTH SIDES. On the drawing, from the declared interactions; on the real run, from its dispatch record -- every dispatch made while releasing, with its addressee and whether it carried an exact command. A release dispatch addressed to any party other than the executor, or one carrying no exact command, fails the clause even when the claim ends up released."
 delivers_to: null
 expects_from:
   - ac_id: BO-3200b-1
-    contract: "The ordered failure-path trace of a real run — claim recorded in the outliving store, later step fails, release performed inline, per-item outcome produced — obtainable programmatically."
+    contract: "The ordered failure-path trace of a real run, obtainable programmatically: claim recorded in the outliving store, later step fails, release carried out by the guaranteeing layer -- through exact-command dispatches to the chartered executor via BO-3200f-1's helper, or with no dispatch -- the per-item release outcome produced and read, halt reported; with every dispatch made while releasing recorded as {addressed_to: str, exact_command: bool, outcome: str}."
+  - ac_id: BO-3200f-1
+    contract: "The harness stand-in that answers executor dispatches through the real capture and fails every other dispatch immediately, used to drive the coherence run; and the dispatch helper's recorded addressee, which together with the executor's registry entry (BO-3200f-2) lets the trace tell an executor dispatch from a specialist dispatch."
   - ac_id: BO-3200b-2
     contract: "The halt payload carrying both the triggering failure and the required-action outcome, so the diagram's final interactions can be checked against what the report actually contains."
 test_spec:
@@ -65,31 +91,45 @@ test_spec:
     framework: unittest
     type: unit
     angle: criterion
-    description: "Parse the declared sequence and assert it contains, in order: claim recorded in the outliving store, later step fails, release performed by the guaranteeing layer, release outcome read as its own interaction, and both facts reaching the halt report."
+    description: "Parse the declared sequence and assert it contains, in order: claim recorded in the outliving store, later step fails, release performed by the guaranteeing layer, release outcome read as its own interaction, and both facts reaching the halt report; and that where the release goes through the executor, the declaration carries that dispatch as initiated by the guaranteeing layer with the executor carrying out the exact release command -- a declaration that omits the executor dispatch fails."
   - name: test_bo_3200b_4_no_specialist_performs_the_release_in_the_drawing
     target_dir: unit_tests/docs/
     framework: unittest
     type: unit
     angle: criterion
-    description: "Assert no declared interaction has a specialist as the performer of the release. Keeps the drawing from being redrawn into the arrangement this tree removed."
+    description: "Classify each declared participant from the real registry (the executor entry from BO-3200f-2 is not a specialist) and assert no declared interaction has a specialist as the performer of the release. A planted copy that draws the executor dispatch as a specialist performing the release, and one that draws a specialist performing it, both fail. Keeps the drawing from being redrawn into the arrangement this tree removed."
   - name: test_bo_3200b_4_diagram_matches_a_real_failure_run
     target_dir: unit_tests/docs/
     framework: unittest
     type: integration
     angle: seam
-    description: "THE COHERENCE CHECK. Drive a real run to a failure after the claim, capture the ordered trace, and assert two-way ordered equality with the diagram's declared interactions — including that the outcome-read interaction actually occurred."
+    description: "THE COHERENCE CHECK. Drive the real lane under BO-3200f-1's harness stand-in to a failure after the claim, so the release takes its executor-dispatching path; capture the ordered trace and assert two-way ordered equality with the diagram's declared interactions -- including that the outcome-read interaction and the executor release dispatch actually occurred."
   - name: test_bo_3200b_4_diagram_page_passes_repo_doc_gates
     target_dir: unit_tests/docs/
     framework: unittest
     type: integration
     angle: deployed
     description: "The repository's real doc front-matter and component-vocabulary checks pass over the new page."
+  - name: test_bo_3200b_4_no_dispatch_asks_a_specialist_to_decide_or_interpret_the_release
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: integration
+    angle: failure
+    description: "Assert over the diagram's declared interactions and over the real failure run's dispatch record that no release dispatch is addressed to a party other than the executor or carries anything but an exact command. Negative controls: a run whose release first asks a specialist whether to release and then falls back to the executor fails even though the claim ends up released; a declared interaction asking a specialist what to release fails. A run whose only release dispatch is the exact release command to the executor passes."
 test_rationale: |
   The element that matters here is a return arrow that used to exist and was never consumed —
   a thing no reviewer notices, because a diagram missing it looks complete. So the coherence test
   compares the declared sequence against a real failure run and specifically requires the
   outcome-read interaction to have occurred, rather than trusting that the drawing is accurate
   because it is plausible.
+  The executor dispatch is the second thing a diagram can hide: drawn as the layer "releasing"
+  with no dispatch, it looks tidier and misstates the only buildable design. So the ordered-path
+  test requires the dispatch to be declared, the coherence run takes the executor-dispatching
+  path, and classifying the executor as not a specialist is read from the registry rather than
+  assumed.
+  The no-decide-or-interpret test is separate because its failure shape passes every other test:
+  a release that asks a specialist first and falls back to the executor releases the claim, draws
+  cleanly and matches a run -- only the dispatch record shows the judgement request.
   Deliberately NOT covered: layout and legibility, which are human judgement.
 origin_agent: business-analyst
 created: 2026-08-25
@@ -102,10 +142,135 @@ amended_by:
 - action: approved
   agent: approve_acs
   date: '2026-08-26'
+- reason: executor-dispatch-counts-as-the-guaranteeing-layer-criteria-changed-reapproval-required
+  by: business-analyst
+  at: 2026-09-17
+  note: |
+    A REAL CHANGE TO AN APPROVED AC, NOT A WORDING TIDY-UP. Authorised by the user (BrainCandy)
+    on 2026-09-17, explicitly for this record, following the chartered-executor decision
+    recorded in BO-3200f's notes; the same treatment BO-3200a-1 and BO-3200b-1 received on
+    2026-09-16. readiness demoted approved -> draft so the approval gate is re-run rather than
+    silently inherited (ACS-1300a-1-i / ACS-1300a-1 precedent: criteria changed on an
+    already-approved record). Title unchanged -- it never carried the "rather than a
+    specialist" wording.
+
+    WHAT THE CRITERIA SAID BEFORE (verbatim):
+      Given a reader tracing what happens to claimed work when a run stops early,
+      When they open the sequence diagram for the failure path,
+      Then it shows, in order: the claim being recorded in a store that outlives the run, a later
+        step failing, the release being performed by the layer that must guarantee it rather than
+        by a specialist, the outcome of that release being read, and both the triggering failure
+        and the release outcome appearing in the halt report.
+
+      Given the diagram,
+      When it is compared against a real run driven to a failure after the claim,
+      Then every interaction it shows occurred in that run, in the order shown, and no specialist
+        appears in it as the performer of the release.
+
+    WHAT THEY SAY NOW. First scenario: the ordered sequence is unchanged except that "rather than
+    by a specialist" is removed from the release step, and ONE And is added -- where the
+    guaranteeing layer performs the release by dispatching an exact release command to the
+    chartered executor, the diagram shows that as the guaranteeing layer performing the release,
+    with the executor carrying the command out on its behalf, not as delegation to a specialist.
+    Second scenario: "every interaction occurred, in order" and "no specialist appears as the
+    performer of the release" are unchanged (split into separate clauses); ONE And is added --
+    neither the diagram nor the real run contains a dispatch asking any specialist to decide or
+    interpret the release, while an exact-command dispatch to the executor does not fail the
+    criterion.
+
+    WHY. The E2 workflow engine gives a workflow body no filesystem or subprocess access
+    (docs/reference/workflow-authoring-contract.md section 1), so the release BO-3200b-1 requires
+    reaches the store through an agent() dispatch to the chartered executor (BO-3200b-1 as
+    amended 2026-09-16; BO-3200f-3 addresses every release there). Read literally, the old
+    "rather than by a specialist" would have been failed by the only buildable design, or would
+    have pushed the diagram author to hide the executor dispatch. BO-3200's standing rule --
+    only JUDGEMENT is delegable to a specialist -- is unchanged, and is now stated as the
+    criterion: a specialist asked to decide or interpret the release still fails it.
+
+    WHAT THIS RECORD STILL PROVES. Unchanged: the full ordered failure path, the outcome read as
+    its own interaction, both facts reaching the halt report, two-way coherence with a real
+    failure run, and no specialist drawn as the performer of the release. Added: the drawing
+    cannot hide the executor dispatch, and a run whose release asks a specialist for a decision
+    fails even when the claim ends up released.
+
+    DEPENDS_ON. BO-3200f-1 added: the criteria now rely on the chartered executor it defines
+    (the party that carries out one exact command verbatim with no judgement), and the build
+    sequencer reads depends_on only (KI-ACD-015). check_ac_circular_deps.py was run after the edit.
+
+    CRITERIA-ONLY CHANGE -- THE TECHNICAL LAYER IS NOW STALE AND IS THE IT PO'S TO REDO. Not
+    edited here (outside the BA's remit):
+      - it_requirements[3] "NO SPECIALIST MAY APPEAR AS THE PERFORMER OF THE RELEASE" -- still
+        true, but silent on how the executor is drawn and on the new no-decide-or-interpret
+        dispatch clause;
+      - expects_from[0].contract (BO-3200b-1) "release performed inline" -- the trace now carries
+        an executor dispatch; and there is no expects_from on BO-3200f-1 for the executor's
+        identity the drawing and the coherence test must recognise;
+      - test_spec[0] test_bo_3200b_4_diagram_declares_the_full_ordered_failure_path -- does not
+        assert the executor dispatch is drawn as the guaranteeing layer's release;
+      - test_spec[1] test_bo_3200b_4_no_specialist_performs_the_release_in_the_drawing -- must
+        now classify the executor as not a specialist, and no test_spec entry covers the added
+        "no dispatch asks a specialist to decide or interpret the release" clause over the real run;
+      - test_spec[2] test_bo_3200b_4_diagram_matches_a_real_failure_run -- its real run is now
+        the executor-dispatching release path (BO-3200f-1's harness stand-in);
+      - doc_links carry nothing for the executor (BO-3200f-1 or its reference page);
+      - test_rationale and notes paragraph "The clause forbidding a specialist as the performer"
+        read against the old wording.
+- reason: technical-re-enrichment-after-criteria-change
+  by: it-po
+  at: 2026-09-17
+  note: |
+    Rewrote every IT PO field the BA's 2026-09-17 entry listed as stale. criteria, title,
+    depends_on and req_status untouched. readiness draft -> reviewed. assigned_agent
+    (architecture-diagram-author), estimated_complexity M, change_target and risk_surface
+    unchanged.
+
+    OLD it_requirements[3] (verbatim): "NO SPECIALIST MAY APPEAR AS THE PERFORMER OF THE RELEASE,
+    as a declared property of the drawing, so it cannot be redrawn later into the shape this tree
+    removed."
+    OLD expects_from[0].contract (verbatim): "The ordered failure-path trace of a real run — claim
+    recorded in the outliving store, later step fails, release performed inline, per-item outcome
+    produced — obtainable programmatically."
+    OLD test_spec[0] description (verbatim): "Parse the declared sequence and assert it contains,
+    in order: claim recorded in the outliving store, later step fails, release performed by the
+    guaranteeing layer, release outcome read as its own interaction, and both facts reaching the
+    halt report."
+    OLD test_spec[1] description (verbatim): "Assert no declared interaction has a specialist as
+    the performer of the release. Keeps the drawing from being redrawn into the arrangement this
+    tree removed."
+    OLD test_spec[2] description (verbatim): "THE COHERENCE CHECK. Drive a real run to a failure
+    after the claim, capture the ordered trace, and assert two-way ordered equality with the
+    diagram's declared interactions — including that the outcome-read interaction actually
+    occurred."
+    OLD test_rationale: the first paragraph and the "Deliberately NOT covered" line, both kept
+    verbatim; two paragraphs added between them.
+    OLD doc_links: the three entries still first in the list, unchanged; nothing named the executor.
+
+    ADDED: it_requirements[8] (executor identity read from the registry) and [9] (the
+    no-decide-or-interpret clause checked on the drawing and on the run's dispatch record);
+    expects_from BO-3200f-1; test_spec[4]
+    test_bo_3200b_4_no_dispatch_asks_a_specialist_to_decide_or_interpret_the_release; doc_links
+    to BO-3200f-1, BO-3200f-2 and docs/reference/chartered-executor.md (planned).
+- reason: depends-on-edges-added-for-landing-order
+  by: business-analyst
+  at: 2026-09-17
+  note: |
+    Added BO-3200f-2 to depends_on. Authorised by the user (BrainCandy) on 2026-09-17. Source: the
+    IT PO finding recorded in notes (CAVEAT -- ORDERING): the drawing and the coherence test need the
+    executor's registry entry, which BO-3200f-2 delivers, but depends_on named only BO-3200f-1, so the
+    sequencer (which reads depends_on only, KI-ACD-015) could schedule this record before the executor
+    is registered. BO-3200f-2 was already named in the BO-3200f-1 expects_from contract. No other field
+    changed; readiness unchanged.
 superseded_by: null
 covered_by: []
 implemented_by: []
 notes: |
+  2026-09-17 (business-analyst) -- CRITERIA CHANGED, READ THIS FIRST. An exact release command
+  dispatched to the chartered executor now explicitly counts as the guaranteeing layer
+  performing the release, not as delegation to a specialist; a dispatch asking any specialist to
+  decide or interpret the release still fails the criterion. Authorised by the user; the old
+  wording, the reason and the stale technical fields are in amended_by. Where the paragraphs
+  below say "no specialist as the performer", read "no party exercising judgement over the release".
+
   Satisfies the sequence-diagram entry in BO-3200b's documentation_triggers.
 
   Showing the outcome being READ as its own interaction is the point of this diagram. In the
@@ -125,3 +290,14 @@ notes: |
   entirely from the claim landing in a throwaway copy. A diagram that shows one undifferentiated
   "store" would teach the reader the accident that contained the damage rather than the rule that
   the claim outlives the run.
+
+  IT-PO RE-ENRICHMENT NOTE (2026-09-17). The paragraph above on "the clause forbidding a specialist
+  as the performer" now reads, in the technical layer, as "no party that exercises judgement may
+  perform or decide the release": it_requirements[3] declares participant roles so the executor
+  is drawn and is not a specialist, and it_requirements[9] checks the new no-decide-or-interpret
+  clause on both the drawing and the real run.
+
+  CAVEAT -- ORDERING. The drawing and the coherence test need the executor's registry entry, which
+  BO-3200f-2 delivers; depends_on names BO-3200f-1 but not BO-3200f-2 (depends_on is the BA's).
+  BO-3200f-2 depends on BO-3200f-1, so the sequencer can schedule this record before the executor
+  is registered. Recommended BA edit: add BO-3200f-2 to depends_on.

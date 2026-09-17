@@ -15,7 +15,8 @@ criteria: |
   What the system knows comes from the real thing, not from a retelling.
 
   When the build needs to know something about your project — a setting, a file,
-  the state of your repository — it reads it directly. No fact it depends on is
+  the state of your repository — it gets the exact value from where it is recorded,
+  with nobody asked to look at it and interpret it. No fact it depends on is
   obtained by asking a specialist to look and report back, so a shortened,
   reworded or partial retelling can never be mistaken for the fact itself.
 depends_on:
@@ -42,6 +43,33 @@ amended_by:
     by: it-po
     at: 2026-08-26
     note: "Added change_target/risk_surface and one ADR doc_link; recorded the judgement-declaration decision in notes. Composite — no assigned_agent. criteria untouched."
+  - reason: premise-narrowed-from-no-dispatch-to-no-judgement-benefit-statement-aligned-with-children
+    by: product-owner
+    at: 2026-09-17
+    note: |
+      Authorised by the user (BrainCandy) on 2026-09-16 through the chartered-executor
+      decision recorded in BO-3200f's notes; brings this L1 in line with its children,
+      whose 2026-09-16 amended_by entries (BO-3200a-1, BO-3200a-2, BO-3200a-3) narrowed
+      the premise from "no specialist can be dispatched" to "no one can be asked to judge".
+
+      OLD criteria second paragraph (verbatim):
+        When the build needs to know something about your project — a setting, a file,
+        the state of your repository — it reads it directly. No fact it depends on is
+        obtained by asking a specialist to look and report back, so a shortened,
+        reworded or partial retelling can never be mistaken for the fact itself.
+      NEW: "it reads it directly" replaced by "it gets the exact value from where it is
+      recorded, with nobody asked to look at it and interpret it". Tagline, title and the
+      rest of the paragraph unchanged -- "read at the source, never relayed" still holds
+      under the new premise (BO-3200 and BO-3200a-3 keep the same wording).
+
+      WHY. The E2 workflow engine gives a workflow body no filesystem or subprocess access
+      (docs/reference/workflow-authoring-contract.md section 1), so "reads it directly"
+      promised something no build can do; the value now arrives through a chartered
+      executor that carries out an exact command and returns its output verbatim,
+      exercising no judgement. What the user is protected from -- a retelling mistaken for
+      the fact -- is unchanged. readiness was draft before and stays draft (no approval to
+      demote). covered_by and depends_on unchanged. Notes updated: the IT-PO DECISION
+      block's old premise and two-value result_use list are marked superseded in place.
 superseded_by: null
 covered_by:
   - BO-3200a-1
@@ -62,6 +90,9 @@ notes: |
 
   Note for the BA: the two halves of that failure decompose to different
   children. "Read the file directly instead of relaying it" is this criterion.
+  [SUPERSEDED 2026-09-16 -- "read directly" is not available to a workflow body;
+  read it as "obtain the exact value with no judgement requested of anyone, through
+  the chartered executor". See the PREMISE UPDATE below.]
   "A check that could not perform its inspection must not emit a substantive
   verdict" is BO-3200e. Fixing only one leaves the other class of failure open —
   a direct read can also fail, and must then report uncertainty rather than a
@@ -80,7 +111,8 @@ notes: |
 
   - Each dispatch site carries an explicit `result_use` declaration on the
     dispatch options object itself, alongside the fields the runtime already
-    reads. Permitted values: `fact` and `judgement`.
+    reads. Permitted values: `fact` and `judgement`. [SUPERSEDED 2026-09-16 --
+    now three values: `fact`, `chore` and `judgement`. See the PREMISE UPDATE below.]
   - ABSENCE MEANS `fact`, AND AN UNDECLARED SITE FAILS THE SWEEP. The exemption
     is opt-out by explicit declaration, never opt-in by omission. Otherwise the
     sweep's scope shrinks silently every time a dispatch is added.
@@ -91,4 +123,29 @@ notes: |
     declaration is contradicted by observation, and the path is reported. This is
     what stops "declare everything judgement" from being the cheap way out: the
     declaration selects which assertion is applied, never whether the path is
-    examined.
+    examined. [SUPERSEDED 2026-09-16 -- "With specialists unavailable" now reads
+    "in an environment where no one can be asked to judge anything". The
+    verification rule itself is unchanged. See the PREMISE UPDATE below.]
+
+  PREMISE UPDATE (2026-09-16, recorded on this L1 2026-09-17) — FROM "NO DISPATCH"
+  TO "NO JUDGEMENT". The user (BrainCandy) chose a chartered executor on 2026-09-16:
+  an agent that carries out an exact command and returns its output verbatim,
+  exercising no judgement and with no grounds to decline an exact command. Reason:
+  the E2 workflow engine gives a workflow body no filesystem or subprocess access
+  (docs/reference/workflow-authoring-contract.md section 1), so every read goes
+  through a dispatch and "specialists unavailable" could never hold. Full history is
+  in the 2026-09-16 amended_by entries of BO-3200a-1, BO-3200a-2 and BO-3200a-3, and
+  in BO-3200f's notes. What now binds this L1:
+
+  - THE TEST ENVIRONMENT removes JUDGEMENT, not dispatch. The only party that can be
+    dispatched is the chartered executor; it gives no answer to a request to look,
+    decide, interpret or summarise, and every dispatch to any other party fails. A
+    fact obtained through an exact command to the executor is NOT relayed; a path
+    that asks a judging party first and falls back to the executor IS reported.
+  - `result_use` HAS THREE VALUES: `fact` (a value the build branches on; addressed
+    to the executor), `chore` (a side effect such as a claim or release; addressed to
+    the executor, not a value the build branches on — added with BO-3200f-3), and
+    `judgement` (may go to a specialist; requires `judgement_reason`). Absence still
+    means `fact` and still fails the sweep. The IT-PO rules above on declaration,
+    absence and verification are otherwise unchanged.
+  - BO-3200's standing rule is untouched: only judgement is delegable to a specialist.
