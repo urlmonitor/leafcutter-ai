@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: '2026-08-18'
-last_updated: '2026-08-18'
+last_updated: '2026-09-17'
 components:
   - commit_guardian
 related_docs:
@@ -22,8 +22,9 @@ related_docs:
 
 - **Severity:** low
 - **Status:** open — no AC
-- **Occurrences:** 1
-- **First seen:** 2026-08-25 · **Last seen:** 2026-08-25
+- **Occurrences:** 3 (2026-08-25; twice on 2026-09-17: a read-only search, and a local
+  `python` heredoc editing a known-issue file, whose text quoted the matcher)
+- **First seen:** 2026-08-25 · **Last seen:** 2026-09-17
 - **Where:** the `enforce_commit_delegation` PreToolUse hook, matching against the whole Bash command string rather than the resolved program and its subcommand
 
 **Symptom.** Any Bash command whose text contains the phrase is refused with the full
@@ -57,6 +58,11 @@ under-inclusive against spellings that do not contain the literal phrase. Only t
 over-inclusive half was observed. Deliberately not probed — attempting to slip a real commit
 past a safety hook is not an appropriate way to characterise it. Flagged for the owner to
 settle by reading the matcher, not by experiment.
+
+**SETTLED BY READING, 2026-09-17.** The under-inclusive half is real:
+`enforce_commit_delegation.py:56` is a bare substring test, so `git -C <dir> commit` (the
+fast lane's shipped form) is never recognised as a commit. Recorded with evidence in
+`KI-CG-20260907-commit-delegation-is-a-password-not-an-identity`, now owned by `GE-129`.
 
 **Fix direction.** Match on the parsed invocation — program resolves to `git` and the
 subcommand is `commit` — rather than on a substring of the command text. Failing that, exclude

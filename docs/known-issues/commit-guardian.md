@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: 2026-08-18
-last_updated: 2026-09-14
+last_updated: 2026-09-17
 components:
   - commit_guardian
 related_docs:
@@ -73,7 +73,7 @@ Severity in the **filename** is a three-level index bucket (`blocker` / `high` /
 
 Fixed issues move to [`commit-guardian/resolved/`](commit-guardian/resolved/) and are no longer listed as open. They are kept, not deleted.
 
-**Open: 67** (6 blocker, 25 high, 36 low) · **Resolved: 6**
+**Open: 71** (6 blocker, 28 high, 37 low) · **Resolved: 7** (recounted from the directory 2026-09-17)
 
 ## Open
 
@@ -97,6 +97,8 @@ Fixed issues move to [`commit-guardian/resolved/`](commit-guardian/resolved/) an
 | `high` | KI-CG-018 — `check_ac_governance` exits 0 without inspecting anything, and its own "did I look?" diagnostic cannot fire on the paths where it did not | [open-high-ki-cg-018.md](commit-guardian/open-high-ki-cg-018.md) |
 | `high` | KI-CG-022 — `check_adr_collision.py` exists but is registered nowhere, and the branch that registers it also makes it fail closed without `origin/main` | [open-high-ki-cg-022.md](commit-guardian/open-high-ki-cg-022.md) |
 | `high` | KI-CG-035 — `check-proof-promise-claim` is a done-time gate that fires at creation time, so no generated epic scaffold can be committed | [open-high-ki-cg-035.md](commit-guardian/open-high-ki-cg-035.md) |
+| `high` | KI-CG-037 — `documentation_guard` signals its block with exit 1, which Claude Code does not treat as a block, and its path map names another project's folders | [open-high-ki-cg-037.md](commit-guardian/open-high-ki-cg-037.md) |
+| `high` | KI-CG-038 — the commit agent's mandated command is refused by Claude Code's permission classifier, and the agent clears the refusal by repeating the identical command | [open-high-ki-cg-038.md](commit-guardian/open-high-ki-cg-038.md) |
 | `high` | KI-CG-20260826-1612 — Every AC guardian filters the index on `--diff-filter=AM`, so a *renamed* AC record is invisible to all six — and renaming is exactly what a tree split requires | [open-high-ki-cg-20260826-1612.md](commit-guardian/open-high-ki-cg-20260826-1612.md) |
 | `high` | KI-CG-20260831-1933 — `check-predone-scope` compares the whole branch diff against one ticket's `files_touched`, so it can never pass on a multi-ticket epic branch | [open-high-ki-cg-20260831-1933.md](commit-guardian/open-high-ki-cg-20260831-1933.md) |
 | `high` | KI-CG-20260831-glossary-coverage-detector-path-unreachable — `check-glossary-coverage` has never run in this repo: it loads its detector from a path no leafcutter layout has, and its own "detector not found" message is dead code | [open-high-ki-cg-20260831-glossary-coverage-detector-path-unreachable.md](commit-guardian/open-high-ki-cg-20260831-glossary-coverage-detector-path-unreachable.md) |
@@ -109,6 +111,8 @@ Fixed issues move to [`commit-guardian/resolved/`](commit-guardian/resolved/) an
 | `high` | KI-CG-20260909-gate-ticket-test-requirements — registered as configured, `check-ticket-test-requirements` would inspect nothing; wired correctly it fails 252 tickets | [open-high-ki-cg-20260909-gate-ticket-test-requirements.md](commit-guardian/open-high-ki-cg-20260909-gate-ticket-test-requirements.md) |
 | `high` | KI-CG-20260914-contract-guard-crashes-on-diff-bytes — the contract-shrinking guard decodes the staged diff in the console code page, crashes on the first non-cp1252 byte, and blocks the commit instead of failing open | [open-high-ki-cg-20260914-contract-guard-crashes-on-diff-bytes.md](commit-guardian/open-high-ki-cg-20260914-contract-guard-crashes-on-diff-bytes.md) |
 | `high` | KI-CG-20260914-ratchet-freezes-central-registries — a per-file ratchet makes any manifest or registry unmaintainable once it crosses its limit, because complying with the rule on one file forces violating it on another | [open-high-ki-cg-20260914-ratchet-freezes-central-registries.md](commit-guardian/open-high-ki-cg-20260914-ratchet-freezes-central-registries.md) |
+| `high` | KI-CG-20260917-doc-index-hook-staging-loses-unstaged-work — `transform-doc-index` stages its own output mid-commit, so pre-commit cannot restore stashed unstaged changes and the working tree loses them | [open-high-ki-cg-20260917-doc-index-hook-staging-loses-unstaged-work.md](commit-guardian/open-high-ki-cg-20260917-doc-index-hook-staging-loses-unstaged-work.md) |
+| `high` | KI-CG-20260917-readme-read-guard-never-checks-a-write — `readme_read_guard` treats every Write as a trivial edit, because a Write carries no `old_string`/`new_string` | [open-high-ki-cg-20260917-readme-read-guard-never-checks-a-write.md](commit-guardian/open-high-ki-cg-20260917-readme-read-guard-never-checks-a-write.md) |
 | `low` | KI-CG-002 — The diagram-type guard silently swaps its enum source when its declaring file is unreachable | [open-low-ki-cg-002.md](commit-guardian/open-low-ki-cg-002.md) |
 | `low` | KI-CG-011 — The roadmap mirror strips its own `description` frontmatter and backdates `created` to today | [open-low-ki-cg-011.md](commit-guardian/open-low-ki-cg-011.md) |
 | `low` | KI-CG-013 — The schema hook and the done-proof oracle disagree about what a leaf is, so one AC can be required to satisfy both branches | [open-low-ki-cg-013.md](commit-guardian/open-low-ki-cg-013.md) |
@@ -145,6 +149,7 @@ Fixed issues move to [`commit-guardian/resolved/`](commit-guardian/resolved/) an
 | `low` | KI-CG-20260914-done-proof-precommit-ignores-test-required — the pre-commit done-proof gate demands a covers tag from an AC that declares it needs no test, while the CI gate it stands in for exempts that AC | [open-low-ki-cg-20260914-done-proof-precommit-ignores-test-required.md](commit-guardian/open-low-ki-cg-20260914-done-proof-precommit-ignores-test-required.md) |
 | `low` | KI-CG-20260914-exception-hook-blocks-silently — the PostToolUse exception-handling hook fails every Python write with an empty error when `ruff` is importable but not on PATH | [open-low-ki-cg-20260914-exception-hook-blocks-silently.md](commit-guardian/open-low-ki-cg-20260914-exception-hook-blocks-silently.md) |
 | `low` | KI-CG-20260914-post-merge-stage-registers-but-installs-no-shim — a hook on the post-merge stage is registered, renders into the config, and still never fires in any checkout that did not create a ticket worktree | [open-low-ki-cg-20260914-post-merge-stage-registers-but-installs-no-shim.md](commit-guardian/open-low-ki-cg-20260914-post-merge-stage-registers-but-installs-no-shim.md) |
+| `low` | KI-CG-20260917-claude-code-hooks-reference-contradicts-exit-codes — the Claude Code hooks reference lists a stale stdin contract and says a non-zero exit never blocks, contradicting itself and the shipped guards | [open-low-ki-cg-20260917-claude-code-hooks-reference-contradicts-exit-codes.md](commit-guardian/open-low-ki-cg-20260917-claude-code-hooks-reference-contradicts-exit-codes.md) |
 
 ## Resolved
 
