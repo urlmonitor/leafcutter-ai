@@ -4,7 +4,7 @@ description: "Field-by-field reference for AC YAML files, the hierarchical ID fo
 type: reference
 status: active
 created: 2026-06-04
-last_updated: 2026-08-25
+last_updated: 2026-09-17
 components:
   - build_pipeline
 related_docs:
@@ -59,6 +59,7 @@ Each AC file is a single YAML document with the following fields.
 | `parent` | string | no | Explicit parent AC ID. Used when the structural parent cannot be mechanically derived from the ID format. Prefer the id-based derivation algorithm where possible. |
 | `components` | list of strings | **yes** | Authoritative **graph-membership** list — **this is the field the knowledge graph reads** to build `component_membership` edges (see `config/paths.json` `acs` surface `edge_fields`). Must be present and non-empty, and every value must be an underscore `id` from `docs/components.json` (the 42 graph component ids, e.g. `knowledge_system`, `build_pipeline`). This is a distinct axis from the scalar `component` field: `component` is the AC-store namespace key (index.yaml kebab ids); `components` is the graph vocabulary (components.json underscore ids). An AC may legitimately have different values on each axis. Existing records were brought up to standard by `scripts/ac_store/backfill_components.py`. |
 | `scope` | string | no | Scope qualifier (e.g. `standing` for standing/permanent requirements that persist across sprints). |
+| `example_product` | string or null | no | ADR-044 self-declared example-product marker. Set only on an AC that describes an example product shipped alongside the project's own record (e.g. `fern-and-fig`), to that product's product-root slug — never a display name, never on the project's own work. When present and different from the project's own product root, `scripts/ac_store/scan_ac_store.py`'s `_is_example_content()` excludes the record from both the ready and blocked sets and reports it via `set_aside_count` instead of dropping it. Absent (the common case) on every AC belonging to the project's own record — absence, not an empty or null value, is what "not an example" means. Supersedes the earlier `product` field (UXP-700d-2); that spelling is retired and MUST NOT be written. |
 | `child_limit_override` | integer or null | no | **Temporary escape hatch.** Raises (never lowers) the default child count hard cap for this parent AC. When set to `N`, the `check-ac-tree-limits` hook uses `max(default_cap, N)` as the effective cap. An override below the default is silently ignored (fail-open). An `OVERRIDE ACTIVE` audit line is emitted to stderr (non-blocking) when the override is active and `child_count` exceeds the default. Only meaningful on L0 and L1 ACs. **Must be removed once the structural reorganisation (e.g. AC-UID-decoupling) is complete.** |
 | `implements_pattern` | string or null | no | ID of the reusable behavior pattern this AC inherits from (e.g. `PTN-001`). When set, the effective behavior is derived from the referenced pattern combined with any `pattern_bindings`. The `criteria` field may contain a plain-text placeholder rather than a full `Given`/`When`/`Then` scenario. |
 | `pattern_bindings` | object or null | no | Key-value bindings that instantiate the referenced pattern for this AC. Values may be strings, arrays, or objects. Only meaningful when `implements_pattern` is set. Example: `{entity_type: "users", columns: ["name", "email"]}`. |
@@ -982,8 +983,7 @@ component IDs to their prefix and description.
 
 ## See Also
 
-- `docs/how-to/ac-traceability-store.md` — task-oriented guide for creating, amending, and deprecating ACs.
-- `docs/how-to/declare-component-membership.md` — how to add the `components` list to an AC (or any knowledge item) so it joins the component view, and how to query a component back to its criteria and delivering code.
+- `docs/how-to/ac-traceability-store.md` — creating, amending, and deprecating ACs. `docs/how-to/declare-component-membership.md` — adding the `components` list to an AC (or any knowledge item) so it joins the component view, and querying a component back to its criteria and delivering code.
 - `docs/acceptance-criteria/README.md` — directory structure and quick-start.
 - `config/ac_store_schema.json` — machine-readable JSON Schema (draft-07) for the AC YAML format.
 - `docs/INDEX.md` — full documentation index.

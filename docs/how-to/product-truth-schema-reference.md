@@ -4,7 +4,7 @@ description: "Field-by-field reference for the four product-truth schemas — Fl
 type: how-to
 status: active
 created: 2026-07-14
-last_updated: 2026-09-09
+last_updated: 2026-09-17
 components:
   - ux_prototyping
 related_docs:
@@ -12,6 +12,7 @@ related_docs:
   - docs/architecture/components/ux-prototyping.md
   - docs/architecture/adrs/ADR-023-product-truth-flow-first-upstream-layer.md
   - docs/architecture/adrs/ADR-022-mockups-are-the-real-app-in-mock-mode.md
+  - docs/architecture/adrs/ADR-043-journey-record-carries-its-own-behind-mark.md
   - docs/product-truth/README.md
   - docs/explanation/traceability-guardrails.md
   - docs/acceptance-criteria/guardrail-engine/GE-120-green-means-checked/GE-120.yaml
@@ -41,6 +42,7 @@ For the authoring workflow (including the mandatory add-vs-create protocol), see
 | `version` | Integer ≥ 1; bumped (not replaced) when an artifact is extended. |
 | `superseded_by` | Id of the replacing artifact when `status: deprecated`; else `null`. |
 | `provenance[]` | Append-only history: `{ action, by, date, note }`, `action` ∈ `authored` \| `reviewed` \| `approved` \| `extended` \| `deprecated` \| `superseded`. |
+| `example_product` | Optional string, pattern `^[a-z0-9-]+$`, on Flow/Mockup/Mock-Data. ADR-044 self-declared example-product marker — absent on the project's own record; never `PROJECT_PRODUCT`. See "Ownership predicate" below. |
 
 ---
 
@@ -72,6 +74,7 @@ A reviewable user journey; machine-readable for agents and human-readable via
 | `impl_summary` | object | **DERIVED** rollup — see below. |
 | `acceptance_scenarios[]` | object[] | Given/When/Then seeds — see below. |
 | `provenance[]` | object[] | History. |
+| `behind` | object | **DERIVED**, optional. Presence of the key IS the mark — see below. |
 
 ### Step (`steps[]`)
 
@@ -114,6 +117,32 @@ human documentation. **Required:** `for` (id of the step OR branch it covers),
 
 Rollup for the visualizer to badge the whole journey: `{ done, in_progress,
 not_started, total, asof }`. Recomputed, never hand-edited.
+
+### `behind` (DERIVED, optional)
+
+The durable, per-journey freshness mark
+([ADR-043](../architecture/adrs/ADR-043-journey-record-carries-its-own-behind-mark.md)).
+**Presence of the key IS the mark** — a journey carrying `behind` is behind; a
+journey without it is not. `additionalProperties: false`, so all three fields
+are required whenever the object is present.
+
+| Field | Type | Notes |
+|---|---|---|
+| `confirmed_against` | string | Stable string identity of the confirmation this journey was last checked at. Copied verbatim from the confirmation record, never re-derived. |
+| `changed[]` | string[] | id of each described thing (AC id or project file path) that moved since `confirmed_against`, in deterministic (sorted) order. |
+| `since` | string | ISO-8601 `YYYY-MM-DD` the journey was first found behind at the current `confirmed_against`. Preserved across re-marks while `confirmed_against` is unchanged; re-stamped when it changes. |
+
+Written and removed by `validate_product_truth.py`'s `_sync_behind_marks` —
+**MUST NOT be hand-edited**. A CURRENT verdict deletes the key outright (never
+nulls it); a BEHIND verdict overwrites the object in place. A journey the
+checker did not examine this run is never read from or written to, so it keeps
+whatever mark (or absence of one) it already had. Serialisation is
+byte-for-byte `json.dumps(flow, indent=2, ensure_ascii=False) + "\n"`, matching
+`generate_product_truth.write_flows`, so this second writer cannot itself
+trigger drift. The Atlas (`frontend-coder`, tracked at
+[UXP-591](../acceptance-criteria/ux-prototyping/UXP-520-atlas-flow-explorer/UXP-591.yaml))
+is the intended reader: it can show a journey is behind, and what it was last
+confirmed against, straight from this field — without re-running the checker.
 
 ---
 
@@ -273,10 +302,11 @@ module's own DECISION HISTORY block for the rationale.
 
 ## See Also
 
-- [How to author a Flow, Mockup, or Mock Data artifact by hand](authoring-product-truth-artifacts.md)
-- [UX Prototyping component](../architecture/components/ux-prototyping.md)
+- [How to author a Flow, Mockup, or Mock Data artifact by hand](authoring-product-truth-artifacts.md). [UX Prototyping component](../architecture/components/ux-prototyping.md).
 - [ADR-023](../architecture/adrs/ADR-023-product-truth-flow-first-upstream-layer.md)
 - [ADR-022 — Mockups are the real application in mock mode](../architecture/adrs/ADR-022-mockups-are-the-real-app-in-mock-mode.md) — the hard constraint the ownership predicate implements (separation, never deletion, of example content).
 - [UXP-554 — fixture drift guard](../acceptance-criteria/ux-prototyping/UXP-550-atlas-mock-mode/UXP-554.yaml) — mock mode's own dependency on the example content staying resolvable by name.
+- [ADR-043 — A journey known to be behind carries a durable `behind` mark in the record itself](../architecture/adrs/ADR-043-journey-record-carries-its-own-behind-mark.md) — the decision behind the Flow `behind` field documented above.
+- [UXP-591 — A person can explore product-truth flows visually in the Atlas](../acceptance-criteria/ux-prototyping/UXP-520-atlas-flow-explorer/UXP-591.yaml) — the future Atlas surface that reads the `behind` field directly, without re-running the checker.
 - [Traceability guardrails — Hole 7, "Silence does not mean pass"](../explanation/traceability-guardrails.md#the-holes)
 - `docs/product-truth/schemas/` — the authoritative schema files.

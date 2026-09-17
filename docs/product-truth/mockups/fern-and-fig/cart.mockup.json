@@ -1,6 +1,7 @@
 {
   "id": "fern-and-fig/cart",
   "component": "ux-prototyping",
+  "example_product": "fern-and-fig",
   "screen": "cart",
   "title": "Cart",
   "summary": "The cart screen: the plant, quantity, unit price and a running total before payment, with a proceed-to-checkout action. Populated by hand from the pending open-cart Order 1050 (ZZ Plant, EUR 28). Also renders the empty-cart state (branch emptyCart) as a second state.",

@@ -227,6 +227,7 @@ covered_by:
   - BO-3900b
   - BO-3900c
   - BO-3900d
+  - BO-3900e
 implemented_by:
   - templates/workflows-js/build-feature.js
   - templates/workflows-js/plan-feature.js

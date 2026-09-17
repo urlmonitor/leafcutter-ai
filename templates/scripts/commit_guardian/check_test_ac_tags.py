@@ -19,6 +19,14 @@ ARCHITECTURE: Pure stdlib (``ast`` + ``re``). Accepts a list of file paths as
     ``CHECK_TEST_AC_TAGS_MODE``. Exit 0 in warn mode always; exit 1 in error mode
     when violations are found.
     Standalone stdlib script — no leafcutter imports.
+
+DECISION HISTORY:
+  - 2026-09-16 [python-coder/TQ-100b-4-iii]: Fixed a Python 3.14 crash in
+    has_covers_tag()'s docstring branch. ``ast.Constant.s`` was a deprecated
+    alias for ``ast.Constant.value`` and was removed in 3.14, so a docstring-
+    first test function raised ``AttributeError: 'Constant' object has no
+    attribute 's'``. Switched both reads to ``.value``, which exists on every
+    supported Python (3.8+).
 """
 
 from __future__ import annotations

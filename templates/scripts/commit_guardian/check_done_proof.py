@@ -559,14 +559,14 @@ def _get_changed_ac_yaml_paths(base_ref: str, project_root: Path) -> list[Path]:
 # ---------------------------------------------------------------------------
 
 
-# UXP-700d-2: the project's own product root. An AC whose `product` field is set
-# and differs from this describes an example product shipped alongside the
-# project's own record, not the project's own work. A done-proof gate that
-# demands a covering test from such a record is picking the example product up
-# as work, which is what UXP-700d-2 exists to stop -- the ready-leaf scanner
-# already sets the same records aside. Ownership is decided by `product` alone
-# and never by component/components: the example and real criteria routinely
-# share a component (UXP-700d-2-ii).
+# UXP-700d-2: the project's own product root. An AC whose `example_product` field
+# is set and differs from this describes an example product shipped alongside the
+# project's own record, not the project's own work (ADR-044/UXP-700d-3-i renamed
+# this from `product`). A done-proof gate that demands a covering test from such
+# a record is picking the example product up as work, which is what UXP-700d-2
+# exists to stop -- the ready-leaf scanner already sets the same records aside.
+# Ownership is decided by `example_product` alone and never by
+# component/components: the example and real criteria routinely share a component.
 _PROJECT_PRODUCT: str = "leafcutter"
 
 
@@ -577,10 +577,10 @@ def _is_example_content(data: dict) -> bool:
         data: Parsed AC record.
 
     Returns:
-        True when ``product`` is set and differs from :data:`_PROJECT_PRODUCT`.
+        True when ``example_product`` is set and differs from :data:`_PROJECT_PRODUCT`.
     """
-    product = data.get("product")
-    return bool(product) and product != _PROJECT_PRODUCT
+    example_product = data.get("example_product")
+    return bool(example_product) and example_product != _PROJECT_PRODUCT
 
 
 def check_staged_done_proofs(
