@@ -1,6 +1,7 @@
 {
   "id": "fern-and-fig/checkout",
   "component": "ux-prototyping",
+  "example_product": "fern-and-fig",
   "screen": "checkout",
   "title": "Checkout",
   "summary": "The checkout screen: confirms the signed-in customer's details and takes payment for the cart, creating an Order. Populated by hand from Customer alex-green + the pending Order 1050 (ZZ Plant, EUR 28). Also renders the two honest failure states this screen owns — payment declined (branch paymentFailed) and sold-out-at-checkout (branch outOfStockAtCheckout).",

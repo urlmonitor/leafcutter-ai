@@ -117,6 +117,9 @@ in both.
    Add it there first if it is new (a typo is a hard failure).
 5. Set `status: active`, `readiness: draft`, `version: 1` (or bump on extend),
    and append a `provenance` entry.
+6. If this dataset belongs to an example product (today only `fern-and-fig`),
+   set `example_product` to that product's root slug (ADR-044). Omit the key
+   entirely on the project's own datasets — never write it as `null`/`""`.
 
 ### Flow (`flows/<product>/<name>.flow.json`)
 
@@ -135,6 +138,8 @@ in both.
    authors. **Do not hand-edit `impl_status` / `impl_summary`** — they are
    derived (see below).
 7. Set the `screen` on any step that renders a Mockup.
+8. Same rule as Mock Data step 6: `example_product` only on an example
+   journey, omitted (never null/empty) on the project's own.
 
 ### Mockup (`mockups/<product>/…`)
 
@@ -145,6 +150,8 @@ in both.
    `entities` it renders (all must be in the `entity_registry`).
 3. `renders` is the path to the self-contained HTML rendering, or `null` if the
    screen is registered but not yet drawn.
+4. Same rule as Mock Data step 6: `example_product` only on an example
+   screen, omitted (never null/empty) on the project's own.
 
 ---
 
