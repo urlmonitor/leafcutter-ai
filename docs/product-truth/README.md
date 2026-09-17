@@ -120,6 +120,17 @@ one that compared some and found them all current. See the
 [how-to's freshness section](../how-to/authoring-product-truth-artifacts.md#part-6--confirm-a-journey-against-what-it-describes-freshness)
 for how to author a `confirmed` record by hand.
 
+Every loaded flow, mock-data, mockup, and AC record's `example_product` is
+cross-checked against the product root it actually lives under (UXP-700d-3-ii,
+[ADR-044](../architecture/adrs/ADR-044-example-content-self-declares-its-product.md)):
+a mismatch, an undeclared example artifact, or a declaration naming the project's own
+product is each reported through the same `errors` channel as every other hard
+failure, prefixed `[example]` and naming both the declared value and the compared
+root. An AC is compared against the roots of its `implemented-by-step` doc_links
+only — one with none is not reported for lacking a root. See the
+[schema reference's ownership section](../how-to/product-truth-schema-reference.md#ownership-predicate--product_ownershippy-projects-own-record-vs-example-content)
+for the underlying predicate.
+
 One journey file that cannot be parsed does not crash the run: the validator names
 it, states how many other journeys it did examine, and prints a run-level
 `degraded` outcome as its last stdout line instead of `checked-and-sound` — see

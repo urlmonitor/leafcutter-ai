@@ -42,7 +42,7 @@ For the authoring workflow (including the mandatory add-vs-create protocol), see
 | `version` | Integer ≥ 1; bumped (not replaced) when an artifact is extended. |
 | `superseded_by` | Id of the replacing artifact when `status: deprecated`; else `null`. |
 | `provenance[]` | Append-only history: `{ action, by, date, note }`, `action` ∈ `authored` \| `reviewed` \| `approved` \| `extended` \| `deprecated` \| `superseded`. |
-| `example_product` | Optional string, pattern `^[a-z0-9-]+$`, on Flow/Mockup/Mock-Data. ADR-044 self-declared example-product marker — absent on the project's own record; never `PROJECT_PRODUCT`. See "Ownership predicate" below. |
+| `example_product` | Optional string, pattern `^[a-z0-9-]+$`, on Flow/Mockup/Mock-Data. ADR-044 self-declared example-product marker — absent on the project's own record; never `PROJECT_PRODUCT`. Cross-checked by the validator against the artifact's own product root (UXP-700d-3-ii); a mismatch, an undeclared example artifact, or a project-declared marker each fail the run, prefixed `[example]`. See "Ownership predicate" below. |
 
 ---
 

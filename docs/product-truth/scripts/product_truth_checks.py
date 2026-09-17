@@ -53,6 +53,7 @@ from product_truth_index_checks import (  # noqa: F401
     _strip_by_ac_asof,
     _strip_by_flow_asof,
 )
+from product_truth_example_checks import check_example_product  # noqa: F401  # re-exported for callers
 
 #: The three artifact-type directories a record is made of. Shared with
 #: validate_product_truth, which reports emptiness per type.
@@ -584,5 +585,10 @@ DECISION HISTORY
   the 2026-09-10 entry above already established; `vpt._validate_schema` /
   `vpt.OUTCOME_BY_COMBO` still resolve via re-import.
   (#EPIC-TruthfulProjectRecord/21) (#EPIC-TruthfulProjectRecord/23)
+- 2026-09-17 [python-coder]: UXP-700d-3-ii -- re-exports `check_example_product`
+  from the new sibling product_truth_example_checks.py (this file's own
+  396/400 headroom had no room for that check's full body), one import line,
+  same precedent product_truth_index_checks.py already set above.
+  (#EPIC-TruthfulProjectRecord/35)
 ====================================================================
 """

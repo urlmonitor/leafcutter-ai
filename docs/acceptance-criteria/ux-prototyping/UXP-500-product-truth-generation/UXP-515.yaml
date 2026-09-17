@@ -27,9 +27,9 @@ doc_links:
     relationship: implemented-by-step
     status: exists
   - path: docs/product-truth/mockups/fern-and-fig/plant-listing.mockup.json
-    relationship: implemented-by-step
+    relationship: related
     status: exists
-    relevance: "The fully drawn reference. It is EXAMPLE content and must stay under the example product root; it is not a screen of leafcutter's own product. See UXP-700d-1."
+    relevance: "The fully drawn reference. It is EXAMPLE content and must stay under the example product root; it is not a screen of leafcutter's own product. See UXP-700d-1. Relationship is `related` (not `implemented-by-step`): this AC cites the example screen as its worked reference, it does not claim ownership of it -- mirrors UXP-614's citation of the same kind (UXP-700d-3-ii, ADR-044 sec 6)."
   - path: docs/acceptance-criteria/ux-prototyping/UXP-700-truthful-project-record/UXP-700d.yaml
     relationship: context
     status: exists
