@@ -7,7 +7,7 @@ components:
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: medium
 roadmap_phase: phase_1
@@ -57,7 +57,15 @@ amended_by:
   date: '2026-09-17'
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+  - docs/product-truth/scripts/product_ownership.py
+  - docs/product-truth/scripts/product_truth_example_checks.py
+  - docs/product-truth/scripts/product_truth_checks.py
+  - docs/product-truth/scripts/validate_product_truth.py
+  - docs/acceptance-criteria/ux-prototyping/UXP-500-product-truth-generation/UXP-515.yaml
+  - unit_tests/product_truth/test_uxp_700d_3_ii.py
+  - unit_tests/product_truth/_uxp_700c_2_fixtures.py
+  - unit_tests/product_truth/test_uxp_700c_2_ii.py
 change_target:
   - code
 risk_surface: contract_boundary

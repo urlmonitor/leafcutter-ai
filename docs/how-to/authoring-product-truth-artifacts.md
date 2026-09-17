@@ -153,6 +153,13 @@ in both.
 4. Same rule as Mock Data step 6: `example_product` only on an example
    screen, omitted (never null/empty) on the project's own.
 
+`validate_product_truth.py` cross-checks every `example_product` you write against
+the artifact's actual product root (UXP-700d-3-ii, ADR-044): get the id's product
+segment right (step 1 above, on the artifact whose `id` the file is registered
+under) and the marker either matches or is correctly omitted. A mismatch, a missing
+marker on an example artifact, or a marker naming the project's own product each
+fail the commit gate, naming both the declared value and the root.
+
 ---
 
 ## Part 4 — Never hand-edit derived fields

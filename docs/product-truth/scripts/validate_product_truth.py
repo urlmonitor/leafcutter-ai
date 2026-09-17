@@ -241,6 +241,34 @@ DECISION HISTORY
   resolve exactly as before. Finished by hand from the halted /build-feature
   run's backup at the user's direction. (#EPIC-TruthfulProjectRecord/21)
   (#EPIC-TruthfulProjectRecord/23)
+- 2026-09-17 [python-coder]: UXP-700d-3-ii -- added the example_product
+  cross-check (ADR-044 sec 6-7). This file stood at 399/400 content lines,
+  so the check's own body lives in the new sibling module
+  product_truth_example_checks.py (re-exported through product_truth_checks,
+  the same pattern product_truth_index_checks already established) --
+  `check_example_product` is squeezed onto the existing `check_mock_data_ref`
+  import line (0 lines). load_ac_records() now also carries `doc_links` /
+  `example_product` per AC (read by check_example_product), packed onto
+  existing lines to hold this file at exactly 400/400.
+  CORRECTNESS FIX, same day: widening load_ac_records()'s record shape
+  silently widened what UXP-700c-2's freshness check compares too --
+  _ac_content_signature originally hashed "every field except path", so
+  the two new keys became part of every AC's freshness signature, and
+  editing an AC's doc_links would have reported every journey citing it as
+  BEHIND, a false positive with no relation to freshness's actual concern.
+  Fixed by pinning _ac_content_signature to an explicit, fixed field tuple
+  (work_status, product_truth, implemented_by, covered_by) local to the
+  function, independent of whatever load_ac_records()'s own shape grows to
+  next -- so a future field added there for a different check can never
+  silently widen freshness again. unit_tests/product_truth/_uxp_700c_2_fixtures.py
+  and test_uxp_700c_2_ii.py needed no change under this fix (both already
+  predicted the signature from exactly that 4-field set) and are byte-for-byte
+  identical to origin/main. Every finding-decision rule for the example_product
+  check itself lives in product_ownership.py (ADR-044 sec 7); this file only
+  loads records and calls it. Verified against the real, committed store:
+  zero new findings after fixing one pre-existing latent one -- see
+  product_ownership.py's own DECISION HISTORY entry on AC UXP-515.
+  (#EPIC-TruthfulProjectRecord/35)
 """
 from __future__ import annotations
 
@@ -275,7 +303,7 @@ from product_truth_checks import (
     _check_shape_version_bounds,  # noqa: F401  # re-exported for callers
     _check_truth_evidence,
     _validate_schema,  # noqa: F401  # re-exported for callers
-    check_mock_data_ref,
+    check_example_product, check_mock_data_ref,
     validate_eval_rows,
     OUTCOME_BY_COMBO,  # noqa: F401  # re-exported for callers
 )
@@ -332,9 +360,11 @@ def _load_schema(name: str) -> dict:
 def load_ac_records() -> dict:
     """One pass over the AC store.
 
-    {ac_id -> {path, work_status, product_truth, implemented_by, covered_by}}.
-    implemented_by / covered_by are the implementation-evidence fields the
-    anti-phantom-done truth check reads (see _check_truth_evidence).
+    {ac_id -> {path, work_status, product_truth, implemented_by, covered_by,
+    doc_links, example_product}}. implemented_by / covered_by are read by the
+    anti-phantom-done truth check (_check_truth_evidence); doc_links /
+    example_product are read by the UXP-700d-3-ii example-product cross-check
+    (check_example_product).
     """
     records: dict[str, dict] = {}
     for path in sorted(AC_STORE.rglob("*.yaml")):
@@ -344,11 +374,10 @@ def load_ac_records() -> dict:
         ac_id = data.get("id")
         if isinstance(ac_id, str):
             records[ac_id] = {
-                "path": path,
-                "work_status": data.get("work_status"),
+                "path": path, "work_status": data.get("work_status"),
                 "product_truth": data.get("product_truth"),
-                "implemented_by": data.get("implemented_by"),
-                "covered_by": data.get("covered_by"),
+                "implemented_by": data.get("implemented_by"), "covered_by": data.get("covered_by"),
+                "doc_links": data.get("doc_links"), "example_product": data.get("example_product"),
             }
     return records
 
@@ -362,9 +391,11 @@ def load_mockups() -> dict:
 
 
 def _ac_content_signature(ac_record: dict) -> str:
-    """CURRENT content signature of one load_ac_records() AC record (UXP-700c-2),
-    excluding `path` (checkout-local, no content), via a sorted-keys JSON hash."""
-    payload = {k: v for k, v in ac_record.items() if k != "path"}
+    """CURRENT signature of one load_ac_records() AC record (UXP-700c-2), over
+    a fixed field set -- independent of load_ac_records()'s own record shape,
+    so a field added there for an unrelated check never widens this."""
+    fields = ("work_status", "product_truth", "implemented_by", "covered_by")
+    payload = {field: ac_record.get(field) for field in fields}
     return hashlib.sha256(json.dumps(payload, sort_keys=True, default=str).encode("utf-8")).hexdigest()
 
 
@@ -564,6 +595,7 @@ def run_checks() -> dict:
     for mockup in mockups.values():
         _validate_schema(mockup, mockup_schema, f"mockup {mockup['id']}", errors)
 
+    check_example_product(flows, mocks, mockups, ac_records, errors)
     check_mock_data_ref(flows, mocks, errors)
 
     index = _load_json(STORE / "index.json")
