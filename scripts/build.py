@@ -867,22 +867,16 @@ def _guard_source_paths_sync_platforms(package_root: Path) -> set[str]:
 def _guard_source_paths_workflow_tools(package_root: Path) -> set[str]:
     """Return SOURCE paths for workflow-tool scripts (BP-100n-4 split).
 
-    Source namespace equals deploy namespace.
+    Source namespace equals deploy namespace. Delegates to
+    _manifest_workflow_tool_scripts (build_phases_knowledge.py), already
+    imported above, instead of re-listing the identical script-name tuple a
+    second time here -- the two functions computed the exact same set from
+    the exact same rule (KM-KGS-100a-3-xi: a duplicated tuple would need a
+    second edit for every future workflow-tool script addition, and this
+    file is already over its GE-127b-1 check-file-size ratchet limit with
+    zero growth budget). (#TICKETLESS reason=km-kgs-100a-3-xi-fastlane)
     """
-    source_paths: set[str] = set()
-    scripts_src = package_root / "scripts"
-    for fname in (
-        "add_component.py",
-        "knowledge_query.py",
-        "set_ticket_status.py",
-        "ticket_prioritizer.py",
-        "port_registry.py",
-        "live_surface_startup.py",
-        "generate_doc_index.py",
-    ):
-        if (scripts_src / fname).is_file():
-            source_paths.add(f"scripts/{fname}")
-    return source_paths
+    return _manifest_workflow_tool_scripts(package_root)
 
 
 def _guard_source_paths_knowledge(package_root: Path) -> set[str]:
@@ -2551,4 +2545,9 @@ if __name__ == "__main__":
 #   scripts" in _run_phases, and added its config file name to
 #   _CONFIG_FILE_PHASE_BY_NAME for the existing diagnostic remediation-hint map.
 #   (#TICKETLESS reason=ac-scoped-fastlane-build-INF-400c-4-v)
+# - 2026-09-17 12:00 [python-coder/KM-KGS-100a-3-xi]: Reworked
+#   _guard_source_paths_workflow_tools to delegate to
+#   _manifest_workflow_tool_scripts instead of re-listing its script tuple,
+#   funding knowledge_frontmatter_reader.py's addition with zero net growth
+#   on this over-limit file. (#TICKETLESS reason=km-kgs-100a-3-xi-fastlane)
 # ====================================================================

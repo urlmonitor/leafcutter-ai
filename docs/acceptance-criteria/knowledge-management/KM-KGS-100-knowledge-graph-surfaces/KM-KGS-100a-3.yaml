@@ -108,6 +108,9 @@ covered_by:
   - KM-KGS-100a-3-vi
   - KM-KGS-100a-3-vii
   - KM-KGS-100a-3-viii
+  - KM-KGS-100a-3-ix
+  - KM-KGS-100a-3-x
+  - KM-KGS-100a-3-xi
 implemented_by:
 - tickets/00_inbox/epics/EPIC-ACCodeTraceabilityGraph/04_TICKET-20260622-KM-KGS-100a-3.md
 change_target: code
