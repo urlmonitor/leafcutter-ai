@@ -412,12 +412,20 @@ def _manifest_workflow_tool_scripts(package_root: Path) -> set[str]:
     #   (``from build_phases_knowledge import _manifest_workflow_tool_scripts``),
     #   not through a build_phases.py re-export, since scripts/build_phases.py
     #   was intentionally left untouched by this extraction. (#INF-400c-5)
+    # - 2026-09-17 12:00 [python-coder/KM-KGS-100a-3-xi]: Added
+    #   knowledge_query.py's new sibling module knowledge_frontmatter_reader.py
+    #   right after it in this tuple, since build_workflow_tools deploys the
+    #   two side by side and _guard_source_paths_workflow_tools (build.py) now
+    #   delegates to this function -- a single source of truth for the set
+    #   instead of a second, duplicated tuple. (#TICKETLESS
+    #   reason=km-kgs-100a-3-xi-fastlane)
     """
     result: set[str] = set()
     scripts_src = package_root / "scripts"
     for fname in (
         "add_component.py",
         "knowledge_query.py",
+        "knowledge_frontmatter_reader.py",
         "set_ticket_status.py",
         "ticket_prioritizer.py",
         "port_registry.py",

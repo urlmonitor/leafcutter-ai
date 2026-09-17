@@ -1,0 +1,224 @@
+id: KM-KGS-100a-3-xi
+components:
+  - knowledge_management
+  - build_pipeline
+readiness: approved
+priority: high
+title: "The knowledge map's frontmatter reader lives in its own module with reading, reachability, deployment and size unchanged or improved"
+component: knowledge-management
+level: L3
+status: active
+req_status: draft
+work_status: done
+roadmap_phase: phase_1
+created_by: "docs/acceptance-criteria/knowledge-management/KM-KGS-100-knowledge-graph-surfaces/KM-KGS-100a-3.yaml"
+criteria: |
+  Given the knowledge-query script as it stands with the reader fixes of
+    KM-KGS-100a-3-i..-x applied, whose frontmatter reader (the functions that
+    locate the frontmatter end, strip matched quotes, split flow sequences,
+    parse scalars, measure indentation, strip inline comments, recognise mapping
+    items, parse block children, parse .md frontmatter and parse .yaml files) is
+    defined inside the script itself
+  And the field values that reader produces for every .yaml acceptance-criterion
+    file and every .md frontmatter file in the repository are recorded as a baseline
+  When the reader is moved into a separate module next to the script and the build
+    is run
+  Then the field values produced for every one of those files are identical to the
+    baseline, file for file and field for field
+  And the separate reader module is at or below the size standard's limit for its
+    file kind
+  And the knowledge-query script's code length is no greater than its code length
+    on main, so the size ratchet accepts the change with no override
+  And each of the ten reader functions is still reachable under its existing name as
+    an attribute of the knowledge-query script, both when the script is imported as
+    a module and when it is loaded from its file path with no scripts directory on
+    the import path
+  And after the build, the deployed knowledge-query script imports and reads an
+    acceptance-criterion record to the same field values as the source script
+  And the reader module is deployed next to the deployed knowledge-query script, each
+    deployed copy byte-identical to its source, and the output-drift check does not
+    report the reader module as an unregistered or missing output
+  And the standard-library-only check fails when a non-standard-library import is
+    added to the reader module, exactly as it does for the knowledge-query script
+  And no other file that stood above its size limit before the change is longer after it
+depends_on:
+  - KM-KGS-100a-3
+  - KM-KGS-100a-3-i
+  - KM-KGS-100a-3-ii
+  - KM-KGS-100a-3-iii
+  - KM-KGS-100a-3-iv
+  - KM-KGS-100a-3-v
+  - KM-KGS-100a-3-vi
+  - KM-KGS-100a-3-vii
+  - KM-KGS-100a-3-viii
+  - KM-KGS-100a-3-ix
+  - KM-KGS-100a-3-x
+  - KM-KQS-007
+  - KM-KQS-010
+doc_links:
+  - path: scripts/knowledge_query.py
+    relationship: describes
+    status: exists
+  - path: scripts/build_phases_knowledge.py
+    relationship: context
+    status: exists
+  - path: scripts/build.py
+    relationship: context
+    status: exists
+  - path: scripts/visualise_knowledge_graph.py
+    relationship: context
+    status: exists
+  - path: unit_tests/test_knowledge_query.py
+    relationship: context
+    status: exists
+  - path: docs/acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/GE-127a-1.yaml
+    relationship: context
+    status: exists
+  - path: docs/acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/GE-127b-1.yaml
+    relationship: context
+    status: exists
+  - path: docs/acceptance-criteria/knowledge-management/KM-KQS-007.yaml
+    relationship: context
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Measured evidence (2026-09-17): the check-file-size pre-commit hook (GE-127a-1 crossing refusal, GE-127b-1 ratchet; .py limit 400 code lines) blocks this PR's commit. scripts/knowledge_query.py was already 1013 code lines on main and the KM-KGS-100a-3-i..-x reader fixes grow it to 1104, which the ratchet refuses for an already-oversized file. The reader functions _find_frontmatter_end, _strip_matched_quotes, _split_flow_sequence_items, _parse_scalar_value, _line_indent, _strip_inline_comment, _is_mapping_item_text, _parse_block_children, _parse_frontmatter and _parse_yaml_file total about 190 lines; moving them out brings knowledge_query.py below its length on main. The user approved doing this extraction in the current PR."
+  - "Behaviour-preserving structural change only: no reader rule from KM-KGS-100a-3-i..-x changes. The baseline is the reader with those fixes applied (not main's reader), captured over every .yaml file under the AC store and every .md file whose frontmatter the knowledge map reads, and compared to the post-extraction output value for value."
+  - "Reachability: the ten names above stay attributes of the knowledge_query module (re-exported, for example), because unit tests call _parse_yaml_file and _parse_frontmatter on knowledge_query and other importers rely on the existing names. scripts/visualise_knowledge_graph.py loads knowledge_query via importlib.util.spec_from_file_location('knowledge_query', <path>), so scripts/ may not be on sys.path; the reader module import must succeed in that loading mode as well as in the deployed .leafcutter/scripts/ location."
+  - "Deployment is by an explicit filename tuple, not a glob: scripts/build_phases_knowledge.py (around line 420) deploys knowledge_query.py to .leafcutter/scripts/, and the same tuple is duplicated in scripts/build.py (around line 876). The new module must be deployed alongside knowledge_query.py by the real build path, with byte-identical deployed copies, otherwise knowledge_query breaks in consumer installs. The output-drift check must not report the new module as a gap. SCOPE NOTE (2026-09-17): drift DETECTION for workflow-tool scripts does not exist today (build_helpers._compute_output_mappings records none, so knowledge_query.py itself is not drift-checked on main); adding it would grow scripts/build_helpers.py, already over its size limit, and is out of scope here, tracked as a separate follow-up."
+  - "Stdlib-only (KM-KQS-007) must be enforced on the new reader module too. TestStdlibOnly::test_stdlib_only currently reads only knowledge_query.py's source text, so moving code out would otherwise escape the gate silently. The gate must cover the reader module's source."
+  - "Size ratchet on other files: scripts/build.py is very likely above its own limit, so the deploy wiring must not add net lines to any file already above its limit (for example by sharing or editing the existing tuple in place rather than growing build.py). The commit must pass check-file-size with no skip or override."
+  - "SCOPE-NEUTRAL: this criterion compares the values read into fields before and after the move. Whether such a value later resolves to a graph node or stays a raw path string is a separate, deferred decision and must not be asserted here."
+test_spec:
+  - name: test_whole_repo_md_frontmatter_edge_values_match_reference_reader
+    target_dir: unit_tests/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    description: "For EVERY *.md file under the real tickets/ and docs/ trees that has a '---' delimited frontmatter block, the fields produced by passing the file text to knowledge_query._parse_frontmatter (the production .md entry point, never a hand-built dict) are compared with yaml.load of the text between the two '---' delimiters using getattr(yaml, 'CSafeLoader', yaml.SafeLoader). The compared fields are the union of every edge_fields entry declared across the surfaces in .leafcutter/config/paths.json (read from the config, never a hard-coded list), and a field is compared only for files where the PyYAML value is a list whose items are all strings. Files whose frontmatter PyYAML rejects or does not read as a mapping are excluded by that data rule, not by name. All mismatches are collected across the whole scan and the test fails once, listing every file path, field, reader value and reference value"
+  - name: test_whole_repo_md_differential_is_not_vacuous
+    target_dir: unit_tests/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    description: "The scan behind the whole-repo .md differential checked at least 1000 files, and each of components, depends_on, files_touched and related_docs was compared at least once; the failure names every field with zero comparisons and the file count reached. When tickets/ or docs/ does not exist under the repo root the test FAILS naming the missing directory, it never calls pytest.skip (the contract-shrinking guard blocks a skip added alongside production code), so a wrong root path cannot pass"
+  - name: test_md_differential_reports_every_forced_disagreement
+    target_dir: unit_tests/
+    framework: pytest
+    type: unit
+    angle: failure
+    description: "Disagreement is forced synthetically, never by relying on a real reader bug: two temp .md files with string-list edge fields are scanned by the same differential helper while _parse_frontmatter is monkeypatched to return different values for both, and the reported failure names both file paths and the differing field for each (all of them, not only the first)"
+  - name: test_reader_functions_are_defined_outside_knowledge_query
+    target_dir: unit_tests/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: "For each of the ten names _find_frontmatter_end, _strip_matched_quotes, _split_flow_sequence_items, _parse_scalar_value, _line_indent, _strip_inline_comment, _is_mapping_item_text, _parse_block_children, _parse_frontmatter and _parse_yaml_file, the function reached as an attribute of knowledge_query has a __module__ other than 'knowledge_query', all ten share ONE defining module, and that module's __file__ is a .py file in the same scripts/ directory as knowledge_query.py. The reader module is discovered from __module__, never by a hard-coded file name. RED before the extraction (all ten report __module__ 'knowledge_query')"
+  - name: test_reader_names_are_the_reader_module_objects_on_normal_import
+    target_dir: unit_tests/
+    framework: pytest
+    type: unit
+    angle: reachability
+    description: "With scripts/ on sys.path and knowledge_query imported normally, each of the ten names is an attribute of knowledge_query and 'getattr(knowledge_query, name) is getattr(reader_module, name)' holds for every name (identity, not equality and not a copy), where reader_module is the module discovered from __module__"
+  - name: test_reader_names_reachable_when_loaded_from_file_path_without_scripts_on_path
+    target_dir: unit_tests/
+    framework: pytest
+    type: integration
+    angle: reachability
+    description: "A subprocess (PYTHONIOENCODING=utf-8, PYTHONUTF8=1, cwd a temp directory, sys.path scrubbed of every entry resolving to a scripts directory before loading) loads scripts/knowledge_query.py with importlib.util.spec_from_file_location('knowledge_query', <absolute path>) exactly as scripts/visualise_knowledge_graph.py does, exits 0, and reports for each of the ten names that the attribute exists, is callable, and is the same object as the attribute of the same name on the module named by its __module__ in sys.modules; the child's stderr is included in the failure message"
+  - name: test_reader_module_code_length_within_py_limit
+    target_dir: unit_tests/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: "The discovered reader module's code length, measured with the check-file-size hook's own rule (count_content_lines from scripts/commit_guardian/_file_size_ratchet.py, the function the hook uses), is at or below the limit get_limit_for_extension from scripts/commit_guardian/check_file_size.py returns for its path (400 for .py); raw line counts are never used"
+  - name: test_knowledge_query_code_length_not_greater_than_main
+    target_dir: unit_tests/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "count_content_lines of the working-tree scripts/knowledge_query.py is less than or equal to count_content_lines of the text from 'git show origin/main:scripts/knowledge_query.py' (1013 on 2026-09-17). If origin/main or that blob cannot be resolved the test FAILS naming the git error, it never skips. RED before the extraction (1104 > 1013)"
+  - name: test_over_limit_build_wiring_files_do_not_grow_vs_main
+    target_dir: unit_tests/
+    framework: pytest
+    type: integration
+    angle: boundary
+    description: "For each of scripts/build.py, scripts/build_phases_knowledge.py, scripts/build_phases_workflows.py and scripts/build_helpers.py (the files that deploy, list or drift-map knowledge_query.py), when count_content_lines of the origin/main blob exceeds get_limit_for_extension for that path, the working-tree count_content_lines is no greater than the origin/main count; files under their limit on main are only required to stay within the limit. All violations are listed in one failure. An unresolvable origin/main blob fails the test, never skips"
+  - name: test_deploy_manifests_list_reader_module_alongside_knowledge_query
+    target_dir: unit_tests/
+    framework: pytest
+    type: unit
+    angle: seam
+    description: "Called against the real package root, _manifest_workflow_tool_scripts (build_phases_knowledge.py) and _guard_source_paths_workflow_tools (build.py) each return a set containing 'scripts/knowledge_query.py' AND 'scripts/<reader module file name>', where the reader file name comes from the discovered module's __file__, so the build guard and the deploy manifest cannot silently omit the new module"
+  - name: test_workflow_tools_phase_deploys_reader_module_byte_identical
+    target_dir: unit_tests/
+    framework: pytest
+    type: integration
+    angle: deployed
+    description: "Following the existing build-deploy test convention (unit_tests/build_guards/test_bp_100k_2.py: a synthetic package copied into a temp workspace, the build_phases module family isolated, and the real deploy phase function called directly instead of a full scripts/build.py subprocess, which is too slow for the unit suite), build_workflow_tools deploys into a temp output root; the deployed scripts/ directory contains knowledge_query.py and the reader module file side by side, and each deployed file's bytes equal its source file's bytes"
+  - name: test_deployed_knowledge_query_reads_ac_record_same_as_source
+    target_dir: unit_tests/
+    framework: pytest
+    type: integration
+    angle: deployed
+    description: "From the temp deployment produced by the real deploy phase, a subprocess (UTF-8 env vars set, no scripts directory on sys.path) loads the DEPLOYED knowledge_query.py via spec_from_file_location and passes a temp AC record file's text (block-list implemented_by and covered_by, depends_on and components with a quoted item and a trailing comment) to _parse_yaml_file; the JSON-serialised field values it prints equal those the SOURCE knowledge_query._parse_yaml_file produces for the same text in-process. Only field values are compared"
+  - name: test_output_drift_gate_reports_no_gap_for_reader_module
+    target_dir: unit_tests/
+    framework: pytest
+    type: integration
+    angle: deployed
+    description: "Using the test_bp_100k_2 pattern (synthetic package, real deploy phase, write_build_manifest, deployed check_output_drift.py run as a subprocess): with untouched deployed copies the gate exits 0 and its output contains no GAP line naming the reader module or knowledge_query.py. Drift DETECTION for workflow-tool scripts is out of scope (see it_requirements scope note) and is not asserted"
+  - name: test_stdlib_scan_rejects_forbidden_import_in_reader_module
+    target_dir: unit_tests/
+    framework: pytest
+    type: unit
+    angle: failure
+    description: "The stdlib-only scan used by TestStdlibOnly (the same forbidden-import list, applied as one shared helper over a list of source paths) run against a temp copy of the reader module source with 'import yaml' appended reports a violation naming that file and the import; the same scan over an unmodified temp copy reports none, so the negative result is caused by the injected import alone"
+  - name: test_stdlib_only_gate_covers_real_reader_module
+    target_dir: unit_tests/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: "The stdlib-only gate reads the source of BOTH scripts/knowledge_query.py and the discovered reader module (asserted by checking the set of paths the gate scans contains both), and both real files pass the scan. RED before the extraction because no separate reader module exists to be scanned"
+test_required: true
+test_rationale: >-
+  A test cannot record a pre-extraction baseline because it only runs after the move, so
+  unchanged reading is proven by transitivity: on 2026-09-17 the post-fix, pre-extraction
+  reader was verified equal to PyYAML on all 4130 .yaml AC files (implemented_by, covered_by)
+  and on all 1978 .md frontmatter files in tickets/ and docs/ (every string-list value of the
+  paths.json edge fields), 0 disagreements each. If the extracted reader still equals PyYAML on
+  both, it reads exactly as before. The .yaml side is the existing KM-KGS-100a-3-viii
+  whole-store differential, which keeps exercising the extracted code because it imports
+  _parse_yaml_file from knowledge_query and the reachability test proves that name is the
+  reader module's own object; the .md side had only an ad-hoc script, so it gets a whole-repo
+  differential through the production _parse_frontmatter with the C loader (a few seconds, like
+  -viii), a non-vacuous floor (at least 1000 files, each of components, depends_on,
+  files_touched and related_docs compared) that fails rather than skips on a missing root, and a
+  forced-disagreement test. Reachability is checked by identity on normal import and in a
+  subprocess using visualise_knowledge_graph.py's spec_from_file_location loading with no
+  scripts directory on sys.path. Size is measured with the check-file-size hook's own
+  count_content_lines and limit lookup, never raw line counts: the reader module within 400,
+  knowledge_query.py no longer than on origin/main (1013), and no over-limit deploy/drift wiring
+  file longer than on main. Deployment follows the test_bp_100k_2 convention of calling the real
+  deploy phase into a temp workspace instead of a full build.py subprocess, and checks
+  side-by-side byte-identical copies, that the deployed script reads a temp AC record to the
+  source's values, and that the output-drift check reports no gap for the new module (drift
+  detection for workflow-tool scripts does not exist on main and is out of scope). The stdlib-only gate is extended
+  to the reader module with a forced forbidden-import failure test and a positive pass on the
+  real file. PyYAML is test-side only. RED before the extraction: the defining-module, main
+  length, manifest, deploy and reader-module stdlib tests. Implemented in
+  unit_tests/test_km_kgs_100a_3_xi.py. Only values read into fields are asserted, never whether
+  an edge target resolves to a graph node.
+delivers_to: null
+expects_from:
+  ac_id: KM-KGS-100a-3-x
+  contract: "The frontmatter reader with the KM-KGS-100a-3-i..-x rules applied, which serves as the behavioural baseline the extraction must preserve"
+origin_agent: business-analyst
+created: 2026-09-17
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary

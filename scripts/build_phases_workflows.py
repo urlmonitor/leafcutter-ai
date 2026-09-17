@@ -410,6 +410,9 @@ def build_workflow_tools(target_root: Path, config: dict[str, Any],
 
     - ``scripts/add_component.py`` — used by the add-component skill.
     - ``scripts/knowledge_query.py`` — used by the knowledge-query skill.
+    - ``scripts/knowledge_frontmatter_reader.py`` — knowledge_query.py's
+      sibling frontmatter/YAML reader module (KM-KGS-100a-3-xi); must ship
+      alongside it or knowledge_query.py fails to import in consumers.
     - ``scripts/set_ticket_status.py`` — used by ticket-lifecycle agents and skills.
     - ``scripts/ticket_prioritizer.py`` — used by the ticket-prioritizer skill.
     - ``scripts/port_registry.py`` — used by the live-surface-tester agent.
@@ -443,6 +446,10 @@ def build_workflow_tools(target_root: Path, config: dict[str, Any],
     #   can import it in consumer projects. Previously absent from the deployed
     #   .leafcutter/scripts/ tree, making the hook a silent no-op outside the
     #   source tree. Parity with _manifest_workflow_tool_scripts() in build.py.
+    # - 2026-09-17 12:00 [python-coder/KM-KGS-100a-3-xi]: Added
+    #   knowledge_frontmatter_reader.py right after knowledge_query.py so the
+    #   extracted reader module deploys side by side with it in every
+    #   consumer install. (#TICKETLESS reason=km-kgs-100a-3-xi-fastlane)
     """
     import shutil
 
@@ -452,6 +459,7 @@ def build_workflow_tools(target_root: Path, config: dict[str, Any],
     deploy_scripts = [
         "add_component.py",
         "knowledge_query.py",
+        "knowledge_frontmatter_reader.py",
         "set_ticket_status.py",
         "ticket_prioritizer.py",
         "port_registry.py",
