@@ -335,20 +335,3 @@ def main(argv: list[str] | None = None) -> int:
 
 if __name__ == "__main__":
     sys.exit(main())
-
-
-# ====================================================================
-# DECISION HISTORY
-# ====================================================================
-# - 2026-09-16 14:00 [python-coder]: Fixed the docstring-tag branch of
-#   has_covers_tag(), which read a constant's string payload through the
-#   deprecated ast.Constant.s alias. Python 3.14 removed .s, so any test
-#   function whose first body statement was an expression (the common case:
-#   a docstring) crashed the hook with AttributeError instead of reaching a
-#   warn/error verdict, on every staged test file that shape applies to.
-#   Switched to ast.Constant.value, which exists on every supported Python
-#   version, keeping the isinstance(..., str) guard so a non-string constant
-#   (e.g. a bare number) still falls through to "no declaration" rather than
-#   being treated as a docstring tag. COVERS_REGEX, the accepted tag
-#   positions, and warn/error mode handling are unchanged — out of scope per
-#   GE-128a-1's scope guard. (#TICKETLESS reason=no-ticket-file-for-this-run-ac-yaml-is-spec)

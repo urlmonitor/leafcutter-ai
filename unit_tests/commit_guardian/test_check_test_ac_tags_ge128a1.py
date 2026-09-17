@@ -1,6 +1,7 @@
 """
 MODULE: test_check_test_ac_tags_ge128a1
-GOAL: TDD red-first tests for GE-128a-1 — the check-test-ac-tags hook must
+GOAL: TDD red-first tests for TQ-100b-4-iii (authored as GE-128a-1, which
+    was superseded by TQ-100b-4-iii when PR #829 landed the same fix) — the check-test-ac-tags hook must
     reach a declared/undeclared verdict on Python 3.14 instead of crashing
     with AttributeError: 'Constant' object has no attribute 's'.
 BUSINESS CONTEXT: On Python 3.14 the deprecated `ast.Constant.s` alias was
@@ -25,7 +26,7 @@ ARCHITECTURE: Every behavioral test invokes the real hook CLI as a subprocess
     separate, out-of-scope defect that this file does not touch or assert on.
 """
 
-# covers: GE-128a-1
+# covers: TQ-100b-4-iii
 
 from __future__ import annotations
 
@@ -108,7 +109,7 @@ class TestDocstringDeclarationRecognisedWithoutCrash(unittest.TestCase):
     """Scenario 1 — a declaration carried in the docstring is recognised."""
 
     def test_docstring_declaration_is_recognised_without_crash(self) -> None:
-        # covers: GE-128a-1
+        # covers: TQ-100b-4-iii
         # angle: criterion
         """RED on current code (Python 3.14): the docstring branch reads
         ast.Constant.s, which was removed in 3.14, so this crashes with
@@ -136,7 +137,7 @@ class TestUndeclaredDocstringTestIsAViolationNotACrash(unittest.TestCase):
     """Scenario 2 — an undeclared test with a docstring is a violation."""
 
     def test_undeclared_docstring_test_is_a_violation_not_a_crash(self) -> None:
-        # covers: GE-128a-1
+        # covers: TQ-100b-4-iii
         # angle: failure
         """RED on current code (Python 3.14): the docstring branch crashes
         with AttributeError before it can classify test_beta as undeclared,
@@ -175,7 +176,7 @@ class TestNonStringConstantFirstStatementIsNoDeclaration(unittest.TestCase):
     """Scenario 3 — a bare non-string constant first statement is 'no declaration'."""
 
     def test_non_string_constant_first_statement_is_no_declaration(self) -> None:
-        # covers: GE-128a-1
+        # covers: TQ-100b-4-iii
         # angle: boundary
         """RED on current code (Python 3.14): isinstance(value.s, str) raises
         AttributeError on ast.Constant before the string-type guard can even
@@ -206,7 +207,7 @@ class TestHookSourceUsesNoVersionSpecificConstantAccessor(unittest.TestCase):
     """Scenario 4 (version-independence proof on one interpreter)."""
 
     def test_hook_source_uses_no_version_specific_constant_accessor(self) -> None:
-        # covers: GE-128a-1
+        # covers: TQ-100b-4-iii
         # angle: real_artifact
         """RED on current code: lines 143-144 of the tracked template read
         value.s, a deprecated ast.Constant alias removed in Python 3.14. This
@@ -245,7 +246,7 @@ class TestSameVerdictAcrossModesIsVersionIndependent(unittest.TestCase):
     """Scenario 4 (behavioural half) — verdict is stable, mode is forced."""
 
     def test_same_verdict_across_modes_is_version_independent(self) -> None:
-        # covers: GE-128a-1
+        # covers: TQ-100b-4-iii
         # angle: criterion
         """RED on current code (Python 3.14): all three files crash with
         AttributeError before any verdict is produced in either mode. Must
@@ -317,7 +318,7 @@ class TestRealKmKgs100a3FilesReachAVerdictWithoutTraceback(unittest.TestCase):
     ]
 
     def test_real_km_kgs_100a_3_files_reach_a_verdict_without_traceback(self) -> None:
-        # covers: GE-128a-1
+        # covers: TQ-100b-4-iii
         # angle: real_artifact
         """RED on current code (Python 3.14): every one of these five
         committed files exits 1 with AttributeError today (reproduction

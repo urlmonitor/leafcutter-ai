@@ -5,9 +5,9 @@ components:
   - commit_guardian
   - testing_quality
 level: L2
-status: active
+status: superseded_by
 req_status: draft
-work_status: done
+work_status: todo
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -134,7 +134,7 @@ expects_from: null
 origin_agent: business-analyst
 created: 2026-09-16
 amended_by: []
-superseded_by: null
+superseded_by: TQ-100b-4-iii
 covered_by: []
 implemented_by: []
 change_target: code
