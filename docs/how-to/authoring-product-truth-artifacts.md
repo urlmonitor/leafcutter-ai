@@ -4,11 +4,12 @@ description: "Step-by-step guide for authoring product-truth artifacts by hand, 
 type: how-to
 status: active
 created: 2026-07-14
-last_updated: 2026-07-14
+last_updated: 2026-09-16
 components:
   - ux_prototyping
 related_docs:
   - docs/architecture/adrs/ADR-023-product-truth-flow-first-upstream-layer.md
+  - docs/architecture/adrs/ADR-043-journey-record-carries-its-own-behind-mark.md
   - docs/architecture/components/ux-prototyping.md
   - docs/how-to/product-truth-schema-reference.md
   - docs/product-truth/README.md
@@ -189,6 +190,48 @@ the `.md`.**
 
 ---
 
+## Part 6 — Confirm a journey against what it describes (freshness)
+
+A journey can additionally carry a top-level `confirmed` record — the statement of
+what it was last confirmed against, and the state of the things it described at that
+moment (UXP-700c-2). This is **opt-in**: a journey with no `confirmed` record is
+never-confirmed, and the freshness check skips it entirely (neither current nor
+behind).
+
+1. Confirm the journey by hand (or via whatever tool walked it) and add:
+
+   ```json
+   "confirmed": {
+     "against": "<explicit id — e.g. a commit SHA or AC-store version tag>",
+     "state": {
+       "<AC id>": "<content signature of that AC as of `against`>"
+     }
+   }
+   ```
+
+   `against` MUST be an explicit string **you** supply — never a hash the checker
+   invents. Per [ADR-043 SS3](../architecture/adrs/ADR-043-journey-record-carries-its-own-behind-mark.md),
+   the checker only ever reads this value; it does not synthesise one, so that a
+   later durable `behind` mark can carry the same identity forward.
+2. `state` names one content signature per described thing (today: each AC id the
+   journey's steps `implement`), computed the same way the validator computes it
+   (`_ac_content_signature` — a stable hash of the AC's `work_status`,
+   `product_truth`, `implemented_by`, and `covered_by` fields, excluding `path`).
+   In practice you confirm a journey by asking the validator to state the *current*
+   signature for you rather than hand-computing one.
+3. Run the validator (see Verification below). Every subsequent run recomputes each
+   described AC's *current* signature and compares it against what `state` recorded.
+   A described thing that changed since `against` makes the whole journey `behind` —
+   reported by name, together with every changed thing — as a WARNING, never a build
+   failure.
+4. Do **not** hand-edit a `behind` object if you find one on a journey — it is a
+   derived, durable mark the validator itself writes and removes
+   ([ADR-043](../architecture/adrs/ADR-043-journey-record-carries-its-own-behind-mark.md)).
+   To clear it, re-confirm the journey (fresh `against` + `state`) so the next run
+   finds it current again.
+
+---
+
 ## Verification
 
 - The validator exits 0. It also prints `resolved N pointer(s)` naming exactly
@@ -202,6 +245,11 @@ the `.md`.**
 - For a flow, the generated `.md` rendering reflects your steps and branches.
 - In the Leafcutter Atlas (`/flows`), the artifact appears and — once ACs are
   linked via `implements` — is coloured by its live build status.
+- If you added a `confirmed` record (Part 6), the validator's stdout states
+  `compared N journey(s) for freshness` — that count rises by one for every
+  further confirmed journey. If nothing your journey describes has changed since
+  `against`, it is absent from the WARNING list; if something has, it is reported
+  `behind` by name, naming every described thing that changed.
 
 ---
 
@@ -210,4 +258,5 @@ the `.md`.**
 - [Product-truth schema reference](product-truth-schema-reference.md) — the four schemas, field by field.
 - [UX Prototyping component](../architecture/components/ux-prototyping.md) — the store's architecture.
 - [ADR-023](../architecture/adrs/ADR-023-product-truth-flow-first-upstream-layer.md) — why the store exists and how it relates to the AC store.
+- [ADR-043](../architecture/adrs/ADR-043-journey-record-carries-its-own-behind-mark.md) — why the `behind` mark lives in the journey record itself, and the `confirmed.against` identity contract.
 - [docs/product-truth/README.md](../product-truth/README.md) — the store's operational README and seed status.

@@ -4,7 +4,7 @@ description: "The baseline business information every product rests on -- Mock D
 type: reference
 status: active
 created: 2026-07-10
-last_updated: 2026-09-10
+last_updated: 2026-09-16
 components:
   - ux_prototyping
 related_docs:
@@ -99,6 +99,23 @@ not resolve in the AC store` — naming the holding artifact, the position withi
 the target that failed to resolve. The final run also states `resolved N pointer(s)`, so
 a run that resolved none is distinguishable from one that resolved some and found none
 broken. Wire it into the commit gates alongside `ac-fulfillment-gate`.
+
+Freshness is a separate, softer check (UXP-700c-2): a journey only carries a
+`confirmed` record (`{against, state}`) once someone — a human or agent — has
+explicitly confirmed it against the things it describes. `against` is an explicit,
+caller-supplied identity string (a commit SHA, an AC-store version tag, or another
+confirmation id) — the checker never derives or hashes one itself
+([ADR-043](../architecture/adrs/ADR-043-journey-record-carries-its-own-behind-mark.md)
+SS3). On every run, each confirmed journey's `state` (one content signature per
+described AC, taken at `against`) is recompared against that AC's *current* content;
+a journey where something changed is reported as `behind`, naming the journey and
+every described thing that moved, as a WARNING — never a build failure, since
+staleness alone is not a defect. A journey with no `confirmed` record yet is
+never-confirmed and is skipped entirely — neither current nor behind. The run always
+states `compared N journey(s) for freshness`, so a run that compared none is
+distinguishable from one that compared some and found them all current. See the
+[how-to's freshness section](../how-to/authoring-product-truth-artifacts.md#part-6--confirm-a-journey-against-what-it-describes-freshness)
+for how to author a `confirmed` record by hand.
 
 One journey file that cannot be parsed does not crash the run: the validator names
 it, states how many other journeys it did examine, and prints a run-level
