@@ -1,0 +1,74 @@
+id: GE-129c
+title: "Automated runs keep saving their work, without a shared secret"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - git_vcs_operations
+  - supervisor_system
+  - build_orchestration
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Automated runs still save their work, without a password to do it.
+
+  Every unattended run that legitimately commits -- a fast build, a supervised
+  ticket, closing out a finished feature -- still commits, because it hands the
+  commit to the commit specialist. A run that tries to commit any other way stops
+  and says so, instead of committing or quietly skipping the step.
+depends_on:
+  - GE-129
+  - GE-129a
+documentation_triggers:
+  - sequence-diagram
+doc_links:
+  - path: docs/agents/conventions.md
+    relationship: describes
+    status: exists
+    relevance: "Section 3.2.1: a dispatched confirmation-gated agent has no human channel; supervised commits auto-authorise on ticket_path."
+  - path: docs/acceptance-criteria/build-orchestration/BO-3200-second-hand-answers/BO-3200f-3.yaml
+    relationship: context
+    status: exists
+    relevance: "Routing check that receives an explicit exclusion: a commit is never an executor chore."
+delivers_to: null
+expects_from: null
+assigned_agent: null
+estimated_complexity: null
+origin_agent: BrainCandy
+created: 2026-09-17
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  DECIDED 2026-09-17 (Q1) -- A DISPATCHED COMMIT SPECIALIST IS UNATTENDED BY
+  DEFINITION. It never has a channel to a person (conventions section 3.2.1), so
+  its approval comes from the run that dispatched it plus an audit record. No
+  token. Verified 2026-09-17: templates/agents/commit.md Step 3's confirmation gate
+  branches on ticket_path; the token only ever satisfied the guard, so retiring it
+  does not change the gate.
+
+  DECIDED 2026-09-17 (Q5) -- finalize-feature step 3.5's closure commit is routed
+  to the commit specialist. Verified 2026-09-17: finalize-feature.js dispatches the
+  step-3.5 closure to status-checker (label step-3.5-closure, line 1661), a
+  read-only reporting specialist, which identity enforcement would refuse. It must
+  NOT be routed to the chartered executor; BO-3200f-3 receives an explicit
+  exclusion so a commit is never an executor chore (downstream amendment).
+
+  INVENTORY OF LEGITIMATE UNATTENDED COMMITTERS (to be re-measured by the BA, not
+  trusted):
+    - fast lane commit step: already dispatched to the commit specialist; survives
+      identity once the token is dropped from its command text.
+    - ticket-supervisor commit phase: dispatches the commit specialist.
+    - finalize-feature step 3.5 closure commit: rerouted per Q5.
+  KI-BO-* records step 3.5's unattended commit doing store-wide damage; putting it
+  through the commit specialist's discipline is a gain, not only a migration cost.
+
+  VISIBLE FAILURE: a refused commit inside a run is a failed step (BO-3100 'every
+  step either really runs or visibly fails'), never a silently skipped one.
+
+  Q6 (no grace period): this reroute ships together with GE-129a's enforcement.

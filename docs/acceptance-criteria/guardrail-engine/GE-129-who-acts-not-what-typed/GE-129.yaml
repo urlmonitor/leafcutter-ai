@@ -1,0 +1,108 @@
+id: GE-129
+title: "The safeguards you are promised check who is acting, not what they typed"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - git_vcs_operations
+level: L0
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Safeguards check who is acting, never what they typed.
+
+  Some actions in your project are reserved for one trusted part of the system,
+  because that part carries the checks, the confirmation and the record that make
+  the action safe. Today that reservation is satisfied by typing a publicly known
+  word, and the same safeguard stops harmless work that merely mentions the action.
+  After this goal, a reserved action is taken only by the part entrusted with it,
+  recognised by who is actually acting; work that only talks about the action is
+  left alone; automated runs keep working without a shared secret; and what the
+  project's rules say is protected is exactly what is protected.
+depends_on: []
+doc_links:
+  - path: docs/known-issues/commit-guardian/open-high-ki-cg-20260907-commit-delegation-is-a-password-not-an-identity.md
+    relationship: describes
+    status: exists
+    relevance: "The defect this goal closes, in both directions: a published token authorises any caller, and a command that merely mentions committing is blocked. Status 'open -- no AC'; this tree is its home."
+  - path: CLAUDE.md
+    relationship: describes
+    status: exists
+    relevance: "'Commit Delegation -- MANDATORY' promises an identity guarantee the guard does not deliver."
+  - path: docs/acceptance-criteria/build-orchestration/BO-3200-second-hand-answers/BO-3200f-2-iii.yaml
+    relationship: context
+    status: exists
+    relevance: "Executor-scoped bypass refusal written on the assumption the caller cannot be identified; its COMMIT_AGENT_MODE exception is retired by the user decisions recorded here."
+delivers_to: null
+expects_from: null
+assigned_agent: null
+estimated_complexity: null
+origin_agent: BrainCandy
+created: 2026-09-17
+amended_by: []
+superseded_by: null
+covered_by:
+  - GE-129a
+  - GE-129b
+  - GE-129c
+  - GE-129d
+  - GE-129e
+implemented_by: []
+notes: |
+  USER DECISION 2026-09-17: identity, chosen over a human-gate reading and over
+  convention-only (the three fix directions in KI-CG-20260907).
+
+  FURTHER USER DECISIONS, 2026-09-17 (all accepted as the PO recommended):
+    Q1 -- A dispatched commit specialist is unattended by definition. Its approval
+          comes from the run that dispatched it plus an audit record. No token.
+          (GE-129c)
+    Q2 -- The top-level session hands each commit decision to Claude Code's own
+          permission prompt. Where no prompt reaches a person (auto-accept,
+          bypass-permissions, headless), the commit is refused. (GE-129d)
+    Q3 -- agent_type is accepted as sufficient identity, with the limit stated in
+          writing, plus two safeguards: agent_id must be present together with
+          agent_type, and a BP-1000-family parity check flags a divergent or
+          duplicate commit agent definition. (GE-129a, GE-129e)
+    Q4 -- BO-3200f-2-iii's COMMIT_AGENT_MODE exception is retired (amendment is
+          BA/IT PO work, listed below).
+    Q5 -- finalize-feature step 3.5's closure commit is routed to the commit
+          specialist; BO-3200f-3 gets an explicit exclusion so a commit is never
+          an executor chore. (GE-129c)
+    Q6 -- No grace period. Identity enforcement, the step-3.5 reroute and the doc
+          corrections ship together; the guard ignores the token rather than
+          erroring on it.
+    Q7 -- Commits only. Opening pull requests, merging and pushing are candidate
+          future L1s under this L0 and are out of scope now.
+    PROBE -- the live identity probe is the FIRST L2 under GE-129a and blocks every
+          sibling.
+
+  WHY A NEW L0. Scanned and rejected as parent: GE-120/GE-120e (verdict honesty;
+  the false-positive axis there is change attribution; tree full at 8/8), GE-123d
+  (same 'mentioning is not doing' shape, credential scanner only -- cited as
+  precedent), GE-126, BO-3200f/-2-iii/-3 (executor as caller only), BP-1100d
+  (authoring-time static check), BO-1700, BO-1100. None owns who may take a
+  reserved action at run time.
+
+  ALTITUDE. The L0 is deliberately generic (reserved actions); every L1 is
+  commit-specific.
+
+  PLACEMENT. guardrail-engine, not build-orchestration: the guard applies in every
+  session, attended or not, not only during a drive.
+
+  EVIDENCE. KI-CG-20260907 (six merged PRs committed through the token in one day
+  under the belief it was routed through identity; a PR body quoting the rule was
+  blocked). Reproduced 2026-09-17 during this authoring: a read-only search whose
+  pattern contained the phrase was blocked.
+
+  DEPENDENT AMENDMENTS (not performed here; BA/IT PO work):
+    - BO-3200f-2-iii: retire COMMIT_AGENT_MODE in the bypass-variable declaration,
+      drop its STATE policy, replace the non-removal rule and the fourth scenario
+      pinned on the shipped token command with GE-129c's identity-keyed scenario;
+      keep the unidentified-caller rule for the other three variables. Recorded as
+      amended_by. Lands with or after GE-129a is built, never before.
+    - BO-3200f-3: explicit exclusion -- a commit is never an executor chore.
+    - BP-1100d, BP-1100d-1, BP-1100d-2: remove 'or COMMIT_AGENT_MODE=1' as an
+      accepted alternative.

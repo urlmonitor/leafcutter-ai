@@ -1,0 +1,67 @@
+id: GE-129e
+title: "The rules you read describe what is actually enforced"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - documentation_system
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Every written promise about who may commit matches what is enforced.
+
+  The project's rules, the commit specialist's instructions and the reference for
+  the safeguards say who may commit, how that is recognised and where the limits
+  of that protection lie, and none of them still tells anyone to type a password.
+depends_on:
+  - GE-129
+  - GE-129a
+documentation_triggers:
+  - reference-doc
+doc_links:
+  - path: CLAUDE.md
+    relationship: describes
+    status: exists
+  - path: docs/reference/claude-code-hooks.md
+    relationship: describes
+    status: exists
+delivers_to: null
+expects_from: null
+assigned_agent: null
+estimated_complexity: null
+origin_agent: BrainCandy
+created: 2026-09-17
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  SURFACES FOUND CARRYING THE TOKEN OR THE STALE PROMISE (re-measure; list is from
+  a docs/templates scan, not exhaustive): CLAUDE.md 'Commit Delegation --
+  MANDATORY'; docs/agents/conventions.md section 3.2.1; templates/agents/commit.md
+  Step 4; templates/skills/building-epics/SKILL.md gated-agent table;
+  templates/skills/ac-audit/SKILL.md; fast-lane-ship workflow commit prompt;
+  docs/how-to/fast-lane-build.md; docs/architecture/agent_delivery_workflows.md;
+  docs/architecture/diagrams/c2-fast-lane-build-path-components.md and
+  c3-fast-lane-build-loop-sequence.md; the guard's own block message; the hooks
+  reference stdin contract (missing agent_id/agent_type) and catalogue (missing
+  enforce_commit_delegation); the Bypass / Escape Hatches table.
+
+  DECIDED 2026-09-17 (Q3) -- THE STATED LIMIT must be written down: identity
+  (agent_id together with agent_type) protects against automation taking a
+  shortcut, not against someone who can write the project's agent definitions; the
+  parity check for divergent or duplicate commit agent definitions narrows, but
+  does not close, that gap. A guarantee stated stronger than it is is the defect
+  this tree closes; do not reintroduce it in the fix's own documentation.
+
+  DECIDED 2026-09-17 (Q2, Q6, Q7) -- the docs describe the top-level session's
+  permission-prompt path and its refusal where no person is reached, carry no
+  transitional token wording, and speak about commits only.
+
+  MECHANICAL, NOT PROSE: per the BO-3100/3200 standing rule, the L2s must check
+  agreement mechanically where possible (e.g. no shipped surface carries the retired
+  token), not by a grep for an instruction sentence.

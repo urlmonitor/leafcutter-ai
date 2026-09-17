@@ -1,0 +1,54 @@
+id: GE-129d
+title: "Committing from your own session asks you, not a password"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - git_vcs_operations
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  In your own session, the go-ahead to commit comes from you in person.
+
+  When you ask for a commit in the conversation you are working in, the commit
+  goes ahead once you confirm it yourself, in a way the assistant cannot answer on
+  your behalf. When no person is there to confirm, the commit does not happen.
+depends_on:
+  - GE-129
+  - GE-129a
+documentation_triggers:
+  - how-to
+doc_links:
+  - path: docs/agents/conventions.md
+    relationship: describes
+    status: exists
+    relevance: "Section 3.2.1 currently tells the top-level session to commit with the token."
+delivers_to: null
+expects_from: null
+assigned_agent: null
+estimated_complexity: null
+origin_agent: BrainCandy
+created: 2026-09-17
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  DECIDED 2026-09-17 (Q2). The top-level session (no agent_id) hands each commit
+  decision to Claude Code's own permission prompt, so the person confirms and the
+  assistant cannot answer for them. Where no prompt reaches a person --
+  auto-accept, bypass-permissions or headless runs -- the commit is refused.
+
+  Rejected alternatives, recorded so they are not re-derived: letting the
+  top-level session commit freely (an auto-mode session would commit with no gate
+  at all, the exposure KI-BO-* records); forbidding top-level commits entirely
+  (interactive commits deadlock through a dispatched specialist, conventions
+  section 3.2.1).
+
+  FOR THE BA/IT PO: establish how the permission prompt behaves in each of those
+  modes as part of GE-129a's live probe, so 'no prompt reaches a person' is decided
+  by observation, not assumed.

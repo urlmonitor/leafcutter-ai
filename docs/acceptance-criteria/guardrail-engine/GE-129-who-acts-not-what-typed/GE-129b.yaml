@@ -1,0 +1,58 @@
+id: GE-129b
+title: "Mentioning a commit is never mistaken for making one"
+component: guardrail-engine
+components:
+  - commit_guardian
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Real commits are recognised however they are written; mere mentions pass.
+
+  Opening a pull request whose description quotes the commit rule, searching your
+  code for the phrase, or writing about committing is never stopped. A command that
+  really does record a commit is recognised however it is spelled, so a reworded
+  command cannot slip past unnoticed.
+depends_on:
+  - GE-129
+documentation_triggers:
+  - reference-doc
+doc_links:
+  - path: docs/known-issues/commit-guardian/open-high-ki-cg-20260907-commit-delegation-is-a-password-not-an-identity.md
+    relationship: describes
+    status: exists
+    relevance: "False-positive table: a gh pr create body quoting the rule was blocked; workaround --body-file evades by moving text into a file."
+  - path: docs/acceptance-criteria/guardrail-engine/GE-123-suppression-narrows-never-disables/GE-123d.yaml
+    relationship: context
+    status: exists
+    relevance: "Precedent in this component: describing a risk is not committing one."
+delivers_to: null
+expects_from: null
+assigned_agent: null
+estimated_complexity: null
+origin_agent: BrainCandy
+created: 2026-09-17
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  BOTH DIRECTIONS ARE ONE L1 -- one root cause (command text used as a proxy for
+  'what is being done'). Do not split into two trees.
+
+  Observed false positives: gh pr create --body quoting CLAUDE.md (KI-CG-20260907);
+  a read-only awk/grep search blocked on 2026-09-17 during this authoring.
+
+  CONFIRMED FALSE NEGATIVE (verified by the coordinator, 2026-09-17):
+  templates/hooks/enforce_commit_delegation.py line 56 is
+  `return "git commit" in command` -- a literal substring match. So
+  `git -C <worktree> commit`, the fast lane's shipped form, is not recognised as a
+  commit at all: the fast lane's token is inert today, and the guard can be passed
+  by spelling. Option forms that place anything between 'git' and 'commit' behave
+  the same way.
+
+  Blocked by GE-129a's first L2 (live identity probe), decided 2026-09-17.

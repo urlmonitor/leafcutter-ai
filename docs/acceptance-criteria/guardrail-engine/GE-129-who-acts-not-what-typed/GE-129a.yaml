@@ -1,0 +1,78 @@
+id: GE-129a
+title: "Only the commit specialist can save changes to your project history"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - git_vcs_operations
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Who is asking decides whether a commit happens; no typed word opens it.
+
+  A commit goes through only when the party making it is the commit specialist,
+  as established from who is actually calling. Nothing a caller writes into its
+  command, sets in its surroundings or says in its instructions can make it count
+  as the commit specialist, and a caller whose identity cannot be established is
+  refused rather than waved through.
+depends_on:
+  - GE-129
+documentation_triggers:
+  - reference-doc
+  - component-diagram
+doc_links:
+  - path: docs/known-issues/commit-guardian/open-high-ki-cg-20260907-commit-delegation-is-a-password-not-an-identity.md
+    relationship: describes
+    status: exists
+  - path: docs/reference/claude-code-hooks.md
+    relationship: describes
+    status: exists
+    relevance: "Stale stdin contract (tool_name, tool_input, session_id only). The official hooks reference (fetched 2026-09-17) documents agent_id (present only inside a subagent call) and agent_type."
+delivers_to: null
+expects_from: null
+assigned_agent: null
+estimated_complexity: null
+origin_agent: BrainCandy
+created: 2026-09-17
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  DECIDED 2026-09-17 -- LIVE PROBE IS THE FIRST L2 UNDER THIS L1 AND BLOCKS EVERY
+  SIBLING (GE-129b..e and all other GE-129a children). In a scratch repository,
+  record what identity the guard actually receives for (1) the top-level session,
+  (2) a subagent dispatched through the Agent tool, (3) an agent dispatched by a
+  workflow script's agent() call, (4) a subagent of a subagent, (5) a top-level
+  session launched with --agent set to the commit specialist's name, (6) a
+  same-named agent defined at user or plugin scope. If (3) carries no usable
+  identity, GE-129c cannot be met as framed: stop and return to the user before
+  decomposing further. The finding is recorded in the hooks reference (GE-129e)
+  and replaces BO-3200f-2-iii's own 'establish from the live payload' clause
+  rather than duplicating it.
+
+  DECIDED 2026-09-17 (Q3) -- IDENTITY RULE. agent_type is accepted as sufficient,
+  with its limit stated in writing (GE-129e), plus two safeguards:
+    - agent_id must be present TOGETHER WITH agent_type naming the commit
+      specialist. A name alone does not count: case (5) gives a top-level session
+      an agent_type with no agent_id.
+    - a BP-1000-family parity check flags a commit agent definition that diverges
+      from the shipped one, or a duplicate definition of the same name at another
+      scope.
+  Stated limit: this protects against automation taking a shortcut (every recorded
+  incident), not against someone who can write the project's agent definitions --
+  who could equally edit or delete the guard.
+
+  IDENTITY SOURCE: only what the harness supplies and a command cannot set. Never
+  command text, environment variables, marker files, working directory or dispatch
+  prompt -- BO-3200f-2-iii already states this and it carries over unchanged.
+
+  DECIDED 2026-09-17 (Q6) -- NO GRACE PERIOD. The token is ignored by the guard
+  (neither honoured nor treated as an error) from the moment identity enforcement
+  ships, together with GE-129c's reroute and GE-129e's corrections.
+
+  Absence of agent_id means the top-level session; that path is GE-129d.
