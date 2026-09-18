@@ -658,7 +658,7 @@ function normalizeArtifactPath(rawPath, root) {
   if (rootNormalized && normalized.startsWith(`${rootNormalized}/`)) {
     normalized = normalized.slice(rootNormalized.length + 1)
   }
-  normalized = normalized.replace(/^(\.\/)+/, '').replace(/^\/+/, '')
+  normalized = normalized.split('/').filter((seg) => seg && seg !== '.').join('/')
   return normalized
 }
 
