@@ -1,0 +1,44 @@
+id: UXP-511-1
+components:
+  - ux_prototyping
+title: "Product-truth indexes use repository-portable paths"
+component: ux-prototyping
+level: L3
+status: active
+req_status: draft
+work_status: done
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given product-truth flow files are loaded on any supported operating system,
+  When generate_product_truth.py derives the by_flow index paths,
+  Then every stored flow path uses forward slashes in repository-relative form,
+  And a Windows rebuild must not report unchanged product-truth data as stale
+  because the host pathlib representation uses backslashes.
+depends_on:
+  - UXP-511
+doc_links:
+  - path: docs/product-truth/scripts/generate_product_truth.py
+    relationship: modifies
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: codex
+created: 2026-08-30
+amended_by: []
+superseded_by: null
+covered_by:
+  - unit_tests/test_generate_product_truth_idempotency.py
+implemented_by:
+  - docs/product-truth/scripts/generate_product_truth.py
+change_target: code
+risk_surface: internal
+test_spec:
+  - name: test_load_flows_uses_posix_paths
+    target_dir: unit_tests
+    framework: pytest
+    type: unit
+    description: "Flow paths returned by load_flows use forward slashes even when pathlib yields Windows separators."

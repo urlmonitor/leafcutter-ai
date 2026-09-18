@@ -419,7 +419,7 @@ def load_flows() -> tuple[dict, dict]:
     for path in sorted((STORE / "flows").rglob("*.flow.json")):
         flow = _load_json(path)
         flows[flow["id"]] = flow
-        paths[flow["id"]] = str(path.relative_to(STORE))
+        paths[flow["id"]] = path.relative_to(STORE).as_posix()
     return flows, paths
 
 

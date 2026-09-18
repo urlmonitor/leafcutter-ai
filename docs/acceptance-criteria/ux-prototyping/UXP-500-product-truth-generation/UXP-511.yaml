@@ -35,7 +35,8 @@ origin_agent: BrainCandy
 created: 2026-07-14
 amended_by: []
 superseded_by: null
-covered_by: []
+covered_by:
+  - UXP-511-1
 implemented_by:
   - docs/product-truth/scripts/generate_product_truth.py
 change_target: code

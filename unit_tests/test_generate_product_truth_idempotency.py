@@ -265,6 +265,24 @@ def _read_index_by_flow_summary_asof(tmp: Path) -> str | None:
 # --------------------------------------------------------------------------- #
 # Tests
 # --------------------------------------------------------------------------- #
+def test_load_flows_uses_posix_paths() -> None:
+    # covers: UXP-511
+    # covers: UXP-511-1
+    # angle: criterion
+    """Repository-relative flow paths use forward slashes on every host OS."""
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        tmp = Path(tmp_dir)
+        _make_store(tmp)
+        original_store = gpt.STORE
+        gpt.STORE = tmp / "docs" / "product-truth"
+        try:
+            _flows, flow_paths = gpt.load_flows()
+        finally:
+            gpt.STORE = original_store
+
+    assert flow_paths["leafcutter/test-flow"] == "flows/leafcutter/test-flow.flow.json"
+
+
 class TestAsofPreservationOnUnchangedContent(unittest.TestCase):
     """Core idempotency guarantee: asof is NOT bumped when content is unchanged."""
 
