@@ -29,7 +29,7 @@ _MANAGED_ARTIFACT_DIRS = {
     "agents": "agents",
     "skills": "skills",
     "hooks": "hooks",
-    "workflows": ".claude/workflows",
+    "workflows": "workflows",
 }
 
 
@@ -97,4 +97,12 @@ def clean_stale_artifacts(
 #   module to bring build_phases.py under the 400-counted-line
 #   check-file-size limit. Re-exported from build_phases.py so build.py and
 #   every test import keeps working. (#refactor/build-phases-size-limit)
+# - 2026-09-14 [python-coder/KI-BP-010]: Fixed _MANAGED_ARTIFACT_DIRS["workflows"]
+#   (".claude/workflows" -> "workflows", joined onto claude_dir which is already
+#   target_dir/".claude"; the old value built a never-existent
+#   ".claude/.claude/workflows" so exists() skipped the sweep every clean run --
+#   orphan survived pre-fix, removed=1 after; path-join only, promoting the sweep
+#   onto the default build path stays BP-1500b-1's scope). Reapplied here after the
+#   bp-size-split refactor moved this constant out from under the original fix
+#   (#KI-BP-010, covered_by: BP-1500b-1).
 # ===========================================================================
