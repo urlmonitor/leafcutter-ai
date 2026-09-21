@@ -65,6 +65,42 @@ AC_STORE_DEPLOY_MAP: tuple[tuple[str, str], ...] = (
     ("scripts/ac_store/scan_ac_store.py",            "scan_ac_store.py"),
     ("scripts/ac_store/generate_ticket_from_ac.py",  "generate_ticket_from_ac.py"),
     ("scripts/ac_store/_component_migration_map.py", "_component_migration_map.py"),
+    # generate_ticket_from_ac.py's 22 _gtfa_* siblings. The 4035-line original
+    # was split to clear the 400-line size gate; what remains at that path is a
+    # 386-line re-export shell that is USELESS without every one of these. Omit
+    # one and the deployed generator dies at import -- loudly, unlike the
+    # importlib try/except degradation above, because the shell imports them
+    # unconditionally.
+    #
+    # The shell resolves them via importlib.import_module under a prefix
+    # COMPUTED from its own __name__ (it must work both package-qualified and
+    # as a bare directory import). A computed name is undecidable statically,
+    # so build.py's derived closure guard cannot see these from the call site;
+    # the shell carries an `if TYPE_CHECKING:` block of relative imports purely
+    # so the analyser can. That block is what keeps the guard able to check
+    # this list at all -- see unit_tests/ac_store/test_gtfa_sibling_closure_guard.py.
+    ("scripts/ac_store/_gtfa_agents_inputs.py",       "_gtfa_agents_inputs.py"),
+    ("scripts/ac_store/_gtfa_agents_map.py",          "_gtfa_agents_map.py"),
+    ("scripts/ac_store/_gtfa_body.py",                "_gtfa_body.py"),
+    ("scripts/ac_store/_gtfa_cli.py",                 "_gtfa_cli.py"),
+    ("scripts/ac_store/_gtfa_cli_parser.py",          "_gtfa_cli_parser.py"),
+    ("scripts/ac_store/_gtfa_components.py",          "_gtfa_components.py"),
+    ("scripts/ac_store/_gtfa_config.py",              "_gtfa_config.py"),
+    ("scripts/ac_store/_gtfa_constants.py",           "_gtfa_constants.py"),
+    ("scripts/ac_store/_gtfa_contracts.py",           "_gtfa_contracts.py"),
+    ("scripts/ac_store/_gtfa_decision_history.py",    "_gtfa_decision_history.py"),
+    ("scripts/ac_store/_gtfa_doc_gates.py",           "_gtfa_doc_gates.py"),
+    ("scripts/ac_store/_gtfa_doc_genre.py",           "_gtfa_doc_genre.py"),
+    ("scripts/ac_store/_gtfa_files_touched.py",       "_gtfa_files_touched.py"),
+    ("scripts/ac_store/_gtfa_frontmatter.py",         "_gtfa_frontmatter.py"),
+    ("scripts/ac_store/_gtfa_implemented_by.py",      "_gtfa_implemented_by.py"),
+    ("scripts/ac_store/_gtfa_paths.py",               "_gtfa_paths.py"),
+    ("scripts/ac_store/_gtfa_phases.py",              "_gtfa_phases.py"),
+    ("scripts/ac_store/_gtfa_report.py",              "_gtfa_report.py"),
+    ("scripts/ac_store/_gtfa_seams.py",               "_gtfa_seams.py"),
+    ("scripts/ac_store/_gtfa_store.py",               "_gtfa_store.py"),
+    ("scripts/ac_store/_gtfa_test_descriptors.py",    "_gtfa_test_descriptors.py"),
+    ("scripts/ac_store/_gtfa_tests_section.py",       "_gtfa_tests_section.py"),
     ("scripts/ac_store/ac_prioritizer.py",            "ac_prioritizer.py"),
     ("scripts/ac_store/mark_ac_done.py",              "mark_ac_done.py"),
     ("scripts/ac_store/scan_ac_orphans.py",           "scan_ac_orphans.py"),

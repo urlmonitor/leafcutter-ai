@@ -34,10 +34,14 @@ criteria: |
 depends_on:
   - BP-1100a
 doc_links:
-  - path: scripts/ac_store/generate_ticket_from_ac.py
+  - path: scripts/ac_store/_gtfa_files_touched.py
     relationship: modifies
     status: exists
-    relevance: "The surface, and the only file this AC edits. Verified 2026-08-18: _build_files_touched (line 535) unions exactly two sources. Source 2 (lines 576-581) admits a doc_link only when its relationship is in _EDIT_SURFACE_RELATIONSHIPS = {constrains, creates, implements, modifies, specifies} (lines 104-106); 'describes' and 'related' are excluded by design (docstring, lines 99-103). Source 1 (lines 561-574) takes reference_file_path from a structured it_requirements dict, or — when it_requirements is the LIST form — scrapes path-shaped tokens out of the prose bullets via _extract_paths_from_prose (line 496). Nothing in either source consults which file the requirement says the work changes. The third criterion clause is served by the same file's self-check block (lines 2790-2793), which today records 'files_touched has N path(s)' as a PASS and warns only when the list is EMPTY. AMENDED 2026-08-19: 'the only file this AC edits' is no longer true — see the two build-ac coordinator entries directly below. This file remains the primary and load-bearing surface; it is now one of three."
+    relevance: "The primary surface. Verified 2026-08-18 and re-pointed 2026-09-14 after generate_ticket_from_ac.py was decomposed into a re-export shell plus _gtfa_* siblings: _build_files_touched unions exactly two sources. Source 2 admits a doc_link only when its relationship is in _EDIT_SURFACE_RELATIONSHIPS = {constrains, creates, implements, modifies, specifies}; 'describes' and 'related' are excluded by design. Source 1 takes reference_file_path from a structured it_requirements dict, or — when it_requirements is the LIST form — scrapes path-shaped tokens out of the prose bullets via _extract_paths_from_prose. Nothing in either source consults which file the requirement says the work changes."
+  - path: scripts/ac_store/_gtfa_report.py
+    relationship: modifies
+    status: exists
+    relevance: "The third criterion clause — 'no report on that ticket calls its surface satisfactory while the surface is undetermined' — is served by the readiness report's self-check, which today records 'files_touched has N path(s) from doc_links' as a PASS and warns only when the list is EMPTY. After the decomposition that check lives here rather than in the generator file."
   - path: templates/agents/build-ac.md
     relationship: modifies
     status: exists
@@ -99,7 +103,7 @@ doc_links:
 assigned_agent: python-coder
 estimated_complexity: M
 it_requirements:
-  reference_file_path: "scripts/ac_store/generate_ticket_from_ac.py"
+  reference_file_path: "scripts/ac_store/_gtfa_files_touched.py"
   n_location_rule: "3 enforcement points across 2 executable surfaces, all of which must change.
     In scripts/ac_store/generate_ticket_from_ac.py: (1) the surface derivation (_build_files_touched,
     line 535), which must return a determination rather than a bare list, and (2) the self-check
