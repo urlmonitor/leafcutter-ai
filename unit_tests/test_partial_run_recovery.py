@@ -33,6 +33,7 @@ from __future__ import annotations
 import json
 import textwrap
 import unittest
+from pathlib import Path
 
 from _plan_feature_e2_runner import (
     E2_PLAN_FEATURE_JS,
@@ -40,25 +41,22 @@ from _plan_feature_e2_runner import (
     run_isolated_e2,
     run_plan_feature_e2,
 )
+from _plan_feature_gate_harness import granted_workspace_setup_permission
 
-# The E2 runtime file is the sole plan-feature.js consumer surface after
-# foundation cleanup deleted the legacy scripts/workflows/plan-feature.js.
-# These behavioral tests were retargeted to drive the E2 body (and its recovery
-# functions) via the _plan_feature_e2_runner harness.
+# Sole plan-feature.js consumer surface (E2); real verdict via _plan_feature_gate_harness.
 _PLAN_FEATURE_JS = str(E2_PLAN_FEATURE_JS)
+_WORKTREE_ROOT = Path(__file__).resolve().parent.parent
+_granted_workspace_setup_permission = granted_workspace_setup_permission
 
 
-# ---------------------------------------------------------------------------
 # Helpers — drive the E2 body / isolate its recovery functions.
-# ---------------------------------------------------------------------------
-
-
 def _run_with_mock_agent(
     plan_feature_path: str,
     mock_agent_js: str,
     user_input: str = "test feature request",
     timeout: int = 25,
     extra_ctx: dict | None = None,
+    extra_args: dict | None = None,
 ) -> tuple[dict, dict]:
     """Drive the E2 plan-feature body under a mock agent.
 
@@ -69,15 +67,72 @@ def _run_with_mock_agent(
     populated by the mock. The mock receives the legacy ``call`` object
     ({agentType, input:{instructions}}) via the runner's shim, so it ports
     unchanged. ``plan_feature_path`` is accepted for signature parity.
+
+    Every call is given a real, granted `workspace_setup_permission` verdict
+    (ACD-2100b-5's Pre-Stage-0 gate) by default so it reaches the recovery-scan
+    behavior under test; a caller that needs to exercise the gate itself may
+    override via `extra_args`.
     """
+    merged_args = {"workspace_setup_permission": _granted_workspace_setup_permission()}
+    if extra_args:
+        merged_args.update(extra_args)
     return run_plan_feature_e2(
-        mock_agent_js, user_input=user_input, extra_ctx=extra_ctx, timeout=timeout
+        mock_agent_js,
+        user_input=user_input,
+        extra_ctx=extra_ctx,
+        extra_args=merged_args,
+        timeout=timeout,
     )
 
 
 def _parse_run_output(result_and_side: tuple[dict, dict]) -> tuple[dict, dict]:
     """Pass-through: run_plan_feature_e2 already returns (run_result, side)."""
     return result_and_side
+
+
+def _pause_then_resume(
+    plan_feature_path: str,
+    phase1_mock_js: str,
+    phase2_mock_js: str,
+    *,
+    gate_id: str,
+    action: str,
+    user_input: str,
+    extra_ctx: dict | None = None,
+    extra_args_base: dict | None = None,
+) -> tuple[dict, dict]:
+    """Drive the ACD-2100c-1 two-phase pause/resume protocol once, for the
+    three resolveOrphanedDrafts() branches below (yes/no/discard).
+
+    Phase 1 (headless): the run scans, finds the orphan(s), and pauses at
+    `gate_id`. Phase 2 (resume): a fresh run answers via a genuine,
+    person-attributed `args.resume_answer` of `action` (PROVENANCE RULE:
+    channel: "person" because this answer stands in for the real human
+    decision this test drives — never a guess, default, retry, or
+    agent-composed answer).
+    """
+    phase1_result, phase1_side = _run_with_mock_agent(
+        plan_feature_path, phase1_mock_js, user_input=user_input, extra_ctx=extra_ctx,
+    )
+    assert phase1_result.get("status") == "paused_awaiting_input", (
+        "Phase 1 (headless discovery) must reach a clean paused_awaiting_input "
+        f"state before resume can be exercised — got {phase1_result!r}. "
+        f"allCalls: {phase1_side.get('allCalls')}"
+    )
+    assert phase1_result.get("gate_id") == gate_id, (
+        f"Phase 1 paused at the wrong gate — got {phase1_result!r}"
+    )
+
+    resume_answer = {"gate_id": gate_id, "type": "single_choice", "action": action, "channel": "person"}
+    extra_args = {"run_id": "test-run", "resume_answer": resume_answer}
+    if extra_args_base:
+        extra_args.update(extra_args_base)
+    return _parse_run_output(
+        _run_with_mock_agent(
+            plan_feature_path, phase2_mock_js, user_input=user_input,
+            extra_ctx=extra_ctx, extra_args=extra_args,
+        )
+    )
 
 
 def _run_scan_orphans_directly(
@@ -119,11 +174,6 @@ def _run_scan_orphans_directly(
     if not stdout:
         raise NodeScriptError("scanOrphanedAcDrafts produced no output")
     return json.loads(stdout)
-
-
-# ---------------------------------------------------------------------------
-# Test class: scan detection logic
-# ---------------------------------------------------------------------------
 
 
 class TestScanOrphanedAcDrafts(unittest.TestCase):
@@ -336,11 +386,6 @@ class TestScanOrphanedAcDrafts(unittest.TestCase):
         )
 
 
-# ---------------------------------------------------------------------------
-# Test class: run() calls recovery scan BEFORE Stage-0 triage
-# ---------------------------------------------------------------------------
-
-
 class TestRecoveryScanBeforeTriage(unittest.TestCase):
     """
     Behavioral tests asserting that run() invokes the recovery scan (via
@@ -421,8 +466,7 @@ class TestRecoveryScanBeforeTriage(unittest.TestCase):
             }
         """)
 
-        # The runner's side channel exposes firstGitStatusCallIndex and
-        # triageCallIndex — both set by the mock above via globalThis.
+        # Side channel exposes firstGitStatusCallIndex/triageCallIndex (mock-set).
         try:
             _run_result, side = _parse_run_output(
                 _run_with_mock_agent(
@@ -459,11 +503,6 @@ class TestRecoveryScanBeforeTriage(unittest.TestCase):
         )
 
 
-# ---------------------------------------------------------------------------
-# Test class: resolveOrphanedDrafts() yes branch
-# ---------------------------------------------------------------------------
-
-
 class TestResolveOrphanedDraftsYesBranch(unittest.TestCase):
     """
     Behavioral tests for the "yes" branch of resolveOrphanedDrafts().
@@ -477,96 +516,127 @@ class TestResolveOrphanedDraftsYesBranch(unittest.TestCase):
 
     def _run_with_orphan_and_choice(self, choice: str) -> tuple[dict, dict]:
         """
-        Run plan-feature with one orphaned AC file present and the given user choice.
+        Drive plan-feature.js through the two-phase ACD-2100c-1 pause/resume
+        protocol for one orphaned AC file, then answer the paused
+        'resolve-orphans-choice' decision point with `choice`.
 
-        The mock agent:
-        - Simulates git status returning one orphaned qualifying YAML file.
-        - Simulates file read returning a qualifying AC YAML.
-        - Answers the choice prompt with the given choice.
-        - For the "yes" branch: allows the commit agent to succeed.
-        - Continues through the pipeline (technical route → defer).
+        ACD-2100c-1 removed the live-gate answer dispatch from resolveGate()
+        for ALL FIVE human-decision points, including 'resolve-orphans-choice':
+        the closure this test used to answer directly
+        (templates/workflows-js/plan-feature.js, ~line 2559) is still built for
+        API-shape parity with the other four gates but is deliberately never
+        invoked. A run now pauses at the decision point instead, and the ONLY
+        remaining channel that can resolve it is a genuine, person-attributed
+        `args.resume_answer` — the same ADR-024 pause/resume substrate
+        unit_tests/workflows/test_acd_2100c_1.py and
+        unit_tests/workflows/test_bo_2300_pause_resume.py drive against the
+        other four gates.
 
-        Returns (run_result, side_channel).
+        Phase 1 (headless): the run scans, finds the one qualifying orphan
+        file, and pauses. Phase 2 (resume): a fresh run answers via
+        `args.resume_answer` with `channel: "person"`.
+
+        Returns (run_result, side_channel) from PHASE 2 — the resumed run.
+        extra_ctx below carries real newlines (git status output needs a
+        trailing one for scanOrphanedAcDrafts' line-split) without JS-literal
+        escaping. Phase 1's 'pause-persist-verify' returns a genuine
+        read-back so the run reaches a clean paused_awaiting_input rather
+        than a pause_persist_failed artifact.
         """
-        # Inject orphan git status and file content via extra_ctx so they carry
-        # real newlines without going through JS string literal escaping.
-        # The git status output must end with a real newline so scanOrphanedAcDrafts
-        # can split lines correctly (it splits on actual newlines, not backslash-n).
         orphan_status_line = "?? docs/acceptance-criteria/ACD-ORPHAN-1.yaml"
         orphan_content = "id: ACD-ORPHAN-1\norigin_agent: product-owner\nreadiness: draft\n"
-        choice_json = json.dumps(choice)
-
-        mock_js = textwrap.dedent(f"""
-            async function mockAgent(call) {{
-                const agentType = call.agentType || '';
-                const instructions = (call.input && call.input.instructions) || '';
-
-                globalThis.__capturedAllCalls.push({{
-                    agentType,
-                    instructionSnippet: instructions.slice(0, 160),
-                }});
-
-                // Simulate git status scan returning one orphaned file.
-                // __orphanGitStatus is injected via vm.createContext with a real newline.
-                if (instructions.includes('git status --porcelain') &&
-                    instructions.includes('docs/acceptance-criteria')) {{
-                    return {{ output: globalThis.__orphanGitStatus, exit_code: 0 }};
-                }}
-
-                // Simulate file read for the orphaned file.
-                // __orphanContent is injected via vm.createContext.
-                if (instructions.includes('Read the file at path') &&
-                    instructions.includes('ACD-ORPHAN-1.yaml')) {{
-                    return {{ content: globalThis.__orphanContent }};
-                }}
-
-                // Answer the yes/no/discard prompt.
-                if (instructions.includes('prior session') && instructions.includes('yes/no/discard')) {{
-                    return {{ choice: {choice_json} }};
-                }}
-
-                // Commit agent (dispatched by commitStageOutput for yes branch).
-                if (agentType === 'commit') {{
-                    globalThis.__capturedCommitCalls.push({{ agentType }});
-                    return {{ status: 'ok', message: 'mock commit ok' }};
-                }}
-
-                // ac-triage (Stage 0 — reached after recovery completes).
-                if (agentType === 'ac-triage') {{
-                    return {{ route: 'technical', existing_acs: [], parent_l1_id: null, rationale: 'test' }};
-                }}
-
-                if (agentType === 'it-po') {{
-                    return {{ status: 'ok', acs_written: ['ACD-NEW-1'] }};
-                }}
-
-                if (agentType === 'status-checker') {{
-                    // E2 commitStageOutput() runs a fail-closed no-main branch
-                    // check before committing the orphans — confirm a non-main
-                    // authoring branch so the commit agent is dispatched.
-                    if (instructions.includes('git branch --show-current')) {{
-                        return {{ output: 'ac-authoring/test', exit_code: 0 }};
-                    }}
-                    const isFinalGate = instructions.includes('IT PO v3 has enriched');
-                    if (isFinalGate) {{
-                        return {{ action: 'defer', priority: 'medium' }};
-                    }}
-                    return {{ action: 'approve' }};
-                }}
-
-                return {{ status: 'ok' }};
-            }}
-        """)
         extra_ctx = {
             "__orphanGitStatus": orphan_status_line + "\n",
             "__orphanContent": orphan_content,
         }
-        proc = _run_with_mock_agent(
-            self.PLAN_FEATURE_PATH, mock_js,
-            user_input="test yes branch",
+        phase1_mock_js = textwrap.dedent("""
+            async function mockAgent(call) {
+                const label = call.label || '';
+                const instructions = (call.input && call.input.instructions) || '';
+                globalThis.__capturedAllCalls.push({
+                    agentType: call.agentType, label, instructionSnippet: instructions.slice(0, 160),
+                });
+
+                if (label === 'scan-orphans-git-status') {
+                    return { output: globalThis.__orphanGitStatus, exit_code: 0 };
+                }
+                if (label === 'scan-orphans-read-file') {
+                    return { content: globalThis.__orphanContent };
+                }
+                if (label === 'pause-persist-verify') {
+                    return {
+                        exists: true, stale: false,
+                        record: { run_id: 'test-run', gate_id: 'resolve-orphans-choice' },
+                    };
+                }
+                return { status: 'ok' };
+            }
+        """)
+        mock_js = textwrap.dedent("""
+            async function mockAgent(call) {
+                const agentType = call.agentType || '';
+                const label = call.label || '';
+                const instructions = (call.input && call.input.instructions) || '';
+
+                globalThis.__capturedAllCalls.push({
+                    agentType,
+                    label,
+                    instructionSnippet: instructions.slice(0, 160),
+                });
+
+                // scanOrphanedAcDrafts() re-scans unconditionally on every
+                // invocation, including the resume — it must still find the
+                // orphan so the gate is reached again.
+                if (label === 'scan-orphans-git-status') {
+                    return { output: globalThis.__orphanGitStatus, exit_code: 0 };
+                }
+                if (label === 'scan-orphans-read-file') {
+                    return { content: globalThis.__orphanContent };
+                }
+
+                // resolveGate() reads the durable pause record back before
+                // applying a validated, person-attributed resume_answer.
+                if (label === 'read-pause-record') {
+                    return { exists: true, stale: false };
+                }
+
+                // Commit agent (dispatched by commitStageOutput for yes branch).
+                if (agentType === 'commit') {
+                    globalThis.__capturedCommitCalls.push({ agentType });
+                    return { status: 'ok', message: 'mock commit ok' };
+                }
+
+                // ac-triage (Stage 0 — reached after recovery completes).
+                if (agentType === 'ac-triage') {
+                    return { route: 'technical', existing_acs: [], parent_l1_id: null, rationale: 'test' };
+                }
+
+                if (agentType === 'it-po') {
+                    return { status: 'ok', acs_written: ['ACD-NEW-1'] };
+                }
+
+                if (agentType === 'status-checker') {
+                    // E2 commitStageOutput() runs a fail-closed no-main branch
+                    // check before committing the orphans — confirm a non-main
+                    // authoring branch so the commit agent is dispatched.
+                    if (instructions.includes('git branch --show-current')) {
+                        return { output: 'ac-authoring/test', exit_code: 0 };
+                    }
+                    const isFinalGate = instructions.includes('IT PO v3 has enriched');
+                    if (isFinalGate) {
+                        return { action: 'defer', priority: 'medium' };
+                    }
+                    return { action: 'approve' };
+                }
+
+                return { status: 'ok' };
+            }
+        """)
+        return _pause_then_resume(
+            self.PLAN_FEATURE_PATH, phase1_mock_js, mock_js,
+            gate_id="resolve-orphans-choice", action=choice, user_input="test yes branch",
             extra_ctx=extra_ctx,
         )
-        return _parse_run_output(proc)
 
     def test_yes_branch_dispatches_commit_agent(self):
         """
@@ -574,16 +644,16 @@ class TestResolveOrphanedDraftsYesBranch(unittest.TestCase):
         MUST be dispatched (via commitStageOutput's hook-safe path).
 
         This is the primary assertion for the "yes" branch: the orphaned files
-        are committed before new triage begins.
+        are committed before new triage begins. Checks both commitCalls
+        (explicit capture) and allCalls (the more reliable universal capture,
+        since it records every agent dispatch regardless of whether the
+        commit-specific push succeeded).
         """
         try:
             _run_result, side = self._run_with_orphan_and_choice("yes")
         except NodeScriptError as exc:
             self.fail(f"Node.js failed unexpectedly: {exc}")
 
-        # Check both commitCalls (explicit capture) and allCalls (universal capture).
-        # allCalls is the more reliable signal since it captures every agent dispatch
-        # regardless of whether the commit-specific push succeeded.
         commit_calls = side.get("commitCalls", [])
         all_calls = side.get("allCalls", [])
         commit_dispatches_in_all = [
@@ -626,11 +696,6 @@ class TestResolveOrphanedDraftsYesBranch(unittest.TestCase):
         )
 
 
-# ---------------------------------------------------------------------------
-# Test class: resolveOrphanedDrafts() no branch
-# ---------------------------------------------------------------------------
-
-
 class TestResolveOrphanedDraftsNoBranch(unittest.TestCase):
     """
     Behavioral tests for the "no" branch of resolveOrphanedDrafts().
@@ -642,29 +707,66 @@ class TestResolveOrphanedDraftsNoBranch(unittest.TestCase):
     PLAN_FEATURE_PATH = _PLAN_FEATURE_JS
 
     def _run_with_orphan_no_choice(self) -> tuple[dict, dict]:
-        """Run with one orphaned AC file and user choice = no."""
+        """
+        Drive the ACD-2100c-1 pause/resume protocol for one orphaned AC file,
+        then answer the paused 'resolve-orphans-choice' decision point with
+        "no" via a genuine, person-attributed args.resume_answer.
+
+        See TestResolveOrphanedDraftsYesBranch._run_with_orphan_and_choice's
+        docstring for why this two-phase drive replaced answering the (now
+        dead) 'resolve-orphans-choice' dispatch directly.
+        """
+        extra_ctx = {
+            "__orphanGitStatus": "?? docs/acceptance-criteria/ACD-NO-1.yaml\n",
+            "__orphanContent": "id: ACD-NO-1\norigin_agent: product-owner\nreadiness: draft\n",
+        }
+
+        # Phase 1: headless run scans and pauses at 'resolve-orphans-choice'.
+        phase1_mock_js = textwrap.dedent("""
+            async function mockAgent(call) {
+                const label = call.label || '';
+                const instructions = (call.input && call.input.instructions) || '';
+                globalThis.__capturedAllCalls.push({
+                    agentType: call.agentType, label, instructionSnippet: instructions.slice(0, 160),
+                });
+
+                if (label === 'scan-orphans-git-status') {
+                    return { output: globalThis.__orphanGitStatus, exit_code: 0 };
+                }
+                if (label === 'scan-orphans-read-file') {
+                    return { content: globalThis.__orphanContent };
+                }
+                if (label === 'pause-persist-verify') {
+                    return {
+                        exists: true, stale: false,
+                        record: { run_id: 'test-run', gate_id: 'resolve-orphans-choice' },
+                    };
+                }
+                return { status: 'ok' };
+            }
+        """)
+        # "no" is the refusal path itself: channel:"person" (_pause_then_resume)
+        # is what makes it honoured as a real decision at all.
         mock_js = textwrap.dedent("""
             async function mockAgent(call) {
                 const agentType = call.agentType || '';
+                const label = call.label || '';
                 const instructions = (call.input && call.input.instructions) || '';
 
                 globalThis.__capturedAllCalls.push({
                     agentType,
+                    label,
                     instructionSnippet: instructions.slice(0, 160),
                 });
 
-                if (instructions.includes('git status --porcelain') &&
-                    instructions.includes('docs/acceptance-criteria')) {
-                    return { output: '?? docs/acceptance-criteria/ACD-NO-1.yaml\\n', exit_code: 0 };
+                if (label === 'scan-orphans-git-status') {
+                    return { output: globalThis.__orphanGitStatus, exit_code: 0 };
                 }
-
-                if (instructions.includes('Read the file at path') &&
-                    instructions.includes('ACD-NO-1.yaml')) {
-                    return { content: 'id: ACD-NO-1\\norigin_agent: product-owner\\nreadiness: draft\\n' };
+                if (label === 'scan-orphans-read-file') {
+                    return { content: globalThis.__orphanContent };
                 }
-
-                if (instructions.includes('prior session') && instructions.includes('yes/no/discard')) {
-                    return { choice: 'no' };
+                if (label === 'read-pause-record') {
+                    return { exists: true, stale: false };
                 }
 
                 if (agentType === 'commit') {
@@ -679,8 +781,11 @@ class TestResolveOrphanedDraftsNoBranch(unittest.TestCase):
                 return { status: 'ok' };
             }
         """)
-        proc = _run_with_mock_agent(self.PLAN_FEATURE_PATH, mock_js)
-        return _parse_run_output(proc)
+        return _pause_then_resume(
+            self.PLAN_FEATURE_PATH, phase1_mock_js, mock_js,
+            gate_id="resolve-orphans-choice", action="no", user_input="test no branch",
+            extra_ctx=extra_ctx,
+        )
 
     def test_no_branch_returns_error_status(self):
         """
@@ -751,11 +856,6 @@ class TestResolveOrphanedDraftsNoBranch(unittest.TestCase):
         )
 
 
-# ---------------------------------------------------------------------------
-# Test class: resolveOrphanedDrafts() discard branch
-# ---------------------------------------------------------------------------
-
-
 class TestResolveOrphanedDraftsDiscardBranch(unittest.TestCase):
     """
     Behavioral tests for the "discard" branch of resolveOrphanedDrafts().
@@ -777,73 +877,102 @@ class TestResolveOrphanedDraftsDiscardBranch(unittest.TestCase):
         self, git_status_for_orphan: str, orphan_path: str
     ) -> tuple[dict, dict]:
         """
-        Run with one orphaned AC file and user choice = discard.
+        Drive the ACD-2100c-1 pause/resume protocol for one orphaned AC file
+        at `orphan_path`, then answer the paused 'resolve-orphans-choice'
+        decision point with "discard" via a genuine, person-attributed
+        args.resume_answer.
 
-        Data (orphan_path and per-file status) is injected via vm.createContext()
-        globals so the mock code can read them without embedding data inside a
-        JS backtick template literal (which would process escape sequences).
+        See TestResolveOrphanedDraftsYesBranch._run_with_orphan_and_choice's
+        docstring for why this two-phase drive replaced answering the (now
+        dead) 'resolve-orphans-choice' dispatch directly.
 
-        git_status_for_orphan: the porcelain status line for the specific orphan file
-        (used in the per-file re-check that discard does to determine tracked vs untracked).
+        `git_status_for_orphan` is the porcelain status line used both for the
+        initial scanOrphanedAcDrafts() detection AND for
+        resolveOrphanedDrafts()'s own per-file re-check inside the discard
+        loop (which determines tracked-vs-untracked — git restore vs delete).
+        Distinct agent() labels ('scan-orphans-git-status' for the initial
+        scan vs. 'discard-orphan-status' for the per-file re-check) remove the
+        need for the old path-substring disambiguation.
+
+        Data is injected via globalThis (extra_ctx) so it carries real
+        newlines without JS backtick-template escaping hazards.
         """
         orphan_filename = orphan_path.rsplit("/", 1)[-1]
         orphan_content = (
             "id: ACD-DISCARD-1\norigin_agent: product-owner\nreadiness: draft\n"
         )
+        extra_ctx = {
+            "__discardOrphanFilename": orphan_filename,
+            "__discardPerFileStatus": git_status_for_orphan,
+            "__discardOrphanContent": orphan_content,
+        }
 
-        # Mock agent reads orphan path and status from globalThis (__discardOrphanPath,
-        # __discardPerFileStatus) so no data is embedded inside a backtick template.
+        scan_mock_branches_js = textwrap.dedent("""
+                if (label === 'scan-orphans-git-status') {
+                    return { output: globalThis.__discardPerFileStatus, exit_code: 0 };
+                }
+                if (label === 'scan-orphans-read-file' &&
+                    instructions.includes(globalThis.__discardOrphanFilename)) {
+                    return { content: globalThis.__discardOrphanContent };
+                }
+        """)
+
+        # Phase 1: headless run scans and pauses at 'resolve-orphans-choice'.
+        phase1_mock_js = textwrap.dedent(f"""
+            async function mockAgent(call) {{
+                const label = call.label || '';
+                const instructions = (call.input && call.input.instructions) || '';
+                globalThis.__capturedAllCalls.push({{
+                    agentType: call.agentType, label, instructionSnippet: instructions.slice(0, 200),
+                }});
+{scan_mock_branches_js}
+                if (label === 'pause-persist-verify') {{
+                    return {{
+                        exists: true, stale: false,
+                        record: {{ run_id: 'test-run', gate_id: 'resolve-orphans-choice' }},
+                    }};
+                }}
+                return {{ status: 'ok' }};
+            }}
+        """)
         mock_js = textwrap.dedent(f"""
             globalThis.__restoreCalls = [];
             globalThis.__deleteCalls = [];
 
             async function mockAgent(call) {{
                 const agentType = call.agentType || '';
+                const label = call.label || '';
                 const instructions = (call.input && call.input.instructions) || '';
-                const orphanPath = globalThis.__discardOrphanPath;
-                const perFileStatus = globalThis.__discardPerFileStatus;
-                const orphanContent = globalThis.__discardOrphanContent;
 
                 globalThis.__capturedAllCalls.push({{
                     agentType,
+                    label,
                     instructionSnippet: instructions.slice(0, 200),
                 }});
 
-                // Main git status scan (all of docs/acceptance-criteria).
-                if (instructions.includes('git status --porcelain') &&
-                    instructions.includes('docs/acceptance-criteria') &&
-                    !instructions.includes(orphanPath)) {{
-                    return {{ output: perFileStatus + ' ', exit_code: 0 }};
+{scan_mock_branches_js}
+                if (label === 'read-pause-record') {{
+                    return {{ exists: true, stale: false }};
                 }}
 
-                // Per-file git status check (inside discard loop).
-                if (instructions.includes('git status --porcelain') &&
-                    instructions.includes(orphanPath)) {{
-                    return {{ output: perFileStatus, exit_code: 0 }};
+                // Per-file status re-check inside resolveOrphanedDrafts()'s discard loop.
+                if (label === 'discard-orphan-status') {{
+                    return {{ output: globalThis.__discardPerFileStatus, exit_code: 0 }};
                 }}
 
-                // Simulate file read for the orphaned file.
-                if (instructions.includes('Read the file at path') &&
-                    instructions.includes('{orphan_filename}')) {{
-                    return {{ content: orphanContent }};
-                }}
-
-                // Answer the yes/no/discard prompt.
-                if (instructions.includes('prior session') && instructions.includes('yes/no/discard')) {{
-                    return {{ choice: 'discard' }};
-                }}
-
-                // Detect git restore call (tracked file revert).
-                if (instructions.includes('git restore') && instructions.includes(orphanPath)) {{
-                    globalThis.__restoreCalls.push({{ instructions: instructions.slice(0, 200) }});
+                // Untracked file removal.
+                if (label === 'discard-orphan-delete') {{
+                    globalThis.__deleteCalls.push({{ instructions: instructions.slice(0, 200) }});
                     return {{ exit_code: 0 }};
                 }}
 
-                // Detect rm / delete call (untracked file removal).
-                if ((instructions.includes('rm -f') || instructions.includes('rm ') ||
-                     instructions.includes('fs.unlinkSync') || instructions.includes('Delete the file')) &&
-                    instructions.includes(orphanPath)) {{
-                    globalThis.__deleteCalls.push({{ instructions: instructions.slice(0, 200) }});
+                // Tracked modified/added file: unstage (only when index status
+                // is A/M), then restore the working tree.
+                if (label === 'discard-orphan-unstage') {{
+                    return {{ exit_code: 0 }};
+                }}
+                if (label === 'discard-orphan-restore') {{
+                    globalThis.__restoreCalls.push({{ instructions: instructions.slice(0, 200) }});
                     return {{ exit_code: 0 }};
                 }}
 
@@ -872,22 +1001,10 @@ class TestResolveOrphanedDraftsDiscardBranch(unittest.TestCase):
                 return {{ status: 'ok' }};
             }}
         """)
-
-        # The mock reads its data from globalThis.__discard* (injected via
-        # extra_ctx) and records restore/delete dispatches on
-        # globalThis.__restoreCalls / __deleteCalls, which the runner's side
-        # channel exposes.
-        extra_ctx = {
-            "__discardOrphanPath": orphan_path,
-            "__discardPerFileStatus": git_status_for_orphan,
-            "__discardOrphanContent": orphan_content,
-        }
-        return _parse_run_output(
-            _run_with_mock_agent(
-                self.PLAN_FEATURE_PATH, mock_js,
-                user_input="test discard scenario",
-                extra_ctx=extra_ctx,
-            )
+        return _pause_then_resume(
+            self.PLAN_FEATURE_PATH, phase1_mock_js, mock_js,
+            gate_id="resolve-orphans-choice", action="discard", user_input="test discard scenario",
+            extra_ctx=extra_ctx,
         )
 
     def test_discard_tracked_modified_calls_git_restore(self):
@@ -977,22 +1094,9 @@ class TestResolveOrphanedDraftsDiscardBranch(unittest.TestCase):
         )
 
 
-# ---------------------------------------------------------------------------
-# Template parity tests — REMOVED.
-#
-# TestRecoveryFunctionParityWithTemplate asserted byte-identity between the
-# recovery functions (scanOrphanedAcDrafts / resolveOrphanedDrafts / run /
-# buildCancelMessage) in scripts/workflows/plan-feature.js and
-# templates/workflows-js/plan-feature.js. Foundation cleanup deleted the legacy
-# scripts/ copy, leaving one canonical E2 file, so there is nothing to compare;
-# these parity tests were removed rather than left asserting against a deleted
-# path. The functions' real runtime behaviour is exercised by the tests above.
-# ---------------------------------------------------------------------------
-
-
-# ---------------------------------------------------------------------------
-# Test class: buildCancelMessage untracked file warning
-# ---------------------------------------------------------------------------
+# Template parity tests — REMOVED (TestRecoveryFunctionParityWithTemplate):
+# the legacy scripts/workflows/plan-feature.js copy they byte-diffed against
+# is gone (foundation cleanup); real behaviour is exercised above instead.
 
 
 class TestBuildCancelMessageUntrackedWarning(unittest.TestCase):
@@ -1047,8 +1151,7 @@ class TestBuildCancelMessageUntrackedWarning(unittest.TestCase):
         except NodeScriptError as exc:
             self.fail(f"Node.js failed unexpectedly: {exc}")
 
-        # The message must either explicitly mention "untracked" or note that
-        # git checkout alone is insufficient (or both).
+        # Must mention "untracked" or that git checkout alone is insufficient.
         mentions_untracked = "untracked" in message.lower()
         mentions_both_steps = (
             "git checkout" in message or "git restore" in message
