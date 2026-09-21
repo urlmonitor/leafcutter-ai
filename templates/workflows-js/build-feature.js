@@ -1598,8 +1598,8 @@ const resolvedTarget = {
   worktree_path: null,
 };
 
-// Establish the isolated worktree (reuse or open) before any build work.
-const worktreeTarget = target_type === "epic" ? (epic_path || target) : (ticket_path || target);
+// Establish the isolated worktree (reuse or open) before any build work. repoAnchor is the repository reference every worktree_repo_facts.py call below is asked relative to: those subcommands default to the process cwd, which for a phase agent is not a checkout at all, so an unanchored call answers null about a perfectly healthy worktree and aborts the run (BO-4000d). Absoluteness is BO-3900's classifier, never a leading-slash test, or drive-lettered and UNC targets fall back to that same broken default.
+const worktreeTarget = target_type === "epic" ? (epic_path || target) : (ticket_path || target), repoAnchor = classifyPathForm(worktreeTarget) === "absolute" ? worktreeTarget : ".";
 /**
  * Run WORKTREE_REPO_FACTS_SCRIPT and relay its parsed JSON. Never itself
  * decides reuse/open/refuse — every caller below reads structured facts,
@@ -1615,22 +1615,22 @@ function undetermined(extra) { return Object.assign({ status: "error", worktree_
 let realWorktreePath = null, stalenessReport = null;
 // Scenario 1: reuse the resolved worktree IFF facts confirm it; otherwise not used — proceed as if unresolved (scenario 2).
 if (resolveResult.worktree_path) {
-  const rf = await repoFactsCall(`python {{config.output_root}}/scripts/worktree_repo_facts.py facts "${resolveResult.worktree_path}"`, "worktree-facts-resolved");
+  const rf = await repoFactsCall(`python {{config.output_root}}/scripts/worktree_repo_facts.py facts "${resolveResult.worktree_path}" --reference "${repoAnchor}"`, "worktree-facts-resolved");
   if (rf && rf.exists && rf.is_linked_worktree && !rf.is_main_checkout && rf.same_repository) realWorktreePath = resolveResult.worktree_path;
 }
 if (!realWorktreePath) {
-  const base = await repoFactsCall("python {{config.output_root}}/scripts/worktree_repo_facts.py base", "worktree-base");
+  const base = await repoFactsCall(`python {{config.output_root}}/scripts/worktree_repo_facts.py base "${repoAnchor}"`, "worktree-base");
   if (!base || !base.worktree_base) return undetermined({ abort_reason: "worktree-base-unavailable", message: "The repository's worktree base could not be established. No phase agent has been spawned." });
   const identity = normalizePathForm(worktreeTarget).replace(/\/$/, "").split("/").filter(Boolean).pop() || worktreeTarget;
   const instructedLocation = normalizePathForm(base.worktree_base).replace(/\/$/, "") + "/" + identity;
   const targetBranch = (target_type === "epic" ? "epic/" : "ticket/") + identity.replace(/^EPIC-/, "").replace(/([a-z0-9])([A-Z])/g, "$1-$2").toLowerCase();
-  const locFacts = await repoFactsCall(`python {{config.output_root}}/scripts/worktree_repo_facts.py facts "${instructedLocation}"`, "worktree-facts-location");
+  const locFacts = await repoFactsCall(`python {{config.output_root}}/scripts/worktree_repo_facts.py facts "${instructedLocation}" --reference "${repoAnchor}"`, "worktree-facts-location");
   if (locFacts && locFacts.exists) {
     // scenario 2 — reuse a worktree of this repo already on the target's branch; refuse any other occupant.
     if (locFacts.is_linked_worktree && !locFacts.is_main_checkout && locFacts.same_repository && locFacts.branch === targetBranch) realWorktreePath = instructedLocation;
     else return undetermined({ abort_reason: "worktree-location-occupied", location: instructedLocation, occupant: locFacts, message: `The named worktree location "${instructedLocation}" is occupied by something other than the target's own worktree. No phase agent has been spawned; nothing there was changed.` });
   } else {
-    const standing = await repoFactsCall(`python {{config.output_root}}/scripts/worktree_repo_facts.py branch-standing "${targetBranch}"`, "branch-standing");
+    const standing = await repoFactsCall(`python {{config.output_root}}/scripts/worktree_repo_facts.py branch-standing "${targetBranch}" --repo "${repoAnchor}"`, "branch-standing");
     let startRef = "origin/main";
     if (standing && standing.exists) {
       if (!standing.fetch_ok) return undetermined({ abort_reason: "branch-standing-unverifiable", branch: targetBranch, message: `The standing of branch "${targetBranch}" against origin/main could not be checked (fetch failed). No phase agent has been spawned.` });

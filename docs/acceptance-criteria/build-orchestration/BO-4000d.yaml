@@ -1,0 +1,175 @@
+id: BO-4000d
+title: "The worktree step asks about the repository using a reference drawn from the target it resolved, so a healthy worktree is never called unavailable because of where the run was launched"
+component: build-orchestration
+components:
+  - build_orchestration
+  - worktree_manager
+level: L3
+status: active
+req_status: draft
+work_status: done
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+change_target: pipeline
+risk_surface: contract_boundary
+package_surface: false
+criteria: |
+  Given a linked worktree for the target that exists, belongs to this repository, sits at
+    the location the workflow named, and is on the target's own branch
+  When the worktree step runs from a working directory that is not inside any git
+    checkout — as a phase agent does in the dev self-hosting layout, where the process
+    directory is the workspace parent rather than the package clone
+  Then the step still recognises that worktree as this repository's own
+  And the run proceeds to dispatch phase agents
+  And it does not stop with `worktree-base-unavailable`.
+
+  Given the same run and the same working directory
+  When the step asks the repository-facts mechanism any question — whether a candidate path
+    is this repository's linked worktree, where new worktrees belong, or how a branch stands
+    against the mainline
+  Then every one of those questions carries a repository reference the step derived from the
+    target it has already resolved
+  And none of them is left to be answered relative to the process's own directory.
+
+  Given a run whose resolved target is not an absolute location, so no reference can be
+    drawn from it
+  When the worktree step asks those same questions
+  Then it falls back to the previous behaviour rather than inventing a reference
+  And the run's outcome is no worse than it was before this record.
+
+  Given a worktree that genuinely is absent, foreign, or occupied
+  When the step asks with a correctly derived reference
+  Then the existing refusals still fire on their own terms
+  And this record widens nothing about which worktrees are accepted.
+depends_on:
+  - BO-4000
+doc_links:
+  - path: templates/workflows-js/build-feature.js
+    relationship: implements
+    status: exists
+    relevance: "The worktree step whose four repository-facts invocations left their reference to the process directory."
+  - path: templates/scripts/worktree_repo_facts.py
+    relationship: related
+    status: exists
+    relevance: "The mechanism whose every subcommand defaults its reference to the process directory; unchanged by this record."
+  - path: unit_tests/_workflow_engine_harness.py
+    relationship: specifies
+    status: exists
+    relevance: "Harness that runs build-feature.js's own top-level body so the abort and the reuse are observed as real dispatch facts."
+  - path: docs/architecture/components/worktree-manager.md
+    relationship: describes
+    status: exists
+    relevance: "Worktree lifecycle component whose establishment step this record constrains."
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Every worktree_repo_facts.py invocation the step constructs passes an explicit repository reference: `facts` via `--reference`, `base` via its positional start, `branch-standing` via `--repo`. Leaving any of them to the cwd default is the defect."
+  - "The reference is derived from the run's own resolved target, which is inside the repository by construction. A fixed literal is not acceptable — it would reintroduce a location the run does not control."
+  - "The fallback when no absolute target is available is the prior cwd-relative behaviour. This record may not make any currently-working case worse."
+  - "Absoluteness is decided by BO-3900's `classifyPathForm`, never by a leading-slash test. A drive-lettered or UNC target is absolute without a leading slash, so `startsWith(\"/\")` would route exactly those platforms back to the cwd default this record exists to remove — and BO-3900d's scanner over the real workflow scripts refuses that expression outright."
+  - "worktree_repo_facts.py itself is not modified. Its cwd default is correct for a caller that has a meaningful cwd; the defect is the step relying on a default that does not hold for a phase agent."
+  - "No refusal is weakened. The absent, foreign, occupied and branch-standing refusals keep their existing conditions and discriminators; only the reference they are evaluated against changes."
+delivers_to: null
+expects_from:
+  ac_id: BO-4000
+  contract: "The resolved target (epic or ticket path) and the worktree location the run names for it, as a single assignment made at the worktree step."
+test_required: true
+test_spec:
+  - name: test_facts_without_a_reference_cannot_tell_it_is_the_same_repository
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: "Run from a non-checkout directory against a real linked worktree, the unreferenced facts call answers same_repository null while every other field is correct — the degenerate answer that made the reuse guard fall through."
+  - name: test_base_without_a_reference_resolves_nothing_outside_a_checkout
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: "From the same directory the unreferenced base call answers all-null — the second degenerate answer, the one the incident aborted on."
+  - name: test_facts_anchored_on_the_target_reports_the_same_repository
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "With a reference derived from the target, the same call from the same non-checkout directory answers same_repository true, so the whole reuse predicate holds."
+  - name: test_base_anchored_on_the_target_resolves_the_worktree_base
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "With the same reference, base resolves the real main checkout and worktree base from outside any checkout."
+  - name: test_unanchored_answers_abort_the_run_and_anchored_answers_do_not
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: real_artifact
+    surface_invoked: templates/workflows-js/build-feature.js
+    description: "The two real script answers, fed to build-feature.js's own top-level body, reproduce the incident and its absence: the cwd-defaulted pair aborts worktree-base-unavailable with zero phase agents, the anchored pair reuses the worktree and the run goes on."
+  - name: test_every_worktree_repo_facts_invocation_in_the_driver_is_anchored
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: reachability
+    surface_invoked: templates/workflows-js/build-feature.js
+    description: "Every invocation is parsed out of the driver and must carry an interpolated reference, so a newly added unanchored call site fails immediately rather than waiting for a drive to abort."
+test_rationale: |
+  The mechanism was already correct and already had the parameters needed; the step simply
+  never passed them. So a test of worktree_repo_facts.py alone would stay green through the
+  entire incident, and a test of the step alone — with the facts calls stubbed, as every
+  other BO-4000 test stubs them — would stay green too, because stubs answer from the
+  fixture rather than from a directory. The defect lived precisely in the seam the existing
+  tests mock away.
+
+  This record therefore runs the real script as a subprocess against a real temporary
+  repository with a real linked worktree, from a directory that is genuinely not a
+  checkout, and then feeds those real answers into the real driver body through the
+  workflow harness. That the degenerate answers abort and the referenced answers do not is
+  the whole claim, and it is observed rather than asserted about.
+
+  The driver-parsing case is deliberately paired with it. The executable half proves what
+  happens for a given pair of answers; it cannot prove the driver asks in the way that
+  produces the good pair. Parsing the invocations out of the driver closes that loop, and
+  deriving them rather than counting them means a fifth call site added later is checked
+  the moment it appears instead of silently inheriting the defect.
+covered_by:
+  - unit_tests/workflows/test_bo4000d_repository_reference_anchor.py
+implemented_by:
+  - templates/workflows-js/build-feature.js
+origin_agent: BrainCandy
+created: 2026-09-21
+amended_by: []
+superseded_by: null
+notes: |
+  FIELD EVIDENCE — workflow run wf_4d8a1c41-0b9, 2026-09-21, driving
+  EPIC-WorkIsOnlyEverMarkedFinishedThroughThe. The run returned
+  `worktree-base-unavailable` with zero phase agents spawned. The worktree was present in
+  `git worktree list`, healthy, correctly located and on the right branch the whole time;
+  three agents ran and none of them was a phase agent.
+
+  Reproduced by hand from the workspace parent: `facts <worktree>` answered
+  `same_repository: null` with `exists`, `is_linked_worktree` and `is_main_checkout` all
+  correct, and `base` answered `{main_checkout: null, worktree_base: null, layout: null}`.
+  Adding a reference drawn from the resolved epic path turned both answers correct from the
+  same directory.
+
+  NAMED MUTATIONS (each turns only this record's tests red):
+    M1 — drop the reference from any one of the four invocations. Caught by
+         test_every_worktree_repo_facts_invocation_in_the_driver_is_anchored, which names
+         the offending subcommand.
+    M2 — pass a fixed literal reference instead of one derived from the resolved target.
+         Caught by the same test's interpolation check.
+    M3 — make the reuse guard accept a null same_repository rather than fixing the
+         question. Caught by test_unanchored_answers_abort_the_run_and_anchored_answers_do_not,
+         which requires the degenerate pair to STILL abort.
+    M4 — decide absoluteness with `startsWith("/")`. Caught by BO-3900d's
+         test_check_passes_on_the_real_workflow_scripts, which scans the real scripts and
+         names the file and line. This mutation was actually written during this record's
+         own implementation and the scanner caught it; on Windows it would have left the
+         defect fully intact while every test here stayed green.
+
+  M3 is the tempting wrong fix and is worth stating plainly: the guard's fail-closed posture
+  is correct and is not what broke. Relaxing it would convert a loud, honest abort into a
+  step that proceeds on an unanswered question — the shape this component keeps having to
+  undo. The question was wrong, not the refusal to guess at its answer.
