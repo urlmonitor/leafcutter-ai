@@ -30,10 +30,14 @@ criteria: |
 depends_on:
   - TQ-200c-2
 doc_links:
-  - path: scripts/ac_store/generate_ticket_from_ac.py
+  - path: scripts/ac_store/_gtfa_tests_section.py
     relationship: modifies
     status: exists
-    relevance: "Where the routing answer is produced and therefore where over-demand would be introduced, and the file this L3 edits; also the source of the last clause's constraint, since the free pass it grants today (line 2773) must not come back as the remedy for over-demand. Retagged describes -> modifies by it-po 2026-08-18 so it reaches files_touched (only edit-surface relationships do — generate_ticket_from_ac.py:104-106)."
+    relevance: "Where the routing answer is produced — _build_test_requirements_section decides which proof a plan asks for, so this is where over-demand would be introduced. Retagged describes -> modifies by it-po 2026-08-18 so it reaches files_touched (only edit-surface relationships do — _gtfa_constants._EDIT_SURFACE_RELATIONSHIPS); re-pointed off the generator shell 2026-09-14 after the decomposition."
+  - path: scripts/ac_store/_gtfa_report.py
+    relationship: modifies
+    status: exists
+    relevance: "The source of the last clause's constraint: the readiness report's 'non-code AC — no test contract required' free pass must not come back as the remedy for over-demand."
   - path: unit_tests/agents/test_test_writer_seam_rule_scope.py
     relationship: related
     status: exists
@@ -49,7 +53,7 @@ doc_links:
 assigned_agent: python-coder
 estimated_complexity: M
 it_requirements:
-  reference_file_path: "scripts/ac_store/generate_ticket_from_ac.py"
+  reference_file_path: "scripts/ac_store/_gtfa_tests_section.py"
   n_location_rule: "1"
   required_skills:
     - python-coder

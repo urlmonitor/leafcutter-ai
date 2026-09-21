@@ -27,10 +27,10 @@ criteria: |
 depends_on:
   - TQ-200c-1
 doc_links:
-  - path: scripts/ac_store/generate_ticket_from_ac.py
+  - path: scripts/ac_store/_gtfa_tests_section.py
     relationship: modifies
     status: exists
-    relevance: "Where the hand-over happens, and the file this L3 edits: the ## Test Requirements descriptor list is the artifact that crosses between the two sides, so it is where a kind can be dropped or re-read in transit, and it is where the parity check must refuse to hand a plan over. Retagged describes -> modifies by it-po 2026-08-18 so it reaches files_touched (only the edit-surface relationships do — generate_ticket_from_ac.py:104-106)."
+    relevance: "Where the hand-over happens, and the file this L3 edits: _build_test_requirements_section produces the ## Test Requirements descriptor list that crosses between the two sides, so it is where a kind can be dropped or re-read in transit, and it is where the parity check must refuse to hand a plan over. Retagged describes -> modifies by it-po 2026-08-18 so it reaches files_touched (only the edit-surface relationships do — _gtfa_constants._EDIT_SURFACE_RELATIONSHIPS); re-pointed off the generator shell 2026-09-14."
   - path: config/ac_store_schema.json
     relationship: describes
     status: exists
@@ -42,7 +42,7 @@ doc_links:
 assigned_agent: python-coder
 estimated_complexity: M
 it_requirements:
-  reference_file_path: "scripts/ac_store/generate_ticket_from_ac.py"
+  reference_file_path: "scripts/ac_store/_gtfa_tests_section.py"
   n_location_rule: "1"
   required_skills:
     - python-coder
