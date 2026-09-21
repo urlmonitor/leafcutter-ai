@@ -1,0 +1,347 @@
+id: GE-129a-3
+title: "The input arrives as the tool call the guard actually sees, and the refusal counted is the tool call not happening — a rejection the event it is wired to cannot produce is unusable rather than satisfied"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - precommit_hooks
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a guard wired at a kind of tool call that can stop the call from happening, whose
+    declaration names a known-bad input and names its observable rejection as that call
+    not happening,
+  When the liveness run examines that guard,
+  Then the declared input is presented to the guard in the form the editor presents one —
+    the event's own account of the tool call being attempted and the arguments it was
+    attempted with, delivered the way the editor delivers it — and not as a path handed to
+    a command,
+  And what is read back is what the protected surface reads back: whether the tool call
+    was allowed to proceed or was stopped,
+  And a guard that stops the declared input is reported as having demonstrated its
+    refusal,
+  And a guard that allows the declared input to proceed is reported as not having
+    demonstrated a refusal, naming it, in the same run as the guard above, so that neither
+    verdict is the only answer the run is able to give,
+  And given a guard wired at a kind of tool call that cannot stop the call from happening,
+  When the liveness run examines it,
+  Then a declaration naming that call not happening as its rejection is reported as
+    unusable on that guard, naming it, and is never reported as satisfied,
+  And a declaration naming a rejection that kind of tool call can produce is examined in
+    the same way as any other, and a guard that produces it is reported as having
+    demonstrated its refusal,
+  And a guard for which no known-bad input is meaningful is reported under the
+    not-applicable alternative together with the ground given for it, and is reported in
+    neither of the two classes above.
+depends_on:
+  - GE-129a
+  - GE-129a-1
+doc_links:
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-129-proven-wherever-it-runs/GE-129a.yaml"
+    relationship: parent
+    status: exists
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-129-proven-wherever-it-runs/GE-129a-1.yaml"
+    relationship: related
+    status: exists
+    relevance: >-
+      Supplies the kind of tool call each subject sits under, which is what decides both the
+      shape of the payload presented here and which rejections that subject is capable of
+      producing at all. The last three clauses above are unreadable without it.
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-120-green-means-checked/GE-120f-1-i.yaml"
+    relationship: related
+    status: exists
+    relevance: >-
+      THE GENERAL RULE THIS RECORD INSTANTIATES AND DOES NOT RESTATE. GE-120f-1-i owns that a
+      refusal produced by reaching inside a check is not a demonstration, that the run states
+      the entry point it used, and that only the entry point the protected surface invokes
+      counts. Every word of that is inherited. What is not in it, because its surface never
+      raised the question, is WHAT the entry point IS here — an event carrying an account of a
+      tool call, not a command line — and WHAT the rejection IS here — the tool call not
+      happening, not a commit being blocked — and that different kinds of tool call can
+      produce different rejections, so a declaration can be unusable at the place it is wired
+      while being perfectly well-formed. That is this record. The run stating which way in it
+      used is GE-120f-1-i's clause and is not repeated above; the event is already reported
+      per subject under GE-129a-1.
+  - path: "docs/architecture/adrs/ADR-045-observed-refusal-establishes-protection.md"
+    relationship: describes
+    status: exists
+    relevance: >-
+      §5 is inherited and is the reason the first clause above is written as it is: the run
+      must establish that the guard SAW its input before its verdict is read, because a clean
+      exit from a check that was handed nothing is the never-attempted state wearing a pass.
+      §1 and §3 are inherited unchanged. Nothing above re-argues any of them.
+  - path: config/verification_flow.schema.json
+    relationship: describes
+    status: exists
+    relevance: >-
+      Supplies the words used above — the known-bad input, the expected rejection, the
+      not-applicable alternative with its ground, and the four states. The last clause above
+      is that schema's own not-applicable hatch on this surface, and nothing beside it is
+      minted.
+  - path: templates/settings.json
+    relationship: describes
+    status: exists
+    relevance: >-
+      The surface whose events decide what a refusal can be. Observed 2026-09-14: it wires
+      guards under more than one kind of tool call — guards that run before a tool call and
+      guards that run after one — and those two are not equally able to stop anything. The
+      worked example sits under the first.
+  - path: templates/hooks/readme_read_guard.py
+    relationship: related
+    status: exists
+    relevance: >-
+      The worked example, wired before an editing tool call, so its refusal is that edit not
+      happening. It allows every input through, which under this record is the second class
+      above — reported by name as not having demonstrated a refusal — and never the first.
+  - path: docs/known-issues/testing-quality.md
+    relationship: context
+    status: exists
+    relevance: >-
+      KI-TQ-007 step 3 — does the production entry point produce the observable effect — is
+      what this record turns into a standing requirement on a surface no regime reaches today.
+      Cited rather than edited; the doc-length gate refuses growth on that register.
+  - path: docs/how-to/creating-a-claude-code-hook.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      THE ONLY WRITTEN ACCOUNT IN THIS REPOSITORY OF HOW THE EDITOR TALKS TO A SESSION GUARD, AND
+      THEREFORE THE SPECIFICATION OF THE ENTRY POINT THIS RECORD REQUIRES. Added at enrichment.
+      It states that the editor launches each hook via `bash -c` and writes a JSON payload to the
+      hook's STDIN, and it tabulates which events can block: PreToolUse blocks by exiting 0 with
+      a decision object, PostToolUse is the observational case. That table is the fact the last
+      three clauses above turn on, and it is where the adapter's protocol is to be read from
+      rather than guessed. Read it before implementing; if it and the editor disagree, the
+      editor wins and the document is a defect this record's implementer should report rather
+      than silently work around.
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+    relevance: The component the surface adapter is added to under GE-129a's one-runner decision.
+  - path: docs/testing/test-angles.md
+    relationship: related
+    status: exists
+    relevance: Source of the `angle` values on the descriptors below.
+assigned_agent: python-coder
+estimated_complexity: L
+it_requirements:
+  - >-
+    THE INPUT IS DELIVERED THE WAY THE EDITOR DELIVERS IT, AND THAT IS A PROTOCOL, NOT A
+    PREFERENCE. Per docs/how-to/creating-a-claude-code-hook.md, the editor launches the entry's
+    own command and writes a JSON payload describing the attempted tool call and its arguments to
+    the guard's STDIN. The adapter must reproduce that: run the entry's own command string as
+    written on the surface, from a working directory the walk-up resolves from, with the payload
+    on stdin. It must NOT import the guard, must NOT call a helper inside it, and must NOT pass a
+    path in argv — GE-129a-3-i owns the last of those and it is the cheapest wrong implementation
+    available here.
+  - >-
+    ESTABLISH THAT THE GUARD SAW ITS INPUT BEFORE READING ITS VERDICT — ADR-045 §5, inherited and
+    load-bearing on this surface for the mirror-image reason it is load-bearing on the commit
+    one. There, checks ignore argv and read the index; here, a guard reads only what the editor
+    sends it, so handing it nothing produces a clean exit that is indistinguishable from
+    approval. The run must have positive evidence of receipt before it records anything other
+    than never-attempted or blocked — the guard's own output, its observable effect, or the
+    payload having been accepted on the channel the editor uses. A clean exit with no such
+    evidence is `unverified` or `blocked`, never `passing`.
+  - >-
+    THE VERDICT IS READ THE WAY THE PROTECTED SURFACE READS IT, WHICH IS NOT THE EXIT STATUS
+    ALONE. On this surface the observable rejection is the tool call being denied, and the
+    editor's decision protocol — not the process's return code — is what decides whether it was.
+    A guard that objects in a way the event discards has not refused anything, and an
+    implementation that reads exit status alone will record it as having demonstrated a refusal.
+    That is the named mutation on this record; the implementation must be written so it fails.
+  - >-
+    EVENT CAPABILITY IS DERIVED FROM THE EVENT, AND THE UNUSABLE CLASS IS A THIRD OUTCOME, NOT A
+    FAILURE. Classify each subject's event by whether it can stop the tool call, take the
+    classification from the same place the protocol is taken from rather than from a list
+    hard-coded beside the adapter, and report a declaration naming a rejection its event cannot
+    produce as UNUSABLE on that guard, by name. Unusable is never reported as satisfied and never
+    reported as not-demonstrated: the first is a false pass and the second reads as a weak guard
+    when the truth is a misplaced declaration. Nothing in
+    config/verification_flow.schema.json's four values covers this, because on the surface it was
+    written for every check reaches the same commit-time verdict — so the class is reported
+    alongside the state rather than as a fifth state value, and no synonym set is minted.
+  - >-
+    A LIVE EXAMPLE OF THE UNUSABLE CLASS ALREADY EXISTS ON THIS SURFACE AND IS THE OBVIOUS
+    REAL-SURFACE PAIRING CANDIDATE — verify it before relying on it, and do not encode its
+    verdict. check_exception_handling_hook is wired PostToolUse on the Edit|Write matcher and is
+    reported in this workspace as announcing a blocking error on essentially every edit while the
+    edit proceeds. Whether that is a guard whose declared rejection its event cannot produce, or a
+    guard doing exactly what a PostToolUse hook can do and being misread, is what this record's
+    machinery exists to state. Either answer is useful; asserting either one in a test by name is
+    forbidden by the same rule GE-129a-4's last clause imposes.
+  - >-
+    THE NOT-APPLICABLE ALTERNATIVE IS THE SCHEMA'S OWN HATCH AND MUST CARRY ITS GROUND. A guard
+    for which no known-bad input is meaningful is reported under
+    negative_control.not_applicable with its stated reason, and is reported in neither the
+    demonstrated nor the not-demonstrated class. An exemption with no ground is not an exemption;
+    a postponement is not a ground.
+  - >-
+    THE ADAPTER MUST NOT MUTATE THE REPOSITORY IT IS EXAMINING. A declared known-bad input for a
+    guard on the Edit|Write matcher describes an edit that must be refused; if the guard allows
+    it, the edit must not actually land. Present the attempt in a disposable working copy, or in
+    a form the editor's protocol lets the adapter abandon after the decision is read. A sweep
+    that leaves the tree dirty will be made to skip subjects, and a sweep that skips subjects to
+    stay safe is the narrowing this record exists to prevent.
+  - >-
+    HOST, DEPLOYMENT AND STRICTNESS. The adapter goes inside templates/scripts/commit_guardian/;
+    anything imported from outside it goes into the scripts/build_phases.py deploy map in the same
+    change. AC_ENFORCE_STRICT=1 on every pytest invocation below. Error-handling policy applies to
+    the subprocess and stdin/stdout I/O: specific exception types, logged at WARNING or higher or
+    re-raised. A swallowed invocation error must never become an absent record or a silent
+    demonstration; it is `blocked`.
+test_spec:
+  - name: test_ge129a3_a_guard_that_stops_the_declared_input_and_one_that_allows_it_are_both_reported_in_one_run
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: >-
+      THE DOUBLE PAIRING, AND IT MUST STAY IN ONE INVOCATION. Over a fixture surface wiring two
+      guards before an editing tool call — one that genuinely denies its declared input and one
+      that allows it — assert in ONE run that the first is reported as having demonstrated its
+      refusal and the second is reported by name as not having. Split apart, the first half is
+      satisfied by a run that reports everything as demonstrated and the second by a run that
+      reports everything as not.
+  - name: test_ge129a3_the_verdict_is_read_from_the_editors_decision_and_not_from_the_exit_status
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: >-
+      NAMED MUTATION, MANDATORY, RUN IT. Include a fixture guard that objects in a way the event
+      discards — it signals disapproval but the tool call proceeds. Assert it is reported as NOT
+      having demonstrated a refusal. Then inject the mutation: read each guard's answer from its
+      exit status alone, without regard to what the editor does with it. Under that injection the
+      discarded objection reads as a demonstration and the allowed-through class empties; this
+      descriptor must go RED naming that guard, and return to green on revert.
+  - name: test_ge129a3_a_rejection_the_event_cannot_produce_is_reported_unusable_and_never_satisfied
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: >-
+      Over a fixture surface: a guard wired at an event that cannot stop the tool call, whose
+      declaration names the call not happening, is reported as UNUSABLE by name and never as
+      satisfied. PAIRED IN THE SAME RUN: a guard at that same kind of event whose declaration
+      names a rejection that event CAN produce is examined normally and, when it produces it, is
+      reported as having demonstrated its refusal — so the unusable class is something the run
+      derives rather than something it assigns to every post-event guard.
+  - name: test_ge129a3_a_guard_with_no_meaningful_known_bad_input_is_reported_not_applicable_with_its_ground
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: >-
+      A fixture guard declared under negative_control.not_applicable with a stated reason is
+      reported in that class together with its ground, and appears in neither the demonstrated nor
+      the not-demonstrated class. PAIRED: a not_applicable declaration with no reason is reported
+      as an unusable or blocked declaration rather than being accepted — an exemption with no
+      ground is not an exemption.
+  - name: test_ge129a3_the_payload_reaches_the_guard_through_the_channel_the_editor_uses
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: integration
+    angle: reachability
+    surface_invoked: >-
+      the entry's own command string as written on the settings surface, executed with the
+      tool-call payload on stdin from a directory the command's walk-up resolves from
+    description: >-
+      PRODUCTION ENTRY POINT, ASSERTED POSITIVELY. Use a fixture guard that echoes back what it
+      received, run it through the adapter, and assert the payload it saw is the account of the
+      attempted tool call and its arguments, delivered on the channel
+      docs/how-to/creating-a-claude-code-hook.md describes, and that the command executed is the
+      entry's own command string rather than a path handed to the interpreter. PAIRED: a fixture
+      guard that reads nothing must not be recorded as having approved anything — that is
+      GE-129a-3-i's subject and this descriptor must not pre-empt its verdict, only establish
+      that receipt is observable at all.
+  - name: test_ge129a3_the_sweep_leaves_the_examined_working_copy_unchanged
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: integration
+    angle: failure
+    description: >-
+      Over a fixture surface including a guard on the Edit|Write matcher that ALLOWS its declared
+      known-bad edit, run the sweep and assert the working copy it examined is byte-identical
+      afterwards. An adapter that lands the edit whenever the guard fails to refuse it makes the
+      sweep unsafe to run, and an unsafe sweep gets narrowed until it examines nothing.
+test_rationale: |
+  This record's clauses are the ones an implementation is most likely to satisfy in appearance. A
+  guard started the wrong way exits cleanly, a guard whose objection the event discards exits
+  non-zero, and both produce a full, plausible report. So every descriptor above is written as a
+  contrast within a single run — demonstrated beside not-demonstrated, unusable beside usable,
+  not-applicable beside a groundless exemption — because each half on its own is satisfied by a
+  run that gives only one answer.
+
+  The receipt descriptor is separate from GE-129a-3-i deliberately. This one establishes that the
+  run CAN observe a guard receiving its input; that one establishes that a guard which received
+  nothing is never recorded as having approved. The first is a capability, the second is a refusal,
+  and an implementation can have the first without the second.
+delivers_to:
+  - ac_id: GE-129a-4
+    contract: >-
+      The observation itself — an input presented as the event presents it, and a verdict read
+      as the protected surface reads it — which GE-129a-4 requires to be made against the real
+      surface and the copy the editor loads.
+  - ac_id: GE-129a-3-i
+    contract: >-
+      The payload channel and the verdict reading — the way in whose ABSENCE GE-129a-3-i
+      describes. That record's clauses are unreadable without a real way in to contrast the bare
+      command invocation against. Added at enrichment: GE-129a-3-i already declared this
+      expectation from its side and the producing side was missing.
+expects_from:
+  - ac_id: GE-129a-2
+    contract: >-
+      The declared known-bad input and the declared observable rejection, tied to the entry
+      they speak for.
+  - ac_id: GE-129a-1
+    contract: >-
+      The kind of tool call each subject sits under, which decides both the shape of the payload
+      presented here and which rejections that subject is capable of producing at all. Added at
+      enrichment: GE-129a-1 already declared this delivery from its side and the consuming side
+      was missing, which left the last three clauses of this record with no stated source for the
+      event they turn on.
+origin_agent: BrainCandy
+created: 2026-09-14
+amended_by: []
+superseded_by: null
+covered_by:
+  - GE-129a-3-i
+implemented_by:
+- tickets/00_inbox/epics/EPIC-AGuardThatHasNeverSaidNoIsNotCountedAs/12_TICKET-20260921-GE-129a-3.md
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  THE NON-OBVIOUS CLAUSE, AND WHY IT IS HERE RATHER THAN IN A NOTE. This surface is not one
+  surface. Guards are wired at several kinds of tool call, and they are not equally able to
+  refuse: one kind runs before the tool call and can stop it, another runs after it, by which
+  time the thing it might have objected to has already happened. A declaration is therefore
+  capable of being FAULTLESS AND USELESS AT THE SAME TIME — well-formed, in the right words,
+  naming a rejection the place it is wired can never produce. Nothing in the vocabulary
+  catches that, because on the surface ADR-045 was written against every registered check
+  reaches the same commit-time verdict. Left unstated, the natural implementation records such
+  a guard as having demonstrated nothing and leaves a reader to conclude the guard is weak,
+  when the truth is that the declaration is unusable where it sits. The clause above makes the
+  run say which of the two it is.
+
+  ANTI-VACUITY, AND IT IS DOUBLE HERE. "A guard that allows the input through is named" is
+  satisfied by a run that names everything; "a guard that stops it is reported as having
+  demonstrated" is satisfied by a run that reports everything as demonstrated. The two are
+  asserted of the same run, over subjects that genuinely differ, following ACS-1300a-3 and
+  ACS-1400c-3. The unusable-declaration clause is paired the same way, against a declaration
+  that names a rejection its own event CAN produce.
+
+  NAMED MUTATION FOR THE ABSENCE-ASSERTING CLAUSES. Read the guard's answer from its exit
+  status alone, without regard to what the editor does with it. Under that mutation a guard
+  that objects in a way the event discards reads as having demonstrated a refusal, and the
+  allowed-through class empties. The clause naming the allowed-through guard must go red and
+  return on revert.
+
+  ARRIVAL COLOURS. Every clause above is RED on arrival: nothing presents anything to these
+  guards today. Do not read the absence of findings on day one as any of them passing.
+
+  Authored at the BA stage. L2 behaviour only. No assigned_agent, no it_requirements, no
+  test_spec, no estimated_complexity — the IT PO's.

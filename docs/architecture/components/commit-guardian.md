@@ -10,6 +10,7 @@ components:
   - commit_guardian
   - git_vcs_operations
 related_docs:
+  - docs/architecture/adrs/ADR-045-observed-refusal-establishes-protection.md
   - docs/architecture/adrs/ADR-038-commit-guardian-shared-change-set-derivation.md
   - docs/architecture/adrs/ADR-037-whole-collection-uniqueness-pass.md
   - docs/architecture/adrs/ADR-029-adr-number-collision-prevention.md

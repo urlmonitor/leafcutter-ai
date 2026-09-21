@@ -1,0 +1,383 @@
+id: GE-129a-1
+title: "What is examined is a place a guard is invoked from, not a script — the same guard wired at two tool-call events is two things to prove, and a guard the settings surface does not name is not this run's business"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - precommit_hooks
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the surface that wires guards to the editor's own tool calls holds, for each
+    kind of tool call, one or more groups selected by which tools they apply to, and
+    each group holds entries that each name a guard to run,
+  And no entry on that surface carries an identifier of its own,
+  When the liveness run takes its subjects from that surface as it stands at the time
+    of the run,
+  Then each subject it reports is one entry, and it is reported together with the kind
+    of tool call that reaches it, the tools that group applies to, and the guard that
+    entry resolves to,
+  And two entries naming the same guard under two different kinds of tool call are two
+    subjects and are reported separately, each with its own state, because what one of
+    them was seen to do says nothing about the other,
+  And given one further entry naming a guard already wired elsewhere on that surface is
+    added under a different kind of tool call, and nothing else changes,
+  When the run repeats,
+  Then that new entry is among the run's subjects in addition to the entry that was
+    already there, and every subject reported before the addition is still reported and
+    still carries the state its own examination produced,
+  And given one existing entry is then moved into a group applying to different tools,
+  When the run repeats again,
+  Then it is reported under the tools its group now applies to and under no other, and
+    the run does not report a subject at the position that entry has left,
+  And a guard that sits in the hook directory but that no entry on that surface names is
+    not among the run's subjects and is named in nothing the run reports, while in that
+    same run the entries the surface does name are each reported with a state, so that
+    silence is the silence of a boundary rather than the silence of a run that examined
+    nothing.
+depends_on:
+  - GE-129a
+doc_links:
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-129-proven-wherever-it-runs/GE-129a.yaml"
+    relationship: parent
+    status: exists
+  - path: "docs/acceptance-criteria/build_pipeline/BP-1600-counted-from-reality/BP-1600a-1.yaml"
+    relationship: related
+    status: exists
+    relevance: >-
+      THE SEAM, AND THE RECORD THIS ONE IS MOST AT RISK OF BEING READ AS. BP-1600a-1
+      (approved, high) ALSO reads this settings surface — its criteria take "from each
+      configured entry the hook script that entry's command executes" — but it does so to
+      produce A SET OF SCRIPTS to compare against the scripts on disk, and it deliberately
+      discards which event and which matcher group each entry sat in, because for its
+      question ("does anything run this script?") one entry anywhere is enough. This record
+      cannot discard that: the event decides how an input reaches a guard and what its
+      refusal looks like, so the unit here is the ENTRY, not the script. The discriminating
+      case is written into the criteria above — the same guard wired at two events is ONE
+      wired script to BP-1600a-1 and TWO subjects here, and both records are right. Consume
+      nothing from it, re-derive nothing of it, and do not grow a second disk walk: a guard
+      the surface does not name has no place to put an input through and is absent from this
+      population by construction.
+  - path: "docs/architecture/adrs/ADR-045-observed-refusal-establishes-protection.md"
+    relationship: describes
+    status: exists
+    relevance: >-
+      INHERITED IN FULL, NOT RESTATED. §2 fixes the population as hooks_manifest and says in
+      terms that extending it to a second registration surface is a separate decision; this
+      record is the population half of that decision. §1 (state produced by execution), §3
+      (reuse the existing vocabulary), §5 (deployed copy, out of process, the check must be
+      shown to have seen its input) and §7 (a verifying surface is guarded twice) apply here
+      by their own terms and are not re-argued in any clause above.
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-120-green-means-checked/GE-120f-3.yaml"
+    relationship: related
+    status: exists
+    relevance: >-
+      THE CLAUSE THIS RECORD DELIBERATELY DOES NOT RESTATE, AND THE ONE THING THE MECHANISM
+      DECISION MUST NOT DROP. GE-120f-3 owns the stated figure of checks actually put an
+      input through, that the figure moves when the population moves, and that a run which
+      put an input through none fails as UNRESOLVED rather than clean. That clause is written
+      once and must reach whatever reads this population: if the session surface is served by
+      a second population reader behind the same runner, it is already covered; if a second
+      runner is chosen instead, GE-120f-3's clause has to be extended to cover it, and a
+      second copy of it must NOT be authored here. This record therefore asserts membership
+      and identity only, never a figure.
+  - path: templates/settings.json
+    relationship: describes
+    status: exists
+    relevance: >-
+      The surface read. Observed in this worktree 2026-09-14: an object keyed by tool-call
+      event, each event holding an array of groups, each group carrying a `matcher` string
+      and a `hooks` array whose items are objects of the form {type, command, timeout}. Note
+      the correction recorded in this record's notes — the entries are objects, not bare
+      command strings; what they lack is an identifier, not a place to hold a value.
+  - path: templates/hooks/readme_read_guard.py
+    relationship: related
+    status: exists
+    relevance: >-
+      The worked example, and a member of this population: it is named by an entry, so it is
+      a subject here. That it is also correctly WIRED — and therefore correctly absent from
+      BP-1600a-1's findings — is the fact that makes the seam above real rather than
+      theoretical.
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      The deployed-layout convention, and the reason the first it_requirement below is about
+      WHICH settings surface is enumerated. templates/ is canonical; the installed tree is a
+      build output reached through links. A population read from a copy the editor does not load
+      is a population of the wrong subjects, and it fails GREEN.
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      The component the reader is added to under the one-runner decision recorded on GE-129a.
+  - path: docs/testing/test-angles.md
+    relationship: related
+    status: exists
+    relevance: Source of the `angle` values on the descriptors below.
+assigned_agent: python-coder
+estimated_complexity: L
+it_requirements:
+  - >-
+    THE SURFACE ENUMERATED IS THE ONE IN FORCE IN THE LAYOUT BEING SWEPT, NOT templates/. This
+    record owns which copy of the SURFACE is read; GE-129a-4 owns which copy of the GUARD is
+    examined; they must be the same layout in the same sweep, or the run enumerates one
+    repository's entries and examines another's. State the surface path the enumeration read in
+    the run's own output, so that fact is available to the assertions on GE-129a-4 rather than
+    assumed by them.
+  - >-
+    THE IDENTITY IS THE TRIPLE, DERIVED AT RUN TIME, AND NO PART OF IT IS AN INDEX. Represent a
+    subject as (tool-call event, the matcher exactly as written on the group, the guard the
+    entry's command resolves to). Every component is read from the parsed surface on the run
+    that uses it — never cached between runs, never persisted in a list inside the runner, and
+    never an array position, which drifts on an unrelated insert. This is the property the
+    binding on GE-129a-2 is derived from, so a representation that cannot survive an unrelated
+    edit to settings.json breaks that record as well as this one.
+  - >-
+    REPORT THE MATCHER AS WRITTEN; DO NOT EXPAND IT INTO A TOOL LIST. The matcher is a pattern
+    the editor interprets, and expanding it into the set of tools it matches would encode a tool
+    vocabulary this project does not own and cannot keep current — the expansion would silently
+    go wrong the day the editor adds a tool. "The tools that group applies to" is satisfied by
+    reporting the matcher verbatim; two entries with different matchers are different subjects
+    because their matchers differ, not because an expansion says so.
+  - >-
+    DO NOT GROW A DISK WALK IN THIS CODE PATH, AND DO NOT CONSUME BP-1600a-1's. The population
+    is enumerated from the parsed settings surface and from nothing else. A directory listing of
+    the hook directory must not appear anywhere in the reader, and BP-1600a-1's enumeration must
+    not be imported or re-derived: it identifies by script and deliberately discards event and
+    matcher, so consuming it would collapse exactly the two subjects the criteria above require
+    to stay apart. The absence-asserting clause is then true by construction rather than by a
+    filter, which is the cheaper and the more honest implementation.
+  - >-
+    THE SESSION POPULATION IS REGISTERED BEHIND GE-120f-1's RUNNER, NOT BESIDE IT — see the
+    one-runner decision on GE-129a and do not re-open it here. The concrete obligation this
+    places on this record: the reader is invoked by the same runner, its subjects flow through
+    the same record-writing and the same verdict logic, and its examined figure is stated for
+    this population separately from the commit-surface figure GE-120f-3's criteria describe.
+    Proving the shared verdict logic actually reaches this population is the failure-angle
+    descriptor below, and it is not optional — without it "already covered" is an assertion.
+  - >-
+    ADR-045 §7 IS DISCHARGED ON THIS RECORD, AND IT IS THE HARDEST REQUIREMENT HERE. This
+    reader's silent failure — no settings surface in the deployed copy, a walk-up that resolves
+    nowhere, a parse that yields nothing — produces an empty population, and an empty population
+    produces no findings, which is indistinguishable from a healthy surface with nothing to
+    report. §7 therefore mandates at least one independent check that does NOT route through the
+    liveness run: it must assert, without asking the run, that the reader exists at its deployed
+    path, that the runner's registration resolves to it, that the real deployed settings surface
+    yields a non-empty population, and that the gate invoking the sweep actually reaches it. A
+    test that establishes any of these by reading the liveness run's output does not satisfy §7
+    and must not be offered as though it did.
+  - >-
+    NO POPULATION FIGURE IN THE IMPLEMENTATION OR IN ANY TEST EXPECTATION. Every assertion is
+    count-and-membership over the run's own emitted output. The 13-and-11 measurement in this
+    record's doc_links is dated evidence about a repository, not a constant; GE-120f records the
+    count as disputed and the parent forbids a figure below it. An assertion that today's eleven
+    entries are all reported passes forever and catches nothing on the day a twelfth is wired,
+    which is the day this run exists for.
+  - >-
+    IF THE CHOSEN IMPLEMENTATION ADDS A TOP-LEVEL KEY TO commit_guardian.json OR TO ANY OTHER
+    WATCHED REGISTRY, THIS RECORD MUST DECLARE package_surface: true BEFORE IT LANDS. It is left
+    undeclared here because the one-runner decision puts the reader behind an already-registered
+    gate, so no new registry entry is expected. The check-package-surface-declaration hook
+    reconciles registry entries actually added against the declarations of the ACs a change
+    cites, so an undeclared registration is caught at landing time rather than at authoring
+    time — amend the record, do not work around the hook.
+  - >-
+    HOST AND DEPLOYMENT. The reader goes inside templates/scripts/commit_guardian/, which
+    build_commit_guardian copies verbatim. Anything it imports from outside that directory goes
+    into the scripts/build_phases.py deploy map in the same change, or the deployed run raises
+    ModuleNotFoundError while source-tree unit tests stay green — and here that surfaces as an
+    empty population, which is the §7 silent failure above wearing a pass.
+  - >-
+    AC_ENFORCE_STRICT=1 on every pytest invocation below. Error-handling policy applies to the
+    surface read and JSON parse: specific exception types, logged at WARNING or higher or
+    re-raised. A swallowed read or parse error must never become an empty population; it is
+    `blocked` and must reach the run's verdict as a refusal.
+test_spec:
+  - name: test_ge129a1_one_guard_wired_at_two_events_is_two_subjects_with_independent_states
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: >-
+      THE DECISIVE IDENTITY DESCRIPTOR — WRITE THIS ONE FIRST. Over a FIXTURE settings surface
+      wiring one guard under two different tool-call events, run the sweep once and assert two
+      separate subjects are reported, each carrying its own event, its own matcher as written,
+      the same resolved guard, and its own independent state. NAMED MUTATION (mandatory, run
+      it): identify subjects by resolved script path and deduplicate. Under that injection the
+      two subjects collapse into one; this descriptor must go RED and return to green on revert,
+      while the boundary descriptor below stays GREEN — that asymmetry is what proves the
+      mutation lands on this record rather than on its neighbour.
+  - name: test_ge129a1_an_entry_added_under_a_new_event_joins_the_subjects_and_no_existing_subject_changes
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: behavioral
+    angle: seam
+    description: >-
+      Over a fixture surface, capture the reported subjects and their states. Add ONE further
+      entry naming a guard already wired elsewhere, under a different event, change nothing
+      else, and re-run: the new entry is an additional subject, every previously reported
+      subject is still reported, and each still carries the state its own examination produced.
+      Establishes that the population is read from the surface at run time rather than from a
+      list inside the runner.
+  - name: test_ge129a1_an_entry_moved_between_matcher_groups_follows_its_group_and_leaves_no_subject_behind
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: >-
+      Move one existing entry into a group carrying a different matcher, change nothing else,
+      re-run: it is reported under the matcher its group now carries and under no other, and no
+      subject is reported at the position it left. NAMED MUTATION (mandatory, run it): identify
+      subjects by array position within the event. Under that injection the moved entry keeps
+      its old identity or a stale subject survives; this descriptor must go RED and return on
+      revert.
+  - name: test_ge129a1_an_unnamed_guard_on_disk_is_absent_while_every_named_entry_carries_a_state
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: >-
+      THE ANTI-VACUITY PAIRING, AND IT MUST STAY IN ONE INVOCATION. Over a fixture layout holding
+      a guard script that no entry names alongside entries that do: in ONE run, assert the
+      unnamed guard appears in nothing the run reports AND that every entry the surface names is
+      reported with a state. Split apart, the first half is satisfied by a run that reports
+      nothing at all, which is the silence this record exists to distinguish from a boundary.
+  - name: test_ge129a1_an_empty_session_population_reaches_ge120f3s_unresolved_verdict_through_the_shared_runner
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: >-
+      THE ONE-RUNNER PROOF, AND THE REASON THE MECHANISM DECISION IS NOT JUST A NOTE. Drive the
+      session population to empty (a fixture surface wiring nothing) and assert the run fails as
+      a run that reached no verdict, states that it examined none, and does NOT report a clean
+      session sweep or that no guard was found wanting. Paired IN THE SAME TEST with a non-empty
+      session population that does reach a verdict, so the descriptor cannot be satisfied by a
+      run that always refuses. NAMED MUTATION (mandatory, run it): give the session reader its
+      own verdict path that returns clean on an empty population. Under that injection the empty
+      sweep reports success; this descriptor must go RED. If it cannot be made to pass without
+      re-authoring GE-120f-3's clause under GE-129, the one-runner decision was not actually
+      implemented — escalate rather than writing a second copy of that clause.
+  - name: test_ge129a1_the_session_reader_is_pinned_without_invoking_the_liveness_run
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: integration
+    angle: reachability
+    surface_invoked: >-
+      the hooks_manifest entry line that invokes GE-120f-1's runner, executed as
+      python .leafcutter/scripts/commit_guardian/run_hook.py <that gate>
+    description: >-
+      ADR-045 §7, AND THE ONLY GUARD THAT SURVIVES THE RUN ITSELF FAILING. Without invoking the
+      liveness run to establish any of it: assert the session reader exists at its deployed path,
+      that the runner's registration resolves to it, that the REAL deployed settings surface
+      yields a non-empty population, and that invoking the gate through its production entry line
+      reaches the reader and propagates a non-zero outcome into the gate's own exit status.
+      PAIRED: over a fixture layout with no settings surface at all, the same gate must REFUSE
+      rather than exit clean — an empty population reported as a clean sweep is the failure mode
+      §7 exists for. Any assertion in this descriptor that is established by reading the liveness
+      run's output does not satisfy §7 and must be rewritten.
+  - name: test_ge129a1_the_deployed_reader_enumerates_the_real_surface_in_a_cold_process
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: integration
+    angle: deployed
+    description: >-
+      After `python scripts/build.py --target-dir <copy>`, the DEPLOYED reader enumerates the
+      settings surface in force in that copy, from a cold process with PYTHONPATH scrubbed, the
+      interpreter isolated and cwd off the source tree. Assert the run states the surface path it
+      read and that the path is the deployed one, not templates/. A helper placed outside
+      templates/scripts/commit_guardian/ without a deploy-map entry surfaces here as
+      ModuleNotFoundError instead of as an empty population. Invoke pytest with
+      AC_ENFORCE_STRICT=1.
+test_rationale: |
+  Every clause of this record is red on arrival for one reason — nothing reads this surface for
+  this purpose today — and every one of them is also satisfiable by a run that reports nothing,
+  which is why no descriptor above asserts an absence on its own. The identity clauses are
+  carried by a fixture surface rather than the real one so they do not expire the day an entry is
+  added or moved, and the two named mutations (deduplicate by script, identify by position) are
+  the two implementations a competent engineer would reach for first, so they are executed rather
+  than described.
+
+  Two descriptors exist for reasons outside the criteria and must not be dropped as redundant.
+  The empty-population descriptor is the only evidence that the one-runner decision recorded on
+  GE-129a was actually implemented rather than merely written down; without it GE-120f-3's
+  unresolved clause is assumed to reach this population rather than shown to. The §7 descriptor
+  is the only guard that survives the runner failing, because in that state the regime's own
+  output is an absence, and an absence is what a healthy surface also produces.
+delivers_to:
+  - ac_id: GE-129a-2
+    contract: >-
+      The identity of a subject — the kind of tool call, the tools its group applies to, and
+      the guard the entry resolves to — derived from the surface at the time of the run.
+      GE-129a-2 binds a declaration to that identity; a declaration cannot be bound to an
+      entry that has no identity.
+  - ac_id: GE-129a-3
+    contract: >-
+      The kind of tool call each subject sits under, which is what decides the shape of the
+      payload GE-129a-3 presents and the shape of the refusal it reads back.
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-09-14
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-AGuardThatHasNeverSaidNoIsNotCountedAs/10_TICKET-20260921-GE-129a-1.md
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  WHY THE UNIT IS THE ENTRY AND NOT THE SCRIPT — THE ONE THING THAT MAKES THIS RECORD
+  DIFFERENT FROM EVERY NEIGHBOUR THAT ALSO READS THIS FILE.
+  hooks_manifest entries carry an id, so GE-120f's population has an identity handed to it.
+  This surface hands out none. Every candidate identity was considered and only one survives
+  contact with the surface's shape:
+    - THE SCRIPT PATH. Rejected. The same guard can be wired at more than one event, and its
+      ability to refuse is not a property of the file — it is a property of the file plus the
+      payload the event hands it plus what that event does with the answer. Identifying by
+      script silently merges two subjects and lets a demonstration at one event stand for the
+      other. This is also exactly the identity BP-1600a-1 uses, correctly, for a different
+      question, which is why the two records must not be collapsed.
+    - THE ENTRY'S POSITION IN THE FILE. Rejected. An index into an array moves when anything
+      above it is inserted or removed, so a declaration bound to it drifts on an unrelated
+      edit — the failure GE-129a-2 exists to make impossible.
+    - THE EVENT, THE MATCHER AND THE RESOLVED GUARD, TAKEN TOGETHER AT RUN TIME. Chosen. It
+      is stable under unrelated edits, it distinguishes the cases that genuinely behave
+      differently, and every part of it is read from the surface rather than repeated by hand.
+      The criteria above fix this behaviourally — two events, two subjects; a move between
+      matcher groups follows the entry — without fixing a representation, which is the IT PO's.
+
+  A CORRECTION TO THE FRAMING THIS RECORD WAS AUTHORED FROM, RECORDED BECAUSE IT CHANGES THE
+  OPEN QUESTION'S SHAPE. GE-129a and GE-129's notes both describe settings.json entries as
+  "COMMAND STRINGS inside matcher groups" with "no field on a command string to hang a
+  declaration from". Read in this worktree 2026-09-14, an entry is a JSON OBJECT —
+  {type, command, timeout} — sitting in a `hooks` array inside a group carrying a `matcher`.
+  The load-bearing half of the claim holds and is why GE-129a-2 exists: there is NO
+  IDENTIFIER on an entry. The other half does not: there is somewhere to put a value. That
+  matters, because it means "declare it in the entry itself" is not ruled out by the file's
+  shape — it is ruled out, if it is ruled out, by the fact that this file is read by the
+  editor's own settings parser rather than by this project, which is a question about that
+  parser's tolerance of unknown keys and is the IT PO's to settle. Left open here
+  deliberately; see GE-129a-2, which fixes the property the answer must have.
+
+  ANTI-VACUITY. The boundary clause — a guard on disk that no entry names is named in nothing
+  this run reports — is trivially true of a run that reports nothing at all, so it is asserted
+  in the same run as the entries the surface does name, each carrying a state. That pairing is
+  ACS-1300a-3's and ACS-1400c-3's shape and it is not optional here.
+
+  NAMED MUTATION FOR THE ABSENCE-ASSERTING CLAUSE. Identify subjects by resolved script path
+  and deduplicate. ARRIVAL COLOUR: the identity clauses are RED on arrival — nothing reads
+  this surface for this purpose today. Under the mutation the two-events-two-subjects clause
+  and the move-between-groups clause both go red while the boundary clause stays green, which
+  is the asymmetry that proves the mutation lands on this record rather than on its neighbour.
+
+  NO POPULATION FIGURE APPEARS ABOVE, DELIBERATELY, and none may be added: the parent forbids
+  one, GE-120f records the count as disputed, and the figure clause itself belongs to
+  GE-120f-3. Every assertion here is membership over the run's own output.
+
+  Authored at the BA stage. L2 behaviour only. No assigned_agent, no it_requirements, no
+  test_spec, no estimated_complexity — the IT PO's.
