@@ -14,51 +14,72 @@ related_docs:
   - docs/known-issues/README.md
 ---
 
-# KI-ACD-20260921-1615 — An AC's `expects_from` edge is dropped from the generated ticket whenever that same AC's `delivers_to` is null, so terminal leaves lose their dependencies
+# KI-ACD-20260921-1615 — `expects_from` is never a source for a generated ticket's `depends_on`, so a contract edge survives only if its author also duplicated it into `depends_on` by hand
 
 - **Severity:** high — a dropped edge means a batch drive builds a consumer before its
   producer; the ticket renders the contract in prose, so the omission looks like an
   absence of dependency rather than a loss of one
-- **Status:** open
+- **Status:** FIXED on branch `feature/acd-generator-edges` (see Resolution). Left open
+  until that branch merges.
 - **Occurrences:** 1 (2026-09-21, BO-4100d — 2 of 3 edges lost)
 - **First seen:** 2026-09-21 · **Last seen:** 2026-09-21
-- **Where:** `scripts/ac_store/generate_ticket_from_ac.py` — the `depends_on` derivation
-  from `expects_from`
-- **Distinct from KI-ACD-021**, which covers edges pointing at an AC's own *parent*. One
-  of the two cases below is a parent edge and is explained by that entry; the other is a
-  *sibling* edge and is not. The discriminator below explains both.
+- **Where:** `scripts/ac_store/_gtfa_store.py::_build_ticket_depends_on`
+
+> **This entry was first filed with the wrong mechanism and corrected the same day.**
+> The original diagnosis claimed the edge was dropped when the consuming AC's
+> `delivers_to` was null. That was a coincidence across four inconsistently-authored
+> records, not a cause — disproved by calling `_build_ticket_depends_on` with
+> `delivers_to: None` and an explicit `depends_on` present, which resolved correctly.
+> The corrected mechanism is below. The original table is kept because the observations
+> in it are real; only the explanation was wrong.
 
 ## Symptom
 
-`depends_on` on a generated ticket is derived from the AC's `expects_from`, but only
-sometimes. Observed across four records generated in one pass, from the same tree, with
-the same field shapes:
+`depends_on` on a generated ticket appeared to be derived from the AC's `expects_from`,
+but only sometimes. Observed across four records generated in one pass:
 
-| AC | `delivers_to` | `expects_from` | ticket `depends_on` |
+| AC | AC's own `depends_on` | `expects_from` | ticket `depends_on` |
 |---|---|---|---|
-| `BO-4100d-1` | populated | — | `[]` — correct, nothing to resolve |
-| `BO-4100d-2` | **null** | `BO-4100d-1` | `[]` — **dropped** |
-| `BO-4100d-3` | populated | `BO-4100d-1` | `[TICKET-…d-1.md]` — resolved |
-| `BO-4100d-3-i` | **null** | `BO-4100d-3` | `[]` — **dropped** |
+| `BO-4100d-1` | `[BO-4100d]` (parent) | — | `[]` — correct |
+| `BO-4100d-2` | `[BO-4100d]` (parent) | `BO-4100d-1` | `[]` — **dropped** |
+| `BO-4100d-3` | `[BO-4100d, BO-4100d-1]` | `BO-4100d-1` | `[TICKET-…d-1.md]` — resolved |
+| `BO-4100d-3-i` | `[BO-4100d-3]` (parent) | `BO-4100d-3` | `[]` — **dropped** |
 
-`d-2` and `d-3` declare `expects_from` against the *same* target (`BO-4100d-1`), in the
-same shape, and were generated minutes apart into the same tickets root. One resolved and
-one did not.
+## The actual mechanism
 
-## The discriminator
+`_build_ticket_depends_on` read **only** `ac.get("depends_on")`. It never consulted
+`expects_from` at all — there was no derivation to be inconsistent about.
 
-The edge is honoured only when the *consuming* AC also has a non-null `delivers_to`. An AC
-that consumes a contract but produces none — which is exactly what a terminal leaf looks
-like — loses its incoming edge.
+Every row above follows from that one fact plus the pre-existing structural-parent drop:
 
-That is the worst possible population to lose: terminal leaves are the ends of every
-contract chain, so the dependency information disappears precisely where ordering has no
-other signal to fall back on.
+- **`d-3` resolved** not because of any contract handling, but because its author had
+  *redundantly duplicated* the contract target into `depends_on` alongside the parent.
+  The generator was reading that literal entry.
+- **`d-2` dropped** because its `depends_on` held only its structural parent, which is
+  deliberately dropped, and its `expects_from` was never read.
+- **`d-3-i` dropped** for the same reason: its sole `depends_on` entry
+  (`BO-4100d-3`) *is* its structural parent.
 
-This appears to be the same seam as KI-ACS-013 (`delivers_to` and `expects_from` are the
-two ends of one edge keyed on different things, so the forward half is not traversable),
-surfacing as a different consequence: there it is a traversal gap, here it silently
-conditions the reverse edge on the forward one being present.
+So the contract layer and the ordering layer were simply not connected. An
+`expects_from` edge reached the generated ticket only when a human had written the same
+fact twice, in two different fields, in two different vocabularies.
+
+This is the generator-side counterpart of **KI-ACD-015** ("Epic ordering reads
+`depends_on` only, so `expects_from` contract edges are invisible to the build
+sequencer"). Same disconnect, one layer earlier: there the sequencer ignores the contract
+edges, here the generator never writes them down in the first place.
+
+## Resolution
+
+Fixed on `feature/acd-generator-edges`: `_build_ticket_depends_on` now unions the AC's
+`depends_on` with the ac_ids harvested from `expects_from` (order-preserving,
+de-duplicated) before classification. The structural-parent drop and the dangling-id
+warning are unchanged, so `d-3-i`'s parent edge is still correctly dropped — verified by
+a test that passes both before and after, to prove the fix did not widen into
+KI-ACD-021's territory.
+
+Regression test: `unit_tests/ac_store/test_ki_acd_20260921_depends_on_expects_from.py`,
+confirmed red before the fix (`Got depends_on=[]`) and green after.
 
 ## Why it reads as correct
 
