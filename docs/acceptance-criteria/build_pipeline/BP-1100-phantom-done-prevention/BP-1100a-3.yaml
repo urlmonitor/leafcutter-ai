@@ -87,8 +87,13 @@ doc_links:
     relevance: "READ ONLY, AND EXPLICITLY NOT A SURFACE — settled 2026-08-19, do not re-open. The
       BA's notes name the goal path's per-leaf readiness gate (ACD-1200b-2) alongside the leaf
       confirmation prompt as a place clause 2 might have to land. It cannot: the readiness gate runs
-      BEFORE ticket generation. run() calls classify_readiness at line 2250 and only reaches ticket
-      generation at line 2290, so at the moment that prompt is presented no ticket exists and no
+      BEFORE ticket generation. The goal path calls classify_readiness before it ever reaches
+      generate_tickets_for_leaves — both now in scripts/ac_store/epic_ac_phases.py (:113 and :191
+      respectively; pre-split these were goal_to_epic.py run() at :2259 and :2297, cited in this
+      block as 2250/2290, correct against 54356a926 and shifted +9 by 2e8756e02 the same week).
+      The ORDERING is what this exclusion rests on, and it is unchanged by the 2026-09-14
+      decomposition — the ruling stands exactly as settled. At the moment that prompt is
+      presented no ticket exists and no
       surface has been derived. The goal path's approval-after-generation moment is the SAME Step 3
       block in templates/agents/build-ac.md ('Build this epic now?'), which is already in this
       surface. Adding this file would name a location that cannot carry the statement."
@@ -333,8 +338,10 @@ amended_by:
       one, since (1) and (2) can both be correct while the approver still sees nothing.
       EXPLICITLY EXCLUDED, with reasons on the record. scripts/goal_to_epic.py is linked
       'describes', NOT 'modifies': the BA's notes name its per-leaf readiness gate as a candidate
-      location, but that gate runs BEFORE ticket generation (classify_readiness at line 2250,
-      generation at line 2290), so no surface exists to report when it prompts. The goal path's
+      location, but that gate runs BEFORE ticket generation (classify_readiness then
+      generate_tickets_for_leaves, both in scripts/ac_store/epic_ac_phases.py since the
+      2026-09-14 decomposition; formerly goal_to_epic.py run()), so no surface exists to
+      report when it prompts. The goal path's
       approval-after-generation moment is the same Step 3 block already in the surface.
       templates/workflows/build-ac.md is not linked at all: its only mention is a frontmatter
       description quoting the unchanged question.

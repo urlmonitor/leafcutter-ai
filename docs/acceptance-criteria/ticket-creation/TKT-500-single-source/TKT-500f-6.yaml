@@ -25,6 +25,11 @@ doc_links:
   - path: scripts/goal_to_epic.py
     relationship: constrains
     status: exists
+    relevance: "Facade only since the 2026-09-14 decomposition. The goal-path generator this AC constrains is now scripts/ac_store/epic_tickets.py, below — the SINGLE shared classification/emission helper must be called from there, not from the facade."
+  - path: scripts/ac_store/epic_tickets.py
+    relationship: constrains
+    status: exists
+    relevance: "Owns _call_generate_ticket_from_ac and generate_tickets_for_leaves — the goal-path half of the two generators that must not drift apart."
   - path: scripts/ac_store/generate_ticket_from_ac.py
     relationship: constrains
     status: exists
@@ -49,5 +54,36 @@ amended_by:
 superseded_by: null
 covered_by: [TKT-500f-6-i, TKT-500f-6-ii, TKT-500f-6-iii]
 implemented_by: []
+test_spec:
+  - name: test_qualifying_implementation_py_emits_test_requirements_section
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "An AC whose files_touched holds a qualifying implementation .py (e.g. scripts/ac_store/generate_ticket_from_ac.py) generates a ticket body containing a section headed exactly '## Test Requirements'."
+  - name: test_section_contains_at_least_one_test_stub_entry
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "The section is non-empty — it carries at least one stub entry describing a test to be written, so a bare heading does not satisfy the AC."
+  - name: test_test_stub_entry_names_the_implementation_file
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "The stub entry names the qualifying implementation file it applies to, which is what makes the section actionable rather than decorative."
+  - name: test_both_generators_emit_the_section_from_one_shared_helper
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: seam
+    description: "The it_requirements no-drift rule: the same AC driven through generate_ticket_from_ac.py and through the goal path (epic_tickets.py) produces the same section, and the classification predicate is reached from a single shared helper rather than inlined in each generator."
+  - name: test_generated_section_is_read_by_the_real_test_writer_signal
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    description: "Round-trip the generated ticket through the consumer that actually reads the heading to decide whether the test-writer phase is needed, rather than asserting on a hand-built string — the section's presence must be a live signal, not just present text."
 change_target: code
 risk_surface: contract_boundary

@@ -33,6 +33,11 @@ doc_links:
   - path: scripts/goal_to_epic.py
     relationship: constrains
     status: exists
+    relevance: "Facade only since the 2026-09-14 decomposition. The goal-path generator this AC constrains is now scripts/ac_store/epic_tickets.py, below."
+  - path: scripts/ac_store/epic_tickets.py
+    relationship: constrains
+    status: exists
+    relevance: "Owns _call_generate_ticket_from_ac and generate_tickets_for_leaves — the goal-path half of the two generators this AC constrains."
   - path: scripts/ac_store/generate_ticket_from_ac.py
     relationship: constrains
     status: exists
@@ -51,5 +56,42 @@ amended_by: []
 superseded_by: null
 covered_by: []
 implemented_by: []
+test_spec:
+  - name: test_test_star_py_does_not_qualify_as_an_implementation_file
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "unit_tests/test_generate_ticket.py (a test_*.py basename) does not trigger the section."
+  - name: test_star_test_py_does_not_qualify_as_an_implementation_file
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "scripts/ac_store/generator_test.py (a *_test.py basename) does not trigger the section — the second naming form, which a regex anchored only on the test_ prefix would miss."
+  - name: test_py_under_tickets_does_not_qualify_as_an_implementation_file
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "tickets/00_inbox/helper.py is excluded by its tickets/ path rather than its basename."
+  - name: test_all_three_non_qualifying_together_emit_no_section
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "The full first Given: a files_touched holding only those three paths generates a ticket with no '## Test Requirements' heading at all."
+  - name: test_no_missing_section_warning_is_recorded_for_a_legitimate_omission
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "Generation completes without recording a warning about a missing Test Requirements section — a legitimate omission must be silent, or the warning channel becomes noise."
+  - name: test_one_implementation_file_alongside_a_test_file_restores_the_section
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: "The second Given: a test file alongside a real implementation file still emits the section, and the stub names the implementation file. This is the control that stops the test-file exclusion swallowing a mixed set."
 change_target: code
 risk_surface: internal

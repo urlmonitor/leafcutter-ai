@@ -40,6 +40,11 @@ doc_links:
   - path: scripts/goal_to_epic.py
     relationship: related
     status: exists
+    relevance: "Facade only since the 2026-09-14 decomposition. The goal-path caller of traverse_ac_tree is now epic_ac_phases.py below; the leaf-filter itself remains in scripts/ac_store/scan_ac_store.py, unaffected by the split."
+  - path: scripts/ac_store/epic_ac_phases.py
+    relationship: related
+    status: exists
+    relevance: "The goal path's traversal step — it does `from scan_ac_store import traverse_ac_tree` and consumes the filtered leaf set this AC constrains."
   - path: docs/reference/ac-schema.md
     relationship: describes
     status: exists
@@ -62,5 +67,42 @@ superseded_by: null
 covered_by:
   - ACD-1200a-10-i
 implemented_by: []
+test_spec:
+  - name: test_ac1200a10_done_leaf_excluded_by_default
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: "A leaf with work_status done is absent from the default result — the Then clause excluding ACD-070a-1."
+  - name: test_ac1200a10_superseded_leaf_excluded_by_default
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: "A leaf with status superseded_by is absent from the default result — the Then clause excluding ACD-070b-1."
+  - name: test_ac1200a10_active_todo_leaf_always_included
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: "An active + todo leaf is still returned — the unchanged default the exclusions must not disturb."
+  - name: test_ac1200a10_superseded_replacement_children_collected
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: "The discriminating case: traversal still recurses into a superseded AC's covered_by, so ACD-070b-1a and -1b are collected even though their superseded parent is skipped. A filter that pruned the whole subtree would pass every other assertion and fail this one."
+  - name: test_ac1200a10_default_result_is_three_leaves
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: "Exact cardinality of the default result, so an over-inclusive filter cannot pass on membership checks alone."
+  - name: test_ac1200a10_both_false_returns_all_five
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: unit
+    angle: boundary
+    description: "With both exclusion flags off, all five leaves return — proving the exclusion is flag-driven rather than unconditional."
 change_target: code
 risk_surface: contract_boundary

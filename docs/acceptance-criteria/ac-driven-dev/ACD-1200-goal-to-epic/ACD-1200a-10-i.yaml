@@ -36,6 +36,15 @@ doc_links:
   - path: scripts/goal_to_epic.py
     relationship: related
     status: exists
+    relevance: "Facade only since the 2026-09-14 decomposition. The zero-leaf guard now lives in the two modules below."
+  - path: scripts/ac_store/epic_ac_phases.py
+    relationship: related
+    status: exists
+    relevance: "The goal path's traversal + zero-leaf check — it imports ZeroLeafError from epic_errors and raises before any epic folder is created."
+  - path: scripts/ac_store/epic_errors.py
+    relationship: related
+    status: exists
+    relevance: "Defines ZeroLeafError, the typed error this AC's non-empty-epic guard raises."
 assigned_agent: python-coder
 estimated_complexity: S
 it_requirements:
@@ -52,5 +61,30 @@ amended_by: []
 superseded_by: null
 covered_by: []
 implemented_by: []
+test_spec:
+  - name: test_acd_1200a_10_i_all_done_or_superseded_yields_empty_leaf_set
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: "Build the ACD-080 shape from the Given (a-1 done, a-2 superseded_by [a-3], a-3 done) and assert leaf collection with default exclusion flags returns an empty list."
+  - name: test_acd_1200a_10_i_zero_leaf_error_fires_with_all_done_message
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: "The zero-leaf error path fires and its message states that no buildable leaf ACs remain beneath the goal because all are done or superseded. Assert on the message content, not merely that some error was raised — the distinction from ACD-1200a-3-i's structurally-leafless case is exactly what the wording carries."
+  - name: test_acd_1200a_10_i_no_epic_folder_is_created
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: "No epic folder exists on disk after the run — the guard must fire before any directory is created, so assert absence rather than emptiness."
+  - name: test_acd_1200a_10_i_differs_from_structurally_leafless_goal
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: unit
+    angle: boundary
+    description: "Discriminating test against ACD-1200a-3-i: a goal whose leaves exist but are all filtered out must be distinguishable from a goal that is structurally leaf-less. An implementation that collapses both into one generic message fails here while passing the other three."
 change_target: code
 risk_surface: internal
