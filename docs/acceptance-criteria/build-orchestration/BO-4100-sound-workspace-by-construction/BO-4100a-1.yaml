@@ -41,6 +41,14 @@ doc_links:
     relationship: describes
     status: exists
     relevance: "Angle taxonomy this record's test_spec entries declare."
+  - path: templates/scripts/setup_ticket_worktree.py
+    relationship: modifies
+    status: exists
+    relevance: "Canonical source. The three creation helpers _create_worktree (l.316), _create_ac_worktree (l.385) and _create_fastlane_worktree (l.1057) each decide their own commit-ish; the single shared resolution point replaces all three."
+  - path: scripts/setup_ticket_worktree.py
+    relationship: modifies
+    status: exists
+    relevance: "Build output of the template above via build_template_standalone_scripts. Must change in parity or CI's build overwrites the fix (ADR-001)."
 assigned_agent: python-coder
 estimated_complexity: M
 it_requirements:

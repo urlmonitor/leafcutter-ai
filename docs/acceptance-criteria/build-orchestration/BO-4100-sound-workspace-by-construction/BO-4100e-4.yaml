@@ -38,6 +38,18 @@ doc_links:
     relationship: describes
     status: exists
     relevance: "Angle taxonomy this record's test_spec entries declare."
+  - path: scripts/worktree/list_workspaces.py
+    relationship: modifies
+    status: planned
+    relevance: "Created by BO-4100e-1. Discovery must stay a READ with no registration side effect on any path -- listing, reporting (BO-4100e-3) and removal (BO-4100e-2) alike -- and origin must survive a listing unchanged rather than being flipped to 'registered'."
+  - path: templates/scripts/setup_ticket_worktree.py
+    relationship: modifies
+    status: exists
+    relevance: "Canonical source of the handover/creation path, which must select on origin == 'registered' and must refuse a request to work inside a leftover with a discriminated remnant-awaiting-clearing payload (ADR-039 shape), distinguishable from the occupied-workspace refusal it resembles."
+  - path: scripts/setup_ticket_worktree.py
+    relationship: modifies
+    status: exists
+    relevance: "Build output of the template above. Must change in parity via the build.py round-trip (ADR-001)."
 assigned_agent: python-coder
 estimated_complexity: M
 it_requirements:

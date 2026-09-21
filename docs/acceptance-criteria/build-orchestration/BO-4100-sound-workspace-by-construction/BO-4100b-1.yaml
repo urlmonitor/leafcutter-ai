@@ -43,6 +43,30 @@ doc_links:
     relationship: describes
     status: exists
     relevance: "Angle taxonomy this record's test_spec entries declare."
+  - path: templates/scripts/commit_guardian/check_build_drift.py
+    relationship: modifies
+    status: exists
+    relevance: "Canonical source. All four refusing exit paths in main() -- violations, missing and unreadable (return 1) and gaps (return 2) -- must be scoped to the commit's changed-file set. The gaps path is the one the 2026-09-14 evidence points at."
+  - path: scripts/commit_guardian/check_build_drift.py
+    relationship: modifies
+    status: exists
+    relevance: "Build output of the template above; the pre-commit hook runs from this deployed copy. Must change in parity via the build.py round-trip (ADR-001)."
+  - path: templates/scripts/commit_guardian/check_output_drift.py
+    relationship: modifies
+    status: exists
+    relevance: "Canonical source. Must be scoped in the same change and keep its RESULT vocabulary identical to check_build_drift's, or the two runs stop being comparable."
+  - path: scripts/commit_guardian/check_output_drift.py
+    relationship: modifies
+    status: exists
+    relevance: "Build output of the template above. Must change in parity via the build.py round-trip (ADR-001)."
+  - path: templates/scripts/commit_guardian/commit_guardian.json
+    relationship: modifies
+    status: exists
+    relevance: "Canonical hooks manifest. check-build-drift and check-output-drift declare change_set_source: handed_by_commit_path while running with pass_filenames: false and always_run: true, so neither is handed a change set. The declaration and the behaviour must be brought into agreement (ADR-038)."
+  - path: scripts/commit_guardian/commit_guardian.json
+    relationship: modifies
+    status: exists
+    relevance: "Deployed manifest the hook actually reads. Must change in parity with the template (ADR-001)."
 assigned_agent: python-coder
 estimated_complexity: M
 it_requirements:

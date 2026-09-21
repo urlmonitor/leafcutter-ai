@@ -25,6 +25,14 @@ doc_links:
   - path: docs/architecture/components/worktree-manager.md
     relationship: describes
     status: exists
+  - path: templates/workflows/close-worktree.md
+    relationship: describes
+    status: exists
+    relevance: "Cited in it_requirements as the SOURCE of the git-cherry patch-content reasoning (TICKET-20260513) that must survive into the computed verdict -- not as an edit surface. BO-4100c-1 states this prompt must not be the thing these records change, so it is declared at a non-edit-surface relationship and excluded from files_touched."
+  - path: scripts/worktree/assess_workspaces.py
+    relationship: modifies
+    status: planned
+    relevance: "Created by BO-4100c-1. This record constrains its reachability rule (patch content via git cherry, not commit identity, because this repository squash-merges) and its ignored-file handling (git's own ignore resolution, never a hard-coded cache-name list)."
 assigned_agent: python-coder
 estimated_complexity: S
 it_requirements:

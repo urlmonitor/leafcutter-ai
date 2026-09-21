@@ -48,6 +48,26 @@ doc_links:
     relationship: describes
     status: exists
     relevance: "Angle taxonomy this record's test_spec entries declare."
+  - path: templates/scripts/setup_ticket_worktree.py
+    relationship: modifies
+    status: exists
+    relevance: "Canonical source. _establish_pre_commit_config (l.1147) prefers os.symlink(<main_repo>/.leafcutter, <worktree>/.leafcutter) -- the structural cause of both harms in BO-4100b. It is replaced by a per-workspace materialisation, and its Windows/NTFS fallback branch must produce an independent copy too."
+  - path: scripts/setup_ticket_worktree.py
+    relationship: modifies
+    status: exists
+    relevance: "Build output of the template above. Must change in parity via the build.py round-trip (ADR-001)."
+  - path: templates/scripts/commit_guardian/_resolve_root.py
+    relationship: modifies
+    status: exists
+    relevance: "The shared root-resolution point for the guardian scripts. Hooks resolving their root from __file__ of the RESOLVED symlink target land in the shared install tree; that must be fixed here rather than hook by hook."
+  - path: scripts/commit_guardian/_resolve_root.py
+    relationship: modifies
+    status: exists
+    relevance: "Build output of the template above; the hooks run from this deployed copy. Must change in parity (ADR-001)."
+  - path: CLAUDE.md
+    relationship: modifies
+    status: exists
+    relevance: "Carries the .security-allowlist dual-update workaround, which exists only because of the symlink this record removes. A stale workaround for a removed defect is a second source of confusion, so it is corrected in the same change."
 assigned_agent: python-coder
 estimated_complexity: L
 it_requirements:

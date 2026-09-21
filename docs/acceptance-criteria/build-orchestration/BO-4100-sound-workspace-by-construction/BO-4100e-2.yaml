@@ -30,6 +30,14 @@ doc_links:
   - path: docs/known-issues/build-orchestration.md
     relationship: describes
     status: exists
+  - path: scripts/worktree/dispose_workspace.py
+    relationship: modifies
+    status: planned
+    relevance: "Created by BO-4100c-2. Absence of a registration entry must stop being a disqualifying condition anywhere on the removal path -- git worktree remove refuses for exactly that reason, so the discovered-entry route cannot simply delegate to it -- and partial registration state referring to the leftover must be cleared too."
+  - path: scripts/worktree/list_workspaces.py
+    relationship: modifies
+    status: planned
+    relevance: "Created by BO-4100e-1. Removal is addressed by the entry's `path` regardless of `origin`, and the post-removal check must read a FRESHLY computed listing rather than a cached one."
 assigned_agent: python-coder
 estimated_complexity: M
 it_requirements:

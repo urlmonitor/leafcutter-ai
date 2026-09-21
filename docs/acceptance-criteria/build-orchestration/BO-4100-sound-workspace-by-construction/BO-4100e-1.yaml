@@ -34,6 +34,26 @@ doc_links:
     relationship: describes
     status: exists
     relevance: "Angle taxonomy this record's test_spec entries declare."
+  - path: scripts/worktree/list_workspaces.py
+    relationship: creates
+    status: planned
+    relevance: "New union listing with two discovery routes -- the registration record and an inspection of the location workspaces occupy -- carrying the machine-readable origin discriminator every other child of BO-4100e branches on. scripts/worktree/ is the existing home for worktree tooling and has no templates/ counterpart, so the module is authored here directly."
+  - path: templates/scripts/setup_ticket_worktree.py
+    relationship: modifies
+    status: exists
+    relevance: "Canonical source of _resolve_installed_layout (l.150), the location resolution creation uses. Discovery must reuse the SAME resolution rather than deriving the location independently, so it must be exposed for that reuse."
+  - path: scripts/setup_ticket_worktree.py
+    relationship: modifies
+    status: exists
+    relevance: "Build output of the template above. Must change in parity via the build.py round-trip (ADR-001)."
+  - path: scripts/worktree/__init__.py
+    relationship: modifies
+    status: exists
+    relevance: "Package init for scripts/worktree/; the new listing module is exported from here."
+  - path: scripts/build_phases_script_deploy.py
+    relationship: modifies
+    status: exists
+    relevance: "Deploy manifest. scripts/worktree/ appears in no build phase today, so the deployed listing path raises ModuleNotFoundError while source-tree unit tests pass."
 assigned_agent: python-coder
 estimated_complexity: M
 it_requirements:

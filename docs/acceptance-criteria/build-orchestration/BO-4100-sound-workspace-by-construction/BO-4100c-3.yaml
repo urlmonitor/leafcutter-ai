@@ -30,6 +30,14 @@ doc_links:
   - path: docs/known-issues/build-orchestration.md
     relationship: describes
     status: exists
+  - path: scripts/worktree/assess_workspaces.py
+    relationship: modifies
+    status: planned
+    relevance: "Created by BO-4100c-1. Both failure shapes -- version-control data ABSENT and a read that FAILS -- must land on no_verdict with a non-null reason, never on holds_nothing."
+  - path: scripts/worktree/dispose_workspace.py
+    relationship: modifies
+    status: planned
+    relevance: "Created by BO-4100c-2. This record adds its second refusal arm, inert and machine-distinguishable from the holds_work refusal through the closed verdict discriminator rather than through message wording."
 assigned_agent: python-coder
 estimated_complexity: M
 it_requirements:

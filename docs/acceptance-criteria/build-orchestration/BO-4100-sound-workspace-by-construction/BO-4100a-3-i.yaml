@@ -25,6 +25,14 @@ doc_links:
   - path: docs/architecture/components/worktree-manager.md
     relationship: describes
     status: exists
+  - path: templates/scripts/setup_ticket_worktree.py
+    relationship: modifies
+    status: exists
+    relevance: "Canonical source. The decide-before-write ordering and the scoped undo live at the refusal boundary shared by every creation refusal path (unreadable shared line, unsupported kind, post-condition failure)."
+  - path: scripts/setup_ticket_worktree.py
+    relationship: modifies
+    status: exists
+    relevance: "Build output of the template above. Must change in parity or CI's build overwrites the fix (ADR-001)."
 assigned_agent: python-coder
 estimated_complexity: S
 it_requirements:

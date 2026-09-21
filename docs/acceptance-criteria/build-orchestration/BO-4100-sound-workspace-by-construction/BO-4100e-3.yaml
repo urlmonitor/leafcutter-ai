@@ -35,6 +35,10 @@ doc_links:
     relationship: describes
     status: exists
     relevance: "Angle taxonomy this record's test_spec entries declare."
+  - path: scripts/worktree/list_workspaces.py
+    relationship: modifies
+    status: planned
+    relevance: "Created by BO-4100e-1. The two findings -- 'a local remnant exists' and 'the shared record is damaged' -- must be modelled separately and separately reportable, the intactness claim must be DERIVED from an actual check of the shared record rather than printed, and a failure to check it is a third outcome."
 assigned_agent: python-coder
 estimated_complexity: M
 it_requirements:

@@ -29,6 +29,18 @@ doc_links:
   - path: docs/known-issues/build-orchestration.md
     relationship: describes
     status: exists
+  - path: scripts/worktree/dispose_workspace.py
+    relationship: modifies
+    status: planned
+    relevance: "Created by BO-4100c-2. This record adds its success arm: directory, registration entry and branch reference removed as one operation whose partial completion is a failure, and idempotent on a second request."
+  - path: scripts/worktree/sweep_processes.py
+    relationship: modifies
+    status: exists
+    relevance: "Already exists for residual processes and open file handles and must be REUSED rather than reimplemented. It is not currently reachable from the deployed layout, and making it so is explicitly part of this work."
+  - path: scripts/build_phases_script_deploy.py
+    relationship: modifies
+    status: exists
+    relevance: "Deploy manifest. Registering scripts/worktree/ here is what makes sweep_processes.py and the disposal module reachable from the deployed layout; without it the deployed disposal path raises ModuleNotFoundError while source-tree unit tests pass."
 assigned_agent: python-coder
 estimated_complexity: M
 it_requirements:

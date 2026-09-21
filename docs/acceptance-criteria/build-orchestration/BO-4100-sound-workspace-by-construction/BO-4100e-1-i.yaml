@@ -24,6 +24,10 @@ doc_links:
   - path: docs/architecture/components/worktree-manager.md
     relationship: describes
     status: exists
+  - path: scripts/worktree/list_workspaces.py
+    relationship: modifies
+    status: planned
+    relevance: "Created by BO-4100e-1. This record bounds what its location-inspection route admits: only directories carrying a linked worktree's own .git file pointing at a gitdir under THIS repository -- excluding populated strays, empty directories, and another project's worktree sharing the parent."
 assigned_agent: python-coder
 estimated_complexity: S
 it_requirements:

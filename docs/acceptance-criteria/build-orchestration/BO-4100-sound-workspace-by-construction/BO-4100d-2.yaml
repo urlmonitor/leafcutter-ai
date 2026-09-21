@@ -34,6 +34,14 @@ doc_links:
     relationship: describes
     status: exists
     relevance: "The discriminated-refusal-payload shape this refusal should reuse."
+  - path: templates/scripts/setup_ticket_worktree.py
+    relationship: modifies
+    status: exists
+    relevance: "Canonical source. The membership test against the declared supported-kind set, the removal of any fallback kind on the creation path, and the refusal that renders the honourable kinds FROM that set all live here."
+  - path: scripts/setup_ticket_worktree.py
+    relationship: modifies
+    status: exists
+    relevance: "Build output of the template above. Must change in parity or CI's build overwrites the fix (ADR-001)."
 assigned_agent: python-coder
 estimated_complexity: S
 it_requirements:

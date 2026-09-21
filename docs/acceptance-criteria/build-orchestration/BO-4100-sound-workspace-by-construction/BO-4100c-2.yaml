@@ -30,6 +30,22 @@ doc_links:
   - path: docs/known-issues/build-orchestration.md
     relationship: describes
     status: exists
+  - path: scripts/worktree/dispose_workspace.py
+    relationship: creates
+    status: planned
+    relevance: "New disposal path. This record authors its refusal arm: inert on the holds_work verdict, naming every item at the granularity the verdict produced it, and reading both verdict and item list from BO-4100c-1's record rather than re-deriving them."
+  - path: scripts/worktree/assess_workspaces.py
+    relationship: modifies
+    status: planned
+    relevance: "Created by BO-4100c-1. Disposal consumes its record; the refusal must not re-derive the verdict or the item list."
+  - path: scripts/worktree/__init__.py
+    relationship: modifies
+    status: exists
+    relevance: "Package init for scripts/worktree/; the new disposal module is exported from here."
+  - path: scripts/build_phases_script_deploy.py
+    relationship: modifies
+    status: exists
+    relevance: "Deploy manifest. scripts/worktree/ appears in no build phase today, so the new disposal module raises ModuleNotFoundError in the deployed layout while source-tree unit tests pass."
 assigned_agent: python-coder
 estimated_complexity: M
 it_requirements:

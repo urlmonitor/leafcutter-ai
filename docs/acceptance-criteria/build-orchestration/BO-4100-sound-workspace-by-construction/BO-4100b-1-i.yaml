@@ -26,6 +26,22 @@ doc_links:
   - path: docs/architecture/components/commit-guardian.md
     relationship: describes
     status: exists
+  - path: templates/scripts/commit_guardian/check_build_drift.py
+    relationship: modifies
+    status: exists
+    relevance: "Canonical source. The true-positive path must keep today's exit code and severity, and must name the in-scope drifted file at path granularity."
+  - path: scripts/commit_guardian/check_build_drift.py
+    relationship: modifies
+    status: exists
+    relevance: "Build output of the template above; the hook runs from this deployed copy. Must change in parity (ADR-001)."
+  - path: templates/scripts/commit_guardian/check_output_drift.py
+    relationship: modifies
+    status: exists
+    relevance: "Canonical source. A true positive suppressed in one of the two gates is still a suppressed true positive, so both carry this guarantee."
+  - path: scripts/commit_guardian/check_output_drift.py
+    relationship: modifies
+    status: exists
+    relevance: "Build output of the template above. Must change in parity (ADR-001)."
 assigned_agent: python-coder
 estimated_complexity: S
 it_requirements:

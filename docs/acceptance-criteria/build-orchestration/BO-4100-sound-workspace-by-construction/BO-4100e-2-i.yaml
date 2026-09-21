@@ -27,6 +27,14 @@ doc_links:
   - path: docs/architecture/components/worktree-manager.md
     relationship: describes
     status: exists
+  - path: scripts/worktree/dispose_workspace.py
+    relationship: modifies
+    status: planned
+    relevance: "Created by BO-4100c-2. The discovery removal route must run BO-4100c-1's verdict check, not a second one written for it, and no force option may bypass the verdict -- any force must be the same option registered workspaces use, subject to the same refusal."
+  - path: scripts/worktree/assess_workspaces.py
+    relationship: modifies
+    status: planned
+    relevance: "Created by BO-4100c-1. Its assessment must be applicable to an entry reached by discovery, producing the SAME record shape and the SAME verdict as for an identical registered workspace. No discovery-specific variant is defined."
 assigned_agent: python-coder
 estimated_complexity: M
 it_requirements:

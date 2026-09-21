@@ -40,6 +40,18 @@ doc_links:
     relationship: describes
     status: exists
     relevance: "Angle taxonomy this record's test_spec entries declare."
+  - path: scripts/worktree/assess_workspaces.py
+    relationship: creates
+    status: planned
+    relevance: "New invocable assessment program producing one record per live workspace. Required because templates/workflows/close-worktree.md is a prompt and structurally cannot carry the whole-set clause -- and that prompt must not be the thing this record changes. scripts/worktree/ is the existing home for worktree tooling (sweep_processes.py) and has no templates/ counterpart, so the module is authored here directly."
+  - path: scripts/worktree/__init__.py
+    relationship: modifies
+    status: exists
+    relevance: "Package init for scripts/worktree/; the new assessment module is exported from here."
+  - path: scripts/build_phases_script_deploy.py
+    relationship: modifies
+    status: exists
+    relevance: "Deploy manifest. scripts/worktree/ appears in no build phase today, so a module added there raises ModuleNotFoundError in the deployed layout while every source-tree unit test passes. Registration is part of this work."
 assigned_agent: python-coder
 estimated_complexity: L
 it_requirements:

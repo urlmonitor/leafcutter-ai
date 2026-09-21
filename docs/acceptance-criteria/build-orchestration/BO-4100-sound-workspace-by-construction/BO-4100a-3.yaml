@@ -35,6 +35,14 @@ doc_links:
     relationship: describes
     status: exists
     relevance: "The discriminated-refusal-payload posture this refusal should reuse rather than relaying a raw git diagnostic."
+  - path: templates/scripts/setup_ticket_worktree.py
+    relationship: modifies
+    status: exists
+    relevance: "Canonical source. _fetch_origin (l.358) currently degrades a failed fetch to a WARNING and proceeds on the cached remote-tracking ref; that warn-and-continue branch is removed and replaced by a discriminated refusal on all three creation paths."
+  - path: scripts/setup_ticket_worktree.py
+    relationship: modifies
+    status: exists
+    relevance: "Build output of the template above. Must change in parity or CI's build overwrites the fix (ADR-001)."
 assigned_agent: python-coder
 estimated_complexity: S
 it_requirements:

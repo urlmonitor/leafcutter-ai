@@ -24,6 +24,22 @@ doc_links:
   - path: docs/architecture/components/commit-guardian.md
     relationship: describes
     status: exists
+  - path: templates/scripts/commit_guardian/check_workspace_material_parity.py
+    relationship: creates
+    status: planned
+    relevance: "New invocable check required by the it_requirement 'the comparison must be available as an invocable check, not only as a test'. Enumerates each tree's check set from its own hooks_manifest and compares set membership plus per-check configuration. Filename is indicative -- it must live alongside the other guardian checks as a canonical template."
+  - path: scripts/commit_guardian/check_workspace_material_parity.py
+    relationship: creates
+    status: planned
+    relevance: "Build output of the new template above; the check must be reachable from the deployed layout or it can never run against a real workspace copy (ADR-001)."
+  - path: templates/scripts/commit_guardian/commit_guardian.json
+    relationship: modifies
+    status: exists
+    relevance: "Canonical hooks manifest -- both the registration entry for the new parity check and the enumeration source each tree's own tooling reads to produce its check set."
+  - path: scripts/commit_guardian/commit_guardian.json
+    relationship: modifies
+    status: exists
+    relevance: "Deployed manifest. Must change in parity with the template (ADR-001)."
 assigned_agent: python-coder
 estimated_complexity: M
 it_requirements:

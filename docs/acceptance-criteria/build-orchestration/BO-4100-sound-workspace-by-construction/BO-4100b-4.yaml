@@ -42,6 +42,26 @@ doc_links:
     relationship: describes
     status: exists
     relevance: "Angle taxonomy this record's test_spec entries declare."
+  - path: docs/INDEX.md
+    relationship: describes
+    status: exists
+    relevance: "Named in it_requirements as COLLATERAL of the current remedy (KI-BP-016 overwrites this tracked file), not as an edit surface. Declared at a non-edit-surface relationship so it is excluded from files_touched -- the corrected remedy must leave it untouched, not modify it."
+  - path: templates/scripts/commit_guardian/check_output_drift.py
+    relationship: modifies
+    status: exists
+    relevance: "Canonical source. Prints the remedy 'build.py (or: python leafcutter/scripts/build.py --force)', which from inside a worktree is KI-BP-016. The remedy text must be replaced with one that acts on the workspace's own .leafcutter copy and is executable exactly as printed."
+  - path: scripts/commit_guardian/check_output_drift.py
+    relationship: modifies
+    status: exists
+    relevance: "Build output of the template above; the operator reads the remedy printed by this deployed copy. Must change in parity (ADR-001)."
+  - path: templates/scripts/commit_guardian/check_build_drift.py
+    relationship: modifies
+    status: exists
+    relevance: "Canonical source. Carries the same rebuild remedy; a remedy corrected in one gate only still sends the operator to overwrite the shared install half the time."
+  - path: scripts/commit_guardian/check_build_drift.py
+    relationship: modifies
+    status: exists
+    relevance: "Build output of the template above. Must change in parity (ADR-001)."
 assigned_agent: python-coder
 estimated_complexity: M
 it_requirements:

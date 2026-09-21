@@ -34,6 +34,22 @@ doc_links:
     relationship: describes
     status: exists
     relevance: "The gates whose finding-to-verdict invariant this record establishes."
+  - path: templates/scripts/commit_guardian/check_build_drift.py
+    relationship: modifies
+    status: exists
+    relevance: "Canonical source. main() returns 2 on gaps while drifted_total = len(violations) + missing excludes gaps from both reported counts -- the arithmetic that prints drifted=0 missing=0 next to a refusal. Every refusing condition must be represented in the reported counts, and the named-item count and the reported count must come from one data structure."
+  - path: scripts/commit_guardian/check_build_drift.py
+    relationship: modifies
+    status: exists
+    relevance: "Build output of the template above; the hook runs from this deployed copy. Must change in parity (ADR-001)."
+  - path: templates/scripts/commit_guardian/check_output_drift.py
+    relationship: modifies
+    status: exists
+    relevance: "Canonical source. The invariant must be enforced in both gates in the same change or the two RESULT vocabularies stop being comparable."
+  - path: scripts/commit_guardian/check_output_drift.py
+    relationship: modifies
+    status: exists
+    relevance: "Build output of the template above. Must change in parity (ADR-001)."
 assigned_agent: python-coder
 estimated_complexity: M
 it_requirements:
