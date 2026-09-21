@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: 2026-08-18
-last_updated: 2026-09-14
+last_updated: 2026-09-15
 components:
   - build_orchestration
 related_docs:
@@ -3233,6 +3233,91 @@ sequenceDiagram
 
 Covers AC-1 of `BO-400e-1`: the decision is taken against the nine phases the ticket's own
 record names, in all three attempts alike.
+
+**Follow-on.** `BO-400e-2` drove both the refused-ticket case and this entry's own
+same-run control case through the real, deployed `build-feature.js` / `build-ticket.js`
+via `unit_tests/prompt_assembly/harness_build_ticket_guard.mjs`, and confirmed the refusal
+above is reached exactly as specified — no change to `scripts/set_ticket_status.py` or
+`build-ticket.js` was needed. It found and fixed a distinct, adjacent defect in the same
+file at the *reporting* layer rather than the write layer: see
+`KI-BO-20260915-completed-sibling-in-a-halted-batch-is-reported-not-built`, below.
+
+```mermaid
+sequenceDiagram
+    participant Driver as build-feature.js / build-ticket.js<br/>concludeTicket()
+    participant Guard as scripts/set_ticket_status.py<br/>agents-parity check (BO-400a-2-i)
+    participant Record as Ticket's own record<br/>(frontmatter agents: map)
+
+    Note over Driver,Record: Ticket A — one phase named needed, no sign-off entry
+    Driver->>Guard: request close(Ticket A)
+    Guard->>Record: read agents: map
+    Record-->>Guard: the needed phase has no sign-off entry
+    Guard-->>Driver: refuse — names the unaccounted phase
+    Note over Driver,Record: no write — status and agents: map left exactly as found;<br/>the finished state is NOT written for Ticket A
+
+    Note over Driver,Record: Ticket B — same run, every needed phase signed off
+    Driver->>Guard: request close(Ticket B)
+    Guard->>Record: read agents: map
+    Record-->>Guard: every needed phase carries a sign-off
+    Guard-->>Driver: proceed
+    Driver->>Record: status: done written
+    Note over Driver,Record: the finished state IS written for Ticket B, in the same run
+```
+
+Covers AC-1 of `BO-400e-2`: the refusal is a read-only decision reached through
+`scripts/set_ticket_status.py`'s existing, unmodified parity check, and the finished state
+is not written for the unaccounted ticket — paired, in the same run, with a control ticket
+that IS written finished.
+
+---
+
+### KI-BO-20260915-completed-sibling-in-a-halted-batch-is-reported-not-built — a ticket written `status: done` in the same batch as a refused sibling was never added to the run's own completed-work list
+
+- **Severity:** medium — no record is written wrong; the run's own report of what it did is
+  wrong.
+- **Status:** resolved — see `BO-400e-2` (the fix)
+- **Occurrences:** 1 (found by `BO-400e-2`'s own test-writer red-baseline pass, 2026-09-15;
+  not previously observed in a real drive)
+- **First seen:** 2026-09-15 · **Last seen:** 2026-09-15
+- **Where:** `templates/workflows-js/build-feature.js`, the halted-batch return branch
+  (`if (haltedTickets.length > 0 || withheldResults.length > 0)`) — `completedBatches` was
+  otherwise only pushed at the bottom of the epic loop, which this branch returns before
+  ever reaching.
+
+**Symptom.** Drive an epic batch containing two tickets: one whose record names a phase as
+needed with no sign-off (refused, per `BO-400a-2-i`/`BO-400e-1`'s guard) and one whose
+record names the same phases with a sign-off for every one (the same-run control case
+`BO-400e-2`'s own AC requires). The refused ticket's file correctly stays `status: todo`.
+The control ticket's file is correctly written `status: done`. But the run's own top-level
+payload never added the control ticket's path to `completedBatches` /
+`completedWorkPaths()`, and the `message` field read "2 piece(s) of work in total were not
+built: `<refused>`, `<control>`" — naming, by path, the ticket that WAS built.
+
+**Why it matters.** This is `BO-400e-2`'s own "So" clause — "not a mechanism that has
+simply stopped writing" — recurring one layer up, at the run's reporting layer instead of
+the per-ticket write layer. The per-ticket decision was already correct: the guard from
+`BO-400a-2-i`/`BO-400e-1` refuses one ticket and writes the other exactly as specified.
+What was wrong is what the batch's own summary says happened. A caller reading only the
+payload, not re-reading every ticket file on disk, would believe the control ticket had
+failed too.
+
+**Distinct from.** `KI-BO-20260831-1932` / `ADR-044` — the per-ticket write decision this
+sits next to, already resolved by `BO-400e-1` and confirmed still correct here. Also
+distinct from a ticket removed between two epic reads (`BO-300a-5-iii`): no removal is
+involved, both tickets are processed together in the same batch, and one halts while the
+other completes.
+
+**Fix.** `build-feature.js`'s halted-batch return branch now computes
+`succeededInBatch` — batch members that are neither in `haltedTickets` nor
+`withheldResults` and whose own result carries `ticket_completed === true` — and pushes a
+partial `completedBatches` entry for them *before* `completedForHalt` / `cmpForHalt` are
+computed, so the existing `completedWorkPaths()` / `notYetAttemptedPaths` logic picks the
+ticket up as completed with no further change needed downstream. No new function was
+added, and the `BO-400a-2-i` refusal itself was not touched or re-implemented.
+
+**Related.** `KI-BO-20260831-1932` (the per-ticket write decision this reporting bug sits
+next to), `ADR-044` (the decision record for that fix), `BO-400e-2` (the AC/ticket whose
+own test-writer red-baseline found this).
 
 ---
 

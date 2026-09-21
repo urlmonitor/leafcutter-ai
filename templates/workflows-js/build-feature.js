@@ -3331,11 +3331,40 @@ if (target_type === "epic") {
           prerequisite_states: r.prerequisite_states || {},
         }));
 
+        // BO-400e-2 — a ticket that SUCCEEDED in the very same batch as a
+        // halted or withheld sibling must be reported completed, not folded
+        // into this halted return's "not built" accounting merely because it
+        // shares a batch with a ticket that did not. Before this batch's
+        // members are compared against `completedBatches` below, push this
+        // batch's own successes into it — the identical, real
+        // `ticket_completed === true` verdict `completedTicketOutcomes`
+        // above already trusts for the SAME purpose. A driver that only
+        // ever records completed work at the bottom of an un-halted batch
+        // (see the `completedBatches.push` after this whole `if`) silently
+        // drops every success that happens to land beside a failure, which
+        // is "a mechanism that has simply stopped writing" for that one
+        // ticket, one batch at a time — the exact failure mode this AC's
+        // control-ticket case exists to catch.
+        const succeededInBatch = batchResults.filter(
+          (r) =>
+            haltedTickets.indexOf(r) === -1 &&
+            withheldResults.indexOf(r) === -1 &&
+            !!(r.result && r.result.ticket_completed === true)
+        );
+        if (succeededInBatch.length > 0) {
+          completedBatches.push({
+            batch_number: batchNumber,
+            tickets_completed: succeededInBatch.length,
+            tickets: succeededInBatch.map((r) => r.ticket_path),
+          });
+        }
+
         // BO-300a-5-iii — THIS is the return that can actually exhibit both kinds
         // of removal at once. At the two epic COMPLETION returns the planned and
         // completed sets are necessarily equal (or both empty), so an uncompleted
         // removal is unreachable there; here, earlier batches are already in
-        // `completedBatches` while this batch's members are not. It carries the
+        // `completedBatches` while this batch's members are not (except for this
+        // batch's own successes, folded in immediately above). It carries the
         // same `no_longer_present` field and used to carry the same "were not
         // built" sentence, so a partition applied only to the completion returns
         // would leave the defect live at the one site that can show it.
