@@ -36,13 +36,22 @@ ARCHITECTURE: Seven public functions (load_surfaces, load_surfaces_with_meta,
     exempt from phantom-edge filtering. All file I/O wrapped in try/except with
     specific exception types (repo error-handling policy).
     Stdlib-only: no third-party dependencies.
+    The ten frontmatter/YAML reader functions (_find_frontmatter_end,
+    _strip_matched_quotes, _split_flow_sequence_items, _parse_scalar_value,
+    _line_indent, _strip_inline_comment, _is_mapping_item_text,
+    _parse_block_children, _parse_frontmatter, _parse_yaml_file) live in the
+    sibling module knowledge_frontmatter_reader.py (KM-KGS-100a-3-xi) and are
+    re-exported here as the SAME function objects via _load_reader_module(),
+    which resolves the sibling module relative to this file's own __file__
+    so the re-export holds both from source scripts/ and a deployed
+    consumer's .leafcutter/scripts/.
 """
 from __future__ import annotations
 
 import argparse
+import importlib.util
 import json
 import logging
-import re
 import sys
 from collections.abc import Generator
 from pathlib import Path
@@ -145,185 +154,60 @@ _PHANTOM_FILTER_EXEMPT_EDGE_TYPES: frozenset[str] = frozenset(
 )
 
 # ---------------------------------------------------------------------------
-# Frontmatter parser (stdlib only, mirrors roadmap_query.py pattern)
+# Frontmatter parser — re-exported from the sibling knowledge_frontmatter_reader
+# module (KM-KGS-100a-3-xi). Loaded via spec_from_file_location, resolved
+# relative to THIS file's own __file__ (never sys.path, never a hard-coded
+# absolute path), so the re-export holds both when knowledge_query is
+# imported normally with scripts/ on sys.path AND when it is loaded via
+# importlib.util.spec_from_file_location with no scripts/ directory on
+# sys.path at all — the way scripts/visualise_knowledge_graph.py loads
+# knowledge_query itself. The loaded module is registered in sys.modules
+# under its own name so the ten functions' __module__ resolves to a real,
+# reachable module object rather than an orphan. The names below are the
+# SAME function objects as the reader module's own attributes (identity,
+# not a copy) — every existing caller in this file keeps using the bare
+# names unchanged.
 # ---------------------------------------------------------------------------
 
-
-def _find_frontmatter_end(lines: list[str]) -> int:
-    """Return the index of the closing ``---`` delimiter, or -1 if absent.
-
-    Args:
-        lines: All lines of the file. Assumes ``lines[0]`` is ``---``.
-
-    Returns:
-        Line index of the closing delimiter, or -1 if not found.
-    """
-    for i, line in enumerate(lines[1:], 1):
-        if line.strip() == "---":
-            return i
-    return -1
+_READER_MODULE_NAME = "knowledge_frontmatter_reader"
+_READER_MODULE_PATH = Path(__file__).resolve().parent / f"{_READER_MODULE_NAME}.py"
 
 
-def _parse_scalar_value(raw: str) -> Any:
-    """Parse an inline scalar YAML value string.
-
-    Handles booleans, null, quoted strings, empty flow sequences (``[]``),
-    and simple non-nested flow sequences (``[item1, item2]``).
-
-    Args:
-        raw: Trimmed right-hand side of a ``key: value`` YAML line.
+def _load_reader_module():
+    """Load the frontmatter-reader sibling module by file path.
 
     Returns:
-        True, False, None, a list (for flow-sequence syntax), or a string.
+        The loaded knowledge_frontmatter_reader module, cached in
+        ``sys.modules`` so repeated calls (and any other importer) share
+        the same module object.
+
+    Raises:
+        FileNotFoundError: When knowledge_frontmatter_reader.py is not
+            found next to this file.
     """
-    lower = raw.lower()
-    if lower == "true":
-        return True
-    if lower == "false":
-        return False
-    if lower in ("null", "~"):
-        return None
-    if len(raw) >= 2 and raw[0] in ('"', "'") and raw[-1] == raw[0]:
-        return raw[1:-1]
-    # Handle inline YAML flow sequences: [] or [item1, item2, ...]
-    # Only handles simple non-nested cases (sufficient for AC YAML files).
-    if len(raw) >= 2 and raw[0] == "[" and raw[-1] == "]":
-        inner = raw[1:-1].strip()
-        if not inner:
-            return []
-        items = [item.strip().strip('"\'') for item in inner.split(",")]
-        return [item for item in items if item]
-    return raw
+    cached = sys.modules.get(_READER_MODULE_NAME)
+    if cached is not None:
+        return cached
+    if not _READER_MODULE_PATH.exists():
+        raise FileNotFoundError(str(_READER_MODULE_PATH))
+    spec = importlib.util.spec_from_file_location(_READER_MODULE_NAME, _READER_MODULE_PATH)
+    reader_module = importlib.util.module_from_spec(spec)
+    sys.modules[_READER_MODULE_NAME] = reader_module
+    spec.loader.exec_module(reader_module)
+    return reader_module
 
 
-def _parse_block_children(lines: list[str], start: int, end: int) -> tuple[list[str], int]:
-    """Collect YAML list items from indented lines following a bare ``key:`` line.
-
-    Args:
-        lines: All lines of the file.
-        start: Index of the first line after the bare ``key:`` line.
-        end: Index of the closing ``---`` delimiter.
-
-    Returns:
-        A tuple of (list_of_items, next_line_index).
-    """
-    children: list[str] = []
-    j = start
-    while j < end and (lines[j].startswith("  ") or lines[j].strip() == ""):
-        stripped = lines[j].strip()
-        if stripped.startswith("- "):
-            children.append(stripped[2:].strip())
-        j += 1
-    return children, j
-
-
-def _parse_frontmatter(text: str) -> dict[str, Any]:
-    """Extract YAML frontmatter fields from a markdown file's text.
-
-    Args:
-        text: Full text content of a file.
-
-    Returns:
-        Dict of frontmatter field names to values. Empty dict when absent.
-    """
-    lines = text.splitlines()
-    if not lines or lines[0].strip() != "---":
-        return {}
-    end = _find_frontmatter_end(lines)
-    if end == -1:
-        return {}
-    fm: dict[str, Any] = {}
-    i = 1
-    while i < end:
-        line = lines[i]
-        if not line.strip() or line.startswith("  "):
-            i += 1
-            continue
-        m = re.match(r"^(\w[\w_-]*):\s*(.*)", line)
-        if not m:
-            i += 1
-            continue
-        key = m.group(1)
-        raw = m.group(2).strip()
-        if raw == "":
-            children, i = _parse_block_children(lines, i + 1, end)
-            if children:
-                fm[key] = children
-            continue
-        fm[key] = _parse_scalar_value(raw)
-        i += 1
-    return fm
-
-
-def _parse_yaml_file(text: str) -> dict[str, Any]:
-    """Parse a plain YAML file (no ``---`` delimiters) and return a flat field dict.
-
-    Handles only the scalar and block-list syntax used by AC YAML files:
-    - ``key: value`` scalar lines at column 0
-    - ``key: |`` multiline block scalars (value collected as-is)
-    - ``key:`` bare lines followed by indented ``- item`` list lines
-
-    This is intentionally minimal — it covers the AC YAML schema and nothing
-    more. It does not support nested mappings, anchors, or flow scalars.
-    Stdlib-only: no third-party imports (PyYAML is explicitly excluded by the
-    project's stdlib-only policy and by the AC test suite's forbidden-imports
-    check).
-
-    Args:
-        text: Full text content of a YAML file (no frontmatter delimiters).
-
-    Returns:
-        Dict of field names to parsed values.  Empty dict on empty input.
-    """
-    lines = text.splitlines()
-    total = len(lines)
-    result: dict[str, Any] = {}
-    i = 0
-    while i < total:
-        line = lines[i]
-        # Skip blank lines and comment lines
-        if not line.strip() or line.strip().startswith("#"):
-            i += 1
-            continue
-        # Skip indented lines at the top level (they belong to a prior block)
-        if line.startswith("  ") or line.startswith("\t"):
-            i += 1
-            continue
-        m = re.match(r"^(\w[\w_-]*):\s*(.*)", line)
-        if not m:
-            i += 1
-            continue
-        key = m.group(1)
-        raw = m.group(2).strip()
-        # Block scalar indicator ``|`` or ``>``
-        if raw in ("|", ">"):
-            # Collect all indented lines following as a single string
-            block_lines: list[str] = []
-            i += 1
-            while i < total and (lines[i].startswith("  ") or lines[i].startswith("\t") or lines[i].strip() == ""):
-                block_lines.append(lines[i])
-                i += 1
-            # Dedent by 2 spaces if applicable, then join
-            dedented = []
-            for bl in block_lines:
-                if bl.startswith("  "):
-                    dedented.append(bl[2:])
-                elif bl.startswith("\t"):
-                    dedented.append(bl[1:])
-                else:
-                    dedented.append(bl)
-            result[key] = "\n".join(dedented).rstrip()
-            continue
-        # Bare key — may be followed by block list items
-        if raw == "":
-            children, i = _parse_block_children(lines, i + 1, total)
-            if children:
-                result[key] = children
-            continue
-        # Inline scalar value
-        result[key] = _parse_scalar_value(raw)
-        i += 1
-    return result
+_reader = _load_reader_module()
+_find_frontmatter_end = _reader._find_frontmatter_end
+_strip_matched_quotes = _reader._strip_matched_quotes
+_split_flow_sequence_items = _reader._split_flow_sequence_items
+_parse_scalar_value = _reader._parse_scalar_value
+_line_indent = _reader._line_indent
+_strip_inline_comment = _reader._strip_inline_comment
+_is_mapping_item_text = _reader._is_mapping_item_text
+_parse_block_children = _reader._parse_block_children
+_parse_frontmatter = _reader._parse_frontmatter
+_parse_yaml_file = _reader._parse_yaml_file
 
 
 def _extract_frontmatter_end_line(text: str) -> int:
@@ -1586,5 +1470,90 @@ DECISION HISTORY
   drops are observable without being noisy. Updated module docstring ARCHITECTURE
   to describe the two-tier policy. The build does not fail solely because a
   relationship named a missing target (Gherkin clause 3 of the AC).
+- 2026-09-16 09:00 [python-coder]: Quote-aware block-list item parsing plus
+  indentation-tolerant list scanning. (#TICKETLESS reason=km-kgs-100a-3-i-vii-fastlane)
+  Introduced _strip_matched_quotes() (strips a matched surrounding quote pair
+  without touching an interior or single-sided quote) and made
+  _split_flow_sequence_items() quote-aware so a comma inside a quoted flow-
+  sequence item is not treated as an item separator. Generalized
+  _parse_block_children() to accept "- item" lines at any indentation, not
+  just a fixed two-space depth, since YAML block-list indentation is not
+  itself significant to list membership. Applied uniformly to both
+  _parse_frontmatter() (.md) and _parse_yaml_file() (.yaml) since both call
+  _parse_block_children().
+- 2026-09-16 10:30 [python-coder]: Comment and blank lines inside a block list no
+  longer end the list or become items. (#TICKETLESS reason=km-kgs-100a-3-ix-fastlane)
+  A whole-store differential against PyYAML (KM-KGS-100a-3-viii) found one
+  remaining disagreement: docs/acceptance-criteria/build-orchestration/BO-201.yaml
+  declares covered_by as a block list whose first item is followed by seven
+  indented comment lines and then a second, unquoted item; _parse_block_children
+  treated the first comment line as the end of the list and silently dropped
+  every item after it. Fixed by skipping any line whose stripped text starts
+  with "#" (blank lines were already skipped) inside _parse_block_children,
+  before the "- " item check and before the not-a-list-item break that ends
+  the scan. This holds at any indentation, including column zero, and even
+  when the comment's text looks like a "key: value" line (e.g.
+  "# covers: KM-EX-010") — it is still just skipped, never mistaken for the
+  next top-level key. The list still ends at the first non-blank,
+  non-comment line that isn't a "- " item (the real next top-level key), and
+  a "#" inside an item value (a path#symbol anchor, KM-KGS-100a-3-v) is
+  unaffected because only the stripped line's leading character is checked,
+  never a substring scan of item text. Since both _parse_frontmatter() (.md)
+  and _parse_yaml_file() (.yaml) delegate to _parse_block_children(), the fix
+  applies uniformly to both readers with a single change.
+- 2026-09-16 12:00 [python-coder]: Continuation lines inside a block list no
+  longer end the list; trailing inline comments on unquoted items are
+  stripped. (#TICKETLESS reason=km-kgs-100a-3-x-fastlane)
+  Fixed a regression introduced by the -i..-ix fastlane work: a line indented
+  deeper than the list's item column that was not itself a "- " item ended
+  the scan outright, dropping every later item — on the real store this
+  truncated docs/acceptance-criteria/index.yaml's `components` list from 16
+  PyYAML-equivalent entries to 1. Reworked _parse_block_children() so the
+  indentation of the list's *first* item fixes the item column for the rest
+  of the list (a deeper "- " line, e.g. a nested `directory_patterns` list
+  inside a mapping item, is never mistaken for a sibling item); a
+  non-blank, non-comment line indented deeper than that column now
+  continues the current item instead of ending the list. For a plain
+  scalar item the continuation folds in with a single space, matching
+  PyYAML; for a mapping item (item text matching `key: value`) the
+  continuation is discarded rather than folded, since the mapping item's
+  own produced value is an explicit non-goal — discarding still guarantees
+  the list is never truncated and the next top-level key's items are never
+  absorbed. Added _line_indent() to measure a raw line's leading-space
+  count, and _is_mapping_item_text() to classify an item's text. Also fixed
+  the pre-existing gap where a trailing "# comment" on a plain (unquoted)
+  list item stayed in the value: added _strip_inline_comment(), a
+  quote-aware scanner that treats a "#" preceded by whitespace as a comment
+  start, leaves a "#" glued to a token (`path#symbol`) or inside a matched
+  quoted span untouched, and — for a quoted item followed by trailing text
+  (`"a b"  # note`) — strips the comment after the closing quote before
+  _strip_matched_quotes() removes the quotes. Applied to both the initial
+  item text and to continuation lines. Since both _parse_frontmatter()
+  (.md) and _parse_yaml_file() (.yaml) delegate to _parse_block_children(),
+  the fix applies uniformly to both readers with a single change.
+- 2026-09-17 12:00 [python-coder]: Extracted the ten frontmatter-reader
+  functions into scripts/knowledge_frontmatter_reader.py. (#TICKETLESS
+  reason=km-kgs-100a-3-xi-fastlane)
+  Moved _find_frontmatter_end, _strip_matched_quotes,
+  _split_flow_sequence_items, _parse_scalar_value, _line_indent,
+  _strip_inline_comment, _is_mapping_item_text, _parse_block_children,
+  _parse_frontmatter and _parse_yaml_file (plus the _MAPPING_ITEM_PATTERN
+  constant they share) verbatim into a new sibling module — no reader rule
+  from KM-KGS-100a-3-i..-x changed. This file's own code length (1104
+  content lines) had grown past its origin/main baseline (1013), which the
+  check-file-size ratchet (GE-127a-1/GE-127b-1) refuses for an
+  already-oversized file. Added _load_reader_module(), which resolves
+  knowledge_frontmatter_reader.py relative to THIS file's own __file__
+  (never sys.path, never a hard-coded absolute path) via
+  importlib.util.spec_from_file_location, registers it in sys.modules, and
+  re-exports all ten names as the reader module's own function objects
+  (identity, not a copy) — so every existing caller in this file, plus
+  scripts/visualise_knowledge_graph.py's spec_from_file_location load with
+  no scripts/ directory on sys.path, keeps working unchanged. Also dropped
+  the now-unused top-level `import re` (all re.* usage moved with the
+  functions) and added `import importlib.util`. Deploy wiring
+  (scripts/build_phases_knowledge.py, scripts/build.py,
+  scripts/build_phases_workflows.py) updated in the same change so the new
+  module ships alongside knowledge_query.py in every consumer install.
 ====================================================================
 """

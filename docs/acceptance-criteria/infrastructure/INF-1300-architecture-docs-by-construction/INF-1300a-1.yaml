@@ -1,0 +1,243 @@
+id: INF-1300a-1
+title: "The document handed to the author is committable exactly as produced, with nothing added by hand"
+component: infrastructure
+components:
+  - documentation_system
+  - doc_compliance
+  - infrastructure
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+created_by: "docs/acceptance-criteria/infrastructure/INF-1300-architecture-docs-by-construction/INF-1300a.yaml"
+criteria: |
+  Given a request to start a new architecture document that supplies every input
+    the invocation declares — the tier, the kind of picture, the component, the
+    title, the destination, the date, the document above it and the originating
+    ticket,
+  When the document is produced,
+  Then the produced file, with not one character altered by a person, is offered
+    to the project's full set of commit-time document checks — the check on the
+    filename and its agreement with the declared tier, the check on the
+    frontmatter fields, the check on the two-directional link to the document
+    above, and the check on the size of the picture — and every one of them
+    passes,
+  And those checks are the project's own, run as the project runs them, over the
+    produced file as it sits on disk: a check that was not run, or that was run
+    over a copy the observation assembled rather than over what was produced,
+    counts as a failure of this criterion and not as an absence of evidence,
+  And no check is skipped, relaxed, reordered, suppressed by a bypass token, or
+    edited in order to obtain that result — a pass bought by changing a check is
+    a failure of this record,
+  And the same result holds when the produced file is the only thing offered: no
+    second file, no hand edit and no follow-up step stands between production and
+    the checks passing.
+depends_on:
+  - INF-1300a
+doc_links:
+  - path: docs/acceptance-criteria/infrastructure/INF-1300-architecture-docs-by-construction/INF-1300a.yaml
+    relationship: parent
+    status: exists
+  - path: templates/skills/write-c4-diagram/SKILL.md
+    relationship: specifies
+    status: exists
+    relevance: >-
+      Section 4 pins the invocation and forbids hand-authoring what it produces; section
+      6 is the frontmatter checklist the produced document must satisfy. This record is
+      the falsifiable form of "forbidden to hand-author" — if the produced document needs
+      a hand edit before it is acceptable, the prohibition cannot be obeyed.
+  - path: scripts/commit_guardian/check_diagram_naming.py
+    relationship: describes
+    status: exists
+    relevance: >-
+      One of the four checks. It fires only on files whose declared type is architecture
+      and requires the filename pattern and the tier digit to agree with the declared
+      flight level. Named so the observation runs the real check rather than re-deriving
+      the pattern.
+  - path: scripts/commit_guardian/check_doc_frontmatter.py
+    relationship: describes
+    status: exists
+    relevance: >-
+      The second check. For this part of the tree it requires title, type, status,
+      created, last_updated, components and flight_level, and it blocks on any path-valued
+      field whose paths do not exist — which is why a placeholder path is fatal rather
+      than harmless (see INF-1300a-3).
+  - path: scripts/commit_guardian/check_mermaid_parent_link.py
+    relationship: describes
+    status: exists
+    relevance: >-
+      The third check, and the one the pinned inputs cannot satisfy on their own. Any
+      document carrying a picture must declare a parent or declare itself root; INF-1300a-2
+      owns that clause. Named here because this record's promise is the whole set passing,
+      not a subset.
+  - path: scripts/commit_guardian/check_mermaid_complexity.py
+    relationship: describes
+    status: exists
+    relevance: >-
+      The fourth check. It applies per-kind thresholds, so an emitted skeleton that is
+      generous for one kind of picture can exceed the threshold for another — which is why
+      INF-1300a-4 requires the result across every declared kind rather than one.
+  - path: CLAUDE.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      "Gate / Workflow ACs — Verify Behaviorally, Not by Grep" and "Real-artifact
+      behavioral spot-check before declaring done". Both apply directly: an observation
+      that reads what produces the document, or that checks a hand-written fixture shaped
+      like the output, stays green on a producer that emits an unacceptable document.
+  - path: templates/scripts/commit_guardian/commit_guardian.json
+    relationship: describes
+    status: exists
+    relevance: >-
+      The hooks manifest. Each hook entry carries a `files:` regex, and that regex — not
+      a list written into an observation — is what decides which checks a produced
+      document actually meets. Applied to docs/architecture/<name>.md it matches SIX
+      judgment-tier hooks, not the four the criteria enumerate: the four named, plus
+      check-description-field (`^docs/.*\.md$`) and check-surface-components-e2
+      (`^(tickets|docs)/.*\.md$`). It also matches two TRANSFORM-tier hooks
+      (transform-doc-frontmatter, transform-description-field) whose repairs would be
+      a follow-up step this record's last clause forbids.
+  - path: docs/reference/architecture-docs-layout.md
+    relationship: specifies
+    status: exists
+    relevance: "Where architecture documents live; the destination the produced file must be written to."
+  - path: docs/architecture/adrs/ADR-013-portable-skill-script-deployment-boundary.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      The portability boundary that decides where the means must be SOURCED. A script a
+      consumer is instructed to run is consumer-facing, so its source belongs under
+      templates/scripts/; a copy only under scripts/ is build output.
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+    relevance: "The angle taxonomy this record's test_spec classifies against; the reachability angle is the one that distinguishes a check that passed from a check that never looked."
+origin_agent: BrainCandy
+created: 2026-09-14
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-09-14'
+superseded_by: null
+covered_by: []
+implemented_by: []
+assigned_agent: python-coder
+estimated_complexity: L
+change_target: code
+risk_surface: contract_boundary
+test_required: true
+it_requirements:
+  - "SOURCE PLACEMENT AND DEPLOY REACHABILITY — MEASURED, NOT ASSUMED. Both authoring surfaces pin the runtime path `scripts/scaffold/new_arch_doc.py`, a NESTED path. `scripts/build_phases.py::build_template_standalone_scripts` globs `templates/scripts/*.py` FLAT (its own comment: 'Shallow scan — only top-level .py files; subdirectories have their own phases'), and every existing `templates/scripts/` subdirectory (ac_store, commit_guardian, feedback, sync_platforms) has a dedicated phase. No `scaffold` phase exists anywhere in scripts/build.py or scripts/build_phases.py. So a file placed at `templates/scripts/scaffold/new_arch_doc.py` is deployed by NOTHING today. The source must live under `templates/scripts/` and a deploy route to `scripts/scaffold/new_arch_doc.py` must exist; authoring/registering that route is INF-1300e's. This AC must not be signed off against a copy that exists only under `scripts/`."
+  - "THE CHECK SET MUST BE DERIVED, NOT LISTED. Determine which checks apply by evaluating each hook entry's `files:` regex in the hooks manifest against the produced document's repo-relative path, filtered to tier `judgment`. The four checks the criteria name are the FLOOR, not the set: the same regexes also match check-description-field and check-surface-components-e2. Exclude only check-mermaid-drift, which the L0 fences out explicitly."
+  - "THE PRODUCED DOCUMENT MUST SATISFY `description:` AND `components:` ITSELF. check_description_field blocks any `docs/**/*.md` lacking a non-empty `description:` frontmatter field, and SKILL.md section 6's frontmatter checklist omits that field entirely. The transform tier (transform-doc-frontmatter, transform-description-field) must be DISABLED in the observation: a value injected by a repair step is a follow-up step, and the last criterion forbids one."
+  - "VACUOUS-GREEN GUARD 1 — the argv-blind hooks. check_diagram_naming.py and check_mermaid_parent_link.py ignore argv entirely and read `git diff --cached`; only check_doc_frontmatter.py accepts a path (`--file` or positional). Handing a path to the first two makes them examine the staged set, which may be empty. Every check in the sweep must therefore be run over a genuinely STAGED produced file."
+  - "VACUOUS-GREEN GUARD 2 — the root-resolution split. check_mermaid_parent_link.py sets `REPO_ROOT = Path(__file__).resolve().parents[2]` as a MODULE-LEVEL constant derived from the hook file's own location, while its staged-file list comes from the process cwd's git index. A scratch repository outside the hook's own tree makes every `abs_path.exists()` false, so `_check_arch_doc` returns an empty list and the hook exits 0 having validated nothing. The scratch collection must be produced where the hook's `__file__`-relative root and the cwd-relative staged index resolve to the SAME directory — e.g. by copying scripts/commit_guardian/ and config/ into the scratch repo at the same relative depth."
+  - "VACUOUS-GREEN GUARD 3 — the bypass token. check_mermaid_parent_link._bypass_active() reads the LAST COMMIT's subject (`git log -1 --format=%s`), and check_diagram_naming reads `.git/COMMIT_EDITMSG`. Either containing `[NO-ARCH-UPDATE]` silences the hook. No commit message or COMMIT_EDITMSG anywhere in the harness may contain that token, and the harness must assert this rather than assume it."
+  - "EACH CHECK MUST PRODUCE POSITIVE EVIDENCE IT EXAMINED THE FILE, and the result must be recorded per check, never in aggregate. Available evidence: check_doc_frontmatter prints `PASSED: N doc(s) passed frontmatter validation` and emits an explicit RESULT line for the nothing-to-inspect and could-not-check outcomes. For the hooks that emit no such count, the evidence is a PAIRED NEGATIVE CONTROL: an otherwise-identical file at the same staged path, corrupted in exactly the dimension that hook owns, must exit non-zero with that hook's named violation. A zero exit with no evidence is a could-not-check and must be reported as a failure of this record, not as a pass."
+  - "NO CHECK MAY BE SKIPPED, RELAXED, REORDERED, SUPPRESSED OR EDITED to obtain the result. The hook files used by the observation must be byte-identical to the repository's own, and the harness must assert that identity."
+  - "Deterministic and idempotent: two runs with identical inputs produce a byte-identical document. No network access, no wall-clock read when `--date` is supplied, no reliance on the ambient locale or timezone."
+  - "Error handling per the project error-handling policy (CLAUDE.md rules 1-4): every filesystem and subprocess boundary wrapped with a named exception type; nothing swallowed silently; failures logged at WARNING or higher or re-raised."
+  - "The seven pinned flags keep their exact names and meanings (--tier --diagram-type --component --title --output --date --update-readme). Additions are additive only: --parent <path>, --root, --source-ticket <id>."
+test_spec:
+  - name: test_produced_doc_passes_every_manifest_matched_judgment_hook
+    target_dir: unit_tests/docs/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    description: "Generate one document into a scratch git repo carrying byte-identical copies of scripts/commit_guardian/ and config/ at the same relative depth, stage it, then run every judgment-tier hook whose manifest files-regex matches the produced path, asserting each one's exit status separately rather than in aggregate."
+  - name: test_each_hook_reports_having_examined_the_produced_file
+    target_dir: unit_tests/docs/
+    framework: pytest
+    type: integration
+    angle: reachability
+    surface_invoked: "scripts/scaffold/new_arch_doc.py"
+    description: "For every hook in the sweep, assert positive evidence of examination — check_doc_frontmatter's PASSED count of at least one and a non-nothing_to_inspect RESULT line, and for each argv-blind hook a paired negative control that exits non-zero on a corrupted copy at the same staged path."
+  - name: test_corrupted_variant_is_rejected_by_the_same_harness
+    target_dir: unit_tests/docs/
+    framework: pytest
+    type: integration
+    angle: failure
+    description: "A copy of the produced document with only its flight_level digit altered makes check_diagram_naming exit 1 in the identical harness, proving the green in the sweep is the hook passing rather than the hook declining to look."
+  - name: test_harness_uses_unmodified_hooks_and_no_bypass_token
+    target_dir: unit_tests/docs/
+    framework: pytest
+    type: integration
+    angle: boundary
+    description: "The hook files copied into the scratch repo hash-match the repository's own, and neither the scratch commit subject nor .git/COMMIT_EDITMSG contains [NO-ARCH-UPDATE]."
+  - name: test_description_and_components_satisfied_without_the_transform_tier
+    target_dir: unit_tests/docs/
+    framework: pytest
+    type: integration
+    angle: boundary
+    description: "With transform-doc-frontmatter and transform-description-field disabled, check_description_field and check_surface_components_e2 both exit 0 over the produced file, proving the generator emits description: and components: itself rather than relying on a repair step."
+  - name: test_single_produced_file_commits_with_no_hand_edit
+    target_dir: unit_tests/docs/
+    framework: pytest
+    type: integration
+    angle: deployed
+    description: "Staging only the produced file (plus, where a parent is named, the parent it updated) and committing in the scratch repo with the full hook set installed succeeds with zero characters altered by hand and no second file."
+test_rationale: >-
+  A direct-import unit test on the generator is insufficient here by construction: this
+  record's promise is ACCEPTANCE, and acceptance is decided by machinery this record does
+  not get to change. A test that asserts the emitted text equals a stored fixture, or that
+  re-implements a check's rule, passes on a producer whose output the project refuses —
+  the exact failure the whole tree exists to end. Three measured mechanisms additionally
+  make a naive "run the hook and read the exit code" test pass vacuously: two of the four
+  named hooks ignore argv and read the staged index; check_mermaid_parent_link resolves
+  paths against its own file's grandparent rather than the cwd repo, so a tmpdir scratch
+  repo silently makes every check return empty; and the parent-link hook's bypass reads the
+  LAST commit's subject. Hence every descriptor is an in-tree, real-hook, staged-index
+  execution paired with an examination proof or a negative control.
+delivers_to:
+  - agent: python-coder
+    contract: "The generator CLI at deployed path scripts/scaffold/new_arch_doc.py (sourced under templates/scripts/), accepting the seven pinned flags plus --parent <path>, --root, --source-ticket <id>; and the reusable scratch-harness that copies scripts/commit_guardian/ + config/ into a scratch git repo at equal relative depth, stages a produced file, runs each manifest-matched judgment hook, and returns a per-hook record of {hook_id, exit_code, examined: bool, stderr}. Consumed by INF-1300a-2, a-2-i, a-3, a-4, b-1, b-2 and b-3."
+  - agent: llm-expert
+    contract: "The means' accepted argument set as the CLI actually implements it — argument names, which are required, which are mutually exclusive (--parent vs --root) — so the two authoring surfaces can be corrected against what the means really accepts rather than against a restatement. Consumed by INF-1300b-4."
+expects_from: null
+notes: |
+  THIS IS THE RECORD THAT CARRIES INF-1300a's WHOLE PROMISE, AND IT IS DELIBERATELY
+  STATED AS AN OUTCOME OF THE REAL CHECKS. The L1 insists the benefit is "accepted",
+  not "correctly formatted", precisely because formatting is claimable by inspection.
+  The only observation that can distinguish the two is offering the produced artifact
+  to the machinery that decides acceptance, unmodified.
+
+  FALSIFIABILITY. Produce a document into a scratch repository, stage it there, and run
+  the project's four commit-time document checks over it as the project runs them. The
+  record is falsified by any one of them failing on a document nobody has touched. It is
+  ALSO falsified by an observation that cannot fail: a test that greps what produces the
+  document for the strings it emits, that asserts the output equals a stored fixture, or
+  that re-implements a check's rule instead of invoking the check, passes on a producer
+  whose output the project would refuse — which is the exact failure this whole tree
+  exists to end. The four checks must be run, and the run must be capable of reporting
+  each one's result separately, so "all four passed" cannot be satisfied by three running
+  and one silently not being reached. Note the recorded trap in this repository: several
+  of these hooks read the staged index rather than a path handed to them, so a hook
+  invoked with a path argument may examine nothing and exit zero. An observation must
+  confirm each check actually saw the produced file before treating its silence as a pass.
+
+  THE BOUNDARY THIS RECORD DRAWS, AND WHY IT IS DRAWN HERE. The L0 and the L1 both record
+  that the pinned inputs cannot determine three things the checks demand. The resolution
+  taken across INF-1300a is: the promise is kept WHOLE, and the inputs are widened to
+  carry the two facts the caller demonstrably already has — the document above the new
+  one, and the originating ticket. Both are things the author knows at the moment of
+  asking, and both authoring surfaces already oblige the author to know them: the parent
+  is identified in the surfaces' own manual step, and the originating ticket is stated as
+  a MUST on every create. Widening is not reinventing: the seven pinned arguments keep
+  their names and meanings, and the additions are additive. The third gap — the further
+  field certain kinds of picture oblige — cannot be widened away, because its value is
+  content nobody but the author has; it is resolved by refusal rather than by a
+  placeholder, and that refusal is INF-1300d-4. The alternative resolution the L1 offered,
+  bounding the promise and naming the remainder as the author's, was rejected for the two
+  widened inputs because a document that is produced and then still refused leaves the
+  author in the round trip this goal exists to end, while appearing to have fixed it.
+
+  DO NOT RESOLVE ANY PART OF THIS BY WEAKENING A CHECK. Stated as a clause in the criteria
+  rather than left as a note, because the cheapest way to make this record pass is to
+  narrow what the checks look at. The L1 says the same in its own terms: if delivering this
+  appears to require changing one of those checks, the producer is wrong, not the check.
+
+  NOT AUTHORED HERE, BY DESIGN: assigned_agent, estimated_complexity, it_requirements,
+  test_spec, test_rationale, delivers_to and expects_from. Those are the IT PO's.

@@ -1,0 +1,185 @@
+id: INF-1300b-3
+title: "The document says which parts are yours to write, so the rule against rewriting the rest can be obeyed"
+component: infrastructure
+components:
+  - documentation_system
+  - infrastructure
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+created_by: "docs/acceptance-criteria/infrastructure/INF-1300-architecture-docs-by-construction/INF-1300b.yaml"
+criteria: |
+  Given a document as it is handed to the author,
+  When the author reads it before writing anything,
+  Then every part of it is in one of exactly two states and which state it is in
+    is visible from the document alone: produced, and not the author's to rewrite;
+    or left for the author, carrying a prompt that says what belongs there,
+  And no part of the document is in neither state or in both,
+  And an author who replaces every prompt with content and changes nothing else
+    obtains a document that still passes the project's full set of commit-time
+    checks,
+  And a document still carrying an unreplaced prompt is distinguishable from a
+    completed one by reading the document alone, without comparing it to anything
+    else,
+  And the prompts say what belongs in each place, not merely that something does.
+depends_on:
+  - INF-1300b
+doc_links:
+  - path: docs/acceptance-criteria/infrastructure/INF-1300-architecture-docs-by-construction/INF-1300b.yaml
+    relationship: parent
+    status: exists
+  - path: templates/skills/write-c4-diagram/SKILL.md
+    relationship: specifies
+    status: exists
+    relevance: >-
+      Section 4 forbids hand-authoring the frontmatter, the key and the picture skeleton,
+      and then instructs the author to flesh out that same skeleton. The two instructions
+      can only both be followed if the document itself distinguishes the produced parts
+      from the parts left open, which is what this record requires.
+  - path: templates/agents/architecture-diagram-author.md
+    relationship: specifies
+    status: exists
+    relevance: >-
+      Its step 5 is the sharpest version of the same tension: make exactly these edits and
+      no others, do not modify the key. An instruction of that form is followable only when
+      "these" is marked in the artifact rather than remembered from the instruction.
+  - path: docs/acceptance-criteria/infrastructure/INF-1300-architecture-docs-by-construction/INF-1300b-2.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      Supplies the line this record makes visible: the notation's meaning is produced, what
+      a particular element stands for in this document is authored. Without b-2's split
+      there is nothing for this record to mark.
+  - path: templates/scripts/commit_guardian/commit_guardian.json
+    relationship: describes
+    status: exists
+    relevance: >-
+      The hooks manifest. It decides which checks the fill-and-check arm must run over the
+      filled document, and it names the one field this record has to reconcile:
+      check-description-field requires a non-empty `description:` on every `docs/**/*.md`,
+      and any non-empty string satisfies it — so an unreplaced prompt sitting in that field
+      passes the hook while leaving the document incomplete.
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+    relevance: "The angle taxonomy this record's test_spec classifies against; the fill-and-check arm is real_artifact, and is the clause with teeth."
+origin_agent: BrainCandy
+created: 2026-09-14
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-09-14'
+superseded_by: null
+covered_by: []
+implemented_by: []
+assigned_agent: python-coder
+estimated_complexity: M
+change_target: code
+risk_surface: contract_boundary
+test_required: true
+it_requirements:
+  - "THE TWO STATES MUST BE MACHINE-DECIDABLE FROM THE DOCUMENT ALONE. Every line of the produced document falls into exactly one of produced-and-closed or open-prompt, and which one must be determinable by reading the document with no reference to a freshly produced copy, no diff, and no external manifest. A line in neither state, or in both, is a failure."
+  - "THE PROMPT MARKER MUST BE UNAMBIGUOUS AND MUST SURVIVE THE CHECKS. It must be a form that check_doc_frontmatter, check_diagram_naming, check_mermaid_parent_link, check_mermaid_complexity, check_description_field and check_surface_components_e2 all tolerate in an unreplaced document — because an author will stage a partially filled document at least once — while still being detectable. Note the measured constraint on where it may NOT sit: check_doc_frontmatter BLOCKS on any entry in related_docs, related_code or architecture_diagrams that does not resolve on disk, so a prompt placed in a path-valued field converts an acceptable document into a refused one."
+  - "THE THIRD CLAUSE IS A STRUCTURAL CLAIM, NOT A LABELLING ONE, AND IT IS THE ARM WITH TEETH. Requiring that an author who fills every prompt and changes nothing else still passes every check constrains WHERE the prompts sit: filling a prompt must not be able to break the frontmatter, the filename-to-tier agreement, the parent link, or a per-kind complexity threshold. In particular the prompts inside the mermaid skeleton must leave headroom under check_mermaid_complexity's per-family thresholds after realistic content is added — a skeleton that is at the threshold when empty fails this clause the moment it is completed."
+  - "EACH PROMPT SAYS WHAT BELONGS IN THAT PLACE, NOT MERELY THAT SOMETHING DOES. A single repeated marker in every open place satisfies the partition clauses completely and tells the author nothing, returning them to copying a sibling — the propagation failure this tree exists to end. Falsifiable form: no two prompts within one document are textually identical, and each names the subject of the section it sits in."
+  - "MEASURED — ONE FIELD FORCES AN EXPLICIT DECISION HERE. `description:` is required on every `docs/**/*.md` by check_description_field, is omitted from SKILL.md section 6's frontmatter checklist, and is satisfied by any non-empty string. So a prompt left in it passes the hook while the document is incomplete, and a constant stub in it passes both the hook and a careless reading of INF-1300a-3. Decide and record which of the two states that field is in; the decision must be consistent with INF-1300a-3's no-placeholder clause."
+  - "THE FILL MUST BE REALISTIC, NOT TOKEN. Replacing each prompt with a single word proves nothing about the complexity thresholds or the field length limits; replace with content of the length a real author would write."
+  - "The partition and the fill-and-check must be performed on a PRODUCED artifact, never on the emitter's source or a fixture. All of INF-1300a-1's vacuous-green guards apply to the check run over the filled document."
+  - "Error handling per the project error-handling policy (CLAUDE.md rules 1-4)."
+test_spec:
+  - name: test_every_line_is_exactly_one_of_produced_or_open_prompt
+    target_dir: unit_tests/docs/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    description: "Partition a produced document line by line into produced-and-closed and open-prompt; the record fails on any line in neither state or in both."
+  - name: test_filling_every_prompt_leaves_the_document_passing_the_full_check_set
+    target_dir: unit_tests/docs/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    description: "THE ARM WITH TEETH — replace each prompt with content of the length a real author would write, change nothing else, stage the result in a-1's in-tree harness, and require every manifest-matched judgment hook to exit 0 with per-hook examination evidence."
+  - name: test_filled_skeleton_stays_within_the_per_family_complexity_threshold
+    target_dir: unit_tests/docs/
+    framework: pytest
+    type: integration
+    angle: boundary
+    description: "check_mermaid_complexity exits 0 over the FILLED document for every kind, proving the emitted skeleton left headroom rather than sitting at the threshold when empty."
+  - name: test_unfilled_document_is_distinguishable_from_a_completed_one_by_itself
+    target_dir: unit_tests/docs/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: "An unfilled produced document is identified as incomplete by reading it alone — no diff against a freshly produced copy and no external manifest — and a filled one is identified as complete by the same reading."
+  - name: test_no_two_prompts_in_a_document_are_textually_identical
+    target_dir: unit_tests/docs/
+    framework: pytest
+    type: unit
+    angle: boundary
+    description: "Anticipates the cheapest implementation: a single repeated marker satisfies the partition clauses and tells the author nothing. Each prompt must be distinct and name its section's subject."
+  - name: test_no_prompt_is_placed_in_a_path_valued_frontmatter_field
+    target_dir: unit_tests/docs/
+    framework: pytest
+    type: integration
+    angle: failure
+    description: "No prompt sits in related_docs, related_code or architecture_diagrams, where check_doc_frontmatter blocks on an entry that does not resolve on disk; asserted by running that hook over the UNFILLED produced document and requiring exit 0."
+  - name: test_description_field_is_in_exactly_one_of_the_two_states
+    target_dir: unit_tests/docs/
+    framework: pytest
+    type: integration
+    angle: boundary
+    description: "check_description_field exits 0 over the unfilled produced document, and the emitted description: value is classified into one of the two states by the same partition the rest of the document uses — never an empty value and never an unmarked constant stub."
+test_rationale: >-
+  Reading the emitter cannot establish either half of this record. The partition is a
+  property of the artifact, and the third clause is a property of the artifact's STRUCTURE
+  rather than its labels: marking the open parts is worth nothing if filling them breaks a
+  check, and only a fill-then-run-the-real-checks observation can catch a prompt placed
+  where completing it pushes the mermaid block past its per-family complexity threshold or
+  writes a non-resolving entry into a path-valued field. The fill must be realistic for the
+  same reason — a one-word substitution leaves every threshold untested. The distinct-prompt
+  descriptor exists because the cheapest implementation, one repeated marker everywhere,
+  satisfies the first three clauses completely and returns the author to copying a sibling,
+  which is the propagation failure the L1 records as already under way.
+delivers_to: null
+expects_from:
+  ac_id: INF-1300b-2
+  contract: "The produced-versus-authored line INF-1300b-2 draws inside the key — notation meaning is produced, what a particular element stands for in this document is authored. Without that split there is nothing here to mark. INF-1300b-1's single section-shape declaration supplies the regions being partitioned, and INF-1300a-1's harness supplies the check run over the filled document."
+notes: |
+  WHY THIS IS A BEHAVIOUR AND NOT A PRESENTATION DETAIL. The prohibition on hand-authoring
+  is the rule INF-1300 exists to make followable, and a prohibition is only followable when
+  its scope is visible at the moment of the act. Today an author holds an instruction in one
+  file and a document in another, and must remember which of the document's parts the
+  instruction covered. That is how "do not modify the key" becomes either an author who
+  leaves the document incomplete or an author who rewrites the produced parts — and the
+  collection already contains both outcomes.
+
+  THE THIRD CLAUSE IS THE ONE WITH TEETH AND IT IS NOT COSMETIC. Marking the open parts is
+  worth nothing if filling them breaks the document. Requiring that an author who fills
+  every prompt and changes nothing else still passes every check turns this record from a
+  statement about labels into a statement about the produced document's structure: the
+  prompts must sit where content can go without disturbing the frontmatter, the naming, the
+  link to the document above, or the size limits on the picture.
+
+  FALSIFIABILITY. Produce a document, and partition it: every line is either produced-and-
+  closed or an open prompt. The record is falsified by a line in neither state or in both.
+  Then replace each prompt with plausible content of the length a real author would write,
+  change nothing else, and run the project's full check set over the result — falsified if
+  anything fails, which is the arm that catches a prompt placed somewhere filling it breaks
+  a check. Then take an unfilled document and require that its incompleteness is readable
+  from the document alone — falsified if telling a finished document from an unfinished one
+  requires diffing it against a freshly produced copy. What will not falsify this record:
+  reading what produces the document. The partition and the fill-and-check must be performed
+  on a produced artifact.
+
+  THE FOURTH CLAUSE ANTICIPATES THE CHEAPEST IMPLEMENTATION. A single repeated marker in
+  every open place satisfies the first three clauses completely and tells the author nothing,
+  which returns them to copying a sibling to find out what belongs there — the propagation
+  failure the L1 records. Requiring the prompt to say what belongs in that place is what
+  separates a marked document from a marked-up one.
+
+  NOT AUTHORED HERE, BY DESIGN: assigned_agent, estimated_complexity, it_requirements,
+  test_spec, test_rationale, delivers_to and expects_from. Those are the IT PO's.

@@ -19,6 +19,7 @@ from __future__ import annotations
 import json
 import logging
 
+from product_ownership import is_example_artifact_id
 from product_truth_checks import _ARTIFACT_TYPES
 
 # The checker's own logger name, kept so its verdict lines read exactly as they
@@ -123,7 +124,7 @@ CHECK_READS: dict[str, tuple[str, ...]] = {
     "derived-indexes": ("flows", "mock-data", "acceptance-criteria"),
     "screen-refs": ("flows",),
     "expansions": ("flows",),
-    "shape-bounds": ("flows",),
+    "shape-bounds": ("flows", "mock-data", "mockups"),
     "artifact-paths": ("index",),
     "canonical-datasets": ("mock-data",),
     "truth-evidence": ("flows",),
@@ -160,6 +161,58 @@ def _compute_empty_types(flows: dict, mocks: dict, mockups: dict) -> list[str]:
     """
     counts = {"flows": len(flows), "mock-data": len(mocks), "mockups": len(mockups)}
     return sorted(name for name in _ARTIFACT_TYPES if counts[name] == 0)
+
+
+def compute_type_population(flows: dict, mocks: dict, mockups: dict) -> dict[str, dict[str, int]]:
+    """Return each artifact type's project/example population split.
+
+    One entry per :data:`_ARTIFACT_TYPES` member, its `project` and `example`
+    counts always summing to that type's total population -- no artifact is
+    ever dropped or double-counted between the two figures (UXP-700d-4 AC-1,
+    AC-3). Ownership of each individual id is decided by
+    :func:`product_ownership.is_example_artifact_id`, the single ownership
+    predicate UXP-700d-1 delivers for exactly this purpose -- never
+    re-derived here.
+
+    Args:
+        flows: ``{flow_id -> flow}``.
+        mocks: ``{mock_id -> mock}``.
+        mockups: ``{mockup_id -> mockup}``.
+
+    Returns:
+        ``{"flows": {"project": int, "example": int}, "mock-data": {...},
+        "mockups": {...}}``.
+    """
+    populations = {"flows": flows, "mock-data": mocks, "mockups": mockups}
+    return {
+        artifact_type: {
+            "project": sum(1 for artifact_id in ids if not is_example_artifact_id(artifact_id)),
+            "example": sum(1 for artifact_id in ids if is_example_artifact_id(artifact_id)),
+        }
+        for artifact_type, ids in populations.items()
+    }
+
+
+def compute_example_only_types(type_population: dict[str, dict[str, int]]) -> list[str]:
+    """Return the artifact types whose whole population is example content.
+
+    A type qualifies exactly when its project count is zero AND its example
+    count is not (UXP-700d-4 AC-2). A type whose project AND example counts
+    are BOTH zero is a distinct, EMPTY outcome (AC-4) that belongs to
+    :func:`_compute_empty_types` instead -- it is deliberately excluded here
+    so the two vocabularies never overlap for the same type.
+
+    Args:
+        type_population: The dict :func:`compute_type_population` returns.
+
+    Returns:
+        Artifact-type names, sorted, reported by name (AC-2).
+    """
+    return sorted(
+        artifact_type
+        for artifact_type, counts in type_population.items()
+        if counts["project"] == 0 and counts["example"] != 0
+    )
 
 
 def _top_level_outcome(
@@ -201,7 +254,8 @@ def _top_level_outcome(
 def _print_outcome_contract(
     outcome: str, examined: int, unreadable: list[str], empty_types: list[str],
     resolved_pointers: int = 0, unresolvable_pointers: int = 0,
-    examined_by_check: dict[str, int] | None = None, resolved_labels: int = 0,
+    examined_by_check: dict[str, int] | None = None, resolved_labels: int = 0, bounds: dict | None = None,
+    type_population: dict[str, dict[str, int]] | None = None, example_only_types: list[str] | None = None,
 ) -> None:
     """Print the LAST stdout line: the machine-readable outcome contract.
 
@@ -209,8 +263,10 @@ def _print_outcome_contract(
     always read the verdict from stdout alone (ADR-042 §3). Both pointer counts
     are emitted on every run, zeros included, so their absence never has to be
     interpreted (§A6). ``examined_by_check`` states how many records each
-    performed check read (UXP-700b-2). Keys are additive: consumers read ``outcome`` and must not
-    assert an exact key set.
+    performed check read (UXP-700b-2). ``type_population`` /
+    ``example_only_types`` are the per-type project/example split and the
+    names it derives (UXP-700d-4 AC-1/AC-2). Keys are additive: consumers read
+    ``outcome`` and must not assert an exact key set.
     """
     print(json.dumps({
         "outcome": outcome,
@@ -221,6 +277,10 @@ def _print_outcome_contract(
         "unresolvable_pointers": unresolvable_pointers,
         "examined_by_check": examined_by_check or {},
         "resolved_labels": resolved_labels,
+        "bounds": {name: {key: (len(value) if key == "holdouts" else value) for key, value in entry.items()}
+                   for name, entry in (bounds or {}).items()},
+        "type_population": type_population or {},
+        "example_only_types": example_only_types or [],
     }))
 
 
@@ -309,5 +369,17 @@ DECISION HISTORY
   _log_run_verdict moved here beside the outcome rules they mirror, keeping the
   validator inside its ratchet; the contract line gains resolved_labels.
   (#EPIC-TruthfulProjectRecord/43)
+- 2026-09-16 [python-coder]: UXP-700d-4 -- added compute_type_population
+  (per-artifact-type project/example split, imported verbatim from
+  product_ownership.is_example_artifact_id per UXP-700d-1's own delivers_to
+  contract) and compute_example_only_types (names, by type, any type whose
+  project count is zero while its example count is not -- distinct from a
+  both-zero type, which stays in _compute_empty_types' vocabulary instead,
+  never this one). Both figures now ride the existing stdout outcome contract
+  line as "type_population" / "example_only_types". Verified against the
+  real, committed store: mockups and mock-data are entirely example content
+  (0 project / 10 example, 0 project / 2 example); flows are mixed (11
+  project / 3 example) and therefore never reported example-only.
+  (#EPIC-TruthfulProjectRecord/36)
 ====================================================================
 """

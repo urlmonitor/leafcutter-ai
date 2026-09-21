@@ -1,0 +1,206 @@
+id: INF-1300b-4
+title: "What the authoring instructions promise is what a produced document actually is"
+component: infrastructure
+components:
+  - documentation_system
+  - infrastructure
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+created_by: "docs/acceptance-criteria/infrastructure/INF-1300-architecture-docs-by-construction/INF-1300b.yaml"
+criteria: |
+  Given the two authoring surfaces that instruct an author to start every new
+    architecture document this way, and which also state what will be produced,
+  When each statement those surfaces make about the produced document is compared
+    with a document actually produced,
+  Then each statement holds: the picture skeleton a surface publishes for a kind
+    is the skeleton produced for that kind; the invocation a surface instructs the
+    author to run is one the means accepts, with every argument the surface names
+    and no argument the surface omits; and the parts a surface says are produced
+    are produced while the parts it says are the author's are left open,
+  And neither surface attributes any part of the produced document to a source
+    document unless that document exists and defines what is attributed to it,
+  And no statement remains on either surface that a produced document contradicts,
+  And the comparison covers every kind the project's vocabulary declares as
+    current, read from that declaration, and is made against the surfaces as they
+    are published rather than a restatement of them.
+depends_on:
+  - INF-1300b
+doc_links:
+  - path: docs/acceptance-criteria/infrastructure/INF-1300-architecture-docs-by-construction/INF-1300b.yaml
+    relationship: parent
+    status: exists
+  - path: templates/skills/write-c4-diagram/SKILL.md
+    relationship: specifies
+    status: exists
+    relevance: >-
+      One of the two surfaces. It publishes eight skeletons in section 5 and says in terms
+      that they are the same ones produced; it pins the invocation in sections 4 and 8; and
+      in section 4 step 4 and section 7 it attributes the key and the cross-links to
+      ADR-015. The attribution is false in this worktree and is the first thing this record
+      requires corrected.
+  - path: templates/agents/architecture-diagram-author.md
+    relationship: specifies
+    status: exists
+    relevance: >-
+      The other surface, and it does not currently agree with the first: its step 4 pins an
+      invocation without the date argument the skill's section 4 makes required. Two
+      surfaces carrying the same mandatory step must not disagree about how to perform it.
+  - path: docs/architecture/adrs/ADR-015-guard-honors-noqa-ble001.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      The document both surfaces name as the source of the explanatory key. It concerns
+      honouring an inline suppression of an exception-handling rule and defines no key.
+      Named here as the evidence for the attribution clause, not as a source.
+  - path: docs/acceptance-criteria/infrastructure/INF-1300-architecture-docs-by-construction/INF-1300b-2.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      Owns what the key actually is and where it is derived from. This record owns only that
+      the surfaces stop describing it as something it is not. The two must land together, or
+      the corrected surface describes a key that does not exist yet.
+  - path: templates/scripts/commit_guardian/commit_guardian.json
+    relationship: describes
+    status: exists
+    relevance: >-
+      The hooks manifest, and the measure of one statement the skill makes that a produced
+      document contradicts. Section 6's frontmatter checklist enumerates nine fields and
+      omits `description:`, which check-description-field requires on every
+      `docs/**/*.md`. An author following the published checklist exactly assembles a
+      document the project refuses.
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+    relevance: "The angle taxonomy this record's test_spec classifies against; the invocation comparison is a deployed-angle execution of the published command, not a reading of it."
+origin_agent: BrainCandy
+created: 2026-09-14
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-09-14'
+superseded_by: null
+covered_by: []
+implemented_by: []
+assigned_agent: llm-expert
+estimated_complexity: M
+change_target: prompt
+risk_surface: contract_boundary
+test_required: true
+it_requirements:
+  - "BOTH SURFACES, ONE CHANGE. Every correction lands on templates/skills/write-c4-diagram/SKILL.md AND templates/agents/architecture-diagram-author.md together. A single-surface check cannot see the defect this record is largely about, because the two disagree with each other today."
+  - "RETIRE THE ADR-015 ATTRIBUTION. Verified: ADR-015 in this repository is ADR-015-guard-honors-noqa-ble001.md, about honouring an inline `# noqa: BLE001` suppression, and defines no diagram key. It is cited as the key's source in SKILL.md section 4 step 4, again for cross-links in section 7, again in section 9, and in the agent template's step 4/5. Every one of those citations must go, and must be replaced by what INF-1300b-2 establishes the key actually derives from — the declared kind vocabulary and the per-kind skeleton. Do NOT resolve this by authoring a new ADR that defines a fixed legend; INF-1300b-2 settles that a fixed block is the wrong requirement even with a real source."
+  - "SETTLE THE --date DISAGREEMENT ON BOTH SURFACES AT ONCE. MEASURED: SKILL.md section 4 pins the invocation WITH `--date <currentDate>` and states the reason (the agent runtime may be in UTC while the project convention is the local date); the agent template's step 4 pins the same invocation WITHOUT it. Whichever way it is settled, both surfaces must carry the same argument set afterwards."
+  - "THE PUBLISHED INVOCATIONS MUST NAME THE WIDENED ARGUMENTS. INF-1300a-2 adds `--parent <path>` and `--root`, and INF-1300a-3 requires `--source-ticket <id>` which SKILL.md section 6 already states as a MUST on every create. An invocation that omits them produces a document the parent-link check refuses on the first commit attempt — which recreates this exact defect one version later. Section 6a's manual parent-link procedure must be rewritten from a MANDATORY post-scaffold step into a statement of what the scaffold now does, not left standing beside a scaffold that already does it."
+  - "MEASURED — A THIRD FALSE STATEMENT, NOT PREVIOUSLY RECORDED. SKILL.md section 6 instructs the author to verify with `python scripts/commit_guardian/check_doc_frontmatter.py --files <path-to-doc>`. That script's argparse defines `--file` (singular) and a positional `filenames`; there is no `--files`, so the published command exits with an unrecognized-argument error. The corrected command must be one that actually runs."
+  - "MEASURED — A FOURTH: SECTION 6's FRONTMATTER CHECKLIST IS INCOMPLETE. It lists title, type, flight_level, diagram_type, status, components, created, last_updated and source_ticket, and omits `description:`, which check_description_field requires on every `docs/**/*.md` and which no transform the author can rely on is guaranteed to supply before the judgment tier runs. The checklist must cover every field the judgment-tier hooks matching `docs/architecture/**` require."
+  - "THE SKELETON COMPARISON IS PER KIND AND IS AGAINST THE PUBLISHED TEXT. SKILL.md section 5 publishes eight skeletons and states in terms that they are the same ones the means emits. Compare each published skeleton with the skeleton in a produced document of that kind, enumerated from INF-1300a-4's run-time set; a skeleton published for a kind the declaration no longer lists, or a declared kind with no published skeleton, is itself a disagreement."
+  - "THE ESCAPE-HATCH AND FAILURE-PATH PROSE MUST SURVIVE THE CHANGE. SKILL.md section 4 step 5 forbids improvising a hand-authored frontmatter or key when the means is unavailable. That prohibition is the rule INF-1300 exists to make followable and must not be softened while the surfaces are being corrected."
+  - "NO STATEMENT MAY REMAIN ON EITHER SURFACE THAT A PRODUCED DOCUMENT CONTRADICTS. This is a sweep, not a list of four fixes: after the corrections, every statement either surface makes about what is produced must be checkable against a produced document and must hold."
+  - "Out of scope here and fenced: whether the instruction and the means both ARRIVE in an adopting project is INF-1300e-2's. This record is only about the two surfaces agreeing with the artifact and with each other."
+test_spec:
+  - name: test_published_skeleton_equals_produced_skeleton_for_every_current_kind
+    target_dir: unit_tests/docs/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    description: "Parse the fenced skeletons published in SKILL.md section 5, produce a document for each kind in INF-1300a-4's run-time enumeration, and require the published and produced skeletons equal — with no declared kind lacking a published skeleton and no published skeleton for an undeclared kind."
+  - name: test_every_invocation_pinned_on_either_surface_is_accepted_by_the_means
+    target_dir: unit_tests/docs/
+    framework: pytest
+    type: integration
+    angle: deployed
+    surface_invoked: "scripts/scaffold/new_arch_doc.py"
+    description: "Extract each new_arch_doc.py invocation from BOTH surfaces and EXECUTE it: every argument the surface names is accepted, and the means requires nothing the surfaces omit — a silently-required argument fails as surely as a rejected one."
+  - name: test_the_two_surfaces_pin_the_same_argument_set
+    target_dir: unit_tests/docs/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: "The argument set in SKILL.md section 4 equals the argument set in architecture-diagram-author.md step 4. This fails today: the skill makes --date required with a stated reason and the agent template omits it."
+  - name: test_no_attribution_on_either_surface_points_at_a_non_defining_document
+    target_dir: unit_tests/docs/
+    framework: pytest
+    type: integration
+    angle: failure
+    description: "Sweep both surfaces for every attribution of produced content to a named document; open each target and require it to define what is attributed to it. ADR-015 cited as the source of the explanatory key fails."
+  - name: test_the_documented_verification_command_actually_runs
+    target_dir: unit_tests/docs/
+    framework: pytest
+    type: integration
+    angle: deployed
+    surface_invoked: "scripts/commit_guardian/check_doc_frontmatter.py"
+    description: "Execute the frontmatter-verification command SKILL.md section 6 publishes against a produced document and require it to run and report. Today it publishes --files, the script accepts --file or a positional path, and the published form exits on an unrecognized argument."
+  - name: test_frontmatter_checklist_covers_every_field_the_doc_hooks_require
+    target_dir: unit_tests/docs/
+    framework: pytest
+    type: integration
+    angle: boundary
+    description: "The field set in SKILL.md section 6's checklist is a superset of the union required over docs/architecture/** by the judgment-tier hooks the manifest matches — today it omits description:, required by check_description_field."
+  - name: test_widened_arguments_appear_on_both_surfaces_and_the_manual_step_is_retired
+    target_dir: unit_tests/docs/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: "Both surfaces name --parent, --root and --source-ticket, and section 6a no longer instructs the author to perform the parent link as a manual post-scaffold step that the means already performs."
+test_rationale: >-
+  This record's subject is agreement between what an author is TOLD will be produced and
+  what IS produced, so every descriptor has to bridge prose and artifact; a test that reads
+  only the prose cannot see a skeleton that has drifted, and a test that reads only the
+  artifact cannot see a false attribution. Two descriptors must EXECUTE rather than read: an
+  invocation is only really pinned if the means accepts it, and a silently-required argument
+  the surfaces omit is invisible to any textual comparison — that is precisely how the
+  published --files verification command came to be unrunnable without anyone noticing. The
+  single-surface reading is explicitly insufficient because the two surfaces disagree with
+  each other today over --date, and no check that opens one of them can see that. The
+  skeleton and invocation arms are not merely about the four defects measured now: they are
+  what keeps the surfaces honest after INF-1300a-2 widens the invocation, because a widening
+  that reaches only the means recreates this exact defect one version later.
+delivers_to: null
+expects_from:
+  - ac_id: INF-1300b-2
+    contract: "The per-kind explanatory key as actually emitted and its real derivation source (the declared kind vocabulary plus the per-kind skeleton, not ADR-015). The corrected surfaces describe this; the two must land in the same change, or the corrected instruction describes a key that does not exist yet."
+  - ac_id: INF-1300a-1
+    contract: "The means' accepted argument set as the CLI implements it — names, which are required, and the --parent / --root mutual exclusion from INF-1300a-2 — so both surfaces are corrected against what the means really accepts rather than against a restatement of it."
+notes: |
+  THIS RECORD IS WHERE THE FALSEHOOD IS RETIRED, AND IT IS HERE RATHER THAN ON INF-1300a
+  BECAUSE THE FALSEHOOD IS ABOUT THE SHAPE AND THE KEY. INF-1300b's own notes make the
+  missing source a prerequisite question. b-2 answers what the key is; this record answers
+  what the surfaces may say about it. Splitting the two matters: correcting the instruction
+  without building the thing leaves an accurate description of nothing, and building the
+  thing without correcting the instruction leaves the next author reading that the key comes
+  from a document about exception handling.
+
+  THE GENERAL PROPERTY, NOT JUST THE ONE DEFECT. The subject is agreement between what an
+  author is told will be produced and what is produced. The ADR attribution is the instance
+  that is provably false today; the skeleton-by-skeleton comparison and the invocation
+  comparison are the arms that keep the two surfaces honest after this tree ships, which
+  matters because INF-1300a-2 widens the invocation and any widening that reaches only the
+  means recreates this exact defect one version later.
+
+  FALSIFIABILITY. For each kind the declaration lists, take the skeleton the surface
+  publishes and the skeleton in a produced document and require them equal. Take the
+  invocation each surface instructs and run it against the means: every argument named must
+  be accepted, and the means must require nothing the surfaces do not name. Then sweep both
+  surfaces for any attribution of produced content to a named document, and for each, open
+  that document and require it to define what is attributed to it. The record is falsified
+  by a skeleton that differs, an argument the means rejects or silently requires, or an
+  attribution whose target does not define its subject. It is NOT satisfied by an
+  observation that reads only one surface — the two disagree with each other today, and a
+  single-surface check cannot see that.
+
+  A MEASURED DISAGREEMENT ALREADY PRESENT, RECORDED SO IT IS NOT DISCOVERED LATE. The skill
+  makes the date argument required and warns why; the agent template's pinned invocation
+  omits it. Whichever way that is settled, it must be settled on both surfaces at once.
+
+  FENCED. Whether the instruction and the means both ARRIVE in an adopting project is
+  INF-1300e-2's subject. This record is about the two agreeing; e-2 is about both being
+  present where the author stands. A collection can have perfectly agreeing surfaces that
+  neither reach nor work anywhere else.
+
+  NOT AUTHORED HERE, BY DESIGN: assigned_agent, estimated_complexity, it_requirements,
+  test_spec, test_rationale, delivers_to and expects_from. Those are the IT PO's.

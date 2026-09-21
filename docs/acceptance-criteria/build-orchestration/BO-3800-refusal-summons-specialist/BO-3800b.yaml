@@ -1,0 +1,122 @@
+id: BO-3800b
+title: "The tidying is done by a craft that specialises in it, never by whoever was mid-change"
+component: build-orchestration
+components:
+  - build_orchestration
+  - supervisor_system
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Restructuring goes to a specialist, not to the author racing a standard.
+
+  Whoever is adding the new work is not the one asked to reorganise the file
+  around it. Someone whose craft is restructuring does that part, so the file is
+  genuinely reorganised and the new work gets a home of its own — rather than
+  existing content being shifted next door to make a number fall.
+depends_on:
+  - BO-3800
+  - INF-800f
+doc_links:
+  - path: docs/acceptance-criteria/build-orchestration/BO-3800-refusal-summons-specialist/BO-3800.yaml
+    relationship: parent
+    status: exists
+  - path: docs/acceptance-criteria/infrastructure/INF-800-safe-restructuring/INF-800f.yaml
+    relationship: depends_on
+    status: exists
+    relevance: >-
+      HARD PRECONDITION — THIS RECORD CANNOT BE BUILT BEFORE IT AND DOES NOT RE-SPECIFY IT.
+      INF-800f is what makes the restructuring craft askable by a supervisor rather than
+      only by a human typing a slash command. This record names the party the work goes to;
+      it does not create, define, register or scope that party. Build this before INF-800f
+      and the only available answer is the author doing its own restructuring, which
+      reinstates precisely the failure the user asked for a specialist to prevent.
+  - path: docs/acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/GE-127f-3.yaml
+    relationship: depends_on
+    status: exists
+    relevance: >-
+      STATES WHICH PARTY A GIVEN DEMAND GOES TO, AND IS NOT RESTATED HERE. GE-127f-3 owns
+      the threshold that separates a demand the author may discharge inside the same change
+      from one handed to a restructuring specialist, and owns the rule that the disposition
+      follows from the size of the demand alone. This record acts on that stated disposition
+      and takes no position on where the line falls.
+  - path: docs/acceptance-criteria/build-orchestration/BO-210-precommit-safety-net/BO-210.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      THE RECORD THIS ONE NARROWS, AND THE MOST LIKELY WRONG IMPLEMENTATION. BO-210 requires
+      the fixer of a refusal to be the same agent type that authored the work, holding its
+      original context. This record requires the opposite for one class of refusal. Both are
+      right in their own population and the seam between them is the stated disposition, not
+      a judgement call at implementation time. An implementation that routes this class back
+      to the author "because BO-210 says so" has deleted this record.
+  - path: templates/workflows/code-refactoring-specialist.md
+    relationship: related
+    status: exists
+    relevance: >-
+      Where the restructuring craft lives today — reachable by hand and by nothing else.
+      Cited so the party this record names is identifiable. Making it askable is INF-800f's;
+      what it does once asked is INF-800's.
+  - path: CLAUDE.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      "Gate / Workflow ACs — Verify Behaviorally, Not by Grep" is binding twice over on this
+      record. Separation of duties is the single property in this tree most likely to attract
+      a test that greps an agent template, a workflow file or a prompt for the specialist's
+      name — a test that stays green on a handoff that never fires. fast-lane-build.js is the
+      repository's own scar on exactly that shape.
+delivers_to:
+  - ac_id: GE-127f-3
+    contract: >-
+      The half of GE-127f-3's expects_from that concerns WHO: on a refusal whose stated
+      disposition is the restructuring specialist, that specialist is the party actually
+      asked, and the author is not asked to discharge the demand inside the same change.
+expects_from:
+  - ac_id: INF-800f
+    contract: >-
+      A restructuring specialist that a supervisor can ask for as part of an ordinary
+      workflow, with its own identity, tools, invocation path and sign-off protocol.
+documentation_triggers:
+  - sequence-diagram
+origin_agent: product-owner-v3
+created: 2026-09-14
+amended_by: []
+superseded_by: null
+covered_by:
+  - BO-3800b-1
+  - BO-3800b-2
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  THIS IS THE RECORD THE USER ASKED FOR, IN THEIR OWN WORDS: "the agent that adds the new
+  lines should not be the one that refactors. it should be a specific agent we already
+  have. That way the move to new file will not take place at all as the refactor agent
+  knows how to properly refactor."
+
+  WHAT IS PROVABLE AND WHAT IS NOT — READ BEFORE WRITING A SINGLE CLAUSE BENEATH THIS.
+  Separation of duties CANNOT be checked from the delivered result. One change, one
+  identity; nothing in it distinguishes a hundred lines removed by the author from a
+  hundred removed by a specialist. No criterion beneath this record may assert that the
+  restructuring WAS performed by the specialist, because nothing can observe that.
+
+  WHAT IS CHECKABLE IS THE SEQUENCE: on the refusal path, the specialist is actually asked,
+  before delivery is retried. That is a reachability-shaped claim about the run and it is
+  provable by observing the ask happen in a real run. It is also the only claim that cannot
+  be satisfied by a system that does nothing — which is exactly why it is the claim this
+  record makes. Anything stronger would be false on its face and anything weaker would be
+  discharged by a prompt that says "please use the specialist".
+
+  THE ANTI-SHUFFLING PROTECTION HAS NO MECHANICAL BACKSTOP AND THIS RECORD IS IT. Moving
+  NEW work out of an oversized file into a home of its own is desired; moving EXISTING
+  content out to make a number fall is the failure; a change shows both identically. The
+  protection rests on the specialist's judgement. That is a matter of who is asked, not of
+  what a check can detect, and the criteria above are worded to claim nothing more.
+
+  BOUNDARY WITH INF-800, DELIBERATE. INF-800 owns performing a restructure safely once one
+  is decided on. This record owns who is asked to do it. Neither closes the other.

@@ -1,0 +1,91 @@
+id: INF-1300c
+components:
+  - documentation_system
+  - infrastructure
+title: "A new architecture document is findable the day it is written"
+component: infrastructure
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  New documents announce themselves in the collection, not just in a folder.
+
+  When a document is created it takes its place in the collection's index, so
+  someone reading the architecture meets it in the ordinary course of looking,
+  rather than only if they already know its name.
+depends_on: [INF-1300]
+doc_links:
+  - path: templates/skills/write-c4-diagram/SKILL.md
+    relationship: specifies
+    status: exists
+    relevance: "Section 8 pins the index flag and names the file it is meant to update -- a file that does not exist in this repository."
+  - path: docs/architecture/diagrams/README.md
+    relationship: describes
+    status: exists
+    relevance: "The only README in the diagram collection today. It states the naming convention and lists no diagrams, and its closing line points at the absent docs/architecture/README.md."
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-09-14
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-09-14'
+superseded_by: null
+covered_by:
+  - INF-1300c-1
+  - INF-1300c-2
+  - INF-1300c-3
+  - INF-1300c-4
+  - INF-1300c-5
+implemented_by: []
+documentation_triggers: []
+documentation_rationale: "The benefit is that an existing index stays complete without anyone remembering to update it; the index itself is the documentation, and a second document describing it would be a second place for it to go stale."
+notes: |
+  Why this is its own benefit and not part of INF-1300a. Acceptance and
+  findability fail independently in both directions. A document can satisfy every
+  check the project applies and still sit in a folder that nobody browses,
+  reachable only by someone who already knows it exists -- which is the state of
+  most of this collection today. And a document can be listed everywhere and
+  still be refused at commit. Neither one delivers the other.
+
+  There is a mechanism overlap that a BA should not mistake for a scope overlap.
+  The link to the document above is enforced by a commit-time check, so it sits
+  inside INF-1300a's "accepted first time" promise; what THIS record owns is the
+  part no check enforces -- that the collection's human index gains an entry. The
+  two touch the same act and answer different questions: one asks whether the
+  project will take the document, the other asks whether a person will ever find
+  it.
+
+  THE INDEX DOES NOT EXIST AND CHOOSING IT IS A PRODUCT DECISION, NOT A DETAIL.
+  The authoring procedure pins an index flag and names docs/architecture/README.md
+  as the file it updates. That file is absent -- verified. The nearest thing is
+  docs/architecture/diagrams/README.md, which explains the naming convention,
+  contains no list of diagrams at all, and itself refers the reader onward to the
+  absent file. So there is currently nowhere for a new document to announce
+  itself. The BA must not silently pick one. The question is where a reader
+  should be able to stand and see the whole collection -- a single architecture
+  index above all the genres, or a per-genre index, or the component documents
+  acting as the index via their lists of children. That choice determines what
+  this L1 means, and it should be put to the user rather than inferred from which
+  file happens to be easiest to append to.
+
+  A related observation, recorded not acted on: the existing collection README
+  also defers the complete numbering rule to docs/reference/artifact-numbering.md
+  "once that document exists", which it does not. Two forward references to two
+  absent documents in one short file is a pattern worth someone's attention; it is
+  not this record's work.
+
+  PRIORITY medium, deliberately not high. Findability is real value and its
+  absence is felt, but the blockage this goal exists to clear -- a mandatory step
+  that cannot be performed, and BO-1800f-3 waiting behind it -- clears without
+  this child. Marking it high alongside the three that do block would make the
+  field stop distinguishing anything.
+
+  Documentation triggers are empty and the rationale field says why. The index is
+  the documentation; describing the index in another document would create the
+  second copy that goes stale first.

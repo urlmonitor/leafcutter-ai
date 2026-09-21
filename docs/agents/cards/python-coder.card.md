@@ -46,7 +46,7 @@ new Python files (excluding .sql files — defer those to sql-coder).**
 |---------|--------|----------------|-------------|
 | 1 | Root CLAUDE.md | always | Project instructions, error handling policy, shell conventions |
 | 2 | Per-folder README.md | on-demand | Module-level context when cwd overlaps edited module folder |
-| 5 | [signoff SKILL.md](../../../.claude/skills/signoff/SKILL.md); [doc-enforcer SKILL.md](../../../.claude/skills/doc-enforcer/SKILL.md); complexity-reduction; collector-enforcer | on-demand | Sign-off protocol, docstring enforcement, complexity scoring, collector pattern enforcement |
+| 5 | [signoff SKILL.md](../../../templates/skills/signoff/SKILL.md); [doc-enforcer SKILL.md](../../../templates/skills/doc-enforcer/SKILL.md); complexity-reduction; collector-enforcer | on-demand | Sign-off protocol, docstring enforcement, complexity scoring, collector pattern enforcement |
 | 6 | Agent frontmatter | spawn-scoped | Model: sonnet, tools: Bash/Read/Edit/Write/Agent, signoff: true, config_keys, portable: true |
 | 7 | skills_config.json + settings.json | spawn-scoped | test_command, collector_enforcer_paths, file_size_limit_py |
 | 8 | Ticket frontmatter | ticket-scoped | Agents map, files_touched, depends_on, ACs, Agent Contracts section |
@@ -421,15 +421,6 @@ flowchart TD
 - ACD-600b-1-i: Post-merge hook exits 0 even when mark_ac_done fails for one ticket
 - ACD-600b-1-ii: Post-merge hook ignores non-ticket files touched by the merge
 - ACD-600b-2: Post-merge hook skips tickets without source_ac and exits 0
-- ACD-800a: Exact-criteria text matching discovers high-confidence implementations
-- ACD-800a-1: Audit finds exact-criteria matches at high confidence
-- ACD-800b: Keyword-and-component matching discovers medium-confidence implementations
-- ACD-800b-1: Audit finds keyword-and-component matches at medium confidence
-- ACD-800c: The --apply flag atomically backfills high-confidence matches into AC metadata
-- ACD-800c-1: --apply writes implemented_by for high-confidence matches only
-- ACD-800c-2: --apply is idempotent for already-linked ACs
-- ACD-800d: Every audit run produces a persistent JSON report for human review
-- ACD-800d-1: JSON report is written to debugging/logs/ with defined schema
 - ACD-900a: pick_next.py presents the highest-priority work item from the merged ticket-and-AC list
 - ACD-900a-1: Default invocation outputs the single highest-priority item with all required fields
 - ACD-900a-1-i: Upstream prioritizer failure produces a diagnostic error and exit code 1
@@ -526,6 +517,7 @@ flowchart TD
 - ACS-1300c-1-i: Reusing an existing backfill that promotes finished state does not satisfy the refusal
 - ACS-1300c-2: A record with nothing to repair is never opened for writing
 - ACS-1300c-3: Evidence the run cannot judge produces a stated abstention, never a silent skip and never a write
+- ACS-1600a-1: A retired requirement is not offered as something to change
 - ACS-200d: New tickets must reference their source AC
 - ACS-200e: The standalone AC validator enforces the same schema as the commit-time gate
 - ACS-200f: An AC whose covering tests genuinely pass can be marked done through the normal path, without the operator knowing an environment variable
@@ -1176,6 +1168,7 @@ flowchart TD
 - BP-1000a-1-i: The merge-gate parity check catches cumulative cross-ticket drift that per-ticket sync verification let through
 - BP-1000a-2: A source script edited during the drive whose template copy was not updated is reported as drift and blocks
 - BP-1000a-3: When every mirrored script is byte-identical the parity check passes and the merge proceeds
+- BP-1000a-7: A text artifact the build writes lands holding exactly its content's bytes, on every platform
 - BP-1000b-1: The parity check runs as a pre-merge gate, positioned before the PR-merge step in finalize
 - BP-1000b-2: When the parity gate finds drift, finalize HALTs and the PR-merge step is never reached
 - BP-1000b-2-i: Drift caught at this gate is caught before merge, never discovered in a post-merge spot-check
@@ -1805,6 +1798,21 @@ flowchart TD
 - INF-1100c-1: Compiled agent instructions contain the resolved work-location path
 - INF-1100c-1-i: A work-location placeholder with no configured value fails compilation loudly
 - INF-1100c-2: An automated test guards compiled prompts against unresolved work-location placeholders
+- INF-1200a-1: The standard is stated in the material the specialist begins from, not pointed at from it
+- INF-1200a-2: The telling does not wait for something to go wrong, and is not changed by something having gone wrong
+- INF-1200a-3: Whether a standard's check currently runs does not decide whether its audience hears about it
+- INF-1200b-1: Covering a kind of file that had no standard is one statement, and the change that does it contains nothing else
+- INF-1200b-2: Strip every standard an author could have written into a specialist's instructions and every specialist is still correct
+- INF-1200c-1: The audience is read off the ownership record, and what a specialist is told moves when ownership moves
+- INF-1200c-1-i: A kind of file the ownership record assigns to nobody gets no invented owner and stops nothing
+- INF-1200c-2: A specialist that owns two kinds of file is told both, and a kind of file with two owners reaches both
+- INF-1200d-1: A standard the delivery has never carried before arrives without the delivery being touched
+- INF-1200d-1-i: A standard that reached nobody is not counted as delivered
+- INF-1200d-2: A standard that is not a number travels in the terms it was declared in
+- INF-1200e-1: An uninformed pairing is named, an informed one is not, and informedness is judged from the brief rather than from the carrier's account of itself
+- INF-1200e-2: An examination that could not look says so, and a run that examined nothing never reads as a clean one
+- INF-1200f-1: The figure in the brief and the figure applied to the work are one figure, and they move together
+- INF-1200f-2: The one pairing that already has this property keeps it, at every point in the brief that holds it today
 - INF-200a-1: check_no_print pre-commit hook blocks print() outside CLI entry points
 - INF-200a-2: check_no_print hook registered in commit_guardian.json with config section
 - INF-200a-4: Rule and pre-commit hook are a paired unit — one manages both

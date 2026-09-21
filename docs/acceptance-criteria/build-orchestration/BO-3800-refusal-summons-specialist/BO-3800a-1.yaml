@@ -1,0 +1,314 @@
+id: BO-3800a-1
+title: "A refusal that asks for a craft leaves the author's change untouched, does not advance the run past delivery, and re-offers that same change to the same standard once the file has been put right"
+component: build-orchestration
+components:
+  - build_orchestration
+  - supervisor_system
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a ticket is being driven and its delivery step is reached with the
+    author's change standing in the working tree,
+  And the standard that judges delivery refuses it with an outcome that names one
+    file, states a demand of 120 measured lines against that file, and states that
+    a demand of that size is handed to a restructuring specialist rather than to
+    the author inside this change,
+  When the run adjudicates that refusal,
+  Then the author's change is still present and is exactly what it was before the
+    refusal — not reverted, not rolled back, not stashed away, not discarded and
+    not re-derived,
+  And the delivery step is not recorded as completed,
+  And nothing that ordinarily follows delivery runs,
+  And given the restructuring specialist has since run against the named file and
+    the file now meets the demand,
+  When the run continues,
+  Then delivery is attempted a second time with the author's original change still
+    in it,
+  And that second attempt is judged by the same standard that refused the first,
+    with nothing suppressed, skipped, waived or overridden to make it pass,
+  And the second attempt completes because the file now meets the demand, so no
+    part of the change is re-authored, re-staged or re-derived by anyone,
+  And given instead the same refusal in a run inspected at the moment after the
+    refusal and before any restructuring has happened,
+  When the sequence of steps the run has taken is read,
+  Then delivery has not been attempted a second time — the re-offer follows the
+    restructuring and never precedes it.
+depends_on:
+  - BO-3800a
+doc_links:
+  - path: docs/acceptance-criteria/build-orchestration/BO-3800-refusal-summons-specialist/BO-3800a.yaml
+    relationship: parent
+    status: exists
+  - path: docs/acceptance-criteria/build-orchestration/BO-3000a.yaml
+    relationship: depends_on
+    status: exists
+    relevance: >-
+      THE SHIPPED HOLDING MECHANISM, REUSED AND NOT REBUILT. BO-3000a is delivered
+      (work_status done) and already establishes exactly the three properties the first
+      half of this record needs: the target is re-dispatched BEFORE any later phase runs,
+      the handing-off phase is NOT recorded as completed, and the drive does NOT advance
+      to the next phase in its phase order. This record consumes that behaviour whole. An
+      implementation that stands up a second holding mechanism beside it is at the wrong
+      address. What BO-3000a cannot supply is the TRIGGER — it routes a handoff an agent
+      chose to emit and targeted, and a refusing standard emits no handoff and names no
+      target — which is why this record's Given begins at a refusal rather than at a
+      handoff.
+  - path: docs/acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/GE-127f-3.yaml
+    relationship: depends_on
+    status: exists
+    relevance: >-
+      PRODUCES THE REFUSAL THIS RECORD ACTS ON. The named file, the stated demand and the
+      stated disposition are consumed as given. This record computes none of them, derives
+      none of them by a second route, and must never restate the arithmetic that produced
+      them (GE-127f-1's inequality, GE-127f-2's definition of what was added, GE-127d's
+      counting rule).
+  - path: docs/architecture/agent_delivery_workflows.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      §4 holds the phase loop and the adjudication ladder this record's hold and retry must
+      sit inside, and the ADR-019 depth note that constrains WHO can do the asking. See the
+      notes below — the dispatching party must be the depth-0 driver, because the delivery
+      step itself runs at depth 1 and an agent at depth 1 cannot invoke the Agent tool at
+      all.
+  - path: docs/architecture/adrs/ADR-019-build-feature-inline-phase-dispatch.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      THE CONSTRAINT THAT DECIDES WHERE THIS LANDS, AND THE REASON A WRONG CHOICE FAILS
+      SILENTLY. An agent invoked via the Agent tool runs at depth 1 and cannot itself invoke
+      the Agent tool; calls beyond depth 1 are SILENTLY DROPPED. That is the same
+      silent-drop shape this tree exists to prevent, one layer down.
+  - path: CLAUDE.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      "Gate / Workflow ACs — Verify Behaviorally, Not by Grep" is binding. A test that finds
+      a retry branch in a workflow file, or asserts a hold flag is set, stays green on a
+      branch nothing reaches. Every arm above is read from a run that actually happened.
+delivers_to:
+  - ac_id: GE-127f-3
+    contract: >-
+      The FATE half of GE-127f-3's expects_from: on a refusal whose stated disposition is
+      the restructuring specialist, the author's change is held unaltered while the file is
+      put right, and delivery is retried against the same standard afterwards. This record
+      takes no position on who does the restructuring (BO-3800b), on what they are told
+      (BO-3800c), or on what happens when the demand is still not met (BO-3800d).
+expects_from:
+  - ac_id: BO-3000a
+    contract: >-
+      The delivered holding behaviour — target re-dispatched before any later phase runs,
+      the handing-off phase not recorded as completed, the drive not advanced — consumed
+      whole rather than re-implemented. This record supplies the trigger BO-3000a cannot:
+      a refusal, which emits no handoff and names no target.
+assigned_agent: python-coder
+estimated_complexity: L
+package_surface: false
+declares_side_effect: false
+it_requirements:
+  - "The hold and the re-offer must be adjudicated by the depth-0 driver that owns the
+    phase loop (templates/workflows-js/build-feature.js and its declared twin
+    build-ticket.js), never inside the delivery phase agent. ADR-019: an agent at depth 1
+    cannot invoke the Agent tool and such calls are silently dropped, so an implementation
+    placed inside the delivery step produces a run in which nothing happens and nothing
+    complains — indistinguishable from this record not being built."
+  - "Reuse BO-3000a's delivered holding behaviour whole — target re-dispatched before any
+    later phase runs, the handing-off phase not recorded as completed, the drive not
+    advanced. Do not stand up a second holding mechanism beside it."
+  - "The phase loop and its phaseOrder array are declared TWINS across
+    templates/workflows-js/build-feature.js and templates/workflows-js/build-ticket.js. An
+    adjudication branch added to one must be added to the other in the same change, and the
+    parity must be asserted by driving the same refusal through both, not by comparing
+    source text."
+  - "The refusal path must not mutate the working tree. No reset, stash, checkout, clean or
+    restore may run between the refusal and the second delivery attempt."
+  - "The second delivery attempt must run the same gate chain as the first: no hook skipped,
+    no allowlist or exemption entry added for the named file, no override or bypass flag set,
+    and nothing marked waived for the remainder of the run."
+  - "IDENTITY IS OUT OF SCOPE HERE AND MUST STAY OUT. These arms hold whoever performed the
+    restructuring; the party's identity is BO-3800b-1's and is blocked on INF-800f. Coverage
+    for this record therefore uses a STAND-IN restructuring step supplied by the fixture and
+    never a named agent id, so nothing here has to be rewritten when INF-800f fixes the name."
+  - "Errors follow the project error handling policy. A delivery outcome that cannot be read
+    or parsed must surface as a named stop, never as an absent disposition that silently
+    resumes the ordinary route."
+  - "The branch must cost nothing on a delivery that is not refused. No lookup, read or
+    resolution may happen before a refusal has actually stated a disposition (BO-3800e-2's
+    population)."
+test_required: true
+test_spec:
+  - name: test_held_refusal_leaves_the_authors_change_byte_identical
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "Drive a delivery refusal whose stated disposition names a restructuring craft; the working tree the author left is byte-identical afterwards — not reverted, rolled back, stashed, discarded or re-derived."
+  - name: test_held_refusal_does_not_record_the_delivery_phase_completed
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "After the refusal the delivery phase is not recorded as completed in the ticket record the run actually wrote."
+  - name: test_no_phase_after_delivery_runs_while_the_change_is_held
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "No phase ordered after delivery appears in the run's dispatch record between the refusal and the re-offer."
+  - name: test_second_delivery_attempt_carries_the_authors_original_change
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "Once the stand-in restructuring step has run and the file meets the demand, delivery is attempted a second time carrying the author's original change, with nothing re-authored, re-staged or re-derived."
+  - name: test_second_attempt_is_judged_by_the_same_unsuppressed_standard
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "The second attempt runs the same gate chain as the first — named file not exempted, no hook skipped, no override set — and completes only because the file now meets the demand."
+  - name: test_the_re_offer_never_precedes_the_restructuring_step
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: "A run inspected after the refusal and before any restructuring shows no second delivery attempt; in the completed run the restructuring step precedes the re-offer in the ordered dispatch record."
+  - name: test_discard_injection_reddens_only_the_hold_arms
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: "Named mutation (1) THE DISCARD — reset the working tree before anyone is asked. The change-still-present and second-attempt-carries-the-change arms go RED; the ordering arm and both arms of BO-3800e-1 and BO-3800e-2 STAY GREEN. The stay-green halves naming BO-3800b-1 and BO-3800b-2 are deferred with those records (INF-800f)."
+  - name: test_forced_pass_injection_reddens_only_the_same_standard_arms
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: "Named mutation (2) THE FORCED PASS — deliver on the second attempt without consulting the standard, or exempt the named file for the rest of the run. The judged-by-the-same-standard and completes-because-the-file-meets-the-demand arms go RED; the hold arms and BO-3800e-1 STAY GREEN."
+  - name: test_dropped_retry_injection_reddens_only_the_second_attempt_arms
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: "Named mutation (3) THE DROPPED RETRY — hold the change and ask, then end the run without re-offering. The second-attempt and completes arms go RED; the change-still-present and phase-not-recorded-completed arms and BO-3800e-1/e-2 STAY GREEN."
+  - name: test_the_hold_branch_behaves_identically_in_both_phase_loop_twins
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: seam
+    surface_invoked: templates/workflows-js/build-ticket.js
+    description: "The same refusal driven through build-ticket.js produces the same hold, the same non-completion and the same re-offer, proving the declared twins have not drifted — asserted from two runs, not from comparing source text."
+  - name: test_hold_and_re_offer_are_reachable_from_the_drivers_own_top_level_body
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: reachability
+    surface_invoked: templates/workflows-js/build-feature.js
+    description: "Every arm above is driven through unit_tests/prompt_assembly/_driver_harness.py executing build-feature.js's own top-level body — not an extracted helper, not a source scan."
+test_rationale: >-
+  The claim is a SEQUENCING property about a run, so the only admissible evidence is a run.
+  unit_tests/prompt_assembly/_driver_harness.py executes build-feature.js's own top-level
+  body and reports the agents a run actually dispatched, the records it wrote and the order
+  of both; BO-3000a — whose holding behaviour this record consumes whole — is already proved
+  on that surface, so it is the right one here. A direct-import unit test against an
+  extracted adjudication helper would be insufficient twice over: it cannot show the branch
+  is reached from the driver's real control flow, and it cannot show that no later phase ran,
+  which is the arm that separates a hold from a pause. A source-reading test is inadmissible
+  outright — fast-lane-build.js passed exactly that shape while never executing its gates.
+  TWO DELIBERATE LIMITS, RECORDED SO THEY ARE NOT MISTAKEN FOR OVERSIGHTS. First, the
+  restructuring step is a STAND-IN supplied by the fixture and is never a named agent: this
+  record explicitly holds whoever did the work, and the party's identity belongs to
+  BO-3800b-1, which is held pending INF-800f. Second, the stay-green halves of the three
+  named mutations are asserted here only against this record's own sibling arms and against
+  BO-3800e-1 and BO-3800e-2. The halves naming BO-3800b-1, BO-3800b-2, BO-3800c-1 and
+  BO-3800d-1 are deferred with those records and must be added to descriptors 7-9 when
+  INF-800f lands. Until then the tree's separability evidence is PARTIAL, and the
+  must-stay-green lists in the notes above remain the authority on what is still owed.
+origin_agent: business-analyst
+created: 2026-09-14
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: internal
+notes: |
+  ONE RECORD FOR THE HOLD AND THE RETRY, BECAUSE THE L1 REQUIRES IT. BO-3800a's notes are
+  explicit: "Holding a change that is never re-offered is the same outcome as losing it,
+  from the point of view of the person waiting for it to land. Decomposition must keep the
+  two halves in one record so an implementation cannot satisfy the hold and quietly drop
+  the retry." This is the only child of BO-3800a for that reason, not for lack of material
+  — the three named mutations below each redden a different arm of this one record, which
+  is what a two-record split would have bought and what the L1 forbade buying.
+
+  WHAT THIS RECORD DOES NOT CLAIM. It does not claim the restructuring was performed by the
+  specialist — that is unobservable in a delivered change and BO-3800's notes forbid any
+  descendant asserting it. It claims only what a run can be watched doing: the change
+  survives the refusal, no step past delivery runs, and delivery is attempted again against
+  the same standard afterwards. Who was asked is BO-3800b's; the three arms above hold
+  whoever did the work.
+
+  NAMED MUTATIONS — EXECUTE THEM, DO NOT MERELY DESCRIBE THEM. Written so the IT PO can
+  lift them verbatim into test descriptors. Each names the arms that must go RED and the
+  arms that must STAY GREEN; a mutation run that reddens everything is a FAILURE of the
+  descriptor, not a stronger result, because it means the arms are not independent.
+
+  (1) THE DISCARD. MUTATION: on a refusal whose disposition names the specialist, reset the
+      working tree to its pre-change state before anyone is asked, so the restructuring
+      starts from a clean file.
+      MUST GO RED: the change-still-present arm, and the second-attempt-carries-the-
+      author's-change arm.
+      MUST STAY GREEN: every arm of BO-3800b-1 and BO-3800b-2 — the right party is still
+      asked and the author still is not — and both arms of BO-3800e-1 and BO-3800e-2. That
+      green half is the evidence that WHO is asked and WHAT HAPPENS TO THE CHANGE are
+      separate promises, which is the collapse BO-3800's notes name as the one to avoid
+      ("Merging (a) with (b) is the specific collapse to avoid, because it is BO-210's shape
+      wearing this goal's title").
+
+  (2) THE FORCED PASS. MUTATION: on the second attempt, deliver without consulting the
+      standard that refused — bypass it, or mark the named file exempt for the remainder of
+      the run.
+      MUST GO RED: the judged-by-the-same-standard arm and the completes-because-the-file-
+      now-meets-the-demand arm.
+      MUST STAY GREEN: the hold arms above, every arm of BO-3800b-1, and BO-3800e-1. This
+      injection is the second of the two failures BO-3800a's notes name, and it is the one
+      that looks most like success: the handoff happened, the change landed, and the rule
+      was quietly reopened for exactly the population it exists for.
+
+  (3) THE DROPPED RETRY. MUTATION: hold the change and ask the specialist, then end the run
+      there — report the handoff as the outcome and never re-offer delivery.
+      MUST GO RED: the second-attempt arm and the completes arm.
+      MUST STAY GREEN: the change-still-present arm, the not-recorded-as-completed arm,
+      every arm of BO-3800b-1 and BO-3800c-1, and BO-3800e-1/e-2. This is the injection the
+      L1 was written to make impossible to ship, and it is the cheapest build in the tree:
+      everything visible has happened and the person waiting for the change is in exactly
+      the position they were in before.
+
+  THE QUESTION THIS RECORD ONCE RAISED IS NOW ANSWERED — DO NOT WIDEN THE SCOPING BACK.
+  Every arm above begins "Given a ticket is being driven". When this record was authored
+  that scoping was reported upward as an open question rather than settled here. BO-3800a
+  was amended on 2026-09-14 and now answers it: the L1 promise is bounded to work being
+  driven. A refusal outside a drive is simply refused — today's behaviour, with the refusing
+  standard's own message as the whole of what the author gets, nothing held and no
+  specialist summoned. The arms above are therefore exactly as wide as their parent, not
+  narrower than it, and nothing here is owed a later widening.
+
+  THE REASONING IS KEPT, BECAUSE IT IS WHY THE SCOPING IS CORRECT RATHER THAN TIMID. The
+  hold and the re-offer both need a party that outlives the refusal and can ask for another.
+  Inside a drive that party exists — the depth-0 driver that owns the phase loop. Outside
+  one it does not: a hand-run commit at a terminal has no driver at all. And the delivery
+  step itself cannot be the asker, because it runs at depth 1 and ADR-019 records that an
+  agent at depth 1 cannot invoke the Agent tool, with calls beyond it SILENTLY DROPPED. A
+  reader who mistakes these Givens for an oversight and widens them is specifying a dispatch
+  the platform will drop without raising anything — the same silent-drop failure this tree
+  exists to prevent.
+
+  NOT AUTHORED HERE, BY DESIGN: assigned_agent, estimated_complexity, it_requirements,
+  test_spec, test_rationale and declares_side_effect. Those are the IT PO's, which runs
+  after this pass. The three named mutations above, including which arms must stay green,
+  are written to be turned directly into test descriptors.

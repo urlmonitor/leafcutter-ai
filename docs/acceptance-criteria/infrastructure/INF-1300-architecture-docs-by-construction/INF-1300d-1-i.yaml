@@ -1,0 +1,172 @@
+id: INF-1300d-1-i
+title: "Which names are recognised is read from the project's declaration, so changing the declaration changes what is accepted"
+component: infrastructure
+components:
+  - documentation_system
+  - infrastructure
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+created_by: "docs/acceptance-criteria/infrastructure/INF-1300-architecture-docs-by-construction/INF-1300d.yaml"
+criteria: |
+  Given the project's declared vocabulary of kinds of picture is held in the one
+    place the project already treats as its statement of that vocabulary,
+  When a kind is added to that declaration and nothing else in the project is
+    changed,
+  Then a request naming the added kind is accepted, and a document is produced for
+    it,
+  And when a kind already declared is then marked as retired in favour of another
+    and nothing else is changed, a request naming it is accepted with the
+    substitution stated,
+  And when a kind is removed from that declaration and nothing else is changed, a
+    request naming it is refused,
+  And no list of kind names is held anywhere in what performs the work, nor in
+    what observes it — a name appearing in either, other than as a value read from
+    the declaration, is a failure of this criterion.
+depends_on:
+  - INF-1300d-1
+doc_links:
+  - path: docs/acceptance-criteria/infrastructure/INF-1300-architecture-docs-by-construction/INF-1300d-1.yaml
+    relationship: parent
+    status: exists
+  - path: config/diagram_types.json
+    relationship: specifies
+    status: exists
+    relevance: >-
+      The single place the project declares the vocabulary, and it says so of itself. Its
+      own note records that a consuming check reads it at startup and that another surface
+      is regenerated when it changes — so the convention that this file decides the
+      vocabulary is already established and is being reused here, not introduced.
+  - path: templates/scripts/commit_guardian/diagram_type_validators.py
+    relationship: describes
+    status: exists
+    relevance: >-
+      The precedent and the caution. It reads the declaration by walking up the directory
+      tree, and falls back to a constant when it cannot find the file — a fallback that, by
+      its own recorded history, once silently disabled all frontmatter enforcement in every
+      consuming project. Whatever reads the declaration here must not become the second
+      instance of that failure.
+  - path: docs/architecture/adrs/ADR-013-portable-skill-script-deployment-boundary.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      The declaration must be resolvable from a consumer install as well as from this
+      repository, which is why the ancestor-walk precedent exists and why a package-relative
+      path would satisfy this record here and fail everywhere else.
+  - path: docs/reference/false-green-mechanisms.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      Names the failure this record's last clause forbids: a test that enumerates today's
+      vocabulary re-creates the private copy inside the observation and keeps reporting
+      success after the declaration moves.
+assigned_agent: python-coder
+estimated_complexity: S
+change_target: code
+risk_surface: contract_boundary
+test_required: true
+it_requirements:
+  - "The vocabulary must be read from config/diagram_types.json at the moment of the request. Reading it once at import and caching for the process lifetime is acceptable; baking it into the producer at build time is not."
+  - "The declaration must be resolved relative to the project root the run is operating on, discovered the same way the project's existing consumers of that file discover it, so both the development layout (config/) and the deployed consumer layout (leafcutter/config/) resolve."
+  - "There must be no fallback to a built-in list of names when the declaration cannot be found or parsed. That situation is a refusal with an explicit message. diagram_type_validators.py's recorded history is the precedent: its constant fallback once silently disabled frontmatter enforcement in every consuming project, and a second instance of that failure is not acceptable."
+  - "No diagram-type name may appear as a literal in the producing code or in the tests, other than as a value read from a declaration the test itself authored. Tests must build their scratch declaration and then assert against the names they put in it."
+  - "The count of declared names must not be asserted anywhere, in the producer or in the tests, so adding or retiring a name does not require a test edit."
+  - "One accessor reads the declaration; INF-1300d-1, INF-1300d-4, INF-1300b-2 and INF-1300a-4 all consume it rather than each opening the file, so a change to how the declaration is read cannot leave part of the tree reading it differently."
+test_spec:
+  - name: test_adding_a_kind_to_the_declaration_makes_it_accepted
+    target_dir: unit_tests/scaffold/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    description: "In a temporary project carrying its own copy of the declaration, add a kind, change nothing else, and request it. Assert a document is produced. The kind's name must be invented by the test, not taken from the real vocabulary."
+  - name: test_marking_a_kind_retired_makes_it_accepted_with_the_substitution_stated
+    target_dir: unit_tests/scaffold/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    description: "Mark a declared kind as retired in favour of another, change nothing else, and request it. Assert the document is produced under the replacement name and the run states the substitution."
+  - name: test_removing_a_kind_from_the_declaration_makes_it_refused
+    target_dir: unit_tests/scaffold/
+    framework: pytest
+    type: integration
+    angle: failure
+    description: "Remove a kind from the declaration, change nothing else, and request it. Assert it is refused and nothing is written. This is the arm that fails a producer that reads the declaration for additions while carrying a private floor of names it always accepts."
+  - name: test_no_diagram_type_name_is_written_as_a_literal_in_producer_or_tests
+    target_dir: unit_tests/scaffold/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: "Read the declaration, then scan the producing module and this record's own test module for any declared name appearing as a string literal. Assert none is found. The scan reads its search terms from the declaration, so it cannot go stale."
+  - name: test_missing_or_malformed_declaration_is_a_refusal_not_a_fallback
+    target_dir: unit_tests/scaffold/
+    framework: pytest
+    type: integration
+    angle: failure
+    description: "Remove the declaration entirely, then corrupt it, and request a name that is valid in the real vocabulary. Assert both runs refuse with a message naming the declaration problem, and that neither produces a document under a built-in default."
+test_rationale: >-
+  A producer holding a private copy of today's names and a producer reading the declaration
+  behave identically on every request anyone will make today, so no single-run assertion can
+  separate them. The contract is therefore written as before-and-after pairs over a scratch
+  declaration the test itself mutates - the only construction in which the derived value can
+  be observed to move. The literal-sweep descriptor extends the same discipline to the
+  observation, because a test enumerating today's eleven names is the private copy relocated
+  into the test suite: it keeps passing after the vocabulary moves and reports that the
+  producer reads the declaration when it does no such thing.
+delivers_to:
+  - agent: python-coder
+    ac_id: INF-1300d-1
+    contract: "A single accessor returning the declared vocabulary as read from config/diagram_types.json at request time - each name with its description, requires_frontmatter list and deprecation marker - plus the replacement name for a retired entry."
+  - agent: python-coder
+    ac_id: INF-1300d-4
+    contract: "The same accessor's requires_frontmatter list per kind, which is what makes 'which kinds oblige which facts' follow the declaration rather than a private list of three names."
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-09-14
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-09-14'
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  WHY THIS IS AN L3. It adds no behaviour of its own. It constrains where INF-1300d-1's
+  already-specified acceptance decision gets its answer from, and that is a property no
+  single request can reveal: a producer holding its own copy of today's eleven names and a
+  producer reading the declaration behave identically on every request anyone will make
+  today. They differ only across a change to the declaration, which is why the criteria are
+  written as three before-and-after pairs rather than as assertions about one run.
+
+  THIS IS THE SAME CONSTRUCTION INF-1200c-1 AND BP-900c-4-i ALREADY SETTLE, REUSED. The
+  general principle those records pin is that a value claimed to be derived from an input
+  must be observed to MOVE when that input changes, because a hard-written copy passes every
+  single-run assertion. The subject here is different and the construction is not reinvented.
+
+  WHY IT MATTERS PARTICULARLY HERE. The vocabulary has already moved once — that is how it
+  came to contain a retired alias — and INF-1300b-2 derives the explanatory key from the same
+  declaration, INF-1300a-4 enumerates its membership, and INF-1300d-1 decides refusals from
+  it. Four records in this tree take that declaration as their source of truth, so a private
+  copy anywhere would put the tree quietly out of step with the project at the next change,
+  in four places at once, with every observation still green.
+
+  THE LAST CLAUSE COVERS THE OBSERVATION AS WELL AS THE WORK, AND THAT IS DELIBERATE. A test
+  that enumerates today's eleven names has re-created the private copy inside the test suite:
+  it will keep passing after the vocabulary moves, and it will report that the producer reads
+  the declaration when the producer does no such thing. This is the recorded failure mode of
+  the count-pinned surfaces in this project's own history.
+
+  FALSIFIABILITY. Three paired runs against a scratch copy of the declaration. Add a kind,
+  change nothing else, request it — falsified if it is refused. Mark a kind retired, change
+  nothing else, request it — falsified if the substitution does not appear. Remove a kind,
+  change nothing else, request it — falsified if a document is produced. Then sweep both the
+  producer and the observation for any kind name written as a literal — falsified if one is
+  found. The removal arm is the one that most often fails: a producer may read the
+  declaration to learn about additions and still carry a private floor of names it always
+  accepts.
+
+  NOT AUTHORED HERE, BY DESIGN: assigned_agent, estimated_complexity, it_requirements,
+  test_spec, test_rationale, delivers_to and expects_from. Those are the IT PO's.

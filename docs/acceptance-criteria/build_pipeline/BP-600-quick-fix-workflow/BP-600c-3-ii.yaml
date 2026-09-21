@@ -1,0 +1,105 @@
+id: BP-600c-3-ii
+components:
+  - build_pipeline
+title: "Quick-fix's mutation proof reverts and restores the fix without touching the shared stash stack"
+component: build-pipeline
+level: L3
+status: active
+readiness: reviewed
+priority: high
+work_status: done
+criteria: |
+  Given the mutation proof of BP-600c-3 must revert the fix, observe red,
+    restore the fix and observe green,
+  And the git stash stack is shared by every session and every agent operating
+    in the same repository, and `git stash pop` with no argument pops whatever
+    entry is on top of it rather than the entry the popper pushed,
+  When the workflow performs that revert-and-restore,
+  Then it does not use `git stash push` or `git stash pop` to do so,
+  And it reverts by writing the file's HEAD content over the working copy after
+    first saving the fixed copy to a path outside the repository,
+  And it restores by copying that saved copy back, never by popping a stack
+    entry it cannot prove is its own,
+  And the HEAD content is materialised into a temporary file and checked before
+    anything overwrites the target, so a failed lookup cannot truncate the fix,
+  And restoration is verified by comparing the target byte-for-byte against the
+    saved copy rather than by inferring it from `git status`,
+  And when the proof cannot complete, the recovery instructions it emits name
+    the saved copy's path, not a stash entry.
+
+  And separately, where the workflow advises a human to set aside their own
+    uncommitted work before a run, it does not advise a bare `git stash` /
+    `git stash pop` pair, but a stash labelled with `-m` that is located in
+    `git stash list` and popped by its own ref.
+
+  And the bug symptom ("the prescribed `git stash push` / `git stash pop` pair
+    popped a concurrent session's stash entry instead of the one quick-fix
+    pushed, destroying that session's uncommitted work — recoverable only by
+    digging the stash commit out of the object store") must not occur.
+depends_on:
+  - BP-600c-3
+doc_links:
+  - path: templates/skills/quick-fix/SKILL.md
+    relationship: implements
+    status: exists
+    relevance: >-
+      Step 4.2 is the prose the mutation-proof step is read from when /quick-fix
+      runs as a skill rather than through the JS workflow.
+  - path: templates/workflows-js/quick-fix.js
+    relationship: implements
+    status: exists
+    relevance: >-
+      The mutation-proof agent prompt and its blocked-path recovery message are
+      the executing copy of the same instruction.
+assigned_agent: workflow-architect
+estimated_complexity: S
+it_requirements:
+  - "Must operate at depth 0 per ADR-006 — phase agents dispatched at depth 1 via the Agent tool"
+  - "Must handle errors gracefully per the project error handling policy"
+  - >-
+    Every command in the revised sequence must remain a single, simple command
+    per the repository shell convention — no chaining, no `cd`.
+  - >-
+    The HEAD copy must be written to a temporary file first. A redirect of the
+    form `git show HEAD:<path> > <path>` truncates the target before git runs,
+    so a failed lookup destroys the very fix the proof exists to protect.
+  - >-
+    Restoration must be proved by a byte-comparison against the saved copy.
+    `git status --porcelain` showing the path as modified only proves the file
+    differs from HEAD, which is also true of a partial or corrupted restore.
+  - >-
+    The two copies must live outside the worktree so they survive a crash mid-proof
+    and are never picked up by `git add` or by a pre-commit hook.
+delivers_to: null
+expects_from:
+  ac_id: BP-600c-3
+  contract: "The revert/restore mechanism underlying { red_without_fix, green_with_fix_restored, fix_restored }"
+origin_agent: BrainCandy
+created: 2026-09-14
+amended_by: []
+superseded_by: null
+covered_by:
+  - "unit_tests/test_quickfix_mutation_proof_stash_free.py::TestQuickFixSkillMutationProofStashFree::test_ac_bp600c3ii_skill_step_4_2_uses_no_stash_command"
+  - "unit_tests/test_quickfix_mutation_proof_stash_free.py::TestQuickFixSkillMutationProofStashFree::test_ac_bp600c3ii_skill_step_4_2_reverts_from_head"
+  - "unit_tests/test_quickfix_mutation_proof_stash_free.py::TestQuickFixSkillMutationProofStashFree::test_ac_bp600c3ii_skill_guard_advises_labelled_stash"
+  - "unit_tests/test_quickfix_mutation_proof_stash_free.py::TestQuickFixWorkflowMutationProofStashFree::test_ac_bp600c3ii_workflow_mutation_prompt_uses_no_stash_command"
+  - "unit_tests/test_quickfix_mutation_proof_stash_free.py::TestQuickFixWorkflowMutationProofStashFree::test_ac_bp600c3ii_workflow_mutation_prompt_reverts_from_head"
+implemented_by:
+  - templates/skills/quick-fix/SKILL.md
+  - templates/workflows-js/quick-fix.js
+change_target: pipeline
+risk_surface: internal
+notes: |
+  Authored by /quick-fix from a field report: the Step 4.2 recipe was followed
+  verbatim in a repository where a second session held a stash entry, and the
+  unqualified `git stash pop` popped that session's entry. It was recovered from
+  the stash commit's SHA, but only because foreign content showing up in the
+  working tree was noticed — a silent loss was equally available.
+
+  The parent BP-600c-3 is mechanism-agnostic: it requires the revert and the
+  restore, not any particular way of performing them. Nothing in it has to
+  change. This record constrains the how.
+
+  The defect existed in two copies of the same instruction — the skill prose and
+  the JS workflow's agent prompt — which is why the field report against the
+  skill alone would have left the executing path untouched.

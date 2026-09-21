@@ -1,0 +1,217 @@
+id: GE-120h-1-i
+title: "A place the reconciliation could not read is reported as unread, never counted as agreement"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - precommit_hooks
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given one of the places a reader consults to learn that a check protects them cannot
+    be read, or can be read but cannot be understood, at the moment the reconciliation
+    runs,
+  When the reconciliation runs,
+  Then it names that place and states that it could not reconcile the claims that place
+    carries,
+  And no check is treated as being in agreement on the strength of a place that was
+    never read,
+  And the number of advertisements the run states it reconciled excludes the claims of
+    that place, so the stated figure never describes work that did not happen,
+  And the claims of every place it could read are still reported as usual, so one
+    unreadable place does not discard the findings of the others,
+  And the run's outcome is distinguishable by whoever reads its output from a run that
+    read every place and found them in agreement,
+
+  And given instead that the one list whose entries cause checks to run is itself the
+    thing that cannot be read or understood,
+  When the reconciliation runs,
+  Then the change is refused, because with that list unreadable no claim anywhere can be
+    reconciled and a clean result would describe a comparison that was never made.
+
+  Coverage note: exercise both arms by executing the reconciliation as a process against
+  a repository in which the named artifact has been made unreadable — permissions removed
+  for the cannot-read arm, and content that is not valid in the artifact's own format for
+  the cannot-understand arm. Assert on what the process wrote and on its outcome. A test
+  that injects an exception into the reader in-process leaves untested the case this
+  record exists for, which is a real artifact in a real state.
+depends_on:
+  - GE-120h-1
+doc_links:
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-120-green-means-checked/GE-120h-1.yaml"
+    relationship: parent
+    status: exists
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-120-green-means-checked/GE-120a.yaml"
+    relationship: related
+    status: exists
+    relevance: >-
+      THE POLICY THIS RECORD APPLIES AND MUST NOT RESTATE. GE-120a owns "a check that
+      cannot do its job says so instead of passing" across the family. This record is
+      that policy applied to one check — the reconciliation itself — and the application
+      is not optional: a check-of-checks that quietly reports agreement when it could not
+      read a surface is the parent's own defect committed by the mechanism built to
+      prevent it. Use GE-120a's vocabulary for the could-not-check outcome rather than
+      minting a second one.
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-116-consistent-agent-config/GE-116a-1-iii.yaml"
+    relationship: context
+    status: exists
+    relevance: >-
+      THE STANDING CONVENTION THIS RECORD IS WRITTEN AGAINST AND DOES NOT REPEAL. An
+      unparseable input fails open and does not block the commit — a deliberate rule, so
+      that a script defect never hard-blocks unrelated work. Nothing here overturns it:
+      the first arm explicitly does NOT refuse, it only refuses to call silence
+      agreement. The second arm is the narrow exception and its ground is stated in the
+      notes.
+  - path: templates/scripts/commit_guardian/commit_guardian.json
+    relationship: related
+    status: exists
+    relevance: >-
+      BOTH ARMS CAN BE EXERCISED ON THIS ONE FILE, WHICH IS WHY THE TWO ARMS ARE SPLIT
+      THE WAY THEY ARE. It carries the executing list AND several per-check settings
+      sections. Malformed, it triggers the second arm; the first arm must therefore be
+      exercised on one of the other surfaces, not on this one.
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "THE TWO ARMS TAKE DIFFERENT EXIT DISPOSITIONS AND BOTH ARE ALREADY DECIDED — DO NOT COLLAPSE THEM. An unreadable ADVERTISING place announces and does not refuse; an unreadable EXECUTING list (hooks_manifest.hooks in templates/scripts/commit_guardian/commit_guardian.json) refuses. A single fail-open or single fail-closed path across both violates the record."
+  - "THE FIRST ARM MUST NOT REPEAL THE STANDING FAIL-OPEN CONVENTION, AND THE SECOND IS THE NARROW EXCEPTION. GE-116a-1-iii's rule — an unparseable input does not hard-block — still governs the advertising places. The executing list is exempt because with it unreadable there is nothing to compare anything against."
+  - "CATCH THE SPECIFIC EXCEPTIONS, NOT Exception. The cannot-read arm is OSError/PermissionError; the cannot-understand arm is the artifact's own format error — json.JSONDecodeError for the two .json surfaces, SyntaxError for a static parse of config.py, and the markdown surface's own parse failure. A bare except turns a defect in the reconciliation into a reported unreadable place, which is the same silence this record exists to end. Log at WARNING per CLAUDE.md error-handling rules 1-4."
+  - "config.py MUST BE READ STATICALLY, NEVER IMPORTED. This is the parent's requirement and it is load-bearing here specifically: an import-based reader raises on a malformed settings surface instead of producing the reported unreadable-place outcome, so the cannot-understand arm becomes a crash and the criterion is unsatisfiable by construction."
+  - "THE STATED COUNT MUST EXCLUDE AN UNREAD PLACE'S CLAIMS, WHICH MEANS THE COUNT IS ACCUMULATED PER PLACE. A count computed as a total and then adjusted will drift from the per-place reporting. This is the mechanical reason the parent's delivers_to requires per-place attribution to survive into the result."
+  - "USE GE-120a'S EXISTING could-not-check VOCABULARY. Do not mint a second name for the same outcome — the family already distinguishes had-nothing-to-examine from examined-and-clean, and this is the third state, not a new one."
+  - "THE OUTCOME MUST BE DISTINGUISHABLE IN THE OUTPUT, NOT ONLY IN THE EXIT CODE. The first arm exits the same way a clean run does, so the exit code cannot carry the distinction and the wording must. Note KI-CG-026: a hook's stdout on the passing path is discarded by pre-commit unless the entry sets verbose: true — an announcement nobody sees is the same as no announcement, so if this lands as a registered hook the entry needs verbose: true, as check-identifier-uniqueness already does for exactly this reason."
+  - "LATENCY. The unreadable path must not retry or back off; one attempt, report, continue. This runs on every commit."
+test_spec:
+  - name: test_ge120h1i_unreadable_advertising_place_is_named_and_its_claims_are_not_counted_as_agreement
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    surface_invoked: "the reconciliation, executed as a process against a fixture repository"
+    description: "With one advertising place chmod'd unreadable, the run names that place, states it could not reconcile its claims, and treats no check as in agreement on its strength."
+  - name: test_ge120h1i_unparseable_advertising_place_is_reported_as_unread
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: "With one advertising place holding content invalid in its own format, the same reporting occurs — cannot-understand is reported like cannot-read, not as a crash."
+  - name: test_ge120h1i_stated_count_excludes_the_unread_places_claims
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "The reconciled-advertisement count for a run with one unreadable place is lower than the same fixture with all places readable, by that place's claims."
+  - name: test_ge120h1i_other_places_are_still_reported_when_one_is_unreadable
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "One unreadable place does not discard the findings of the others — the readable places' disagreements are still reported."
+  - name: test_ge120h1i_unread_run_is_distinguishable_from_a_clean_agreeing_run
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "The output of a run with an unread place differs, to a reader, from the output of a run that read every place and found agreement."
+  - name: test_ge120h1i_unreadable_executing_list_refuses_the_change
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: "With hooks_manifest.hooks itself unreadable or malformed, the run refuses rather than reporting a clean comparison that never happened."
+  - name: test_ge120h1i_treating_an_unread_place_as_carrying_no_claims_turns_the_first_arm_red
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: "The record's named mutation, executed: under an injection that treats an unreadable place as claim-free and continues, the first-arm assertions fail; reverting restores green."
+test_rationale: >-
+  The fixtures make a real artifact genuinely unreadable — permissions removed for the
+  cannot-read arm, content invalid in the artifact's own format for the
+  cannot-understand arm — rather than injecting an exception into the reader in
+  process, because the case this record exists for is a real artifact in a real state
+  and an in-process injection leaves exactly that untested. Every clause here asserts
+  an absence or a distinction, and an implementation that reports nothing at all
+  satisfies all of them, which is why the record's named mutation is itself a test
+  case rather than a note: if the mutation does not turn the first arm red the fixture
+  is not actually making the artifact unreadable, and no result from that fixture
+  means anything. The two arms are tested separately and on different artifacts by
+  necessity — commit_guardian.json carries both the executing list and several
+  advertising settings sections, so the first arm must be exercised on one of the other
+  three places or it will trip the second.
+declares_side_effect: false
+delivers_to: null
+expects_from:
+  - ac_id: GE-120h-1
+    contract: >-
+      The stated count of reconciled advertisements and the per-place reporting this
+      record constrains — the count must be reduced by the claims of an unread place,
+      and the place must be nameable in the output, which it cannot be if the parent's
+      implementation discards which place a claim came from.
+origin_agent: business-analyst
+created: 2026-09-14
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  WHY THIS EDGE CASE NEEDED ITS OWN RECORD. The parent's clauses are all about what the
+  reconciliation reports when it CAN read everything. Every one of them stays green on
+  an implementation that swallows a read failure and continues with three surfaces
+  instead of four — and that implementation is strictly worse than no reconciliation at
+  all, because it produces an authoritative-looking clean result. This repository has
+  already recorded the same shape four times over (silence is not a pass), including one
+  check that printed "skipping check (fail-open)" and exited 0 while the same check on
+  the same files blocked with six violations elsewhere.
+
+  THE TWO ARMS ARE DIFFERENT DECISIONS AND THE GROUNDS ARE DIFFERENT. GE-120's standing
+  rule says block-versus-announce is decided per check, explicitly, with no default, so
+  both are decided here rather than left open:
+    - AN ADVERTISING PLACE CANNOT BE READ -> announce, do not refuse. The claims of the
+      other places are still worth reconciling, the author's own change is probably
+      unrelated to the unreadable artifact, and refusing would make an unrelated file's
+      permissions a commit-stopper. The whole obligation is that the result is not
+      mistaken for agreement.
+    - THE EXECUTING LIST CANNOT BE READ -> refuse. There is nothing to compare anything
+      against; every claim in the repository becomes unreconcilable at once. A clean
+      result in that state is a statement about a comparison that did not occur, which
+      is the exact thing GE-120's L0 exists to forbid. This is also self-limiting in
+      practice: that file being unreadable means the commit path itself is broken.
+
+  NAMED MUTATION — EXECUTE IT, DO NOT DESCRIBE IT. Every clause here asserts an absence
+  or a distinction and is green on an implementation that reports nothing at all.
+  INJECTION: make the reconciliation treat an unreadable place as carrying no claims and
+  continue. Under that injection the first arm must go RED — the run reports agreement
+  for a repository in which one surface was never read, and its stated count silently
+  covers claims nobody looked at. Revert must return it to green. If the mutation does
+  not go red, the fixture is not actually making the artifact unreadable; fix the fixture
+  before believing any result from it.
+
+  NOT AUTHORED HERE, BY DESIGN: assigned_agent, estimated_complexity, it_requirements,
+  test_spec, test_rationale and declares_side_effect. Those are the IT PO's fields.
+
+  ---- IT PO ENRICHMENT, 2026-09-14 ----
+
+  HOW THE NAMES IN it_requirements WERE VERIFIED. The four advertising places and the
+  executing list were each opened in this worktree on 2026-09-14 (README.md, config.py,
+  commit_guardian.json with its 38 top-level keys and 62-member hooks_manifest.hooks,
+  and templates/scripts/precommit-autofix.json). KI-CG-026's discarded-passing-path
+  stdout is not asserted from memory either: the manifest entry for
+  check-identifier-uniqueness carries verbose: true with a comment giving that exact
+  reason, which is the precedent cited. No configuration key is named anywhere in this
+  record's enrichment, so there is nothing here of the shape
+  KI-CG-20260831-fictional-config-schema-fragment warns about.
+
+  THE verbose: true POINT IS A DEPENDENCY ON THE PARENT'S UNSETTLED SHAPE. It only
+  applies if the reconciliation lands as a registered pre-commit entry. That question is
+  open on GE-120h-1 and is flagged in its notes together with the package_surface
+  consequence; this record inherits the same open question rather than resolving it.

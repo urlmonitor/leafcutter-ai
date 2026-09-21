@@ -6,7 +6,7 @@ component: infrastructure
 level: L3
 status: active
 req_status: active
-work_status: todo
+work_status: done
 priority: high
 readiness: draft
 created_by: "docs/acceptance-criteria/infrastructure/INF-400-agent-learning/INF-400c-5.yaml"
@@ -48,7 +48,12 @@ origin_agent: BrainCandy
 created: 2026-08-25
 amended_by: []
 superseded_by: null
-covered_by: []
-implemented_by: []
+covered_by:
+- tests/knowledge/test_inf_400c_5_i.py
+- tests/knowledge/test_inf_400c_5_i_h2_harvester_normalises_variant_on_read.py
+implemented_by:
+- scripts/knowledge/entry_kind_vocabulary.py
+- scripts/knowledge/emit_knowledge.py
+- scripts/knowledge/harvest_learnings.py
 change_target: code
 risk_surface: internal

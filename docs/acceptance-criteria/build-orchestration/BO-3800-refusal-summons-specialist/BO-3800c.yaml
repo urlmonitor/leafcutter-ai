@@ -1,0 +1,110 @@
+id: BO-3800c
+title: "The specialist arrives knowing which file is at issue and how much has to leave it"
+component: build-orchestration
+components:
+  - build_orchestration
+  - supervisor_system
+  - commit_guardian
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  No guesswork — the demand travels with the request, exactly as it was stated.
+
+  Whatever the standard asked for is carried across intact: which file is at
+  issue and how much has to come out of it. The specialist never has to work out
+  the demand for itself or guess at it, so it cannot answer a different question
+  from the one that was actually asked.
+depends_on:
+  - BO-3800
+  - GE-127f-3
+doc_links:
+  - path: docs/acceptance-criteria/build-orchestration/BO-3800-refusal-summons-specialist/BO-3800.yaml
+    relationship: parent
+    status: exists
+  - path: docs/acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/GE-127f-3.yaml
+    relationship: depends_on
+    status: exists
+    relevance: >-
+      PRODUCES WHAT THIS RECORD CARRIES. GE-127f-3's refusal already states the file, how
+      many measured lines must leave it, and which party the demand is handed to. This
+      record transports those facts to the party being asked. It computes nothing, derives
+      nothing by a second route, and must never restate how the demand is arrived at — that
+      is GE-127f-1's inequality, GE-127f-2's definition of what was added, and GE-127d's
+      counting rule, none of which may be re-expressed on this side of the seam.
+  - path: docs/acceptance-criteria/build-orchestration/BO-3000a.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      THE PRECEDENT THAT MAKES THIS RECORD NECESSARY RATHER THAN FUSSY. BO-3000a's central
+      decision, taken after its first design was reversed on code review, is that a driver
+      must NEVER infer a handoff's target from surrounding prose — it is told explicitly or
+      it refuses diagnosably, because inference is ambiguous exactly on the artifacts that
+      follow conventions best and it converts a deliberate halt into a spurious run. The
+      same argument applies one field over: a specialist that has to reconstruct the demand
+      by re-reading the file, re-running the standard, or parsing a message for numbers is
+      inferring, with the same failure modes. Carry the demand; do not reconstruct it.
+  - path: docs/acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/GE-127e.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      BOUNDARY, AND THE ONE MOST LIKELY TO BLUR HERE. GE-127e owns what a refusal SAYS to a
+      human and how useful it reads. This record owns that the facts it states reach the
+      party being asked to act on them, intact. No clause beneath this record may be
+      discharged by improving a message, and none may take a position on wording.
+  - path: docs/acceptance-criteria/build-orchestration/BO-2200-documentation-coverage-guarantee/BO-2200c.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      THE STORE'S PRECEDENT FOR TREATING THE BRIEF AS ITS OWN PROMISE. BO-2200c separates
+      "the writer gets a precise brief — kind, location, required contents" from the fact of
+      dispatching a writer at all, for the same reason this record is separate from
+      BO-3800b: a correct dispatch carrying a vague brief produces confident work answering
+      the wrong question.
+delivers_to:
+  - ac_id: GE-127f-3
+    contract: >-
+      The half of GE-127f-3's expects_from that concerns WHAT IS ASKED: the named file and
+      the named demand reach the restructuring specialist as stated, so the disposition
+      GE-127f-3 emits is acted on rather than merely printed.
+expects_from:
+  - ac_id: GE-127f-3
+    contract: >-
+      A refusal stating the file, the number of measured lines that must leave it, and the
+      disposition that applies. This record consumes those three facts verbatim.
+documentation_triggers:
+  - reference-doc
+origin_agent: product-owner-v3
+created: 2026-09-14
+amended_by: []
+superseded_by: null
+covered_by:
+  - BO-3800c-1
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  WHY THIS IS NOT PART OF BO-3800b. Asking the right party and asking it the right question
+  are separately failable. A handoff that reaches the restructuring specialist with nothing
+  but "this file is too big" fully satisfies the separation of duties and fully fails here:
+  the specialist restructures to its own taste, the standard refuses again for a different
+  amount, and the loop that BO-3800d has to bound becomes the normal case rather than the
+  exception. This is the same split BO-2200 makes between dispatching a writer and briefing
+  one.
+
+  THE FAILURE THIS EXCLUDES IS RECONSTRUCTION, NOT ABSENCE. The tempting implementation is
+  not "send nothing" — it is "send the file name and let the specialist re-run the standard
+  to find out how much". That is a second derivation of a quantity already in hand, it can
+  disagree with the first, and when it does, the specialist satisfies a demand that is not
+  the one blocking delivery. GE-127f-1's enrichment refuses the same shape on its own side
+  of the seam ("recomputing any of them on the way to the message is how the printed
+  arithmetic stops reconciling with the verdict"); this is that rule applied to the handoff.
+
+  WHAT THIS RECORD DOES NOT OWN. How much must leave the file (GE-127f-1), what counts as a
+  line the change added (GE-127f-2), which lines are measured at all (GE-127d), how the
+  refusal reads (GE-127e), and where the author-clearable threshold falls (GE-127f-3). Every
+  one of those is consumed and none may be restated.

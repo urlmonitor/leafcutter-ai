@@ -1,0 +1,92 @@
+id: BO-3800e
+title: "Everything a standard does not ask a specialist for behaves exactly as it does today"
+component: build-orchestration
+components:
+  - build_orchestration
+  - supervisor_system
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Only a refusal that asks for a craft brings one in — nothing else changes.
+
+  Work that is accepted, and work that is turned away for something its author
+  can put right there and then, is untouched. Nobody is brought in who was not
+  asked for, so the ordinary path costs no more time and no more money than it
+  does now.
+depends_on:
+  - BO-3800
+doc_links:
+  - path: docs/acceptance-criteria/build-orchestration/BO-3800-refusal-summons-specialist/BO-3800.yaml
+    relationship: parent
+    status: exists
+  - path: docs/acceptance-criteria/build-orchestration/BO-210-precommit-safety-net/BO-210.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      THE POPULATION THIS RECORD PROTECTS. BO-210 owns what happens when a standard refuses
+      and the author's own craft is what is needed — the fixer is the same agent type that
+      authored the work, holding its original context. This record is the guarantee that
+      BO-3800 takes nothing from that population: an ordinary refusal still routes the way
+      BO-210 says it does, and BO-210's three children must stay green when BO-3800 lands.
+      Where the boundary falls is not judged here — it follows the disposition the refusing
+      standard itself states.
+  - path: docs/acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/GE-127f-3.yaml
+    relationship: depends_on
+    status: exists
+    relevance: >-
+      OWNS WHERE THE BOUNDARY FALLS, WHICH THIS RECORD READS AND NEVER SECOND-GUESSES.
+      GE-127f-3 fixes that a threshold exists, that it is at least one measured line so the
+      author-clearable band is never empty, and that the disposition follows from the size
+      of the demand alone. The author-clearable band is precisely the population this record
+      leaves alone.
+  - path: docs/acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/GE-127f-1.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      THE COST DISCIPLINE, INHERITED. GE-127f-1's enrichment requires that a commit which
+      refuses nothing must not become measurably slower than it is today. The same
+      expectation applies one layer up and is the measurable half of this record: a run in
+      which nothing is refused must ask for nobody and must not become slower.
+delivers_to: null
+expects_from: null
+documentation_triggers: []
+documentation_rationale: >-
+  This L1 introduces no new user-visible behaviour — it is the guarantee that existing
+  behaviour is unchanged everywhere the handoff does not apply, so there is nothing new to
+  document. The handoff itself is documented under BO-3800a and BO-3800b.
+origin_agent: product-owner-v3
+created: 2026-09-14
+amended_by: []
+superseded_by: null
+covered_by:
+  - BO-3800e-1
+  - BO-3800e-2
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+notes: |
+  WHY A NEGATIVE PROMISE EARNS ITS OWN RECORD. Every other child of BO-3800 is satisfied by
+  a system that summons a specialist. Each of them, alone and together, is also satisfied by
+  a system that summons one on EVERY refusal — which would be cheaper to build, would pass
+  every positive arm, and would be a serious regression: it dispatches a restructuring
+  specialist to remove two lines for a typo fix, it collides head-on with BO-210's
+  same-agent promise across that promise's entire population, and it makes the urgent
+  one-line correction expensive in exactly the way GE-127f's second decision ("zero addition
+  costs nothing") exists to prevent. GE-127f-3's notes name the over-broad reading as one of
+  its two mutations for the same reason. Without this record, the cheapest implementation of
+  this tree is the one that breaks the most.
+
+  IT IS ALSO THE SEPARABILITY EVIDENCE. If this record's arms stay green while the other
+  four are broken and repaired, the tree is not one promise written five times. That is the
+  store's established way of showing siblings are not duplicates, and it should be carried
+  into decomposition as a required observation rather than asserted in prose.
+
+  WHAT "EXACTLY AS TODAY" MEANS, SO IT IS NOT READ AS A FREEZE. It means the outcome and the
+  parties involved are unchanged for work that is accepted and for refusals that do not ask
+  for another craft. It is not a claim that no code changes, and it must not be decomposed
+  into a criterion about which files were edited.

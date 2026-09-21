@@ -1,0 +1,196 @@
+id: INF-1300d-3
+title: "Every refusal says what to do next and leaves the project exactly as it found it"
+component: infrastructure
+components:
+  - documentation_system
+  - infrastructure
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+created_by: "docs/acceptance-criteria/infrastructure/INF-1300-architecture-docs-by-construction/INF-1300d.yaml"
+criteria: |
+  Given any request that cannot be satisfied correctly, for any reason,
+  When it is refused,
+  Then the refusal states both what about the request was wrong and what to supply
+    instead, in terms the author can act on without opening another document,
+  And after the refusal the project is in exactly the state it was in before the
+    request: no document at the destination, no entry in any index, no change to
+    any other document, and no partially written file anywhere,
+  And a refusal is distinguishable from a success by the outcome of the run alone,
+    before and without reading anything it said,
+  And no refusal ends with the author holding a document: if what was asked for
+    cannot be produced in a form the project would accept, nothing is produced,
+  And this holds for every reason a request can be refused in this tree, each
+    reason observed rather than assumed to behave like the others.
+depends_on:
+  - INF-1300d
+doc_links:
+  - path: docs/acceptance-criteria/infrastructure/INF-1300-architecture-docs-by-construction/INF-1300d.yaml
+    relationship: parent
+    status: exists
+  - path: templates/skills/write-c4-diagram/SKILL.md
+    relationship: specifies
+    status: exists
+    relevance: >-
+      Section 4 step 5 is the present failure protocol — surface to the user and do not
+      improvise. This record is its counterpart: the protocol is only followable when the
+      failure says enough for the author to act, which is what turned "stop and ask" into
+      "improvise" twice in this collection's recorded history.
+  - path: scripts/build_propagation_audit.py
+    relationship: describes
+    status: exists
+    relevance: >-
+      Its allowlist comment records what the present unhandled failure costs — a hard
+      user-visible failure with no graceful skip. That is the bare-failure outcome this
+      record's first clause excludes, described by the project about itself.
+  - path: docs/acceptance-criteria/infrastructure/INF-1300-architecture-docs-by-construction/INF-1300d-1.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      One of the reasons a request is refused. The last clause here requires each reason to
+      be observed separately, so d-1, d-2 and d-4 each supply a case this record's contract
+      must hold for.
+  - path: CLAUDE.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      "Gate / Workflow ACs — Verify Behaviorally, Not by Grep". A refusal contract is the
+      easiest thing in this tree to satisfy by inspection — the message text is right there
+      in the source. Only running each refusal and reading the state afterwards can tell a
+      refusal that cleans up from one that merely says it did.
+  - path: docs/reference/false-green-mechanisms.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      The catalogue of ways an observation reports success having established nothing. Both
+      of this record's hardest clauses - the empty whole-project difference and the verdict
+      carried by the outcome rather than the prose - are defences against entries in it.
+  - path: docs/architecture/adrs/ADR-013-portable-skill-script-deployment-boundary.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      Places the producing script's source under templates/scripts/, so the refusal contract
+      is the one a consumer install actually receives.
+assigned_agent: python-coder
+estimated_complexity: L
+change_target: code
+risk_surface: safety
+test_required: true
+it_requirements:
+  - "Production must be ordered so that every condition that can refuse is decided before anything is written. Atomicity is a constraint on the order of the work, not a cleanup step: a refusal discovered after the document exists must not be repaired by deleting it, because a failure during that repair leaves exactly the state this record forbids."
+  - "If a write must begin before all conditions are known, it must be staged outside the project tree and moved into place only once the run has committed to succeeding."
+  - "The run's exit status must carry the verdict: non-zero on every refusal, zero only on a completed production. Both authoring surfaces instruct an agent as well as a human, so a caller must be able to tell refusal from success without parsing prose."
+  - "Every refusal message must state both halves - what about the request was wrong AND what to supply instead - in terms the author can act on without opening another document. A message stating only the problem does not satisfy this record."
+  - "Refusal messages go to the error stream and must not be suppressible by the default verbosity."
+  - "No refusal may end with a document in the author's hands. Producing something the project's own checks would reject, and leaving the author to fix it, is the failure mode INF-1300a exists to prevent."
+  - "Each refusal reason must be implemented through one shared refusal path so the atomicity and message guarantees cannot diverge as reasons are added. Refusal paths written one at a time diverge immediately: the first is careful, the third is an early return that leaves a file behind."
+  - "Errors must follow the project error handling policy in CLAUDE.md; an unexpected exception escaping as a traceback is a bare failure and does not satisfy the message contract."
+test_spec:
+  - name: test_every_refusal_reason_leaves_an_empty_whole_project_difference
+    target_dir: unit_tests/scaffold/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    description: "Parameterised over every refusal reason reachable in this tree - undeclared kind, occupied destination, tier-and-number collision, absent or wrong-tier parent, undeclared component, missing obliged field. For each: hash every file in a git-initialised temporary project, make the request, hash again, assert the difference is empty. Each reason is a separate case; none may be skipped or assumed to behave like another."
+  - name: test_every_refusal_reason_exits_non_zero
+    target_dir: unit_tests/scaffold/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "For the same parameterised set, assert the process exit status is non-zero and that a successful production exits zero - the verdict read from the outcome alone, before and without reading any message."
+  - name: test_every_refusal_message_states_both_the_problem_and_the_remedy
+    target_dir: unit_tests/scaffold/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "For the same parameterised set, assert each message contains an identification of what was wrong AND a statement of what to supply instead. A message containing only the first half fails."
+  - name: test_refusal_discovered_late_still_leaves_nothing_behind
+    target_dir: unit_tests/scaffold/
+    framework: pytest
+    type: integration
+    angle: failure
+    description: "Construct a request that is valid up to the last checked condition and refuses on it. Assert no document exists at the destination, the intended parent is unchanged, no index entry appeared, and no temporary file survives. This is the ordering constraint, not the message contract."
+  - name: test_no_refusal_leaves_the_author_holding_a_document
+    target_dir: unit_tests/scaffold/
+    framework: pytest
+    type: integration
+    angle: failure
+    description: "Across the parameterised set, assert no .md file was created anywhere under the temporary project, including outside the intended destination."
+  - name: test_refusal_reason_set_is_enumerated_from_the_implementation_not_from_a_list_in_the_test
+    target_dir: unit_tests/scaffold/
+    framework: pytest
+    type: unit
+    angle: reachability
+    surface_invoked: "templates/scripts/scaffold/new_arch_doc.py"
+    description: "Derive the set of refusal reasons from the shared refusal path itself and assert every one of them appears in the parameterised suite above. A reason added later without a case is a failure, which is what stops this record becoming a claim about the reasons that happened to be written first."
+test_rationale: >-
+  The message text of a refusal is the easiest thing in this tree to satisfy by inspection -
+  it is right there in the source - and CLAUDE.md's gate-and-workflow rule is explicit that
+  a grep-shaped assertion passes on dead code. So every descriptor here runs the refusal and
+  reads the state afterwards. The whole-project difference is the only observation that can
+  tell a refusal that cleans up from one that merely says it did, and it must be taken per
+  reason rather than once, because refusal paths are written one at a time and the third one
+  is where the early return leaves a file behind. The last descriptor exists because a fixed
+  list of reasons in the test would silently stop covering the tree the first time a reason
+  is added - the same count-pinned failure this project has recorded elsewhere.
+delivers_to: null
+expects_from:
+  - ac_id: INF-1300d-1
+    contract: "The undeclared-diagram-type refusal reason, with its own case: nothing written, message naming the value, the fact it is not declared, and the declared alternatives."
+  - ac_id: INF-1300d-2
+    contract: "The occupied-destination and tier-and-number-collision refusal reasons, each with its own case, each naming what is occupied and - for the collision - which number is free."
+  - ac_id: INF-1300d-4
+    contract: "The missing-obliged-fact refusal reason, with its own case: nothing written, message naming the kind, the obliged field and the sort of value it takes."
+origin_agent: BrainCandy
+created: 2026-09-14
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-09-14'
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  THE TWO WRONG OUTCOMES THE L1 SEPARATES, AND WHY THIS RECORD HOLDS BOTH. The plausible-
+  looking wrong document is excluded by the fourth clause: nothing is produced that the
+  project would refuse. The bare failure is excluded by the first: a refusal that does not
+  say what to supply puts the author back to improvising, and the L1 is explicit that
+  building the success path and leaving the failure path to a written instruction is how
+  this gap was created in the first place. A criterion holding only one of the two would
+  leave the other, and the other is what happens today.
+
+  THE SECOND CLAUSE IS ATOMICITY AND IT IS THE HARDEST TO GET RIGHT. A refusal discovered
+  late — after the document has been written and while the parent's list of children is
+  being updated — leaves a document the author did not ask for, a half-updated neighbour, or
+  both. The state afterwards must be the state before, whichever step the refusal was
+  discovered at. That is a real constraint on how production is ordered, not a message
+  requirement, which is why it is stated as an observation about the project rather than
+  about the run.
+
+  THE THIRD CLAUSE EXISTS BECAUSE THIS TREE WILL BE CONSUMED BY MACHINERY AS WELL AS PEOPLE.
+  A refusal whose outcome is indistinguishable from success until someone reads the prose is
+  a refusal that an automated caller will treat as a success — and both authoring surfaces
+  instruct an agent, not only a human. The outcome has to carry the verdict.
+
+  THE LAST CLAUSE IS WHAT STOPS THIS BECOMING A CLAIM ABOUT ONE REFUSAL. Refusal paths are
+  written one at a time and diverge immediately: the first is careful, the third is an early
+  return that leaves a file behind. Requiring every reason in the tree to be observed
+  separately is what makes this a contract rather than an example.
+
+  FALSIFIABILITY. Enumerate every reason a request is refused across this tree — an
+  undeclared kind, an occupied destination, a tier-and-number collision, a parent that does
+  not exist or sits at the wrong tier, a component the registry does not declare, a missing
+  field a kind obliges. For each: snapshot the whole scratch project, make the request,
+  snapshot again, and require the difference to be empty; require the run's outcome to say
+  failure without reference to its message; and read the message for both halves — what was
+  wrong AND what to supply. The record is falsified by any reason whose difference is
+  non-empty, by any refusal whose outcome reads as success, and by any message that states
+  only the problem. It is also falsified by an observation that exercises one reason and
+  generalises: that is the construction this record's last clause exists to forbid.
+
+  NOT AUTHORED HERE, BY DESIGN: assigned_agent, estimated_complexity, it_requirements,
+  test_spec, test_rationale, delivers_to and expects_from. Those are the IT PO's.

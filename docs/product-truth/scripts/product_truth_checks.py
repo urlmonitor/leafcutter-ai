@@ -7,16 +7,29 @@ BUSINESS CONTEXT: Extracted from validate_product_truth.py, which had grown past
     mutates the shared `errors` / `warnings` lists it is handed -- none of them
     reads a module global -- so moving them changes no behaviour and no test
     seam: validate_product_truth re-imports them, and `vpt.<check>` still
-    resolves exactly as before. `_check_eval` deliberately stayed behind, being
-    the one check that reads STORE and the schema loader directly.
+    resolves exactly as before. The STORE-touching *wrapper* around
+    `validate_eval_rows` (path resolution + not-executed bookkeeping)
+    deliberately stayed behind in validate_product_truth.py, as does
+    `load_ac_records`/`load_mockups`/`_load_schema` -- this module never reads
+    or patches STORE.
 ARCHITECTURE: Leaf module. Imports the derivation helpers from
     generate_product_truth (the single writer) and is imported by
     validate_product_truth; nothing imports back, so there is no cycle.
 """
 from __future__ import annotations
 
+import json
 import re
 from pathlib import PurePosixPath
+
+# jsonschema is a HARD dependency of validate_product_truth.py (see that
+# module's own guard/exit-2 at main()); guarded identically here so this leaf
+# module never crashes at import time on a host where it's absent -- callers
+# only ever invoke `_validate_schema` after that upstream guard has passed.
+try:
+    import jsonschema
+except ImportError:
+    jsonschema = None  # type: ignore[assignment]
 
 from generate_product_truth import (
     _without_asof,
@@ -26,6 +39,7 @@ from generate_product_truth import (
     impl_status_for_ac,
     iter_nodes,
 )
+from product_truth_bounds import bound_named, check_bounds
 from product_truth_shapes import expansion_targets
 
 # Re-exported, not used here: validate_product_truth imports the whole check
@@ -39,13 +53,11 @@ from product_truth_index_checks import (  # noqa: F401
     _strip_by_ac_asof,
     _strip_by_flow_asof,
 )
+from product_truth_example_checks import check_example_product  # noqa: F401  # re-exported for callers
 
 #: The three artifact-type directories a record is made of. Shared with
 #: validate_product_truth, which reports emptiness per type.
 _ARTIFACT_TYPES = ("flows", "mock-data", "mockups")
-
-
-
 
 
 
@@ -236,8 +248,6 @@ def _check_product_truth(ac_records: dict, by_ac: dict, errors: list[str]) -> No
             errors.append(f"[product_truth] AC '{ac_id}': has a product_truth block but no flow node references it")
 
 
-
-
 def _check_screens(flows: dict, mockups: dict, errors: list[str], warnings: list[str]) -> None:
     """D4 — every step/branch screen must resolve to a registered mockup artifact."""
     registered = {mockup.get("screen") for mockup in mockups.values()}
@@ -313,18 +323,10 @@ def _check_mock_invariants(mock: dict, errors: list[str], warnings: list[str]) -
             )
 
 
-#: The longest a journey `summary` may run once a journey declares it is
-#: shaped to the current conventions. A record that keeps growing stops being
-#: readable at a glance, which is the whole point of holding one.
-_DESCRIPTION_LENGTH_BOUND = 120
-
-
-#: The shape_version at which _DESCRIPTION_LENGTH_BOUND became binding. A
-#: journey declaring THIS version or later is held to the bound; one declaring
-#: an earlier version -- or none at all -- predates it and is only warned
-#: about, so introducing a bound never retroactively blocks a record written
-#: before it existed.
-_DESCRIPTION_BOUND_EFFECTIVE_SHAPE_VERSION = 2
+#: The journey description bound UXP-700e-1-i introduced, now declared in
+#: product_truth_bounds.BOUNDS; kept here under its original names for callers.
+_DESCRIPTION_LENGTH_BOUND = bound_named("journey-description-length").limit
+_DESCRIPTION_BOUND_EFFECTIVE_SHAPE_VERSION = bound_named("journey-description-length").effective_shape_version
 
 
 def _check_artifact_paths(index: dict, errors: list[str]) -> None:
@@ -386,51 +388,24 @@ def _check_canonical_datasets(mocks: dict, errors: list[str]) -> None:
 
 
 def _check_shape_version_bounds(flows: dict, errors: list[str], warnings: list[str]) -> None:
-    """Hold each journey to the size bound its declared shape_version opts into.
+    """Hold each journey to the description bound its declared shape_version opts into.
 
     Only journeys whose `summary` exceeds :data:`_DESCRIPTION_LENGTH_BOUND` are
-    considered at all; one within the bound is never reported whatever version
-    it declares. An over-long journey is then classified by its declared
-    shape_version, and the classification decides which list it lands in:
+    reported, and the declared shape_version decides which list each lands in:
 
     * declares >= the effective version -> `errors` (blocks: it opted in)
     * declares an earlier version       -> `warnings` (predates the bound)
     * declares none                     -> `warnings` (needs a shape_version)
 
-    Only the first case reaches `errors`, so a bound introduced today cannot
-    retroactively block a record written before it -- the grandfathered cases
-    stay visible as warnings instead of being silently dropped (GE-120).
+    The journey-description slice of product_truth_bounds.check_bounds(), which
+    the checker runs over every declared bound (UXP-700e-1).
 
     Args:
         flows: ``{flow_id -> flow}``.
         errors: Shared error list; appended to for a real violation.
         warnings: Shared warning list; appended to for a grandfathered finding.
     """
-    for flow_id, flow in flows.items():
-        summary = flow.get("summary") or ""
-        if len(summary) <= _DESCRIPTION_LENGTH_BOUND:
-            continue
-
-        shape_version = flow.get("shape_version")
-        if shape_version is None:
-            warnings.append(
-                f"[shape] {flow_id}: summary is {len(summary)} characters, over the "
-                f"{_DESCRIPTION_LENGTH_BOUND}-character bound, but the journey declares no "
-                f"shape_version — it needs a shape_version before the bound can be applied to it"
-            )
-        elif shape_version < _DESCRIPTION_BOUND_EFFECTIVE_SHAPE_VERSION:
-            warnings.append(
-                f"[shape] {flow_id}: summary is {len(summary)} characters, over the "
-                f"{_DESCRIPTION_LENGTH_BOUND}-character bound, but the journey declares "
-                f"shape_version {shape_version}, which predates the bound "
-                f"(effective at shape_version {_DESCRIPTION_BOUND_EFFECTIVE_SHAPE_VERSION}) — not blocked"
-            )
-        else:
-            errors.append(
-                f"[shape] {flow_id}: summary is {len(summary)} characters, over the "
-                f"{_DESCRIPTION_LENGTH_BOUND}-character bound this journey is held to at "
-                f"shape_version {shape_version}"
-            )
+    check_bounds({"flows": flows}, errors, warnings, (bound_named("journey-description-length"),))
 
 
 #: The one pointer-target kind the checker knows how to resolve: an acceptance-
@@ -516,7 +491,66 @@ def _check_pointers(
     return resolved
 
 
+OUTCOME_BY_COMBO = {
+    (True, True, True): "full-set",
+    (False, True, True): "mockup+data",
+    (False, False, True): "mockup-only",
+    (False, True, False): "mock-data-only",
+    (False, False, False): "none",
+}
 
+
+def _validate_schema(instance: dict, schema: dict, label: str, errors: list[str]) -> None:
+    """Validate one instance against a schema (jsonschema is guaranteed present
+    by validate_product_truth.main()'s own hard-dependency exit-2 guard)."""
+    try:
+        jsonschema.validate(instance, schema)
+    except jsonschema.ValidationError as exc:
+        errors.append(f"[schema] {label}: {exc.message}")
+
+
+def validate_eval_rows(lines: list[str], schema: dict, errors: list[str]) -> int:
+    """Validate each classifier/eval.jsonl row (schema conformance + outcome
+    derivation), given already-read `lines` and the loaded eval schema.
+
+    Pure: takes the file's already-read lines rather than a path, so it
+    carries no STORE dependency -- the caller (validate_product_truth.py's
+    `_check_eval`) resolves the path and precondition-absent bookkeeping.
+    Returns the number of non-blank rows examined.
+    """
+    examined = 0
+    for i, line in enumerate(lines, 1):
+        if not line.strip():
+            continue
+        try:
+            row = json.loads(line)
+        except json.JSONDecodeError as exc:
+            errors.append(f"[eval] line {i}: invalid JSON: {exc}")
+            continue
+        examined += 1
+        _validate_schema(row, schema, f"eval row {row.get('id', i)}", errors)
+        exp = row["expected"]
+        combo = (exp["needs_flow"], exp["needs_mock_data"], exp["needs_mockup"])
+        derived = OUTCOME_BY_COMBO.get(combo)
+        if derived is None:
+            errors.append(f"[eval] {row['id']}: impossible combo {combo}")
+        elif derived != row["outcome"]:
+            errors.append(f"[eval] {row['id']}: outcome '{row['outcome']}' != derived '{derived}'")
+    return examined
+
+
+def check_mock_data_ref(flows: dict, mocks: dict, errors: list[str]) -> None:
+    """Every flow's `mock_data_ref`, when set, must resolve to a loaded mock
+    dataset, and the flow's own `entities` must be a subset of that dataset's."""
+    for flow in flows.values():
+        ref = flow.get("mock_data_ref")
+        if ref and ref in mocks:
+            mock_entities = set(mocks[ref].get("entities", {}).keys())
+            missing = [e for e in flow.get("entities", []) if e not in mock_entities]
+            if missing:
+                errors.append(f"[flow] {flow['id']}: entities {missing} absent from mock_data_ref '{ref}'")
+        elif ref:
+            errors.append(f"[flow] {flow['id']}: mock_data_ref '{ref}' does not resolve")
 
 
 """
@@ -533,5 +567,28 @@ DECISION HISTORY
 - 2026-09-14 [python-coder]: UXP-700e-3-i -- the cycle and dangling-reference
   checks read `expands_to` in either shape via expansion_targets, and check
   every id in a list. (#EPIC-TruthfulProjectRecord/44)
+- 2026-09-14 [python-coder]: UXP-700e-1 -- the description bound and its
+  shape-version rule move into product_truth_bounds.BOUNDS;
+  _check_shape_version_bounds and its two constants stay as the journey-
+  description slice of it. (#EPIC-TruthfulProjectRecord/38)
+- 2026-09-16 [python-coder]: Moved OUTCOME_BY_COMBO, _validate_schema, and two
+  new pure functions (validate_eval_rows, check_mock_data_ref) here from
+  validate_product_truth.py to bring that file back under its 400-content-line
+  ratchet after UXP-700c-2/UXP-700c-2-ii's freshness/behind-mark code (which
+  ADR-043 SS10 pins inside validate_product_truth.py, beside each other) grew
+  it past the limit. All three moved pieces already took their inputs as
+  arguments -- validate_eval_rows takes already-read `lines` rather than a
+  path, and check_mock_data_ref takes already-loaded `flows`/`mocks` -- so
+  none of them reads or patches STORE; the STORE-touching wrapper (path
+  resolution, precondition-absent bookkeeping) stayed in
+  validate_product_truth.py's own `_check_eval`. Pure move, same convention
+  the 2026-09-10 entry above already established; `vpt._validate_schema` /
+  `vpt.OUTCOME_BY_COMBO` still resolve via re-import.
+  (#EPIC-TruthfulProjectRecord/21) (#EPIC-TruthfulProjectRecord/23)
+- 2026-09-17 [python-coder]: UXP-700d-3-ii -- re-exports `check_example_product`
+  from the new sibling product_truth_example_checks.py (this file's own
+  396/400 headroom had no room for that check's full body), one import line,
+  same precedent product_truth_index_checks.py already set above.
+  (#EPIC-TruthfulProjectRecord/35)
 ====================================================================
 """

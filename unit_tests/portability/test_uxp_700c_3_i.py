@@ -46,7 +46,18 @@ _BACKSLASH = chr(92)
 class TestFlowPathsArePlatformIndependent(unittest.TestCase):
     """The producer must emit POSIX separators regardless of host platform."""
 
-    def test_load_flows_emits_no_backslash_on_any_platform(self) -> None:
+    def test_index_path_keys_use_the_canonical_separator_on_every_platform(self) -> None:
+        # covers: UXP-700c-3-i
+        # angle: criterion
+        """AC-3: index keys built from OS-native path objects are emitted with
+        forward slashes regardless of the host separator.
+
+        load_flows() walks the store with native Path objects, so on Windows
+        every path it sees is backslash-separated. This test is the one that
+        exercises that host: it runs on every contributor machine as well as on
+        POSIX CI, and asserts on the strings the index is built from, never on a
+        pathlib round-trip, which would pass vacuously on POSIX.
+        """
         with tempfile.TemporaryDirectory() as tmp:
             store = Path(tmp)
             nested = store / "flows" / "demo-product" / "sub"
@@ -69,6 +80,11 @@ class TestFlowPathsArePlatformIndependent(unittest.TestCase):
             f"store-relative path must use POSIX separators, got {emitted!r}",
         )
         self.assertEqual(emitted, "flows/demo-product/sub/a-journey.flow.json")
+
+        flow = {"id": "demo-product/a-journey", "component": "demo-product", "level": None, "entities": []}
+        index_entry = gpt.build_by_flow({flow["id"]: flow}, paths, {})[flow["id"]]
+        self.assertEqual(index_entry["path"], "flows/demo-product/sub/a-journey.flow.json",
+                         "the index entry must carry the same forward-slash key the loader emitted")
 
     def test_committed_index_holds_no_windows_written_path(self) -> None:
         index_path = _REPO_ROOT / "docs" / "product-truth" / "index.json"

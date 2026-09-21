@@ -94,9 +94,8 @@ Exit codes
 
 from __future__ import annotations
 
-import argparse
-import dataclasses
 import hashlib
+import importlib.util
 import json
 import logging
 import sys
@@ -107,136 +106,64 @@ logger = logging.getLogger("harvest_learnings")
 
 
 # ---------------------------------------------------------------------------
-# Result type
+# Required sibling modules (extracted seams, GE-127b-1 file-size fix)
 # ---------------------------------------------------------------------------
 
 
-@dataclasses.dataclass
-class HarvestResult:
-    """Outcome of a single harvester run.
+def _load_required_sibling_module(module_name: str, filename: str) -> Any:
+    """Load a required sibling module from this file's own directory.
 
-    Six record-level buckets — ``routed``, ``previously_processed``,
-    ``skipped_unknown``, ``write_failures``, ``no_learning_text``,
-    ``missing_required_field_count`` — partition every ``knowledge_captured``
-    record read from the sink; they always sum to the number of such
-    records. ``malformed_lines`` is a separate, line-level counter (a
-    malformed line never parses into a record at all) and is intentionally
-    excluded from that sum (INF-700c-1-i).
+    ``harvest_learnings.py`` is loaded three different ways across this
+    codebase (see ``_load_entry_kind_vocabulary_module``'s docstring below
+    for the full account): as ``__main__`` via subprocess, and via
+    ``importlib.util.spec_from_file_location`` from several pre-existing
+    test files that do NOT add ``scripts/knowledge/`` to ``sys.path`` first.
+    A bare top-level ``import`` only resolves in the first case, so every
+    sibling module this file depends on is instead located relative to
+    *this* file's own on-disk path.
 
-    ``missing_required_field_count`` / ``missing_required_field_lines``
-    (INF-400b-2-i) count records that parsed as a valid JSON object and are
-    genuine ``knowledge_captured`` events but lack a field the idempotency
-    digest requires (see ``_event_hash``). This is deliberately a distinct
-    bucket from ``malformed_lines`` — the line itself is well-formed JSON;
-    it is the record's content that is short a required key. Such a record
-    is never hashed, routed, or added to the idempotency state, so it is
-    retried on a later run once the producer is fixed.
+    Unlike ``_load_entry_kind_vocabulary_module``, the modules loaded here
+    (``harvest_result``, ``sink_resolution``, ``capture_write``,
+    ``harvest_cli``) are load-bearing plumbing with no degraded fallback --
+    a load failure is re-raised rather than swallowed, since there is
+    nothing sensible for the harvester to do without them.
 
-    ``outstanding`` (INF-700c-2 / INF-700c-2-ii) is the "still waiting to be
-    written" count: the number of records carrying non-empty ``text`` that
-    have not yet been durably written to their destination. It is derived,
-    never stored — a record contributes to it only for the run(s) in which
-    the record is neither eligibility-excluded (``no_learning_text``) nor
-    already watermarked as processed (``previously_processed``) nor
-    successfully written by *this* run. This includes a record that is
-    *also* counted in ``missing_required_field_count``: such a record can
-    never be hashed, so it can never be watermarked, and it never reaches
-    the write step — so a text-bearing one always contributes here too.
-    ``outstanding`` is not one of the six partitioning buckets; it overlaps
-    them by design, and reading it as a seventh bucket is the mistake that
-    let a text-bearing record with a missing digest field report
-    ``outstanding: 0``. It is deliberately NOT derived from
-    ``skipped_unknown`` / ``unroutable_by_kind``: those describe records the
-    routing table cannot place, which is a different condition from a
-    record waiting to be written, and a text-bearing record can be both at
-    once (INF-700c-2-ii it_requirements).
+    Registers the module in ``sys.modules`` under *module_name* BEFORE
+    executing it -- exactly the sequence the pre-existing test bootstrap
+    already uses for ``harvest_learnings`` itself. This is not merely
+    convention: ``harvest_result.py``'s ``@dataclasses.dataclass`` combined
+    with ``from __future__ import annotations`` needs
+    ``sys.modules[cls.__module__]`` to exist when the decorator resolves its
+    field types, and raises a bare ``AttributeError`` if it does not.
+
+    Raises
+    ------
+    ImportError
+        If the sibling module cannot be located at all (missing file or
+        unbuildable spec). Any exception the sibling module itself raises
+        while executing (e.g. a syntax or dataclass-resolution error)
+        propagates as-is -- this is load-bearing plumbing with no
+        degraded fallback, so there is nothing this wrapper can usefully do
+        besides let the real failure surface.
     """
+    module_path = Path(__file__).resolve().parent / filename
+    spec = importlib.util.spec_from_file_location(module_name, module_path)
+    if spec is None or spec.loader is None:
+        raise ImportError(f"could not build an import spec for {module_path}")
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[module_name] = module
+    spec.loader.exec_module(module)
+    return module
 
-    routed: int = 0
-    previously_processed: int = 0
-    skipped_unknown: int = 0
-    by_kind: dict[str, int] = dataclasses.field(default_factory=dict)
-    unroutable_by_kind: dict[str, int] = dataclasses.field(default_factory=dict)
-    write_failures: int = 0
-    failed_by_kind: dict[str, int] = dataclasses.field(default_factory=dict)
-    state_persist_failed: bool = False
-    no_learning_text: int = 0
-    no_learning_by_kind: dict[str, int] = dataclasses.field(default_factory=dict)
-    malformed_lines: int = 0
-    malformed_line_numbers: list[int] = dataclasses.field(default_factory=list)
-    missing_required_field_count: int = 0
-    missing_required_field_lines: list[int] = dataclasses.field(default_factory=list)
-    outstanding: int = 0
 
-    def summary(self) -> str:
-        """Return the human-readable one-line summary.
+_harvest_result_mod = _load_required_sibling_module("harvest_result", "harvest_result.py")
+HarvestResult = _harvest_result_mod.HarvestResult
 
-        Format: ``"N learnings routed: K1 kind1, K2 kind2 (M previously
-        processed); P unroutable: K3 kind3, K4 kind4; Q write failures: ...;
-        state NOT persisted; R no learning text: ...; S malformed line(s):
-        [...]; T record(s) missing a required digest field at line(s)
-        [...]"``. Each trailing segment appears only when the condition it
-        reports is present.
+_sink_resolution = _load_required_sibling_module("sink_resolution", "sink_resolution.py")
 
-        The unroutable segment names each distinct unroutable ``entry_kind``
-        with its count so the backlog is visible on every run
-        (INF-400c-2-ii).
+_capture_write = _load_required_sibling_module("capture_write", "capture_write.py")
 
-        The write-failure and state segments exist because a run in which
-        every write failed otherwise renders as ``"0 learnings routed:
-        none"`` — textually identical to a run that had nothing to do. The
-        counters are what let the caller tell an empty queue from a broken
-        one.
-
-        The no-learning-text segment (INF-700c-1) and the malformed-line
-        segment (INF-700c-1-i) never include the record's or line's raw
-        content — only counts and, for malformed lines, 1-based line
-        numbers — so a corrupt or content-free record cannot leak its bytes
-        into the run's own output.
-
-        The ``outstanding`` count (INF-700c-2) is always printed, including
-        when it is zero: "visible is not the same as outstanding"
-        (INF-700c-2 it_requirements #5) — a reader must be able to see that
-        the honoured 28 are known about without them being reported as
-        still waiting to be written.
-        """
-        parts = [f"{count} {kind}" for kind, count in sorted(self.by_kind.items())]
-        breakdown = ", ".join(parts) if parts else "none"
-        base = f"{self.routed} learnings routed: {breakdown}"
-        base += f"; {self.outstanding} outstanding"
-        if self.previously_processed:
-            base += f" ({self.previously_processed} previously processed)"
-        if self.skipped_unknown:
-            unroutable_parts = [
-                f"{count} {kind}" for kind, count in sorted(self.unroutable_by_kind.items())
-            ]
-            base += f"; {self.skipped_unknown} unroutable: {', '.join(unroutable_parts)}"
-        if self.write_failures:
-            failed_parts = [
-                f"{count} {kind}" for kind, count in sorted(self.failed_by_kind.items())
-            ]
-            base += f"; {self.write_failures} write failures: {', '.join(failed_parts)}"
-        if self.state_persist_failed:
-            base += (
-                f"; state NOT persisted ({self.routed} routed learnings will be"
-                " re-applied on the next run)"
-            )
-        if self.no_learning_text:
-            no_text_parts = [
-                f"{count} {kind}" for kind, count in sorted(self.no_learning_by_kind.items())
-            ]
-            base += f"; {self.no_learning_text} no learning text: {', '.join(no_text_parts)}"
-        if self.malformed_lines:
-            base += (
-                f"; {self.malformed_lines} malformed line(s) at "
-                f"{self.malformed_line_numbers}"
-            )
-        if self.missing_required_field_count:
-            base += (
-                f"; {self.missing_required_field_count} record(s) missing a "
-                f"required digest field at line(s) {self.missing_required_field_lines}"
-            )
-        return base
+_harvest_cli = _load_required_sibling_module("harvest_cli", "harvest_cli.py")
 
 
 # ---------------------------------------------------------------------------
@@ -359,19 +286,18 @@ def _save_state(state_path: Path, hashes: set[str]) -> None:
 # ---------------------------------------------------------------------------
 #
 # The build deploys this file to <output_root>/scripts/knowledge/
-# harvest_learnings.py (see build_knowledge_scripts in build_phases.py), so
-# the deployed output root is always exactly two directories above this
-# file's own location. Pure path arithmetic -- no I/O -- so this never
-# raises, even when the file is being run from an un-built source tree
-# (where the resulting "output root" simply will not contain a declaration
-# and every caller here falls back to the historical default).
-
-_LEGACY_SINK_RELATIVE_PARTS: tuple[str, ...] = (
-    "leafcutter-ai",
-    "debugging",
-    "logs",
-    "knowledge_emissions.jsonl",
-)
+# harvest_learnings.py (see build_knowledge_scripts in
+# build_phases_knowledge.py), so the deployed output root is always exactly
+# two directories above this file's own location. Pure path arithmetic -- no
+# I/O -- so this never raises, even when the file is being run from an
+# un-built source tree.
+#
+# The declaration-read, default/staleness/legacy resolution, and
+# --print-sink handling this cluster used to hold here now live in the
+# sibling ``sink_resolution`` module (loaded above via
+# ``_load_required_sibling_module`` as ``_sink_resolution``) -- a cohesive
+# "where things live" concern distinct from draining the sink once resolved.
+# See that module's own docstring for the extraction rationale.
 
 
 def _deployed_output_root() -> Path:
@@ -380,176 +306,6 @@ def _deployed_output_root() -> Path:
     Pure function: no I/O, no shared-state mutation.
     """
     return Path(__file__).resolve().parents[2]
-
-
-def _read_sink_declaration(output_root: Path) -> str | None:
-    """Read the build-time knowledge-sink declaration, if one exists.
-
-    Returns the declared absolute path string, or ``None`` when no
-    declaration file is present (e.g. an un-built source-tree run) or it
-    cannot be parsed -- callers fall back to the historical default in
-    either case, per AC INF-400c-4-v ("nothing is written into nowhere").
-    """
-    declaration_path = output_root / "config" / "knowledge_sink.json"
-    if not declaration_path.is_file():
-        return None
-    try:
-        data = json.loads(declaration_path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError) as exc:
-        logger.warning(
-            "Could not read sink declaration %s: %s", declaration_path, exc
-        )
-        return None
-    value = data.get("knowledge_emission_sink")
-    return value if isinstance(value, str) and value else None
-
-
-def _resolve_default_sink(output_root: Path) -> Path:
-    """Resolve the sink path to use when ``--sink`` is not given on the CLI.
-
-    Prefers the build-time declaration recorded beside this deployed script
-    (AC INF-400c-4-v); falls back to the historical CWD-relative default
-    when no declaration is present.
-    """
-    declared = _read_sink_declaration(output_root)
-    if declared is not None:
-        return Path(declared)
-    return Path("debugging/logs/knowledge_emissions.jsonl")
-
-
-def _recomputed_sink_for_output_root(output_root: Path) -> Path:
-    """Recompute the conventional sink path from where this script currently lives.
-
-    Mirrors ``build_knowledge_sink_declaration``'s own derivation in
-    ``build_phases.py`` (``<project_root>/debugging/logs/
-    knowledge_emissions.jsonl``, where ``project_root == output_root.parent``)
-    so that comparing this against a DECLARED value is what staleness
-    detection (AC INF-400c-4-v) is built on: a declaration written for an
-    install that has since been moved by hand still names its OLD absolute
-    path verbatim, and that stops matching what this exact layout would
-    produce right now -- without either path needing to exist on disk for
-    the comparison itself to hold.
-
-    Pure function: no I/O, no shared-state mutation.
-    """
-    return output_root.parent / "debugging" / "logs" / "knowledge_emissions.jsonl"
-
-
-def _stale_declaration_message(output_root: Path) -> str | None:
-    """Return a staleness message if the build-time declaration no longer matches reality.
-
-    AC INF-400c-4-v: a declared path whose install was moved by hand is
-    reported as STALE, distinctly from a sink that has simply never been
-    written to -- and without inventing a new exit status. Returns ``None``
-    when there is no declaration to go stale, or when the declared value
-    still matches what this layout would produce right now.
-    """
-    declared = _read_sink_declaration(output_root)
-    if declared is None:
-        return None
-    if Path(declared) == _recomputed_sink_for_output_root(output_root):
-        return None
-    return (
-        f"Declared knowledge-emission sink is STALE: {declared} (its "
-        "directory no longer exists -- this install was likely moved by "
-        "hand after the build fixed this absolute path). A rebuild "
-        "(python scripts/build.py --target-dir <project-root>) re-declares "
-        "the sink at this install's current location."
-    )
-
-
-def _handle_print_sink(output_root: Path) -> int:
-    """Print the resolved absolute sink path, or refuse (AC INF-400c-4-i).
-
-    Side-effect free: reads the declaration only.
-
-    AC INF-400c-4-v established this flag and, at the time, had it fall back
-    to a CWD-relative default when no declaration was present -- the same
-    fallback the ordinary (non-print-sink) run still uses today, on purpose,
-    for un-built source-tree runs (see ``_resolve_default_sink``). AC
-    INF-400c-4-i hardens THIS flag specifically: the four shipped emit
-    surfaces are being repointed to depend on ``--print-sink`` as their
-    single source of truth for an install-wide destination, so a fallback
-    that resolves against wherever the calling process happens to stand
-    would silently hand different agents different files -- the exact
-    corpus split those surfaces exist to prevent. This is therefore a
-    REFUSAL, not a warning: no path is printed to stdout on this path, only
-    a message on stderr naming the missing declaration, and the ordinary
-    run's fallback for un-built source trees is left untouched.
-    """
-    declared = _read_sink_declaration(output_root)
-    if declared is None:
-        declaration_path = output_root / "config" / "knowledge_sink.json"
-        print(
-            "ERROR: no build-time knowledge-emission-sink declaration found "
-            f"at {declaration_path}. Refusing to resolve --print-sink "
-            "against the current working directory -- that would hand a "
-            "different answer to every caller depending on where it is "
-            "standing, which is the corpus split this refusal exists to "
-            "prevent. Rebuild (python scripts/build.py --target-dir "
-            "<project-root>) to declare the sink for this install.",
-            file=sys.stderr,
-        )
-        return 1
-    print(declared)
-    return 0
-
-
-def _resolve_sink_or_log_stale(args: argparse.Namespace, output_root: Path) -> Path | None:
-    """Resolve the sink path for an ordinary (non-print-sink) run.
-
-    Returns the resolved ``Path`` when the run should proceed. Returns
-    ``None`` when the build-time declaration is stale -- the staleness
-    message has already been logged, and the caller should exit 1 (AC
-    INF-400c-4-v: reused exit code, distinct message).
-
-    An explicit ``--sink`` is the caller's own responsibility and is never
-    checked for staleness -- only the DECLARED/default path is a build-time
-    declaration that can go stale.
-    """
-    if args.sink is not None:
-        return args.sink
-    stale_message = _stale_declaration_message(output_root)
-    if stale_message is not None:
-        logger.error(stale_message)
-        return None
-    return _resolve_default_sink(output_root)
-
-
-def _legacy_sink_candidate(output_root: Path) -> Path:
-    """Return the conventional pre-declaration sink location for *output_root*.
-
-    Mirrors the concrete instance recorded in AC INF-400c-4-v's notes: in a
-    development workspace whose build target is the workspace root, the
-    operational stream's existing lines sit one level down, under the
-    package clone's own ``debugging/logs/``. ``output_root``'s parent is the
-    project root the build was pointed at.
-
-    Pure function: no I/O, no shared-state mutation.
-    """
-    project_root = output_root.parent
-    return project_root.joinpath(*_LEGACY_SINK_RELATIVE_PARTS)
-
-
-def _warn_if_diverging_from_legacy(resolved_sink: Path, output_root: Path) -> None:
-    """Print+log a notice when a pre-existing legacy sink diverges from *resolved_sink*.
-
-    AC INF-400c-4-v: adopting the declaration must not silently orphan
-    records already accumulating elsewhere -- names BOTH locations once,
-    and never touches either file itself. A no-op when the legacy candidate
-    does not exist or is already the same file the declaration names.
-    """
-    legacy = _legacy_sink_candidate(output_root)
-    if legacy == resolved_sink or not legacy.is_file():
-        return
-    message = (
-        f"NOTE: declared knowledge-emission sink is {resolved_sink}, which "
-        f"differs from records already accumulating at {legacy}. Naming "
-        "both here rather than silently diverging -- reconcile "
-        "deliberately before relying on either being the complete history."
-    )
-    print(message)
-    logger.warning(message)
 
 
 # ---------------------------------------------------------------------------
@@ -563,42 +319,168 @@ def _warn_if_diverging_from_legacy(resolved_sink: Path, output_root: Path) -> No
 # the routing rules are extended) reads and retries it. The backlog stays
 # visible via HarvestResult.unroutable_by_kind / skipped_unknown rather than
 # growing an unbounded reprocessing loop silently: every run reports it.
+#
+# AC INF-400c-5: this set is the harvester's half of the single declared
+# entry_kind vocabulary at config/entry_kind_vocabulary.json — the emission
+# helper (scripts/knowledge/emit_knowledge.py) validates against the same
+# JSON declaration via scripts/knowledge/entry_kind_vocabulary.py, and this
+# literal set must be kept equal to that declaration's "members" keys (a
+# reconciliation test reads this literal frozenset from source and compares
+# it against the JSON file — see tests/knowledge/test_inf_400c_5.py). It is
+# the union of the pre-INF-400c-5 11 harvester-only kinds with the 16
+# route-knowledge classifier target_surface values (4 already overlapped),
+# so every previously-routable kind stays routable and every classifier
+# label becomes routable too.
+#
+# AC INF-400c-5-i / DECISION HISTORY (why this frozenset still exists rather
+# than being deleted outright): the routability *decision* below no longer
+# compares a raw on-disk entry_kind against this frozenset directly -- that
+# was the H-2 defect a fast-lane pr-review caught (an event surviving on disk
+# under a separator/case variant, e.g. "component_convention" for the
+# canonical "component-convention", compared unequal to every member here and
+# was misreported as unroutable). The comparison now goes through
+# `_resolve_entry_kind_canonical`, which normalises via
+# `entry_kind_vocabulary.resolve_canonical` -- the SAME shared function
+# `emit_knowledge.py` calls -- against the JSON-declared vocabulary read at
+# harvest time, so the write-side and read-side normalisation are provably
+# one mechanism, not two hand-kept-in-sync ones. This literal frozenset is
+# kept only as (a) the target the reconciliation test above pins the JSON
+# declaration against, and (b) a defense-in-depth fallback set for the rare
+# case the sibling `entry_kind_vocabulary.py` module or the JSON declaration
+# cannot be loaded at all at runtime (see `_resolve_entry_kind_canonical`) --
+# in that fallback path there is deliberately no normalisation, since without
+# the shared module there is no shared function left to apply.
 _KNOWN_ENTRY_KINDS: frozenset[str] = frozenset(
     {
-        "memory-project",
-        "per-folder-readme",
-        "agent-frontmatter",
-        "code-comment",
         "adr",
-        "skill-context",
-        "per-agent-memory",
-        "explanation-doc",
-        "reference-doc",
+        "agent-frontmatter",
+        "architecture-doc",
         "claude-md",
+        "claude-md-inline",
+        "claude-md-toc",
+        "code-comment",
+        "explanation",
+        "explanation-doc",
+        "glossary",
+        "how-to",
+        "memory-project",
+        "memory-reference",
+        "memory-user",
+        "per-agent-memory",
+        "per-folder-readme",
+        "reference",
+        "reference-doc",
         "retrospective",
+        "settings-json",
+        "skill-context",
+        "skills-config",
+        "ticket-body",
     }
 )
 
 
-def _default_capture(learning_text: str, destination_path: str) -> None:
-    """Write *learning_text* to *destination_path* (append-only).
+def _load_entry_kind_vocabulary_module() -> Any:
+    """Load the sibling ``entry_kind_vocabulary`` module by file path.
 
-    This is the production capture-learning write protocol.  In tests, this
-    function is replaced by a lightweight stub so the test suite does not
-    write to the real filesystem.
+    ``harvest_learnings.py`` is loaded three different ways across this
+    codebase: as ``__main__`` via subprocess (Python auto-adds this file's
+    own directory to ``sys.path[0]``, so a bare ``import
+    entry_kind_vocabulary`` would resolve); via
+    ``importlib.util.spec_from_file_location`` from several pre-existing test
+    files (``tests/knowledge/test_harvest_learnings.py`` and siblings) that
+    do NOT add ``scripts/knowledge/`` to ``sys.path`` first; and, after this
+    change, potentially re-executed under a different registered module name
+    by more than one of those test files in the same process. A bare
+    top-level ``import`` only resolves in the first case and would break
+    every pre-existing test using the second -- so instead the sibling module
+    is located relative to *this* file's own on-disk path, exactly the
+    approach those same test files already use to load this module.
+
+    Returns ``None`` (never raises) if the sibling module cannot be loaded --
+    e.g. a non-standard layout where it is genuinely absent -- so the caller
+    falls back to a plain, unnormalised membership check against
+    ``_KNOWN_ENTRY_KINDS`` rather than crashing the harvest run. External I/O
+    (file read), so wrapped and logged per the project error-handling policy.
     """
-    dest = Path(destination_path)
+    module_path = Path(__file__).resolve().parent / "entry_kind_vocabulary.py"
     try:
-        dest.parent.mkdir(parents=True, exist_ok=True)
-        with open(dest, "a", encoding="utf-8") as fh:
-            fh.write(learning_text + "\n")
-    except OSError as exc:
+        spec = importlib.util.spec_from_file_location("entry_kind_vocabulary", module_path)
+        if spec is None or spec.loader is None:
+            raise ImportError(f"could not build an import spec for {module_path}")
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+    except (OSError, ImportError) as exc:
         logger.warning(
-            "Failed to write learning to %s: %s",
-            destination_path,
+            "Could not load sibling entry_kind_vocabulary module at %s: %s -- "
+            "entry_kind routing falls back to an unnormalised membership "
+            "check against _KNOWN_ENTRY_KINDS.",
+            module_path,
             exc,
         )
-        raise
+        return None
+    return module
+
+
+_ENTRY_KIND_VOCAB_MODULE: Any = _load_entry_kind_vocabulary_module()
+
+
+def _entry_kind_members_for_routing() -> dict[str, Any]:
+    """Return the members mapping to validate/normalise an entry_kind against.
+
+    Deliberately built from this file's own live ``_KNOWN_ENTRY_KINDS`` --
+    NOT re-read from the JSON declaration at harvest time -- for two reasons:
+    (1) ``_KNOWN_ENTRY_KINDS`` is already reconciled against the JSON
+    declaration by ``test_every_vocabulary_member_has_a_harvester_routing_rule``
+    (tests/knowledge/test_inf_400c_5.py), so it is not an independently
+    drifting copy; and (2) ``tests/knowledge/test_harvest_learnings.py``'s
+    ``TestExtendedRoutingRulesReroutesPreviouslyUnroutable`` monkeypatches
+    the module-level ``_KNOWN_ENTRY_KINDS`` attribute directly to simulate
+    the routing table being extended, and expects that patched value to take
+    effect on the very next ``harvest()`` call -- reading from the JSON file
+    instead would silently ignore that monkeypatch and break an existing,
+    untouched test. Read at call time (not cached at import time) so the
+    monkeypatch is honoured.
+
+    Pure function: no I/O, no shared-state mutation.
+    """
+    return {name: {} for name in _KNOWN_ENTRY_KINDS}
+
+
+def _resolve_entry_kind_canonical(
+    raw_entry_kind: str, members: dict[str, Any] | None
+) -> str | None:
+    """Return the canonical vocabulary member for *raw_entry_kind*, or ``None``.
+
+    Delegates to ``entry_kind_vocabulary.resolve_canonical`` -- the SAME
+    shared function the emission helper (``emit_knowledge.py``) uses -- so a
+    separator/case variant already on disk (e.g. a legacy
+    ``"component_convention"`` or ``"CLAUDE.md-inline"`` record) is
+    normalised identically on both the write and the read path (AC
+    INF-400c-5-i it_requirements: "Normalisation must be applied at both the
+    emission helper and the harvester read path, from one shared function").
+    A normalised value that still matches no member returns ``None``:
+    normalisation never invents a member.
+
+    Falls back to a bare, unnormalised membership check against
+    ``_KNOWN_ENTRY_KINDS`` only when *members* is ``None`` -- meaning the
+    sibling module could not be loaded at all (see
+    ``_load_entry_kind_vocabulary_module``'s docstring) and there is no
+    shared function left to call.
+
+    Pure function: no I/O, no shared-state mutation.
+    """
+    if _ENTRY_KIND_VOCAB_MODULE is None or members is None:
+        return raw_entry_kind if raw_entry_kind in _KNOWN_ENTRY_KINDS else None
+    return cast(
+        "str | None", _ENTRY_KIND_VOCAB_MODULE.resolve_canonical(raw_entry_kind, members)
+    )
+
+
+# The production capture-learning write path now lives in the sibling
+# capture_write module (loaded above as _capture_write) -- see that module's
+# docstring for the extraction rationale. Bound to this name so harvest()'s
+# default parameter value and this file's own docstrings are unchanged.
+_default_capture = _capture_write.default_capture
 
 
 # ---------------------------------------------------------------------------
@@ -664,6 +546,15 @@ def harvest(
     cannot be read keeps the pre-existing distinct ``SystemExit(1)``.
     """
     result = HarvestResult()
+
+    # Resolve the entry_kind members mapping once per run (AC INF-400c-5-i):
+    # built fresh from the current `_KNOWN_ENTRY_KINDS` (see
+    # `_entry_kind_members_for_routing`'s docstring for why it is not
+    # re-read from the JSON declaration here), reused for every event's
+    # normalisation/routability check below via `_resolve_entry_kind_canonical`.
+    entry_kind_members = (
+        _entry_kind_members_for_routing() if _ENTRY_KIND_VOCAB_MODULE is not None else None
+    )
 
     # 1. Read sink file
     #
@@ -821,8 +712,17 @@ def harvest(
             # and is not durable across a fresh clone or install).
             continue
 
-        # Route based on entry_kind
-        if entry_kind not in _KNOWN_ENTRY_KINDS:
+        # Route based on entry_kind, normalised through the SAME shared
+        # function the emission helper uses (AC INF-400c-5-i it_requirements:
+        # "Normalisation must be applied at both the emission helper and the
+        # harvester read path, from one shared function"). Without this, a
+        # legacy or hand-written record on disk carrying a separator/case
+        # variant of a routable kind (e.g. "component_convention" instead of
+        # the canonical "component-convention") compared unequal to every
+        # member of _KNOWN_ENTRY_KINDS and was misreported as unroutable even
+        # though its normalised form IS a known kind (H-2, 2026-09-14).
+        canonical_entry_kind = _resolve_entry_kind_canonical(entry_kind, entry_kind_members)
+        if canonical_entry_kind is None:
             logger.warning(
                 "Unrecognised entry_kind %r in event from ticket %r (destination: %r). "
                 "Event stays unprocessed and will be retried on a later run.",
@@ -846,6 +746,12 @@ def harvest(
             # an unroutable event must remain retryable, not be silently
             # discarded via the idempotency record.
             continue
+
+        # From here on, use the canonical spelling -- for routing, counting,
+        # and the capture-write destination lookup -- since it is "the one
+        # form ... used in every report" per INF-400c-5-i, not whatever
+        # separator/case variant the on-disk record happened to carry.
+        entry_kind = canonical_entry_kind
 
         # By this point `_is_no_learning_text` has already confirmed `text`
         # is present and carries real content, so it is used verbatim. Per
@@ -928,52 +834,10 @@ def harvest(
 # ---------------------------------------------------------------------------
 # CLI entry point
 # ---------------------------------------------------------------------------
-
-
-def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
-    parser = argparse.ArgumentParser(
-        prog="harvest_learnings",
-        description="Route knowledge_captured events from the emission sink.",
-    )
-    parser.add_argument(
-        "--sink",
-        type=Path,
-        default=None,
-        metavar="PATH",
-        help=(
-            "Path to the JSONL sink. Default (AC INF-400c-4-v): the "
-            "build-time declaration at config/knowledge_sink.json beside "
-            "this deployed script, falling back to "
-            "debugging/logs/knowledge_emissions.jsonl when no declaration "
-            "is present."
-        ),
-    )
-    parser.add_argument(
-        "--state",
-        type=Path,
-        default=Path("debugging/logs/harvest_state.json"),
-        metavar="PATH",
-        help="Path to the processed-event state file (default: debugging/logs/harvest_state.json).",
-    )
-    parser.add_argument(
-        "--print-sink",
-        action="store_true",
-        help=(
-            "Print the resolved absolute sink path and exit 0. Side-effect "
-            "free: reads the declaration only (AC INF-400c-4-v)."
-        ),
-    )
-    parser.add_argument(
-        "--dry-run",
-        action="store_true",
-        help="Log routing decisions but do not write to knowledge surfaces.",
-    )
-    parser.add_argument(
-        "--verbose",
-        action="store_true",
-        help="Log each event as it is processed.",
-    )
-    return parser.parse_args(argv)
+#
+# Argument parsing now lives in the sibling harvest_cli module (loaded above
+# as _harvest_cli) -- see that module's docstring for the extraction
+# rationale.
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -990,7 +854,7 @@ def main(argv: list[str] | None = None) -> int:
         ``sys.exit(1)``/``sys.exit(2)`` for sink/state read failures before
         this function returns.
     """
-    args = _parse_args(argv)
+    args = _harvest_cli.parse_args(argv)
 
     output_root = _deployed_output_root()
 
@@ -999,16 +863,16 @@ def main(argv: list[str] | None = None) -> int:
     # the sink-existence check, the legacy-divergence check) can touch the
     # filesystem beyond that one read.
     if args.print_sink:
-        return _handle_print_sink(output_root)
+        return _sink_resolution.handle_print_sink(output_root)
 
     log_level = logging.DEBUG if args.verbose else logging.INFO
     logging.basicConfig(level=log_level, format="%(levelname)s %(name)s: %(message)s")
 
-    sink_path = _resolve_sink_or_log_stale(args, output_root)
+    sink_path = _sink_resolution.resolve_sink_or_log_stale(args, output_root)
     if sink_path is None:
         return 1
 
-    _warn_if_diverging_from_legacy(sink_path, output_root)
+    _sink_resolution.warn_if_diverging_from_legacy(sink_path, output_root)
 
     result = harvest(
         sink_path=sink_path,
@@ -1103,19 +967,70 @@ if __name__ == "__main__":
 #   pre-existing accumulation differs from the newly adopted declaration.
 #   No behaviour change for existing callers that pass --sink explicitly.
 #   (#TICKETLESS reason=ac-scoped-fastlane-build-INF-400c-4-v)
-# - 2026-09-14 [python-coder/INF-400c-4-i]: Hardened `--print-sink` specifically:
-#   with no build-time declaration present it now REFUSES (exit 1, message on
-#   stderr naming the missing declaration, nothing printed to stdout) instead
-#   of falling back to `_resolve_default_sink`'s CWD-relative default. The four
-#   shipped emit surfaces are being repointed (this same AC) to depend on
-#   `--print-sink` as their single source of truth for an install-wide
-#   destination; the CWD fallback that flag inherited from INF-400c-4-v would
-#   have handed each surface a different absolute-looking path depending on
-#   where the invoking agent stood, reproducing the exact corpus split those
-#   surfaces exist to prevent. Deliberately scoped to `_handle_print_sink`
-#   only: `_resolve_default_sink` / `_resolve_sink_or_log_stale` (the ordinary,
-#   non-print-sink run's `--sink` default) are UNCHANGED, so INF-400c-4-v's own
-#   documented un-built-source-tree fallback for ordinary `harvest` runs still
-#   works exactly as before. No new exit code: reuses 1, already the sink-
-#   resolution-failure code for the ordinary run. (#TICKETLESS
-#   reason=ac-scoped-fastlane-build-INF-400c-4-i)
+# - 2026-09-14 [python-coder/INF-400c-4-i]: Hardened `--print-sink`: with no
+#   build-time declaration present it now REFUSES (exit 1, stderr message,
+#   nothing on stdout) instead of falling back to `_resolve_default_sink`'s
+#   CWD-relative default -- the four shipped emit surfaces depend on
+#   `--print-sink` as their single source of truth, so a CWD fallback would
+#   reproduce the corpus split those surfaces exist to prevent. Scoped to
+#   `_handle_print_sink` only; the ordinary `harvest` run's `--sink` default
+#   (INF-400c-4-v) is unchanged. Reuses exit 1, no new code.
+#   (#TICKETLESS reason=ac-scoped-fastlane-build-INF-400c-4-i)
+# - 2026-09-14 15:10 [python-coder/INF-400c-4]: `_stale_declaration_message`
+#   now treats a non-absolute declared value as "nothing to report" instead
+#   of misreporting it as install-moved -- that shape is the different
+#   resolution-hazard defect INF-400c-4's own parity check already rejects,
+#   and never "used to match" an absolute recomputation. Ordinary relative
+#   -value handling (resolve against CWD) is unchanged.
+#   (#TICKETLESS reason=ac-scoped-fastlane-build-INF-400c-4)
+# - 2026-09-14 [python-coder/INF-400c-5-i, H-2 fix]: A fast-lane pr-review
+#   found the routing check at the bottom of `harvest()` compared a raw
+#   on-disk `entry_kind` directly against `_KNOWN_ENTRY_KINDS` with no
+#   normalisation, while `emit_knowledge.py` normalised via
+#   `entry_kind_vocabulary.resolve_canonical` before writing -- so a legacy
+#   or hand-written record already on disk under a separator/case variant of
+#   a routable kind (this AC's own Given clause: "component_convention" vs
+#   "component-convention") compared unequal to every frozenset member and
+#   was misreported unroutable, even though every OTHER value in
+#   `_KNOWN_ENTRY_KINDS` uses the canonical hyphenated-lowercase spelling.
+#   Two hand-kept-in-sync mechanisms (a literal frozenset here, a shared
+#   function there) reconciled only by a structural test is explicitly not
+#   "one shared function" per this AC's own it_requirements. Fixed by adding
+#   `_load_entry_kind_vocabulary_module` (loads the sibling module by file
+#   path rather than a bare top-level `import`, since several pre-existing
+#   tests -- test_harvest_learnings.py and siblings -- load this file via
+#   `importlib.util.spec_from_file_location` without putting
+#   scripts/knowledge/ on sys.path; a bare import would have broken all of
+#   them), `_entry_kind_members_for_routing` (builds the members mapping
+#   from the current `_KNOWN_ENTRY_KINDS`, read fresh at each `harvest()`
+#   call rather than from the JSON declaration -- an earlier draft of this
+#   fix read the JSON directly and broke the pre-existing
+#   `TestExtendedRoutingRulesReroutesPreviouslyUnroutable` test, which
+#   monkeypatches the module-level `_KNOWN_ENTRY_KINDS` attribute and expects
+#   that patched value, not the JSON file, to govern the very next
+#   `harvest()` call), and `_resolve_entry_kind_canonical` (calls the SAME
+#   `entry_kind_vocabulary.resolve_canonical` the emission helper uses to
+#   normalise *before* the membership check, rather than comparing the raw
+#   value). The routing check now branches on the canonical value and
+#   reassigns `entry_kind` to it before any downstream counting/capture use,
+#   so a normalised-but-still-unknown value still correctly routes to
+#   `skipped_unknown` (normalisation never invents a member) while a known
+#   variant is now routed and reported under its canonical spelling.
+#   `_KNOWN_ENTRY_KINDS` is deliberately NOT deleted: it remains the
+#   harvester's live, single routing table (now normalised-against via the
+#   shared function instead of compared raw), the pre-existing
+#   `test_every_vocabulary_member_has_a_harvester_routing_rule`
+#   (tests/knowledge/test_inf_400c_5.py) structurally asserts its literal
+#   presence and equality with the JSON declaration, and per this project's
+#   constraint no existing test is weakened to land a fix. It also serves as
+#   an explicit fallback set for the (expected to be rare, and itself the
+#   subject of the sibling H-1 deploy-manifest fix) case where the sibling
+#   `entry_kind_vocabulary` module cannot be loaded at runtime at all -- that
+#   fallback path has no normalisation, since there is no shared function
+#   left to call. No new exit code; no change to the idempotency hash
+#   (`_event_hash` reads the raw event dict, computed before this
+#   normalisation). New coverage:
+#   `tests/knowledge/test_inf_400c_5_i_h2_harvester_normalises_variant_on_read.py`
+#   writes a variant-spelled `entry_kind` directly into the sink (bypassing
+#   the emission CLI, as a legacy record would be) and asserts the real
+#   harvester CLI routes it. (#TICKETLESS reason=fast-lane-pr-review-fix-INF-400c-5-i-H2)

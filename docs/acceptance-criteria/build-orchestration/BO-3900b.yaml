@@ -1,0 +1,149 @@
+id: BO-3900b
+title: "A path counts as inside the worktree only at a whole-segment boundary, with Windows letter case and trailing separators ignored and POSIX case respected"
+component: build-orchestration
+components:
+  - build_orchestration
+level: L3
+status: active
+req_status: draft
+work_status: done
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+change_target: pipeline
+risk_surface: contract_boundary
+package_surface: false
+criteria: |
+  Given the resolved worktree `C:\wt\foo`
+  When a ticket is named by `C:\wt\foo-bar\07_TICKET-x.md`
+  Then the ticket path is judged outside the worktree, because `foo-bar` is not the
+    segment `foo`
+  And it reaches the phase agents naming `C:\wt\foo-bar\07_TICKET-x.md`, unjoined.
+
+  Given the resolved worktree is spelled `C:/wt/foo/` (trailing separator), `C:\wt\foo`,
+    or `c:\WT\Foo`
+  When a ticket is named by `C:\wt\foo\tickets\07_TICKET-x.md`
+  Then in all three cases the ticket path is judged inside the worktree
+  And it reaches the phase agents as the same single path in all three cases.
+
+  Given the resolved worktree `/home/henzeh/wt/foo` on a POSIX system
+  When a ticket is named by `/home/henzeh/WT/foo/tickets/07_TICKET-x.md`
+  Then the ticket path is judged outside the worktree, because POSIX paths differ by case
+  And it reaches the phase agents unchanged.
+
+  Given the resolved worktree `C:\wt\foo`
+  When a path is exactly `C:\wt\foo` or `C:/wt/foo/`
+  Then it is judged to be the worktree root itself, and is not joined onto the worktree.
+
+  Given the resolved worktree `C:\wt\foo`
+  When a ticket is named by `C:\wt\foo\tickets\..\..\other\07_TICKET-x.md`
+  Then it is judged outside the worktree once its `.` and `..` segments are applied
+  And a ticket named by `C:\wt\foo\tickets\.\07_TICKET-x.md` is judged inside it.
+depends_on:
+  - BO-3900
+doc_links:
+  - path: templates/workflows-js/build-feature.js
+    relationship: implements
+    status: exists
+    relevance: "The containment test the incident defeated was a prefix check with a forward-slash separator."
+  - path: unit_tests/_workflow_engine_harness.py
+    relationship: specifies
+    status: exists
+    relevance: "Harness for the reachability entry."
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+    relevance: "Component overview for the build workflows whose worktree containment decision this record pins."
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Containment is decided at a whole-segment boundary, after '.' and '..' segments have been applied to both the worktree root and the candidate path. A raw prefix test with or without a separator is a defect."
+  - "The equivalence rule is the single one BO-3900 defines per script. Separator spelling and trailing separators are ignored, letter case is ignored for drive-lettered and UNC paths only, and POSIX paths compare case-sensitively. Lower-casing POSIX paths is a defect."
+  - "A '..' that would climb above a path's root must never produce a path judged inside the worktree."
+  - "A path equivalent to the worktree root is recognised as the root and dispatched as the root. It is never joined onto the root."
+  - "Case-insensitive matching decides containment only. The dispatched path has one deterministic spelling that does not depend on which spelling of the worktree the run received, so the three worktree spellings yield byte-identical dispatched paths."
+delivers_to: null
+expects_from:
+  ac_id: BO-3900
+  contract: "BO-3900's per-script equivalence and whole-segment containment rule: separators and trailing separators ignored, '.' and '..' applied, case-insensitive for drive-lettered and UNC forms only, and a path equal to the root counts as the root."
+test_required: true
+test_spec:
+  - name: test_sibling_directory_sharing_a_name_prefix_is_not_inside_the_worktree
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: "C:\\wt\\foo-bar\\... is judged outside worktree C:\\wt\\foo."
+  - name: test_windows_worktree_spelling_variants_contain_the_same_ticket
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: "Trailing-separator, backslash and different-case spellings of one Windows worktree all contain the same ticket path and yield one dispatched path."
+  - name: test_posix_containment_is_case_sensitive
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: "A POSIX path differing from the worktree only by letter case is judged outside it."
+  - name: test_worktree_root_itself_is_not_joined
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: "A path equal to the worktree root, with or without a trailing separator, is recognised as the root."
+  - name: test_dot_dot_segments_are_applied_before_containment
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: "A path that escapes the worktree through .. segments is outside, and one that uses a . segment is inside."
+  - name: test_containment_boundaries_are_reachable_from_the_workflow_top_level_body
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: reachability
+    surface_invoked: templates/workflows-js/build-feature.js
+    description: "At least the prefix-sibling and case-variant cases are driven through _workflow_engine_harness.py running build-feature.js's own body."
+test_rationale: |
+  Each boundary here is a place where a plausible fix for BO-3900 is still wrong. The
+  cheapest fix for the incident swaps "/" for either separator in a prefix check, and that
+  fix drops the segment boundary. The next cheapest lower-cases everything, and that breaks
+  POSIX. Both pass BO-3900's own cases, whose worktree and ticket share a real segment
+  boundary and a single letter case. So the boundaries need their own inputs. At least two
+  of them go through the harness, because containment is decided at the same call sites
+  the incident went through.
+covered_by:
+  - unit_tests/workflows/test_bo3900b_containment_boundaries.py
+implemented_by:
+  - templates/workflows-js/build-feature.js
+origin_agent: business-analyst
+created: 2026-09-14
+amended_by:
+- reason: it-po-technical-enrichment
+  date: 2026-09-14
+  by: it-po
+  changes: 'Set package_surface: false, added it_requirements and an architecture
+    doc_link, tightened expects_from, and set readiness to reviewed. criteria, test_spec,
+    test_rationale and notes are unchanged.'
+- action: approved
+  agent: approve_acs
+  date: '2026-09-14'
+superseded_by: null
+notes: |
+  NAMED MUTATIONS (each turns only this record's tests red; BO-3900's cases stay green):
+    M1 — containment as a raw prefix test with no separator boundary. Caught by
+         test_sibling_directory_sharing_a_name_prefix_is_not_inside_the_worktree.
+    M2 — containment compared case-sensitively for drive-lettered paths. git on Windows
+         reports `C:/...`, and agents and users type `c:\...`. Caught by
+         test_windows_worktree_spelling_variants_contain_the_same_ticket.
+    M3 — lower-case every path before comparing, POSIX included. Caught by
+         test_posix_containment_is_case_sensitive.
+    M4 — compare without applying `..` first. Caught by
+         test_dot_dot_segments_are_applied_before_containment.
+
+  ASSUMPTION, logged. Drive-lettered and UNC paths are compared case-insensitively
+  throughout, not only on the drive letter. That matches the default Windows file-system
+  behaviour. Risk if wrong: a Windows directory set to be case-sensitive (per-directory
+  case sensitivity is available on NTFS) could have two distinct folders judged the same.
+  No build orchestration layout depends on that.

@@ -29,6 +29,11 @@
     "product": {
       "type": "string"
     },
+    "example_product": {
+      "type": "string",
+      "pattern": "^[a-z0-9-]+$",
+      "description": "ADR-044: self-declared example-product marker. Set ONLY on an example artifact (today: fern-and-fig), to the product-root slug it belongs to -- never a display name, never the project's own product root. Absent on every artifact of the project's own record; absence, not an empty/null value, is what 'not an example' means. OPTIONAL and never required -- distinct from the `product` display-name field above, and never used to decide ownership (product_ownership.py's id/path-derived root remains the sole authority)."
+    },
     "name": {
       "type": "string"
     },
@@ -102,7 +107,7 @@
     "shape_version": {
       "type": "integer",
       "minimum": 1,
-      "description": "Which iteration of the journey-shape conventions this journey declares it is written to. Optional: a journey that omits it predates every shape rule and is only ever warned about, never blocked (validate_product_truth._check_shape_version_bounds)."
+      "description": "Which iteration of the journey-shape conventions this journey declares it is written to. Optional: a journey that omits it predates every size bound and is only warned about, never blocked; a bound blocks every journey only once none is left on an older version (product_truth_bounds, UXP-700e-1-ii)."
     },
     "tags": {
       "type": "array",
@@ -390,6 +395,58 @@
           "note": {
             "type": "string"
           }
+        }
+      }
+    },
+    "behind": {
+      "type": "object",
+      "description": "ADR-043: durable, per-journey freshness mark. Presence of this key IS the mark -- a journey carrying it is behind; a journey without it is not. Written/removed by validate_product_truth.py's _sync_behind_marks; MUST NOT be hand-edited (derived data).",
+      "additionalProperties": false,
+      "required": [
+        "confirmed_against",
+        "changed",
+        "since"
+      ],
+      "properties": {
+        "confirmed_against": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Stable string identity of the confirmation this journey was last checked at (ADR-043 SS2/SS3). Copied verbatim from the confirmation record -- never re-derived or synthesised."
+        },
+        "changed": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string"
+          },
+          "description": "id of each described thing (AC id or project file path) that has moved since confirmed_against, in deterministic (sorted) order (ADR-043 SS2)."
+        },
+        "since": {
+          "type": "string",
+          "description": "ISO-8601 YYYY-MM-DD date this journey was first found behind at the current confirmed_against. Preserved across re-marks while confirmed_against is unchanged; re-stamped when it changes (ADR-043 SS7)."
+        }
+      }
+    },
+    "confirmed": {
+      "type": "object",
+      "description": "UXP-700c-2: the journey's own confirmation record -- what it was last confirmed against, and a per-described-thing content snapshot taken at that moment. AUTHORED by whoever confirmed the journey (a human or agent) -- validate_product_truth.py's _check_freshness only READS this to compute a behind/current verdict; it MUST NOT write or synthesise it.",
+      "additionalProperties": false,
+      "required": [
+        "against",
+        "state"
+      ],
+      "properties": {
+        "against": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Explicit, caller-supplied string identity of the confirmation event (e.g. a commit SHA or an explicit confirmation id) -- NEVER a hash or fingerprint synthesised by the checker (ADR-043 SS3). Copied verbatim into behind.confirmed_against when a described thing has since moved."
+        },
+        "state": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "One content signature per described thing (today: AC id) as of `against`, keyed by that thing's id. Compared against its CURRENT signature (_ac_content_signature) to decide behind vs. current."
         }
       }
     }

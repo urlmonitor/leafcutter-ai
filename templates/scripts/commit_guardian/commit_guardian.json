@@ -11,15 +11,36 @@
     "templates"
   ],
   "file_size": {
-    "_comment": "check_file_size.py — Line limits for NEW files only",
+    "_comment": "check_file_size.py — Line limits per checked extension (GE-127c-1 pinned scope, 2026-09-14). IN SCOPE, each with an explicit limit so none silently inherits default_limit: .py 400 (unchanged), .sql 600 (unchanged), .js 1000 (new — top of the empty 600-1000 band across the 13 tracked files, catching the six oversized workflow bodies while leaving 43% headroom on the largest compliant file), .mjs 1000 (new, same limit as .js so a rename cannot dodge the gate), .ts 400 (new), .tsx 400 (new), .sh 400 (new). OUT OF SCOPE, each for a stated reason, not by omission: .md (already governed by check-doc-length over docs/; a second length gate over the same files would be drift), .yaml/.json (machine-authored/registry-shaped; length carries no comprehension cost), .css/.html (no first-party file over any candidate limit).",
     "line_limits": {
       ".py": 400,
-      ".sql": 600
+      ".sql": 600,
+      ".js": 1000,
+      ".mjs": 1000,
+      ".ts": 400,
+      ".tsx": 400,
+      ".sh": 400
     },
     "default_limit": 400,
     "checked_extensions": [
       ".py",
-      ".sql"
+      ".sql",
+      ".js",
+      ".mjs",
+      ".ts",
+      ".tsx",
+      ".sh"
+    ]
+  },
+  "doc_length": {
+    "_comment": "check_doc_length.py — Length limits for docs/**.md (2026-09-14). severity 'block' (was the 'warn' default, under which this gate ALWAYS exited 0 — the reason three known-issues registers reached ~4,500 lines against a 300-line limit without one commit being stopped). Blocking is survivable only because the gate now ratchets exactly as check-file-size does for code (GE-127a-1 crossing refusal + GE-127b-1 growth ratchet, merge-aware, INDETERMINATE on an unresolvable previous value): a doc may not CROSS its limit, and a doc already over may not GROW, but shrinking or holding steady always passes. That matters here — 59 of 339 tracked docs are already over, and an absolute block would freeze every one of them including the append-heavy registers. max_lines/max_lines_adr/max_sections/excluded_files are pinned to their previous implicit defaults, so this change alters ENFORCEMENT only, not which docs are judged or where the thresholds sit. max_sections has zero current violations (the registers use ### per entry, not ##), so its dimension blocks with no grandfathered population.",
+    "severity": "block",
+    "max_lines": 300,
+    "max_lines_adr": 400,
+    "max_sections": 25,
+    "excluded_files": [
+      "README.md",
+      "CHANGELOG.md"
     ]
   },
   "complexity": {
@@ -1246,6 +1267,153 @@
         "change_set_source": "handed_by_commit_path",
         "always_run": true,
         "_comment": "GE-127a-1: registers the long-documented (README.md line 41) but previously unreachable check-file-size gate. always_run: true because the script resolves its own staged-file set via `git diff --cached --name-status` and filters to covered extensions internally, mirroring check-build-drift/check-hook-trigger-reachability rather than a files regex. Refuses a commit that takes a covered file from under to over its permitted length (GE-127a-1), refuses one that grows an already-oversized file further per the GE-127b-1 ratchet, and exits 2 INDETERMINATE (GE-127a-1-i / GE-127b-1-i) when a file's length cannot be established or the previous-length source cannot be resolved."
+      },
+      {
+        "id": "check-folder-density",
+        "tier": "judgment",
+        "name": "Check Folder Density (GE-120h-3 — cap non-markdown files per directory)",
+        "entry": "python {{config.output_root}}/scripts/commit_guardian/run_hook.py {{config.output_root}}/scripts/commit_guardian/check_folder_density.py",
+        "language": "system",
+        "stages": [
+          "pre-commit"
+        ],
+        "pass_filenames": false,
+        "change_set_source": "handed_by_commit_path",
+        "always_run": true,
+        "script": "check_folder_density.py",
+        "description": "Refuses a commit that takes a directory from at-or-under to over the permitted count of non-markdown files (folder_density.max_files, default 15).",
+        "_comment": "GE-120h-3: documented live at README.md line 42 and configured since the initial extract, but named by no hooks_manifest entry and therefore never run. always_run with no files key because main() resolves its own staged set via get_staged_files() (`git diff --cached`) and ignores argv; a files regex would be a filter the script never consults, which check-hook-trigger-reachability flags as a contradiction. Safe to register as-is: _classify_folders raises a violation only when a folder crosses the threshold IN THIS COMMIT (after > limit and before <= limit), so the 113 directories already over 15 classify as warnings. Verified against a real staged set, where templates/scripts/commit_guardian (109) and unit_tests/commit_guardian (142) both reported PRE-EXISTING rather than blocking."
+      },
+      {
+        "id": "check-test-fixture-bloat",
+        "tier": "judgment",
+        "name": "Check Test Fixture Bloat (ADR-028 — oversized inline test data)",
+        "entry": "python {{config.output_root}}/scripts/commit_guardian/run_hook.py {{config.output_root}}/scripts/commit_guardian/check_test_fixture_bloat.py",
+        "language": "system",
+        "stages": [
+          "pre-commit"
+        ],
+        "pass_filenames": false,
+        "change_set_source": "handed_by_commit_path",
+        "always_run": true,
+        "script": "check_test_fixture_bloat.py",
+        "description": "Warns (or blocks, once armed) when a staged test_*.py carries inline fixture data over the ADR-028 thresholds.",
+        "_comment": "GE-120h-3: written for EPIC-TestFixtureConvention/02 and never registered. always_run with no files key because main() enumerates staged test files itself via `git diff --cached --name-only`. INERT ON REGISTRATION, DELIBERATELY: `test_fixture_bloat` is NOT among this file's top-level keys, so main() resolves config = {} (:327-337), `enabled` defaults to False (:339), and every violation path returns 0 (:392-394). That absence is load-bearing — it is what makes registering this zero-risk. Adding the test_fixture_bloat block with enabled: true is a separate, deliberate step to be reviewed on its own merits; do not 'complete' the config as though the key were missing by oversight."
+      },
+      {
+        "id": "check-sql-complexity",
+        "tier": "judgment",
+        "name": "Check SQL Complexity (GE-120h-3 — SQL cyclomatic complexity ceiling)",
+        "entry": "python {{config.output_root}}/scripts/commit_guardian/run_hook.py {{config.output_root}}/scripts/commit_guardian/check_sql_complexity.py",
+        "language": "system",
+        "stages": [
+          "pre-commit"
+        ],
+        "pass_filenames": false,
+        "change_set_source": "handed_by_commit_path",
+        "always_run": true,
+        "script": "check_sql_complexity.py",
+        "description": "Refuses a staged .sql file whose keyword-derived complexity score exceeds sql_complexity.max_score (default 75).",
+        "_comment": "GE-120h-3: documented live at README.md line 38 and carrying autofix routing in precommit-autofix.json, but named by no hooks_manifest entry. always_run with no files key because get_staged_files() resolves the staged set itself and filters to .sql internally. Vacuous in this repository (zero tracked .sql) and that is the point — the gate exists for the consumer projects README.md line 38 has been promising it to. Unlike the deleted check_sql_dependencies.py it hardcodes no schema; the threshold is config-driven and portable."
+      },
+      {
+        "id": "check-debug-scripts",
+        "tier": "judgment",
+        "name": "Check Debug Scripts (GE-120h-3 — metadata tags on debug scripts)",
+        "entry": "python {{config.output_root}}/scripts/commit_guardian/run_hook.py {{config.output_root}}/scripts/commit_guardian/check_debug_scripts.py",
+        "language": "system",
+        "stages": [
+          "pre-commit"
+        ],
+        "pass_filenames": false,
+        "change_set_source": "handed_by_commit_path",
+        "always_run": true,
+        "script": "check_debug_scripts.py",
+        "description": "Requires the DEBUG SCRIPT / CATEGORY / DESCRIPTION metadata tags on staged files under the configured debug-script directory.",
+        "_comment": "GE-120h-3: documented live at README.md line 32 and fully configured (debug_scripts.valid_categories / .required_tags / .exempt_dirs) but named by no hooks_manifest entry. always_run with no files key because get_staged_debug_scripts() resolves and filters the staged set itself. This also avoids the trap a path-anchored `files: ^debugging/scripts/` regex would create here (GE-120h-3-i): debugging/ is untracked in this repository, and a LOCATION-ANCHORED zero-match is classified UNREACHABLE by check-hook-trigger-reachability, not NOTHING-TO-MATCH. Vacuous here, portable and valuable in a consumer that keeps a debug-script convention."
+      },
+      {
+        "id": "check-doc-links",
+        "tier": "judgment",
+        "name": "Check Doc Links Bidirectional Traceability",
+        "entry": "python {{config.output_root}}/scripts/commit_guardian/run_hook.py {{config.output_root}}/scripts/commit_guardian/check_doc_links.py",
+        "language": "system",
+        "stages": [
+          "pre-commit"
+        ],
+        "pass_filenames": false,
+        "change_set_source": "handed_by_commit_path",
+        "_comment": "BP-100n-4 day-one triage: enforces DOC_LINKS traceability between code and docs. Already carries a dedicated 'doc_links' config section."
+      },
+      {
+        "id": "check-root-files",
+        "tier": "judgment",
+        "name": "Check Root Directory Files",
+        "entry": "python {{config.output_root}}/scripts/commit_guardian/run_hook.py {{config.output_root}}/scripts/commit_guardian/check_root_files.py",
+        "language": "system",
+        "stages": [
+          "pre-commit"
+        ],
+        "pass_filenames": false,
+        "change_set_source": "handed_by_commit_path",
+        "_comment": "BP-100n-4 day-one triage: blocks commits that add unauthorized new files to the project root. Already carries a dedicated 'root_files' config section."
+      },
+      {
+        "id": "check-test-ac-tags",
+        "tier": "judgment",
+        "name": "Check Test AC Tags",
+        "entry": "python {{config.output_root}}/scripts/commit_guardian/run_hook.py {{config.output_root}}/scripts/commit_guardian/check_test_ac_tags.py",
+        "language": "system",
+        "stages": [
+          "pre-commit"
+        ],
+        "pass_filenames": true,
+        "change_set_source": "handed_by_commit_path",
+        "_comment": "BP-100n-4 day-one triage: verifies every test function in a staged test file carries a '# covers: XX-NNN' tag. Needs staged filenames as positional args (no internal git-diff fallback), so pass_filenames:true; non-test files are skipped internally by is_test_file()."
+      },
+      {
+        "id": "check-ticket-ac-limits",
+        "tier": "judgment",
+        "name": "Check Ticket AC Count Limits",
+        "entry": "python {{config.output_root}}/scripts/commit_guardian/run_hook.py {{config.output_root}}/scripts/commit_guardian/hooks/check_ac_limits.py",
+        "language": "system",
+        "files": "^tickets/.*\\.md$",
+        "stages": [
+          "pre-commit"
+        ],
+        "pass_filenames": false,
+        "change_set_source": "handed_by_commit_path",
+        "_comment": "BP-100n-4 day-one triage: enforces acceptance-criteria count limits on staged ticket files (max 7 ACs per agent block, max 20 ACs per ticket total). Distinct from check-ac-tree-limits, which enforces AC TREE depth limits on docs/acceptance-criteria/ YAML files via the top-level check_ac_limits.py -- a genuine filename collision between two unrelated, real gates, one of which (this one) had a dedicated test file (test_check_ac_count_limits.py) but had never been wired into hooks_manifest.hooks at all. Self-scans via git diff --cached; files filter scopes it to staged tickets."
+      },
+      {
+        "id": "check-ticket-test-requirements",
+        "tier": "judgment",
+        "name": "Check Ticket Test Requirements",
+        "entry": "python {{config.output_root}}/scripts/commit_guardian/run_hook.py {{config.output_root}}/scripts/commit_guardian/check_ticket_test_requirements.py",
+        "language": "system",
+        "files": "^tickets/.*\\.md$",
+        "stages": [
+          "pre-commit"
+        ],
+        "pass_filenames": false,
+        "change_set_source": "handed_by_commit_path",
+        "_comment": "BP-100n-4 day-one triage: verifies staged tickets declare test requirements. Scoped to staged tickets only, mirroring check-ticket-ac-status-parity's own files trigger."
+      },
+      {
+        "id": "check-ac-done-on-merge",
+        "tier": "transform",
+        "name": "Check AC Done On Merge (close source ACs when tickets land)",
+        "entry": "python {{config.output_root}}/scripts/commit_guardian/hooks/check_ac_done_on_merge.py",
+        "language": "system",
+        "stages": [
+          "post-merge"
+        ],
+        "pass_filenames": false,
+        "change_set_source": "handed_by_commit_path",
+        "always_run": true,
+        "script": "check_ac_done_on_merge.py",
+        "description": "After a merge, marks each source AC work_status: done for every ticket the merge moved to status: done.",
+        "_comment": "GE-120h-3: never registered in either manifest, so no AC has ever been auto-closed on merge. Unlike the four gates above it consults NEITHER argv NOR the staged set — it reads `git diff HEAD~1 HEAD` on the post-merge stage. Cannot block: main() returns 0 unconditionally (:213) and the __main__ guard swallows OSError/ValueError into sys.exit(0) (:219-224). Note the call direction: this script INVOKES scripts/ac_store/mark_ac_done.py by subprocess (:148-162); mark_ac_done.py:6 naming this hook is a back-reference, not an invocation, and has been misread as one. FIRST post-merge entry in this manifest — build_precommit.py renders the stage verbatim, but the git shim is installed by install_pre_commit_shims.collect_stages, which only setup_ticket_worktree.py calls, so an existing checkout that never ran it has no post-merge shim and this gate stays silent there. Verified present in this repository's .git/hooks/post-merge (a genuine pre-commit shim, --hook-type=post-merge)."
       }
     ]
   },
@@ -1364,7 +1532,30 @@
       "canonical": "templates/scripts/commit_guardian/commit_guardian.json",
       "legacy": "templates/commit-guardian/commit_guardian.json"
     },
-    "excluded_scripts": [],
+    "excluded_scripts": [
+      "check_outcome.py",
+      "check_v2_ac_store_alignment.py"
+    ],
+  "_excluded_scripts_comment": [
+    "KI-TQ-007. Files matching hook_script_patterns that are NOT hooks, and so",
+    "must not be counted as unregistered gates by check_hook_parity.py or by",
+    "unit_tests/commit_guardian/test_hook_registration_inventory.py.",
+    "",
+    "check_outcome.py — has no main() and no __main__ block. It is the GE-120",
+    "machine-readable outcome vocabulary (OUTCOME_OK / OUTCOME_COULD_NOT_CHECK /",
+    "OUTCOME_NOTHING_TO_INSPECT / OUTCOME_NOT_RUN), imported by run_hook.py — the",
+    "dispatcher every registered hook runs through — and by check_contract_shrinking,",
+    "check_doc_frontmatter and check_ac_parent_covered_by. It is the most-executed",
+    "file in this directory and matched the orphan scan only via its check_ prefix.",
+    "",
+    "check_v2_ac_store_alignment.py — a real script with a real caller, but not a",
+    "pre-commit gate: templates/agents/ac-validator.md step 2c runs it with",
+    "--ticket <path> and treats a non-zero exit as a blocker finding. Listed here",
+    "rather than registered, because the pre-commit stage is not its entry point.",
+    "Note its inline `implements AC-XX-NNN` input form is nearly retired (4 tickets,",
+    "all finished June 2026 work); if that form is formally dropped, remove step 2c",
+    "from ac-validator.md FIRST, then delete the script and this entry."
+  ],
     "hook_script_patterns": [
       "check_*.py",
       "run_hook.py",
@@ -1437,6 +1628,22 @@
     {
       "path": ".claude/precommit-autofix.json",
       "ground": "Write-if-absent scaffold (scripts/build_config_scaffolds.py, force=False always) seeding the precommit-autofix routing table skills_config.json points at; the project fills in its own check->fix routes and the deployed file is expected to diverge from the seed template from the first route onward, so its content is never build-determined. Same class as the four scaffolds already registered here - it was simply never declared, so every commit in a built worktree failed this gate on a file no commit can contain (it is gitignored)."
+    },
+    {
+      "path": ".claude/settings.local.json",
+      "ground": "Per-developer, machine-local Claude Code settings (gitignored, .gitignore:33); the adopter edits this file directly on each machine and no build phase writes deterministic content to it, so it can never match a pinned hash (BP-100k-3-iii)."
+    },
+    {
+      "path": ".claude/scheduled_tasks.lock",
+      "ground": "Runtime lock file a scheduled task acquires while running (session id, process id, and an acquisition timestamp that changes on every acquisition); no build phase creates or manages it, and its content is never expected to be stable, let alone build-determined (BP-100k-3-iii)."
+    },
+    {
+      "path": ".claude/skills_config.json",
+      "ground": "The project's own build INPUT, read by config_loader.py to drive every build phase, never a file any phase writes deterministic content TO; it is seeded once by bootstrap_install.py/the onboard wizard and then hand-edited by the project, so no build run can ever be expected to reproduce its content (BP-100k-3-iii)."
+    },
+    {
+      "path": ".claude/changelog_categories.md",
+      "ground": "Write-if-absent scaffold (scripts/build_config_scaffolds.py, force=False always; gitignored, .gitignore:35) the project appends its own changelog categories to on an ongoing basis; content is expected to diverge from the seed template starting at the first appended category, so it is never build-determined. Same class as the .claude/precommit-autofix.json entry above, simply never declared for this sibling scaffold (BP-100k-3-iii)."
     }
   ],
   "__hook_trigger_reachability_exemption_registry_doc": [
@@ -1532,6 +1739,34 @@
     "never sets this variable."
   ],
   "hook_trigger_reachability_exemption_registry": [
+    {
+      "script": "check_ac_coverage.py",
+      "ground": "BP-100n-4 correction: NOT a declared non-gate -- this is a BROKEN, TRACKED gate withheld from registration, not something legitimately exempt from being one. Probed by invoking it the way pre-commit actually will (positional staged filenames, since pass_filenames defaults true with no files/always_run set): argparse rejects the positional filename with 'error: unrecognized arguments: <path>' (exit 2), because its parser only defines --ac-dir/--test-dir with no positional or *_FILES-style catch-all. Registering it as-is would block every commit in this repository and in every consumer install (KI-CG-20260831-0713). It is intended to become a real gate once its CLI accepts (or ignores) staged-filename arguments; an AC is being authored to fix the argparse setup and re-register it."
+    },
+    {
+      "script": "check_doc_coverage.py",
+      "ground": "BP-100n-4 correction: NOT a declared non-gate -- a BROKEN, TRACKED gate withheld from registration. Probed via positional staged-filename invocation (pass_filenames defaults true, no files/always_run set): raises 'NameError: name '_project_root' is not defined' at argparse setup time (exit 1) -- a default= expression in the argument parser references '_project_root' where only 'project_root' exists in module scope, so the script crashes before it can even parse its arguments, let alone run. This is a hard crash, not the advisory-only, always-exit-0 behavior its own module docstring describes for its intended steady state. Registering it as-is would block every commit here and downstream (KI-CG-20260831-0713). It is intended to become a real gate once the NameError is fixed; an AC is being authored to fix the undefined name and re-register it."
+    },
+    {
+      "script": "check_docstrings.py",
+      "ground": "BP-100n-4 correction: NOT a declared non-gate -- a BROKEN, TRACKED gate withheld from registration. Probed via positional staged-filename invocation (pass_filenames defaults true, no files/always_run set): argparse rejects the positional filename with 'error: unrecognized arguments: <path>' (exit 2) -- its parser only defines an optional --file flag, not a positional or repeated-argument form pre-commit's default invocation shape requires. Registering it as-is would block every commit here and downstream (KI-CG-20260831-0713). It is intended to become a real gate once its CLI accepts pre-commit's positional filename list; an AC is being authored to fix the argparse setup and re-register it."
+    },
+    {
+      "script": "check_documentation.py",
+      "ground": "BP-100n-4 correction: NOT a declared non-gate -- a BROKEN, TRACKED gate withheld from registration. Probed via positional staged-filename invocation (pass_filenames defaults true, no files/always_run set): argparse rejects the positional filename with 'error: unrecognized arguments: <path>' (exit 2) -- its parser only defines optional --file/--report-legacy flags, not a positional or repeated-argument form pre-commit's default invocation shape requires. Registering it as-is would block every commit here and downstream (KI-CG-20260831-0713). It is intended to become a real gate once its CLI accepts pre-commit's positional filename list; an AC is being authored to fix the argparse setup and re-register it."
+    },
+    {
+      "script": "check_v2_ac_store_alignment.py",
+      "ground": "BP-100n-4 correction: NOT a declared non-gate -- a BROKEN, TRACKED gate withheld from registration. Probed by invoking it the way pre-commit actually will (positional staged filenames, since pass_filenames defaults true with no always_run set -- its 'files' trigger only scopes WHICH commits run it, not whether pre-commit still passes matched filenames positionally): argparse rejects the positional filename with 'error: unrecognized arguments: <path>' (exit 2), because its parser only defines --ticket/--ac-store with no positional or catch-all form. Registering it as-is would block every commit touching a staged ticket, here and downstream (KI-CG-20260831-0713). It is intended to become a real gate once its CLI accepts (or ignores) staged-filename arguments; an AC is being authored to fix the argparse setup and re-register it."
+    },
+    {
+      "script": "check_outcome.py",
+      "ground": "BP-100n-4-i declared non-gate: a shared library module (declares the INDETERMINATE/reason= outcome vocabulary other commit_guardian checks emit) with no __main__ entry point; it is imported by other checks, never itself invoked as a gate."
+    },
+    {
+      "script": "check_complexity.py",
+      "ground": "BP-100n-4 correction: FUNCTIONAL, not broken -- distinct from the six argparse/NameError crashes above. It would run cleanly if registered: invoked positionally (pass_filenames defaults true, no files/always_run set) it parses staged filenames and reports without crashing. It is withheld from registration solely because this repository currently carries 65 functions over the complexity.max_score threshold (15) across scripts/ and templates/scripts/commit_guardian/, including _build_agents_map (76, generate_ticket_from_ac.py), _compute_output_mappings (70, build_helpers.py), _check_file (47, check_ac_governance.py), _collect_all (44, knowledge_query.py), and validate_agent_self_description (43, which lived in build_phases.py when that count was taken and moved to build_phases_agent_validation.py in main's #806 size split -- the function and its score are unchanged, only its home). The hook scans `git diff --cached`, so registering it now would block ANY commit that merely stages one of those 65 files, even when the commit does not touch the offending function -- and several are high-traffic modules this branch itself repeatedly commits to. This branch already paid down the 7 over-threshold functions in the four files the reachability census itself depends on, but the remaining 65 are pre-existing debt tracked as separate work, not a permanent exemption: once that debt is paid down (or the threshold/scope is otherwise reconciled), this entry should be removed and check-complexity registered as a real gate. Note the 65 count predates #806's split, which moved functions between files without changing their complexity."
+    },
     {
       "id": "check-paths-integrity",
       "ground": "Targets config/paths.json, one of this package's own internal files. A consumer install may vendor leafcutter-ai/ as an untracked directory or git submodule, in which case this path is never part of the consumer's own tracked tree even though the trigger pattern (^(leafcutter-ai/)?config/paths\\.json$) is correct for both the self-hosted and the tracked-vendor layout."

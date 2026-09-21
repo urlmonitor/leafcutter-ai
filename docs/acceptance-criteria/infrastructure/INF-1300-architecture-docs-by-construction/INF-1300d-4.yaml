@@ -1,0 +1,198 @@
+id: INF-1300d-4
+title: "A kind of picture that obliges a fact only the author has is refused until the author supplies it, never filled in with a stand-in"
+component: infrastructure
+components:
+  - documentation_system
+  - infrastructure
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+created_by: "docs/acceptance-criteria/infrastructure/INF-1300-architecture-docs-by-construction/INF-1300d.yaml"
+criteria: |
+  Given the project's vocabulary declares, for certain kinds of picture, a further
+    fact the document must carry which nothing in the request determines,
+  When a document of such a kind is requested without that fact,
+  Then nothing is written, and the refusal names the kind, names the fact that
+    kind obliges, and says what sort of value it takes,
+  And the fact is never written with a stand-in: not an example, not an empty
+    entry, not a value copied from another document, and not a value guessed from
+    the component or the title,
+  And given the same request supplying that fact,
+  When the document is produced,
+  Then it carries the supplied value, and the produced document passes the
+    project's full set of commit-time checks unmodified,
+  And which kinds oblige which facts is read from the project's declaration at the
+    moment of the request, so a kind that stops obliging a fact stops being
+    refused for it, and a kind that starts obliging one starts being refused
+    without anything else changing.
+depends_on:
+  - INF-1300d
+doc_links:
+  - path: docs/acceptance-criteria/infrastructure/INF-1300-architecture-docs-by-construction/INF-1300d.yaml
+    relationship: parent
+    status: exists
+  - path: config/diagram_types.json
+    relationship: specifies
+    status: exists
+    relevance: >-
+      MEASURED. Three declared kinds oblige a further fact and the other eight do not: the
+      data-movement kind obliges the code it concerns, the user-facing kind obliges the
+      surfaces it concerns, and the agent-flow kind obliges the agents it concerns. All
+      three are content the author has and the request's pinned inputs cannot determine.
+  - path: scripts/commit_guardian/check_doc_frontmatter.py
+    relationship: describes
+    status: exists
+    relevance: >-
+      TWO MEASURED FACTS THAT TOGETHER SHAPE THIS RECORD. First, it blocks on any entry in a
+      path-valued field that does not point at something real — so a stand-in value in the
+      code-concerned field turns an acceptable document into a refused one. Second, and
+      recorded as a finding rather than fixed here: it does NOT currently enforce the
+      presence of these obliged facts at all. It validates the kind's name and stops. So the
+      obligation is declared and unenforced, and this record is the only thing in the tree
+      that honours it.
+  - path: docs/acceptance-criteria/infrastructure/INF-1300-architecture-docs-by-construction/INF-1300a-3.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      The other half of one boundary. a-3 forbids the producer from writing a value the
+      request did not supply; this record says what happens instead. Neither is complete
+      alone: a-3 without this leaves the field simply missing, and this without a-3 leaves
+      the stand-in as a tempting alternative to refusing.
+  - path: docs/acceptance-criteria/infrastructure/INF-1300-architecture-docs-by-construction/INF-1300a-1.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      The promise this record protects. a-1 says the produced document is accepted as
+      offered; that promise survives these three kinds only because a document that could
+      not be complete is not produced at all.
+  - path: templates/scripts/commit_guardian/diagram_type_validators.py
+    relationship: describes
+    status: exists
+    relevance: >-
+      RE-MEASURED IN THIS WORKTREE, AND SHARPER THAN RECORDED. validate_diagram_type checks
+      the kind's NAME against the declaration and returns; requires_frontmatter appears in
+      this module only inside a docstring and in no other Python file in the repository. So
+      the obliged facts are enforced by nothing at all.
+  - path: docs/architecture/adrs/ADR-013-portable-skill-script-deployment-boundary.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      Places the producing script's source under templates/scripts/, so the refusal honours
+      the declared obligation in a consumer install and not only here.
+assigned_agent: python-coder
+estimated_complexity: M
+change_target: code
+risk_surface: contract_boundary
+test_required: true
+it_requirements:
+  - "Which kinds oblige which facts, and the names of those facts, must be read from the requires_frontmatter list in config/diagram_types.json at the moment of the request. No list of three kind names and no list of field names may be held in the producer or in the tests."
+  - "A request for an obliging kind without the fact is a refusal under INF-1300d-3's contract: nothing written anywhere, non-zero outcome, and a message naming the kind, the obliged field and the sort of value it takes."
+  - "No stand-in may ever be written for an obliged fact: not an example, not an empty list, not a value copied from a neighbouring document, not a value inferred from the component or the title. Omitting the field entirely is equally forbidden - it passes today's checks and teaches every future author that the declared obligation is optional."
+  - "When the fact is supplied, the produced document must carry the supplied value verbatim and must be accepted by the project's full commit-time check set as produced."
+  - "MEASURED CONSTRAINT ON THE OBSERVATION: the check set cannot see this obligation. frontmatter_validators.validate_paths only tests related_docs, related_code and architecture_diagrams for path existence, and nothing anywhere reads requires_frontmatter. So related_surfaces and related_agents are unobserved by every hook, and even related_code is only observed when a value is present. 'The checks passed' is therefore not evidence for this AC's first arm; the presence, absence and content of the obliged field must be asserted directly against the produced artifact."
+  - "The path-valued case explains why omission-plus-placeholder is the worst option available: a sample path in related_code turns a document the project would have accepted into one it blocks, so the most helpful-looking implementation produces exactly the outcome INF-1300a exists to prevent."
+  - "Reading the declaration must follow the project error handling policy in CLAUDE.md, and a declaration that cannot be read is a refusal rather than an assumption that nothing is obliged."
+test_spec:
+  - name: test_obliging_kind_without_the_fact_is_refused_with_nothing_written
+    target_dir: unit_tests/scaffold/
+    framework: pytest
+    type: integration
+    angle: failure
+    description: "Enumerate the obliging kinds from the declaration, not from a list in the test. For each, request a document without the fact; assert a whole-project snapshot difference is empty and the refusal names the kind, the obliged field and the sort of value it takes."
+  - name: test_no_stand_in_value_is_ever_written_for_an_obliged_fact
+    target_dir: unit_tests/scaffold/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    description: "Assert directly against the produced artifact - never via the hooks - that no document exists carrying the obliged field with an example path, an empty list, a value copied from a neighbouring document, or a value derived from the component or title."
+  - name: test_supplied_fact_appears_verbatim_and_the_document_passes_the_real_hooks
+    target_dir: unit_tests/scaffold/
+    framework: pytest
+    type: integration
+    angle: deployed
+    description: "Supply the fact with a value that points at something real, git add the produced document in the temporary repo, and run the real check_doc_frontmatter.py and check_diagram_naming.py over it. Assert exit 0 with a non-zero inspected count, and that a deliberately broken control document is rejected by the same hooks in the same harness."
+  - name: test_placeholder_path_would_be_blocked_by_the_real_frontmatter_hook
+    target_dir: unit_tests/scaffold/
+    framework: pytest
+    type: integration
+    angle: boundary
+    description: "Hand-author a document carrying a sample path in the path-valued obliged field, stage it, and run the real frontmatter hook. Assert it is rejected. This pins the measurement behind the no-stand-in rule rather than leaving it as an assertion in a notes field."
+  - name: test_obligation_set_follows_the_declaration_when_it_changes
+    target_dir: unit_tests/scaffold/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    description: "In a scratch declaration, make a kind that obliged nothing oblige a fact, change nothing else, and request it without the fact: assert it is now refused. Then remove an obligation and assert the same request is now accepted. This is the pair that separates reading the declaration from a private list of three kind names, which is correct today and wrong at the next change."
+test_rationale: >-
+  This record's first arm is unobservable through the project's own checks, and that is a
+  measured fact rather than a caution: nothing in the repository reads requires_frontmatter,
+  and of the three obliged fields only related_code is touched by any validator - and only
+  when a value is present. A test that produced a document without the fact and concluded
+  'the hooks passed, so it is fine' would therefore report success on precisely the defect
+  this record exists to forbid. So the obliged field's presence and content are asserted
+  directly against the produced artifact, and the hooks are used only where they genuinely
+  discriminate: proving a supplied value is acceptable, and proving a placeholder is not.
+  The last descriptor mutates a scratch declaration because the three-kind obligation set is
+  correct today and a private copy of it passes every single-run assertion.
+delivers_to:
+  agent: python-coder
+  ac_id: INF-1300d-3
+  contract: "The missing-obliged-fact refusal reason, supplied as one of the separately observed cases INF-1300d-3's contract must hold for: nothing written, non-zero outcome, and a message naming the kind, the obliged field and the sort of value it takes."
+expects_from:
+  ac_id: INF-1300d-1-i
+  contract: "The declared vocabulary read at request time, including each kind's requires_frontmatter list, so which kinds oblige which facts follows the declaration rather than a list held in the producer."
+origin_agent: BrainCandy
+created: 2026-09-14
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-09-14'
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  THIS IS WHERE THE L0's THIRD GAP IS ACTUALLY SETTLED. The L0 records that three things the
+  produced document needs are not among the pinned inputs, and that a BA must choose between
+  widening the inputs and bounding the promise. Two of the three — the document above, and
+  the originating ticket — are widened, because the author already has them at the moment of
+  asking (see INF-1300a-2). The third cannot be widened away in the same sense, because its
+  value is not an administrative fact but a claim about what the diagram concerns, and the
+  request is made before the diagram is drawn. So it is settled by refusal: the fact is a
+  required input for those kinds, and without it nothing is produced.
+
+  WHY NOT A STAND-IN, STATED AS A MEASUREMENT RATHER THAN A PREFERENCE. The temptation is to
+  write a placeholder so the document exists and the author fills it in. In this project that
+  is not merely untidy — the frontmatter check blocks on an entry in a path-valued field that
+  points at nothing, so the placeholder converts an acceptable document into a refused one.
+  The most helpful-looking implementation produces exactly the outcome INF-1300a exists to
+  prevent.
+
+  WHY NOT SIMPLY OMIT THE FIELD, WHICH WOULD PASS TODAY. Measured: no commit-time check
+  currently enforces these obliged facts. A document of one of those three kinds that omits
+  the fact passes everything. Omission is therefore the cheapest implementation and it is
+  invisible — and it is wrong, because the project has declared the obligation, and a
+  generator that quietly produces documents violating a declared obligation teaches every
+  future author that the obligation is optional. That the enforcing check is missing is a
+  real finding and is recorded on INF-1300a-4 as well; closing it belongs to the guardrail
+  surface and is outside this L0's fence. This record honours the declaration regardless of
+  whether anything polices it, which is also why its observation cannot lean on the check
+  set.
+
+  FALSIFIABILITY. For each kind the declaration marks as obliging a fact — enumerated from
+  the declaration, not listed here — make two requests. Without the fact: the record is
+  falsified if anything is written, if the refusal does not name both the kind and the fact,
+  or if a document appears carrying a stand-in. With the fact: falsified if the value does
+  not appear, or if the produced document fails any of the project's checks. Then change the
+  declaration so a kind that obliged nothing now obliges a fact, change nothing else, and
+  repeat: falsified if the request is still accepted without it. That last pair is what
+  separates reading the declaration from carrying a private list of three kind names, and the
+  private list is correct today and wrong at the next change. Note that the check set cannot
+  observe the first arm, since nothing in it enforces the obligation — assert it directly
+  against the produced artifact.
+
+  NOT AUTHORED HERE, BY DESIGN: assigned_agent, estimated_complexity, it_requirements,
+  test_spec, test_rationale, delivers_to and expects_from. Those are the IT PO's.

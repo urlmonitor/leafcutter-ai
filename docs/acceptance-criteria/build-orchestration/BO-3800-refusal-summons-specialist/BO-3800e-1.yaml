@@ -1,0 +1,248 @@
+id: BO-3800e-1
+title: "A refusal that asks for no craft engages no restructuring specialist and recovers exactly the way it does before this capability exists"
+component: build-orchestration
+components:
+  - build_orchestration
+  - supervisor_system
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a ticket is being driven and delivery is refused with an outcome stating
+    that the demand is one the author may discharge inside this change,
+  When the run adjudicates that refusal,
+  Then no restructuring specialist appears anywhere in the ordered record of
+    parties the run engaged,
+  And the parties engaged, the order they were engaged in, and the outcome of the
+    delivery are the same as they are for that same refusal on the same ticket
+    before this capability exists,
+  And given instead delivery is refused by a standard whose outcome states no
+    disposition at all — the shape every standard that refuses today has, naming
+    no craft,
+  When the run adjudicates that refusal,
+  Then no restructuring specialist appears in the record of parties the run
+    engaged,
+  And the parties engaged, their order, and the outcome of the delivery are the
+    same as they are for that refusal before this capability exists — so a
+    standard that has never heard of a disposition is not made to behave
+    differently by this capability's arrival.
+depends_on:
+  - BO-3800e
+doc_links:
+  - path: docs/acceptance-criteria/build-orchestration/BO-3800-refusal-summons-specialist/BO-3800e.yaml
+    relationship: parent
+    status: exists
+  - path: docs/acceptance-criteria/build-orchestration/BO-210-precommit-safety-net/BO-210.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      THE POPULATION THIS RECORD PROTECTS, IN FULL. BO-210 is approved, active and priority
+      high: on a pre-commit hook failure the fixer is the SAME agent type that authored the
+      work, carrying its original design context, and the commit is retried once. BO-3800
+      narrows that clause for exactly one class and for nothing else. This record is the
+      observable guarantee of the remainder — both arms above are BO-210's population, and
+      BO-210's three children must stay green when BO-3800 lands. Where the boundary falls
+      is not judged here: it follows the disposition the refusing standard itself states.
+  - path: docs/acceptance-criteria/build-orchestration/BO-210-precommit-safety-net/BO-210c.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      THE ROUTE THAT MUST STILL FIRE, UNCHANGED. BO-210c's re-dispatch of the originating
+      coder with its context capsule, and its single commit retry, are what "exactly as it
+      does today" means for the first arm above. An implementation that reworks the routing
+      to admit a new disposition and incidentally changes how the existing route behaves
+      fails here even when every positive arm of BO-3800 passes.
+  - path: docs/acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/GE-127f-3.yaml
+    relationship: depends_on
+    status: exists
+    relevance: >-
+      OWNS WHERE THE BOUNDARY FALLS, WHICH THIS RECORD READS AND NEVER SECOND-GUESSES —
+      including that the author-clearable band is never empty, which is what makes the first
+      arm above a population rather than a hypothetical. Nothing here restates the threshold,
+      its value, or the arithmetic behind it.
+  - path: docs/acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/GE-127f.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      THE COST DISCIPLINE THIS RECORD INHERITS FROM THE OTHER SIDE OF THE SEAM. GE-127f's
+      second user decision — "zero addition costs nothing" — is called load-bearing rather
+      than a courtesy, precisely so an urgent one-line correction in a very large file stays
+      as cheap as it is today. Dispatching a restructuring specialist to remove two lines for
+      a typo fix is the same failure one layer up. The measurable half of that promise is
+      BO-3800e-2's; the routing half is this record's.
+  - path: CLAUDE.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      "Gate / Workflow ACs — Verify Behaviorally, Not by Grep". An assertion that a routing
+      table has no entry for the specialist on these hooks is a grep on configuration; it
+      stays green on a run that engages one by another path. Both arms above are read from
+      the parties a real run actually engaged, and both are compared against a run of the
+      same ticket without this capability.
+delivers_to: null
+expects_from: null
+assigned_agent: python-coder
+estimated_complexity: M
+package_surface: false
+declares_side_effect: false
+it_requirements:
+  - "THE BO-210a SEAM IS DECIDED: route on the DISPOSITION the refusal states, never on the
+    hook id, and leave blocking_hook_ids unchanged. The full decision and its reasoning are
+    recorded on BO-3800b-2's it_requirements. It binds here because keying the new class on
+    a hook id reddens this record's first arm BY CONSTRUCTION: check-file-size is a single
+    hook id that emits BOTH dispositions, so a hook-keyed route sends every author-clearable
+    refusal from that same hook to the specialist as well."
+  - "blocking_hook_ids must be unchanged by this work. That list answers which hooks GATE a
+    commit; a disposition does not change whether a hook gates — it gates either way. Giving
+    the list a second job destroys the 'sole authority on which hooks gate a commit' property
+    BO-210a is approved and active on."
+  - "The disposition must be read from the refusal's own output. Its ABSENCE must resolve to
+    the existing route and never to the new one. This is the second arm's entire subject and
+    it governs every gate in the guardrail suite, all of which state no disposition today."
+  - "THE BASELINE MUST BE MEASURED, NOT DERIVED FROM BO-210c's TEXT. 'Exactly as today' is a
+    comparison against what the unmodified driver observably does now on a gating-hook
+    refusal, captured by running it through the same harness on the same fixture. Do not
+    build the expected baseline from BO-210 or BO-210c's criteria: BO-210c is work_status
+    todo, and templates/skills/precommit-autofix/SKILL.md Step 4a.3 instructs the commit
+    agent — a depth-1 phase agent under ADR-019 — to dispatch the originating coder with the
+    Agent tool, while its own re-dispatch prompt tells that agent it is 'running at depth 2'
+    and that any Agent call it makes 'will be silently dropped'. If the measured baseline
+    turns out to engage nobody, that is a finding to escalate before this record is frozen
+    around it, not a behaviour to preserve."
+  - "The comparison run must be produced by the same driver with the new branch not taken, in
+    the same harness, on the same fixture. A hand-written list of expected agents is not a
+    baseline — it makes the arm assert the test author's belief rather than the previous
+    behaviour."
+  - "No observable work may be added on the author-clearable path: same parties, same order,
+    same delivery outcome, and no extra file read, registry read or subprocess."
+  - "Errors follow the project error handling policy. A delivery outcome that cannot be read
+    must surface as a named stop, never as an absent disposition."
+test_required: true
+test_spec:
+  - name: test_author_clearable_refusal_dispatch_record_is_identical_to_the_baseline_run
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "Drive the same ticket and the same author-clearable refusal through the unmodified driver and the changed driver; the ordered list of agents dispatched and the delivery outcome are identical. Equality against the baseline is what makes 'no restructuring specialist appeared' assertable without naming one."
+  - name: test_refusal_stating_no_disposition_at_all_matches_the_baseline_run
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "A refusal carrying no disposition field at all — the shape every standard that refuses today has — produces the same parties, the same order and the same outcome as the baseline run."
+  - name: test_absent_disposition_is_not_read_as_the_specialist_case
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: "A disposition field that is absent, empty or blank takes the existing route. This is the arm that catches an implementation reading absence as the new class — it passes arm one, where the field is present and says author."
+  - name: test_over_broad_summons_injection_reddens_both_arms_here
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: "Named mutation THE OVER-BROAD SUMMONS — act on any refusal without reading the stated disposition and without requiring one. Both arms here go RED; BO-3800a-1 and BO-3800e-2 STAY GREEN. The declared coupling to BO-3800b-2's paired arm is reported, not suppressed; the stay-green halves naming BO-3800b-1, BO-3800c-1, BO-3800d-1 and BO-3800d-2 are deferred with those records (INF-800f)."
+  - name: test_a_hook_absent_from_the_gating_list_still_engages_nobody
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: seam
+    description: "Drive a refusal from a hook that is not in blocking_hook_ids and observe that nothing is engaged at all — proving the gating list is still the sole authority on which hooks gate, and the new route is selected only after that list has said the hook gates. Asserted from a run, never by reading the config file."
+  - name: test_the_negative_promise_is_reachable_from_the_drivers_own_top_level_body
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: reachability
+    surface_invoked: templates/workflows-js/build-feature.js
+    description: "Every arm above is driven through unit_tests/prompt_assembly/_driver_harness.py executing build-feature.js's own top-level body — not an extracted helper, not a source scan."
+test_rationale: >-
+  This record is specifiable TODAY, before INF-800f, because every one of its assertions is
+  an EQUALITY AGAINST A BASELINE RUN rather than a statement about the specialist. "No
+  restructuring specialist appears in the record of parties the run engaged" is proved by
+  showing the dispatch record is identical, element for element and in order, to the record
+  the unmodified driver produced on the same fixture — which requires no knowledge of the
+  specialist's agent id, its phaseOrder position, or the shape of its result. That is the
+  BP-900c-4-i construction the store already uses: compare two runs and require the answer to
+  hold, rather than assert a single run against a hand-written expectation. A weaker shape is
+  insufficient in a specific and already-demonstrated way: an assertion that the routing
+  table has no entry mapping these hooks to the specialist is a grep on configuration and
+  stays green on a run that engages one by another path, and BO-3800e-1's own notes name that
+  as the likely wrong test. The baseline itself carries a caveat recorded in it_requirements
+  and it is load-bearing: it must be MEASURED from the unmodified driver, not reconstructed
+  from BO-210c's criteria, because BO-210c is unbuilt and its specified mechanism dispatches
+  from depth 1 to depth 2, which ADR-019 says is silently dropped. Freezing an assumed
+  baseline would make this record certify a behaviour nobody has observed.
+origin_agent: business-analyst
+created: 2026-09-14
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: internal
+notes: |
+  THIS IS THE RECORD THE TREE CANNOT BE BUILT CORRECTLY WITHOUT, AND THE ONE MOST LIKELY TO
+  BE DROPPED AS "NOT A REQUIREMENT". Every other record in BO-3800 is satisfied by a system
+  that engages a restructuring specialist on EVERY refusal. That system is cheaper to build,
+  passes every positive arm of BO-3800a, b, c and d, and is a serious regression in three
+  independent ways: it dispatches a restructuring specialist to remove two lines for a typo
+  fix; it collides head-on with BO-210's same-agent promise across that promise's entire
+  population, which is approved, active and priority high with three approved children; and
+  it makes the urgent one-line correction expensive in exactly the way GE-127f's "zero
+  addition costs nothing" decision exists to prevent. Without this record the cheapest
+  implementation of this tree is the one that breaks the most.
+
+  IT IS ALSO THE SEPARABILITY EVIDENCE FOR THE WHOLE TREE, AND THAT IS A REQUIRED OBSERVATION
+  RATHER THAN A CLAIM. Its named mutation below is the one injection in this tree whose
+  stay-green half spans every sibling: under the over-broad summons, BO-3800a-1, BO-3800b-1,
+  BO-3800c-1, BO-3800d-1 and BO-3800d-2 must ALL stay green while both arms here go red. If
+  that run reddens a sibling as well, the siblings were never independent of this one and
+  the tree is one promise written several times — which is a FAILURE of the observation, not
+  a stronger result. Conversely, every other record in this tree names both arms of this one
+  in its own stay-green half, which is the other direction of the same evidence.
+
+  WHAT "EXACTLY AS TODAY" MEANS HERE, SO IT IS NOT READ AS A FREEZE. It means the parties
+  engaged, their order, and the delivery outcome are unchanged. It is NOT a claim that no
+  code changes, and no clause above is about which files were edited — BO-3800e's notes
+  forbid decomposing it that way. The comparison is therefore between two runs of the same
+  ticket and the same refusal, one with the capability and one without, which is the only
+  construction that makes "as today" observable rather than asserted.
+
+  THE SECOND ARM COVERS THE POPULATION NOBODY WILL THINK TO TEST. Every standard in the
+  repository that refuses today states no disposition at all, because the disposition is a
+  new fact GE-127f-3 introduces for one rule. An implementation that reads the disposition
+  field and treats its ABSENCE as the specialist case — or that treats any refusal reaching
+  the new code path as a specialist case — passes the first arm, because there the field is
+  present and says "author". Only the second arm catches it, and it is the arm that governs
+  every other gate in the guardrail suite.
+
+  THE BOUNDARY WITH BO-3800b-2, STATED SO THE TWO ARE NOT READ AS DUPLICATES. BO-3800b-2's
+  paired arm asserts that the party engaged MOVES when the disposition moves; it says nothing
+  about whether the author-clearable route still behaves as it did. This record asserts that
+  it does — same parties, same order, same outcome as a run without the capability — and adds
+  the no-disposition population BO-3800b-2 never touches. A build can pass BO-3800b-2's pair
+  and fail both arms here.
+
+  NAMED MUTATION — EXECUTE IT, DO NOT MERELY DESCRIBE IT. Written so the IT PO can lift it
+  verbatim into a test descriptor.
+
+  THE OVER-BROAD SUMMONS. MUTATION: on any refusal at delivery, engage the restructuring
+  specialist, without reading the stated disposition and without requiring one to be present.
+  MUST GO RED: both arms of this record.
+  MUST STAY GREEN: every arm of BO-3800a-1, BO-3800b-1, BO-3800c-1, BO-3800d-1 and
+  BO-3800d-2, and both arms of BO-3800e-2 — the over-broad build satisfies all of them, which
+  is the whole reason this record exists. An injection run that reddens any of those is a
+  FAILURE of this descriptor even though it looks like a stronger result.
+  EXPECTED COUPLING, TO BE REPORTED RATHER THAN SUPPRESSED: BO-3800b-2's paired
+  author-clearable arm also reddens under this injection, necessarily, because that arm and
+  this record's first arm observe the same run from two angles. Record it; do not suppress it
+  and do not treat it as evidence the two records collapse.
+
+  NOT AUTHORED HERE, BY DESIGN: assigned_agent, estimated_complexity, it_requirements,
+  test_spec, test_rationale and declares_side_effect. Those are the IT PO's, which runs after
+  this pass.

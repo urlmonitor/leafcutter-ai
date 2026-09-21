@@ -1,0 +1,159 @@
+id: INF-1300c-3
+title: "Listing the same document twice updates its entry rather than adding a second one"
+component: infrastructure
+components:
+  - documentation_system
+  - infrastructure
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+created_by: "docs/acceptance-criteria/infrastructure/INF-1300-architecture-docs-by-construction/INF-1300c.yaml"
+criteria: |
+  Given the index already lists a document at a given place in the collection,
+  When the listing is requested again for that same place, with a changed title or
+    a changed state,
+  Then the existing entry is brought up to date where it already sits, and no
+    second entry for that place appears,
+  And every other entry in the index is unchanged, character for character,
+  And given the listing is requested twice with nothing changed in between,
+  When the index is read after each request,
+  Then the index is identical after the second request to what it was after the
+    first,
+  And an entry whose document has been moved or removed from the collection is not
+    left pointing at nothing without that being visible to a reader of the index.
+depends_on:
+  - INF-1300c
+doc_links:
+  - path: docs/acceptance-criteria/infrastructure/INF-1300-architecture-docs-by-construction/INF-1300c.yaml
+    relationship: parent
+    status: exists
+  - path: docs/acceptance-criteria/infrastructure/INF-1300-architecture-docs-by-construction/INF-1300c-1.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      Owns the entry appearing at all, on a first listing into an index that does not yet
+      hold this document. This record owns every listing after the first, which is the case
+      an implementation written against c-1 alone gets wrong by construction.
+  - path: docs/acceptance-criteria/infrastructure/INF-1300-architecture-docs-by-construction/INF-1300c-1-i.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      Requires that an entry's stated state can be brought into agreement with the document
+      when the document's state changes. That is a second listing of the same document, so
+      it is unreachable unless this record holds.
+  - path: docs/architecture/adrs/ADR-013-portable-skill-script-deployment-boundary.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      Places the producing script's source under templates/scripts/, so the idempotent
+      update reaches a consumer install and not only this repository.
+  - path: docs/architecture/diagrams/README.md
+    relationship: specifies
+    status: exists
+    relevance: >-
+      States that two documents collide on the tier-and-number pair regardless of slug. That
+      pair is therefore the entry's identity: a re-listing under a changed title is the same
+      entry, and matching on title or on link text would produce the duplicate this record
+      forbids.
+assigned_agent: python-coder
+estimated_complexity: M
+change_target: code
+risk_surface: safety
+test_required: true
+it_requirements:
+  - "An entry's identity is the document's tier-and-number pair, matching the collection's own collision rule. Matching on title, slug or link text would treat a renamed document as a new one and produce the duplicate this record forbids."
+  - "A listing that changes nothing must leave the index byte-identical, including whitespace, line endings and entry order. Rewriting the file with equivalent content does not satisfy this: the observable is the bytes, because an index that churns on a no-op trains reviewers to stop reading its diffs."
+  - "Updating one entry must not reformat, reorder or re-serialise any other entry. Read-modify-write over the whole index is acceptable only if untouched entries survive byte for byte."
+  - "An entry whose target no longer resolves must be visible as broken to a reader of the index. Detecting moves across the collection is explicitly out of scope; the requirement is only that a broken entry does not read as sound."
+  - "Update must be atomic with respect to the index file: an interrupted or failing update must leave the previous index intact rather than a truncated one."
+  - "Errors reading or writing the index must follow the project error handling policy in CLAUDE.md."
+  - "Re-listing must complete in under 2 seconds for an index of up to 500 entries."
+test_spec:
+  - name: test_relisting_with_a_changed_title_updates_in_place
+    target_dir: unit_tests/scaffold/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    description: "In a git-initialised temporary project whose index holds several entries, list a document, then list the same tier-and-number destination again with a changed title. Assert exactly one entry exists for that destination and that it carries the new title."
+  - name: test_relisting_leaves_every_other_entry_byte_identical
+    target_dir: unit_tests/scaffold/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    description: "Capture the index bytes before the second listing; after it, remove the updated entry's lines from both captures and assert the remainders are byte-identical. This is the arm that catches a read-re-derive-write implementation that silently reformats untouched entries."
+  - name: test_second_identical_listing_is_a_byte_level_no_op
+    target_dir: unit_tests/scaffold/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    description: "Run the identical listing twice with nothing changed in between and assert the index file's bytes after the second run equal the bytes after the first, including trailing newline and entry order."
+  - name: test_entry_whose_target_is_gone_reads_as_broken
+    target_dir: unit_tests/scaffold/
+    framework: pytest
+    type: integration
+    angle: failure
+    description: "Delete a listed document from the temporary collection, re-run a listing for a different document, and assert the stale entry is visibly marked as not resolving rather than presented as a sound link."
+  - name: test_index_survives_a_failed_update_intact
+    target_dir: unit_tests/scaffold/
+    framework: pytest
+    type: integration
+    angle: failure
+    description: "Force the update to fail partway (for example by making the index read-only after it is opened) and assert the index on disk is byte-identical to its pre-run state, with no truncated or temporary file left beside it."
+test_rationale: >-
+  Every descriptor here compares bytes rather than parsed structure, and that choice is the
+  whole content of the test contract. An implementation that loads the index, re-derives it
+  and writes it back satisfies every structural assertion - the right entries are present
+  with the right fields - while reformatting entries nobody asked it to touch and churning
+  the file on a no-op. Only an exact comparison sees it. A direct-import unit test over an
+  update function is insufficient for the same reason it is insufficient in INF-1300c-1: the
+  property is about a file's bytes across two runs of a process, not about a return value.
+delivers_to:
+  agent: python-coder
+  ac_id: INF-1300c-1-i
+  contract: "In-place refresh of an existing entry keyed on the tier-and-number pair, so a document whose declared state later changes updates the entry it already has instead of gaining a second one."
+expects_from:
+  ac_id: INF-1300c-1
+  contract: "An entry written at a position determined by a stated (tier, number) ordering rule, and identified by the document's tier-and-number destination rather than by its title or link text."
+origin_agent: BrainCandy
+created: 2026-09-14
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-09-14'
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  WHY THIS IS A SEPARATE BEHAVIOUR AND NOT A REFINEMENT OF INF-1300c-1. The L1's benefit is
+  that an index stays complete without anyone remembering to maintain it — the
+  documentation_rationale on INF-1300c says so in terms. An index that only ever grows is
+  not maintained, it is accumulated: it duplicates every document that is ever re-listed,
+  and after a handful of state changes a reader cannot tell which of three entries for the
+  same document is current. That failure cannot happen on a first listing, so c-1's criteria
+  cannot see it.
+
+  FALSIFIABILITY. Start from a scratch index holding several entries. List a document, then
+  list it again with a changed title. Read the index: the record is falsified by a second
+  entry for that place, by the change not appearing, or by any other entry differing by so
+  much as a character. Then list twice with nothing changed and compare the index against
+  itself between the two runs — falsified if the file differs at all, including in
+  whitespace or ordering, because an index that churns on a no-op change makes every
+  unrelated commit look like an index edit and trains reviewers to stop reading it. The
+  byte-for-byte comparison of the untouched entries is the arm with teeth: an implementation
+  that reads the index, re-derives it and writes it back satisfies every other clause here
+  while quietly reformatting entries nobody asked it to touch, and only an exact comparison
+  can see that.
+
+  THE LAST CLAUSE IS DELIBERATELY WEAK AND THAT IS THE POINT. An entry pointing at a document
+  that has moved must not be silently wrong, but this record does not require the index to
+  chase documents around the collection — nothing in this tree produces a move, and a
+  requirement to detect one would either be unimplementable from a production step or would
+  pull drift detection inside the L0's fence, which its scope statement forbids. What is
+  required is only that such an entry is visible as broken rather than reading as sound.
+
+  NOT AUTHORED HERE, BY DESIGN: assigned_agent, estimated_complexity, it_requirements,
+  test_spec, test_rationale, delivers_to and expects_from. Those are the IT PO's.
