@@ -4,7 +4,7 @@ description: "Human-curated, one-line-per-page orientation to every file in docs
 type: reference
 status: active
 created: 2026-09-14
-last_updated: 2026-09-14
+last_updated: 2026-09-21
 components:
   - documentation_system
 related_docs:
@@ -79,6 +79,7 @@ below by hand.
 | [fixture-policy.md](fixture-policy.md) | Which test fixtures must be produced by the real serializer, the round-trip requirement for parser/validator tests, and the real-artifact behavioral-check rule. |
 | [proof-claims-and-completeness.md](proof-claims-and-completeness.md) | For each of the seven `# angle:` test-proof kinds: what the claim asserts, what it does NOT entitle a reader to conclude, and where the excluded question is actually settled. |
 | [documentation-coverage-guarantee.md](documentation-coverage-guarantee.md) | How the `documentation_gates` trigger policy, the `documentation-verifier` phase, and the `## Agent Contracts` brief combine to guarantee demanded documentation is real, not a placeholder. |
+| [negative-control-liveness.md](negative-control-liveness.md) | The `negative_control` declaration shapes, the liveness runner's behavior, and the four `currently.state` values (`passing`/`failing`/`blocked`/`unverified`) a report reader uses to tell a genuine rejection from a launch failure. |
 
 ## Code Review (Code-Smell Pipeline)
 

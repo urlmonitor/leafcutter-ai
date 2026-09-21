@@ -5,11 +5,12 @@ flight_level: L3-Component
 status: active
 type: reference
 created: 2026-06-08
-last_updated: 2026-09-07
+last_updated: 2026-09-21
 components:
   - commit_guardian
   - git_vcs_operations
 related_docs:
+  - docs/reference/negative-control-liveness.md
   - docs/architecture/adrs/ADR-045-observed-refusal-establishes-protection.md
   - docs/architecture/adrs/ADR-038-commit-guardian-shared-change-set-derivation.md
   - docs/architecture/adrs/ADR-037-whole-collection-uniqueness-pass.md

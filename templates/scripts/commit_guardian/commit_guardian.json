@@ -1414,6 +1414,36 @@
         "script": "check_ac_done_on_merge.py",
         "description": "After a merge, marks each source AC work_status: done for every ticket the merge moved to status: done.",
         "_comment": "GE-120h-3: never registered in either manifest, so no AC has ever been auto-closed on merge. Unlike the four gates above it consults NEITHER argv NOR the staged set — it reads `git diff HEAD~1 HEAD` on the post-merge stage. Cannot block: main() returns 0 unconditionally (:213) and the __main__ guard swallows OSError/ValueError into sys.exit(0) (:219-224). Note the call direction: this script INVOKES scripts/ac_store/mark_ac_done.py by subprocess (:148-162); mark_ac_done.py:6 naming this hook is a back-reference, not an invocation, and has been misread as one. FIRST post-merge entry in this manifest — build_precommit.py renders the stage verbatim, but the git shim is installed by install_pre_commit_shims.collect_stages, which only setup_ticket_worktree.py calls, so an existing checkout that never ran it has no post-merge shim and this gate stays silent there. Verified present in this repository's .git/hooks/post-merge (a genuine pre-commit shim, --hook-type=post-merge)."
+      },
+      {
+        "id": "check-negative-controls",
+        "tier": "judgment",
+        "name": "Check Negative Controls (liveness of declared refusals)",
+        "entry": "python {{config.output_root}}/scripts/commit_guardian/run_hook.py {{config.output_root}}/scripts/commit_guardian/check_negative_controls.py",
+        "language": "system",
+        "stages": [
+          "pre-commit"
+        ],
+        "pass_filenames": false,
+        "change_set_source": "handed_by_commit_path",
+        "always_run": true,
+        "entry_point": "{{config.output_root}}/scripts/commit_guardian/run_hook.py {{config.output_root}}/scripts/commit_guardian/check_negative_controls.py",
+        "negative_control": {
+          "input": "--self-check-empty-population",
+          "command": "python {{config.output_root}}/scripts/commit_guardian/run_hook.py {{config.output_root}}/scripts/commit_guardian/check_negative_controls.py --self-check-empty-population",
+          "expected_result": "non-zero exit; the runner MUST refuse to report a clean sweep when it examined zero checks (ADR-045 section 7)",
+          "currently": {
+            "state": "unverified",
+            "observed": "2026-09-21",
+            "evidence": [
+              {
+                "command": "n/a - not yet run",
+                "output": ""
+              }
+            ]
+          }
+        },
+        "_comment": "GE-120f-1 / ADR-045 section 6a: this runner is a hooks_manifest gate like every other and is NOT exempt from the regime it enforces. Its own negative_control's known-bad input is the --self-check-empty-population flag, whose observable rejection is refusing to report a clean sweep over a registration surface with zero invokable entries -- the ADR section 7 failure mode this whole family exists to guard against. ADR-045 section 6b's independent guard (the runner's existence and reachability pinned WITHOUT routing through this negative_control) lives in unit_tests/portability/test_ge_120f_1.py's test_ge120f1_runner_is_registered_and_reachable_independently_of_its_own_regime, deliberately not here."
       }
     ]
   },

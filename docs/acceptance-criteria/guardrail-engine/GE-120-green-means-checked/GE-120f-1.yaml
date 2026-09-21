@@ -354,8 +354,17 @@ superseded_by: null
 covered_by:
   - GE-120f-1-i
   - GE-120f-1-ii
+  - unit_tests/portability/test_ge_120f_1_alter_and_pairing.py
+  - unit_tests/portability/test_ge_120f_1_deployed_and_gate.py
+  - unit_tests/portability/test_ge_120f_1_reachability_and_regressions.py
 implemented_by:
 - tickets/00_inbox/epics/EPIC-AGuardThatHasNeverSaidNoIsNotCountedAs/01_TICKET-20260914-GE-120f-1.md
+- templates/scripts/commit_guardian/check_negative_controls.py
+- templates/scripts/commit_guardian/commit_guardian.json
+- unit_tests/portability/_ge120f1_harness.py
+- unit_tests/portability/test_ge_120f_1_alter_and_pairing.py
+- unit_tests/portability/test_ge_120f_1_deployed_and_gate.py
+- unit_tests/portability/test_ge_120f_1_reachability_and_regressions.py
 change_target: code
 risk_surface: contract_boundary
 notes: |
