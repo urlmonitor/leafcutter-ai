@@ -234,7 +234,7 @@ TICKET_FM_TICKETS_DIR: str = _get("ticket_frontmatter", "tickets_dir", "tickets"
 # check_ticket_signoff_parity — agent registry
 # ---------------------------------------------------------------------------
 AGENT_REGISTRY_PATH: str = _get(
-    "ticket_signoff_parity", "agent_registry_path", "leafcutter/config/agent_registry.json"
+    "ticket_signoff_parity", "agent_registry_path", "config/agent_registry.json"
 )
 
 # ---------------------------------------------------------------------------
@@ -325,6 +325,17 @@ DECISION HISTORY
   live nested under the existing file_size section so the whole-document
   mapping_keys watcher (which only sees the top-level dotted path "") never
   needs to change.
+- 2026-09-14 [python-coder/KI-CG-024]: Changed AGENT_REGISTRY_PATH default from
+  'leafcutter/config/agent_registry.json' to 'config/agent_registry.json'. The
+  old value does not exist in any deployed layout; the real file is at
+  <project_root>/config/agent_registry.json (mirrors the DOC_FM_COMPONENTS_REGISTRY
+  / load_components_registry() convention already used elsewhere in this file —
+  a plain project-root-relative default, resolved by the caller joining it onto
+  find_project_root()). Because the old default never resolved,
+  load_agent_registry() in _signoff_parity_checks.py always hit its
+  registry-not-found fail-open branch and check_ticket_signoff_parity's check #6
+  (unchecked-tasks parity guard) silently skipped on every ticket commit since
+  the hook was registered.
 - 2026-08-13 12:00 [python-coder]: Changed SECURITY_SCANNER_SCRIPTS_DIR default
   from '.claude/skills/security-scanner/scripts' to
   '.leafcutter/skills/security-scanner/scripts' — a git worktree has the

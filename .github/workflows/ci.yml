@@ -532,7 +532,13 @@ jobs:
         if: github.event_name == 'pull_request'
         run: |
           git fetch --no-tags --depth=1 origin "${{ github.base_ref }}"
-          CHANGED=$(git diff --name-only --diff-filter=ACM "origin/${{ github.base_ref }}"...HEAD -- 'scripts/**/*.py' 'tests/**/*.py' 'unit_tests/**/*.py')
+          # KI-BP-20260831-0620: git pathspec '**/*.py' does NOT match files directly
+          # inside the named directory (e.g. scripts/build.py) -- only files at least
+          # one level deeper. The 'dir/*.py' forms alongside the existing 'dir/**/*.py'
+          # forms are required so top-level scripts are not silently excluded from
+          # mypy, which previously reported SUCCESS while never seeing 64 of 123
+          # tracked scripts, including scripts/build.py.
+          CHANGED=$(git diff --name-only --diff-filter=ACM "origin/${{ github.base_ref }}"...HEAD -- 'scripts/*.py' 'scripts/**/*.py' 'tests/*.py' 'tests/**/*.py' 'unit_tests/*.py' 'unit_tests/**/*.py')
           if [ -z "$CHANGED" ]; then
             echo "No changed Python files under scripts/, tests/, or unit_tests/ — skipping mypy."
             exit 0

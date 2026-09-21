@@ -55,10 +55,18 @@ doc_links:
     relationship: modifies
     status: exists
     relevance: "The store-query surface that must be able to answer 'which records declare no producer', with the examined-count reported alongside the answer."
-  - path: scripts/ac_store/generate_ticket_from_ac.py
+  - path: scripts/ac_store/_gtfa_body.py
     relationship: modifies
     status: exists
-    relevance: "Holds the fallback this criterion makes visible without changing: ac.get('assigned_agent', 'python-coder') at lines 2456, 3195 and 3235. Line 3046 already records a WARN for the ABSENT spelling, but that is a validation-report line rather than a statement on the generated ticket, and it does not fire for the null spelling."
+    relevance: "Builds the ticket body, and holds the fallback this criterion makes visible without changing — ac.get('assigned_agent', 'python-coder') in _build_ticket_body. The 'the producer was defaulted rather than declared' statement has to land here, because this is the module that writes the artifact build-feature.js reads."
+  - path: scripts/ac_store/_gtfa_report.py
+    relationship: modifies
+    status: exists
+    relevance: "Holds the --verify readiness report's WARN 'assigned_agent absent — generator defaults to python-coder'. That line fires only for the ABSENT spelling and goes to the validation report rather than to the generated ticket; this criterion requires the two spellings to read as one state."
+  - path: scripts/ac_store/_gtfa_cli.py
+    relationship: describes
+    status: exists
+    relevance: "The write path carries the second ac.get('assigned_agent', 'python-coder') fallback. Context only for this criterion — changing it belongs to ACS-100i-10-i."
 assigned_agent: python-coder
 estimated_complexity: M
 it_requirements:

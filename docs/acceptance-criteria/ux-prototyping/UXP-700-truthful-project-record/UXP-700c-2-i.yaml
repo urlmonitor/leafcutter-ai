@@ -6,7 +6,7 @@ components:
 level: L3
 status: active
 req_status: approved
-work_status: todo
+work_status: done
 readiness: approved
 priority: medium
 criteria: |
@@ -40,7 +40,8 @@ amended_by:
 superseded_by: null
 covered_by: []
 implemented_by:
-- tickets/00_inbox/TICKET-20260909-UXP-700c-2-i.md
+- docs/product-truth/scripts/validate_product_truth.py
+- unit_tests/product_truth/test_uxp_700c_2_i.py
 change_target: code
 risk_surface: contract_boundary
 test_required: true

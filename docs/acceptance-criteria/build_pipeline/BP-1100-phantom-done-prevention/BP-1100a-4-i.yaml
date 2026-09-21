@@ -23,10 +23,14 @@ criteria: |
 depends_on:
   - BP-1100a-4
 doc_links:
-  - path: scripts/ac_store/generate_ticket_from_ac.py
+  - path: scripts/ac_store/_gtfa_files_touched.py
     relationship: modifies
     status: exists
-    relevance: "Same surface as the parent, and the only file this L3 edits. This case is the parent's rule at its extreme: _extract_paths_from_prose (line 496) is a lexical token scan, so the more emphatically a requirement forbids a file, the more mentions it produces and the more certainly the path is scraped into the surface. The failure gets worse as the requirement gets clearer, which is why it needs its own record. Note the second criterion clause reaches beyond files_touched into the rest of the ticket body — the same file writes both."
+    relevance: "Same surface as the parent. This case is the parent's rule at its extreme: _extract_paths_from_prose is a lexical token scan, so the more emphatically a requirement forbids a file, the more mentions it produces and the more certainly the path is scraped into the surface. The failure gets worse as the requirement gets clearer, which is why it needs its own record."
+  - path: scripts/ac_store/_gtfa_body.py
+    relationship: modifies
+    status: exists
+    relevance: "The second criterion clause reaches beyond files_touched into the rest of the ticket body. Before the generator decomposition that was 'the same file'; the body is now written here, so the two halves of this L3 span two modules."
   - path: docs/acceptance-criteria/build-orchestration/BO-2400-fast-lane-build/BO-2400g-2.yaml
     relationship: related
     status: exists
@@ -41,7 +45,7 @@ doc_links:
 assigned_agent: python-coder
 estimated_complexity: S
 it_requirements:
-  reference_file_path: "scripts/ac_store/generate_ticket_from_ac.py"
+  reference_file_path: "scripts/ac_store/_gtfa_files_touched.py"
   n_location_rule: "1 — the prose-admission decision the parent installs at the caller of _extract_paths_from_prose. This L3 adds no second mechanism; it constrains the parent's rule so that repetition cannot defeat it, and extends the assertion beyond files_touched to the rest of the emitted ticket."
   required_skills:
     - python-coder

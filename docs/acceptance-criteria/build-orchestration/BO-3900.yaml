@@ -1,0 +1,321 @@
+id: BO-3900
+title: "Paths the build workflows resolve, join, compare and hand to agents name the right file on Windows and on POSIX alike"
+component: build-orchestration
+components:
+  - build_orchestration
+level: L2
+status: active
+req_status: draft
+work_status: done
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+change_target: pipeline
+risk_surface: contract_boundary
+package_surface: false
+criteria: |
+  Given /build-feature is driving an epic whose worktree the run resolved, in the
+    spelling git reports on Windows, as
+    `C:/Users/Hendrik/Code/leafcutter/worktrees/uxp-700-tranche-2`
+  And the epic's ticket list names a ticket by the absolute Windows path
+    `C:\Users\Hendrik\Code\leafcutter\worktrees\uxp-700-tranche-2\tickets\00_inbox\epics\EPIC-TruthfulProjectRecord\07_TICKET-20260909-UXP-700a-3.md`
+  When the workflow hands that ticket to its phase agents
+  Then every phase agent receives one absolute path that names that same file
+  And that path contains exactly one drive root — no second `C:` occurs anywhere after
+    its first two characters
+  And no stretch of the worktree path occurs twice in it
+  And it uses one separator spelling throughout, never a mixture of `/` and `\`.
+
+  Given the same run
+  When the same ticket is instead named by the relative path
+    `tickets/00_inbox/epics/EPIC-TruthfulProjectRecord/07_TICKET-20260909-UXP-700a-3.md`,
+    and again by `tickets\00_inbox\epics\EPIC-TruthfulProjectRecord\07_TICKET-20260909-UXP-700a-3.md`,
+    and again by a mixed spelling of the absolute path above
+  Then each is resolved onto the worktree exactly once
+  And all of them reach the phase agents as the same path the absolute form reaches them as.
+
+  Given the same run
+  When a ticket is named by an absolute path outside the worktree —
+    `D:\elsewhere\07_TICKET-x.md`, `d:/elsewhere/07_TICKET-x.md`, or `\\fileserver\share\07_TICKET-x.md`
+  Then that absolute path reaches the phase agents naming that same file
+  And it is never joined onto the worktree or onto any other absolute path.
+
+  Given a run on a POSIX system whose resolved worktree is
+    `/home/henzeh/projects/leafcutter/worktrees/handoff-routing`
+  When tickets are named by `/home/henzeh/projects/leafcutter/worktrees/handoff-routing/tickets/00_inbox/07_TICKET-x.md`,
+    by `tickets/00_inbox/07_TICKET-x.md`, and by `/tmp/elsewhere/07_TICKET-x.md`
+  Then the first two reach the phase agents as the same path inside the worktree
+  And the third reaches them unchanged, never joined onto the worktree.
+
+  Given a ticket whose `depends_on` names its predecessor
+    `06_TICKET-20260909-UXP-700a-2.md` by an absolute Windows path, by a relative
+    forward-slash path, or by a relative backslash path
+  When the workflow decides which tickets are ready
+  Then the predecessor resolves to the same path the run dispatches that predecessor
+    under, in every one of those spellings
+  And the dependency is judged satisfied or unsatisfied by that predecessor's real
+    state, never reported as naming a ticket the run does not have.
+
+  Given any other workflow script in the build workflows' script directory that
+    resolves, joins, or compares ticket, epic, worktree, or store paths, or derives a
+    name from such a path — at authoring time plan-feature and build-epic, besides
+    build-feature
+  When it is handed the spellings above
+  Then it reaches the same outcomes stated above for build-feature
+  And a name it derives from a path, such as an epic name, is the same whichever
+    separator the path was written with
+  And a script is not out of scope because the 2026-09-14 incident happened to be
+    observed in build-feature.
+
+  Given the Node-based workflow harness at unit_tests/_workflow_engine_harness.py,
+    which runs a workflow script's own top-level body under mocked agent globals
+  When this record is verified
+  Then for EVERY workflow script that resolves, joins, or compares paths, or derives a
+    name from one — build-feature, plan-feature and build-epic at authoring time — the
+    Windows absolute, relative, and outside-the-worktree cases that script can receive
+    are proven by running THAT script's own top-level body through that harness, and
+    asserting on the paths and path-derived names actually present in the prompts it
+    handed to its agents
+  And for build-feature the depends_on case is proven the same way too, with the
+    resolver stub reporting the Windows worktree above
+  And a harness run of one script is never accepted as the proof for another, so a
+    script with such path handling and no harness run of its own leaves this record
+    not done
+  And a script found later to contain such path handling needs its own harness proof
+    before this record can be done
+  And a test that calls an extracted path helper directly is welcome in addition, but
+    is not accepted instead of the harness run
+  And a test that searches the workflow source for a path expression is not accepted
+    as coverage.
+depends_on: []
+doc_links:
+  - path: docs/known-issues/build-orchestration.md
+    relationship: describes
+    status: exists
+    relevance: "Adjacent entry KI-BO-027 (resolver returns the epic folder as worktree_path). The 2026-09-14 incident behind this record is not yet filed in the register; see notes."
+  - path: templates/workflows-js/build-feature.js
+    relationship: implements
+    status: exists
+    relevance: "The path helper that joined an absolute Windows ticket path onto the worktree, and its ticket-path and depends_on call sites."
+  - path: templates/workflows-js/plan-feature.js
+    relationship: implements
+    status: exists
+    relevance: "Joins a file path onto the authoring worktree after stripping only a leading '/', and splits on '/' only (see notes for line numbers)."
+  - path: templates/workflows-js/build-epic.js
+    relationship: implements
+    status: exists
+    relevance: "Derives the epic name by splitting the epic path on '/' only."
+  - path: unit_tests/_workflow_engine_harness.py
+    relationship: specifies
+    status: exists
+    relevance: "The harness each script's reachability proof must run through."
+  - path: docs/known-issues/build-pipeline.md
+    relationship: related
+    status: exists
+    relevance: "KI-BP-20260907-0812 — the earlier Windows separator defect in the product-truth store, and its warning that a regression test must assert on string content or it passes vacuously on POSIX."
+  - path: docs/acceptance-criteria/ux-prototyping/UXP-700-truthful-project-record/UXP-700c-3-i.yaml
+    relationship: related
+    status: exists
+    relevance: "Same defect class in a different surface: a verdict must not depend on the host operating system."
+  - path: docs/architecture/adrs/ADR-030-dual-engine-workflow-support.md
+    relationship: describes
+    status: exists
+    relevance: "The E2 engine executes a workflow's top-level body and injects no module loader, so path handling cannot import Node's path module or a shared helper file."
+  - path: docs/reference/workflow-authoring-contract.md
+    relationship: describes
+    status: exists
+    relevance: "E2 canonical script contract (top-level body, globals, schema-validated agent calls) the changed scripts must still satisfy."
+  - path: docs/architecture/agent_delivery_workflows.md
+    relationship: describes
+    status: exists
+    relevance: "Section 4: build-feature.js inline phase dispatch, and the rule that driveTicketPhases changes are applied to the build-ticket.js twin as well."
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+    relevance: "Component overview for the build workflows whose path handling this record fixes."
+assigned_agent: python-coder
+estimated_complexity: L
+it_requirements:
+  - "Scope is every script under templates/workflows-js/ that resolves, joins or compares ticket, epic, worktree or store paths, or derives a name from one: at authoring time build-feature.js (every call site of its worktree-path helper, including the ticket-path, epic-path, depends_on and result ticket_path sites), plan-feature.js and build-epic.js. A site fixed in one script but left unfixed in another leaves this record not done."
+  - "Path handling must be plain string logic that runs inside the workflow body. The E2 engine injects no module loader (ADR-030; KI-BO-028), so the fix must not require or import Node's path, os or fs modules, and must not depend on a helper file outside the script. A fix that throws, or silently falls back, when run under the engine is a failed fix."
+  - "Classification, containment and resolution must not consult the host operating system, the host path module, or any environment variable: the same input string yields the same result on Windows and on POSIX (pinned by BO-3900a)."
+  - "One output spelling rule applies at every call site: exactly one root, one separator spelling throughout, and '.' and '..' segments applied. A relative input is joined onto the resolved worktree exactly once, and an absolute input is never joined onto anything."
+  - "Every path comparison in a script (worktree containment, depends_on predecessor matching, and BO-4000a's instructed-versus-reported location check) uses one equivalence rule. Separator spelling and trailing separators are ignored, and letter case is ignored for drive-lettered and UNC forms only; POSIX paths compare case-sensitively (pinned by BO-3900b)."
+  - "depends_on predecessors are resolved by the same rule that produces the dispatched ticket path, so for every accepted spelling a predecessor's resolved form equals the path it is dispatched under. A spelling mismatch must never be reported as a reference to a ticket the run does not have."
+  - "A name derived from a path (epic name, last segment, store-relative reference) must split on both separators and must be identical for backslash, forward-slash and mixed spellings of the same path."
+  - "Where the engine forces each script to carry its own copy of the path rules, all copies must reach identical outcomes for identical inputs. Each script's own harness run is the guard, and no copy is exempt from it."
+  - "If a changed site lies inside driveTicketPhases, the build-ticket.js twin must receive the identical change (agent_delivery_workflows.md section 4), and build-ticket.js then needs its own harness proof under this record's 'script found later' clause."
+  - "If unit_tests/_workflow_engine_harness.py cannot yet run the top-level bodies of plan-feature.js or build-epic.js with mocked agent globals, extending the harness is in scope for this record. The extension must not change the outcome of any existing harness-driven test."
+  - "Test inputs must be literal Windows-shaped strings, never paths built from the host separator or a host path join (BO-3900a; KI-BP-20260907-0812)."
+  - "POSIX-spelled inputs keep the outcomes they had before the change."
+  - "Existing agent result and prompt fields consumed downstream (for example ticket_path and worktree_path) must not be renamed or removed; only their path values change."
+  - "The canonical source is templates/workflows-js/. The deployed .claude/workflows/ copies are build outputs regenerated by 'python scripts/build.py' and are never hand-edited (ADR-001). The build's dual-engine transform must still accept every changed script (ADR-030)."
+delivers_to:
+  agent: python-coder
+  contract: "Platform-independent path rules, available inside each affected workflow script's own body with no module loader, consumed by BO-4000 and BO-4000a. (1) Classify a string as absolute (drive-lettered in either letter case with either or mixed separators, UNC, or leading '/'), relative (no root and no drive), or unrecognised (drive-relative 'C:foo', rooted-without-drive '\\foo', empty or blank, or carrying a second root after its first segment). (2) Equivalence: separator spelling and trailing separators ignored, '.' and '..' applied, case-insensitive for drive-lettered and UNC forms only. (3) Containment: true only at a whole-segment boundary under that equivalence; a path equal to the root counts as the root itself. (4) Resolve onto a root: returns one absolute path string in the single output spelling, or an unrecognised-form result that carries the input value verbatim. It never joins an absolute path onto anything."
+expects_from: null
+test_required: true
+test_spec:
+  - name: test_windows_absolute_ticket_path_reaches_phase_agents_unjoined
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "The incident replay — an absolute backslash ticket path inside a forward-slash-spelled worktree reaches every phase agent prompt as one absolute path with one drive root."
+  - name: test_relative_ticket_paths_in_either_separator_are_joined_onto_the_worktree_once
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "Forward-slash, backslash and mixed relative spellings all reach phase agents as the same single path under the worktree."
+  - name: test_absolute_path_outside_the_worktree_is_never_joined
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: "Drive-letter, lowercase drive-letter, UNC and POSIX absolute paths outside the worktree pass through naming the same file."
+  - name: test_depends_on_in_any_spelling_resolves_to_the_dispatched_ticket_path
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: seam
+    description: "A predecessor named in depends_on by an absolute Windows path, a relative forward-slash path, or a relative backslash path is matched to the path the run dispatches it under."
+  - name: test_posix_worktree_paths_keep_their_current_outcomes
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: "The POSIX spellings reach the same outcomes as before the fix, so the change does not trade one platform for the other."
+  - name: test_cross_platform_path_resolution_is_reachable_from_the_workflow_top_level_body
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: reachability
+    surface_invoked: templates/workflows-js/build-feature.js
+    description: "Every case above is driven through _workflow_engine_harness.py running build-feature.js's own top-level body, asserting on dispatched prompts, not on a helper's return value."
+  - name: test_plan_feature_cross_platform_path_joins_are_reachable_from_its_own_top_level_body
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: reachability
+    surface_invoked: templates/workflows-js/plan-feature.js
+    description: "plan-feature.js's own top-level body, run through _workflow_engine_harness.py with a Windows-spelled authoring worktree and Windows absolute, backslash-relative and forward-slash-relative file paths, hands its agents one correct path each: an absolute path is never joined onto the worktree."
+  - name: test_build_epic_path_derived_names_are_reachable_from_its_own_top_level_body
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: reachability
+    surface_invoked: templates/workflows-js/build-epic.js
+    description: "build-epic.js's own top-level body, run through _workflow_engine_harness.py with the epic path spelled with backslashes and with forward slashes, derives the same epic name EPIC-TruthfulProjectRecord in both, not the whole path."
+test_rationale: |
+  The defect is in what a top-level workflow body hands to agents, not only in what a
+  helper returns. A pure-function test of a corrected helper stays green if the workflow
+  keeps calling the old helper at one of its call sites (the ticket path and the
+  depends_on path go through separate call sites), if the fix lives in a helper nothing
+  calls, or if the fix reaches for a module the workflow engine does not provide — the
+  E2 engine injects no module loader, which already made one done criterion false
+  (BO-1000c-1a, recorded in KI-BO-028's addendum). Only running build-feature's own body
+  through _workflow_engine_harness.py and reading the paths out of the dispatched prompts
+  distinguishes a workflow that hands agents the right file from one that merely contains
+  a correct function. The inputs must be literal Windows-shaped strings, never paths built
+  from the host's separator, or the Linux CI runner never sees a backslash and the test
+  passes vacuously (BO-3900a owns that property). The same argument applies to each script
+  separately. plan-feature and build-epic have their own path code (see notes), so a green
+  build-feature run says nothing about them. Each gets its own harness entry.
+covered_by:
+  - BO-3900a
+  - BO-3900b
+  - BO-3900c
+  - BO-3900d
+  - BO-3900e
+implemented_by:
+  - templates/workflows-js/build-feature.js
+  - templates/workflows-js/plan-feature.js
+  - templates/workflows-js/build-epic.js
+origin_agent: business-analyst
+created: 2026-09-14
+amended_by:
+- reason: it-po-technical-enrichment
+  date: 2026-09-14
+  by: it-po
+  changes: 'Set package_surface: false (the record registers no registry entry the
+    build reads). Added it_requirements and architecture doc_links, raised estimated_complexity
+    from M to L (three scripts, 18+ call sites in build-feature.js, possible harness
+    extension), tightened the delivers_to contract, and set readiness to reviewed.
+    criteria, test_spec, test_rationale and notes are unchanged.'
+- action: approved
+  agent: approve_acs
+  date: '2026-09-14'
+superseded_by: null
+notes: |
+  FIELD EVIDENCE — run wf_0e0872f9-453, 2026-09-14, Windows 11. /build-feature
+  EPIC-TruthfulProjectRecord, started inside worktree uxp-700-tranche-2, spent about
+  975k subagent tokens and built nothing: all 9 tickets in batch 1 were blocked. The
+  workflow's worktree-path helper recognises a path as already inside the worktree only
+  when it starts with the worktree path plus "/", and as absolute only when it starts
+  with "/". A Windows absolute path matches neither and was joined onto the worktree,
+  so every phase agent received
+    C:\Users\Hendrik\Code\leafcutter\worktrees\uxp-700-tranche-2\tickets\00_inbox\epics\EPIC-TruthfulProjectRecord/C:\Users\...\07_TICKET-20260909-UXP-700a-3.md
+  Ticket-planners answered "TICKET NOT FOUND" with empty titles, and the failure
+  classifiers halted. The same helper normalises depends_on paths, which is why the
+  depends_on scenario is its own clause and its own seam test. A second, independent
+  defect in the same run (the worktree created inside the repository) is BO-4000.
+
+  NAMED MUTATIONS the covering tests must catch (each must turn at least one test red):
+    M1 — replace the Windows-absolute recognition with startsWith("/") alone: the
+         incident path is joined again. Caught by
+         test_windows_absolute_ticket_path_reaches_phase_agents_unjoined.
+    M2 — test containment with worktreePath + "/" only: a backslash path inside a
+         forward-slash-spelled worktree is judged outside and passed through (or joined).
+         Caught by the incident replay, whose worktree and ticket use different separators.
+    M3 — fix the ticket-path call site and leave the depends_on call site on the old
+         logic. Caught by test_depends_on_in_any_spelling_resolves_to_the_dispatched_ticket_path.
+    M4 — land the corrected helper but leave the workflow body calling the old one.
+         Caught only by the reachability test; a direct helper test stays green.
+    M5 — make the helper treat every path containing ":" as absolute, or return every
+         path unchanged. Caught by the relative-path test, which requires a join to happen.
+
+  SCOPE — DECIDED 2026-09-14 (user, Q5). EVERY workflow script that joins, resolves or
+  compares paths the way build-feature does needs its own harness-driven reachability
+  proof. A proof for build-feature alone does not satisfy this record.
+
+  SCRIPTS IDENTIFIED, by a grep of templates/workflows-js/ on 2026-09-14 for
+  toWorktreePath-style helpers, leading-"/" absoluteness checks, "/"-concatenation joins
+  and "/"-only splits (line numbers are as of origin/main at authoring and will drift):
+    - build-feature.js — toWorktreePath() at ~1471-1501: startsWith(worktreePath + "/")
+      containment at 1477, startsWith("/") absoluteness at 1483, worktreePath + "/" + ...
+      joins at 1488/1495/1501. 18 call sites, including epic path 2506, depends_on
+      2745/2926, ticket paths 2227/2266/2716/2780/2920/3351, and result ticket_path
+      3045/3058/3134/3137.
+    - plan-feature.js — authoringWorktreePath.replace(/\/$/, "") + "/" +
+      filePath.replace(/^\//, "") at 588: a Windows absolute filePath is joined onto the
+      worktree, the same defect class. "/"-only last-segment split at 135. Store-path joins
+      root + ptStorePath + "/" + flowRef.replace(/^\/+/, "") at 1391 and 1427. (633
+      normalises backslashes before splitting and looks correct; it is listed so its
+      harness proof can confirm that.)
+    - build-epic.js — epicPath.split("/").pop() at 488: a backslash-spelled epic path gives
+      the whole path back as the epic name.
+  No matches in build-ticket.js, create-ticket.js, fast-lane-ship.js, finalize-feature.js
+  or quick-fix.js for these patterns. That is a grep result, not a proof of absence.
+  BO-3900d is the derived breadth guard for what a grep misses.
+
+  Two follow-ups for IT PO enrichment. plan-feature is the AC-authoring workflow
+  (ac-driven-dev territory), but it lives in the same script directory and is kept in
+  scope here per the user's "every script" decision. Whether
+  _workflow_engine_harness.py can already run plan-feature.js and build-epic.js's
+  top-level bodies has not been checked; if it cannot, extending it is part of this work.
+
+  NOT FILED IN THE REGISTER. This incident has no known-issues entry yet. The doc_link to
+  the build-orchestration register points at the adjacent KI-BO-027, not at this incident.
+
+  PLACEMENT. Authored as a root-level L2 in build-orchestration, the same shape the store
+  already uses for defects found in a live build-feature run (BO-3000, BO-3700, BO-3701):
+  a record that can be scheduled, driven and closed on its own, with L3 children for the
+  axes whose mutations turn only that child red. Neighbours considered and rejected as
+  parents: BO-1800a (per-drive isolated clones under ADR-018; already at 5/5 L2 and about
+  topology, not path spelling); GE-113 (commit-time misplaced artifacts, guardrail-engine,
+  not drive-time path resolution); UXP-700c-3-i (the same defect class, but in the
+  product-truth store's checker). The BA authors L2/L3 only and does not invent an L1.
+  BO-3800 is taken on the unmerged branch origin/ac-authoring/refactor-handoff, and
+  BO-3300/BO-3400 are unexplained gaps, so BO-3900 was taken as the next number clear on
+  every ref.

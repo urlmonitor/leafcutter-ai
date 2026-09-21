@@ -51,6 +51,15 @@ doc_links:
   - path: scripts/goal_to_epic.py
     relationship: modifies
     status: exists
+    relevance: "Facade only since the 2026-09-14 decomposition — re-exports generate_master_plan but defines none of the rendering. The two modules below own this behaviour."
+  - path: scripts/ac_store/epic_master_plan.py
+    relationship: modifies
+    status: exists
+    relevance: "Owns _collect_master_plan_data, _render_master_plan and generate_master_plan — the frontmatter block this AC requires the ticket_frontmatter gate to accept."
+  - path: scripts/ac_store/epic_phases.py
+    relationship: modifies
+    status: exists
+    relevance: "Owns _write_master_plan_safely — the post-assembly phase that invokes the renderer and writes Master_Plan.md into the epic folder."
   - path: docs/known-issues/ac-driven-dev.md
     relationship: context
     status: exists

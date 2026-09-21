@@ -46,6 +46,7 @@ export const meta = {
     { title: "Coder", detail: "make green + verify_green_and_coverage" },
     { title: "Review", detail: "pr-reviewer over the uncommitted working diff (BO-2400f-11)" },
     { title: "Changelog", detail: "emit_entry.py when the change owes one (BO-2400f-4/KI-BO-001)" },
+    { title: "Knowledge Routing", detail: "route emitted learnings to their surfaces before commit (INF-700a-1, fail-open)" },
     { title: "Commit", detail: "mark ACs done + commit on the worktree branch" },
     { title: "Pull Request", detail: "open the PR against main (gh + EMU fallback)" },
   ],
@@ -206,12 +207,17 @@ const CONTEXT_BUNDLE_STATE_USABLE = "usable";
 /**
  * isContextBundleLocatorString — deterministic, scheme-agnostic locator test
  * on the returned string itself: a `file:` URI scheme, a leading `/`
- * (absolute POSIX path), or a drive-letter root (`C:\`, `C:/`). Never a
- * plausibility heuristic and never a length threshold — a 47-character path
- * and a 47-character bundle fragment must be separable by this rule alone
- * (BO-2400c-1-iii's LANE-RECEIVES constraint). The observed production
- * failure value, `file:/tmp/bo2400f13-bundle/bundle_output.txt`, matches the
- * first branch.
+ * (absolute POSIX path), a drive-letter root (`C:\`, `C:/`), or a UNC root
+ * (`\\server\share`, `//server/share`). Never a plausibility heuristic and
+ * never a length threshold — a 47-character path and a 47-character bundle
+ * fragment must be separable by this rule alone (BO-2400c-1-iii's
+ * LANE-RECEIVES constraint). The observed production failure value,
+ * `file:/tmp/bo2400f13-bundle/bundle_output.txt`, matches the first branch.
+ * The UNC branch was added under BO-3900d: this is the shared classification
+ * its leading-`/` test sits inside — it recognises drive-letter AND UNC
+ * forms alongside it, the property BO-3900d's scanner derives its
+ * permitted-home exemption from. A `//server/share` root already satisfies
+ * the leading-`/` branch, so the UNC alternative only adds `\\server\share`.
  *
  * Pure function: no agent(), no I/O — safe to extract and execute directly.
  *
@@ -224,7 +230,7 @@ function isContextBundleLocatorString(text) {
   return (
     /^file:/i.test(trimmed) ||
     /^\//.test(trimmed) ||
-    /^[a-zA-Z]:[\\/]/.test(trimmed)
+    /^([a-zA-Z]:[\\/]|\\\\[^\\/])/.test(trimmed)
   );
 }
 
@@ -581,6 +587,64 @@ function buildReleaseOutcomeFields(releaseReply, claimedIds, executorAgentType) 
   };
 }
 
+// BO-2400f-4-vi-adjacent: the routing dispatch's expected reply shape
+// (INF-700a-1). `case` is the only required field — `read`/`written`/
+// `unwritten`/`detail` are read defensively by classifyKnowledgeRouting()
+// below, never trusted as present just because the schema names them.
+const KNOWLEDGE_ROUTING_SCHEMA = {
+  type: "object",
+  required: ["case"],
+  properties: {
+    case: { type: "string", enum: ["completed", "could_not_complete", "did_not_run"] },
+    read: { type: "integer" },
+    written: { type: "integer" },
+    unwritten: { type: "integer" },
+    detail: { type: ["string", "null"] },
+  },
+};
+
+/**
+ * classifyKnowledgeRouting — the SINGLE construction site for the
+ * `knowledge_routing` figures consumed into a completion path's terminal
+ * payload (INF-700a-1 / INF-700a-1-ii). Fails CLOSED, the same pattern used
+ * throughout this file for the review verdict and red-baseline gate_passed
+ * checks: only a reply carrying a RECOGNISED `case` value ("completed" or
+ * "could_not_complete") is trusted as having actually run. Anything else —
+ * a missing case, an unparseable reply, or the harness's own unlabelled
+ * default stub — is reported as the third, distinct "did_not_run" case
+ * (INF-700a-1-ii), never rendered as "completed" with zero figures, which is
+ * exactly how an unwired routing step would read as a healthy one.
+ *
+ * A knowledge step never fails, retries, or blocks the unit of work's own
+ * outcome (ADR-034's fail-open branch) — this function only classifies the
+ * reply; it never throws, and its result is merged into the terminal payload
+ * alongside (never in place of) the work's own outcome.
+ *
+ * Pure function: no agent(), no I/O — safe to extract and execute directly.
+ *
+ * @param {*} reply - The raw reply from the "knowledge-routing-step" dispatch.
+ * @returns {{case: string, read: number, written: number, unwritten: number, detail: (string|null)}}
+ */
+function classifyKnowledgeRouting(reply) {
+  var recognisedCase =
+    reply && (reply.case === "completed" || reply.case === "could_not_complete")
+      ? reply.case
+      : "did_not_run";
+  var asInt = function (value) {
+    return typeof value === "number" && Number.isFinite(value) ? value : 0;
+  };
+  return {
+    case: recognisedCase,
+    read: recognisedCase === "did_not_run" ? 0 : asInt(reply.read),
+    written: recognisedCase === "did_not_run" ? 0 : asInt(reply.written),
+    unwritten: recognisedCase === "did_not_run" ? 0 : asInt(reply.unwritten),
+    detail:
+      recognisedCase === "could_not_complete" && typeof reply.detail === "string"
+        ? reply.detail
+        : null,
+  };
+}
+
 // ---------------------------------------------------------------------------
 // Phase 0 — Argument validation
 // ---------------------------------------------------------------------------
@@ -719,9 +783,9 @@ const worktreeVerify = await agent(
   `infer, guess or normalise a path — only quote what git prints.
 
 ` +
-  `Run exactly this one command:
+  `Run exactly this one command (the -C pins the probe to the repository this run already knows, not wherever your shell happens to start):
 ` +
-  `   git worktree list --porcelain
+  `   git -C "${claimedWorktreePath}" worktree list --porcelain
 
 ` +
   `Find the record whose branch line is refs/heads/${branch}. Return:
@@ -730,8 +794,8 @@ const worktreeVerify = await agent(
   `"raw": "<that record's full porcelain text, verbatim>" }
 
 ` +
-  `If no record matches that branch, return ` +
-  `{ "worktree_path": "", "raw": "<the command's full output, verbatim>" }.`,
+  `If that command cannot run at all, or no record matches that branch, return ` +
+  `{ "worktree_path": "", "raw": "<full output, verbatim>" }.`,
   {
     agentType: "worktree-agent",
     schema: WORKTREE_VERIFY_SCHEMA,
@@ -740,33 +804,33 @@ const worktreeVerify = await agent(
   }
 );
 
-// Trust git over the agent, but only where git actually answered.
-//
-// Three states, deliberately distinguished:
-//   - git quoted a path      -> use it; it outranks the agent's claim.
-//   - git said nothing       -> fall back to the claim. An unanswered probe is
-//                               not evidence of fabrication, and halting the
-//                               lane every time one extra dispatch hiccups is a
-//                               worse failure mode than the bug this guards.
-//   - git answered, and the reported path is absent from its own raw output
-//                            -> HALT. That path was invented, not quoted, and
-//                               it is the exact failure seen on BO-2400f
-//                               (2026-08-11) and UXP-700d (2026-09-07).
+// Trust git over the agent, only where it answered — an ABSENT answer (raw
+// empty) is not evidence and falls back to the claim as before; an answer
+// EMPTY OF THIS RUN'S OWN BRANCH (raw non-empty, no record for `branch`)
+// HALTs — positive evidence of a stale second clone, not silence
+// (BO-2400f-3-i, 2026-09-14). A reported path absent from its own raw
+// output is invented, not quoted, and also HALTs (BO-2400f-3; BO-2400f
+// 2026-08-11 / UXP-700d 2026-09-07).
 const gitReportedPath =
   worktreeVerify && worktreeVerify.worktree_path ? worktreeVerify.worktree_path : "";
 const gitRaw = (worktreeVerify && worktreeVerify.raw) || "";
+const branchRefLine = `refs/heads/${branch}`;
 
 if (gitReportedPath && !gitRaw.includes(gitReportedPath)) {
   return {
     status: "error",
-    message:
-      `The worktree location reported for branch ${branch} does not appear in ` +
-      `the git output it was supposedly read from, so it was composed rather ` +
-      `than quoted. Reported: "${gitReportedPath}". git worktree list ` +
-      `--porcelain returned: ${JSON.stringify(gitRaw)}. The worktree phase ` +
-      `separately claimed "${claimedWorktreePath}". Proceeding on an invented ` +
-      `path is what sent the resolver to a non-existent directory on BO-2400f ` +
-      `and UXP-700d.`,
+    message: `The worktree location reported for branch ${branch} does not appear in the git output it was supposedly read from, so it was composed rather than quoted. Reported: "${gitReportedPath}". git worktree list --porcelain returned: ${JSON.stringify(gitRaw)}. The worktree phase separately claimed "${claimedWorktreePath}". Proceeding on an invented path is what sent the resolver to a non-existent directory on BO-2400f and UXP-700d.`,
+    failing_phase: "worktree",
+    claimed_worktree_path: claimedWorktreePath,
+    branch,
+    classification: "halt",
+  };
+}
+
+if (gitRaw.trim() !== "" && !gitRaw.includes(branchRefLine)) {
+  return {
+    status: "error",
+    message: `git worktree list --porcelain answered, but has no record for branch ${branch} — this run's own branch, created moments earlier — so the probe looked at a repository without it (e.g. a stale second clone). That is positive evidence, not silence, and is not forgiven the way an unanswered probe is. Raw output: ${JSON.stringify(gitRaw)}. The worktree phase claimed "${claimedWorktreePath}".`,
     failing_phase: "worktree",
     claimed_worktree_path: claimedWorktreePath,
     branch,
@@ -1518,6 +1582,49 @@ if (changelogRequired) {
 }
 
 // ---------------------------------------------------------------------------
+// Knowledge Routing — dispatched once the phases that perform the work
+// (test-writer, coder, review, changelog) have returned, and BEFORE the
+// phase that publishes the unit of work's own output ("fastlane-commit"),
+// so its writes can ride the commit this path already makes (INF-700a-1's
+// ordering clause). Fail-open (INF-700a-1-ii): there is deliberately no halt
+// branch below — whatever this dispatch reports, the run's own outcome and
+// exit status proceed unaffected, and the figures are merged into the
+// terminal payload rather than discarded (INF-700a-1's anti-fire-and-forget
+// requirement).
+// ---------------------------------------------------------------------------
+
+phase("Knowledge Routing");
+
+const knowledgeRoutingReply = await agent(
+  `You are the knowledge-routing phase agent for a fast-lane build. Route any ` +
+  `knowledge records the phases that just ran emitted to the surface each one ` +
+  `names — nobody runs this by hand.\n\n` +
+  `Run this single Bash command from the repository root and read its JSON ` +
+  `summary and exit code:\n` +
+  `   python3 {{config.output_root}}/scripts/knowledge/harvest_learnings.py\n\n` +
+  `Classify the outcome as exactly one of three cases:\n` +
+  `  - "completed": the harvester ran to completion (exit 0 or 3 — some ` +
+  `records left unroutable is still a completed run).\n` +
+  `  - "could_not_complete": the declared sink could not be read, or a ` +
+  `destination file could not be written (exit 1, 2, or 4).\n` +
+  `  - "did_not_run": the command itself could not be run at all.\n\n` +
+  `Return JSON: { "case": "completed"|"could_not_complete"|"did_not_run", ` +
+  `"read": <records read>, "written": <records written to a surface>, ` +
+  `"unwritten": <records left unwritten>, "detail": "<what could not be done, ` +
+  `or null>" }.\n\n` +
+  `This step must never block, retry, or fail the build — always return a ` +
+  `best-effort classification, even on an unreadable sink or a failed write.`,
+  {
+    agentType: "python-coder",
+    schema: KNOWLEDGE_ROUTING_SCHEMA,
+    label: "knowledge-routing-step",
+    phase: "Knowledge Routing",
+  }
+);
+
+const knowledgeRouting = classifyKnowledgeRouting(knowledgeRoutingReply);
+
+// ---------------------------------------------------------------------------
 // Phase 5 — Commit: mark ACs done + commit on the worktree branch (BO-2400f-4)
 // ---------------------------------------------------------------------------
 
@@ -1690,6 +1797,7 @@ return {
   files_modified: (coderResult && coderResult.files_modified) || [],
   review_medium_findings: reviewMediumFindings,
   review_low_suppressed_count: reviewLowSuppressedCount,
+  knowledge_routing: knowledgeRouting,
   changelog_required: changelogRequired,
   changelog_entry_path:
     (changelogResult && changelogResult.entry_path) || null,

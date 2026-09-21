@@ -1,0 +1,172 @@
+id: BO-2400f-3-i
+components:
+  - build_orchestration
+title: "The worktree location the run proceeds on is confirmed against the repository the run is operating in"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: done
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given the run has just opened its worktree for a criterion, on a branch it
+    created moments earlier,
+  And the probe that reports where git says that worktree is answers from
+    somewhere other than the repository the run is operating in, so its answer
+    lists worktrees but holds no record for that branch,
+  When the run decides which location the remaining phases will use,
+  Then the run halts, naming the branch it could not confirm and the location
+    the worktree phase had claimed,
+  And no later phase runs against the claimed location,
+  And given instead a probe that answers from the repository the run is
+    operating in and does list that branch, the run proceeds on the location
+    git reported,
+  And given instead a probe that could not be run at all and returned no
+    answer of any kind, the run still proceeds on the claimed location as it
+    does today.
+depends_on: [BO-2400f-3]
+doc_links:
+  - path: templates/workflows-js/fast-lane-ship.js
+    relationship: modifies
+    status: exists
+  - path: docs/known-issues/build-orchestration.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "The distinction that carries this record is between an answer that is ABSENT
+     and an answer that is EMPTY OF THIS BRANCH. The existing fallback treats both
+     as 'git said nothing' and trusts the claim. Only the first is a hiccup; the
+     second is positive evidence that the probe looked somewhere that does not
+     have the branch this run just created, because the run created it. Do not
+     collapse them back together, and do not delete the fallback wholesale — its
+     stated reason, that one flaky dispatch should not halt the lane, is sound."
+  - "Containment of the probe matters more than inspection of its answer. An
+     answer is only evidence about the repository it came from, so the probe must
+     be run against a repository the run already knows rather than an agent's
+     ambient working directory. Checking the answer harder while leaving the
+     probe free to run anywhere reproduces this defect with more steps."
+  - "The existing self-consistency check — that the reported path appears in the
+     raw output supplied alongside it — must be kept. It catches a fabricated
+     path, which is a different failure from this one, and was added for two
+     recorded occurrences."
+  - "This file is already over its size limit (measured by
+     _file_size_ratchet.count_content_lines, not wc -l), so the GE-127b-1 ratchet
+     refuses any commit that leaves it longer than it stood at HEAD. The change
+     must be net-neutral or net-shrinking in content lines."
+test_spec:
+  - name: test_a_probe_answering_without_the_runs_own_branch_halts
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: integration
+    angle: failure
+    description: "The probe returns an answer that lists worktrees but has no
+      record for the branch this run created; the run halts instead of
+      proceeding. Fails the behaviour that treats this as 'git said nothing'."
+  - name: test_the_halt_names_the_unconfirmed_branch_and_the_claimed_location
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "The halt payload carries both the branch that could not be
+      confirmed and the location the worktree phase claimed. A halt naming
+      neither leaves the reader unable to tell a wrong-repo probe from a genuine
+      absence."
+  - name: test_no_later_phase_runs_against_the_claimed_location
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "After the halt, the resolve phase is never dispatched. Asserted
+      on dispatch, not on the returned status, since a run can report a halt and
+      still have taken the step."
+  - name: test_a_probe_that_lists_the_runs_branch_proceeds_on_gits_path
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "The non-regression arm: a probe answering from the right
+      repository, listing the branch, lets the run proceed on git's reported
+      path. Fails any fix that halts whenever the probe is anything but perfect."
+  - name: test_a_probe_that_could_not_run_at_all_still_falls_back
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: integration
+    angle: boundary
+    description: "The narrowing arm: no answer of any kind still falls back to
+      the claim. Fails any fix that deletes the fallback rather than narrowing
+      it, which would halt the lane on a single flaky dispatch."
+test_rationale: |
+  The two arms that matter are the third and the fifth, and they must both exist in
+  the same suite. A fix that halts on every imperfect probe passes the first four
+  descriptors and fails the fifth; a fix that changes nothing passes the fourth and
+  fifth and fails the first. Only a fix that distinguishes an absent answer from an
+  answer empty of this run's own branch passes all five.
+
+  test_no_later_phase_runs_against_the_claimed_location asserts on whether the next
+  phase was dispatched rather than on the returned status, because the failure this
+  record exists to prevent is precisely a run that continued to a later phase
+  against a wrong location — a status field saying "halt" would not have prevented
+  the observed failure, which reached the resolve phase and died there.
+
+  These run through unit_tests/_workflow_engine_harness.py with stubbed agent
+  responses, the same vehicle
+  unit_tests/workflows/test_bo2400f_13_workspace_refusal_workflow.py already uses
+  for the sibling refusal path. A test that greps fast-lane-ship.js for the new
+  condition does not satisfy any descriptor here: the defect being fixed is one
+  where a present, correct-looking check produced the wrong decision, so presence
+  of source text is exactly the evidence that was already misleading.
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-09-14
+amended_by: []
+superseded_by: null
+covered_by:
+  - unit_tests/workflows/test_bo2400f_3_i_worktree_verify_workflow.py
+implemented_by:
+  - templates/workflows-js/fast-lane-ship.js
+change_target: pipeline
+risk_surface: safety
+notes: |
+  Observed twice on 2026-09-14, both runs aiming the lane at INF-1300. The run
+  reported its worktree as /mnt/c/Users/henzeh/Documents/Scripts/leafcutter/
+  leafcutter-ai -- a second, stale clone of this same repository on the Windows
+  mount -- and died at the resolve phase looking for fast_lane.py there. The
+  worktree phase had in fact created the correct worktree, on the correct branch,
+  in the right place; only the reported location was wrong.
+
+  WHY THE EXISTING GUARD DID NOT CATCH IT. The guard added on 2026-09-07 for
+  BO-2400f-3 runs `git worktree list --porcelain` through a sub-agent and then
+  checks that the reported path appears in the raw output supplied alongside it.
+  That proves the agent quoted from some git invocation. It does not prove the
+  invocation ran in the repository the run is operating in, and an answer is only
+  evidence about the repository it came from.
+
+  The stale clone holds no fast-lane branches, so the probe running there found no
+  record and returned the contract's empty result. The workflow then took its
+  documented fallback -- git said nothing, so trust the claim -- and the claim was
+  the wrong path. The wrong-repository case is therefore the one case this guard
+  structurally cannot catch: the probe fails to contradict the claim because it was
+  looking somewhere the claim could not be contradicted, and the fallback exists to
+  forgive exactly that silence.
+
+  WHY NARROWING RATHER THAN REMOVING. The fallback's stated reason is that an
+  unanswered probe is not evidence of fabrication and halting on every hiccuping
+  dispatch is the worse failure. That reasoning holds. What does not hold is
+  treating "the answer does not mention the branch I created a moment ago" as the
+  same thing as "no answer". The run knows it created that branch; an answer
+  omitting it is information, not silence.
+
+  Falsifiability. Five descriptors over one harness, of which two are opposed: an
+  answer empty of this run's branch must halt, and no answer at all must still fall
+  back. A fix that cannot tell those apart fails one of them whichever way it
+  errs, so neither "halt on anything imperfect" nor "change nothing" can pass.
+
+  Related and deliberately not folded in: the enabling condition is that a second
+  clone of this repository exists on the Windows mount and agents can reach it.
+  Removing it is an environment decision for the operator, not a code change, and
+  the guard should hold with or without it.

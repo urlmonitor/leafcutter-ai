@@ -28,6 +28,15 @@ doc_links:
   - path: scripts/goal_to_epic.py
     relationship: modifies
     status: exists
+    relevance: "CLI facade only since the 2026-09-14 decomposition; it re-exports the names below but no longer defines them. The single-location write and back-reference logic this AC constrains lives in the two modules that follow."
+  - path: scripts/ac_store/epic_assembly.py
+    relationship: modifies
+    status: exists
+    relevance: "Owns assemble_epic_folder, _build_loose_to_epic_map, _remove_loose_inbox_tickets and _replace_implemented_by_entry — the single-location epic-folder write and the implemented_by splice this AC specifies."
+  - path: scripts/ac_store/epic_phases.py
+    relationship: modifies
+    status: exists
+    relevance: "Owns _apply_epic_backrefs / _relativise_backref_pair — the post-assembly phase that records the epic-folder implemented_by back-reference (shared with TKT-016)."
   - path: docs/reference/ac-schema.md
     relationship: describes
     status: exists
@@ -53,5 +62,36 @@ covered_by:
   - ACD-1200a-9-i
 implemented_by:
   - tickets/00_inbox/epics/EPIC-GoalToEpicBugfixes/01_single_location_write_and_backref.md
+test_spec:
+  - name: test_removes_loose_ticket_from_inbox_root
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: "After assembly, no copy of a generated ticket is left at the tickets inbox root — the Then clause that no loose inbox-root copy survives."
+  - name: test_no_stray_file_remains_at_inbox_root
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: "The inbox root holds zero NN_*.md files for the built leaves once the run completes."
+  - name: test_updates_implemented_by_from_loose_to_epic_path
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: "Each leaf AC's implemented_by is rewritten from the inbox-root path to the epic-folder path, so no back-reference names an inbox-root location."
+  - name: test_idempotent_when_epic_path_already_present
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: unit
+    angle: boundary
+    description: "The it_requirements idempotency rule: re-running against an AC that already names the epic-folder path leaves it unchanged rather than appending a duplicate."
+  - name: test_full_flow_leaves_no_stray_and_correct_backref
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: integration
+    angle: seam
+    description: "End-to-end across the write and the back-reference together: the ticket file and its implemented_by entry agree on one epic-folder path, catching the case where the two writes drift apart."
 change_target: code
 risk_surface: internal

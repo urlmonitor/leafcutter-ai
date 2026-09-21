@@ -24,8 +24,8 @@ related_docs:
 - **Status:** open
 - **Occurrences:** 1
 - **First seen:** 2026-08-25 · **Last seen:** 2026-08-25
-- **Where:** `scripts/goal_to_epic.py:1449-1455` — `_gate_select_approved_ids()`, the
-  `if yes or approved_only:` branch; and its caller `run()` at `:2252-2264`
+- **Where:** `scripts/ac_store/epic_readiness_gate.py:319-325` — `_gate_select_approved_ids()`,
+  the `if yes or approved_only:` branch; and its caller `run()` at `epic_pipeline.py:122`
 
 **Symptom.** `goal_to_epic.py --ac <goal> --yes` (or `--approved-only`) generates an epic
 containing only the leaves that were already `readiness: approved`. Every leaf below

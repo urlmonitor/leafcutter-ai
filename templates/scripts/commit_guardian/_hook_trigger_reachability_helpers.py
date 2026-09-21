@@ -84,6 +84,18 @@ ARCHITECTURE: ``validate_exemptions`` rejects both a groundless entry (mirrors
     test-only escape hatch (mirrors ``HOOK_TRIGGER_REGEX_TIMEOUT_SECONDS``)
     that reverts to the pre-fix behavior so the fix's own test suite can
     prove its assertions are capable of failing.
+
+    BP-100n-4 (file-size split): ``evaluate_all_gates`` and
+    ``_apply_duplicate_id_override`` moved here from
+    check_hook_trigger_reachability.py, which was over the 400-line cap —
+    the registry-wide application of ``evaluate_gate`` (including the
+    duplicate-id override) reasons about the SAME per-gate reachability
+    rule this module already owns, so it belongs beside it. Tracked-path
+    acquisition (``git ls-files``) moved to the new sibling
+    _hook_trigger_tracked_paths.py instead of here: adding it here too
+    would have pushed this module itself over the 400-line cap. See
+    check_hook_trigger_reachability.py's own DECISION HISTORY for the
+    integration.
 """
 
 from __future__ import annotations
@@ -92,6 +104,7 @@ import os
 import re
 import signal
 import sys
+from collections import Counter
 
 # The display fallback used for a hooks-manifest entry with no "id" field.
 # Kept as a single named constant specifically so it can be checked against
@@ -424,6 +437,124 @@ def evaluate_gate(
     )
 
 
+def evaluate_all_gates(
+    hooks: list[dict], tracked_paths: list[str], exemptions: dict[str, str]
+) -> tuple[int, int, int, int] | None:
+    """Evaluate every hooks_manifest entry, printing per-gate diagnostics.
+
+    BP-100k-4 round-2 hardening (F5, duplicate ids): a hooks-manifest id
+    that appears more than once can never safely share one exemption entry
+    — the ground given for one gate is not guaranteed to apply to the
+    other. Detected up front so every occurrence is handled uniformly.
+
+    Args:
+        hooks: The full ``hooks_manifest.hooks`` list (non-dict and
+            disabled entries are skipped internally).
+        tracked_paths: The repository's tracked paths.
+        exemptions: Valid gate-id -> ground map.
+
+    Returns:
+        ``(total, unreachable, exempt, nothing_to_match)`` on completion
+        (BP-100k-4-ii added the fourth counter), or None if a regex
+        evaluation exceeded its wall-clock bound — in which case this
+        function has already printed the ``INDETERMINATE`` line itself.
+    """
+    id_counts = Counter(
+        entry.get("id")
+        for entry in hooks
+        if isinstance(entry, dict) and entry.get("enabled") is not False and entry.get("id")
+    )
+    duplicate_ids = {gate_id for gate_id, count in id_counts.items() if count > 1}
+    reported_duplicate_ids: set[str] = set()
+
+    total = 0
+    unreachable = 0
+    exempt = 0
+    nothing_to_match = 0
+    for entry in hooks:
+        if not isinstance(entry, dict) or entry.get("enabled") is False:
+            continue
+        total += 1
+        gate_id = entry.get("id")
+        display_id = gate_id if gate_id else UNKNOWN_GATE_ID_SENTINEL
+
+        try:
+            verdict, detail = evaluate_gate(entry, tracked_paths, exemptions)
+        except RegexTimeoutError:
+            print(
+                f"INDETERMINATE: reason=evaluating gate {display_id!r}'s "
+                f"files pattern {entry.get('files')!r} against "
+                f"{len(tracked_paths)} tracked path(s) exceeded its "
+                f"{regex_match_timeout_seconds()}s wall-clock budget — "
+                "reachability cannot be determined in bounded time",
+                file=sys.stderr,
+            )
+            return None
+
+        verdict, detail = _apply_duplicate_id_override(
+            gate_id, verdict, detail, duplicate_ids, id_counts, reported_duplicate_ids
+        )
+
+        if verdict == "unreachable":
+            unreachable += 1
+            print(f"UNREACHABLE: {display_id} reason={detail}", file=sys.stderr)
+        elif verdict == "exempt":
+            exempt += 1
+            print(f"EXEMPT: {display_id} ground={detail}", file=sys.stderr)
+        elif verdict == "nothing_to_match":
+            nothing_to_match += 1
+            print(f"NOTHING-TO-MATCH: {display_id} reason={detail}", file=sys.stderr)
+
+    return total, unreachable, exempt, nothing_to_match
+
+
+def _apply_duplicate_id_override(
+    gate_id: str | None,
+    verdict: str,
+    detail: str | None,
+    duplicate_ids: set[str],
+    id_counts: Counter,
+    reported_duplicate_ids: set[str],
+) -> tuple[str, str | None]:
+    """Force a duplicated-id gate's "exempt" verdict to "unreachable".
+
+    Also prints the ``DUPLICATE-ID: ...`` diagnostic once per duplicated id
+    (BP-100k-4 round-2 hardening, F5) — a duplicate id is itself a reported
+    condition, never a silent shared exemption key.
+
+    Args:
+        gate_id: The entry's raw id (may be None).
+        verdict: The verdict from ``evaluate_gate``.
+        detail: The detail text from ``evaluate_gate``.
+        duplicate_ids: Set of ids that appear more than once.
+        id_counts: Occurrence count per id.
+        reported_duplicate_ids: Mutated in place — ids already diagnosed.
+
+    Returns:
+        The (possibly overridden) ``(verdict, detail)`` pair.
+    """
+    if gate_id not in duplicate_ids:
+        return verdict, detail
+
+    if gate_id not in reported_duplicate_ids:
+        print(
+            f"DUPLICATE-ID: {gate_id} reason=id appears "
+            f"{id_counts[gate_id]} times in hooks_manifest.hooks; a "
+            "duplicate id can never share one exemption entry across "
+            "distinct gates",
+            file=sys.stderr,
+        )
+        reported_duplicate_ids.add(gate_id)
+
+    if verdict == "exempt":
+        return "unreachable", (
+            f"id {gate_id!r} is duplicated in hooks_manifest.hooks; "
+            "duplicate ids are never eligible for a shared exemption "
+            f"(the ground text was: {detail!r})"
+        )
+    return verdict, detail
+
+
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
@@ -477,4 +608,17 @@ def evaluate_gate(
 #   non-blocking; a location-based condition with no exemption entry that
 #   no checkout could ever produce is still UNREACHABLE and still blocks.
 #   (#BP-100k-4-ii, H-1)
+# - 2026-09-07 [python-coder/BP-100n-4, file-size split]:
+#   check_hook_trigger_reachability.py exceeded the 400-line file-size cap
+#   (424 counted lines) after the BP-100n-4 disk-side census integration.
+#   Moved ``evaluate_all_gates`` and ``_apply_duplicate_id_override`` here
+#   from that module — the registry-wide application of ``evaluate_gate``
+#   (including the duplicate-id override) reasons about the same per-gate
+#   reachability rule this module already owns. Tracked-path acquisition
+#   went to the new sibling _hook_trigger_tracked_paths.py instead: moving
+#   it here too would have pushed this module itself over the 400-line cap
+#   (406 counted lines with both). Pure move, no behavior change: `main()`
+#   in check_hook_trigger_reachability.py now imports and calls these under
+#   their unchanged names. See that module's own DECISION HISTORY.
+#   (#BP-100n-4)
 # ====================================================================

@@ -28,6 +28,11 @@ doc_links:
   - path: scripts/goal_to_epic.py
     relationship: constrains
     status: exists
+    relevance: "Facade only since the 2026-09-14 decomposition. The goal-path consumer of the SINGLE shared files_touched classification helper is now scripts/ac_store/epic_tickets.py, below — the predicate must not be inlined or duplicated there either."
+  - path: scripts/ac_store/epic_tickets.py
+    relationship: constrains
+    status: exists
+    relevance: "Owns _call_generate_ticket_from_ac and generate_tickets_for_leaves — the goal-path half of the two generators that must share one classification helper."
   - path: scripts/ac_store/generate_ticket_from_ac.py
     relationship: constrains
     status: exists
@@ -57,5 +62,30 @@ amended_by:
 superseded_by: null
 covered_by: []
 implemented_by: []
+test_spec:
+  - name: test_section_presence_is_the_signal_that_test_writer_is_required
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "An AC with an implementation .py generates a ticket carrying '## Test Requirements', and the consumer that decides whether the test-writer phase runs reads that heading and answers 'required'. Assert the decision, not just the text — presence is only a signal if something consumes it."
+  - name: test_section_absence_is_the_signal_that_a_skip_is_legitimate
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "An AC whose files_touched is only docs/.yaml/.json/tickets paths generates a ticket with no such heading, and the same consumer answers 'skip is legitimate'."
+  - name: test_shared_classification_helper_is_the_single_owner_of_the_predicate
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: seam
+    description: "The it_requirements constraint that one helper owns the qualifying-.py predicate for BOTH generate_ticket_from_ac.py and the goal path (epic_tickets.py). A duplicated or inlined predicate in either generator fails this test even while both produce correct output today."
+  - name: test_absent_section_is_distinguishable_from_an_ungenerated_ticket
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: failure
+    description: "A legitimately absent section must not be indistinguishable from a generation that silently failed — the skip signal has to mean 'deliberately omitted', which is the phantom-done risk this AC guards."
 change_target: code
 risk_surface: contract_boundary

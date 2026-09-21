@@ -29,7 +29,7 @@ related_docs:
   `risk_surface`. Caught by `ticket_frontmatter_guard` on the first edit to the file, so it
   fails loudly, which is the good half. The bad half is that it is still unfixed six days and
   four occurrences later, and every generated epic pays the repair by hand.
-- **Where:** `scripts/goal_to_epic.py:1626` — the frontmatter block in
+- **Where:** `scripts/ac_store/epic_master_plan.py:191-199` — the frontmatter block in
   `_render_master_plan()`; against `templates/hooks/ticket_frontmatter_guard.py`
 - **Reported by:** customer bug report 2026-08-25
 

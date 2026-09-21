@@ -1,0 +1,96 @@
+id: KM-KGS-100a-3-viii
+components:
+  - knowledge_management
+readiness: approved
+priority: high
+title: "Relationship reading is proven against real store records, not a hand-built dictionary"
+component: knowledge-management
+level: L3
+status: active
+req_status: draft
+work_status: done
+roadmap_phase: phase_1
+created_by: "docs/acceptance-criteria/knowledge-management/KM-KGS-100-knowledge-graph-surfaces/KM-KGS-100a-3.yaml"
+criteria: |
+  Given the acceptance-criteria store on disk contains records declaring their
+    implemented_by and covered_by fields in every form the store actually uses —
+    column-zero and indented block lists, quoted and unquoted items, test-function
+    suffixes and symbol anchors
+  When the automated checks for acceptance-criterion relationship reading run
+  Then those checks obtain the field values by reading real acceptance-criterion
+    files from the store through the same file-reading entry point the knowledge
+    map itself uses
+  And no check in the group substitutes a pre-built field dictionary for that
+    reading step
+  And the set of real records exercised covers each of the declared forms listed
+    above, with at least one record per form
+  And for every record exercised, the values obtained match the values an
+    independent reference reader obtains from the same bytes
+  And the check group reports a failure whenever those two disagree on any record
+depends_on:
+  - KM-KGS-100a-3
+  - KM-KGS-100a-3-i
+  - KM-KGS-100a-3-iii
+doc_links:
+  - path: unit_tests/test_ac_edge_relationships.py
+    relationship: describes
+    status: exists
+  - path: scripts/knowledge_query.py
+    relationship: context
+    status: exists
+  - path: docs/testing/test-angles.md
+    relationship: context
+    status: exists
+assigned_agent: test-writer
+estimated_complexity: M
+it_requirements:
+  - "Measured evidence (2026-09-16): the existing checks for this behaviour build their fixture in the single formatting variant the reader happens to support (two-space indent, unquoted), and most assertions are made against a pre-built field dictionary, bypassing the file-reading step entirely. The component that fails in production is therefore never exercised — a phantom-done shape (green checks, broken behaviour)."
+  - "REFERENCE-READER VERIFICATION (performed, do not re-derive): the stdlib-only gate for this component is a single assertion that greps the text of scripts/knowledge_query.py for third-party import statements including 'import yaml'. It inspects only that one shipped script and does not scan test files. 163 test files under unit_tests/ already import yaml today. PyYAML is therefore permitted as a test-side reference oracle and use of it here does not violate KM-KQS-007 or the forbidden-imports assertion. The ban applies to the shipped script only, and the fix for the sibling criteria must remain standard-library-only."
+  - "The differential must run over every AC YAML record in the REAL store, not a sample and not a regenerated copy. A record is identified by its content (a YAML file that the reference reader reads as a mapping carrying an id field), never by file name or a hard-coded path list. The store's own serializer and its hand-edited records are the two producers whose output shape matters. This matches the established project convention that a hand-typed fixture reproduces the exact bias that hides the bug (see BO-2500c-1, TQ-400a-1, GE-124c-2)."
+  - "Form coverage must be proven by scanning the raw text of the scanned records independently of the production reader, so the proof does not rely on the component under test and does not rot when a particular record changes shape. The check must fail loudly, naming each declared form for which no scanned record exhibits it, so an empty store, a wrong store path or a silently filtered scan cannot pass vacuously."
+  - "SCOPE-NEUTRAL: the differential compares parsed FIELD VALUES only. It must not assert anything about whether a value resolves to a graph node or remains a raw path string."
+test_spec:
+  - name: test_whole_store_relationship_values_match_reference_reader
+    target_dir: unit_tests/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    description: "For EVERY AC record file in the real docs/acceptance-criteria store (every *.yaml file that PyYAML safe_load reads as a mapping carrying an id field; non-record files excluded by that data rule, not by name), implemented_by and covered_by obtained by passing the file path to the knowledge map's own file-reading entry point (never a pre-built field dict) equal the values PyYAML safe_load obtains from the same bytes, with absent or null normalised to an empty list. All mismatches are collected across the whole scan and the test fails once, listing every mismatching record path and field, not only the first"
+  - name: test_whole_store_scan_exercises_every_declared_relationship_form
+    target_dir: unit_tests/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    description: "The set of records scanned by the whole-store differential contains at least one record per form, detected from the raw file text independently of the production reader: column-zero block list, indented block list, quoted item, unquoted item, ::test_function suffix, #symbol anchor, and a comment line inside a block list. The check fails naming any form with no exemplar, so an empty store, a wrong store path or a silently filtered scan cannot pass vacuously"
+  - name: test_relationship_differential_reports_every_forced_disagreement
+    target_dir: unit_tests/
+    framework: pytest
+    type: unit
+    angle: failure
+    description: "The disagreement is forced synthetically, never by relying on a real reader bug: the production reader's return value is monkeypatched to differ from the PyYAML reference for two or more records, and the differential reports a failure naming each of those records and the field that differs (all of them, not only the first). The test stays valid whichever reader bugs exist or are fixed"
+test_required: true
+test_rationale: >-
+  The previous per-form sample missed the one remaining real divergence (BO-201, a comment line
+  inside a block list), and reading all ~4127 AC files with PyYAML plus the production reader
+  takes only a few seconds, so the differential runs over the whole store through the production
+  file-reading entry point and reports every mismatching file. PyYAML is the test-side reference
+  oracle (allowed: the stdlib-only gate inspects only scripts/knowledge_query.py). Whole-store
+  still satisfies "at least one record per form"; the form-coverage test, which now includes the
+  comment-inside-list form, proves the scan really exercised each form so an empty or wrong store
+  path cannot pass. The failure test forces disagreement by monkeypatching the reader's return
+  value, because a fixture that depended on a real reader bug drifted green once the bug was
+  fixed. Only field values are compared; nothing is asserted about node resolution of targets.
+delivers_to:
+  agent: python-coder
+  contract: "A failing differential over real store records that names each record where the reader and the reference reader disagree, and the field they disagree on"
+expects_from:
+  ac_id: KM-KGS-100a-3
+  contract: "The file-reading entry point that turns an acceptance-criterion file into its frontmatter field values"
+origin_agent: business-analyst
+created: 2026-09-16
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary

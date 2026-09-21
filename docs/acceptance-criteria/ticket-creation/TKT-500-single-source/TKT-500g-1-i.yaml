@@ -27,10 +27,14 @@ doc_links:
     relationship: constrains
     status: exists
     relevance: "The approved AC this criterion narrows. TKT-500f-7 says docs/config-only changed paths produce no proof section and no warning; read literally it forbids what this criterion requires. Its scope is hereby narrowed to the no-authored-demand case — see the ruling in notes and the amended_by entry recorded on that file."
-  - path: scripts/ac_store/generate_ticket_from_ac.py
+  - path: scripts/ac_store/_gtfa_body.py
     relationship: constrains
     status: exists
-    relevance: "Where the two rules meet. The path-shape branch must be the fallback that runs only when no demand was authored, never a filter applied after one was."
+    relevance: "Where the two rules meet. _build_ticket_body's `has_code_producer or authored_spec` gate decides whether a proof section is emitted at all; the path-shape branch must be the fallback that runs only when no demand was authored, never a filter applied after one was."
+  - path: scripts/ac_store/_gtfa_tests_section.py
+    relationship: constrains
+    status: exists
+    relevance: "_has_authored_test_spec is the 'a demand was authored' predicate the precedence rule turns on, and _build_test_requirements_section is the emitter the path-shape rule must not be allowed to suppress."
   - path: docs/architecture/components/ac-driven-dev.md
     relationship: describes
     status: exists

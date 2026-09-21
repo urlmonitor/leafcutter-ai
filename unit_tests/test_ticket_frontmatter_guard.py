@@ -427,6 +427,22 @@ _GUARDRAIL_YAML_PATH = _os.path.join(
     _REPO_ROOT_FOR_YAML, "config", "guardrail_gates.yaml"
 )
 
+# Top-level sections of guardrail_gates.yaml that are meta-policy blocks rather
+# than per-change_target gate maps, and so are excluded from the vocabulary
+# contract below. Both tests in this class read this ONE set: the list used to
+# be written out inline in each of them, which meant adding a section to one
+# and forgetting the other produced a half-updated contract. INF-700a-1 hit
+# exactly that -- knowledge_routing_wiring was added to the equivalent set in
+# unit_tests/commit_guardian/test_check_ac_schema.py, this file's two copies
+# were missed, and both tests went red in CI having been green on the branch
+# only because that suite had not been run locally.
+_NON_CHANGE_TARGET_SECTIONS = {
+    "flow_change_gates",
+    "documentation_gates",
+    "surgical_removal_guard",
+    "knowledge_routing_wiring",
+}
+
 
 class TestGuardrailYamlVocabularyContract(unittest.TestCase):
     """AC-2: guardrail_gates.yaml vocabulary must match the ADR-017 guard enums.
@@ -453,12 +469,8 @@ class TestGuardrailYamlVocabularyContract(unittest.TestCase):
         is disjoint from the guard enum.
         """
         data = self._load_yaml()
-        # flow_change_gates, documentation_gates, and surgical_removal_guard are
-        # meta-policy sections, not per-change_target gate maps — exclude them from
-        # the vocab contract.
-        _non_target_sections = {"flow_change_gates", "documentation_gates", "surgical_removal_guard"}
         yaml_change_targets = {
-            k for k in data.keys() if k not in _non_target_sections
+            k for k in data.keys() if k not in _NON_CHANGE_TARGET_SECTIONS
         }
         guard_set = set(ALLOWED_CHANGE_TARGETS)
 
@@ -490,7 +502,7 @@ class TestGuardrailYamlVocabularyContract(unittest.TestCase):
         failures: list[str] = []
 
         for change_target, surface_map in data.items():
-            if change_target in {"flow_change_gates", "documentation_gates", "surgical_removal_guard"}:
+            if change_target in _NON_CHANGE_TARGET_SECTIONS:
                 continue
             if not isinstance(surface_map, dict):
                 continue

@@ -8,7 +8,7 @@ component: knowledge-management
 level: L2
 status: active
 req_status: draft
-work_status: done
+work_status: in_progress
 roadmap_phase: phase_1
 created_by: "docs/acceptance-criteria/knowledge-management/KM-KGS-100-knowledge-graph-surfaces/KM-KGS-100b.yaml"
 criteria: |
@@ -38,6 +38,39 @@ it_requirements:
   - "The machine-readable export (JSON form) must expose each edge with its source id, target id, and edge_type so a reader can collect a node's outbound edges and group them by type without parsing display text"
   - "An acs node's outbound edge set must contain exactly the four declared edge kinds for criteria (implemented_by, covered_by, depends_on, component_membership) and no other outbound relationship type — edge production must stay bounded by the surface's declared edge_fields"
   - "The query path that scopes to a single criterion id must remain available through the existing knowledge-query interface (filter/select by node id) without a new bespoke command, so the how-to AC can reference a stable invocation"
+test_spec:
+  - name: test_json_export_edges_expose_source_target_and_edge_type
+    target_dir: unit_tests/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "Every edge in the machine-readable (JSON) export carries source id, target id and edge_type as separate fields, so outbound edges can be collected and grouped without parsing display text"
+  - name: test_ac_node_outbound_edge_kinds_within_four_declared_kinds
+    target_dir: unit_tests/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "For KM-EX-010 with all four relationship fields populated, the set of edge_type values across its outbound edges in the export is a subset of implemented_by, covered_by, depends_on and component_membership; no other kind appears"
+  - name: test_ac_node_depends_on_and_component_membership_grouped_by_kind
+    target_dir: unit_tests/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "Grouping KM-EX-010's exported outbound edges by edge_type puts the edge to KM-EX-009 under depends_on and the edge to the build-pipeline hub under component_membership"
+  - name: test_single_criterion_selection_returns_only_its_outbound_edges
+    target_dir: unit_tests/
+    framework: pytest
+    type: integration
+    angle: reachability
+    description: "Selecting node KM-EX-010 by id through the existing knowledge-query interface returns edges whose source is KM-EX-010 only, with no new bespoke command"
+test_required: true
+test_rationale: >-
+  The contract checks the export shape, that outbound kinds stay within the four declared kinds
+  (the 'no extra kind' clause), grouping for the two node-to-node kinds, and single-node selection
+  through the existing interface. It does not assert that implemented_by or covered_by edges are
+  present in the export or that their targets name nodes: whether those edges survive
+  edge-target validation depends on the deferred raw-path vs resolved-node decision. Once that is
+  decided, the subset assertion can be tightened to exact equality of the four kinds.
 delivers_to:
   agent: documentation-expert
   contract: "A stable knowledge-query invocation that selects one acs node by id and returns its outbound edges grouped as implemented_by (source files), covered_by (tests), depends_on (criteria), component_membership (component hub) in the machine-readable export"
@@ -46,6 +79,16 @@ expects_from:
   contract: "The four acceptance-criterion edge types attached to each acs node (implemented_by, covered_by, depends_on, component_membership)"
 origin_agent: business-analyst
 created: 2026-06-22
+notes: |
+  2026-09-16 measurement: this criterion was marked work_status: done but is not
+  satisfied. The AC store declares 1454 implemented_by values and the knowledge map
+  emits 641 edges; it declares 4541 covered_by values and emits 4333. Root cause is in
+  the block-list reader used by the acs surface: column-zero list items are read as an
+  empty list (841 files disagree with a reference reader for implemented_by, 394 for
+  covered_by) and quoted items keep their quote characters (281 implemented_by, 324
+  covered_by). The existing checks did not catch either, because they exercise a single
+  indented-and-unquoted fixture and largely bypass the reader with a pre-built field
+  dictionary. Reset done -> in_progress pending KM-KGS-100a-3-i..-viii.
 amended_by: []
 superseded_by: null
 covered_by: []

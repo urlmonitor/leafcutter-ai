@@ -1,6 +1,7 @@
 {
   "id": "fern-and-fig/track-an-order",
   "component": "ux-prototyping",
+  "example_product": "fern-and-fig",
   "product": "Fern & Fig",
   "name": "Customer tracks an order",
   "level": "journey",

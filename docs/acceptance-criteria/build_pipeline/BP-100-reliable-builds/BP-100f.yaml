@@ -25,7 +25,7 @@ created: 2026-06-05
 amended_by:
   - "split: BP-100 -> BP-100 + BP-500, 2026-06-05 — reparented from BP-100 to BP-500"
 superseded_by: null
-covered_by: [BP-100f-1, BP-100f-2, BP-100f-3]
+covered_by: [BP-100f-1, BP-100f-2, BP-100f-3, BP-100f-4]
 implemented_by: []
 change_target: prompt
 risk_surface: contract_boundary

@@ -1,0 +1,243 @@
+id: TQ-600b-5
+components:
+  - testing_quality
+title: "The standard way of running the suite is the parallel way, from a plain checkout"
+component: testing-quality
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a working environment prepared from nothing but the project's declared
+    development dependencies, on a checkout with no local configuration of its own,
+  When the suite is started by the command the project documents for running it,
+  Then the run spreads across more than one worker process,
+    And the run states in its own output how many workers it used,
+    And the same is true of the run the project's automated verification performs,
+      so the parallel path is the one that actually gates changes rather than an
+      alternative a reader must know to ask for,
+    And the single-worker run remains available by an explicit request, since
+      TQ-600b-1's comparison needs both.
+depends_on:
+  - TQ-600b
+  - TQ-600b-1
+doc_links:
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      The reachability angle is the whole point of this AC — whether the capability
+      is invoked on the path that actually runs — and the deployed angle covers the
+      from-a-plain-checkout clause.
+  - path: docs/acceptance-criteria/testing-quality/TQ-600-suite-feedback-latency/TQ-600b.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      Records the measured finding that the parallel runner is neither installed
+      nor declared as a development dependency, which is why installation is part
+      of this AC rather than an assumption underneath it.
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - >-
+    EXTEND `pytest.ini`'s addopts, NEVER REPLACE IT. Verified at enrichment, the
+    file currently reads
+    `addopts = --continue-on-collection-errors -p scripts.ac_store.pytest_ac_enforcement`.
+    Replacing that line silently removes the AC-enforcement plugin and the
+    collection-error tolerance the 96 measured collection errors depend on. Both
+    must survive the change, and that survival must be asserted.
+  - >-
+    PUT THE DEFAULT IN THE CONFIG FILE, NOT ON A COMMAND LINE. Verified at
+    enrichment, `.github/workflows/ci.yml`'s `Test suite (pytest)` job runs
+    `python -m pytest tests/ unit_tests/ -q --continue-on-collection-errors`. If
+    the worker default lives in `pytest.ini` that job inherits it and the third
+    clause holds by construction; if the worker count is instead appended to a
+    local command, CI and local diverge and the clause is NOT satisfied. Prefer
+    the config file and assert CI's inheritance rather than editing the job's
+    command.
+  - >-
+    pytest-xdist MUST BE ADDED TO `requirements-dev.txt` — measured absent, and
+    absent from the declared set is the whole point of the Given. Use the loose
+    `>=` pin convention that file states. An AC satisfied only where somebody
+    installed the runner by hand is satisfied nowhere that matters.
+  - >-
+    THE WORKER COUNT MUST REACH A MACHINE-READABLE SURFACE, not only the console.
+    xdist prints gateway lines, but TQ-600c's readers must not parse console
+    text; emit the count into the TQ-600c-1 cost record as well.
+  - >-
+    A PYTEST SESSION-SCOPED FIXTURE RUNS ONCE PER WORKER, WHICH DIRECTLY
+    CONTRADICTS TQ-600a-1'S HEADLINE CLAIM. With N workers the shared reference
+    layout is produced N times, not once, at 59.8s each — so adopting xdist
+    naively reintroduces a large fraction of the cost TQ-600a removed. Either
+    produce the layout once per RUN behind a lock in a run-scoped directory
+    (derived from the workers' common base temp directory), or have TQ-600a-1
+    report N-per-run honestly. This must be decided explicitly and recorded on
+    both ACs; neither may assume the other resolved it.
+  - >-
+    SERIAL MUST STAY REACHABLE BY AN EXPLICIT REQUEST, and the request must be
+    documented where the run command is documented — `docs/testing/README.md` and
+    `unit_tests/README.md`. TQ-600b-1's comparison has no baseline without it,
+    and the justification for parallelism quietly becomes unfalsifiable.
+  - >-
+    DO NOT ADOPT A NON-DEFAULT DISTRIBUTION MODE without re-running TQ-600b-1's
+    comparison. `loadscope` and `loadgroup` change which tests share a worker and
+    therefore which collisions occur, so a comparison run under one mode says
+    nothing about another.
+delivers_to:
+  - agent: python-coder
+    ac_id: TQ-600c-1
+    contract: >-
+      The run's worker count as a named field for the machine-readable cost
+      record, so downstream readers never parse xdist's console gateway lines.
+  - agent: documentation-expert
+    ac_id: TQ-600b-6
+    contract: >-
+      The standard invocation as delivered and the documented means of forcing a
+      serial run, both quoted rather than invented — including whether the plain
+      `python -m pytest` form inherits the parallel default from pytest.ini,
+      since that determines which command the guidance shows.
+expects_from:
+  ac_id: TQ-600b-1
+  contract: >-
+    A serial-versus-parallel per-test outcome comparison reporting agreement over
+    a whole-suite pair, with a stated compared count. Parallel may become the
+    default only once that comparison agrees, and this AC must keep single-worker
+    mode reachable so the comparison retains its baseline.
+test_spec:
+  - name: test_tq600b_5_pytest_xdist_is_a_declared_development_dependency
+    target_dir: unit_tests/build_guards/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: >-
+      The runner appears in `requirements-dev.txt` — the declared set — not
+      merely importable in the current interpreter. Asserting importability
+      passes on a machine where somebody installed it by hand.
+  - name: test_tq600b_5_the_documented_run_command_spreads_across_more_than_one_worker
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: reachability
+    surface_invoked: "python -m pytest (the command the project documents for running the suite)"
+    description: >-
+      Invoking the documented command over a small selection produces more than
+      one worker process. This is the whole point of the AC: a parallel mode
+      nobody's command reaches is the documented-but-unregistered-hook shape.
+  - name: test_tq600b_5_the_run_states_its_worker_count_in_its_own_machine_readable_output
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: >-
+      The count is read from the emitted cost record, not scraped from console
+      text, and equals the number of worker processes observed.
+  - name: test_tq600b_5_the_ci_test_suite_job_takes_the_same_parallel_path
+    target_dir: unit_tests/build_guards/
+    framework: unittest
+    type: integration
+    angle: deployed
+    description: >-
+      Parse the `Test suite (pytest)` job out of `.github/workflows/ci.yml` and
+      assert its invocation inherits the parallel default with no serial
+      override. NAMED MUTATION: add `-p no:xdist` or `-n 0` to that job's step;
+      this test must go RED. The parallel path must be the one that gates
+      changes, not an alternative a reader must know to ask for.
+  - name: test_tq600b_5_a_single_worker_run_remains_available_by_explicit_request
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: >-
+      The explicit serial request still produces exactly one worker, so
+      TQ-600b-1's comparison keeps its baseline. NAMED MUTATION: make parallel
+      the only mode; this test must go RED.
+  - name: test_tq600b_5_the_existing_addopts_entries_survive_the_change
+    target_dir: unit_tests/build_guards/
+    framework: unittest
+    type: unit
+    angle: failure
+    description: >-
+      After the change, `--continue-on-collection-errors` and the
+      `scripts.ac_store.pytest_ac_enforcement` plugin are both still in effect.
+      NAMED MUTATION: replace the addopts line rather than extending it; this
+      test must go RED. Against 96 collection errors, losing the tolerance flag
+      changes the run's verdict rather than its speed.
+  - name: test_tq600b_5_a_clean_environment_built_only_from_declared_dependencies_runs_in_parallel
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: deployed
+    description: >-
+      From a checkout with no local configuration of its own and an environment
+      installed only from `requirements-dev.txt`, the documented command spreads
+      across more than one worker. This is the Given made assertable.
+test_rationale: |
+  This is the anti-inert AC and every other AC under TQ-600b is satisfiable by
+  a parallel path that is never taken. The documented precedent is exact: a
+  commit hook whose README described it as live with enforcement enabled, which
+  appeared in no manifest and therefore ran for nobody.
+
+  The reachability descriptor therefore invokes the documented command rather
+  than asserting a configuration value, and the CI descriptor parses the job
+  the verification actually runs. A test that only asserted "-n auto appears in
+  pytest.ini" would pass on a CI job that overrides it.
+
+  The addopts-survival descriptor is not housekeeping. `pytest.ini` currently
+  carries `--continue-on-collection-errors` and the AC-enforcement plugin; the
+  natural edit replaces that line, and against 96 collection errors losing the
+  tolerance flag changes the run's verdict rather than its speed. Its named
+  mutation is exactly that replacement.
+
+  The declared-dependency descriptor asserts presence in `requirements-dev.txt`
+  rather than importability, because the measured finding is that xdist is
+  neither installed nor declared. An importability assertion passes on the one
+  machine where somebody installed it by hand, which is the state the Given
+  rules out.
+origin_agent: business-analyst
+created: 2026-09-21
+amended_by:
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-09-21
+  note: 'python-coder, M. Read pytest.ini and ci.yml at enrichment and pinned both:
+    addopts must be EXTENDED (it currently carries --continue-on-collection-errors
+    and the pytest_ac_enforcement plugin) and the default must live in the config
+    file so the CI job inherits it rather than diverging. Recorded the per-worker
+    session-fixture multiplication that puts this AC in direct tension with TQ-600a-1''s
+    headline claim, and required the conflict to be resolved explicitly on both records.
+    criteria untouched.'
+- action: approved
+  agent: approve_acs
+  date: '2026-09-21'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - dependency
+  - pipeline
+risk_surface: internal
+notes: |
+  THIS IS THE ANTI-INERT AC AND THIS REPOSITORY NEEDS IT MORE THAN MOST. The
+  documented precedent is exact: a commit hook whose README described it as live
+  with enforcement enabled, which appeared nowhere in any manifest and therefore
+  ran for nobody. A parallel mode documented in a how-to and never used by the
+  command anyone actually types is the same artifact. Every other AC under TQ-600b
+  is satisfiable by a parallel path that is never taken.
+
+  INSTALLATION IS IN SCOPE BECAUSE IT IS MEASURABLY ABSENT. The parallel runner is
+  not installed and not among the declared development dependencies, so this is a
+  dependency decision rather than a configuration flip — which is why the Given
+  insists on an environment built only from declared dependencies. An AC satisfied
+  only on a machine where somebody once installed the runner by hand is satisfied
+  nowhere that matters.
+
+  THE FOURTH CLAUSE PROTECTS TQ-600b-1. If parallel becomes the only available
+  mode, the equivalence comparison that justifies parallelism has no baseline to
+  compare against, and the justification quietly becomes unfalsifiable.
+
+  DELIBERATELY NOT SPECIFIED: the worker count, and whether it is fixed or derived
+  from the machine. The criterion is "more than one, and stated", so the it-po can
+  choose without reopening this AC.

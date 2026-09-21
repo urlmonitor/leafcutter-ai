@@ -1,0 +1,145 @@
+id: KM-KGS-100d-3-i
+components:
+  - knowledge_management
+readiness: draft
+priority: medium
+title: "An entry the builder cannot turn into an edge is reported, never passed over in silence"
+component: knowledge-management
+level: L3
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+parent: KM-KGS-100d-3
+criteria: |
+  Given a document whose related_docs holds one entry in a shape the shared
+    resolver does not accept, alongside two entries it does accept,
+  When the knowledge map is built,
+  Then the build names the surface, the document and the unaccepted entry on its
+    diagnostic stream,
+  And the build states, beside the number of edges that field contributed, the
+    number of entries it declined, so a field that contributed nothing is
+    distinguishable from a field that had nothing to contribute,
+  And the two accepted entries still contribute their edges,
+  And the build does not fail solely because one entry could not be turned into
+    an edge.
+depends_on:
+  - KM-KGS-100d-3
+doc_links:
+  - path: scripts/knowledge_query.py
+    relationship: modifies
+    status: exists
+    relevance: "extract_edges() is a generator that yields on the accepted path and does nothing on every other path. There is no branch in which a declined item is observed, so this criterion adds one — the count has to be carried out of the generator, not printed from inside it."
+  - path: docs/acceptance-criteria/ac-store/ACS-1100-honest-coverage-answers/ACS-1100.yaml
+    relationship: context
+    status: exists
+    relevance: "The standing contract this record instantiates rather than re-homes: an answer states the total it was measured against and the method behind it. Inherited per the knowledge-management PROJECT_CONTEXT — do not copy ACS-1100's criteria into this record, and do not move this record into ac-store because it reports a number."
+  - path: docs/reference/false-green-mechanisms.md
+    relationship: context
+    status: exists
+    relevance: "The named shape: a signal computed and then not consumed is indistinguishable from success. A declined entry that produces no edge and no count is that mechanism operating on a relationship rather than on a verdict."
+  - path: docs/architecture/components/knowledge-system.md
+    relationship: describes
+    status: exists
+    relevance: "Where the map's output surfaces are described. The count has to land on one of them to be readable after the build has scrolled past, which is the whole difference between this record and a stderr line."
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "THE DIAGNOSTIC STREAM IS stderr, AND THE LINE NAMES FOUR THINGS: the surface, the document (repo-relative path), the field, and the declined entry as the parser rendered it. stdout carries the map and must stay parseable — a diagnostic written to stdout corrupts the machine-readable output that the count itself is being added to."
+  - "THE COUNT SURFACES WHERE THE EDGE COUNT ALREADY SURFACES, IN BOTH RENDERERS. render_json's payload gains a machine-readable declined figure alongside the edges it already emits, and render_text's summary line — today `Surfaces: N   Nodes: N   Edges: N` — gains the same figure. A count that exists only on stderr is read by whoever is watching at the moment it scrolls past, which is the readership the criterion explicitly rejects."
+  - "BOTH FIGURES ARE EMITTED UNCONDITIONALLY, INCLUDING ZERO. A declined figure printed only when non-zero reproduces the ambiguity at smaller scale: a reader who sees no decline line cannot tell whether nothing was declined or nothing was looked at. Zero must be stated, and it is the assertion that a test can actually make about the negative case."
+  - "THE COUNT MUST BE CARRIED OUT OF THE GENERATOR, NOT PRINTED FROM INSIDE IT. extract_edges is a generator whose caller decides how much to consume; a print from inside makes the reported figure depend on consumption, and makes the same run report different numbers to the text and JSON paths. The declined observation must reach the caller as data."
+  - "THE FIGURE MUST BE ATTRIBUTABLE TO THE FIELD THAT PRODUCED IT. The criterion pairs the decline count with the number of edges that FIELD contributed, so an aggregate with no attribution does not satisfy it: the stderr line names surface, document and field, and the reported total must be reconcilable against those lines. State the denominator, per the ACS-1100 contract this record inherits."
+  - "THE BUILD DOES NOT FAIL ON A DECLINE. Exit code stays zero and the accepted entries still contribute their edges. The map builder is not a gate; the refusal belongs to the commit-time guard (GE-118d-1). An implementation that exits non-zero makes the map's integrity check a commit blocker by accident."
+  - "ERROR-HANDLING POLICY APPLIES UNCHANGED (CLAUDE.md Rules 1-4). A decline is a return value, not an exception, and must not be produced by catching one."
+test_spec:
+  - name: test_km_kgs_100d_3_i_declined_entry_is_named_on_stderr_with_surface_document_field_and_entry
+    target_dir: unit_tests/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    surface_invoked: "scripts/knowledge_query.py"
+    description: "Run the CLI as a subprocess over a fixture tree holding one document whose related_docs carries one entry the resolver declines alongside two it accepts. Assert the stderr text names the surface, the document path, the field, and the entry as parsed — all four, because a message naming only 'an entry' is not actionable — and assert stdout remains parseable."
+  - name: test_km_kgs_100d_3_i_declined_count_appears_beside_the_edge_count_in_both_renderers
+    target_dir: unit_tests/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    surface_invoked: "scripts/knowledge_query.py --format json and --format text"
+    description: "THE ASSERTION TARGET, NAMED SO THE TEST IS WRITABLE. Run the same fixture twice: with --format json, parse stdout and assert the payload carries the declined figure next to the edges; with the default text format, assert the summary line carries the declined figure beside Edges. Assert the two renderers report the SAME number from the same run — a figure that differs between them is the generator-consumption bug."
+  - name: test_km_kgs_100d_3_i_zero_declines_is_stated_and_differs_from_three_declines
+    target_dir: unit_tests/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: "THE WHOLE POINT OF THE RECORD, AND THE ARM MOST EASILY DROPPED. Two fixture trees: one whose field declares nothing, one whose field declares three entries that are all declined. Both contribute zero edges. Assert the two runs report DIFFERENT declined figures — 0 and 3 — and that the zero case states 0 explicitly rather than omitting the figure. A test that only asserts the accepted edges exist cannot tell 'contributed nothing' from 'had nothing to contribute', which is the ambiguity this record closes."
+  - name: test_km_kgs_100d_3_i_accepted_entries_still_contribute_and_the_build_exits_zero
+    target_dir: unit_tests/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: "On the fixture with one declined and two accepted entries, assert both accepted edges are present in the map and the process exit code is zero. The exit-code assertion is the guard against turning the map builder into a gate, which the final criterion clause forbids."
+test_rationale: |
+  The criterion's distinguishing clause is not provable by any test that looks
+  at one run. 'Zero edges' and 'zero edges because three entries were declined'
+  render identically today, so the third arm runs two fixtures whose edge output
+  is identical by construction and asserts that the REPORTED figures differ.
+  That is the only shape that fails on an implementation which reports declines
+  only when there are some, and it is why the zero case is asserted as an
+  explicit 0 rather than as the absence of a line.
+
+  The two-renderer arm is separate from the stderr arm deliberately: a message
+  on the diagnostic stream is read by whoever is watching the build, while the
+  count beside the edge count is read by anyone later asking whether the map is
+  complete. Both arms are in the criterion because either alone leaves
+  completeness a matter of trust. Asserting the two renderers agree within one
+  run additionally catches the generator-consumption defect — a figure printed
+  from inside extract_edges depends on how much the caller consumed and can
+  legitimately differ between the JSON and text paths.
+
+  This arm is not dead code once KM-KGS-100d-3 lands. The labelled form becomes
+  accepted, but the decline path stays exercised by every shape the resolver
+  refuses, including the two-key mapping GE-118d-2 refuses on the guard side —
+  the case where an author believes they declared two relationships and the map
+  contains neither.
+delivers_to: null
+expects_from:
+  ac_id: KM-KGS-100d-3
+  contract: "STEP 5 — consumes the resolver-backed element branch KM-KGS-100d-3 creates in extract_edges, specifically its ability to distinguish accepted-and-yielded from declined. That distinction does not exist before that record lands: today both outcomes are simply 'no edge', which is why this record cannot be built first. Adds no accepted shape and changes no edge; it only makes the declined outcome observable and counted."
+origin_agent: BrainCandy
+created: 2026-09-21
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: internal
+notes: |
+  WHY A COUNT AND NOT ONLY A MESSAGE. A message on the diagnostic stream is read
+  by whoever is watching the build at the moment it scrolls past. The count sits
+  beside the edge count and is read by anyone who later asks whether the map is
+  complete — which is the question the silent drop made unanswerable. Both arms
+  are in the criterion because either alone leaves the map's completeness a
+  matter of trust.
+
+  THE DISTINGUISHING CLAUSE IS THE POINT, AND IT IS EASY TO DROP. "Zero edges"
+  and "zero edges because three entries were declined" render identically today.
+  An implementation that reports declines only when there are some, without ever
+  stating the denominator, reproduces the ambiguity on a smaller scale — a reader
+  who sees no decline line cannot tell whether nothing was declined or nothing
+  was looked at. State both numbers, always.
+
+  THIS ARM SURVIVES THE FIX AND IS NOT DEAD CODE AFTERWARDS. Once
+  KM-KGS-100d-3 lands, the labelled form is accepted, so the decline path is no
+  longer exercised by the shape that motivated it. It remains exercised by every
+  shape the resolver does not accept — including the two-key mapping GE-118d-2
+  refuses on the guard side, which is the case where a document's author believes
+  they declared two relationships and the map contains none of them. Without this
+  record that case is silent in exactly the way the original defect was.
+
+  BLOCK-VERSUS-ANNOUNCE IS SETTLED HERE AS ANNOUNCE, DELIBERATELY. The final
+  clause says the build does not fail on a declined entry. The map builder is not
+  a gate; failing a build over one malformed relationship in one document would
+  make the map's integrity check a commit blocker by accident. The refusal belongs
+  to the commit-time guard (GE-118d-1), which is the surface an author is already
+  interacting with. Two records, two dispositions, stated rather than inherited.

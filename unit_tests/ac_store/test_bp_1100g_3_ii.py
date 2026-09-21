@@ -71,7 +71,21 @@ _SCHEMA_SRC = _REPO_ROOT / "config" / "ac_store_schema.json"
 _SUBPROCESS_TIMEOUT = 90
 
 # Modules that must travel together for done_proof to import at all.
-_MODULE_FILES = ("done_proof.py", "test_enforcement.py")
+#
+# This list is a hand-maintained mirror of the ac_store entries in
+# `AC_STORE_DEPLOY_MAP` (scripts/build_phases.py) that done_proof imports at
+# MODULE SCOPE. Extracting a new sibling out of done_proof.py therefore takes
+# TWO edits, not one: the deploy map (so the real deployed hook can import it)
+# and this tuple (so the simulated deployed layouts below can). Miss this one
+# and every test in this file fails with "driver produced no result" whose real
+# stderr is a ModuleNotFoundError for the new sibling — the fixture is broken,
+# not the module under test. That is exactly what happened when BP-100n-4 split
+# `_done_proof_phase_helpers.py` out of done_proof.py.
+_MODULE_FILES = (
+    "done_proof.py",
+    "test_enforcement.py",
+    "_done_proof_phase_helpers.py",
+)
 
 
 def _run_in_subprocess(module_dir: Path, body: str) -> dict:

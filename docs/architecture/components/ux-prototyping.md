@@ -6,7 +6,7 @@ diagram_type: component
 status: active
 type: reference
 created: 2026-07-14
-last_updated: 2026-07-14
+last_updated: 2026-09-16
 components:
   - ux_prototyping
   - ac_store
@@ -161,9 +161,24 @@ flow are **read-only views**; the `.flow.json` stays the single source of truth.
 - `docs/product-truth/scripts/validate_product_truth.py` checks schema
   conformance, `index.json` mirroring, entity-registry membership, step/branch id
   uniqueness, `acceptance_scenarios.for` resolution, `impl_summary` correctness,
-  mock-data invariants, and classifier `outcome` consistency. Unresolved
-  `implements` AC ids are warnings (a seed flow may reference not-yet-authored
-  ACs). It is wired into the commit gates alongside the AC gates.
+  mock-data invariants, and classifier `outcome` consistency. Every `implements`
+  AC id is re-resolved against the AC store as it stands right now (UXP-700c-1):
+  an unresolved one is a **hard failure**, naming the holding artifact, position,
+  and target; the run states `resolved N pointer(s)` unconditionally. It is wired
+  into the commit gates alongside the AC gates.
+- **Freshness (UXP-700c-2, softer than the pointer check above):** a journey may
+  additionally carry a top-level `confirmed` record — an explicit, caller-supplied
+  identity (`against`) plus a per-described-thing content snapshot (`state`) taken
+  at that moment; the checker only ever reads this, never synthesises it
+  ([ADR-043](../adrs/ADR-043-journey-record-carries-its-own-behind-mark.md) SS3).
+  Each run recompares every confirmed journey's `state` against the described
+  things' *current* content; a journey where something moved is reported `behind`
+  by name (naming every changed thing) as a WARNING, never a build failure. A
+  never-confirmed journey is skipped entirely. The run states
+  `compared N journey(s) for freshness` unconditionally, so a run that compared
+  none is distinguishable from one that compared some and found them all current.
+  The verdict this check computes is what UXP-700c-2-ii's `_sync_behind_marks`
+  writes into the journey's durable `behind` mark.
 
 ## Entry Points
 
@@ -175,6 +190,7 @@ flow are **read-only views**; the `.flow.json` stays the single source of truth.
 ## Cross-Links
 
 - [ADR-023 — Product-Truth Store as the Flow-First Upstream Layer](../adrs/ADR-023-product-truth-flow-first-upstream-layer.md) — the decision, and the reconciliation with ADR-010.
+- [ADR-043 — A Journey Known to Be Behind Carries a Durable `behind` Mark in the Record Itself](../adrs/ADR-043-journey-record-carries-its-own-behind-mark.md) — the `confirmed.against` identity contract and the durable `behind` mark this check's verdict feeds.
 - [ADR-010 — AC Store as Authoritative Backlog](../adrs/ADR-010-ac-store-as-authoritative-backlog.md) — the downstream backlog this store feeds.
 - [How to author product-truth artifacts by hand](../../how-to/authoring-product-truth-artifacts.md) — the search → add-vs-create protocol.
 - [Product-truth schema reference](../../how-to/product-truth-schema-reference.md) — field-by-field reference for the four schemas.

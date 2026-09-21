@@ -1,0 +1,258 @@
+id: TQ-600c-5
+components:
+  - testing_quality
+title: "The guard runs as part of the checks that gate a change, not only when someone thinks to run it"
+component: testing-quality
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: critical
+roadmap_phase: phase_1
+criteria: |
+  Given a proposed change to the project,
+  When the project's automated verification of that change runs,
+  Then the budget guard is among the checks that run, and it is reached from the
+    verification's own registered set of checks rather than from a document
+    describing it,
+    And its verdict decides part of the verification's overall outcome, so a change
+      that puts the suite over budget cannot be accepted while the guard reports
+      that it is,
+    And the verification's output states that the guard ran, and states its verdict,
+    And when the guard is removed from the registered set, the verification reports
+      that the guard did not run, rather than reporting an outcome that omits it in
+      silence.
+depends_on:
+  - TQ-600c
+  - TQ-600c-2
+doc_links:
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      The reachability angle is the entire AC, and the deployed angle applies to
+      the second clause — the guard must be exercised through the path a real
+      change travels, from the layout that path actually uses.
+  - path: CLAUDE.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      Documents the registered-check sets a change passes through and the recurring
+      trap this AC closes: hooks that are documented as live, and are absent from
+      every manifest, therefore running for nobody and reporting to nobody.
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - >-
+    NAME EVERY ENFORCEMENT POINT AND SAY WHICH ONE ACTUALLY GATES. Verified at
+    enrichment, `.github/workflows/ci.yml` defines these jobs: Lint (ruff),
+    Component vocab style, Test suite (pytest), Proof-of-done coverage check, AC
+    store valid, AC store valid (whole store, push to main), Numbering guarantee
+    valid, Changelog entry present, Type-check changed files (informational), and
+    Consumer install simulation. Adding a job there makes the guard RUN. It does
+    NOT make it GATE — only membership of the `main` branch ruleset's required
+    status checks makes the second clause ("cannot be accepted") true. Both
+    points must be named, and the ruleset entry identified as the load-bearing
+    one. The Type-check job is the standing example of a job that reports and
+    does not gate.
+  - >-
+    THE RULESET EDIT IS NOT A CODE CHANGE AND IS NOT THE CODER'S TO MAKE. It
+    requires repository-admin rights. Treat it as an explicit hand-off: the coder
+    lands the job and reports that the required-check registration is outstanding,
+    rather than declaring the second clause satisfied by the job's existence.
+  - >-
+    A PRE-COMMIT HOOK IS NOT A VIABLE ENFORCEMENT POINT FOR THIS GUARD. The cost
+    record is produced by a full suite run, which no commit hook performs. If a
+    hook is nonetheless added it would register an entry in
+    `templates/scripts/commit_guardian/commit_guardian.json` — a package surface
+    — and this AC would first have to be amended with `package_surface: true` and
+    the five-field structured it_requirements spec. That amendment is an it-po
+    decision; raise it rather than adding the manifest entry.
+  - >-
+    THE GUARD MUST NOT RE-RUN THE SUITE. It consumes the cost record the existing
+    `Test suite (pytest)` job produced — via an uploaded artifact, or as a step
+    inside that job. A second full run doubles exactly the cost this goal exists
+    to remove, and would make the verification slower as a consequence of
+    measuring its speed.
+  - >-
+    THE REGISTRATION CHECK MUST BE STRUCTURAL, NOT A GREP. Parse the workflow's
+    job mapping — the structure the verification actually consumes — and assert
+    membership there. A grep for the job's name passes on a commented-out job, on
+    a job in a workflow that never triggers, and on a mention in a comment.
+  - >-
+    THE FOURTH CLAUSE NEEDS A POSITIVE REPORT OF ABSENCE. When the guard is not
+    in the registered set, the verification must report that the guard did not
+    run. Most checks fail loudly when they break; a check that is merely
+    unregistered fails silently and indistinguishably from a clean run.
+  - >-
+    THE DECLINED-BECAUSE-PARTIAL VERDICT OF TQ-600c-1-i AND THE DEGENERATE
+    FAILURES OF TQ-600c-2-i MUST REACH THE VERIFICATION'S OUTCOME UNCHANGED. A
+    wrapper step that maps anything other than a clean pass onto success — or
+    that carries `continue-on-error` — re-opens the false green at the last
+    possible moment.
+  - >-
+    The guard's output must appear in the job's own log with its verdict, not
+    only in its exit status, so a reader of the verification can see that it ran
+    and what it decided.
+delivers_to: null
+expects_from:
+  ac_id: TQ-600c-2
+  contract: >-
+    The budget guard's command-line entry point: a non-zero exit status when the
+    run is over budget, zero when within, and an output stating the measured
+    total, the budget compared against, the examined-entry count and the ranked
+    offenders. This AC registers that entry point and carries its exit status
+    into the verification's outcome.
+test_spec:
+  - name: test_tq600c_5_the_budget_guard_is_among_the_jobs_the_verification_enumerates
+    target_dir: unit_tests/build_guards/
+    framework: unittest
+    type: integration
+    angle: reachability
+    surface_invoked: ".github/workflows/ci.yml job mapping"
+    description: >-
+      The workflow's job mapping is parsed as a structure and the guard's job is
+      present and enabled. Reached from the verification's own registered set,
+      not from a document describing it.
+  - name: test_tq600c_5_the_registration_check_is_not_satisfied_by_a_commented_out_job
+    target_dir: unit_tests/build_guards/
+    framework: unittest
+    type: unit
+    angle: failure
+    description: >-
+      A workflow in which the guard's job is commented out is reported as NOT
+      registered. NAMED MUTATION: implement the registration check as a grep for
+      the job name; a commented-out job then satisfies it and this test must go
+      RED.
+  - name: test_tq600c_5_removing_the_guard_from_the_registered_set_is_reported_as_the_guard_not_running
+    target_dir: unit_tests/build_guards/
+    framework: unittest
+    type: integration
+    angle: failure
+    description: >-
+      THE FOURTH CLAUSE, AND THE UNUSUAL ONE. With the guard absent from the
+      registered set, the verification reports that the guard did not run and
+      fails, rather than completing with an outcome that omits it in silence.
+      NAMED MUTATION: report only the outcomes of the jobs that did run; the
+      removal becomes invisible and this test must go RED.
+  - name: test_tq600c_5_the_guard_verdict_decides_part_of_the_verification_outcome
+    target_dir: unit_tests/build_guards/
+    framework: unittest
+    type: integration
+    angle: seam
+    description: >-
+      Over an over-budget cost record the simulated verification fails; over a
+      within-budget record it succeeds. NAMED MUTATION: add `continue-on-error:
+      true` to the guard's step; the over-budget run then succeeds overall and
+      this test must go RED.
+  - name: test_tq600c_5_the_verification_output_states_that_the_guard_ran_and_states_its_verdict
+    target_dir: unit_tests/build_guards/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: >-
+      Both facts appear in the verification's own output, so a reader does not
+      have to infer that the guard ran from the absence of a complaint.
+  - name: test_tq600c_5_the_guard_consumes_the_record_the_test_suite_job_produced_rather_than_rerunning_the_suite
+    target_dir: unit_tests/build_guards/
+    framework: unittest
+    type: integration
+    angle: deployed
+    description: >-
+      The guard's path in the workflow contains no second full-suite invocation;
+      it reads the record the existing `Test suite (pytest)` job emitted. NAMED
+      MUTATION: have the guard job run the suite itself; this test must go RED.
+      Measuring the suite's cost must not double it.
+  - name: test_tq600c_5_a_declined_partial_verdict_is_not_mapped_to_success_by_the_verification
+    target_dir: unit_tests/build_guards/
+    framework: unittest
+    type: integration
+    angle: failure
+    description: >-
+      TQ-600c-1-i's third verdict value reaches the verification's outcome
+      unchanged. NAMED MUTATION: treat any non-failing guard status as success;
+      declined then reads as a pass and this test must go RED — the false green
+      re-opened at the last possible moment.
+  - name: test_tq600c_5_the_required_status_check_registration_is_asserted_or_reported_outstanding
+    target_dir: unit_tests/build_guards/
+    framework: unittest
+    type: integration
+    angle: reachability
+    description: >-
+      The distinction between running and gating is made explicit: the test
+      asserts either that the guard's job is among the branch ruleset's required
+      checks, or — where that state is not readable from the repository — that
+      the implementation recorded the registration as an outstanding hand-off
+      rather than claiming the second clause satisfied by the job's existence.
+test_rationale: |
+  A guard nothing invokes is the purest form of the defect this tree is about,
+  and it is worse than absent because its existence is cited as the reason
+  nobody needs to watch the runtime. Every other AC under TQ-600c — the record,
+  the failing verdict, the derived budget, the per-test regression — is
+  satisfiable in full by a guard that nothing ever calls.
+
+  So the registration descriptors parse the workflow's job mapping as a
+  structure rather than grepping it. A grep passes on a commented-out job, on a
+  job in a workflow that never triggers, and on a mention in a comment; this
+  repository's filed precedent is a commit hook documented in its own README as
+  live with enforcement enabled, which appeared in no manifest and ran for
+  nobody.
+
+  The two enforcement points are deliberately separated. Adding a CI job makes
+  the guard RUN; only membership of the branch ruleset's required checks makes
+  it GATE, and the workflow already contains a job (Type-check, informational)
+  that reports without gating. The final descriptor forces that distinction to
+  be answered rather than assumed, because a job added to a workflow looks
+  exactly like a gate until a change merges past it.
+
+  The removal descriptor is the unusual one and it is the point. Most checks
+  fail loudly when they break; a check that is merely unregistered fails
+  silently and indistinguishably from a clean run. Requiring the verification to
+  notice an absent guard converts "the guard was removed" from an invisible
+  event into a reported one — the same distinction between examined-nothing and
+  found-nothing that runs through TQ-600c-2 and TQ-600c-2-i.
+origin_agent: business-analyst
+created: 2026-09-21
+amended_by:
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-09-21
+  note: 'python-coder, M. Enumerated ci.yml''s actual job list at enrichment and separated
+    the two enforcement points: a workflow job makes the guard RUN, only the main
+    ruleset''s required-checks membership makes it GATE, and the existing informational
+    Type-check job is the standing proof that the two differ. Flagged the ruleset
+    edit as an admin hand-off outside the coder''s reach. Required the guard to consume
+    the Test suite job''s record rather than re-run the suite — measuring the cost
+    must not double it. Ruled a pre-commit hook out as an enforcement point and noted
+    it would need a package_surface amendment first. criteria untouched.'
+- action: approved
+  agent: approve_acs
+  date: '2026-09-21'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - pipeline
+  - config
+risk_surface: internal
+notes: |
+  A GUARD NOTHING INVOKES IS THE PUREST FORM OF THE DEFECT THIS TREE IS ABOUT. It
+  is worse than absent, because its existence is cited as the reason nobody needs
+  to watch the runtime. This repository has the precedent on file: a commit hook
+  documented in its own README as live with enforcement enabled, which appeared in
+  no manifest anywhere and had never run. Every other AC under TQ-600c — the
+  record, the failing verdict, the derived budget, the per-test regression — is
+  satisfiable in full by a guard that nothing ever calls.
+
+  THE FOURTH CLAUSE IS THE UNUSUAL ONE AND IT IS THE POINT. Most checks fail loudly
+  when they break; a check that is merely unregistered fails silently and
+  indistinguishably from a clean run. Requiring the verification to notice an
+  absent guard is what converts "the guard was removed" from an invisible event
+  into a reported one — the same distinction between examined-nothing and
+  found-nothing that runs through TQ-600c-2 and TQ-600c-2-i.
+
+  SCOPE BOUNDARY: this AC says nothing about the guard's logic, which is TQ-600c-2
+  and TQ-600c-4, and nothing about the budget's value, which is TQ-600c-3. It is
+  about invocation and consequence only. Keeping it separate matters, because
+  reachability is the property most often assumed by the tests for the other three.

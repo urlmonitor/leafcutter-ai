@@ -25,7 +25,7 @@ origin_agent: BrainCandy
 created: 2026-07-23
 amended_by: []
 superseded_by: null
-covered_by: []
+covered_by: [BO-2400f-3-i]
 implemented_by: [scripts/setup_ticket_worktree.py]
 change_target: pipeline
 risk_surface: internal

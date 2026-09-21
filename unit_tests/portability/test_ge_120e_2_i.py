@@ -137,39 +137,13 @@ def _sweep(harness, working_copy_dir: Path, hooks_by_id: dict, check_ids, staged
     return report
 
 
-# Signals that a non-zero exit means "this check could not run here", NOT
-# "this check inspected the change set and objected to something in it".
-#
-# This distinction is the whole point of GE-120a-1, and getting it wrong is
-# what made this sweep accuse six checks of objecting to carried-in content
-# when not one of them had inspected anything: two were handed no file
-# argument and printed usage, two needed a product-truth store the second
-# working copy does not carry, and two needed a fuller layout than the
-# fixture provides. `exit != 0` is not an objection.
-#
-# The RESULT-line form is the epic's own machine-readable vocabulary
-# (`check_outcome.OUTCOME_COULD_NOT_CHECK`) and is the form this should
-# eventually rely on alone. The prose markers below are a documented
-# INTERIM fallback for checks that have not adopted that vocabulary yet —
-# adoption across the fleet is GE-120a-2/GE-120a-5's scope. Delete the
-# fallback when it lands; do not grow it to paper over a real objection.
-_COULD_NOT_RUN_MARKERS = (
-    "could_not_check",
-    "usage:",
-    "cannot read",
-    "skipping",
-    "no such file or directory",
-    "modulenotfounderror",
-    "importerror",
-    "traceback (most recent call last)",
-    "matches none of the",
+# Does a non-zero exit mean "could not run here" rather than "inspected the
+# change set and objected"? That distinction is the whole point of GE-120a-1;
+# it lives in a sibling module with its full rationale, because this file is at
+# its size limit and the reasoning must not be compressed away to fit.
+from unit_tests.portability._ge_120e_2_i_outcome_markers import (  # noqa: E402
+    could_not_run as _could_not_run,
 )
-
-
-def _could_not_run(outcome) -> bool:
-    """True when `outcome` shows the check never performed its inspection."""
-    lowered = (outcome.output or "").lower()
-    return any(marker in lowered for marker in _COULD_NOT_RUN_MARKERS)
 
 
 def _write_fixture_manifest(tmp_dir: Path, hooks: list[dict]) -> Path:

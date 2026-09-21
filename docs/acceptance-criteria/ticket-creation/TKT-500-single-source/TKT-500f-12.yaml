@@ -29,9 +29,14 @@ criteria: |
     docs/config-only tickets).
 depends_on: [TKT-500f, TKT-500f-9, TKT-500f-11]
 doc_links:
-  - path: scripts/ac_store/generate_ticket_from_ac.py
+  - path: scripts/ac_store/_gtfa_agents_inputs.py
     relationship: constrains
     status: exists
+    relevance: "_collect_needed_agents — where ac-validator and ac-fulfillment-gate are unioned into the needed set, and where the implementation-.py test against files_touched decides whether they are."
+  - path: scripts/ac_store/_gtfa_agents_map.py
+    relationship: constrains
+    status: exists
+    relevance: "_build_agents_map — the map builder that turns the needed set into the ticket's agents map, and the place an override could still strip the two gates back out."
   - path: docs/reference/ac-schema.md
     relationship: specifies
     status: exists
@@ -56,8 +61,8 @@ expects_from:
   contract: "Ticket frontmatter ac_traceability { id, path } so the wired ac-validator / ac-fulfillment-gate phases can resolve the source AC (rather than silently no-opping). Combines with TKT-500f-11's '- [ ] AC-N:' checkbox lines that ac-validator asserts against (see depends_on: TKT-500f-11)."
 it_requirements:
   config_schema_fragment: null
-  reference_file_path: "scripts/ac_store/generate_ticket_from_ac.py"
-  n_location_rule: "1 (the agents-map builder; e.g. _build_agents_map / the computed-quality-gates map, BO-500 family, per ADR-017)"
+  reference_file_path: "scripts/ac_store/_gtfa_agents_inputs.py"
+  n_location_rule: "1 (_collect_needed_agents, the computed-quality-gates needed-set builder, BO-500 family, per ADR-017). Its consumer _build_agents_map in scripts/ac_store/_gtfa_agents_map.py is declared in doc_links."
   required_skills:
     - python-coder
   post_write_commands:

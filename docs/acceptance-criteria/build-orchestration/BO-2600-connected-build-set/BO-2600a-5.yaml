@@ -29,6 +29,15 @@ doc_links:
   - path: scripts/goal_to_epic.py
     relationship: modifies
     status: exists
+    relevance: "Facade only since the 2026-09-14 decomposition — it re-exports build_epic_from_ids and its main() still routes --ids, but the entrypoint and the flag both live in the two modules below."
+  - path: scripts/ac_store/epic_pipeline.py
+    relationship: modifies
+    status: exists
+    relevance: "Owns build_epic_from_ids — the id-list entrypoint this AC adds, including the 'id set is authoritative, no subtree re-derivation' rule (its docstring carries the BO-2600a-5 annotation)."
+  - path: scripts/ac_store/epic_cli.py
+    relationship: modifies
+    status: exists
+    relevance: "Owns _build_parser's --ac / --ids mutually exclusive group and _run_ids_mode, which splits the comma-joined id string and dispatches to build_epic_from_ids."
   - path: scripts/build_orchestration/fast_lane.py
     relationship: related
     status: exists
@@ -40,8 +49,8 @@ delivers_to:
 expects_from: null
 it_requirements:
   config_schema_fragment: null
-  reference_file_path: scripts/goal_to_epic.py
-  n_location_rule: "1"
+  reference_file_path: scripts/ac_store/epic_pipeline.py
+  n_location_rule: "1 (build_epic_from_ids in epic_pipeline.py), plus the --ids flag and _run_ids_mode dispatch in scripts/ac_store/epic_cli.py. Retargeted from scripts/goal_to_epic.py on 2026-09-14: the decomposition moved both out of the facade, which now only re-exports them."
   required_skills:
     - python-coder
   post_write_commands: []
@@ -103,5 +112,8 @@ covered_by:
 implemented_by:
 - tickets/99_done/EPIC-BuildAcResolvesALeafAcsConnectedBuildSet/05_TICKET-20260811-BO-2600a-5.md
 - scripts/goal_to_epic.py
+- scripts/ac_store/epic_pipeline.py
+- scripts/ac_store/epic_cli.py
+- scripts/ac_store/epic_phases.py
 change_target: code
 risk_surface: contract_boundary

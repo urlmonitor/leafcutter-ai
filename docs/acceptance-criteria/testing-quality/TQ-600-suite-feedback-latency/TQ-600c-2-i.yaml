@@ -1,0 +1,200 @@
+id: TQ-600c-2-i
+components:
+  - testing_quality
+title: "A guard that examined nothing reports that, and never reports clean"
+component: testing-quality
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: critical
+roadmap_phase: phase_1
+criteria: |
+  Given a cost record that holds no test entries, or that cannot be read, or that is
+    not where the guard expects to find one,
+  When the budget guard runs,
+  Then it finishes with a failing status in each of those three cases,
+    And it states which of the three it encountered,
+    And in no case does it finish with a passing status,
+    And its examined-entry count is reported as zero, rather than being omitted.
+depends_on:
+  - TQ-600c-2
+doc_links:
+  - path: CLAUDE.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      Holds all three precedents in one place, including the explicit instruction
+      that a check which examined nothing must not look like a check that found
+      nothing. This AC is that sentence made into a testable obligation for this
+      guard.
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      The failure angle, three times over. Each of the three inputs is a separate
+      case and an implementation can easily handle one and fall through the others
+      to a clean exit.
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - >-
+    ALL THREE DEGENERATE INPUTS EXIT NON-ZERO, AND EACH SAYS WHICH IT WAS. Empty,
+    unreadable, and absent have different causes and different fixes — the run
+    produced nothing, the run produced something malformed, the wiring is broken
+    — so reporting them identically hands the reader the diagnosis problem this
+    whole goal exists to remove.
+  - >-
+    THE ABSENT-RECORD CASE MUST NOT BE SPECIAL-CASED TO "NOTHING TO CHECK". That
+    is the obvious implementation and it silently retires the guard the moment
+    the record's location changes or a run fails before producing one. It is the
+    most likely of the three in practice and the most dangerous.
+  - >-
+    THE EXAMINED-ENTRY COUNT IS REPORTED AS ZERO, NOT OMITTED, in all three
+    cases. An omitted figure is indistinguishable from a figure nobody computed,
+    which is the precise failure this clause exists to close.
+  - >-
+    No degenerate input may reach a passing status by any path, including an
+    exception that a caller could interpret as success. Wrap the read per the
+    project error handling policy, log at WARNING or above, and return the
+    failing status explicitly.
+  - >-
+    Cover the near-miss shapes alongside the three named ones: a record that
+    parses but whose entries key is absent or null, and a record holding a header
+    but an empty entry list. Both are "holds no test entries" in substance and an
+    implementation that checks only for an empty file will pass them through.
+delivers_to: null
+expects_from:
+  ac_id: TQ-600c-2
+  contract: >-
+    The budget guard's command-line entry point and its examined-entry-count
+    reporting. This AC asserts the guard's behaviour on the three degenerate cost
+    records, where the count must be reported as zero and the status must never
+    be passing.
+test_spec:
+  - name: test_tq600c_2_i_an_empty_cost_record_makes_the_guard_exit_non_zero_and_say_so
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: failure
+    description: >-
+      A record holding no test entries produces a non-zero exit and an output
+      naming the empty-record case specifically.
+  - name: test_tq600c_2_i_an_unreadable_cost_record_makes_the_guard_exit_non_zero_and_say_so
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: failure
+    description: >-
+      A malformed or unparseable record produces a non-zero exit naming the
+      unreadable case — not a traceback a caller could mistake for an
+      infrastructure hiccup and retry past.
+  - name: test_tq600c_2_i_a_missing_cost_record_makes_the_guard_exit_non_zero_and_say_so
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: failure
+    description: >-
+      THE MOST LIKELY AND MOST DANGEROUS CASE. No record at the expected location
+      produces a non-zero exit naming the absent case. NAMED MUTATION: treat an
+      absent record as "nothing to check" and exit clean; this test must go RED.
+      That mutation is the obvious implementation and it silently stops the guard
+      guarding the moment the record's location changes.
+  - name: test_tq600c_2_i_the_three_cases_are_reported_distinguishably
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: >-
+      Empty, unreadable and absent each produce their own stated reason. NAMED
+      MUTATION: collapse all three onto one "cannot evaluate" message; this test
+      must go RED. The three have different fixes.
+  - name: test_tq600c_2_i_no_degenerate_input_ever_produces_a_passing_status
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: unit
+    angle: failure
+    description: >-
+      Parametrised over all three named cases plus the two near-misses — a record
+      whose entries key is absent or null, and a record with a header but an
+      empty entry list. None produces a zero exit. NAMED MUTATION: check only for
+      a zero-byte file; the two near-misses then pass through and this test must
+      go RED.
+  - name: test_tq600c_2_i_the_examined_count_is_reported_as_zero_rather_than_omitted
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: >-
+      In each of the three cases the examined-entry field is present in the
+      output and reads zero. NAMED MUTATION: omit the count when no entries were
+      read; this test must go RED. An omitted figure is indistinguishable from a
+      figure nobody computed.
+test_rationale: |
+  This is the highest-value L3 in the tree and it is written from three filed
+  incidents rather than from caution. The AC-store validator globbed zero files,
+  printed a success-shaped message and exited clean for eight days while the
+  documented defence against store rot did nothing. The documented
+  feedback-configuration check pointed one directory too high, so it reported
+  missing on every worktree including correct ones and a real absence was
+  indistinguishable from the check's own error. The merge audit compared against
+  a stale reference and agreed with itself. Three mechanisms, one outcome:
+  examined nothing, looked clean.
+
+  The missing-record descriptor carries the load-bearing injection, because
+  treating an absent record as "nothing to check" is the implementation anyone
+  would write first and it is the case most likely to occur. Failing instead is
+  the only behaviour that keeps the guard honest.
+
+  The no-passing-status descriptor is parametrised beyond the three named cases
+  to include a record whose entries key is absent or null and one with a header
+  but an empty list. Both are "holds no test entries" in substance, and an
+  implementation checking for a zero-byte file passes them through — which is
+  how one handled case and two fall-throughs reach a clean exit.
+
+  The zero-count descriptor exists because an omitted figure is
+  indistinguishable from a figure nobody computed, which is the same distinction
+  the examined-count clauses enforce throughout this tree.
+origin_agent: business-analyst
+created: 2026-09-21
+amended_by:
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-09-21
+  note: python-coder, S. Added two near-miss inputs beyond the BA's three — a record
+    whose entries key is absent or null, and one with a header but an empty entry
+    list — because both are "holds no test entries" in substance and an implementation
+    checking for a zero-byte file passes them through. The missing-record descriptor
+    carries the load-bearing injection (treat-absent-as-nothing-to-check). criteria
+    untouched.
+- action: approved
+  agent: approve_acs
+  date: '2026-09-21'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: internal
+notes: |
+  THIS IS THE HIGHEST-VALUE L3 IN THE TREE AND IT IS WRITTEN FROM THREE FILED
+  INCIDENTS, NOT FROM CAUTION. The AC-store validator globbed zero files, printed a
+  success-shaped message and exited clean for eight days while the documented
+  defence against store rot did nothing. The documented feedback-configuration
+  check pointed one directory too high, so it reported missing on every worktree
+  including correct ones, and a real absence was indistinguishable from the check's
+  own error. The merge audit compared against a stale reference and agreed with
+  itself. Three different mechanisms, one outcome: examined nothing, looked clean.
+
+  A MISSING RECORD IS THE MOST LIKELY OF THE THREE IN PRACTICE, AND THE MOST
+  DANGEROUS. The obvious implementation treats an absent record as "nothing to
+  check" and exits clean, which means the guard silently stops guarding the moment
+  the record's location changes or a run fails before producing one. Failing
+  instead is the only behaviour that keeps the guard honest, and it is why this is
+  specified rather than left as a robustness detail.
+
+  THE THREE CASES ARE DISTINGUISHED IN THE OUTPUT BECAUSE THEY HAVE DIFFERENT
+  FIXES. An empty record means the run produced nothing; an unreadable one means it
+  produced something malformed; an absent one means the wiring is broken. Reporting
+  them identically hands the reader the diagnosis problem this whole goal exists to
+  remove.

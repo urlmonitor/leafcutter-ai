@@ -422,3 +422,73 @@ surgical_removal_guard:
         the canonical test pair). It is injected via documentation_gates
         (post-coder canonical order), never via flow_change_gates.
       enforced_by: unit_tests/test_bo_2200d_1_i.py::test_documentation_expert_never_double_injected
+
+# ---------------------------------------------------------------------------
+# knowledge_routing_wiring (AC INF-700a-1-i) — the anti-partial-wiring
+# declaration. check_knowledge_routing_wiring() (scripts/build_phases_knowledge.py,
+# re-exported from build_phases.py) globs templates/workflows-js/*.js for its
+# candidate set — NEVER from this file — and checks each real file name
+# against the two lists below. A file present in neither list is reported
+# "unwired" and build.py aborts the build (mirrors the existing
+# _check_command_reachability_guard shape).
+#
+# n_location_rule: all — this section must be present in all deployments of
+# guardrail_gates.yaml.
+# ---------------------------------------------------------------------------
+
+knowledge_routing_wiring:
+  description: >
+    Every real workflow artefact under templates/workflows-js/ is named here
+    as either wired (dispatches a "knowledge-routing-step" agent() call
+    before the phase that publishes its own output, per AC INF-700a-1) or
+    excluded (deliberately not given a routing step, with a disclosed
+    reason) — so a completion path added later without either is caught by
+    the build-time guard rather than discovered by absence.
+  n_location_rule: all
+  wired:
+    - fast-lane-ship.js
+    - quick-fix.js
+    - build-epic.js
+  excluded:
+    - path: build-ticket.js
+      reason: >
+        Genuine completion path (dispatched directly by a single-ticket
+        drive) whose "commit"/"pull-request" phases are dispatched generically
+        inside a dynamic pending-phases loop (Phase Dispatch, driven by the
+        ticket's own frontmatter agents list), not from a fixed, named
+        agent() call site the way fast-lane-ship.js and quick-fix.js dispatch
+        their commit. Wiring the routing step here correctly (BEFORE whichever
+        loop iteration turns out to be the commit phase, for an arbitrary
+        per-ticket phase ordering) needs its own dedicated design and test
+        coverage rather than a blind insertion at the end of the loop, which
+        would place it AFTER the commit it must precede — the exact ordering
+        violation INF-700a-1 exists to prevent. Tracked as a disclosed,
+        known gap for a follow-up AC; not silently assumed away.
+      covered_by: null
+    - path: finalize-feature.js
+      reason: >
+        Genuine completion path (post-merge feature finalization) whose
+        publish step (Step 4 — merge PR to main) sits deep inside a 9-step,
+        confirmation-gated sequence with its own resumability and halt
+        semantics. Wiring the routing step here needs its own dedicated
+        design and test coverage rather than a blind insertion, for the same
+        ordering-risk reason given for build-ticket.js above. Tracked as a
+        disclosed, known gap for a follow-up AC; not silently assumed away.
+      covered_by: null
+    - path: build-feature.js
+      reason: >
+        User-facing entry point that resolves to build-epic.js or
+        build-ticket.js and completes nothing itself.
+      covered_by: "build-epic.js / build-ticket.js"
+    - path: plan-feature.js
+      reason: >
+        Produces AC specifications rather than completing built work. Agents
+        emit knowledge during AC authoring (the product-owner, business-analyst
+        and it-po templates all carry an emission block), but that work is
+        completed later, when the resulting AC is actually built.
+      covered_by: "whichever completion path later builds the authored AC"
+    - path: create-ticket.js
+      reason: >
+        Produces a ticket specification rather than completing built work,
+        for the same reason as plan-feature.js above.
+      covered_by: "whichever completion path later builds the created ticket"

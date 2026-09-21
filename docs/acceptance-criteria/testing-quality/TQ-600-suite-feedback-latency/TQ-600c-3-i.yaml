@@ -1,0 +1,186 @@
+id: TQ-600c-3-i
+components:
+  - testing_quality
+title: "No budget record, no fallback number — the guard fails instead of inventing one"
+component: testing-quality
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given the declared budget record is absent, or holds no budget, or holds a budget
+    that is not a positive duration,
+  When the budget guard runs against a valid cost record,
+  Then it finishes with a failing status and names the budget record as the reason,
+    And it does not fall back to a value of its own, so no verdict is reached
+      against an unrecorded budget,
+    And the same is true when the record is present but names no baseline, date or
+      headroom, since a budget that cannot be traced to a measurement is not a
+      budget in force.
+depends_on:
+  - TQ-600c-3
+doc_links:
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      The failure angle. Each of the listed degenerate records is a separate input
+      the guard must reject, and a fallback default satisfies none of them while
+      appearing to work.
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - >-
+    NO FALLBACK OF ANY KIND — not a module constant, not an environment variable,
+    not a last-known-good cache, not a value baked into a default config the
+    loader merges over. A built-in fallback is how the single source of truth
+    stops being one: the record can be deleted, moved or emptied and the guard
+    carries on reporting verdicts against a number nobody agreed to, with no
+    signal that the record it was supposed to read is gone.
+  - >-
+    THE FAILURE MUST NAME THE BUDGET RECORD AS THE REASON, and must be
+    distinguishable from TQ-600c-2-i's cost-record failures. Both end in a
+    failing status for different reasons — nothing to measure against, versus
+    nothing to measure — and each must say which.
+  - >-
+    "NOT A POSITIVE DURATION" COVERS FOUR SHAPES, each rejected explicitly rather
+    than coerced: zero, negative, non-numeric, and a numeric string carrying a
+    unit suffix the loader does not understand. Silent coercion of "90m" to 90 is
+    a wrong verdict dressed as a right one.
+  - >-
+    A RECORD PRESENT BUT MISSING BASELINE, DATE OR HEADROOM IS REJECTED even when
+    its budget field is a valid positive number. A budget that cannot be traced
+    to a measurement is not a budget in force, and this is what keeps TQ-600c-3's
+    derivation rule from decaying into a magic number over time.
+  - >-
+    The failure this prevents is not the guard crashing — it is the guard
+    CONTINUING. Verify behaviourally: with the record removed, no verdict of any
+    kind about the run's total may appear in the output.
+delivers_to: null
+expects_from:
+  ac_id: TQ-600c-3
+  contract: >-
+    The declared budget record and its loader. This AC asserts the loader's
+    refusals: absent, budget-less, non-positive, and present-but-untraceable
+    records must each produce a failing status naming the budget record, with no
+    fallback value substituted.
+test_spec:
+  - name: test_tq600c_3_i_an_absent_budget_record_makes_the_guard_fail_and_name_the_budget_record
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: failure
+    description: >-
+      With no declared record present and a perfectly valid cost record supplied,
+      the guard exits non-zero and its output names the budget record as the
+      reason.
+  - name: test_tq600c_3_i_a_record_holding_no_budget_makes_the_guard_fail
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: unit
+    angle: failure
+    description: >-
+      A record that loads but carries no budget field is refused, rather than
+      treated as an empty override over a default.
+  - name: test_tq600c_3_i_a_zero_negative_non_numeric_or_unit_suffixed_budget_is_rejected
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: >-
+      Parametrised over all four shapes. NAMED MUTATION: coerce the value with a
+      permissive numeric cast; "90m" then becomes 90 seconds, a wrong verdict
+      dressed as a right one, and this test must go RED.
+  - name: test_tq600c_3_i_the_guard_reaches_no_verdict_at_all_against_an_unrecorded_budget
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: failure
+    description: >-
+      THE LOAD-BEARING DESCRIPTOR. With the record removed, the output contains
+      neither a pass nor a fail about the run's total — only the budget-record
+      error. NAMED MUTATION: add a module-level default budget used when the
+      record is unreadable; the guard then continues reporting verdicts against
+      a number nobody agreed to and this test must go RED. The failure this
+      prevents is not the guard crashing, it is the guard continuing.
+  - name: test_tq600c_3_i_a_record_with_a_budget_but_no_baseline_date_or_headroom_is_rejected
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: >-
+      A valid positive budget with no provenance beside it is refused.
+      Parametrised so each of the three missing fields is rejected on its own —
+      an implementation that checks only for the baseline passes the other two.
+  - name: test_tq600c_3_i_a_budget_record_failure_is_distinguishable_from_a_cost_record_failure
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: >-
+      Complements TQ-600c-2-i. Nothing-to-measure and nothing-to-measure-against
+      both fail, and the two outputs say which. NAMED MUTATION: emit one generic
+      "guard could not evaluate" message for both; this test must go RED.
+test_rationale: |
+  A built-in fallback is how the single source of truth stops being one. It is
+  the helpful-looking default that quietly makes TQ-600c-3's second clause
+  untestable in production: the record can be deleted, moved or emptied and the
+  guard carries on reporting verdicts against a number nobody agreed to, with no
+  signal that the record it was supposed to read is gone.
+
+  So the load-bearing descriptor asserts an ABSENCE of verdict, not merely a
+  non-zero exit, and names the module-default injection. A guard that crashed
+  loudly would satisfy a weaker reading of these criteria; a guard that
+  continued would not, and only the absence assertion tells them apart.
+
+  The non-positive descriptor is parametrised over four shapes including a
+  unit-suffixed string, because permissive numeric coercion is the natural
+  implementation and turns "90m" into ninety seconds — a wrong verdict wearing
+  the appearance of a right one.
+
+  The missing-provenance descriptor is parametrised per field rather than as one
+  case, because an implementation that checks only for the baseline passes the
+  other two. A bare number with no baseline, no date and no headroom cannot be
+  checked, defended or revised by anyone who was not present when it was chosen,
+  which six months out is everybody.
+origin_agent: business-analyst
+created: 2026-09-21
+amended_by:
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-09-21
+  note: python-coder, S. Made the load-bearing descriptor assert an ABSENCE of verdict
+    rather than a non-zero exit — a guard that crashes loudly would satisfy a weaker
+    reading, and only the absence assertion separates crashing from continuing. Enumerated
+    four shapes for "not a positive duration" including a unit-suffixed string, since
+    permissive coercion turns "90m" into ninety seconds. Parametrised the missing-provenance
+    case per field. criteria untouched.
+- action: approved
+  agent: approve_acs
+  date: '2026-09-21'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: internal
+notes: |
+  A BUILT-IN FALLBACK IS HOW THE SINGLE SOURCE OF TRUTH STOPS BEING ONE. It is the
+  helpful-looking default that quietly makes TQ-600c-3's second clause untestable in
+  production: the record can be deleted, moved or emptied and the guard carries on
+  reporting verdicts against a number nobody agreed to, with no signal that the
+  record it was supposed to read is gone. The failure this prevents is not the
+  guard crashing — it is the guard continuing.
+
+  THE LAST CLAUSE IS THE STRICT ONE AND IT IS INTENTIONAL. A bare number with no
+  baseline, no date and no headroom beside it cannot be checked, defended or
+  revised by anyone who was not present when it was chosen — which, six months out,
+  is everybody. Refusing to act on one is what keeps TQ-600c-3's derivation rule
+  from decaying into a magic number over time.
+
+  COMPLEMENTARY TO TQ-600c-2-i, NOT OVERLAPPING. That AC covers a missing or
+  unreadable COST record — nothing to measure. This one covers a missing or
+  untraceable BUDGET record — nothing to measure against. Both end in a failing
+  status, for different reasons, and each must say which.

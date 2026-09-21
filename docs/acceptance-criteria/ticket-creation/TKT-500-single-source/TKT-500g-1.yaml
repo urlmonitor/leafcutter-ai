@@ -31,10 +31,14 @@ criteria: |
     authors a proof demand, not only for a constructed example.
 depends_on: [TKT-500g]
 doc_links:
-  - path: scripts/ac_store/generate_ticket_from_ac.py
+  - path: scripts/ac_store/_gtfa_body.py
     relationship: constrains
     status: exists
-    relevance: "The surface. This is where the whole proof section used to be gated on whether some worker in the computed map declares it produces production code; f3ac950c / PR #536 removed that gate for the authored route. Read the authored-versus-derived split before changing anything here."
+    relevance: "The surface. _build_ticket_body holds the `has_code_producer or authored_spec` gate on the whole proof section — this is where it used to be gated on whether some worker in the computed map declares it produces production code; f3ac950c / PR #536 removed that gate for the authored route. Read the authored-versus-derived split before changing anything here."
+  - path: scripts/ac_store/_gtfa_agents_inputs.py
+    relationship: constrains
+    status: exists
+    relevance: "_collect_needed_agents is where test-writer and test-runner are recorded as owed. The clause 'the phase list records the proof writer and the proof runner as phases still owed' is decided here, not in the body builder."
   - path: unit_tests/ac_store/test_authored_test_spec_survives_generation.py
     relationship: verifies
     status: exists

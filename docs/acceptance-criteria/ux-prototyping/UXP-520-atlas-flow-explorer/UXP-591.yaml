@@ -21,6 +21,12 @@ doc_links:
   - path: docs/product-truth/flows/leafcutter/explore-flows-in-atlas.flow.json
     relationship: implemented-by-step
     status: exists
+  - path: docs/architecture/adrs/ADR-043-journey-record-carries-its-own-behind-mark.md
+    relationship: context
+    status: exists
+  - path: docs/how-to/product-truth-schema-reference.md
+    relationship: context
+    status: exists
 delivers_to: null
 expects_from: {}
 origin_agent: BrainCandy

@@ -5,6 +5,14 @@ GOAL: Unit and integration tests for the readiness gate in goal_to_epic.py.
       three-choice prompt routing (ACD-1200b-2) in the build-ac agent template.
 TICKET: EPIC-GoalToEpic/02_readiness-gate.md
 COVERS: ACD-1200b-1, ACD-1200b-1-i, ACD-1200b-2
+
+MOCK TARGET NOTE: the `dispatch_it_po_v3` patches below target
+`epic_readiness_gate`, NOT `goal_to_epic`. `_review_all_and_reclassify` calls
+`dispatch_it_po_v3` as a bare name resolved through `epic_readiness_gate`'s
+module globals; `goal_to_epic` merely re-exports it, so rebinding the attribute
+there leaves the real subprocess dispatch in place. Before goal_to_epic.py was
+split into sibling modules the two forms were the same object, and these
+patches read `goal_to_epic.dispatch_it_po_v3`.
 """
 
 from __future__ import annotations
@@ -344,7 +352,7 @@ class TestThreeChoicePromptRouting:
             # the gate sees all approved and proceeds.
             with patch("builtins.input", side_effect=["review-all"]):
                 with patch(
-                    "goal_to_epic.dispatch_it_po_v3",
+                    "epic_readiness_gate.dispatch_it_po_v3",
                     side_effect=mock_it_po_v3_dispatch,
                 ) as mock_dispatch:
                     result = readiness_gate_prompt(
@@ -382,7 +390,7 @@ class TestThreeChoicePromptRouting:
 
             with patch("builtins.input", side_effect=["review-all"]):
                 with patch(
-                    "goal_to_epic.dispatch_it_po_v3",
+                    "epic_readiness_gate.dispatch_it_po_v3",
                     side_effect=promote_on_dispatch,
                 ):
                     result = readiness_gate_prompt(readiness_dict, store_root=store_root)
@@ -435,7 +443,7 @@ class TestThreeChoicePromptRouting:
             # User types "review-all" first, then after re-presentation types "yes"
             with patch("builtins.input", side_effect=["review-all", "yes"]):
                 with patch(
-                    "goal_to_epic.dispatch_it_po_v3",
+                    "epic_readiness_gate.dispatch_it_po_v3",
                     side_effect=partial_promote,
                 ):
                     result = readiness_gate_prompt(readiness_dict, store_root=store_root)

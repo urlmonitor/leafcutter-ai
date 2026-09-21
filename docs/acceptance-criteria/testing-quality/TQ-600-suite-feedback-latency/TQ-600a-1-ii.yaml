@@ -1,0 +1,184 @@
+id: TQ-600a-1-ii
+components:
+  - testing_quality
+  - build_pipeline
+title: "When the one shared deploy fails, every waiting test says so and none of them passes"
+component: testing-quality
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given the single deploy that produces the shared reference layout, made to fail,
+  When a selection of tests that consume that layout is run,
+  Then not one of those tests reports a pass,
+    And each of them reports a failure that names the shared preparation as the
+      cause and carries the deploy's own failure output, rather than an assertion
+      failure about a file that is absent,
+    And the deploy is not retried once per waiting test — the reported deploy
+      attempt count stays at one for the whole run.
+depends_on:
+  - TQ-600a-1
+  - TQ-600a-6
+doc_links:
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      The failure angle. This is the single-point-of-failure case that sharing
+      creates and that per-test deploys did not have, so it is new risk introduced
+      by TQ-600a-1 and must be covered by TQ-600a-1's own work.
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - >-
+    THE FAILURE MUST BE CACHED AS A FAILURE, NOT RE-ATTEMPTED. Cache the deploy's
+    OUTCOME, not just its success. A naive "if the layout is missing, build it"
+    guard retries per consumer and converts one 59.8s failure into N of them —
+    the slowest possible run, which is the failure mode this whole goal exists to
+    remove.
+  - >-
+    NEVER HAND BACK A PARTIAL LAYOUT. The consuming test must be failed at setup.
+    A fixture that catches the deploy error and returns the (empty or
+    half-written) target directory leaves consumers passing vacuously — phantom
+    done via the fixture layer, and the highest-value clause in this AC.
+  - >-
+    CARRY THE DEPLOY'S OWN DIAGNOSTIC. The raised error must include the deploy
+    subprocess's captured stdout, stderr and exit status. An assertion failure
+    about an absent file discards the only information that explains the run.
+  - >-
+    ERROR HANDLING POLICY APPLIES DIRECTLY. The deploy is a subprocess, so it is
+    external I/O: wrap it, log at WARNING or above, and re-raise as a typed error.
+    Do not swallow, and do not let a `pass` or a flag-set stand in for a raise.
+  - >-
+    Total added cost of a failed shared deploy across N waiting consumers must be
+    one deploy's cost, not N — this is a correctness constraint here, not an
+    optimisation.
+  - >-
+    Under pytest-xdist the cache is per worker. State the per-worker attempt
+    figure honestly rather than claiming one attempt for the whole run; the
+    criterion is that no consumer triggers a retry, not that N workers
+    coordinate.
+delivers_to: null
+expects_from:
+  - ac_id: TQ-600a-1
+    contract: >-
+      The single deploy's cached outcome, in either shape: success carrying a
+      layout root path, or failure carrying the deploy subprocess's captured
+      stdout, stderr and exit status. This AC asserts over the failure shape and
+      over no second attempt being made.
+  - ac_id: TQ-600a-6
+    contract: >-
+      The run's reported real-deploy figure, which is the surface on which "the
+      attempt count stayed at 1" is observable after a failed shared deploy — a
+      retry storm across waiting consumers shows up there and nowhere else.
+test_spec:
+  - name: test_tq600a_1_ii_no_consumer_passes_when_the_shared_deploy_fails
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: failure
+    description: >-
+      With the single deploy forced to fail, a child session over at least three
+      consumers reports zero passes among them. This is the clause that matters
+      most and it is asserted over the child run's own result record.
+  - name: test_tq600a_1_ii_each_failure_names_the_shared_preparation_and_carries_the_deploy_output
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: failure
+    description: >-
+      Every consumer's reported failure identifies the shared preparation as the
+      cause and contains the deploy subprocess's own captured stderr — not a
+      FileNotFoundError naming a path inside the missing layout.
+  - name: test_tq600a_1_ii_a_consumer_never_passes_vacuously_over_an_empty_layout
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: failure
+    description: >-
+      NAMED MUTATION: make the fixture catch the deploy error and return the
+      empty target directory. A consumer whose assertions are satisfied by an
+      absence (for example "no forbidden file is present") then passes, and THIS
+      TEST MUST GO RED. Revert and it returns to green. This is the phantom-done
+      control for the fixture layer.
+  - name: test_tq600a_1_ii_the_failed_deploy_is_attempted_once_for_the_whole_run
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: >-
+      Over a selection of at least three consumers with the deploy failing, the
+      number of deploy subprocesses actually executed is 1, observed
+      independently of the reported figure. NAMED MUTATION: retry on each
+      cache miss instead of caching the failure; this test must go RED.
+  - name: test_tq600a_1_ii_the_reported_attempt_count_is_one_not_zero_or_absent
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: >-
+      A failed deploy still counts as an attempt: the run reports 1, not 0 and
+      not an omitted field. A counter incremented only on success makes a failing
+      run look like a run that never needed the layout.
+test_rationale: |
+  Sharing concentrates risk that per-test deploys did not have, and this AC
+  prices it. Before the change a broken deploy failed one test with its own
+  error attached; after it, one broken deploy can fail dozens of tests on
+  missing files with the real cause discarded.
+
+  The vacuous-pass descriptor is the load-bearing one and it names its
+  injection, because it asserts an absence: a fixture that swallows its own
+  failure and returns an empty directory leaves any consumer whose assertions
+  are satisfied by an absence passing. No other descriptor in this tree catches
+  that shape.
+
+  The attempt-count descriptor observes executed subprocesses rather than the
+  reported figure, because the two can disagree and a retrying fixture that
+  reports 1 is exactly the disagreement.
+origin_agent: business-analyst
+created: 2026-09-21
+amended_by:
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-09-21
+  note: python-coder, M. Pinned the cache-the-FAILURE requirement (a naive "rebuild
+    if missing" guard retries per consumer and costs 59.8s each) and the never-hand-back-a-partial-layout
+    rule. The vacuous-pass descriptor names its injection because it asserts an absence.
+    Attempt count is observed as executed subprocesses, not read from the report.
+    criteria untouched.
+- reason: 'Split of TQ-600a-1 into fixture (TQ-600a-1) + deploy-count reporting (TQ-600a-6).
+    This record stays a child of TQ-600a-1: what it constrains is the fixture''s cached
+    outcome and the fact that no consumer passes over a failed deploy. Its third clause
+    — the reported attempt count stays at one — asserts over the figure TQ-600a-6
+    now owns, so TQ-600a-6 is added to depends_on. Nothing else changed; criteria
+    untouched.'
+  by: business-analyst
+  at: 2026-09-21
+- action: approved
+  agent: approve_acs
+  date: '2026-09-21'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+notes: |
+  SHARING CONCENTRATES RISK AND THIS AC PRICES IT. Before the change, a broken
+  deploy failed one test at a time with that test's own error attached. After it,
+  one broken deploy can produce dozens of tests failing on missing files, with the
+  real cause — the deploy's own error output — discarded. That turns a five-minute
+  diagnosis into an afternoon, which is the same currency TQ-600 is trying to save.
+
+  THE "NONE OF THEM PASSES" CLAUSE IS THE ONE THAT MATTERS MOST. A shared fixture
+  that swallows its own failure and hands back an empty or half-written directory
+  can leave a consuming test passing vacuously — it finds nothing to object to
+  because there is nothing there. That is phantom-done via the fixture layer.
+
+  THE RETRY CLAUSE IS NOT AN OPTIMISATION. A failed shared preparation that is
+  retried per consumer costs 59.8s per waiting test and converts one fast failure
+  into the slowest possible run, which is the failure mode this whole goal exists
+  to remove.

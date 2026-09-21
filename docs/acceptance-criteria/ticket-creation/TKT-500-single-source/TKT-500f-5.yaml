@@ -31,6 +31,11 @@ doc_links:
   - path: scripts/goal_to_epic.py
     relationship: constrains
     status: exists
+    relevance: "Facade only since the 2026-09-14 decomposition. The goal-path generator this AC constrains is now scripts/ac_store/epic_tickets.py, below — the shared helper must be used from there, not from the facade."
+  - path: scripts/ac_store/epic_tickets.py
+    relationship: constrains
+    status: exists
+    relevance: "Owns _call_generate_ticket_from_ac and generate_tickets_for_leaves — the goal-path half of the two generators this AC constrains."
   - path: scripts/ac_store/generate_ticket_from_ac.py
     relationship: constrains
     status: exists
@@ -60,5 +65,42 @@ amended_by:
 superseded_by: null
 covered_by: [TKT-500f-5-i]
 implemented_by: []
+test_spec:
+  - name: test_non_phase_agent_is_not_named_as_the_ticket_phase_agent
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "An AC assigned an agent whose registry entry has is_ticket_phase false (e.g. workflow-architect) generates a ticket that does not name that agent as its phase agent."
+  - name: test_template_editing_work_substitutes_llm_expert
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "When the work edits agent or skill templates, the substitute is llm-expert — the first branch of the substitution rule."
+  - name: test_all_other_work_substitutes_python_coder
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "For all other work the substitute is python-coder — the second branch. Both branches need their own test or a constant-return implementation passes."
+  - name: test_substitution_warning_names_substitute_and_original_agent
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "The recorded warning states a substitution was made AND names both the substitute and the AC's original assigned_agent. Assert all three facts separately — a bare 'substitution occurred' string satisfies none of the diagnostic purpose."
+  - name: test_phase_agent_passes_through_unchanged_with_no_warning
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: "The second Given: an is_ticket_phase true agent (python-coder) is named unchanged and NO substitution warning is recorded. This is the control that stops the substitution firing on everything."
+  - name: test_substitution_reads_is_ticket_phase_from_the_real_registry
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    description: "The is_ticket_phase decision is taken from the actual config/agent_registry.json rather than a hard-coded agent-name list, so a newly registered phase agent inherits the behaviour automatically."
 change_target: code
 risk_surface: contract_boundary

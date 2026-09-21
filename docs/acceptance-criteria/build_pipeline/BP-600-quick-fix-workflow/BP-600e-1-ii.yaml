@@ -1,0 +1,205 @@
+id: BP-600e-1-ii
+components:
+  - build_pipeline
+title: "Quick-fix scope guard ignores the workflow's own artifacts (AC YAMLs, test file)"
+component: build-pipeline
+level: L3
+status: active
+req_status: active
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+work_status: done
+criteria: |
+  Given a /quick-fix run has reached Phase 3 (Fix) and the workflow has
+    already produced its own three artifacts — the new AC YAML (ac_path),
+    the back-linked parent AC YAML (parent_ac_path) and the red-phase test
+    file (testFile) — so all three paths already appear dirty in
+    `git status --porcelain` before the fix agent is dispatched,
+  When the fix agent reports its changed files and names one or more of
+    those same workflow-authored paths among extra_files, or sets
+    scope_expanded solely because of them,
+  Then the scope-expansion guard excludes ac_path, parent_ac_path and
+    testFile from the set of paths it judges, and the run continues to the
+    green phase instead of halting,
+  And the Fix prompt itself names those same three paths as expected
+    additions the agent must leave out of extra_files, so the exclusion
+    holds at both the prompt and the guard rather than at only one of them,
+  And a genuine extra path — one that is not among the workflow's own known
+    artifacts — still halts the run and is named in the halt message,
+  And the bug symptom ("A quick-fix run halts with 'scope expansion'
+    although only the target file was modified, because the fix agent lists
+    the workflow's OWN earlier outputs as extra files. A real run on
+    2026-09-17 halted naming docs/acceptance-criteria/.../INF-1300c.yaml,
+    INF-1300c-5.yaml and
+    unit_tests/docs/test_adr_index_frontmatter_preserved.py — the AC written
+    in the AC Creation phase, its back-linked parent, and the test written
+    by test-writer. Every run hits this, since those three files are always
+    dirty by the time the Fix phase runs.") must not occur.
+  And when the fix agent sets scope_expanded=true but does not name the
+    genuinely unexpected path in extra_files at all — either extra_files is
+    empty, or it lists only the three workflow artifacts while
+    modified_files (populated from `git status --porcelain` per the Fix
+    prompt) shows the fix touched something beyond target_file and those
+    three artifacts — the guard still halts, applying the same
+    normalisation and the same artifact exclusion (plus target_file itself)
+    to modified_files before judging it, and names the unnamed extra path in
+    the halt message and the returned extra_files, so scope_expanded is
+    never itself the halt trigger while an unreported expansion is.
+depends_on:
+  - BP-600e-1
+doc_links:
+  - path: templates/workflows-js/quick-fix.js
+    relationship: implements
+    status: exists
+    relevance: >-
+      The Fix-phase prompt and the scope-expansion check that follows it. The
+      prompt tells the agent to run `git status --porcelain` and report
+      everything it finds; the check then halts on `fixResult.extra_files`
+      verbatim, with no notion of which paths the workflow itself authored.
+  - path: templates/skills/quick-fix/SKILL.md
+    relationship: specifies
+    status: exists
+    relevance: >-
+      Phase 3.5 already states the intended behaviour — extra files are judged
+      "ignoring the AC YAML(s) and the test file, which are expected
+      additions". This record is that sentence made executable.
+  - path: unit_tests/workflows/_quick_fix_harness.py
+    relationship: verifies
+    status: exists
+    relevance: >-
+      Supplies run_workflow_under_e2 and _full_success_responses, so the
+      behaviour can be driven end-to-end with a stubbed Fix response rather
+      than asserted by grepping the JS source.
+assigned_agent: workflow-architect
+estimated_complexity: S
+it_requirements:
+  - >-
+    The exclusion set must be built from the variables the workflow already
+    holds (ac_path, parent_ac_path, testFile) — never from a hardcoded glob
+    such as "docs/acceptance-criteria/**" or "*_test.py". A pattern-based
+    exemption would also silence a genuine unrelated AC or test edit, which is
+    exactly the third-party change the guard exists to catch.
+  - >-
+    Both halves must change together. Filtering only in the guard leaves the
+    prompt instructing the agent to report artifacts it should never report;
+    naming paths only in the prompt leaves the guard trusting whatever the
+    agent returns. Either half alone leaves the halt one sloppy agent away.
+  - >-
+    Path comparison must be normalised before matching (separator and
+    leading-./ differences, repo-relative vs worktree-absolute), because the
+    agent reports paths as `git status --porcelain` prints them while the
+    workflow holds the values it constructed itself.
+  - >-
+    scope_expanded must not be able to force a halt on its own once every
+    reported extra path has been excluded — otherwise the boolean becomes a
+    second, unfilterable trigger for the same condition.
+  - "Must handle errors gracefully per the project error handling policy."
+test_spec:
+  - name: test_ac_bp600e1ii_workflow_artifacts_do_not_halt_the_run
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: >-
+      Driving quick-fix.js under the workflow harness with a Fix response whose
+      extra_files lists exactly the run's own ac_path, parent_ac_path and
+      testFile does not halt: the run reaches the green phase and does not
+      report halt_reason scope_expansion.
+    covers:
+      - BP-600e-1-ii
+  - name: test_ac_bp600e1ii_genuine_third_party_file_still_halts
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: boundary
+    description: >-
+      The same run halts with halt_reason scope_expansion, naming the offending
+      path, when extra_files contains one unrelated source file alongside the
+      three workflow-authored paths — the filter narrows the halt, it does not
+      remove it.
+    covers:
+      - BP-600e-1-ii
+  - name: test_ac_bp600e1ii_fix_prompt_names_the_expected_additions
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: unit
+    angle: seam
+    description: >-
+      The Fix-phase prompt the workflow sends interpolates the run's ac_path,
+      parent_ac_path and testFile and instructs the agent to exclude them from
+      extra_files, so the agent and the guard share one definition of
+      "expected addition".
+    covers:
+      - BP-600e-1-ii
+  - name: test_ac_bp600e1ii_unnamed_expansion_in_modified_files_still_halts
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: failure
+    description: >-
+      A Fix response with scope_expanded=true, empty extra_files, and
+      modified_files naming a genuinely unrelated file (beyond target_file and
+      the three workflow artifacts) still halts with halt_reason
+      scope_expansion, naming that file — the guard applies the same
+      exclusion to modified_files rather than trusting extra_files alone.
+    covers:
+      - BP-600e-1-ii
+  - name: test_ac_bp600e1ii_target_file_and_artifacts_in_modified_files_do_not_halt
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: >-
+      A Fix response with scope_expanded=true, empty extra_files, and
+      modified_files naming only target_file plus the three workflow
+      artifacts does not halt — scope_expanded alone, with nothing genuinely
+      unexpected in either list, is not an expansion.
+    covers:
+      - BP-600e-1-ii
+test_rationale: >-
+  The first two tests must drive the workflow end-to-end through the harness,
+  not grep quick-fix.js for a filter expression. The defect being fixed is a
+  false halt, and a presence-only source assertion ("extra_files is filtered
+  somewhere") passes equally on a filter that matches nothing — precisely the
+  phantom-done shape recorded in BP-600e-2's notes for this same family. Only
+  a run that supplies the three artifact paths and observes no halt proves the
+  exclusion works, and only its negative twin proves the guard was narrowed
+  rather than disabled. The third test is deliberately a source-contract
+  assertion, because the prompt text is the artifact under test there: it is
+  what the agent reads, and no behavioural run with a stubbed agent can observe
+  whether a real agent was told the right thing.
+delivers_to: null
+expects_from:
+  ac_id: BP-600e-1
+  contract: >-
+    Fix-application result { target_file, files_modified[], scope_expanded,
+    extra_files[] } plus the run-scoped artifact paths ac_path, parent_ac_path
+    and testFile, which together define the set the scope check may judge.
+origin_agent: BrainCandy
+created: 2026-09-18
+amended_by: []
+superseded_by: null
+covered_by:
+  - unit_tests/workflows/test_quick_fix_scope_guard_artifact_exclusion.py
+implemented_by:
+  - templates/workflows-js/quick-fix.js
+change_target: pipeline
+risk_surface: internal
+notes: |
+  Authored by /quick-fix. Root cause: The fix prompt tells the agent to report
+  everything from `git status --porcelain` without telling it which files the
+  workflow itself already created, and the guard then trusts extra_files
+  verbatim. SKILL.md's Phase 3.5 already specifies that the AC YAML(s) and the
+  test file are expected additions and must be ignored. Fix: name the expected
+  paths (ac_path, parent_ac_path, testFile) in the prompt as files the agent
+  must exclude, and filter those same paths out of extra_files before deciding
+  whether to halt, so a halt happens only for a genuine third-party file.
+
+  Placement: filed as a child of BP-600e-1 rather than as a fourth L2 under
+  BP-600e, because BP-600e-1's own criteria already excludes "the test file and
+  AC YAML" from the file count — this record is the technical constraint that
+  makes that clause hold against a self-reporting agent, not a new guardrail
+  behaviour. It is the exact shape of its sibling BP-600e-1-i, which carves out
+  auto-formatted files from the same count. BP-600e had 3 of 5 L2 slots used at
+  authoring time, so no cap forced the choice.

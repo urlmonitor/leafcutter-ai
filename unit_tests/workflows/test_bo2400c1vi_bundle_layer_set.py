@@ -708,7 +708,7 @@ _REAL_WORKTREE_VERIFY_LABEL = {
     "raw": (
         f"worktree {_REPO_ROOT}\n"
         "HEAD 0000000000000000000000000000000000000000\n"
-        "branch refs/heads/fast-lane/bo-stub-1"
+        "branch refs/heads/fast-lane/bo2400c1vi-real-worktree-probe"
     ),
 }
 

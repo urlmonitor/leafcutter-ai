@@ -1,0 +1,214 @@
+id: TQ-600a-4
+components:
+  - testing_quality
+  - build_pipeline
+title: "Every converted test gives the same answer it gave when it deployed its own copy"
+component: testing-quality
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given the set of tests moved from deploying their own copy to consuming the shared
+    reference layout, and a per-test record of the outcome each of them reached
+    before the move — passed, failed, skipped or expected-to-fail,
+  When the same set is run after the move,
+  Then every test in the set reaches the same outcome it reached before,
+    And any test whose outcome differs is named in the comparison, with both
+      outcomes stated,
+    And the comparison is made test by test rather than by comparing the two runs'
+      overall pass counts, so a test that started failing while another started
+      passing is reported rather than cancelling out,
+    And the comparison states how many tests it compared, and that number equals
+      the number of tests in the converted set.
+depends_on:
+  - TQ-600a
+  - TQ-600a-1
+doc_links:
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      The real_artifact angle governs the before-record: it must come from an
+      actual run of the suite as it stands today, not from a list of outcomes
+      someone believed to be current.
+assigned_agent: python-coder
+estimated_complexity: L
+it_requirements:
+  - >-
+    THE BEFORE-RECORD IS TAKEN FROM A REAL RUN AND RECORDED AS-IS. It must carry
+    the measured baseline's 2 failures, 5 skips, 19 xfailed and 96 collection
+    errors. Do NOT clean it first: the criterion is preservation of each test's
+    own outcome, so an already-failing test that starts passing is a
+    disagreement, and a curated baseline makes the whole comparison vacuous.
+  - >-
+    KEY ON THE FULL TEST NODE ID (file::class::name), never on the bare function
+    name. There are 667 test files here and duplicate function names across them
+    are certain; a bare-name key silently pairs the wrong outcomes and reports
+    agreement.
+  - >-
+    A TEST PRESENT IN ONE RECORD AND ABSENT FROM THE OTHER IS A DISAGREEMENT, not
+    an omission to be skipped. Iterating the keys of one mapping is the natural
+    implementation and it ignores every test the other run did not execute.
+  - >-
+    THE OUTCOME VOCABULARY MUST DISTINGUISH passed / failed / skipped / xfailed /
+    xpassed / error. Collapsing xfail into pass or into fail is a
+    false-agreement generator against a baseline holding 19 xfails.
+  - >-
+    READ MACHINE-READABLE RESULT RECORDS (junit-xml or the TQ-600c-1 cost record),
+    never the console output. A comparator that re-parses terminal text silently
+    matches nothing when the format changes, and a comparator that matches
+    nothing reports agreement.
+  - >-
+    THIS COMPARATOR AND TQ-600b-1'S MAY SHARE AN IMPLEMENTATION, BUT THE TWO
+    CLAIMS MUST STAY SEPARATELY ASSERTABLE. This AC compares before against after
+    the shared layout; TQ-600b-1 compares serial against parallel. A single
+    merged "nothing changed" run would pass while one change masked the other's
+    breakage. If one module serves both, each AC keeps its own independently
+    failing test and its own pair of input records.
+  - >-
+    Report per-test only, and state the compared count, which must equal the size
+    of the converted set. Totals must not appear as the verdict.
+delivers_to:
+  - agent: python-coder
+    ac_id: TQ-600b-1
+    contract: >-
+      A per-test outcome comparator keyed on the full node id, with the six-value
+      outcome vocabulary, present-in-one-only treated as disagreement, and a
+      stated compared count. TQ-600b-1 may reuse the implementation but asserts a
+      different pair of runs and keeps its own failing test.
+expects_from:
+  ac_id: TQ-600a-1
+  contract: >-
+    The identity of the converted set — every test moved from deploying its own
+    copy to consuming the shared reference layout — which is the population this
+    comparison is sized against and the number the compared count must equal.
+test_spec:
+  - name: test_tq600a_4_every_converted_test_reaches_its_recorded_prior_outcome
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    description: >-
+      Over the before-record and after-record that two genuine runs of the
+      converted set produced — not hand-authored fixtures — every test's outcome
+      matches.
+  - name: test_tq600a_4_a_flipped_outcome_is_named_with_both_outcomes_stated
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: unit
+    angle: failure
+    description: >-
+      THE RED. One test's outcome differs between the two records; the comparison
+      names it and states the outcome it reached in each.
+  - name: test_tq600a_4_a_pass_to_fail_and_a_fail_to_pass_in_the_same_pair_are_both_reported
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: unit
+    angle: failure
+    description: >-
+      The cancellation control. NAMED MUTATION: compare the two runs' overall
+      pass counts instead of per-test outcomes. The measured baseline is 5292
+      passed / 2 failed, so one break plus one accidental fix leaves the totals
+      identical and the totals comparison reports agreement — this test must go
+      RED under that injection.
+  - name: test_tq600a_4_a_test_absent_from_one_record_is_reported_as_disagreeing
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: >-
+      NAMED MUTATION: iterate the keys of the before-record only. A test the
+      after-run never executed is then invisible and this test must go RED.
+  - name: test_tq600a_4_xfail_skip_and_pass_are_distinct_outcomes
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: >-
+      An xfailed test that becomes a pass, and a skipped test that becomes a
+      pass, are each reported as disagreements. NAMED MUTATION: collapse the
+      outcome vocabulary to pass/fail; this test must go RED against a baseline
+      holding 19 xfails and 5 skips.
+  - name: test_tq600a_4_the_compared_count_is_stated_and_equals_the_converted_set_size
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: >-
+      The count appears in the output and equals the number of tests in the
+      converted set. Two empty records must NOT report agreement — they report a
+      compared count of 0 and a failure.
+  - name: test_tq600a_4_outcomes_are_paired_by_full_node_id_not_by_function_name
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: unit
+    angle: seam
+    description: >-
+      Two different files each containing a function of the same name, with
+      different outcomes, are not paired with each other. NAMED MUTATION: key on
+      the bare function name; this test must go RED.
+test_rationale: |
+  A faster suite that answers differently is not a faster suite, it is a
+  different suite. Sharing setup changes what each converted test sees, and
+  that is a real behavioural change that can flip an outcome.
+
+  Four descriptors are negative controls naming their injections. The
+  load-bearing one is the totals-comparison injection: comparing pass counts is
+  the tempting cheap check and it is worthless against this baseline, where one
+  break plus one accidental fix leaves 5292/2 unchanged.
+
+  The node-id descriptor exists because this suite has 667 test files, so
+  duplicate function names are certain and a bare-name key reports agreement
+  while pairing unrelated tests.
+
+  This AC's comparison must not be merged with TQ-600b-1's. That one compares
+  serial against parallel; this one compares before against after the shared
+  layout. A single "nothing changed" test spanning both would pass while one
+  change masked the other's breakage, which is the specific reason the two are
+  separate ACs.
+origin_agent: business-analyst
+created: 2026-09-21
+amended_by:
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-09-21
+  note: 'python-coder, L. Held this AC''s equivalence claim separate from TQ-600b-1''s,
+    as both files'' notes require: a shared implementation is permitted but each AC
+    keeps its own independently failing test and its own pair of records. Pinned node-id
+    keying (667 test files make duplicate function names certain) and the six-value
+    outcome vocabulary (19 xfails in the baseline). criteria untouched.'
+- action: approved
+  agent: approve_acs
+  date: '2026-09-21'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+notes: |
+  A FASTER SUITE THAT ANSWERS DIFFERENTLY IS NOT A FASTER SUITE, IT IS A DIFFERENT
+  SUITE. Sharing setup changes what each converted test sees: it no longer gets a
+  layout deployed moments ago by itself, but one deployed once, earlier, possibly
+  by a different working directory and certainly with different neighbours. That is
+  a real behavioural change and it can flip an outcome.
+
+  THE THIRD CLAUSE IS THE LOAD-BEARING ONE. Comparing totals is the tempting cheap
+  check and it is worthless: the measured baseline is 5292 passed / 2 failed, and a
+  conversion that breaks one test while accidentally fixing another leaves those
+  totals identical. Per-test comparison is the only form that cannot cancel out.
+
+  THE BASELINE IS DIRTY AND THAT IS FINE, PROVIDED IT IS RECORDED AS-IS. The
+  measured run has 2 failures, 5 skips, 19 xfails and 96 collection errors. The
+  criterion is preservation of each test's own outcome, not that every test passes
+  — an already-failing test must still fail, or the conversion has changed
+  something it should not have. Do not clean up the baseline before recording it.
+
+  BOUNDARY AGAINST TQ-600b-1. That AC compares a serial run against a parallel one;
+  this one compares a run before the shared layout against a run after it. Two
+  different changes, two different equivalence claims, and the two must not be
+  merged into one AC — a single "nothing changed" test would pass while one of the
+  two changes silently broke something the other happened to mask.

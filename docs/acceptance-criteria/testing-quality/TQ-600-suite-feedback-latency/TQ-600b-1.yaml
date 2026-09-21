@@ -1,0 +1,244 @@
+id: TQ-600b-1
+components:
+  - testing_quality
+title: "The many-worker run and the one-at-a-time run agree test by test, or the disagreement is named"
+component: testing-quality
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given one unchanged checkout of the suite,
+  When it is run once with a single worker and once spread across several workers,
+  Then each test reaches the same outcome in both runs — passed, failed, skipped or
+    expected-to-fail — and the two sets of per-test outcomes are equal,
+    And any test whose outcome differs between the two runs is named, with the
+      outcome it reached in each,
+    And the agreement is established by comparing the two runs' per-test outcomes,
+      not by comparing their exit statuses or their pass counts, so two runs that
+      both end badly for different reasons are reported as disagreeing rather than
+      as matching,
+    And the comparison states how many tests it compared, and that number equals the
+      number of tests the single-worker run executed.
+depends_on:
+  - TQ-600b
+doc_links:
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      The real_artifact angle governs this AC: the comparison must consume the
+      result records two genuine runs of the whole suite produced, not a curated
+      subset chosen because it was known to be parallel-safe.
+  - path: docs/acceptance-criteria/testing-quality/TQ-600-suite-feedback-latency/TQ-600.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      Records the measured baseline these runs are compared against — 5292 passed,
+      2 failed, 5 skipped, 19 xfailed, 96 collection errors of 5318 collected —
+      and the honest caveat about shared-host timing contamination.
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - >-
+    CONSUME MACHINE-READABLE PER-TEST RESULT RECORDS from both runs — junit-xml
+    or the TQ-600c-1 cost record. Never the console output, never the exit
+    status, never the counts. A comparator that re-parses terminal text matches
+    nothing when the format shifts, and a comparator that matches nothing reports
+    agreement.
+  - >-
+    KEY ON THE FULL TEST NODE ID and use the six-value outcome vocabulary
+    (passed / failed / skipped / xfailed / xpassed / error). The measured
+    baseline holds 19 xfails; collapsing them into pass or fail manufactures
+    agreement.
+  - >-
+    COLLECTION ERRORS MUST BE REPRESENTED AS AN OUTCOME, NOT AS ABSENCE. The
+    measured baseline has 96 collection errors over 5318 collected tests. If a
+    module the parallel run failed to collect simply vanishes from its record, a
+    comparator iterating the intersection reports agreement — the single most
+    likely false match for this specific suite.
+  - >-
+    REPORT THE COMPARED COUNT on every path, and fail when either record is empty
+    or unreadable. A comparison over two empty sets is equal, exits clean and
+    proves nothing — the AC-store validator's zero-file exit-0, repeated.
+  - >-
+    THE COMPARISON MUST RUN OVER THE WHOLE SUITE, not a curated parallel-safe
+    subset. A subset chosen because it was known to be safe answers a different
+    question.
+  - >-
+    DISTINCT FROM TQ-600a-4'S EQUIVALENCE CLAIM. That one compares before against
+    after the shared layout; this one compares serial against parallel. Sharing
+    one comparator implementation is permitted and sensible, but each AC keeps
+    its own independently failing test and its own pair of input records. A
+    single merged "nothing changed" run is explicitly rejected: it would pass
+    while one change masked the other's breakage.
+  - >-
+    The two runs must differ only in worker count. Pin the seed, the distribution
+    mode, and the test selection, or the comparison is measuring three changes
+    at once.
+delivers_to:
+  - agent: python-coder
+    ac_id: TQ-600b-5
+    contract: >-
+      A serial-versus-parallel per-test outcome comparison with a stated compared
+      count and named disagreements. TQ-600b-5 may only make parallel the default
+      once this comparison reports agreement over a whole-suite pair, and it must
+      keep the single-worker mode reachable so this comparison retains a baseline.
+  - agent: python-coder
+    ac_id: TQ-600b-1-i
+    contract: >-
+      The comparator itself, taking two per-test result records and returning
+      either agreement with a compared count or a list of named disagreements.
+      TQ-600b-1-i asserts over its three false-match shapes.
+  - agent: documentation-expert
+    ac_id: TQ-600b-6
+    contract: >-
+      The form in which a serial-versus-parallel disagreement is reported, so the
+      guidance's account of "a test that passes alone and fails in parallel"
+      matches the output the contributor is actually shown.
+expects_from:
+  - ac_id: TQ-600a-4
+    contract: >-
+      A per-test outcome comparator keyed on the full node id, with the six-value
+      outcome vocabulary and present-in-one-only treated as disagreement. Reuse is
+      permitted; this AC supplies a different pair of runs and keeps its own test.
+  - ac_id: TQ-600b-2
+    contract: >-
+      A standing examination that removes the fixed-scratch-path collision class
+      by construction, so this comparison is not relied upon to surface a
+      timing-dependent defect it could only catch by luck.
+  - ac_id: TQ-600b-4
+    contract: >-
+      Removal of the shared-sink collision class, so a disagreement this
+      comparison reports is a genuine parallelism defect rather than another
+      worker's writes.
+test_spec:
+  - name: test_tq600b_1_the_real_serial_and_parallel_records_of_a_whole_suite_run_are_compared
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    description: >-
+      The comparison consumes the result records two genuine runs of the whole
+      suite produced, not a curated subset and not hand-authored fixtures, and
+      reports agreement with a compared count.
+  - name: test_tq600b_1_one_flipped_outcome_is_named_with_the_outcome_in_each_run
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: unit
+    angle: failure
+    description: >-
+      THE RED. A single test reaching different outcomes in the two records is
+      named, with both outcomes stated.
+  - name: test_tq600b_1_two_runs_that_both_end_badly_for_different_reasons_are_reported_as_disagreeing
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: unit
+    angle: failure
+    description: >-
+      NAMED MUTATION: compare the two runs' exit statuses. Against this suite
+      that is vacuous — the measured baseline already exits non-zero with 2
+      failures and 96 collection errors, so a parallel run exiting non-zero for a
+      hundred new collision failures compares equal. This test must go RED under
+      that injection.
+  - name: test_tq600b_1_equal_pass_counts_with_different_per_test_outcomes_are_reported_as_disagreeing
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: unit
+    angle: failure
+    description: >-
+      NAMED MUTATION: compare pass counts. One test breaking while another
+      accidentally passes leaves the totals identical; this test must go RED.
+  - name: test_tq600b_1_a_module_the_parallel_run_failed_to_collect_is_reported_as_disagreeing
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: >-
+      Collection failure must appear as an outcome, not as absence. NAMED
+      MUTATION: iterate the intersection of the two records' keys; a module the
+      parallel run never collected then vanishes and this test must go RED. This
+      is the most likely false match for a suite with 96 collection errors.
+  - name: test_tq600b_1_xfail_and_xpass_are_not_collapsed_into_pass_or_fail
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: >-
+      An xfailed test that xpasses under parallelism is a disagreement. NAMED
+      MUTATION: map xfail to fail and xpass to pass; against 19 xfails this test
+      must go RED.
+  - name: test_tq600b_1_the_compared_count_equals_the_number_of_tests_the_serial_run_executed
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: >-
+      The count is stated and matches the serial run's executed count. Two empty
+      records report a compared count of 0 and a failure, never agreement.
+test_rationale: |
+  This is the criterion that decides whether parallelism may ship at all, so the
+  comparator's own controls carry more weight than its happy path. A parallel
+  run that is fast and wrong is strictly worse than a slow correct one, because
+  it retires the safety net while appearing to improve it.
+
+  Four descriptors are negative controls naming their injections, and three of
+  the four are specific to this suite's measured shape rather than generic
+  caution. Exit-status comparison is vacuous here because the baseline already
+  exits non-zero. Intersection iteration is the most dangerous because 96
+  collection errors mean modules genuinely do vanish from a record. Collapsing
+  xfail manufactures agreement across 19 tests.
+
+  The comparison is over the whole suite deliberately. A curated
+  parallel-safe subset would answer a different question and would pass by
+  construction.
+
+  This AC's comparison must not be merged with TQ-600a-4's, which compares
+  before against after the shared layout. One implementation may serve both,
+  but a single merged "nothing changed" test would pass while one change masked
+  the other's breakage.
+origin_agent: business-analyst
+created: 2026-09-21
+amended_by:
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-09-21
+  note: 'python-coder, M. Kept this equivalence claim separate from TQ-600a-4''s per
+    both files'' notes — shared implementation allowed, merged test contract not.
+    Added the collection-error descriptor: with 96 collection errors in the baseline,
+    a module vanishing from the parallel record is this suite''s most likely false
+    match, and intersection iteration is the natural implementation. criteria untouched.'
+- action: approved
+  agent: approve_acs
+  date: '2026-09-21'
+superseded_by: null
+covered_by:
+  - TQ-600b-1-i
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+notes: |
+  THIS IS THE CRITERION THAT DECIDES WHETHER PARALLELISM MAY SHIP AT ALL. The
+  parent L1's boundary is explicit that "the suite is faster with several workers"
+  is not sufficient, and the reason is not pedantry: a parallel run that is fast
+  and wrong is strictly worse than a slow correct one, because it retires the
+  safety net while appearing to improve it. Speed is the motivation; equivalence is
+  the acceptance criterion.
+
+  THE THIRD CLAUSE NAMES THE CHEAP WRONG CHECK EXPLICITLY. Comparing exit statuses
+  is the implementation somebody will reach for first, and against this suite it is
+  vacuous: the measured baseline already exits non-zero (2 failures, 96 collection
+  errors), so a parallel run that exits non-zero for a hundred new collision
+  failures compares equal to it. Comparing pass counts is the second-cheapest wrong
+  check and cancels out in exactly the way TQ-600a-4's notes describe.
+
+  THE COMPARED-COUNT CLAUSE IS THE ANTI-VACUITY CONTROL. A comparison over two
+  empty result sets is equal, exits clean, and proves nothing — the same shape as
+  the AC-store validator that globbed zero files and exited 0 for eight days.
+
+  WHAT THIS AC DOES NOT DECIDE: how many workers, which distribution strategy, or
+  which runner. Those are it-po decisions, and TQ-600b-5 covers the separate
+  question of the runner being installed and actually used.

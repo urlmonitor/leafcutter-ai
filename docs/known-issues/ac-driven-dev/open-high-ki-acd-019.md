@@ -24,7 +24,7 @@ related_docs:
 - **Status:** open — handover ticket raised for the falsified ACs; the missing records are being authored separately
 - **Occurrences:** 1
 - **First seen:** 2026-08-25 · **Last seen:** 2026-08-25
-- **Where:** `scripts/goal_to_epic.py` (`:16`, `:37`, `:311`, `:319`, `:439`, `:2601`) citing `ACD-1200a-6`; three further sites citing `ACD-1200a-7`
+- **Where:** `scripts/ac_store/epic_naming.py` (`:9`, `:24`, `:178`, `:186`, `:305`, `:351`) plus `scripts/goal_to_epic.py` (`:59`, `:321`) citing `ACD-1200a-6`; three further sites citing `ACD-1200a-7`
 
 **Ticket:** [`tickets/00_inbox/TICKET-20260825-BuildOrchestrationPhantomTriage.md`](../../tickets/00_inbox/TICKET-20260825-BuildOrchestrationPhantomTriage.md)
 

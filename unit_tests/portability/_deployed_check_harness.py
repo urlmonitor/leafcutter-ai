@@ -54,6 +54,22 @@ DECISION HISTORY
   test file, per the AC author's explicit reasoning: "the deliverable is
   verification apparatus, and the failure mode being guarded against is an
   implementer building a harness shaped to pass against their own fix."
+- 2026-09-15 [mypy typing fix]: `run_sweep()` read each hook's id with
+  `hook.get("id")` and used the `Any | None` result both as `CheckSweepEntry.
+  check_id` (declared `str`) and as the `entries` dict key — two real
+  `arg-type`/`index` defects, and behind them an unhandled `None`: an entry
+  with no id silently became a `None`-keyed pseudo-check that every later
+  id-keyed lookup missed, and a second such entry silently overwrote the
+  first. Ids are now validated up front by `_hook_check_id()` and a
+  malformed entry is reported through the SAME `failed_setup_step` channel
+  the missing-deployed-layout case already uses (GE-120c-1-i). It is NOT
+  skipped: this module exists because a check that quietly did not run looks
+  exactly like a check that passed, so a sweep must never silently inspect
+  fewer things than its caller believes. It is NOT raised either — the
+  established contract for "this sweep cannot be completed" is a
+  success=False `HarnessResult` naming the specific bad artifact, and
+  validation happens before any subprocess is spawned, so refusing costs no
+  wasted work.
 ====================================================================
 """
 
@@ -290,7 +306,13 @@ class DeployedCheckHarness:
         GE-120c-1-i: if EITHER copy's deployed layout is missing, this
         returns immediately with success=False, checks_exercised=0, and a
         failed_setup_step naming the specific missing artifact — it never
-        proceeds to the per-check execution loop on incomplete setup."""
+        proceeds to the per-check execution loop on incomplete setup.
+
+        A hook entry carrying no usable string `id` is treated the same way:
+        it is a malformed registry entry, i.e. a defect in a prerequisite
+        artifact of the sweep, and it is reported through the SAME
+        failed_setup_step channel rather than skipped. See the module's
+        DECISION HISTORY entry for 2026-09-15 for why it is not skipped."""
         second_copy_dir = Path(second_copy_dir)
         first_copy_dir = Path(first_copy_dir) if first_copy_dir is not None else self.repo_root
         manifest_count = self._template_manifest_check_count()
@@ -325,16 +347,38 @@ class DeployedCheckHarness:
         hooks = list(self._manifest_hooks(second_copy_dir))
         if extra_hooks:
             hooks = hooks + list(extra_hooks)
+
+        identified_hooks: list[tuple[str, dict]] = []
+        for hook in hooks:
+            hook_id = _hook_check_id(hook)
+            if hook_id is None:
+                failed_step = (
+                    "manifest hook entry carries no usable string 'id' — "
+                    f"offending entry: {hook!r}"
+                )
+                return HarnessResult(
+                    success=False,
+                    checks_exercised=0,
+                    manifest_check_count=manifest_count,
+                    message=(
+                        f"Setup incomplete: {failed_step} — "
+                        f"0 of {manifest_count} checks exercised."
+                    ),
+                    failed_setup_step=failed_step,
+                )
+            identified_hooks.append((hook_id, hook))
+
         if check_ids is not None:
-            hooks = [h for h in hooks if h.get("id") in check_ids]
+            identified_hooks = [
+                (cid, hook) for cid, hook in identified_hooks if cid in check_ids
+            ]
 
         args = list(staged_files) if staged_files else []
         entries: dict[str, CheckSweepEntry] = {}
         lines: list[str] = []
         any_disagreement = False
 
-        for hook in hooks:
-            check_id = hook.get("id")
+        for check_id, hook in identified_hooks:
             entry_template = hook.get("entry", "")
             hook_args = args if hook.get("pass_filenames", False) else []
 
@@ -361,6 +405,18 @@ class DeployedCheckHarness:
             failed_setup_step=None,
             checks=entries,
         )
+
+
+def _hook_check_id(hook: dict) -> str | None:
+    """Return the hook entry's `id` when it is a usable check id — a
+    non-empty string — and None when it is absent, null, blank, or not a
+    string. A manifest entry cannot be reported on, keyed by, or compared
+    across copies without one, so None here means "this entry cannot be
+    swept", NOT "this entry passed"."""
+    raw_id = hook.get("id")
+    if isinstance(raw_id, str) and raw_id.strip():
+        return raw_id
+    return None
 
 
 def _looks_like_could_not_check(output: str) -> bool:

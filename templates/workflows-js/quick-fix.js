@@ -34,6 +34,7 @@ export const meta = {
     { title: 'Red Phase', detail: 'test-writer creates failing test, verified red under AC_ENFORCE_STRICT=1' },
     { title: 'Fix', detail: 'python-coder applies targeted fix to single file' },
     { title: 'Green Phase', detail: 'Verified green under AC_ENFORCE_STRICT=1, then mutation-proved' },
+    { title: 'Knowledge Routing', detail: 'route emitted learnings to their surfaces before commit (INF-700a-1-i, fail-open)' },
     { title: 'Commit', detail: 'commit agent stages AC, parent back-link, test and fix' },
     { title: 'Changelog', detail: 'changelog-agent authors the entry a required CI check demands' },
     { title: 'Close', detail: 'Push, then open a PR behind a confirmation gate' },
@@ -117,6 +118,11 @@ const FIX_SCHEMA = schema({
   extra_files: { type: 'array', items: { type: 'string' } },
 }, ['modified_files'])
 
+/* BP-600e-1-i: paths already dirty before the coder is dispatched — from an
+   earlier phase's own output, from pre-commit/doc-enforcer auto-formatting,
+   or from ordinary worktree drift — so the Fix-phase scope guard can treat
+   them as pre-existing rather than as the coder's own intentional change. */
+const BASELINE_SCHEMA = schema({ dirty_paths: { type: 'array', items: { type: 'string' } } })
 const COMMIT_SCHEMA = schema({
   commit_sha: { type: 'string' },
 })
@@ -148,6 +154,60 @@ function blockedOnFailure(result, phase, agentLabel, extra = {}) {
     return blocked(phase, result ? result.message : `${agentLabel} returned null`, { detail: result, ...extra })
   }
   return null
+}
+
+// The routing dispatch's expected reply shape (INF-700a-1-i). `case` is the
+// only required field — `read`/`written`/`unwritten`/`detail` are read
+// defensively by classifyKnowledgeRouting() below, never trusted as present
+// just because the schema names them.
+const KNOWLEDGE_ROUTING_SCHEMA = {
+  type: 'object',
+  properties: {
+    case: { type: 'string', enum: ['completed', 'could_not_complete', 'did_not_run'] },
+    read: { type: 'integer' },
+    written: { type: 'integer' },
+    unwritten: { type: 'integer' },
+    detail: { type: ['string', 'null'] },
+  },
+  required: ['case'],
+}
+
+/**
+ * classifyKnowledgeRouting — the SINGLE construction site for the
+ * `knowledge_routing` figures consumed into this path's terminal payload
+ * (INF-700a-1 / INF-700a-1-i / INF-700a-1-ii — same contract as
+ * fast-lane-ship.js's own copy of this function). Fails CLOSED: only a
+ * reply carrying a RECOGNISED `case` value ("completed" or
+ * "could_not_complete") is trusted as having actually run. Anything else —
+ * a missing case, an unparseable reply, or the harness's own unlabelled
+ * default stub — is reported as the third, distinct "did_not_run" case,
+ * never rendered as "completed" with zero figures.
+ *
+ * A knowledge step never fails, retries, or blocks the unit of work's own
+ * outcome (ADR-034's fail-open branch) — this function only classifies the
+ * reply; it never throws.
+ *
+ * Pure function: no agent(), no I/O — safe to extract and execute directly.
+ *
+ * @param {*} reply - The raw reply from the "knowledge-routing-step" dispatch.
+ * @returns {{case: string, read: number, written: number, unwritten: number, detail: (string|null)}}
+ */
+function classifyKnowledgeRouting(reply) {
+  const recognisedCase =
+    reply && (reply.case === 'completed' || reply.case === 'could_not_complete')
+      ? reply.case
+      : 'did_not_run'
+  const asInt = (value) => (typeof value === 'number' && Number.isFinite(value) ? value : 0)
+  return {
+    case: recognisedCase,
+    read: recognisedCase === 'did_not_run' ? 0 : asInt(reply.read),
+    written: recognisedCase === 'did_not_run' ? 0 : asInt(reply.written),
+    unwritten: recognisedCase === 'did_not_run' ? 0 : asInt(reply.unwritten),
+    detail:
+      recognisedCase === 'could_not_complete' && typeof reply.detail === 'string'
+        ? reply.detail
+        : null,
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -596,6 +656,10 @@ if (divergenceCheck && divergence_decision === 'continue') {
 
 phase('Fix')
 
+/* BP-600e-1-i: snapshot dirty paths BEFORE dispatching the coder. Unavailable
+   (agent failure, no dirty_paths) degrades to an empty baseline — today's
+   three-artifact exclusion below, never a halt on everything. */
+const baselineResult = await agent(`Snapshot dirty paths BEFORE any fix, in ${worktreeRoot}: run git -C "${worktreeRoot}" status --porcelain and list every shown path (staged/unstaged/untracked) as dirty_paths[]. Never block — return status="ok", dirty_paths=[] if clean or the command fails.`, { label: 'baseline-dirty-snapshot', phase: 'Fix', schema: BASELINE_SCHEMA })
 const fixResult = await agent(
   `Apply a targeted fix for this bug. MODIFY ONLY THE TARGET FILE.
 
@@ -611,19 +675,71 @@ do NOT make those changes. Instead, set scope_expanded=true and list the additio
 files in extra_files[].
 
 After applying the fix, run: git -C "${worktreeRoot}" status --porcelain
-Report all modified files in modified_files[], excluding pre-existing build-output drift you did not cause.`,
+Report all modified files in modified_files[], excluding pre-existing build-output drift you did not cause.
+
+EXPECTED ADDITIONS — do not report these in extra_files, and do not set scope_expanded
+because of them. They are artifacts the /quick-fix workflow itself already wrote in
+earlier phases, so they always show up dirty in git status by the time you run it:
+  - ${ac_path}         (AC YAML written in the AC Creation phase)
+  - ${parent_ac_path}  (parent AC, back-linked to the one above)
+  - ${testFile}         (test written by test-writer in the Red Phase)
+extra_files[] is for genuinely unexpected files beyond ${target_file} and the three
+paths above — name only those.`,
   { label: 'python-coder/fix', phase: 'Fix', schema: FIX_SCHEMA, agentType: 'python-coder' }
 )
 
 const fixBlock = blockedOnFailure(fixResult, 'Fix', 'python-coder')
 if (fixBlock) return fixBlock
 
-// Scope expansion check (BP-600e-1)
-if (fixResult.scope_expanded || (fixResult.extra_files && fixResult.extra_files.length > 0)) {
-  log(`Scope expansion detected: ${(fixResult.extra_files || []).join(', ')}`)
+// Scope expansion check (BP-600e-1, narrowed by BP-600e-1-ii)
+//
+// By the time this phase runs, ac_path, parent_ac_path and testFile are ALWAYS
+// already dirty — the workflow itself wrote them in earlier phases. A fix agent
+// that reports everything from `git status --porcelain` (as instructed above)
+// will therefore always see these three paths, even when it touched nothing but
+// target_file. Without this filter every run halts on the workflow's own output.
+//
+// The exclusion set is built from the run's own known-good variables, never from
+// a hardcoded glob — a glob would also silence a genuine unrelated AC or test
+// edit, which is exactly the third-party change this guard exists to catch.
+//
+// Paths are normalised before matching (separator, leading "./", and
+// worktree-absolute vs repo-relative) because the agent reports paths as
+// `git status --porcelain` prints them, not as this script constructed them.
+function normalizeArtifactPath(rawPath, root) {
+  if (!rawPath) return ''
+  let normalized = String(rawPath).replace(/\\/g, '/')
+  const rootNormalized = String(root || '').replace(/\\/g, '/').replace(/\/+$/, '')
+  if (rootNormalized && normalized.startsWith(`${rootNormalized}/`)) {
+    normalized = normalized.slice(rootNormalized.length + 1)
+  }
+  normalized = normalized.split('/').filter((seg) => seg && seg !== '.').join('/')
+  return normalized
+}
+
+/* BP-600e-1-i: the baseline snapshot above is folded in as extra entries, reusing normalizeArtifactPath and this same Set — a path already dirty before the coder ran is not a scope-exceeding change. Unavailable baseline (no dirty_paths) contributes nothing, so behaviour degrades to the three-artifact exclusion alone. */
+const expectedArtifacts = new Set(
+  [ac_path, parent_ac_path, testFile, ...((baselineResult && Array.isArray(baselineResult.dirty_paths)) ? baselineResult.dirty_paths : [])].map((p) => normalizeArtifactPath(p, worktreeRoot))
+)
+
+const genuineExtraFiles = (fixResult.extra_files || []).filter(
+  (f) => !expectedArtifacts.has(normalizeArtifactPath(f, worktreeRoot))
+)
+
+// modified_files gets the same treatment, plus target_file itself. scope_expanded
+// is NOT the trigger on its own — the agent can set it true while naming nothing in
+// extra_files, which would otherwise either always-halt or be a no-op. What still
+// must halt is an expansion never named in extra_files but visible in modified_files.
+const expectedModifiedPaths = new Set([...expectedArtifacts, normalizeArtifactPath(target_file, worktreeRoot)])
+const genuineExtraModifiedFiles = (fixResult.modified_files || [])
+  .filter((f) => !expectedModifiedPaths.has(normalizeArtifactPath(f, worktreeRoot)))
+const allGenuineExtraFiles = Array.from(new Set([...genuineExtraFiles, ...genuineExtraModifiedFiles]))
+
+if (allGenuineExtraFiles.length > 0) {
+  log(`Scope expansion detected: ${allGenuineExtraFiles.join(', ')}`)
   return blocked('Fix (scope expansion)',
-    `python-coder reports the fix requires changes beyond ${target_file}.\n\nAdditional files needed: ${(fixResult.extra_files || []).join(', ')}\n\nOptions:\n  - Re-run /quick-fix to proceed anyway (if python-coder only modified target_file)\n  - Escalate to /build-feature for a multi-file fix`,
-    { halt_reason: 'scope_expansion', test_file: testFile, ac_id, extra_files: fixResult.extra_files })
+    `python-coder reports the fix requires changes beyond ${target_file}.\n\nAdditional files needed: ${allGenuineExtraFiles.join(', ')}\n\nOptions:\n  - Re-run /quick-fix to proceed anyway (if python-coder only modified target_file)\n  - Escalate to /build-feature for a multi-file fix`,
+    { halt_reason: 'scope_expansion', test_file: testFile, ac_id, extra_files: allGenuineExtraFiles })
 }
 
 log(`Fix applied to ${target_file}`)
@@ -778,6 +894,41 @@ if (mutationResult.red_without_fix !== true || mutationResult.green_with_fix_res
 }
 
 log(`Mutation proof passed: reverting the fix returns the test to red; restoring it returns green.`)
+
+// ---------------------------------------------------------------------------
+// Knowledge Routing — dispatched once the phases that perform the work have
+// returned, and BEFORE the phase that publishes this unit of work's own
+// output ("commit"), so its writes can ride the commit this path already
+// makes (INF-700a-1's ordering clause, applied here per INF-700a-1-i's
+// per-path coverage requirement). Fail-open: there is deliberately no halt
+// branch below — whatever this dispatch reports, the run's own outcome and
+// exit status proceed unaffected.
+// ---------------------------------------------------------------------------
+
+phase('Knowledge Routing')
+
+const knowledgeRoutingReply = await agent(
+  `Route any knowledge records the phases that just ran emitted to the ` +
+  `surface each one names — nobody runs this by hand.\n\n` +
+  `Run this single Bash command from the repository root and read its JSON ` +
+  `summary and exit code:\n` +
+  `   python3 {{config.output_root}}/scripts/knowledge/harvest_learnings.py\n\n` +
+  `Classify the outcome as exactly one of three cases:\n` +
+  `  - "completed": the harvester ran to completion (exit 0 or 3 — some ` +
+  `records left unroutable is still a completed run).\n` +
+  `  - "could_not_complete": the declared sink could not be read, or a ` +
+  `destination file could not be written (exit 1, 2, or 4).\n` +
+  `  - "did_not_run": the command itself could not be run at all.\n\n` +
+  `Return JSON: { "case": "completed"|"could_not_complete"|"did_not_run", ` +
+  `"read": <records read>, "written": <records written to a surface>, ` +
+  `"unwritten": <records left unwritten>, "detail": "<what could not be ` +
+  `done, or null>" }.\n\n` +
+  `This step must never block, retry, or fail the build — always return a ` +
+  `best-effort classification, even on an unreadable sink or a failed write.`,
+  { label: 'knowledge-routing-step', phase: 'Knowledge Routing', schema: KNOWLEDGE_ROUTING_SCHEMA, agentType: 'python-coder' }
+)
+
+const knowledgeRouting = classifyKnowledgeRouting(knowledgeRoutingReply)
 
 // ---------------------------------------------------------------------------
 // Phase 5 — Commit
@@ -971,4 +1122,5 @@ return {
   isolated: selfIsolated,
   branch: activeBranch,
   pr_url: pushResult.pr_url || '',
+  knowledge_routing: knowledgeRouting,
 }

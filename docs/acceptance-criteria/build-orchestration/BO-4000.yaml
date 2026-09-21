@@ -1,0 +1,240 @@
+id: BO-4000
+title: "The build workflow reuses the worktree it resolved for the target, or opens one at a fixed location it names itself, never inside a checkout or at the target's folder"
+component: build-orchestration
+components:
+  - build_orchestration
+  - worktree_manager
+level: L2
+status: active
+req_status: draft
+work_status: done
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+change_target: pipeline
+risk_surface: contract_boundary
+package_surface: false
+criteria: |
+  Given /build-feature EPIC-TruthfulProjectRecord is started from inside the linked
+    worktree `C:\Users\Hendrik\Code\leafcutter\worktrees\uxp-700-tranche-2`
+  And the epic folder
+    `C:\Users\Hendrik\Code\leafcutter\worktrees\uxp-700-tranche-2\tickets\00_inbox\epics\EPIC-TruthfulProjectRecord`
+    lies inside that worktree
+  And the run's target resolution reports that worktree as the target's worktree
+  And that path is the top-level directory of a linked worktree, not the main checkout
+  When the worktree step runs
+  Then no agent is asked to open a new worktree
+  And every phase agent in the run is handed paths rooted in
+    `C:\Users\Hendrik\Code\leafcutter\worktrees\uxp-700-tranche-2`
+  And no later step replaces that worktree with a different path.
+
+  Given the run's target resolution reports as the target's worktree a path that is not
+    the top-level directory of a linked worktree — the epic folder inside a checkout,
+    as in KI-BO-027 — or reports the main checkout itself
+  When the worktree step runs
+  Then that path is not used as the run's worktree
+  And the run goes on as if no worktree had been resolved for the target, per the next
+    scenario.
+
+  Given /build-feature EPIC-TruthfulProjectRecord is started from the main checkout
+    `C:\Users\Hendrik\Code\leafcutter\leafcutter-ai`, in the dev layout, where the
+    repository's worktree base is `C:\Users\Hendrik\Code\leafcutter\worktrees`
+  And no worktree exists for that target
+  When the worktree step runs
+  Then the workflow itself names one exact location for the new worktree to the agent
+    that opens it, and the location is not left to that agent's judgement
+  And that location is a direct child of the worktree base, derived only from the base
+    and the target's identity — for this target,
+    `C:\Users\Hendrik\Code\leafcutter\worktrees\EPIC-TruthfulProjectRecord`
+  And starting the same run for the same target again names the same location
+  And the location is never the target's folder or any folder under it, never at or under
+    the top-level directory of the main checkout in the dev layout, and never at or under
+    the top-level directory of any linked worktree.
+
+  Given the Node-based workflow harness at unit_tests/_workflow_engine_harness.py, which
+    runs a workflow script's own top-level body under mocked agent globals
+  When this record is verified
+  Then the reuse scenario, the rejected-resolution scenario, and the named-location
+    scenario are each proven by running build-feature's own top-level body through that
+    harness, with stubbed resolver and worktree agents, asserting on which agents the run
+    dispatched and on the paths present in their prompts
+  And a test that only inspects the worktree step's prompt text in the workflow source is
+    not accepted as coverage.
+depends_on:
+  - BO-3900
+doc_links:
+  - path: templates/workflows-js/build-feature.js
+    relationship: implements
+    status: exists
+    relevance: "The resolve-target and worktree-setup steps. The setup prompt currently leaves the new worktree's location to the agent."
+  - path: docs/known-issues/build-orchestration.md
+    relationship: describes
+    status: exists
+    relevance: "KI-BO-027 — the resolver returned the epic folder as worktree_path. Its fix direction (validate that the path is a worktree top-level and not the main checkout before anything consumes it) is the second scenario here."
+  - path: docs/architecture/agent_delivery_workflows.md
+    relationship: describes
+    status: exists
+    relevance: "Section 9: the worktree base resolution for the dev layout (workspace sibling) and the consumer layout (consumer root)."
+  - path: templates/skills/feature/SKILL.md
+    relationship: related
+    status: exists
+    relevance: "The convention that epic worktrees live under the repo parent's worktrees directory."
+  - path: unit_tests/_workflow_engine_harness.py
+    relationship: specifies
+    status: exists
+    relevance: "The harness the reachability proof must run through."
+  - path: docs/architecture/components/worktree-manager.md
+    relationship: describes
+    status: exists
+    relevance: "Worktree lifecycle component and its provisioning entry point (setup_ticket_worktree.py), the home of the repository facts the worktree decision rests on."
+  - path: docs/architecture/adrs/ADR-018-agent-isolation-topology.md
+    relationship: describes
+    status: exists
+    relevance: "Per-drive isolation topology that the worktree placement serves."
+  - path: docs/architecture/adrs/ADR-030-dual-engine-workflow-support.md
+    relationship: describes
+    status: exists
+    relevance: "The workflow body has no module loader and cannot run git itself; repository facts reach it only through schema-validated agent results."
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: describes
+    status: exists
+    relevance: "Canonical template sources versus build-generated deployed copies, for both the workflow script and the worktree provisioning script."
+assigned_agent: python-coder
+estimated_complexity: L
+it_requirements:
+  - "The workflow body decides the worktree outcome (reuse the resolved worktree, reject the resolution, or name a new location) from structured facts. The decision is never left to an agent's judgement, and the worktree-opening agent is given the exact location with no discretion over it."
+  - "Whether a path is the top-level directory of a linked worktree, and whether it is the main checkout, is established from facts git reports about the repository, returned in a schema-validated result. It is never inferred from the path's spelling or folder name, and never taken on the resolver's word: RESOLVE_SCHEMA accepts any string (KI-BO-027)."
+  - "Those repository facts come from a deterministic helper on the worktree-manager surface that queries the repository (see worktree-manager.md entry points), not from free-form agent prose. The real-artifact test can then exercise the same decision inputs against a temporary real repository without an LLM."
+  - "The worktree base is derived from the repository's main checkout, found through git's shared common directory, using the existing layout resolution in agent_delivery_workflows.md section 9. It is never derived from the current directory's own top-level, which inside a linked worktree is that worktree (BO-4000c M1). No second base-derivation rule is introduced."
+  - "The new location is <worktree base>/<target identity>. For an epic, the identity is its folder name, derived with BO-3900's separator-independent name rule. The same inputs name the same location on every run, with no suffix, counter, timestamp, random or session component."
+  - "Checks that keep the location off the target folder, the dev-layout main checkout and every linked worktree use BO-3900's platform-independent containment, so they hold when the paths are spelled with different separators or letter case."
+  - "Consumer-layout placement is out of scope (user decision Q1, 2026-09-14). The never-under-the-main-checkout rule applies to the dev layout only, and the consumer layout's <consumer_root>/worktrees convention (BO-1500e-2) is not changed."
+  - "The run's worktree is assigned once, at the worktree step, and every later phase prompt is rooted in it."
+  - "The real-artifact test works only on temporary repositories and leaves no worktree, branch or directory behind in the host repository."
+  - "KI-BO-027 is not claimed closed: the resolver's own output is unchanged by this record, and only the workflow's handling of a bad resolution changes."
+  - "Canonical sources are templates/workflows-js/build-feature.js and templates/scripts/setup_ticket_worktree.py (or whichever templates/scripts/ file the helper lands in). Deployed copies are regenerated by 'python scripts/build.py' and never hand-edited (ADR-001). The changed worktree-step agent call must remain an E2-valid call with a schema (ADR-030)."
+delivers_to:
+  agent: python-coder
+  contract: "For BO-4000a, BO-4000b and BO-4000c. (1) The exact location string the workflow names to the worktree-opening agent: <worktree base>/<target identity>, spelled with BO-3900's output rule. (2) The run's worktree as a single assignment made at the worktree step. (3) Repository facts for a candidate path, as a schema-validated object: { path: string, exists: boolean, is_git_toplevel: boolean, is_linked_worktree: boolean, is_main_checkout: boolean, same_repository: boolean | null (null when the path is not a git checkout), branch: string | null (null when not a checkout or detached) }."
+expects_from:
+  ac_id: BO-3900
+  contract: "BO-3900's platform-independent containment and equivalence (whole-segment boundary; separators and trailing separators ignored; case-insensitive for drive-lettered and UNC forms only), plus its separator-independent name derivation for the target identity."
+test_required: true
+test_spec:
+  - name: test_run_inside_the_resolved_worktree_dispatches_no_worktree_creation
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "Incident replay: with the resolver reporting uxp-700-tranche-2 as the target's worktree, no worktree-opening agent is dispatched and every phase prompt is rooted there."
+  - name: test_resolved_path_that_is_not_a_worktree_top_level_is_not_reused
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: "A resolver reporting the epic folder, or the main checkout, as the worktree does not become the run's worktree."
+  - name: test_new_worktree_location_is_named_by_the_workflow_and_is_a_child_of_the_base
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "The worktree-opening agent's prompt carries the exact location worktrees/EPIC-TruthfulProjectRecord, and two runs for the same target carry the same location."
+  - name: test_new_worktree_location_is_never_under_the_target_or_any_checkout
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: "Across Windows- and POSIX-spelled layouts, the named location is never at or under the target folder, the dev-layout main checkout, or any linked worktree."
+  - name: test_worktree_decision_on_a_real_repository_with_a_linked_worktree
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: real_artifact
+    description: "Against a temporary real git repository with a linked worktree and a tracked epic folder, the reuse and named-location decisions match the scenarios, and no tracked file of either checkout is reported deleted afterwards."
+  - name: test_worktree_placement_is_reachable_from_the_workflow_top_level_body
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: reachability
+    surface_invoked: templates/workflows-js/build-feature.js
+    description: "All scenarios are driven through _workflow_engine_harness.py running build-feature.js's own top-level body."
+test_rationale: |
+  The location was decided by an agent reading a prompt that left it open. Nothing in the
+  workflow checked what came back. So a test of a location-computing helper proves nothing
+  unless the workflow body really hands that location to the agent, and really declines to
+  open a worktree when one was already resolved. Both are dispatch facts. They are visible
+  only by running build-feature's own body through _workflow_engine_harness.py and reading
+  which agents were dispatched with which prompts. The real-artifact entry exists because
+  "top-level directory of a linked worktree" and "tracked content" are facts about a real
+  git layout that string fixtures can only imitate. The incident's visible damage (46
+  tracked ticket files shown as deleted) is a git-status fact.
+covered_by:
+  - BO-4000a
+  - BO-4000b
+  - BO-4000c
+implemented_by:
+  - templates/workflows-js/build-feature.js
+  - templates/scripts/worktree_repo_facts.py
+origin_agent: business-analyst
+created: 2026-09-14
+amended_by:
+- reason: it-po-technical-enrichment
+  date: 2026-09-14
+  by: it-po
+  changes: 'Set package_surface: false. Added it_requirements and architecture doc_links,
+    raised estimated_complexity from M to L (workflow worktree step plus a deterministic
+    repository-facts helper with a template/deployed pair, plus real-repository tests),
+    added a delivers_to contract for the three L3 children, tightened expects_from,
+    and set readiness to reviewed. criteria, test_spec, test_rationale and notes are
+    unchanged.'
+- action: approved
+  agent: approve_acs
+  date: '2026-09-14'
+superseded_by: null
+notes: |
+  FIELD EVIDENCE — run wf_0e0872f9-453, 2026-09-14, Windows 11, the same run as BO-3900.
+  The resolve-target agent correctly reported
+  worktree_path: C:\Users\Hendrik\Code\leafcutter\worktrees\uxp-700-tranche-2, because the
+  run was already inside a worktree. The next worktree-setup agent was handed only the epic
+  FOLDER as its target, with a prompt that left the new worktree's location open
+  ("git worktree add <path> ..."). It ran git worktree add AT the epic folder path,
+  ...\uxp-700-tranche-2\tickets\00_inbox\epics\EPIC-TruthfulProjectRecord, on a local
+  branch epic/truthful-project-record that was 47 commits behind main. The nested checkout
+  shadowed all 46 tracked ticket files, which the outer worktree then showed as deleted.
+  The resolved worktree path was discarded and replaced by the nested one.
+
+  NAMED MUTATIONS (each must turn at least one test red):
+    M1 — keep the location to the agent's judgement (the prompt names no exact path).
+         Caught by test_new_worktree_location_is_named_by_the_workflow_and_is_a_child_of_the_base.
+    M2 — always open a new worktree, even when one was resolved for the target. Caught by
+         test_run_inside_the_resolved_worktree_dispatches_no_worktree_creation.
+    M3 — reuse any resolved path without checking it is a linked worktree's top-level.
+         The KI-BO-027 epic-folder value would be reused. Caught by
+         test_resolved_path_that_is_not_a_worktree_top_level_is_not_reused.
+    M4 — derive the location as <target folder> or <current directory>/<slug>. Caught by
+         test_new_worktree_location_is_never_under_the_target_or_any_checkout.
+    M5 — decide containment with a forward-slash-only prefix test. A backslash-spelled
+         location under a forward-slash-spelled checkout is judged outside it. Caught by
+         the Windows-spelled layout in the same boundary test (the BO-3900 dependency).
+
+  THE THREE L3s cover the axes whose mutations leave every test above green: a
+  worktree step that reports a location other than the one it was told (BO-4000a), a
+  stale local branch (BO-4000b), and a run started inside an unrelated worktree or aimed
+  at an occupied location (BO-4000c).
+
+  DECIDED 2026-09-14 (user, Q1): consumer-layout placement stays out of scope. The "never under the main checkout" clause applies to the dev layout only.
+
+  CONSUMER LAYOUT — background to that decision. The user asked that a new worktree
+  never be created "inside the repository tree". In the dev layout the worktree base is a
+  sibling of the repository, and this record states that outright. In the consumer layout
+  documented in agent_delivery_workflows.md section 9 (BO-1500e-2), the base is
+  <consumer_root>/worktrees. That is under the consumer checkout's top-level directory.
+  This record therefore scopes the "never under the main checkout" clause to the dev
+  layout, and keeps the universal clauses (never at or under the target folder, never at
+  or under any linked worktree). If the user wants the consumer layout moved outside the
+  consumer repository too, that is a change to BO-1500e-2's convention and needs its own
+  record. This one should not quietly contradict it.
+
+  KI-BO-027 is referenced, not claimed closed. The second scenario covers what the build
+  workflow does with a bad resolution. Whether the resolver itself stops producing one is
+  still KI-BO-027's.

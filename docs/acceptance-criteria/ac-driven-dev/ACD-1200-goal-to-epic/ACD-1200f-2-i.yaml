@@ -38,6 +38,11 @@ doc_links:
   - path: scripts/goal_to_epic.py
     relationship: related
     status: exists
+    relevance: "Facade only since the 2026-09-14 decomposition. The goal-path caller of traverse_ac_tree is now epic_ac_phases.py below; traverse_ac_tree itself stays in scripts/ac_store/scan_ac_store.py, unaffected by the split."
+  - path: scripts/ac_store/epic_ac_phases.py
+    relationship: related
+    status: exists
+    relevance: "The consumer of traverse_ac_tree on the goal path — a duplicated leaf would surface here as a duplicated ticket."
 assigned_agent: python-coder
 estimated_complexity: S
 it_requirements:
@@ -57,5 +62,24 @@ amended_by:
 superseded_by: null
 covered_by: []
 implemented_by: []
+test_spec:
+  - name: test_acd_1200f_2_i_diamond_reachable_leaf_appears_exactly_once
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: "Build the ROOT-002 shape from the Given (L1 covered_by lists all descendants while each L2 also lists its own L3) and assert ROOT-002a-1-i occurs exactly once in traverse_ac_tree's result — count the occurrences, do not merely assert membership."
+  - name: test_acd_1200f_2_i_every_other_leaf_appears_exactly_once
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: "ROOT-002a-1 and ROOT-002a-2 each appear exactly once — the whole result is duplicate-free, not just the diamond node."
+  - name: test_acd_1200f_2_i_result_length_equals_distinct_leaf_count
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: unit
+    angle: boundary
+    description: "len(result) == len(set(result)) and equals the distinct leaf count, so a de-duplication that drops a genuine leaf is caught alongside one that keeps a duplicate."
 change_target: code
 risk_surface: internal

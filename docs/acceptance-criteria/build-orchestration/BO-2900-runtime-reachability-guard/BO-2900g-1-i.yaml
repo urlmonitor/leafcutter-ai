@@ -36,15 +36,19 @@ doc_links:
     relationship: related
     status: exists
     relevance: "The consumer side. When the request cannot name the way in, resolving one is the doer's judgement — BP-1100g-2 owns that half; this AC only guarantees the request does not overwrite a way in that was already named."
-  - path: scripts/ac_store/generate_ticket_from_ac.py
+  - path: scripts/ac_store/_gtfa_test_descriptors.py
     relationship: describes
     status: exists
-    relevance: "The producer under test. _reachability_descriptor currently builds an unconditional entry with a fixed asserts string; the de-duplication and preservation rules this AC states are the constraints on making that append universal."
+    relevance: "The producer under test. _reachability_descriptor currently builds an unconditional entry with a fixed asserts string, and _ensure_reachability_floor is where the de-duplication and preservation rules this AC states must hold."
+  - path: scripts/ac_store/_gtfa_constants.py
+    relationship: describes
+    status: exists
+    relevance: "Holds _REACHABILITY_ASSERTS — the single stable 'entry point is not declared' sentinel this AC requires be emitted from one constant so BP-1100g-4 and BP-1100g-2 can recognise it without pattern-guessing."
 assigned_agent: python-coder
 estimated_complexity: S
 declares_side_effect: false
 it_requirements:
-  reference_file_path: "scripts/ac_store/generate_ticket_from_ac.py"
+  reference_file_path: "scripts/ac_store/_gtfa_test_descriptors.py"
   n_location_rule: "1"
   required_skills:
     - python-coder

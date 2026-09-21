@@ -131,6 +131,7 @@ superseded_by: null
 covered_by:
   - TQ-100b-4-i
   - TQ-100b-4-ii
+  - TQ-100b-4-iii
 implemented_by: []
 notes: |
   PRECONDITION FOR TQ-100b-1-ii — NOT A DUPLICATE OF IT. TQ-100b-1-ii specifies

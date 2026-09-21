@@ -1,0 +1,274 @@
+id: TQ-600a-7
+components:
+  - testing_quality
+  - build_pipeline
+title: "Someone adding a test that needs a deployed package can find out how to reuse the shared one, and the standing rule agrees with them"
+component: testing-quality
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given an author about to add a test that needs a deployed copy of the package, who
+    has the project's written guidance and nothing else — no sibling to ask and no
+    access to the fixture's source,
+  When they follow that guidance,
+  Then they declare their test a reader and obtain the shared reference layout from
+    that declaration, adding no deploy of their own and without having to infer the
+    declaration by reading the fixture,
+    And they can state which of the two paths their test will take and why, and can
+      name the case that must keep a copy of its own — a test that alters the package
+      before deploying it and then asserts that the deploy fails,
+    And they can say what becomes of a test that declares nothing: it is given a copy
+      of its own and the run names it, so they can recognise their own omission in a
+      run's output instead of meeting it as an unexplained slow run,
+    And, shown a run that named their test as undeclared and a run that failed because
+      a test which alters the package was handed the shared layout, they can say which
+      of the two they are looking at and what to change in each case,
+    And the standing rule in the repository's root CLAUDE.md no longer says the
+      fixture is absent: the sentence "Until that fixture exists, the prohibition alone
+      applies" is gone from that rule, and in its place the rule names the declaration
+      the author has just been taught and points at this guidance, so the rule and the
+      mechanism describe the same repository,
+    And every command and every declaration the guidance shows works as written
+      against the repository at the time it is published — an author who copies a step
+      does not have to adjust it to make it work.
+depends_on:
+  - TQ-600a
+  - TQ-600a-1
+  - TQ-600a-2
+  - TQ-600a-5
+doc_links:
+  - path: CLAUDE.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      THE CO-EDIT THIS AC EXISTS TO FORCE. The rule "Tests must not spawn their own
+      build.py — reuse a shared deployed layout" is where authors already look, and it
+      currently closes with "Until that fixture exists, the prohibition alone applies:
+      do not add new spawn sites." That sentence is true only until TQ-600a-1 lands and
+      false the moment it does. It must be reconciled in the same change as the guide,
+      not left pointing at a state of the world that no longer exists.
+  - path: unit_tests/README.md
+    relationship: related
+    status: exists
+    relevance: >-
+      A candidate home, or a candidate link source, for the declaration instructions —
+      10,958 bytes as of 2026-09-21 and the readme a test author is closest to. WHICH
+      SURFACE CARRIES THE GUIDE IS AN IT-PO DECISION; what this AC fixes is that there
+      is exactly one account of the declaration and that CLAUDE.md agrees with it.
+  - path: docs/testing/README.md
+    relationship: related
+    status: exists
+    relevance: >-
+      The other candidate surface, and the one TQ-600b-6 targets. If both this AC and
+      TQ-600b-6 land material here, they must cross-link rather than each restate the
+      other's half — running the suite and declaring a test are different questions
+      with one reader.
+  - path: docs/acceptance-criteria/testing-quality/TQ-600-suite-feedback-latency/TQ-600a-5.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      Owns the declaration itself — a per-test marker, with the undeclared case routed
+      to a copy of its own and named by the run. The guide documents that marker as
+      delivered and must not invent a name for it.
+  - path: docs/testing/shared-reference-layout.md
+    relationship: describes
+    status: planned
+    relevance: >-
+      THE SURFACE DECISION, made at enrichment: a new page carries the one account
+      of the declaration. It is a new file rather than a section of
+      docs/testing/README.md because that README is 326 lines against the
+      300-line check-doc-length limit and the gate refuses growth of an
+      already-over file; a new file is not growth.
+assigned_agent: documentation-expert
+estimated_complexity: M
+it_requirements:
+  - >-
+    SURFACE DECISION, WHICH THE BA EXPLICITLY LEFT HERE: the one account of the
+    declaration lives in a new page, `docs/testing/shared-reference-layout.md`.
+    `unit_tests/README.md` and the standing rule in the root `CLAUDE.md` point at
+    it; neither carries a second procedure. One account, two pointers.
+  - >-
+    THE DOC-LENGTH RATCHET DECIDES THAT SURFACE AND IS NOT NEGOTIABLE BY PROSE.
+    Verified at enrichment against the resolved known-issue record: `check-doc-length`
+    refuses a commit in which a file already over the 300-line limit GROWS, and
+    passes a file that shrinks or holds steady. `docs/testing/README.md` is 326
+    lines and the root `CLAUDE.md` is 820 — both already over. Consequences, all
+    three load-bearing: new material goes in a new file; any pointer added to
+    `docs/testing/README.md` must be offset by at least as many lines removed in
+    the same commit; and the `CLAUDE.md` edit must be a replacement that does not
+    increase that file's line count. `unit_tests/README.md` is 228 lines and has
+    room. The gate is PRE-COMMIT ONLY — `.github/workflows/ci.yml` does not run
+    it — so a violation is invisible to CI and appears only as a local refusal.
+  - >-
+    THE CLAUDE.md RECONCILIATION IS AN ABSENCE PLUS A NAMING, AND IT IS THE
+    LOAD-BEARING HALF OF THIS AC. Verified at enrichment: the sentence sits at
+    `CLAUDE.md` line 416. After this change the exact sentence "Until that fixture
+    exists, the prohibition alone applies" must appear nowhere in the root
+    CLAUDE.md, and the rule must name the registered declaration and link to the
+    guide. That rule is loaded into every agent's context: while it is
+    unreconciled it is the louder of the two accounts and it is the wrong one.
+  - >-
+    QUOTE THE MECHANISM, NEVER PARAPHRASE THE INTENT. Every marker name, flag,
+    path and command shown must be copied from what TQ-600a-5 actually registered
+    in `pytest.ini` and what TQ-600a-1 actually delivers. A documented marker
+    differing by one character from the registered one is treated as an honest
+    omission, routed to the unshared path, and costs 59.8s per test with no error
+    anywhere — the silent route is the expensive one.
+  - >-
+    PUBLISH AFTER THE MECHANISM LANDS, NOT BESIDE IT. This AC is implemented
+    against merged TQ-600a-1, TQ-600a-2 and TQ-600a-5. A guide written ahead of
+    delivery documents an intention, and a plausible intention is
+    indistinguishable from a correct account until a reader tries the declaration.
+  - >-
+    CROSS-LINK WITH TQ-600b-6 RATHER THAN RESTATING IT. Running the suite and
+    declaring a test are different questions with one reader. A second account of
+    the other's half is exactly the drift TQ-600b-6's agreement clause forbids.
+  - >-
+    THE NEW PAGE MUST BE COMMITTABLE AND REACHABLE: it carries the YAML
+    frontmatter `check-doc-frontmatter` requires and is linked from the doc index
+    and from the two pointer surfaces. A guide nobody can navigate to satisfies
+    every clause about its contents and teaches nobody.
+  - >-
+    VERIFY THE GATES FROM INSIDE THE WORKTREE. Commit-guardian hooks resolve
+    their target set from the current working directory; invoked with absolute
+    paths from elsewhere they examine nothing and exit 0, which is
+    indistinguishable from a pass. Run them with `env --chdir=<worktree>` and
+    worktree-relative paths, and read silence as "it examined nothing".
+delivers_to: null
+expects_from:
+  - ac_id: TQ-600a-5
+    contract: >-
+      The declaration as delivered — its exact form, its permitted values, and the
+      behaviour of the undeclared case — which the guidance quotes rather than
+      paraphrases. It cannot be written from intent: a documented marker that differs
+      by one character from the registered one is silently ignored, and the silent
+      route is the expensive one.
+  - ac_id: TQ-600a-1
+    contract: >-
+      The shared reference layout as delivered, and the means by which a declared
+      reader obtains its root, which is the step the author is being taught to take.
+  - ac_id: TQ-600a-2
+    contract: >-
+      The mis-routing failure as delivered — what the run says, and how it names the
+      offending test — which is one of the two run outputs the reader must be able to
+      tell apart.
+test_spec:
+  - name: test_tq600a_7_the_stale_sentence_is_gone_from_the_root_claude_md
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: >-
+      The exact sentence "Until that fixture exists, the prohibition alone
+      applies" appears nowhere in the root CLAUDE.md, and the rule that contained
+      it names the registered declaration marker and links to the guide.
+      Verified at enrichment: the sentence is at CLAUDE.md line 416 today, so
+      this descriptor is RED before the change and GREEN after — which is the
+      honest shape for a claim written as an absence. NAMED MUTATION: reinstate
+      the sentence; this test must go RED.
+  - name: test_tq600a_7_every_declaration_the_guidance_shows_is_one_the_runner_actually_accepts
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    surface_invoked: "python -m pytest (child session declaring a test exactly as the published guide instructs)"
+    description: >-
+      Extract the marker names, commands and repository paths the guide shows,
+      assert every marker is in pytest.ini's registered markers and every path
+      exists, then EXECUTE the guide's declaration step verbatim and assert the
+      declared test is routed to the shared layout. NAMED MUTATION: alter one
+      character of the marker name in the guide; this test must go RED while
+      every other descriptor stays green. This is what separates a guide that
+      works from a guide that reads well.
+  - name: test_tq600a_7_there_is_one_account_of_the_declaration_and_the_other_surfaces_link_to_it
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: unit
+    angle: seam
+    description: >-
+      The guide's anchor exists; unit_tests/README.md and the CLAUDE.md rule each
+      link to it; and the step-by-step procedure for obtaining the shared root
+      appears in the guide alone — the other two surfaces name the declaration and
+      point, rather than restating how to use it. NAMED MUTATION: copy the
+      procedure into CLAUDE.md as well; two accounts then exist, the louder one
+      will rot first, and this test must go RED.
+test_rationale: |
+  Three of this AC's six clauses are reader outcomes and no automated descriptor
+  can check them. Whether an author can state which of the two paths their test
+  will take, name the case that must keep its own copy, and tell a
+  named-as-undeclared run apart from a mis-routing failure are properties of
+  whether the prose teaches — and a file with the right headings passes any
+  presence check while teaching nobody anything. They are verified by a reader
+  trial against the published page (a documentation-verifier pass carrying the
+  reader's question, not the author's outline), and that is recorded here rather
+  than papered over with a descriptor that greps for a filename.
+
+  The two clauses the BA deliberately made mechanical get real descriptors. The
+  missing CLAUDE.md sentence is checkable precisely because it is phrased as an
+  absence: "the rule is updated" is an opinion, "that sentence is gone" is not.
+  The copy-runnable clause is checked by EXECUTING the declaration the guide
+  shows, not by reading it — a documented marker one character off the registered
+  one is silently ignored, and silence routes the test to the 59.8s path with no
+  error to notice.
+
+  The third descriptor protects the property the other two depend on: one
+  account. Two surfaces describing one declaration is two chances for one of them
+  to rot, and the one that rots keeps being believed. It is satisfiable by a link
+  and forbidden only from carrying a second procedure.
+
+  No descriptor here asserts that a guide exists. Existence is not the claim.
+origin_agent: business-analyst
+created: 2026-09-21
+amended_by:
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-09-21
+  note: 'documentation-expert, M. Made the surface decision the BA delegated: a new
+    page docs/testing/shared-reference-layout.md carries the one account, with unit_tests/README.md
+    and the CLAUDE.md rule pointing at it. The deciding constraint is mechanical rather
+    than editorial — check-doc-length ratchets against a 300-line limit and docs/testing/README.md
+    is already 326 lines, so it cannot take new material, while CLAUDE.md at 820 lines
+    can only take a non-growing replacement. Verified the stale sentence at CLAUDE.md:416.
+    The test contract covers only the two mechanically checkable clauses plus the
+    single-account property, and states plainly that the three reader-outcome clauses
+    are verified by a reader trial; no descriptor greps for the file''s existence.
+    criteria untouched.'
+- action: approved
+  agent: approve_acs
+  date: '2026-09-21'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: docs
+risk_surface: internal
+notes: |
+  Satisfies the how-to entry in TQ-600a's documentation_triggers.
+
+  THE CLAUDE.md CLAUSE IS THE URGENT HALF, NOT AN ADDENDUM. The standing rule is the
+  surface that actually reaches authors today — it is loaded into every agent's
+  context and it is where a human looks before adding a test. It currently ends with
+  "Until that fixture exists, the prohibition alone applies", which is a promise about
+  a future. The instant TQ-600a-1 lands, that sentence describes a repository that no
+  longer exists, and the rule starts teaching authors to do nothing rather than to
+  declare. A guide published beside an unreconciled rule leaves two accounts, and the
+  louder one is wrong. This is why the clause is written as an absence — the sentence
+  is gone — rather than as "the rule is updated": an absence is checkable and an
+  update is a matter of opinion.
+
+  WHY THE CRITERIA ARE READER OUTCOMES RATHER THAN "A GUIDE EXISTS". A file with the
+  right name and the right headings satisfies a presence check while teaching nobody
+  anything. Every clause here is something an author must be able to DO or SAY after
+  reading, and the two that are fully mechanical — the missing CLAUDE.md sentence and
+  the copy-runnable declaration — are the floor under the rest.
+
+  WHAT IS NOT DECIDED HERE. Which file carries the guide. unit_tests/README.md and
+  docs/testing/README.md are both plausible and both already exist; the CLAUDE.md
+  reconciliation is required either way. That choice, and the sequencing after
+  TQ-600a-1 and TQ-600a-5 land, are it-po decisions — a guide written ahead of those
+  deliveries documents an intention, and a plausible intention is indistinguishable
+  from a correct account until a reader tries the declaration.

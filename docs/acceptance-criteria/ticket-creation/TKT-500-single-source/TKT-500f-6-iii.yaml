@@ -31,9 +31,10 @@ doc_links:
   - path: docs/architecture/adrs/ADR-027-tdd-workflow-enforcement.md
     relationship: constrains
     status: exists
-  - path: scripts/ac_store/generate_ticket_from_ac.py
+  - path: scripts/ac_store/_gtfa_tests_section.py
     relationship: constrains
     status: exists
+    relevance: "Producer of the '## Test Requirements' signal this supervisor rule reads. The supervisor's notion of 'implementation .py in scope' must match the predicate that gates emission here. (The generate_ticket_from_ac.py path in this AC's criteria is an EXAMPLE files_touched entry, not the edit surface.)"
 assigned_agent: null
 estimated_complexity: M
 it_requirements:

@@ -39,8 +39,12 @@ This guide covers five tasks:
 
 - EPIC-GoalToEpic tickets 01–05 are merged and deployed
   (`build.py` has been run in your project).
-- `goal_to_epic.py`, `build_ac_mode_detection.py`, and
-  `scan_ac_store.py` are installed under `scripts/`.
+- Every script named in `AC_STORE_DEPLOY_MAP` (`scripts/build_phases.py`) is
+  installed. That manifest is the authoritative list: it covers `goal_to_epic.py`,
+  `build_ac_mode_detection.py`, `scan_ac_store.py`, and the fourteen
+  `ac_store/epic_*.py` modules holding the pipeline's implementation.
+  `goal_to_epic.py` imports all fourteen at module scope, so a partial install
+  does not degrade the tool — it makes it unimportable.
 - The goal AC (L0 or L1) has at least one approved leaf AC beneath it.
   Use the [AC-driven development guide](ac-driven-development.md) to
   author and approve ACs if needed.

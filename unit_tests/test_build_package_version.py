@@ -9,6 +9,24 @@ BUSINESS CONTEXT: AC ACD-1100e-2 requires that a user examining the deployed
 ARCHITECTURE: Tests import build.py directly and monkeypatch expensive phases.
     The _read_package_version helper is tested in isolation against a temp
     config/version.json; the main() integration tests verify end-to-end wiring.
+
+    PATCH TARGETS (BP-100n-4): a stub only intercepts if it replaces the name
+    at the module whose globals the CALL SITE reads. ``main()`` still lives in
+    build.py, but BP-100n-4 moved most of its inline steps into
+    ``build_main_helpers``; the steps that call ``write_build_manifest``,
+    ``check_halt_guard``, ``write_lock_file``, ``_resolve_package_sha``,
+    ``scan_for_placeholders`` and ``check_referential_integrity`` now resolve
+    those names through ``build_main_helpers``' globals, so those six are
+    patched on ``_bmh``. The remaining stubs stay on ``_build`` because
+    ``main()`` still reads them from build.py's own globals (``_run_phases``
+    and ``validate_agent_registry`` directly; ``_cleanup_stale_paths`` /
+    ``_check_script_reference_guard`` are read there and passed into the
+    helpers as parameters). Patching the wrong module is silent: the attribute
+    is rebound, nobody reads it, and the test goes green while asserting
+    nothing. ``test_build_version_wiring.py`` carries the shared guard against
+    that, ``test_write_build_manifest_stub_actually_intercepts`` — it asserts
+    the stub is actually reached, which pins the correct patch module for this
+    file's stubs too.
 """
 
 from __future__ import annotations
@@ -27,6 +45,7 @@ if str(_SCRIPTS_DIR) not in sys.path:
     sys.path.insert(0, str(_SCRIPTS_DIR))
 
 import build as _build  # noqa: E402 — after sys.path setup
+import build_main_helpers as _bmh  # noqa: E402 — after sys.path setup
 
 
 # ---------------------------------------------------------------------------
@@ -113,13 +132,13 @@ def _build_patches(target_root: Path):
     """Return a context manager that stubs all expensive build phases."""
     return (
         patch.object(_build, "_run_phases", _noop_run_phases),
-        patch.object(_build, "write_build_manifest", _noop_write_manifest),
-        patch.object(_build, "check_halt_guard", _noop_check_halt),
+        patch.object(_bmh, "write_build_manifest", _noop_write_manifest),
+        patch.object(_bmh, "check_halt_guard", _noop_check_halt),
         patch.object(_build, "_cleanup_stale_paths", _noop_cleanup),
-        patch.object(_build, "write_lock_file", lambda *a, **k: None),
-        patch.object(_build, "_resolve_package_sha", lambda *a: "abc123"),
-        patch.object(_build, "scan_for_placeholders", lambda *a: []),
-        patch.object(_build, "check_referential_integrity", lambda *a, **k: []),
+        patch.object(_bmh, "write_lock_file", lambda *a, **k: None),
+        patch.object(_bmh, "_resolve_package_sha", lambda *a: "abc123"),
+        patch.object(_bmh, "scan_for_placeholders", lambda *a: []),
+        patch.object(_bmh, "check_referential_integrity", lambda *a, **k: []),
         patch.object(_build, "validate_agent_registry", _noop_validate_registry),
         patch.object(_build, "_check_script_reference_guard", lambda *a, **k: 0),
     )
@@ -193,13 +212,13 @@ class TestPackageVersionInBuildOutput:
         """
         with (
             patch.object(_build, "_run_phases", _noop_run_phases),
-            patch.object(_build, "write_build_manifest", _noop_write_manifest),
-            patch.object(_build, "check_halt_guard", _noop_check_halt),
+            patch.object(_bmh, "write_build_manifest", _noop_write_manifest),
+            patch.object(_bmh, "check_halt_guard", _noop_check_halt),
             patch.object(_build, "_cleanup_stale_paths", _noop_cleanup),
-            patch.object(_build, "write_lock_file", lambda *a, **k: None),
-            patch.object(_build, "_resolve_package_sha", lambda *a: "abc123"),
-            patch.object(_build, "scan_for_placeholders", lambda *a: []),
-            patch.object(_build, "check_referential_integrity", lambda *a, **k: []),
+            patch.object(_bmh, "write_lock_file", lambda *a, **k: None),
+            patch.object(_bmh, "_resolve_package_sha", lambda *a: "abc123"),
+            patch.object(_bmh, "scan_for_placeholders", lambda *a: []),
+            patch.object(_bmh, "check_referential_integrity", lambda *a, **k: []),
             patch.object(_build, "validate_agent_registry", _noop_validate_registry),
             patch.object(_build, "_check_script_reference_guard", lambda *a, **k: 0),
         ):
@@ -219,13 +238,13 @@ class TestPackageVersionInBuildOutput:
         """
         with (
             patch.object(_build, "_run_phases", _noop_run_phases),
-            patch.object(_build, "write_build_manifest", _noop_write_manifest),
-            patch.object(_build, "check_halt_guard", _noop_check_halt),
+            patch.object(_bmh, "write_build_manifest", _noop_write_manifest),
+            patch.object(_bmh, "check_halt_guard", _noop_check_halt),
             patch.object(_build, "_cleanup_stale_paths", _noop_cleanup),
-            patch.object(_build, "write_lock_file", lambda *a, **k: None),
-            patch.object(_build, "_resolve_package_sha", lambda *a: "abc123"),
-            patch.object(_build, "scan_for_placeholders", lambda *a: []),
-            patch.object(_build, "check_referential_integrity", lambda *a, **k: []),
+            patch.object(_bmh, "write_lock_file", lambda *a, **k: None),
+            patch.object(_bmh, "_resolve_package_sha", lambda *a: "abc123"),
+            patch.object(_bmh, "scan_for_placeholders", lambda *a: []),
+            patch.object(_bmh, "check_referential_integrity", lambda *a, **k: []),
             patch.object(_build, "validate_agent_registry", _noop_validate_registry),
             patch.object(_build, "_check_script_reference_guard", lambda *a, **k: 0),
         ):
@@ -257,13 +276,13 @@ class TestPackageVersionInBuildOutput:
 
         with (
             patch.object(_build, "_run_phases", _noop_run_phases),
-            patch.object(_build, "write_build_manifest", _noop_write_manifest),
-            patch.object(_build, "check_halt_guard", _noop_check_halt),
+            patch.object(_bmh, "write_build_manifest", _noop_write_manifest),
+            patch.object(_bmh, "check_halt_guard", _noop_check_halt),
             patch.object(_build, "_cleanup_stale_paths", _noop_cleanup),
-            patch.object(_build, "write_lock_file", lambda *a, **k: None),
-            patch.object(_build, "_resolve_package_sha", lambda *a: "abc123"),
-            patch.object(_build, "scan_for_placeholders", lambda *a: []),
-            patch.object(_build, "check_referential_integrity", lambda *a, **k: []),
+            patch.object(_bmh, "write_lock_file", lambda *a, **k: None),
+            patch.object(_bmh, "_resolve_package_sha", lambda *a: "abc123"),
+            patch.object(_bmh, "scan_for_placeholders", lambda *a: []),
+            patch.object(_bmh, "check_referential_integrity", lambda *a, **k: []),
             patch.object(_build, "validate_agent_registry", _noop_validate_registry),
             patch.object(_build, "_check_script_reference_guard", lambda *a, **k: 0),
         ):
@@ -283,13 +302,13 @@ class TestPackageVersionInBuildOutput:
         """A --dry-run build must NOT write the LEAFCUTTER_VERSION file."""
         with (
             patch.object(_build, "_run_phases", _noop_run_phases),
-            patch.object(_build, "write_build_manifest", _noop_write_manifest),
-            patch.object(_build, "check_halt_guard", _noop_check_halt),
+            patch.object(_bmh, "write_build_manifest", _noop_write_manifest),
+            patch.object(_bmh, "check_halt_guard", _noop_check_halt),
             patch.object(_build, "_cleanup_stale_paths", _noop_cleanup),
-            patch.object(_build, "write_lock_file", lambda *a, **k: None),
-            patch.object(_build, "_resolve_package_sha", lambda *a: "abc123"),
-            patch.object(_build, "scan_for_placeholders", lambda *a: []),
-            patch.object(_build, "check_referential_integrity", lambda *a, **k: []),
+            patch.object(_bmh, "write_lock_file", lambda *a, **k: None),
+            patch.object(_bmh, "_resolve_package_sha", lambda *a: "abc123"),
+            patch.object(_bmh, "scan_for_placeholders", lambda *a: []),
+            patch.object(_bmh, "check_referential_integrity", lambda *a, **k: []),
             patch.object(_build, "validate_agent_registry", _noop_validate_registry),
             patch.object(_build, "_check_script_reference_guard", lambda *a, **k: 0),
         ):
@@ -312,6 +331,18 @@ class TestPackageVersionInBuildOutput:
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-09-14 [python-coder/BP-100n-4]: Retargeted six stubs from `_build` to (#BP-100n-4)
+#   `_bmh` (build_main_helpers). BP-100n-4 moved main()'s inline steps into
+#   build_main_helpers, taking the calls to write_build_manifest,
+#   check_halt_guard, write_lock_file, _resolve_package_sha,
+#   scan_for_placeholders and check_referential_integrity with them, so
+#   patch.object(_build, ...) raised AttributeError on all four integration
+#   tests here. _run_phases, validate_agent_registry, _cleanup_stale_paths and
+#   _check_script_reference_guard stay on `_build` — main() still reads those
+#   from build.py's own globals. See test_build_version_wiring.py's DECISION
+#   HISTORY for why the re-add-the-import fix was rejected as vacuous, and
+#   test_write_build_manifest_stub_actually_intercepts there for the guard that
+#   now pins the patch module for this file's stubs too.
 # - 2026-06-10 [test-writer/EPIC-AcPipelineConsolidation/12]: (#EPIC-AcPipelineConsolidation/12)
 #   Created module. Tests cover: _read_package_version unit tests (valid file,
 #   absent file, malformed JSON, missing key, non-standard version); integration

@@ -1,0 +1,152 @@
+id: TQ-600a-1-i
+components:
+  - testing_quality
+  - build_pipeline
+title: "Nobody pays for the shared layout when nobody asked for it"
+component: testing-quality
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a selection of tests in which not one test consumes the shared reference
+    layout,
+  When that selection is run,
+  Then no real package deploy is executed at all, and the run's reported deploy count
+    is zero,
+    And when the selection is widened by one test that does consume the shared
+      layout, the reported deploy count is one.
+depends_on:
+  - TQ-600a-1
+  - TQ-600a-6
+doc_links:
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      The boundary angle at its cheapest and most valuable: zero consumers and one
+      consumer are the two ends this AC pins, and an eagerly-created shared layout
+      passes every other AC in this tree.
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - >-
+    PRODUCTION MUST BE DEFERRED TO FIRST DEMAND, NOT TO SESSION START AND NOT TO
+    COLLECTION. Collection is measured at 5.33s and touches every test module, so
+    a layout produced during collection, at plugin import, or by an autouse
+    fixture is created for every run including a single-test one. The trigger must
+    be the first actual request for the layout root.
+  - >-
+    LAZINESS IS PER WORKER AS WELL AS PER RUN. Under pytest-xdist a worker to
+    which no consumer is scheduled must produce nothing. Assert both scopes;
+    a run-level "at least one consumer existed somewhere" test passes while every
+    idle worker still pays 59.8s.
+  - >-
+    The zero case must be observable two ways that can disagree: the reported
+    count is 0 AND no deploy subprocess was executed. A fixture that deploys and
+    reports 0 satisfies only one of them.
+delivers_to: null
+expects_from:
+  - ac_id: TQ-600a-1
+    contract: >-
+      The shared layout produced on first demand only, and the deploy signal that
+      fires when — and only when — production really happens. This AC asserts the
+      two lowest cases: a selection with no consumer produces nothing, and a
+      selection with consumers produces once.
+  - ac_id: TQ-600a-6
+    contract: >-
+      The run's reported real-deploy figure, which is the surface on which this
+      AC's zero case is observable — a selection with no consumer must report 0
+      rather than omit the field.
+test_spec:
+  - name: test_tq600a_1_i_a_selection_with_no_consumer_reports_zero_deploys
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: >-
+      A child pytest session over tests that never request the shared layout
+      reports a deploy count of 0.
+  - name: test_tq600a_1_i_no_deploy_subprocess_runs_for_the_zero_consumer_selection
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: failure
+    description: >-
+      Independently of what the run reports, no `build.py --target-dir`
+      subprocess is executed for that selection. NAMED MUTATION: make the fixture
+      session-autouse (eager); this test must go RED while a report-only
+      assertion could still pass.
+  - name: test_tq600a_1_i_widening_by_one_consumer_takes_the_count_from_zero_to_one
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: >-
+      The same selection plus exactly one test that consumes the shared layout
+      reports a deploy count of 1 — pinning the other end of the boundary, so a
+      layout that is never produced at all does not satisfy this AC.
+  - name: test_tq600a_1_i_a_worker_with_no_scheduled_consumer_produces_nothing
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: >-
+      Under more than one worker, with all consumers scheduled onto one worker,
+      the idle worker executes no deploy subprocess. NAMED MUTATION: create the
+      layout in a worker-startup hook; this test must go RED.
+test_rationale: |
+  The regression this prevents is a 59.8s tax on every single-test run — the
+  exact debugging loop TQ-600 exists to protect — and it is invisible to every
+  other AC in the tree, all of which measure whole-suite behaviour where an
+  eager layout looks identical to a lazy one.
+
+  The count-is-zero descriptor and the no-subprocess descriptor are kept
+  separate on purpose: they can disagree, and the disagreement is the defect.
+  A fixture that deploys eagerly and reports 0 passes the first alone.
+
+  The per-worker descriptor exists because laziness proved at run scope says
+  nothing at worker scope, and once TQ-600b-5 lands, worker scope is where the
+  cost actually multiplies.
+origin_agent: business-analyst
+created: 2026-09-21
+amended_by:
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-09-21
+  note: python-coder, S. Split the zero case into two descriptors that can disagree
+    — reported count 0 and no deploy subprocess — because a fixture that deploys eagerly
+    and reports 0 passes the report-only form. Added a per-worker laziness descriptor,
+    since laziness proved at run scope says nothing at worker scope once TQ-600b-5
+    lands. criteria untouched.
+- reason: 'Split of TQ-600a-1 into fixture (TQ-600a-1) + deploy-count reporting (TQ-600a-6).
+    This record stays a child of TQ-600a-1: what it constrains is when the layout
+    is PRODUCED, which is fixture behaviour. But its two count clauses (zero when
+    unused, one when widened by one consumer) assert over the reported figure, which
+    TQ-600a-6 now owns, so TQ-600a-6 is added to depends_on. Nothing else changed;
+    criteria untouched.'
+  by: business-analyst
+  at: 2026-09-21
+- action: approved
+  agent: approve_acs
+  date: '2026-09-21'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+notes: |
+  THE REGRESSION THIS PREVENTS IS A 60-SECOND TAX ON EVERY SINGLE-TEST RUN. A
+  shared resource created eagerly at the start of every session makes the whole-suite
+  case faster and the debugging case — one developer running one test repeatedly —
+  measurably worse, by the full measured 59.8s per invocation. That is the exact
+  loop TQ-600 exists to protect, so the shared layout must be produced on first
+  demand rather than on startup.
+
+  The two-clause form is deliberate: "zero when unused" alone is satisfiable by a
+  layout that is never produced at all, which would fail TQ-600a-1 but only in a
+  different test. Pinning one-when-used in the same criterion keeps this AC
+  self-contained.

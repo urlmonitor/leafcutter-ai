@@ -1,0 +1,245 @@
+id: TQ-600a-2
+components:
+  - testing_quality
+  - build_pipeline
+title: "A test that alters the package before deploying keeps a copy of its own, and still proves what it proved"
+component: testing-quality
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given the tests in unit_tests/test_bp_900g_8*.py, each of which alters the package
+    before deploying it — withholding a declared dependency, or editing the
+    declaration tuples the deploy reads — and then asserts that the deploy FAILS,
+  When the suite is run with the shared reference layout of TQ-600a-1 in place,
+  Then each of those tests works from a copy of the package that is its own, reached
+    through a path that no other test in the run is given,
+    And each of them reaches the same verdict it reached before the shared layout
+      existed: the deploy it provokes still fails, and it still fails for the reason
+      the test names,
+    And the shared reference layout is never handed to a test that alters the package,
+      so no such test can reach it even by asking for it,
+    And a test that alters the package and is nevertheless routed to the shared
+      layout is reported by name as a failure of the run, rather than quietly
+      succeeding.
+depends_on:
+  - TQ-600a
+  - TQ-600a-1
+doc_links:
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      The boundary angle applies directly: this AC is the negative half of
+      TQ-600a-1's positive claim, and the two must be covered separately or the
+      pair is satisfiable by sharing everything.
+  - path: CLAUDE.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      The standing rule "Tests must not spawn their own build.py" names
+      unit_tests/test_bp_900g_8*.py as the canonical mutating exception and states
+      why sharing with them would both corrupt the shared copy and destroy the
+      behaviour they exist to prove. This AC is that carve-out made mechanical.
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - >-
+    THE GLOB IS A PROXY, NOT A POPULATION. `unit_tests/test_bp_900g_8*.py` was
+    used at authoring time to NAME the known mutators; it was never verified to
+    be the complete set, and establishing the true set requires reading test
+    source. Routing MUST therefore be driven by the per-test declaration of
+    TQ-600a-5, never by that glob, by a filename pattern, or by a directory. An
+    implementation keyed on the glob satisfies every clause here today and
+    silently mis-routes the first mutator named otherwise.
+  - >-
+    EACH UNSHARED COPY GETS A PATH UNIQUE TO THE TEST INSTANCE. Derive it from
+    pytest's per-test temporary directory, so the carve-out also satisfies
+    TQ-600b-2 under parallel workers rather than re-introducing a fixed path.
+  - >-
+    MIS-ROUTING MUST FAIL THE RUN, NOT WARN. The last clause is the anti-
+    regression clause: the run's exit status is non-zero and the offending test
+    is named by node id. A logged warning leaves the decision to rot silently,
+    which is exactly the failure the clause exists to stop.
+  - >-
+    VERDICT PRESERVATION IS BY NAMED REASON, NOT BY "STILL FAILS". A copy broken
+    in some other way also fails the deploy. The comparison must be against the
+    specific failure reason each test asserts on, so a test that fails for a new
+    wrong reason is not counted as preserved.
+  - >-
+    THESE FOUR TESTS KEEP THEIR COST BY DESIGN — roughly 10.5 minutes between
+    them, each running a three-state deploy. Do not attempt to share state
+    between the three states within a test as a speed measure unless that test's
+    own verdict is independently re-proved; the same reasoning that forbids
+    sharing across tests applies inside them.
+  - >-
+    The count of tests routed to the unshared path must be reported by the run.
+    TQ-600a-6's final clause is a relational bound and this is its second
+    figure; without it the bound is unassertable without a literal. The figure
+    must reach the same whole-run emission TQ-600a-6 aggregates, not a per-worker
+    tally, or the bound compares a whole-run left-hand side against a fraction.
+delivers_to:
+  - agent: python-coder
+    ac_id: TQ-600a-6
+    contract: >-
+      The run's count of tests routed to the unshared path, as the second term of
+      TQ-600a-6's relational bound `reported_deploys <= 1 + unshared_routed`.
+  - agent: python-coder
+    ac_id: TQ-600a-5
+    contract: >-
+      A mis-routing detector that fails the run and names, by node id, any test
+      that altered the package and was nevertheless handed the shared layout.
+      TQ-600a-5 relies on it for the undeclared-defaults-to-unshared guarantee.
+  - agent: documentation-expert
+    ac_id: TQ-600a-7
+    contract: >-
+      The mis-routing failure as delivered — the exact text the run emits and how
+      it names the offending test by node id — which the guidance quotes as one
+      of the two run outputs a reader must be able to tell apart.
+expects_from:
+  - ac_id: TQ-600a-1
+    contract: >-
+      A routing decision point at fixture-request time that can refuse to hand
+      out the shared layout, and the layout root path this AC must prove is never
+      reachable from a mutating test.
+  - ac_id: TQ-600a-5
+    contract: >-
+      The per-test declaration that selects reader or mutator, which is the sole
+      permitted routing input for this AC.
+test_spec:
+  - name: test_tq600a_2_each_mutating_test_receives_a_copy_no_other_test_is_given
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: >-
+      Across a run containing every declared mutator, the package-copy roots are
+      pairwise distinct and none of them is the shared reference layout root.
+  - name: test_tq600a_2_each_mutating_test_reaches_the_same_verdict_for_the_same_named_reason
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    description: >-
+      Run the actual unit_tests/test_bp_900g_8*.py files, not a fixture
+      reproduction, before and after the shared layout exists. Each reaches the
+      same outcome AND its provoked deploy fails for the reason that test names.
+      A test that now fails for a different reason is a disagreement.
+  - name: test_tq600a_2_a_mutator_routed_to_the_shared_layout_is_named_and_fails_the_run
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: failure
+    description: >-
+      THE ANTI-REGRESSION RED. A test declared a mutator is deliberately routed
+      to the shared layout; the run exits non-zero and names that test by node
+      id. A warning-only outcome does not satisfy this descriptor.
+  - name: test_tq600a_2_routing_is_decided_by_the_declaration_not_by_file_name
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: >-
+      A mutator named outside the test_bp_900g_8* pattern still receives its own
+      copy, and a reader named inside that pattern still receives the shared
+      layout. NAMED MUTATION: replace the declaration lookup with a filename glob;
+      this test must go RED while the other descriptors stay green.
+  - name: test_tq600a_2_the_shared_layout_root_is_unreachable_from_a_mutating_test
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: failure
+    description: >-
+      A declared mutator that explicitly asks for the shared layout is refused —
+      it cannot reach the shared root even by asking. NAMED MUTATION: make the
+      shared-layout fixture return its root unconditionally; this test must go
+      RED.
+  - name: test_tq600a_2_the_run_reports_how_many_tests_took_the_unshared_path
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: >-
+      The figure is present in the run's own record and equals the number of
+      tests actually routed to the unshared path, so TQ-600a-6's relational bound
+      has a second measured term rather than a literal.
+test_rationale: |
+  This is the AC that stops the obvious wrong answer — "make every test reuse
+  one deploy" — so its controls must be able to distinguish a correct carve-out
+  from a plausible one.
+
+  The routing-by-declaration descriptor is the load-bearing one and it names
+  its injection, because the filename-glob implementation satisfies every other
+  descriptor here. The glob was a proxy used to name the known mutators at
+  authoring time; nobody verified it is the complete set, and a contract that
+  hardcoded it would bless the very implementation that breaks on the fifth
+  mutator.
+
+  Verdict preservation is asserted against the real test files rather than a
+  reproduction. The repository's own precedent is that a hand-authored fixture
+  reproduces the author's assumptions — the files_touched parser stayed a no-op
+  through seven green sign-offs on exactly that bias — and these four tests are
+  the artifact whose behaviour is in question.
+origin_agent: business-analyst
+created: 2026-09-21
+amended_by:
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-09-21
+  note: python-coder, M. Recorded explicitly that unit_tests/test_bp_900g_8*.py is
+    a PROXY for the mutating population and not a verified complete set, and forbade
+    routing on it — the declaration of TQ-600a-5 is the sole permitted input. The
+    routing-by-declaration descriptor names the glob implementation as its injection.
+    Verdict preservation asserted against the real test files. criteria untouched.
+- reason: 'Contract rewire only, from the split of TQ-600a-1 into fixture (TQ-600a-1)
+    + deploy-count reporting (TQ-600a-6). The unshared-routed count this record supplies
+    is the second term of the relational bound, and the bound moved to TQ-600a-6,
+    so the delivers_to entry that named TQ-600a-1 now names TQ-600a-6. The expects_from
+    on TQ-600a-1 is unchanged — the routing decision point and the layout root are
+    still fixture-side. NOTE FOR THE NEXT it-po PASS: it_requirement 6 still reads
+    "TQ-600a-1''s fourth clause is a relational bound" and test_spec entry 5''s description
+    still attributes the bound to TQ-600a-1; the bound is now TQ-600a-6''s final clause.
+    criteria untouched.'
+  by: business-analyst
+  at: 2026-09-21
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-09-21
+  note: Second pass, acting on the BA's re-homing note. it_requirement 6 and test_spec
+    entry 6 now name TQ-600a-6's final clause as the bound they feed, and the requirement
+    additionally pins that the figure must reach the whole-run emission rather than
+    a per-worker tally — a per-worker second term would compare a fraction against
+    a whole-run left-hand side. Added the delivers_to entry for TQ-600a-7, which already
+    expected the mis-routing output from here. Agent and complexity unchanged (python-coder,
+    M). criteria untouched.
+- action: approved
+  agent: approve_acs
+  date: '2026-09-21'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+notes: |
+  THIS IS THE AC THAT STOPS THE OBVIOUS WRONG ANSWER. The naive reading of TQ-600a
+  is "make every test reuse one deploy". Applied to unit_tests/test_bp_900g_8*.py
+  that is doubly destructive: those four tests (~10.5 min between them, each running
+  a three-state deploy) exist to prove that a broken package FAILS to deploy, so
+  sharing a layout with them would leave a deliberately broken layout behind for
+  every reader, and would remove the very thing they assert.
+
+  THE LAST CLAUSE IS THE ANTI-REGRESSION CLAUSE AND IT IS THE LOAD-BEARING ONE.
+  Routing is a decision made per test, and decisions rot. Without a failure that
+  names the offender, a future test that mutates the shared layout degrades the
+  whole suite silently and the first symptom is an unrelated test failing
+  intermittently somewhere else. TQ-600a-3 asserts the corruption is detected;
+  this clause asserts the mis-routing is detected before it can corrupt anything.
+
+  VERDICT UNCHANGED, NOT MERELY STILL-FAILING. "The deploy still fails" is
+  satisfiable by a copy that is broken in some entirely different way. The clause
+  requires the failure reason the test names, so a test that passes for a new
+  wrong reason is not counted as preserved.

@@ -1,0 +1,297 @@
+id: TQ-600c-1
+components:
+  - testing_quality
+title: "Every run leaves behind what it cost, per test, separating preparation from the test itself"
+component: testing-quality
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+declares_side_effect: true
+criteria: |
+  Given any run of the suite,
+  When the run finishes,
+  Then a record of what it cost is written to a durable location inside the
+    repository, and not to a temporary directory a cleanup timer can reclaim,
+    And that record names every test the run executed together with the time that
+      test took,
+    And for each test it distinguishes the time spent preparing for the test from
+      the time spent in the test itself, so a cost that is pure repeated
+      preparation is visible as such rather than being attributed to the test,
+    And it states the run's total, the number of tests it accounts for, and when
+      the run happened,
+    And the record is machine-readable by a later reader without that reader having
+      to parse the run's human-facing console output.
+depends_on:
+  - TQ-600c
+doc_links:
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      The real_artifact angle governs the record: a later reader must be tested
+      against a record an actual run produced, not a hand-typed example, since a
+      hand-typed fixture reproducing the author's assumptions is precisely how this
+      repository's files_touched parser stayed a no-op through seven green
+      sign-offs.
+  - path: docs/acceptance-criteria/testing-quality/TQ-600-suite-feedback-latency/TQ-600c.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      Records why the durable-location clause is in the criteria at all: the
+      prototype profiler that produced this goal's evidence lived in a temporary
+      directory and was reclaimed by the hourly cleanup timer mid-investigation.
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - >-
+    THE LOCATION MUST BE INSIDE THE REPOSITORY AND SURVIVE A CLEANUP TIMER.
+    `/tmp`, `$TMPDIR`, `tempfile.gettempdir()` and pytest's `tmp_path` are all
+    disqualified — the prototype profiler that produced this goal's evidence
+    lived in a temporary directory and was reaped by the hourly wsl-reclaim timer
+    mid-investigation. A path under the repository's `debugging/` tree, or an
+    equivalent durable in-repo location, is the requirement.
+  - >-
+    MACHINE-READABLE, AND THE MACHINE-READABLE FORM IS WHAT DOWNSTREAM READS.
+    junit-xml is acceptable as the SOURCE, but TQ-600c-2 and TQ-600c-4 must read
+    a derived record (JSON or JSONL) with named fields. A guard that re-parses
+    console output silently matches nothing when formatting changes, and a guard
+    that matches nothing reports clean.
+  - >-
+    SETUP AND CALL MUST BE SEPARATE FIELDS PER TEST, taken from pytest's own
+    per-phase durations, never inferred or apportioned. This is the finding, not
+    a nicety: two of the three most expensive measured entries are fixture setup
+    rather than the test — 206.74s in unit_tests/portability/test_bp_1500d_1_i.py
+    and 73.03s in unit_tests/portability/test_ge_120c_1.py — and a per-test total
+    hides the single most actionable fact this investigation produced. Record
+    teardown too; it is free once the phase hook is in place.
+  - >-
+    REQUIRED HEADER FIELDS: run total, number of tests accounted for, run
+    timestamp, the commit, the worker count (TQ-600b-5) and the real-deploy count
+    (TQ-600a-6, the reporting surface split out of TQ-600a-1). The last two are
+    why those ACs' counts have a durable home rather than living only in console
+    output, and both are whole-run figures — a per-worker value in either field
+    makes the header describe a fraction of the run while reading as a whole.
+  - >-
+    UNDER pytest-xdist THE RECORD MUST BE AGGREGATED INTO ONE FILE PER RUN.
+    Per-worker files left unmerged make every downstream reader see a fraction of
+    the run and compare it against a whole-run budget — the partial-run false
+    green of TQ-600c-1-i arriving by a different route.
+  - >-
+    STATE A RETENTION RULE. TQ-600c-4 needs a previous run kept as its comparison
+    point, and an unbounded per-run file set will not survive contact with a busy
+    repository. Either keep the last N runs under dated names or keep one
+    current plus one comparison point; decide and record which, since "the last
+    run" is ambiguous on a branch.
+  - >-
+    WRITING THE RECORD MUST NOT MEASURABLY LENGTHEN THE RUN — well under a second
+    for roughly 5300 entries — and must not fail the run if the write fails. Per
+    the project error handling policy, wrap the write, log at WARNING or above,
+    and continue; TQ-600c-2-i is what converts a missing record into a guard
+    failure, so a silent skip here is not a silent skip overall.
+  - >-
+    `declares_side_effect: true` is correctly set by the BA: this AC writes a
+    durable artifact. Note for the ticket that will be generated from this
+    record — that flag force-routes `user-surface-smoker` onto the ticket and the
+    gate is not overridable.
+delivers_to:
+  - agent: python-coder
+    ac_id: TQ-600c-2
+    contract: >-
+      A durable, machine-readable per-run cost record: per test a node id with
+      separate setup, call and teardown durations, plus a header carrying the run
+      total, the accounted test count, the timestamp, the commit, the worker
+      count and the real-deploy count. The budget guard reads this and nothing
+      else.
+  - agent: python-coder
+    ac_id: TQ-600c-4
+    contract: >-
+      The same record, retained for at least one previous run under a stated
+      retention rule, so the per-test regression comparison has a comparison
+      point that is a real record rather than a remembered figure.
+  - agent: python-coder
+    ac_id: TQ-600c-1-i
+    contract: >-
+      An explicit completeness mark and a not-run count in the record's header,
+      set by the run from how it ended, so a partial run is distinguishable from
+      a fast one without counting entries.
+  - agent: documentation-expert
+    ac_id: TQ-600c-6
+    contract: >-
+      The cost record's location and its named fields as delivered — in
+      particular the separate setup, call and teardown figures per test — which
+      the guidance teaches a contributor to read so they do not begin by
+      optimising a test whose cost is repeated preparation.
+expects_from:
+  - ac_id: TQ-600a-6
+    contract: >-
+      The run's real-deploy count, as a header field of this record.
+  - ac_id: TQ-600b-5
+    contract: >-
+      The run's worker count, as a header field of this record, so downstream
+      readers never parse xdist's console gateway lines.
+test_spec:
+  - name: test_tq600c_1_a_real_run_leaves_a_record_at_a_durable_in_repository_path
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    description: >-
+      A genuine child pytest session leaves a record, and its path is inside the
+      repository. NAMED MUTATION: write the record under the system temporary
+      directory; this test must go RED. The prototype profiler behind this goal's
+      evidence was reaped from exactly there, mid-investigation.
+  - name: test_tq600c_1_the_record_names_every_test_the_run_executed_with_its_time
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: >-
+      The entry count equals the number of tests the child run executed, and each
+      entry carries a node id and a duration.
+  - name: test_tq600c_1_setup_and_call_time_are_separate_fields_per_test
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: >-
+      A test with slow setup and a fast body is distinguishable in the record
+      from one with fast setup and a slow body. NAMED MUTATION: sum the phases
+      into a single duration; the two become identical and this test must go RED.
+      This is the finding the whole goal rests on.
+  - name: test_tq600c_1_the_record_states_the_total_the_accounted_count_the_timestamp_and_the_commit
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: >-
+      All four header fields are present and self-consistent — the accounted
+      count equals the number of entries, and the total is consistent with their
+      sum.
+  - name: test_tq600c_1_a_later_reader_consumes_the_record_without_any_console_output
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: unit
+    angle: seam
+    description: >-
+      A reader given only the record file, with no access to the run's stdout,
+      recovers every per-test figure and every header field. NAMED MUTATION: make
+      the reader fall back to parsing terminal text for any field; this test must
+      go RED.
+  - name: test_tq600c_1_an_xdist_run_produces_one_merged_record_covering_every_worker
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: >-
+      Under more than one worker, exactly one record exists and its entry count
+      equals the serial run's. NAMED MUTATION: leave per-worker records unmerged;
+      a downstream reader then sees a fraction of the run and this test must go
+      RED.
+  - name: test_tq600c_1_the_record_carries_the_worker_count_and_the_real_deploy_count
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: seam
+    description: >-
+      The two figures TQ-600a-6 and TQ-600b-5 are required to report reach this
+      record as named fields, giving them a durable home rather than a
+      console-only one.
+  - name: test_tq600c_1_the_retention_rule_keeps_a_previous_run_available_as_a_comparison_point
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: >-
+      After two successive runs, the record of the earlier one is still
+      retrievable under the declared retention rule, which is what TQ-600c-4
+      depends on. NAMED MUTATION: overwrite a single fixed filename each run;
+      this test must go RED.
+test_rationale: |
+  The setup-versus-call split is the finding, not a refinement. Two of the three
+  most expensive measured entries are fixture setup rather than the test —
+  206.74s and 73.03s — so a record reporting only a per-test total would hide
+  that the cost is repetition rather than work, and would send the next reader
+  looking at the wrong thing. Its descriptor names the summing injection
+  because that is the natural implementation.
+
+  The durable-location descriptor is written from a failure that already
+  happened: the profiler behind this goal's evidence lived in a temporary
+  directory and was reclaimed by the hourly cleanup timer while still in use. A
+  measurement surface that does not survive an hour cannot support a trend, and
+  a budget without a trend is a number nobody can justify.
+
+  The no-console descriptor exists because TQ-600c-2 and TQ-600c-4 both read
+  this record. A guard that re-parses console output is fragile in a specific
+  and dangerous way: a formatting change makes it silently match nothing, and a
+  guard that matches nothing reports clean.
+
+  Every descriptor here consumes a record a real run produced. A hand-typed
+  fixture reproduces the author's assumptions, which is precisely how this
+  repository's files_touched parser stayed a no-op through seven green
+  sign-offs.
+origin_agent: business-analyst
+created: 2026-09-21
+amended_by:
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-09-21
+  note: 'python-coder, M. Decided the two things the BA left open: a durable in-repo
+    path under debugging/ (explicitly disqualifying tmp_path and gettempdir, the location
+    the prototype profiler was reaped from) and a derived JSON record as the form
+    downstream reads, with junit-xml allowed only as the source. Added the xdist single-merged-record
+    requirement and a retention rule, since TQ-600c-4 needs a previous run kept. Confirmed
+    declares_side_effect true and noted the non-overridable user-surface-smoker routing
+    it forces on the generated ticket. criteria untouched.'
+- reason: 'Contract rewire only, from the split of TQ-600a-1 into fixture (TQ-600a-1)
+    + deploy-count reporting (TQ-600a-6). The real-deploy count this record carries
+    as a header field is now produced by TQ-600a-6, so the expects_from entry that
+    named TQ-600a-1 now names TQ-600a-6. NOTE FOR THE NEXT it-po PASS: it_requirement
+    4 still attributes the real-deploy count to TQ-600a-1. criteria untouched.'
+  by: business-analyst
+  at: 2026-09-21
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-09-21
+  note: Second pass, acting on the BA's re-homing note. it_requirement 4 now attributes
+    the real-deploy header field to TQ-600a-6 and adds that both it and the worker
+    count are whole-run figures — a per-worker value in either makes the header describe
+    a fraction while reading as a whole. test_spec entry 7, stale by the same fact
+    and not flagged, was re-homed with it. Added the delivers_to entry for TQ-600c-6,
+    which already expected the record's location and field names from here. Agent
+    and complexity unchanged (python-coder, M). criteria untouched.
+- action: approved
+  agent: approve_acs
+  date: '2026-09-21'
+superseded_by: null
+covered_by:
+  - TQ-600c-1-i
+implemented_by: []
+change_target: code
+risk_surface: internal
+notes: |
+  THE SETUP-VERSUS-CALL SPLIT IS NOT A NICETY, IT IS THE FINDING. Two of the three
+  most expensive entries in the measured duration table are preparation, not the
+  test: 206.74s for a single test in unit_tests/portability/test_bp_1500d_1_i.py
+  and 73.03s in unit_tests/portability/test_ge_120c_1.py. A record that reports
+  only a per-test total hides the single most actionable fact this investigation
+  produced — that the cost is repetition rather than work — and would have sent
+  the next reader looking at the wrong thing.
+
+  THE DURABLE-LOCATION CLAUSE IS WRITTEN FROM A FAILURE THAT ALREADY HAPPENED. The
+  profiler behind this goal's evidence was reclaimed by the hourly cleanup timer
+  while it was still being used. A measurement surface that does not survive an
+  hour cannot support a trend, and a budget without a trend is a number nobody can
+  justify.
+
+  THE MACHINE-READABLE CLAUSE EXISTS BECAUSE OF TQ-600c-2 AND TQ-600c-4. Both read
+  this record. A guard that re-parses console output is fragile in a specific and
+  dangerous way: a change in output formatting makes it silently match nothing,
+  and a guard that matches nothing reports clean.
+
+  WHAT IS NOT DECIDED HERE: the record's format, and its exact path. Both are
+  it-po decisions. The criteria fix only that it is durable, complete, split by
+  phase, self-describing, and readable by a program.

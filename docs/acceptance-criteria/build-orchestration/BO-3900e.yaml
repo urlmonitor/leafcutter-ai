@@ -1,0 +1,154 @@
+id: BO-3900e
+title: "A ticket's prerequisite is found where the ticket names it: beside the ticket, not at the worktree root"
+component: build-orchestration
+components:
+  - build_orchestration
+level: L3
+status: active
+req_status: draft
+work_status: done
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+change_target: pipeline
+risk_surface: contract_boundary
+package_surface: false
+criteria: |
+  Given the resolved worktree `C:\Users\Hendrik\Code\leafcutter\worktrees\ki-20260914`
+  And ticket `tickets/00_inbox/epics/EPIC-X/07_TICKET-a.md` whose depends_on names the
+    sibling `02_TICKET-b.md` by bare filename
+  And `tickets/00_inbox/epics/EPIC-X/02_TICKET-b.md` reads `status: done`
+  When the build workflow decides whether ticket 07 may be released
+  Then the prerequisite is read from `tickets/00_inbox/epics/EPIC-X/02_TICKET-b.md`
+  And it counts as satisfied, because it was finished before this run
+  And ticket 07 is released, not withheld as depending on work outside the run
+
+  Given a depends_on entry that is not a bare sibling filename
+  When the workflow resolves it
+  Then it is resolved the way the ticket frontmatter hook resolves it
+    (templates/skills/ticket-authoring/SKILL.md, "depends_on Resolution"):
+    against the ticket's own folder, then that folder's `done/`, then, for a ticket
+    that is itself in `done/`, the folder above
+  And an entry that begins `tickets/` still resolves against the worktree root
+  And an absolute entry is used as written
+  And the same rule decides the path in both places that read depends_on: the
+    run-set membership check and the per-ticket release gate
+
+  Given a depends_on entry that resolves to no file in any of those places
+  When the release gate reports the withheld ticket
+  Then the reported prerequisite path is the first candidate beside the ticket,
+    not a path at the worktree root that the ticket never named
+depends_on:
+  - BO-3900
+doc_links:
+  - path: templates/workflows-js/build-feature.js
+    relationship: implements
+    status: exists
+    relevance: "The run-set membership check and the per-ticket release gate both resolved depends_on onto the worktree root."
+  - path: templates/skills/ticket-authoring/SKILL.md
+    relationship: specifies
+    status: exists
+    relevance: "The documented depends_on resolution rule the frontmatter hook already enforces."
+  - path: unit_tests/_workflow_engine_harness.py
+    relationship: specifies
+    status: exists
+    relevance: "Harness for driving the release gate through the workflow body."
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+    relevance: "Component overview for the epic batch loop and its release gate."
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "One resolution function serves both depends_on readers (the run-set membership check and the per-ticket release gate), so the two cannot disagree about where a prerequisite lives."
+  - "The rule mirrors the ticket frontmatter hook's documented order: <ticket_dir>/<entry>, then <ticket_dir>/done/<entry>, then <ticket_dir>/../<entry> for a ticket inside done/. Entries beginning `tickets/` keep resolving against the worktree root; absolute entries are used as written. Existence is decided by reading the record back through the existing readTicketRecordBack dispatch, not by a new file-system call in the workflow body."
+  - "Path handling reuses the BO-3900 inline helpers (classification, normalisation, joining) already in the script. No require/import and no new shared helper file (ADR-030)."
+  - "The existing done-prerequisite handling (`succeeded_before_this_run`) is reused unchanged; only the path it reads changes."
+  - "A depends_on entry that is an AC id rather than a file path (e.g. `TKT-500f`) is out of scope and its handling is unchanged; record this in notes."
+  - "templates/workflows-js/build-feature.js is over its size limit and may not grow; keep the net content-line delta at or below zero without compressing pre-existing code."
+delivers_to: null
+expects_from:
+  ac_id: BO-3900
+  contract: "BO-3900's inline classification and join helpers, and its rule that a relative path is resolved onto a stated root rather than guessed."
+test_required: true
+test_spec:
+  - name: test_bare_sibling_prerequisite_is_read_beside_the_ticket
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "A done prerequisite named by bare filename is read from the dependant's own folder and releases the dependant."
+  - name: test_prerequisite_in_done_subfolder_and_legacy_tickets_prefix_resolve
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: "A sibling moved to done/, a ticket that is itself in done/, a `tickets/`-prefixed entry and an absolute entry each resolve to the documented location."
+  - name: test_membership_check_and_release_gate_resolve_depends_on_identically
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: seam
+    description: "The run-set membership check and the release gate see the same prerequisite path for the same entry."
+  - name: test_missing_prerequisite_is_reported_beside_the_ticket_not_at_the_root
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: "A prerequisite that exists nowhere is reported at its sibling path, never at the worktree root."
+  - name: test_prerequisite_resolution_is_reachable_from_the_workflow_top_level_body
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: reachability
+    surface_invoked: templates/workflows-js/build-feature.js
+    description: "A resumed epic run through _workflow_engine_harness.py releases a ticket whose bare-filename prerequisite is already done."
+test_rationale: |
+  The incident was a resumed run: every prerequisite was done on disk and the gate
+  correctly reads a done prerequisite as satisfied, but it read the record at the worktree
+  root, found nothing, and withheld 7 of 9 tickets. A test that only calls the resolver
+  would pass while the gate still used the old join, so reachability drives the real
+  release gate. The seam test exists because the defect lived in two call sites that
+  resolved independently.
+covered_by:
+  - unit_tests/workflows/test_bo3900e_depends_on_resolved_beside_ticket.py
+  - unit_tests/workflows/_bo3900e_resolver_harness.py
+  - unit_tests/workflows/_bo3900e_fixtures.py
+implemented_by:
+  - templates/workflows-js/build-feature.js
+origin_agent: BrainCandy
+created: 2026-09-16
+amended_by:
+- reason: authored-from-run-evidence
+  date: 2026-09-16
+  by: claude
+  changes: Authored after /build-feature run wf_3d2879c1-2ae withheld 7 of 9 tickets.
+    The user chose "fix both, then resume" on 2026-09-16. Written enriched (it_requirements,
+    test contract) and set to reviewed; criteria follow the documented hook rule.
+- action: approved
+  agent: approve_acs
+  date: '2026-09-16'
+superseded_by: null
+notes: |
+  INCIDENT (2026-09-16, run wf_3d2879c1-2ae): after BO-3900 and BO-4000 landed, /build-feature
+  planned 9 eligible UXP-700 tickets and withheld 7. Each depends_on entry was a bare sibling
+  filename such as `02_TICKET-20260909-UXP-700a-1.md`, and both readers called
+  `toWorktreePath(entry, realWorktreePath)`, which resolved it to
+  `worktrees/ki-20260914/02_TICKET-20260909-UXP-700a-1.md`. The gate's done-prerequisite
+  read found nothing there and recorded `not_in_run_set`, though the real sibling reads
+  `status: done`. The old pre-BO-3900 toWorktreePath joined relative paths onto the
+  worktree root too, so the defect predates BO-3900, but BO-3900's it_requirements already
+  said depends_on must resolve "by the same rule as dispatch", and that rule is the
+  ticket's own folder.
+
+  MEASURED 2026-09-16 across tickets/**: 458 bare-filename entries, 38 `tickets/`-prefixed,
+  5 other relative paths (e.g. `../../../99_done/...`), 772 AC ids. AC-id entries are not
+  file paths and are out of scope here.
+
+  NAMED MUTATIONS:
+    M1 — keep resolving relative entries onto the worktree root. Caught by
+         test_bare_sibling_prerequisite_is_read_beside_the_ticket.
+    M2 — fix only the release gate and leave the membership check on the old rule. Caught
+         by test_membership_check_and_release_gate_resolve_depends_on_identically.
+    M3 — skip the done/ fallbacks. Caught by
+         test_prerequisite_in_done_subfolder_and_legacy_tickets_prefix_resolve.

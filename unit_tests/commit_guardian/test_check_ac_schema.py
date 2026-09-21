@@ -2328,10 +2328,13 @@ class TestAcAxesVocabularyContractAc3(unittest.TestCase):
         #      - flow_change_gates: flow-change pair gates
         #      - documentation_gates: doc-coverage triggers (BO-2200a-1)
         #      - surgical_removal_guard: surgical-removal policy (BO-2200d-1-i)
+        #      - knowledge_routing_wiring: completion-path routing-step
+        #        wiring/exclusion declaration (AC INF-700a-1-i)
         _NON_CHANGE_TARGET_SECTIONS = {
             "flow_change_gates",
             "documentation_gates",
             "surgical_removal_guard",
+            "knowledge_routing_wiring",
         }
         guardrail_path = repo_root / "config" / "guardrail_gates.yaml"
         gates = _yaml.safe_load(guardrail_path.read_text(encoding="utf-8"))

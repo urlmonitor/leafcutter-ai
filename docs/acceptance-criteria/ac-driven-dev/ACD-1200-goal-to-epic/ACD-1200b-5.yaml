@@ -36,6 +36,15 @@ doc_links:
   - path: scripts/goal_to_epic.py
     relationship: related
     status: exists
+    relevance: "Facade only since the 2026-09-14 decomposition. reference_file_path correctly names scripts/ac_store/approve_acs.py (unaffected by the split); the OPTIONAL --approve flag n_location_rule mentions would now be declared in epic_cli.py and consumed by the gate in epic_readiness_gate.py, both below."
+  - path: scripts/ac_store/epic_cli.py
+    relationship: related
+    status: exists
+    relevance: "Owns _build_parser — where the optional --approve flag named in n_location_rule would be declared, alongside the existing --yes / --approved-only."
+  - path: scripts/ac_store/epic_readiness_gate.py
+    relationship: related
+    status: exists
+    relevance: "Owns readiness_gate_prompt and _gate_select_approved_ids — the consumer that would observe the readiness: reviewed -> approved promotion this AC delivers."
   - path: docs/reference/ac-schema.md
     relationship: specifies
     status: exists

@@ -42,10 +42,14 @@ doc_links:
     relationship: describes
     status: exists
     relevance: "The requested-gate vocabulary itself: (change_target, risk_surface) pairs mapped to gate agent names, plus the flow_change_gates and documentation_gates sections that union in further gates. Extending this file is the 'new gate' of the Given."
-  - path: scripts/ac_store/generate_ticket_from_ac.py
+  - path: scripts/ac_store/_gtfa_agents_map.py
     relationship: describes
     status: exists
-    relevance: "_build_agents_map (line 651) and _CANONICAL_PHASE_ORDER (line 165) — the single iteration over the requested set that the recording must be a property of."
+    relevance: "_build_agents_map — the single iteration over the requested set that the recording must be a property of."
+  - path: scripts/ac_store/_gtfa_constants.py
+    relationship: describes
+    status: exists
+    relevance: "_CANONICAL_PHASE_ORDER — the phase-order list the requested-gate vocabulary is realised through. Adding a gate here must require zero edits to the recording code."
   - path: config/skills_config.default.json
     relationship: describes
     status: exists
@@ -61,7 +65,7 @@ it_requirements:
     gate_agnostic_recording_rule:
       type: object
       description: "Recording is a property of the iteration over the requested-gate set, not of any gate: for every G in requested_gates, exactly one record is produced from the same code path, with the gate name flowing through as data. Adding a gate to the requested-gate vocabulary (config/guardrail_gates.yaml, and the phase-order list it is realised through) must require ZERO edits to the recording code. Removing a gate from a work item's requested set removes exactly that gate's entry and leaves every other entry byte-identical."
-  reference_file_path: "scripts/ac_store/generate_ticket_from_ac.py"
+  reference_file_path: "scripts/ac_store/_gtfa_agents_map.py"
   n_location_rule: "1"
   required_skills:
     - python-coder

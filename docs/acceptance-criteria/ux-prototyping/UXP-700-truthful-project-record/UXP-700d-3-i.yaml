@@ -1,0 +1,131 @@
+id: UXP-700d-3-i
+title: "Every piece of example content carries its own example marker, and the project's own record carries none"
+component: ux-prototyping
+components:
+  - ux_prototyping
+  - ac_store
+level: L3
+status: active
+req_status: draft
+work_status: done
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the example product's journeys, screens and dataset under its product root, and the
+    example acceptance criteria that implement its steps,
+  When any one of them is read on its own, with nothing but its own content,
+  Then it carries `example_product` naming the product-root slug of the example product,
+  And the value is a slug such as `fern-and-fig`, never a display name,
+  And the same field is accepted by the journey, screen and dataset shapes and documented for
+    acceptance criteria,
+  And an artifact or criterion of the project's own record read the same way carries no
+    `example_product` at all, not even an empty or null one,
+  And the older `product:` field on example acceptance criteria is replaced by
+    `example_product`, so the fact has one spelling, and the count of example criteria set
+    aside from the work queue is unchanged by the rename.
+depends_on:
+  - UXP-700d
+  - UXP-700d-1
+doc_links:
+  - path: docs/architecture/adrs/ADR-044-example-content-self-declares-its-product.md
+    relationship: specifies
+    status: exists
+    relevance: "Sections 1 to 5: the key's name, value, absence rule, schema registration and backfill."
+  - path: docs/product-truth/schemas/flow.schema.json
+    relationship: modifies
+    status: exists
+  - path: docs/product-truth/schemas/mockup.schema.json
+    relationship: modifies
+    status: exists
+  - path: docs/product-truth/schemas/mock-data.schema.json
+    relationship: modifies
+    status: exists
+  - path: docs/reference/ac-schema.md
+    relationship: modifies
+    status: exists
+  - path: scripts/ac_store/scan_ac_store.py
+    relationship: modifies
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to:
+  ac_id: UXP-700d-3-ii
+  contract: "Every existing example item marked with example_product, so a cross-check can refuse an unmarked one without failing the store on the day it lands."
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-09-16
+amended_by:
+- reason: split-from-parent
+  date: 2026-09-16
+  by: claude
+  changes: Split from UXP-700d-3 at the user's direction on 2026-09-16 after the /build-feature
+    run found the work spans about 38 files. This half registers and backfills the
+    marker; UXP-700d-3-ii adds the cross-check.
+- reason: depends_on-correction
+  date: 2026-09-17
+  by: python-coder
+  changes: 'The scratchpad draft listed depends_on: [UXP-700d-3] -- its own parent,
+    whose work_status cannot flip to done until this AC and UXP-700d-3-ii are both
+    done, which would leave this AC permanently unready in the leaf scanner. Replaced
+    with the parent''s own prerequisites (UXP-700d, UXP-700d-1) instead, mirroring
+    what UXP-700d-3 itself declared before the split.'
+- action: approved
+  agent: approve_acs
+  date: '2026-09-17'
+superseded_by: null
+covered_by: []
+implemented_by:
+  - docs/product-truth/schemas/flow.schema.json
+  - docs/product-truth/schemas/mockup.schema.json
+  - docs/product-truth/schemas/mock-data.schema.json
+  - docs/reference/ac-schema.md
+  - scripts/ac_store/scan_ac_store.py
+  - templates/scripts/commit_guardian/check_done_proof.py
+  - config/ac_store_schema.json
+  - unit_tests/product_truth/test_uxp_700d_3_i.py
+change_target:
+  - code
+  - schema
+risk_surface: contract_boundary
+test_required: true
+test_rationale: |
+  The marker is only useful if a reader holding one file finds it, so the real-artifact test
+  reads a checked-in example file's own content rather than an index or a loader that
+  already knows the path. The boundary test reads a project-owned artifact the same way and
+  asserts the key is absent, because a marker present everywhere says nothing.
+test_spec:
+  - name: test_example_artifact_declares_its_example_product_in_its_own_content
+    target_dir: unit_tests/product_truth/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    description: "A checked-in fern-and-fig journey, screen and dataset each carry example_product: fern-and-fig in their own content."
+  - name: test_project_owned_artifact_carries_no_example_declaration
+    target_dir: unit_tests/product_truth/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: "A project-owned artifact and criterion read the same way carry no example_product key; the schemas accept the key without requiring it."
+notes: |
+  ORDER, DECIDED 2026-09-16: the split the user chose was "schema and checker" then
+  "backfill". It is taken in the reverse order. ADR-044 section 5 requires every existing
+  example item to be marked in the same change that introduces the check; a cross-check
+  landing first would report all 14 fern-and-fig artifacts and 18 example criteria as
+  undeclared, and check-product-truth-validate would refuse that PR's own commit. So this
+  half registers and backfills the key with no check, and UXP-700d-3-ii adds the check once
+  nothing is unmarked.
+
+  MEASURED 2026-09-16 (scratchpad draft): 3 fern-and-fig flows, 10 mockups, 1 dataset; 18
+  example criteria carrying `product: fern-and-fig`.
+
+  MEASURED 2026-09-17 (implementation, re-verified): flows/mockups/dataset counts unchanged
+  (3/10/1). The 18-file raw grep count for `product: fern-and-fig` across AC yaml also holds.
+  scan_ac_store.py's own reported `set_aside_count` (its default --level leaf --work-status
+  todo --json filters: leaf, work_status=todo, status=active, readiness=approved) is 3, not
+  18 -- most of the 18 example ACs are not yet readiness: approved, so they are excluded from
+  the ready/blocked/set-aside classification entirely regardless of the product marker. The
+  AC's own closing clause ("the count of example criteria set aside from the work queue is
+  unchanged by the rename") is verified against this real, smaller figure (3), not the raw
+  18-file count.
+target_epic: EPIC-TruthfulProjectRecord

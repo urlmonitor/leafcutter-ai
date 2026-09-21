@@ -4,6 +4,16 @@ GOAL: Unit tests for the concise epic name derivation introduced by ACD-1200a-6.
       Verifies _derive_epic_name(), _truncate_pascal_at(), and the LLM-fallback path.
 TICKET: EPIC-AcParentChildLinkEnforcement/06_TICKET-20260607-ACD-1200a-6.md
 COVERS: ACD-1200a-6
+
+MOCK TARGET NOTE: the `_summarise_title_via_llm` patches below target
+`epic_naming`, NOT `goal_to_epic`. `_derive_epic_name` and
+`_summarise_title_via_llm` both live in `epic_naming`, so the call between them
+is a bare-name lookup resolved through `epic_naming`'s module globals.
+`goal_to_epic` merely re-exports the pair; rebinding the attribute there leaves
+the real Anthropic client call in place, so the test would hit the network (or
+fail on a missing key) instead of its stub. Before goal_to_epic.py was split
+into sibling modules the two forms were the same object, and these patches read
+`goal_to_epic.*`.
 """
 
 from __future__ import annotations
@@ -111,9 +121,9 @@ class TestDeriveEpicNameLongTitle:
     def test_long_title_with_llm_success(self) -> None:
         # covers: ACD-1200a-6
         """ACD-1200a-6: LLM result is used when available and valid."""
-        import goal_to_epic as _gte_mod
+        import epic_naming as _naming_mod
 
-        with patch.object(_gte_mod, "_summarise_title_via_llm", return_value="AcRelationalIntegrity"):
+        with patch.object(_naming_mod, "_summarise_title_via_llm", return_value="AcRelationalIntegrity"):
             result = _derive_epic_name(LONG_TITLE)
 
         assert result == "AcRelationalIntegrity", (
@@ -124,10 +134,10 @@ class TestDeriveEpicNameLongTitle:
     def test_long_title_llm_unavailable_falls_back_to_truncation(self) -> None:
         # covers: ACD-1200a-6
         """ACD-1200a-6: When LLM is unavailable, truncation fallback fires."""
-        import goal_to_epic as _gte_mod
+        import epic_naming as _naming_mod
 
         # Simulate LLM unavailable: _summarise_title_via_llm returns None
-        with patch.object(_gte_mod, "_summarise_title_via_llm", return_value=None):
+        with patch.object(_naming_mod, "_summarise_title_via_llm", return_value=None):
             result = _derive_epic_name(LONG_TITLE)
 
         assert len(result) <= 40, (
@@ -141,10 +151,10 @@ class TestDeriveEpicNameLongTitle:
     def test_long_title_llm_error_falls_back_to_truncation(self) -> None:
         # covers: ACD-1200a-6
         """ACD-1200a-6: LLM errors cause fallback to truncation (≤ 40 chars, no partial word)."""
-        import goal_to_epic as _gte_mod
+        import epic_naming as _naming_mod
 
         # Simulate LLM error: _summarise_title_via_llm returns None (error case)
-        with patch.object(_gte_mod, "_summarise_title_via_llm", return_value=None):
+        with patch.object(_naming_mod, "_summarise_title_via_llm", return_value=None):
             result = _derive_epic_name(LONG_TITLE)
 
         assert len(result) <= 40, (
@@ -157,10 +167,10 @@ class TestDeriveEpicNameLongTitle:
     def test_long_title_llm_returns_invalid_string_falls_back(self) -> None:
         # covers: ACD-1200a-6
         """ACD-1200a-6: Invalid LLM output (e.g. None) triggers truncation fallback."""
-        import goal_to_epic as _gte_mod
+        import epic_naming as _naming_mod
 
         # Simulate LLM returning None (invalid/unusable output)
-        with patch.object(_gte_mod, "_summarise_title_via_llm", return_value=None):
+        with patch.object(_naming_mod, "_summarise_title_via_llm", return_value=None):
             result = _derive_epic_name(LONG_TITLE)
 
         assert len(result) <= 40, (
@@ -243,7 +253,7 @@ class TestEpicNamingEdgeCases:
 
     def test_exactly_40_char_pascal_does_not_trigger_llm(self) -> None:
         """A title whose PascalCase is exactly 40 chars is returned WITHOUT calling LLM."""
-        import goal_to_epic as _gte_mod
+        import epic_naming as _naming_mod
 
         # Build a title whose PascalCase is exactly 40 chars.
         # "A" * 40 is a 40-char single PascalCase token.
@@ -253,13 +263,13 @@ class TestEpicNamingEdgeCases:
 
         call_log: list[str] = []
 
-        original = _gte_mod._summarise_title_via_llm
+        original = _naming_mod._summarise_title_via_llm
 
         def _spy(t: str) -> None:  # type: ignore[return]
             call_log.append(t)
             return original(t)
 
-        with patch.object(_gte_mod, "_summarise_title_via_llm", side_effect=_spy):
+        with patch.object(_naming_mod, "_summarise_title_via_llm", side_effect=_spy):
             result = _derive_epic_name(title)
 
         assert call_log == [], (
@@ -274,7 +284,7 @@ class TestEpicNamingEdgeCases:
 
     def test_41_char_pascal_does_trigger_llm(self) -> None:
         """A title whose PascalCase is 41 chars MUST attempt LLM summarisation."""
-        import goal_to_epic as _gte_mod
+        import epic_naming as _naming_mod
 
         # Construct a title whose PascalCase is exactly 41 chars.
         # Use "a" * 41 — single token of 41 chars.
@@ -288,7 +298,7 @@ class TestEpicNamingEdgeCases:
             call_log.append(t)
             return None  # simulate LLM unavailable; just capture the call
 
-        with patch.object(_gte_mod, "_summarise_title_via_llm", side_effect=_spy):
+        with patch.object(_naming_mod, "_summarise_title_via_llm", side_effect=_spy):
             result = _derive_epic_name(title)
 
         assert call_log, (
@@ -369,7 +379,7 @@ class TestEpicNamingEdgeCases:
 
     def test_very_long_title_result_within_limit(self) -> None:
         """A 200+ character title yields a result at most 40 chars (LLM or fallback)."""
-        import goal_to_epic as _gte_mod
+        import epic_naming as _naming_mod
 
         # Construct a 200-char title using many distinct words so PascalCase
         # is also very long.
@@ -384,7 +394,7 @@ class TestEpicNamingEdgeCases:
         assert len(naive) > 40, f"Precondition: naive PascalCase must exceed 40; got {len(naive)}"
 
         # Force LLM to return None so we exercise the truncation fallback.
-        with patch.object(_gte_mod, "_summarise_title_via_llm", return_value=None):
+        with patch.object(_naming_mod, "_summarise_title_via_llm", return_value=None):
             result = _derive_epic_name(title)
 
         assert len(result) <= 40, (

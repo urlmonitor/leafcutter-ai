@@ -1,6 +1,7 @@
 {
   "id": "fern-and-fig/order-confirmation",
   "component": "ux-prototyping",
+  "example_product": "fern-and-fig",
   "screen": "order-confirmation",
   "title": "Order confirmation",
   "summary": "The confirmation screen after a captured payment: a success check, the paid order number (#1042) with a 'Paid' badge, the payment method + processor reference (pay-1042 / auth_9f2a1042), and the paid line items with the total. Populated by hand from Customer alex-green + the genuinely-paid Order 1042 (monstera-deliciosa, EUR 34). Order 1050 is the open cart used by the cart / declined states, so it is not rendered here as paid. This is the `confirmed` step of both customer-buys-a-plant and the checkout-and-pay child flow.",

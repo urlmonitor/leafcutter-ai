@@ -22,9 +22,18 @@ criteria: |
   verbatim into the ticket, which the ticket_frontmatter_guard then rejects.
 depends_on: []
 doc_links:
-  - path: scripts/ac_store/generate_ticket_from_ac.py
+  - path: scripts/ac_store/_gtfa_files_touched.py
     relationship: modifies
     status: exists
+    relevance: "Half (a) — _extract_paths_from_prose / _is_real_prose_path / _build_files_touched, the path that vacuums illustrative file paths out of prose it_requirements into files_touched."
+  - path: scripts/ac_store/_gtfa_store.py
+    relationship: modifies
+    status: exists
+    relevance: "Half (b) — _build_ticket_depends_on, which decides what the AC's depends_on becomes on the generated ticket."
+  - path: scripts/ac_store/_gtfa_frontmatter.py
+    relationship: modifies
+    status: exists
+    relevance: "_build_frontmatter emits the files_touched and depends_on keys the ticket_frontmatter_guard reads."
 assigned_agent: null
 estimated_complexity: null
 delivers_to: null

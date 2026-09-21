@@ -34,10 +34,18 @@ depends_on:
   - TQ-200c
   - TQ-200c-1
 doc_links:
-  - path: scripts/ac_store/generate_ticket_from_ac.py
+  - path: scripts/ac_store/_gtfa_config.py
     relationship: modifies
     status: exists
-    relevance: "The decision this AC replaces, the exact shape of the defect, and the file this AC edits. Verified 2026-08-18: line 2740 `is_code_ac = _computed_map_has_production_code_producer(agents)` (line 2068) resolves through `_agent_produces_production_code` (line 1055), whose `_FALLBACK_PRODUCERS` frozenset at line 1073 holds nine names (python-coder, sql-coder, frontend-coder and six sql-* specialists). On the normal path it calls `_load_production_code_agents` (line 658), which at line 684 reduces the registry's whole `produces` vocabulary to `== \"production_code\"`. Either way the answer is one boolean keyed on producer identity. Retagged describes -> modifies by it-po 2026-08-18 so it reaches files_touched."
+    relevance: "The decision this AC replaces, at its definition. Verified 2026-08-18, re-pointed 2026-09-14 after the generator decomposition: `_computed_map_has_production_code_producer` resolves through `_agent_produces_production_code`, whose `_FALLBACK_PRODUCERS` frozenset holds nine names (python-coder, sql-coder, frontend-coder and six sql-* specialists). On the normal path it calls `_load_production_code_agents`, which reduces the registry's whole `produces` vocabulary to `== \"production_code\"`. Either way the answer is one boolean keyed on producer identity."
+  - path: scripts/ac_store/_gtfa_report.py
+    relationship: modifies
+    status: exists
+    relevance: "First consumer of that boolean: the readiness report's `is_code_ac`, which gates whether any test-contract check is attempted at all. n_location_rule 'all' means every consumer, and after the decomposition they live in two modules rather than one file."
+  - path: scripts/ac_store/_gtfa_body.py
+    relationship: modifies
+    status: exists
+    relevance: "Second consumer: _build_ticket_body's `has_code_producer` gate on the whole ## Test Requirements section. Retagged describes -> modifies by it-po 2026-08-18 so it reaches files_touched."
   - path: config/agent_registry.json
     relationship: describes
     status: exists
@@ -57,8 +65,8 @@ doc_links:
 assigned_agent: python-coder
 estimated_complexity: L
 it_requirements:
-  reference_file_path: "scripts/ac_store/generate_ticket_from_ac.py"
-  n_location_rule: "all"
+  reference_file_path: "scripts/ac_store/_gtfa_config.py"
+  n_location_rule: "all — the producer-identity boolean is defined here and consumed in scripts/ac_store/_gtfa_report.py and scripts/ac_store/_gtfa_body.py (both declared in doc_links); before the generator decomposition all three sites were one file."
   required_skills:
     - python-coder
   post_write_commands:
