@@ -8,7 +8,7 @@ component: infrastructure
 level: L3
 status: active
 req_status: active
-work_status: todo
+work_status: done
 priority: high
 readiness: reviewed
 created_by: "docs/acceptance-criteria/infrastructure/INF-400-agent-learning/INF-700a-1.yaml"
@@ -76,8 +76,14 @@ amended_by:
     by: business-analyst
     at: 2026-09-07
 superseded_by: null
-covered_by: []
-implemented_by: []
+covered_by:
+- unit_tests/build_guards/test_inf_700a_1_i_completion_path_guard.py
+- unit_tests/build_guards/test_inf_700a_1_i_reachability.py
+- unit_tests/workflows/test_inf_700a_1_i.py
+implemented_by:
+- scripts/build_phases_knowledge.py
+- scripts/build.py
+- config/guardrail_gates.yaml
 test_spec:
   - name: test_each_of_the_five_completion_paths_writes_the_learning_to_its_destination
     target_dir: unit_tests/workflows/

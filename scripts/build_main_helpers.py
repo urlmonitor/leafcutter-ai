@@ -325,6 +325,44 @@ def _check_command_reachability_if_live(
     return None
 
 
+def _check_knowledge_routing_wiring_if_live(output_root: Path, dry_run: bool) -> int | None:
+    """Run the knowledge-routing wiring guard on a real (non-dry-run) build.
+
+    Same shape as ``_check_command_reachability_if_live`` above, and here for
+    the same reason: the guard's call site is three lines of main() plus the
+    paragraph explaining it, and scripts/build.py is grandfathered ~4.5x over
+    its 400-content-line limit with a ratchet (GE-127b-1, and now the pinned
+    CI ceiling in test_km_kgs_100a_3_xi) that refuses any growth at all. The
+    explanation lives in this docstring rather than as ``#`` comments in
+    main() because it belongs beside the function it describes -- not to
+    duck the count, though the counting rule does strip docstrings and not
+    ``#`` lines.
+
+    AC INF-700a-1-i. After the deploy phases have written
+    ``config/guardrail_gates.yaml``, abort the build when any real
+    ``templates/workflows-js/*.js`` artefact is neither declared wired to a
+    knowledge-routing step nor declared excluded. Skipped under ``--dry-run``
+    for the same reason as the reachability guard: no files were written to
+    ``output_root`` for it to scan.
+
+    The guard is imported at function scope, mirroring how
+    ``build_phases_knowledge`` itself defers its ``build_phases`` imports, so
+    this module stays importable regardless of module load order.
+
+    Args:
+        output_root: Absolute path to the deployed ``.leafcutter`` tree.
+        dry_run: When True the guard is skipped and None is returned.
+
+    Returns:
+        1 when the guard refuses the build, otherwise None.
+    """
+    from build_phases_knowledge import check_knowledge_routing_wiring_guard
+
+    if not dry_run and check_knowledge_routing_wiring_guard(output_root):
+        return 1
+    return None
+
+
 def _print_write_summary(total: int, dry_run: bool) -> None:
     """Print the total-files-written/would-write summary lines (BP-100n-4 split)."""
     uptodate = get_uptodate_count()

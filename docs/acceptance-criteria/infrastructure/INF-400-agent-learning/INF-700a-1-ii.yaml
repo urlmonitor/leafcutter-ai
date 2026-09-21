@@ -8,7 +8,7 @@ component: infrastructure
 level: L3
 status: active
 req_status: active
-work_status: todo
+work_status: done
 priority: high
 readiness: reviewed
 created_by: "docs/acceptance-criteria/infrastructure/INF-400-agent-learning/INF-700a-1.yaml"
@@ -64,8 +64,12 @@ origin_agent: BrainCandy
 created: 2026-09-07
 amended_by: []
 superseded_by: null
-covered_by: []
-implemented_by: []
+covered_by:
+- unit_tests/workflows/test_inf_700a_1_ii.py
+implemented_by:
+- templates/workflows-js/build-epic.js
+- templates/workflows-js/fast-lane-ship.js
+- templates/workflows-js/quick-fix.js
 test_spec:
   - name: test_driver_exit_status_is_equal_with_a_failing_and_a_succeeding_routing_step
     target_dir: unit_tests/workflows/
