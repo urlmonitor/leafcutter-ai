@@ -1,0 +1,161 @@
+id: KM-KGS-100d-3
+components:
+  - knowledge_management
+readiness: draft
+priority: medium
+title: "A relationship entry becomes an edge whichever accepted shape it uses"
+component: knowledge-management
+level: L2
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+parent: KM-KGS-100d
+criteria: |
+  Given a document on a surface whose configuration declares related_docs among
+    its edge fields, and whose related_docs holds one bare entry naming
+    docs/explanation/architecture.md and one labelled entry
+    `reference: docs/reference/configuration.md`,
+  When the knowledge map is built,
+  Then the map holds one related_docs edge from that document per entry — two
+    edges, not one,
+  And the edge derived from the labelled entry carries the same edge type and
+    resolves to the same target as it would have carried had that entry used the
+    bare form,
+  And this holds for every surface whose configuration declares the field, not
+    only for the first surface the builder reads.
+depends_on:
+  - KM-KGS-100d
+  - GE-118f
+doc_links:
+  - path: scripts/knowledge_query.py
+    relationship: modifies
+    status: exists
+    relevance: "The defect site: extract_edges(). Its list branch is `for item in value: if isinstance(item, str) and item:` — a mapping item matches neither guard, so it produces no edge, no warning and no error. The string branch above it has the same blind spot by construction."
+  - path: config/paths.json
+    relationship: describes
+    status: exists
+    relevance: "Three surfaces declare related_docs in edge_fields — docs, adrs and components — so this is not one surface's problem. The final clause of the criterion is about those three, and about any fourth a maintainer declares later under KM-KGS-100c."
+  - path: docs/known-issues/commit-guardian/open-blocker-ki-cg-008.md
+    relationship: context
+    status: exists
+    relevance: "The originating report. It records the commit-guardian crash only — the graph-side silent drop was found while triaging it and is NOT in that entry. Read it for the shape evidence (at least 33 of 50 documents in the reporting adopter use the labelled form), not for this failure mode."
+  - path: docs/acceptance-criteria/guardrail-engine/GE-118-hooks-work-in-worktrees/GE-118f.yaml
+    relationship: context
+    status: exists
+    relevance: "The contract this record consumes. GE-118f owns the one shared entry-shape resolver and the property that both consumers agree; this record owns the edge actually appearing in the map. Neither closes the other."
+  - path: docs/architecture/components/knowledge-system.md
+    relationship: describes
+    status: exists
+    relevance: "The component boundary: how the map is built, what a surface is, and where knowledge_query.py runs from. Read it before deciding where the resolver call belongs in _collect_all's traversal."
+  - path: docs/how-to/declare-a-knowledge-surface.md
+    relationship: describes
+    status: exists
+    relevance: "Why the final clause is phrased against 'a surface whose configuration declares the field' rather than a field name: declaring a surface or an edge field is a configuration change with no code change. An implementation that special-cases related_docs breaks that the first time someone declares related_code as an edge field, and this document is the promise it would break."
+  - path: docs/how-to/real-artifact-fixtures.md
+    relationship: describes
+    status: exists
+    relevance: "The fixture shape the real-artifact arm requires. Frontmatter written by yaml.safe_dump puts block-list dashes at column 0; a hand-indented literal does not, and that exact difference has already produced a green suite over a complete no-op in this repository."
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "CALL THE SHARED RESOLVER; DO NOT RE-DERIVE THE SHAPE RULE. The `isinstance(item, str) and item` test in extract_edges's list branch is replaced by the resolver GE-118f delivers. The string branch above it has the same blind spot by construction and must route through the same call, or the two branches disagree about the same document."
+  - "DERIVE THE FIELDS FROM CONFIGURATION, NEVER FROM A FIELD NAME. The behaviour must follow whatever a surface declares in edge_fields in config/paths.json. related_docs is the only declared one today and three surfaces declare it; an implementation that names related_docs anywhere in a conditional breaks the no-code-change promise KM-KGS-100c makes for declaring a new edge field."
+  - "THE EDGE FROM A LABELLED ENTRY MUST BE INDISTINGUISHABLE FROM THE BARE-FORM EDGE — same edge_type, same target_id, same treatment by the downstream resolution the field already gets (e.g. the _PATH_FIELDS stem resolution). Asserting only that two edges exist passes on an implementation whose target is the mapping's label, its repr, or the whole element, which changes the defect's shape instead of closing it."
+  - "DO NOT BYPASS THE MEMBERSHIP FILTER. KM-KGS-100d-2 requires every edge to point at a node that exists and KM-KGS-100d-2-i settles what happens when one does not. This record adds candidates to that filter; an implementation that routes a labelled entry's edge around the filter so it survives is satisfying this record by breaking its siblings."
+  - "REAL-ARTIFACT FIXTURE, NOT A HAND-INDENTED LITERAL (CLAUDE.md, 'Real-artifact behavioral spot-check'). At least one test must build the map over a document whose frontmatter was produced by yaml.safe_dump, read from disk by the real loader, and must invoke the CLI as a subprocess rather than calling extract_edges directly."
+  - "NO NEW NODE MAY BE CREATED BY THIS CHANGE. The label of a labelled entry is not a node, a target, or an id. Assert the absence explicitly — a map that gains a node named 'reference' passes a naive two-edges test."
+  - "ERROR-HANDLING POLICY APPLIES UNCHANGED (CLAUDE.md Rules 1-4). extract_edges is a pure generator over already-parsed data: do not wrap it in try/except; a shape it cannot use is a resolver refusal, not an exception."
+test_spec:
+  - name: test_km_kgs_100d_3_labelled_and_bare_entries_each_produce_one_edge
+    target_dir: unit_tests/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "A document whose related_docs holds one bare entry and one labelled entry yields TWO related_docs edges from that document, not one. The count is the arm that fails today, where the labelled entry produces no edge, no warning and no error."
+  - name: test_km_kgs_100d_3_labelled_entry_edge_equals_the_edge_the_bare_form_would_have_produced
+    target_dir: unit_tests/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "Build the map over two fixture trees identical except that one document writes the entry labelled and the other writes it bare. Assert the resulting edge sets are equal — same edge_type and same target_id — and separately assert no node or edge target equals the label 'reference' or the element's repr."
+  - name: test_km_kgs_100d_3_holds_for_every_surface_that_declares_the_field
+    target_dir: unit_tests/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: "Enumerate the surfaces declaring related_docs in edge_fields by READING config/paths.json at test time — three today (docs, adrs, components) — and assert the labelled entry yields its edge on each. Deriving the list rather than hard-coding it is what makes the test cover a fourth surface the day one is declared, and what catches a related_docs special case."
+  - name: test_km_kgs_100d_3_edge_appears_for_a_pyyaml_serialised_document_through_the_cli
+    target_dir: unit_tests/
+    framework: unittest
+    type: behavioral
+    angle: real_artifact
+    surface_invoked: "scripts/knowledge_query.py --format json"
+    description: "Write the fixture document with yaml.safe_dump — PyYAML's own serialisation, block-list dashes at column 0 — then run knowledge_query.py as a subprocess with --project-root and --format json and parse the edge out of stdout. Calling extract_edges directly on a dict skips the loader and the CLI, which is where the last defect of this class in this repository actually lived."
+test_rationale: |
+  The failure being closed is invisible by construction: no exception, no
+  message, no count that moves. So every arm here asserts a positive fact about
+  the map rather than the absence of an error, and two of them are shaped
+  against specific wrong implementations. Asserting 'two edges exist' passes on
+  an implementation whose second edge points at the mapping's label or its repr,
+  so the bare-form comparison is a separate arm with an explicit no-node-named-
+  after-the-label assertion. Asserting the behaviour on one surface passes on an
+  implementation that special-cases related_docs, so the surface list is read
+  from config/paths.json at test time rather than written into the test.
+
+  The CLI arm exists because extract_edges is reachable directly and a
+  dict-in/edges-out unit test would never touch the loader, the surface
+  traversal, or the phantom filter — the parts that decide whether the edge
+  survives into the map a reader actually queries.
+delivers_to:
+  agent: python-coder
+  contract: "STEP 4 — the resolver-backed element branch in extract_edges: for each element of a declared edge field it now has a decidable outcome, accepted (yielding an edge) or declined. KM-KGS-100d-3-i consumes exactly that distinction; before this record it does not exist, because an accepted-but-unyielded element and a declined one are both simply 'no edge'."
+expects_from:
+  ac_id: GE-118f
+  contract: "STEP 3's output — the one shared entry-shape resolver, importable from the DEPLOYED scripts/ layout (which is GE-118f's deploy-manifest obligation, not this record's to rediscover), returning the path string an element denotes or a named refusal. Called in place of the isinstance(item, str) test in extract_edges. This record must not add to, narrow, or reinterpret the accepted-shape set — doing so is precisely the two-copies drift GE-118f exists to prevent."
+origin_agent: BrainCandy
+created: 2026-09-21
+amended_by: []
+superseded_by: null
+covered_by: [KM-KGS-100d-3-i]
+implemented_by: []
+change_target: code
+risk_surface: internal
+notes: |
+  THIS IS NOT THE COMMIT-GUARDIAN DEFECT IN ANOTHER FILE, AND IT MUST NOT BE
+  FOLDED INTO IT. The two failures share a cause — one field, two consumers,
+  neither told what shape an element takes — and nothing else. The guard's
+  failure is a crash: loud, blocking, impossible to miss, and the reason the
+  field's shape became a question at all. This failure produces a correct-looking
+  map with a relationship missing from it. No exception, no message, no count
+  that moves. A reader gets an answer and has no way to tell it is short.
+
+  That asymmetry is the whole reason for two records. The guard's fix is complete
+  when the crash stops; this one's is complete when a relationship a document
+  declares is a relationship the map contains. An implementer working from one
+  merged record will fix the crash — it is the visible half — and the graph will
+  stay quietly wrong, which is the failure this repository has recorded most
+  often.
+
+  SCOPE, DELIBERATELY NARROWER THAN GE-118d's. GE-118d covers related_docs,
+  related_code and architecture_diagrams because validate_paths() reads all three
+  from one list. Only related_docs is declared in edge_fields today, so only
+  related_docs reaches this consumer. The criterion is therefore phrased against
+  "a surface whose configuration declares the field" rather than against a fixed
+  field name — per KM-KGS-100c, declaring a new surface or a new edge field is a
+  configuration change with no code change, and an implementation that special-
+  cases related_docs would break that the first time someone declares
+  related_code as an edge field.
+
+  WHY THE BARE-FORM COMPARISON IS IN THE CRITERION. Asserting only "two edges
+  exist" passes on an implementation that emits an edge whose target is the
+  mapping's label, or its repr, or the whole element. The edge has to be the SAME
+  edge the bare form would have produced, or the map gains a node named
+  "reference" and the defect changes shape rather than closing.
+
+  INHERITED, NOT RESTATED: KM-KGS-100d-2 already requires every edge to point at
+  a node that exists, and KM-KGS-100d-2-i already settles what happens when one
+  does not. This record adds edges to the candidate set; it does not touch the
+  membership filter those two own, and an implementation that bypasses the filter
+  to make a labelled entry's edge survive is satisfying this record by breaking
+  its siblings.

@@ -1,0 +1,153 @@
+id: GE-118d
+components:
+  - commit_guardian
+title: "A document's path-bearing frontmatter entries are resolved whichever of the two accepted shapes they use"
+component: guardrail-engine
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a document whose frontmatter carries related_docs with two entries — the
+    bare form `docs/explanation/architecture.md` and the labelled form
+    `explanation: docs/explanation/architecture.md` — and whose related_code and
+    architecture_diagrams each carry one entry in the labelled form,
+  And every path named by those four entries exists in the repository,
+  When the document-frontmatter guard checks the document,
+  Then the guard reports no path error for any of the four entries,
+  And given one labelled entry is changed to name docs/explanation/absent.md,
+    which does not exist,
+  When the guard checks the document again,
+  Then it reports exactly one path error, and that error names the field and the
+    path string docs/explanation/absent.md — not the whole entry as the parser
+    rendered it,
+  And the guard reaches a verdict for the document on both runs without raising.
+depends_on:
+  - GE-118
+doc_links:
+  - path: templates/scripts/commit_guardian/frontmatter_validators.py
+    relationship: modifies
+    status: exists
+    relevance: "The defect site: validate_paths() guards that each of related_docs / related_code / architecture_diagrams is a LIST and never that its elements are strings, then does `project_root_path / p`. A mapping element raises TypeError: unsupported operand type(s) for /: 'PosixPath' and 'dict'. This is the SOURCE; scripts/commit_guardian/ and .leafcutter/scripts/commit_guardian/ are build outputs regenerated from it."
+  - path: docs/known-issues/commit-guardian/open-blocker-ki-cg-008.md
+    relationship: context
+    status: exists
+    relevance: "The reporting entry, severity blocker, reported by adopter repo DIAGraph against pin 54356a92. Carries the verbatim traceback, the 33-of-50 measurement and the sketch fix. Read it before implementing — and note that its sketch accepts a multi-key mapping, which GE-118d-2 deliberately refuses."
+  - path: docs/acceptance-criteria/guardrail-engine/GE-118-hooks-work-in-worktrees/GE-118c.yaml
+    relationship: context
+    status: exists
+    relevance: "The nearest sibling and the reason this record lives under GE-118: same guard, same source file (frontmatter_validators.py is already in GE-118c's implemented_by), same shape — the project never declared the rule, so the guard enforces one nobody wrote. GE-118c is REOPENED; do not close either as a duplicate of the other, and do not let a fix for one silently re-resolve the other's declaring file."
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+    relevance: "The component boundary this work sits inside: hook discovery, the transform/judgment tiers, and the source-vs-deployed layout distinction that makes a source-tree unit test structurally blind to the guard that actually runs."
+  - path: docs/how-to/real-artifact-fixtures.md
+    relationship: describes
+    status: exists
+    relevance: "The project's own recipe for the fixture shape it_requirement 6 mandates. A hand-indented triple-quoted frontmatter literal is the bias this document exists to stop; PyYAML emits block lists at column 0 and that difference has already hidden one defect of this exact class in this repository."
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "FIX THE TEMPLATE, NOT THE BUILD OUTPUT. templates/scripts/commit_guardian/frontmatter_validators.py is the source; scripts/commit_guardian/ and .leafcutter/scripts/commit_guardian/ are regenerated from it by build_commit_guardian's directory copy. An edit applied to a deployed copy alone is reverted by the next build.py run and leaves the template broken while the suite reads green."
+  - "ONE ROUTINE, ONE DECLARED ACCEPTED-SHAPE SET, IN EXACTLY ONE PLACE. validate_paths() must obtain its path strings by calling the resolver, not by testing element types inline. GE-118f proves the sharing by admitting a further shape at that single declaration point and observing both consumers move; any second copy of the rule — including an inlined 'fast path for the common string case' — makes that proof fail for a reason unrelated to GE-118f."
+  - "THE RESOLVER'S HOME IS A DEPLOYMENT DECISION AND MUST BE SETTLED HERE, NOT DISCOVERED LATER. The guard imports from the deployed layout (.leafcutter/scripts/commit_guardian/); knowledge_query.py runs from the deployed scripts/. Whichever directory hosts the module, it must be reachable from BOTH deployed locations and must be covered by the build deploy manifest governing its directory. GE-118f's it_requirements name the exact manifest entries for each candidate home — choose one before this AC is called done, because both later consumers inherit the choice."
+  - "ALL THREE FIELDS, DRIVEN BY THE path_fields LIST RATHER THAN BY NAME. related_docs, related_code and architecture_diagrams already share one list and one loop. Apply the resolver inside that loop so a fourth field added to the list inherits the rule automatically; do not special-case any field name."
+  - "A PATH ERROR NAMES THE PATH AND THE FIELD, AND DOES NOT NAME THE PARSED ELEMENT. For a labelled entry pointing at an absent file the message must contain the path string and the field name and must NOT contain the mapping's Python repr — the reader has to be able to copy the path out of the message and act on it."
+  - "REAL-ARTIFACT FIXTURE, NOT A HAND-INDENTED LITERAL (CLAUDE.md, 'Real-artifact behavioral spot-check'; docs/how-to/real-artifact-fixtures.md). At least one test must run against a document whose frontmatter was produced by yaml.safe_dump — PyYAML's own serialisation, block lists at column 0 — and at least one must run against a document already tracked in this repository that uses the bare form. A triple-quoted fixture reproduces the author's own indentation bias; that bias has already hidden one defect of this class here."
+  - "THE VERDICT FOR EVERY DOCUMENT THAT PASSES TODAY MUST BE UNCHANGED. The bare string is the form essentially every tracked document in this repository uses, so any change in its verdict is a regression, and the real-artifact arm above is what makes that visible rather than assumed."
+  - "ERROR-HANDLING POLICY APPLIES UNCHANGED (CLAUDE.md Rules 1-4). No bare except, no swallowed exception, and no try/except wrapped around the pure classification step: the classification must be total — it returns a refusal for an input it does not accept rather than being prevented from raising by a wrapper."
+test_spec:
+  - name: test_ge_118d_deployed_guard_accepts_bare_and_labelled_entries_in_all_three_fields
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: deployed
+    surface_invoked: ".leafcutter/scripts/commit_guardian/run_hook.py check_doc_frontmatter.py"
+    description: "PRODUCTION LAYOUT AND ENTRY POINT. Build into a temp target OUTSIDE this repository, then run the deployed hook as a subprocess against a document whose related_docs holds one bare and one labelled entry and whose related_code and architecture_diagrams each hold one labelled entry, every named path existing. Assert exit zero, no path error for any of the four entries, and no ModuleNotFoundError or traceback on either stream. A source-tree import resolves a different module set and is blind to the deploy gap that reopened GE-118c."
+  - name: test_ge_118d_labelled_entry_naming_an_absent_path_reports_exactly_one_error_naming_the_path
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: failure
+    description: "THE NEGATIVE ARM, which is what separates the fix from unwrapping an element and never checking it. Change one labelled entry to name docs/explanation/absent.md and assert exactly one error, that it names the field and the literal string docs/explanation/absent.md, and that the message does NOT contain the mapping's repr. Asserting only 'an error occurred' passes on an implementation that reports the whole element."
+  - name: test_ge_118d_resolver_returns_one_ordered_path_per_accepted_entry
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "Direct on the resolver: a bare string yields that string; a single-key mapping yields its value; a mixed list yields both, in the order declared. Order is asserted because GE-118f compares the two consumers' ordered lists and an unordered resolver makes that comparison vacuous."
+  - name: test_ge_118d_verdict_is_unchanged_on_a_real_tracked_document_and_on_a_pyyaml_serialised_one
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    description: "Run the guard against a document tracked in this repository that uses the bare form (e.g. docs/known-issues/commit-guardian/open-blocker-ki-cg-008.md) and against a labelled-form document written with yaml.safe_dump rather than as an indented string literal. Assert a verdict is reached on both and that the bare-form document's verdict is unchanged from today's."
+test_rationale: |
+  Every weaker shape passes on the bug. A test that imports
+  frontmatter_validators from the source tree cannot see the deploy gap that
+  reopened GE-118c, so the deployed-layout arm is not optional. A test that
+  asserts only 'the guard did not crash' passes on an implementation that
+  unwraps a labelled entry and never checks the path it names — hence the
+  negative arm, which pins the error count at exactly one and pins the message
+  to the path string rather than to the element. A hand-indented fixture
+  reproduces the author's own serialisation bias; PyYAML writes block lists at
+  column 0 and that difference has already produced a green suite over a
+  complete no-op in this repository, which is why one arm builds its fixture
+  with yaml.safe_dump and one reads a document already on disk.
+delivers_to:
+  agent: python-coder
+  contract: "STEP 1 OF THE CHAIN — the producer everything else in this feature consumes. One importable entry-shape resolver taking a single element of a path-bearing frontmatter field and returning either the one path string it denotes or a named refusal carrying the field, the entry as parsed, and the accepted-shape set. Three outcomes only: accepted-bare, accepted-labelled (single-key mapping whose value is a string), refused-by-name. Accompanied by the accepted-shape set itself, declared in exactly one place so that admitting a further shape is a one-line edit at that point. Consumed by GE-118d-1 and GE-118d-2 (refusal arms), by GE-118f (second consumer plus the agreement property), and — through GE-118f — by KM-KGS-100d-3 in scripts/knowledge_query.py. GE-118e publishes the accepted-shape set and the refusal message as prose."
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-09-21
+amended_by: []
+superseded_by: null
+covered_by: [GE-118d-1, GE-118d-2]
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  THE CANONICAL-SHAPE DECISION, MADE HERE AND NOT LEFT TO THE IMPLEMENTER.
+  Both shapes are accepted. The bare path string is named as the form to use in
+  a NEW document (GE-118e); the labelled single-key mapping is accepted as an
+  equal-status alternate, not as a deprecated one.
+
+  The three options were: accept both; declare the bare string canonical and
+  reject the mapping; declare the mapping canonical and reject the bare string.
+  Accepting both wins on one fact that outranks taste — the package has never
+  declared a shape, so NEITHER corpus is in violation of anything. Rejecting
+  either punishes authors for a rule that did not exist at the time they wrote,
+  which is the harm the register names rather than a fix for it. Concretely:
+  rejecting the mapping fails at least 33 of 50 documents in the reporting
+  adopter with no migration tool in the package; rejecting the bare string fails
+  essentially every document in this repository. A single-key mapping resolves
+  to exactly one path with no information lost and nothing to adjudicate — the
+  label is extra information, not a conflict.
+
+  REJECTED MIDDLE PATH, stated so it is not re-proposed: accept both but emit a
+  deprecation warning on the labelled form. A warning on 33 of 50 documents is
+  noise, and noise on a gate whose current workaround is already
+  `SKIP=check-doc-frontmatter` trains exactly the reflex this record exists to
+  end.
+
+  ALL THREE FIELDS ARE IN SCOPE, DELIBERATELY. related_docs, related_code and
+  architecture_diagrams share one `path_fields` list and one loop in
+  validate_paths(); the crash is identical for all three. Fixing only
+  related_docs would leave a guard that accepts a labelled entry in one field
+  and crashes on the same entry in the next — a rule no author can hold in their
+  head. The declaration in GE-118e covers all three for the same reason.
+
+  NOT IN SCOPE, and must not be closed as a duplicate of this:
+  check_adr_cross_reference._doc_mentions_adr also consumes related_docs, but by
+  raw case-insensitive substring match over the whole file, so it never indexes
+  into an element and is unaffected. Leave it alone; changing it to parse
+  elements would create a third shape rule for GE-118f to reconcile.
+
+  THE NEGATIVE ARM IS MANDATORY. The second half of the criterion — a labelled
+  entry naming an absent path still produces exactly one error, naming the PATH
+  and not the raw element — is what distinguishes the fix from unwrapping the
+  element and never checking it. An implementation that accepts every labelled
+  entry unconditionally satisfies the first half.
