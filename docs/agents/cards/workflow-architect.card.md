@@ -152,6 +152,7 @@ flowchart TD
 - BP-600c-2-i: Quick-fix workflow halts when a test errors out rather than failing cleanly
 - BP-600c-3: Quick-fix confirms the test passes under strict enforcement, then proves it is coupled to the fix
 - BP-600c-3-i: Quick-fix workflow detects when the fix breaks existing related tests
+- BP-600c-3-ii: Quick-fix's mutation proof reverts and restores the fix without touching the shared stash stack
 - BP-600d-1: Quick-fix workflow accepts a structured diagnosis as input
 - BP-600d-1-i: Quick-fix workflow rejects input that lacks a file path or root cause
 - BP-600d-2: Quick-fix workflow dispatches python-coder to apply the fix after red-phase test

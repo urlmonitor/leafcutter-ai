@@ -118,6 +118,11 @@ const FIX_SCHEMA = schema({
   extra_files: { type: 'array', items: { type: 'string' } },
 }, ['modified_files'])
 
+/* BP-600e-1-i: paths already dirty before the coder is dispatched — from an
+   earlier phase's own output, from pre-commit/doc-enforcer auto-formatting,
+   or from ordinary worktree drift — so the Fix-phase scope guard can treat
+   them as pre-existing rather than as the coder's own intentional change. */
+const BASELINE_SCHEMA = schema({ dirty_paths: { type: 'array', items: { type: 'string' } } })
 const COMMIT_SCHEMA = schema({
   commit_sha: { type: 'string' },
 })
@@ -651,6 +656,10 @@ if (divergenceCheck && divergence_decision === 'continue') {
 
 phase('Fix')
 
+/* BP-600e-1-i: snapshot dirty paths BEFORE dispatching the coder. Unavailable
+   (agent failure, no dirty_paths) degrades to an empty baseline — today's
+   three-artifact exclusion below, never a halt on everything. */
+const baselineResult = await agent(`Snapshot dirty paths BEFORE any fix, in ${worktreeRoot}: run git -C "${worktreeRoot}" status --porcelain and list every shown path (staged/unstaged/untracked) as dirty_paths[]. Never block — return status="ok", dirty_paths=[] if clean or the command fails.`, { label: 'baseline-dirty-snapshot', phase: 'Fix', schema: BASELINE_SCHEMA })
 const fixResult = await agent(
   `Apply a targeted fix for this bug. MODIFY ONLY THE TARGET FILE.
 
@@ -666,19 +675,71 @@ do NOT make those changes. Instead, set scope_expanded=true and list the additio
 files in extra_files[].
 
 After applying the fix, run: git -C "${worktreeRoot}" status --porcelain
-Report all modified files in modified_files[], excluding pre-existing build-output drift you did not cause.`,
+Report all modified files in modified_files[], excluding pre-existing build-output drift you did not cause.
+
+EXPECTED ADDITIONS — do not report these in extra_files, and do not set scope_expanded
+because of them. They are artifacts the /quick-fix workflow itself already wrote in
+earlier phases, so they always show up dirty in git status by the time you run it:
+  - ${ac_path}         (AC YAML written in the AC Creation phase)
+  - ${parent_ac_path}  (parent AC, back-linked to the one above)
+  - ${testFile}         (test written by test-writer in the Red Phase)
+extra_files[] is for genuinely unexpected files beyond ${target_file} and the three
+paths above — name only those.`,
   { label: 'python-coder/fix', phase: 'Fix', schema: FIX_SCHEMA, agentType: 'python-coder' }
 )
 
 const fixBlock = blockedOnFailure(fixResult, 'Fix', 'python-coder')
 if (fixBlock) return fixBlock
 
-// Scope expansion check (BP-600e-1)
-if (fixResult.scope_expanded || (fixResult.extra_files && fixResult.extra_files.length > 0)) {
-  log(`Scope expansion detected: ${(fixResult.extra_files || []).join(', ')}`)
+// Scope expansion check (BP-600e-1, narrowed by BP-600e-1-ii)
+//
+// By the time this phase runs, ac_path, parent_ac_path and testFile are ALWAYS
+// already dirty — the workflow itself wrote them in earlier phases. A fix agent
+// that reports everything from `git status --porcelain` (as instructed above)
+// will therefore always see these three paths, even when it touched nothing but
+// target_file. Without this filter every run halts on the workflow's own output.
+//
+// The exclusion set is built from the run's own known-good variables, never from
+// a hardcoded glob — a glob would also silence a genuine unrelated AC or test
+// edit, which is exactly the third-party change this guard exists to catch.
+//
+// Paths are normalised before matching (separator, leading "./", and
+// worktree-absolute vs repo-relative) because the agent reports paths as
+// `git status --porcelain` prints them, not as this script constructed them.
+function normalizeArtifactPath(rawPath, root) {
+  if (!rawPath) return ''
+  let normalized = String(rawPath).replace(/\\/g, '/')
+  const rootNormalized = String(root || '').replace(/\\/g, '/').replace(/\/+$/, '')
+  if (rootNormalized && normalized.startsWith(`${rootNormalized}/`)) {
+    normalized = normalized.slice(rootNormalized.length + 1)
+  }
+  normalized = normalized.split('/').filter((seg) => seg && seg !== '.').join('/')
+  return normalized
+}
+
+/* BP-600e-1-i: the baseline snapshot above is folded in as extra entries, reusing normalizeArtifactPath and this same Set — a path already dirty before the coder ran is not a scope-exceeding change. Unavailable baseline (no dirty_paths) contributes nothing, so behaviour degrades to the three-artifact exclusion alone. */
+const expectedArtifacts = new Set(
+  [ac_path, parent_ac_path, testFile, ...((baselineResult && Array.isArray(baselineResult.dirty_paths)) ? baselineResult.dirty_paths : [])].map((p) => normalizeArtifactPath(p, worktreeRoot))
+)
+
+const genuineExtraFiles = (fixResult.extra_files || []).filter(
+  (f) => !expectedArtifacts.has(normalizeArtifactPath(f, worktreeRoot))
+)
+
+// modified_files gets the same treatment, plus target_file itself. scope_expanded
+// is NOT the trigger on its own — the agent can set it true while naming nothing in
+// extra_files, which would otherwise either always-halt or be a no-op. What still
+// must halt is an expansion never named in extra_files but visible in modified_files.
+const expectedModifiedPaths = new Set([...expectedArtifacts, normalizeArtifactPath(target_file, worktreeRoot)])
+const genuineExtraModifiedFiles = (fixResult.modified_files || [])
+  .filter((f) => !expectedModifiedPaths.has(normalizeArtifactPath(f, worktreeRoot)))
+const allGenuineExtraFiles = Array.from(new Set([...genuineExtraFiles, ...genuineExtraModifiedFiles]))
+
+if (allGenuineExtraFiles.length > 0) {
+  log(`Scope expansion detected: ${allGenuineExtraFiles.join(', ')}`)
   return blocked('Fix (scope expansion)',
-    `python-coder reports the fix requires changes beyond ${target_file}.\n\nAdditional files needed: ${(fixResult.extra_files || []).join(', ')}\n\nOptions:\n  - Re-run /quick-fix to proceed anyway (if python-coder only modified target_file)\n  - Escalate to /build-feature for a multi-file fix`,
-    { halt_reason: 'scope_expansion', test_file: testFile, ac_id, extra_files: fixResult.extra_files })
+    `python-coder reports the fix requires changes beyond ${target_file}.\n\nAdditional files needed: ${allGenuineExtraFiles.join(', ')}\n\nOptions:\n  - Re-run /quick-fix to proceed anyway (if python-coder only modified target_file)\n  - Escalate to /build-feature for a multi-file fix`,
+    { halt_reason: 'scope_expansion', test_file: testFile, ac_id, extra_files: allGenuineExtraFiles })
 }
 
 log(`Fix applied to ${target_file}`)

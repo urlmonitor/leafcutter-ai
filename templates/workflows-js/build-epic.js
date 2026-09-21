@@ -578,7 +578,19 @@ const knowledgeRoutingReply = await agent(
 
 const knowledgeRouting = classifyKnowledgeRouting(knowledgeRoutingReply);
 
-const epicName = epicPath.split("/").pop() || epicPath;
+// BO-3900 — a name derived from a path must split on BOTH separators, so
+// the result is identical whichever separator the path was written with. A
+// forward-slash-only split leaves a backslash-spelled epicPath un-split,
+// reporting the WHOLE path instead of just its last segment.
+function lastPathSegment(input) {
+  const parts = String(input)
+    .replace(/\\/g, "/")
+    .split("/")
+    .filter((seg) => seg !== "");
+  return parts.length > 0 ? parts[parts.length - 1] : String(input);
+}
+
+const epicName = lastPathSegment(epicPath) || epicPath;
 
 const completionMessage =
   `## Summary\n` +

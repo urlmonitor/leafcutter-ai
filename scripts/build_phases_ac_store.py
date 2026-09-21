@@ -76,6 +76,14 @@ AC_STORE_DEPLOY_MAP: tuple[tuple[str, str], ...] = (
     # BO-2500e-1).  It MUST deploy alongside done_proof.py — if absent, the
     # deployed check_done_proof hook crashes with ModuleNotFoundError at runtime.
     ("scripts/ac_store/test_enforcement.py",          "test_enforcement.py"),
+    # _done_proof_phase_helpers.py was extracted out of done_proof.py by
+    # BP-100n-4 to get that file under its size cap, and done_proof.py imports
+    # it at MODULE scope. Same fast-lane gate, same failure: it MUST deploy or
+    # the REQUIRED CI done-proof check crashes with ModuleNotFoundError in the
+    # deployed layout. Note the second copy of this list that also needs the
+    # name — unit_tests/ac_store/test_bp_1100g_3_ii.py::_MODULE_FILES builds its
+    # own simulated deployed tree and does not read this map.
+    ("scripts/ac_store/_done_proof_phase_helpers.py", "_done_proof_phase_helpers.py"),
     # ac_parent_id.py provides derive_parent_id, imported at module scope by
     # scripts/build_orchestration/fast_lane.py. Without it the deployed
     # fast_lane.py exists but dies at import with ModuleNotFoundError, so

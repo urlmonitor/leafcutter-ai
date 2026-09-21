@@ -622,30 +622,40 @@ def test_dispatch_order_plan_feature() -> None:
 def test_dispatch_order_build_feature() -> None:
     """build-feature.js dispatches worktree-agent before ticket-supervisor (ticket 12).
 
-    With a custom label_response injecting a valid worktree-setup result,
-    build-feature.js must dispatch in this order:
+    With label_responses driving a "no worktree resolved yet, name and open a
+    new one" run (BO-4000), build-feature.js must dispatch, in order:
 
       Phase Resolve Target:
-        1. status-checker   label='resolve-target'   — determines target type
-        2. worktree-agent   label='worktree-setup'   — creates/reuses isolated worktree
+        1. status-checker  label='resolve-target'          — determines target type
+        2. status-checker  label='worktree-base'            — BO-4000: repository facts
+        3. status-checker  label='worktree-facts-location'  — BO-4000: repository facts
+        4. status-checker  label='branch-standing'          — BO-4000: repository facts
+        5. worktree-agent  label='worktree-setup'           — opens the NAMED worktree
 
       Phase Build (single-ticket path with default stub args):
-        3. status-checker  label='ticket-planner'  — flattened per-phase driver
+        6. status-checker  label='ticket-planner'  — flattened per-phase driver
            (ADR-019 / BO-2000f: replaces the old inline ticket-supervisor dispatch)
 
-    A missing or reordered worktree-agent dispatch FAILS this test (AC-2 / AC-3 from ticket 12).
+    BO-4000 supersedes ticket 12's original AC-3 sequence (worktree-agent no
+    longer immediately follows resolve-target — it follows the new repo-facts
+    checks that make the workflow, not the agent, decide reuse/open/refuse).
+    This test's own regression-guard intent is preserved: worktree-agent must
+    still appear, still before ticket-planner, and never dropped (AC-3).
+
+    The worktree-setup agent is now told the EXACT location; its reported
+    path must equal that instructed location or the run refuses.
+    "worktree-base" plus the ticket_path's own last segment deterministically
+    name that location, so the stubbed "worktree-setup" report below matches.
     """
     build_feature = _WORKFLOWS_DIR / "build-feature.js"
     if not build_feature.exists():
         pytest.skip(f"build-feature.js not found at {build_feature}")
 
-    # Inject a valid worktree-setup response so the script proceeds past the
-    # worktree-path guard and dispatches the flattened per-phase driver.
     label_responses = {
-        "worktree-setup": {
-            "worktree_path": "/tmp/test-worktree",
-            "status": "reused",
-        }
+        "resolve-target": {"target_type": "ticket", "ticket_path": "tickets/00_inbox/07_TICKET-x.md", "worktree_path": None},
+        "worktree-base": {"output": '{"main_checkout": "/tmp/repo", "worktree_base": "/tmp/wtbase", "layout": "dev"}', "exit_code": 0},
+        "worktree-facts-location": {"output": '{"exists": false}', "exit_code": 0},
+        "worktree-setup": {"worktree_path": "/tmp/wtbase/07_TICKET-x.md", "status": "reused"},
     }
 
     result = run_workflow_under_e2(build_feature, label_responses=label_responses)
@@ -662,20 +672,15 @@ def test_dispatch_order_build_feature() -> None:
         f"Calls: {[(c.agent_type, c.label) for c in result.agent_calls]}"
     )
 
-    expected_sequence = [
-        ("status-checker", "resolve-target"),
-        ("worktree-agent", "worktree-setup"),
-        ("status-checker", "ticket-planner"),
-    ]
-    actual_sequence = [
-        (c.agent_type, c.label) for c in result.agent_calls[:3]
-    ]
+    actual_labels = [(c.agent_type, c.label) for c in result.agent_calls]
+    resolve_idx = actual_labels.index(("status-checker", "resolve-target"))
+    worktree_idx = actual_labels.index(("worktree-agent", "worktree-setup"))
+    planner_idx = actual_labels.index(("status-checker", "ticket-planner"))
 
-    assert actual_sequence == expected_sequence, (
-        f"build-feature.js dispatch order wrong (ticket 12 / AC-3).\n"
-        f"Expected: {expected_sequence}\n"
-        f"Actual:   {actual_sequence}\n"
-        f"Full sequence: {[(c.agent_type, c.label) for c in result.agent_calls]}"
+    assert resolve_idx < worktree_idx < planner_idx, (
+        f"build-feature.js dispatch order wrong (ticket 12 / AC-3, superseded by BO-4000).\n"
+        f"Expected resolve-target < worktree-setup < ticket-planner.\n"
+        f"Full sequence: {actual_labels}"
     )
 
     # Also verify no parallel() contract violations.

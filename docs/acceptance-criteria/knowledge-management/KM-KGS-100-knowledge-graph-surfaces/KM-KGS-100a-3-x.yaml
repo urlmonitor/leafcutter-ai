@@ -1,0 +1,198 @@
+id: KM-KGS-100a-3-x
+components:
+  - knowledge_management
+readiness: approved
+priority: high
+title: "Continuation lines and trailing comments inside a block list neither end the list nor leak into item values"
+component: knowledge-management
+level: L3
+status: active
+req_status: draft
+work_status: done
+roadmap_phase: phase_1
+created_by: "docs/acceptance-criteria/knowledge-management/KM-KGS-100-knowledge-graph-surfaces/KM-KGS-100a-3.yaml"
+criteria: |
+  Given a first acceptance-criterion record whose covered_by field is declared as a
+    block list in which the first plain item wraps onto an indented continuation
+    line, followed immediately by the next top-level key with its own block list:
+      covered_by:
+        - unit_tests/very/long/path/
+          that/continues/here.py
+        - unit_tests/second.py
+      implemented_by:
+        - scripts/example_module.py
+  And a second record whose covered_by block list holds one item that is itself a
+    mapping, with an indented continuation line, followed by a plain item and the
+    next top-level key:
+      covered_by:
+        - path: unit_tests/test_alpha.py
+          relationship: covers
+        - unit_tests/test_beta.py
+      implemented_by:
+        - scripts/example_module.py
+  And a third record whose covered_by block list holds plain and quoted items
+    carrying hash characters, followed by the next top-level key:
+      covered_by:
+        - unit_tests/test_gamma.py  # note
+        - unit_tests/test_delta.py#test_symbol
+        - "unit_tests/test_epsilon.py #kept"
+      implemented_by:
+        - scripts/example_module.py
+  When each record's frontmatter is read for relationship extraction
+  Then the value obtained for covered_by in the first record is the two-item list
+    ["unit_tests/very/long/path/ that/continues/here.py", "unit_tests/second.py"]
+  And the value obtained for implemented_by in the first record is the one-item list
+    ["scripts/example_module.py"]
+  And in the second record the last item of the covered_by value is
+    "unit_tests/test_beta.py", and no item of implemented_by appears in covered_by
+  And the value obtained for implemented_by in the second record is the one-item list
+    ["scripts/example_module.py"]
+  And the value obtained for covered_by in the third record is the three-item list
+    ["unit_tests/test_gamma.py", "unit_tests/test_delta.py#test_symbol",
+     "unit_tests/test_epsilon.py #kept"]
+  And the value obtained for implemented_by in the third record is the one-item list
+    ["scripts/example_module.py"]
+  And a fourth record declaring the first record's covered_by list with its dash items
+    at column zero and the continuation line indented two spaces yields the same
+    covered_by and implemented_by values as the first record
+depends_on:
+  - KM-KGS-100a-3
+  - KM-KGS-100a-3-ii
+  - KM-KGS-100a-3-ix
+doc_links:
+  - path: scripts/knowledge_query.py
+    relationship: describes
+    status: exists
+  - path: docs/reference/ac-schema.md
+    relationship: context
+    status: exists
+  - path: docs/acceptance-criteria/index.yaml
+    relationship: context
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Measured evidence (2026-09-16), two divergences from PyYAML as reference reader, both verified. (A) REGRESSION versus main, introduced by the in-progress fix for KM-KGS-100a-3-i..-ix: an indented line inside a block list that is not a list item ends the list, so every later item is dropped. For the first record's fixture PyYAML reads ['unit_tests/very/long/path/ that/continues/here.py', 'unit_tests/second.py'], the reader on main reads ['unit_tests/very/long/path/', 'unit_tests/second.py'], and the in-progress reader reads ['unit_tests/very/long/path/'], dropping second.py. The same failure hits a list whose items are mappings; on the real repository it changed exactly one file versus main, docs/acceptance-criteria/index.yaml components, where the reader on main already produced 45 malformed strings (16 'id: ...' strings plus 29 items lifted out of the nested directory_patterns lists), PyYAML returns 16 mappings, and the in-progress reader returns 1. (B) PRE-EXISTING gap, present on main as well: a trailing inline comment on a plain list item is kept in the value; for '- foo.py  # note' PyYAML reads ['foo.py'] while both readers read ['foo.py  # note']."
+  - "Continuation rule: inside a block list, a line indented deeper than the list's dash column that is not a list item, not a comment line and not blank is a continuation of the current item, not the end of the list. For a plain scalar item the continuation folds into the item as YAML does, joined to the preceding text with a single space and with its own leading indentation removed, matching PyYAML. Items after the continuation are still read."
+  - "Mapping items: when a list item is itself a mapping ('- path: x' followed by an indented 'relationship: y'), its continuation lines do not end the list and all later items are still read. EXPLICIT NON-GOAL: this criterion does not specify what value a mapping item produces (a mapping, a string, or omission), because relationship fields are string lists. It only requires that a mapping item never truncates the list and never absorbs the next top-level key's items."
+  - "Termination rule: the list ends only at the next top-level key, meaning a column-zero line that is not a list item, not a comment line and not blank. This stays consistent with KM-KGS-100a-3-i (column-zero dash items are valid items, not terminators), KM-KGS-100a-3-ii (the scan stops at the next key and never absorbs a following key's list) and KM-KGS-100a-3-ix (comment and blank lines, including column-zero comments, do not end the list)."
+  - "Trailing comment rule: on a plain (unquoted) item, a # preceded by at least one whitespace character (space or tab, as YAML defines) starts a comment; the item's value is the text before it with trailing whitespace trimmed. A # with no preceding whitespace is part of the token and is NOT a comment (path#symbol stays intact, consistent with KM-KGS-100a-3-v). A # inside a quoted item is NOT a comment ('\"a #b\"' reads to 'a #b', consistent with KM-KGS-100a-3-iii, which strips only the matched surrounding quote pair)."
+  - "The reader under test serves both .yaml acceptance-criterion files and .md frontmatter (tickets, docs and ADRs), so the continuation, termination and trailing-comment rules apply to every surface whose frontmatter is read by it, not only the acs surface."
+  - "Standard-library-only constraint applies (KM-KQS-007)."
+  - "SCOPE-NEUTRAL: this criterion is about the value read into the field, before any edge-target resolution. Whether such a value later resolves to a graph node or stays a raw path string is a separate, deferred decision and must not be asserted here."
+test_spec:
+  - name: test_wrapped_plain_item_folds_continuation_with_single_space
+    target_dir: unit_tests/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: "A temp AC file carrying the first record's fixture (indented dash items, first plain item wrapped onto an indented continuation line) reads covered_by through the production file-reading entry point to exactly ['unit_tests/very/long/path/ that/continues/here.py', 'unit_tests/second.py'], equal to the PyYAML safe_load value of the same bytes; the continuation is joined with exactly one space and its leading indentation removed"
+  - name: test_items_after_wrapped_continuation_are_still_read
+    target_dir: unit_tests/
+    framework: pytest
+    type: unit
+    angle: failure
+    description: "Regression shape: in the value read from the first record's file, unit_tests/second.py is present after the wrapped item, so the continuation line does not end the list (the in-progress reader returns only ['unit_tests/very/long/path/'])"
+  - name: test_column_zero_dash_wrapped_item_matches_indented_form
+    target_dir: unit_tests/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: "A temp AC file carrying the fourth record (same covered_by list with dash items at column zero and the continuation line indented two spaces) reads covered_by and implemented_by to the same values as the first record's file, compared read-path against read-path and against the expected literal lists"
+  - name: test_mapping_item_does_not_truncate_covered_by_list
+    target_dir: unit_tests/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: "A temp AC file carrying the second record (first covered_by item is a mapping '- path: ...' with an indented 'relationship: covers' continuation) reads covered_by through the production entry point with 'unit_tests/test_beta.py' as its last item; neither the item count nor the value produced for the mapping item is asserted (stated non-goal)"
+  - name: test_mapping_item_list_keeps_implemented_by_separate
+    target_dir: unit_tests/
+    framework: pytest
+    type: unit
+    angle: boundary
+    description: "For the second record's file, implemented_by reads to exactly ['scripts/example_module.py'] and no item of implemented_by appears in covered_by, so the mapping item's continuation never absorbs the next top-level key's items"
+  - name: test_list_still_ends_at_next_column_zero_key
+    target_dir: unit_tests/
+    framework: pytest
+    type: unit
+    angle: boundary
+    description: "For each of the four record files, no implemented_by item appears in the covered_by value and no string covered_by item appears in the implemented_by value, so continuation handling does not move the list end past the next column-zero key"
+  - name: test_trailing_space_comment_stripped_from_unquoted_item
+    target_dir: unit_tests/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: "In the value read from the third record's file, the unquoted item '- unit_tests/test_gamma.py  # note' reads to exactly 'unit_tests/test_gamma.py'; no item contains the comment text 'note' and no item ends in whitespace"
+  - name: test_trailing_tab_comment_stripped_from_unquoted_item
+    target_dir: unit_tests/
+    framework: pytest
+    type: unit
+    angle: boundary
+    description: "A temp AC file whose covered_by item is '- unit_tests/test_gamma.py<TAB># note' (tab before #, allowed by the it_requirements trailing comment rule) reads covered_by to exactly ['unit_tests/test_gamma.py'], equal to the PyYAML safe_load value"
+  - name: test_hash_glued_to_token_is_not_a_comment
+    target_dir: unit_tests/
+    framework: pytest
+    type: unit
+    angle: boundary
+    description: "In the value read from the third record's file, the item 'unit_tests/test_delta.py#test_symbol' is present in full, not truncated at # (consistent with KM-KGS-100a-3-v)"
+  - name: test_hash_inside_quoted_item_is_not_a_comment
+    target_dir: unit_tests/
+    framework: pytest
+    type: unit
+    angle: boundary
+    description: "In the value read from the third record's file, the double-quoted item reads to exactly 'unit_tests/test_epsilon.py #kept', with the surrounding quotes stripped and the whitespace-preceded # kept (consistent with KM-KGS-100a-3-iii)"
+  - name: test_hash_record_reads_exact_lists
+    target_dir: unit_tests/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: "The third record's file reads covered_by to exactly ['unit_tests/test_gamma.py', 'unit_tests/test_delta.py#test_symbol', 'unit_tests/test_epsilon.py #kept'] and implemented_by to exactly ['scripts/example_module.py'], both equal to the PyYAML safe_load values of the same bytes"
+  - name: test_md_frontmatter_wrapped_continuation_does_not_truncate_list
+    target_dir: unit_tests/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: "A temp .md file whose '---' delimited frontmatter carries the first record's covered_by and implemented_by lists, read through the production .md frontmatter entry point (not a hand-built dict), yields covered_by ['unit_tests/very/long/path/ that/continues/here.py', 'unit_tests/second.py'] and implemented_by ['scripts/example_module.py']"
+  - name: test_md_frontmatter_trailing_comment_stripped
+    target_dir: unit_tests/
+    framework: pytest
+    type: unit
+    angle: boundary
+    description: "A temp .md file whose frontmatter carries the third record's covered_by list, read through the production .md frontmatter entry point, yields the same three-item covered_by value as the third record's .yaml file"
+  - name: test_real_index_yaml_components_list_not_truncated
+    target_dir: unit_tests/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    description: "Reading the real docs/acceptance-criteria/index.yaml through the production file-reading entry point yields a components value with at least as many items as there are top-level dash entries of the components list counted from the raw file text (independent of the production reader; the raw count must be greater than 1 so the check cannot pass vacuously). Only the count is asserted, never the item values, because the items are mappings (non-goal)"
+test_required: true
+test_rationale: >-
+  Two verified divergences from PyYAML, one a regression in this PR (an indented non-item line
+  inside a block list ends the list and drops later items, which truncated index.yaml
+  components from 45 to 1) and one pre-existing (a trailing inline comment on a plain item
+  leaks into the value), so each rule gets its own test reading real temp files through the
+  production file-reading entry points, with PyYAML used test-side only as the oracle. The
+  wrapped plain scalar is checked for single-space folding, for later items surviving, and in
+  the column-zero dash form; the mapping item only for not truncating the list and keeping
+  implemented_by separate, deliberately asserting neither the item count nor the mapping
+  item's value because that is a stated non-goal; list end at the next column-zero key in
+  both directions; trailing comments after a space and after a tab (the it_requirements name
+  both); and a # glued to a token or inside a quoted item kept, consistent with -v and -iii.
+  Because the reader also serves tickets, docs and ADRs, .md frontmatter is exercised through
+  its own production entry point, and a real-artifact guard asserts only the item count of
+  index.yaml components. The wrapped-continuation, mapping-truncation, trailing-comment, .md
+  and index.yaml tests are RED against the in-progress reader. Implemented in
+  unit_tests/test_km_kgs_100a_3_x.py. Only values read into fields are asserted, never whether
+  a target resolves to a graph node.
+delivers_to: null
+expects_from:
+  ac_id: KM-KGS-100a-3
+  contract: "The frontmatter field values of a single acceptance-criterion record, read from disk prior to any edge-target resolution"
+origin_agent: business-analyst
+created: 2026-09-16
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
