@@ -2124,7 +2124,7 @@ def _migrate_skills_config(
         return
 
     data, raw = _read_skills_config_json(resolved)
-    if raw is None:
+    if data is None or raw is None:  # coupled pair; mypy can't narrow 2 names
         return
 
     optional_skills = _get_frontend_optional_skills(data, resolved)
