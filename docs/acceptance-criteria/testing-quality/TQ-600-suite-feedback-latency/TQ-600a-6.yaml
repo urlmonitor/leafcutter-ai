@@ -1,0 +1,307 @@
+id: TQ-600a-6
+components:
+  - testing_quality
+  - build_pipeline
+title: "The run says how many times it really deployed the package, and that figure is bounded by the tests that needed their own copy"
+component: testing-quality
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given any run of the suite, however it is spread across workers,
+  When the run finishes,
+  Then the run states, in its own output, the number of times a real package deploy
+    was executed, so the figure is observable without timing the run,
+    And the same figure appears as a named field in the durable cost record, so a
+      later reader recovers it from the artifact rather than from console text,
+    And the figure counts deploys that were actually executed, not requests for a
+      layout: a layout handed out many times within one run is reported as the one
+      deploy that produced it,
+    And the figure is stated for the whole run and not for one worker: a run spread
+      across several workers in which the layout was produced once reports one, and a
+      run in which each worker produced its own reports the number of workers, so a
+      per-worker multiplication is visible in the figure rather than hidden by it,
+    And across a full run the figure is no greater than one plus the number of tests
+      routed to a copy of their own, with both numbers taken from the run's own
+      record rather than from any figure written into a test.
+depends_on:
+  - TQ-600a
+  - TQ-600a-1
+doc_links:
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      The real_artifact angle governs every clause here: the figure must be read
+      back out of what the run emitted. A count read from an in-process counter
+      proves a property of the counter, not of the run.
+  - path: docs/acceptance-criteria/testing-quality/TQ-600-suite-feedback-latency/TQ-600.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      Holds the measured evidence (2026-09-21, origin/main 624d39ac) these clauses
+      refuse to turn into literals: 77 counts deploy invocation SITES across 52
+      files, not invocations, so no absolute count may be asserted anywhere.
+  - path: docs/acceptance-criteria/testing-quality/TQ-600-suite-feedback-latency/TQ-600b-5.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      TQ-600b-5 makes parallel execution the default, which is what makes the
+      whole-run-versus-per-worker clause load-bearing rather than pedantic. This
+      AC is the surface on which "once per run" is distinguishable from "once per
+      worker" after the fact.
+  - path: docs/acceptance-criteria/testing-quality/TQ-600-suite-feedback-latency/TQ-600c-1.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      The durable cost record this figure must reach as a named field, and the AC
+      that requires one merged record per run under xdist. The whole-run clause
+      here and that merge requirement are the same constraint seen from two sides:
+      an unmerged per-worker record makes both unsatisfiable.
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - >-
+    THE COUNT MUST BE EMITTED BY THE RUN, NOT BY A TEST. Report it in the run's
+    own output and as a named field in the TQ-600c-1 cost record. A figure
+    produced only inside a test that patched the deploy call proves a property of
+    that patch. A human must be able to read the figure off a real full run after
+    the fact.
+  - >-
+    REGISTER THE EMITTER WHERE A WHOLE-SUITE RUN LOADS IT, AND NAME THE
+    LOAD-BEARING REGISTRATION. Verified at enrichment: this repo has NO root
+    conftest.py and no unit_tests/conftest.py — the only conftest files are
+    per-directory (e.g. unit_tests/portability/conftest.py). An emitter in a
+    per-directory conftest states a figure true of a fraction of the run while
+    reading as true of all of it. Register it in the same whole-run surface
+    TQ-600a-1's fixture uses (a plugin named in pytest.ini, or a root conftest),
+    enumerate every place it is registered, and state which one actually gates.
+  - >-
+    THE WHOLE-RUN FIGURE MUST BE AGGREGATED BY THE CONTROLLER, NOT REPORTED PER
+    WORKER. Under pytest-xdist each worker finishes its own session, so the
+    obvious session-finish emitter writes N figures each reading "1" — and a
+    per-worker build then looks exactly like a shared one, which is the failure
+    this record exists to make visible. The count must be collected across
+    workers and stated once for the run, consistent with TQ-600c-1's
+    one-merged-record-per-run requirement.
+  - >-
+    THE BOUND IS RELATIONAL AND MUST STAY RELATIONAL. Nothing may assert a
+    literal deploy count. The measured 77 counts invocation SITES across 52
+    files, not invocations — a looped or parametrised site may deploy more than
+    once, and the true per-run figure was not established at authoring time. The
+    bound is `reported_deploys <= 1 + tests_routed_to_the_unshared_path`, and
+    both figures must come from the run's own record (TQ-600a-2 and TQ-600a-5
+    supply the second).
+  - >-
+    COUNT EXECUTIONS, NOT HANDOUTS. The figure increments only on the signal
+    TQ-600a-1 emits at the point a `python scripts/build.py --target-dir <path>`
+    subprocess is actually executed (measured cost 59.8s each). A cached layout
+    handed out 500 times within one run is one.
+  - >-
+    ZERO MUST BE STATED, NOT OMITTED. A run in which no consumer asked for a
+    layout reports 0 as a present field. An absent field and a zero field must
+    not be confusable, or "the emitter never ran" reads as "nothing was
+    deployed" — this repository's standing failure mode, and the reason the
+    inspected-count convention exists at all.
+  - >-
+    THE TWO EMISSIONS MUST CARRY ONE NUMBER. The console line and the
+    cost-record field are two renderings of a single source, not two
+    computations. Two independently derived figures drift, and the one a reader
+    happens to look at is the one they believe.
+  - >-
+    EMISSION MUST NOT FAIL THE RUN AND MUST NOT MEASURABLY LENGTHEN IT. Writing
+    the figure crosses a process boundary and is external I/O under the project
+    error handling policy: wrap it, log at WARNING or above, and continue rather
+    than failing the suite over a reporting write. Well under a second per run.
+delivers_to:
+  - agent: python-coder
+    ac_id: TQ-600c-1
+    contract: >-
+      The run's real-deploy count as a named field in the machine-readable cost
+      record, so the figure is durable rather than console-only.
+  - agent: python-coder
+    ac_id: TQ-600a-1-i
+    contract: >-
+      The reported real-deploy figure, which is the surface on which TQ-600a-1-i's
+      zero case is observable: a selection with no consumer reports 0 as a present
+      field rather than omitting it.
+  - agent: python-coder
+    ac_id: TQ-600a-1-ii
+    contract: >-
+      The reported real-deploy figure, which is where a retry storm after a failed
+      shared deploy becomes visible — TQ-600a-1-ii's "the attempt count stayed at
+      1" is an assertion over this figure, not over an in-process counter.
+expects_from:
+  - ac_id: TQ-600a-1
+    contract: >-
+      A single point at which a real package deploy is executed, and a signal each
+      time one is, so the count is taken from executions rather than from handouts
+      of the cached layout. Under several workers the producer must make the
+      whole-run figure reachable, not only each worker's own.
+  - ac_id: TQ-600a-2
+    contract: >-
+      The run's count of tests routed to a copy of their own, which is the second
+      term of the bound in this AC's final clause.
+  - ac_id: TQ-600a-5
+    contract: >-
+      The count of tests that took the unshared path without declaring why, which
+      counts toward that same second term during the migration.
+test_spec:
+  - name: test_tq600a_6_the_run_reports_its_own_real_deploy_count
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    surface_invoked: "python -m pytest (child session; count read from the run's own emitted record)"
+    description: >-
+      The count is read back out of the artifact the child run emitted — its
+      output line and its TQ-600c-1 cost record — and equals the number of deploy
+      subprocesses the harness independently observed. Reading an in-process
+      counter instead of the run's emission does not satisfy this descriptor.
+  - name: test_tq600a_6_the_reported_count_is_a_function_of_the_selection_not_a_literal
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: failure
+    description: >-
+      Widening the selection from read-only consumers alone to read-only
+      consumers plus one test routed to the unshared path moves the reported
+      count from 1 to 2. NAMED MUTATION: emit a constant 1 as the count; this
+      test must go RED while the reported-count descriptor above stays green.
+  - name: test_tq600a_6_the_figure_is_stated_for_the_whole_run_not_for_one_worker
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    surface_invoked: "python -m pytest -n <N> (child session spread across several workers)"
+    description: >-
+      THE DESCRIPTOR THIS RECORD EXISTS FOR. Over a child run spread across more
+      than one worker: with TQ-600a-1's shared producer in place the run reports
+      1, and with per-worker production deliberately forced the run reports the
+      worker count. NAMED MUTATION: emit each worker's own tally at its own
+      session finish; a per-worker build then reports 1 from every worker, reads
+      exactly like success, and this test must go RED.
+  - name: test_tq600a_6_the_deploy_count_is_bounded_by_one_plus_the_unshared_routed_count
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    description: >-
+      Over a genuine multi-file run, both figures are read from the run's own
+      record and the assertion is reported_deploys <= 1 + unshared_routed. NO
+      LITERAL APPEARS: neither 77 nor any other measured figure may be written
+      into this test, because 77 counts invocation sites rather than invocations.
+  - name: test_tq600a_6_a_cached_layout_handed_out_many_times_is_reported_as_one_deploy
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: >-
+      The figure counts executed deploy subprocesses, not fixture requests. A
+      layout requested fifty times within one run reports 1. NAMED MUTATION:
+      increment on fixture request; this test must go RED.
+  - name: test_tq600a_6_the_console_figure_and_the_cost_record_field_agree
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: seam
+    description: >-
+      Both emissions of one run carry the same number. NAMED MUTATION: derive
+      the cost-record field by a second independent computation; the two drift
+      under a selection where they can differ and this test must go RED. A
+      reader believes whichever surface they happened to open.
+  - name: test_tq600a_6_a_run_with_no_consumers_reports_zero_rather_than_omitting_the_field
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: >-
+      A run whose selection asks for no layout at all emits the field with the
+      value 0. NAMED MUTATION: emit the field only when the counter is non-zero;
+      "the emitter never ran" then becomes indistinguishable from "nothing was
+      deployed" and this test must go RED.
+test_rationale: |
+  This record is an audit surface, so every descriptor but one reads what the
+  run emitted rather than what a counter held. A figure that only exists in
+  process is not recoverable by the human who wants to know, after the fact,
+  whether a run deployed once or twenty times.
+
+  The whole-run-versus-per-worker descriptor is the load-bearing one and it is
+  why the split from TQ-600a-1 was worth making. Under xdist each worker
+  finishes its own session, so the natural emitter writes "1" from every worker
+  — and a per-worker build, which is the exact regression TQ-600b-5 makes
+  likely, then reads as success on every surface. Only a figure that is
+  aggregated for the run can tell the two apart, and only a descriptor that
+  runs more than one worker can tell an aggregated figure from a per-worker one.
+
+  The function-of-the-selection descriptor is kept separate from the
+  reported-count descriptor on purpose: a hardcoded 1 satisfies the first alone.
+  The zero descriptor is the mirror image — an omitted field and a zero field
+  must not be confusable, because this repository's recurring defect is a check
+  that examined nothing reporting the same shape as a check that found nothing.
+
+  No literal deploy count appears anywhere in this contract. The measured 77 is
+  a count of invocation SITES across 52 files, not of invocations, and the true
+  per-run figure was not established at authoring time because doing so requires
+  reading test source. The bound is relational and both of its terms come from
+  the run's own record.
+origin_agent: business-analyst
+created: 2026-09-21
+amended_by:
+- reason: 'Created by splitting TQ-600a-1, which bundled two surfaces with different
+    consumers: the shared fixture (consumed by TQ-600a-1-i, TQ-600a-1-ii, a-2, a-3,
+    a-4, a-5) and the deploy-count reporting surface (consumed by TQ-600c-1). This
+    record takes the reporting surface and the relational bound `reported_deploys
+    <= 1 + unshared_routed`, because that bound is an assertion over two REPORTED
+    figures and is only auditable from what the run emitted. The whole-run-versus-per-worker
+    clause is new and carries the conflict the it-po found: a pytest session-scoped
+    fixture runs once per xdist worker, so once TQ-600b-5 makes parallel the default,
+    "once per run" silently means "once per worker" unless the figure distinguishes
+    them.'
+  by: business-analyst
+  at: 2026-09-21
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-09-21
+  note: 'python-coder, M. Second enrichment pass, after the split of TQ-600a-1. Three
+    it_requirements and three test_spec descriptors were RE-HOMED here from TQ-600a-1,
+    where the BA flagged them as describing this record''s criteria: the count-is-emitted-by-the-run
+    requirement, the relational bound, and the audit half of the per-worker multiplication
+    problem. The production half of that last one stayed on TQ-600a-1, because the
+    criteria there now settle the resolution (lock plus run-scoped directory) while
+    this record only has to make a regression to it visible. Added three requirements
+    the split made necessary: controller-side aggregation, zero stated rather than
+    omitted, and one number behind the two emissions. No literal deploy count appears
+    in the contract. criteria untouched.'
+- action: approved
+  agent: approve_acs
+  date: '2026-09-21'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+notes: |
+  WHY THIS IS A SEPARATE RECORD FROM TQ-600a-1. The fixture and the figure fail
+  independently and are consumed by different ACs. A fixture that deploys once and
+  reports a hardcoded 1 satisfies the fixture claim and defeats every use of the
+  figure; a faithful counter over a fixture that deploys per worker satisfies this
+  record and defeats the fixture claim. Bundled, either failure can hide behind the
+  other's evidence.
+
+  THE WHOLE-RUN CLAUSE IS THE AUDIT SURFACE FOR THE XDIST CONFLICT. The agreed
+  resolution to per-worker multiplication is a file lock plus a run-scoped shared
+  directory — the first worker to ask produces the layout, the rest wait on it — and
+  that resolution is stated as a claim on TQ-600a-1. This record is what makes the
+  claim checkable afterwards: if the resolution regresses to a per-worker build, the
+  reported figure rises to the worker count and says so. Without a whole-run figure,
+  a per-worker build reports 1 from every worker and reads exactly like success.
+
+  NO LITERAL DEPLOY COUNT MAY APPEAR. The measured 77 counts invocation SITES across
+  52 files, not invocations: a looped or parametrised site may deploy more than once,
+  and the true per-run figure was not established at authoring time. The bound is
+  relational and both of its terms come from the run's own record.

@@ -1,0 +1,312 @@
+id: TQ-600c-2
+components:
+  - testing_quality
+title: "Fed an over-budget run, the guard fails and names who spent the time"
+component: testing-quality
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: critical
+roadmap_phase: phase_1
+criteria: |
+  Given a cost record for a run whose total exceeds the budget in force,
+  When the budget guard reads it,
+  Then the guard finishes with a failing status,
+    And it names the individual tests that account for the overrun, most expensive
+      first, each with the time it took,
+    And it states the measured total and the budget it was compared against, so a
+      reader can see the size of the gap without rerunning anything,
+    And it states how many test entries it examined, so a guard that examined
+      nothing is distinguishable from a guard that found nothing,
+    And given instead a cost record for a run whose total is within the budget, the
+      same guard finishes with a passing status over the same number of examined
+      entries.
+depends_on:
+  - TQ-600c
+  - TQ-600c-1
+  - TQ-600c-3
+doc_links:
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      The failure angle is the primary angle for this AC, not a supplementary one.
+      The over-budget case is the AC; the within-budget case is the control that
+      stops a guard which fails unconditionally from passing as a guard which fails
+      correctly.
+  - path: docs/acceptance-criteria/testing-quality/TQ-500-checks-that-can-fail/TQ-500.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      Sibling goal governing whether a passing check could have failed. This AC is
+      that discipline applied to the one guard TQ-600 introduces, which is why the
+      over-budget case is specified as observable behaviour rather than left to the
+      test contract.
+  - path: CLAUDE.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      Records all three precedents this AC is written against — the documented
+      check whose path never existed, the validator that exited clean over zero
+      files for eight days, and the merge audit that compared against a stale
+      reference. All three are the same defect the examined-count clause makes
+      visible.
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - >-
+    THE GUARD MUST HAVE A REAL COMMAND-LINE ENTRY POINT AND THE FAILING PATH MUST
+    BE EXERCISED THROUGH IT. A guard reachable only by importing a function is
+    the documented fast-lane shape: `fast_lane.py` had no CLI, so its runner's
+    call was a silent no-op while the structural tests stayed green. The
+    over-budget case must be proved against the process, with its real exit
+    status.
+  - >-
+    "FAILING STATUS" MEANS A NON-ZERO PROCESS EXIT CODE, not a logged word and
+    not a returned object a caller may ignore. TQ-600c-5 wires the verdict into
+    the verification's outcome and that wiring reads the exit status.
+  - >-
+    THE EXAMINED-ENTRY COUNT MUST BE REPORTED ON EVERY PATH — the failing path,
+    the passing path, and each degenerate path of TQ-600c-2-i. A count printed
+    only when something was found tells the reader nothing when nothing was
+    found, which is exactly the shape of all three precedents on file.
+  - >-
+    OFFENDERS RANKED MOST EXPENSIVE FIRST, each with its own time. The measured
+    concentration is extreme — the top 60 of 5318 tests are 3404s, 63% of wall
+    clock in 1.1% of the tests — so a short ranked list explains most of any
+    overrun. Cap the list at a stated N and SAY it was capped; a silent
+    truncation makes the reader believe they have seen the whole story.
+  - >-
+    STATE THE MEASURED TOTAL AND THE BUDGET COMPARED AGAINST, with units, on both
+    verdicts, so a reader can see the size of the gap without rerunning anything.
+  - >-
+    THE BUDGET COMES FROM TQ-600c-3'S DECLARED RECORD AND NOWHERE ELSE — no
+    literal, no default, no environment-variable fallback. TQ-600c-3-i is the
+    observable form of this constraint.
+  - >-
+    NO BUDGET NUMBER MAY BE WRITTEN INTO THIS AC'S IMPLEMENTATION OR ITS TESTS.
+    The post-fix baseline does not exist yet; the tests supply their own budget
+    values through the declared record, which also makes the verdict-flips
+    property assertable.
+  - >-
+    Reading the cost record is external I/O under the project error handling
+    policy: wrap it, log at WARNING or above, and fail. Never let an exception
+    path or an absent file resolve into a clean exit.
+  - >-
+    Must complete in well under five seconds over a record of roughly 5300
+    entries, since TQ-600c-5 places it in the verification's critical path.
+delivers_to:
+  - agent: python-coder
+    ac_id: TQ-600c-5
+    contract: >-
+      A budget guard with a command-line entry point taking a cost-record path,
+      returning a non-zero exit status when the run is over budget and zero when
+      it is within, and printing the measured total, the budget compared against,
+      the examined-entry count and the ranked offender list on both verdicts.
+      TQ-600c-5 registers this entry point and carries its exit status into the
+      verification's outcome.
+  - agent: python-coder
+    ac_id: TQ-600c-4
+    contract: >-
+      The shared cost-record reader and the declared-record lookup, so the
+      per-test regression check consumes the same record and the same single
+      source of budget figures rather than a second copy of either.
+  - agent: python-coder
+    ac_id: TQ-600c-2-i
+    contract: >-
+      The guard's command-line entry point and its examined-entry-count
+      reporting, which TQ-600c-2-i asserts over for the three degenerate cost
+      records — the count reported as zero and the status never passing.
+  - agent: documentation-expert
+    ac_id: TQ-600c-6
+    contract: >-
+      The guard's failure output as delivered, including how it names the tests
+      that spent the time, so TQ-600c-6's guidance describes the screen the
+      reader is actually looking at rather than a paraphrase of it.
+expects_from:
+  - ac_id: TQ-600c-1-i
+    contract: >-
+      The completeness mark and not-run count in the cost record's header, plus
+      the third verdict value (declined-because-partial) this guard must return
+      rather than passing or comparing a partial record against a whole-run
+      budget.
+  - ac_id: TQ-600c-1
+    contract: >-
+      The durable, machine-readable cost record: per test a node id with separate
+      setup, call and teardown durations, plus a header with the run total, the
+      accounted test count, the timestamp, the commit, and the completeness mark
+      of TQ-600c-1-i.
+  - ac_id: TQ-600c-3
+    contract: >-
+      The declared budget record, holding the budget in force together with the
+      baseline it was derived from, that baseline's date and commit, and the
+      headroom. This guard reads the budget from there and from nowhere else.
+test_spec:
+  - name: test_tq600c_2_an_over_budget_record_makes_the_guard_exit_non_zero
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: failure
+    surface_invoked: "the budget guard's command-line entry point, invoked as a process with a cost-record path"
+    description: >-
+      THE PRIMARY DESCRIPTOR OF THIS AC. The guard is invoked through its real
+      command-line entry point — as a process, not an imported function —
+      against a cost record whose total exceeds the budget in the declared
+      record, and its exit status is non-zero. A test that only asserts the guard
+      exists, or that it passes on a good record, does not satisfy this AC and
+      will be rejected in review.
+  - name: test_tq600c_2_the_over_budget_run_names_the_offending_tests_most_expensive_first_with_their_times
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: failure
+    description: >-
+      The offenders accounting for the overrun are named, each with the time it
+      took, in descending order of cost. NAMED MUTATION: emit them in record
+      order; this test must go RED. A guard that says only "too slow" hands the
+      next person the same multi-hour investigation that produced this goal.
+  - name: test_tq600c_2_the_guard_states_the_measured_total_and_the_budget_it_compared_against
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: >-
+      Both figures appear with units on the failing verdict, so the size of the
+      gap is readable without rerunning anything.
+  - name: test_tq600c_2_the_guard_states_how_many_test_entries_it_examined_on_the_failing_path
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: >-
+      The examined count is present and equals the number of entries in the
+      record.
+  - name: test_tq600c_2_a_within_budget_record_makes_the_same_guard_exit_zero_over_the_same_examined_count
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: >-
+      THE CONTROL. A record with the same number of entries and a lower total
+      produces a zero exit status and the same examined count. NAMED MUTATION:
+      make the guard fail unconditionally; THIS test goes RED while the
+      over-budget descriptor stays green — the asymmetry that establishes the
+      verdict is a function of the input rather than a constant.
+  - name: test_tq600c_2_the_guard_states_the_examined_count_on_the_passing_path_too
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: unit
+    angle: failure
+    description: >-
+      NAMED MUTATION: report the examined count only when offenders were found.
+      The guard then prints a bare success on the path where the count actually
+      matters, and this test must go RED. This is the precedent shape: a check
+      that examined nothing must not look like a check that found nothing.
+  - name: test_tq600c_2_the_verdict_flips_when_only_the_budget_record_changes
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: seam
+    description: >-
+      With the cost record byte-identical and only the declared budget lowered
+      below its total, the verdict goes from pass to fail. NAMED MUTATION:
+      compare against a literal in the guard; this test must go RED. No budget
+      number appears in this test — both values come from the record under test.
+  - name: test_tq600c_2_the_guard_runs_against_a_cost_record_a_real_run_produced
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    description: >-
+      At least one descriptor consumes a record emitted by an actual child pytest
+      session rather than a hand-typed fixture. A hand-authored fixture
+      reproduces the author's assumptions — the mechanism by which this
+      repository's files_touched parser stayed a no-op through seven green
+      sign-offs.
+  - name: test_tq600c_2_a_capped_offender_list_says_it_was_capped
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: >-
+      When more offenders exist than the guard lists, the output states that the
+      list was truncated and how many were omitted. A silent truncation makes the
+      reader believe they have seen the whole story.
+test_rationale: |
+  This is the AC the parent L1 singled out as mandatory, and its test contract
+  is written to be un-weakenable. The parent states plainly that a child
+  asserting "the budget check exists" or "the budget check passes" will be
+  rejected, because this repository has three documented cases of a guard that
+  reported clean forever while examining nothing.
+
+  So the over-budget input and the non-zero exit status are the primary
+  descriptor, and it is exercised through the guard's real command-line entry
+  point as a process. That is not ceremony: `fast_lane.py` shipped with no CLI,
+  so its runner's call was a silent no-op while its structural tests stayed
+  green, and the defect was found only by an agent that executed the code.
+
+  The within-budget control is not filler. Paired with the over-budget
+  descriptor it establishes the asymmetry that matters: the fail-unconditionally
+  injection turns the control red while leaving the headline descriptor green,
+  which is the only evidence that the verdict is a function of the input rather
+  than a constant. A guard that always fails is as useless as one that always
+  passes and is far more likely to be disabled.
+
+  The examined-count descriptor is deliberately duplicated across the failing
+  and passing paths, with the passing-path one naming its injection. Reporting
+  the count only when offenders were found is the natural implementation and it
+  omits the figure on precisely the path where it carries the information — the
+  shape all three filed precedents took.
+
+  No budget number appears anywhere in this contract. The post-fix baseline does
+  not exist yet; every descriptor supplies its budget through TQ-600c-3's
+  declared record, which is also what makes the verdict-flips descriptor
+  assertable at all.
+origin_agent: business-analyst
+created: 2026-09-21
+amended_by:
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-09-21
+  note: python-coder, M. The over-budget failing case is the primary descriptor and
+    is exercised through the guard's real command-line entry point as a process, against
+    the fast_lane.py precedent where a missing CLI made the runner's call a silent
+    no-op under green structural tests. Paired it with the within-budget control and
+    named the fail-unconditionally injection, so the asymmetry proves the verdict
+    is a function of the input. Required the examined count on the PASSING path too,
+    naming the report-only-on-findings injection. No budget number appears in the
+    contract. criteria untouched.
+- action: approved
+  agent: approve_acs
+  date: '2026-09-21'
+superseded_by: null
+covered_by:
+  - TQ-600c-2-i
+implemented_by: []
+change_target: code
+risk_surface: internal
+notes: |
+  THIS IS THE AC THE PARENT L1 SINGLED OUT AS MANDATORY. Its boundary states
+  plainly that a child asserting "the budget check exists" or "the budget check
+  passes" will be rejected, because this repository has three documented cases of a
+  guard that reported clean forever while examining nothing. The over-budget input
+  and the failing status are therefore in the criteria, where the it-po cannot
+  substitute a weaker test for them.
+
+  NAMING THE OFFENDERS IS WHAT MAKES THE GUARD WORTH HAVING, NOT DECORATION. The
+  measured concentration is extreme — the top 60 of 5318 tests are 3404s, 63% of
+  wall clock in 1.1% of the tests — so a short ranked list explains most of any
+  overrun. A guard that says only "too slow" hands the next person the same
+  multi-hour investigation that produced this goal, which is the cost it exists to
+  prevent.
+
+  NO NUMBER APPEARS IN THESE CRITERIA AND THAT IS DELIBERATE. "The budget in force"
+  is whatever TQ-600c-3 records; this AC is about the guard's behaviour either side
+  of that value. Writing a figure here would fix a budget against a baseline that
+  does not exist yet, since it depends on what TQ-600a and TQ-600b recover.
+
+  THE WITHIN-BUDGET CLAUSE IS NOT FILLER. A guard that always fails is as useless
+  as one that always passes and is far more likely to be disabled. The two clauses
+  together are what establish that the verdict is a function of the input.

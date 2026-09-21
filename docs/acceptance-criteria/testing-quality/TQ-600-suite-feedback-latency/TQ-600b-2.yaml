@@ -1,0 +1,238 @@
+id: TQ-600b-2
+components:
+  - testing_quality
+title: "No test keeps its scratch work at a fixed address two workers can both reach"
+component: testing-quality
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given the suite as it stands, in which some tests place their scratch files at a
+    fixed temporary path rather than at a path unique to the running test,
+  When every test that creates scratch files is examined,
+  Then each such test is found to use a scratch location that is unique to that one
+    test instance, so two workers running two tests at once cannot be handed the
+    same location,
+    And every test still using a fixed shared location is named, with the location
+      it uses, and the examination reports a failure rather than a note,
+    And the examination reports how many tests it inspected, so an examination that
+      inspected nothing is distinguishable from one that found nothing,
+    And when a test using a fixed shared location is deliberately introduced, the
+      examination names it and fails.
+depends_on:
+  - TQ-600b
+doc_links:
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      The failure angle is mandatory here — the last clause is the deliberately
+      introduced offender — and the real_artifact angle governs the examination,
+      which must run over the suite's actual test files rather than a fixture set.
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - >-
+    THE EXAMINATION RUNS OVER THE REAL SUITE, discovered by walking `tests/` and
+    `unit_tests/` — the 667 measured test files — never over a fixture corpus. It
+    must state the inspected count, and a run that inspected zero files is a
+    FAILURE, not a pass. This repo's AC-store validator globbed zero files and
+    exited 0 for eight days; the inspected count is the cheap defence.
+  - >-
+    IT MUST FAIL, NOT NOTE. Non-zero exit, with each offender named together with
+    the fixed location it uses. The criteria say "reports a failure rather than a
+    note" and a warning-level implementation does not satisfy them.
+  - >-
+    RECOGNISE THE SHAPES THAT ACTUALLY OCCUR, not just a literal "/tmp/" prefix.
+    At minimum: a hardcoded absolute temp path in a string literal;
+    `tempfile.gettempdir()` joined with a constant name; `tempfile.mkdtemp()` or
+    `NamedTemporaryFile` with a fixed `dir=` plus a fixed `prefix=` that is then
+    reused; and a module-level constant holding any of the above. A checker
+    matching only the first shape is the likely implementation and is
+    insufficient.
+  - >-
+    EXEMPTIONS MUST BE DATA-DRIVEN, NEVER BY NAME. If a site genuinely needs a
+    fixed location, it declares that at the site; there must be no hardcoded list
+    of exempt filenames in the checker. A name-keyed exemption list means a new
+    offender does not inherit the rule.
+  - >-
+    STATE WHICH MODE WAS CHOSEN — static inspection of test sources or runtime
+    observation of the paths tests actually open — and make the choice visible in
+    the output. A static examination must REPORT any file it could not parse
+    rather than skipping it silently, or its inspected count overstates what it
+    actually checked.
+  - >-
+    IF SHIPPED AS A COMMIT-GUARDIAN HOOK, the hook must be registered in
+    `commit_guardian.json`'s manifest AND any helper module it imports must be
+    added to the build deploy map. CLAUDE.md records the precedent: a hook
+    dependency omitted from the deploy map raises ModuleNotFoundError from the
+    deployed layout while the unit tests, which import from the source tree, stay
+    green. Note that adding a manifest entry makes this a package surface, which
+    would require this AC to be amended with `package_surface: true` and the
+    five-field structured spec first — raise that rather than adding the entry.
+  - >-
+    Must complete in seconds over 667 files so it can run on every commit or in
+    CI without re-introducing the cost this goal removes.
+delivers_to:
+  - agent: python-coder
+    ac_id: TQ-600b-1
+    contract: >-
+      A standing examination that removes the fixed-path collision class by
+      construction, so TQ-600b-1's equivalence run is not relied upon to surface
+      a timing-dependent defect it can only catch by luck.
+  - agent: documentation-expert
+    ac_id: TQ-600b-6
+    contract: >-
+      The per-test scratch-space rule as delivered, which is where TQ-600b-6's
+      guidance sends a contributor whose test turns out to be the one colliding.
+expects_from: null
+test_spec:
+  - name: test_tq600b_2_the_examination_reports_how_many_test_files_it_inspected
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: >-
+      The inspected count appears in the output and equals the number of test
+      files present under the scanned roots.
+  - name: test_tq600b_2_an_examination_that_inspected_nothing_fails_rather_than_reporting_clean
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: unit
+    angle: failure
+    description: >-
+      Pointed at an empty directory, or at a root whose discovery glob matches
+      nothing, the examination reports an inspected count of 0 and a failing
+      status. NAMED MUTATION: return success when the offender list is empty
+      without consulting the inspected count; this test must go RED.
+  - name: test_tq600b_2_a_deliberately_introduced_fixed_path_test_is_named_and_the_examination_fails
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: failure
+    description: >-
+      THE RED. A committed offender fixture that writes its scratch files to a
+      fixed location is placed in the scanned population; the examination exits
+      non-zero and names it together with the location it uses. An examination
+      that walks every file and recognises nothing passes every other descriptor
+      here.
+  - name: test_tq600b_2_the_four_fixed_path_shapes_are_each_recognised
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: >-
+      Parametrised over a hardcoded absolute temp path, `gettempdir()` joined
+      with a constant, a fixed `dir=` plus `prefix=` that is reused, and a
+      module-level constant holding such a path. NAMED MUTATION: match only a
+      literal "/tmp/" prefix; three of the four then pass unnoticed and this test
+      must go RED.
+  - name: test_tq600b_2_a_test_using_a_per_test_temporary_directory_is_not_reported
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: >-
+      The false-positive control. A test using pytest's per-test temporary
+      directory is silent. Without this the examination fires on the correct
+      population and is disabled.
+  - name: test_tq600b_2_a_file_the_examination_could_not_parse_is_reported_rather_than_skipped
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: unit
+    angle: failure
+    description: >-
+      An unparseable test file appears in the output as unexamined. NAMED
+      MUTATION: swallow the parse error and continue; the inspected count then
+      overstates what was checked and this test must go RED.
+  - name: test_tq600b_2_an_exemption_is_declared_at_the_site_and_never_by_file_name
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: unit
+    angle: seam
+    description: >-
+      A site carrying an explicit declaration is exempt; the same site without it
+      is reported, regardless of which file it lives in. NAMED MUTATION: add a
+      hardcoded list of exempt filenames; a newly added offender in an exempt file
+      is then missed and this test must go RED.
+  - name: test_tq600b_2_the_examination_runs_over_the_real_suite_and_names_its_current_offenders
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    description: >-
+      Executed against the actual `tests/` and `unit_tests/` tree, the
+      examination produces its own offender list and its own inspected count. NO
+      LITERAL EXPECTED COUNT: the assertion is that the inspected count matches
+      the files on disk and that the offender list is reproducible, not that it
+      holds any particular number.
+test_rationale: |
+  A fixed-path collision is timing-dependent: two workers must reach the same
+  path in the same instant. A parallel run can pass a hundred times and fail on
+  the hundred-and-first, so TQ-600b-1's equivalence run cannot be relied on to
+  surface this class. A standing examination catches the offender by
+  construction rather than by luck, and keeps catching it as tests are added —
+  which is why this is an examination rather than "run it and see".
+
+  The two anti-false-green descriptors are different defects and both are
+  needed. The inspected-count descriptor catches an examination whose file
+  discovery is broken and which therefore reports clean over an empty
+  population. The deliberately introduced offender catches an examination that
+  walks every file and recognises nothing. This repository has shipped both
+  shapes.
+
+  The four-shapes descriptor exists because the likely implementation matches a
+  literal "/tmp/" prefix and would miss three of the four forms that actually
+  occur in a Python suite. The exemption descriptor forbids a name-keyed
+  allowlist, so a new offender inherits the rule automatically instead of
+  hiding behind a filename someone exempted years earlier.
+
+  No literal offender count appears anywhere: the real-suite descriptor asserts
+  the examination's own reported figures against the files on disk, because the
+  current offender population was not enumerated at authoring time.
+origin_agent: business-analyst
+created: 2026-09-21
+amended_by:
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-09-21
+  note: python-coder, M. Enumerated the four fixed-path shapes a Python suite actually
+    produces, because the likely implementation matches only a literal "/tmp/" prefix
+    and misses three of them. Required exemptions to be declared at the site rather
+    than by filename, so a new offender inherits the rule. Flagged that a commit-guardian
+    manifest entry would make this a package surface needing a prior amendment. criteria
+    untouched.
+- action: approved
+  agent: approve_acs
+  date: '2026-09-21'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+notes: |
+  NAMED AS A BEHAVIOUR TO SATISFY, NOT A RISK TO NOTE. The parent L1's boundary
+  lists three collision sources and requires them addressed rather than assumed
+  away. This is the first of the three. The other two are TQ-600b-3 (git against
+  the real checkout) and TQ-600b-4 (shared result sinks).
+
+  WHY AN EXAMINATION AND NOT JUST "RUN IT AND SEE". A fixed-path collision is
+  timing-dependent: two workers must reach the same path in the same instant. A
+  parallel run can pass a hundred times and fail on the hundred-and-first, so
+  TQ-600b-1's equivalence run cannot be relied on to surface this class. A standing
+  examination catches the offender by construction rather than by luck, and keeps
+  catching it as tests are added.
+
+  THE LAST TWO CLAUSES ARE BOTH ANTI-FALSE-GREEN AND THEY DIFFER. The inspected
+  count catches an examination whose file discovery is broken and which therefore
+  reports clean over an empty population. The deliberately introduced offender
+  catches an examination that walks every file and recognises nothing. This repo
+  has shipped both shapes.
+
+  DELIBERATELY NOT SPECIFIED: whether the examination is a static inspection of
+  test sources or a runtime observation of the paths tests actually open. Either
+  can satisfy these criteria; the choice is the it-po's.

@@ -1,0 +1,255 @@
+id: TQ-600a-5
+components:
+  - testing_quality
+  - build_pipeline
+title: "A test that has not said which kind it is gets the safe kind"
+component: testing-quality
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a newly added test that needs a deployed copy of the package and that says
+    nothing about whether it intends to alter the package or only to read the result,
+  When that test is run,
+  Then it is given a copy of its own rather than the shared reference layout,
+    And the run reports that test by name as having taken the unshared path without
+      declaring why, so the omission is visible rather than merely tolerated,
+    And a test that does declare itself a reader is given the shared layout, so the
+      declaration is what selects the path and not the test's location or its name.
+depends_on:
+  - TQ-600a
+  - TQ-600a-1
+  - TQ-600a-2
+doc_links:
+  - path: CLAUDE.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      The standing rule instructs authors not to add new deploy sites and to
+      justify one in the ticket if they believe they need it. This AC makes the
+      undeclared case safe by default and visible, so the rule is not the only
+      thing standing between a new test and a corrupted shared layout.
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      The boundary angle: the two declared paths and the undeclared third case
+      must each be covered, since an implementation with only two branches is the
+      likely shape and silently routes the undeclared case to the shared layout.
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - >-
+    THE DECLARATION IS A FIRST-CLASS PER-TEST MARKER THE RUNNER READS, and it
+    must be REGISTERED in pytest.ini's `markers` section. An unregistered marker
+    is silently ignored under some configurations, which would make a typo in a
+    reader declaration indistinguishable from an honest omission — and the
+    omission path is the unshared one, so the typo would silently cost 59.8s
+    rather than erroring.
+  - >-
+    UNDECLARED MUST BE SAFE AND LOUD, NOT SAFE AND SILENT. The undeclared test
+    runs (fail-safe, not fail-fast, on the BA's recorded decision), receives its
+    own copy, and is named by node id in the run's own record along with a count
+    of how many such tests there were. Without the count the 77-site migration
+    has no progress measure.
+  - >-
+    UNDECLARED TESTS COUNT TOWARD THE MUTATOR TERM OF TQ-600a-6'S BOUND. Say so
+    explicitly in the implementation, or that bound silently tightens to exclude
+    them and starts failing for the wrong reason during the migration. The bound
+    lives on TQ-600a-6, not on TQ-600a-1, because it is an assertion over two
+    reported figures; this AC supplies part of the second one.
+  - >-
+    THE ROUTE MUST BE DECIDABLE AT FIXTURE-REQUEST TIME from the test item's
+    metadata, without importing or executing the test body.
+  - >-
+    ROUTING MUST NOT CONSULT THE TEST'S LOCATION OR ITS NAME, for either branch.
+    The cheapest wrong implementation — "anything matching test_bp_900g_8* gets
+    its own copy" — satisfies TQ-600a-1 and TQ-600a-2 as written and fails the
+    moment a fifth mutator appears under another name. Verified at enrichment:
+    that glob was a proxy for the known mutators, never a verified complete set.
+  - >-
+    An undeclared test must never be failed, errored or skipped by the routing
+    itself. The cost of the safe default is one extra 59.8s deploy until somebody
+    labels it; the reported name is what stops that becoming permanent.
+delivers_to:
+  - agent: python-coder
+    ac_id: TQ-600a-2
+    contract: >-
+      A per-test declaration — a registered pytest marker with reader and mutator
+      values — readable at fixture-request time, which is the sole routing input
+      TQ-600a-2 permits, plus the undeclared-test count that feeds TQ-600a-6's
+      relational bound.
+  - agent: python-coder
+    ac_id: TQ-600a-6
+    contract: >-
+      The count of tests that took the unshared path without declaring why, which
+      counts toward the second term of TQ-600a-6's bound
+      `reported_deploys <= 1 + unshared_routed` for as long as the migration of the
+      77 measured sites is incomplete.
+  - agent: documentation-expert
+    ac_id: TQ-600a-7
+    contract: >-
+      The declaration exactly as registered — the marker's spelling, its
+      permitted values, and the behaviour of the undeclared case — for the
+      guidance to quote rather than paraphrase. A documented marker differing by
+      one character from the registered one routes silently to the unshared path,
+      which is the expensive one and the one that produces no error.
+expects_from:
+  - ac_id: TQ-600a-1
+    contract: >-
+      The shared reference layout and the routing decision point at
+      fixture-request time, which this AC supplies the selector for.
+  - ac_id: TQ-600a-2
+    contract: >-
+      The unshared per-test package copy, which is the path an undeclared test is
+      routed to by default.
+test_spec:
+  - name: test_tq600a_5_an_undeclared_test_receives_its_own_copy
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: >-
+      A test that needs a deployed package and declares nothing is handed a
+      package root that is not the shared reference layout root.
+  - name: test_tq600a_5_an_undeclared_test_is_named_in_the_runs_own_record
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: >-
+      The run's own output and cost record name that test by node id as having
+      taken the unshared path without declaring why. Read the emitted record, not
+      an in-process structure.
+  - name: test_tq600a_5_a_test_declared_a_reader_receives_the_shared_layout
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: >-
+      The positive branch of the declaration, pinning the second of the three
+      cases.
+  - name: test_tq600a_5_a_test_declared_a_mutator_receives_its_own_copy
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: >-
+      The third case. An implementation with only two branches — declared reader
+      versus everything else — is the likely shape, and these three descriptors
+      together are what exclude it.
+  - name: test_tq600a_5_the_declaration_selects_the_path_not_the_file_name_or_location
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: failure
+    description: >-
+      A reader-declared test whose filename matches the mutator pattern still
+      receives the shared layout, and a mutator-declared test sitting alongside
+      the readers still receives its own copy. NAMED MUTATION: replace the marker
+      lookup with a filename or directory rule; this test must go RED while every
+      other descriptor here stays green.
+  - name: test_tq600a_5_the_run_reports_how_many_tests_were_undeclared
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: >-
+      The count appears in the run's record and equals the number of tests
+      actually routed undeclared, giving the migration a progress measure and
+      TQ-600a-6's bound part of its second term.
+  - name: test_tq600a_5_an_undeclared_test_still_runs_and_still_passes
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: >-
+      Fail-safe, not fail-fast. NAMED MUTATION: make the routing raise on an
+      undeclared test; this test must go RED. The decision to tolerate rather
+      than refuse was taken deliberately by the BA and is asserted here so a
+      later "helpful" hardening cannot silently reverse it.
+  - name: test_tq600a_5_the_marker_is_registered_so_a_misspelled_declaration_is_not_silently_ignored
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: unit
+    angle: seam
+    description: >-
+      The marker names appear in pytest.ini's registered markers, and a test
+      carrying a misspelled variant is reported rather than silently treated as
+      undeclared. NAMED MUTATION: remove the marker registration; this test must
+      go RED.
+test_rationale: |
+  The three cases — declared reader, declared mutator, undeclared — are one
+  boundary and all three must be covered, because the likely implementation has
+  only two branches and silently routes the undeclared case to the shared
+  layout. That is the corruption path TQ-600a-3 would then have to catch after
+  the fact.
+
+  The declaration-selects-the-path descriptor is the load-bearing one and names
+  its injection. Routing by filename pattern satisfies TQ-600a-1 and TQ-600a-2
+  exactly as written; only this descriptor distinguishes it from a real
+  declaration. The glob it would use was a proxy for the known mutators at
+  authoring time and was never verified to be the complete set.
+
+  The still-passes descriptor asserts a deliberate product decision rather than
+  a mechanism: fail-safe was chosen over fail-fast so that a future author's
+  first encounter with this machinery is not a hard stop. Recording it as a
+  test is what keeps a later hardening from reversing it silently.
+origin_agent: business-analyst
+created: 2026-09-21
+amended_by:
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-09-21
+  note: 'python-coder, M. Decided the declaration form the BA left to the it-po: a
+    registered pytest marker, with registration in pytest.ini''s markers section made
+    a testable requirement — an unregistered marker is silently ignored, which would
+    make a misspelled reader declaration indistinguishable from an honest omission.
+    Recorded that undeclared tests count toward TQ-600a-1''s mutator term. criteria
+    untouched.'
+- reason: 'Contract rewire only, from the split of TQ-600a-1 into fixture (TQ-600a-1)
+    + deploy-count reporting (TQ-600a-6). The undeclared-test count feeds the relational
+    bound, which moved to TQ-600a-6, so a delivers_to entry naming TQ-600a-6 was added
+    and the prose in the TQ-600a-2 entry now names TQ-600a-6 rather than TQ-600a-1.
+    The expects_from on TQ-600a-1 is unchanged — the shared layout and the routing
+    decision point are still fixture-side. NOTE FOR THE NEXT it-po PASS: it_requirement
+    3 still reads "TQ-600a-1''S BOUND"; the bound is now TQ-600a-6''s. criteria untouched.'
+  by: business-analyst
+  at: 2026-09-21
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-09-21
+  note: Second pass, acting on the BA's re-homing note. it_requirement 3 now names
+    TQ-600a-6's bound and says why it lives there (an assertion over two reported
+    figures); test_spec entry 6, stale by the same fact and not flagged, was re-homed
+    with it. Added the delivers_to entry for TQ-600a-7, which already expected the
+    declaration's exact form from here. Agent and complexity unchanged (python-coder,
+    M). criteria untouched.
+- action: approved
+  agent: approve_acs
+  date: '2026-09-21'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+notes: |
+  FAIL SAFE, NOT FAIL FAST, AND DELIBERATELY SO. The alternative — refusing to run
+  an undeclared test — was considered and rejected: it makes every future test
+  author's first encounter with this machinery a hard stop, and the cost of the
+  safe default is one extra 59.8s deploy for one test until somebody labels it.
+  The reported name is what stops that one deploy becoming permanent.
+
+  THE THIRD CLAUSE PREVENTS THE CHEAPEST WRONG IMPLEMENTATION. Routing by filename
+  pattern — "anything matching test_bp_900g_8* gets its own copy" — satisfies
+  TQ-600a-1 and TQ-600a-2 as written and fails the moment a fifth mutating test is
+  added under any other name. Requiring the declaration to be the selector closes
+  that.
+
+  SCOPE NOTE: what form the declaration takes is not specified here and is an
+  it-po decision. The criteria constrain only that some per-test declaration exists,
+  that it is what selects the path, and that its absence is safe and loud.

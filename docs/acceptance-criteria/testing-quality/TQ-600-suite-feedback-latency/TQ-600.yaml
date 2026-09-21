@@ -1,0 +1,99 @@
+id: TQ-600
+components:
+  - testing_quality
+  - build_pipeline
+title: "Get an answer from the test suite while you are still waiting for it"
+component: testing-quality
+level: L0
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  The suite answers fast enough that running it stays part of the work.
+
+  Today a full run takes an hour and a half, so in practice nobody waits for
+  one. The check that is supposed to tell you whether your change is safe is
+  skipped locally, deferred to somebody else's machine, or started and
+  abandoned — and a suite that is not run is not a safety net, whatever it
+  says when it eventually finishes. Worse, almost all of that time buys
+  nothing: the same expensive setup is rebuilt from scratch for test after
+  test, so the wait is mostly the suite repeating itself.
+
+  After this goal, a full run comes back quickly enough to sit through, the
+  expensive setup is paid for once rather than once per test, and the runtime
+  is watched so it cannot quietly creep back. Speed here is not a comfort —
+  it is what decides whether the suite is consulted before a change ships or
+  after it breaks something.
+depends_on: []
+doc_links:
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-09-21
+amended_by: []
+superseded_by: null
+covered_by:
+  - TQ-600a
+  - TQ-600b
+  - TQ-600c
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+notes: |
+  FOURTH TESTING-QUALITY AXIS — about the COST of getting a verdict, not its
+  truthfulness. Deliberately distinct from its four siblings; do not fold it
+  into any of them:
+
+    - TQ-100 (trustworthy test gate) governs WHICH failures are allowed to
+      block main. Says nothing about how long the run takes.
+    - TQ-300 (tooling coverage recovery) governs whether the package's own
+      tooling is tested AT ALL. A coverage question, not a latency one.
+    - TQ-400 (durable done proof) governs whether a done record is still
+      provable LATER. Re-checking over time, not speed of one run.
+    - TQ-500 (checks that can fail) governs whether a passing test COULD have
+      failed. Mutation-style proof strength, not runtime.
+    - TQ-600 (this goal) governs whether the verdict arrives soon enough to be
+      part of the loop. A suite can be perfectly trustworthy under all four
+      siblings and still be useless because nobody waits 90 minutes for it.
+
+  Evidence gathered at authoring time (2026-09-21, origin/main 624d39ac),
+  measured on this workspace rather than estimated:
+    - A full run is 5387.62s (1:29:47): 5292 passed, 2 failed, 5 skipped,
+      19 xfailed, 96 collection errors, 5318 tests collected.
+    - The top 60 tests account for 3404s — 63% of total wall clock in 1.1%
+      of the tests. The cost is extremely concentrated, so a small number of
+      targeted changes recover most of the time.
+    - One `python scripts/build.py --target-dir <tmp>` measures 59.8s. That
+      is the unit of cost.
+    - There are 77 `--target-dir` real-build invocation sites across 52 test
+      files. 77 x 59.8s is approximately the entire observed runtime.
+    - The suite contains ZERO `scope="session"` fixtures and only 15
+      module-scoped ones. Everything else is function-scoped, so a test that
+      merely needs to READ a deployed layout rebuilds one from scratch.
+      The 206.74s and 73.03s entries in the duration table are fixture
+      `setup`, not `call` — pure repetition.
+    - `unit_tests/test_bp_900g_8_ii.py` alone is ~10.5 min across four tests
+      (each runs a three-state build).
+    - Collection is 5.33s and the `pytest_ac_enforcement` plugin only fires
+      on failures — neither is a contributor. Ruled out by measurement, not
+      assumption.
+    - pytest-xdist is not installed and not in requirements-dev.txt; the
+      workload is process-spawn-bound and parallelises well.
+
+  Measurement caveat recorded honestly: the run shared a WSL host with other
+  agent activity, so the absolute 5387s may be inflated. The concentration
+  finding (63% in 60 tests) and the measured 59.8s build are independent of
+  host load and are the figures the children should be specified against.
+
+  Namespace rationale: filed under testing-quality as a sibling of TQ-100 /
+  TQ-300 / TQ-400 / TQ-500 because the subject is the usability of the test
+  suite as a safety net. It carries build_pipeline as a secondary component
+  because the dominant cost driver is build.py, which the fix must touch.
