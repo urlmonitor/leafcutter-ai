@@ -5,9 +5,9 @@ title: "Quick-fix workflow counts only intentional source changes, not auto-form
 component: build-pipeline
 level: L3
 status: active
-readiness: reviewed
+readiness: approved
 priority: medium
-work_status: todo
+work_status: done
 criteria: |
   Given the python-coder modifies "scripts/build_helpers.py" (the target),
   When the pre-commit hooks auto-format another file (e.g. adding a
@@ -33,15 +33,91 @@ it_requirements:
   - "Requires Claude Code >= 2.1.154 for JS workflow script support"
   - "Must handle errors gracefully per the project error handling policy"
   - "Must snapshot git diff --name-only before dispatching the coder, then diff again after — only net-new files count as intentional changes"
+test_spec:
+  - name: test_ac_bp600e1i_file_dirty_before_fix_phase_does_not_halt
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: >-
+      Driving quick-fix.js under the workflow harness with a baseline-dirty-snapshot
+      response naming a path, and a Fix response reporting that same path in
+      extra_files, does not halt: the run reaches the green phase and does not
+      report halt_reason scope_expansion.
+    covers:
+      - BP-600e-1-i
+  - name: test_ac_bp600e1i_baseline_snapshot_is_dispatched_before_the_fix_agent
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: unit
+    angle: seam
+    description: >-
+      The baseline-dirty-snapshot label is dispatched, and appears strictly before
+      python-coder/fix in the label sequence, so the snapshot is always taken
+      before the coder is given a chance to touch anything.
+    covers:
+      - BP-600e-1-i
+  - name: test_ac_bp600e1i_file_the_coder_newly_touched_still_halts
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: boundary
+    description: >-
+      A path absent from the pre-fix baseline still halts the run with
+      halt_reason scope_expansion, naming that path, while the baseline path
+      is filtered out of the reported extra_files — the exclusion narrows the
+      halt, it does not remove it.
+    covers:
+      - BP-600e-1-i
+  - name: test_ac_bp600e1i_unavailable_baseline_falls_back_to_the_three_artifact_exclusion
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: failure
+    description: >-
+      When the baseline-dirty-snapshot step itself returns blocked (carrying no
+      dirty_paths), the guard degrades to the pre-existing three-known-artifact
+      exclusion: a Fix response naming only ac_path, parent_ac_path and testFile
+      in extra_files still does not halt.
+    covers:
+      - BP-600e-1-i
+  - name: test_ac_bp600e1i_unavailable_baseline_still_catches_a_genuine_extra_file
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: failure
+    description: >-
+      An unavailable baseline snapshot does not widen into "nothing is scope
+      expansion" — a genuinely unrelated file in extra_files still halts the
+      run with halt_reason scope_expansion exactly as before this AC existed.
+    covers:
+      - BP-600e-1-i
+test_rationale: >-
+  The first and third tests must drive the workflow end-to-end through the
+  harness, not grep quick-fix.js for a filter expression, for the same
+  phantom-done reason recorded on BP-600e-1-ii: a presence-only source
+  assertion passes equally on a filter that matches nothing. Only a run that
+  supplies a pre-fix-dirty path and observes no halt proves the baseline
+  exclusion works, and only its negative twin (a path absent from the
+  baseline) proves the guard was narrowed rather than disabled. The fourth and
+  fifth tests are the failure-mode boundary the it_requirements imply but do
+  not test directly: an agent failure on the new baseline step must degrade
+  to today's behaviour in both directions — never silently excusing more, and
+  never halting on everything just because the new step itself failed.
 delivers_to: null
 expects_from:
   ac_id: BP-600e-1
   contract: "File-count check logic that compares pre-coder and post-coder git diff snapshots to isolate intentional changes"
 origin_agent: business-analyst-v3
 created: 2026-06-05
-amended_by: []
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-09-18'
 superseded_by: null
-covered_by: []
-implemented_by: []
+covered_by:
+  - unit_tests/workflows/test_quick_fix_scope_guard_baseline_exclusion.py
+implemented_by:
+  - templates/workflows-js/quick-fix.js
 change_target: pipeline
 risk_surface: internal

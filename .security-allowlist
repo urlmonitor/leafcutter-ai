@@ -96,7 +96,26 @@ ENTROPY_HIGH:unit_tests/test_bp_1100f_5.py:*
 ENTROPY_HIGH:unit_tests/test_setup_ticket_worktree.py:*
 ENTROPY_HIGH:unit_tests/workflows/test_bo2400c_context_bundle.py:*
 ENTROPY_HIGH:unit_tests/workflows/test_finalize_feature_preflight.py:*
-ENTROPY_HIGH:unit_tests/workflows/test_quick_fix_workflow.py:*
+# test_quick_fix_workflow.py was split into the nine files below (plus an
+# uncollected harness) when check-file-size refused its 1731 content lines
+# against the 400 limit. Its blanket glob is replaced by theirs rather than
+# dropped: these files ARE its contents, so the same long-CamelCase test-class
+# names that tripped ENTROPY_HIGH there trip it here. Only
+# test_quick_fix_ac_creation.py fires today; the rest are listed because the
+# pattern is identical and a later edit surfacing one should not block a commit
+# for a finding already triaged as a false positive. The names are deliberately
+# NOT reproduced here — quoting one makes this allowlist trip the scanner it
+# suppresses. Glob, not per-line, per CLAUDE.md: these files grow.
+ENTROPY_HIGH:unit_tests/workflows/_quick_fix_harness.py:*
+ENTROPY_HIGH:unit_tests/workflows/test_quick_fix_ac_creation.py:*
+ENTROPY_HIGH:unit_tests/workflows/test_quick_fix_commit_changelog_and_delivery.py:*
+ENTROPY_HIGH:unit_tests/workflows/test_quick_fix_diagnosis_and_fix.py:*
+ENTROPY_HIGH:unit_tests/workflows/test_quick_fix_escalation_and_topology.py:*
+ENTROPY_HIGH:unit_tests/workflows/test_quick_fix_green_phase_and_mutation_proof.py:*
+ENTROPY_HIGH:unit_tests/workflows/test_quick_fix_guard_halts.py:*
+ENTROPY_HIGH:unit_tests/workflows/test_quick_fix_red_phase.py:*
+ENTROPY_HIGH:unit_tests/workflows/test_quick_fix_verification_trust_boundary.py:*
+ENTROPY_HIGH:unit_tests/workflows/test_quick_fix_worktree_invariant.py:*
 # ACS-100i-7 baseline fixture: a recorded list of AC file paths and their
 # validator messages. The long hyphenated store paths trip the entropy
 # heuristic. Glob rather than per-line, since the file is regenerated when the
@@ -249,3 +268,29 @@ ENTROPY_HIGH:unit_tests/product_truth/test_uxp_700e_3_i.py:*
 # number moves whenever a helper is added above it, which is exactly what the
 # 2026-09-21 shared-harness extraction did.
 ENTROPY_HIGH:unit_tests/test_plan_feature_pt_phase.py:*
+
+# The known-issues split (2026-09-14) put each issue's id in its filename, its
+# frontmatter title, its description and its H1. A long kebab-case KI id reads to
+# the entropy detector as a high-entropy string, so the same slug trips it three
+# or four times in one file. These are ids, not secrets, and there is no credential
+# of any kind in a known-issues register.
+#
+# Glob, not per-line: these files are regenerated (the index) or will gain lines as
+# an issue is updated, so a line number would silently stop matching. Only the two
+# files that actually trip it are listed -- the rest of the 302-file tree scans
+# clean, and a blanket entry over the directory would be wider than the evidence.
+#
+# The underlying false positive is worth fixing at source rather than suppressing
+# forever: the detector has no notion that a hyphen-separated identifier is not a
+# key. Until then these two entries stop it blocking the register.
+ENTROPY_HIGH:docs/known-issues/commit-guardian.md:*
+ENTROPY_HIGH:docs/known-issues/testing-quality/open-high-ki-tq-20260831-mutation-probe-lands-in-the-wrong-copy.md:*
+
+# A keyword argument passing a module-level constant of edit-surface relationship
+# names into a helper call -- ordinary code, no credential (not reproduced here for
+# the same reason as the entries above: quoting it would trip the scanner this entry
+# suppresses). The long SCREAMING_SNAKE identifier reads as high entropy. Glob, not
+# per-line: the call sits mid-file and its line number moves whenever anything is
+# added above it. This module was carved out of generate_ticket_from_ac.py when the
+# 4035-line original was split to clear the 400-line size gate.
+ENTROPY_HIGH:scripts/ac_store/_gtfa_files_touched.py:*

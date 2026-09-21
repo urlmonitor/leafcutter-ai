@@ -82,6 +82,17 @@ DECISION HISTORY:
     unconditionally (the ACD-400a falsely-done-composite defect this repo has
     20 recorded instances of). L2/L3 leaves are untouched: the original
     direct-covers-tag requirement and its exact reason string still apply.
+  - 2026-09-17 [python-coder/BO-2500b-1-iii]: Replaced the L0/L1 ``level``
+    check with "``covered_by`` has at least one AC-id child"
+    (_composite_child_ids), matching done_proof.py's own
+    _verify_composite_eligible convention, since a done L2 composite (e.g.
+    UXP-700d-3) was refused for lacking a tag naming its own id. A same-day
+    follow-up then had to teach _composite_child_ids to exclude entries that
+    LOOK LIKE test-file paths (path separator or .py/.ts/.tsx extension):
+    this store also uses ``covered_by`` on a LEAF to record its own proving
+    test file(s) (e.g. this very AC's own record), and the first version of
+    the fix misread every such leaf's test path as an unresolved child,
+    which would have blocked this very commit.
 """
 from __future__ import annotations
 
@@ -261,6 +272,31 @@ def _collect_all_covered_ids(test_root: Path) -> set[str]:
     return covered
 
 
+def _composite_child_ids(covered_by: object) -> list[str]:
+    """Return the AC-id children of a ``covered_by`` value, excluding test paths.
+
+    BO-2500b-1-iii: the single place deciding which ``covered_by`` entries
+    count as composite children — shared by :func:`check_staged_done_proofs`
+    and :func:`_unproven_composite_children` so the two never disagree. This
+    store also uses ``covered_by`` on a LEAF to record its own proving
+    test-file path(s) (e.g. this very AC's own record) — an entry is that,
+    not an AC-id child, when it contains a path separator or ends in a
+    recognised test-file extension (mirroring, in spirit, the
+    store-resolvability convention ``done_proof.py::_has_resolvable_child``
+    already uses for the same distinction).
+
+    Args:
+        covered_by: The raw ``covered_by`` value from a parsed AC YAML
+            mapping (expected to be a list, but may be any YAML-parsed type).
+
+    Returns:
+        Entries that are NOT test-file paths. Empty when *covered_by* is not
+        a list, is empty, or holds only test paths — all three mean "this AC
+        is a leaf, not a composite".
+    """
+    return [e for e in map(str, covered_by if isinstance(covered_by, list) else []) if not re.search(r"[/\\]|\.(py|ts|tsx)$", e)]
+
+
 def _find_ac_root(yaml_path: Path) -> Path | None:
     """Return the ancestor ``acceptance-criteria`` directory of *yaml_path*.
 
@@ -345,16 +381,20 @@ def _unproven_composite_children(
 ) -> list[str]:
     """Return the ids of ``covered_by`` children that fail to prove a composite done.
 
-    Implements the BO-2500b-1-ii model: an L0/L1 composite's fulfilment is
+    Implements the BO-2500b-1-ii/iii model: a composite's fulfilment is
     DERIVED from its children rather than proven by a covers tag naming its
-    own id. A child proves itself when it is ``work_status: done`` AND either
-    (a) it is a leaf (L2/L3, or level unset) that itself carries a
-    ``# covers: <child-id>`` tag somewhere under the test root, or (b) it is
-    itself an L0/L1 composite whose own ``covered_by`` children all
-    recursively prove it via this same rule.
+    own id. Compositeness is a ``covered_by`` list containing at least one
+    AC-id child, at any level, matching
+    :func:`scripts.ac_store.done_proof._verify_composite_eligible` (used by
+    ``mark_ac_done.py``) — not by ``level`` alone, and never a test-file-path
+    entry (:func:`_composite_child_ids`, shared with
+    :func:`check_staged_done_proofs` so both agree). A child proves
+    itself when ``work_status: done`` AND either (a) it is a leaf (no AC-id
+    children) carrying its own ``# covers: <child-id>`` tag, or (b) it is a
+    composite whose own children all recursively prove it.
 
-    A composite is NEVER treated as proven unconditionally: an empty or
-    missing ``covered_by`` list has nothing to derive fulfilment from and is
+    A composite is NEVER treated as proven unconditionally: a ``covered_by``
+    with no AC-id children has nothing to derive fulfilment from and is
     reported as its own unproven id. This is the guard against the ACD-400a
     falsely-done-composite defect (20 recorded instances in this repo) —
     composites must be provably done via their children, not skipped.
@@ -371,17 +411,17 @@ def _unproven_composite_children(
             callers should not pass this.
 
     Returns:
-        Empty list when every child in ``covered_by`` is proven done and
-        covered; otherwise a list of the unproven child (or composite) ids.
+        Empty list when every AC-id child in ``covered_by`` is proven done
+        and covered; otherwise a list of the unproven child (or composite)
+        ids. Test-path entries never appear in the result.
     """
     seen = _seen if _seen is not None else set()
-    covered_by = data.get("covered_by") or []
-    if not isinstance(covered_by, list) or not covered_by:
+    child_ids = _composite_child_ids(data.get("covered_by"))
+    if not child_ids:
         return [str(data.get("id", "?"))]
 
     unproven: list[str] = []
-    for child_id in covered_by:
-        child_id_str = str(child_id)
+    for child_id_str in child_ids:
         if child_id_str in seen:
             continue
         seen.add(child_id_str)
@@ -398,12 +438,10 @@ def _unproven_composite_children(
             unproven.append(child_id_str)
             continue
 
-        child_level = str(child_data.get("level") or "").upper()
-        if child_level in ("L0", "L1"):
+        child_composite_children = _composite_child_ids(child_data.get("covered_by"))
+        if child_composite_children:
             unproven.extend(
-                _unproven_composite_children(
-                    child_data, ac_root, all_covered_ids, _seen=seen
-                )
+                _unproven_composite_children(child_data, ac_root, all_covered_ids, _seen=seen)
             )
         elif child_id_str not in all_covered_ids:
             unproven.append(child_id_str)
@@ -565,14 +603,14 @@ def _get_changed_ac_yaml_paths(base_ref: str, project_root: Path) -> list[Path]:
 # ---------------------------------------------------------------------------
 
 
-# UXP-700d-2: the project's own product root. An AC whose `product` field is set
-# and differs from this describes an example product shipped alongside the
-# project's own record, not the project's own work. A done-proof gate that
-# demands a covering test from such a record is picking the example product up
-# as work, which is what UXP-700d-2 exists to stop -- the ready-leaf scanner
-# already sets the same records aside. Ownership is decided by `product` alone
-# and never by component/components: the example and real criteria routinely
-# share a component (UXP-700d-2-ii).
+# UXP-700d-2: the project's own product root. An AC whose `example_product` field
+# is set and differs from this describes an example product shipped alongside the
+# project's own record, not the project's own work (ADR-044/UXP-700d-3-i renamed
+# this from `product`). A done-proof gate that demands a covering test from such
+# a record is picking the example product up as work, which is what UXP-700d-2
+# exists to stop -- the ready-leaf scanner already sets the same records aside.
+# Ownership is decided by `example_product` alone and never by
+# component/components: the example and real criteria routinely share a component.
 _PROJECT_PRODUCT: str = "leafcutter"
 
 
@@ -583,10 +621,10 @@ def _is_example_content(data: dict) -> bool:
         data: Parsed AC record.
 
     Returns:
-        True when ``product`` is set and differs from :data:`_PROJECT_PRODUCT`.
+        True when ``example_product`` is set and differs from :data:`_PROJECT_PRODUCT`.
     """
-    product = data.get("product")
-    return bool(product) and product != _PROJECT_PRODUCT
+    example_product = data.get("example_product")
+    return bool(example_product) and example_product != _PROJECT_PRODUCT
 
 
 def check_staged_done_proofs(
@@ -603,17 +641,19 @@ def check_staged_done_proofs(
     hook.  Only ACs staged as ``done`` are evaluated (bounded blast radius);
     ACs in any other work_status are silently ignored.
 
-    Level-aware for composites (BO-2500b-1-ii): a done AC whose ``level`` is
-    ``"L0"`` or ``"L1"`` is a composite whose fulfilment is DERIVED from its
-    ``covered_by`` children rather than proven by a tag naming its own id —
-    such a tag may never legitimately exist, since the composite's
-    implementation lives under each child's own covers tag by construction.
-    A composite is reported as a violation (naming the unproven child) only
-    when at least one of its children is not itself done-and-covered; it is
-    never skipped unconditionally (see :func:`_unproven_composite_children`
-    for the ACD-400a falsely-done-composite guard). An L2/L3 leaf (or any AC
-    with no ``level``/an unrecognised one) keeps the original, unchanged
-    direct-covers-tag requirement below.
+    Composite-aware (BO-2500b-1-ii/iii): a done AC whose ``covered_by``
+    contains at least one AC-id child — at any level, matching
+    :func:`scripts.ac_store.done_proof._verify_composite_eligible` used by
+    ``mark_ac_done.py`` — is a composite whose fulfilment is DERIVED from its
+    children rather than a tag naming its own id, which may never
+    legitimately exist. A composite is a violation (naming the unproven
+    child) only when at least one child is not done-and-covered; never
+    skipped unconditionally (see :func:`_unproven_composite_children` for
+    the ACD-400a guard). ``covered_by`` entries that look like test-file
+    paths (:func:`_composite_child_ids`) are never AC-id children — this
+    store also uses ``covered_by`` on a LEAF to record its own proving test
+    file(s) — so a leaf (empty ``covered_by``, or one holding only test
+    paths) keeps the original direct-covers-tag requirement below.
 
     On the leaf path only, ACs with ``test_required: false`` (the Python
     boolean ``False``, not the string ``"false"``) are silently exempted and
@@ -674,8 +714,7 @@ def check_staged_done_proofs(
             continue
         ac_id_str = str(ac_id)
 
-        level = str(data.get("level") or "").upper()
-        if level in ("L0", "L1"):
+        if _composite_child_ids(data.get("covered_by")):
             ac_root = _find_ac_root(yaml_path)
             unproven = _unproven_composite_children(data, ac_root, all_covered_ids)
             if unproven:
@@ -683,9 +722,8 @@ def check_staged_done_proofs(
                     {
                         "ac_id": ac_id_str,
                         "reason": (
-                            f"composite {ac_id_str} is marked done but its "
-                            "covered_by children are not all done-and-covered "
-                            f"— unproven: {', '.join(unproven)}"
+                            f"composite {ac_id_str} is marked done but its covered_by "
+                            f"children are not all done-and-covered — unproven: {', '.join(unproven)}"
                         ),
                     }
                 )

@@ -203,20 +203,20 @@ def _is_approved(ac: AcRecord) -> bool:
 def _is_example_content(ac: AcRecord) -> bool:
     """Return True when the AC describes an example product, not the project's own record.
 
-    Ownership is decided by the AC's ``product`` field alone (a product-root
-    marker), never by ``component``/``components`` — the example criteria and
-    real criteria in this store routinely share a component (UXP-700d-2-ii).
-    An AC with no ``product`` field is the project's own record.
+    Ownership is decided by the AC's ``example_product`` field alone (a
+    product-root marker, ADR-044), never by ``component``/``components`` —
+    the example criteria and real criteria in this store share a component
+    (UXP-700d-2-ii). No ``example_product`` field means the project's own.
 
     Args:
         ac: Parsed AC dict.
 
     Returns:
-        True when ``product`` is set and differs from the project's own
-        product root (:data:`_PROJECT_PRODUCT`).
+        True when ``example_product`` is set and differs from the project's
+        own product root (:data:`_PROJECT_PRODUCT`).
     """
-    product = ac.get("product")
-    return bool(product) and product != _PROJECT_PRODUCT
+    example_product = ac.get("example_product")
+    return bool(example_product) and example_product != _PROJECT_PRODUCT
 
 
 # ---------------------------------------------------------------------------
@@ -1026,7 +1026,7 @@ def main(argv: list[str] | None = None) -> int:
 
     # Filter: level + work_status + status + readiness (approved only)
     # UXP-700d-2: ACs describing an example product (product-root marker,
-    # e.g. product: fern-and-fig) are set aside before ready/blocked
+    # e.g. example_product: fern-and-fig, ADR-044) are set aside before ready/blocked
     # classification — they must appear in neither set, and the count of
     # what was set aside is reported in the JSON output.
     filtered: list[AcRecord] = []
@@ -1150,5 +1150,8 @@ DECISION HISTORY
   records remain fully readable via _load_ac_by_id() (ADR-022). config/
   ac_store_schema.json gained a matching optional `product` property so the
   marker itself does not trip schema validation. (#UXP-700d-2)
+- 2026-09-17 [python-coder]: `product` renamed to `example_product`
+  (ADR-044/UXP-700d-3-i) in lockstep with the 18 AC files, the schema, and
+  check_done_proof.py's copy of this predicate. (#UXP-700d-3-i)
 ====================================================================
 """

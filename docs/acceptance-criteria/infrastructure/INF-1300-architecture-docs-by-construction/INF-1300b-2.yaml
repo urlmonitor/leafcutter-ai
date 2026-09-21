@@ -1,0 +1,201 @@
+id: INF-1300b-2
+title: "The explanatory key explains the notation this kind of picture uses, and is the same for every document of that kind"
+component: infrastructure
+components:
+  - documentation_system
+  - infrastructure
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+created_by: "docs/acceptance-criteria/infrastructure/INF-1300-architecture-docs-by-construction/INF-1300b.yaml"
+criteria: |
+  Given a document is produced for a given kind of picture,
+  When its explanatory key is read against the picture skeleton produced with it,
+  Then the key has one entry for each notation element the skeleton uses, and no
+    entry for notation the skeleton does not use,
+  And each entry states what that element of the notation means in general — what
+    a boundary encloses, what an arrow asserts, what a lifeline stands for — and
+    not what any particular box or arrow in this document stands for, which is
+    left for the author,
+  And producing a second document of the same kind yields a key with the same
+    entries, while producing a document of a different kind yields a key with
+    different entries, so the key follows the kind of picture rather than being
+    one fixed block reproduced in every document,
+  And the key's content is derived from the project's own declared vocabulary of
+    kinds and the skeletons it publishes for them: no part of the produced key,
+    and no instruction accompanying it, attributes the key to a source document
+    that does not define one.
+depends_on:
+  - INF-1300b
+doc_links:
+  - path: docs/acceptance-criteria/infrastructure/INF-1300-architecture-docs-by-construction/INF-1300b.yaml
+    relationship: parent
+    status: exists
+  - path: docs/architecture/components/knowledge-management.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      MEASURED EVIDENCE FOR THE THIRD CLAUSE. Its key is an element key for a C4 component
+      picture — a two-column table naming what a boundary, a component and an external
+      system mean in that notation. It is not the same table as the one in the flowchart
+      document below, and no single fixed block could be both.
+  - path: docs/architecture/components/build-epic-workflow-dispatch.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      The counter-example that settles it. Its key is a shape key for a flowchart — what a
+      top-down flow, a solid arrow and a decision diamond mean. Placed beside the C4
+      element key above, the two demonstrate that the key is per-notation and cannot be one
+      block the author is forbidden to alter.
+  - path: docs/architecture/diagrams/c3-005-artifact-knowledge-graph.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      The third shape found in the collection: two three-column tables classing the edges
+      of that particular graph by how far each may be trusted. That is per-diagram content
+      an author wrote, not notation. It is named here to mark the line this record's second
+      clause draws — the notation is produced, what a particular element stands for is
+      authored.
+  - path: templates/skills/write-c4-diagram/SKILL.md
+    relationship: specifies
+    status: exists
+    relevance: >-
+      Section 4 step 4 states the key is populated from ADR-015 and must remain verbatim.
+      VERIFIED FALSE IN THIS WORKTREE: ADR-015 is about honouring an inline suppression of
+      an exception-handling rule and defines no key; no document in the ADR directory
+      defines one. This record's last clause exists because a criterion reproducing a key
+      from a document that does not describe one could not be implemented or tested.
+      Correcting the statement on the surface is INF-1300b-4's.
+  - path: config/diagram_types.json
+    relationship: specifies
+    status: exists
+    relevance: >-
+      The declaration the key is derived from, one key per declared kind. Named as the
+      source in place of the absent one, so the derivation has somewhere real to start.
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+    relevance: "The angle taxonomy this record's test_spec classifies against; the fixed-block detector is a criterion-angle comparison between kinds, and the derivation proof is a real_artifact movement test."
+origin_agent: BrainCandy
+created: 2026-09-14
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-09-14'
+superseded_by: null
+covered_by: []
+implemented_by: []
+assigned_agent: python-coder
+estimated_complexity: M
+change_target: code
+risk_surface: contract_boundary
+test_required: true
+it_requirements:
+  - "THERE IS NO CANONICAL LEGEND TO REPRODUCE AND NONE MAY BE INVENTED AS ONE. Verified in this worktree: ADR-015 is ADR-015-guard-honors-noqa-ble001.md, about honouring an inline suppression of an exception-handling rule, and no ADR in the directory defines a diagram key. The corpus carries three unrelated shapes under `## Legend` — a C4 element key, a flowchart shape key, and per-diagram edge-trust tables. Any implementation that emits one fixed block, from any source, is wrong on the merits and not merely unsourced: a key correct above a C4 component picture is simply wrong above a flowchart. Do not author a 'canonical legend' file as a way of making a verbatim rule implementable."
+  - "THE KEY IS DERIVED FROM THE NOTATION THE EMITTED SKELETON ACTUALLY USES, per kind, at run time. The correspondence must be exact in both directions: one entry for each notation element the skeleton uses, and no entry for notation it does not. That bidirectionality is what prevents the derivation degrading into a per-kind constant that happens to be right today and drifts the moment a skeleton changes."
+  - "GENERAL MEANING IS PRODUCED; PER-ELEMENT MEANING IS AUTHORED. Each entry states what that element of the notation means for any document of that kind — what a boundary encloses, what an arrow asserts, what a lifeline stands for. No entry may name an identifier that appears only in this document's own skeleton body; that is content the author supplies, and INF-1300b-3 owns marking the place where they supply it."
+  - "NO PRODUCED TEXT, AND NO INSTRUCTION SHIPPED ALONGSIDE IT, MAY ATTRIBUTE THE KEY TO A SOURCE THAT DOES NOT DEFINE ONE. Concretely: the produced document must not cite ADR-015 for the key. Retiring the same false attribution from the two authoring surfaces is INF-1300b-4's, and the two must land in the same change — correcting the instruction without building the derivation leaves an accurate description of nothing, and building the derivation without correcting the instruction leaves the next author reading that the key comes from a document about exception handling."
+  - "THE DERIVATION MUST BE OBSERVABLE AS A DERIVATION, NOT INFERRED FROM READING THE CODE. A producer holding one hard-written block per kind and a producer deriving each key from the declaration are indistinguishable by inspection. They are distinguished by adding a kind to the declaration and observing the key follow — the same movement construction INF-1300a-3 and INF-1300a-4 use, and the arm INF-1300d-1-i owns in full."
+  - "THE KIND SET COMES FROM INF-1300a-4's SINGLE RUN-TIME ENUMERATION, never a list written into this emitter or its tests."
+  - "Deterministic: the same kind yields a byte-identical key on every run."
+  - "Error handling per the project error-handling policy (CLAUDE.md rules 1-4)."
+test_spec:
+  - name: test_key_entries_exactly_cover_the_notation_the_skeleton_uses
+    target_dir: unit_tests/docs/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    description: "For each produced document, parse the notation elements out of the emitted mermaid fence and require the key's entry set equal to that set in both directions — no entry for unused notation, no used notation without an entry."
+  - name: test_two_documents_of_the_same_kind_have_identical_keys
+    target_dir: unit_tests/docs/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "Two productions of the same kind, differing in every request input, yield byte-identical key blocks."
+  - name: test_two_documents_of_different_kinds_have_different_keys
+    target_dir: unit_tests/docs/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "THE FIXED-BLOCK DETECTOR — a C4-family kind and a flowchart-family kind produce keys that are not identical; a single reproduced block reveals itself here and nowhere else."
+  - name: test_no_key_entry_names_a_this_document_only_identifier
+    target_dir: unit_tests/docs/
+    framework: pytest
+    type: unit
+    angle: boundary
+    description: "No key entry mentions an identifier that appears only in this document's skeleton body, enforcing the produced-general versus authored-particular line."
+  - name: test_no_produced_text_attributes_the_key_to_a_non_defining_document
+    target_dir: unit_tests/docs/
+    framework: pytest
+    type: integration
+    angle: failure
+    description: "Sweep the produced document for any ADR or document citation attached to the key; each cited document must exist and define what is attributed to it. ADR-015 appearing as the key's source fails."
+  - name: test_key_follows_a_kind_added_to_the_declaration
+    target_dir: unit_tests/docs/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    description: "Adding a kind to the diagram_types.json the run resolves yields a key for it derived from its skeleton, with no edit to the emitter; the arm that separates derivation from one hard-written block per kind."
+test_rationale: >-
+  Reading the producer cannot settle this record. A producer holding one hard-written key
+  per kind and a producer deriving each key from the declaration emit identical output on
+  every single run and are indistinguishable by inspection; only adding a kind separates
+  them, which is why the movement descriptor is present here and not left entirely to
+  INF-1300d-1-i. The different-kinds comparison is the second irreplaceable arm and the one
+  the present authoring instruction would have failed: the surfaces say the key is a fixed
+  block reproduced verbatim, and the six documents in the corpus that carry a key carry at
+  least three different shapes, so "emit a fixed block" is not merely unsourced but the
+  wrong requirement. The bidirectional notation-coverage assertion is what keeps a derived
+  key honest after the skeletons move; a one-directional check passes on a key that has
+  grown stale entries.
+delivers_to:
+  agent: llm-expert
+  contract: "The per-kind explanatory key as the means actually emits it, together with its real derivation source — config/diagram_types.json plus the per-kind skeleton, NOT ADR-015, which defines no key. INF-1300b-4 corrects the two authoring surfaces against this, and the two must land in the same change."
+expects_from:
+  ac_id: INF-1300a-1
+  contract: "The generator CLI and the per-kind skeleton emitter from INF-1300a-1's delivers_to; the key is derived from the notation that skeleton uses, so a change to the skeleton must be visible to the key derivation at run time rather than requiring a second edit. INF-1300b-1's single section-shape declaration fixes where the key sits, and INF-1300a-4's enumeration fixes the kind set."
+notes: |
+  HOW THE DANGLING REFERENT WAS RESOLVED, AND WHY THE "VERBATIM" RULE COULD NOT SURVIVE.
+  Both authoring surfaces say the key is populated from ADR-015 and that the author must
+  not alter it. Two things are wrong with that and they are wrong independently. First, the
+  source does not exist: ADR-015 in this repository concerns inline suppression of an
+  exception-handling rule, and no ADR defines a diagram key — verified by reading the
+  directory. A criterion citing it would be unimplementable, so none does. Second, and more
+  interesting: even a real source could not supply one fixed block. The six documents in the
+  collection that carry a key carry at least three different things — a C4 element key, a
+  flowchart shape key, and a pair of per-diagram edge-trust tables. Notation differs by kind
+  of picture, so a key that is correct for a C4 component picture is simply wrong above a
+  flowchart. "Emit a fixed block the author must not modify" is therefore not merely
+  unsourced; it would be the wrong requirement if it had a source.
+
+  THE RESOLUTION, STATED SO IT CANNOT BE READ TWO WAYS. The key is PRODUCED and is
+  per-kind: it covers exactly the notation that kind's skeleton uses, with general meanings
+  that hold for any document of that kind. What each particular element of THIS document
+  stands for is AUTHORED. The produced part is stable and the author has no reason to
+  rewrite it; the authored part is the point of writing the document at all. INF-1300b-3
+  owns making that line visible in the document itself, so "do not modify the key" becomes
+  an instruction an author can actually follow rather than one that forbids completing the
+  document.
+
+  FALSIFIABILITY. Produce two documents of the same kind and two of different kinds. Read
+  each key against the skeleton produced beside it. The record is falsified when the key
+  names notation the skeleton does not use, when the skeleton uses notation the key does
+  not name, when the two same-kind keys differ, or when the two different-kind keys are
+  identical — that last one is how a single fixed block reveals itself, and it is the
+  observation the present instruction would have failed. It is also falsified by any
+  produced text attributing the key to a source document that does not define one. Note
+  what will NOT falsify it: reading what produces the key. A producer holding one hard-
+  written block per kind and a producer deriving each key from the declaration are
+  indistinguishable by inspection and distinguishable by adding a kind to the declaration —
+  which is INF-1300d-1-i's arm, and is the reason that arm is worth its own record.
+
+  FENCED. The key's PLACE in the document is INF-1300b-1's. The correction of the false
+  statement on the two authoring surfaces is INF-1300b-4's. This record owns the key's
+  content and its derivation, and nothing else.
+
+  NOT AUTHORED HERE, BY DESIGN: assigned_agent, estimated_complexity, it_requirements,
+  test_spec, test_rationale, delivers_to and expects_from. Those are the IT PO's.

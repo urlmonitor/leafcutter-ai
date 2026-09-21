@@ -1,0 +1,77 @@
+id: KM-KGS-100a-3-iv
+components:
+  - knowledge_management
+readiness: approved
+priority: high
+title: "A test-function suffix on a coverage item survives reading intact"
+component: knowledge-management
+level: L3
+status: active
+req_status: draft
+work_status: done
+roadmap_phase: phase_1
+created_by: "docs/acceptance-criteria/knowledge-management/KM-KGS-100-knowledge-graph-surfaces/KM-KGS-100a-3.yaml"
+criteria: |
+  Given an acceptance-criterion record whose covered_by field is declared as a block
+    list holding the single unquoted item
+    unit_tests/test_alpha.py::test_beta_returns_two_items
+  And a second record declaring that same item double-quoted
+  When each record's frontmatter is read for relationship extraction
+  Then the value obtained for covered_by is the one-item list
+    ["unit_tests/test_alpha.py::test_beta_returns_two_items"] for both records
+  And the ::test_beta_returns_two_items portion appears in full in that item
+  And the item is not split into two entries at the colon characters
+depends_on:
+  - KM-KGS-100a-3
+  - KM-KGS-100a-3-iii
+doc_links:
+  - path: scripts/knowledge_query.py
+    relationship: describes
+    status: exists
+  - path: docs/reference/ac-schema.md
+    relationship: context
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "The AC schema states covered_by items may carry an optional ::test_function suffix, so the double colon is part of the declared value space and is not a key/value separator inside a sequence item."
+  - "A line-oriented reader that splits a list item on the first colon would truncate this value. The criterion exists to pin that no such split happens, in both the quoted and unquoted forms, because the quoted form exercises a different code path (see KM-KGS-100a-3-iii)."
+  - "Standard-library-only constraint applies (KM-KQS-007)."
+  - "SCOPE-NEUTRAL: no assertion is made about whether the suffix is later kept, stripped, or resolved for any downstream purpose."
+test_spec:
+  - name: test_unquoted_covered_by_item_keeps_test_function_suffix
+    target_dir: unit_tests/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: "An unquoted block-list item unit_tests/test_alpha.py::test_beta_returns_two_items reads to exactly that one-item list"
+  - name: test_double_quoted_covered_by_item_keeps_test_function_suffix
+    target_dir: unit_tests/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: "The same item declared double-quoted reads to the same one-item list, with the ::test_beta_returns_two_items portion present in full"
+  - name: test_test_function_suffix_item_not_split_at_colons
+    target_dir: unit_tests/
+    framework: pytest
+    type: unit
+    angle: boundary
+    description: "For both the quoted and unquoted files the covered_by value has exactly one item; it is not split into entries at the colon characters"
+test_required: true
+test_rationale: >-
+  Quoted and unquoted items take different read paths (see KM-KGS-100a-3-iii), so both forms
+  are exercised from real files, and the item count is asserted separately so a colon split
+  cannot hide behind a substring match. Asserts the parsed value only; whether the suffix is
+  later kept, stripped or resolved is out of scope.
+delivers_to: null
+expects_from:
+  ac_id: KM-KGS-100a-3
+  contract: "The frontmatter field values of a single acceptance-criterion record, read from disk prior to any edge-target resolution"
+origin_agent: business-analyst
+created: 2026-09-16
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary

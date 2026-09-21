@@ -83,6 +83,7 @@ AC: BO-3000 (docs/acceptance-criteria/build-orchestration/BO-3000.yaml)
 
 from __future__ import annotations
 
+import json
 import sys
 from pathlib import Path
 
@@ -102,6 +103,10 @@ _TIMEOUT = 30  # seconds; all agent() calls are synchronous mocks
 
 _TICKET_ABS_PATH = "/tmp/bo3000-worktree/tickets/01_todo/07_ticket.md"
 _WORKTREE_ABS_PATH = "/tmp/bo3000-worktree"
+# BO-4000: build-feature.js checks resolve-target's own worktree_path via a
+# repo-facts call before reusing it; this reports it reusable so the run
+# reuses _WORKTREE_ABS_PATH exactly as before that check existed.
+_WORKTREE_FACTS_RESOLVED = {"output": json.dumps({"exists": True, "is_git_toplevel": True, "is_linked_worktree": True, "is_main_checkout": False, "same_repository": True, "branch": "fixture"}), "exit_code": 0}
 
 
 # ---------------------------------------------------------------------------
@@ -142,6 +147,7 @@ def test_handoff_reroutes_to_named_agent_and_blocks_advance_in_build_feature():
             "ticket_path": _TICKET_ABS_PATH,
             "worktree_path": _WORKTREE_ABS_PATH,
         },
+        "worktree-facts-resolved": _WORKTREE_FACTS_RESOLVED,
         "worktree-setup": {
             "worktree_path": _WORKTREE_ABS_PATH,
             "status": "reused",
@@ -322,6 +328,7 @@ def test_handoff_with_unparseable_target_still_blocks_advance_in_build_feature()
             "ticket_path": _TICKET_ABS_PATH,
             "worktree_path": _WORKTREE_ABS_PATH,
         },
+        "worktree-facts-resolved": _WORKTREE_FACTS_RESOLVED,
         "worktree-setup": {
             "worktree_path": _WORKTREE_ABS_PATH,
             "status": "reused",

@@ -55,6 +55,10 @@ Checks performed:
      how many pointers it resolved (including zero), so a run that resolved
      none is distinguishable from a run that resolved some and found none of
      them broken.
+ 12. FRESHNESS (WARNING): every confirmed journey's described things are
+     compared against their CURRENT content; a moved thing reports the journey
+     behind (never an error). A BEHIND verdict is made durable on the journey
+     as a `behind` mark, written/removed by `_sync_behind_marks` (ADR-043).
 
 SCHEMA VALIDATION IS MANDATORY: jsonschema is a hard dependency. When it is not
 importable the validator exits non-zero (2) up front rather than warn-and-skip —
@@ -193,10 +197,84 @@ DECISION HISTORY
   the contract line states each bound's measured count and enforcement. --tighten
   BOUND is refused, naming the holdouts, while any artifact is on an older shape
   version. (#EPIC-TruthfulProjectRecord/38, /40)
+- 2026-09-16 [python-coder]: UXP-700d-4 -- run_checks() now states, per artifact
+  type, how many of its records belong to the project versus the example
+  product (product_truth_outcome.compute_type_population, built on UXP-700d-1's
+  is_example_artifact_id). main() derives example_only_types from it and both
+  land on the existing stdout contract line. A both-zero type is never reported
+  example-only -- it stays in the pre-existing empty_types vocabulary instead.
+  (#EPIC-TruthfulProjectRecord/36)
+- 2026-09-16 [python-coder]: UXP-700c-2 / UXP-700c-2-ii -- added check 12
+  (FRESHNESS: _ac_content_signature/_check_freshness) and the ADR-043
+  write/remove helper (_resolve_flow_path/_behind_mark_for/_sync_behind_marks),
+  wiring the latter into run_checks()/main() -- resolving the blocker left
+  when the halted run's backup added the helper but never called it. Fixed a
+  real defect along the way: an AC id named in a journey's `confirmed.state`
+  that had since vanished from the AC store fell back to `ac_records.get(id,
+  {})`, an empty signature that never matches, wrongly reporting the journey
+  BEHIND; vanished ids now route to a distinct `[freshness-unresolvable]`
+  warning instead (mirrors `_check_pointers`'s unresolvable/broken split).
+  TRIED extracting all five freshness/behind-mark functions to a sibling
+  product_truth_freshness.py for ratchet headroom (this file's usual escape
+  valve) -- REVERTED after it produced a genuine, reproduced-only-under-the-
+  full-suite bug: unit_tests/product_truth/test_uxp_700a_1.py deliberately
+  pops `validate_product_truth` from sys.modules in its own cleanup (testing
+  fresh-install import behaviour), and ANY later cross-module re-import (a
+  plain deferred `import`, or a registered STORE-provider closure -- both
+  tried) can end up bound to a DIFFERENT validate_product_truth module object
+  than the one a test patched `vpt.STORE` on, silently losing the patch.
+  Keeping these five functions inline, reading `STORE` as a plain same-module
+  global exactly like generate_product_truth.py's `gpt.STORE` pattern every
+  sibling test already relies on, is the only reliable fix -- and is what
+  ADR-043 SS10 already requires ("the write/remove helper MUST live in
+  validate_product_truth.py, in the same module as UXP-700c-2's verdict
+  computation... A parallel script MUST NOT be created"), a constraint the
+  halted run's own two python-coder passes on these same tickets independently
+  honoured the same way. To bring the file back under its 400-content-line
+  ratchet with the freshness/behind-mark code staying inline, moved OTHER,
+  unrelated, STORE-independent code out instead: `OUTCOME_BY_COMBO`,
+  `_validate_schema`, and two new pure functions (`validate_eval_rows`,
+  `check_mock_data_ref`, extracted from `_check_eval`'s row loop and
+  run_checks()'s mock_data_ref cross-check respectively) now live in
+  product_truth_checks.py -- see that file's own DECISION HISTORY -- and are
+  re-imported here so `vpt._validate_schema` / `vpt.OUTCOME_BY_COMBO` still
+  resolve exactly as before. Finished by hand from the halted /build-feature
+  run's backup at the user's direction. (#EPIC-TruthfulProjectRecord/21)
+  (#EPIC-TruthfulProjectRecord/23)
+- 2026-09-17 [python-coder]: UXP-700d-3-ii -- added the example_product
+  cross-check (ADR-044 sec 6-7). This file stood at 399/400 content lines,
+  so the check's own body lives in the new sibling module
+  product_truth_example_checks.py (re-exported through product_truth_checks,
+  the same pattern product_truth_index_checks already established) --
+  `check_example_product` is squeezed onto the existing `check_mock_data_ref`
+  import line (0 lines). load_ac_records() now also carries `doc_links` /
+  `example_product` per AC (read by check_example_product), packed onto
+  existing lines to hold this file at exactly 400/400.
+  CORRECTNESS FIX, same day: widening load_ac_records()'s record shape
+  silently widened what UXP-700c-2's freshness check compares too --
+  _ac_content_signature originally hashed "every field except path", so
+  the two new keys became part of every AC's freshness signature, and
+  editing an AC's doc_links would have reported every journey citing it as
+  BEHIND, a false positive with no relation to freshness's actual concern.
+  Fixed by pinning _ac_content_signature to an explicit, fixed field tuple
+  (work_status, product_truth, implemented_by, covered_by) local to the
+  function, independent of whatever load_ac_records()'s own shape grows to
+  next -- so a future field added there for a different check can never
+  silently widen freshness again. unit_tests/product_truth/_uxp_700c_2_fixtures.py
+  and test_uxp_700c_2_ii.py needed no change under this fix (both already
+  predicted the signature from exactly that 4-field set) and are byte-for-byte
+  identical to origin/main. Every finding-decision rule for the example_product
+  check itself lives in product_ownership.py (ADR-044 sec 7); this file only
+  loads records and calls it. Verified against the real, committed store:
+  zero new findings after fixing one pre-existing latent one -- see
+  product_ownership.py's own DECISION HISTORY entry on AC UXP-515.
+  (#EPIC-TruthfulProjectRecord/35)
 """
 from __future__ import annotations
 
 import argparse
+import datetime
+import hashlib
 import json
 import logging
 import sys
@@ -224,6 +302,10 @@ from product_truth_checks import (
     _check_screens,
     _check_shape_version_bounds,  # noqa: F401  # re-exported for callers
     _check_truth_evidence,
+    _validate_schema,  # noqa: F401  # re-exported for callers
+    check_example_product, check_mock_data_ref,
+    validate_eval_rows,
+    OUTCOME_BY_COMBO,  # noqa: F401  # re-exported for callers
 )
 from product_truth_outcome import (  # noqa: F401  # re-exported for callers
     _log_run_verdict,
@@ -244,6 +326,8 @@ from product_truth_outcome import (  # noqa: F401  # re-exported for callers
     _compute_empty_types,
     _print_outcome_contract,
     _top_level_outcome,
+    compute_example_only_types,
+    compute_type_population,
 )
 from product_truth_bounds import check_bounds, tighten_refusal
 from product_truth_shapes import _check_outcome_kinds, count_branches  # noqa: F401
@@ -265,48 +349,22 @@ except ImportError:
 
 logger = logging.getLogger("validate_product_truth")
 
-
-
-
-
-
-
-
-
 STORE = Path(__file__).resolve().parent.parent
 AC_STORE = STORE.parent / "acceptance-criteria"
-
-OUTCOME_BY_COMBO = {
-    (True, True, True): "full-set",
-    (False, True, True): "mockup+data",
-    (False, False, True): "mockup-only",
-    (False, True, False): "mock-data-only",
-    (False, False, False): "none",
-}
 
 
 def _load_schema(name: str) -> dict:
     return _load_json(STORE / "schemas" / name)
 
 
-def _validate_schema(instance: dict, schema: dict, label: str, errors: list[str]) -> None:
-    """Validate one instance against a schema (jsonschema is guaranteed present).
-
-    main() exits non-zero before any check runs when jsonschema is absent, so
-    the module-level `jsonschema` is never None here.
-    """
-    try:
-        jsonschema.validate(instance, schema)
-    except jsonschema.ValidationError as exc:
-        errors.append(f"[schema] {label}: {exc.message}")
-
-
 def load_ac_records() -> dict:
     """One pass over the AC store.
 
-    {ac_id -> {path, work_status, product_truth, implemented_by, covered_by}}.
-    implemented_by / covered_by are the implementation-evidence fields the
-    anti-phantom-done truth check reads (see _check_truth_evidence).
+    {ac_id -> {path, work_status, product_truth, implemented_by, covered_by,
+    doc_links, example_product}}. implemented_by / covered_by are read by the
+    anti-phantom-done truth check (_check_truth_evidence); doc_links /
+    example_product are read by the UXP-700d-3-ii example-product cross-check
+    (check_example_product).
     """
     records: dict[str, dict] = {}
     for path in sorted(AC_STORE.rglob("*.yaml")):
@@ -316,11 +374,10 @@ def load_ac_records() -> dict:
         ac_id = data.get("id")
         if isinstance(ac_id, str):
             records[ac_id] = {
-                "path": path,
-                "work_status": data.get("work_status"),
+                "path": path, "work_status": data.get("work_status"),
                 "product_truth": data.get("product_truth"),
-                "implemented_by": data.get("implemented_by"),
-                "covered_by": data.get("covered_by"),
+                "implemented_by": data.get("implemented_by"), "covered_by": data.get("covered_by"),
+                "doc_links": data.get("doc_links"), "example_product": data.get("example_product"),
             }
     return records
 
@@ -333,41 +390,121 @@ def load_mockups() -> dict:
     return mockups
 
 
+def _ac_content_signature(ac_record: dict) -> str:
+    """CURRENT signature of one load_ac_records() AC record (UXP-700c-2), over
+    a fixed field set -- independent of load_ac_records()'s own record shape,
+    so a field added there for an unrelated check never widens this."""
+    fields = ("work_status", "product_truth", "implemented_by", "covered_by")
+    payload = {field: ac_record.get(field) for field in fields}
+    return hashlib.sha256(json.dumps(payload, sort_keys=True, default=str).encode("utf-8")).hexdigest()
 
 
+def _check_freshness(flows: dict, ac_records: dict, warnings: list[str]) -> tuple[dict, int]:
+    """TIER-2 content check (UXP-700c-2): has a confirmed journey's described
+    AC ids moved since `confirmed.state` was recorded? A never-confirmed
+    journey is OMITTED from `verdicts` and `compared` -- neither current nor
+    behind, because there is no earlier confirmation for it to be judged
+    against -- but IS named on `warnings` with a distinct `[freshness-never-
+    confirmed]` prefix (UXP-700c-2-i), so it is reported rather than silently
+    skipped: a checker that says nothing about the journeys it declined to
+    compare is indistinguishable from one that found them sound. An id absent
+    from `ac_records` (vanished) is UNRESOLVABLE, not behind -- a distinct
+    `[freshness-unresolvable]` warning, never folded into `changed` (bug fix:
+    the prior `ac_records.get(id, {})` fallback hashed an empty record that
+    could never match, wrongly reporting BEHIND for a vanished target --
+    mirrors `_check_pointers`' unresolvable/broken split).
+
+    Returns (verdicts, compared): verdicts is {flow_id -> None | {confirmed_against,
+    changed}}, never-confirmed OMITTED entirely (key presence = "examined",
+    the contract `_sync_behind_marks` consumes). None = CURRENT. A dict =
+    BEHIND (`changed` sorted, never a vanished id; one `[freshness]` WARNING).
+    `compared` counts confirmed journeys only, stated unconditionally by main().
+    """
+    verdicts: dict = {}
+    compared = 0
+    for flow_id, flow in flows.items():
+        confirmed = flow.get("confirmed")
+        if not confirmed:
+            warnings.append(f"[freshness-never-confirmed] {flow_id}: never confirmed")
+            continue
+        compared += 1
+        changed: list[str] = []
+        unresolvable: list[str] = []
+        for ac_id, recorded_signature in confirmed.get("state", {}).items():
+            if ac_id not in ac_records:
+                unresolvable.append(ac_id)
+            elif _ac_content_signature(ac_records[ac_id]) != recorded_signature:
+                changed.append(ac_id)
+        changed.sort()
+        if unresolvable:
+            unresolvable.sort()
+            warnings.append(f"[freshness-unresolvable] {flow_id}: confirmed against vanished id(s): {unresolvable}")
+        if not changed:
+            verdicts[flow_id] = None
+            continue
+        verdicts[flow_id] = {"confirmed_against": confirmed["against"], "changed": changed}
+        warnings.append(f"[freshness] {flow_id}: behind -- changed: {changed}")
+    return verdicts, compared
 
 
+def _resolve_flow_path(rel_or_abs: str) -> Path:
+    """Resolve a flow_paths[] entry (STORE-relative, per load_flows()'s 2nd
+    return value) to an absolute Path under STORE; absolute values pass through."""
+    candidate = Path(rel_or_abs)
+    return candidate if candidate.is_absolute() else STORE / candidate
 
 
+def _behind_mark_for(flow: dict, verdict: dict, today: str) -> dict:
+    """Build the `behind` object for one BEHIND verdict (ADR-043 SS2/SS7);
+    `since` is preserved while `confirmed_against` is unchanged, else re-stamped."""
+    existing = flow.get("behind")
+    if isinstance(existing, dict) and existing.get("confirmed_against") == verdict["confirmed_against"]:
+        since = existing.get("since", today)
+    else:
+        since = today
+    return {"confirmed_against": verdict["confirmed_against"], "changed": sorted(verdict["changed"]), "since": since}
 
 
+def _sync_behind_marks(
+    flows: dict, flow_paths: dict, verdicts: dict, warnings: list[str], today: str,
+) -> list[str]:
+    """Write, overwrite, or remove each examined journey's durable `behind`
+    mark per ADR-043, and persist any change to disk (UXP-700c-2-ii). A
+    flow_id absent from `verdicts` is never read or written (SS5/SS6);
+    `verdicts[id] is None` deletes the key outright, never nulls it (SS4); a
+    dict overwrites `behind` in place (SS7). Serialisation matches
+    generate_product_truth.write_flows byte-for-byte (SS9); rewritten only
+    when the text differs from disk (SS5.3). OSError -> `warnings`, fail-open
+    (SS9). Returns the flow ids actually rewritten.
+    """
+    rewritten: list[str] = []
+    for flow_id, verdict in verdicts.items():
+        flow = flows.get(flow_id)
+        if flow is None:
+            continue
+        if verdict is None:
+            if "behind" not in flow:
+                continue
+            del flow["behind"]
+        else:
+            flow["behind"] = _behind_mark_for(flow, verdict, today)
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+        new_text = json.dumps(flow, indent=2, ensure_ascii=False) + "\n"
+        path = _resolve_flow_path(flow_paths[flow_id])
+        try:
+            current_text = path.read_text(encoding="utf-8") if path.exists() else None
+        except OSError as exc:
+            warnings.append(f"[behind] {flow_id}: cannot read {path} to sync its behind mark: {exc}")
+            continue
+        if new_text == current_text:
+            continue
+        try:
+            path.write_text(new_text, encoding="utf-8")
+        except OSError as exc:
+            warnings.append(f"[behind] {flow_id}: cannot write {path} to sync its behind mark: {exc}")
+            continue
+        rewritten.append(flow_id)
+    return rewritten
 
 
 def _check_eval(errors: list[str], checks: list[dict]) -> None:
@@ -395,33 +532,12 @@ def _check_eval(errors: list[str], checks: list[dict]) -> None:
         # record as sound (UXP-700a-1-i).
         never_installed = not path.parent.is_dir()
         detail = "not installed" if never_installed else "not authored yet"
-        record_check_not_executed(
-            checks,
-            "eval",
-            f"precondition absent ({detail}): {path} not found",
-            blocks=never_installed,
-        )
+        reason = f"precondition absent ({detail}): {path} not found"
+        record_check_not_executed(checks, "eval", reason, blocks=never_installed)
         return
     schema = _load_schema("classifier-eval.schema.json")
     lines = _read_text(path).splitlines()
-    examined = 0
-    for i, line in enumerate(lines, 1):
-        if not line.strip():
-            continue
-        try:
-            row = json.loads(line)
-        except json.JSONDecodeError as exc:
-            errors.append(f"[eval] line {i}: invalid JSON: {exc}")
-            continue
-        examined += 1
-        _validate_schema(row, schema, f"eval row {row.get('id', i)}", errors)
-        exp = row["expected"]
-        combo = (exp["needs_flow"], exp["needs_mock_data"], exp["needs_mockup"])
-        derived = OUTCOME_BY_COMBO.get(combo)
-        if derived is None:
-            errors.append(f"[eval] {row['id']}: impossible combo {combo}")
-        elif derived != row["outcome"]:
-            errors.append(f"[eval] {row['id']}: outcome '{row['outcome']}' != derived '{derived}'")
+    examined = validate_eval_rows(lines, schema, errors)
     record_check_executed(checks, "eval", examined)
 
 
@@ -479,15 +595,8 @@ def run_checks() -> dict:
     for mockup in mockups.values():
         _validate_schema(mockup, mockup_schema, f"mockup {mockup['id']}", errors)
 
-    for flow in flows.values():
-        ref = flow.get("mock_data_ref")
-        if ref and ref in mocks:
-            mock_entities = set(mocks[ref].get("entities", {}).keys())
-            missing = [e for e in flow.get("entities", []) if e not in mock_entities]
-            if missing:
-                errors.append(f"[flow] {flow['id']}: entities {missing} absent from mock_data_ref '{ref}'")
-        elif ref:
-            errors.append(f"[flow] {flow['id']}: mock_data_ref '{ref}' does not resolve")
+    check_example_product(flows, mocks, mockups, ac_records, errors)
+    check_mock_data_ref(flows, mocks, errors)
 
     index = _load_json(STORE / "index.json")
     by_ac = build_by_ac(flows)
@@ -533,6 +642,9 @@ def run_checks() -> dict:
     record_population_checks(checks, {"flows": len(flows), "mock-data": len(mocks), "mockups": len(mockups),
                                       "index": len(index.get("artifacts", [])), "acceptance-criteria": len(ac_records)})
 
+    # Freshness check (UXP-700c-2): feeds the SAME `warnings` list every other check uses.
+    freshness_verdicts, compared_freshness = _check_freshness(flows, ac_records, warnings)
+
     return {
         "errors": errors,
         "warnings": warnings,
@@ -546,6 +658,9 @@ def run_checks() -> dict:
         "resolved_labels": resolved_labels,
         "bounds": bounds,
         "empty_types": _compute_empty_types(flows, mocks, mockups),
+        "type_population": compute_type_population(flows, mocks, mockups),
+        "freshness_verdicts": freshness_verdicts, "compared_freshness": compared_freshness,
+        "flow_paths": flow_paths, "flows": flows,
     }
 
 
@@ -572,10 +687,12 @@ def main() -> int:
     errors, warnings, checks = report["errors"], report["warnings"], report["checks"]
     examined_flows, unreadable_flows = report["examined_flows"], report["unreadable_flows"]
     empty_types = report["empty_types"]
-    unresolvable = report["unresolvable_pointers"]
+    unresolvable, compared_freshness = report["unresolvable_pointers"], report["compared_freshness"]
+    type_population = report["type_population"]
+    example_only_types = compute_example_only_types(type_population)
     top_outcome = _top_level_outcome(examined_flows, unreadable_flows, bool(errors), empty_types, len(unresolvable))
     contract = (top_outcome, examined_flows, unreadable_flows, empty_types, report["resolved_pointers"], len(unresolvable),
-                examined_by_check(checks), report["resolved_labels"], report["bounds"])
+                examined_by_check(checks), report["resolved_labels"], report["bounds"], type_population, example_only_types)
 
     # Stated on EVERY run, zero included (UXP-700c-1): without it a run that
     # resolved none of the pointers it holds is indistinguishable, in the
@@ -583,6 +700,14 @@ def main() -> int:
     logger.warning("resolved %d AC pointer(s)", report["resolved_pointers"])
     for message in unresolvable:
         logger.warning("%s", message)
+
+    # UXP-700c-2 / ADR-043: state the compared count, then persist verdicts as
+    # durable `behind` marks.
+    logger.warning("compared %d journey(s) for freshness", compared_freshness)
+    _sync_behind_marks(
+        report["flows"], report["flow_paths"], report["freshness_verdicts"], warnings,
+        datetime.date.today().isoformat(),
+    )
 
     _log_skipped_entries(checks, unreadable_flows, examined_flows)
     for warn in warnings:

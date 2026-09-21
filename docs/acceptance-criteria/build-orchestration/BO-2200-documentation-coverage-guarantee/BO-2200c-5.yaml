@@ -36,7 +36,7 @@ it_requirements:
     single_source_of_truth:
       type: object
       description: "The '## Agent Contracts' -> '### documentation-expert' block is the ONE source both documentation-expert (Contract-Aware Mode) and documentation-verifier read; no parallel required-docs list."
-  reference_file_path: "scripts/ac_store/generate_ticket_from_ac.py"
+  reference_file_path: "scripts/ac_store/_gtfa_contracts.py"
   n_location_rule: "1"
   required_skills:
     - python-coder

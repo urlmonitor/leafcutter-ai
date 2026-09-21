@@ -13,7 +13,7 @@ roadmap_phase: phase_1
 created_by: "docs/acceptance-criteria/build-orchestration/BO-1800-isolated-parallel-delivery/BO-1800f.yaml"
 criteria: |
   Given the delivery-boundary behaviour specified by BO-1800f-1, BO-1800f-1-i,
-    BO-1800f-2 and BO-1800f-2-i,
+    BO-1800f-1-ii, BO-1800f-2, BO-1800f-2-i and BO-1800f-2-ii,
   When a reader looks for the picture of what happens when finished work leaves its
     copy for the shared branch,
   Then they find one sequence diagram in the project's architecture-diagram
@@ -24,27 +24,56 @@ criteria: |
     path: reading the state the shared branch is in at that moment, replaying the
     copy's commits onto that state, and adjudicating what the replayed result would
     take away,
+  And every one of those three decision points is drawn with both of its outcomes, so
+    that no step in the picture is shown as a step that can only succeed,
   And the state the adjudication is shown comparing against is carried across from
     the read step, so the diagram cannot be read as comparing against the state the
     copy was originally made from,
-  And the diagram has exactly three end points, each reached by its own branch:
-    the shared branch's state could not be read, so nothing leaves the copy and the
-    copy is left as it was found; the replayed result would take away content on a
-    path no commit in the delivery declared, so nothing leaves the copy and that
-    path is named; and every path the result takes content away from was declared,
-    or it takes nothing away, so the delivery leaves the copy,
+  And the diagram has exactly four end points, each reached by its own branch:
+    the shared branch's state could not be read, so nothing leaves the copy, the copy
+    is left exactly as it was found, and what stopped the shared branch being consulted
+    is named;
+    the shared branch's state was read, but the copy's commits could not be replayed
+    onto it without a decision being made, so nothing leaves the copy, the copy is put
+    back to the commits it held before the replay began, and every path whose region
+    could not be replayed is named;
+    the replay completed and the replayed result would take away content on a path no
+    commit in the delivery declared, so nothing leaves the copy and that path is named;
+    and the replay completed and every path the result takes content away from was
+    declared, or it takes nothing away, so the delivery leaves the copy,
+  And the three end points at which nothing leaves the copy are drawn so that a reader
+    can tell which one they are looking at without leaving the diagram: each says how
+    far the boundary got before it stopped and what was done to the copy -- nothing was
+    examined and the copy was not touched; the shared branch was read but no
+    adjudication was ever reached and the copy had to be put back; the adjudication ran,
+    reached a verdict on a named path, and the copy needs no putting back -- so that no
+    two of the three read as the same refusal,
   And the adjudication branch is drawn as a decision taken per path against what was
     declared, not as one yes-or-no over the whole delivery,
   And no branch exists in which the delivery leaves the copy after the shared
-    branch's state could not be read,
-  And each of those three end points and each of the two decision branches is
-    labelled with the identifier of the acceptance criterion that specifies it, and
-    the diagram lists BO-1800f-1, BO-1800f-1-i, BO-1800f-2 and BO-1800f-2-i among
-    its related documents, so that a criterion added, amended or withdrawn under
-    BO-1800f leaves an identifiable gap in the diagram rather than a silent one,
+    branch's state could not be read, and none in which it leaves the copy after a
+    replay that could not complete,
+  And the report of what the delivery would take away is shown being produced on both
+    outcomes of the adjudication and on neither of the two earlier end points, because
+    it is produced whenever the examination runs and the examination is never reached
+    from those two,
+  And each of those four end points, each of those three decision branches, and that
+    report -- eight labelled elements -- is labelled with the identifier of the
+    acceptance criterion that specifies it, and the diagram lists all six of
+    BO-1800f-1, BO-1800f-1-i, BO-1800f-1-ii, BO-1800f-2, BO-1800f-2-i and BO-1800f-2-ii
+    among its related documents, leaving no behavioural criterion under BO-1800f
+    unreferenced, so that a criterion added, amended or withdrawn under BO-1800f leaves
+    an identifiable gap in the diagram rather than a silent one,
   And the diagram stays inside the collection's complexity limits for a sequence and
     carries the collection's parent link in both directions.
-depends_on: [BO-1800f, BO-1800f-1, BO-1800f-1-i, BO-1800f-2, BO-1800f-2-i]
+depends_on:
+  - BO-1800f
+  - BO-1800f-1
+  - BO-1800f-1-i
+  - BO-1800f-1-ii
+  - BO-1800f-2
+  - BO-1800f-2-i
+  - BO-1800f-2-ii
 doc_links:
   - path: docs/architecture/diagrams/README.md
     relationship: specifies
@@ -113,12 +142,21 @@ it_requirements:
      AND append the diagram's path to that file's existing children: list, which today holds a
      single entry. check_mermaid_parent_link.py enforces this on the staged diagram and will
      block a one-directional link."
-  - "The four criteria the diagram depicts must be named in the frontmatter related_docs list
-     as their AC-store YAML paths. check_doc_frontmatter.py validates related_docs entries for
+  - "All SIX criteria the diagram depicts must be named in the frontmatter related_docs list
+     as their AC-store YAML paths (BO-1800f-1, BO-1800f-1-i, BO-1800f-1-ii, BO-1800f-2,
+     BO-1800f-2-i, BO-1800f-2-ii). check_doc_frontmatter.py validates related_docs entries for
      EXISTENCE and blocks on a dangling path, so a withdrawn or renamed criterion file breaks
      any later commit that touches the diagram. This is the only mechanical staleness signal
      the artifact gets for free, and it is worth having — but it fires only when the diagram
      itself is staged, which is why the conformance test in test_spec exists."
+  - "COMPLEXITY BUDGET FOR THE FOURTH BRANCH, checked rather than assumed. The relevant hook
+     is check_mermaid_complexity.py, whose sequence-genre limits in
+     config/commit_guardian.json are max_participants: 8 and max_interactions: 25, with
+     strict: false so it warns rather than blocks. A four-terminal drawing of this boundary
+     needs four or five participants and roughly twenty interactions, so it fits with headroom
+     and the criteria's complexity clause is satisfiable as written. Verified at amendment
+     time; re-check the config rather than trusting this line if the drawing grows a
+     participant."
   - "THE DIAGRAM MUST NOT LAND UNDER [NO-ARCH-UPDATE]. Every hook named above —
      check_diagram_naming, check_mermaid_parent_link, check_doc_frontmatter,
      check_structural_change — honours that commit-message token as a blanket bypass, so a
@@ -192,14 +230,27 @@ test_spec:
       produced by the read step, and no cut-time base, merge-base or originally-copied-from
       state appears as that operand. This is the seam BO-1800f-2's it_requirements call the
       plausible wrong implementation."
-  - name: test_the_diagram_has_exactly_three_end_points
+  - name: test_the_diagram_has_exactly_four_end_points
     target_dir: unit_tests/docs/
     framework: pytest
     type: unit
     angle: criterion
-    description: "The terminal outcomes count exactly three, and they are the three named
-      dispositions. A happy-path-only drawing (one) and a success-plus-one-failure drawing
-      (two) both fail; so does a fourth invented terminal."
+    description: "The terminal outcomes count exactly four, and they are the four named
+      dispositions: the shared branch's state could not be read; the replay could not
+      complete; an undeclared removal was adjudicated; the delivery leaves. A
+      happy-path-only drawing (one), a success-plus-one-failure drawing (two), and the
+      three-terminal drawing that omits the replay halt all fail; so does a fifth invented
+      terminal."
+  - name: test_the_three_refusal_end_points_are_distinguishable_from_one_another
+    target_dir: unit_tests/docs/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: "Each of the three nothing-leaves-the-copy terminals states how far the
+      boundary got and what was done to the copy — not touched / put back to its pre-replay
+      commits / no putting back needed — and no two of the three carry the same text. Four
+      terminals two of which read as the same refusal is the collapse the count alone does
+      not catch."
   - name: test_no_branch_delivers_after_an_unreadable_shared_branch
     target_dir: unit_tests/docs/
     framework: pytest
@@ -208,6 +259,27 @@ test_spec:
     description: "Walking the alt/else structure, no path that begins at the
       could-not-read-the-shared-branch branch reaches the delivery-leaves-the-copy terminal.
       Asserts the disposition of the unverifiable case, not merely that the case is drawn."
+  - name: test_no_branch_delivers_after_a_replay_that_could_not_complete
+    target_dir: unit_tests/docs/
+    framework: pytest
+    type: unit
+    angle: failure
+    description: "Walking the alt/else structure, no path that begins at the
+      replay-could-not-complete branch reaches the delivery-leaves-the-copy terminal, and
+      none reaches the adjudication step either — the halt is before any adjudication. Kept
+      separate from the unreadable-shared-branch descriptor because the two fail
+      independently: a drawing that branches the replay but lets the branch rejoin the main
+      path passes that one and fails this."
+  - name: test_the_removal_report_is_shown_on_both_adjudication_outcomes_and_on_neither_earlier_halt
+    target_dir: unit_tests/docs/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: "The report message labelled BO-1800f-2-ii appears on the refusal outcome
+      AND on the delivery outcome of the adjudication, and appears on neither the
+      could-not-read nor the replay-halt terminal. A drawing that emits it only on the
+      refusal fails, and so does one that emits it on a path where the examination never
+      ran."
   - name: test_the_adjudication_is_drawn_per_path_not_as_one_verdict_over_the_delivery
     target_dir: unit_tests/docs/
     framework: pytest
@@ -221,10 +293,10 @@ test_spec:
     framework: pytest
     type: unit
     angle: criterion
-    description: "All five labelled elements — three end points and two decision branches —
-      carry an AC identifier drawn from BO-1800f-1, BO-1800f-1-i, BO-1800f-2, BO-1800f-2-i,
-      and all four of those appear in related_docs. An unlabelled or partially labelled
-      drawing fails."
+    description: "All eight labelled elements — four end points, three decision branches and
+      the removal report — carry an AC identifier drawn from BO-1800f-1, BO-1800f-1-i,
+      BO-1800f-1-ii, BO-1800f-2, BO-1800f-2-i, BO-1800f-2-ii, and all six of those appear in
+      related_docs. An unlabelled or partially labelled drawing fails."
   - name: test_every_criterion_the_diagram_names_still_exists_in_the_ac_store
     target_dir: unit_tests/docs/
     framework: pytest
@@ -234,6 +306,18 @@ test_spec:
       store to a record that exists and is not superseded. A criterion withdrawn, renamed or
       superseded under BO-1800f turns this red by name. This descriptor is the substitute for
       the drift hook that does not cover this genre."
+  - name: test_no_behavioural_criterion_under_bo_1800f_is_left_out_of_the_diagram
+    target_dir: unit_tests/docs/
+    framework: pytest
+    type: unit
+    angle: real_artifact
+    description: "Every active, non-superseded record under BO-1800f whose change_target is
+      'pipeline' — the behavioural leaves, which excludes the two documentation records whose
+      change_target is 'docs' — is referenced by the diagram. Adding a behavioural sibling
+      under BO-1800f turns this red until the diagram accounts for it. The completeness
+      direction, which the liveness descriptor above cannot supply: liveness catches a
+      reference to a record that went away, this catches a record that arrived and was never
+      drawn."
   - name: test_the_diagram_is_reachable_from_its_parent_component_doc
     target_dir: unit_tests/docs/
     framework: pytest
@@ -258,14 +342,32 @@ test_rationale: |
   criteria decline to fix or go green-by-vacuity the day the file is renamed — the
   found-nothing-so-passed shape this whole tree exists to remove.
 
-  The enumerations are not restatements of each other. Three distinct wrong diagrams are
-  excluded by three distinct counts: the end-point count fails a happy-path-only drawing and a
-  success-plus-single-undifferentiated-failure drawing; the branch-labelling check fails a
-  drawing whose branches cannot be traced to the criteria they claim to depict; and the
-  no-delivery-after-an-unreadable-read check fails a drawing that carries the wrong disposition
-  for an unverifiable shared branch. An assertion about the file's existence, its frontmatter
-  alone, or its line count satisfies none of the three — which is exactly the weaker shape the
-  BA's falsifiability note names and rejects.
+  The enumerations are not restatements of each other. Distinct wrong diagrams are excluded by
+  distinct assertions: the end-point count fails a happy-path-only drawing, a
+  success-plus-single-undifferentiated-failure drawing, and the three-terminal drawing that
+  silently omits the replay halt; the refusal-distinguishability check fails a four-terminal
+  drawing whose refusals are worded alike, which the count alone passes; the branch-labelling
+  check fails a drawing whose branches cannot be traced to the criteria they claim to depict;
+  and the two no-delivery-after checks fail a drawing that carries the wrong disposition for an
+  unverifiable shared branch or for a replay that could not complete. An assertion about the
+  file's existence, its frontmatter alone, or its line count satisfies none of them — which is
+  exactly the weaker shape the BA's falsifiability note names and rejects.
+
+  The two no-delivery-after descriptors are deliberately not merged. They fail independently:
+  a drawing that gives the replay a branch but lets that branch rejoin the main path satisfies
+  the unreadable-read assertion completely while carrying exactly the defect the replay
+  assertion exists to catch — and the merged form, "no early halt reaches the delivery
+  terminal", would be satisfied by a drawing that has no replay branch at all, because a
+  terminal that is not drawn cannot reach anything. That vacuity is why the replay descriptor
+  also asserts the halt is before any adjudication rather than only that it is before delivery.
+
+  test_the_removal_report_is_shown_on_both_adjudication_outcomes_and_on_neither_earlier_halt is
+  the one assertion here about something that is not a branch. It is included because where the
+  report is emitted IS a structural fact of this boundary and is checkable — it is produced on
+  both adjudication outcomes and on neither earlier halt, since the examination is never
+  reached from those. What the report CONTAINS — the two attribution categories BO-1800f-2-ii
+  specifies — is not drawn and is not asserted here; that is the reference doc's subject, per
+  the scope fence in it_requirements.
 
   test_the_adjudication_compares_against_the_state_carried_from_the_read_step is the one that
   is easy to mistake for a nicety. It is not. BO-1800f-2's enrichment records that the
@@ -275,14 +377,27 @@ test_rationale: |
   teach an implementing agent to build precisely that defect, and every other descriptor here
   would stay green while it did.
 
-  test_every_criterion_the_diagram_names_still_exists_in_the_ac_store carries the staleness
-  duty on its own. check_mermaid_drift.py does not cover sequence diagrams, and
-  check_doc_frontmatter's related_docs existence check fires only on commits that stage the
-  diagram. This descriptor runs in CI on every commit and resolves each referenced identifier
-  against the live store, so a criterion withdrawn or superseded elsewhere in the tree surfaces
-  as a named mismatch rather than as a picture that merely still looks plausible. That is the
-  whole of the mechanical staleness defence for this artifact, and it is why the record is not
-  test_required: false.
+  test_every_criterion_the_diagram_names_still_exists_in_the_ac_store and
+  test_no_behavioural_criterion_under_bo_1800f_is_left_out_of_the_diagram carry the staleness
+  duty between them, in the two opposite directions. check_mermaid_drift.py does not cover
+  sequence diagrams, and check_doc_frontmatter's related_docs existence check fires only on
+  commits that stage the diagram. Both descriptors run in CI on every commit: the first
+  resolves each referenced identifier against the live store, so a criterion withdrawn or
+  superseded elsewhere in the tree surfaces as a named mismatch; the second enumerates the
+  behavioural leaves under BO-1800f and fails on one the diagram never mentions, so a sibling
+  ADDED later cannot pass unnoticed. Together they are the whole of the mechanical staleness
+  defence for this artifact, and they are why the record is not test_required: false.
+
+  The completeness descriptor is new at this amendment and it is the mechanism that would have
+  caught the drift the amendment fixes. It was withheld at enrichment on the explicit ground
+  that it would be red on arrival against BO-1800f-1-ii and BO-1800f-2-ii, and a
+  knowingly-red-forever test is worse than a narrower green one. That ground is removed by
+  amending the criteria to reference both, so the descriptor is now green on arrival and is
+  authored. Its discriminator between behavioural and documentation records is change_target:
+  the six behavioural leaves carry 'pipeline' and the two documentation records carry 'docs',
+  so the enumeration does not demand that the diagram reference itself or its sibling reference
+  doc. Neither is a genuine field of the boundary, and both would be red on arrival if
+  included.
 
   test_the_diagram_is_reachable_from_its_parent_component_doc is the reachability angle for a
   prose artifact: a diagram nobody can navigate to is the documentation equivalent of a gate
@@ -293,7 +408,8 @@ delivers_to: null
 expects_from:
   ac_id: BO-1800f-2
   contract: "The settled shape of the delivery boundary AS RECORDED, not as implemented:
-    the criteria texts of BO-1800f-1, BO-1800f-1-i, BO-1800f-2 and BO-1800f-2-i; the boundary
+    the criteria texts of all six behavioural records under BO-1800f — BO-1800f-1,
+    BO-1800f-1-i, BO-1800f-1-ii, BO-1800f-2, BO-1800f-2-i and BO-1800f-2-ii; the boundary
     order fixed by BO-1800f-2's enrichment as read-tip -> replay -> adjudicate -> refuse-or-push;
     and the declaration mechanism fixed there as a `Removes: <repo-relative path>` git trailer
     unioned across the delivery set, adjudicated PER PATH against that union. This record
@@ -301,7 +417,21 @@ expects_from:
     which is why delivers_to on the producing side names python-coder and not this record."
 origin_agent: BrainCandy
 created: 2026-09-14
-amended_by: []
+amended_by:
+  - reason: "End-point count amended from three to four, resolving the open question the IT PO
+      raised as caveat A and BO-1800f's notes recorded as unresolved. BO-1800f-1-ii (a replay
+      that cannot complete stops the delivery and restores the copy) is a terminal disposition
+      of a step this diagram already draws, so omitting it would have made the picture claim a
+      straight line at exactly the point the tree says a decision is taken. Criteria now fix
+      four end points, three decision branches and eight labelled elements, require the three
+      refusal terminals to be distinguishable in the reader's terms, and reference all six
+      behavioural criteria under BO-1800f. test_the_diagram_has_exactly_three_end_points is
+      renamed test_the_diagram_has_exactly_four_end_points; four descriptors added
+      (refusal-distinguishability, no-delivery-after-a-failed-replay, report emission,
+      behavioural-completeness). readiness left at reviewed; no other record's criteria
+      touched."
+    by: business-analyst
+    at: 2026-09-14
 superseded_by: null
 covered_by: []
 implemented_by: []
@@ -325,19 +455,76 @@ notes: |
   the path where everything works. All three would be indistinguishable from a correct
   one under an existence check, and the last is the likeliest outcome: a delivery
   boundary is easy to draw as a straight line from finished work to an open pull
-  request, which is precisely the picture that hides both refusals. The criteria
-  therefore fix the two decision points, both their outcomes, and the count of end
-  points, so that the artifact cannot be produced without depicting the behaviour the
-  L1 is about.
+  request, which is precisely the picture that hides all three refusals. The criteria
+  therefore fix the three decision points, both outcomes of every one of them, and the
+  count of end points, so that the artifact cannot be produced without depicting the
+  behaviour the L1 is about.
 
-  Why the end points are counted rather than listed loosely. There are exactly three,
-  and enumerating them is what rules out the two degenerate drawings that a looser
-  wording admits: a diagram with one end point (everything succeeds) and a diagram
-  with two (success and a single undifferentiated failure). The second is the more
-  dangerous of the two, because collapsing "could not read the shared branch" into
+  Why the end points are counted rather than listed loosely. There are exactly four,
+  and enumerating them is what rules out the degenerate drawings that a looser
+  wording admits: a diagram with one end point (everything succeeds), a diagram
+  with two (success and a single undifferentiated failure), and a diagram with three
+  that quietly drops one of the refusals. The collapsed drawings are the more
+  dangerous, because collapsing "could not read the shared branch" into
   "refused" in the picture is the same collapse BO-1800f-1-i exists to forbid in the
   behaviour — a check that examined nothing reported in the same shape as a check that
-  found nothing.
+  found nothing. Counting alone does not finish the job, which is why the criteria also
+  require the three refusal terminals to say how far the boundary got and what was done
+  to the copy: four terminals, two of them worded alike, is the same collapse wearing a
+  higher number.
+
+  Why four and not three — the amendment. This record was authored with three end
+  points and the IT PO's enrichment raised, without resolving, that BO-1800f-1-ii is a
+  fourth. It is, and the reason is not that a record exists elsewhere: it is that the
+  diagram already draws the replay as one of its three steps, and BO-1800f-1-ii is a
+  terminal disposition OF THAT STEP — its own expects_from says it "constrains the same
+  operation rather than a separate code path". A picture that draws the replay and gives
+  it only one outcome asserts that the replay always completes, which the tree says it
+  does not. Three arguments settled it:
+
+    - Symmetry with BO-1800f-1-i. The read step's failure is an end point in this
+      diagram. The replay step's failure is the same kind of thing at the next step
+      along, specified at the same level, with the same readiness. There is no principle
+      that admits the first and excludes the second.
+    - The record's own purpose clause. The labelling requirement exists "so that a
+      criterion added, amended or withdrawn under BO-1800f leaves an identifiable gap in
+      the diagram rather than a silent one". A diagram that omits an approved terminal of
+      the flow it draws IS that silent gap, present on the day it lands.
+    - Consequence in code. The IT PO's own risk_surface rationale records that this
+      diagram is read as context by the implementers of all three delivery workflows, so
+      an error in it propagates. BO-1800f-1-ii requires restoration on EVERY abnormal exit
+      from the replay; a picture showing the replay as unbranched teaches the implementer
+      there is nothing to restore.
+
+  What distinguishes the three refusal terminals, in the reader's terms. All three end
+  with nothing leaving the copy, and a reader who cannot tell them apart has three
+  identical pictures of "it refused". They differ on two axes that the diagram can show:
+
+    - how far the boundary got. The read failure got nowhere: nothing was examined. The
+      replay halt got past the read but never reached the adjudication, so no verdict on
+      what the delivery would take away was ever formed. The undeclared-removal refusal
+      ran the whole boundary and reached a verdict on a named path.
+    - what was done to the copy. The read failure did nothing to it — it is left exactly
+      as found, not restored, because there is nothing to restore. The replay halt
+      altered it and put it back to the commits it held before. The undeclared-removal
+      refusal needs no putting back: the replay completed and the copy is in the state
+      that replay left it in.
+
+  Those two axes also tell the reader what to do next, which is why they are the right
+  distinction to draw rather than merely a true one: an unreadable shared branch is
+  retried, a replay halt needs a human to resolve an overlap, and an undeclared removal
+  is declared or undone.
+
+  Why BO-1800f-2-ii appears as a report and not as a terminal. It is the sixth
+  behavioural record and the criteria previously did not mention it. It produces no end
+  point: its own it_requirements say the report is produced "on the refusal path and on
+  the clean path alike", so it decorates both outcomes of the adjudication rather than
+  creating one. What the diagram can and does say about it is structural — WHERE it is
+  emitted: on both adjudication outcomes, and on neither of the two earlier halts,
+  because from those the examination is never reached. What the diagram deliberately does
+  NOT say is what the report contains; the two attribution categories are the reference
+  doc's subject under BO-1800f-4, and drawing them here would breach the same scope fence
+  that keeps the trailer's grammar out.
 
   Why the per-path clause is stated separately. BO-1800f-2-i's four-way table shows
   that a single whole-delivery "were removals declared?" decision looks correct and is
@@ -346,14 +533,21 @@ notes: |
   decision against the declared set is what makes the picture agree with the record.
 
   Falsifiability. The criteria are checked by reading the artifact and enumerating,
-  not by confirming it is present. Three distinct enumerations each fail a distinct
-  wrong diagram: the end-point count fails a happy-path-only drawing; the
+  not by confirming it is present. Five distinct enumerations each fail a distinct
+  wrong diagram: the end-point count fails a happy-path-only drawing and the
+  three-terminal drawing that omits the replay halt; the distinguishability requirement
+  fails a four-terminal drawing whose refusals are worded alike; the
   branch-labelling requirement fails a drawing whose branches cannot be traced to the
-  criteria they claim to depict; and the prohibition on a proceed-branch after an
+  criteria they claim to depict; the prohibition on a proceed-branch after an
   unreadable read fails a drawing that carries the wrong disposition for an
-  unverifiable shared branch. Each of the five labelled elements is checked against a
+  unverifiable shared branch; and the same prohibition after an incomplete replay fails
+  a drawing whose replay branch rejoins the delivering path. Each of the eight labelled
+  elements is checked against a
   named acceptance criterion, so when a criterion under BO-1800f changes, the element
-  bearing its identifier either changes with it or is demonstrably out of date; the
+  bearing its identifier either changes with it or is demonstrably out of date; and the
+  completeness check fails a diagram that never mentions a behavioural criterion added
+  later, which is the direction this record's own three-to-four amendment was caught in
+  by hand. The
   failure surfaces as a named mismatch rather than as a diagram that merely looks
   plausible. An assertion about the diagram's existence, its frontmatter alone, or its
   line count satisfies none of these.
@@ -420,17 +614,22 @@ notes: |
      identifier the diagram references against the live store on every CI run. It is
      narrower than a content-hash drift check — it catches a criterion withdrawn,
      renamed or superseded, not a criterion silently reworded — and that narrowing is
-     stated here rather than glossed.
+     stated here rather than glossed. The BA's 2026-09-14 amendment added the opposite
+     direction as a second descriptor
+     (test_no_behavioural_criterion_under_bo_1800f_is_left_out_of_the_diagram), which was
+     withheld here only because it would then have been red on arrival; a silently
+     reworded criterion is still not caught by either.
 
   3. TEST CONTRACT. Set test_required: true with a nine-descriptor test_spec, NOT
-     test_required: false. A sequence diagram in this repo is a committed text artifact
+     test_required: false (grown to thirteen by the BA's 2026-09-14 amendment to four end
+     points). A sequence diagram in this repo is a committed text artifact
      with parseable frontmatter and a parseable mermaid body, so 'no pytest-shaped
      assertion is possible' is false here: every clause of the criteria that is not
      already covered by a commit hook is expressible as an assertion over that file plus
      the AC store. Leaving it false would have left the content clauses — the three
-     decision points, the three end points, the per-path adjudication, the absent
-     proceed-branch, the five labels — enforced by nothing at all, which is precisely the
-     unfalsifiable documentation AC the BA wrote these criteria to avoid.
+     decision points, the four end points, the per-path adjudication, the two absent
+     proceed-branches, the eight labels — enforced by nothing at all, which is precisely
+     the unfalsifiable documentation AC the BA wrote these criteria to avoid.
 
      The routing concern that would normally argue for false does not apply: the assigned
      agent's registry produces value is 'documentation', so the produces-trait TDD
@@ -459,7 +658,10 @@ notes: |
      reconciling, which is not this record's work.
 
   5. depends_on. Added BO-1800f-1, BO-1800f-1-i, BO-1800f-2 and BO-1800f-2-i to the
-     existing [BO-1800f]. The governing reason is BO-1800f's own: a documentation
+     existing [BO-1800f] (BO-1800f-1-ii and BO-1800f-2-ii added by the BA's 2026-09-14
+     amendment, on the same ordering grounds, once the diagram came to depict them too —
+     all six edges are ORDERING, and this record remains a direct child of BO-1800f).
+     The governing reason is BO-1800f's own: a documentation
      criterion written against an unsettled shape documents the wrong thing, and it is
      the IMPLEMENTATION, not the record, that is still unsettled. Nothing detects
      divergence between this diagram and the code it depicts — there is no drift hook for
@@ -491,26 +693,35 @@ notes: |
 
   CAVEATS RAISED TO THE BA — not acted on, because criteria are the BA's:
 
-  A. BO-1800f-1-ii LOOKS LIKE A FOURTH END POINT AND THE CRITERIA FIX THE COUNT AT THREE.
-     BO-1800f-1-ii is 'A replay that cannot complete cleanly stops the delivery and
-     restores the copy' — a distinct terminal disposition of this same boundary, and not
-     reducible to either of the two refusal end points the criteria enumerate (the read
-     failed; an undeclared removal was found). The criteria name four sibling records and
-     three end points; BO-1800f-1-ii and BO-1800f-2-ii are behavioural siblings the
-     criteria do not mention. Either the diagram will omit a real branch of the boundary
-     it claims to draw, or the count is short by one. This needs a BA decision: amend to
-     four end points and six or seven labelled elements, or state in the criteria that the
-     replay-failure disposition is out of this diagram's scope and why. Until then the
-     test_spec asserts EXACTLY THREE, faithfully to the criteria as written — which means
-     that if the BA amends, the end-point descriptor must be amended with it.
+  A. RESOLVED 2026-09-14 BY THE BA — AMENDED TO FOUR END POINTS. The caveat as raised was
+     correct: BO-1800f-1-ii ('A replay that cannot complete cleanly stops the delivery and
+     restores the copy') is a fourth terminal disposition of this boundary and is not
+     reducible to either of the two refusals the original criteria enumerated. The
+     decisive point is not that BO-1800f-1-ii exists as a record — a record existing
+     elsewhere does not by itself make it a branch of this flow — but that this diagram
+     already draws the replay as one of its three steps, and BO-1800f-1-ii is a terminal
+     disposition OF THAT STEP rather than of a separate operation; its own expects_from
+     says it "constrains the same operation rather than a separate code path". Drawing the
+     replay with only one outcome would have asserted that the replay always completes.
+     The option of keeping three and scoping the replay failure out was considered and
+     rejected: it could not be given a reason a reader could act on that did not also
+     exclude BO-1800f-1-i, which is an end point. The full reasoning is in the notes above
+     under "Why four and not three".
 
-     This is also why the staleness descriptor is written as a liveness check (every
-     referenced identifier still resolves) rather than as a completeness check (every
-     behavioural leaf under BO-1800f is referenced). The completeness form is the more
-     useful of the two and it is what the criteria's purpose clause reaches for, but
-     authored today it would be red on arrival against BO-1800f-1-ii and BO-1800f-2-ii,
-     and a knowingly-red-forever test is worse than a narrower green one. Revisit when
-     caveat A is resolved.
+     BO-1800f-2-ii is resolved differently and deliberately so: it is now referenced, but
+     as a report emitted on both adjudication outcomes rather than as a terminal, because
+     it produces no end point. See "Why BO-1800f-2-ii appears as a report and not as a
+     terminal" above.
+
+     The staleness descriptor's narrowing is resolved with it. It was written as a
+     liveness check (every referenced identifier still resolves) rather than a
+     completeness check (every behavioural leaf under BO-1800f is referenced) solely
+     because completeness would have been red on arrival against BO-1800f-1-ii and
+     BO-1800f-2-ii. Both are now referenced, so that objection is gone and the
+     completeness form is authored as a second descriptor,
+     test_no_behavioural_criterion_under_bo_1800f_is_left_out_of_the_diagram, alongside
+     the liveness one. The two fail in opposite directions and are kept apart for that
+     reason.
 
   B. THE BA'S HOUSE-STYLE REFERENCE HAS A NON-CONFORMING FILENAME.
      docs/architecture/diagrams/c3-done-proof-evaluation-sequence.md is a good model for

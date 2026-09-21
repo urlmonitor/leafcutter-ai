@@ -203,50 +203,57 @@ class TestQuickFixSkillMutationProofStashFree(unittest.TestCase):
 
 
 class TestQuickFixWorkflowMutationProofStashFree(unittest.TestCase):
-    """quick-fix.js's mutation-proof prompt must not prescribe the stash stack.
+    """No path through quick-fix.js may operate the shared git stash stack.
 
-    This is the copy that actually executes, so fixing only the skill prose
-    would leave the hazard live on the /quick-fix workflow path.
+    Originally scoped to just the mutation-proof block via `_slice_between`,
+    because at the time that was the only place the file still needed
+    checking -- other sections legitimately used `git stash` too. That is no
+    longer true: the whole file should be stash-free. The region anchor was
+    REMOVED rather than kept as an apparent belt-and-suspenders, because an
+    anchor on a literal like `halt_reason: 'mutation_proof_failed'` couples
+    the test to the source's physical layout -- a same-behaviour refactor
+    that moves that literal from an object key into a function argument (a
+    shared helper for the two mutation-proof failure returns) broke this
+    test even though nothing about the prompt or its stash-freedom changed.
+    Do not reintroduce region-slicing here; it reads like tightening the
+    guard but it narrows what gets checked and re-couples the test to
+    wherever the halt_reason literal happens to sit today.
+
+    Whole-file scope makes this guard STRONGER, not weaker: it now also
+    catches a stash operation introduced anywhere else in the workflow, not
+    only inside the mutation-proof section.
     """
 
     @classmethod
     def setUpClass(cls):
         cls.full = _read(_WORKFLOW_JS)
-        cls.mutation_block = _slice_between(
-            cls.full,
-            r"^const mutationResult = await agent\(",
-            r"halt_reason:\s*'mutation_proof_failed'",
-            "quick-fix.js mutation-proof prompt and its blocked path",
-        )
 
-    def test_ac_bp600c3ii_workflow_mutation_prompt_uses_no_stash_command(self):
+    def test_ac_bp600c3ii_workflow_uses_no_stash_command_anywhere(self):
         # covers: BP-600c-3-ii
-        """The mutation-proof prompt and its recovery message must be stash-free.
+        """No stash *operation* may appear anywhere in quick-fix.js.
 
-        Both the numbered command sequence handed to the agent and the
-        `mutation_proof_incomplete` recovery text pointed at the stash stack.
-
-        Matched on stash *operations* (`push`/`pop`/`list`/...), so the prompt
-        can still spell out the prohibition without tripping its own guard.
+        Matched on stash *operations* (`push`/`pop`/`list`/...), so the file
+        can still spell out the prohibition ("DO NOT USE git stash...") in
+        prose without tripping its own guard -- `_STASH_OPERATION` requires a
+        subcommand, unlike the bare `_STASH_MENTION`.
         """
-        found = _STASH_OPERATION.findall(self.mutation_block)
+        found = _STASH_OPERATION.findall(self.full)
         self.assertEqual(
             found,
             [],
             msg=(
-                "templates/workflows-js/quick-fix.js still instructs the "
-                f"mutation-proof agent to use the shared stash stack ({found!r}). "
-                "This is the executing copy of the Step 4.2 recipe -- correcting "
-                "the skill prose alone leaves the workflow path unchanged "
-                "(BP-600c-3-ii)."
+                "templates/workflows-js/quick-fix.js instructs some agent to "
+                f"use the shared stash stack ({found!r}). This is the executing "
+                "copy of the Step 4.2 recipe -- correcting the skill prose "
+                "alone leaves the workflow path unchanged (BP-600c-3-ii)."
             ),
         )
 
     def test_ac_bp600c3ii_workflow_mutation_prompt_reverts_from_head(self):
         # covers: BP-600c-3-ii
-        """The prompt must still revert, by reading HEAD's content."""
+        """The mutation-proof prompt must still revert, by reading HEAD's content."""
         self.assertRegex(
-            self.mutation_block,
+            self.full,
             _SHOW_FROM_HEAD,
             msg=(
                 "templates/workflows-js/quick-fix.js no longer instructs the "

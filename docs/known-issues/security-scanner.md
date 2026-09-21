@@ -15,6 +15,7 @@ related_docs:
   - templates/skills/security-scanner/SKILL.md
 ---
 
+
 # Known issues — security-scanner
 
 Observed defects in the **secrets and vulnerability scanning** surface that are **not
@@ -77,140 +78,28 @@ in the commit message. If it earns real work, author an AC for it and note the A
 
 ---
 
-### KI-SEC-001 — Prose exemption disables entropy detection for WHOLE FILES, including executable Python under `templates/skills/`
+## How this register is stored
 
-- **Severity:** high
-- **Status:** open — partially anticipated by `GE-123d-4-i` (draft), but that AC governs a *proposed* widening, not this existing behaviour
-- **Occurrences:** 1
-- **First seen:** 2026-08-18 · **Last seen:** 2026-08-18
-- **Where:** `templates/scripts/commit_guardian/check_secrets.py` — `_PROSE_FILE_PREFIXES` / `_is_prose_exempt`
-- **History:** filed 2026-08-18 as `KI-CG-004` in `commit-guardian.md`; moved here 2026-08-19 when this register was created. `KI-CG-004` is retired, not reused.
-
-**Symptom.** `ENTROPY_HIGH` is the only rule that catches an **opaque** credential — a
-Stripe key, a JWT, a random API token — because such values carry no `password =`
-style keyword for `GENERIC_SECRET` to match and no fixed prefix for `AWS_KEY` or
-`PRIVATE_KEY`. That rule is switched off for entire files under four path prefixes.
-The source comment states the scope plainly: *"Prose-only file prefixes — entire files
-are exempt from entropy scanning."*
-
-**Evidence.** A live-shaped token (`sk_live_…`, Shannon entropy **5.17**, threshold
-4.5) run through the real `_is_prose_exempt`:
+This file is an **index**. Each known issue is its own file under [`security-scanner/`](security-scanner/), named `<status>-<severity>-<ki-id>.md`, so the directory listing answers "is anything open, and how bad" without opening anything:
 
 ```
-templates/skills/security-scanner/scripts/scan_secrets.py   EXEMPT — not reported
-templates/skills/some-skill/scripts/helper.py               EXEMPT — not reported
-tickets/00_inbox/TICKET-20260818-Example.md                 EXEMPT — not reported
-docs/acceptance-criteria/guardrail-engine/GE-123.yaml       EXEMPT — not reported
-docs/retrospectives/retro.md                                EXEMPT — not reported
-scripts/build.py                                            reported
-leafcutter-web/app/page.tsx                                 reported
+ls docs/known-issues/security-scanner/open-blocker-*   # anything critical open?
+ls docs/known-issues/security-scanner/open-*           # everything still live
 ```
 
-**Why `templates/skills/` is the sharp edge.** It is on the prose list but it is not
-prose — it holds executable Python, including the secrets scanner's own
-`scan_secrets.py`. A credential pasted into any script under that prefix is
-unreported by the very tool meant to catch it. The other three prefixes are genuinely
-prose directories, so the exposure there is narrower, but a ticket is still a file a
-developer will happily paste a token into while writing up an incident.
+Severity in the **filename** is a three-level index bucket (`blocker` / `high` / `low`). The original grading is preserved verbatim on each entry's own `**Severity:**` line — the bucket never overwrites it. `critical` indexes as `blocker`; `medium` indexes as `low`.
 
-**Scope of the exemption, precisely.** It gates `ENTROPY_HIGH` only —
-`AWS_KEY`, `PRIVATE_KEY`, `EXCHANGE_API_KEY` and `GENERIC_SECRET` still fire in these
-paths. So the hole is exactly the class of credential that has no recognisable shape,
-which is most modern opaque tokens.
+Fixed issues move to [`security-scanner/resolved/`](security-scanner/resolved/) and are no longer listed as open. They are kept, not deleted.
 
-**The exemption is far wider than four directories — the match is NOT root-anchored.**
-`_is_prose_exempt` tests `("/" + prefix) in path_str`, a substring test against the
-whole path. So the four prefixes are really four *directory names*, matching at **any
-depth, in any subtree**. Measured with the same 5.17-entropy token:
+**Open: 2** (0 blocker, 1 high, 1 low) · **Resolved: 0**
 
-```
-tickets/00_inbox/note.md                    EXEMPT   (intended)
-leafcutter-web/tickets/app.py               EXEMPT   (not intended)
-src/vendor/tickets/handler.py               EXEMPT   (not intended)
-some/deep/nested/docs/retrospectives/x.py   EXEMPT   (not intended)
-unrelated/templates/skills/evil.py          EXEMPT   (not intended)
-src/app.py                                  reported
-```
+## Open
 
-This repository already ships `leafcutter-web/`. Any feature directory named
-`tickets/`, any vendored dependency containing one, and any nested `templates/skills/`
-loses entropy detection silently — for `.py` as readily as for `.md`. The original
-framing of this issue (four known prose directories) understated it: the reachable
-surface is any path containing one of those four segment names.
-
-**Corollary — a test can be written that passes for the wrong reason.** A fixture
-placed under any such path measures the exemption rather than the scanner. This is a
-live authoring hazard, not a theoretical one; it is called out as a hard
-`it_requirement` in the `GE-123a` and `GE-123c` subtrees for exactly that reason.
-
-**Fix direction.** Three separable changes, in descending order of payoff:
-
-- **Anchor the match at the repository root.** Compare path *segments* from the root
-  rather than substring-testing the whole path. This is the single change that shrinks
-  the surface from "any path containing these names" back to the four directories the
-  exemption was written for, and it is the cheapest of the three.
-- Gate the exemption by **file kind**, not only by path. A `.md` under `tickets/` is
-  prose; a `.py` under `templates/skills/` is not. This closes the executable-code case
-  that anchoring alone leaves open, since `templates/skills/` genuinely is on the list.
-- Make the exemption **per finding** rather than per file. The existing rule discards
-  every entropy finding in a matching file; the narrower rule is to discard only
-  findings whose high entropy is explained by a benign token — which the module
-  already computes for `TICKET-…` / `EPIC-…` identifiers and could extend.
-
-**One more thing the fix must not trip over.** `_filter_prose_findings` passes
-`finding.excerpt` as the line to test, and `scan_file` sets
-`excerpt = line.strip()[:120]` (`scan_secrets.py:248` and `:254`). The exemption
-therefore judges a **truncated** line: a benign explanatory token sitting past column
-120 is invisible to it, so verdict can turn on line length alone. Any per-finding
-rework needs the full matched value, not the excerpt.
-
-**Relationship to in-flight work.** `GE-123d` proposes extending prose exemption to
-`GENERIC_SECRET`, and `GE-123d-4-i` exists specifically to require a file-kind gate so
-that widening does not inherit this defect. That is the right guard for the *new*
-behaviour, but it does not repair the *existing* `ENTROPY_HIGH` exemption — this issue
-covers that, and it should be fixed first so the new work is not built on top of it.
-
-Six `GE-123` records cite this defect by its original id and file path
-(`KI-CG-004` in `docs/known-issues/commit-guardian.md`), deliberately, as an
-out-of-scope fence. Those citations were left untouched by the move: they are dated
-records of a decision, and the retired-id stub in `commit-guardian.md` resolves them in
-one hop. Do not "fix" them to point here — the fence is what stops this issue and
-`GE-123d-4-i` being closed as duplicates of each other.
-
----
-
-### KI-SEC-20260914-entropy-flags-test-class-names — ENTROPY_HIGH reads a long CamelCase test class name carrying an AC id as a secret, and the only remedy it offers is an allowlist edit that an automated reviewer rightly refuses
-
-- **Severity:** medium. No secret can slip past because of this, but it costs a commit round-trip each time. Its standard remedy, a `.security-allowlist` glob, weakens scanning for the whole file. On 2026-09-14 the auto-mode permission classifier refused a commit containing such an edit as `[Security Weaken]`.
-- **Status:** open
-- **Occurrences:** 5 on 2026-09-14 alone, counting this register entry's own first commit (see below). `test_uxp_700c_1_i.py` and `test_uxp_700b_2.py` were allowlisted. `test_uxp_700e_3_i.py` was allowlisted. `test_uxp_700e_1_ii.py` was refused and its class renamed instead.
-- **First seen:** 2026-09-14 (at least; earlier allowlist globs for `unit_tests/...:*` suggest the same cause) · **Last seen:** 2026-09-14
-- **Where:** `templates/scripts/commit_guardian/check_secrets.py`: `_ENTROPY_MIN_LEN = 20`, `_ENTROPY_THRESHOLD = 4.5`, and the prose exemption `_is_prose_exempt()`
-
-**Symptom.**
-
-```text
-[ENTROPY_HIGH] unit_tests\product_truth\test_uxp_700e_1_ii.py:94
-  class TestUxp700e1Ii…ReachableFromEntryPoint(unittest.TestCase):
-```
-
-**Measurement.** Shannon entropy per token, computed with the scanner's formula:
-
-| Token | Length | Entropy |
+| Severity | Issue | File |
 |---|---|---|
-| `TestUxp700e1Ii` + `ReachableFromEntryPoint`, one identifier | 37 | 4.540 (flagged) |
-| `TestUxp700e3I` + `ReachableFromEntryPoint`, one identifier | 36 | 4.538 (flagged) |
-| `TestTighteningReachableFromEntryPoint` | 37 | 4.108 |
-| `test_uxp_700e_1_ii_reachable_from_entry_point` | 45 | 4.089 |
+| `high` | KI-SEC-001 — Prose exemption disables entropy detection for WHOLE FILES, including executable Python under `templates/skills/` | [open-high-ki-sec-001.md](security-scanner/open-high-ki-sec-001.md) |
+| `low` | KI-SEC-20260914-entropy-flags-test-class-names — ENTROPY_HIGH reads a long CamelCase test class name carrying an AC id as a secret, and the only remedy it offers is an allowlist edit that an automated reviewer rightly refuses | [open-low-ki-sec-20260914-entropy-flags-test-class-names.md](security-scanner/open-low-ki-sec-20260914-entropy-flags-test-class-names.md) |
 
-The repo's test convention causes this. A reachability test is named after its AC, and the AC id (`700e1Ii`) adds digits and mixed case to an otherwise ordinary identifier. That tips it just over 4.5. The snake_case method name carrying the same id stays under. Only the CamelCase class name trips the scanner.
+## Resolved
 
-**This entry is itself an occurrence.** Its first draft quoted the two flagged names whole. `check-secrets` refused the commit that added this register entry, and also flagged a 65-character KI slug in `commit-guardian.md`, because the scanner's token pattern `[A-Za-z0-9+/=_\-]{20,}` counts a whole hyphenated slug as one token. The names above are therefore quoted in two parts, and that slug was shortened. That is the same rename-to-evade workaround this entry describes, applied to prose.
-
-**Why the allowlist remedy is wrong here.** A `ENTROPY_HIGH:<file>:*` glob suppresses *every* future entropy finding in that file, including a real token pasted into a fixture later. Per-line entries go stale as the file grows, which is why the register's convention is globs. So the scanner leaves two choices: weaken a whole file, or maintain entries that rot. A reviewer that refuses the glob is behaving correctly. The defect is that the scanner made the glob necessary.
-
-**Workaround in use.** Rename the class to something without the AC id (`TestTighteningReachableFromEntryPoint`). The `# covers:` tag and the method name still carry the id, so traceability is unaffected.
-
-**Fix direction.** Exempt Python identifiers in declaration position (`class X(`, `def x(`) from ENTROPY_HIGH when the token matches `^[A-Za-z_][A-Za-z0-9_]*$` and splits into dictionary-like CamelCase or snake_case segments. A secret is almost never a syntactically valid identifier in declaration position. Pin it with the four tokens above: the two flagged names must pass, and a 40-character base64 token assigned to a variable in the same file must still be flagged.
-
-**Pattern:** a detector whose false positives are structurally produced by the project's own naming convention, and whose only escape hatch is to suppress the detector for the whole file.
+None yet.
