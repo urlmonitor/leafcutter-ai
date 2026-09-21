@@ -6,7 +6,7 @@ BUSINESS CONTEXT: docs/roadmap.json is the machine-readable plan-of-record for t
     Ensuring schema compliance at commit time prevents invalid roadmap content from landing
     on any branch, protecting downstream tooling (roadmap_query.py, ticket_frontmatter_guard.py)
     that reads the file at runtime.
-ARCHITECTURE: Reads the schema from leafcutter/config/roadmap.schema.json.
+ARCHITECTURE: Reads the schema from config/roadmap.schema.json (project-root-relative).
     Fail-open: exits 0 with a warning when the schema file is absent, git is unavailable,
     or any unexpected error occurs. Only fires when docs/roadmap.json is staged.
     Decision rationale: config/roadmap.schema.json is the authoritative shape.
@@ -24,7 +24,7 @@ import sys
 from pathlib import Path
 
 
-SCHEMA_RELATIVE = "leafcutter/config/roadmap.schema.json"
+SCHEMA_RELATIVE = "config/roadmap.schema.json"
 try:
     from config import DOC_FM_DOCS_DIR as _DOCS_DIR
 except ImportError:
@@ -168,6 +168,20 @@ if __name__ == "__main__":
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-09-14 [python-coder/KI-CG-010]: Fixed SCHEMA_RELATIVE from
+#   "leafcutter/config/roadmap.schema.json" to "config/roadmap.schema.json" --
+#   the old value does not exist in any layout; the schema has always lived at
+#   <project_root>/config/roadmap.schema.json. Because the old path never
+#   resolved, main() hit its "schema not found; skipping" fail-open branch on
+#   every run and this hook has validated nothing since it was written.
+#   PAIRED CHANGE, same commit: config/roadmap.schema.json was ALSO extended
+#   to add the optional root property "last_updated" and the optional
+#   per-phase property "components" (both additionalProperties:false blocks).
+#   Fixing only the path would have made docs/roadmap.json immediately
+#   uncommittable -- validating it against the schema as it stood yields 9
+#   errors (1 root "last_updated" unexpected + 8 phase-item "components"
+#   unexpected, one per phase in the current roadmap). Verified 9 -> 0 after
+#   both halves landed together. (#KI-CG-010)
 # - 2026-05-18 10:25 [python-coder]: Initial creation. Blocking pre-commit (#TICKETLESS reason=standalone-agent-note)
 #   hook that validates docs/roadmap.json against roadmap.schema.json when
 #   that file is staged. Exits 1 on schema failure; exits 0 (fail-open) on

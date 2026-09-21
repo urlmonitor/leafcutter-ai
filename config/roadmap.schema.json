@@ -10,6 +10,10 @@
       "type": "string",
       "description": "Optional human-readable note about the file (JSON has no native comments)."
     },
+    "last_updated": {
+      "type": "string",
+      "description": "Optional ISO-8601 (or YYYY-MM-DD) date the roadmap was last edited."
+    },
     "current_phase": {
       "type": "string",
       "description": "ID of the currently active phase. Must match one of phases[*].id.",
@@ -59,6 +63,13 @@
           "tickets_advancing_outcome": {
             "type": "array",
             "description": "List of ticket identifiers (paths or slugs) that directly advance the current_outcome for this phase.",
+            "items": {
+              "type": "string"
+            }
+          },
+          "components": {
+            "type": "array",
+            "description": "Optional list of component ids (from docs/components.json) that this phase touches.",
             "items": {
               "type": "string"
             }

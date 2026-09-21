@@ -244,7 +244,7 @@ def build_workflow_scripts(target_root: Path, config: dict[str, Any],
 
     version_known = version_str is not None
     version_ok = False
-    if version_known:
+    if version_str is not None:  # not `version_known`: mypy cannot narrow via a bool
         try:
             version_ok = Version(version_str) >= Version(_MINIMUM_VERSION)
         except InvalidVersion:
@@ -552,4 +552,12 @@ def build_workflow_tools(target_root: Path, config: dict[str, Any],
 #   build_phases.py under the 400-counted-line check-file-size limit.
 #   Re-exported from build_phases.py so build.py and every test import
 #   keeps working. (#refactor/build-phases-size-limit)
+# - 2026-09-14 [python-coder/KI-BP-20260831-0620]: Reapplied the mypy narrowing
+#   fix to build_workflow_scripts() after the bp-size-split moved it here:
+#   `if version_str is not None:` in place of `if version_known:` -- mypy
+#   cannot narrow an Optional through an intermediate bool, so the widened
+#   CI pathspec (this file now being checked for the first time) flagged
+#   Version(version_str) as str | None where str is required. version_known
+#   still holds the same value and is still consulted below; behaviour is
+#   unchanged. (#KI-BP-20260831-0620)
 # ===========================================================================
