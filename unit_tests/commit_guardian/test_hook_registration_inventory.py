@@ -64,25 +64,34 @@ MANIFEST_PATH = GUARDIAN_DIR / "commit_guardian.json"
 # ---------------------------------------------------------------------------
 # Ratchet baseline — hook scripts that exist on disk with no hooks_manifest
 # entry. 18 at 2524993b9 (2026-09-14); 16 after check_pytest_style.py and
-# check_sql_dependencies.py were deleted as bybit-trader residue; 14 now that
-# two non-hooks are listed in hook_parity.excluded_scripts.
+# check_sql_dependencies.py were deleted as bybit-trader residue; 14 after two
+# non-hooks were listed in hook_parity.excluded_scripts; 9 once the five gates
+# needing no code work were registered under GE-120h-3, the criterion that
+# declares the package surface check-package-surface-declaration demanded; 5 now
+# that BP-100n-4 has registered four more.
+#
+# BP-100n-4 and GE-120h-3 registered overlapping sets independently and landed
+# within hours of each other. The merge took the union: GE-120h-3's five, plus
+# BP-100n-4's check-doc-links, check-root-files, check-test-ac-tags,
+# check-ticket-test-requirements and check-ticket-ac-limits (the
+# hooks/check_ac_limits.py filename-collision case, which never appeared in this
+# baseline because it lives in the hooks/ subdirectory).
 #
 # THIS LIST MAY ONLY SHRINK. Every entry is a script that pre-commit never
 # runs. Adding to it would make this test the rubber stamp it exists to
 # prevent; to clear an entry, either register the script in
 # hooks_manifest.hooks or delete it, then remove the line here.
 #
-# The remaining fourteen are all KNOWN AND WANTED — none is a candidate for
-# deletion. Five of them (check_folder_density, check_test_fixture_bloat,
-# check_sql_complexity, check_debug_scripts, check_ac_done_on_merge) need no
-# code work and are verified safe to register, but registering them adds
-# package-registry entries, which check-package-surface-declaration refuses
-# unless a cited acceptance criterion carries `package_surface: true`. That
-# criterion does not exist yet, so the registration is queued behind it rather
-# than forced through. The other nine each need real work first — a ratchet over
-# existing violations, a crash fix, or an argv fix — scheduled after the
-# file-length gate is fully integrated. The comments below record what each is
-# waiting on, measured against the tree at this commit.
+# The remaining five are all KNOWN AND WANTED — none is a candidate for
+# deletion. Each needs real work before it can be registered (a ratchet over
+# existing violations, a crash fix, or an argv fix), scheduled after the
+# file-length gate is fully integrated. check_complexity is the largest and is
+# deliberately withheld: it is functional, but 65 over-threshold functions remain
+# repo-wide, so registering it would block every commit. GE-120h is the parent
+# for that work; note its L2s deliberately require more than draining this list,
+# because a decomposition that only registers today's orphans leaves the next one
+# free to appear with the same four reassuring signals. The comments below record
+# what each entry is waiting on, measured against the tree at this commit.
 # ---------------------------------------------------------------------------
 UNREGISTERED_BASELINE: frozenset[str] = frozenset(
     {
@@ -90,18 +99,6 @@ UNREGISTERED_BASELINE: frozenset[str] = frozenset(
         # CI). Also near-blind: _ID_REGEX is $-anchored, so a suffixed id like
         # TQ-100b-4-i never matches — it sees 275 of 4,032 records.
         "check_ac_coverage.py",
-        # READY TO REGISTER — blocked only on a package_surface AC. Cannot block
-        # a commit: main() returns 0 unconditionally and the __main__ guard
-        # swallows OSError/ValueError into exit 0. Belongs on the post-merge
-        # stage. Note the call direction: it INVOKES mark_ac_done.py, whose
-        # docstring back-reference to this hook was misread as an invoker once.
-        "check_ac_done_on_merge.py",
-        # READY TO REGISTER — blocked only on a package_surface AC. Fully
-        # config-driven, so portable; vacuous here because debugging/ is
-        # untracked. Must be registered always_run with no files key: a
-        # location-anchored `^debugging/scripts/` regex matching nothing is
-        # classified UNREACHABLE, not NOTHING-TO-MATCH.
-        "check_debug_scripts.py",
         # Wanted. Nothing enforces cyclomatic complexity today (ruff.toml
         # selects only E, F, E722 — no C901). Needs a shrink-only ratchet first:
         # 79 over-limit functions across 50 files at max_score 15.
@@ -111,9 +108,6 @@ UNREGISTERED_BASELINE: frozenset[str] = frozenset(
         # hook's stdout is discarded (KI-CG-026). Needs verbose: true to be
         # worth registering.
         "check_doc_coverage.py",
-        # Advisory, exits 0, only 13 findings. Needs verbose: true and a parser
-        # fix — it reads DECISION HISTORY lines as DOC_LINKS paths (3 of the 13).
-        "check_doc_links.py",
         # Wanted. ruff carries no D rules, so nothing enforces docstrings.
         # Needs an unhandled docstring_parser.ParseError caught and a ratchet
         # over 617 violations in 74 of 127 in-scope files.
@@ -122,41 +116,38 @@ UNREGISTERED_BASELINE: frozenset[str] = frozenset(
         # 35 of 50 directories holding tracked .py have no README.md. Has a live
         # caller: doc-enforcer SKILL.md runs it with --report-legacy.
         "check_documentation.py",
-        # READY TO REGISTER — blocked only on a package_surface AC. Safe because
-        # the ratchet is built in: _classify_folders raises a violation only when
-        # a folder crosses the limit IN THIS COMMIT, so the 113 directories
-        # already over 15 report as warnings. Verified against a real staged set.
-        "check_folder_density.py",
-        # Concept is general, allowlist is not: it still permits bybit-trader's
-        # app_launcher.py while REJECTING ruff.toml, SETUP.md, VERSION,
-        # LEAFCUTTER_VERSION, build-self.sh and requirements-dev.txt — and it
-        # fires on modify, not just add. Needs its allowlist rewritten.
-        # check_documentation.py imports its constants, so it cannot just go.
-        "check_root_files.py",
-        # READY TO REGISTER — blocked only on a package_surface AC. Portable and
-        # config-driven (unlike the deleted check_sql_dependencies.py, it
-        # hardcodes no schema); vacuous here with zero tracked .sql, and there
-        # for the consumers README.md line 38 has been promising it to.
-        "check_sql_complexity.py",
-        # Substantially superseded by done_proof.py, which reimplements the same
-        # three tag positions. Warn mode today; 5,725 untagged test functions in
-        # 642 of 644 files, so registering it verbose would be pure noise.
-        "check_test_ac_tags.py",
-        # READY TO REGISTER — blocked only on a package_surface AC. Inert by
-        # design once registered: the test_fixture_bloat config key does not
-        # exist, so config resolves to {}, enabled defaults False, and every
-        # violation path returns 0. Arming it is a separate deliberate step.
-        "check_test_fixture_bloat.py",
-        # Registering as-is would be theatre: main() ignores argv and reads
-        # paths from stdin (:151-152), but pre-commit passes filenames as
-        # arguments and leaves stdin empty, so it would check zero files and
-        # always pass. Needs sys.argv[1:] preferred first.
-        "check_ticket_test_requirements.py",
     }
 )
 
 _SCRIPT_IN_ENTRY = re.compile(r"([A-Za-z0-9_]+\.py)")
 _ALWAYS_EXCLUDED = frozenset({"__init__.py", "README.md"})
+
+# The whole path token, not just its basename. Entries name scripts in several
+# trees — the deployed guardian dir via {{config.output_root}}, and repo-relative
+# paths such as docs/product-truth/scripts/ — so a basename-only match cannot
+# tell "this script lives elsewhere" from "this script is gone".
+_PY_PATH_IN_ENTRY = re.compile(r"(\S+\.py)")
+
+
+def _script_token_resolves(token: str) -> bool:
+    """True when a .py path named by a manifest entry exists in this repo.
+
+    An entry addresses the DEPLOYED layout, so `{{config.output_root}}/scripts/x`
+    is checked against its template source under templates/. Repo-relative tokens
+    are checked as given. The bare-name fallbacks keep a `script`-key entry, which
+    carries a filename rather than a path, resolvable.
+    """
+    cleaned = token.replace("{{config.output_root}}/", "")
+    name = Path(cleaned).name
+    return any(
+        candidate.is_file()
+        for candidate in (
+            PROJECT_ROOT / cleaned,
+            PROJECT_ROOT / "templates" / cleaned,
+            GUARDIAN_DIR / name,
+            GUARDIAN_DIR / "hooks" / name,
+        )
+    )
 
 
 def _load_manifest() -> dict:
@@ -234,18 +225,30 @@ def test_every_registered_script_resolves_on_disk() -> None:
     entry pointing at a filename that is not there is a gate that fails at
     invocation rather than one that silently never runs, but it is the same
     unasked question about the link between registry and disk.
+
+    Both the `script` key AND the script named on the `entry` command line are
+    checked, for the reason _registered_script_names gives: an entry may declare
+    its script through either convention, and this repo overwhelmingly uses the
+    second. Checking only `script` made this assertion very nearly vacuous — at
+    the time it was widened, 71 of 73 entries carried no `script` key, so it
+    validated two of them while its own docstring promised it validated every
+    one. BP-100n-4 registered check-pytest-style and check-sql-dependencies in
+    the entry form; main deleted both scripts as bybit-trader residue in #794 the
+    same day; the merge produced two entries pointing at files that no longer
+    existed, and this test passed anyway. The failure surfaced instead as
+    `RESULT: not_run ... reason=could_not_start` in an unrelated portability
+    sweep, a long way from the registry where the fault actually was.
     """
     manifest = _load_manifest()
 
     missing: list[str] = []
     for hook in manifest.get("hooks_manifest", {}).get("hooks", []):
+        named: set[str] = set(_PY_PATH_IN_ENTRY.findall(hook.get("entry", "")))
         script = hook.get("script")
-        if not script:
-            continue
-        if (
-            not (GUARDIAN_DIR / script).is_file()
-            and not (GUARDIAN_DIR / "hooks" / script).is_file()
-        ):
-            missing.append(f"{hook.get('id')} -> {script}")
+        if script:
+            named.add(script)
+        for name in sorted(named):
+            if not _script_token_resolves(name):
+                missing.append(f"{hook.get('id')} -> {name}")
 
     assert not missing, f"hooks_manifest entries naming a script that does not exist: {missing}"

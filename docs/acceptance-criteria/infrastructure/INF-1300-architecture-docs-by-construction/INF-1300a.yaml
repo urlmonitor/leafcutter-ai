@@ -1,0 +1,101 @@
+id: INF-1300a
+components:
+  - documentation_system
+  - doc_compliance
+  - infrastructure
+title: "Your architecture document is accepted the first time you offer it"
+component: infrastructure
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  No round-trips -- what you start from already satisfies every check.
+
+  The document you are handed already meets the rules the project applies before
+  it will accept a document of that kind, so the only thing that can send you
+  back is something you wrote, never something in how the document was set up.
+depends_on: [INF-1300]
+doc_links:
+  - path: templates/skills/write-c4-diagram/SKILL.md
+    relationship: specifies
+    status: exists
+    relevance: "Section 6 is the frontmatter checklist the produced document must satisfy; section 6a is the two-directional parent link that the pinned invocation cannot currently supply."
+  - path: docs/architecture/diagrams/README.md
+    relationship: specifies
+    status: exists
+    relevance: "The collection's naming and numbering rule, including that two files collide on the level/number pair regardless of slug."
+  - path: config/diagram_types.json
+    relationship: specifies
+    status: exists
+    relevance: "Declares which diagram kinds exist and which of them oblige extra fields that the produced document must carry."
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-09-14
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-09-14'
+superseded_by: null
+covered_by:
+  - INF-1300a-1
+  - INF-1300a-2
+  - INF-1300a-3
+  - INF-1300a-4
+  - INF-1300a-5
+implemented_by: []
+documentation_triggers:
+  - how-to
+documentation_rationale: null
+notes: |
+  This is the author-facing half of the goal and the one that clears the current
+  blockage. Its subject is the round-trip: today an author who writes a new
+  architecture document learns the project's rules one refusal at a time, from a
+  sequence of separate checks -- the name and its agreement with the declared
+  level, the required fields for this part of the tree, the two-directional link
+  to the document above, the size limits on the picture, and the whole-collection
+  rule that no two documents share a level and number. Each of those is a
+  separate trip. Every trip after the first is avoidable.
+
+  WHY THE BENEFIT IS "ACCEPTED", NOT "CORRECTLY FORMATTED". Formatting is
+  checkable by inspection and therefore easy to claim falsely. Acceptance is
+  binary, is decided by machinery that already exists and that this record does
+  not get to change, and is the thing the author actually cares about. A BA
+  decomposing this should hold that line: the falsifiable form of this L1 is a
+  produced document surviving the real checks, not a produced document matching a
+  fixture.
+
+  THE PROMISE IS CURRENTLY WIDER THAN THE PINNED INVOCATION CAN KEEP -- resolve
+  before writing L2s. The invocation fixed by both authoring surfaces takes the
+  tier, the diagram kind, the component, the title, the output path, the date and
+  an index flag. At least three things the checks demand are not derivable from
+  those: the link to the parent document and the reciprocal entry in that
+  parent's list of children, which the authoring procedure itself leaves as a
+  manual step; the originating ticket, which the same procedure says MUST be
+  populated on every create; and the extra fields that certain diagram kinds
+  oblige. A BA has exactly two honest options and must choose one in writing:
+  widen the inputs so the promise can be kept whole, or state in the criteria
+  which parts remain the author's and why, so the L1 does not promise a first-try
+  acceptance it structurally cannot deliver. Do not resolve this by weakening a
+  check.
+
+  WHAT THIS L1 DOES NOT OWN. It does not own the rules themselves. The
+  whole-collection uniqueness rule belongs to the GE-122 tree; the naming and
+  frontmatter checks belong to the guardrail surface. This record's claim is only
+  that what is produced SATISFIES them. If delivering this appears to require
+  changing one of those checks, that is a signal the generator is wrong, not the
+  check.
+
+  PRIORITY high, inherited from the L0's grounds and specific to this child:
+  BO-1800f-3's enrichment names "the scaffold script is authored and deployed
+  first" as its preferred resolution, and that record cannot be dispatched until
+  this L1 is real.
+
+  Documentation: how-to. A new author-facing command needs the how-to that tells
+  an author how to start a new architecture document and what is left for them to
+  write; the troubleshooting entry point for INF-1300d's refusals belongs in the
+  same document rather than in one of its own.

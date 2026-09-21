@@ -34,6 +34,6 @@ the next sequence number by hand.
 ## Full numbering rule
 
 The complete identifier-shape rule, free-number lookup, and never-reuse policy
-live in `docs/reference/artifact-numbering.md` (once that document exists).
+live in `docs/reference/artifact-numbering.md`.
 
 See also `docs/architecture/README.md` and the `write-c4-diagram` skill.

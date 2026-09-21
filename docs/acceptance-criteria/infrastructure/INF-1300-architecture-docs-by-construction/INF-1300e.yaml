@@ -1,0 +1,120 @@
+id: INF-1300e
+components:
+  - documentation_system
+  - build_pipeline
+  - infrastructure
+title: "Every project that inherits the rule inherits the means of following it"
+component: infrastructure
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  The convention and the thing that satisfies it arrive together.
+
+  Wherever this way of working is adopted, what is needed to produce a correct
+  document arrives with the instruction to produce one, so an adopting project
+  never meets a mandatory step it has no way to perform.
+depends_on: [INF-1300]
+doc_links:
+  - path: scripts/build_propagation_audit.py
+    relationship: describes
+    status: exists
+    relevance: "The guard that exists precisely to catch an instruction shipped without its means, and the allowlist entry through which this particular one has travelled unreported since 2026-06-17."
+  - path: templates/agents/architecture-diagram-author.md
+    relationship: specifies
+    status: exists
+    relevance: "One of the two surfaces that carries the mandatory instruction into every adopting project."
+  - path: templates/skills/write-c4-diagram/SKILL.md
+    relationship: specifies
+    status: exists
+    relevance: "The other. Both are package templates, so both reach every adopter regardless of whether the means does."
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-09-14
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-09-14'
+superseded_by: null
+covered_by:
+  - INF-1300e-1
+  - INF-1300e-2
+  - INF-1300e-3
+  - INF-1300e-4
+implemented_by: []
+documentation_triggers:
+  - component-diagram
+documentation_rationale: null
+notes: |
+  THE component-diagram SLOT IS DELIBERATELY HELD, NOT OVERLOOKED. This record
+  carries documentation_triggers: [component-diagram] and has four L2 children,
+  leaving exactly one slot free under the 5-child cap. The diagram is NOT
+  authored yet, and that is a decision taken on 2026-09-14 rather than one
+  missed. The reason is specific to this tree: a component diagram is produced
+  by scripts/scaffold/new_arch_doc.py, which is the very artifact INF-1300
+  exists to bring into being. Authoring the record now would either commit the
+  diagram to be hand-authored -- the exact thing SKILL.md section 4 forbids and
+  this L0 exists to stop -- or schedule it against a producer that does not yet
+  work. Its two sibling L1s took the same shape of decision in the opposite
+  direction and were filled once their subjects were settled; this one cannot
+  be until INF-1300a lands.
+
+  Author it after INF-1300a-1 is done, not before. The empty slot is the record
+  of that sequencing, and it is the only child of this tree whose production
+  depends on the tree's own output.
+
+  WHY THIS IS A SEPARATE BENEFIT AND NOT A RESTATEMENT. The request's third
+  candidate benefit was "the mandatory rule stops being a rule that cannot be
+  obeyed". Taken literally that is a restatement of the goal, and it was not given
+  an L1 on those terms -- see the L0's notes. But it contains one claim that none
+  of the other L1s make: the rule is a PACKAGE TEMPLATE. Both surfaces that carry
+  it are shipped to every project that adopts this package, so the rule reaches
+  every adopter whether or not the means does. "It works in this repository" and
+  "it works wherever the rule lands" are different promises, and only the second
+  is what an adopter experiences. That is this record.
+
+  THE ASYMMETRY IS WHAT MAKES IT MATTER. An instruction travels for free -- it is
+  text in a template -- while the means of following it has to be deliberately
+  delivered and kept delivered. So the default outcome of doing nothing is
+  precisely the present one: the obligation everywhere, the capability nowhere.
+  A rule shipped without its means is worse than no rule at all, because it stops
+  the authors who follow it and quietly excuses the authors who do not, and the
+  second group's output becomes the collection's standard.
+
+  THE GUARD FOR EXACTLY THIS ALREADY EXISTS AND WAS SWITCHED OFF FOR THIS CASE.
+  The package runs a propagation audit whose whole purpose is to notice a
+  referenced-but-undelivered dependency. It has known about this one since
+  2026-06-17 and has been told to stay quiet about it, with an inline comment
+  recording that the absence causes a hard user-visible failure and that a
+  separate authoring ticket is required. That is the sharpest possible statement
+  of this L1's value: the detection existed, it fired, and the response was to
+  silence it for three months. Delivering this L1 means the silencing is no longer
+  needed -- and the entry that performs it becomes a falsehood that should be
+  removed, which is flagged on the L0 for the IT PO to place rather than folded in
+  here.
+
+  A DISTINCTION FOR THE BA. This record is about the means being PRESENT AND
+  USABLE in an adopting project, not about the mechanics of any particular
+  delivery step. Resist the pull toward writing criteria about build phases and
+  manifests -- those are the how. The falsifiable form is an adopting project, in
+  its own layout, in which an author following the mandatory instruction succeeds.
+  The repository's own history is unambiguous that verifying this in the source
+  tree proves nothing about the deployed one, and a criterion satisfied only in
+  the source tree would leave the adopter in exactly the state this record exists
+  to end.
+
+  PRIORITY high. Portability is the phase_1 outcome in its own words -- "reliable
+  enough to use across multiple repos" -- and this is the child on which that
+  reading of the goal rests. It is also the difference between fixing this once
+  and fixing it once per adopter.
+
+  Documentation: component-diagram. The goal introduces a new part to the
+  authoring surface and a new thing that has to be delivered with the package;
+  where it sits relative to the authoring skill, the diagram agent, the checks it
+  must satisfy and the delivery that carries it is the picture a maintainer needs,
+  and this is the L1 whose subject is that placement.

@@ -1,0 +1,91 @@
+id: KM-KGS-100a-3-vi
+components:
+  - knowledge_management
+readiness: approved
+priority: high
+title: "A comma inside a quoted inline item does not split that item in two"
+component: knowledge-management
+level: L3
+status: active
+req_status: draft
+work_status: done
+roadmap_phase: phase_1
+created_by: "docs/acceptance-criteria/knowledge-management/KM-KGS-100-knowledge-graph-surfaces/KM-KGS-100a-3.yaml"
+criteria: |
+  Given an acceptance-criterion record whose covered_by field is declared as an
+    inline sequence on one line holding a single double-quoted item whose text
+    contains two commas:
+      covered_by: ["unit_tests/test_alpha.py::test_accepts_a, b, and c"]
+  When that record's frontmatter is read for relationship extraction
+  Then the value obtained for covered_by has exactly one item
+  And that item is the full text unit_tests/test_alpha.py::test_accepts_a, b, and c
+  And no item of the value is the fragment "b" or the fragment "and c"
+  And a record declaring two genuinely separate quoted items in an inline sequence
+    still yields a value with exactly two items
+depends_on:
+  - KM-KGS-100a-3
+  - KM-KGS-100a-3-iii
+doc_links:
+  - path: scripts/knowledge_query.py
+    relationship: describes
+    status: exists
+  - path: docs/reference/ac-schema.md
+    relationship: context
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "Measured evidence (2026-09-16): the inline-sequence branch of the scalar reader splits the bracketed text on every comma with no quote awareness, so a comma interior to a quoted item produces spurious extra items. The final And clause is present so a fix cannot regress the ordinary multi-item case by simply refusing to split at all."
+  - "Quote-awareness must respect both double and single quotes, and must not treat a quote character interior to an unquoted item as opening a quoted region."
+  - "This is a genuine-YAML-shape requirement, not a stylistic one: the store's declared value space includes ::test_function suffixes, and a test function name is free text from the reader's point of view."
+  - "Standard-library-only constraint applies (KM-KQS-007). A hand-rolled quote-aware split is expected; note that the standard library ships a csv reader that performs exactly this split and is available without adding a dependency."
+  - "SCOPE-NEUTRAL: assert only the item count and item text of the parsed value."
+test_spec:
+  - name: test_inline_quoted_item_with_commas_reads_as_single_item
+    target_dir: unit_tests/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: "An inline covered_by sequence holding one double-quoted item unit_tests/test_alpha.py::test_accepts_a, b, and c, read from a file, yields a value with exactly one item"
+  - name: test_inline_quoted_item_with_commas_keeps_full_text
+    target_dir: unit_tests/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: "That single item equals the full text unit_tests/test_alpha.py::test_accepts_a, b, and c"
+  - name: test_inline_quoted_item_with_commas_yields_no_fragments
+    target_dir: unit_tests/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: "No item of the value is the fragment 'b' or the fragment 'and c'"
+  - name: test_inline_two_separate_quoted_items_still_yield_two_items
+    target_dir: unit_tests/
+    framework: pytest
+    type: unit
+    angle: boundary
+    description: "An inline sequence of two separately quoted items still reads to a value with exactly two items"
+  - name: test_single_quoted_inline_item_with_commas_reads_as_single_item
+    target_dir: unit_tests/
+    framework: pytest
+    type: unit
+    angle: boundary
+    description: "The comma-bearing item declared single-quoted in an inline sequence also reads as one item holding the full text"
+test_required: true
+test_rationale: >-
+  Item count, full text and absence of fragments are asserted separately so that neither an
+  over-split nor a partial join can pass. The two-item regression test stops a fix that simply
+  never splits, and the single-quote variant pins the quote-awareness it_requirement. Only the
+  parsed value's item count and text are asserted.
+delivers_to: null
+expects_from:
+  ac_id: KM-KGS-100a-3
+  contract: "The frontmatter field values of a single acceptance-criterion record, read from disk prior to any edge-target resolution"
+origin_agent: business-analyst
+created: 2026-09-16
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary

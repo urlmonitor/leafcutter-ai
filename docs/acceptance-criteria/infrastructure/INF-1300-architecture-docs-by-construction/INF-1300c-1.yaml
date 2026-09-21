@@ -1,0 +1,180 @@
+id: INF-1300c-1
+title: "A new document appears in the collection's index, reachable by following the link"
+component: infrastructure
+components:
+  - documentation_system
+  - infrastructure
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+created_by: "docs/acceptance-criteria/infrastructure/INF-1300-architecture-docs-by-construction/INF-1300c.yaml"
+criteria: |
+  Given the collection's index exists and a new architecture document is produced
+    with its listing requested,
+  When production completes,
+  Then the index has gained exactly one entry for the new document, carrying its
+    title, its tier, the kind of picture it holds, and a link to it,
+  And following that link from the index reaches the produced document,
+  And the entry sits in the order the index already uses rather than being
+    appended wherever there was room,
+  And every entry the index already held is still present and unchanged, including
+    entries for documents this production had nothing to do with,
+  And the index, after the entry is added, still satisfies the project's own
+    document checks.
+depends_on:
+  - INF-1300c
+doc_links:
+  - path: docs/acceptance-criteria/infrastructure/INF-1300-architecture-docs-by-construction/INF-1300c.yaml
+    relationship: parent
+    status: exists
+  - path: templates/skills/write-c4-diagram/SKILL.md
+    relationship: specifies
+    status: exists
+    relevance: >-
+      Section 8 pins the listing flag and names the file it updates. It also states the
+      index should not be updated for documents that are not yet settled — which every
+      newly produced document is. That tension is real and is resolved in INF-1300c-1-i
+      rather than ignored here.
+  - path: docs/architecture/diagrams/README.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      The collection's only existing README. It states the naming convention, lists no
+      diagram at all, and closes by pointing the reader at the index this record writes
+      into. It is the evidence that the collection currently has no index, and the reason
+      INF-1300c-2 owns creating one.
+  - path: docs/architecture/adrs/ADR-013-portable-skill-script-deployment-boundary.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      The deployment boundary that decides where the producing script's source lives. A
+      script referenced by a portable skill must be deployed to consumer installs, which
+      makes templates/scripts/ the source and anything under scripts/ build output.
+  - path: docs/architecture/README.md
+    relationship: describes
+    status: planned
+    relevance: >-
+      The index this record writes into. It does not exist today; INF-1300c-2 creates it.
+      Recorded as planned so the gap is visible from this record rather than only from c-2.
+  - path: docs/reference/false-green-mechanisms.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      Why this record's observation has to resolve the link rather than compare its text,
+      and why a hook that inspected nothing must not read as a hook that found nothing.
+assigned_agent: python-coder
+estimated_complexity: M
+change_target: code
+risk_surface: contract_boundary
+test_required: true
+it_requirements:
+  - "The producing script's source must live under templates/scripts/ (templates/scripts/scaffold/new_arch_doc.py). A copy that exists only under scripts/ is build output and is unreachable by a fresh consumer install, so it does not satisfy this AC."
+  - "MEASURED DEPLOYMENT CAVEAT, recorded here because it constrains where the source can sit: build_template_standalone_scripts globs templates/scripts/*.py FLAT, so a nested templates/scripts/scaffold/ source is invisible to it and reaches no consumer. Whoever implements must either place the source at templates/scripts/ top level or land a new deploy phase with its own mirroring manifest helper. Which of the two is chosen belongs to INF-1300e; this record only requires that the choice be made before the behaviour is called done."
+  - "The index entry must be written by the same invocation that produces the document, with no second command and no follow-up step an author has to remember."
+  - "The link recorded in the entry must be derived from the path the document was actually written to, not from the requested --output value, so a run that resolves or relocates the destination cannot emit a correctly spelled link to nothing."
+  - "Insertion must leave every byte of the index outside the inserted entry unchanged. An implementation that parses the index, re-derives it and writes it back does not satisfy this even when the entry content compares equal."
+  - "Entry position must follow a stated ordering rule over the entries' own fields (tier, then allocated number), never append position, so INF-1300c-3 has a defined slot to update in place."
+  - "After insertion the index must still be accepted by the project's own commit-time document checks for docs/** — in particular check_doc_frontmatter's required-field, components-vocabulary and path-existence rules."
+  - "Failures reading or writing the index must follow the project error handling policy in CLAUDE.md: logged at WARNING or above, or raised as a typed error; never swallowed and never downgraded to a silent skip that leaves the document produced and unlisted."
+  - "Index insertion must complete in under 2 seconds for a collection of up to 500 documents."
+  - "The CLI keeps the seven pinned flags (--tier, --diagram-type, --component, --title, --output, --date, --update-readme) with their exact names and meanings; --parent, --root and --source-ticket are additive."
+test_spec:
+  - name: test_index_gains_exactly_one_entry_for_the_new_document
+    target_dir: unit_tests/scaffold/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    description: "In a git-initialised temporary project whose index already holds at least three unrelated entries, run the real CLI with the listing requested. Assert the index's entry count rose by exactly one and that the new entry carries the document's title, its tier, its diagram type and a link."
+  - name: test_index_link_resolves_to_the_produced_document
+    target_dir: unit_tests/scaffold/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    description: "Resolve the new entry's link relative to the index file's own directory and open the target. Assert it is the produced document. Comparing the link text against the requested --output value does not satisfy this descriptor."
+  - name: test_preexisting_entries_survive_byte_for_byte
+    target_dir: unit_tests/scaffold/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    description: "Capture the index bytes before the run; after the run remove exactly the inserted entry's lines and assert the remainder is byte-identical to the capture, including whitespace and trailing newline. The starting index must hold entries the production is unrelated to."
+  - name: test_new_entry_lands_in_the_indexes_declared_order
+    target_dir: unit_tests/scaffold/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "Produce a document whose tier and number sort into the middle of the existing entries and assert the new entry appears at that sorted position, not at the end of the list."
+  - name: test_updated_index_passes_the_real_frontmatter_hook
+    target_dir: unit_tests/scaffold/
+    framework: pytest
+    type: integration
+    angle: deployed
+    description: "git add the updated index inside the temporary repo and run the real scripts/commit_guardian/check_doc_frontmatter.py against it. Assert exit 0 AND that the hook reports a non-zero inspected-file count; in the same harness a deliberately malformed index must exit 1, proving the hook actually looked."
+  - name: test_documented_skill_invocation_reaches_the_index_write
+    target_dir: unit_tests/scaffold/
+    framework: pytest
+    type: integration
+    angle: reachability
+    surface_invoked: "templates/scripts/scaffold/new_arch_doc.py --update-readme"
+    description: "Run the exact command line the write-c4-diagram skill prints in section 8 and assert the index changed. This is the only descriptor that proves the behaviour is reachable from the instruction authors actually follow."
+test_rationale: >-
+  Every descriptor here executes the real CLI against a real temporary project and reads the
+  artifact it produced. That shape is chosen deliberately over a direct-import unit test for
+  three reasons this record's criteria make load-bearing. First, the link clause is only
+  falsifiable by resolving the link against the filesystem; a unit test that asserts on the
+  string the writer was handed cannot distinguish a correct link from a correctly spelled
+  link to nothing, which is the defect that makes an index worse than no index. Second, the
+  preservation clause is a byte-level property of a file, so it needs a file. Third, the
+  checks-still-pass clause names the project's own hooks, and the hooks that police
+  docs/architecture read the git index rather than argv - so they must be run over staged
+  output in a git repository, with a negative control in the same harness, or a hook that
+  inspected nothing will report success.
+delivers_to:
+  agent: python-coder
+  ac_id: INF-1300c-3
+  contract: "An index entry whose identity is the document's tier-and-number destination, written at a position determined by a stated ordering rule over (tier, number). INF-1300c-3 updates that entry in place and relies on the identity key and the position rule being stable across runs."
+expects_from:
+  ac_id: INF-1300c-2
+  contract: "An index file present at docs/architecture/README.md carrying valid docs/** frontmatter and a list of entries in (tier, number) order, whose conventions are stated by reference to docs/architecture/diagrams/README.md rather than restated."
+origin_agent: BrainCandy
+created: 2026-09-14
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-09-14'
+superseded_by: null
+covered_by:
+  - INF-1300c-1-i
+implemented_by: []
+notes: |
+  WHAT THIS RECORD OWNS AND WHY IT IS NOT PART OF INF-1300a. Acceptance and findability
+  fail independently, as the L1 says. Nothing in the project's check set has an opinion
+  about whether a document is listed anywhere, so this is the half of producing a document
+  that no machinery will ever complain about — which is exactly why it needs a record.
+
+  FALSIFIABILITY. In a scratch collection holding an index with several existing entries,
+  produce a document with its listing requested. Read the index: the record is falsified if
+  no entry appeared, if more than one did, if any existing entry changed or vanished, if
+  the new entry is out of the index's order, or if the link does not resolve to the produced
+  file. The link clause must be tested by RESOLVING the link against the collection, not by
+  matching the link text against the requested destination — a correctly spelled link to a
+  path that is not where the document landed is precisely the defect that makes an index
+  worse than no index, and text comparison cannot see it. The preservation clause needs the
+  scratch index to hold entries the production is unrelated to; an index with one entry
+  cannot distinguish "added an entry" from "rewrote the file with one entry".
+
+  THE ORDER CLAUSE IS NOT DECORATION. An index whose entries accumulate in creation order
+  stops being a place a reader can stand and see the collection, which is the benefit the
+  L1 names. It also makes INF-1300c-3's in-place update unreachable, because there is no
+  defined position for an entry to be updated in.
+
+  FENCED. WHERE the index lives, and creating it when it is absent, is INF-1300c-2's. What
+  happens when the listing is requested twice for the same document is INF-1300c-3's. What
+  happens when it is not requested at all is INF-1300c-4's. This record assumes an index
+  exists and owns only the entry that appears in it.
+
+  NOT AUTHORED HERE, BY DESIGN: assigned_agent, estimated_complexity, it_requirements,
+  test_spec, test_rationale, delivers_to and expects_from. Those are the IT PO's.

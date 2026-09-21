@@ -93,6 +93,60 @@ def test_marker_after_heading_text_is_not_reported_but_opening_one_is(
     )
 
 
+def test_marker_after_cell_text_is_not_reported_but_one_opening_a_cell_is(
+    tmp_path: Path,
+) -> None:
+    # covers: BO-2200b-3-ii
+    """A marker mid-cell quotes a title; one that opens the cell is a stub.
+
+    Paired for the same reason as the heading test above: a blanket "tables are
+    exempt" rule satisfies the first assertion and fails the second.
+
+    This shape is not hypothetical. On 2026-09-14 every known-issues register
+    became a generated index of one row per issue, and one issue is titled
+    `KI-BO-021 — TODO: BO-2400e-4 is closed on two of its four specified tests`.
+    As a `###` heading its marker was correctly read as part of a title; moved
+    verbatim into a table cell it was reported as a stub, failing three
+    real-register tests on a row that creates nothing and fixes nothing.
+    """
+    body = (
+        "| Severity | Issue | File |\n"
+        "|---|---|---|\n"
+        "| `low` | KI-BO-021 — TODO: `BO-2400e-4` is closed on two tests | x.md |\n"
+        "| `low` | TODO: fill this in | y.md |\n"
+    )
+    hits = _scan_one(tmp_path, "index.md", body)
+
+    reported_lines = [h["line"] for h in hits]
+    assert 3 not in reported_lines, (
+        "a marker after other text in a table cell is a quoted title, not a "
+        f"stub -- this is the generated known-issues index shape; got {hits!r}"
+    )
+    assert 4 in reported_lines, (
+        "a marker OPENING a table cell IS a stub and must still be reported -- "
+        f"a blanket table exclusion is the wrong fix; got {hits!r}"
+    )
+
+
+def test_prose_containing_one_pipe_is_not_treated_as_a_table_row(
+    tmp_path: Path,
+) -> None:
+    # covers: BO-2200b-3-ii
+    """A single `|` in prose must not buy a line the table exemption.
+
+    The table rule keys on a row shape (leading pipe, then another pipe), not on
+    the presence of a pipe character. Without that bound, any sentence quoting a
+    shell pipeline would silently gain a marker exemption.
+    """
+    body = "Run `ls | wc -l` and then TODO: replace this paragraph\n"
+    hits = _scan_one(tmp_path, "prose.md", body)
+
+    assert [h["line"] for h in hits] == [1], (
+        "prose containing a pipe is not a table row and must not be exempt; "
+        f"got {hits!r}"
+    )
+
+
 def test_emphasis_is_not_a_list_bullet_for_placeholder(tmp_path: Path) -> None:
     # covers: BO-2200b-3-ii
     """`*Placeholder*` is emphasis; `- PLACEHOLDER:` is a list item.

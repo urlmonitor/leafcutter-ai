@@ -1,0 +1,243 @@
+id: INF-1300e-4
+title: "The guard that watches for an instruction shipped without its means reports on this one truthfully again"
+component: infrastructure
+components:
+  - documentation_system
+  - build_pipeline
+  - infrastructure
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+created_by: "docs/acceptance-criteria/infrastructure/INF-1300-architecture-docs-by-construction/INF-1300e.yaml"
+criteria: |
+  Given the project runs a guard whose purpose is to notice an instruction
+    referring to something an adopting project will not receive, and given that
+    guard currently holds an entry excusing this particular reference,
+  When the means is delivered and the guard is run with that excusing entry
+    removed,
+  Then the guard reports nothing about this reference,
+  And when the means is then withheld from delivery and the guard is run again,
+    unchanged and still without the excusing entry,
+  Then the guard reports this reference,
+  And both runs are observed, because the first alone cannot distinguish a guard
+    that watches this reference from one that has merely stopped being able to see
+    it,
+  And no excusing entry for this reference remains once the means is delivered —
+    an entry that excuses a reference needing no excuse makes the guard's silence
+    mean nothing for every other reference it covers.
+depends_on:
+  - INF-1300e
+doc_links:
+  - path: docs/acceptance-criteria/infrastructure/INF-1300-architecture-docs-by-construction/INF-1300e.yaml
+    relationship: parent
+    status: exists
+  - path: scripts/build_propagation_audit.py
+    relationship: describes
+    status: exists
+    relevance: >-
+      THE GUARD, AND THE RECORD OF ITS OWN SILENCING. Its exception list carries this exact
+      reference with a comment stating the absence causes a hard user-visible failure and
+      that a separate authoring ticket is required. The detection existed, it fired, and the
+      response was to quiet it — which the L1 calls the sharpest possible statement of this
+      record's value.
+  - path: docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900b-1-1.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      OWNS THE EXCEPTION LIST, AND IS ALREADY DONE. That is why this record states the
+      property the guard must have rather than authoring the edit: amending a completed
+      record in another component is a separate call, flagged on the L0 for the IT PO to
+      place. This record's last clause makes the removal a consequence of delivering the
+      means, not an independent chore someone must remember.
+  - path: docs/acceptance-criteria/infrastructure/INF-1300-architecture-docs-by-construction/INF-1300e-1.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      The property this guard is the standing watch over. e-1 establishes that the means is
+      present and usable in an adopting project once; this record establishes that the
+      project will notice if that ever stops being true.
+  - path: docs/architecture/components/template-compiler.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      Documents the propagation audit and its "External-Dependency Allowlist (AC BP-900b-1-1)"
+      section. Removing an entry without updating this section leaves the documented behaviour
+      describing a guard that no longer exists in that shape.
+  - path: docs/architecture/components/phantom-done-prevention.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      The component whose whole subject is the difference between work that is done and work
+      that reports done. A single green run of a guard that no longer looks is that defect
+      applied to a guard rather than to a ticket, which is why the two-run construction is a
+      criterion and not a test-design preference.
+  - path: docs/reference/false-green-mechanisms.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      Names the mechanism the criteria exclude by construction: a clean report from a check that
+      examined nothing. The movement construction here is the catalogued remedy.
+assigned_agent: python-coder
+estimated_complexity: M
+change_target:
+  - code
+  - pipeline
+risk_surface: safety
+test_required: true
+it_requirements:
+  - >-
+    THE ENTRY MUST GO IN THE SAME CHANGE THAT MAKES THE REFERENCE RESOLVE. The excusing entry is
+    the string "scripts/scaffold/new_arch_doc.py" in EXTERNAL_DEPENDENCY_ALLOWLIST
+    (scripts/build_propagation_audit.py, with the inline comment conceding the absence "causes a
+    hard user-visible failure"). Removing it earlier breaks the build; removing it later leaves a
+    window in which the guard is excusing a reference that needs no excuse, and that window is
+    what the last criterion forbids.
+  - >-
+    MEASURED — _suggest_action WILL LIE UNLESS ITS PREFIX TUPLE IS UPDATED TOO.
+    _PREFIXES_WITH_EXISTING_DEPLOY_PHASE is currently exactly
+    ("scripts/ac_store/", "scripts/feedback/", "scripts/commit_guardian/"). Once a scaffold
+    deploy phase exists, "scripts/scaffold/" must be added to that tuple in the same change.
+    Without it, a future absence of this source reports the untruthful action "add a deploy
+    phase in build_phases.py" when the deploy phase already exists and the real fault is a
+    missing or untracked source. The guard reporting the wrong remedy is a quieter version of
+    the guard not reporting at all.
+  - >-
+    BOTH RUNS ARE MANDATORY AND MUST BE ONE OBSERVATION WITH SHARED SETUP. Delivered → silent,
+    and withheld → reported. A test asserting only the silent run is passed identically by a
+    guard that was removed, renamed, never executed, or still carrying the excusing entry — so
+    it is a no-op dressed as a gate. This is the same movement construction INF-1200c-1 and
+    BP-900c-4-i already settle for other subjects; reuse it rather than reinventing it.
+  - >-
+    THE WITHHELD RUN MUST WITHHOLD THE MEANS, NOT THE REFERENCE. Suppress the deploy phase's or
+    the manifest helper's contribution so the path leaves the deployable set. Deleting the
+    reference from the authoring surfaces instead would make the guard silent for the opposite
+    reason and would prove nothing — it is the inverse experiment wearing the same green.
+  - >-
+    THE TWO RUNS MUST DIFFER IN EXACTLY ONE INPUT. Any second difference between them makes the
+    contrast unattributable and the observation worthless.
+  - >-
+    STATE MUST BE RESTORED AFTER THE OBSERVATION, INCLUDING ON FAILURE. The allowlist, the
+    deploy phase and the manifest must be byte-identical to their committed form when the test
+    completes. Use the framework's teardown, never trailing statements that an assertion failure
+    skips past.
+  - >-
+    KNOWN_UNDEPLOYED_ALLOWLIST MUST STAY EMPTY. This reference must not be relocated there as a
+    way of keeping the guard quiet. That set's own comment states an entry in it is a regression
+    and not a fix: it means shipping an agent that cannot run. Moving the entry rather than
+    deleting it satisfies the letter of the last criterion and inverts its purpose.
+  - >-
+    SCOPE FENCE — GUARD-LEVEL RESOLUTION IS NOT RUNTIME REACHABILITY. The audit resolves
+    references in a layout-agnostic "scripts/<rel>" key space, so a resolving key does NOT
+    establish that the path the arrived instruction states resolves from where an adopting
+    project's authors work. That is INF-1300e-2's, and it is measurably still false as of
+    2026-09-14. This record must not be read, tested, or signed off as covering it.
+  - >-
+    DO NOT AMEND BP-900b-1-1. It owns the allowlist and is already work_status: done. The edit
+    is booked under this record; the placement question is raised in the enrichment report for
+    the user, not decided by the implementer.
+test_spec:
+  - name: test_guard_is_silent_on_the_scaffold_reference_when_the_means_is_delivered
+    target_dir: unit_tests/build_guards/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: >-
+      With the means deployed and no excusing entry present, the propagation audit reports
+      nothing about scripts/scaffold/new_arch_doc.py. Half of the movement, worthless alone.
+  - name: test_guard_reports_the_scaffold_reference_when_the_means_is_withheld
+    target_dir: unit_tests/build_guards/
+    framework: pytest
+    type: integration
+    angle: failure
+    description: >-
+      Changing exactly one input — withholding the means from the deployable set — and running
+      the same unchanged guard again makes it name this reference. This is the half that
+      distinguishes a watching guard from a blind one.
+  - name: test_no_excusing_entry_for_the_scaffold_reference_remains_in_either_allowlist
+    target_dir: unit_tests/build_guards/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: >-
+      The string scripts/scaffold/new_arch_doc.py is absent from BOTH
+      EXTERNAL_DEPENDENCY_ALLOWLIST and KNOWN_UNDEPLOYED_ALLOWLIST — closing the relocate-rather-
+      than-delete evasion — and KNOWN_UNDEPLOYED_ALLOWLIST is still empty.
+  - name: test_withheld_scaffold_source_is_reported_with_the_commit_under_templates_action
+    target_dir: unit_tests/build_guards/
+    framework: pytest
+    type: integration
+    angle: boundary
+    description: >-
+      The report entry from the withheld run carries the truthful remedy — commit the source
+      under templates/scripts/ — rather than "add a deploy phase", proving
+      _PREFIXES_WITH_EXISTING_DEPLOY_PHASE gained scripts/scaffold/.
+test_rationale: >-
+  The contract is a movement, not a state, because the state is ambiguous: once the means ships,
+  a guard that watches this reference and a guard that cannot see it produce byte-identical
+  silence. Descriptors 1 and 2 are therefore one test in two halves and neither is meaningful
+  alone — descriptor 1 is exactly the evidence shape this repository has repeatedly recorded as
+  a check that examined nothing, and it is passed by deleting the guard. Descriptor 3 exists
+  because the last criterion has a cheap evasion the first two cannot see: relocating the entry
+  to KNOWN_UNDEPLOYED_ALLOWLIST keeps the guard quiet while both runs behave, so the allowlists
+  must be read directly and both of them. Descriptor 4 covers the quieter failure where the
+  guard does report but names the wrong remedy, which is a measured consequence of
+  _PREFIXES_WITH_EXISTING_DEPLOY_PHASE not gaining the new prefix and is invisible to a test
+  that only asks whether an entry was emitted.
+delivers_to: null
+expects_from:
+  ac_id: INF-1300e-1
+  contract: >-
+    A propagation-audit manifest key of exactly "scripts/scaffold/new_arch_doc.py", contributed
+    by a manifest helper that mirrors the new deploy phase, plus a documented way to suppress
+    that single contribution so the withheld run can be constructed by changing one input. The
+    removal here is only correct if this exact key is what resolves the reference; if the
+    delivered key differs in any character the entry must NOT be removed, and the mismatch is a
+    blocker to be raised rather than papered over.
+origin_agent: BrainCandy
+created: 2026-09-14
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-09-14'
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  THIS IS THE ONLY RECORD IN THE TREE THAT IS ABOUT THE FAILURE NOT RECURRING. Everything
+  else delivers the means; this one restores the detection that would have caught its absence
+  in the first place and has been switched off for this case for three months. Without it the
+  tree fixes one instance of a defect whose alarm remains disabled.
+
+  THE TWO-RUN CONSTRUCTION IS THE WHOLE RECORD AND IT IS NOT OPTIONAL. A guard that reports
+  nothing is indistinguishable from a guard that cannot see. Delivering the means makes the
+  guard silent by itself, so a single green run proves nothing at all — it is satisfied
+  equally by a guard that was correctly reassured and by a guard that no longer looks at this
+  reference for any reason, including the excusing entry simply still being there. Only
+  withholding the means and requiring the report to come back separates the two. This is the
+  same movement construction INF-1200c-1 and BP-900c-4-i settle for other subjects, reused
+  rather than reinvented.
+
+  THE LAST CLAUSE IS ABOUT MORE THAN TIDINESS. An exception list that excuses a reference
+  which no longer needs excusing is a list nobody trusts and everybody adds to. Each stale
+  entry lowers the cost of the next one, and the guard's whole value is that its silence
+  means something. The L0 flags the removal for the IT PO to place because the list belongs to
+  a completed record in another component; stating the property here means the removal is
+  driven by this tree's own acceptance rather than depending on someone remembering.
+
+  FALSIFIABILITY. Take the guard as the project runs it. Remove the entry excusing this
+  reference, deliver the means, run: the record is falsified if the guard reports this
+  reference. Then, changing nothing else, withhold the means from delivery and run again:
+  falsified if the guard reports nothing. Both runs must be observed together and the state
+  must be restored afterwards. Then read the exception list: falsified if an entry for this
+  reference remains. What will not satisfy this record: running the guard once, with the means
+  delivered, and reporting a clean result — that is the exact shape of evidence this project
+  has repeatedly recorded as a check that examined nothing.
+
+  NOT AUTHORED HERE, BY DESIGN: assigned_agent, estimated_complexity, it_requirements,
+  test_spec, test_rationale, delivers_to and expects_from. Those are the IT PO's. In
+  particular, WHERE the exception-list edit is booked — under this tree or as an amendment to
+  the completed record that owns the list — is an IT PO placement decision, not a criterion.

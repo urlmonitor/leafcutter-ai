@@ -1,0 +1,194 @@
+id: INF-1300a-2
+title: "The link to the document above is complete in both directions the moment the document exists"
+component: infrastructure
+components:
+  - documentation_system
+  - doc_compliance
+  - infrastructure
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+created_by: "docs/acceptance-criteria/infrastructure/INF-1300-architecture-docs-by-construction/INF-1300a.yaml"
+criteria: |
+  Given a request that names the document above the new one,
+  When the new document is produced,
+  Then three separate things are true without any further step: the new document
+    declares that document as the one above it; the new document carries, in its
+    prose, a reference to that document placed where the project requires it to
+    be and naming it by the human-readable title the parent gives itself rather
+    than by its filename; and the parent document's own list of the documents
+    below it has gained the new document,
+  And the parent document is otherwise untouched: every document already listed
+    below it is still listed, and nothing else in the parent is rewritten,
+  And the project's check on the two-directional link passes over the new
+    document and the parent together, run as the project runs it, with no manual
+    step performed between production and the check,
+  And the parent named must be a document that exists and that sits above the new
+    one in the tiers: a request naming a parent that is absent, or that sits at or
+    below the new document's tier, produces nothing and is refused.
+depends_on:
+  - INF-1300a
+doc_links:
+  - path: docs/acceptance-criteria/infrastructure/INF-1300-architecture-docs-by-construction/INF-1300a.yaml
+    relationship: parent
+    status: exists
+  - path: scripts/commit_guardian/check_mermaid_parent_link.py
+    relationship: describes
+    status: exists
+    relevance: >-
+      THE CHECK THIS RECORD EXISTS TO SATISFY, AND THE MEASUREMENT THAT SHARPENED IT. It
+      demands THREE things, not the two the authoring surface describes: a declared parent
+      in the frontmatter (absence of which is its own named violation for any document
+      carrying a picture), the prose reference, and the reciprocal entry in the parent.
+      It also refuses a parent that does not exist and a parent whose tier does not sit
+      above the child. Every scaffolded document carries a picture, so every scaffolded
+      document meets this check immediately.
+  - path: templates/skills/write-c4-diagram/SKILL.md
+    relationship: specifies
+    status: exists
+    relevance: >-
+      Section 6a makes both halves of the link a MANUAL step performed after the scaffold,
+      and warns that missing either causes a failure on the first commit attempt. That
+      manual step is exactly the round trip INF-1300a exists to remove, and this record
+      is where it is removed.
+  - path: docs/acceptance-criteria/infrastructure/INF-1300-architecture-docs-by-construction/INF-1300a-1.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      The sibling that requires the whole check set to pass over the produced document.
+      This record supplies the one clause of that set the pinned inputs could not reach,
+      and is therefore a prerequisite of a-1 being satisfiable at all rather than a
+      variant of it.
+  - path: docs/reference/architecture-docs-layout.md
+    relationship: specifies
+    status: exists
+    relevance: "The tier structure the parent/child relation is drawn over; a parent must sit at a strictly higher tier."
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+    relevance: "The angle taxonomy this record's test_spec classifies against."
+origin_agent: BrainCandy
+created: 2026-09-14
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-09-14'
+superseded_by: null
+covered_by:
+  - INF-1300a-2-i
+implemented_by: []
+assigned_agent: python-coder
+estimated_complexity: M
+change_target: code
+risk_surface: safety
+test_required: true
+it_requirements:
+  - "THIS IS THE ONLY PLACE IN THE TREE THAT MUTATES AN EXISTING DOCUMENT, so the write into the parent must be SURGICAL: insert one entry into the parent's `children:` sequence and change nothing else. A whole-file rewrite, a YAML round-trip that reflows the parent's frontmatter, or a re-serialisation that reorders keys or normalises quoting is a failure even when the resulting document still passes every check. Verify by line-level diff of the parent before and after, not by re-parsing it."
+  - "IDEMPOTENT ON THE PARENT: naming the same parent twice must not add a duplicate children entry, and a re-run must leave the parent byte-identical."
+  - "MEASURED — THE CHECK DEMANDS THREE THINGS, NOT THE TWO SKILL.md SECTION 6a DESCRIBES. check_mermaid_parent_link requires (1) a `parent:` frontmatter field, whose absence is its own named violation ARCH-PARENT-MISSING on any document containing a mermaid fence, (2) the prose link, found by searching for the parent's BASENAME anywhere after the first mermaid fence's closing delimiter (ARCH-MARKDOWN-LINK), and (3) the parent's `children:` list containing this file's basename or path (ARCH-BIDIRECTIONAL). It additionally refuses a parent that does not exist (ARCH-PARENT-NOTFOUND) and one whose flight_level is not strictly higher (ARCH-LEVEL-ORDER). Every scaffolded document carries a fence, so all of this fires immediately."
+  - "THE CRITERIA ARE STRICTER THAN THE CHECK AND THE STRICTER PART MUST BE ASSERTED DIRECTLY. _validate_markdown_link only requires the parent's basename to appear somewhere after the fence, so a bare filename, a path in a URL, or a link whose visible text is the filename all satisfy the hook. The criterion 'naming it by the human-readable title the parent gives itself' is therefore invisible to the hook: assert that the link's visible text equals the parent document's own frontmatter `title:` value."
+  - "PROSE LINK PLACEMENT: the hook searches only the region AFTER the first mermaid fence closes. A `Parent:` line emitted above the diagram satisfies a human and fails the check. Emit it below the first fence, with the case-sensitive `Parent: ` prefix SKILL.md section 6a pins."
+  - "REFUSAL LEAVES NOTHING BEHIND: when the named parent is absent or not at a strictly higher tier, no file is written at --output, no directory is created, and the parent is not touched. The shape and wording of the refusal is INF-1300d-3's; this record requires only that the refusal happens and that the filesystem is unchanged afterwards."
+  - "All of INF-1300a-1's vacuous-green guards apply unchanged and are load-bearing here, because check_mermaid_parent_link is the single hook most able to exit 0 having examined nothing: its REPO_ROOT is `Path(__file__).resolve().parents[2]`, a module-level constant from the hook's own location, while its file list comes from the cwd repo's staged index. Use a-1's scratch harness; never a bare tmpdir."
+  - "Error handling per the project error-handling policy (CLAUDE.md rules 1-4). Reading and rewriting the parent is external I/O and must be wrapped with named exception types; a partial write that leaves the parent truncated is the worst outcome available here and must be impossible (write-then-replace, never truncate-then-write)."
+test_spec:
+  - name: test_all_three_link_halves_exist_the_moment_the_document_does
+    target_dir: unit_tests/docs/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    description: "One production run against a scratch collection yields a document with a parent: frontmatter field, a prose Parent: link below the first mermaid fence, and a parent whose children: list has gained the new path — with no step performed between production and the reads."
+  - name: test_parent_link_check_passes_over_child_and_parent_together
+    target_dir: unit_tests/docs/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "With both files staged in a-1's in-tree scratch harness, check_mermaid_parent_link exits 0 and no manual step was performed between production and the run."
+  - name: test_parent_link_check_actually_examined_the_pair
+    target_dir: unit_tests/docs/
+    framework: pytest
+    type: integration
+    angle: reachability
+    surface_invoked: "scripts/commit_guardian/check_mermaid_parent_link.py"
+    description: "Negative control: removing the new entry from the parent's children: list makes the same invocation exit 1 naming ARCH-BIDIRECTIONAL, proving the hook resolved the staged paths against a root where the files exist rather than returning empty."
+  - name: test_parent_is_otherwise_byte_identical_apart_from_the_added_child
+    target_dir: unit_tests/docs/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "A parent that already lists two children is line-diffed before and after production; the only difference is one added children entry, both prior children survive, and no other line — frontmatter ordering, quoting or body — differs."
+  - name: test_prose_link_text_is_the_parents_declared_title_not_its_filename
+    target_dir: unit_tests/docs/
+    framework: pytest
+    type: unit
+    angle: boundary
+    description: "The visible text of the Parent: markdown link equals the parent's frontmatter title: value; asserted directly because check_mermaid_parent_link only searches for the parent basename and would pass a filename-only link."
+  - name: test_absent_or_wrongly_tiered_parent_produces_nothing
+    target_dir: unit_tests/docs/
+    framework: pytest
+    type: integration
+    angle: failure
+    description: "Two runs — one naming a parent path that does not exist, one naming a parent at the same or a lower tier — each exit non-zero, write no file at --output, and leave the named parent byte-identical."
+  - name: test_naming_the_same_parent_twice_adds_no_duplicate_child_entry
+    target_dir: unit_tests/docs/
+    framework: pytest
+    type: integration
+    angle: boundary
+    description: "Re-running production for an already-linked document leaves the parent byte-identical and its children: list free of duplicates."
+test_rationale: >-
+  Every other record in INF-1300a is about what is written at the destination; this one
+  writes into a neighbour, and the failure modes of writing into a neighbour — clobbering
+  the other children, reflowing the parent's frontmatter, editing the wrong parent, leaving
+  a truncated parent behind a crash — are invisible to any child-only inspection. A
+  producer that emits a perfect child and never touches the parent passes a unit test on
+  the emitter and fails the real check. Two of this record's descriptors are therefore
+  whole-file diffs of the PARENT, and one is a negative control that exists solely to prove
+  the parent-link hook resolved the pair at all: its REPO_ROOT is a module-level constant
+  taken from the hook file's own grandparent, so in a tmpdir scratch repo it returns an
+  empty violation list and exits 0 without reading either document.
+delivers_to:
+  agent: python-coder
+  contract: "The parent-link writer: given a produced document path and a parent path, it emits `parent: <repo-relative-path>` into the child's frontmatter, a `Parent: [<parent frontmatter title>](<relative-path>)` line placed after the first mermaid fence closes, and inserts one entry into the parent's existing `children:` sequence in place. Refusal contract: on an absent or not-strictly-higher-tier parent it writes nothing anywhere and exits non-zero. Consumed by INF-1300a-2-i, which constrains the same writer on the no-parent input."
+expects_from:
+  ac_id: INF-1300a-1
+  contract: "The generator CLI and the in-tree scratch harness described in INF-1300a-1's delivers_to — specifically the per-hook {hook_id, exit_code, examined, stderr} record, without which a parent-link pass cannot be distinguished from a parent-link no-op."
+notes: |
+  WHY THIS IS A SEPARATE RECORD AND NOT A CLAUSE OF INF-1300a-1. It is the only place in
+  this tree where producing a document CHANGES A DOCUMENT THAT ALREADY EXISTS. Everything
+  else in INF-1300a is about what is written at the destination; this writes into a
+  neighbour, and the failure modes of writing into a neighbour — clobbering the other
+  children, rewriting the parent's frontmatter, editing the wrong parent — do not exist
+  anywhere else in the tree and cannot be observed by a-1's criteria.
+
+  FALSIFIABILITY. In a scratch collection, stage a parent document that already lists two
+  children. Produce a new document naming it as parent. Then run the project's
+  two-directional link check over both files as the project runs it, and read the parent:
+  the record is falsified if the check reports anything, if either of the two existing
+  children has gone, if any other line of the parent differs, or if the new document's
+  prose reference names the parent's filename rather than the title the parent declares
+  for itself. It is also falsified by an observation that checks only the new document —
+  the reciprocal half lives in the parent, and a producer that writes a perfect child and
+  never touches the parent passes any child-only inspection while failing the real check.
+  Do not accept a pass from a check invoked with the file as an argument without first
+  confirming the check actually examined it; the hooks in this project read the staged
+  index, and a check that examined nothing exits zero.
+
+  THE WIDENED INPUT, STATED PLAINLY. The pinned invocation has no argument for the parent.
+  This record requires one, and INF-1300a's notes record why that is the honest route
+  rather than bounding the promise: the author already knows which document sits above,
+  the authoring surface already obliges them to identify it, and a producer that emits a
+  document which fails the parent check on its first commit attempt has reproduced the
+  present situation with extra steps. The seven pinned arguments are unchanged; this is an
+  addition, and INF-1300b-4 and INF-1300e-2 are the records that keep the two authoring
+  surfaces in agreement with it.
+
+  DELIBERATELY NOT OWNED HERE: what the refusal for an absent or wrongly-tiered parent
+  says and what state it leaves behind. That contract is INF-1300d-3's, and this record
+  requires only that the refusal happens rather than a document being produced.
+
+  NOT AUTHORED HERE, BY DESIGN: assigned_agent, estimated_complexity, it_requirements,
+  test_spec, test_rationale, delivers_to and expects_from. Those are the IT PO's.

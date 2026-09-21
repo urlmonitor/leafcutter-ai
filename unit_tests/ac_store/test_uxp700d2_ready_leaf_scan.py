@@ -22,16 +22,19 @@ observed in the live store."
 RED-STATE CONTRACT (what must be implemented to turn this green):
     scan_ac_store.py must classify an AC record as "example content" when it
     carries a product-root marker distinguishing it from the project's own
-    record (this test uses `product: fern-and-fig`, following the same
-    product-root convention UXP-700d-1 establishes for product-truth
+    record (this test uses `example_product: fern-and-fig`, following the
+    same product-root convention UXP-700d-1 establishes for product-truth
     artifacts) and:
       1. exclude such records from the `ready` JSON array,
       2. exclude such records from the `blocked` JSON array,
       3. report how many records were excluded via a new `set_aside_count`
          integer field in the --json output.
-    If python-coder settles on a different marker (e.g. a directory-based
-    product root instead of a `product:` field), update this fixture builder
-    accordingly — see Source-of-Truth Discipline Rule 1 (test drift).
+    UPDATED 2026-09-17 (ADR-044/UXP-700d-3-i, test drift per Source-of-Truth
+    Discipline Rule 1): the marker was renamed from `product:` to
+    `example_product:`, so the fact has one spelling shared with
+    product-truth artifacts. This fixture builder and its assertions were
+    updated in lockstep; the marker's semantics (product-root slug, absent
+    on the project's own record) are unchanged.
 """
 from __future__ import annotations
 
@@ -71,7 +74,7 @@ def _write_ac(root: Path, subdir: str, ac_id: str, *, product: str | None = None
         "estimated_complexity": "S",
     }
     if product is not None:
-        data["product"] = product
+        data["example_product"] = product
     data.update(overrides)
     path = target / f"{ac_id}.yaml"
     path.write_text(yaml.safe_dump(data, sort_keys=False), encoding="utf-8")
@@ -217,7 +220,7 @@ class TestExampleCriteriaRemainReadableAfterTheChange(unittest.TestCase):
                     loaded, f"example AC {example_id} must still be readable from disk"
                 )
                 self.assertEqual(loaded["id"], example_id)
-                self.assertEqual(loaded.get("product"), "fern-and-fig")
+                self.assertEqual(loaded.get("example_product"), "fern-and-fig")
 
 
 if __name__ == "__main__":

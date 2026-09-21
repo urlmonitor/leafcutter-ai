@@ -16,8 +16,21 @@ import sys
 from pathlib import Path
 
 _REPO_ROOT = Path(__file__).resolve().parent.parent.parent
-_HARVESTER_SRC = _REPO_ROOT / "scripts" / "knowledge" / "harvest_learnings.py"
+_KNOWLEDGE_SRC_DIR = _REPO_ROOT / "scripts" / "knowledge"
+_HARVESTER_SRC = _KNOWLEDGE_SRC_DIR / "harvest_learnings.py"
 _CHECK_SINK_PARITY = _REPO_ROOT / "scripts" / "ci" / "check_sink_parity.py"
+
+# Required sibling modules harvest_learnings.py loads at import time via
+# _load_required_sibling_module (GE-127b-1 file-size fix). A deploy that
+# copies harvest_learnings.py without these crashes with ImportError before
+# it can do anything -- must be kept in lockstep with build_knowledge_scripts's
+# own deploy_scripts list (scripts/build_phases_knowledge.py).
+_HARVESTER_REQUIRED_SIBLINGS: tuple[str, ...] = (
+    "harvest_result.py",
+    "sink_resolution.py",
+    "capture_write.py",
+    "harvest_cli.py",
+)
 
 _REAL_SURFACES: tuple[tuple[str, Path, tuple[str, ...]], ...] = (
     ("signoff", _REPO_ROOT / "templates" / "skills" / "signoff" / "SKILL.md",
@@ -53,9 +66,20 @@ _TIMEOUT_SECONDS = 30
 
 
 def _deploy_harvester(deployed_root: Path) -> Path:
-    dest = deployed_root / "scripts" / "knowledge" / "harvest_learnings.py"
-    dest.parent.mkdir(parents=True, exist_ok=True)
+    """Deploy harvest_learnings.py AND its required sibling modules.
+
+    Mirrors what a real ``build.py`` run actually deploys
+    (``build_knowledge_scripts`` in ``scripts/build_phases_knowledge.py``) --
+    copying only ``harvest_learnings.py`` in isolation would crash every
+    caller of this fixture with ``ImportError`` the moment the deployed
+    script tries to load its required siblings.
+    """
+    output_dir = deployed_root / "scripts" / "knowledge"
+    output_dir.mkdir(parents=True, exist_ok=True)
+    dest = output_dir / "harvest_learnings.py"
     shutil.copy2(_HARVESTER_SRC, dest)
+    for sibling_name in _HARVESTER_REQUIRED_SIBLINGS:
+        shutil.copy2(_KNOWLEDGE_SRC_DIR / sibling_name, output_dir / sibling_name)
     return dest
 
 
