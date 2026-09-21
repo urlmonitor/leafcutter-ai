@@ -1,0 +1,272 @@
+id: TQ-600c-3
+components:
+  - testing_quality
+title: "The budget is a measured, dated, single-source number the guard looks up — not a literal in the guard"
+component: testing-quality
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given one declared record of the runtime budget, holding the budget in force
+    together with the measured baseline it was derived from, the date and the commit
+    of the run that produced that baseline, and the headroom allowed above the
+    baseline,
+  When the budget guard needs a budget to compare against,
+  Then it takes the budget from that record, and from nowhere else,
+    And changing the value in that record changes the guard's verdict on an
+      unchanged cost record, with no change to the guard itself,
+    And the budget in force equals the recorded baseline increased by the recorded
+      headroom, so the number is reproducible from the two figures beside it rather
+      than being an opinion,
+    And the baseline named in the record is one measured after the work of TQ-600a
+      and TQ-600b has landed, on the commit the record names.
+depends_on:
+  - TQ-600c
+  - TQ-600a
+  - TQ-600b
+doc_links:
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      The seam angle: the defect this AC prevents lives between the guard and the
+      budget, and a test of the guard alone with an injected budget cannot see a
+      guard that ignores the record and uses its own literal.
+  - path: docs/acceptance-criteria/testing-quality/TQ-600-suite-feedback-latency/TQ-600c.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      Carries the parent's explicit instruction not to hardcode a budget number
+      before the post-fix baseline exists, and to specify instead how the number is
+      derived and where it is recorded. This AC is that specification.
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - >-
+    THIS AC IS STRUCTURALLY BLOCKED ON A BASELINE THAT DOES NOT EXIST YET, and
+    that is why its depends_on names TQ-600a and TQ-600b as whole L1s. Do NOT
+    author a budget value while implementing them. The deliverable here is the
+    record's SHAPE, the single-source lookup, and the derivation rule; the value
+    is filled in afterwards by a measured run on the commit the record names.
+    Ship the shape with the value absent and let TQ-600c-3-i's refusal hold the
+    line until the measurement exists.
+  - >-
+    THE 2026-09-21 FIGURES ARE EXPLICITLY NOT THE BASELINE and must never be
+    written into the record. The 5387.62s run predates the fix and its absolute
+    total is contaminated by other agent activity on the shared WSL host. The
+    concentration finding and the 59.8s deploy are sound; the total is not.
+  - >-
+    REQUIRED FIELDS: the budget in force, the measured baseline, the baseline
+    run's date, the baseline run's commit, the headroom, and — per TQ-600c-4 —
+    the allowed per-test growth. A bare number with no baseline, date or headroom
+    beside it cannot be checked, defended or revised by anyone who was not
+    present when it was chosen.
+  - >-
+    THE INVARIANT `budget == baseline + headroom` MUST BE CHECKED BY THE LOADER AT
+    LOAD TIME, not merely documented. A record whose three numbers disagree is
+    not a budget in force and must be refused, or the derivation rule decays into
+    a magic number with decorative provenance.
+  - >-
+    STATE WHETHER HEADROOM IS ABSOLUTE SECONDS OR A FRACTION, and make the
+    arithmetic reproducible either way. A reader must be able to recompute the
+    budget from the two figures beside it without knowing a convention that is
+    written down nowhere.
+  - >-
+    NO LITERAL AND NO FALLBACK IN THE GUARD — not a module constant, not an
+    environment variable, not a last-known-good cache. The second clause is the
+    only one with teeth: changing only the record and observing the verdict flip
+    is the whole proof that the guard consults the record rather than reading it
+    and ignoring it.
+  - >-
+    A TRACKED, REVIEWABLE CONFIG FILE IS THE RIGHT HOME — something a change
+    shows up in as a diff. Do NOT embed the budget in `pytest.ini`'s addopts or
+    in the CI workflow, where an edit is invisible to this AC's own tests and the
+    single-source claim quietly becomes false.
+  - >-
+    Reading the record is external I/O under the project error handling policy:
+    wrap it, log at WARNING or above, and surface a typed failure. Never let a
+    read error resolve into a default.
+delivers_to:
+  - agent: python-coder
+    ac_id: TQ-600c-2
+    contract: >-
+      One declared budget record holding the budget in force, the measured
+      baseline it derives from, that baseline's date and commit, and the
+      headroom; plus a loader that refuses a record whose budget does not equal
+      baseline plus headroom. The guard reads its budget from here and nowhere
+      else.
+  - agent: python-coder
+    ac_id: TQ-600c-4
+    contract: >-
+      The allowed per-test growth, held in the SAME declared record as the
+      budget, so both numbers are revisable in one place with their
+      justification beside them.
+  - agent: python-coder
+    ac_id: TQ-600c-3-i
+    contract: >-
+      The declared budget record and its loader, whose refusals TQ-600c-3-i
+      asserts over: absent, budget-less, non-positive and present-but-untraceable
+      records must each produce a failing status naming the record, with no
+      fallback value substituted.
+  - agent: documentation-expert
+    ac_id: TQ-600c-6
+    contract: >-
+      The derivation procedure as delivered and the location of the recorded
+      limit. TQ-600c-6's guidance reports both and reproduces neither — in
+      particular it never restates the number, which is what keeps the guidance
+      and the guard from ever disagreeing.
+expects_from:
+  - ac_id: TQ-600a
+    contract: >-
+      A measured post-fix suite runtime, taken after the shared reference layout
+      has landed, on a named commit. Until it exists this AC's record has a shape
+      but no value.
+  - ac_id: TQ-600b
+    contract: >-
+      A measured post-fix suite runtime taken under the parallel default, on the
+      same named commit, since the recorded baseline must describe the suite as
+      it will actually be run.
+test_spec:
+  - name: test_tq600c_3_the_guard_takes_its_budget_from_the_declared_record
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: unit
+    angle: seam
+    description: >-
+      Given a declared record, the guard's comparison uses the budget it holds.
+      The defect this AC prevents lives between the guard and the record, so a
+      test of the guard alone with an injected budget cannot see it.
+  - name: test_tq600c_3_changing_only_the_record_flips_the_verdict_on_an_unchanged_cost_record
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: seam
+    description: >-
+      THE CLAUSE WITH TEETH. The cost record is byte-identical across two
+      invocations; only the declared budget changes, and the verdict goes from
+      pass to fail. NAMED MUTATION: compare against a module-level constant in
+      the guard; this test must go RED while every other descriptor here stays
+      green. This is the only descriptor that distinguishes a guard which
+      consults the record from one which reads it and ignores it.
+  - name: test_tq600c_3_the_budget_in_force_equals_the_recorded_baseline_plus_the_recorded_headroom
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: >-
+      Parametrised over several baseline-and-headroom pairs, with no literal
+      budget anywhere in the test: the loader's budget equals the arithmetic of
+      the two figures beside it.
+  - name: test_tq600c_3_a_record_whose_budget_does_not_equal_baseline_plus_headroom_is_refused
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: unit
+    angle: failure
+    description: >-
+      The three-numbers-disagree case. NAMED MUTATION: read the budget field and
+      skip the invariant check; a record with decorative provenance then loads
+      and this test must go RED.
+  - name: test_tq600c_3_the_record_names_the_baseline_date_and_commit
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: >-
+      Both are present and non-empty in a loadable record. A number with its
+      baseline and date beside it is an argument; a bare number six months later
+      is unfalsifiable.
+  - name: test_tq600c_3_the_derivation_is_reproducible_from_the_record_alone
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: >-
+      A reader recomputing the budget from the record's own baseline and headroom
+      arrives at the recorded budget, for an absolute headroom and a fractional
+      one alike — so the convention is readable from the record rather than known
+      only to its author.
+  - name: test_tq600c_3_the_shipped_budget_record_satisfies_its_own_invariants
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    description: >-
+      The loader is run over the ACTUAL committed budget record, not a fixture:
+      all required fields present, the invariant holding, and the baseline commit
+      naming a real commit. This descriptor is expected to stay RED until a
+      post-fix baseline has been measured and written, which is the honest
+      encoding of this AC's structural block.
+test_rationale: |
+  No number is written here, on the parent's explicit instruction, and the
+  substitute is a derivation rule. The budget is the measured post-fix baseline
+  plus a recorded headroom, with both inputs beside the result so a later reader
+  can check the arithmetic and see what the suite actually cost on the day the
+  budget was agreed.
+
+  Every descriptor therefore tests the derivation and the lookup, never a value.
+  The parametrised arithmetic descriptor carries no literal budget at all; the
+  verdict-flip descriptor supplies two budgets and asserts only that they
+  differ in effect.
+
+  The verdict-flip descriptor is the load-bearing one and names its injection,
+  because it is the only clause that distinguishes a guard which genuinely
+  consults the record from one which reads it, ignores it, and compares against
+  a literal of its own. Changing only the record and observing the flip is the
+  whole proof.
+
+  The real-artifact descriptor is expected to be RED until a post-fix baseline
+  exists. That is deliberate: this AC depends_on TQ-600a and TQ-600b precisely
+  because the number cannot be authored before they land, and a test contract
+  that went green on a fixture alone would let the record ship with no
+  measurement behind it.
+origin_agent: business-analyst
+created: 2026-09-21
+amended_by:
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-09-21
+  note: python-coder, M. Authored no budget number anywhere, per the parent's instruction
+    — every descriptor tests the derivation and the lookup, and the arithmetic descriptor
+    is parametrised so it carries no literal at all. Made the budget == baseline +
+    headroom invariant a LOADER check rather than documentation. Required a tracked
+    reviewable config file, explicitly not pytest.ini addopts or the CI workflow where
+    an edit would be invisible to this AC's own tests. The real-artifact descriptor
+    is expected RED until a post-fix baseline exists, which is the honest encoding
+    of the structural block. criteria untouched.
+- action: approved
+  agent: approve_acs
+  date: '2026-09-21'
+superseded_by: null
+covered_by:
+  - TQ-600c-3-i
+implemented_by: []
+change_target: code
+risk_surface: internal
+notes: |
+  NO NUMBER IS WRITTEN HERE, ON THE PARENT'S EXPLICIT INSTRUCTION, AND THE
+  SUBSTITUTE IS A DERIVATION RULE. The budget is the measured post-fix baseline
+  plus a recorded headroom. Both inputs live beside the result, so any later reader
+  can check the arithmetic and, more importantly, can see what the suite actually
+  cost on the day the budget was agreed. A bare number in a file is unfalsifiable
+  six months later; a number with its baseline and date beside it is an argument.
+
+  THE MEASURED BASELINE DOES NOT EXIST YET AND THIS AC IS BLOCKED UNTIL IT DOES.
+  That is why depends_on names TQ-600a and TQ-600b rather than only the parent. The
+  figures measured on 2026-09-21 — a 5387.62s run on a shared WSL host — are
+  explicitly not the baseline: they predate the fix and the absolute total is
+  contaminated by other activity on the host.
+
+  THE SECOND CLAUSE IS THE ONE WITH TEETH. It is the only clause that distinguishes
+  a guard which genuinely consults the record from one which reads it, ignores it,
+  and compares against a literal of its own. Changing only the record and observing
+  the verdict flip is the whole proof.
+
+  THE HEADROOM IS RECORDED RATHER THAN FIXED HERE ON PURPOSE. Too tight and the
+  guard fires on ordinary host variation until somebody disables it; too loose and
+  it never fires at all. That trade-off needs the post-fix variance, which nobody
+  has yet. Recording the value beside the baseline is what lets it be revised
+  honestly rather than quietly.

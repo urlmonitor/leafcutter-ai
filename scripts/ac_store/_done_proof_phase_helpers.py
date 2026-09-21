@@ -35,7 +35,7 @@ ARCHITECTURE: Two independent helper groups, moved verbatim from
     verify_done_eligible -- need them). This module's own helpers call BACK
     into done_proof.py for the classification/IO primitives that stayed
     behind (JsRunnerUnavailable, run_vitest_and_parse, _discover_project_dir,
-    _run_pytest_and_parse, _pytest_timeout_reason, _classify_outcomes,
+    _run_pytest_and_parse, _pytest_incomplete_run_reason, _classify_outcomes,
     _has_resolvable_child, _verify_composite_eligible,
     _check_reachability_for_linked_tests, _describe_non_passing). A
     top-level ``from done_proof import ...`` on THIS side would deadlock the
@@ -360,16 +360,20 @@ def _run_python_test_phase(
             is a legal no-op (the AC may link only TypeScript/TSX tests).
 
     Returns:
-        ``(passing, failing, pytest_results, timeout_reason)``. When
+        ``(passing, failing, pytest_results, incomplete_reason)``. When
         *py_linked* is empty, all four are empty/``None``. When the pytest
-        subprocess times out, ``passing``/``failing`` are empty and
-        ``timeout_reason`` names the budget and command per
-        :func:`done_proof._pytest_timeout_reason` — the caller must check
-        ``timeout_reason`` before trusting ``passing``/``failing``.
+        subprocess did not run to completion — it exceeded its budget, or
+        was killed by the machine, or ended for any other reason before
+        every linked test reported — ``passing``/``failing`` are empty and
+        ``incomplete_reason`` says the run did not finish, per
+        :func:`done_proof._pytest_incomplete_run_reason`. The caller MUST
+        check ``incomplete_reason`` before trusting ``passing``/``failing``:
+        without it, tests that never reported read as tests that did not
+        pass (BO-2500a-7).
     """
     from done_proof import (
         _classify_outcomes,
-        _pytest_timeout_reason,
+        _pytest_incomplete_run_reason,
         _run_pytest_and_parse,
     )
 
@@ -377,9 +381,9 @@ def _run_python_test_phase(
         return [], [], {}, None
     py_files = list({t["file"] for t in py_linked})
     pytest_results = _run_pytest_and_parse(py_files)
-    timeout_reason = _pytest_timeout_reason(ac_id, pytest_results)
-    if timeout_reason is not None:
-        return [], [], pytest_results, timeout_reason
+    incomplete_reason = _pytest_incomplete_run_reason(ac_id, pytest_results)
+    if incomplete_reason is not None:
+        return [], [], pytest_results, incomplete_reason
     py_passing, py_failing = _classify_outcomes(py_linked, pytest_results)
     return py_passing, py_failing, pytest_results, None
 

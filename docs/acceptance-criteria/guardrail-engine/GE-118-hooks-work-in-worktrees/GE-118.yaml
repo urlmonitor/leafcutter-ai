@@ -58,7 +58,7 @@ amended_by:
       reasoning, including why GE-120 — the semantically closer parent — is
       mechanically forbidden.'
 superseded_by: null
-covered_by: [GE-118a, GE-118b, GE-118c]
+covered_by: [GE-118a, GE-118b, GE-118c, GE-118d, GE-118e, GE-118f]
 implemented_by: []
 change_target: code
 risk_surface: internal

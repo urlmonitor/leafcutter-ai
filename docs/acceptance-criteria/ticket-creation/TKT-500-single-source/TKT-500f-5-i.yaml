@@ -27,6 +27,11 @@ doc_links:
   - path: scripts/goal_to_epic.py
     relationship: constrains
     status: exists
+    relevance: "Facade only since the 2026-09-14 decomposition. The goal-path generator this AC constrains is now scripts/ac_store/epic_tickets.py, below — the shared helper must be used from there, not from the facade."
+  - path: scripts/ac_store/epic_tickets.py
+    relationship: constrains
+    status: exists
+    relevance: "Owns _call_generate_ticket_from_ac and generate_tickets_for_leaves — the goal-path half of the two generators this AC constrains."
   - path: scripts/ac_store/generate_ticket_from_ac.py
     relationship: constrains
     status: exists
@@ -50,5 +55,30 @@ amended_by:
 superseded_by: null
 covered_by: []
 implemented_by: []
+test_spec:
+  - name: test_unknown_agent_is_not_named_as_the_ticket_phase_agent
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "An AC whose assigned_agent has no registry entry at all (e.g. made-up-agent) generates a ticket that does not name it as the phase agent."
+  - name: test_unknown_agent_substitution_follows_the_same_rule_as_non_phase
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "The substitute is chosen by the SAME rule TKT-500f-5 defines (llm-expert for template work, python-coder otherwise) — assert both branches, so the absent-from-registry path cannot diverge into its own private default."
+  - name: test_unknown_agent_warning_names_registry_miss_substitute_and_ac_id
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "The warning states the original assigned_agent was not found in the registry, names the substitute, and names the AC id — three separate assertions."
+  - name: test_unknown_agent_generation_completes_without_unhandled_error
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: failure
+    description: "Generation completes and returns a ticket rather than propagating a KeyError or similar from the registry lookup — the failure-mode clause of the criteria."
 change_target: code
 risk_surface: internal

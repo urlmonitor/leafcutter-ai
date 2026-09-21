@@ -220,7 +220,10 @@ def _extract_syspath_directories(tree: ast.AST, script: Path) -> list[Path]:
     ``sys.path.insert(0, <dir-expression>)`` followed by a plain
     ``import``/``from ... import`` statement that resolves against the
     pushed directory rather than the script's own directory or the package
-    root. ``goal_to_epic.py``'s ``run()`` is the live instance:
+    root. ``scripts/ac_store/epic_ac_phases.py`` is the live instance --
+    ``goal_to_epic.py``'s ``run()`` was, until the 2026-09 decomposition moved
+    the import to that sibling and the push to module scope; this function
+    walks the whole tree, so either placement is seen:
     ``sys.path.insert(0, str(_sibling_dir))`` then
     ``from scan_ac_store import traverse_ac_tree`` -- neither
     ``scripts/scan_ac_store.py`` (script's own directory) nor

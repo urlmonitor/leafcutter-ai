@@ -129,6 +129,7 @@ from build_main_helpers import (
     _check_self_description_error_gate,
     _raise_deploy_failures_if_any,
     _check_command_reachability_if_live,
+    _check_knowledge_routing_wiring_if_live,
     _print_write_summary,
     _write_version_files,
     _write_and_verify_manifest,
@@ -2368,6 +2369,10 @@ def main(argv: list[str] | None = None) -> int:
     )
     if reachability_exit is not None:
         return reachability_exit
+
+    knowledge_exit = _check_knowledge_routing_wiring_if_live(output_root, args.dry_run)
+    if knowledge_exit is not None:
+        return knowledge_exit
 
     _print_write_summary(total, args.dry_run)
 

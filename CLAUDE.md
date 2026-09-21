@@ -395,6 +395,35 @@ code. For the out-of-band store-wide sweep, see "AC-store hygiene" below — and
 bare-directory no-op documented there.
 (Source: ACD-400a drift, found 2026-08-18.)
 
+### Tests must not spawn their own `build.py` — reuse a shared deployed layout
+
+Do **not** add a test that runs `python scripts/build.py --target-dir <tmp>` of its own.
+One build measures **59.8s**. The suite already contains **77** such invocation sites
+across 52 test files and has **zero** `scope="session"` fixtures, so every one of them
+pays the full 60s — which is how a full run reached **1:29:47**, with 63% of wall clock
+sitting in 60 of 5318 tests.
+
+The rule, once TQ-600a lands the shared fixture:
+
+- A test that only **reads** a deployed layout must reuse the shared session-scoped
+  reference build. It must not produce one.
+- A test that **mutates** the package before building — withholding a dependency,
+  editing `build.py`'s declaration tuples, then asserting the build *fails* — still
+  builds its own copy. `unit_tests/test_bp_900g_8*.py` is the canonical example.
+  Sharing a layout with those would corrupt the shared copy *and* destroy the
+  behaviour they exist to prove.
+
+Until that fixture exists, the prohibition alone applies: do not add new spawn sites.
+If you believe you need one, say so in the ticket and justify why the read-only path
+does not cover it.
+
+Do not assume this is cheap because collection is fast — collection is 5.33s and the
+`pytest_ac_enforcement` plugin only fires on failures. Both were measured and ruled out.
+The build subprocess is the whole cost.
+
+(Source: test-suite profiling, 2026-09-21, origin/main 624d39ac. Full evidence and the
+read-vs-mutate boundary: `docs/acceptance-criteria/testing-quality/TQ-600-suite-feedback-latency/TQ-600.yaml`.)
+
 ## Pre-Drive Checklist
 
 Run through these checks before invoking `/build-feature` or starting any epic drive.

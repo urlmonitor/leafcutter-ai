@@ -1,0 +1,90 @@
+id: TQ-600b
+components:
+  - testing_quality
+title: "The suite uses the whole machine, without tests treading on each other"
+component: testing-quality
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  A run spreads across the cores available and still gives the same answer it
+  would give one test at a time.
+
+  Today the suite works through its tests one after another while the rest of
+  the machine sits idle, and almost all of that time is spent waiting on
+  separate programs to start and finish rather than on any real computation —
+  exactly the shape of work that a machine can do several of at once. Running
+  them side by side is only worth anything if the answer does not change, so
+  this also means tests stop quietly sharing the same scratch space and the
+  same checkout: each gets its own, and a run spread across many workers
+  agrees with a run done one at a time.
+depends_on:
+  - TQ-600
+doc_links:
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-09-21
+amended_by:
+  - reason: >-
+      child_limit_override raised 5 -> 6 to admit TQ-600b-6, the how-to this L1's
+      documentation_triggers ([how-to]) require. WHAT THE OVERRIDE ADMITS: exactly one
+      child beyond the cap, and it is documentation of the five behaviours already
+      here rather than a sixth behaviour. WHY REDISTRIBUTING WOULD BE WORSE: the five
+      behavioural children are a single claim seen from five angles — parallel is the
+      default (b-5), the verdict is unchanged by it (b-1), and the three collision
+      sources that would otherwise change the verdict (b-2 scratch paths, b-3 the real
+      checkout, b-4 shared sinks). Moving any of them under a sibling L1 would split
+      the correctness half of the claim from the speed half, which is precisely the
+      pairing this L1's notes insist on ("pair the speed claim with an equivalence
+      claim"). Moving the documentation under a sibling L1 would separate the
+      documented command from the AC that defines it, and TQ-600b-6's whole subject is
+      that one command has one account. REMOVE THIS OVERRIDE when a PO-owned split
+      rebalances the TQ-600 tree, or when any of the three collision-source children
+      is superseded by a mechanical guard that makes its case unreachable, freeing a
+      slot back to 5.
+    by: business-analyst
+    at: 2026-09-21
+superseded_by: null
+covered_by:
+  - TQ-600b-1
+  - TQ-600b-2
+  - TQ-600b-3
+  - TQ-600b-4
+  - TQ-600b-5
+  - TQ-600b-6
+implemented_by: []
+child_limit_override: 6
+change_target: pipeline
+risk_surface: internal
+documentation_triggers:
+  - how-to
+notes: |
+  Authoring evidence (2026-09-21, origin/main 624d39ac):
+    - 979 subprocess call sites across 349 of 667 test files; 94 `git init`
+      calls. The workload is process-spawn-bound, which parallelises well.
+    - pytest-xdist is NOT installed and NOT in requirements-dev.txt, so
+      adopting it is a real dependency decision, not a config flip.
+    - Collection is only 5.33s, so per-worker collection overhead is cheap.
+
+  IMPORTANT BOUNDARY for the BA decomposing this L1: correctness under
+  parallelism is the risk, not speed. Known collision sources that children
+  must address rather than assume away:
+    - tests that write to a FIXED /tmp path instead of a per-test tmp_path
+      will collide across workers;
+    - tests that run `git` against the REAL repository checkout share one
+      index; two workers staging at once corrupt each other's state;
+    - tests asserting on a shared sink (debugging/logs/*.jsonl) can see
+      another worker's writes.
+  A child that only asserts "the suite is faster with -n auto" is insufficient
+  — equivalence of the VERDICT between serial and parallel runs is the
+  criterion that matters. Pair the speed claim with an equivalence claim.
