@@ -60,7 +60,7 @@ task, then pull only those files.
 |------|------|-------------|
 | agent delivery workflows | [docs/architecture/agent_delivery_workflows.md](docs/architecture/agent_delivery_workflows.md) | Visualises how the leafcutter-ai agent ecosystem orchestrates code delivery — slash-command entry points, supervisor dispatch topology, quick-fix workflow, and blocker adjudication flows. |
 | agent knowledge plane | [docs/architecture/agent_knowledge_plane.md](docs/architecture/agent_knowledge_plane.md) | Canonical reference for knowledge injection — all channels through which agents receive context at invocation time, including skills_invoked cross-reference validation. |
-| agent knowledge system | [docs/architecture/agent_knowledge_system.md](docs/architecture/agent_knowledge_system.md) | Agent Knowledge System |
+| agent knowledge system | [docs/architecture/agent_knowledge_system.md](docs/architecture/agent_knowledge_system.md) | Overview of Agent Knowledge System. |
 | feedback lifecycle | [docs/architecture/feedback-lifecycle.md](docs/architecture/feedback-lifecycle.md) | Feedback Lifecycle — Data Flow |
 
 ## Architecture Decision Records (ADRs)
