@@ -293,6 +293,7 @@ _find_ac_by_id = _gtfa_store._find_ac_by_id
 _find_existing_ticket = _gtfa_store._find_existing_ticket
 _load_derive_parent_id_fn = _gtfa_store._load_derive_parent_id_fn
 _load_parent_ac = _gtfa_store._load_parent_ac
+_expects_from_ac_ids = _gtfa_store._expects_from_ac_ids
 _build_ticket_depends_on = _gtfa_store._build_ticket_depends_on
 
 
@@ -304,6 +305,7 @@ _extract_local_paths = _gtfa_files_touched._extract_local_paths
 _extract_paths_from_prose = _gtfa_files_touched._extract_paths_from_prose
 _resolve_worktree_root_or_none = _gtfa_files_touched._resolve_worktree_root_or_none
 _is_real_prose_path = _gtfa_files_touched._is_real_prose_path
+_is_prose_path_negated = _gtfa_files_touched._is_prose_path_negated
 _paths_declared_non_edit_surface_only = (
     _gtfa_files_touched._paths_declared_non_edit_surface_only
 )
