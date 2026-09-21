@@ -1748,15 +1748,9 @@ function pathsEquivalent(a, b) {
 }
 // BO-3900-PATH-HELPERS-END
 
-// ---------------------------------------------------------------------------
-// Derive worktree-resident paths from resolve output
-//
-// resolve may return epic_path / ticket_path as an absolute main-clone path
-// (e.g. /home/user/leafcutter-ai/tickets/…), a repo-relative path (e.g.
-// tickets/00_inbox/epics/EPIC-X), or an absolute Windows path in any
-// separator spelling. Either way we must land inside realWorktreePath before
-// passing paths to the planner or phase agents.
-// ---------------------------------------------------------------------------
+// Derive worktree-resident paths from resolve output. resolve may return an absolute
+// MAIN-CLONE path, a repo-relative path, or an absolute Windows path; every one of them
+// must land inside realWorktreePath before reaching the planner or any phase agent.
 
 /**
  * Algorithm (BO-3900): classify the path's FORM from the string alone.
@@ -1775,6 +1769,12 @@ function toWorktreePath(resolvedPath, worktreePath) {
   if (!resolvedPath) return null;
   const resolved = resolvePathOntoRoot(worktreePath, resolvedPath);
   return resolved.ok ? resolved.path : resolved.value;
+}
+/** Reduce an absolute MAIN-CLONE ticket path to its repo-relative tail so toWorktreePath can re-root it.
+ *  BO-3900's return-absolute-as-is rule is deliberate and untouched; this corrects the INPUT (BO-4000e). */
+function repoRelativeTicketPath(input) {
+  const tail = normalizePathForm(input || "").match(/(?:^|\/)(tickets\/.+)$/);
+  return tail ? tail[1] : input;
 }
 
 /**
@@ -2857,7 +2857,7 @@ if (target_type === "epic") {
   // layer at all (BO-100e-1's own cost-control constraint: never one look
   // per ticket).
   // -----------------------------------------------------------------------
-  const worktreeEpicPath = toWorktreePath(epic_path || target, realWorktreePath);
+  const worktreeEpicPath = toWorktreePath(repoRelativeTicketPath(epic_path || target), realWorktreePath);
 
   const BATCH_SIZE = 12;
   const completedBatches = [];
@@ -3754,7 +3754,7 @@ if (target_type === "epic") {
     };
   }
 
-  const worktreeTicketPath = toWorktreePath(singleTicketPath, realWorktreePath);
+  const worktreeTicketPath = toWorktreePath(repoRelativeTicketPath(singleTicketPath), realWorktreePath);
 
   const ticketResult = await driveTicketPhases(worktreeTicketPath);
 

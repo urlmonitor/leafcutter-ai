@@ -173,6 +173,7 @@ covered_by:
   - BO-4000b
   - BO-4000c
   - BO-4000d
+  - BO-4000e
 implemented_by:
   - templates/workflows-js/build-feature.js
   - templates/scripts/worktree_repo_facts.py
