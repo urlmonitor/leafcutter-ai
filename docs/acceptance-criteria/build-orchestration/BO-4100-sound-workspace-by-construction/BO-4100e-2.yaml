@@ -12,6 +12,7 @@ readiness: approved
 priority: high
 roadmap_phase: phase_1
 change_target: code
+risk_surface: safety
 package_surface: false
 criteria: |
   Given a leftover that appears in the listing only because it was discovered on

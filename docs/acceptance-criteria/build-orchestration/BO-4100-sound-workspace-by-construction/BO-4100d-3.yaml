@@ -12,6 +12,7 @@ readiness: approved
 priority: high
 roadmap_phase: phase_1
 change_target: code
+risk_surface: contract_boundary
 package_surface: false
 criteria: |
   Given creation has finished and is about to report what it made,
@@ -105,7 +106,8 @@ created: 2026-09-21
 amended_by: []
 superseded_by: null
 covered_by: [BO-4100d-3-i]
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260921-BO-4100d-3.md
 notes: >-
   The second arm of BO-4100d, and separately failable from the first: creation could make
   the right thing and still describe it from the request, in which case the next defect of

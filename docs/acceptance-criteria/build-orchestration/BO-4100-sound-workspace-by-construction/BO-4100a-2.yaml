@@ -12,6 +12,7 @@ readiness: approved
 priority: high
 roadmap_phase: phase_1
 change_target: code
+risk_surface: contract_boundary
 package_surface: false
 criteria: |
   Given a staleness check run before creation has reported the starting point

@@ -12,6 +12,7 @@ readiness: approved
 priority: high
 roadmap_phase: phase_1
 change_target: code
+risk_surface: contract_boundary
 package_surface: false
 criteria: |
   Given a request for a workspace naming the kind of work it is for, made once
@@ -98,7 +99,8 @@ created: 2026-09-21
 amended_by: []
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260921-BO-4100d-1.md
 notes: >-
   Observed 2026-09-14: every created branch was labelled a feature, so fixes, chores and
   hotfixes were silently relabelled. All four kinds are exercised deliberately -- the

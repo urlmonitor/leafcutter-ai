@@ -12,6 +12,7 @@ readiness: approved
 priority: high
 roadmap_phase: phase_1
 change_target: code
+risk_surface: internal
 package_surface: false
 criteria: |
   Given the machine's local copy of the main line carries two commits that are

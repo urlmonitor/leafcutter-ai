@@ -11,6 +11,7 @@ work_status: todo
 readiness: approved
 priority: high
 roadmap_phase: phase_1
+risk_surface: safety
 criteria: |
   A workspace starts current, stands on its own, and is described to you truthfully.
 

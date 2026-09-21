@@ -12,6 +12,7 @@ readiness: approved
 priority: high
 roadmap_phase: phase_1
 change_target: code
+risk_surface: safety
 package_surface: false
 criteria: |
   Given two workspaces exist at the same time, each created through the normal

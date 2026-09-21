@@ -11,6 +11,7 @@ work_status: todo
 readiness: approved
 priority: high
 roadmap_phase: phase_1
+risk_surface: safety
 criteria: |
   Your workspace's supporting material is its own, so nothing borrowed is held against you.
 

@@ -11,6 +11,7 @@ work_status: todo
 readiness: approved
 priority: high
 roadmap_phase: phase_1
+risk_surface: safety
 criteria: |
   Finished workspaces stop piling up, and none holding undelivered work is ever let go.
 

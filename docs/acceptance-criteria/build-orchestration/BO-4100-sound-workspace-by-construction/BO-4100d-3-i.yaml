@@ -12,6 +12,7 @@ readiness: approved
 priority: high
 roadmap_phase: phase_1
 change_target: code
+risk_surface: contract_boundary
 package_surface: false
 criteria: |
   Given a requested workspace name containing characters the branch name cannot
@@ -89,7 +90,8 @@ created: 2026-09-21
 amended_by: []
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260921-BO-4100d-3-i.md
 notes: >-
   The one legitimate reason the created name may differ from the requested one, carved out
   so BO-4100d-3 does not have to treat every alteration as a failure. The risk it closes is

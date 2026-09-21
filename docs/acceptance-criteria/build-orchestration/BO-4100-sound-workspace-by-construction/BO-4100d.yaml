@@ -11,6 +11,7 @@ work_status: todo
 readiness: approved
 priority: high
 roadmap_phase: phase_1
+risk_surface: contract_boundary
 criteria: |
   What you are told about the workspace matches what was made -- including its name.
 

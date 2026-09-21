@@ -12,6 +12,7 @@ readiness: approved
 priority: high
 roadmap_phase: phase_1
 change_target: code
+risk_surface: contract_boundary
 package_surface: false
 criteria: |
   Given a request for a workspace naming a kind of work that creation does not
@@ -96,7 +97,8 @@ created: 2026-09-21
 amended_by: []
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260921-BO-4100d-2.md
 notes: >-
   Closes the general defect class rather than the four cases in BO-4100d-1: silent
   substitution is what made the 2026-09-14 failure invisible, and an implementation that

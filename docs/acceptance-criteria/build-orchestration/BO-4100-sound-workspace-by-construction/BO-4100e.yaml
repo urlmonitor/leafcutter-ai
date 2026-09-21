@@ -11,6 +11,7 @@ work_status: todo
 readiness: approved
 priority: high
 roadmap_phase: phase_1
+risk_surface: safety
 criteria: |
   Every workspace that exists is accounted for, and none is beyond clearing away.
 

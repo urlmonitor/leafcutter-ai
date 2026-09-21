@@ -11,6 +11,7 @@ work_status: todo
 readiness: approved
 priority: high
 roadmap_phase: phase_1
+risk_surface: contract_boundary
 criteria: |
   Every new workspace begins at the shared work as it stands now, not as it stood.
 
