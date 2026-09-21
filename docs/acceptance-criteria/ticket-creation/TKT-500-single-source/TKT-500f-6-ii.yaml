@@ -54,7 +54,7 @@ origin_agent: business-analyst
 created: 2026-06-22
 amended_by: []
 superseded_by: null
-covered_by: [unit_tests/ac_store/test_tkt_500f_6_ii.py]
+covered_by: []
 implemented_by: []
 test_spec:
   - name: test_test_star_py_does_not_qualify_as_an_implementation_file
