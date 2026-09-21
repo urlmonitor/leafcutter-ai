@@ -196,13 +196,12 @@ def should_check_file(filepath: str) -> bool:
     return ext in CHECKED_EXTENSIONS
 
 
-def check_file(filepath: str, is_new_file: bool) -> tuple[bool, int, int]:
+def check_file(filepath: str) -> tuple[bool, int, int]:
     """
     Check if a file passes the size limit.
 
     Args:
         filepath: Path to the file to check.
-        is_new_file: Whether this is a newly added file.
 
     Returns:
         Tuple of (passes_check, line_count, limit).
@@ -398,13 +397,12 @@ def _resolve_ratchet_or_indeterminate(covered_paths: list[str]) -> tuple[dict[st
 
 
 def _classify_file(
-    filepath: str, is_new: bool, previous_lengths: dict[str, int]
+    filepath: str, previous_lengths: dict[str, int]
 ) -> tuple[str, int, int | None]:
     """Classify one staged, covered file into pass / grew / too-large.
 
     Args:
         filepath: The staged file's path.
-        is_new: Whether this is a newly added file.
         previous_lengths: Mapping of path to its length at HEAD, for files
             that had one.
 
@@ -473,7 +471,7 @@ def main() -> int:
 
     try:
         for filepath, is_new in covered_files.items():
-            verdict, lines, reference = _classify_file(filepath, is_new, previous_lengths)
+            verdict, lines, reference = _classify_file(filepath, previous_lengths)
             if verdict == "grew":
                 grown_files.append((filepath, reference, lines))
             elif verdict == "too_large":
@@ -514,6 +512,16 @@ if __name__ == "__main__":
 ====================================================================
 DECISION HISTORY
 ====================================================================
+- 2026-09-21 [python-coder/GE-127d-1 rework, H-1]: pr-reviewer (10:45) and
+  ac-validator (11:05) independently found the 2026-09-15 fix below had
+  removed `is_new_file` from the WRONG function: `check_file()` (below) has
+  no callers anywhere in this file -- `main()` calls `_classify_file()` at
+  commit time, and THAT function still accepted an inert `is_new` that its
+  body never read. Removed `is_new` from `_classify_file()`'s signature and
+  docstring, and updated its one call site in `main()` to match. `main()`'s
+  own `is_new` (from `covered_files.items()`) is untouched and still feeds
+  the legitimate new/modified label in the `passed_files` report.
+- 2026-09-15 [python-coder/GE-127d-1]: Removed unused, accepted-but-inert `is_new_file` from check_file() (a decoy -- see the 2026-09-21 entry above); added sibling gate check_file_size_rule_parity.py; corrected README.md's stale new-files-only claim (see 2026-05-01 below).
 - 2026-09-14 [python-coder/GE-127c-1]: Widened commit_guardian.json's
   file_size.checked_extensions (pinned by GE-127c-1's it_requirements) from
   [".py", ".sql"] to [".py", ".sql", ".js", ".mjs", ".ts", ".tsx", ".sh"],
