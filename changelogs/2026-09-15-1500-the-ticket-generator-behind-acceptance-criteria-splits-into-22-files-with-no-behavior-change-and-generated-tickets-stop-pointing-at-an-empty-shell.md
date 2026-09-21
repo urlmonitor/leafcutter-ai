@@ -12,9 +12,9 @@ components:
 summary: "The tool that turns acceptance criteria into engineering tickets was split into smaller, easier-to-maintain files with no change in what it produces, and tickets it generates now point engineers at the real implementation files instead of an empty placeholder."
 description: "scripts/ac_store/generate_ticket_from_ac.py (4,035 lines, 10x the repo file-size cap) is split into a 386-line re-export shell plus 22 _gtfa_* sibling modules, each 393 lines or fewer. Behavior is unchanged, verified by dir() parity against the pre-split module and by running 123 sampled ACs through both the old and new generator from a deployed layout with 0 stdout/exit divergences. A new test pins the dependency closure the shell derives via importlib at runtime, which static analysis could not see and which left the deploy-manifest build guard blind to the whole generator. 32 not-done ACs that declared the shell as their edit surface are re-pointed to the real sibling modules, so a ticket generated from them now sends a coder to the actual implementation file rather than a file of re-export assignments."
 commits: 
-  - 2859c0ca9
-  - c86fb87f0
-  - 5243a81a3
+  - a202258a
+  - a0ae5cba
+  - 94d6b2dc
 breaking: false
 ---
 
