@@ -1,0 +1,78 @@
+id: BO-4100a-3-i
+title: "A refused creation leaves no half-made workspace behind"
+component: build-orchestration
+components:
+  - build_orchestration
+  - worktree_manager
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+change_target: code
+package_surface: false
+criteria: |
+  Given creation has refused because the shared main line could not be read,
+  When the live workspaces and the branches are listed immediately afterwards,
+  Then neither listing contains an entry for the requested workspace,
+  And no directory remains at the location creation would have used,
+  And the counts of live workspaces and of branches are identical to their
+    values before the refused request.
+depends_on: [BO-4100a-3]
+doc_links:
+  - path: docs/architecture/components/worktree-manager.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "The refusal must decide before it writes. ADR-039's occupied-workspace refusal already establishes a 'no fetch, no branch, no directory' posture for a refusal path in this same script; that ordering is the model. Where a write genuinely must precede the decision, the undo must be performed AND verified, never assumed."
+  - "Cleanup must be scoped to what THIS request created. It must never remove a directory, branch or registration entry that existed before the request -- a refusal that tidies up a pre-existing neighbour is a worse failure than the debris it was avoiding."
+  - "Applies to every refusal path in creation, not just the unreadable-shared-line one: BO-4100d-2's unsupported-kind refusal and BO-4100a-2's post-condition failure reach the same guarantee, so the no-debris behaviour belongs at the refusal boundary rather than in one branch."
+  - "Both the canonical template and its scripts/ build output must carry the change (ADR-001)."
+delivers_to: null
+expects_from: null
+test_required: true
+test_spec:
+  - name: test_a_refused_creation_leaves_no_worktree_entry_and_no_branch
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "git worktree list and git branch --list are read immediately after the refusal; neither contains an entry for the requested workspace."
+  - name: test_a_refused_creation_leaves_no_directory_at_the_target_location
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "The path creation would have used does not exist on disk afterwards -- including the empty-directory case, which git worktree add creates before it fails."
+  - name: test_the_worktree_and_branch_counts_are_identical_before_and_after_the_refused_request
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: "Both counts are captured before the request and compared after. The count assertion is what catches over-eager cleanup as well as under-cleanup: an implementation that removes a neighbouring workspace while tidying fails here and passes every name-based check."
+test_rationale: |
+  Two opposite defects share this record's surface and only the count assertion sees both.
+  Under-cleanup leaves debris and is caught by the name-based assertions. Over-cleanup --
+  a refusal that prunes or removes more than it created -- passes every name-based
+  assertion, because the requested workspace is indeed absent. Capturing the counts either
+  side is the cheapest falsifiable form that fails in both directions, which is why it is
+  stated as its own test rather than derived from the other two.
+origin_agent: BrainCandy
+created: 2026-09-21
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: >-
+  Scoped narrowly to the refusal path of BO-4100a-3: a refusal that has already written
+  a directory or a branch turns one clean failure into a piece of debris someone must
+  later decide about. This is NOT the recovery case in KI-BO-20260831-1331 (a workspace
+  that is already half-created and invisible to the tool that lists them); this record
+  owns the PREVENTION half -- a refused creation leaves no branch, directory or
+  registration behind -- while BO-4100e ("A workspace the list cannot see is still
+  accounted for, and still removable") owns the RECOVERY half for that same case. The
+  two are complementary and neither should be folded into the other.

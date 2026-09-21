@@ -1,0 +1,91 @@
+id: BO-4100c-2
+title: "Disposal is refused for a workspace that still holds something, and says what it holds"
+component: build-orchestration
+components:
+  - build_orchestration
+  - worktree_manager
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+change_target: code
+package_surface: false
+criteria: |
+  Given a workspace carrying the holds-work verdict,
+  When its disposal is requested,
+  Then the disposal is refused,
+  And the workspace is still listed in the live set afterwards and its files are
+    byte-identical to what they were before the request,
+  And the refusal names each item that produced the verdict -- the modified,
+    staged or untracked files by path, the unreached commits by identifier, and
+    any stash entry belonging to the workspace.
+depends_on: [BO-4100c, BO-4100c-1]
+doc_links:
+  - path: docs/architecture/components/worktree-manager.md
+    relationship: describes
+    status: exists
+  - path: docs/known-issues/build-orchestration.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "The refusal must name items at the granularity the verdict produced them: modified, staged and untracked files by path; unreached commits by identifier; the stash entry by its reference. A count, a category summary, or 'uncommitted changes present' does not satisfy this -- the operator cannot act on any of those, and their only route forward is to override."
+  - "The refusal path must be inert: no file in the workspace, no ref, and no registration entry may be written while refusing. Byte-identity of the workspace is asserted, so a refusal that repairs, prunes or stashes anything on its way out fails."
+  - "If an override exists at all it must name the workspace explicitly, must not be the default, and must not be reachable by repeating the same command. The recorded harm is an override habit turning this guarantee off, and a one-keystroke override is how that habit forms."
+  - "The verdict and the item list must both come from BO-4100c-1's assessment record. Disposal must not re-derive either -- a second derivation can disagree with the first, and then the refusal names items the verdict was not based on."
+  - "Error handling follows the project error handling policy. A failure while assembling the refusal must not fall through to disposal."
+delivers_to: null
+expects_from:
+  ac_id: BO-4100c-1
+  contract: "The assessment record { path, verdict, items, reason }. Disposal reads verdict == 'holds_work' as its refusal trigger and names every entry of `items` (kind + ref) in the refusal. Neither value is re-derived by disposal."
+test_required: true
+test_spec:
+  - name: test_disposal_is_refused_for_a_workspace_carrying_the_holds_work_verdict
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "Disposal of a holds_work workspace ends in a refusal and a non-success outcome."
+  - name: test_the_workspace_is_still_listed_and_byte_identical_after_the_refusal
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "A recursive content hash of the whole workspace directory is taken before and after the refused request and must be equal, and the workspace is still present in the live set. This is the inertness assertion."
+  - name: test_the_refusal_names_every_item_that_produced_the_verdict
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "The fixture workspace carries all five trigger kinds at once; every modified, staged and untracked path, every unreached commit identifier, and the stash reference appears in the refusal. Asserted as set equality against the verdict's item list, so a refusal naming only the first finding fails."
+  - name: test_the_named_items_come_from_the_verdict_record_rather_than_a_second_derivation
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: seam
+    description: "The item set in the refusal equals the item set in the assessment record for the same workspace. A disposal path that re-runs its own git queries can disagree with the verdict it refused on, and that disagreement is invisible to the other tests."
+test_rationale: |
+  A bare refusal is indistinguishable from a false positive, so the naming clause is what
+  makes the guarantee survivable rather than something the operator learns to override.
+  That makes set equality -- not containment -- the right assertion: a refusal that names
+  one of five findings reads as a manageable problem and is worse than one naming none,
+  because it invites a partial fix and a retry.
+  The fixture has to carry all five trigger kinds simultaneously for the same reason
+  BO-4100c-1's has to carry them separately: there, independent sufficiency is the claim;
+  here, completeness of the report is.
+origin_agent: BrainCandy
+created: 2026-09-21
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: >-
+  Naming the items is part of the refusal and not a nicety: a bare refusal is
+  indistinguishable from a false positive, so the operator's only route forward is to
+  override it, and an override habit turns this guarantee off. The recorded loss this
+  prevents is a concurrent session removing a workspace mid-drive and leaving a snapshot
+  commit marked not-for-merge behind.

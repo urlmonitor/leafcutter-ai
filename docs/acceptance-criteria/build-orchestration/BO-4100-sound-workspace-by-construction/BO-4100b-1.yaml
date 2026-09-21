@@ -1,0 +1,108 @@
+id: BO-4100b-1
+title: "A check may only refuse over material the commit itself changed"
+component: build-orchestration
+components:
+  - build_orchestration
+  - worktree_manager
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+change_target: code
+package_surface: false
+criteria: |
+  Given a workspace whose branch is 39 commits behind the shared main line,
+  And a commit whose changed-file set contains no file belonging to the
+    supporting-material tree,
+  When the checks that compare supporting material against its expected content
+    run,
+  Then the commit is not refused,
+  And no item outside the commit's changed-file set appears as a reason for a
+    refusal,
+  And the same commit is accepted identically whether the branch is 39 commits
+    behind the shared main line or level with it.
+depends_on: [BO-4100b]
+doc_links:
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/worktree-manager.md
+    relationship: describes
+    status: exists
+  - path: docs/known-issues/build-pipeline.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-038-commit-guardian-shared-change-set-derivation.md
+    relationship: describes
+    status: exists
+    relevance: "Establishes the one shared authored-change derivation (_authored_change.get_authored_change) and the required hooks_manifest change_set_source declaration. This record is about a gate whose declaration and behaviour disagree."
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+    relevance: "Angle taxonomy this record's test_spec entries declare."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "check-build-drift and check-output-drift both declare change_set_source: handed_by_commit_path in templates/scripts/commit_guardian/commit_guardian.json while running with pass_filenames: false and always_run: true -- so neither is handed a change set and neither reads one. The declaration and the behaviour must be brought into agreement: either consume the shared derivation (_authored_change.get_authored_change(), ADR-038) or declare self_derived and derive it. A manifest entry naming a source the hook never reads must not survive this work."
+  - "Scoping applies to the REFUSAL, not to the SCAN. The gates may still hash the whole tree -- that breadth is what makes them useful. What they may not do is let an item outside the commit's changed-file set drive a non-zero exit or appear as a reason in the BLOCKED block."
+  - "Every refusing exit path must be scoped, not only the hash-mismatch one. check_build_drift.main() today refuses through four independent conditions: violations, missing and unreadable (return 1) and gaps (return 2). The observed evidence -- refused while reporting drifted=0 missing=0 -- points at the gaps path, so a fix applied only to violations leaves the defect exactly where it was."
+  - "Both gates must change together and must keep reporting in one vocabulary; their RESULT lines are required by their own docstrings to be comparable, and a reader who cannot compare two runs cannot diagnose which gate refused."
+  - "The verified == 0 floor (a gate that compared nothing must not exit as if it had compared everything) must survive the scoping change. Narrowing the refusal must not create a new way for a gate to pass while having checked nothing."
+  - "Both the canonical templates under templates/scripts/commit_guardian/ and their deployed scripts/commit_guardian/ copies must change together and be verified in parity via the build.py round-trip (ADR-001). The hook runs from the deployed layout; source-tree unit tests alone do not prove the deployed gate changed."
+delivers_to: null
+expects_from: null
+test_required: true
+test_spec:
+  - name: test_the_identical_commit_is_accepted_both_when_the_branch_is_39_behind_and_when_it_is_level
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: real_artifact
+    description: "One commit touching no supporting-material file is presented twice against a real temporary repository -- once from a branch 39 commits behind the shared main line, once from a branch level with it. Both runs must exit 0 AND the two verdicts must be equal. This is the decisive clause: a test that exercises only the level case is green against the live defect, because the defect is a verdict that is a function of the branch's position rather than of the work."
+  - name: test_no_item_outside_the_commits_changed_file_set_appears_as_a_reason_for_a_refusal
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "The supporting-material tree is deliberately drifted in files the commit did not touch; the gate's output names none of them and the exit code is 0."
+  - name: test_every_refusing_exit_path_is_scoped_to_the_changed_file_set
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: "Each of the four refusing conditions -- violations, missing, unreadable and gaps -- is induced separately on material OUTSIDE the commit's changed set; none may produce a non-zero exit. The gaps case is named explicitly because it exits 2 without appearing in either the drifted or the missing count, so a fix that only scopes violations passes the other three assertions and fails this one."
+  - name: test_the_gate_is_reached_through_run_hook_with_a_real_staged_commit
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: reachability
+    surface_invoked: "python scripts/commit_guardian/run_hook.py scripts/commit_guardian/check_build_drift.py"
+    description: "The gate is exercised through the deployed hook entry point with a genuinely staged commit, so a scoping fix that is never reached from the hook's real invocation fails."
+test_rationale: |
+  The decisive clause is the last one: the SAME commit accepted whether the branch is 39
+  behind or level. Everything else in this record is satisfiable by an implementation that
+  still refuses on branch position, because the drifted material in a single-case fixture
+  can always be described as in-scope or out-of-scope after the fact. Running one commit
+  through two branch positions and asserting the verdicts are EQUAL is the only shape that
+  makes branch position itself the variable under test.
+  The second reason this needs a real repository rather than a synthetic fixture is the
+  gaps path. The observed refusal reported drifted=0 missing=0, which means the refusing
+  condition was one that does not appear in either count -- and a fixture that seeds only
+  hash mismatches never reaches it. A test contract that covers only the hash-mismatch
+  condition would silently drop the exact clause this record exists for.
+origin_agent: BrainCandy
+created: 2026-09-21
+amended_by: []
+superseded_by: null
+covered_by: [BO-4100b-1-i]
+implemented_by: []
+notes: >-
+  The last clause is the decisive one and comes straight from the 2026-09-14 observation:
+  the identical commit was refused while behind and accepted after the main line was
+  merged in, which is proof the verdict was a function of the branch's position rather
+  than of the work. Polarity warning carried down from BO-4100b: this is a check that
+  wrongly FIRES. BO-1700's family is about a check that wrongly stays SILENT, so nothing
+  under BO-1700 covers this and BO-1700h must not be cited as if it did.

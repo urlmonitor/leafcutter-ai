@@ -1,0 +1,103 @@
+id: BO-4100a-1
+title: "Every way of creating a workspace roots it at the current shared tip"
+component: build-orchestration
+components:
+  - build_orchestration
+  - worktree_manager
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+change_target: code
+package_surface: false
+criteria: |
+  Given the machine's local copy of the main line is 39 commits behind the
+    shared main line,
+  When a workspace is created through each of the supported creation paths --
+    the general-purpose path, the acceptance-criteria authoring path, and the
+    fast-lane path --
+  Then the commit each newly created branch is rooted at is the current tip of
+    the shared main line,
+  And the commit each newly created branch is rooted at is not the machine's
+    local main-line copy,
+  And this holds identically for all three paths, with no path producing a
+    different rooted commit from the others.
+depends_on: [BO-4100a]
+doc_links:
+  - path: docs/architecture/components/worktree-manager.md
+    relationship: describes
+    status: exists
+  - path: docs/known-issues/build-orchestration.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: describes
+    status: exists
+    relevance: "templates/scripts/setup_ticket_worktree.py is the canonical source; scripts/setup_ticket_worktree.py is its build output (build_template_standalone_scripts). Both must change together."
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+    relevance: "Angle taxonomy this record's test_spec entries declare."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "The commit-ish every creation path hands to worktree creation must come from ONE shared resolution point. Three independent literals that happen to agree today is not parity -- a fourth creation path added later must inherit the behaviour rather than re-decide it. The observed defect is exactly a divergence between three sites."
+  - "The change must land in BOTH templates/scripts/setup_ticket_worktree.py (canonical source) and its build output scripts/setup_ticket_worktree.py, and the two verified identical through the build.py round-trip (ADR-001). Editing one side only ships a fix the deployed script does not have."
+  - "_create_worktree currently roots at local main HEAD under a documented branching policy (module DECISION HISTORY, 2026-05-12, 'Fixed silent stale-worktree bug'). That policy is being reversed. The reversal and its reason must be recorded against that entry, or the next reader restores it as a fix."
+  - "The shared tip must be resolvable from a local remote-tracking ref in a fixture repository, so the tests run with no network access."
+  - "At most one additional remote read per creation request -- not one per path, and not one per git invocation."
+  - "Failure to establish the shared tip must surface as a typed failure per the project error handling policy and must never degrade to a local starting point. The refusal behaviour itself is BO-4100a-3 and is not re-derived here."
+delivers_to: null
+expects_from: null
+test_required: true
+test_spec:
+  - name: test_all_three_creation_paths_root_at_the_shared_tip_when_local_main_is_39_behind
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: real_artifact
+    description: "Against a real temporary origin/clone pair with local main forced 39 commits behind, each of the three subcommands is run as a real subprocess and the created branch's rooted commit is read back with git rev-parse; all three must equal the shared main tip."
+  - name: test_no_creation_path_roots_at_the_machines_local_main_copy
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "For each of the three paths the rooted commit is asserted NOT to be the local main HEAD -- the assertion that fails today for create-only."
+  - name: test_the_three_creation_paths_agree_on_one_rooted_commit
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "The set of rooted commits collected across the three paths has exactly one member. This is the parity clause; a test exercising a single path cannot see the divergence that was actually observed."
+  - name: test_the_creation_paths_are_exercised_through_their_cli_subcommands
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: reachability
+    surface_invoked: "python scripts/setup_ticket_worktree.py create-only | create-ac-worktree | create-fastlane-worktree"
+    description: "Each path is reached through the deployed CLI subcommand a caller actually invokes, not by importing the private helper, so a fix applied to the helper but not wired into a subcommand fails."
+test_rationale: |
+  The defect is a DIVERGENCE between three creation paths, two of which are already
+  correct. Any test that exercises one path -- or that exercises the two already-correct
+  ones -- is green against the live defect. The parity assertion (one distinct rooted
+  commit across all three) is therefore the load-bearing one, and it must be made against
+  a real repository whose local main is genuinely behind, because with local main level
+  with origin/main the two commit-ishes resolve to the same commit and every assertion
+  passes vacuously. That vacuity is why the original 2026-05-12 change went unnoticed for
+  four months.
+origin_agent: BrainCandy
+created: 2026-09-21
+amended_by: []
+superseded_by: null
+covered_by: [BO-4100a-1-i]
+implemented_by: []
+notes: >-
+  The observable is the commit the branch is rooted at after creation, never a warning
+  printed before it -- see BO-4100a's notes for why a pre-flight check is explicitly not
+  the shape of this guarantee. The three paths are named because the defect observed on
+  2026-09-14 was a DIVERGENCE between them: two paths rooted at the shared line and one
+  at the machine's local copy, so parity across paths is part of what is being asserted
+  and a test that exercises only one path cannot see the defect.

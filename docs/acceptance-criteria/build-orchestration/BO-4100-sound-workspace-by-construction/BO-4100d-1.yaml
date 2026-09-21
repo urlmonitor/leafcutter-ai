@@ -1,0 +1,98 @@
+id: BO-4100d-1
+title: "Ask for a fix and you get a fix, not a feature wearing its name"
+component: build-orchestration
+components:
+  - build_orchestration
+  - worktree_manager
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+change_target: code
+package_surface: false
+criteria: |
+  Given a request for a workspace naming the kind of work it is for, made once
+    for each supported kind -- feature, fix, chore and hotfix,
+  When each workspace is created,
+  Then the branch that exists afterwards carries the kind that was requested,
+  And the kind carried by the branch is never a kind other than the one
+    requested,
+  And this holds for all four kinds, with no kind being substituted for another.
+depends_on: [BO-4100d]
+doc_links:
+  - path: docs/architecture/components/worktree-manager.md
+    relationship: describes
+    status: exists
+  - path: docs/known-issues/build-orchestration.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: describes
+    status: exists
+    relevance: "templates/scripts/setup_ticket_worktree.py is the canonical source; scripts/setup_ticket_worktree.py is its build output. The hard-coded feature/ prefix exists in both."
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+    relevance: "Angle taxonomy this record's test_spec entries declare."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "No creation path accepts a kind today. cmd_setup_ticket and cmd_create_only hard-code feature/ in both the branch they cut (_create_worktree, git worktree add -b feature/<slug>) and the payload they report. Accepting the kind is part of this work, not a precondition of it."
+  - "The supported-kind set must be DECLARED ONCE and read by every site that depends on it -- branch construction, refusal (BO-4100d-2), reporting (BO-4100d-3), and the reconnect/reuse lookup. _worktree_exists currently recognises prior workspaces by a hard-coded prefix list (feature/, ticket/, ac-authoring/, fast-lane/); a kind that creation can cut but reuse cannot find silently produces a SECOND workspace on the next call, which is a new instance of the accumulation BO-4100c exists to end."
+  - "The kind must be readable back off the branch that exists, because BO-4100d-3's read-back comparison depends on it. It must not be held only in a side record that creation writes."
+  - "Adding kinds must not break the existing prefixes. ac-authoring/ and fast-lane/ are consumed by _worktree_exists, by the fast-lane occupancy determination, and by callers that match on them; they are part of the declared set, not legacy to be replaced."
+  - "Template and deployed copies change together and are verified in parity via the build.py round-trip (ADR-001)."
+delivers_to:
+  agent: python-coder
+  contract: "Two things. (1) The DECLARED SUPPORTED-KIND SET, read by branch construction, by the reconnect/reuse lookup, by BO-4100d-2's acceptance rule and by the list of honourable kinds BO-4100d-2's refusal prints. (2) A created branch whose kind is encoded IN THE BRANCH NAME and is therefore readable back off the repository -- the observation BO-4100d-3 compares against the request, and the value BO-4100d-3-i asserts survives name sanitisation."
+expects_from: null
+test_required: true
+test_spec:
+  - name: test_all_four_supported_kinds_produce_a_branch_carrying_the_requested_kind
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "feature, fix, chore and hotfix are each requested in turn against a real fixture repository and the branch that exists afterwards is read back with git branch --list. All four must be exercised: feature alone cannot detect the defect, because for exactly that kind the substituted value and the requested value coincide."
+  - name: test_no_requested_kind_is_substituted_for_another
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "For each of the four, the kind carried by the created branch is asserted NOT to be any of the other three. Today all three non-feature requests fail this."
+  - name: test_a_non_feature_kind_is_found_by_the_reconnect_lookup_on_a_second_request
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: "The same fix-kind workspace is requested twice; the second call reuses the first rather than creating a second workspace. This is what fails when the kind set is added to branch construction but not to _worktree_exists's prefix recognition."
+  - name: test_the_kind_is_read_back_off_the_branch_that_exists_not_off_the_request
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: seam
+    description: "The assertion is made against git's own branch list, not against the command's reported payload, so a tool that reports the right kind while cutting the wrong branch fails here. The converse -- reporting derived from the artefact -- is BO-4100d-3."
+test_rationale: |
+  The defect is invisible to a single-kind test, and the kind a test author reaches for
+  first is feature -- which is the one case where the substituted value and the requested
+  value are the same. All four must therefore be exercised, and the second test states the
+  negative form explicitly rather than trusting the positive one, because "the branch
+  carries a kind" is satisfied by a branch that always carries feature.
+  The reconnect test is here because the declared-set requirement is otherwise unfalsifiable
+  from behaviour: an implementation that teaches branch construction about four kinds and
+  leaves the reuse lookup on its hard-coded prefix list passes both of the first two tests
+  and quietly doubles the workspace count on every repeated request.
+origin_agent: BrainCandy
+created: 2026-09-21
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: >-
+  Observed 2026-09-14: every created branch was labelled a feature, so fixes, chores and
+  hotfixes were silently relabelled. All four kinds are exercised deliberately -- the
+  defect is invisible to a test that only requests a feature, because the substituted
+  value and the requested value coincide for exactly that one case.

@@ -1,0 +1,98 @@
+id: BO-4100e-1
+title: "A workspace with no registration entry is still shown in the list"
+component: build-orchestration
+components:
+  - build_orchestration
+  - worktree_manager
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+change_target: code
+package_surface: false
+criteria: |
+  Given a directory sitting where workspaces are created, carrying a workspace's
+    own identifying state, for which the registration record holds no entry,
+  When the set of workspaces is listed,
+  Then that directory appears in the listing,
+  And it is marked in the listing as having no registration entry, distinguishing
+    it from the registered workspaces alongside it,
+  And the listing reaches it by inspecting the location workspaces occupy, so it
+    is found even though nothing in the registration record refers to it.
+depends_on: [BO-4100e]
+doc_links:
+  - path: docs/architecture/components/worktree-manager.md
+    relationship: describes
+    status: exists
+  - path: docs/known-issues/build-orchestration.md
+    relationship: describes
+    status: exists
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+    relevance: "Angle taxonomy this record's test_spec entries declare."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "The listing must have TWO discovery routes and return their union: the registration record, and an inspection of the location workspaces occupy. A listing derived only from git worktree list structurally cannot surface a leftover that was never registered -- which is the entire defect, so the second route is the substance of this record and not an optimisation."
+  - "The location must be resolved exactly as creation resolves it -- _resolve_installed_layout() then <worktrees_base>/worktrees -- so discovery and creation can never disagree about where to look. A second, independently-derived location is a new way for a leftover to stay invisible."
+  - "The discovered/registered distinction must be a machine-readable field on the entry, not a difference in how the entry is rendered. BO-4100e-2 addresses removal by it, BO-4100e-3 branches its report on it, and BO-4100e-4 refuses handover on it -- none of those can read a rendering."
+  - "Discovery must be a READ. It must not register, repair, prune or write anything it finds; registering what is discovered is explicitly forbidden by BO-4100e-4."
+  - "A directory whose own identifying state cannot be read must not be silently skipped -- it is the case most likely to be a genuine leftover. It is surfaced with the no-verdict outcome BO-4100c-1 defines rather than dropped."
+  - "Listing must stay fast enough for routine use at the recorded scale (~150 entries), since every other child of BO-4100e runs on top of it."
+  - "Any new module must be registered in the build deploy manifest, or the deployed listing path raises ModuleNotFoundError while the source-tree unit tests pass."
+delivers_to:
+  agent: python-coder
+  contract: "Listing entries carrying a machine-readable origin discriminator: { path: str, origin: 'registered' | 'discovered', branch: str | null }. BO-4100e-2 addresses removal by `path` regardless of `origin`; BO-4100e-3 branches its report on `origin == 'discovered'`; BO-4100e-4 filters handover to `origin == 'registered'` only. `origin` is a field, never a rendering difference."
+expects_from: null
+test_required: true
+test_spec:
+  - name: test_a_directory_with_workspace_state_and_no_registration_entry_appears_in_the_listing
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "Against a real repository, a half-created workspace directory is left in place and its registration entry removed; the listing contains it. This is KI-BO-20260831-1331 reproduced."
+  - name: test_the_discovered_entry_is_marked_as_having_no_registration_entry
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "The entry carries origin == 'discovered' as a field, and registered workspaces listed alongside it carry origin == 'registered'. The distinction is read from the data, not from the printed output."
+  - name: test_the_listing_finds_it_by_inspecting_the_location_rather_than_the_registration_record
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: seam
+    description: "The registration record is emptied of any reference to the leftover before listing. It must still appear. This is the clause that a registration-only listing cannot satisfy by any amount of hardening, and it is the one an implementer will otherwise satisfy by making git worktree list more thorough."
+  - name: test_the_listing_is_reached_through_its_cli_entry_point
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: reachability
+    surface_invoked: "the workspace-listing CLI entry point (the command BO-4100e-2/e-3/e-4 consume)"
+    description: "The union listing is obtained through the entry point the other children consume, not by importing the discovery helper, so a discovery route that is never wired into the listing fails."
+test_rationale: |
+  The load-bearing clause is the third: the listing must reach the leftover by inspecting
+  the LOCATION. The first two clauses are satisfiable by a more thorough reading of the
+  registration record, and against a fixture where the registration record still holds a
+  partial entry, that implementation passes both. Emptying the registration record of any
+  reference before listing is what makes the discovery route itself the thing under test.
+  The discriminator is asserted as a field rather than as text because three sibling
+  records branch on it in control flow; a marker that exists only in the rendering makes
+  all three of them unimplementable while this record reads green.
+origin_agent: BrainCandy
+created: 2026-09-21
+amended_by: []
+superseded_by: null
+covered_by: [BO-4100e-1-i]
+implemented_by: []
+notes: >-
+  The completeness half of BO-4100e, and the one every other child depends on -- nothing
+  can be removed, classified or correctly described while it remains invisible. The last
+  clause is the substance: a listing derived only from the registration record cannot
+  ever surface a leftover that was never registered, so the discovery route has to be
+  the location itself. Recovery only; the prevention half is BO-4100a-3-i.

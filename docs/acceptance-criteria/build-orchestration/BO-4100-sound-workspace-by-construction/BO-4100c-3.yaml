@@ -1,0 +1,93 @@
+id: BO-4100c-3
+title: "A workspace nobody could reach a verdict on is never disposed of"
+component: build-orchestration
+components:
+  - build_orchestration
+  - worktree_manager
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+change_target: code
+package_surface: false
+criteria: |
+  Given a workspace whose assessment cannot reach either verdict -- its version
+    control data is absent, or the attempt to read it fails,
+  When its disposal is requested,
+  Then the disposal is refused,
+  And the workspace is still listed in the live set afterwards and its files are
+    byte-identical to what they were before the request,
+  And the refusal states that no verdict could be reached, and is distinguishable
+    in its report from a refusal issued because the workspace holds work.
+depends_on: [BO-4100c, BO-4100c-1]
+doc_links:
+  - path: docs/architecture/components/worktree-manager.md
+    relationship: describes
+    status: exists
+  - path: docs/known-issues/build-orchestration.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "An assessment that raises, times out, or finds the version-control data absent must yield the no-verdict outcome -- never holds-nothing. The natural implementation reads an unanswerable question as an empty finding set, lands on holds-nothing, and disposes of the workspace. That path must be closed explicitly rather than assumed absent."
+  - "The two refusals must be distinguishable by a MACHINE, through the closed verdict discriminator, not only by the wording of their messages. They call for opposite follow-ups -- deliver the work, versus repair the workspace -- so a caller that cannot tell them apart without matching on prose will eventually match wrong."
+  - "The refusal path must be inert: no attempt to repair, re-initialise or prune the unreadable workspace while refusing. The unreadable workspace is the one most likely to be worth keeping intact."
+  - "Both failure modes named in the Given must be covered: version-control data ABSENT, and an attempt to read it that FAILS. They arrive by different code paths and an implementation can easily handle one and crash on the other."
+  - "Error handling follows the project error handling policy: the underlying read failure is logged at WARNING or higher and carried into the refusal's reason, never swallowed into a default verdict."
+delivers_to: null
+expects_from:
+  ac_id: BO-4100c-1
+  contract: "The assessment record { path, verdict, items, reason }, specifically verdict == 'no_verdict' with a non-null `reason`. The closed three-value verdict set is what makes this refusal machine-distinguishable from the holds_work refusal BO-4100c-2 issues."
+test_required: true
+test_spec:
+  - name: test_disposal_is_refused_when_no_verdict_could_be_reached
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: "Both shapes are exercised: a workspace whose version-control data is absent, and one whose read fails. Each ends in a refusal."
+  - name: test_an_unreadable_workspace_is_not_classified_as_holding_nothing
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: "The verdict is asserted to be no_verdict and specifically NOT holds_nothing. This is the single assertion that separates the correct implementation from the natural one, which reads an unanswerable question as an absence of findings and disposes of the damaged workspace."
+  - name: test_the_no_verdict_refusal_is_machine_distinguishable_from_the_holds_work_refusal
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "Both refusals are produced in one run, from two workspaces in the fixture, and are told apart by the verdict discriminator alone with no prose matching. Two refusals that differ only in their message text fail here."
+  - name: test_the_workspace_is_still_listed_and_byte_identical_after_the_refusal
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "Recursive content hash of the workspace before and after the refused request, and continued presence in the live set. A refusal that tries to repair the unreadable workspace fails here."
+test_rationale: |
+  This is the more dangerous half of the pair, because its failure mode is silent and
+  destructive: an unreadable workspace treated as an absence of findings is disposed of,
+  and the workspace most likely to be unreadable is the damaged one someone still needs.
+  So the decisive assertion is negative -- the verdict is NOT holds_nothing -- and it has
+  to be stated as its own test, because "the disposal was refused" is satisfied by an
+  implementation that refuses for the wrong reason and will stop refusing the moment the
+  read starts succeeding intermittently.
+  Machine-distinguishability is asserted through the discriminator rather than the message
+  for the same reason: the two refusals need opposite follow-ups, and any caller routing
+  on message text is one rewording away from routing wrong.
+origin_agent: BrainCandy
+created: 2026-09-21
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: >-
+  Separately failable from BO-4100c-2 and the more dangerous of the two: an unreadable
+  workspace is the one most likely to be the damaged one worth keeping, and the natural
+  implementation reads an unanswerable question as an absence of findings, which lands
+  on holds-nothing and disposes of it. Keeping the two refusals distinguishable matters
+  because they need opposite follow-ups -- deliver the work, versus repair the workspace.

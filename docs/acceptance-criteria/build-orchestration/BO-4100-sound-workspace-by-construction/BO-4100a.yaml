@@ -1,0 +1,46 @@
+id: BO-4100a
+title: "Work always starts from the current shared line, never an older copy of it"
+component: build-orchestration
+components:
+  - build_orchestration
+  - worktree_manager
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Every new workspace begins at the shared work as it stands now, not as it stood.
+
+  However a workspace comes to exist, the work inside it starts from the current
+  state of the shared line rather than from whatever older picture of the project
+  happened to be sitting on this machine. You are never quietly handed a starting
+  point that the rest of the work has already moved past.
+depends_on: [BO-4100]
+documentation_triggers: []
+documentation_rationale: "Corrects the starting point of an existing step rather than introducing a surface anyone interacts with; the value is that no one has to know about it."
+doc_links: []
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-09-21
+amended_by: []
+superseded_by: null
+covered_by: [BO-4100a-1, BO-4100a-2, BO-4100a-3]
+implemented_by: []
+notes: >-
+  Evidence, observed 2026-09-14: the canonical worktree-setup script's create-only mode
+  roots a new branch at the machine's local copy of the main line, while its two sibling
+  modes root at the shared one. Local main was 39 commits behind when checked. Independently
+  recorded as KI-BO-20260909-worktrees-go-stale-within-minutes, which also records that the
+  quick-fix workflow had to hand-roll a compensating staleness pre-check (BP-600a-1 territory)
+  and that passing that pre-check proved insufficient, because the script then produced a
+  worktree rooted at a commit that was not the local main the guard had just verified. Two
+  consequences for decomposition: the guarantee is about the COMMIT THE WORKSPACE IS ROOTED
+  AT, not about a warning being printed; and a per-caller pre-check is the shape this AC
+  exists to replace, so do not specify one. Distinct from BO-900a (divergence accumulating
+  DURING a drive) and BO-1800f (freshness at DELIVERY) -- see the BO-4100 notes field.

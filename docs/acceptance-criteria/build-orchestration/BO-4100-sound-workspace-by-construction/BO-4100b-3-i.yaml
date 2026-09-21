@@ -1,0 +1,80 @@
+id: BO-4100b-3-i
+title: "A workspace's own supporting material carries the same checks as the shared one"
+component: build-orchestration
+components:
+  - build_orchestration
+  - worktree_manager
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+change_target: code
+package_surface: false
+criteria: |
+  Given a workspace's own supporting material and the shared install tree's
+    supporting material were both derived from the same commit,
+  When the set of checks each of them defines is enumerated,
+  Then the two sets contain the same checks,
+  And each check appears with the same configuration in both sets.
+depends_on: [BO-4100b-3]
+doc_links:
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "The equivalence is over the ENUMERATED CHECK SET and each check's configuration, not over the raw bytes of the two trees. A copy produced by a different materialisation route is still equivalent if it defines the same checks with the same configuration, and a byte-comparison would fail it for no reason that matters."
+  - "The enumeration must come from the same place each side's own tooling reads it from -- the hooks_manifest as each tree exposes it -- so a copy that omits an entry the manifest names is detected, rather than a copy that merely orders entries differently being reported as divergent."
+  - "The assertion must be made for the fallback materialisation route as well as the preferred one, or a Windows/NTFS install silently receives the reduced copy this record exists to forbid."
+  - "This record does NOT assert that the checks fire. That is BO-1700a and must not be re-derived here; nor is it BO-1700e's question of the guard working across layouts."
+  - "The comparison must be available as an invocable check, not only as a test, so a per-workspace copy that drifts from the shared one later is detectable without re-running the suite."
+delivers_to: null
+expects_from:
+  ac_id: BO-4100b-3
+  contract: "The per-workspace supporting-material tree at <workspace>/.leafcutter, materialised from the same commit as the shared install tree, whose enumerated check set this record compares against the shared one."
+test_required: true
+test_spec:
+  - name: test_the_workspace_copy_and_the_shared_install_define_the_same_set_of_checks
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "Both trees are materialised from one commit and their check sets enumerated; the two sets are asserted EQUAL as sets. An empty or reduced workspace copy -- which satisfies BO-4100b-3 completely -- fails here."
+  - name: test_each_check_appears_with_the_same_configuration_in_both_sets
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "Per-check configuration is compared field by field, so a copy carrying the same check names with a check disabled or its file filter narrowed is detected."
+  - name: test_the_fallback_materialisation_route_produces_the_same_check_set
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: "With os.symlink forced to raise, the copy produced by the fallback route is compared the same way. The historical fallback copied a single config file rather than the tree, so this is the route most likely to produce a reduced copy."
+test_rationale: |
+  BO-4100b-3 is fully satisfied by giving each workspace an EMPTY .leafcutter: it is its
+  own, it is not the shared tree, and repairing it damages nobody. It also silently costs
+  the author every check, which is the silent-check failure BO-1700 exists to prevent
+  arriving by a new route. So the equivalence has to be asserted as set equality rather
+  than as containment or non-emptiness, and per-check configuration has to be compared
+  separately -- a copy listing the same check names with one disabled passes a set-equality
+  test on names alone.
+origin_agent: BrainCandy
+created: 2026-09-21
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: >-
+  Guards the fidelity of the per-workspace copy introduced by BO-4100b-3: giving each
+  workspace an empty or reduced copy would satisfy independence and quietly cost the
+  author every check. Deliberately framed as an equivalence between two copies derived
+  from one commit, NOT as an assertion that the checks fire -- proof that checks
+  genuinely run is BO-1700a and must not be re-derived here. The nearest BO-1700
+  neighbour is BO-1700e (the guard working across layouts), which is about the guard's
+  own portability rather than about whether a copy is faithful.

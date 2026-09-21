@@ -1,0 +1,94 @@
+id: BO-4100a-3
+title: "When the shared line cannot be read, creation refuses instead of falling back to the old copy"
+component: build-orchestration
+components:
+  - build_orchestration
+  - worktree_manager
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+change_target: code
+package_surface: false
+criteria: |
+  Given the shared main line cannot be read -- it is unreachable, or the attempt
+    to read it fails,
+  And the machine holds a local copy of the main line that is 39 commits behind,
+  When a workspace is requested,
+  Then creation refuses and reports failure,
+  And no branch is created and no workspace is registered,
+  And the refusal states that the shared main line could not be read,
+  And the machine's local main-line copy is not used as a substitute starting
+    point.
+depends_on: [BO-4100a]
+doc_links:
+  - path: docs/architecture/components/worktree-manager.md
+    relationship: describes
+    status: exists
+  - path: docs/known-issues/build-orchestration.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-039-fast-lane-occupied-workspace-refusal.md
+    relationship: describes
+    status: exists
+    relevance: "The discriminated-refusal-payload posture this refusal should reuse rather than relaying a raw git diagnostic."
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "_fetch_origin currently degrades a failed fetch to a WARNING and proceeds with the cached remote-tracking ref. That warn-and-continue branch IS the silent fallback this record removes: an unestablished shared tip must end the run, not soften into a note on stderr."
+  - "A cached remote-tracking ref that could not be refreshed must not be treated as the shared tip. 'Could not read the shared line' and 'the shared line is empty' are different outcomes and must be reported as different outcomes."
+  - "The refusal must be emitted as a discriminated structured outcome on the same channel the success payload uses, following the shape ADR-039 already established for the fast-lane occupied-workspace refusal -- never a relayed git diagnostic on stderr with no structured output, which is the pre-ADR-039 behaviour."
+  - "Applies to all three creation paths. A refusal implemented on one path leaves the other two falling back silently."
+  - "Both the canonical template and its scripts/ build output must carry the change (ADR-001)."
+  - "Error handling follows the project error handling policy: the underlying read failure must be logged at WARNING or higher and either re-raised or wrapped in a typed error, never swallowed."
+delivers_to: null
+expects_from: null
+test_required: true
+test_spec:
+  - name: test_creation_refuses_when_the_shared_main_line_cannot_be_read
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: "With the remote made unreachable in a real fixture repository and local main 39 commits behind, the creation request ends in a refusal and a non-success outcome."
+  - name: test_the_local_main_copy_is_not_used_as_a_substitute_starting_point
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "After the refusal, no branch exists that is rooted at the stale local main tip -- the assertion that distinguishes refusing from warning-and-proceeding, which is what the code does today."
+  - name: test_the_refusal_states_that_the_shared_main_line_could_not_be_read
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "The refusal carries a machine-readable reason identifying an unreadable shared line, distinguishable from any other refusal reason this command can emit."
+  - name: test_every_creation_path_refuses_when_the_shared_line_cannot_be_read
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: "All three subcommands are exercised under the same unreachable-remote fixture; each refuses. A refusal wired into one path only fails here."
+test_rationale: |
+  The failure this closes is not a crash but a success: today the tool prints a warning
+  and hands over a workspace rooted at a stale local copy. So the decisive assertion is
+  not that an error is raised -- it is that no branch rooted at the stale local tip exists
+  afterwards. A test asserting only "a warning was printed" or "exit code is non-zero" can
+  pass against an implementation that still creates the workspace, which is why the
+  negative assertion on the branch list is stated separately.
+origin_agent: BrainCandy
+created: 2026-09-21
+amended_by: []
+superseded_by: null
+covered_by: [BO-4100a-3-i]
+implemented_by: []
+notes: >-
+  The silent fallback to a local copy is the mechanism by which a stale workspace gets
+  handed over without anybody choosing it. Refusing is the only option that keeps the
+  BO-4100a promise intact: there is no third state in which the shared tip is unknown
+  AND the workspace is still guaranteed current. Distinct from BO-1700b (a workspace
+  whose CHECKS cannot run fails closed) -- that is about gates, this is about the
+  starting point, and neither implies the other.

@@ -1,0 +1,91 @@
+id: BO-4100e-2
+title: "A leftover that was never registered can still be cleared away"
+component: build-orchestration
+components:
+  - build_orchestration
+  - worktree_manager
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+change_target: code
+package_surface: false
+criteria: |
+  Given a leftover that appears in the listing only because it was discovered on
+    disk, with no registration entry referring to it,
+  When its removal is requested,
+  Then the request is accepted rather than rejected for want of a registration
+    entry,
+  And afterwards no directory remains at the location it occupied,
+  And any partial registration state referring to it is gone,
+  And a second listing of the set does not contain it.
+depends_on: [BO-4100e, BO-4100e-1]
+doc_links:
+  - path: docs/architecture/components/worktree-manager.md
+    relationship: describes
+    status: exists
+  - path: docs/known-issues/build-orchestration.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "Absence of a registration entry must not be a disqualifying condition anywhere on the removal path. git worktree remove refuses for exactly that reason, so removal of a discovered entry cannot simply delegate to it -- and the alternative route must still run BO-4100c-1's verdict check (BO-4100e-2-i), not skip straight to deletion."
+  - "Partial registration state referring to the leftover must be cleared too. A half-created workspace can leave an administrative record behind with no directory, and that record is itself a leftover that reproduces the symptom."
+  - "Removal must be addressed to the discovered entry's resolved path and must not widen to siblings. BO-4100c-4-i's blast-radius constraint applies here unchanged and must not be re-derived."
+  - "The second-listing assertion must be satisfied against a FRESHLY computed listing, not a cached one, since the discovery route reads the filesystem and a cache would report the removed leftover as still present or vice versa."
+  - "Residual processes and open handles must be handled as in BO-4100c-4; a half-created workspace is not less likely to have one."
+  - "Error handling follows the project error handling policy. A removal that partially completes must report failure, not success."
+delivers_to: null
+expects_from:
+  ac_id: BO-4100e-1
+  contract: "A listing entry { path, origin: 'discovered', branch } that removal can be addressed by `path`. `origin == 'discovered'` must not itself be a reason to refuse -- that is the defect this record closes -- and must not be a reason to skip the verdict check either."
+test_required: true
+test_spec:
+  - name: test_removal_of_a_discovered_leftover_is_not_rejected_for_want_of_a_registration_entry
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "The refusal reason that must NOT occur is named explicitly in the assertion: a removal that fails because no registration entry refers to the leftover fails this test rather than merely erroring. That is today's behaviour and the sharpest symptom of KI-BO-20260831-1331."
+  - name: test_no_directory_remains_at_the_leftovers_location
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "The path does not exist on disk after the removal."
+  - name: test_any_partial_registration_state_referring_to_it_is_gone
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "The fixture seeds a partial administrative record for the half-created workspace; afterwards no reference to it remains. A removal that deletes the directory and leaves the record recreates the invisible-and-unremovable state."
+  - name: test_a_second_listing_of_the_set_does_not_contain_it
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "A freshly computed listing is taken after the removal and must not contain the leftover by either discovery route."
+test_rationale: |
+  The first clause names a specific refusal reason that must not occur, so the test has to
+  assert on the reason and not merely on success. A test phrased as "removal succeeds"
+  passes against an implementation that succeeds for the wrong reason and will start
+  refusing again the first time the registration check is re-introduced somewhere upstream.
+  The partial-registration clause is stated as its own test because it is the half of the
+  symptom that survives a naive fix: deleting the directory is easy and visible, and the
+  record left behind is neither -- and it is precisely what makes the leftover recur.
+origin_agent: BrainCandy
+created: 2026-09-21
+amended_by: []
+superseded_by: null
+covered_by: [BO-4100e-2-i]
+implemented_by: []
+notes: >-
+  KI-BO-20260831-1331's sharpest symptom: the leftover could not be removed at all, so it
+  stayed forever. The first clause names the actual defect -- removal refusing BECAUSE
+  there is no registration entry, which is the one reason that must not disqualify it, the
+  missing entry being the very condition this AC is about. Surfacing without removability
+  would leave the operator able to see the problem and unable to end it.

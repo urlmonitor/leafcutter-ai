@@ -1,0 +1,71 @@
+id: BO-4100
+title: "The workspace you are given is sound, and what you are told about it is true"
+component: build-orchestration
+components:
+  - build_orchestration
+  - worktree_manager
+level: L0
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  A workspace starts current, stands on its own, and is described to you truthfully.
+
+  Every separate workspace you are given to work in begins from the current state
+  of the shared work rather than an older copy of it, so nothing is built on a
+  picture of the project that has already moved on. It holds its own supporting
+  material instead of borrowing another workspace's, so it is never judged for
+  something you did not change and repairing it can never damage a session
+  somebody else is running. When it is finished with, you can tell whether it
+  still holds anything you would miss, so finished workspaces stop piling up
+  without anyone risking work that was never delivered -- and nothing that exists
+  is left out of that reckoning or beyond clearing away. And the account you are
+  given of the workspace you received -- what it is called, what kind of work it
+  is for -- matches what was actually made.
+depends_on: []
+doc_links:
+  - path: docs/known-issues/build-orchestration.md
+    relationship: describes
+    status: exists
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-09-21
+amended_by: []
+superseded_by: null
+covered_by: [BO-4100a, BO-4100b, BO-4100c, BO-4100d, BO-4100e]
+implemented_by: []
+notes: >-
+  Boundaries for BA decomposition (not requirements). This is a deliberate SIBLING of
+  BO-1700, authored 2026-09-21 after an overlap audit of a six-item incident report;
+  BO-1700 was NOT extended because it is at its 8-child cap under an audited waiver its
+  own amendment record says must be REMOVED, not widened, and because the subject
+  differs. BO-1700's single promise is that quality gates cannot be switched off. This
+  goal is about properties of the workspace itself that are not gate-shaped: baseline
+  freshness at creation (a), independence of supporting material (b), disposability
+  being knowable (c), a truthful account of what was made (d), and the set of
+  workspaces being complete and every leftover clearable (e, added 2026-09-21 on
+  operator ruling). Do NOT re-derive any of the following, all already approved
+  under BO-1700 and all still todo: a workspace repairing its own missing check setup
+  however it was created (BO-1700c), proof that checks genuinely fire rather than merely
+  appear present (BO-1700a), failing closed when they cannot (BO-1700b), verification at
+  both create-time and pre-drive (BO-1700d). Two further distinctions that are easy to
+  blur. (1) BO-4100a is freshness AT CREATION and is distinct from BO-900a (divergence
+  DURING a long drive, measured by commits ahead) and from BO-1800f (freshness AT
+  DELIVERY, before work leaves its copy) -- all three are needed and none implies
+  another. (2) BO-4100b concerns a check that WRONGLY REFUSES over borrowed material,
+  the opposite polarity to BO-1700's concern with a check that wrongly stays silent;
+  it is also distinct from BO-1700e, which is portability of the guard across layouts,
+  and from BO-1700f, which is a genuine-absence no-op rather than a false positive.
+  Framing note settled at PO stage: the request that prompted this arrived as "guidance
+  that tells an agent how to do it". It was deliberately reframed as enforcement --
+  guidance that must be read to help is a weaker instrument than a property that holds
+  by construction, and the incident that prompted the request happened to an operator
+  who had not read the guidance, from a repository whose own guidance documented the
+  symptom and pointed at the broken remedy. Do not decompose any child of this goal
+  into "a document explains how to...".

@@ -1,0 +1,77 @@
+id: BO-4100c-1-i
+title: "Work that already reached the shared line does not keep a workspace alive"
+component: build-orchestration
+components:
+  - build_orchestration
+  - worktree_manager
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+change_target: code
+package_surface: false
+criteria: |
+  Given a workspace whose branch carries three commits, all three of them
+    reachable from the shared main line,
+  And whose only remaining files not under version control are ones the
+    project's ignore rules exclude,
+  When the workspace is assessed,
+  Then it carries the holds-nothing verdict.
+depends_on: [BO-4100c-1]
+doc_links:
+  - path: docs/architecture/components/worktree-manager.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "'Reachable from the shared main line' must be decided by patch content, not by commit identity. After a squash merge the pre-squash SHAs are still absent from main's history while their diffs are on it, so identity-based reachability reports every squash-merged workspace as holding work -- and this repository squash-merges. templates/workflows/close-worktree.md already records this reasoning and the manual verification that forced it in TICKET-20260513; that reasoning must survive into the computed verdict."
+  - "Ignored files must be excluded using the project's own ignore rules as git resolves them, never a hard-coded list of cache directory names. A name list goes stale the first time a tool writes somewhere new, and every workspace then reads as holding work."
+  - "The holds-nothing verdict must be reachable in practice. An implementation on which no realistic finished workspace ever earns it satisfies BO-4100c-1 in full and defeats the accumulation half of BO-4100c entirely, and that failure is invisible from BO-4100c-1's own evidence."
+delivers_to: null
+expects_from:
+  ac_id: BO-4100c-1
+  contract: "The assessment record's verdict field, whose holds_nothing value this record asserts is reachable for a genuinely finished workspace."
+test_required: true
+test_spec:
+  - name: test_a_workspace_whose_commits_are_all_on_the_shared_main_line_holds_nothing
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "Three commits, all merged to the shared main line, and no non-ignored untracked file: the verdict is holds_nothing."
+  - name: test_a_squash_merged_workspace_holds_nothing
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: "The three commits are squash-merged into the shared main line under a single new SHA, so none of the three original SHAs is in main's history while all three diffs are. The verdict must still be holds_nothing. An implementation comparing commit identity rather than patch content fails exactly here, and passes the previous test."
+  - name: test_ignored_build_artefacts_do_not_produce_a_holds_work_verdict
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "The workspace carries untracked files that the project's ignore rules exclude, including under a nested .gitignore; the verdict is holds_nothing."
+test_rationale: |
+  This is the counterweight that keeps BO-4100c-1 from being satisfied by answering
+  holds-work for everything -- trivially safe, and the reason 150 workspaces stay at 150.
+  The squash-merge case is the one that decides whether the counterweight has any force in
+  THIS repository, because this repository squash-merges: an identity-based reachability
+  check reports every delivered workspace as still holding work, which is precisely the
+  safe-and-useless verdict, and it passes a fixture built with an ordinary merge. So the
+  squash case is stated as its own test rather than folded into the first.
+origin_agent: BrainCandy
+created: 2026-09-21
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: >-
+  The counterweight to BO-4100c-1. An assessment that answers holds-work for everything
+  is trivially safe and completely useless: it satisfies the never-lose-work half of
+  BO-4100c while guaranteeing the accumulation half never improves, and 150 workspaces
+  stay at 150. Build artefacts and ignored caches are the common reason a finished
+  workspace would otherwise read as holding something.

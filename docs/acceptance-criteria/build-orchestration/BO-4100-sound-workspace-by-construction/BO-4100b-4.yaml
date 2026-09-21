@@ -1,0 +1,108 @@
+id: BO-4100b-4
+title: "The remedy a refusal offers repairs your workspace and leaves everyone else's alone"
+component: build-orchestration
+components:
+  - build_orchestration
+  - worktree_manager
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+change_target: code
+package_surface: false
+criteria: |
+  Given a check has refused a commit in a workspace and its report names a
+    remedy,
+  And a second workspace is live at the same time,
+  When the named remedy is carried out from inside the refused workspace,
+  Then the refusal it was offered for no longer occurs when the check is re-run
+    in that workspace,
+  And the shared install tree is byte-identical before and after the remedy,
+  And the second workspace's supporting material is byte-identical before and
+    after the remedy.
+depends_on: [BO-4100b, BO-4100b-3]
+doc_links:
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/worktree-manager.md
+    relationship: describes
+    status: exists
+  - path: docs/known-issues/build-pipeline.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: describes
+    status: exists
+    relevance: "The remedy text lives in the templates/scripts/commit_guardian/ sources and their deployed copies; both must change together."
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+    relevance: "Angle taxonomy this record's test_spec entries declare."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "A remedy MUST be named. This record is not satisfiable by deleting the remedy line from the refusal: the first clause requires that carrying out the named remedy actually clears the refusal, so 'offer nothing' fails rather than passes. Without that clause the safest implementation would leave the author stuck instead of safe."
+  - "The remedy currently named by both drift gates is 'Re-run build.py' (check_output_drift prints 'build.py (or: python leafcutter/scripts/build.py --force)'). From inside a worktree that is KI-BP-016: it deploys the branch's unmerged templates over the live shared install tree other sessions are reading, and it overwrites the tracked docs/INDEX.md. The remedy text must change in step with BO-4100b-3's per-workspace material so the named command acts on the workspace's own copy only."
+  - "The remedy must be executable exactly as printed, from the workspace it was printed in, with no argument the operator has to infer. A remedy that needs a --target-dir the operator has to work out is the same defect one step removed."
+  - "Byte-identity of the shared install tree and of the second live workspace must be established across the remedy by recursive content hashing of each whole tree."
+  - "Both drift gates must carry the corrected remedy; a fixed message in one and the KI-BP-016 message in the other still sends the operator to destroy the shared install half the time."
+  - "Template and deployed copies change together and are verified in parity via the build.py round-trip (ADR-001)."
+delivers_to: null
+expects_from:
+  ac_id: BO-4100b-3
+  contract: "A per-workspace supporting-material tree at <workspace>/.leafcutter that is a real materialisation rather than an alias of the shared install tree -- the local thing the named remedy acts on, and the reason acting on it cannot reach the shared tree or the second workspace."
+test_required: true
+test_spec:
+  - name: test_carrying_out_the_named_remedy_clears_the_refusal
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: real_artifact
+    description: "The remedy string is EXTRACTED FROM THE REFUSAL ITSELF and executed as a real subprocess from inside the refused workspace; re-running the check afterwards exits 0. Extracting rather than hard-coding the command is what makes the assertion fail against an implementation that names no remedy, or names one that does not work."
+  - name: test_the_shared_install_tree_is_byte_identical_across_the_remedy
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "A recursive content hash of the shared install tree, taken before and after the same extracted remedy runs, must be equal. Today's remedy fails this."
+  - name: test_the_second_live_workspaces_supporting_material_is_byte_identical_across_the_remedy
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "The same whole-tree hash comparison for a second workspace live at the same time."
+  - name: test_both_drift_gates_name_a_remedy_that_satisfies_all_three_clauses
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: "The extract-execute-and-compare cycle is run for check-build-drift and for check-output-drift separately. A remedy corrected in one gate only still sends the operator to overwrite the shared install from the other."
+test_rationale: |
+  The first clause is load-bearing and is the one a test contract silently drops. Without
+  it, the cheapest implementation -- stop printing a remedy at all -- passes both
+  byte-identity assertions perfectly, and the author is left with a refusal and no way
+  forward. The test therefore has to EXTRACT the remedy from the refusal and RUN it,
+  rather than hard-coding a command the test author believes is correct: a hard-coded
+  command tests the test author's belief, not the tool's advice, and the defect here is
+  precisely that the tool's advice is wrong.
+  All three observables are states of trees on disk rather than properties of wording,
+  so all three are whole-tree content hashes. Reading the shared tree is harmless; the
+  measurement has to span the remedy's execution.
+origin_agent: BrainCandy
+created: 2026-09-21
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: >-
+  The cross-session-damage arm of BO-4100b. Observed 2026-09-14: the refusing check's own
+  suggested remedy was to rebuild, which is KI-BP-016 and deploys an unmerged branch's
+  material over the live shared install that other concurrent sessions are reading -- so
+  following the advice the tool gives is the failure. The first clause is load-bearing:
+  without it this AC is satisfiable by offering no remedy at all, which leaves the author
+  stuck rather than safe. All three clauses are observable states of trees on disk, not
+  properties of any wording.

@@ -1,0 +1,47 @@
+id: BO-4100c
+title: "You can tell which workspaces are finished with and which still hold something"
+component: build-orchestration
+components:
+  - build_orchestration
+  - worktree_manager
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Finished workspaces stop piling up, and none holding undelivered work is ever let go.
+
+  For any workspace you can tell whether it still holds work that has not reached
+  the shared line, so the ones that are genuinely finished with can be let go
+  routinely instead of accumulating indefinitely, and a workspace that still holds
+  something you would miss is never disposed of on the assumption that it does not.
+depends_on: [BO-4100]
+documentation_triggers: []
+documentation_rationale: "The whole point of this L1 is that the disposability verdict is computed and enforced rather than looked up; a how-to instructing an operator to judge roughly 150 workspaces by hand is precisely the instrument that already failed."
+doc_links: []
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-09-21
+amended_by: []
+superseded_by: null
+covered_by: [BO-4100c-1, BO-4100c-2, BO-4100c-3, BO-4100c-4]
+implemented_by: []
+notes: >-
+  Evidence, observed 2026-09-14: roughly 150 workspaces were live at once, with no stated
+  way to judge whether any given one was safe to let go. Read alongside two recorded losses
+  of the opposite kind -- a concurrent session removing a workspace mid-drive and leaving
+  behind a snapshot commit marked not-for-merge, and KI-BO-20260831-1331, where a
+  half-created workspace is invisible to the tool that lists them, so it cannot be disposed
+  of at all and its symptom reads as store-wide corruption. Boundary against BO-1800d, which
+  is the nearest neighbour and was rejected as the host: BO-1800d is the do-no-harm
+  constraint on background tidying against a drive that is STILL RUNNING. It presupposes
+  tidying exists and says nothing about accumulation, about how a finished workspace is
+  recognised, or about a workspace that is not running anything yet still holds work that
+  never reached the shared line -- which is exactly the loss recorded above. Both are needed;
+  do not fold this into BO-1800d or restate its promise here.

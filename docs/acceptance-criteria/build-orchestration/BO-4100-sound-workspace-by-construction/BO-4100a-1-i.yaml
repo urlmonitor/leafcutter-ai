@@ -1,0 +1,75 @@
+id: BO-4100a-1-i
+title: "Commits sitting only on the machine's local copy never reach the new workspace"
+component: build-orchestration
+components:
+  - build_orchestration
+  - worktree_manager
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+change_target: code
+package_surface: false
+criteria: |
+  Given the machine's local copy of the main line carries two commits that are
+    not present on the shared main line,
+  When a workspace is created,
+  Then the commit the new branch is rooted at is the shared main line's tip,
+  And neither of the two local-only commits is reachable from the new branch,
+  And the machine's local main-line copy is left unchanged by the creation.
+depends_on: [BO-4100a-1]
+doc_links:
+  - path: docs/architecture/components/worktree-manager.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Creation must not write to the machine's local main ref, its reflog, its index or its working tree. Fetching into remote-tracking refs is permitted; fast-forwarding, resetting, merging or checking out local main is not. That mutation is the cheap wrong fix this record exists to forbid."
+  - "Whether a local-only commit reached the workspace is decided by reachability from the new branch, not by comparing commit counts, messages or dates -- those agree with the wrong implementation."
+  - "Both the canonical template and its scripts/ build output must carry the change (ADR-001)."
+  - "The no-mutation guarantee holds for every creation path, including the reconnect/reuse path where an existing branch is checked out rather than freshly cut."
+  - "This record is a deliberate, operator-approved reversal of the 2026-05-12 18:30 DECISION HISTORY entry in setup_ticket_worktree.py ('Fixed silent stale-worktree bug. Changed _create_worktree() to branch from local main instead of origin/main so that unpushed commits on local main -- e.g. the ticket-creation commit from /create-ticket -- are always included. Fixes TICKET-20260512.'). That fix protected /create-ticket, which is retired under ADR-012; the workflow it protected no longer exists, and this record forbids exactly the behaviour it introduced. The implementer must add a new DECISION HISTORY entry to setup_ticket_worktree.py recording this deliberate reversal and citing both TICKET-20260512 and ADR-012, so the two entries read as a documented supersession rather than a contradiction."
+delivers_to: null
+expects_from: null
+test_required: true
+test_spec:
+  - name: test_neither_local_only_commit_is_reachable_from_the_new_branch
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "Two commits are made on local main only; after creation, git merge-base --is-ancestor is false for each of them against the new branch."
+  - name: test_the_new_branch_tip_is_the_shared_main_lines_tip
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "The created branch's rooted commit equals origin/main's tip, not the local main tip that carries the two extra commits."
+  - name: test_the_local_main_ref_is_byte_identical_before_and_after_creation
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: "git rev-parse main and the main reflog are captured before and after the creation and must be unchanged. This is the assertion that rules out 'fast-forward local main, then branch from it', which satisfies every other clause."
+test_rationale: |
+  BO-4100a-1 can be satisfied by pulling the shared line down into local main and then
+  branching from that copy. That implementation makes the rooted commit correct and leaves
+  a side effect on shared local state that nobody asked for -- and on a machine where
+  local main carries unpushed work it silently changes what the operator's own main means.
+  The unchanged-local-main assertion is the only one of the three that separates the right
+  fix from that one, so it is stated as its own test rather than folded into the others.
+origin_agent: BrainCandy
+created: 2026-09-21
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: >-
+  Rules out the cheapest wrong implementation of BO-4100a-1: bringing the shared line
+  down into the machine's local copy and then branching from that copy. That satisfies
+  "not behind" while still handing over a starting point nobody else has, and it also
+  mutates shared local state as a side effect of creating one workspace.

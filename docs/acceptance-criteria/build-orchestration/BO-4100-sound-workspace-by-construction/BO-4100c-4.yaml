@@ -1,0 +1,102 @@
+id: BO-4100c-4
+title: "A workspace holding nothing is disposed of completely, and leaves the live set"
+component: build-orchestration
+components:
+  - build_orchestration
+  - worktree_manager
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+change_target: code
+package_surface: false
+criteria: |
+  Given a workspace carrying the holds-nothing verdict,
+  When its disposal is requested,
+  Then the disposal completes and reports success,
+  And the workspace no longer appears in the live set,
+  And no directory remains at the location it occupied,
+  And no registration entry for it remains, so a second listing of the live set
+    returns the same entries as the first.
+depends_on: [BO-4100c, BO-4100c-1]
+doc_links:
+  - path: docs/architecture/components/worktree-manager.md
+    relationship: describes
+    status: exists
+  - path: docs/known-issues/build-orchestration.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "Directory removal, registration removal and branch-reference removal are one operation whose PARTIAL completion is itself a failure, not a partial success. A half-disposal that removes the directory and leaves the registration produces an entry that can never be assessed again, which BO-4100c-3 must then refuse forever -- so the anti-accumulation arm would make the accumulation permanent."
+  - "Residual background processes and open file handles inside the workspace must be dealt with before removal, or removal fails precisely on the workspaces that were most recently in use. scripts/worktree/sweep_processes.py already exists for this and must be reused rather than reimplemented; if it is not currently reachable from the deployed layout, making it so is part of this work."
+  - "Disposal must be idempotent: a second request for an already-disposed workspace must not error the run, and repeated listings of the live set must return identical entries."
+  - "The verdict that authorises disposal must come from BO-4100c-1's assessment record, not from a check disposal performs itself. A second derivation can authorise what the first refused."
+  - "This record says nothing about disposal running while a drive is in progress -- that constraint is BO-1800d's and must not be restated or implemented here."
+  - "Any new module must be registered in the build deploy manifest, or the deployed disposal path raises ModuleNotFoundError while the source-tree unit tests pass."
+delivers_to:
+  agent: python-coder
+  contract: "A completed disposal addressed to ONE resolved workspace path, whose success outcome asserts the directory, the registration entry and the branch reference are all gone. BO-4100c-4-i bounds the blast radius of that operation and does not re-assert its success."
+expects_from:
+  ac_id: BO-4100c-1
+  contract: "The assessment record { path, verdict, items, reason }. Disposal proceeds only on verdict == 'holds_nothing' and does not re-derive that verdict for itself."
+test_required: true
+test_spec:
+  - name: test_disposal_completes_and_reports_success_for_a_holds_nothing_workspace
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "Against a real fixture repository, disposal of a holds_nothing workspace returns a success outcome."
+  - name: test_no_directory_and_no_registration_entry_remain_after_disposal
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "Both are asserted: the path does not exist on disk, and git worktree list holds no entry for it. A removal that leaves either behind fails."
+  - name: test_two_successive_listings_of_the_live_set_return_the_same_entries
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "The live set is read twice after disposal and compared for equality. This is the residual-registration assertion: an entry whose directory is gone but whose registration remains shows up on the first listing and can flip on the second, and it is the state that makes the workspace permanently un-assessable."
+  - name: test_a_workspace_holding_open_file_handles_is_still_disposed_of_completely
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: "A residual process holds a file inside the workspace; disposal still completes and leaves no directory and no registration entry. This is the case where a naive removal half-succeeds, and it is the common case at the scale this family exists for."
+  - name: test_disposal_is_reached_through_its_cli_entry_point
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: reachability
+    surface_invoked: "the workspace-disposal CLI entry point"
+    description: "Disposal is driven through the entry point an operator or scheduled sweep actually invokes, not by importing the helper."
+test_rationale: |
+  The anti-accumulation arm only works if an allowed disposal actually FINISHES, so the
+  assertions are about completeness rather than about the happy path. The second-listing
+  assertion is the one that carries the weight: a disposal that removes the directory and
+  leaves the registration reports success and looks correct on a single read, and the
+  entry it leaves behind is exactly the un-assessable state BO-4100c-3 must refuse for
+  ever. Reading the live set twice and comparing is the cheapest falsifiable form.
+  The open-file-handle case is included because at 150 workspaces the ones being disposed
+  of are disproportionately the ones just finished with, which are the ones most likely to
+  still have a process in them -- so the half-success path is the common path, not the edge.
+origin_agent: BrainCandy
+created: 2026-09-21
+amended_by: []
+superseded_by: null
+covered_by: [BO-4100c-4-i]
+implemented_by: []
+notes: >-
+  The anti-accumulation arm: 150 live workspaces only comes down if a disposal that is
+  allowed actually finishes. The completeness clauses are there because a half-disposal
+  that removes the directory but leaves the registration produces an entry that can never
+  be assessed again, which is the state BO-4100c-3 then has to refuse forever. Says
+  nothing about disposal running while a drive is in progress -- that constraint is
+  BO-1800d's and is deliberately not restated here.

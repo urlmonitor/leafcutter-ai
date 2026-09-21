@@ -1,0 +1,119 @@
+id: BO-4100c-1
+title: "Every live workspace carries a definite verdict on whether it still holds something"
+component: build-orchestration
+components:
+  - build_orchestration
+  - worktree_manager
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+change_target: code
+package_surface: false
+criteria: |
+  Given 150 live workspaces, some holding work that has not reached the shared
+    main line and some holding none,
+  When the live set is assessed,
+  Then every one of the 150 carries exactly one of two verdicts: holds work not
+    on the shared main line, or holds nothing not on the shared main line,
+  And no workspace is left without a verdict,
+  And a workspace carries the holds-work verdict when any one of these is true
+    of it on its own: it has modified tracked files; it has staged changes; it
+    has untracked files that are not ignored; its branch carries a commit not
+    reachable from the shared main line; or a stash entry belongs to it.
+depends_on: [BO-4100c]
+doc_links:
+  - path: docs/architecture/components/worktree-manager.md
+    relationship: describes
+    status: exists
+  - path: docs/known-issues/build-orchestration.md
+    relationship: describes
+    status: exists
+  - path: templates/workflows/close-worktree.md
+    relationship: describes
+    status: exists
+    relevance: "Today's only disposal surface. It is a prompt, so it cannot carry the whole-set coverage clause; its git-cherry reasoning about squash-absorbed commits is the part that must survive into the computed verdict."
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+    relevance: "Angle taxonomy this record's test_spec entries declare."
+assigned_agent: python-coder
+estimated_complexity: L
+it_requirements:
+  - "The verdict must be produced by an invocable program, not by an agent following a procedure. templates/workflows/close-worktree.md is today's only disposal surface and it is a prompt: it judges one workspace a human already chose, so it structurally cannot carry the clause that all 150 receive a verdict. It must not be the thing this record changes."
+  - "The five triggers are independently sufficient and must be evaluated as a disjunction over a DECLARED set, so a sixth trigger is added by extending the set rather than by editing the verdict logic. A hard-coded chain of conditions reproduces the count-coupling defect this family is full of."
+  - "Reachability from the shared main line must be decided by PATCH CONTENT, not by commit identity: after a squash merge the pre-squash SHAs are absent from main's history while their diffs are on it, and treating them as unreached makes every delivered workspace read as holding work. The existing close-worktree procedure already uses git cherry for exactly this reason and records why."
+  - "Untracked-file detection must honour the project's ignore rules as git itself resolves them -- nested .gitignore files and the worktree's own exclude file included -- or every workspace with a build cache reads as holding work and the accumulation half of BO-4100c never improves (see BO-4100c-1-i)."
+  - "A stash entry must be attributed to the workspace it was made in. Git's stash list is per-repository and shared across every workspace, so an attribution rule is required. An entry that cannot be attributed to any workspace must not be silently dropped -- it is itself an unaccounted holding and must be surfaced rather than discarded."
+  - "An assessment that raises or cannot read must yield the no-verdict outcome, never holds-nothing. The natural implementation reads an unanswerable question as an empty finding set; that path must be closed here, because BO-4100c-3 can only act on an outcome this record produces."
+  - "Assessing the whole live set must be fast enough for routine use at the recorded scale -- on the order of seconds for 150 workspaces -- so per-workspace git invocations must not be issued serially without bound."
+  - "The assessment is a READ. It must not fetch, prune, reset, stash, or write any ref or file in any workspace it inspects."
+  - "Any new module must be registered in the build deploy manifest (scripts/build_phases*.py). The hook and CLI layers run from the DEPLOYED layout, so a module present only in the source tree raises ModuleNotFoundError at runtime while every source-tree unit test passes."
+delivers_to:
+  agent: python-coder
+  contract: "One assessment record per live workspace: { path: str, verdict: 'holds_work' | 'holds_nothing' | 'no_verdict', items: [{kind: 'modified' | 'staged' | 'untracked' | 'unreached_commit' | 'stash', ref: str}], reason: str | null }. `items` is non-empty exactly when verdict is holds_work, and is the set BO-4100c-2's refusal names item by item. `reason` is non-null exactly when verdict is no_verdict, and is what BO-4100c-3's refusal states. The three verdict values are a closed machine-readable discriminator, so BO-4100c-3's two refusals are distinguishable without parsing prose. BO-4100e-2-i consumes the same record for a workspace reached by discovery rather than by registration."
+expects_from: null
+test_required: true
+test_spec:
+  - name: test_every_workspace_in_the_live_set_carries_exactly_one_verdict
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "A fixture holding many workspaces of mixed state is assessed; the number of records equals the number of live workspaces, every record carries one value from the closed verdict set, and none is absent or null."
+  - name: test_each_of_the_five_triggers_independently_yields_the_holds_work_verdict
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "Five workspaces are built, each carrying exactly ONE trigger -- a modified tracked file, a staged change, a non-ignored untracked file, a commit unreachable from the shared main line, and an attributed stash entry -- and each is asserted holds_work on its own. Independently sufficient means a fixture combining them cannot prove this."
+  - name: test_the_assessment_covers_the_whole_live_set_rather_than_one_named_workspace
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: "The assessment is invoked with no workspace named and returns a record for every live workspace. A per-workspace answer that nothing calls for the whole set leaves the accumulation exactly where it was, and passes every other test here."
+  - name: test_an_unattributable_stash_entry_is_surfaced_rather_than_dropped
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: "A stash entry that cannot be attributed to any live workspace appears in the output as an unaccounted holding. Silently dropping it is the recorded loss shape -- a stash belonging to a workspace nobody could attribute."
+  - name: test_the_assessment_is_reached_through_its_cli_entry_point
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: reachability
+    surface_invoked: "the workspace-assessment CLI entry point (the command BO-4100c-2/c-3/c-4 disposal invokes)"
+    description: "The verdict is obtained through the entry point disposal actually calls, not by importing the helper, so a verdict rule that is never wired into disposal fails."
+test_rationale: |
+  Two clauses here are routinely dropped and both are the point of the record.
+  First, WHOLE-SET coverage. A test that assesses one workspace and checks its verdict is
+  correct passes against an implementation that can only ever be pointed at a workspace
+  someone already chose -- which is exactly today's prompt-based procedure, and which
+  leaves 150 workspaces at 150. The assertion has to be that a call naming nothing returns
+  a record per live workspace.
+  Second, INDEPENDENT SUFFICIENCY. A single fixture carrying all five triggers at once is
+  satisfied by an implementation that detects only one of them. Each trigger therefore
+  gets its own single-trigger workspace, and each is asserted alone.
+  The five are not interchangeable detections: a commit that never left the branch and an
+  orphaned stash entry are different losses found by different means, and the stash case
+  needs an attribution rule that has no analogue in the other four -- which is why the
+  unattributable entry gets a test of its own rather than being assumed away.
+origin_agent: BrainCandy
+created: 2026-09-21
+amended_by: []
+superseded_by: null
+covered_by: [BO-4100c-1-i]
+implemented_by: []
+notes: >-
+  Observed 2026-09-14: roughly 150 live workspaces and no stated way to judge any one of
+  them. The five triggers are listed as independently sufficient because each is a
+  separate way work has been lost -- a commit that never left the branch, and a stash
+  belonging to a workspace nobody could attribute, are different losses with different
+  detections. Coverage of the WHOLE live set is asserted rather than the verdict for one
+  workspace, because a per-workspace answer that nothing calls for all 150 leaves the
+  accumulation exactly where it was.

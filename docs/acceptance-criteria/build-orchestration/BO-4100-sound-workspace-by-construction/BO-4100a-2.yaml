@@ -1,0 +1,106 @@
+id: BO-4100a-2
+title: "The rooted commit is checked after the workspace exists, not predicted before it"
+component: build-orchestration
+components:
+  - build_orchestration
+  - worktree_manager
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+change_target: code
+package_surface: false
+criteria: |
+  Given a staleness check run before creation has reported the starting point
+    as current,
+  And creation has then produced a workspace whose branch is rooted at a commit
+    other than the shared main-line tip that creation targeted,
+  When creation finishes,
+  Then creation reports failure rather than success,
+  And the workspace is not offered to the caller as ready to work in,
+  And the failure states both the commit the branch is actually rooted at and
+    the shared main-line tip it was required to be rooted at.
+  And given the branch is rooted at exactly the targeted shared main-line tip,
+    When creation finishes, Then creation reports success.
+depends_on: [BO-4100a]
+doc_links:
+  - path: docs/architecture/components/worktree-manager.md
+    relationship: describes
+    status: exists
+  - path: docs/known-issues/build-orchestration.md
+    relationship: describes
+    status: exists
+  - path: docs/reference/false-green-mechanisms.md
+    relationship: describes
+    status: exists
+    relevance: "A verdict derived from the input rather than the artefact is the mechanism this record's post-condition exists to close."
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+    relevance: "Angle taxonomy this record's test_spec entries declare."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "The verdict must be computed from the CREATED WORKSPACE's own HEAD, read back after creation, never from the commit-ish handed to git worktree add. _compute_base_commit_report already does this read on the fast-lane path (BO-2400f-13-iv) but only REPORTS it; here the same read must GATE the outcome."
+  - "No pre-creation staleness check may be added, strengthened or relied on to satisfy this record. An existing pre-check may remain, but it must not be what produces the verdict -- a check that runs before the thing it checks exists can only ever verify an input."
+  - "The post-condition must run on every creation path, including the reconnect/reuse path where an existing branch is checked out or force-reset rather than freshly cut. That is the path on which a stale root is most likely and the one the fast-lane reconnect already demonstrates."
+  - "On failure the success payload must not be emitted and the workspace must not be offered as ready to work in. Whether the failed workspace is removed or left for BO-4100e to account for is the implementer's call; emitting success is not."
+  - "Both commits must be carried as separate machine-readable values (actual rooted commit, required shared tip), not only embedded in a sentence, so a caller can act without parsing prose."
+  - "Both the canonical template and its scripts/ build output must carry the change (ADR-001)."
+  - "Error handling follows the project error handling policy; the post-condition itself failing to read HEAD is a failure, never a pass."
+delivers_to: null
+expects_from: null
+test_required: true
+test_spec:
+  - name: test_creation_fails_when_the_created_branch_is_rooted_elsewhere_despite_a_passing_pre_check
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: "A pre-creation staleness check is held in the fixture at a PASSING verdict while creation is driven to produce a branch rooted at a commit other than the targeted shared tip. Creation must report failure and emit no ready-to-work payload. Because the pre-check's pass is part of the Given, hardening the pre-check cannot turn this test green."
+  - name: test_the_verdict_is_read_from_the_created_workspaces_head_not_from_the_requested_commit_ish
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: seam
+    description: "The commit named in the verdict equals git -C <worktree> rev-parse HEAD taken after creation, and the fixture makes that differ from the commit-ish passed to git worktree add, so a verdict derived from the request fails."
+  - name: test_the_failure_states_both_the_actual_rooted_commit_and_the_required_shared_tip
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "Both commit identifiers are present in the failure as separate values and are the two the fixture set up, not placeholders."
+  - name: test_creation_reports_success_when_the_branch_is_rooted_at_exactly_the_targeted_shared_tip
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "The positive arm of the second Given/When/Then. Without it the record is satisfiable by refusing every creation."
+test_rationale: |
+  KI-BO-20260909 records a compensating staleness pre-check that PASSED while the
+  worktree it guarded was rooted somewhere else. The obvious remedy -- make the pre-check
+  stricter -- cannot work, because a check that runs before the artefact exists verifies
+  an input and not the artefact. The whole value of this record is that it moves the
+  assertion after creation, so the first test deliberately holds the pre-check at PASS
+  inside the fixture: any implementation that satisfies this record by hardening the
+  pre-check leaves that test red. The second test separates reading HEAD back from
+  restating the requested commit-ish, which is the same read-back discipline BO-4100d-3
+  demands of the branch name; both must be exercised with the artefact and the request
+  deliberately different, or the assertion is vacuous.
+origin_agent: BrainCandy
+created: 2026-09-21
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: >-
+  This exists because of the specific failure recorded in
+  KI-BO-20260909-worktrees-go-stale-within-minutes: a compensating staleness pre-check
+  PASSED and the workspace was STILL rooted somewhere else. A check that runs before the
+  thing it is checking has been made can only ever verify an input, so this AC moves the
+  assertion to after creation and makes it a post-condition on the artefact. The
+  pre-check's verdict is deliberately part of the Given, to make a test that satisfies
+  this AC by strengthening the pre-check fail.

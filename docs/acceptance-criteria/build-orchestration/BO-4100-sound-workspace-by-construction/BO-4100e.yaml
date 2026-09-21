@@ -1,0 +1,60 @@
+id: BO-4100e
+title: "A workspace the list cannot see is still accounted for, and still removable"
+component: build-orchestration
+components:
+  - build_orchestration
+  - worktree_manager
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Every workspace that exists is accounted for, and none is beyond clearing away.
+
+  The set of workspaces you are shown is complete: one that was left half-made, or
+  that otherwise never got registered, is still surfaced rather than sitting there
+  invisibly. Any workspace found that way can still be cleared away, so a remnant
+  nobody can see is never also a remnant nobody can act on -- and its presence is
+  reported as the local leftover it is, rather than as damage to the shared record.
+depends_on: [BO-4100]
+documentation_triggers: []
+documentation_rationale: "The promise is that the listing is complete and the leftover is removable -- both observable in what the system does; a document telling someone where else to look would leave the incompleteness in place."
+doc_links:
+  - path: docs/known-issues/build-orchestration.md
+    relationship: describes
+    status: exists
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-09-21
+amended_by: []
+superseded_by: null
+covered_by: [BO-4100e-1, BO-4100e-2, BO-4100e-3, BO-4100e-4]
+implemented_by: []
+notes: >-
+  Evidence: KI-BO-20260831-1331 -- a half-created workspace is invisible to the tool that
+  lists them, so it can be neither classified nor removed, and its symptom reads as
+  store-wide corruption. That misdiagnosis is part of the harm and belongs in scope: the
+  leftover must be reported as a local remnant, not as damage to the shared record, or the
+  operator is sent to repair the wrong thing.
+  SCOPE -- RECOVERY HALF ONLY. The prevention half is already specified by BO-4100a-3-i
+  ("a refused creation leaves no branch, directory or registration behind"). Do not
+  re-derive it here. This record covers only what must happen for a leftover that already
+  exists, which makes it considerably smaller than it first appears.
+  BOUNDARY against BO-4100c -- decided at PO stage after the BA's decomposition, do not
+  re-open. All four of BO-4100c's L2 children presuppose that the workspace APPEARS in the
+  live set: c-1 assesses that set, and c-2/c-3/c-4 each act on an entry within it. A
+  workspace the listing cannot see is outside the domain of all four, and folding this in
+  would force every one of them to carry a weaker precondition ("for workspaces the listing
+  can see...") and degrade the family. The promises differ too: BO-4100c promises the
+  disposability VERDICT is right; this promises the listing is COMPLETE and that something
+  unlistable is still recoverable. The observables are completeness and recoverability, not
+  verdict correctness.
+  Keep enforcement-shaped when decomposing: every Then clause must be observable in what the
+  system does -- a workspace surfaced, a leftover cleared, a cause named correctly -- never
+  in a document existing or having been read.

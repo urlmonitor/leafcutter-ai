@@ -1,0 +1,78 @@
+id: BO-4100b-1-i
+title: "Real drift in material the commit did change is still refused"
+component: build-orchestration
+components:
+  - build_orchestration
+  - worktree_manager
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+change_target: code
+package_surface: false
+criteria: |
+  Given a commit whose changed-file set includes a file belonging to the
+    supporting-material tree,
+  And that file's content differs from the content the check expects for it,
+  When the checks that compare supporting material run,
+  Then the commit is refused,
+  And the refusal names that file,
+  And the refusal names no file the commit did not change.
+depends_on: [BO-4100b-1]
+doc_links:
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "The true-positive path must keep the exit code and the severity it has today. Narrowing what a gate may refuse over must not change what it does when it finds a genuine mismatch inside the scope that remains -- that would convert a false-positive fix into the silent-check failure BO-1700 exists to prevent."
+  - "This record and BO-4100b-1 must be covered by tests that run in the same suite against the same fixture repository, so no change can widen one and break the other without turning something red in the same run."
+  - "The refusal must name the in-scope file at path granularity, not as a count or a category, because BO-4100c-2 and the operator both act on the name."
+  - "Applies to both drift gates; a true positive suppressed in one of the two is still a suppressed true positive."
+  - "Template and deployed copies change together and are verified in parity via the build.py round-trip (ADR-001)."
+delivers_to: null
+expects_from: null
+test_required: true
+test_spec:
+  - name: test_a_drifted_file_the_commit_did_change_is_still_refused
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: "A supporting-material file is both included in the commit's changed-file set and drifted from its expected content; the gate must exit non-zero at the severity it uses today."
+  - name: test_the_refusal_names_the_drifted_file_the_commit_changed
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "The refusal output contains that file's path."
+  - name: test_the_refusal_names_no_file_the_commit_did_not_change
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: "The fixture carries ONE in-scope drift and several out-of-scope drifts at once; the refusal must name exactly the one. A mixed fixture is required -- with only in-scope drift present, an unscoped gate passes this test unchanged."
+test_rationale: |
+  BO-4100b-1's evidence cannot distinguish "the gate now refuses only over what the commit
+  changed" from "the gate no longer refuses". Both make the observed false refusal go away.
+  This record pins the true-positive case so the first reading is the only one that passes.
+  The third test is the one that actually carries the weight: a fixture containing only an
+  in-scope drift is satisfied by today's unscoped gate as well as by the correct one, so
+  the in-scope and out-of-scope drifts must be present together and the refusal's named set
+  asserted for exact equality, not merely for containment.
+origin_agent: BrainCandy
+created: 2026-09-21
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: >-
+  Written specifically so that BO-4100b-1 cannot be satisfied by weakening or disabling
+  the check. Narrowing what a check may refuse over and stopping it refusing at all are
+  indistinguishable from BO-4100b-1's evidence alone; this AC forces the true-positive
+  case to stay green and is the boundary that keeps BO-4100b from drifting into the
+  silent-check failure BO-1700 exists to prevent.
