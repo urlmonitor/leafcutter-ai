@@ -1,0 +1,362 @@
+id: GE-129a
+title: "The guards that run while you work have been seen to refuse something"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - precommit_hooks
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Protection that watches your editing is proven, not merely switched on.
+
+  Each guard the project runs in response to your own actions, rather than at
+  commit time, is handed something it must reject and is watched to see whether
+  it rejects it. One that has never been seen to say no is named as unproven
+  instead of being counted among the things keeping your work safe, so a guard
+  that would wave everything through is visible rather than quietly reassuring.
+depends_on:
+  - GE-129
+doc_links:
+  - path: docs/acceptance-criteria/guardrail-engine/GE-129-proven-wherever-it-runs/GE-129.yaml
+    relationship: parent
+    status: exists
+  - path: docs/architecture/adrs/ADR-045-observed-refusal-establishes-protection.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      THE DECISION THIS RECORD EXTENDS TO A SECOND SURFACE — READ IT, DO NOT RESTATE IT.
+      Decisions 1 (the state is produced by execution and may come from nowhere else),
+      3 (reuse config/verification_flow.schema.json's vocabulary verbatim), 5 (out of
+      process, deployed copy, the check must be shown to have SEEN its input before its
+      verdict is read), 6b and 7 (a verifying surface is guarded twice, the second guard
+      not routing through its own regime) are INHERITED IN FULL. What §2 fixes — that the
+      population is hooks_manifest — is the one thing this record changes, and the ADR
+      itself records that change as "a separate decision requiring its own record".
+  - path: docs/acceptance-criteria/guardrail-engine/GE-120-green-means-checked/GE-120f.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      THE SAME GUARANTEE ON THE OTHER SURFACE, AND IT MUST NOT BE RE-AUTHORED HERE.
+      GE-120f (approved, critical) and GE-120f-1..-5 own the regime on the commit-guardian
+      registration surface and are at their five-L2 cap. This record does not restate a
+      single clause of theirs: it says the same guarantee is owed on a surface their
+      population cannot reach. Nine tickets and ADR-045 cite those ids; none of them is to
+      be re-cut, renumbered or widened.
+  - path: docs/acceptance-criteria/guardrail-engine/GE-120-green-means-checked/GE-120f-1.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      THE RUN TO EXTEND RATHER THAN DUPLICATE. GE-120f-1 builds the liveness run and its
+      execution machinery (ADR-045 §5 binds it to unit_tests/portability/
+      _deployed_check_harness.py, built once per sweep). A second runner beside it is the
+      wrong answer; what this surface needs that that one does not have is a different way
+      of reading its population, a different place to hold the declaration, and a
+      different entry point to put the input through. Decide explicitly whether that is a
+      second population reader behind one runner or a second runner, and record the
+      decision — do not let it be settled by whichever is quicker to write.
+  - path: docs/acceptance-criteria/build_pipeline/BP-1600-counted-from-reality/BP-1600a-1.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      THE SEAM, AND IT IS THE MOST IMPORTANT LINK ON THIS RECORD. BP-1600a-1 (approved,
+      high) owns the CENSUS of this same surface — whether a script on disk is invoked by
+      the settings surface at all, taken from disk on one side and from the settings
+      surface on the other, reporting by name and failing the run. This record owns
+      whether an INVOKED one can refuse. Same surface, different question, and the worked
+      example proves neither implies the other: readme_read_guard.py is wired, so
+      BP-1600a-1 reports it as WIRED and is right to, and it still cannot refuse anything.
+      BP-1600a-1's own doc_link to GE-120f already draws this line from the other side.
+      NOT a depends_on — see this record's notes for why the dependency is not real.
+  - path: templates/settings.json
+    relationship: describes
+    status: exists
+    relevance: >-
+      THE REGISTRATION SURFACE THIS RECORD READS. An object of tool-call events, each
+      holding matcher groups whose entries carry a command string; every entry wraps the
+      script in a shell walk-up to the installed hook directory, so the script is named
+      inside a command rather than in a field, and no entry carries an id. Re-measured
+      2026-09-14: templates/hooks/ holds 13 scripts and this file names 11 of them —
+      an observation with a date attached, never a figure to encode.
+  - path: templates/hooks/readme_read_guard.py
+    relationship: describes
+    status: exists
+    relevance: >-
+      THE WORKED EXAMPLE, AND THE ACCEPTANCE SHAPE. Wired at templates/settings.json line
+      57 as a PreToolUse hook on the Edit|Write matcher, running on every edit, and unable
+      to refuse: three of its four gated prefixes resolve out from under themselves through
+      symlinks into the deployed tree and stop matching, and the fourth names alembic/,
+      which this repository has never had. Whatever lands beneath this record must examine
+      THIS script and report that no refusal has ever been demonstrated for it. If it does
+      not, the record is not satisfied, however complete the machinery looks.
+  - path: config/verification_flow.schema.json
+    relationship: describes
+    status: exists
+    relevance: >-
+      THE VOCABULARY TO REUSE AND NEVER TO DUPLICATE — negative_control with its input,
+      expected_result and its not_applicable-with-a-reason alternative, and the four state
+      values passing / failing / blocked / unverified with unverified as the honest
+      placeholder for an attempt never made. It has no code reader, which is itself an
+      instance of this defect class. Nothing on this surface justifies a second vocabulary;
+      what differs is where the declaration is HELD, not what it says.
+  - path: docs/acceptance-criteria/guardrail-engine/GE-126-checks-answer-truthfully/GE-126b-5.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      UPSTREAM, NOT A DUPLICATE. GE-126b-5 defines the four-value vocabulary and requires a
+      check to carry and report its own record. It is silent on where the value comes from
+      and on which surfaces are in scope. This record neither restates it nor extends it —
+      it names a population GE-126b-5 does not name.
+  - path: docs/reference/false-green-mechanisms.md
+    relationship: related
+    status: exists
+    relevance: >-
+      The catalogue. The M9a worked example lives on this surface, and BP-1600a-1 already
+      records that the qualifier "across the commit-guardian surface" in M9's scheduled-work
+      paragraph is the gap. A new or amended entry for a guard whose refusal branch is
+      unreachable is recommended and is GE-120f's to make, not this record's to duplicate.
+  - path: docs/known-issues/commit-guardian.md
+    relationship: context
+    status: exists
+    relevance: >-
+      KI-CG-021 — a main() hardened over six review rounds that no runner ever called — is
+      the shape a runner on a new surface reproduces if its refusal moves nothing. Cited
+      rather than edited: the check-doc-length gate refuses every register in this repo
+      since 2026-09-14.
+  - path: docs/known-issues/testing-quality.md
+    relationship: context
+    status: exists
+    relevance: >-
+      KI-TQ-007 — configuration presence read as evidence of registration. Its step 3,
+      "does the production entry point produce the observable effect", is what this record
+      turns into a standing requirement on a surface no census or regime reaches today.
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      The component document for the engine this work extends. Added at enrichment because the
+      one-runner decision below places the session population reader and its surface adapter
+      inside the commit-guardian runner rather than beside it, which makes this component's
+      boundary the one the change moves.
+  - path: docs/testing/test-angles.md
+    relationship: related
+    status: exists
+    relevance: Source of the `angle` values on the descriptors beneath this record.
+assigned_agent: python-coder
+estimated_complexity: L
+it_requirements:
+  - >-
+    THE MECHANISM DECISION, SETTLED AT ENRICHMENT AS THIS RECORD'S doc_link ON GE-120f-1
+    DEMANDS: ONE RUNNER, A SECOND POPULATION READER BEHIND IT. The session surface is served by
+    GE-120f-1's runner through an additional population reader plus a surface adapter, and NOT
+    by a second runner. Grounds, in order of weight. (a) ADR-045 §5 binds execution to
+    unit_tests/portability/_deployed_check_harness.py with the second working copy built ONCE
+    per sweep; two runners build it twice, and the sweep's cost is precisely the thing that gets
+    quietly narrowed when it starts to hurt. (b) §7's independent-guard obligation attaches to
+    each verifying surface, so a second runner is a second silent-failure mode to guard rather
+    than a shared one. (c) The four-state vocabulary, the rollup, the unresolved verdict and the
+    outcome propagation are all population-agnostic; duplicating them recreates exactly the
+    two-populations-disagree hazard GE-120f-3's own it_requirements forbid. (d) The
+    decomposition already isolates every part that genuinely differs behind three seams —
+    subject enumeration (GE-129a-1), declaration home and binding (GE-129a-2), input
+    presentation and verdict reading (GE-129a-3) — which is a population-reader-plus-adapter
+    interface in all but name. The decision is also cheap to reverse late and expensive to
+    reverse early: one runner with a pluggable reader can grow a second entry point, whereas two
+    runners cannot be merged without re-cutting approved records.
+  - >-
+    THE CONSEQUENCE OF THAT DECISION, AND IT IS THE CLAUSE MOST LIKELY TO BE DROPPED IN SILENCE.
+    GE-120f-3 owns "a run that put an input through none fails as UNRESOLVED rather than clean",
+    and it is written ONCE. Because one runner serves both populations, that clause reaches this
+    surface unchanged: it MUST NOT be re-authored anywhere beneath GE-129, and GE-120f-3 MUST
+    NOT be amended, re-cut or widened — it is approved, nine tickets and ADR-045 cite its id,
+    and the BA deliberately authored no duplicate. What the implementation owes instead is PROOF
+    that the clause actually reaches here, which is a test and not a note: see the descriptor on
+    GE-129a-1 that drives the session population to empty and asserts the run reaches
+    GE-120f-3's unresolved verdict through the SAME code path rather than reporting a clean
+    session sweep.
+  - >-
+    THE FIGURE IS STATED PER POPULATION, WHICH IS WHAT MAKES THE SHARED RUNNER SAFE. Sharing the
+    runner must not fold session subjects into the figure GE-120f-3's criteria describe; doing
+    so would change an approved record's observable behaviour without amending it, which is the
+    other way this decision could go wrong. Each population states its own examined figure and
+    reaches its own verdict; the run's overall outcome is the refusal of ANY population that
+    reached no verdict. Inheriting the RULE is the point; merging the COUNTS is not.
+  - >-
+    ADR-045 §7 IS CARRIED HERE AS A CONSTRAINT AND DISCHARGED ON GE-129a-1. Everything beneath
+    this record is a verifying surface, and §7's governing test — would this surface's silent
+    failure be distinguishable from a clean report — is met here in the worst available way. The
+    session reader's silent failure (settings.json absent from the deployed copy, a layout in
+    which the walk-up resolves nowhere, an adapter that hands every subject an empty payload)
+    produces zero findings, which is byte-for-byte what a healthy session surface with nothing
+    to report produces. The independent guard is therefore MANDATORY, not advisory, and it must
+    not route through the liveness run: see the §7 descriptor on GE-129a-1. No record beneath
+    this one may discharge §7 by asserting something the liveness run itself told it.
+  - >-
+    DECLARATION HOME, SETTLED AT ENRICHMENT: A DECLARED SECTION IN THE GUARDRAIL ENGINE'S OWN
+    CONFIG, NEVER templates/settings.json. GE-129a-2 leaves the home to this stage and names
+    three candidates. It is NOT the entry object, for a reason stronger than the parser question
+    the record poses: templates/settings.json is read by the editor's own settings parser, whose
+    tolerance of an unknown key this project cannot test, cannot pin and does not control, and
+    whose worst rejection mode is the whole file being refused — which unwires every session
+    guard at once. Risking the guard surface in order to hold metadata about the guard surface
+    is not an acceptable trade at any level of tolerance, so the parser fact does not need to be
+    settled to settle the decision. It is also NOT a block inside the guard script: GE-129a-2's
+    criteria require one declaration per ENTRY, a guard wired at two events needs two, and a
+    per-script home structurally cannot hold two — the same collapse GE-129a-1 already rejected
+    for script-path identity. What remains is a side-car keyed by the identity triple, and
+    GE-129a-2 fixes which file and why.
+  - >-
+    AC_ENFORCE_STRICT=1 ON EVERY PYTEST INVOCATION SPECIFIED BENEATH THIS RECORD. Without it
+    pytest_ac_enforcement xfail-masks every descriptor here — all of which cover a not-done AC
+    on the day they are written — and the suite reads green while proving nothing, which is this
+    tree's own subject committed by its own tooling.
+  - >-
+    ANYTHING THE RUN IMPORTS MUST BE ON THE BUILD DEPLOY PATH IN THE SAME CHANGE. Put the
+    session population reader and the surface adapter INSIDE templates/scripts/commit_guardian/,
+    which build_commit_guardian copies verbatim, so no scripts/build_phases.py deploy-map entry
+    is needed. A helper placed outside that directory without a deploy-map entry raises
+    ModuleNotFoundError in the deployed run while source-tree unit tests stay green — and here
+    that failure surfaces as an EMPTY SESSION POPULATION, which is the §7 silent failure named
+    above rather than a visible crash.
+  - >-
+    Error-handling policy applies to the reader's and adapter's filesystem, JSON and subprocess
+    I/O: specific exception types, logged at WARNING or higher or re-raised, never swallowed. A
+    swallowed settings-surface read error must never become an empty population or an absent
+    subject — it is `blocked`, and it must reach the run's verdict as a refusal.
+delivers_to: null
+expects_from: null
+documentation_triggers:
+  - reference-doc
+origin_agent: BrainCandy
+created: 2026-09-14
+amended_by: []
+superseded_by: null
+covered_by:
+  - GE-129a-1
+  - GE-129a-2
+  - GE-129a-3
+  - GE-129a-4
+  - GE-129a-5
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  ==========================================================================
+  THE SEAM AGAINST BP-1600a-1 — STATED ONCE, PROPERLY, AND NOT TO BE BLURRED
+  ==========================================================================
+  Same surface, two questions, and they are asked of two different populations:
+    - BP-1600a-1 asks IS THIS SCRIPT IN THE INVOKED SET AT ALL. Its population is the
+      scripts present on disk beneath the hook directory; its comparison is against what
+      the settings surface executes; its verdict is wired / run-by-nothing / deliberately
+      unwired-with-a-ground.
+    - THIS RECORD asks CAN AN INVOKED ONE SAY NO. Its population is the entries the
+      settings surface itself names, read at run time, restricted to those a tool-call
+      event actually executes; its verdict is the four-value observed state.
+  The worked example settles that neither implies the other: readme_read_guard.py is
+  wired, so BP-1600a-1 reports it as wired and is correct, and it still cannot refuse.
+  A script the census reports as run by nothing has no entry point to put an input
+  through and is simply not in this record's population.
+
+  WHY THIS IS NOT A depends_on, DELIBERATELY. This record never needs the disk walk. It
+  reads the settings surface and takes the invoked set from it — both sides of that read
+  are on the registration surface. Making BP-1600a-1 a prerequisite would park this record
+  behind an unbuilt approved record for no mechanical reason and would invite the second
+  error the fence exists to prevent, which is one of the two growing a census the other
+  already owns. Fenced in doc_links, consumed nowhere, duplicated never.
+
+  THIS TREE READS A REGISTRATION SURFACE AND DOES NOT WALK DISK. Inherited verbatim from
+  GE-120f's tree-wide boundary and ADR-045 §2. A script registered nowhere is structurally
+  invisible here and is BP-1600a-1's. Do not build a disk walk beneath this record, and do
+  not read this record as covering the registered-nowhere case, because it cannot see it.
+
+  ==========================================================================
+  WHAT IS GENUINELY DIFFERENT ABOUT THIS SURFACE — THE BA'S REAL WORK
+  ==========================================================================
+  Three differences, all of them consequences of the surface's shape rather than of
+  anybody's preference, and none of them a licence to re-decide ADR-045:
+    1. NO IDENTIFIER TO BIND THE DECLARATION TO. A hooks_manifest entry is a JSON object
+       with an id, so ADR-045 §3 attaches negative_control and entry_point to the entry
+       itself. A settings.json entry is ALSO a JSON object — {type, command, timeout} —
+       inside a matcher group, but it carries NO ID. Where a session hook's declaration
+       lives, and how it is bound to the script so the binding cannot drift, is the open
+       question. The constraint that is NOT open: reuse
+       config/verification_flow.schema.json's names. A synonym set beside it is how a
+       vocabulary with one reader becomes a vocabulary with none.
+       CORRECTED 2026-09-15 — this clause previously read "a command string inside a matcher
+       group, with no id and no fields", and was headed "NO PLACE TO HANG THE DECLARATION".
+       Inherited unverified from BrainCandy's dispatch brief and false on its second half:
+       verified at templates/settings.json:50-59, the entry is an object and there IS a
+       place to put a value. What is genuinely absent is an IDENTIFIER, which is the half
+       that matters and the reason this L1's GE-129a-2 derives the tie from particulars read
+       off the surface at run time instead of looking it up by key. The open question is
+       therefore not "where is there room" but "does the editor's own settings parser
+       tolerate an unknown key" — a fact about that parser, not about this project, and the
+       IT PO's to settle. Prior wording quoted rather than deleted.
+    2. A DIFFERENT ENTRY POINT. The production way in is a harness tool-call event carrying
+       its payload, not run_hook.py. Invoking one of these scripts as a bare command with a
+       path in argv is NOT the entry point the protected surface uses, and a clean exit from
+       a hook that was handed nothing is the never-attempted state wearing a pass — this
+       repository's most repeated trap and ADR-045 §5's explicit requirement. Establish that
+       the hook saw its input before reading its verdict.
+    3. A DIFFERENT OBSERVABLE REJECTION. The worked example is a PreToolUse hook, so its
+       refusal is the tool call being denied, not a commit being blocked. The declared
+       rejection has to be expressed in terms this surface can produce.
+
+  ==========================================================================
+  THE WORKED EXAMPLE IS THE ACCEPTANCE TEST FOR THIS RECORD
+  ==========================================================================
+  readme_read_guard.py must end up examined and reported as never having demonstrated a
+  refusal. Two things that will otherwise quietly defeat that, both already recorded in
+  this family and both re-stated here because they bear directly on this one script:
+    - ITS INERTNESS ARISES BY TWO MECHANISMS DEPENDING ON LAYOUT — an exception in the main
+      workspace, a plain failed prefix match inside a worktree. A demonstration that covers
+      only the first leaves every worktree unexamined, and worktrees are where the drives
+      run.
+    - THE COPY THAT IS EXAMINED MUST BE THE COPY THAT RUNS. templates/ is canonical;
+      .claude/hooks/ is a build output reached through symlinks, and resolving paths
+      through those symlinks is precisely what made this guard inert in the first place.
+      An observation made against a copy the harness does not load fails GREEN, which is
+      indistinguishable from a pass.
+
+  ==========================================================================
+  INHERITED, NOT REPEALED, AND NOT RESTATED
+  ==========================================================================
+  ADR-045 in full, and §7 in particular: anything built beneath this record is a verifying
+  surface, so it must be guarded both by the regime it participates in and by at least one
+  independent check that does not route through that regime, because its silent failure is
+  byte-for-byte what a healthy repository with nothing to report also produces. That rule
+  is already written; do not re-argue it, do apply it.
+
+  This component's fail-open convention (GE-116a-1-iii) and GE-120's line over it: failing
+  open on one bad input while the check still ran is fine; reporting success for a check
+  that never ran is not. Block-vs-announce stays a per-stage L2 decision; the unit is
+  visibility.
+
+  ANTI-GREP BINDS EVERY DESCRIPTOR BENEATH THIS RECORD. Nothing here may be satisfied by
+  asserting that a string appears in settings.json, that a declaration parses, or that a
+  field is populated. The discriminator is ADR-045 §1's alter-and-revert pair: hold the
+  declaration byte-identical, change the guard's behaviour, and require the recorded state
+  to move.
+
+  NO POPULATION FIGURE in any criterion or test expectation beneath this record. The
+  13-and-11 measurement in the doc_links is dated evidence; GE-120f records the instance
+  count as DISPUTED and forbids a figure below it. Assert by count-and-membership over the
+  run's own output.
+
+  DAY-ONE BLAST RADIUS IS THE CORRECT OUTCOME. On the commit that lands this, the session
+  hooks will report that no refusal has ever been demonstrated, because none has. That is
+  the true state; pre-suppressing it by seeding records or writing exemptions ahead of the
+  first run is the failure mode, and a postponement is not a ground for an exemption.
+
+  documentation_triggers is [reference-doc] and nothing else, matching GE-120f: the rule
+  has to be written where the next session-hook author will find it, and what is written
+  down today is a vocabulary with no reader. No component-diagram — ADR-045 §5 binds the
+  execution surface to the existing harness, which is to be extended rather than drawn
+  twice.
+
+  Authored at the PO stage. L1 only. No L2, no L3, no test_spec, no it_requirements, no
+  assigned_agent, no estimated_complexity and no declares_side_effect, by design.

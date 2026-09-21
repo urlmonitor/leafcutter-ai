@@ -1,0 +1,289 @@
+id: GE-129a-4
+title: "The guard this epic keeps citing is examined on the real surface, in the copy the entry that runs it actually resolves to, and is reported as never having refused anything — beside a guard on the same surface that has"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - precommit_hooks
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the guard the project's own records cite as running before every edit and unable to
+    refuse anything — readme_read_guard, wired on the settings surface the project ships —
+  And the copy of that guard the editor runs is not the copy the project edits: the entry's
+    own command walks up from where work is happening to an installed hook directory and
+    runs what it finds there,
+  When the liveness run examines the real surface rather than a stand-in for it,
+  Then that guard is among the subjects the run reports,
+  And the run states which copy of it the examination loaded, and that copy is the one the
+    entry's command resolves to when it is run from where the editor runs it,
+  And a copy that entry does not resolve to is not examined in its place,
+  And for as long as that guard allows its declared input to proceed, it is reported as not
+    having demonstrated a refusal and is absent from anything the run says is protecting the
+    work,
+  And at least one other guard the same real surface names is reported in that same run as
+    having demonstrated its refusal, so being named as unproven is a finding about this guard
+    rather than the only thing the run is able to say,
+  And the state reported for that guard is the state its own examination produced: were it
+    changed so that its declared input is stopped, the run would report it as having
+    demonstrated its refusal, without anything about the guard being noted in the run itself.
+depends_on:
+  - GE-129a
+  - GE-129a-1
+  - GE-129a-2
+  - GE-129a-3
+doc_links:
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-129-proven-wherever-it-runs/GE-129a.yaml"
+    relationship: parent
+    status: exists
+  - path: templates/hooks/readme_read_guard.py
+    relationship: describes
+    status: exists
+    relevance: >-
+      THE WORKED EXAMPLE AND THE ACCEPTANCE SHAPE THE PARENT FIXED. Wired before every edit,
+      running on every edit, and gating nothing: three of its four gated prefixes resolve out
+      from under themselves through links into the installed tree and stop matching, and the
+      fourth names a directory this repository has never had. The parent states that whatever
+      lands beneath it must examine THIS guard and report that no refusal has ever been
+      demonstrated for it, and that a tree which does not is unsatisfied however complete the
+      machinery looks. That is what this record is.
+  - path: templates/settings.json
+    relationship: describes
+    status: exists
+    relevance: >-
+      The real surface, examined as it stands rather than as a fixture. The entry that runs the
+      worked example resolves the guard by walking up from the current directory to an
+      installed hook directory, which is why the second clause above is about resolution rather
+      than about a path.
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-126-checks-answer-truthfully/GE-126c-5.yaml"
+    relationship: related
+    status: exists
+    relevance: >-
+      UPSTREAM, AND THE OWNER OF THE GENERAL RULE. GE-126c-5 owns which copy a verifying
+      process loaded and refuses an alteration the loaded copy never saw. That rule is
+      inherited, not restated. What is specific here is that on this surface the copy is chosen
+      by a walk-up performed at run time from wherever the work is happening, so "the copy the
+      editor loads" is not a fixed path and cannot be asserted as one — and that resolving
+      through those links is the very mechanism that made the worked example inert.
+  - path: "docs/architecture/adrs/ADR-001-self-hosting-boundary.md"
+    relationship: describes
+    status: exists
+    relevance: >-
+      The deployed-layout convention. templates/ is canonical; the installed hook directory is
+      a build output reached through links. An observation made against a copy the editor does
+      not load fails GREEN, and a green failure is indistinguishable from a pass — which is the
+      reason this record insists on resolution rather than accepting either path as given.
+  - path: "docs/architecture/adrs/ADR-045-observed-refusal-establishes-protection.md"
+    relationship: describes
+    status: exists
+    relevance: >-
+      §5's deployed-copy requirement inherited onto this surface. Also the ADR's own
+      Consequences note, which records in terms that the worked example is OUTSIDE the
+      population its runner examines and that this is "a known limit, not coverage". This
+      record is the clause that closes that limit for the one guard the ADR names.
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-120-green-means-checked/GE-120f-1.yaml"
+    relationship: related
+    status: exists
+    relevance: >-
+      The regime on the other surface. Its motivating example is this same guard, which its
+      population structurally cannot reach — that mismatch is why GE-129 exists. The
+      alter-and-revert discriminator is GE-120f-1's and is NOT restated above: the last clause
+      here is narrower and does a different job, refusing an implementation that hard-codes a
+      verdict for a guard it recognises by name.
+  - path: docs/reference/false-green-mechanisms.md
+    relationship: related
+    status: exists
+    relevance: >-
+      The catalogue whose M9a worked example lives on this surface. Cited, not amended — an
+      entry for a guard whose refusal branch is unreachable is GE-120f's to make, and the
+      doc-length gate refuses growth on over-length registers in any case.
+  - path: docs/testing/test-angles.md
+    relationship: related
+    status: exists
+    relevance: Source of the `angle` values on the descriptors below.
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - >-
+    THE PAIRING CLAUSE COSTS A REAL DECLARATION AND THAT COST IS PART OF THIS RECORD. At least
+    one genuine session guard — one that really does deny a tool call — must be declared in the
+    section GE-129a-2 establishes and genuinely examined in the change that lands this. A fixture
+    cannot stand in; the clause's whole value is that the report distinguishes this tree's inert
+    guard from a live one standing beside it on the same surface, which no fixture pairing can
+    do. Affordable candidates observed on this surface: enforce_commit_delegation, wired
+    PreToolUse on the Bash matcher and documented in CLAUDE.md as blocking a direct `git commit`;
+    and inline_work_guard, wired PreToolUse on Edit|Write and reported in this workspace as
+    hard-blocking file-mutating one-liners. VERIFY THE CANDIDATE BEHAVES AS DESCRIBED BEFORE
+    RELYING ON IT — a pairing guard that turns out not to deny anything either would make this
+    clause unsatisfiable at the last moment, and the two guards above are named here as leads,
+    never as findings.
+  - >-
+    THE COPY EXAMINED IS THE ONE THE ENTRY'S COMMAND RESOLVES TO, AND RESOLUTION IS PERFORMED,
+    NOT ASSERTED. The entry walks up from the current directory to an installed hook directory,
+    so the target is not a fixed path and must not be written as one. Perform the walk-up from
+    where the editor would run, report the absolute path it landed on, and assert that path is
+    what was loaded. A test that hard-codes either templates/hooks/... or .claude/hooks/... has
+    asserted a constant, not a resolution — and resolving through those links is the very
+    mechanism that made the worked example inert, so getting this wrong reproduces the defect
+    inside the machinery built to find it.
+  - >-
+    THE SURFACE READ AND THE GUARD EXAMINED MUST COME FROM THE SAME LAYOUT IN THE SAME SWEEP.
+    GE-129a-1 owns which copy of the settings surface is enumerated and states the path it read;
+    this record owns which copy of the guard is loaded. Assert the two agree rather than assuming
+    it. Enumerating one repository's entries while examining another's produces a full, plausible
+    and entirely wrong report, and nothing else in the tree would catch it.
+  - >-
+    NO VERDICT MAY BE HARD-CODED FOR A GUARD RECOGNISED BY NAME — this is what makes naming a real
+    script in a criterion non-expiring, and it is the clause most easily defeated by a convenience
+    branch. The implementation must contain no mapping from a guard's name to an expected state,
+    no allowlist, and no special case for readme_read_guard. The record does not assert that guard
+    is inert; it asserts that whatever is reported about it is what its own examination produced,
+    which stays true and stays meaningful on the day it is repaired.
+  - >-
+    DAY-ONE BLAST RADIUS IS THE CORRECT OUTCOME AND MUST NOT BE PRE-SUPPRESSED. On the landing
+    commit most session subjects will report that no attempt has ever been made, because none
+    has. Do not seed records, do not write exemptions ahead of the first run, and do not add the
+    pairing guard's declaration in a way that quietly also declares the others. A postponement is
+    not a ground for an exemption.
+  - >-
+    THE REAL-SURFACE SWEEP MUST NOT BE ABLE TO DEGRADE SILENTLY INTO EXAMINING NOTHING — ADR-045
+    §7's governing test applies to this record too, and its in-criteria pairing clause is an
+    IN-REGIME guard, which §7 explicitly says is not enough. The independent, out-of-regime guard
+    for the non-empty real population lives on GE-129a-1's §7 descriptor; this record must rely on
+    that one rather than growing a second, and must not satisfy its own non-empty precondition by
+    asking the liveness run.
+  - >-
+    AC_ENFORCE_STRICT=1 on every pytest invocation below. The sweep must not mutate the repository
+    it examines (GE-129a-3's constraint applies unchanged here, where the surface is real rather
+    than a fixture, and matters more for exactly that reason). Error-handling policy applies to
+    the resolution walk-up and the subprocess calls: specific exception types, logged at WARNING or
+    higher or re-raised. A failed resolution is `blocked` and is reported by name; it must never
+    become an absent subject.
+test_spec:
+  - name: test_ge129a4_the_worked_example_is_examined_on_the_real_surface_and_reported_as_unproven_beside_a_guard_that_refused
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    description: >-
+      THE RECORD'S ACCEPTANCE SHAPE, AND BOTH HALVES BELONG TO ONE RUN. Over the repository's REAL
+      settings surface and the resolved copies: assert readme_read_guard is among the reported
+      subjects, that the state reported for it is the one its own examination produced, and that
+      while it allows its declared input through it is absent from anything the run describes as
+      protecting the work. IN THE SAME RUN, assert at least one OTHER guard the same real surface
+      names is reported as having demonstrated its refusal. Read both verdicts from the run's own
+      output; assert neither against a literal. Without the second half the first is satisfied by a
+      run that reports every real guard as unproven.
+  - name: test_ge129a4_the_examined_copy_is_the_one_the_entrys_command_resolves_to
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: integration
+    angle: deployed
+    description: >-
+      Assert the run states which copy of each guard it loaded, that the stated path equals the
+      path the entry's own command resolves to when executed from where the editor runs, and that
+      no other copy was examined in its place. NAMED MUTATION (mandatory, run it): examine the
+      canonical copy under templates/ instead of the resolved one. Under that injection the run
+      still produces a full, plausible report and every other descriptor in this record stays
+      green — only this one goes RED. That asymmetry is the point; record both sides of it.
+  - name: test_ge129a4_the_enumerated_surface_and_the_examined_guard_come_from_one_layout
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: integration
+    angle: seam
+    description: >-
+      Assert the settings-surface path GE-129a-1's reader reported and the guard paths this
+      record's examination reported belong to the same layout root. PAIRED: construct a layout in
+      which they would differ (a deployed copy whose settings surface and hook directory are out
+      of step) and assert the run refuses or reports the mismatch by name rather than producing a
+      report that looks ordinary.
+  - name: test_ge129a4_the_reported_state_moves_when_the_guard_is_repaired_and_no_verdict_is_hard_coded
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: >-
+      THE NON-EXPIRY DESCRIPTOR, AND THE ONE THAT KILLS A NAME-KEYED IMPLEMENTATION. In a
+      disposable copy of the real layout, change the guard so its declared input IS stopped,
+      leaving its declaration byte-identical, and assert the run reports it as having demonstrated
+      its refusal; revert and assert it returns to not-demonstrated. Assert the declaration bytes
+      are identical across both runs and that the altered file is the same path the run reported
+      loading. An implementation that recognises this guard by name and reports a fixed verdict
+      fails here and passes everything else.
+test_rationale: |
+  Three fixture-based siblings already specify this mechanism, and every one of them can be
+  satisfied in full against a fixture surface while the real one is never read — which is not
+  hypothetical, it is how this family's own machinery came to have a motivating example it cannot
+  see. So the descriptors above are the only ones in the tree that run against the repository as it
+  actually stands, and they are written so that no clause is satisfiable by a report that merely
+  looks complete.
+
+  Two of them exist to defeat specific cheap implementations rather than to cover a Then clause.
+  The resolution descriptor defeats an examination of the canonical copy, which produces a report
+  indistinguishable from a correct one. The repair descriptor defeats a name-keyed verdict, which
+  is the natural shortcut once a real guard is named in a criterion, and it is what keeps that name
+  from expiring the day the guard is fixed.
+delivers_to:
+  - ac_id: GE-129a-4-i
+    contract: >-
+      The resolution of the real surface to the copy the entry's command reaches, and the
+      examination performed against that copy. GE-129a-4-i requires that resolution to be
+      performed once per layout rather than once overall, since it is the resolution itself that
+      differs between layouts. Added at enrichment: GE-129a-4-i already declared this expectation
+      from its side and the producing side read null.
+expects_from:
+  - ac_id: GE-129a-3
+    contract: >-
+      The observation: an input presented as the event presents it and a verdict read as the
+      protected surface reads it. This record requires that observation to be made against the
+      real surface and the resolved copy, rather than against a stand-in.
+origin_agent: BrainCandy
+created: 2026-09-14
+amended_by: []
+superseded_by: null
+covered_by:
+  - GE-129a-4-i
+implemented_by:
+- tickets/00_inbox/epics/EPIC-AGuardThatHasNeverSaidNoIsNotCountedAs/14_TICKET-20260921-GE-129a-4.md
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  WHY A REAL-SURFACE RECORD EXISTS AT ALL WHEN THREE FIXTURE-BASED SIBLINGS ALREADY SPECIFY THE
+  MECHANISM. Because every one of them can be satisfied in full against a fixture surface while
+  the real one is never read. That is not hypothetical: it is how this family's own machinery
+  came to have a motivating example it cannot see. The parent fixes the acceptance shape as a
+  property of the real repository, and a property of the real repository needs a record that
+  says so.
+
+  NAMING A REAL GUARD IN A CRITERION — DELIBERATE, AND MADE NON-EXPIRING. The house rule in this
+  family is to assert over fixtures so an assertion does not expire the day a guard changes. It
+  is overridden here because the parent requires this specific guard to end up examined and
+  reported. The expiry is handled by the last clause instead of by avoiding the name: the
+  record does not assert that this guard is inert, it asserts that whatever the run reports
+  about it is what its own examination produced. On the day the guard is repaired the record is
+  still true and still meaningful, and an implementation that recognises the guard by name and
+  reports a fixed verdict for it fails.
+
+  THE PAIRING CLAUSE HAS A CONSEQUENCE THE IT PO SHOULD SEE COMING. Requiring another guard on
+  the SAME REAL SURFACE to be reported as having demonstrated its refusal in the same run means
+  at least one real session guard must be declared and genuinely examined in the change that
+  lands this — a fixture standing in for it does not satisfy the clause. That is affordable:
+  this surface already wires guards that really do stop a tool call. It is also the strongest
+  available form of the anti-vacuity rule, because it makes the report distinguish the epic's
+  inert guard from a live one standing right next to it, which no fixture pairing can do.
+  Nothing here licenses pre-suppressing the day-one state of the others: the correct outcome on
+  the landing commit is that most subjects report no attempt ever made.
+
+  NAMED MUTATION. Examine the canonical copy under templates/ instead of the copy the entry
+  resolves to. ARRIVAL COLOUR: RED — nothing examines this surface today. Under the mutation the
+  run still produces a full, plausible report, and the clause requiring the examined copy to be
+  the resolved one is the only thing that goes red; everything else stays green. That asymmetry
+  is the point, and it is the same mechanism — resolution through links into the installed tree
+  — that made the worked example inert in the first place.
+
+  Authored at the BA stage. L2 behaviour only. No assigned_agent, no it_requirements, no
+  test_spec, no estimated_complexity — the IT PO's.

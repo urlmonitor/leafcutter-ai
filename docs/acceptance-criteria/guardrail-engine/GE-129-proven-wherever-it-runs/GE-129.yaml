@@ -1,0 +1,278 @@
+id: GE-129
+title: "A guard is proven wherever it runs, not only where someone thought to look"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - precommit_hooks
+level: L0
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Every place that runs guards is held to the same proof of protection.
+
+  Your work is protected from more than one place: some guards run when you
+  commit, others run continuously while you work. Every standard for proving a
+  guard is real — that it is counted, that it can be reached, that it has been
+  seen to refuse something — has so far been written against one of those
+  places, so a guard attached anywhere else inherits all of the reassurance and
+  none of the proof. After this goal, where a guard happens to be attached no
+  longer decides whether anyone ever establishes that it works, and a new place
+  to attach guards cannot arrive already exempt from the standards the existing
+  ones are held to.
+depends_on: []
+doc_links:
+  - path: docs/acceptance-criteria/guardrail-engine/GE-120-green-means-checked/GE-120f.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      THE STANDARD THIS GOAL CARRIES TO A SECOND PLACE, AND IT IS NOT RESTATED HERE.
+      GE-120f (approved, critical) owns "a guard that has never said no is not counted as
+      protection" and its GE-120f-1 builds the liveness run. Both are scoped, by GE-120f's
+      own tree-wide boundary and by ADR-045 §2, to the commit-guardian registration surface.
+      This goal owns the fact that the standard's REACH is decided by which surface a guard
+      is attached to rather than by anything about the guard. Neither may be closed as a
+      duplicate of the other; GE-120f must not be re-cut, renumbered or widened to absorb
+      this, and nine tickets plus ADR-045 cite its ids.
+  - path: docs/architecture/adrs/ADR-045-observed-refusal-establishes-protection.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      THE DECISION THIS GOAL EXTENDS, AND THE PLACE IT SAYS SO ITSELF. ADR-045 (Proposed,
+      2026-09-14) settles what establishes protection and, under "Unresolved boundary
+      carried forward, not closed here", records that no acceptance criterion takes a
+      census of the second registration surface and that "extending the population of §2
+      to a second registration surface is a separate decision requiring its own record".
+      This tree is that record. Its decisions 1, 3, 5, 6 and 7 are INHERITED VERBATIM and
+      must not be restated anywhere beneath this goal — in particular §7, which already
+      binds any verifying surface added in this family to a second guard that does not
+      route through its own regime.
+  - path: docs/acceptance-criteria/build_pipeline/BP-1600-counted-from-reality/BP-1600a-1.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      THE SAME SURFACE, THE PRIOR QUESTION, AND THE SEAM MUST NOT BE BLURRED. BP-1600a-1
+      (approved, high) owns the CENSUS of this surface: is a script on disk invoked by the
+      settings surface at all. This goal owns whether an invoked one can REFUSE. Its own
+      doc_link to GE-120f already draws the line from the other side — "a script this
+      census reports as run by nothing has no refusal to demonstrate, and a script this
+      census reports as wired may still be unable to refuse". Read both before authoring
+      anything beneath this goal, and do not grow a second census here.
+  - path: docs/acceptance-criteria/guardrail-engine/GE-126-checks-answer-truthfully/GE-126.yaml
+    relationship: context
+    status: exists
+    relevance: >-
+      EXAMINED AS A HOST AND REJECTED ON SUBJECT, FOR THE SECOND TIME IN THIS COMPONENT.
+      GE-126 holds the only free L1 slots in the GE-120/GE-126 family, and its reader is a
+      person INTERROGATING the guard system. GE-120f already rejected it as the liveness
+      regime's parent on exactly that ground: the worked example fails during ordinary
+      editing with nobody interrogating anything. GE-128 rejected it on subject a second
+      time on 2026-09-14. Not a duplicate in either direction.
+  - path: templates/settings.json
+    relationship: describes
+    status: exists
+  - path: templates/hooks/readme_read_guard.py
+    relationship: describes
+    status: exists
+  - path: docs/reference/false-green-mechanisms.md
+    relationship: context
+    status: exists
+    relevance: >-
+      The register of false-green mechanisms. The worked example of the whole M9 family
+      lives on the surface no standard has ever reached, which is this goal's argument in
+      one sentence.
+  - path: docs/known-issues/commit-guardian.md
+    relationship: context
+    status: exists
+  - path: docs/known-issues/testing-quality.md
+    relationship: context
+    status: exists
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-09-14
+amended_by: []
+superseded_by: null
+covered_by:
+  - GE-129a
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  ORIGIN (2026-09-14, product-owner, on BrainCandy's ruling during
+  EPIC-AGuardThatHasNeverSaidNoIsNotCountedAs). The gap was found while ADR-045 was being
+  written: the epic builds a liveness regime whose population is commit_guardian.json's
+  hooks_manifest, and the epic's own worked example is registered nowhere in it. The
+  ruling was to close it inside the epic, as its own record, on the session-hook surface.
+
+  ==========================================================================
+  THE GAP, VERIFIED IN THIS WORKTREE BEFORE ANYTHING WAS AUTHORED
+  ==========================================================================
+  Re-derived 2026-09-14, four checks, none of them a reading of a note:
+    (1) grep -c readme_read_guard templates/commit-guardian/commit_guardian.json -> 0.
+        The record is absent from the manifest that is the liveness run's population.
+    (2) templates/settings.json line 57 wires it, as a PreToolUse hook on the Edit|Write
+        matcher, through a bash -c walk-up to the installed hook directory.
+    (3) templates/hooks/ holds 13 scripts; templates/settings.json names 11 of them.
+        Identical to the 2026-09-07 measurement in GE-120f and BP-1600a-1, re-measured
+        rather than cited.
+    (4) The three hooks_manifest ids in that file are check-hook-parity,
+        check-output-drift and check-ticket-ac-status-parity — none of them a session hook.
+  So the mechanism GE-120f-1 builds would never examine the guard GE-120f, GE-120f-1 and
+  GE-120f-1-ii all cite as their motivating example. ADR-045 records this itself, twice,
+  as a known limit rather than as coverage.
+
+  ==========================================================================
+  PLACEMENT — WHY A NEW ROOT L0, WITH EVERY ALTERNATIVE EXAMINED
+  ==========================================================================
+  The ac-tree-split skill was loaded before the placement was chosen. Caps were verified
+  by parsing the store, not by trusting a note.
+    - GE-120f, the semantically perfect parent, is at FIVE active L2 children
+      (GE-120f-1..-5) against the five cap. Growing it is also forbidden by the ruling,
+      and PO authorship stops at L1 regardless.
+    - GE-120, the next-best parent, is at SEVEN L1 children (a..g) against the seven cap.
+      Its covered_by was read directly.
+    - Pattern A (horizontal split of GE-120) was examined and REJECTED AS MECHANICALLY
+      INERT, which is the non-obvious finding. check_ac_limits.py counts children by
+      deriving the parent from the id STRING, so moving GE-120g to a new L0 without
+      renaming it leaves it counted under GE-120 and frees nothing. Freeing a slot would
+      require renaming an existing GE-120x and every descendant under it — forbidden by
+      the ruling for GE-120f-*, and for any other branch it would break test module names,
+      ticket references and ADR-045's own links. The skill documents this trap in its own
+      Pattern A note.
+    - GE-126 has the family's only free L1 slots and was rejected on subject, twice over:
+      GE-120f's notes reject it as the liveness regime's parent because its reader is
+      someone interrogating the system while the worked example fails during ordinary
+      editing, and they record the four regime records already sitting there
+      (GE-126b-5/-5-i, GE-126c-5/-5-i) as "a capacity artifact rather than a design
+      decision" whose re-homing is a USER decision. Putting a second regime record there
+      to save one file would repeat a placement the tree has already flagged as regrettable.
+    - child_limit_override on GE-120 was reached for LAST and declined. ACS-800.yaml
+      states the field is "only a TEMPORARY stopgap" for the id restructure it exists to
+      retire; this component's standing note says that after GE-126's slots the tree is to
+      be split rather than the cap raised; and raising an override to quiet a guard, in a
+      tree whose subject is guards that were quieted, is the instinct BP-1600a-1 declined
+      in writing seven days ago.
+  IN-REPO PRECEDENT FOR THIS EXACT MOVE, ALL WITHIN THREE WEEKS: BP-1600 (new L0 rather
+  than a fourteenth L1 under a capped BP-100), BP-1300 before it for the same pair of
+  reasons, and GE-125 in this component (new root L0 chosen over GE-123e). The split
+  itself is the precedent, not ACS-800 — see the CORRECTIONS section below.
+
+  ==========================================================================
+  SPARSE ON PURPOSE — ONE L1, AND WHY THAT IS NOT AN ACCIDENT
+  ==========================================================================
+  This L0 opens with a single L1. The child-limit hook's sparse advisory (fewer than three
+  children) will fire; it is non-blocking and it is correct. BP-1600 did exactly this on
+  2026-09-07 and said so: "SPARSE ON PURPOSE, AND NOT PERMANENTLY". The alternative was to
+  invent two further L1s to reach the floor, and every candidate was either BP-1600a-1's
+  (the census) or an open-ended follow-up, both of which the ruling excludes. A padded
+  tree would have been worse than a sparse one. The natural second member is the durable
+  half — that a NEW place to attach guards cannot arrive already exempt — and it is named
+  here rather than authored, so the next author finds the thought instead of re-having it.
+  Six L1 slots remain. No child_limit_override is authored here and none may be added.
+
+  ==========================================================================
+  THE TWO SURFACES ARE GENUINELY DIFFERENT IN SHAPE — DO NOT LET THIS BE FLATTENED
+  ==========================================================================
+  They are two registration surfaces, not one surface read two ways, and the difference is
+  load-bearing for whoever implements beneath this goal:
+    - hooks_manifest entries are structured JSON objects carrying an id, which is why
+      ADR-045 §3 can hang a negative_control and an entry_point straight onto the entry.
+    - settings.json entries are JSON OBJECTS — {type, command, timeout} — inside matcher
+      groups keyed by tool-call event, and they carry NO IDENTIFIER. The absent identifier
+      is the load-bearing fact; it is why GE-129a-2 exists and why a tie has to be derived
+      from particulars read off the surface rather than looked up by key.
+      CORRECTED 2026-09-15 — the text above previously read "COMMAND STRINGS ... there is no
+      field on a command string to hang a declaration from". That came from BrainCandy's
+      dispatch brief, was inherited into this record unverified, and is FALSE on its second
+      half: verified in-worktree at templates/settings.json:50-59, an entry is an object and
+      there is somewhere to put a value. The correction matters because it changes the open
+      question from "there is no room" to "the room belongs to the editor's own settings
+      parser, and whether it tolerates an unknown key is a fact about that parser rather
+      than about this project" — a different question with a different answer. Found by the
+      BA at decomposition; the prior wording is quoted here rather than deleted so a reader
+      can tell a corrected claim from one that was never made.
+      Where a session hook's declaration is held, and how it is tied to the script, is an
+      open mechanism question for the BA and IT PO — with one constraint that is not open:
+      reuse config/verification_flow.schema.json's vocabulary, never mint a second one
+      beside it. That schema already has one reader too few; this is ADR-045 §3 and it is
+      inherited, not restated.
+    - The entry point differs too. A session hook's real way in is a harness tool-call
+      event carrying its payload, not run_hook.py, and a PreToolUse hook's observable
+      rejection is the tool call being denied rather than a commit being blocked.
+  Anything beneath this goal reads a REGISTRATION SURFACE and does not walk disk. That is
+  GE-120f's tree-wide boundary and ADR-045 §2, inherited unchanged: a script registered
+  nowhere is structurally invisible here and belongs to BP-1600a-1.
+
+  ==========================================================================
+  INHERITED AND NOT REPEALED
+  ==========================================================================
+  ADR-045's decisions, in full and without restatement — in particular §6b and §7, which
+  already bind any verifying surface in this family to a guard that does not route through
+  its own regime, because a runner that stops running reports its own silence as a clean
+  result. Anything authored beneath this goal is such a surface and §7 applies to it by
+  its own terms.
+
+  This component's deliberate fail-open convention (GE-116a-1-iii) and the line GE-120
+  drew over it: failing open on one bad input while the check still ran is acceptable;
+  reporting success for a check that never ran is not. The unit is visibility, not
+  blocking; block-vs-announce stays a per-stage L2 decision.
+
+  ANTI-GREP, and here it is the whole subject. A criterion satisfiable by asserting that a
+  declaration exists, parses, or is populated reproduces this defect one level up. The
+  discriminator is ADR-045 §1's alter-and-revert pair.
+
+  NO POPULATION FIGURE may be written into any criteria block or test expectation beneath
+  this goal. The 13-and-11 measurement above is an observation with a date attached, and
+  GE-120f records the instance count as DISPUTED and forbids one.
+
+  DAY-ONE BLAST RADIUS IS THE CORRECT OUTCOME, exactly as for GE-120f: on the commit that
+  lands this, the session hooks will report that no refusal has ever been demonstrated,
+  because none has. Pre-suppressing that is the failure mode.
+
+  ==========================================================================
+  CORRECTIONS TO THE AUTHORING BRIEF — RECORDED, NOT PAPERED OVER
+  ==========================================================================
+  - "The ACS-800 precedent in this repo is that a capability which would push a tree over
+    cap gets a sibling L0" is WRONG as stated. ACS-800 is "Reorganize your requirements
+    freely as they grow, without breaking a single reference" — the unbuilt opaque-UID
+    restructure. It is not a placement precedent. The real precedents are BP-1600, BP-1300
+    and GE-125, and they were used. The other half of the brief's sentence is RIGHT and was
+    verified: ACS-800.yaml does state that child_limit_override is a temporary stopgap it
+    exists to retire.
+  - Everything else in the brief that was checkable was checked and held: the grep count of
+    zero, the settings.json line number, GE-120f's five L2s, GE-120's seven L1s, and
+    GE-120f/-1/-1-ii all citing readme_read_guard as the motivating example.
+
+  ==========================================================================
+  IDENTIFIER
+  ==========================================================================
+  GE-129 established free on 2026-09-14 by four independent checks, none of which is a
+  directory listing (a folder-only listing under-reports taken ids here — GE-114-1..4 and
+  GE-115 sit loose at namespace root):
+    (1) a recursive grep for the literal GE-1[0-9][0-9] across docs/, tickets/, templates/,
+        unit_tests/, scripts/ and changelogs/ — highest citation of any kind is GE-128;
+    (2) a whole-worktree grep for GE-129 excluding .git — no hits of any kind;
+    (3) git grep GE-129 against origin/main — no hits;
+    (4) a grep of the shared main working tree for an uncommitted claim — no hits.
+  GE-119, GE-121 and GE-124 remain retired and must never be reissued. Highest taken root
+  in this component is now GE-129. Re-verify at merge time; id allocation in this store is
+  known-broken (KI-ACD-008).
+
+  ==========================================================================
+  WHAT WAS DELIBERATELY NOT TOUCHED
+  ==========================================================================
+  No existing record was modified to author this tree. GE-120f and its five L2s are
+  untouched, ADR-045 is untouched, and no known-issues register was edited (the
+  check-doc-length gate refuses every register since 2026-09-14; they are cited in
+  doc_links instead). Nothing existing becomes false as a result: ADR-045's unresolved
+  boundary says the ADR does not close the gap, which remains true — this tree specifies
+  it. A back-link from GE-120f, and an ADR-045 amendment naming this tree, are both
+  available and are the user's call, not taken unasked on approved records.
+
+  Authored at the PO stage. L0 and L1 only. No L2, no L3, no test_spec, no
+  it_requirements, no assigned_agent, no estimated_complexity and no
+  declares_side_effect, by design.
