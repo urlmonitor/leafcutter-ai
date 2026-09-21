@@ -35,7 +35,7 @@ import argparse
 import json
 import logging
 import sys
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import Any
 
 logger = logging.getLogger("product_ownership")
@@ -132,6 +132,125 @@ def is_example_component(component: str | None) -> bool:
         True iff *component* equals :data:`EXAMPLE_PRODUCT`.
     """
     return component == EXAMPLE_PRODUCT
+
+
+#: The three store directories a doc_links path into product-truth can name.
+#: Shared with validate_product_truth's own _ARTIFACT_TYPES notion, restated
+#: here (not imported) so this leaf module gains no dependency on the checker.
+_STORE_ARTIFACT_DIRS = ("flows", "mockups", "mock-data")
+
+#: The relationship value ADR-044 sec 6 requires an AC's example_product to be
+#: cross-checked against. Every other doc_links relationship (e.g. "context",
+#: "related") is a citation, not an ownership claim, and MUST NOT be consulted.
+IMPLEMENTED_BY_STEP = "implemented-by-step"
+
+#: The three finding kinds ADR-044 sec 6 defines for one example_product
+#: comparison (mismatch / undeclared / project-declared).
+FINDING_MISMATCH = "mismatch"
+FINDING_UNDECLARED = "undeclared"
+FINDING_PROJECT_DECLARED = "project-declared"
+
+
+def product_root_of_doc_link(path: str, relationship: str) -> str | None:
+    """Return the product root a doc_links entry names, or None.
+
+    Only an `implemented-by-step` link carries ownership information for the
+    AC it belongs to (ADR-044 sec 6): "project ACs legitimately cite example
+    artifacts as context" through any other relationship, so those are never
+    consulted here. A qualifying path must resolve under
+    `docs/product-truth/<flows|mockups|mock-data>/<root>/...`; anything else
+    (a link into a schema, another AC, or outside the store) also returns
+    None -- there is nothing to compare for it.
+
+    Args:
+        path: The doc_links entry's `path` value.
+        relationship: The doc_links entry's `relationship` value.
+
+    Returns:
+        The product root segment, or None when this link names no root.
+    """
+    if relationship != IMPLEMENTED_BY_STEP:
+        return None
+    parts = PurePosixPath(str(path).replace("\\", "/")).parts
+    try:
+        store_index = parts.index("product-truth")
+    except ValueError:
+        return None
+    remainder = parts[store_index + 1:]
+    if len(remainder) < 2 or remainder[0] not in _STORE_ARTIFACT_DIRS:
+        return None
+    return remainder[1]
+
+
+def example_product_findings(declared: str | None, root: str | None) -> list[str]:
+    """Classify one `example_product` declaration against its compared root.
+
+    The pure verdict helper ADR-044 sec 7 requires beside this module's
+    ownership predicate: given the declared value (None when absent) and the
+    product root it is compared against (None when there is none to compare
+    against -- an AC with no `implemented-by-step` link), returns every
+    finding kind that applies. More than one can apply to the same input
+    (e.g. an artifact under the example root declaring the project's own
+    product is both a mismatch AND a project-declared finding) -- the caller
+    reports each. Ownership itself is never decided here: `root` is always
+    supplied by the caller from :func:`product_of_artifact_id` or a
+    doc_links path, never re-derived from `declared`.
+
+    Args:
+        declared: The artifact/AC's own `example_product` value, or None.
+        root: The product root to compare against, or None.
+
+    Returns:
+        The finding kinds that apply (:data:`FINDING_MISMATCH`,
+        :data:`FINDING_UNDECLARED`, :data:`FINDING_PROJECT_DECLARED`), in
+        that fixed order.
+    """
+    findings: list[str] = []
+    if root is not None and declared is not None and declared != root:
+        findings.append(FINDING_MISMATCH)
+    if root == EXAMPLE_PRODUCT and declared is None:
+        findings.append(FINDING_UNDECLARED)
+    if declared == PROJECT_PRODUCT:
+        findings.append(FINDING_PROJECT_DECLARED)
+    return findings
+
+
+def example_product_findings_for_ac(
+    declared: str | None, roots: list[str]
+) -> list[tuple[str, str | None]]:
+    """Classify one AC's `example_product` against every root its
+    `implemented-by-step` links name.
+
+    Fans :func:`example_product_findings` out over zero or more roots rather
+    than re-deriving its rule (ADR-044 sec 7: "not re-derive it"), and
+    de-duplicates :data:`FINDING_PROJECT_DECLARED`, which does not depend on
+    which root it is compared against and would otherwise repeat once per
+    link. An AC with no roots at all (ADR-044 sec 6's own boundary clause) is
+    compared once against `root=None`, which can only ever yield
+    `FINDING_PROJECT_DECLARED` -- the absence of a root is never itself a
+    finding.
+
+    Args:
+        declared: The AC's own `example_product` value, or None.
+        roots: The product roots of every `implemented-by-step` doc_links
+            entry (empty when the AC has none).
+
+    Returns:
+        `(finding_kind, root)` pairs; `root` is None for a
+        `FINDING_PROJECT_DECLARED` entry produced with no roots to compare.
+    """
+    if not roots:
+        return [(kind, None) for kind in example_product_findings(declared, None)]
+    results: list[tuple[str, str | None]] = []
+    reported_project_declared = False
+    for root in roots:
+        for kind in example_product_findings(declared, root):
+            if kind == FINDING_PROJECT_DECLARED:
+                if reported_project_declared:
+                    continue
+                reported_project_declared = True
+            results.append((kind, root))
+    return results
 
 
 def _product_root_of_flow(flow_id: str, flow: dict[str, Any]) -> str:
@@ -379,5 +498,25 @@ DECISION HISTORY
   and is correct against the real store. Verified: --store docs/product-truth
   reports own_record_count=11, set_aside_count=3.
   (#EPIC-TruthfulProjectRecord/30)
+- 2026-09-17 [python-coder]: UXP-700d-3-ii -- added the pure verdict helpers
+  ADR-044 sec 6-7 require beside this module's ownership predicate:
+  product_root_of_doc_link (an AC doc_links entry -> the product root it
+  names, implemented-by-step only), example_product_findings (one declared
+  value + compared root -> mismatch/undeclared/project-declared finding
+  kinds), and example_product_findings_for_ac (fans the same rule out over
+  an AC's zero-or-more implemented-by-step roots, de-duplicating
+  project-declared). validate_product_truth.py only loads records and calls
+  the new sibling module product_truth_example_checks.check_example_product,
+  which imports these three verbatim -- this module still never reads
+  example_product to decide ownership (own_record_* / is_example_* are
+  unchanged). Verified against the real, committed store: zero findings
+  except one pre-existing latent one on AC UXP-515 (a project-owned AC whose
+  doc_links carried relationship: implemented-by-step into a fern-and-fig
+  mockup it only cites as a worked reference, contradicting this ADR's own
+  Context section, which states such citations "use other relationships" --
+  UXP-614's sibling citation of the same kind does use `related`). Fixed by
+  correcting UXP-515.yaml's relationship to `related` to match UXP-614's
+  established pattern, not by weakening this check.
+  (#EPIC-TruthfulProjectRecord/35)
 ====================================================================
 """

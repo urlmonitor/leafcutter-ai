@@ -1,0 +1,148 @@
+id: BO-4000a
+title: "A worktree step that reports any location other than the one it was told stops the run before a single phase agent is dispatched"
+component: build-orchestration
+components:
+  - build_orchestration
+  - worktree_manager
+level: L3
+status: active
+req_status: draft
+work_status: done
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+change_target: pipeline
+risk_surface: contract_boundary
+package_surface: false
+criteria: |
+  Given the workflow told the worktree-opening agent to open the worktree at
+    `C:\Users\Hendrik\Code\leafcutter\worktrees\EPIC-TruthfulProjectRecord`
+  When that agent reports it opened the worktree at
+    `C:\Users\Hendrik\Code\leafcutter\worktrees\uxp-700-tranche-2\tickets\00_inbox\epics\EPIC-TruthfulProjectRecord`
+    (the incident), or at any other location that is not the one it was told
+  Then no phase agent is dispatched
+  And the run stops with a refusal that names both the location it was told and the
+    location it reported
+  And the run's worktree is not replaced by the reported location.
+
+  Given the same instruction
+  When the agent reports the same directory spelled differently —
+    `C:/Users/Hendrik/Code/leafcutter/worktrees/EPIC-TruthfulProjectRecord`, or
+    `c:\users\hendrik\code\leafcutter\worktrees\EPIC-TruthfulProjectRecord\`
+  Then the report is accepted as the location it was told
+  And the run continues with that worktree.
+
+  Given the same instruction
+  When the worktree-opening agent returns no readable result at all
+  Then no phase agent is dispatched
+  And the run stops with a refusal stating that no usable result came back from the
+    worktree step
+  And that refusal is distinguishable from the wrong-location refusal above.
+
+  Given the run reused the worktree resolved for the target (no worktree was opened)
+  When any later agent's result carries a different `worktree_path`
+  Then phase agents keep being handed paths rooted in the resolved worktree.
+depends_on:
+  - BO-4000
+doc_links:
+  - path: templates/workflows-js/build-feature.js
+    relationship: implements
+    status: exists
+    relevance: "The step that adopted the setup agent's reported path and discarded the resolved one."
+  - path: unit_tests/_workflow_engine_harness.py
+    relationship: specifies
+    status: exists
+    relevance: "Harness for stubbing the worktree agent's report and observing the dispatches."
+  - path: docs/architecture/adrs/ADR-039-fast-lane-occupied-workspace-refusal.md
+    relationship: related
+    status: exists
+    relevance: "Precedent for a refusal as a discriminated result that cannot be mistaken for success or for another refusal kind."
+  - path: docs/architecture/components/worktree-manager.md
+    relationship: describes
+    status: exists
+    relevance: "Worktree lifecycle component whose opening step this record adjudicates."
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "The instructed and reported locations are compared with BO-3900's single equivalence rule (separator spelling, trailing separator, and letter case for drive-lettered and UNC forms). Raw string equality is a defect."
+  - "The reported location is read only from the worktree step's schema-validated result. A missing, unparseable or schema-failing result counts as 'no usable result'; it never means 'no worktree needed', and the run never falls back to the current directory."
+  - "Both refusals end the run before any phase agent is dispatched. Each carries a stable, machine-readable reason discriminator (wrong location versus no usable result) and, for the wrong-location refusal, both locations, so the two can be told apart without parsing message wording (ADR-039 precedent)."
+  - "A refusal stops the run only. It does not remove, modify or register anything the worktree agent may have created: cleanup is a separate capability that has not been requested."
+  - "Once assigned, the run's worktree is never changed. A worktree_path field in any later agent result is ignored when rooting phase prompts."
+  - "When a differently spelled report is accepted, the run keeps the instructed location's spelling for every later phase prompt."
+delivers_to: null
+expects_from:
+  ac_id: BO-4000
+  contract: "The exact location string BO-4000 names to the worktree-opening agent (<worktree base>/<target identity>, in BO-3900's output spelling), and the run's worktree as a single assignment made at the worktree step."
+test_required: true
+test_spec:
+  - name: test_reported_location_other_than_instructed_stops_before_any_phase_agent
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: "With the worktree stub reporting the incident's nested epic-folder path, no phase agent is dispatched and the refusal names both locations."
+  - name: test_same_location_in_another_spelling_is_accepted
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: "Paired acceptable input: forward-slash, lower-case and trailing-separator spellings of the instructed location are accepted and the run proceeds."
+  - name: test_unreadable_worktree_result_refuses_distinguishably_from_wrong_location
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: "No usable result and a wrong location both stop the run with different stated reasons."
+  - name: test_later_worktree_path_in_an_agent_result_does_not_replace_the_resolved_worktree
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: seam
+    description: "In the reuse case, a stray worktree_path in a later result does not change the root of subsequent phase prompts."
+  - name: test_worktree_report_adjudication_is_reachable_from_the_workflow_top_level_body
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: reachability
+    surface_invoked: templates/workflows-js/build-feature.js
+    description: "All cases are driven through _workflow_engine_harness.py running build-feature.js's own top-level body."
+test_rationale: |
+  BO-4000 makes the workflow name the location. It cannot make an agent obey. The only
+  guarantee the workflow can give is to refuse a report that disagrees. Every BO-4000 test
+  stays green with a stub that obeys, so disobedience needs its own stubs. The
+  other-spelling case is paired with it because the obvious implementation, raw string
+  equality, refuses a correct worktree whenever git and the agent spell the path
+  differently, which on Windows is the normal case.
+covered_by:
+  - unit_tests/workflows/test_bo4000a_worktree_report_adjudication.py
+implemented_by:
+  - templates/workflows-js/build-feature.js
+origin_agent: business-analyst
+created: 2026-09-14
+amended_by:
+- reason: it-po-technical-enrichment
+  date: 2026-09-14
+  by: it-po
+  changes: 'Set package_surface: false, added it_requirements and doc_links, tightened
+    expects_from, and set readiness to reviewed. criteria, test_spec, test_rationale
+    and notes are unchanged.'
+- action: approved
+  agent: approve_acs
+  date: '2026-09-14'
+superseded_by: null
+notes: |
+  NAMED MUTATIONS (each turns only this record's tests red):
+    M1 — adopt whatever path the worktree agent reports (the incident behaviour). Caught by
+         test_reported_location_other_than_instructed_stops_before_any_phase_agent.
+    M2 — compare instructed and reported locations by raw string equality. Caught by
+         test_same_location_in_another_spelling_is_accepted.
+    M3 — treat an unreadable result as "no worktree needed" and continue in the current
+         directory. Caught by test_unreadable_worktree_result_refuses_distinguishably_from_wrong_location.
+    M4 — let any later agent result's worktree_path overwrite the run's worktree. Caught by
+         test_later_worktree_path_in_an_agent_result_does_not_replace_the_resolved_worktree.
+
+  Refusing after the agent has already run cannot undo a nested checkout it may have
+  created. This record stops the run from building on one. It does not remove the nested
+  checkout. Stating that plainly so no one reads the refusal as a repair. Cleaning up
+  after a disobedient agent would be a separate, explicitly requested capability.

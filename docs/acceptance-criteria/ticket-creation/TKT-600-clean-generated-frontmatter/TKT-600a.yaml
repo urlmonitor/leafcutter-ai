@@ -17,9 +17,18 @@ criteria: |
   surface without hand-editing.
 depends_on: [TKT-600]
 doc_links:
-  - path: scripts/ac_store/generate_ticket_from_ac.py
+  - path: scripts/ac_store/_gtfa_files_touched.py
     relationship: modifies
     status: exists
+    relevance: "The files_touched half — _build_files_touched and the prose-path extraction that must name only real edit-surface files."
+  - path: scripts/ac_store/_gtfa_store.py
+    relationship: modifies
+    status: exists
+    relevance: "The depends_on half — _build_ticket_depends_on, which must produce real ticket references or an empty list rather than copying AC ids verbatim."
+  - path: scripts/ac_store/_gtfa_frontmatter.py
+    relationship: modifies
+    status: exists
+    relevance: "_build_frontmatter is where both fields are emitted into the block the ticket_frontmatter_guard validates."
 assigned_agent: null
 estimated_complexity: null
 delivers_to: null

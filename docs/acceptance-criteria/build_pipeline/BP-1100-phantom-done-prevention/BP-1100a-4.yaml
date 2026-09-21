@@ -26,10 +26,10 @@ depends_on:
   - BP-1100a
   - BP-1100a-3
 doc_links:
-  - path: scripts/ac_store/generate_ticket_from_ac.py
+  - path: scripts/ac_store/_gtfa_files_touched.py
     relationship: modifies
     status: exists
-    relevance: "The surface, and the same function as BP-1100a-3 but its other half — the only file this AC edits. Verified 2026-08-18: when it_requirements is the LIST form, _build_files_touched (lines 570-574) hands every prose bullet to _extract_paths_from_prose (line 496), which admits any token containing a '/' whose final component carries a known extension OR which starts a known path prefix. The extractor is purely lexical — it reads the token, never the sentence around it — so 'run this' and 'do not touch this' are indistinguishable from 'change this'."
+    relevance: "The surface, and the same function as BP-1100a-3 but its other half — the only file this AC edits. Verified 2026-08-18, re-pointed 2026-09-14 after the generator decomposition: when it_requirements is the LIST form, _build_files_touched hands every prose bullet to _extract_paths_from_prose, which admits any token containing a '/' whose final component carries a known extension OR which starts a known path prefix. The extractor is purely lexical — it reads the token, never the sentence around it — so 'run this' and 'do not touch this' are indistinguishable from 'change this'."
   - path: docs/acceptance-criteria/build-orchestration/BO-2400-fast-lane-build/BO-2400g-2.yaml
     relationship: related
     status: exists
@@ -44,7 +44,7 @@ doc_links:
 assigned_agent: python-coder
 estimated_complexity: M
 it_requirements:
-  reference_file_path: "scripts/ac_store/generate_ticket_from_ac.py"
+  reference_file_path: "scripts/ac_store/_gtfa_files_touched.py"
   n_location_rule: "2 — _extract_paths_from_prose (line 496) AND its caller in _build_files_touched (lines 570-574). The extractor is a pure lexical scan with no access to the sentence, so the decision cannot be made inside it alone; the caller is where a prose-derived path may be admitted or refused. A change confined to the extractor's regex or prefix list narrows which tokens are seen and still admits every token it does see."
   required_skills:
     - python-coder

@@ -22,10 +22,18 @@ criteria: |
   And generation completes without recording a warning about the absent section.
 depends_on: [TKT-500g, TKT-500g-1]
 doc_links:
-  - path: scripts/ac_store/generate_ticket_from_ac.py
+  - path: scripts/ac_store/_gtfa_body.py
     relationship: constrains
     status: exists
-    relevance: "The bounded fallback. When no demand was authored the generator may derive one from the requirement's own wording — this criterion is the boundary on that derivation, so widening the authored route does not start manufacturing obligations for records nobody asked to prove."
+    relevance: "The bounded fallback. _build_ticket_body's `has_code_producer or authored_spec` gate decides whether any proof section is emitted at all — this criterion is the boundary on that gate, so widening the authored route does not start manufacturing obligations for records nobody asked to prove."
+  - path: scripts/ac_store/_gtfa_test_descriptors.py
+    relationship: constrains
+    status: exists
+    relevance: "_derive_tests_from_criteria is the derivation this criterion bounds — the route that would manufacture a proof statement from the requirement's own wording."
+  - path: scripts/ac_store/_gtfa_agents_inputs.py
+    relationship: constrains
+    status: exists
+    relevance: "_collect_needed_agents decides whether test-writer and test-runner are marked owed. The omission and the phase list must move together, and the phase-list half is decided here."
   - path: unit_tests/ac_store/test_authored_test_spec_survives_generation.py
     relationship: verifies
     status: exists

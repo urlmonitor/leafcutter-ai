@@ -122,9 +122,7 @@ if str(_COMMIT_GUARDIAN_DIR) not in sys.path:
 _SUBPROCESS_TIMEOUT_SECONDS = 60
 
 
-# ---------------------------------------------------------------------------
 # Fixture builders — real serializer, never a hand-typed YAML literal (2h.2)
-# ---------------------------------------------------------------------------
 
 
 def _dump_seam_answer_yaml(answer: dict) -> str:
@@ -225,6 +223,15 @@ def _build_ticket_fixture(
         "",
         f"# {work_item_id}",
         "",
+        # Required once KI-CG-024 fixed check #6's registry path (previously skipped
+        # every run, masking this fixture's own check-#6 shortfall) -- unrelated to
+        # this file's own cross-layer seam answer angle.
+        "## Implementation Tasks",
+        "",
+        "### test-writer",
+        "",
+        "- [x] Author the fixture's RED tests.",
+        "",
         "## Sign-offs",
         "",
         "- [x] test-writer — 2026-08-31 12:00",
@@ -242,9 +249,7 @@ def _build_ticket_fixture(
     return "\n".join(lines)
 
 
-# ---------------------------------------------------------------------------
 # angle: criterion
-# ---------------------------------------------------------------------------
 
 
 class TestFourRecordsProduceThreeNamedShortfallsAndNoReportForW(unittest.TestCase):
@@ -314,9 +319,7 @@ class TestFourRecordsProduceThreeNamedShortfallsAndNoReportForW(unittest.TestCas
         self.assertEqual(result_z["work_item_id"], "record-z.md")
 
 
-# ---------------------------------------------------------------------------
 # angle: real_artifact
-# ---------------------------------------------------------------------------
 
 
 class TestRecordsAreParsedFromRealTicketFilesWrittenBySignoffRecipe(unittest.TestCase):
@@ -400,9 +403,7 @@ class TestRecordsAreParsedFromRealTicketFilesWrittenBySignoffRecipe(unittest.Tes
                     self.assertEqual(result["kind"], expected_kind, f"{name}: {result!r}")
 
 
-# ---------------------------------------------------------------------------
 # angle: boundary
-# ---------------------------------------------------------------------------
 
 
 class TestCardinalityIsCountedPerWorkItemAcrossTwoItemsAndAHaltedRun(unittest.TestCase):
@@ -487,9 +488,7 @@ class TestCardinalityIsCountedPerWorkItemAcrossTwoItemsAndAHaltedRun(unittest.Te
         )
 
 
-# ---------------------------------------------------------------------------
 # angle: reachability
-# ---------------------------------------------------------------------------
 
 
 class TestShortfallsAreReportedThroughTheDeployedSignoffHook(unittest.TestCase):

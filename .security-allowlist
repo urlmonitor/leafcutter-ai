@@ -276,3 +276,12 @@ ENTROPY_HIGH:unit_tests/product_truth/test_uxp_700e_3_i.py:*
 # key. Until then these two entries stop it blocking the register.
 ENTROPY_HIGH:docs/known-issues/commit-guardian.md:*
 ENTROPY_HIGH:docs/known-issues/testing-quality/open-high-ki-tq-20260831-mutation-probe-lands-in-the-wrong-copy.md:*
+
+# A keyword argument passing a module-level constant of edit-surface relationship
+# names into a helper call -- ordinary code, no credential (not reproduced here for
+# the same reason as the entries above: quoting it would trip the scanner this entry
+# suppresses). The long SCREAMING_SNAKE identifier reads as high entropy. Glob, not
+# per-line: the call sits mid-file and its line number moves whenever anything is
+# added above it. This module was carved out of generate_ticket_from_ac.py when the
+# 4035-line original was split to clear the 400-line size gate.
+ENTROPY_HIGH:scripts/ac_store/_gtfa_files_touched.py:*
