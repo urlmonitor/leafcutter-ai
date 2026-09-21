@@ -73,7 +73,7 @@ Severity in the **filename** is a three-level index bucket (`blocker` / `high` /
 
 Fixed issues move to [`commit-guardian/resolved/`](commit-guardian/resolved/) and are no longer listed as open. They are kept, not deleted.
 
-**Open: 68** (6 blocker, 26 high, 36 low) · **Resolved: 6**
+**Open: 67** (6 blocker, 25 high, 36 low) · **Resolved: 7**
 
 ## Open
 
