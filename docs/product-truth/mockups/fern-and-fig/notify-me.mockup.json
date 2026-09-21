@@ -1,6 +1,7 @@
 {
   "id": "fern-and-fig/notify-me",
   "component": "ux-prototyping",
+  "example_product": "fern-and-fig",
   "screen": "notify-me",
   "title": "Notify me",
   "summary": "STUB — registered so the customer-buys-a-plant flow's `notify` branch resolves. Replaces add-to-cart with a notify-me action for an out-of-stock plant. Not yet drawn; see plant-listing for the gold-reference shape.",

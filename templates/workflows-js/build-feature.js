@@ -125,6 +125,17 @@ const WORKTREE_SCHEMA = {
 };
 
 /**
+ * The "run a command, relay raw stdout" envelope (BO-4000's repository-facts
+ * dispatch; same shape plan-feature.js already uses for its registry read).
+ * The workflow validates and parses `output` itself — this schema only
+ * guards the envelope, never the facts payload inside it.
+ */
+const REPO_FACTS_ENVELOPE_SCHEMA = {
+  type: "object",
+  required: ["output", "exit_code"],
+  properties: { output: { type: "string" }, exit_code: { type: "number" } },
+};
+/**
  * Completion-time re-read of the epic's set of work (BO-300a-5).
  *
  * `readable: false` is a first-class answer: a re-read that FAILED must never
@@ -1587,118 +1598,233 @@ const resolvedTarget = {
   worktree_path: null,
 };
 
-// Establish the isolated worktree (create or reuse) before any build work.
-const worktreeTarget = target_type === "epic"
-  ? (epic_path || target)
-  : (ticket_path || target);
-
-const worktreeResult = await agent(
-  `Create or reuse the isolated git worktree for the build target.\n\n` +
-  `Target: "${worktreeTarget}"\n` +
-  `Target type: "${target_type}"\n\n` +
-  `Instructions:\n` +
-  `1. Run 'git worktree list --porcelain' to check if a worktree for this target already exists.\n` +
-  `2. If it exists: REUSE it — report the existing absolute path as worktree_path, status "reused".\n` +
-  `3. If it does not exist: CREATE it from origin/main.\n` +
-  `   For epics: 'git worktree add <path> -b <branch-name> origin/main'\n` +
-  `   Report the new absolute path as worktree_path, status "created".\n` +
-  `4. On any error: report status "failed" with an error message.\n\n` +
-  `IMPORTANT: After creating, bootstrap the worktree: copy/symlink .leafcutter from the main clone so hooks are present.\n\n` +
-  `Return JSON: { "worktree_path": "<absolute path>", "status": "created"|"reused", "error": "<if failed, else omit>" }`,
-  {
-    agentType: "worktree-agent",
-    schema: WORKTREE_SCHEMA,
-    label: "worktree-setup",
-    phase: "Resolve Target",
-  }
-);
-
-if (!worktreeResult || worktreeResult.status === "failed" || worktreeResult.error) {
-  return {
-    status: "error",
-    worktree_undetermined: true,
-    resolved_target: resolvedTarget,
-    message:
-      `The isolated working copy for "${worktreeTarget}" is UNDETERMINED: ` +
-      `worktree-agent failed to create or reuse one. ` +
-      `Error: ${(worktreeResult && worktreeResult.error) || "worktree-agent returned null or failed"}. ` +
-      `No phase agent has been spawned. Safety abort: /build-feature will NOT ` +
-      `fall back to the epic's work-store folder, to the directory the process ` +
-      `happens to be running in, or to any other existing location — an agent ` +
-      `sent to the wrong working copy commits in the wrong repository, and that ` +
-      `is discovered only after the fact. Fix the worktree issue and re-run.`,
-    abort_reason: "worktree-undetermined",
-    action_required: "establish_worktree",
-  };
+// Establish the isolated worktree (reuse or open) before any build work.
+const worktreeTarget = target_type === "epic" ? (epic_path || target) : (ticket_path || target);
+/**
+ * Run WORKTREE_REPO_FACTS_SCRIPT and relay its parsed JSON. Never itself
+ * decides reuse/open/refuse — every caller below reads structured facts,
+ * never the resolver's or an agent's own word (BO-4000).
+ */
+async function repoFactsCall(command, label) {
+  const r = await agent(`Run the following command and return ONLY its raw stdout:\n${command}\nReturn JSON: { "output": "<raw stdout>", "exit_code": <number> }`, { agentType: "status-checker", schema: REPO_FACTS_ENVELOPE_SCHEMA, label, phase: "Resolve Target" });
+  if (!r || typeof r.output !== "string" || Number(r.exit_code) !== 0) return null;
+  try { return JSON.parse(r.output); } catch (_e) { return null; }
 }
-
-const realWorktreePath = worktreeResult.worktree_path;
+/** A worktree-undetermined abort payload (BO-4000's abort shape), extended per refusal kind. */
+function undetermined(extra) { return Object.assign({ status: "error", worktree_undetermined: true, resolved_target: resolvedTarget, action_required: "establish_worktree" }, extra); }
+let realWorktreePath = null, stalenessReport = null;
+// Scenario 1: reuse the resolved worktree IFF facts confirm it; otherwise not used — proceed as if unresolved (scenario 2).
+if (resolveResult.worktree_path) {
+  const rf = await repoFactsCall(`python {{config.output_root}}/scripts/worktree_repo_facts.py facts "${resolveResult.worktree_path}"`, "worktree-facts-resolved");
+  if (rf && rf.exists && rf.is_linked_worktree && !rf.is_main_checkout && rf.same_repository) realWorktreePath = resolveResult.worktree_path;
+}
 if (!realWorktreePath) {
-  return {
-    status: "error",
-    worktree_undetermined: true,
-    resolved_target: resolvedTarget,
-    message:
-      "The isolated working copy for this drive is UNDETERMINED: worktree-agent " +
-      "returned no worktree_path. No phase agent has been spawned, and no " +
-      "substitute location is used in its place.",
-    abort_reason: "worktree-undetermined",
-    action_required: "establish_worktree",
-  };
+  const base = await repoFactsCall("python {{config.output_root}}/scripts/worktree_repo_facts.py base", "worktree-base");
+  if (!base || !base.worktree_base) return undetermined({ abort_reason: "worktree-base-unavailable", message: "The repository's worktree base could not be established. No phase agent has been spawned." });
+  const identity = normalizePathForm(worktreeTarget).replace(/\/$/, "").split("/").filter(Boolean).pop() || worktreeTarget;
+  const instructedLocation = normalizePathForm(base.worktree_base).replace(/\/$/, "") + "/" + identity;
+  const targetBranch = (target_type === "epic" ? "epic/" : "ticket/") + identity.replace(/^EPIC-/, "").replace(/([a-z0-9])([A-Z])/g, "$1-$2").toLowerCase();
+  const locFacts = await repoFactsCall(`python {{config.output_root}}/scripts/worktree_repo_facts.py facts "${instructedLocation}"`, "worktree-facts-location");
+  if (locFacts && locFacts.exists) {
+    // scenario 2 — reuse a worktree of this repo already on the target's branch; refuse any other occupant.
+    if (locFacts.is_linked_worktree && !locFacts.is_main_checkout && locFacts.same_repository && locFacts.branch === targetBranch) realWorktreePath = instructedLocation;
+    else return undetermined({ abort_reason: "worktree-location-occupied", location: instructedLocation, occupant: locFacts, message: `The named worktree location "${instructedLocation}" is occupied by something other than the target's own worktree. No phase agent has been spawned; nothing there was changed.` });
+  } else {
+    const standing = await repoFactsCall(`python {{config.output_root}}/scripts/worktree_repo_facts.py branch-standing "${targetBranch}"`, "branch-standing");
+    let startRef = "origin/main";
+    if (standing && standing.exists) {
+      if (!standing.fetch_ok) return undetermined({ abort_reason: "branch-standing-unverifiable", branch: targetBranch, message: `The standing of branch "${targetBranch}" against origin/main could not be checked (fetch failed). No phase agent has been spawned.` });
+      if (standing.behind > 0 && standing.ahead > 0) return undetermined({ abort_reason: "branch-has-unique-commits", branch: targetBranch, ahead: standing.ahead, behind: standing.behind, message: `Branch "${targetBranch}" is ${standing.ahead} commit(s) ahead and ${standing.behind} behind origin/main. No worktree was opened. Bring the branch up to date, remove it, or aim the run at a different branch.` });
+      if (standing.behind > 0) stalenessReport = { branch: targetBranch, behind: standing.behind, started_from: "origin/main" };
+      else startRef = targetBranch;
+    }
+    const worktreeResult = await agent(`Open a NEW git worktree at the EXACT location "${instructedLocation}" on branch "${targetBranch}", starting from "${startRef}". Do not choose any other location. Bootstrap it (copy/symlink .leafcutter so hooks are present). On any error report status "failed".\nReturn JSON: { "worktree_path": "<absolute path>", "status": "created"|"reused", "error": "<if failed, else omit>" }`, { agentType: "worktree-agent", schema: WORKTREE_SCHEMA, label: "worktree-setup", phase: "Resolve Target" });
+    if (!worktreeResult || worktreeResult.status === "failed" || worktreeResult.error || typeof worktreeResult.worktree_path !== "string") return undetermined({ abort_reason: "worktree-report-unusable", instructed_location: instructedLocation, message: `The worktree-opening agent returned no usable result for "${instructedLocation}". No phase agent has been spawned.` });
+    if (!pathsEquivalent(instructedLocation, worktreeResult.worktree_path)) return undetermined({ abort_reason: "worktree-location-mismatch", instructed_location: instructedLocation, reported_location: worktreeResult.worktree_path, message: `The worktree-opening agent reported "${worktreeResult.worktree_path}", not the instructed location "${instructedLocation}". No phase agent has been spawned, and the run's worktree was not replaced.` });
+    realWorktreePath = instructedLocation;
+  }
 }
-
+if (!realWorktreePath) return undetermined({ message: "The isolated working copy for this drive is UNDETERMINED. No phase agent has been spawned, and no substitute location is used in its place." });
 // The later step has now established the isolated working copy, so the
 // resolved target carries it and no longer reads as undetermined.
 resolvedTarget.worktree_path = realWorktreePath;
+if (stalenessReport) resolvedTarget.worktree_staleness = stalenessReport; // BO-4000b
+
+// BO-3900-PATH-HELPERS-START
+/**
+ * Cross-platform path handling (BO-3900). Every rule below is decided from
+ * the path STRING's own form only — never from process.platform or any
+ * other host signal (BO-3900a). This block is a deliberate, self-contained
+ * COPY: the E2 engine injects no module loader (ADR-030; KI-BO-028), so a
+ * workflow script cannot require/import Node's `path`, `os`, or `fs`
+ * modules, or reach for a shared helper file outside itself. Every script
+ * that needs this logic carries its own copy (BO-3900's it_requirements
+ * names this explicitly); all copies must reach identical outcomes for
+ * identical inputs, and each script's own harness run is the guard.
+ */
+
+/**
+ * Classify a path STRING's form: "absolute", "relative", or "unrecognised".
+ *
+ * Absolute: drive-lettered (either letter case, either or mixed separators),
+ * UNC (\\server\share, or //server/share via the leading "/" rule), or a
+ * leading "/" (POSIX).
+ * Relative: no root and no drive.
+ * Unrecognised (never resolved, never joined — BO-3900c): drive-relative
+ * ("C:foo"), rooted-without-drive ("\foo"), empty/blank, or a value already
+ * carrying a second root after its first segment. A second drive root
+ * anywhere after the string's own start means the value is already
+ * (mis-)joined — refused, never repaired.
+ *
+ * @param {*} input
+ * @returns {"absolute"|"relative"|"unrecognised"}
+ */
+function classifyPathForm(input) {
+  if (typeof input !== "string" || input.trim() === "") return "unrecognised";
+  if ((input.match(/[A-Za-z]:[\\/]/g) || []).length >= 2) return "unrecognised";
+  if (/^(\\\\[^\\/]|[A-Za-z]:[\\/]|\/)/.test(input)) return "absolute";
+  if (/^([A-Za-z]:|\\(?!\\))/.test(input)) return "unrecognised";
+  return "relative";
+}
+
+/**
+ * Normalise separator spelling to "/" and apply "." and ".." segments,
+ * anchored on the path's own root (if it has one) so a ".." can never climb
+ * above it. Content-preserving otherwise: letter case is never changed here.
+ * The root is a drive ("C:/"), a UNC share ("//server/share/"), or "/".
+ *
+ * @param {string} input
+ * @returns {string}
+ */
+function normalizePathForm(input) {
+  const slashed = String(input).replace(/\\/g, "/");
+  const rootMatch = /^([A-Za-z]:\/|\/\/[^/]+\/[^/]+(\/|$)|\/)/.exec(slashed);
+  const root = rootMatch ? rootMatch[0].replace(/\/?$/, "/") : "";
+  const stack = [];
+  for (const seg of slashed.slice(root.length).split("/")) {
+    if (seg === "" || seg === ".") continue;
+    if (seg !== "..") stack.push(seg);
+    else if (stack.length > 0) stack.pop();
+    else if (root === "") stack.push("..");
+  }
+  return root + stack.join("/");
+}
+
+/**
+ * Resolve `input` onto `root` (BO-3900's delivers_to point 4). An absolute
+ * input is normalised and returned unchanged in content — never joined onto
+ * anything, inside the root or not. A relative input is joined onto the
+ * normalised root exactly once. An unrecognised input is refused: its exact
+ * value comes back verbatim, still unjoined, still unrepaired (BO-3900c).
+ *
+ * @param {string} root
+ * @param {*} input
+ * @returns {{ok: true, form: string, path: string}|{ok: false, form: "unrecognised", value: *}}
+ */
+function resolvePathOntoRoot(root, input) {
+  const form = classifyPathForm(input);
+  if (form === "unrecognised") return { ok: false, form, value: input };
+  const path = normalizePathForm(input);
+  if (form === "absolute") return { ok: true, form, path };
+  return { ok: true, form, path: normalizePathForm(root).replace(/\/$/, "") + "/" + path };
+}
+
+/**
+ * A comparison key for an absolute path (BO-4000's equivalence rule, reusing
+ * BO-3900b's own case policy): separators and a trailing separator are
+ * ignored; letter case is ignored ONLY for drive-lettered ("C:/...") and UNC
+ * ("//server/...") forms, and preserved for a POSIX ("/...") form.
+ *
+ * @param {string} input
+ * @returns {string}
+ */
+function pathComparableKey(input) {
+  const norm = normalizePathForm(input).replace(/\/$/, "");
+  return /^([A-Za-z]:\/|\/\/)/.test(norm) ? norm.toLowerCase() : norm;
+}
+/** Do `a` and `b` name the same location, per pathComparableKey()? */
+function pathsEquivalent(a, b) {
+  return pathComparableKey(a) === pathComparableKey(b);
+}
+// BO-3900-PATH-HELPERS-END
 
 // ---------------------------------------------------------------------------
 // Derive worktree-resident paths from resolve output
 //
 // resolve may return epic_path / ticket_path as an absolute main-clone path
-// (e.g. /home/user/leafcutter-ai/tickets/…) or as a repo-relative path
-// (e.g. tickets/00_inbox/epics/EPIC-X).  Either way we must land inside
-// realWorktreePath before passing paths to the planner or phase agents.
-//
-// Algorithm:
-//   1. If the path is already inside realWorktreePath → use as-is.
-//   2. If absolute → strip to the repo-relative portion via known directory
-//      anchors (tickets/, templates/, docs/, unit_tests/), then join under
-//      realWorktreePath.
-//   3. If repo-relative (no leading slash) → join directly under realWorktreePath.
+// (e.g. /home/user/leafcutter-ai/tickets/…), a repo-relative path (e.g.
+// tickets/00_inbox/epics/EPIC-X), or an absolute Windows path in any
+// separator spelling. Either way we must land inside realWorktreePath before
+// passing paths to the planner or phase agents.
 // ---------------------------------------------------------------------------
 
+/**
+ * Algorithm (BO-3900): classify the path's FORM from the string alone.
+ *   - absolute  → normalised and returned as-is; NEVER joined onto anything,
+ *                 whether it names a location inside realWorktreePath or
+ *                 outside it (BO-3900's own delivers_to contract, point 4).
+ *   - relative  → joined onto the normalised realWorktreePath exactly once.
+ *   - unrecognised (drive-relative, rooted-without-drive, blank, or already
+ *     carrying a second root) → the value is returned verbatim, still
+ *     unjoined and unrepaired (BO-3900c). Call sites that must REFUSE
+ *     dispatch for a ticket with such a value check classifyPathForm()
+ *     directly, before ever reaching this function — see the chunk-dispatch
+ *     and single-ticket call sites below.
+ */
 function toWorktreePath(resolvedPath, worktreePath) {
   if (!resolvedPath) return null;
-
-  // Case 1: already inside the worktree
-  if (
-    resolvedPath === worktreePath ||
-    resolvedPath.startsWith(worktreePath + "/")
-  ) {
-    return resolvedPath;
-  }
-
-  // Case 2: absolute path — strip to repo-relative using known anchors
-  if (resolvedPath.startsWith("/")) {
-    const anchors = ["tickets/", "templates/", "docs/", "unit_tests/"];
-    for (const anchor of anchors) {
-      const idx = resolvedPath.indexOf("/" + anchor);
-      if (idx !== -1) {
-        return worktreePath + "/" + resolvedPath.slice(idx + 1);
-      }
-    }
-    // Fallback: try anchor without requiring a leading slash
-    for (const anchor of anchors) {
-      const idx = resolvedPath.indexOf(anchor);
-      if (idx !== -1) {
-        return worktreePath + "/" + resolvedPath.slice(idx);
-      }
-    }
-  }
-
-  // Case 3: repo-relative (no leading slash) — join directly
-  return worktreePath + "/" + resolvedPath;
+  const resolved = resolvePathOntoRoot(worktreePath, resolvedPath);
+  return resolved.ok ? resolved.path : resolved.value;
 }
+
+/**
+ * The BO-3900c refusal record for a ticket path whose FORM is neither
+ * recognisably absolute nor recognisably relative. Shared by the epic
+ * chunk-dispatch and single-ticket call sites so both refuse identically.
+ * Nothing is repaired: the reason quotes EXACTLY the value given, verbatim,
+ * never trimmed, never resolved against a guessed root.
+ *
+ * @param {*} ticketPath - The unrecognised value, reproduced verbatim.
+ * @param {string} dispatchNote - Appended to "No phase agent was dispatched".
+ * @returns {{status: "blocked", ticket_path: *, classification: string, message: string}}
+ */
+function pathFormRefusal(ticketPath, dispatchNote) {
+  return {
+    status: "blocked",
+    ticket_path: ticketPath,
+    classification: "path-form-unrecognised",
+    message:
+      `Ticket path "${ticketPath}" is not a recognised absolute or relative path. ` +
+      `No phase agent was dispatched${dispatchNote}. The value above is reproduced verbatim — ` +
+      `it was not joined onto the worktree, not trimmed into some other path, and not guessed at.`,
+  };
+}
+/**
+ * BO-3900e: resolve one depends_on ENTRY where the ticket frontmatter hook
+ * resolves it (ticket-authoring SKILL.md, "depends_on Resolution") — beside
+ * the dependant's OWN ticket, never joined onto the worktree root. Order:
+ * <ticket_dir>/<entry>, <ticket_dir>/done/<entry>, and (only when the
+ * ticket itself sits inside done/) <ticket_dir>/../<entry>. An entry
+ * beginning "tickets/" still resolves against the worktree root; an
+ * absolute entry is used as written — both single-candidate, no sibling
+ * search. Existence is decided by the SAME readTicketRecordBack dispatch
+ * every other reader uses — no new file-system call. Both depends_on
+ * readers (run-set membership check, per-ticket release gate) call this
+ * ONE function so they can never disagree about where a prerequisite
+ * lives. An AC-id entry (e.g. "TKT-500f") is not a path; it is not
+ * detected specially and simply falls through this same search unresolved.
+ *
+ * @returns {Promise<{resolved: string|null, reported: string, record: object|null}>}
+ *   `reported` is the first sibling candidate when nothing resolves —
+ *   never the worktree-root join the old code produced.
+ */
+async function resolveDependsOnPath(entry, ticketWorktreePath, worktreePath) {
+  const form = classifyPathForm(entry);
+  if (form === "unrecognised") return { resolved: null, reported: entry, record: null };
+  const dir = normalizePathForm(ticketWorktreePath).replace(/\/[^/]*$/, "");
+  const candidates = form === "absolute" || /^tickets\//.test(normalizePathForm(entry)) ? [toWorktreePath(entry, worktreePath)] : [dir, `${dir}/done`, ...(/\/done$/.test(dir) ? [`${dir}/..`] : [])].map((root) => resolvePathOntoRoot(root, entry).path);
+  for (const candidate of candidates) { const record = await readTicketRecordBack(candidate); if (record && record.readable) return { resolved: candidate, reported: candidate, record }; }
+  return { resolved: null, reported: candidates[0], record: null }; }
 
 // ---------------------------------------------------------------------------
 // driveTicketPhases — flattened per-ticket phase driver
@@ -2969,12 +3095,8 @@ if (target_type === "epic") {
             // and the drive absorbs new work silently. A partial guard beats
             // both. When the planner answers question (7) this branch is dead.
             const dependencyRecord = await readTicketRecordBack(normalized);
-            const dependsOn = Array.isArray(dependencyRecord && dependencyRecord.depends_on)
-              ? dependencyRecord.depends_on.map((p) => toWorktreePath(p, realWorktreePath))
-              : [];
-            const linksIntoRunSet = dependsOn.some(
-              (p) => p && (plannedTicketPaths.indexOf(p) !== -1 || priorCompletedPaths.has(p))
-            );
+            const dependsOn = (await Promise.all((Array.isArray(dependencyRecord && dependencyRecord.depends_on) ? dependencyRecord.depends_on : []).map((p) => resolveDependsOnPath(p, normalized, realWorktreePath)))).map((r) => r.resolved || r.reported);
+            const linksIntoRunSet = dependsOn.some((p) => p && (plannedTicketPaths.indexOf(p) !== -1 || priorCompletedPaths.has(p)));
             if (!linksIntoRunSet) {
               continue;
             }
@@ -3145,15 +3267,29 @@ if (target_type === "epic") {
         // run already performs, not to pretend the dispatch is not happening.
         const chunkOutcomesByPath = {};
         const chunkThunks = chunk.map((ticket) => {
+          /*
+           * BO-3900c — a path whose FORM is neither recognisably absolute
+           * nor recognisably relative is refused by name, before any agent
+           * is dispatched for it. This ticket alone is blocked; well-formed
+           * siblings in the same batch/chunk are unaffected (this check runs
+           * per ticket, inside the same parallel chunk every other ticket
+           * goes through). Nothing is repaired (see pathFormRefusal).
+           */
+          if (classifyPathForm(ticket.path) === "unrecognised") {
+            const refusedOutcome = Promise.resolve({
+              ticket_path: ticket.path,
+              status: "blocked",
+              result: pathFormRefusal(ticket.path, " for it"),
+            });
+            chunkOutcomesByPath[ticket.path] = refusedOutcome;
+            return () => refusedOutcome;
+          }
+
           const worktreeTicketPath = toWorktreePath(ticket.path, realWorktreePath);
 
           const outcomePromise = (async () => {
             const dependencyRecord = await readTicketRecordBack(worktreeTicketPath);
-            const dependsOn = Array.isArray(dependencyRecord && dependencyRecord.depends_on)
-              ? dependencyRecord.depends_on
-                  .map((p) => toWorktreePath(p, realWorktreePath))
-                  .filter((p) => p && p !== worktreeTicketPath)
-              : [];
+            const dependsOn = (await Promise.all((Array.isArray(dependencyRecord && dependencyRecord.depends_on) ? dependencyRecord.depends_on : []).map((p) => resolveDependsOnPath(p, worktreeTicketPath, realWorktreePath)))).map((r) => r.resolved || r.reported).filter((p) => p && p !== worktreeTicketPath);
 
             const withheldBy = [];
             const prerequisiteStates = {};
@@ -3605,6 +3741,19 @@ if (target_type === "epic") {
   // the planner reads accurate (post-drive) frontmatter statuses.
   // -----------------------------------------------------------------------
   const singleTicketPath = ticket_path || target;
+
+  /*
+   * BO-3900c — refuse an unrecognised path form before spawning any phase
+   * agent for it, exactly as the epic batch path does.
+   */
+  if (classifyPathForm(singleTicketPath) === "unrecognised") {
+    return {
+      status: "blocked",
+      resolved_target: resolvedTarget,
+      ...pathFormRefusal(singleTicketPath, ""),
+    };
+  }
+
   const worktreeTicketPath = toWorktreePath(singleTicketPath, realWorktreePath);
 
   const ticketResult = await driveTicketPhases(worktreeTicketPath);

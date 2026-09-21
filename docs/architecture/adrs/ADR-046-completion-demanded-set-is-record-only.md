@@ -1,5 +1,5 @@
 ---
-title: "ADR-044: The Completion Decision's Demanded-Step Set Is Derived Solely From the Ticket's Own Record"
+title: "ADR-046: The Completion Decision's Demanded-Step Set Is Derived Solely From the Ticket's Own Record"
 description: "The set of phases a ticket's close is checked against MUST be read out of the ticket's own agents: map and from nowhere else, because a guard that accepts the driven party's account of which phases do not count has stopped checking that party."
 type: "adr"
 status: "active"
@@ -24,7 +24,7 @@ related_code:
   - unit_tests/prompt_assembly/harness_build_ticket_guard.mjs
 ---
 
-# ADR-044: The Completion Decision's Demanded-Step Set Is Derived Solely From the Ticket's Own Record
+# ADR-046: The Completion Decision's Demanded-Step Set Is Derived Solely From the Ticket's Own Record
 
 ## Status
 

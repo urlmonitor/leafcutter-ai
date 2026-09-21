@@ -307,7 +307,10 @@ def test_bp_900g_9_three_unresolvable_entries_are_all_named_in_one_run(
 
     build_synthetic_full_package = _load_build_synthetic_full_package()
     pkg_root = build_synthetic_full_package(tmp_path / "workspace")
-    scratch_build_phases = pkg_root / "scripts" / "build_phases.py"
+    # AC_STORE_DEPLOY_MAP now lives in build_phases_ac_store.py (post
+    # build_phases.py size-limit split) -- build_phases.py itself only
+    # re-exports it.
+    scratch_build_phases = pkg_root / "scripts" / "build_phases_ac_store.py"
     original_text = scratch_build_phases.read_text(encoding="utf-8")
     anchor = "AC_STORE_DEPLOY_MAP: tuple[tuple[str, str], ...] = (\n"
     assert anchor in original_text, (

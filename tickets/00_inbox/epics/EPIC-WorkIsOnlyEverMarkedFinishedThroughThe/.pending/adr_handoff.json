@@ -1,5 +1,5 @@
 {
-  "adr_id": "ADR-044",
+  "adr_id": "ADR-046",
   "affected_files": [
     "scripts/set_ticket_status.py",
     "templates/workflows-js/build-feature.js",

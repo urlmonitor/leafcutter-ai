@@ -1,0 +1,74 @@
+{
+  "_comment": "Single declared entry_kind vocabulary (AC INF-400c-5). Both the route-knowledge classifier (templates/skills/route-knowledge/SKILL.md taxonomy table) and the harvester (scripts/knowledge/harvest_learnings.py _KNOWN_ENTRY_KINDS) must reconcile to exactly this member set. destination_pattern is advisory routing metadata used by scripts/knowledge/emit_knowledge.py to suggest candidates on rejection; a null value means the destination is caller-determined and has no fixed path pattern.",
+  "members": {
+    "adr": {
+      "destination_pattern": "docs/architecture/adrs/ADR-NNN-<slug>.md"
+    },
+    "agent-frontmatter": {
+      "destination_pattern": "templates/agents/<name>.md"
+    },
+    "architecture-doc": {
+      "destination_pattern": "docs/architecture/<name>.md"
+    },
+    "claude-md": {
+      "destination_pattern": "CLAUDE.md"
+    },
+    "claude-md-inline": {
+      "destination_pattern": "CLAUDE.md"
+    },
+    "claude-md-toc": {
+      "destination_pattern": "docs/<subdir>/<name>.md"
+    },
+    "code-comment": {
+      "destination_pattern": null
+    },
+    "explanation": {
+      "destination_pattern": "docs/explanation/<name>.md"
+    },
+    "explanation-doc": {
+      "destination_pattern": "docs/explanation/<name>.md"
+    },
+    "glossary": {
+      "destination_pattern": "docs/glossary.md"
+    },
+    "how-to": {
+      "destination_pattern": "docs/how-to/<name>.md"
+    },
+    "memory-project": {
+      "destination_pattern": "memory/project_<topic>.md"
+    },
+    "memory-reference": {
+      "destination_pattern": "memory/reference_<topic>.md"
+    },
+    "memory-user": {
+      "destination_pattern": "memory/feedback_<topic>.md"
+    },
+    "per-agent-memory": {
+      "destination_pattern": null
+    },
+    "per-folder-readme": {
+      "destination_pattern": "<folder>/README.md"
+    },
+    "reference": {
+      "destination_pattern": "docs/reference/<name>.md"
+    },
+    "reference-doc": {
+      "destination_pattern": "docs/reference/<name>.md"
+    },
+    "retrospective": {
+      "destination_pattern": "docs/retrospectives/<name>.md"
+    },
+    "settings-json": {
+      "destination_pattern": "config/settings.json"
+    },
+    "skill-context": {
+      "destination_pattern": null
+    },
+    "skills-config": {
+      "destination_pattern": "config/skills_config.json"
+    },
+    "ticket-body": {
+      "destination_pattern": "tickets/<status>/<ticket>.md"
+    }
+  }
+}

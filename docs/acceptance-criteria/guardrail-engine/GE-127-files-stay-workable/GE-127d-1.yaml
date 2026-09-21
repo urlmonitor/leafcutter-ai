@@ -7,7 +7,7 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: reviewed
+readiness: approved
 priority: medium
 roadmap_phase: phase_1
 criteria: |
@@ -378,35 +378,43 @@ amended_by:
   by: it-po
   at: 2026-09-01
   note: 'criteria untouched. PACKAGE SURFACE TRUE: this record adds a SECOND hooks_manifest.hooks
-    id for the reconciliation gate — a watched list_ids registration — so
-    check-package-surface-declaration refuses the commit unless a cited AC declares it. HOST
-    DECIDED: a new sibling check_*.py inside templates/scripts/commit_guardian/, not a mode of
-    check_file_size.py, because its trigger population is the published surfaces and the enforcing
-    code rather than the staged file set, and folding it in would fire it on the wrong population.
-    build_commit_guardian copies that directory whole so no scripts/build_phases.py entry is needed;
-    anything imported from outside it does need one. NO NEW TOP-LEVEL KEY: the configured list of
-    published surfaces goes NESTED under the existing file_size section at commit_guardian.json line
-    13, invisible to the mapping_keys container bound at dotted path "". config_schema_fragment names
-    hooks_manifest, which is real and present — the BP-100k-4 / BP-100k-4-i fictional-key precedent
-    is not repeated. DIRECTION OF THE FIX DECIDED EXPLICITLY, AS THE BA REQUIRED: correct the two
-    stale published statements (README.md line 41 and the file_size _comment at line 14) to match the
-    behaviour; do NOT restore the new-files-only exemption, because GE-127b-1''s ratchet delivers the
-    incremental path that wording promised without reopening a hole. Exactly one statement of each
-    fact must survive, per the parent L1. THE INERT-INPUT CLAUSE: check_file(filepath, is_new_file)
-    accepts the newly-added fact and its body never reads it, while the same fact IS legitimately read
-    elsewhere to label a passing file new or modified — so no artifact may assert "the flag is
-    unused"; the expected resolution is removing it from the verdict signature while leaving the
-    reporting use intact, and either permitted resolution must be recorded. SEQUENCING: GE-127c-1 and
-    GE-127b-1 must land before or with this, or its first run reports disagreement with documentation
-    nobody has had the chance to correct. declares_side_effect false: every Then clause reports to a
-    stream and sets an exit status; the documentation correction is a source edit made by the change,
-    not a runtime side-effect the criteria assert. test_spec: eight executing descriptors carrying all
-    three of the BA''s named mutations, plus an add-a-surface-and-require-the-count-to-move descriptor
-    borrowed in shape from BP-1600a-2 so the surface list cannot be a literal, plus the registered hook
-    entry point and the deployed copy in a cold process.'
+    id for the reconciliation gate — a watched list_ids registration — so check-package-surface-declaration
+    refuses the commit unless a cited AC declares it. HOST DECIDED: a new sibling
+    check_*.py inside templates/scripts/commit_guardian/, not a mode of check_file_size.py,
+    because its trigger population is the published surfaces and the enforcing code
+    rather than the staged file set, and folding it in would fire it on the wrong
+    population. build_commit_guardian copies that directory whole so no scripts/build_phases.py
+    entry is needed; anything imported from outside it does need one. NO NEW TOP-LEVEL
+    KEY: the configured list of published surfaces goes NESTED under the existing
+    file_size section at commit_guardian.json line 13, invisible to the mapping_keys
+    container bound at dotted path "". config_schema_fragment names hooks_manifest,
+    which is real and present — the BP-100k-4 / BP-100k-4-i fictional-key precedent
+    is not repeated. DIRECTION OF THE FIX DECIDED EXPLICITLY, AS THE BA REQUIRED:
+    correct the two stale published statements (README.md line 41 and the file_size
+    _comment at line 14) to match the behaviour; do NOT restore the new-files-only
+    exemption, because GE-127b-1''s ratchet delivers the incremental path that wording
+    promised without reopening a hole. Exactly one statement of each fact must survive,
+    per the parent L1. THE INERT-INPUT CLAUSE: check_file(filepath, is_new_file) accepts
+    the newly-added fact and its body never reads it, while the same fact IS legitimately
+    read elsewhere to label a passing file new or modified — so no artifact may assert
+    "the flag is unused"; the expected resolution is removing it from the verdict
+    signature while leaving the reporting use intact, and either permitted resolution
+    must be recorded. SEQUENCING: GE-127c-1 and GE-127b-1 must land before or with
+    this, or its first run reports disagreement with documentation nobody has had
+    the chance to correct. declares_side_effect false: every Then clause reports to
+    a stream and sets an exit status; the documentation correction is a source edit
+    made by the change, not a runtime side-effect the criteria assert. test_spec:
+    eight executing descriptors carrying all three of the BA''s named mutations, plus
+    an add-a-surface-and-require-the-count-to-move descriptor borrowed in shape from
+    BP-1600a-2 so the surface list cannot be a literal, plus the registered hook entry
+    point and the deployed copy in a cold process.'
+- action: approved
+  agent: approve_acs
+  date: '2026-09-14'
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-FilesStayWorkable/01_TICKET-20260914-GE-127d-1.md
 change_target:
   - code
   - docs

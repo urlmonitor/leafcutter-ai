@@ -9,7 +9,7 @@ last_updated: 2026-09-14
 components:
   - build_orchestration
 related_docs:
-  - docs/architecture/adrs/ADR-044-completion-demanded-set-is-record-only.md
+  - docs/architecture/adrs/ADR-046-completion-demanded-set-is-record-only.md
 children:
   - docs/architecture/diagrams/c3-fast-lane-build-loop-sequence.md
 ---
@@ -83,7 +83,7 @@ The two workflow drivers this component owns, `templates/workflows-js/build-feat
 only surfaces that write a ticket's `status: done`. Before doing so, each derives a
 **demanded-step set** — the phases the close is checked against — via
 `demandedPhasesFromRecord()` and `requiredPhasesForCompletion()`. Per
-[ADR-044](../adrs/ADR-044-completion-demanded-set-is-record-only.md), that set has exactly
+[ADR-046](../adrs/ADR-046-completion-demanded-set-is-record-only.md), that set has exactly
 one source: the ticket's own frontmatter `agents:` map and its own sign-off headings. No
 caller-supplied list — from a ticket-planner reply, a request payload, or any other
 channel — may add to or subtract from it, and `scripts/set_ticket_status.py` (the mechanism

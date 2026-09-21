@@ -7,16 +7,29 @@ BUSINESS CONTEXT: Extracted from validate_product_truth.py, which had grown past
     mutates the shared `errors` / `warnings` lists it is handed -- none of them
     reads a module global -- so moving them changes no behaviour and no test
     seam: validate_product_truth re-imports them, and `vpt.<check>` still
-    resolves exactly as before. `_check_eval` deliberately stayed behind, being
-    the one check that reads STORE and the schema loader directly.
+    resolves exactly as before. The STORE-touching *wrapper* around
+    `validate_eval_rows` (path resolution + not-executed bookkeeping)
+    deliberately stayed behind in validate_product_truth.py, as does
+    `load_ac_records`/`load_mockups`/`_load_schema` -- this module never reads
+    or patches STORE.
 ARCHITECTURE: Leaf module. Imports the derivation helpers from
     generate_product_truth (the single writer) and is imported by
     validate_product_truth; nothing imports back, so there is no cycle.
 """
 from __future__ import annotations
 
+import json
 import re
 from pathlib import PurePosixPath
+
+# jsonschema is a HARD dependency of validate_product_truth.py (see that
+# module's own guard/exit-2 at main()); guarded identically here so this leaf
+# module never crashes at import time on a host where it's absent -- callers
+# only ever invoke `_validate_schema` after that upstream guard has passed.
+try:
+    import jsonschema
+except ImportError:
+    jsonschema = None  # type: ignore[assignment]
 
 from generate_product_truth import (
     _without_asof,
@@ -40,13 +53,11 @@ from product_truth_index_checks import (  # noqa: F401
     _strip_by_ac_asof,
     _strip_by_flow_asof,
 )
+from product_truth_example_checks import check_example_product  # noqa: F401  # re-exported for callers
 
 #: The three artifact-type directories a record is made of. Shared with
 #: validate_product_truth, which reports emptiness per type.
 _ARTIFACT_TYPES = ("flows", "mock-data", "mockups")
-
-
-
 
 
 
@@ -235,8 +246,6 @@ def _check_product_truth(ac_records: dict, by_ac: dict, errors: list[str]) -> No
     for ac_id, record in ac_records.items():
         if record.get("product_truth") and ac_id not in by_ac:
             errors.append(f"[product_truth] AC '{ac_id}': has a product_truth block but no flow node references it")
-
-
 
 
 def _check_screens(flows: dict, mockups: dict, errors: list[str], warnings: list[str]) -> None:
@@ -482,7 +491,66 @@ def _check_pointers(
     return resolved
 
 
+OUTCOME_BY_COMBO = {
+    (True, True, True): "full-set",
+    (False, True, True): "mockup+data",
+    (False, False, True): "mockup-only",
+    (False, True, False): "mock-data-only",
+    (False, False, False): "none",
+}
 
+
+def _validate_schema(instance: dict, schema: dict, label: str, errors: list[str]) -> None:
+    """Validate one instance against a schema (jsonschema is guaranteed present
+    by validate_product_truth.main()'s own hard-dependency exit-2 guard)."""
+    try:
+        jsonschema.validate(instance, schema)
+    except jsonschema.ValidationError as exc:
+        errors.append(f"[schema] {label}: {exc.message}")
+
+
+def validate_eval_rows(lines: list[str], schema: dict, errors: list[str]) -> int:
+    """Validate each classifier/eval.jsonl row (schema conformance + outcome
+    derivation), given already-read `lines` and the loaded eval schema.
+
+    Pure: takes the file's already-read lines rather than a path, so it
+    carries no STORE dependency -- the caller (validate_product_truth.py's
+    `_check_eval`) resolves the path and precondition-absent bookkeeping.
+    Returns the number of non-blank rows examined.
+    """
+    examined = 0
+    for i, line in enumerate(lines, 1):
+        if not line.strip():
+            continue
+        try:
+            row = json.loads(line)
+        except json.JSONDecodeError as exc:
+            errors.append(f"[eval] line {i}: invalid JSON: {exc}")
+            continue
+        examined += 1
+        _validate_schema(row, schema, f"eval row {row.get('id', i)}", errors)
+        exp = row["expected"]
+        combo = (exp["needs_flow"], exp["needs_mock_data"], exp["needs_mockup"])
+        derived = OUTCOME_BY_COMBO.get(combo)
+        if derived is None:
+            errors.append(f"[eval] {row['id']}: impossible combo {combo}")
+        elif derived != row["outcome"]:
+            errors.append(f"[eval] {row['id']}: outcome '{row['outcome']}' != derived '{derived}'")
+    return examined
+
+
+def check_mock_data_ref(flows: dict, mocks: dict, errors: list[str]) -> None:
+    """Every flow's `mock_data_ref`, when set, must resolve to a loaded mock
+    dataset, and the flow's own `entities` must be a subset of that dataset's."""
+    for flow in flows.values():
+        ref = flow.get("mock_data_ref")
+        if ref and ref in mocks:
+            mock_entities = set(mocks[ref].get("entities", {}).keys())
+            missing = [e for e in flow.get("entities", []) if e not in mock_entities]
+            if missing:
+                errors.append(f"[flow] {flow['id']}: entities {missing} absent from mock_data_ref '{ref}'")
+        elif ref:
+            errors.append(f"[flow] {flow['id']}: mock_data_ref '{ref}' does not resolve")
 
 
 """
@@ -503,5 +571,24 @@ DECISION HISTORY
   shape-version rule move into product_truth_bounds.BOUNDS;
   _check_shape_version_bounds and its two constants stay as the journey-
   description slice of it. (#EPIC-TruthfulProjectRecord/38)
+- 2026-09-16 [python-coder]: Moved OUTCOME_BY_COMBO, _validate_schema, and two
+  new pure functions (validate_eval_rows, check_mock_data_ref) here from
+  validate_product_truth.py to bring that file back under its 400-content-line
+  ratchet after UXP-700c-2/UXP-700c-2-ii's freshness/behind-mark code (which
+  ADR-043 SS10 pins inside validate_product_truth.py, beside each other) grew
+  it past the limit. All three moved pieces already took their inputs as
+  arguments -- validate_eval_rows takes already-read `lines` rather than a
+  path, and check_mock_data_ref takes already-loaded `flows`/`mocks` -- so
+  none of them reads or patches STORE; the STORE-touching wrapper (path
+  resolution, precondition-absent bookkeeping) stayed in
+  validate_product_truth.py's own `_check_eval`. Pure move, same convention
+  the 2026-09-10 entry above already established; `vpt._validate_schema` /
+  `vpt.OUTCOME_BY_COMBO` still resolve via re-import.
+  (#EPIC-TruthfulProjectRecord/21) (#EPIC-TruthfulProjectRecord/23)
+- 2026-09-17 [python-coder]: UXP-700d-3-ii -- re-exports `check_example_product`
+  from the new sibling product_truth_example_checks.py (this file's own
+  396/400 headroom had no room for that check's full body), one import line,
+  same precedent product_truth_index_checks.py already set above.
+  (#EPIC-TruthfulProjectRecord/35)
 ====================================================================
 """

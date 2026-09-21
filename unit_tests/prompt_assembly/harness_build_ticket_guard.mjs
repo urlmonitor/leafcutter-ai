@@ -501,9 +501,22 @@ function deleteRecord(path) {
 
 /** Longest ticket path that appears in the prompt (handles parallel epics). */
 function ticketFromPrompt(prompt) {
+  // BO-3900: the drivers under test now normalise separator spelling to "/"
+  // before a dispatched prompt ever embeds a ticket path (one separator
+  // spelling throughout — see build-feature.js's toWorktreePath()). The
+  // scenario's own ticketPaths keys are still the ORIGINAL, real on-disk
+  // path strings this harness wrote (Windows-backslash on a Windows host,
+  // via os.path.join on the Python side), so matching must compare both
+  // sides with the same separator spelling. The match still RETURNS the
+  // original key `p`, unchanged, so every `ticketConfigs[ticketPath]`
+  // lookup elsewhere in this file keeps using the same dict key it always
+  // has — only the COMPARISON is separator-insensitive.
+  if (typeof prompt !== "string") return null;
+  const normalizedPrompt = prompt.replace(/\\/g, "/");
   let best = null;
   for (const p of ticketPaths) {
-    if (typeof prompt === "string" && prompt.includes(p)) {
+    const normalizedP = p.replace(/\\/g, "/");
+    if (normalizedPrompt.includes(normalizedP)) {
       if (best === null || p.length > best.length) best = p;
     }
   }
@@ -638,6 +651,46 @@ async function agent(prompt, opts = {}) {
       ticket_path: ticketPaths[0] || null,
       worktree_path: scenario.record_dir || "/fake/worktree",
     };
+  }
+
+  // BO-4000: build-feature.js checks resolve-target's own worktree_path via a
+  // repo-facts call before reusing it, rather than trusting it unconditionally.
+  // Default: reusable ONLY when the queried path (read out of the prompt,
+  // which names it verbatim) equals scenario.record_dir — the harness's own
+  // notion of "the established working copy". This reproduces every
+  // pre-BO-4000 scenario whose "resolve" reports record_dir (the dominant
+  // shape) unchanged, with no worktree-setup dispatch, while still letting a
+  // scenario that deliberately reports something ELSE (e.g. the work-store
+  // epic folder, BO-1900a-4's own observed defect shape) fall through to the
+  // "name a new location" path exactly as BO-4000's second scenario requires.
+  if (label === "worktree-facts-resolved") {
+    if (scenario.worktree_facts_resolved !== undefined) {
+      return { output: JSON.stringify(scenario.worktree_facts_resolved), exit_code: 0 };
+    }
+    const queried = (/facts "([^"]*)"/.exec(String(prompt)) || [])[1] || null;
+    const reusable = queried !== null && queried === scenario.record_dir;
+    return {
+      output: JSON.stringify({
+        exists: reusable, is_git_toplevel: reusable, is_linked_worktree: reusable,
+        is_main_checkout: false, same_repository: reusable, branch: reusable ? "harness-default" : null,
+      }),
+      exit_code: 0,
+    };
+  }
+
+  // BO-4000: the "name a new location" branch's own repo-facts checks. Every
+  // pre-existing scenario is indifferent to these (none asserts on them), so
+  // generic, always-succeeding defaults let the run proceed to the SAME
+  // "worktree-setup" dispatch it always reached — the one label every
+  // existing scenario already controls via scenario.worktree_agent.
+  if (label === "worktree-base") {
+    return { output: JSON.stringify({ main_checkout: "/fake/repo", worktree_base: "/fake/worktrees", layout: "dev" }), exit_code: 0 };
+  }
+  if (label === "worktree-facts-location") {
+    return { output: JSON.stringify({ exists: false }), exit_code: 0 };
+  }
+  if (label === "branch-standing") {
+    return { output: JSON.stringify({ exists: false, fetch_ok: true, behind: null, ahead: null }), exit_code: 0 };
   }
 
   if (label === "worktree-setup") {
