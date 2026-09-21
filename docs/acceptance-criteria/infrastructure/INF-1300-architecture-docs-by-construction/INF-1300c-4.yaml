@@ -1,0 +1,151 @@
+id: INF-1300c-4
+title: "When the listing is not asked for, nothing outside the new document and its parent is written"
+component: infrastructure
+components:
+  - documentation_system
+  - infrastructure
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+created_by: "docs/acceptance-criteria/infrastructure/INF-1300-architecture-docs-by-construction/INF-1300c.yaml"
+criteria: |
+  Given a request to produce a document that does not ask for the document to be
+    listed,
+  When the document is produced,
+  Then the index is not modified in any way, and no index is created where none
+    existed,
+  And the produced document is identical to the one produced by the same request
+    with the listing asked for, so asking for the listing changes the index and
+    nothing else,
+  And nothing anywhere in the project is written except the new document and the
+    single entry the new document's parent gains in its list of the documents
+    below it,
+  And this is established by comparing the whole project before and after, not by
+    inspecting the places a change was expected.
+depends_on:
+  - INF-1300c
+doc_links:
+  - path: docs/acceptance-criteria/infrastructure/INF-1300-architecture-docs-by-construction/INF-1300c.yaml
+    relationship: parent
+    status: exists
+  - path: docs/acceptance-criteria/infrastructure/INF-1300-architecture-docs-by-construction/INF-1300a-2.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      Owns the one write outside the new document that this record permits — the reciprocal
+      entry in the parent. The permitted set is stated here by reference so the two records
+      cannot drift into permitting different things.
+  - path: templates/skills/write-c4-diagram/SKILL.md
+    relationship: specifies
+    status: exists
+    relevance: >-
+      Section 8 makes the listing a flag rather than part of producing a document, so the
+      flag's absence is a real and reachable case rather than a hypothetical. This record
+      pins what the flag's absence means.
+  - path: docs/architecture/adrs/ADR-013-portable-skill-script-deployment-boundary.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      Fixes the script's source under templates/scripts/, which is also what makes the
+      whole-project snapshot meaningful: the snapshot is of a consumer-shaped temporary
+      project, not of this repository.
+  - path: docs/reference/false-green-mechanisms.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      The named reason this record's observation must be a whole-tree difference rather than
+      an inspection of the places a stray write was expected to land.
+assigned_agent: python-coder
+estimated_complexity: S
+change_target: code
+risk_surface: safety
+test_required: true
+it_requirements:
+  - "The listing flag must gate the index write only. No other output of the run may vary with it - not the produced document's bytes, not the parent's reciprocal entry, not any log-driven side effect that writes to disk."
+  - "The run must write nothing outside the produced document and the single reciprocal entry in its parent: no temporary or lock files left behind, no sequence-number cache, no touched neighbour frontmatter, no created directories beyond the document's own destination directory."
+  - "Any scratch file the implementation needs must be created outside the project tree or removed before the run exits, since the observable is a whole-project difference and not a list of expected paths."
+  - "The producing script's source must live under templates/scripts/ so the flag's semantics are the same in a consumer install as here."
+  - "Errors on the no-listing path must follow the project error handling policy in CLAUDE.md and must not leave partial output behind."
+test_spec:
+  - name: test_whole_project_difference_is_only_the_document_and_its_parent_entry
+    target_dir: unit_tests/scaffold/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    description: "Hash every file in a git-initialised temporary project, run the real CLI without the listing flag, hash again, and assert the difference is exactly the new document plus the single added line in its parent. Enumerate the difference from the snapshots, never from a list of paths the test expected to change."
+  - name: test_no_index_is_created_when_the_listing_is_not_requested
+    target_dir: unit_tests/scaffold/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "In a project with no docs/architecture/README.md, run without the listing flag and assert the file still does not exist; then in a project that has one, assert its bytes are unchanged."
+  - name: test_produced_document_is_identical_with_and_without_the_listing_flag
+    target_dir: unit_tests/scaffold/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    description: "Run the same request into two fresh copies of the same starting project, one with the listing flag and one without, and assert the two produced documents are byte-identical. Pins the flag to exactly one effect."
+  - name: test_no_stray_files_survive_the_run
+    target_dir: unit_tests/scaffold/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    description: "From the same whole-tree snapshots, assert no file was added anywhere other than the destination - including temporary files, lock files, caches and empty directories - and that no existing file's mtime-independent content changed."
+test_rationale: >-
+  The criteria state the whole-project comparison explicitly, and the reason survives into
+  the test contract: an observation that checks only the index has already assumed it knows
+  where a stray write would land, and the writes worth catching are the ones nobody
+  predicted. A snapshot difference costs no more than the narrow check and can see a
+  temporary file, a touched neighbour and a cache written somewhere unexpected. The
+  identical-document descriptor cannot be replaced by reading the source for a conditional
+  around the index write: that conditional can be present and reached on both paths, which
+  is exactly the grep-shaped false green CLAUDE.md warns about for gate and workflow ACs.
+delivers_to: null
+expects_from:
+  ac_id: INF-1300a-2
+  contract: "The single write outside the produced document that this record permits: one reciprocal entry added to the parent document's list of the documents below it. The permitted set is taken from there by reference so the two records cannot drift into permitting different things."
+origin_agent: BrainCandy
+created: 2026-09-14
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-09-14'
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  THE NEGATIVE THAT MAKES THE POSITIVE MEAN SOMETHING. Every other record under INF-1300c
+  describes something appearing in the index. All of them are satisfied by an implementation
+  that lists every document it ever produces, flag or no flag. That implementation is
+  defensible in review — the index is more complete, after all — and it takes a decision out
+  of the author's hands that the authoring surface deliberately leaves in them. Only this
+  record can fail on it.
+
+  THE SECOND CLAUSE IS THE SHARPEST AND IT IS A PAIRED OBSERVATION. Requiring the produced
+  document to be IDENTICAL with and without the listing pins the flag to exactly one effect.
+  Without it, an implementation could change what it writes into the document depending on
+  whether the document will be listed, which is the kind of coupling nobody looks for and
+  which makes the two paths quietly different artifacts.
+
+  THE WHOLE-PROJECT COMPARISON IS STATED IN THE CRITERIA ON PURPOSE. An observation that
+  checks only the index has already assumed it knows where a stray write would land. The
+  writes worth catching are the ones nobody predicted — a temporary file left behind, a
+  neighbouring document's frontmatter touched, a sequence-number cache written somewhere.
+  Comparing the whole tree before and after is the only construction that can see them, and
+  it costs no more than the narrow one.
+
+  FALSIFIABILITY. Take a full snapshot of a scratch project. Produce a document without
+  asking for the listing. Snapshot again and take the difference: the record is falsified if
+  the difference contains anything other than the new document and the single added line in
+  its parent. Then produce the same document into a fresh copy with the listing asked for,
+  and compare the two produced documents byte for byte — falsified if they differ. What will
+  not falsify it: reading what produces the document for the presence of a conditional
+  around the index write. That conditional can be present and still be reached on both
+  paths.
+
+  NOT AUTHORED HERE, BY DESIGN: assigned_agent, estimated_complexity, it_requirements,
+  test_spec, test_rationale, delivers_to and expects_from. Those are the IT PO's.

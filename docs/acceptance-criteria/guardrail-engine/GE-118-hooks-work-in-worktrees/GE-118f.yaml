@@ -1,0 +1,169 @@
+id: GE-118f
+components:
+  - commit_guardian
+  - knowledge_system
+title: "The commit-time guard and the knowledge map resolve a frontmatter entry through one shared rule"
+component: guardrail-engine
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given one frontmatter field value holding a bare entry and a labelled entry,
+  When the document-frontmatter guard resolves that value to the paths it will
+    check, and the knowledge-map builder resolves the same value to the targets
+    it will connect,
+  Then both produce the same ordered list of path strings,
+  And both obtain that list by calling one shared routine, rather than each
+    applying its own rule,
+  And given a further entry shape is then admitted to that routine's accepted
+    set, with nothing else in the project altered,
+  When the same comparison is made again,
+  Then both consumers resolve the further shape, so agreement is a property of
+    the arrangement rather than of the moment it was last inspected.
+depends_on:
+  - GE-118
+  - GE-118d
+doc_links:
+  - path: templates/scripts/commit_guardian/frontmatter_validators.py
+    relationship: modifies
+    status: exists
+    relevance: "Consumer one: validate_paths(). Reads related_docs, related_code, architecture_diagrams."
+  - path: scripts/knowledge_query.py
+    relationship: modifies
+    status: exists
+    relevance: "Consumer two: extract_edges(). Reads whatever config/paths.json declares in a surface's edge_fields, which includes related_docs for the docs, adrs and components surfaces. Its list branch tests `isinstance(item, str)` and a non-string item falls through with no edge and no message."
+  - path: config/paths.json
+    relationship: describes
+    status: exists
+    relevance: "Why the two consumers meet at all: three surfaces declare related_docs in edge_fields, so the same field in the same file is read by both the commit gate and the graph builder. Do not narrow this record to related_docs — the shared routine must serve whatever field either consumer is pointed at."
+  - path: docs/acceptance-criteria/knowledge-management/KM-KGS-100-knowledge-graph-surfaces/KM-KGS-100d-3.yaml
+    relationship: context
+    status: exists
+    relevance: "The other side of the contract, in the other component. That record owns the edge appearing; this record owns the two consumers agreeing about what the entry says. Neither closes the other."
+  - path: docs/architecture/components/knowledge-system.md
+    relationship: describes
+    status: exists
+    relevance: "Consumer two's component boundary: how knowledge_query.py is invoked and from where. Read alongside commit-guardian.md — the two documents are why this record exists, because the shared routine has to be importable from two components that ship from two different deployed directories."
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+    relevance: "Consumer one's component boundary, including the source-versus-deployed layout distinction that makes the deploy-manifest obligation below real rather than theoretical."
+  - path: docs/reference/false-green-mechanisms.md
+    relationship: context
+    status: exists
+    relevance: "Names the mechanism the third-shape arm defends against: two copies that agree today are indistinguishable from one routine until something changes, so a test comparing the two copies' present behaviour reports success for an arrangement that has none of the property claimed."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "THE SHARED MODULE MUST BE IN THE BUILD DEPLOY MANIFEST FOR ITS DIRECTORY, AND WHICH MANIFEST DEPENDS ON WHERE IT LIVES. Name the entry in the implementation, do not leave it implicit. (a) If the resolver ships under templates/scripts/commit_guardian/, it deploys wholesale via build_commit_guardian's directory copy and needs NO new manifest line — the precedent is BP-1100g-4, recorded in scripts/build_phases.py's decision history — but the deployed scripts/knowledge_query.py must then resolve it from the deployed commit_guardian directory, which is a sys.path insertion of the kind check_done_proof.py already does for scripts/ac_store/. (b) If it ships as a scripts/ sibling of knowledge_query.py — the precedent is scripts/knowledge_frontmatter_reader.py, added for KM-KGS-100a-3-xi — its filename MUST be added in TWO places: the deploy_scripts list inside build_workflow_tools() in scripts/build_phases_workflows.py, and the script-name tuple inside _manifest_workflow_tool_scripts() in scripts/build_phases_knowledge.py. _guard_source_paths_workflow_tools delegates to the second, and the manifest/deploy parity guard (test_guard_source_paths_match_deployable_set) fails when the two disagree. The deployed commit-guardian hook must then reach it, which is again a sys.path question and not a free import."
+  - "THE MANIFEST OBLIGATION IS PROVEN BY RUNNING THE DEPLOYED HOOK, NEVER BY THE UNIT TESTS. Unit tests import from the source tree and are structurally blind to a missing manifest entry — they were green throughout the window in which GE-118c's config/doc_types.json was absent from the manifest and the deployed guard crashed in a consumer install. The proof is: build.py into a temp target directory that is NOT inside this repository, then invoke BOTH deployed entry points as fresh subprocesses and assert neither emits ModuleNotFoundError on any stream. A target inside this repository is the self-hosting mask GE-118c's reopening note describes; it cannot distinguish the two failure modes."
+  - "THE AGREEMENT MUST BE PROVEN BEHAVIOURALLY, NOT BY GREP (CLAUDE.md, 'Gate / Workflow ACs — Verify Behaviorally, Not by Grep'). A test that asserts both call sites mention the helper's name passes on two independent copies that both happen to import it, and on dead code. The required proof is: admit a further shape at the resolver's SINGLE accepted-shape declaration point at runtime — with no edit to either consumer — and observe both consumers resolve the further shape in their own outputs. Two copies make that test fail; it is the only arm that cannot be satisfied by coincidence."
+  - "STATE THE SINGLE PATCH POINT AS AN INTERFACE PROPERTY, BECAUSE THE TEST DEPENDS ON IT. The accepted-shape set must be reachable and extensible from one object, so the third-shape arm is a single in-process substitution rather than a source edit. If admitting a shape requires touching more than one place, the arrangement does not have the property this record asserts, whatever the code looks like."
+  - "AGREEMENT IS ON THE ORDERED LIST, NOT THE SET. Both consumers must produce the same path strings in the same order from the same field value, so that a document declaring two relationships is two relationships to both, in the order the author wrote them."
+  - "DO NOT ROUTE check_adr_cross_reference._doc_mentions_adr THROUGH THE RESOLVER. It reads related_docs by case-insensitive substring match over the whole file and never indexes into an element, so it is unaffected today and must remain so. Its present behaviour — matching an ADR id that appears anywhere in the document, including in prose outside related_docs — is the observable that proves it was left alone."
+  - "SOURCE-VERSUS-BUILD-OUTPUT PARITY (ADR-001). templates/scripts/commit_guardian/ is the source for consumer one; scripts/knowledge_query.py is itself the source for consumer two and is copied verbatim. Run build.py after editing and confirm the deployed copies match, or the next build silently reverts half the change."
+  - "ERROR-HANDLING POLICY APPLIES UNCHANGED (CLAUDE.md Rules 1-4) in both consumers."
+test_spec:
+  - name: test_ge_118f_both_consumers_resolve_one_field_value_to_the_same_ordered_path_list
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: seam
+    description: "One field value holding a bare entry and a labelled entry. Assert the guard's list of paths-to-check and the map builder's list of edge targets are equal AND in the same order. Set equality is not sufficient — order is what makes 'the document declares these two relationships, in this order' the same statement in both components."
+  - name: test_ge_118f_admitting_a_further_shape_at_the_single_declaration_point_moves_both_consumers
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: seam
+    description: "THE ONLY ARM THAT CANNOT PASS BY COINCIDENCE. Substitute the resolver's one accepted-shape declaration in process to admit a third shape, with no edit to either consumer, then re-run the comparison: both must now resolve the third shape. Assert the pre-substitution baseline refuses it in both, so the test proves movement rather than a pre-existing accept. If either consumer holds its own copy of the rule, only one moves and this fails — which is the point."
+  - name: test_ge_118f_deployed_layout_both_consumers_import_the_resolver_from_a_target_outside_this_repo
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: deployed
+    surface_invoked: ".leafcutter/scripts/commit_guardian/run_hook.py check_doc_frontmatter.py and scripts/knowledge_query.py"
+    description: "THE DEPLOY-MANIFEST OBLIGATION, PROVEN THE ONLY WAY IT CAN BE. Run build.py --target-dir into a temp directory outside this repository, then invoke the deployed hook and the deployed knowledge_query.py as separate fresh subprocesses against a document carrying a labelled entry. Assert both exit as expected and that neither stream contains ModuleNotFoundError or ImportError. Running against this repository's own .leafcutter/ passes while the manifest entry is missing, which is exactly how GE-118c was reopened."
+  - name: test_ge_118f_adr_cross_reference_still_matches_by_whole_file_substring
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: "The third consumer must stay unaffected. Assert _doc_mentions_adr returns True for an ADR id that appears only in the document's prose and never in related_docs — a behaviour a resolver-backed implementation would lose. This is a behavioural check that it was not rewired, not a grep for an import."
+test_rationale: |
+  Two independent implementations satisfy every other test in this feature on
+  the day they are written, so the coverage here is built around the two things
+  that distinguish one routine from two copies that currently agree.
+
+  The third-shape arm is the load-bearing one. Comparing today's two resolvers
+  on today's two shapes passes whenever the copies agree, which they will. The
+  substitution arm asserts a baseline refusal in both consumers, applies one
+  in-process change at one declaration point, and asserts both consumers moved —
+  a property no amount of source-text inspection can establish, and one that
+  fails loudly if a second copy exists. A test that greps both call sites for
+  the helper's name is explicitly not acceptable: it passes on dead code and on
+  two copies that both import a helper neither actually uses.
+
+  The deployed arm is separate from the integration arm for the reason recorded
+  in GE-118c's reopening note: unit tests import from the source tree, so a
+  module missing from the deploy manifest is invisible to them, and running the
+  deployed hook inside this repository is equally blind because the package IS
+  the git root here. Only a target directory outside this repository can tell a
+  reachable helper from an unreachable one.
+delivers_to:
+  agent: python-coder
+  contract: "STEP 3 — the resolver, now importable from BOTH deployed locations, with its accepted-shape set extensible at one declaration point, and with the deploy-manifest entry for its directory actually added. KM-KGS-100d-3 consumes this unchanged in scripts/knowledge_query.py's extract_edges, in place of the isinstance(item, str) test; it inherits the deployed reachability proved here and must not re-derive the shape rule."
+expects_from:
+  ac_id: GE-118d
+  contract: "STEP 1's output — the resolver, its three outcomes (accepted-bare, accepted-labelled, refused-by-name) and its single-point accepted-shape declaration, plus the settled decision about which directory the module lives in, since that decision determines which build deploy manifest this record must edit."
+origin_agent: BrainCandy
+created: 2026-09-21
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  WHY AGREEMENT IS ITS OWN CRITERION RATHER THAN A CONSEQUENCE. GE-118d and
+  KM-KGS-100d-3 can both be satisfied by two independent implementations that
+  happen to accept the same shapes on the day they are built. Nothing then holds
+  them together: the next shape question is answered twice, and the second answer
+  is written by someone who does not know the first exists. At that point the two
+  components disagree about what a document MEANS — the guard says a document
+  declares two relationships, the map says it declares one — and no test in either
+  component can see the disagreement, because each is consistent with itself.
+
+  THE SHAPE OF THE FIX IS NAMED PRECEDENT, NOT INVENTION. ACS-100i-9 is the
+  established pattern in this store for anything enforced in two places: one
+  shared helper imported by both entry points, one format string so the two
+  messages are identical rather than merely similar, and explicitly no second
+  copy of the list. GE-126's L0 notes cite it for exactly this purpose. Follow it.
+
+  THE THIRD-SHAPE CLAUSE IS THE ONLY ARM THAT CANNOT BE SATISFIED BY COINCIDENCE.
+  Comparing today's two resolvers on today's two shapes passes whenever the two
+  copies agree, which they will on the day they are written. Admitting a further
+  shape to the shared routine and observing BOTH consumers move is what proves
+  there is one routine and not two — the same test shape INF-1200f-1 uses to
+  prove a figure is shared rather than duplicated, and the sentence is borrowed
+  from it deliberately.
+
+  A DEPLOYMENT HAZARD THE IMPLEMENTER MUST SETTLE, NOT DISCOVER. The two
+  consumers do not ship from the same place: the guard runs from the deployed
+  layout under .leafcutter/scripts/commit_guardian/, while knowledge_query.py
+  runs from scripts/. A shared helper that only one of them can import is the
+  ModuleNotFoundError this L0 exists for, and CLAUDE.md's standing rule applies —
+  a module a hook imports must be in the build deploy manifest, verified by
+  running the DEPLOYED hook, not by the unit tests, which import from the source
+  tree and are structurally blind to the gap. GE-118c was reopened for precisely
+  this class (config/doc_types.json missing from the manifest); do not repeat it.
+
+  NOT A LICENCE TO UNIFY THE THIRD CONSUMER.
+  check_adr_cross_reference._doc_mentions_adr reads related_docs by substring
+  match over the whole file and never indexes into an element. It is unaffected
+  today and must stay unaffected — routing it through the resolver would change
+  its behaviour for no gain and put a third opinion into a contract this record
+  exists to reduce to one.

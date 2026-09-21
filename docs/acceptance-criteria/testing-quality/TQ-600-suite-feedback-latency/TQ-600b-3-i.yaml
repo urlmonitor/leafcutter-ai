@@ -1,0 +1,189 @@
+id: TQ-600b-3-i
+components:
+  - testing_quality
+title: "Reading the real checkout stays allowed; only changing it does not"
+component: testing-quality
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a test that consults the checkout the run was started from without changing
+    it — listing its tracked files, reading a file's committed content, or asking
+    which commit it is on,
+  When the suite is run across several workers,
+  Then that test runs unhindered and is not named as an offender,
+    And a test that changes that same checkout is still named,
+    And both cases are decided by whether the checkout's state changed, not by which
+      version-control command was issued, so a command that only reads in one form
+      and writes in another is judged on what it did.
+depends_on:
+  - TQ-600b-3
+doc_links:
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      The boundary angle: this AC and TQ-600b-3 are the two sides of one line, and
+      covering only the offending side produces a check that is correct and
+      unusable.
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - >-
+    THE VERDICT IS A FUNCTION OF OBSERVED STATE CHANGE ONLY. Judging by command
+    name is wrong in both directions and both directions must be closed: the same
+    command reads in one form and writes in another (`git stash list` versus
+    `git stash push`; `git checkout <path>` versus `git checkout <branch>`), so a
+    name-based rule simultaneously forbids safe reads and permits the write that
+    corrupts the index.
+  - >-
+    COMPARE THE STAGED CONTENT, NOT THE INDEX FILE — this is the constraint that
+    makes the carve-out possible at all. `git status` refreshes `.git/index`'s
+    cached stat data, and `git diff` can rewrite it, WITHOUT changing what is
+    staged. A comparison over the index file's bytes or mtime therefore reports
+    every legitimate reader as an offender. Compare the tree the index resolves
+    to, plus HEAD, the stash list, and working-tree content.
+  - >-
+    LEGITIMATE READERS MUST RUN UNHINDERED. No wrapping, sandboxing or path
+    redirection that changes what a reader observes. This package's own tests
+    routinely read tracked files to check that a deployed artifact matches its
+    source, and the project's conventions require exactly that comparison — a
+    check that fires on them is turned off within a week, and then the real
+    collisions return unobserved.
+  - >-
+    Repositories a test creates for its own use are untouched by this AC. They
+    are unshared by construction and were never in scope; nothing here relaxes
+    anything about them.
+  - >-
+    The carve-out must not introduce a declared-exempt list of commands or files.
+    The rule is behavioural — what the command did — so an allowlist would
+    reintroduce the name-based judgement this AC exists to forbid.
+delivers_to: null
+expects_from:
+  ac_id: TQ-600b-3
+  contract: >-
+    The state-change detector parameterised by checkout root, comparing staged
+    content, branch, stash list and working tree. This AC asserts the permissive
+    side of the same line: that a test changing none of those four is not
+    reported, decided on observed change rather than on the command issued.
+test_spec:
+  - name: test_tq600b_3_i_a_test_listing_tracked_files_is_not_reported
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: >-
+      A test that lists the checkout's tracked files runs unhindered and appears
+      in no offender list.
+  - name: test_tq600b_3_i_a_test_reading_committed_content_is_not_reported
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: >-
+      A test that reads a file's committed content from the run's own checkout —
+      the deployed-versus-source comparison this package's conventions require —
+      is silent.
+  - name: test_tq600b_3_i_a_test_asking_which_commit_the_checkout_is_on_is_not_reported
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: >-
+      Resolving HEAD is a read and is silent.
+  - name: test_tq600b_3_i_a_test_that_changes_the_same_checkout_is_still_reported
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: failure
+    description: >-
+      THE PAIRED RED. The carve-out must not become a hole: a test that changes
+      the checkout is still named. NAMED MUTATION: widen the carve-out to exempt
+      any test that also performed a read; an offender that reads before writing
+      is then missed and this test must go RED.
+  - name: test_tq600b_3_i_a_read_that_refreshes_the_index_stat_cache_is_not_reported
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: failure
+    description: >-
+      A test invoking `git status` against the checkout causes `.git/index` to be
+      rewritten while the staged content is unchanged, and is silent. NAMED
+      MUTATION: compare `.git/index` bytes or mtime instead of the tree the index
+      resolves to; every legitimate reader is then an offender and this test must
+      go RED. This is the single implementation choice that decides whether the
+      carve-out works.
+  - name: test_tq600b_3_i_the_verdict_is_decided_by_observed_change_not_by_command_name
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: >-
+      `git stash list` is silent and `git stash push` is reported, although both
+      are `git stash`; `git checkout <path>` against a modified file is reported
+      while `git checkout` resolving a name is not. NAMED MUTATION: substitute a
+      command-name allowlist or denylist; this test must go RED in both
+      directions.
+test_rationale: |
+  Without this carve-out TQ-600b-3 is unshippable. A blanket prohibition on
+  touching the run's own checkout would condemn a large, legitimate and
+  necessary population — this package's own tests routinely read tracked files
+  to check that a deployed artifact matches its source — and a check that fires
+  on all of them is turned off within a week, after which the real collisions
+  return unobserved.
+
+  The index-stat-cache descriptor is the load-bearing one and it names the
+  implementation choice that decides the whole AC. `git status` rewrites
+  `.git/index` without changing what is staged, so a detector comparing the
+  index FILE reports every legitimate reader as an offender while a detector
+  comparing the TREE the index resolves to does not. No other descriptor
+  distinguishes the two.
+
+  The command-name descriptor is asserted in both error directions, because a
+  name-based rule fails both ways: it forbids safe reads and it permits the
+  write that corrupts the index. One direction alone would leave the other
+  implementation green.
+
+  The paired-red descriptor keeps the carve-out from becoming a hole. Its named
+  injection — exempting any test that also performed a read — is the natural
+  over-correction once the false-positive pressure is felt.
+origin_agent: business-analyst
+created: 2026-09-21
+amended_by:
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-09-21
+  note: 'python-coder, M. Named the technical fact that makes this carve-out buildable:
+    git status and git diff rewrite .git/index''s stat cache without changing the
+    staged content, so the comparison must be over the tree the index resolves to,
+    not the index file. That single choice decides whether every legitimate reader
+    is a false positive. Asserted the command-name prohibition in both error directions.
+    criteria untouched.'
+- action: approved
+  agent: approve_acs
+  date: '2026-09-21'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+notes: |
+  WITHOUT THIS CARVE-OUT, TQ-600b-3 IS UNSHIPPABLE. A blanket prohibition on
+  touching the run's own checkout would condemn a large, legitimate and necessary
+  population: this package's own tests routinely read tracked files to check that
+  a deployed artifact matches its source, and the project's conventions require
+  exactly that comparison. A check that fires on all of them is turned off within a
+  week, and then the real collisions return unobserved.
+
+  THE THIRD CLAUSE IS THE SUBSTANTIVE ONE AND IT IS DELIBERATELY STRICT. Judging by
+  command name is the tempting implementation and it is wrong in both directions:
+  the same command reads in one form and writes in another, so a name-based rule
+  both forbids safe reads and permits the write that corrupts the index. Deciding
+  on observed state change is harder to build and is the only rule that holds.
+
+  BOUNDARY: this AC does not relax anything about repositories a test creates for
+  its own use. Those are unshared by construction and were never in scope.

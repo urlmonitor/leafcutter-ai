@@ -4,11 +4,12 @@ description: "Step-by-step guide for authoring product-truth artifacts by hand, 
 type: how-to
 status: active
 created: 2026-07-14
-last_updated: 2026-07-14
+last_updated: 2026-09-17
 components:
   - ux_prototyping
 related_docs:
   - docs/architecture/adrs/ADR-023-product-truth-flow-first-upstream-layer.md
+  - docs/architecture/adrs/ADR-043-journey-record-carries-its-own-behind-mark.md
   - docs/architecture/components/ux-prototyping.md
   - docs/how-to/product-truth-schema-reference.md
   - docs/product-truth/README.md
@@ -116,6 +117,9 @@ in both.
    Add it there first if it is new (a typo is a hard failure).
 5. Set `status: active`, `readiness: draft`, `version: 1` (or bump on extend),
    and append a `provenance` entry.
+6. If this dataset belongs to an example product (today only `fern-and-fig`),
+   set `example_product` to that product's root slug (ADR-044). Omit the key
+   entirely on the project's own datasets — never write it as `null`/`""`.
 
 ### Flow (`flows/<product>/<name>.flow.json`)
 
@@ -134,6 +138,8 @@ in both.
    authors. **Do not hand-edit `impl_status` / `impl_summary`** — they are
    derived (see below).
 7. Set the `screen` on any step that renders a Mockup.
+8. Same rule as Mock Data step 6: `example_product` only on an example
+   journey, omitted (never null/empty) on the project's own.
 
 ### Mockup (`mockups/<product>/…`)
 
@@ -144,6 +150,15 @@ in both.
    `entities` it renders (all must be in the `entity_registry`).
 3. `renders` is the path to the self-contained HTML rendering, or `null` if the
    screen is registered but not yet drawn.
+4. Same rule as Mock Data step 6: `example_product` only on an example
+   screen, omitted (never null/empty) on the project's own.
+
+`validate_product_truth.py` cross-checks every `example_product` you write against
+the artifact's actual product root (UXP-700d-3-ii, ADR-044): get the id's product
+segment right (step 1 above, on the artifact whose `id` the file is registered
+under) and the marker either matches or is correctly omitted. A mismatch, a missing
+marker on an example artifact, or a marker naming the project's own product each
+fail the commit gate, naming both the declared value and the root.
 
 ---
 
@@ -171,24 +186,86 @@ the `.md`.**
    It checks schema conformance, that `index.json` mirrors each artifact,
    entity-registry membership, step/branch id uniqueness,
    `acceptance_scenarios.for` resolution, `impl_summary` correctness, mock-data
-   invariants, and classifier `outcome` consistency. Unresolved `implements` AC
-   ids are warnings (a seed flow may reference not-yet-authored ACs); everything
-   else is a hard failure.
+   invariants, and classifier `outcome` consistency. An unresolved `implements`
+   AC id is now a hard failure (UXP-700c-1): every pointer is re-resolved
+   against the AC store *as it stands right now*, and a broken one is reported
+   as `[pointer] <flow id> <step/branch kind> '<node id>': AC pointer '<ac id>'
+   does not resolve in the AC store` — naming the artifact holding the pointer,
+   the position within it, and the target that failed to resolve. (The same
+   pointer also still produces the older `[impl]` WARNING from the impl-status
+   rollup check; the two are independent checks over the same data, and the
+   WARNING alone no longer means the run is safe to ignore.) Do **not** leave
+   `implements` pointing at an AC id that does not exist yet — author or
+   restore the AC first, or drop the pointer until it does.
 
 3. The validator is wired into the commit gates alongside the AC gates, so a
-   malformed artifact blocks the commit.
+   malformed artifact blocks the commit — including a dangling `implements`
+   pointer.
+
+---
+
+## Part 6 — Confirm a journey against what it describes (freshness)
+
+A journey can additionally carry a top-level `confirmed` record — the statement of
+what it was last confirmed against, and the state of the things it described at that
+moment (UXP-700c-2). This is **opt-in**: a journey with no `confirmed` record is
+never-confirmed. It is named as such on the freshness check's own WARNING channel
+(`[freshness-never-confirmed]`, UXP-700c-2-i), but it is judged neither current nor
+behind — there is no earlier confirmation for it to be judged against — and it is not
+counted in the run's `compared` figure.
+
+1. Confirm the journey by hand (or via whatever tool walked it) and add:
+
+   ```json
+   "confirmed": {
+     "against": "<explicit id — e.g. a commit SHA or AC-store version tag>",
+     "state": {
+       "<AC id>": "<content signature of that AC as of `against`>"
+     }
+   }
+   ```
+
+   `against` MUST be an explicit string **you** supply — never a hash the checker
+   invents. Per [ADR-043 SS3](../architecture/adrs/ADR-043-journey-record-carries-its-own-behind-mark.md),
+   the checker only ever reads this value; it does not synthesise one, so that a
+   later durable `behind` mark can carry the same identity forward.
+2. `state` names one content signature per described thing (today: each AC id the
+   journey's steps `implement`), computed the same way the validator computes it
+   (`_ac_content_signature` — a stable hash of the AC's `work_status`,
+   `product_truth`, `implemented_by`, and `covered_by` fields, excluding `path`).
+   In practice you confirm a journey by asking the validator to state the *current*
+   signature for you rather than hand-computing one.
+3. Run the validator (see Verification below). Every subsequent run recomputes each
+   described AC's *current* signature and compares it against what `state` recorded.
+   A described thing that changed since `against` makes the whole journey `behind` —
+   reported by name, together with every changed thing — as a WARNING, never a build
+   failure.
+4. Do **not** hand-edit a `behind` object if you find one on a journey — it is a
+   derived, durable mark the validator itself writes and removes
+   ([ADR-043](../architecture/adrs/ADR-043-journey-record-carries-its-own-behind-mark.md)).
+   To clear it, re-confirm the journey (fresh `against` + `state`) so the next run
+   finds it current again.
 
 ---
 
 ## Verification
 
-- The validator exits 0 (warnings about unresolved AC ids are acceptable for
-  seeds).
+- The validator exits 0. It also prints `resolved N pointer(s)` naming exactly
+  how many `implements` pointers it re-checked against the AC store on this
+  run — so a run that resolved none (e.g. an empty store) is distinguishable
+  from a run that resolved some and found none broken. A run with even one
+  unresolved pointer exits non-zero; there is no "acceptable to leave dangling"
+  case any more.
 - Your artifact appears in `index.json` under `artifacts[]` and in each derived
   index (`by_component`, `by_entity`, `by_flow`) it belongs to.
 - For a flow, the generated `.md` rendering reflects your steps and branches.
 - In the Leafcutter Atlas (`/flows`), the artifact appears and — once ACs are
   linked via `implements` — is coloured by its live build status.
+- If you added a `confirmed` record (Part 6), the validator's stdout states
+  `compared N journey(s) for freshness` — that count rises by one for every
+  further confirmed journey. If nothing your journey describes has changed since
+  `against`, it is absent from the WARNING list; if something has, it is reported
+  `behind` by name, naming every described thing that changed.
 
 ---
 
@@ -197,4 +274,5 @@ the `.md`.**
 - [Product-truth schema reference](product-truth-schema-reference.md) — the four schemas, field by field.
 - [UX Prototyping component](../architecture/components/ux-prototyping.md) — the store's architecture.
 - [ADR-023](../architecture/adrs/ADR-023-product-truth-flow-first-upstream-layer.md) — why the store exists and how it relates to the AC store.
+- [ADR-043](../architecture/adrs/ADR-043-journey-record-carries-its-own-behind-mark.md) — why the `behind` mark lives in the journey record itself, and the `confirmed.against` identity contract.
 - [docs/product-truth/README.md](../product-truth/README.md) — the store's operational README and seed status.

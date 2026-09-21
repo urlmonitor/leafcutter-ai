@@ -1,0 +1,67 @@
+id: TKT-017
+components:
+  - ticket_creation_pipeline
+readiness: reviewed
+priority: high
+title: "A generated epic's tickets depend on files that exist, whichever route generated it"
+component: ticket-creation
+status: active
+criteria: |
+  Given a goal AC whose leaf criteria depend on one another,
+  When an epic is generated from it and assembly renames each ticket with the
+    numeric prefix that records its build order,
+  Then every dependency a ticket declares names a file that exists in the epic
+    folder,
+    And it names the prefixed filename assembly actually produced, not the
+      unprefixed name the ticket had before it was moved,
+
+  And given the same goal generated through the other entry point -- the one that
+    takes an explicit list of criteria rather than walking a goal's subtree,
+  When its epic is generated,
+  Then its tickets' dependencies resolve on the same terms, because a reader
+    cannot tell from the result which route produced it and should not have to.
+
+  So a generated epic is committable, and the ordering it records is real rather
+  than a set of names that happen to look plausible.
+superseded_by: null
+amended_by: []
+covered_by: []
+implemented_by: []
+origin_agent: "human user"
+change_target: pipeline
+risk_surface: internal
+notes: |
+  FOUND IN USE, 2026-09-08, generating the BO-400e epic. check-doc-frontmatter
+  refused the commit outright:
+
+    depends_on 'TICKET-20260908-BO-400e-1.md' not found. Looked in:
+      .../EPIC-.../TICKET-20260908-BO-400e-1.md
+      .../EPIC-.../done/TICKET-20260908-BO-400e-1.md
+
+  The file on disk is `01_TICKET-20260908-BO-400e-1.md`. Assembly renames every
+  ticket with an `NN_` prefix and does not update the sibling references.
+
+  THE FIX ALREADY EXISTS AND IS NOT REACHED FROM THIS ROUTE.
+  `_translate_ticket_depends_on()` does exactly this job, mapping raw AC ids to
+  the prefixed epic-folder filenames. It is called from exactly one place:
+  `build_epic_from_ids()` (the `--ids` route). `run()` (the `--ac` route) never
+  calls it.
+
+  WHICH ROUTE IS BROKEN IS THE POINT. `--ac` is the DEFAULT and is what
+  /build-ac drives; `--ids` is the newer, rarer path. BO-2600a-5 introduced two
+  hygiene fixes -- depends_on translation and repo-relative implemented_by --
+  and applied BOTH to the function it was adding, neither to the one already in
+  use. Its own DECISION HISTORY entry describes them as applied, which reads as
+  applied everywhere.
+
+  SECOND OF A PAIR. TKT-016 fixed the implemented_by half of the same
+  back-port gap, in the same function, hours earlier. That fix was correct and
+  incomplete: having found one missing hygiene fix in `run()`, the right move was
+  to check whether the other one was missing too. It was. Both halves of
+  BO-2600a-5 were absent from the default route.
+
+  WHY THIS IS THE MORE SERIOUS HALF. TKT-016 produced a record that resolved on
+  one machine. This produces an epic that CANNOT BE COMMITTED AT ALL: the
+  frontmatter guard blocks it, so every epic generated through the documented
+  default route has needed a hand-edit before it could land. That the guard is
+  loud is the only reason this was not silently shipped.

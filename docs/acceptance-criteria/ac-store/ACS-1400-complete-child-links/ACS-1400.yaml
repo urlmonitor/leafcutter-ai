@@ -9,7 +9,7 @@ req_status: draft
 work_status: todo
 readiness: draft
 priority: medium
-roadmap_phase: phase_1
+roadmap_phase: phase_store_record_health
 criteria: |
   A requirement counts as finished only against every part it actually has.
 

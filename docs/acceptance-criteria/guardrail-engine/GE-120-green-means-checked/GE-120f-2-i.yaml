@@ -8,7 +8,7 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
+readiness: approved
 priority: critical
 roadmap_phase: phase_1
 criteria: |
@@ -73,8 +73,158 @@ doc_links:
   - path: docs/architecture/components/commit-guardian.md
     relationship: related
     status: exists
+  - path: docs/testing/test-angles.md
+    relationship: related
+    status: exists
+    relevance: >-
+      Source of the `angle` values below. This record is almost entirely a `reachability`
+      question — whether the finding survives the boundary between the run and its caller.
+  - path: docs/known-issues/commit-guardian.md
+    relationship: context
+    status: exists
+    relevance: >-
+      READ-ONLY. The component's recorded history of a correct signal discarded at the
+      boundary — a gate documented as taking a remediation action its code never takes, and a
+      fail-closed contract "never wired to the exit code" with nothing reading that exit code
+      (KI-CG-021). This record exists because that is the habit, not a hypothetical.
 assigned_agent: python-coder
 estimated_complexity: S
+it_requirements:
+  - >-
+    THE FINDING IS THE OUTCOME, NOT A NOTE BESIDE ONE. The value handed back to whatever
+    invoked the run is a refusal whenever any examined check's rejection was not observed, was
+    never attempted, or could not be run to a verdict. Printing every finding and returning
+    success satisfies the parent's naming clauses completely and is the failure this record
+    exists to prevent — run the injection below rather than describing it, because fail-open is
+    the reflex this component reaches for by habit.
+  - >-
+    THE ACCEPTANCE ARM IS NOT DECORATION. A run that completed, examined AT LEAST ONE check,
+    and found every examined check's rejection observed or exempted on an accepted ground hands
+    back an acceptance. Without this the requirement is satisfiable by a run that always
+    refuses, which is the same inert shape one level up (GE-120f-1-ii). The examined-at-least-one
+    qualifier belongs to GE-120f-3 and is consumed here, not restated: this record must not be
+    satisfiable by a run that examines nothing and accepts.
+  - >-
+    FOUR VALUES, FOUR DISPOSITIONS — DO NOT COLLAPSE `blocked` INTO `failing`. A check whose
+    attempt was made and produced no answer is reported as unresolved under its OWN wording, the
+    run refuses, and the check is counted neither among those whose rejection was observed nor
+    among those whose rejection was not observed. The two conditions have opposite remedies —
+    repair the check, against repair the run — and a reader who cannot tell them apart repairs
+    the wrong one and concludes the tooling is unreliable.
+  - >-
+    THE STANDING FAIL-OPEN CONVENTION IS NOT REPEALED, AND THE LINE IS NARROW. GE-116a-1-iii's
+    convention — a guard that meets one input it cannot handle announces and does not
+    hard-block — stands, and its subject is a check that RAN. This record's subject is a run
+    whose verdict is already known and would be discarded, or a run that never reached a verdict
+    at all. Implement the distinction explicitly; the last descriptor below asserts both sides
+    of it in one run so the convention is not flattened by accident.
+  - >-
+    THE OUTCOME MUST REACH THE CALLER, AND THE TICKET MUST NAME THE CALLER. A non-zero return
+    that no gate reads is the same inertness one layer out. Assert propagation into the invoking
+    gate's own outcome — the hooks_manifest entry line, the ci.yml job, or the pytest collection
+    named in GE-120f-1's it_requirements. This is the clause KI-CG-021 would have caught on day
+    one: "the fail-closed contract was never wired to the exit code", and nothing read that
+    exit code.
+  - >-
+    THIS RECORD ADDS NO NEW FINDING. It constrains what the run does with the findings it
+    already has. Anything that reads like a second classification pass is wrong.
+  - >-
+    AC_ENFORCE_STRICT=1 on every pytest invocation; exercise the DEPLOYED copy out of process.
+    Any module imported from outside templates/scripts/commit_guardian/ goes into the
+    scripts/build_phases.py deploy map in the same change.
+  - >-
+    Error-handling policy: specific-exception try/except around subprocess and I/O, logged at
+    WARNING or higher or re-raised. An exception escaping the run must produce a refusal with a
+    stated reason, never an acceptance and never a traceback the caller reads as success.
+test_spec:
+  - name: test_ge120f2i_a_finding_run_refuses_and_a_clean_run_accepts_in_the_same_test
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: >-
+      THE PAIRING. Population A holds one check whose attempt has never been made: the run hands
+      back a REFUSAL and the named check appears in the same output stream a reader of that
+      refusal sees. Population B holds only checks whose rejection was observed, at least one
+      examined: the run hands back an ACCEPTANCE. NAMED MUTATION (mandatory, run it): make the
+      run always hand back an acceptance and print its findings. Under that injection GE-120f-2's
+      clauses ALL stay green — every check is still named with its declared input and rejection
+      — and only this descriptor goes RED. That asymmetry is the entire reason this file exists.
+  - name: test_ge120f2i_an_attempt_that_produced_no_answer_is_unresolved_and_is_in_neither_observed_nor_not_observed
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: >-
+      A fixture check whose invocation is made and produces no answer is reported as unresolved
+      under its own wording, the run refuses, and that check is absent from both the
+      rejection-observed and rejection-not-observed sets — asserted as set membership, not as a
+      message match. NAMED MUTATION (mandatory, run it): treat a check whose attempt produced no
+      answer as one whose rejection was not observed. Under that injection the run still fails
+      and the check is still named, so the parent stays green and the earlier descriptor here
+      stays green; ONLY this one goes red.
+  - name: test_ge120f2i_a_run_that_cannot_proceed_refuses_while_one_unreadable_input_mid_run_does_not
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: >-
+      BOTH SIDES OF THE FAIL-OPEN LINE IN ONE TEST, so the component's convention is not
+      flattened. (a) Make the registration surface unreadable so the run cannot proceed at all:
+      it says so and hands back a REFUSAL, and does not announce a difficulty and continue to a
+      clean answer. (b) In a separate population, give a check that RAN one input it cannot
+      handle: the component's convention holds, the run still reaches a verdict for every other
+      check, and that one input does not by itself convert the run's outcome. Asserting (a)
+      without (b) invites an implementation that hard-blocks on everything and repeals a
+      convention this record explicitly leaves standing.
+  - name: test_ge120f2i_the_refusal_propagates_into_the_invoking_gates_own_outcome
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: integration
+    angle: reachability
+    surface_invoked: >-
+      the gate named in GE-120f-1's it_requirements — a hooks_manifest entry line invoked via
+      python .leafcutter/scripts/commit_guardian/run_hook.py, or the ci.yml job that runs it
+    description: >-
+      PRODUCTION ENTRY POINT, AND THE CLAUSE KI-CG-021 WOULD HAVE CAUGHT ON DAY ONE. Invoke the
+      run the way the gate invokes it and assert the GATE's outcome is non-zero for population A
+      and zero for population B from the first descriptor. A refusal that no gate reads is the
+      same inertness one layer out, and "the fail-closed contract was never wired to the exit
+      code" is this component's recorded history of exactly that.
+  - name: test_ge120f2i_the_deployed_copy_returns_the_outcome_rather_than_only_printing_it
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: integration
+    angle: deployed
+    description: >-
+      After build.py, the DEPLOYED run returns the outcome from a cold process with the source
+      tree off the import path — a helper outside templates/scripts/commit_guardian/ without a
+      scripts/build_phases.py deploy-map entry surfaces here as ModuleNotFoundError rather than
+      passing. Assert the process exit status, not only its stdout: a run whose findings appear
+      in stdout while its exit status is zero is the precise defect. Invoke pytest with
+      AC_ENFORCE_STRICT=1.
+test_rationale: |
+  This record's whole evidential value is asymmetry, so the descriptors are written to fail HERE
+  and nowhere else. Its parent requires the checks to be named and the run to fail; an
+  implementation can satisfy the naming half perfectly and lose the failing half at the
+  boundary, and every parent clause about naming stays green throughout. That is not
+  hypothetical in this repository — it is the documented-as-live, always-returns-success
+  remediation path this component already shipped once.
+
+  So the first descriptor's injection must be EXECUTED, not described: if making the run always
+  accept turns any GE-120f-2 descriptor red, the injection has been applied too broadly and this
+  record's independence is unproven.
+
+  The unresolved descriptor is deliberately asserted as SET MEMBERSHIP rather than as a message
+  match, because a shared message with a different word in it would pass a text assertion while
+  the two conditions remained merged in the data.
+
+  The two-sided fail-open descriptor exists because the obvious over-correction — hard-block on
+  every internal difficulty — repeals GE-116a-1-iii, which this record explicitly leaves
+  standing. Asserting only the refusal half would ship that over-correction green.
+
+  Per CLAUDE.md's grep rule no descriptor reads source text; each executes the run and asserts
+  on its exit status and emitted output. AC_ENFORCE_STRICT=1 on every invocation.
 delivers_to: null
 expects_from:
   ac_id: GE-120f-2
@@ -86,7 +236,8 @@ created: 2026-09-01
 amended_by: []
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-AGuardThatHasNeverSaidNoIsNotCountedAs/05_TICKET-20260914-GE-120f-2-i.md
 change_target: code
 risk_surface: contract_boundary
 notes: |
@@ -127,3 +278,4 @@ notes: |
   as unresolved. It is written into the acceptance clause here so that this record cannot be
   satisfied by a run that examines nothing and accepts; the figure itself, and its movement
   under a varying population, are not restated here.
+target_epic: EPIC-AGuardThatHasNeverSaidNoIsNotCountedAs

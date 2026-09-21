@@ -1,0 +1,177 @@
+id: TQ-600b-1-i
+components:
+  - testing_quality
+title: "The equivalence comparison is shown disagreeing before it is trusted agreeing"
+component: testing-quality
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a pair of runs in which one named test is deliberately made to reach a
+    different outcome in the many-worker run than in the one-at-a-time run,
+  When the two runs are compared,
+  Then the comparison reports disagreement, names that one test, and states the
+    outcome it reached in each run,
+    And the comparison reports disagreement when a test present in one run is
+      absent from the other, rather than treating the absent test as agreeing,
+    And the comparison reports disagreement when one of the two result records is
+      empty or cannot be read, rather than reporting agreement over nothing.
+depends_on:
+  - TQ-600b-1
+doc_links:
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      The failure angle applied to a comparator rather than to a feature: the unit
+      under test here is the comparison itself, and the only evidence it works is
+      watching it report the difference it was built to find.
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - >-
+    THE THREE FALSE-MATCH SHAPES MUST BE THREE DISTINCT REPORTED REASONS, not one
+    generic error. A genuine difference missed, a test present in one record
+    only, and an empty or unreadable record have different causes and different
+    fixes; reporting them identically hands the reader the diagnosis problem this
+    goal exists to remove.
+  - >-
+    THE COMPARATOR MUST NEVER RETURN AGREEMENT OVER A ZERO-LENGTH COMPARISON. An
+    empty-versus-empty pair is a failure with a compared count of 0, not a pass.
+  - >-
+    PRESENT-IN-ONE-ONLY IS THE CLAUSE MOST LIKELY TO BE MISSED, because comparing
+    two mappings by iterating the keys of one of them is the natural way to write
+    it and silently ignores every test the other run never executed. Iterate the
+    union, in both directions, and prove both directions separately.
+  - >-
+    An unreadable record must be distinguished from an absent one and from an
+    empty one; wrap the read as external I/O, log at WARNING or above, and return
+    a failing comparison rather than propagating a bare exception that a caller
+    might treat as "no differences found".
+  - >-
+    This AC is unit-testable directly against fixture records — no real suite run
+    is required, which is why it is cheap enough to be non-negotiable.
+delivers_to: null
+expects_from:
+  ac_id: TQ-600b-1
+  contract: >-
+    The comparator: two per-test result records in, and either agreement with a
+    stated compared count or a list of named disagreements out. This AC asserts
+    over its three false-match shapes and over the distinctness of the three
+    reported reasons.
+test_spec:
+  - name: test_tq600b_1_i_a_deliberately_flipped_test_is_named_with_the_outcome_in_each_run
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: unit
+    angle: failure
+    description: >-
+      THE RED FOR THE COMPARATOR ITSELF. One named test reaches a different
+      outcome in each record; the comparison reports disagreement, names that
+      test, and states both outcomes. A comparator that returned agreement
+      unconditionally would clear TQ-600b-1 on its first run and license a
+      parallel suite nobody has checked.
+  - name: test_tq600b_1_i_a_test_present_in_one_run_and_absent_from_the_other_is_reported_as_disagreeing
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: unit
+    angle: failure
+    description: >-
+      NAMED MUTATION: compare by iterating the keys of the first record only. The
+      absent test is then treated as agreeing and this test must go RED. Asserted
+      in BOTH directions — present-only-in-serial and present-only-in-parallel —
+      since a one-directional walk passes one of them.
+  - name: test_tq600b_1_i_an_empty_result_record_is_reported_as_disagreement_not_agreement
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: unit
+    angle: failure
+    description: >-
+      One record holding no entries produces a failing comparison with a compared
+      count of 0. NAMED MUTATION: return agreement when the difference list is
+      empty without checking the compared count; this test must go RED. This is
+      the AC-store validator's zero-file exit-0 reproduced deliberately.
+  - name: test_tq600b_1_i_an_unreadable_result_record_is_reported_as_disagreement
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: unit
+    angle: failure
+    description: >-
+      A malformed or unparseable record produces a failing comparison rather than
+      an exception a caller could mistake for "no differences found", and rather
+      than agreement.
+  - name: test_tq600b_1_i_the_three_false_match_shapes_are_reported_distinguishably
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: >-
+      Flipped outcome, present-in-one-only, and empty-or-unreadable each produce
+      their own stated reason. NAMED MUTATION: collapse all three onto one
+      "records disagree" message; this test must go RED.
+  - name: test_tq600b_1_i_two_empty_records_do_not_compare_equal
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: >-
+      The degenerate symmetric case. Both records empty is a failure with a
+      compared count of 0 — agreement over nothing is the outcome this AC exists
+      to forbid.
+test_rationale: |
+  TQ-600b-1 is the gate that decides whether parallelism ships, so the gate
+  itself needs a proof. A comparison that returned "equal" unconditionally would
+  clear TQ-600b-1 on the first run and wave through the correctness of every
+  future verdict — the most expensive possible instance of this repository's
+  recurring defect.
+
+  All three clauses are ways to report a false match and each has a precedent
+  here, so each gets its own descriptor with its own named injection. The
+  present-in-one-only descriptor is the likeliest to be missed in
+  implementation, because comparing two mappings by iterating the keys of one is
+  the natural way to write it; it is therefore asserted in both directions,
+  since a one-directional walk satisfies one of them.
+
+  This AC needs no real suite run — fixture records are sufficient and correct
+  here, because the unit under test is the comparison, not the suite. That is
+  what makes these controls cheap enough to be non-negotiable.
+origin_agent: business-analyst
+created: 2026-09-21
+amended_by:
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-09-21
+  note: python-coder, S. Kept change_target code — the unit under test is the comparator,
+    so fixture records are the correct artifact here and no real suite run is needed.
+    Split the present-in-one-only clause into both directions, since a one-directional
+    key walk satisfies one of them. criteria untouched.
+- action: approved
+  agent: approve_acs
+  date: '2026-09-21'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: internal
+notes: |
+  TQ-600b-1 IS THE GATE THAT DECIDES WHETHER PARALLELISM SHIPS, SO THE GATE ITSELF
+  NEEDS A PROOF. A comparison that returns "equal" unconditionally would clear
+  TQ-600b-1 on the first run and license a parallel suite nobody has actually
+  checked. That is the most expensive possible instance of this repository's
+  recurring defect, because the thing it would wave through is the correctness of
+  every future verdict.
+
+  THE THREE CLAUSES ARE THREE DIFFERENT WAYS TO REPORT A FALSE MATCH, AND EACH HAS
+  A PRECEDENT HERE. A genuine difference missed is the ordinary bug. A test present
+  in one run and missing from the other is the shape that matters most in practice
+  — a collision that prevents a test from running at all looks like agreement to a
+  comparator that iterates the intersection. An empty or unreadable record
+  comparing equal is the AC-store validator's zero-file exit-0, repeated.
+
+  THE SECOND CLAUSE IS THE LIKELIEST TO BE MISSED IN IMPLEMENTATION. Comparing two
+  mappings by iterating the keys of one of them is the natural way to write this,
+  and it silently ignores every test the parallel run failed to execute.

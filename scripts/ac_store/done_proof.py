@@ -41,7 +41,10 @@ ARCHITECTURE: Subprocess-invoking utility.  Scans the test tree for covers tags
     All external I/O is wrapped per the Error Handling Policy (Rule 1).
     Pure classification helpers carry no try/except (Rule 4).
 
-    Flow:
+    Flow (BP-100n-4: verify_done_eligible's body is orchestration-only —
+    each phase below is a dedicated helper so the function's own cyclomatic
+    complexity stays low; every helper is a pure extraction with no
+    behaviour change from the inline code it replaced):
         verify_done_eligible(ac_id, *, ac_root, test_root) -> dict
             └── _build_ac_status_map(ac_root)
             └── _scan_test_root_for_covers_tags(test_root)
@@ -49,18 +52,37 @@ ARCHITECTURE: Subprocess-invoking utility.  Scans the test tree for covers tags
             │       └── _scan_single_ts_file(ts_file)         [.ts/.tsx]
             └── _collect_dangling_tags(all_tags, ac_status_map)
             └── _collect_linked_tests(ac_id, all_tags)
-            └── [no direct test] _has_resolvable_child(covered_by, ac_status_map)
-            └── [no direct test + composite] _verify_composite_eligible(...)
-            │       └── _resolve_all_child_ids(covered_by, ac_status_map)
-            │       └── _collect_linked_tests(child_id, all_tags)
-            │       └── _run_pytest_and_parse(test_files)
-            │       └── _classify_outcomes(child_tests, pytest_results)
-            └── [leaf, py path] _run_pytest_and_parse(py_files)
-            │       └── _parse_pytest_verbose_output(stdout)
-            │            _classify_outcomes(py_linked, pytest_results)
-            │                    └── _find_nodeid_for_test(func, basename, results)
-            └── [leaf, ts path] run_vitest_and_parse(ts_files, project_dir=…)
-                         _discover_project_dir(ts_files) → project_dir
+            └── [no direct test] _handle_no_direct_tests(...)
+            │       └── _has_resolvable_child(covered_by, ac_status_map)
+            │       └── [composite] _verify_composite_eligible(...)
+            │               └── _resolve_all_child_ids(covered_by, ac_status_map)
+            │               └── _collect_linked_tests(child_id, all_tags)
+            │               └── _run_pytest_and_parse(test_files)
+            │               └── _classify_outcomes(child_tests, pytest_results)
+            └── _split_linked_tests_by_language(linked_tests) → py_linked, ts_linked
+            └── _maybe_reachability_verdict(reachability_spec, py_linked, ...)
+            │       └── _check_reachability_for_linked_tests(...)
+            └── [py path] _run_python_test_phase(ac_id, py_linked)
+            │       └── _run_pytest_and_parse(py_files)
+            │       │       └── _parse_pytest_verbose_output(stdout)
+            │       └── _classify_outcomes(py_linked, pytest_results)
+            │               └── _find_nodeid_for_test(func, basename, results)
+            └── [ts path] _run_ts_test_phase(ts_linked)
+            │       └── _discover_project_dir(ts_files) → project_dir
+            │       └── run_vitest_and_parse(ts_files, project_dir=…)
+            │       └── _classify_ts_outcomes(ts_linked, vitest_results)
+            └── [failing] _build_failure_reason(ac_id, py_failing, ts_failing, ...)
+            │       └── _describe_non_passing(nodeid, pytest_results)
+            └── [success] _apply_reachability_gate(...)
+
+    run_vitest_and_parse's body is likewise orchestration-only (BP-100n-4):
+        run_vitest_and_parse(test_files, *, project_dir) -> dict[str, str]
+            └── _build_abs_path_map(test_files)
+            └── _ensure_vitest_binary(vitest_bin)
+            └── _build_vitest_command(vitest_bin, abs_by_original, test_files)
+            └── _execute_vitest(cmd, cwd)
+            └── _parse_vitest_stdout(stdout)
+            └── _build_raw_results_from_json(data)
 
     BP-1100g-3 — tag-record collection (separate entry point, feeds NO
     eligibility decision):
@@ -74,6 +96,24 @@ ARCHITECTURE: Subprocess-invoking utility.  Scans the test tree for covers tags
         find_unrecognised_angle_tags(records) -> list[dict]
             └── _load_permitted_angle_kinds()  [config/ac_store_schema.json,
                                                  the BP-1100g-1 single source]
+
+    Sibling-module split (BP-100n-4-ii): six of the "run_vitest_and_parse's
+    body" helpers listed above (_build_abs_path_map, _ensure_vitest_binary,
+    _build_vitest_command, _execute_vitest, _parse_vitest_stdout,
+    _build_raw_results_from_json) and seven of the "verify_done_eligible's
+    body" helpers listed above (_split_linked_tests_by_language,
+    _handle_no_direct_tests, _maybe_reachability_verdict,
+    _run_python_test_phase, _run_ts_test_phase, _classify_ts_outcomes,
+    _build_failure_reason) now live in the sibling module
+    _done_proof_phase_helpers.py rather than in this file — moved verbatim,
+    with no behaviour change, so this file fits back under the file-size
+    ratchet (scripts/commit_guardian/check_file_size.py) after the in-place
+    complexity decomposition below pushed it over. They are imported at this
+    module's top level (see the import block below) so every call site in
+    this file is unchanged. See the DECISION HISTORY entry below and that
+    module's own docstring for the full rationale, including why that
+    module's OWN dependency back on this one is a local (function-body)
+    import rather than a top-level one.
 """
 
 from __future__ import annotations
@@ -93,6 +133,27 @@ import yaml
 # test_enforcement lazily imports done_proof inside a function body,
 # so this top-level import does NOT create a circular dependency.
 from test_enforcement import COVERS_TAG_RE
+
+# BP-100n-4-ii: import the sibling module's relocated private helpers at
+# top level. This is safe in EITHER load order: _done_proof_phase_helpers
+# has no top-level import of this module (its own back-reference to this
+# module's symbols is a LOCAL, function-body import — see that module's own
+# docstring), so loading it here never re-enters this module while it is
+# still mid-definition.
+from _done_proof_phase_helpers import (
+    _build_abs_path_map,
+    _build_failure_reason,
+    _build_raw_results_from_json,
+    _build_vitest_command,
+    _ensure_vitest_binary,
+    _execute_vitest,
+    _handle_no_direct_tests,
+    _maybe_reachability_verdict,
+    _parse_vitest_stdout,
+    _run_python_test_phase,
+    _run_ts_test_phase,
+    _split_linked_tests_by_language,
+)
 
 # ---------------------------------------------------------------------------
 # BO-2900d-1: shared reachability-exemption seam import.
@@ -239,18 +300,12 @@ _PYTEST_PER_FILE_BUDGET_SECONDS = 300.0
 # otherwise. See _resolve_pytest_timeout_seconds.
 _ENV_TIMEOUT_OVERRIDE_VAR = "LEAFCUTTER_DONE_PROOF_PYTEST_TIMEOUT_SECONDS"
 
-# Sentinel key stored in the dict _run_pytest_and_parse returns on a genuine
-# subprocess timeout. Deliberately shaped so it can never collide with a real
-# pytest nodeid: every real nodeid contains "::" and ends in a "test_..."
-# segment (see _nodeid_function_name), so both this module's own
-# _classify_outcomes/_find_nodeid_for_test and fast_lane.py's
-# _resolve_tag_outcome look it up by nodeid, miss it, and fall through to
-# their existing "no result found" handling — identical to what they already
-# do for a genuinely empty dict. Only the two call sites that build the
-# operator-facing eligibility reason (verify_done_eligible's leaf path and
-# _verify_composite_eligible) read this key directly, to make a timeout
-# distinguishable from "no test found" (KI-TQ-20260901-1310 bullet 2).
-_PYTEST_TIMEOUT_SENTINEL = "__done_proof_pytest_timeout__"
+# Sentinel key _run_pytest_and_parse returns whenever the run did not finish
+# -- a subprocess timeout OR a completed-but-truncated process, e.g. killed by
+# machine/OOM/scheduler contention (BO-2500a-7). Shaped so it never collides
+# with a real nodeid (every real nodeid contains "::"); only the two
+# eligibility-reason call sites read it directly (KI-TQ-20260901-1310 bullet 2).
+_PYTEST_RUN_INCOMPLETE_SENTINEL = "__done_proof_pytest_timeout__"
 
 
 def _resolve_pytest_timeout_seconds(test_files: list[Path]) -> float:
@@ -590,6 +645,13 @@ def _discover_project_dir(ts_files: list[Path]) -> Path:
     return ts_files[0].parent if ts_files else Path.cwd()
 
 
+# BP-100n-4-ii: _build_abs_path_map, _ensure_vitest_binary,
+# _build_vitest_command, _execute_vitest, _parse_vitest_stdout, and
+# _build_raw_results_from_json — the internals run_vitest_and_parse's body
+# below calls — now live in the sibling module _done_proof_phase_helpers.py
+# (imported at the top of this file). Moved verbatim, no behaviour change.
+
+
 def run_vitest_and_parse(
     test_files: list[Path],
     *,
@@ -604,6 +666,12 @@ def run_vitest_and_parse(
     A file is ``"PASSED"`` iff its file-level result in the JSON output is
     ``"passed"`` with no failing assertions.  Any other status — or absence
     from the JSON output — is mapped to ``"FAILED"`` (fail-closed).
+
+    BP-100n-4: the body below is orchestration only — subprocess launch,
+    JSON parsing, and outcome-map construction are each extracted into a
+    dedicated helper (see the docstrings above) so this function's own
+    cyclomatic complexity stays low. Pure refactor: identical control flow,
+    messages, and return values to before the extraction.
 
     Args:
         test_files: Absolute paths of TypeScript test files to run.
@@ -635,70 +703,22 @@ def run_vitest_and_parse(
     # Map the caller's path spelling -> its absolute form. The returned dict is
     # keyed by the ORIGINAL spelling so callers can look results up by the same
     # path object they passed in.
-    abs_by_original: dict[str, str] = {
-        str(f): str(Path(f).resolve()) for f in test_files
-    }
+    abs_by_original = _build_abs_path_map(test_files)
 
     vitest_bin = project_dir_abs / "node_modules" / ".bin" / "vitest"
-    if not vitest_bin.exists():
-        raise JsRunnerUnavailable(
-            f"vitest binary not found: {vitest_bin}; ensure node_modules is installed"
-        )
+    _ensure_vitest_binary(vitest_bin)
 
-    cmd = [str(vitest_bin), "run", "--reporter=json"]
-    cmd.extend(abs_by_original[str(f)] for f in test_files)
+    cmd = _build_vitest_command(vitest_bin, abs_by_original, test_files)
 
-    try:
-        proc = subprocess.run(
-            cmd,
-            capture_output=True,
-            text=True,
-            timeout=120,
-            cwd=str(project_dir_abs),
-        )
-    except FileNotFoundError as exc:
-        raise JsRunnerUnavailable(
-            f"vitest binary not invokable (FileNotFoundError): {exc}"
-        ) from exc
-    except OSError as exc:
-        raise JsRunnerUnavailable(
-            f"vitest OS error on launch: {exc}"
-        ) from exc
-    except subprocess.TimeoutExpired as exc:
-        print(
-            f"WARNING: done_proof: vitest timed out after 120 s: {exc}",
-            file=sys.stderr,
-        )
+    proc = _execute_vitest(cmd, project_dir_abs)
+    if proc is None:
         return {str(f): "FAILED" for f in test_files}
 
-    try:
-        data = json.loads(proc.stdout)
-    except json.JSONDecodeError as exc:
-        print(
-            f"WARNING: done_proof: vitest JSON parse error: {exc}",
-            file=sys.stderr,
-        )
+    data = _parse_vitest_stdout(proc.stdout)
+    if data is None:
         return {str(f): "FAILED" for f in test_files}
 
-    # Build a path → outcome map from the JSON testResults array.
-    # Vitest/Jest JSON reporter uses "testFilePath" or "name" for the file path
-    # and "status" for the per-suite outcome ("passed" | "failed").
-    raw_results: dict[str, str] = {}
-    for item in data.get("testResults", []):
-        file_path = (
-            item.get("testFilePath")
-            or item.get("file")
-            or item.get("name")
-            or ""
-        )
-        if not file_path:
-            continue
-        status = str(item.get("status", "failed")).lower()
-        # Vitest reports absolute paths; normalise so lookups match the absolute
-        # forms computed above regardless of how the caller spelled them.
-        raw_results[str(Path(file_path).resolve())] = (
-            "PASSED" if status == "passed" else "FAILED"
-        )
+    raw_results = _build_raw_results_from_json(data)
 
     # Fail-closed: any requested file absent from JSON output → FAILED.
     # Keyed by the caller's original path spelling; matched by absolute path.
@@ -1257,10 +1277,20 @@ def _run_pytest_and_parse(test_files: list[Path]) -> dict[str, str]:
 
     A genuine timeout still fails closed exactly as before — no test can be
     reported as passing — but the returned dict now carries
-    :data:`_PYTEST_TIMEOUT_SENTINEL` instead of being silently empty, so a
-    caller building the operator-facing reason can name the budget and the
-    command instead of the ambiguous bare "not run" phrasing (bullet 2 of the
-    KI; see :func:`verify_done_eligible` and :func:`_verify_composite_eligible`).
+    :data:`_PYTEST_RUN_INCOMPLETE_SENTINEL` instead of being silently empty,
+    so a caller building the operator-facing reason can name the budget and
+    the command instead of the ambiguous bare "not run" phrasing (bullet 2 of
+    the KI; see :func:`verify_done_eligible` and
+    :func:`_verify_composite_eligible`).
+
+    BO-2500a-7 generalises this beyond the timeout path: a subprocess that
+    ends WITHOUT raising ``TimeoutExpired`` — killed outright by the OS
+    (OOM, scheduler contention, any signal) — returns a normal
+    ``CompletedProcess`` with partial stdout and a returncode that is not one
+    of pytest's two "ran every collected test to conclusion" codes (``0`` all
+    passed, ``1`` some failed). That case is detected the same way and
+    reported with the same sentinel, so a killed run is never mistaken for a
+    completed run whose named tests genuinely failed.
 
     Args:
         test_files: Absolute paths to Python test files to execute.
@@ -1268,8 +1298,9 @@ def _run_pytest_and_parse(test_files: list[Path]) -> dict[str, str]:
     Returns:
         Dict mapping pytest nodeid strings to outcome strings.  Returns an
         empty dict when *test_files* is empty or the subprocess cannot be
-        started.  Returns ``{_PYTEST_TIMEOUT_SENTINEL: <message>}`` — never a
-        real nodeid — when the subprocess exceeds its computed budget.
+        started.  Returns ``{_PYTEST_RUN_INCOMPLETE_SENTINEL: <message>}`` —
+        never a real nodeid — when the subprocess exceeds its computed
+        budget, or ends with a returncode inconsistent with a completed run.
     """
     if not test_files:
         return {}
@@ -1291,13 +1322,17 @@ def _run_pytest_and_parse(test_files: list[Path]) -> dict[str, str]:
             f"its {timeout_seconds:.1f}s timeout budget (command: pytest): {exc}"
         )
         print(f"WARNING: done_proof: {message}", file=sys.stderr)
-        return {_PYTEST_TIMEOUT_SENTINEL: message}
+        return {_PYTEST_RUN_INCOMPLETE_SENTINEL: message}
     except OSError as exc:
         print(
             f"WARNING: done_proof: cannot run pytest: {exc}",
             file=sys.stderr,
         )
         return {}
+    if proc.returncode not in (0, 1):
+        message = f"pytest run unfinished: {len(test_files)} file(s), returncode {proc.returncode}"
+        print(f"WARNING: done_proof: {message}", file=sys.stderr)
+        return {_PYTEST_RUN_INCOMPLETE_SENTINEL: message}
     return _parse_pytest_verbose_output(proc.stdout)
 
 
@@ -1509,33 +1544,35 @@ def _describe_non_passing(nodeid: str, pytest_results: dict[str, str]) -> str:
     return f"linked test {label}: {nodeid}"
 
 
-def _pytest_timeout_reason(ac_id: str, pytest_results: dict[str, str]) -> str | None:
-    """Return a distinguishable timeout reason, or ``None`` when no timeout occurred.
+def _pytest_incomplete_run_reason(ac_id: str, pytest_results: dict[str, str]) -> str | None:
+    """Return a distinguishable "run did not finish" reason, or ``None``.
 
-    KI-TQ-20260901-1310 bullet 2: a genuine pytest timeout must not read like
-    "the tests do not exist" — ``_describe_non_passing``'s bare ``"not run"``
-    fallback is exactly that ambiguous phrase, and a timeout empties
-    *pytest_results* of every real nodeid, so every linked test would
-    otherwise report it. Checking for :data:`_PYTEST_TIMEOUT_SENTINEL` here
-    lets both call sites (:func:`verify_done_eligible`'s leaf path and
+    KI-TQ-20260901-1310 bullet 2 (generalised by BO-2500a-7 beyond the
+    timeout-only case): a run that did not finish — whether via a genuine
+    pytest timeout or a subprocess killed outright by the OS — must not read
+    like "the tests do not exist" or "these tests failed".
+    ``_describe_non_passing``'s bare ``"not run"`` fallback is exactly that
+    ambiguous phrase, and an incomplete run empties *pytest_results* of every
+    real nodeid, so every linked test would otherwise report it as if it had
+    individually failed. Checking for :data:`_PYTEST_RUN_INCOMPLETE_SENTINEL`
+    here lets both call sites (:func:`verify_done_eligible`'s leaf path and
     :func:`_verify_composite_eligible`) short-circuit to a reason that names
-    the AC, the budget, and the command *before* any per-test classification
-    runs.
+    the AC and the run failure *before* any per-test classification runs.
 
     Args:
         ac_id: The AC identifier being evaluated (leaf) or the composite's own
             identifier — folded into the reason for operator context.
         pytest_results: ``{nodeid: outcome}`` from :func:`_run_pytest_and_parse`,
-            or the sentinel-only dict it returns on timeout.
+            or the sentinel-only dict it returns when the run did not finish.
 
     Returns:
         The operator-facing reason string when *pytest_results* is the
-        timeout sentinel dict; ``None`` otherwise.
+        incomplete-run sentinel dict; ``None`` otherwise.
     """
-    message = pytest_results.get(_PYTEST_TIMEOUT_SENTINEL)
+    message = pytest_results.get(_PYTEST_RUN_INCOMPLETE_SENTINEL)
     if message is None:
         return None
-    return f"could not verify {ac_id}: {message}"
+    return f"could not verify {ac_id}: the run did not finish -- {message}"
 
 
 def _classify_outcomes(
@@ -1644,11 +1681,11 @@ def _verify_composite_eligible(
     all_child_tests = [test for tests in per_child_tests.values() for test in tests]
     test_files = list({t["file"] for t in all_child_tests})
     pytest_results = _run_pytest_and_parse(test_files)
-    timeout_reason = _pytest_timeout_reason(ac_id, pytest_results)
-    if timeout_reason is not None:
+    incomplete_reason = _pytest_incomplete_run_reason(ac_id, pytest_results)
+    if incomplete_reason is not None:
         return {
             "eligible": False,
-            "reason": timeout_reason,
+            "reason": incomplete_reason,
             "passing_tests": [],
             "failing_tests": [],
             "dangling_tags": dangling_tags,
@@ -2012,6 +2049,16 @@ def _apply_reachability_gate(
 
 
 # ---------------------------------------------------------------------------
+# BP-100n-4-ii: _split_linked_tests_by_language, _handle_no_direct_tests,
+# _maybe_reachability_verdict, _run_python_test_phase, _run_ts_test_phase,
+# _classify_ts_outcomes, and _build_failure_reason — the orchestration
+# helpers verify_done_eligible's body below calls — now live in the sibling
+# module _done_proof_phase_helpers.py (imported at the top of this file).
+# Moved verbatim, no behaviour change.
+# ---------------------------------------------------------------------------
+
+
+# ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
 
@@ -2118,119 +2165,79 @@ def verify_done_eligible(
             reaching the target through it; ``None`` otherwise (including
             every pre-existing refusal reason, unaffected by this ticket).
     """
+    # BP-100n-4: this body is orchestration only — each phase (splitting by
+    # language, the reachability pre-gate, the pytest phase, the vitest
+    # phase, and the failure-reason text) is extracted into a dedicated
+    # helper above so this function's own cyclomatic complexity stays low.
+    # Pure refactor: identical control flow, messages, and return values to
+    # before the extraction — see the DECISION HISTORY entry at the bottom
+    # of this module.
     ac_status_map = _build_ac_status_map(ac_root)
     all_tags = _scan_test_root_for_covers_tags(test_root)
     dangling_tags = _collect_dangling_tags(all_tags, ac_status_map)
     linked_tests = _collect_linked_tests(ac_id, all_tags)
 
     if not linked_tests:
-        ac_info = ac_status_map.get(ac_id)
-        covered_by = ac_info.get("covered_by", []) if ac_info else []
-        if _has_resolvable_child(covered_by, ac_status_map):
-            return _verify_composite_eligible(
-                ac_id,
-                covered_by,
-                ac_status_map=ac_status_map,
-                all_tags=all_tags,
-                dangling_tags=dangling_tags,
-            )
-        return {
-            "eligible": False,
-            "reason": f"no linked test found for {ac_id}",
-            "passing_tests": [],
-            "failing_tests": [],
-            "dangling_tags": dangling_tags,
-        }
+        return _handle_no_direct_tests(
+            ac_id,
+            ac_status_map=ac_status_map,
+            all_tags=all_tags,
+            dangling_tags=dangling_tags,
+        )
 
     # Split linked tests by language: .py → pytest path; .ts/.tsx → vitest path.
-    py_linked = [t for t in linked_tests if Path(t["file"]).suffix == ".py"]
-    ts_linked = [
-        t for t in linked_tests if Path(t["file"]).suffix in (".ts", ".tsx")
-    ]
+    py_linked, ts_linked = _split_linked_tests_by_language(linked_tests)
 
     # BO-2900a-1-i: reachability is an ADDITIONAL condition layered on top of
     # the pre-existing pass/fail gate below, evaluated first so a proof that
     # never reached the target is refused without depending on whatever the
     # separate pytest subprocess run happens to report.
-    if reachability_spec is not None and py_linked:
-        reachability_verdict = _check_reachability_for_linked_tests(
-            py_linked, reachability_spec
-        )
-        if reachability_verdict is not None:
-            reachability_verdict["dangling_tags"] = dangling_tags
-            return reachability_verdict
+    reachability_verdict = _maybe_reachability_verdict(
+        reachability_spec, py_linked, dangling_tags
+    )
+    if reachability_verdict is not None:
+        return reachability_verdict
 
     # --- Python path ---
-    py_passing: list[str] = []
-    py_failing: list[str] = []
-    pytest_results: dict[str, str] = {}
-    if py_linked:
-        py_files = list({t["file"] for t in py_linked})
-        pytest_results = _run_pytest_and_parse(py_files)
-        timeout_reason = _pytest_timeout_reason(ac_id, pytest_results)
-        if timeout_reason is not None:
-            return {
-                "eligible": False,
-                "reason": timeout_reason,
-                "passing_tests": [],
-                "failing_tests": [],
-                "dangling_tags": dangling_tags,
-            }
-        py_passing, py_failing = _classify_outcomes(py_linked, pytest_results)
+    py_passing, py_failing, pytest_results, incomplete_reason = _run_python_test_phase(
+        ac_id, py_linked
+    )
+    if incomplete_reason is not None:
+        return {
+            "eligible": False,
+            "reason": incomplete_reason,
+            "passing_tests": [],
+            "failing_tests": [],
+            "dangling_tags": dangling_tags,
+        }
 
     # --- TypeScript/JavaScript path (BO-2500e-2 / BO-2500e-4-i) ---
     # Only invoked when ≥1 linked .ts/.tsx test exists.
-    ts_passing: list[str] = []
-    ts_failing: list[str] = []
-    if ts_linked:
-        ts_files_unique = list({t["file"] for t in ts_linked})
-        project_dir = _discover_project_dir(ts_files_unique)
-        try:
-            vitest_results = run_vitest_and_parse(
-                ts_files_unique, project_dir=project_dir
-            )
-        except JsRunnerUnavailable as exc:
-            return {
-                "eligible": False,
-                "reason": (
-                    f"JS runner unavailable for {ac_id}: {exc}"
-                ),
-                "passing_tests": py_passing,
-                "failing_tests": [],
-                "dangling_tags": dangling_tags,
-            }
-        # Map each linked .ts file to its vitest outcome (fail-closed if absent).
-        seen_ts_files: set[str] = set()
-        for t in ts_linked:
-            f_str = str(t["file"])
-            if f_str in seen_ts_files:
-                continue
-            seen_ts_files.add(f_str)
-            outcome = vitest_results.get(f_str, "FAILED")
-            if outcome == "PASSED":
-                ts_passing.append(f_str)
-            else:
-                ts_failing.append(f_str)
+    try:
+        ts_passing, ts_failing = _run_ts_test_phase(ts_linked)
+    except JsRunnerUnavailable as exc:
+        return {
+            "eligible": False,
+            "reason": (
+                f"JS runner unavailable for {ac_id}: {exc}"
+            ),
+            "passing_tests": py_passing,
+            "failing_tests": [],
+            "dangling_tags": dangling_tags,
+        }
 
     # --- Combine and classify ---
     passing_tests = py_passing + ts_passing
     failing_tests = py_failing + ts_failing
 
     if failing_tests:
-        reason_parts: list[str] = []
-        if py_failing:
-            for nid in py_failing:
-                # Name the real outcome (failed / skipped / xfail / not run) so
-                # the three refusal causes stay distinguishable — ACS-200f-1.
-                reason_parts.append(_describe_non_passing(nid, pytest_results))
-        if ts_failing:
-            ts_names = ", ".join(ts_failing)
-            reason_parts.append(
-                f"JS test(s) failed for {ac_id}: {ts_names}"
-            )
+        # Name the real outcome (failed / skipped / xfail / not run) so the
+        # three refusal causes stay distinguishable — ACS-200f-1.
         return {
             "eligible": False,
-            "reason": "; ".join(reason_parts),
+            "reason": _build_failure_reason(
+                ac_id, py_failing, ts_failing, pytest_results
+            ),
             "passing_tests": passing_tests,
             "failing_tests": failing_tests,
             "dangling_tags": dangling_tags,
@@ -2304,3 +2311,37 @@ def verify_done_eligible(
 #   contract test-writer's fixtures drive -- BO-2900a-1's own auto-detection
 #   of a unit's main(argv) entry point from an AC id alone is a separate,
 #   not-yet-built parent AC. (#BO-2900a-1-i)
+# - 2026-09-14 00:00 [python-coder]: Pure complexity-reduction refactor so
+#   check-complexity can register clean on this branch (max threshold 15).
+#   verify_done_eligible (was 21) and run_vitest_and_parse (was 17) were
+#   both over the limit; both are now orchestration-only bodies (6 and 7
+#   respectively) with the same branches extracted into small, independently
+#   testable helpers: _split_linked_tests_by_language, _handle_no_direct_tests,
+#   _maybe_reachability_verdict, _run_python_test_phase, _run_ts_test_phase,
+#   _classify_ts_outcomes, and _build_failure_reason for verify_done_eligible;
+#   _build_abs_path_map, _ensure_vitest_binary, _build_vitest_command,
+#   _execute_vitest, _parse_vitest_stdout, and _build_raw_results_from_json
+#   for run_vitest_and_parse. Behaviour-preserving only -- no verdict, message
+#   text, exit code, or error-handling path changed. Verified by diffing
+#   verify_done_eligible's verdict for real AC ids (one eligible, one not)
+#   computed against a HEAD worktree checkout vs. this branch, and by running
+#   the module's own unit test suite. (#BP-100n-4)
+#   ADDENDUM 2026-09-14 [python-coder/BP-100n-4-ii]: The above in-place
+#   decomposition added ~131 counted lines of new signatures/docstrings to a
+#   file that was already over its file-size-ratchet baseline (1347 lines,
+#   scripts/commit_guardian/check_file_size.py), which refuses a further
+#   grow of an already-oversized file. Rather than undoing the complexity
+#   fix, all 13 helpers named above were relocated verbatim (pure move, no
+#   logic/message/exit-code change) into a new sibling module,
+#   _done_proof_phase_helpers.py, added to build_ac_store's deploy_map in
+#   scripts/build_phases.py in the same change (the done_proof.py precedent
+#   this file's own module docstring already documents: an ac_store/
+#   dependency omitted from that hardcoded deploy_map crashes the deployed
+#   check_done_proof hook with ModuleNotFoundError). Both directions of the
+#   resulting cross-module call graph are intentional: this file imports the
+#   sibling's helpers at top level; the sibling imports this file's
+#   remaining symbols LOCALLY inside each function body, so neither load
+#   order deadlocks. Re-verified verify_done_eligible's verdict for the same
+#   two real AC ids after the move, plus check_file_size.py, check_complexity.py,
+#   and a build.py --force-breaking deploy confirming the new module lands in
+#   the deployed layout. (#BP-100n-4)

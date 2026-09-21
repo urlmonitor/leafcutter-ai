@@ -32,10 +32,14 @@ depends_on:
   - TQ-200c
   - TQ-200c-1
 doc_links:
-  - path: scripts/ac_store/generate_ticket_from_ac.py
+  - path: scripts/ac_store/_gtfa_report.py
     relationship: modifies
     status: exists
-    relevance: "The transit path where a demand gets dropped, and the file this AC edits. Verified 2026-08-18: the whole test-contract branch is gated on `is_code_ac` (line 2740) — line 2776's check that the generated Test Requirements block would pass the ticket guard is skipped entirely for non-code work, and line 2773 records the omission as PASS. Today, a five-entry authored test_spec on an llm-expert AC is silently discarded, so the current behaviour is not merely one-demand-at-a-time but zero. Retagged describes -> modifies by it-po 2026-08-18 so it reaches files_touched."
+    relevance: "The transit path where a demand gets dropped. Verified 2026-08-18, re-pointed 2026-09-14 after the generator decomposition: the readiness report's whole test-contract branch is gated on `is_code_ac` — the check that the generated Test Requirements block would pass the ticket guard is skipped entirely for non-code work, and the omission is recorded as PASS."
+  - path: scripts/ac_store/_gtfa_body.py
+    relationship: modifies
+    status: exists
+    relevance: "Where the discard itself happens: _build_ticket_body gates the whole ## Test Requirements section on `has_code_producer or authored_spec`. Today a five-entry authored test_spec on an llm-expert AC is silently discarded, so the current behaviour is not merely one-demand-at-a-time but zero. Retagged describes -> modifies by it-po 2026-08-18 so it reaches files_touched."
   - path: config/ac_store_schema.json
     relationship: describes
     status: exists
@@ -55,7 +59,7 @@ doc_links:
 assigned_agent: python-coder
 estimated_complexity: M
 it_requirements:
-  reference_file_path: "scripts/ac_store/generate_ticket_from_ac.py"
+  reference_file_path: "scripts/ac_store/_gtfa_report.py"
   n_location_rule: "1"
   required_skills:
     - python-coder

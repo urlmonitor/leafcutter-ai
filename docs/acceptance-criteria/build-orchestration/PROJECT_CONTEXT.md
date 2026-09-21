@@ -1,11 +1,15 @@
 ---
+title: "build-orchestration — AC store context"
 description: Accumulated conventions for the build-orchestration AC namespace — L0
   numbering, scope boundaries vs. neighbouring components, and concurrency/parity/registry
   distinctions for BO-series authoring agents.
 created: '2026-07-17'
-last_updated: '2026-07-17'
+last_updated: '2026-09-14'
 type: tutorial
 status: active
+components:
+  - build_orchestration
+  - ac_store
 ---
 # build-orchestration — Project Context for Authoring Agents
 
@@ -15,15 +19,17 @@ Read this before authoring or decomposing ACs in this component.
 ## ID numbering
 
 - L0s occupy hundreds: 100, 200, 201, 202, 300, 400, 500, 700, 800, 900, 1100,
-  1200, 1300, 1400, 1500, 1600, 1700, 1800, 1900, 2000, 2100, 2200.
-- Next free L0 hundred after BO-2200 is **BO-2300**. Pick the next free hundred
-  for any new L0. (BO-1700 = worktree-quality-gate-guard, added 2026-07-01;
-  BO-1800 = isolated-parallel-delivery, added 2026-07-06 from ADR-018;
-  BO-1900 = dispatch-preflight; BO-2000 = correct-prompts-by-construction;
-  BO-2100 = live-app-proof; BO-2200 = documentation-coverage-guarantee, added
-  2026-07-15.)
-- The earlier "next free is BO-1900" note was stale — always confirm the highest
-  existing L0 folder on disk before assigning, not just this file.
+  1200, 1300, 1400, 1500, 1600, 1700, 1800, 1900, 2000, 2100, 2200, 2300, 2400,
+  2500, 2600, 2700, 2800, 2900, 3100, 3200, 3500, 3600, 3800. Slots 3000, 3700
+  and 3701 are occupied by loose `BO-NNNN.yaml` L2/L3 records sitting at the
+  component root — a loose file reserves its slot exactly as a folder does.
+- Next free L0 hundred is **BO-3900** (correct as of 2026-09-14, when BO-3800 was
+  added). Pick the next free hundred for any new L0.
+- **This line has now gone stale three times** — it has previously claimed
+  BO-1900, BO-2300 and BO-3300 while the store had already moved past each.
+  Treat the number above as a hint, never as an answer: `ls` the component
+  directory (folders AND loose `BO-*.yaml` files) and confirm the highest
+  existing slot before assigning, then update this line in the same pass.
 - Deprecated/superseded IDs are reserved permanently — never reuse a numeric slot.
 
 ## Documentation-coverage guarantee — BO-2200 family (placement rationale + boundary)
@@ -122,6 +128,68 @@ isolation-topology capability landed in build-orchestration (drive isolation +
 main-branch gating during drives), not build-pipeline or infrastructure. The
 BO-2200 documentation-coverage guarantee (2026-07-15) followed the same rule: a
 drive-time documentation GATE belongs here, alongside BO-500 computed gates.
+
+## Refusal-triggered specialist handoff — BO-3800 family (placement + the BO-210 seam)
+
+BO-3800 ("When a standard turns work away, the right craft is brought in to finish
+it", added 2026-09-14) is the supervisor-side half of a capability whose guardrail
+half is GE-127f. It lives here for the usual reason: a commit-time gate can only
+REFUSE — it cannot summon anyone — so the RULE belongs in guardrail-engine and the
+HANDOFF (hold the change, ask the specialist, retry delivery, stop and report when it
+still fails) belongs in the layer that drives the work. Five L1s, each separately
+failable; keep them distinct when decomposing:
+
+- **BO-3800a** — the change's FATE: held, not lost and not forced through, and
+  re-offered afterwards. Hold and retry are one record on purpose.
+- **BO-3800b** — WHO does the tidying: a restructuring craft, never the author
+  mid-change. The user's requirement, and the only structural answer to line-shuffling.
+- **BO-3800c** — the BRIEF: the named file and the named demand are CARRIED, never
+  reconstructed. Same split as BO-2200c (dispatch vs. brief).
+- **BO-3800d** — the GIVE-UP path: bounded, and reported with what was asked, done and
+  outstanding. No infinite retry, no quiet pass.
+- **BO-3800e** — the NEGATIVE promise: everything a standard does not ask a specialist
+  for is unchanged. Without it, the cheapest implementation summons a specialist on
+  every refusal, which passes every positive arm and is a serious regression.
+
+**BO-3800a is bounded to work being DRIVEN — decided 2026-09-14, do not re-open.** The
+hold-and-re-offer promise applies inside a drive only. A refusal outside one — a hand-run
+`git commit` at a terminal — is simply refused, with the refusing standard's own message as
+the whole of what the author gets; nothing is held and no specialist is summoned. The reason
+is ADR-019's depth-1 cap: holding a change and re-offering it need a party that outlives the
+refusal, which is the depth-0 driver, and the delivery step itself runs at depth 1 where an
+agent cannot invoke the Agent tool at all — such calls are silently dropped. The alternative
+was rejected because no design for it exists under that constraint. BO-3800a-1's "Given a
+ticket is being driven" Givens are correct under this decision and must not be widened.
+
+**Hard precondition: INF-800f** (infrastructure). The restructuring craft is a slash
+command today, reachable by hand and by nothing else. Nothing in BO-3800 is buildable
+until INF-800f makes it askable. Do not re-specify or decompose it under BO.
+
+**The BO-210 seam — the thing most likely to be got wrong.** BO-210 is the nearest
+neighbour and was rejected as the HOST. Its promise is that a hook-failure fix is done
+by the SAME agent type that authored the work, holding its original context; BO-3800's
+promise is that for one class of refusal the author is the WRONG party. Both are right
+in their own population and the boundary is the disposition the refusing standard
+itself states — it is not judged by either record. BO-210 now carries a
+`narrowed-by-later-sibling` audit entry pointing at BO-3800 (criteria untouched), in
+the same shape GE-127b carries for GE-127f. Reconcile BO-210a and BO-210c with the
+carve-out in the change that implements BO-3800.
+
+**Reuse, do not rebuild: BO-3000 / BO-3000a.** Handoff routing already ships — target
+re-dispatched before any later phase, handing-off phase not recorded complete, refusal
+diagnosable, and the target NEVER inferred from prose. What it cannot supply is the
+trigger, because a standard that refuses emits no handoff and names no target. That
+missing trigger is BO-3800's whole subject, and BO-3000a's no-inference decision is the
+reason BO-3800c insists the demand is carried rather than reconstructed.
+
+**What is provable here, and what is not** (settled at PO stage; do not widen at L2):
+separation of duties is invisible in a delivered change — one change, one identity — and
+anti-shuffling is invisible in a diff, since moving NEW work out is desired and moving
+EXISTING content out to make a number fall is the failure. No criterion may assert that
+the restructuring WAS performed by the specialist. What is provable is the SEQUENCING:
+that the specialist is actually asked on the refusal path before delivery is retried.
+That is a reachability-shaped claim, and `fast-lane-build.js` is this repo's scar on
+what happens when such a claim is covered by a grep-only test instead.
 
 ## Cross-component placement notes (parity & registry — NOT build-orchestration)
 

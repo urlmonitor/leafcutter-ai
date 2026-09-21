@@ -46,6 +46,7 @@ _EXIT_STALE = 3
 
 _SELECTOR_REL = "scripts/evals/eval_selector.py"
 _RUNNER_HINT = "python scripts/evals/run_agent_eval.py --agent"
+_RESULTS_REL = "scripts/evals/results"
 
 
 class EvalStalenessError(Exception):
@@ -136,6 +137,26 @@ def _offenders(stdout: str) -> list[tuple[str, str]]:
     return sorted((a, str(s)) for a, s in status.items() if s != "fresh")
 
 
+def _never_run_here(repo_root: Path) -> bool:
+    """Return True when no eval has EVER produced a result in this worktree.
+
+    ``scripts/evals/results/*.json`` is gitignored, so results exist only on the
+    machine that last ran them. A fresh clone or a new worktree therefore holds
+    NONE of them, by construction — which is a different condition from "this
+    result is out of date", even though the selector reports both as non-fresh.
+
+    Args:
+        repo_root: The repository root.
+
+    Returns:
+        True when the results directory is absent or holds no result at all.
+    """
+    results_dir = repo_root / _RESULTS_REL
+    if not results_dir.is_dir():
+        return True
+    return not any(results_dir.glob("*.json"))
+
+
 def _print_block(offenders: list[tuple[str, str]], selector_stdout: str) -> None:
     """Print the blocking message naming the offending agents + remediation."""
     print(
@@ -194,7 +215,29 @@ def main() -> int:
         return 0
 
     if result.returncode == _EXIT_STALE:
-        _print_block(_offenders(result.stdout), result.stdout)
+        offenders = _offenders(result.stdout)
+        # Distinguish "never produced here" from "produced and now out of date".
+        # Results are gitignored, so a fresh clone holds none of them and every
+        # affected agent reports `missing` — a state no local action can clear
+        # when the harness itself cannot run, which made this gate unsatisfiable
+        # in any new worktree (KI-TQ-20260908-0900). Fail open there, loudly and
+        # by name. A `stale` offender still BLOCKS: a result that exists and no
+        # longer matches its triggers is exactly the case this gate is for, and
+        # so does a mixed set, where some results plainly can be produced here.
+        if offenders and all(status == "missing" for _agent, status in offenders) and _never_run_here(repo_root):
+            logger.warning(
+                "check-eval-staleness: fail-open — no eval result exists in this "
+                "worktree at all (%s is empty or absent), so every affected agent "
+                "reports 'missing': %s. This is the never-run state, not staleness, "
+                "and results are gitignored so a fresh clone can never start from "
+                "anything else. Run `%s <agent>` to produce them; the required CI "
+                "check still enforces the hard gate.",
+                _RESULTS_REL,
+                ", ".join(agent for agent, _status in offenders),
+                _RUNNER_HINT,
+            )
+            return 0
+        _print_block(offenders, result.stdout)
         return 1
 
     # _EXIT_INFRA (or any unexpected code): advisory, do not wedge the commit.
@@ -214,6 +257,20 @@ if __name__ == "__main__":
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-09-10 [python-coder]: Separated "never run here" from "out of date".
+#   Results live in scripts/evals/results/*.json, which is gitignored, so a fresh
+#   clone or new worktree holds NONE of them and every affected agent reports
+#   'missing'. Combined with the harness's own inability to launch the claude CLI
+#   (KI-TQ-20260908-0900), that made this gate unsatisfiable by any local action:
+#   it blocked every commit touching an eval's trigger closure, and the sanctioned
+#   escape (SKIP=) is unreachable from a sub-agent, whose conversation is with its
+#   parent rather than the user. main() now fails open -- loudly, naming each agent
+#   and the runner command -- when EVERY offender is 'missing' AND the results
+#   directory holds no result at all. A 'stale' offender still BLOCKS, and so does
+#   a MIXED set: if any result exists here, results can plainly be produced here,
+#   and a non-fresh one is exactly what this gate is for. This narrows an
+#   unsatisfiable gate; it does not weaken the satisfiable one. The required CI
+#   check is unchanged.
 # - 2026-07-15 [TQ-200b-4]: Created the fast local pre-commit staleness guard.
 #   Delegates the affected-agent selection + freshness gate to
 #   scripts/evals/eval_selector.py --check (the SSOT — this hook owns no

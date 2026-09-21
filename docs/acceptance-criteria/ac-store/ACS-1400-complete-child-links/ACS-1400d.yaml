@@ -4,7 +4,7 @@ components:
 title: "Two different kinds of link stop competing for one place to live"
 component: ac-store
 level: L1
-status: active
+status: superseded_by
 req_status: draft
 work_status: todo
 readiness: draft
@@ -45,8 +45,24 @@ delivers_to: null
 expects_from: null
 origin_agent: BrainCandy
 created: 2026-09-08
-amended_by: []
-superseded_by: null
+amended_by:
+- reason: superseded-by-own-l0
+  by: product-owner
+  at: '2026-09-08'
+  note: >-
+    BrainCandy's 2026-09-08 ruling executed. This placeholder L1's capability now
+    has its own root L0, ACS-1500 (docs/acceptance-criteria/ac-store/
+    ACS-1500-separate-link-relations/), six L1s a-f. superseded_by set to
+    ACS-1500; covered_by stays empty PERMANENTLY, as this record's own notes
+    require. status also flipped active -> superseded_by: the schema states
+    superseded_by is "set when status is superseded_by", and leaving an active L1
+    with an empty covered_by is separately the shape check_ac_coverage.py flags.
+    criteria, title and doc_links UNCHANGED — the reasoning in the notes below is
+    the handover document for ACS-1500 and must stay readable. This record stays
+    listed in ACS-1400's covered_by; whether a retired child should be delisted
+    is the unsettled convention question ACS-1400's own notes park under
+    population 3, and it is not settled here as a side effect.
+superseded_by: ACS-1500
 covered_by: []
 implemented_by: []
 change_target:
@@ -56,6 +72,27 @@ documentation_triggers:
   - reference-doc
   - component-diagram
 notes: |
+  SUPERSEDED 2026-09-08 BY ACS-1500 — THE RULING BELOW HAS BEEN EXECUTED. The
+  home this record was a placeholder for now exists:
+  docs/acceptance-criteria/ac-store/ACS-1500-separate-link-relations/, root L0
+  ACS-1500 "Record what a requirement is made of separately from what proves
+  it", six L1s a-f. This record's covered_by stays EMPTY PERMANENTLY. Everything
+  below is retained deliberately as the handover document — ACS-1500's notes
+  point back here rather than restating it, so do not trim it.
+
+  THREE THINGS ACS-1500 FOUND THAT CONTRADICT THE PARAGRAPHS BELOW, recorded
+  here so this record does not keep circulating a stale diagnosis (the general
+  lesson ACS-1300's PROJECT_CONTEXT entry states: an AC's notes record the
+  defect AS FILED and do not self-update). Measured 2026-09-08, whole store,
+  branch ac/coverage-field-split. (1) The population is 3,925 records, 1,739 of
+  them holding coverage entries — not the ~482 the follow-up brief assumed.
+  (2) 76 records already hold BOTH relations in one list; nothing had counted
+  that, and it is the migration's hardest case. (3) ac-schema.md's table of five
+  readers is roughly an order of magnitude short, and two of the omitted readers
+  (ac_coverage_resolver.py, _ac_schema_validators.py) are more dangerous than
+  any listed one because they branch on the field being EMPTY rather than on its
+  contents. See ACS-1500's notes for the full figures and denominators.
+
   RULED 2026-09-08 BY BrainCandy: THE FIELD SPLIT GETS ITS OWN L0. This L1 is
   therefore a placeholder awaiting supersession, not work to be decomposed in place.
   A product owner authors the replacement L0 as a follow-up; when it lands, this

@@ -1,3 +1,19 @@
+---
+title: "Product-Truth Store"
+description: "The baseline business information every product rests on -- Mock Data, Flows, and Mockups -- read the same by agents and reviewed the same way by personas."
+type: reference
+status: active
+created: 2026-07-10
+last_updated: 2026-09-17
+components:
+  - ux_prototyping
+related_docs:
+  - docs/how-to/authoring-product-truth-artifacts.md
+  - docs/how-to/product-truth-schema-reference.md
+  - docs/architecture/components/ux-prototyping.md
+  - docs/reference/product-truth-checker-outcomes.md
+---
+
 # Product-Truth Store
 
 > The **baseline business information** every product rests on — the things that
@@ -36,6 +52,9 @@ docs/product-truth/
   mockups/<product>/…           (HTML; the flow-site is the current renderer)
   scripts/
     validate_product_truth.py   schema + cross-ref + impl-rollup + eval validator
+    product_ownership.py        product-root ownership predicate + CLI (project's own
+                                 record vs. example content — see the schema reference's
+                                 "Ownership predicate" section)
 ```
 
 ## Linkage: graphs ↔ mocks ↔ ACs (how everything cross-references)
@@ -73,9 +92,50 @@ from `readiness` (has a persona reviewed it: `draft → reviewed → approved`).
 `python scripts/validate_product_truth.py` checks schema conformance, that `index.json`
 mirrors each artifact, entity-registry membership, step/branch id uniqueness +
 `acceptance_scenarios.for` resolution, `impl_summary` correctness, mock-data invariants,
-and classifier `outcome` consistency. Unresolved `implements` AC ids are warnings (seed
-flows may reference not-yet-authored ACs). Wire it into the commit gates alongside
-`ac-fulfillment-gate`.
+and classifier `outcome` consistency. Every `implements` AC id is also re-resolved
+against the AC store as it stands right now (UXP-700c-1): an unresolved one is a hard
+failure, reported as `[pointer] <flow id> <kind> '<node id>': AC pointer '<ac id>' does
+not resolve in the AC store` — naming the holding artifact, the position within it, and
+the target that failed to resolve. The final run also states `resolved N pointer(s)`, so
+a run that resolved none is distinguishable from one that resolved some and found none
+broken. Wire it into the commit gates alongside `ac-fulfillment-gate`.
+
+Freshness is a separate, softer check (UXP-700c-2): a journey only carries a
+`confirmed` record (`{against, state}`) once someone — a human or agent — has
+explicitly confirmed it against the things it describes. `against` is an explicit,
+caller-supplied identity string (a commit SHA, an AC-store version tag, or another
+confirmation id) — the checker never derives or hashes one itself
+([ADR-043](../architecture/adrs/ADR-043-journey-record-carries-its-own-behind-mark.md)
+SS3). On every run, each confirmed journey's `state` (one content signature per
+described AC, taken at `against`) is recompared against that AC's *current* content;
+a journey where something changed is reported as `behind`, naming the journey and
+every described thing that moved, as a WARNING — never a build failure, since
+staleness alone is not a defect. A journey with no `confirmed` record yet is
+never-confirmed: it is reported as such, by name, on that same WARNING channel
+(`[freshness-never-confirmed]`, UXP-700c-2-i) — but it is not judged current or
+behind (there is no earlier confirmation for it to be judged against), and it is
+not counted in the `compared` figure. The run always states `compared N
+journey(s) for freshness`, so a run that compared none is distinguishable from
+one that compared some and found them all current. See the
+[how-to's freshness section](../how-to/authoring-product-truth-artifacts.md#part-6--confirm-a-journey-against-what-it-describes-freshness)
+for how to author a `confirmed` record by hand.
+
+Every loaded flow, mock-data, mockup, and AC record's `example_product` is
+cross-checked against the product root it actually lives under (UXP-700d-3-ii,
+[ADR-044](../architecture/adrs/ADR-044-example-content-self-declares-its-product.md)):
+a mismatch, an undeclared example artifact, or a declaration naming the project's own
+product is each reported through the same `errors` channel as every other hard
+failure, prefixed `[example]` and naming both the declared value and the compared
+root. An AC is compared against the roots of its `implemented-by-step` doc_links
+only — one with none is not reported for lacking a root. See the
+[schema reference's ownership section](../how-to/product-truth-schema-reference.md#ownership-predicate--product_ownershippy-projects-own-record-vs-example-content)
+for the underlying predicate.
+
+One journey file that cannot be parsed does not crash the run: the validator names
+it, states how many other journeys it did examine, and prints a run-level
+`degraded` outcome as its last stdout line instead of `checked-and-sound` — see
+[the run-outcome contract](../how-to/product-truth-schema-reference.md#validator-run-outcome--validate_product_truthpy-not-the-classifier-outcome-above)
+for the full `{outcome, examined, unreadable}` shape.
 
 Artifact ids are path-stable: `<product>/<name>` (e.g. `fern-and-fig/catalog`). The id
 never changes when an artifact is extended — only its `version` and contents grow.

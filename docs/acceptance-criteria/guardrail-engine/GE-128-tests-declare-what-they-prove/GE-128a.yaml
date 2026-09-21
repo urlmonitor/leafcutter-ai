@@ -1,0 +1,130 @@
+id: GE-128a
+title: "What you add today names what it proves; what is already there stays workable"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - testing_quality
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  A new test declares its requirement; the existing backlog never blocks you.
+
+  Adding a test that does not name the requirement it proves is refused. Working
+  on a file that already holds undeclared tests is never refused for tests it did
+  not add, so nothing in the project becomes untouchable on the day the standard
+  is switched on. The number of undeclared tests in any one file can go down and
+  never up, judged against that same file as it stood before the change rather
+  than against any target — so the backlog shrinks on its own and the standard
+  needs no cleanup before it can be adopted.
+depends_on:
+  - GE-128
+doc_links:
+  - path: docs/acceptance-criteria/ac-driven-dev/ACD-2200-adoption-floor/ACD-2200b.yaml
+    relationship: depends_on
+    status: exists
+    relevance: >-
+      THE GENERIC RULE THIS IS ONE INSTANCE OF — INHERITED, NOT RE-ARGUED. ACD-2200b
+      states the grandfather-and-refuse-new policy for all standards and ACD-2200c
+      states that the tolerated count is visible and only shrinks. This record adds
+      the only things those cannot: that the counted quantity here is undeclared
+      test functions, and that it is held per file. Do not restate the policy; do
+      not re-justify grandfathering.
+  - path: docs/acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/GE-127b.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      THE SAME MECHANISM ONE GATE OVER, ALREADY BUILT, AND A REUSE CANDIDATE RATHER
+      THAN A PATTERN TO COPY BY HAND. Its ratchet is a per-file scalar compared
+      against the previous version, and it shipped as a shared helper. The register
+      recommends reusing that helper for the next gate rather than growing a second
+      implementation. Its three-arm baseline (grew, refuse; same or smaller, allow;
+      no previous version, out of scope) transfers directly and should be read
+      before decomposing this one.
+  - path: docs/acceptance-criteria/testing-quality/TQ-100-trustworthy-test-gate/TQ-100b-5.yaml
+    relationship: depends_on
+    status: exists
+    relevance: >-
+      THE COUNT IS ONLY AS STABLE AS THE RECOGNISER BEHIND IT. TQ-100b-5 is making
+      every declaration-recogniser in the repo agree over the real tree. The
+      quantity ratcheted here is produced by one of those recognisers, so a change
+      in recognition moves every file's count at once and can manufacture an
+      apparent increase with no test added. Consume that answer; do not define
+      recognition here.
+  - path: docs/known-issues/commit-guardian.md
+    relationship: describes
+    status: exists
+  - path: templates/scripts/commit_guardian/check_test_ac_tags.py
+    relationship: modifies
+    status: exists
+  - path: templates/scripts/commit_guardian/commit_guardian.json
+    relationship: modifies
+    status: exists
+delivers_to: null
+expects_from: null
+documentation_triggers:
+  - how-to
+  - reference-doc
+origin_agent: BrainCandy
+created: 2026-09-14
+amended_by: []
+superseded_by: null
+covered_by:
+  - GE-128a-1
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  THE KEYSTONE, AND THE ITEM THAT RESOLVES THE DEADLOCK. The standard cannot be
+  turned on as a flat rule: on the measurement in the register, 5,566 test
+  functions across 595 of 597 files carry no declaration, so a flat rule refuses
+  essentially all test work on day one. The two obvious escapes — leave the gate
+  advisory forever, or write the offending files onto a permanent exception list —
+  both leave the project exactly where it is. The ratchet is the way out and is
+  what makes the setting safe to make deliberate.
+
+  THE BASELINE BEHAVIOUR THE BA MUST BE ABLE TO DERIVE, STATED PLAINLY SO IT CAN BE.
+  The comparison is between one file as it stands after the change and the same
+  file as it stood before it. The judgement is on the DIRECTION of that comparison.
+  Three consequences, each of which should become a scenario rather than be left to
+  inference:
+    - A file whose undeclared count is HIGHER after the change is refused.
+    - A file whose count is the same or LOWER is allowed, even though undeclared
+      tests remain in it. This arm is not a concession, it is the mechanism.
+      Without it the ratchet is a freeze, and a frozen file never gets improved
+      because nobody can touch it.
+    - Whether a file with no previous version has a count to compare against is
+      NOT settled here. It is GE-128b's subject and must be consumed from there,
+      not re-decided. A decomposition that treats "no previous version" as
+      "previous count of zero" is making GE-128b's decision by accident.
+
+  MANDATORY NEGATIVE ARM — WITHOUT IT THE CRITERION IS VACUOUS. Every positive
+  scenario above is satisfied by an implementation that permits everything. The arm
+  that distinguishes a working ratchet from a disabled one is a file with existing
+  undeclared tests to which one further undeclared test is added, refused — paired,
+  in the same run, with the same file edited in any other way, allowed. Either arm
+  alone passes on a stuck answer. Prove it by mutation, not by grep.
+
+  THE SHRINKING-BACKLOG CLAIM IS PART OF THE PROMISE, NOT A SIDE EFFECT. The value
+  sold is that the undeclared population is monotonically non-increasing once this
+  lands. An implementation permitting it to grow under any routine condition — a
+  generated block, a large mechanical edit, a merge — breaks that promise even if
+  every hand-written scenario passes. Whether any such condition warrants an
+  exception is a decision to be taken explicitly and recorded, never defaulted into
+  existence.
+
+  THE CONFIGURATION KEY IS IN SCOPE ONLY AS A CONSEQUENCE, NOT AS A SUBJECT. Today
+  the gate resolves to advisory because its key is ABSENT — nobody chose advisory.
+  Once the ratchet exists the setting can be made deliberate, and a deliberate
+  advisory is a legitimate answer. What must not survive is a mode nobody picked.
+  Whether the gate is registered at all is BP-1600a-2's, not this record's; whether
+  a check honestly reports its own strength is GE-126's. Neither may be restated
+  here.
+
+  PRECONDITION, NOT SCOPE. This gate has never run. Making it run is BP-1600a-2's
+  day-one triage, carried on the L0 as a dependency. An L2 here that re-specifies
+  the registration census duplicates an approved high-priority record.

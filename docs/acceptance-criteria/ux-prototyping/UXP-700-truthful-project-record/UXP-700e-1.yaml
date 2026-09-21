@@ -6,7 +6,7 @@ components:
 level: L2
 status: active
 req_status: approved
-work_status: todo
+work_status: done
 readiness: approved
 priority: medium
 criteria: |
@@ -45,9 +45,16 @@ amended_by:
   date: '2026-09-07'
 superseded_by: null
 covered_by:
-  - UXP-700e-1-i
-  - UXP-700e-1-ii
-implemented_by: []
+- UXP-700e-1-i
+- UXP-700e-1-ii
+- unit_tests/product_truth/test_uxp_700e_1.py
+implemented_by:
+- docs/product-truth/scripts/product_truth_bounds.py
+- docs/product-truth/scripts/validate_product_truth.py
+- docs/product-truth/scripts/product_truth_checks.py
+- docs/product-truth/scripts/product_truth_outcome.py
+- docs/product-truth/schemas/mock-data.schema.json
+- docs/product-truth/schemas/mockup.schema.json
 change_target:
   - code
   - schema
@@ -83,3 +90,4 @@ notes: |
   maxLength, steps has no maxItems, tags has no pattern, component is free text. This AC
   introduces the measurement; the transition rules that stop it breaking the store on day one
   are UXP-700e-1-i and UXP-700e-1-ii and must land in the same piece of work.
+target_epic: EPIC-TruthfulProjectRecord

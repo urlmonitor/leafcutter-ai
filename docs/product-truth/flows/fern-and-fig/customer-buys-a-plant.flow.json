@@ -1,6 +1,7 @@
 {
   "id": "fern-and-fig/customer-buys-a-plant",
   "component": "ux-prototyping",
+  "example_product": "fern-and-fig",
   "product": "Fern & Fig",
   "name": "Customer buys a plant",
   "level": "journey",
@@ -104,7 +105,9 @@
       "implements": [
         "UXP-210d"
       ],
-      "expands_to": "fern-and-fig/checkout-and-pay",
+      "expands_to": [
+        "fern-and-fig/checkout-and-pay"
+      ],
       "impl_status": "not_started",
       "impl_asof": "2026-07-20"
     },

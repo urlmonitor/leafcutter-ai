@@ -29,38 +29,65 @@ Exit codes:
 # AC-4: --apply writes implemented_by for high-confidence matches only
 # AC-5: Report is written to debugging/logs/
 # AC-6: --apply is idempotent for already-linked ACs
+
+MODULE: scripts.ac_store.cross_reference_audit
+GOAL: CLI entry point that orchestrates the AC-to-ticket backfill audit.
+BUSINESS CONTEXT: Owns argument parsing and the top-level run sequence only —
+    load ACs, filter to candidates, load done tickets, match, report, and
+    optionally apply. Each of those steps' actual logic lives in a sibling
+    module (see ARCHITECTURE) so this file stays a thin, readable
+    orchestration layer.
+ARCHITECTURE: Sibling modules `_xref_ac_store.py`, `_xref_tickets.py`,
+    `_xref_matching.py`, `_xref_report.py`, and `_xref_apply.py` live
+    alongside this file in scripts/ac_store/ and hold the AC-store loading/
+    filtering, ticket loading/parsing, the two matching passes, report/output
+    rendering, and the --apply backfill writer respectively. They are loaded
+    via bare imports (e.g. `from _xref_ac_store import ...`) rather than
+    relative imports, because this file must work both when executed directly
+    (`python3 scripts/ac_store/cross_reference_audit.py`, where Python puts
+    this directory at sys.path[0] automatically) and when imported as a
+    package (`from scripts.ac_store.cross_reference_audit import
+    _filter_todo_acs`, where pytest's `pythonpath = .` only puts the repo
+    root on sys.path). The sys.path bootstrap immediately below makes both
+    invocation styles resolve the same bare imports. ACS-900e names this
+    module's AC-to-source traceability resolution as a contract other tooling
+    is expected to reuse rather than re-implement — the split preserves that
+    surface unchanged: every name importable from this module before the
+    split (`_filter_todo_acs`, `_load_ac_yamls`, `_find_matches`, etc.) is
+    still importable from it after the split, via the imports below.
 """
 
 from __future__ import annotations
 
 import argparse
-import difflib
 import json
 import logging
 import sys
 from datetime import date
 from pathlib import Path
-from typing import Any
 
-import yaml
+# Sibling modules live alongside this script; ensure this directory is on
+# sys.path so the bare imports below resolve both when this file is executed
+# directly (sys.path[0] is already this directory in that case) and when it
+# is imported as a package (`from scripts.ac_store.cross_reference_audit
+# import ...`), where only the repo root is on sys.path.
+_SCRIPT_DIR = Path(__file__).resolve().parent
+if str(_SCRIPT_DIR) not in sys.path:
+    sys.path.insert(0, str(_SCRIPT_DIR))
+
+from _xref_ac_store import _filter_todo_acs, _load_ac_yamls  # noqa: E402
+from _xref_apply import _apply_backfill  # noqa: E402
+from _xref_matching import _find_matches  # noqa: E402
+from _xref_report import _print_match, _write_report  # noqa: E402
+from _xref_tickets import _load_done_tickets  # noqa: E402
 
 # ---------------------------------------------------------------------------
 # Constants
 # ---------------------------------------------------------------------------
 
-_STOP_WORDS: frozenset[str] = frozenset(
-    {"the", "a", "an", "is", "are", "when", "then", "given", "and", "or", "not"}
-)
-
-_PASS1_SIMILARITY_THRESHOLD: float = 0.90
-_PASS2_MIN_KEYWORD_OVERLAP: int = 2
-
 _DEFAULT_AC_ROOT: str = "docs/acceptance-criteria"
 _DEFAULT_TICKETS_ROOT: str = "tickets"
 _DEFAULT_LOGS_DIR: str = "debugging/logs"
-
-# Lifecycle folders whose tickets are considered "done" even without status: done
-_DONE_FOLDER_MARKERS: frozenset[str] = frozenset({"99_done"})
 
 logging.basicConfig(
     level=logging.INFO,
@@ -68,13 +95,6 @@ logging.basicConfig(
     stream=sys.stderr,
 )
 _log = logging.getLogger(__name__)
-
-
-# ---------------------------------------------------------------------------
-# Type aliases
-# ---------------------------------------------------------------------------
-
-MatchRecord = dict[str, Any]
 
 
 # ---------------------------------------------------------------------------
@@ -89,390 +109,6 @@ def _detect_worktree_root() -> Path:
             return candidate
         candidate = candidate.parent
     return Path(__file__).resolve().parent.parent.parent
-
-
-# ---------------------------------------------------------------------------
-# AC store helpers
-# ---------------------------------------------------------------------------
-
-def _load_ac_yamls(ac_root: Path) -> list[dict[str, Any]]:
-    """Load all AC YAML files from the AC store directory tree.
-
-    Returns a list of dicts with at least: id, title, criteria, component,
-    work_status, implemented_by. Skips files that cannot be parsed.
-    """
-    acs: list[dict[str, Any]] = []
-    if not ac_root.exists():
-        _log.warning("AC root does not exist: %s", ac_root)
-        return acs
-
-    for yaml_path in sorted(ac_root.rglob("*.yaml")):
-        try:
-            with open(yaml_path, encoding="utf-8") as fh:
-                data = yaml.safe_load(fh)
-            if not isinstance(data, dict):
-                _log.warning("Skipping non-dict YAML: %s", yaml_path)
-                continue
-            data["_path"] = str(yaml_path)
-            acs.append(data)
-        except yaml.YAMLError as exc:
-            _log.warning("YAML parse error in %s: %s", yaml_path, exc)
-        except OSError as exc:
-            _log.warning("Cannot read %s: %s", yaml_path, exc)
-    return acs
-
-
-def _filter_todo_acs(acs: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    """Return only ACs with work_status: todo and implemented_by: []."""
-    result = []
-    for ac in acs:
-        work_status = ac.get("work_status", "todo")
-        implemented_by = ac.get("implemented_by", [])
-        if work_status == "todo" and not implemented_by:
-            result.append(ac)
-    return result
-
-
-# ---------------------------------------------------------------------------
-# Ticket helpers
-# ---------------------------------------------------------------------------
-
-def _is_done_ticket(ticket_path: Path, ticket_text: str) -> bool:
-    """Return True if the ticket is 'done' by folder name or frontmatter status."""
-    # Check if any parent folder name is a done-marker
-    for part in ticket_path.parts:
-        if part in _DONE_FOLDER_MARKERS:
-            return True
-    # Parse frontmatter for status: done
-    if ticket_text.startswith("---"):
-        end = ticket_text.find("\n---", 3)
-        if end != -1:
-            fm_text = ticket_text[3:end]
-            try:
-                fm = yaml.safe_load(fm_text)
-                if isinstance(fm, dict) and fm.get("status") == "done":
-                    return True
-            except yaml.YAMLError:
-                pass
-    return False
-
-
-def _extract_ticket_frontmatter(ticket_text: str) -> dict[str, Any]:
-    """Extract YAML frontmatter from a ticket file."""
-    if ticket_text.startswith("---"):
-        end = ticket_text.find("\n---", 3)
-        if end != -1:
-            try:
-                fm = yaml.safe_load(ticket_text[3:end])
-                return fm if isinstance(fm, dict) else {}
-            except yaml.YAMLError:
-                pass
-    return {}
-
-
-def _extract_acceptance_criteria_section(ticket_text: str) -> str:
-    """Extract text of the ## Acceptance Criteria section from a ticket body."""
-    # Find the section header
-    marker = "## Acceptance Criteria"
-    idx = ticket_text.find(marker)
-    if idx == -1:
-        return ""
-    # Extract until the next ## section or end of file
-    start = idx + len(marker)
-    next_section = ticket_text.find("\n## ", start)
-    if next_section != -1:
-        return ticket_text[start:next_section].strip()
-    return ticket_text[start:].strip()
-
-
-def _load_done_tickets(tickets_root: Path) -> list[dict[str, Any]]:
-    """Load all done tickets from the tickets root directory.
-
-    Returns a list of dicts with: path, title, components, ac_section.
-    Skips files that cannot be read.
-    """
-    tickets: list[dict[str, Any]] = []
-    if not tickets_root.exists():
-        _log.warning("Tickets root does not exist: %s", tickets_root)
-        return tickets
-
-    for md_path in sorted(tickets_root.rglob("*.md")):
-        try:
-            ticket_text = md_path.read_text(encoding="utf-8")
-        except OSError as exc:
-            _log.warning("Cannot read ticket %s: %s", md_path, exc)
-            continue
-
-        if not _is_done_ticket(md_path, ticket_text):
-            continue
-
-        fm = _extract_ticket_frontmatter(ticket_text)
-        title = fm.get("title", md_path.stem)
-        components = fm.get("components", [])
-        if isinstance(components, str):
-            components = [components]
-        ac_section = _extract_acceptance_criteria_section(ticket_text)
-
-        tickets.append(
-            {
-                "path": str(md_path),
-                "title": title,
-                "components": components,
-                "ac_section": ac_section,
-            }
-        )
-    return tickets
-
-
-# ---------------------------------------------------------------------------
-# Matching
-# ---------------------------------------------------------------------------
-
-def _pass1_similarity(ac_criteria: str, ticket_ac_section: str) -> float:
-    """Compute similarity ratio between AC criteria text and ticket AC section."""
-    if not ac_criteria or not ticket_ac_section:
-        return 0.0
-    sm = difflib.SequenceMatcher(None, ac_criteria, ticket_ac_section, autojunk=False)
-    return sm.ratio()
-
-
-def _tokenize(text: str) -> list[str]:
-    """Tokenize text into lowercase words, filtering stop words."""
-    words = []
-    for word in text.lower().split():
-        # Strip punctuation
-        clean = "".join(ch for ch in word if ch.isalnum())
-        if clean and clean not in _STOP_WORDS:
-            words.append(clean)
-    return words
-
-
-def _pass2_keyword_overlap(
-    ac_title: str,
-    ticket_title: str,
-    ac_component: str | None,
-    ticket_components: list[str],
-) -> tuple[bool, str]:
-    """Check keyword overlap and component match for medium-confidence matching.
-
-    Returns (matched, reason_string).
-    """
-    ac_tokens = set(_tokenize(ac_title))
-    ticket_tokens = set(_tokenize(ticket_title))
-    overlap = ac_tokens & ticket_tokens
-
-    has_component_match = False
-    if ac_component and ticket_components:
-        # Normalize for comparison
-        ac_comp_lower = ac_component.lower().replace("-", "").replace("_", "")
-        for tc in ticket_components:
-            tc_lower = tc.lower().replace("-", "").replace("_", "")
-            if ac_comp_lower == tc_lower or ac_comp_lower in tc_lower or tc_lower in ac_comp_lower:
-                has_component_match = True
-                break
-
-    if len(overlap) >= _PASS2_MIN_KEYWORD_OVERLAP and has_component_match:
-        reason = (
-            f"title keyword overlap ({len(overlap)}/{len(ac_tokens)}) "
-            f"+ component match ({ac_component})"
-        )
-        return True, reason
-    return False, ""
-
-
-def _find_matches(
-    acs: list[dict[str, Any]],
-    tickets: list[dict[str, Any]],
-) -> list[MatchRecord]:
-    """Run two-pass matching and return deduplicated match records."""
-    matches: list[MatchRecord] = []
-
-    for ac in acs:
-        ac_id = ac.get("id", "UNKNOWN")
-        ac_title = str(ac.get("title", ""))
-        ac_criteria = str(ac.get("criteria", ""))
-        # component may be a string, list, or dict (various AC YAML schemas)
-        ac_component_raw = ac.get("component", ac.get("components", None))
-        if isinstance(ac_component_raw, list):
-            ac_component: str | None = ac_component_raw[0] if ac_component_raw else None
-        elif isinstance(ac_component_raw, dict):
-            # Some ACs encode component as a dict with an 'id' or 'name' key
-            ac_component = str(
-                ac_component_raw.get("id", ac_component_raw.get("name", ""))
-            ) or None
-        elif ac_component_raw is None:
-            ac_component = None
-        else:
-            ac_component = str(ac_component_raw)
-
-        best_match: MatchRecord | None = None
-
-        for ticket in tickets:
-            ticket_path = ticket["path"]
-            ticket_title = str(ticket["title"])
-            ticket_components = ticket["components"]
-            ticket_ac_section = ticket["ac_section"]
-
-            # Pass 1 — exact criteria similarity
-            similarity = _pass1_similarity(ac_criteria, ticket_ac_section)
-            if similarity >= _PASS1_SIMILARITY_THRESHOLD:
-                record: MatchRecord = {
-                    "ac_id": ac_id,
-                    "ticket_path": ticket_path,
-                    "confidence": "high",
-                    "reason": f"AC criteria text similarity ({similarity:.0%})",
-                    "_ac": ac,
-                }
-                # High confidence wins — track best
-                if best_match is None or best_match["confidence"] == "medium":
-                    best_match = record
-                continue
-
-            # Pass 2 — keyword + component match
-            matched, reason = _pass2_keyword_overlap(
-                ac_title, ticket_title, ac_component, ticket_components
-            )
-            if matched:
-                record = {
-                    "ac_id": ac_id,
-                    "ticket_path": ticket_path,
-                    "confidence": "medium",
-                    "reason": reason,
-                    "_ac": ac,
-                }
-                # Only record medium if no high match exists yet
-                if best_match is None:
-                    best_match = record
-
-        if best_match is not None:
-            matches.append(best_match)
-
-    return matches
-
-
-# ---------------------------------------------------------------------------
-# Output helpers
-# ---------------------------------------------------------------------------
-
-def _print_match(match: MatchRecord) -> None:
-    """Print a single match in human-readable format."""
-    ac_id = match["ac_id"]
-    ticket_path = match["ticket_path"]
-    confidence = match["confidence"]
-    reason = match["reason"]
-
-    ac_title = match.get("_ac", {}).get("title", "")
-    ticket_name = Path(ticket_path).name
-
-    print(f"\nMATCH (confidence: {confidence}):")
-    print(f"  AC:     {ac_id} — \"{ac_title}\"")
-    print(f"  Ticket: {ticket_name}")
-    print(f"          {ticket_path}")
-    print(f"  Reason: {reason}")
-
-
-def _write_report(
-    matches: list[MatchRecord],
-    logs_dir: Path,
-) -> Path:
-    """Write the JSON report to debugging/logs/ and return the file path."""
-    logs_dir.mkdir(parents=True, exist_ok=True)
-    today = date.today().strftime("%Y%m%d")
-    report_path = logs_dir / f"ac_cross_reference_audit_{today}.json"
-
-    report = {
-        "run_date": date.today().isoformat(),
-        "matches": [
-            {
-                "ac_id": m["ac_id"],
-                "ticket_path": m["ticket_path"],
-                "confidence": m["confidence"],
-                "reason": m["reason"],
-            }
-            for m in matches
-        ],
-    }
-
-    try:
-        with open(report_path, "w", encoding="utf-8") as fh:
-            json.dump(report, fh, indent=2, ensure_ascii=False)
-        _log.info("Report written to %s", report_path)
-    except OSError as exc:
-        _log.error("Cannot write report to %s: %s", report_path, exc)
-        sys.exit(1)
-
-    return report_path
-
-
-# ---------------------------------------------------------------------------
-# Apply logic
-# ---------------------------------------------------------------------------
-
-def _apply_backfill(matches: list[MatchRecord]) -> int:
-    """Write implemented_by for high-confidence matches.
-
-    Returns the number of ACs modified.
-    """
-    modified = 0
-    for match in matches:
-        if match["confidence"] != "high":
-            continue
-
-        ac = match.get("_ac", {})
-        ac_path_str = ac.get("_path")
-        if not ac_path_str:
-            _log.warning("No _path for AC %s — skipping apply", match["ac_id"])
-            continue
-
-        ac_path = Path(ac_path_str)
-        ticket_path = match["ticket_path"]
-
-        # Re-read the AC YAML fresh to avoid stale state
-        try:
-            with open(ac_path, encoding="utf-8") as fh:
-                ac_data = yaml.safe_load(fh)
-        except (OSError, yaml.YAMLError) as exc:
-            _log.warning("Cannot re-read AC %s for apply: %s", ac_path, exc)
-            continue
-
-        if not isinstance(ac_data, dict):
-            _log.warning("AC file %s is not a dict — skipping apply", ac_path)
-            continue
-
-        implemented_by = ac_data.get("implemented_by", [])
-        if not isinstance(implemented_by, list):
-            implemented_by = []
-
-        # Idempotency check — AC-6
-        if ticket_path in implemented_by:
-            _log.info(
-                "no-op (already linked): %s already has %s in implemented_by",
-                match["ac_id"],
-                ticket_path,
-            )
-            continue
-
-        implemented_by.append(ticket_path)
-        ac_data["implemented_by"] = implemented_by
-        ac_data["work_status"] = "done"
-
-        try:
-            with open(ac_path, "w", encoding="utf-8") as fh:
-                yaml.dump(
-                    ac_data,
-                    fh,
-                    default_flow_style=False,
-                    allow_unicode=True,
-                    sort_keys=False,
-                )
-            _log.info(
-                "Applied: %s ← %s (work_status: done)", match["ac_id"], ticket_path
-            )
-            modified += 1
-        except OSError as exc:
-            _log.error("Cannot write AC %s: %s", ac_path, exc)
-
-    return modified
 
 
 # ---------------------------------------------------------------------------
@@ -592,3 +228,28 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+
+
+"""
+====================================================================
+DECISION HISTORY
+====================================================================
+- 2026-09-14 [python-coder]: Split this file into cross_reference_audit.py
+  (CLI entry point + orchestration) plus five sibling modules —
+  _xref_ac_store.py, _xref_tickets.py, _xref_matching.py, _xref_report.py,
+  _xref_apply.py — because it had grown to 557 content lines against the
+  400-line limit check-file-size enforces. Pure structural refactor: every
+  function moved verbatim into the sibling that matches its concern (AC-store
+  loading/filtering, ticket loading/parsing, the two matching passes, report/
+  output rendering, and the --apply backfill writer respectively); no
+  behaviour changed, and every name previously importable from this module
+  (`_filter_todo_acs`, `_load_ac_yamls`, `_find_matches`, `_apply_backfill`,
+  etc.) remains importable from it via the re-exporting imports above. See
+  _xref_ac_store.py's DECISION HISTORY for the ACS-1600a-1 retired-status fix
+  this split carried through unchanged. Deploy manifest updated in the same
+  commit: scripts/build_phases.py's AC_STORE_DEPLOY_MAP now lists all five new
+  sibling files, since a module imported by a deployed hook/script but absent
+  from that map raises ModuleNotFoundError in a consumer install even though
+  local tests (which import from source) stay green.
+====================================================================
+"""

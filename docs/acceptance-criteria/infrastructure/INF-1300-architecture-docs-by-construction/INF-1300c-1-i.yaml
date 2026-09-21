@@ -1,0 +1,154 @@
+id: INF-1300c-1-i
+title: "A document that is not settled yet is listed with its state shown, not left out of the index"
+component: infrastructure
+components:
+  - documentation_system
+  - infrastructure
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+created_by: "docs/acceptance-criteria/infrastructure/INF-1300-architecture-docs-by-construction/INF-1300c.yaml"
+criteria: |
+  Given a newly produced document, which is by definition not yet settled,
+  When its listing is requested,
+  Then it appears in the index and its entry shows that it is not yet settled, so
+    a reader meets it in the ordinary course of looking and can see what it is,
+  And it is not omitted from the index on the ground of not being settled,
+  And when the document's state later changes, its existing entry can be brought
+    into agreement with the document without a second entry appearing,
+  And an entry's stated state always matches the state the document itself
+    declares: a document that says one thing about itself and whose entry says
+    another is a failure of this criterion.
+depends_on:
+  - INF-1300c-1
+doc_links:
+  - path: docs/acceptance-criteria/infrastructure/INF-1300-architecture-docs-by-construction/INF-1300c-1.yaml
+    relationship: parent
+    status: exists
+  - path: templates/skills/write-c4-diagram/SKILL.md
+    relationship: specifies
+    status: exists
+    relevance: >-
+      THE STANDING INSTRUCTION THIS RECORD CONTRADICTS, NAMED RATHER THAN WORKED AROUND.
+      Section 8 says to update the index when a document is published as settled and NOT to
+      update it for unsettled ones — and then gives, as its own worked example, the listing
+      flag passed on the very invocation that creates a document, which is necessarily
+      unsettled at that moment. The instruction is self-contradictory as written and cannot
+      be satisfied as it stands.
+  - path: docs/acceptance-criteria/infrastructure/INF-1300-architecture-docs-by-construction/INF-1300c.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      The L1 whose benefit decides the contradiction: findable THE DAY IT IS WRITTEN. An
+      index that excludes unsettled documents cannot deliver that, because every document is
+      unsettled on the day it is written.
+  - path: docs/acceptance-criteria/infrastructure/INF-1300-architecture-docs-by-construction/INF-1300e-2.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      Owns bringing the instruction and the means into agreement. The section 8 sentence this
+      record contradicts is a correction to an authoring surface, which is llm-expert work
+      under a different L1; it is named here as a contract rather than performed here.
+  - path: docs/architecture/adrs/ADR-013-portable-skill-script-deployment-boundary.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      Fixes where the producing script's source lives, which decides whether a consumer
+      install inherits the state-showing behaviour or only this repository does.
+assigned_agent: python-coder
+estimated_complexity: S
+change_target: code
+risk_surface: contract_boundary
+test_required: true
+it_requirements:
+  - "The state shown in an entry must be read from the document's own frontmatter at the moment the entry is written or refreshed, never carried from a value captured at creation and never inferred from the request, so an entry cannot state a status the document has moved on from."
+  - "A document is eligible for listing regardless of its declared state. No status value may be used as a filter that suppresses the entry."
+  - "Refreshing an entry must reuse the identity and position established by INF-1300c-1 so a state change updates the existing entry rather than adding a second one."
+  - "This record's behaviour contradicts write-c4-diagram SKILL.md section 8 as written ('Do NOT update the README for status: draft docs'). Implementing it without the paired surface correction leaves the shipped behaviour and the shipped instruction disagreeing; the correction is INF-1300e-2's and must land in the same release."
+  - "The set of states an entry can show must be derived from the project's declared document status vocabulary rather than from a literal list held in the producer or in the tests."
+  - "Failures reading the document's frontmatter must follow the project error handling policy in CLAUDE.md and must not silently fall back to omitting the entry."
+test_spec:
+  - name: test_freshly_produced_draft_document_is_listed_with_its_state_shown
+    target_dir: unit_tests/scaffold/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    description: "Run the real CLI with the listing requested in a git-initialised temporary project. Assert an entry appeared for the newly produced document and that the entry displays the status the produced document's frontmatter declares."
+  - name: test_unsettled_document_is_not_omitted_from_the_index
+    target_dir: unit_tests/scaffold/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "Assert the entry exists for a document whose declared status is the unsettled one. Falsified by an implementation that filters on status before writing."
+  - name: test_state_change_refreshes_the_existing_entry_without_adding_a_second
+    target_dir: unit_tests/scaffold/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    description: "After the first listing, edit the produced document's declared status on disk and request the listing again. Assert the index holds exactly one entry for that document and that the entry now shows the new status."
+  - name: test_entry_state_never_disagrees_with_the_document_it_points_at
+    target_dir: unit_tests/scaffold/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    description: "For every entry in the index after a sequence of listings, open the document the entry links to and assert the state in the entry equals the state the document declares. This is the arm an implementation fails by writing the state once at creation and never reading it again."
+test_rationale: >-
+  The falsifying observation for this record is a disagreement between two artifacts - an
+  index entry and the document it points at - so the test must hold both and compare them,
+  which a direct-import unit test over the entry-formatting function cannot do: that
+  function will faithfully render whatever state it is handed, including a stale one. The
+  third and fourth descriptors are the ones with teeth, because they require a second run
+  after the document has changed on disk; an implementation that captures the state at
+  creation passes every single-run assertion and produces an index that grows steadily more
+  confident about documents that have moved on.
+delivers_to:
+  agent: llm-expert
+  ac_id: INF-1300e-2
+  contract: "The behavioural fact the authoring surface must be corrected to match: a newly produced document IS listed, with its declared state shown in the entry. write-c4-diagram SKILL.md section 8's 'Do NOT update the README for status: draft docs' sentence and its own worked example (which passes --update-readme on the creation invocation) currently disagree with each other and with this behaviour."
+expects_from:
+  - ac_id: INF-1300c-1
+    contract: "An entry whose identity is the document's tier-and-number destination and whose position follows a stated (tier, number) ordering rule."
+  - ac_id: INF-1300c-3
+    contract: "In-place update of an existing entry, so a state refresh reaches the entry that already exists instead of appending a second one."
+origin_agent: BrainCandy
+created: 2026-09-14
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-09-14'
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  A CONTRADICTION WITH A STANDING INSTRUCTION, FLAGGED EXPLICITLY RATHER THAN RESOLVED
+  QUIETLY. The authoring surface says unsettled documents do not belong in the index. This
+  record says they do, with their state shown. The two cannot both stand, and the reasons
+  for taking this side are: the L1's benefit is being findable on the day the document is
+  written, and every document is unsettled on that day; the surface's own worked example
+  passes the listing flag on the creation invocation, so the instruction already contradicts
+  itself; and an index that silently omits part of the collection is worse than one that
+  shows it as provisional, because a reader cannot tell an absent document from a
+  non-existent one. THE USER SHOULD SEE THIS AND MAY DECIDE OTHERWISE. The alternative — the
+  index lists only settled documents and the listing is performed later, when the document
+  settles — is coherent, and it reduces INF-1300c to a benefit nobody will ever collect,
+  because "later" is a step no check enforces and no author remembers. If it is chosen, the
+  L1's title must change, because the document will not be findable the day it is written.
+
+  WHY THIS IS AN L3. It adds no behaviour of its own. It constrains INF-1300c-1's listing
+  on the single input every listing actually has — a document in its first moments — and
+  that input is where the standing instruction and the benefit collide.
+
+  FALSIFIABILITY. Produce a document with its listing requested and read the index: the
+  record is falsified if no entry appeared, or if the entry does not show the document's
+  state. Then change the document's declared state and request the listing again: falsified
+  if a second entry appears, or if the entry's stated state and the document's own now
+  disagree. The last arm is the one an implementation fails by writing the state once, at
+  creation, and never reading it again — which produces an index that grows increasingly
+  confident about documents that have moved on.
+
+  NOT AUTHORED HERE, BY DESIGN: assigned_agent, estimated_complexity, it_requirements,
+  test_spec, test_rationale, delivers_to and expects_from. Those are the IT PO's.

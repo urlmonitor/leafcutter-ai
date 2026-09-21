@@ -96,7 +96,10 @@ def test_bp_1500g_1_ii_the_run_names_the_specific_content_and_the_specific_step_
     planted path, never on a generic phrase, so a categorical message like
     `some paths could not be cleaned` fails."""
     target_root = fresh_scratch_adopter(tmp_path)
-    planted = plant_capability_at_discoverable_location(target_root)
+    # Planted for its side effect only. The assertion below names
+    # ".claude/skills" literally rather than deriving it from the return
+    # value, so the binding would be dead (ruff F841).
+    plant_capability_at_discoverable_location(target_root)
 
     result = run_build(target_root)
     combined = result.stdout + result.stderr

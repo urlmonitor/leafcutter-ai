@@ -1,0 +1,115 @@
+id: GE-118d-2
+components:
+  - commit_guardian
+title: "A labelled entry carrying more than one path is refused rather than resolved by guesswork"
+component: guardrail-engine
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a document whose related_docs list holds one entry that is a mapping with
+    two keys — `explanation: docs/explanation/architecture.md` and
+    `reference: docs/reference/configuration.md` — both naming paths that exist,
+  When the document-frontmatter guard checks the document,
+  Then it reports an error naming that entry and stating that an entry in the
+    labelled form carries exactly one label and one path,
+  And it does not accept the entry by taking only the first value, and does not
+    accept it by taking every value,
+  And given the same two-key entry appears instead in related_code, and then in
+    architecture_diagrams,
+  When the guard checks each of those documents,
+  Then each is refused on the same terms, so the rule does not differ between the
+    three fields.
+depends_on:
+  - GE-118d
+doc_links:
+  - path: docs/known-issues/commit-guardian/open-blocker-ki-cg-008.md
+    relationship: context
+    status: exists
+    relevance: "The register's 'Fix direction' sketch reads `candidates = [v for v in p.values() if isinstance(v, str)]` and then checks every candidate. That is the behaviour this criterion refuses. The sketch is a sketch — it is cited here so an implementer who copies it is stopped by a test rather than by a reviewer."
+  - path: templates/scripts/commit_guardian/frontmatter_validators.py
+    relationship: modifies
+    status: exists
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+    relevance: "The component boundary. Named so the implementer sees that the three path fields are one loop in one validator — the reason this refusal has to read identically in all three rather than being wired per field."
+assigned_agent: python-coder
+estimated_complexity: XS
+it_requirements:
+  - "FIX THE TEMPLATE, NOT THE BUILD OUTPUT. The source is templates/scripts/commit_guardian/frontmatter_validators.py; the scripts/ and .leafcutter/ copies are build outputs of build_commit_guardian."
+  - "THE ARITY CHECK BELONGS IN THE RESOLVER, NOT IN THE GUARD. 'A labelled entry carries exactly one label and one path' is a property of the accepted shape, so it is enforced where the shape is declared. Enforcing it in validate_paths() puts a second opinion about the shape into the guard and makes the two consumers disagree the moment the map builder is wired up in GE-118f."
+  - "REFUSE THE REGISTER'S OWN SKETCH. KI-CG-008's fix direction reads `candidates = [v for v in p.values() if isinstance(v, str)]` and checks every candidate. An implementation that follows it accepts the two-key entry, so the test must assert that NEITHER named path is reported as checked — not merely that an error was produced. Taking the first value is refused on the same terms."
+  - "ONE RULE, THREE FIELDS, ONE MESSAGE. The refusal must be produced from the same format string for related_docs, related_code and architecture_diagrams. Asserting only that all three refuse is weaker than asserting the messages differ solely in the field name — differing wording is how a per-field special case survives a passing test."
+  - "PATH EXISTENCE MUST NOT BE THE REASON. Both paths in the fixture exist, so a refusal caused by a broken-path check rather than by arity would be a false pass. The message must name the arity rule, not path existence."
+  - "A ZERO-KEY MAPPING AND A ONE-KEY MAPPING WITH A NON-STRING VALUE ARE GE-118d-1'S SUBJECT, NOT THIS ONE'S. Do not add a second refusal path for them here; they are already refused as unaccepted shapes, and a duplicate arm would give the same input two messages."
+test_spec:
+  - name: test_ge_118d_2_two_key_mapping_is_refused_identically_in_each_of_the_three_path_fields
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "Parameterised over related_docs, related_code and architecture_diagrams, with both paths in the entry existing on disk. Assert each is refused and that the three messages are identical except for the field name, so the rule provably does not differ between fields."
+  - name: test_ge_118d_2_neither_the_first_value_nor_every_value_is_accepted_as_a_path
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: failure
+    description: "THE ARM THAT STOPS THE REGISTER'S SKETCH. Assert the resolver returns a refusal and that the resolved path list for the entry is empty — specifically that neither docs/explanation/architecture.md nor docs/reference/configuration.md appears in the set of paths the guard went on to check. An implementation that takes the first value, and one that takes every value, both fail here while both would pass a test that only asserts 'an error was reported'."
+  - name: test_ge_118d_2_refusal_names_the_arity_rule_and_not_path_existence
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: "Both paths exist, so assert the message states that a labelled entry carries exactly one label and one path, and that it does not claim a broken or missing path. Without this the test passes for the wrong reason the day someone deletes a fixture file."
+test_rationale: |
+  The failure this record guards against is an implementation that looks
+  correct: both plausible readings of a two-key mapping produce an answer, and
+  both answers are wrong invisibly. So the assertions are on what must NOT
+  happen — neither named path may enter the checked set — rather than on the
+  presence of an error, which the register's own sketch would also produce once
+  a path happened to be broken. The three-field parameterisation asserts message
+  identity rather than mere refusal, because a per-field special case refuses
+  too, just in different words.
+delivers_to: null
+expects_from:
+  ac_id: GE-118d
+  contract: "STEP 2, WITH GE-118d-1 — consumes GE-118d's resolver. Requires 'single-key mapping whose value is a string' to be the accepted labelled shape, with the arity condition held inside the resolver's declared accepted set rather than in the guard, so both consumers inherit it and GE-118f's agreement property is not broken by a guard-only rule."
+origin_agent: BrainCandy
+created: 2026-09-21
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  ID SHAPE. Numbered GE-118d-2 rather than GE-118d-ii for the reason recorded in
+  GE-118d-1's notes: the store's id grammar requires a numeric segment before any
+  roman one, so GE-118d-ii is rejected by config/ac_store_schema.json. This is an
+  L3 technical constraint on GE-118d, not a second L2.
+
+  WHY THIS EDGE IS WORTH ITS OWN RECORD. Accepting both shapes (GE-118d) opens a
+  hole that rejecting one would not have: once a mapping is a legal entry, the
+  resolver has to answer "which value is the path?" for a mapping that offers
+  more than one. Both plausible answers are wrong in a way nobody will notice.
+  Taking the first value silently drops a declared relationship — which is
+  KM-KGS-100d-3-i's failure mode arriving through the front door. Taking every
+  value turns one entry into several, so the guard and the knowledge map disagree
+  about how many relationships the document declared, and GE-118f's agreement
+  property fails for a reason that has nothing to do with GE-118f.
+
+  Refusing is the only answer that stays honest, and it costs the adopter
+  nothing: the reported convention labels each entry with one Diataxis genre, so
+  a two-key entry is not a shape anyone is using — it is a shape the permissive
+  fix would quietly invent.
+
+  A ZERO-KEY MAPPING, AND A ONE-KEY MAPPING WHOSE VALUE IS NOT A STRING, ARE
+  GE-118d-1's SUBJECT AND NOT THIS ONE'S. They are refused there as unaccepted
+  shapes. This record is specifically about the entry that looks accepted and is
+  ambiguous, which is why it needs its own arm rather than folding into the open
+  set of unaccepted shapes.

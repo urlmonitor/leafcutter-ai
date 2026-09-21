@@ -22,10 +22,14 @@ criteria: |
     reported as not ready, naming the demand that was lost.
 depends_on: [TKT-500g, TKT-500g-1]
 doc_links:
-  - path: scripts/ac_store/generate_ticket_from_ac.py
+  - path: scripts/ac_store/_gtfa_report.py
     relationship: constrains
     status: exists
-    relevance: "The readiness check runs from the same surface as the generation it reports on. Its verdict for a non-code assignee used to be a pass reading 'no proof contract required' — the sentence that made 308 discarded descriptors invisible."
+    relevance: "_build_verification_report is the readiness check itself. Its verdict for a non-code assignee used to be a pass reading 'no proof contract required' — the sentence that made 308 discarded descriptors invisible."
+  - path: scripts/ac_store/_gtfa_cli.py
+    relationship: constrains
+    status: exists
+    relevance: "main() owns the --verify entry point and its exit status. 'A not-ready verdict must be consumed, not merely printed' is decided here — the report's verdict has to reach the exit code callers read."
   - path: unit_tests/ac_store/test_authored_test_spec_survives_generation.py
     relationship: verifies
     status: exists

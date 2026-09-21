@@ -36,14 +36,22 @@ The `build-self.sh` script invokes the compiler for local development. Consumer 
 
 `build_template_standalone_scripts` (scripts/build_phases.py) deploys every
 top-level `.py` file under `templates/scripts/` (non-recursive) verbatim to
-`<output_root>/scripts/`. This includes `goal_to_epic.py` (a thin delegator
-to the full implementation deployed separately at
-`<output_root>/scripts/ac_store/goal_to_epic.py` by `build_ac_store`, kept
-this way to stay under the 400-line file-size limit) and
-`build_ac_mode_detection.py` (a full copy, small enough to duplicate
-safely). `install_shims()` (scripts/build_helpers.py) then creates a
+`<output_root>/scripts/` — `setup_ticket_worktree.py`, `git_recovery.py`, the
+`glossary_*` helpers, `leafcutter_inventory.py`, and `onboard_hook_opt_in.py`.
+`install_shims()` (scripts/build_helpers.py) then creates a
 relative-symlink shim at `<target>/scripts/<name>` for each, resolving to
 the deployed copy (AC BP-900a-2).
+
+`goal_to_epic.py` and `build_ac_mode_detection.py` are **not** deployed by this
+phase — there is no `templates/scripts/goal_to_epic.py` and there never has
+been. Both are deployed by `build_ac_store` from their sources under `scripts/`,
+listed in the `AC_STORE_DEPLOY_MAP` manifest in `scripts/build_phases.py`, which
+flattens them into `<output_root>/scripts/ac_store/` (`scripts/goal_to_epic.py`
+→ `<output_root>/scripts/ac_store/goal_to_epic.py`). `goal_to_epic.py` is the
+CLI entry point and the re-export facade over the fourteen `epic_*.py` sibling
+modules that the same manifest deploys beside it; it imports all fourteen at
+module scope, so a sibling missing from the manifest makes the deployed script
+unimportable rather than merely degraded.
 
 ## Deployed ac_store Import Contract (AC BP-900a-3)
 

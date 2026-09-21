@@ -1,0 +1,91 @@
+id: INF-1300b
+components:
+  - documentation_system
+  - infrastructure
+title: "Every architecture document reads the same way, so you learn the conventions once"
+component: infrastructure
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  One shape and one explanatory key across the whole collection.
+
+  Each new document arrives in the same shape as every other, carrying the same
+  explanatory key and a starting outline suited to the kind of picture being
+  drawn, so a reader who has understood one architecture document can read any of
+  them and an author never has to decide what the shape should be.
+depends_on: [INF-1300]
+doc_links:
+  - path: templates/skills/write-c4-diagram/SKILL.md
+    relationship: specifies
+    status: exists
+    relevance: "Section 5 holds the per-kind starting outlines and states they are the same ones the produced document is meant to carry; section 4 step 4 forbids the author from altering the explanatory key."
+  - path: config/diagram_types.json
+    relationship: specifies
+    status: exists
+    relevance: "The declared set of diagram kinds a starting outline must exist for."
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-09-14
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-09-14'
+superseded_by: null
+covered_by:
+  - INF-1300b-1
+  - INF-1300b-2
+  - INF-1300b-3
+  - INF-1300b-4
+  - INF-1300b-5
+implemented_by: []
+documentation_triggers:
+  - reference-doc
+documentation_rationale: null
+notes: |
+  This is the reader's half of the goal, and it is separable from INF-1300a
+  rather than a restatement of it. A collection can be entirely acceptable to
+  every check and still be nine documents in nine shapes, each explaining its own
+  notation differently or not at all; and a single beautifully consistent
+  document is worth nothing to a reader who has to relearn on the next one. The
+  audiences differ, the failure modes differ, and delivering either one alone
+  leaves the other benefit undelivered.
+
+  THE FAILURE THIS PREVENTS IS ALREADY HAPPENING AND IS SELF-PROPAGATING. Two
+  documents in the collection carry notes recording that the sanctioned starting
+  point was unavailable, so their opening sections were copied from whichever
+  sibling the author happened to pick. Copying a sibling is the rational move for
+  an author who is forbidden to invent and given nothing to start from -- and it
+  is exactly how a single non-conforming document becomes the collection's
+  standard. One of the models being copied is now itself unacceptable to the
+  naming check. Consistency by imitation degrades; consistency by construction
+  does not.
+
+  THE EXPLANATORY KEY HAS NO SOURCE. Flagged at L0 and repeated here because this
+  is the L1 it blocks: both authoring surfaces say the key is populated from
+  ADR-015 and that the author must not alter it, and ADR-015 in this repository
+  is about inline suppression of an exception-handling rule. It defines no key.
+  Whoever writes the L2s must first establish what the key actually is and where
+  it lives, because "reproduce it verbatim from a document that does not describe
+  it" cannot be implemented and cannot be tested. Treat that as a prerequisite
+  question, not as an implementation detail to settle later.
+
+  SCOPE. The shape and the key are the subject. WHICH documents must exist is
+  BO-2200's subject; whether a document has drifted from what it describes is the
+  drift surface's, and is explicitly out of scope per the L0's fence.
+
+  PRIORITY high. Unblocking BO-1800f-3 requires a document carrying the house key
+  and shape, not merely one that passes the mechanical checks -- that record's
+  enrichment demands the key be reproduced verbatim -- so this child is on the
+  same critical path as INF-1300a rather than behind it.
+
+  Documentation: reference-doc. The shape and the key are reference material -- an
+  author needs to be able to look up what the parts of an architecture document
+  are and which of them are theirs to change. This is also the natural home for
+  the answer to the missing-key question above, which is why the trigger is here
+  and not on INF-1300a.

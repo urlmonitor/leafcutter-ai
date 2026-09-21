@@ -48,6 +48,72 @@ export const meta = {
 /** Maximum retry count for a single authoring agent on edit-path. */
 const MAX_EDIT_RETRIES = 1;
 
+// BO-3900-PATH-HELPERS-START
+/**
+ * Cross-platform path handling (BO-3900). Every rule below is decided from
+ * the path STRING's own form only — never from process.platform or any
+ * other host signal (BO-3900a). This block is a deliberate, self-contained
+ * COPY of the same rules in build-feature.js and build-epic.js: the E2
+ * engine injects no module loader (ADR-030; KI-BO-028), so a workflow
+ * script cannot require/import Node's `path`, `os`, or `fs` modules, or
+ * reach for a shared helper file outside itself.
+ */
+
+/**
+ * Classify a path STRING's form: "absolute", "relative", or "unrecognised".
+ * See build-feature.js's own copy of this function for the full contract.
+ *
+ * @param {*} input
+ * @returns {"absolute"|"relative"|"unrecognised"}
+ */
+function classifyPathForm(input) {
+  if (typeof input !== "string" || input.trim() === "") return "unrecognised";
+  if ((input.match(/[A-Za-z]:[\\/]/g) || []).length >= 2) return "unrecognised";
+  if (/^(\\\\[^\\/]|[A-Za-z]:[\\/]|\/)/.test(input)) return "absolute";
+  if (/^([A-Za-z]:|\\(?!\\))/.test(input)) return "unrecognised";
+  return "relative";
+}
+
+/**
+ * Normalise separator spelling to "/" and apply "." and ".." segments,
+ * anchored on the path's own root so a ".." can never climb above it.
+ *
+ * @param {string} input
+ * @returns {string}
+ */
+function normalizePathForm(input) {
+  const slashed = String(input).replace(/\\/g, "/");
+  const rootMatch = /^([A-Za-z]:\/|\/\/[^/]+\/[^/]+(\/|$)|\/)/.exec(slashed);
+  const root = rootMatch ? rootMatch[0].replace(/\/?$/, "/") : "";
+  const stack = [];
+  for (const seg of slashed.slice(root.length).split("/")) {
+    if (seg === "" || seg === ".") continue;
+    if (seg !== "..") stack.push(seg);
+    else if (stack.length > 0) stack.pop();
+    else if (root === "") stack.push("..");
+  }
+  return root + stack.join("/");
+}
+
+/**
+ * Resolve `input` onto `root`. An absolute input is normalised and returned
+ * unchanged in content — never joined onto anything. A relative input is
+ * joined onto the normalised root exactly once. An unrecognised input is
+ * refused: its exact value comes back verbatim, still unjoined.
+ *
+ * @param {string} root
+ * @param {*} input
+ * @returns {{ok: true, form: string, path: string}|{ok: false, form: "unrecognised", value: *}}
+ */
+function resolvePathOntoRoot(root, input) {
+  const form = classifyPathForm(input);
+  if (form === "unrecognised") return { ok: false, form, value: input };
+  const path = normalizePathForm(input);
+  if (form === "absolute") return { ok: true, form, path };
+  return { ok: true, form, path: normalizePathForm(root).replace(/\/$/, "") + "/" + path };
+}
+// BO-3900-PATH-HELPERS-END
+
 // ---------------------------------------------------------------------------
 // Prose-tolerant reply reader (BP-300e)
 // ---------------------------------------------------------------------------
@@ -583,10 +649,17 @@ async function scanOrphanedAcDrafts(acStoreDir, authoringWorktreePath) {
       xyStatus === "??";
     if (!isRelevant) { continue; }
 
-    // Resolve the file path against the authoring worktree root.
-    const resolvedFilePath = authoringWorktreePath
-      ? authoringWorktreePath.replace(/\/$/, "") + "/" + filePath.replace(/^\//, "")
-      : filePath;
+    // Resolve the file path against the authoring worktree root (BO-3900).
+    /*
+     * filePath is a relative path git status reported; classify it from its
+     * own form rather than assuming it is always relative, so a value that
+     * already looks absolute is never joined onto anything, and a mixed
+     * separator pairing (a Windows-backslash authoringWorktreePath with a
+     * forward-slash filePath) never survives past this one join site. A
+     * refused (unrecognised) filePath is used verbatim, exactly as given.
+     */
+    const resolved = authoringWorktreePath ? resolvePathOntoRoot(authoringWorktreePath, filePath) : null;
+    const resolvedFilePath = resolved && resolved.ok ? resolved.path : filePath;
 
     // Read the YAML file content to qualify it as an orphan.
     let fileContent;
@@ -1385,9 +1458,16 @@ async function runFlowReconciliation(flowRef, flowBacklinks, component, runId, p
     return { status: "skipped", message: "no flow_backlinks reported by the business-analyst — reconciliation skipped" };
   }
 
-  const root = authoringWorktreePath ? authoringWorktreePath.replace(/\/$/, "") + "/" : "";
+  /*
+   * BO-3900 — normalise the worktree root's own separator spelling before
+   * it is prefixed onto ptStorePath/flowRef (always forward-slash store
+   * identifiers): a Windows-backslash authoringWorktreePath concatenated
+   * as-is here previously produced a MIXED-separator path.
+   */
+  const root = authoringWorktreePath ? normalizePathForm(authoringWorktreePath).replace(/\/$/, "") + "/" : "";
   const scriptPath = root + ptStorePath + "/scripts/apply_flow_backlinks.py";
   // flowRef is store-relative (e.g. flows/foo/bar.flow.json); resolve it for the CLI.
+  // NOT-A-PATH: idempotent de-duplication of an already-prefixed product-truth store identifier (forward-slash by convention, UXP-700c-3-i) — not a Windows/POSIX absoluteness decision.
   const flowArg = root + ptStorePath + "/" + flowRef.replace(/^\/+/, "").replace(new RegExp("^" + ptStorePath + "/"), "");
   const backlinksJson = JSON.stringify(JSON.stringify(flowBacklinks));
 
@@ -1424,6 +1504,7 @@ async function runFlowReconciliation(flowRef, flowBacklinks, component, runId, p
   const commitMessage =
     `plan-feature(RECONCILE): ${component || "unknown-component"}\n\nrun-id: ${runId}\nflow step.implements back-links + regenerated derived data`;
   const indexPath = ptStorePath + "/index.json";
+  // NOT-A-PATH: same idempotent store-identifier de-duplication as flowArg above — not a Windows/POSIX absoluteness decision.
   const flowStorePath = ptStorePath + "/" + flowRef.replace(/^\/+/, "").replace(new RegExp("^" + ptStorePath + "/"), "");
 
   try {

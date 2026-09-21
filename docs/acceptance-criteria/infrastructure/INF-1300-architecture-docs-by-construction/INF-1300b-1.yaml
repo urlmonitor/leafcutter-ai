@@ -1,0 +1,167 @@
+id: INF-1300b-1
+title: "Two documents produced for different pictures still have the same sections in the same order"
+component: infrastructure
+components:
+  - documentation_system
+  - infrastructure
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+created_by: "docs/acceptance-criteria/infrastructure/INF-1300-architecture-docs-by-construction/INF-1300b.yaml"
+criteria: |
+  Given documents produced for two different kinds of picture at two different
+    tiers,
+  When the produced documents are compared section by section,
+  Then they carry the same named sections, in the same order, and each named
+    section appears exactly once in each document,
+  And no produced document omits a section another produced document has, and
+    none carries a section the others do not,
+  And the only differences between them are the values taken from the request,
+    the picture skeleton belonging to the kind, and the explanatory key belonging
+    to the kind,
+  And this holds across every kind the project's vocabulary declares as current,
+    enumerated from that declaration rather than from a list written into the
+    observation.
+depends_on:
+  - INF-1300b
+doc_links:
+  - path: docs/acceptance-criteria/infrastructure/INF-1300-architecture-docs-by-construction/INF-1300b.yaml
+    relationship: parent
+    status: exists
+  - path: templates/skills/write-c4-diagram/SKILL.md
+    relationship: specifies
+    status: exists
+    relevance: >-
+      Sections 4, 5, 6, 6a and 7 between them name the parts a finished document has —
+      the frontmatter, the purpose line, the picture, the prose reference to the document
+      above, the explanatory key and the cross-links. They are stated across five separate
+      sections and nowhere as one ordered shape, which is why each author reconstructs the
+      order and why the collection has several.
+  - path: docs/architecture/components/knowledge-management.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      A member of the collection as it stands, carrying an explanatory key. Read alongside
+      the other five documents that carry one, it is the evidence that the shape is not
+      currently shared: the sections these documents have, and the order they come in,
+      differ between them.
+  - path: config/diagram_types.json
+    relationship: specifies
+    status: exists
+    relevance: >-
+      The declaration the last clause enumerates. The shape must be the same across every
+      kind it declares, so the set of kinds covered has to be read from it rather than
+      chosen.
+  - path: docs/reference/architecture-docs-layout.md
+    relationship: specifies
+    status: exists
+    relevance: "Where architecture documents live and how the tree is organised; the collection whose shape this record makes uniform."
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+    relevance: "The angle taxonomy this record's test_spec classifies against; the real_artifact angle carries the produced-against-produced comparison that a stored expected shape cannot supply."
+origin_agent: BrainCandy
+created: 2026-09-14
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-09-14'
+superseded_by: null
+covered_by: []
+implemented_by: []
+assigned_agent: python-coder
+estimated_complexity: M
+change_target: code
+risk_surface: contract_boundary
+test_required: true
+it_requirements:
+  - "NO CHECK ENFORCES THIS RECORD'S SUBJECT, AND THAT IS THE POINT. The project's checks decide whether a document is acceptable; none of them has an opinion about whether it has the same sections as its neighbour. So the observation for this record CANNOT be 'the checks passed' in any form. It is a direct comparison of produced documents against each other."
+  - "COMPARE PRODUCED AGAINST PRODUCED, NEVER AGAINST A STORED EXPECTED SHAPE. A test that asserts a produced document's heading list equals a fixture passes when every document is equally wrong, which is the only failure mode this record exists to catch. The assertion is pairwise equality across the produced set."
+  - "ONE SECTION-ORDER DEFINITION, HELD IN ONE PLACE. The ordered section shape must exist as a single declaration the emitter reads, not as an ordering implied by the order of statements in the emitting code and separately by the order of headings in each per-kind skeleton. Where a shape is expressed twice it drifts; a duplicated source is the defect, not a redundancy."
+  - "THE PERMITTED AXES OF VARIATION ARE EXACTLY THREE AND THE FOURTH IS A FAILURE: values taken from the request, the picture skeleton belonging to the kind, and the explanatory key belonging to the kind. Any other difference between two produced documents is a violation, including a section that appears for one kind because it seemed useful there. Assert the enumeration positively — every differing region of a diff between two produced documents must fall inside one of the three — rather than asserting only that the heading lists match."
+  - "THE KIND SET IS READ FROM config/diagram_types.json AT RUN TIME, by the emitter and the observation alike, and must be taken from INF-1300a-4's single enumeration rather than re-derived. A list of kinds written into either side is the recurring defect in this tree."
+  - "A NAMED SECTION APPEARS EXACTLY ONCE PER DOCUMENT. Duplicate headings must be impossible by construction, not merely absent from the samples observed."
+  - "Deterministic and idempotent: producing the same kind and tier twice yields a byte-identical document."
+  - "Error handling per the project error-handling policy (CLAUDE.md rules 1-4)."
+test_spec:
+  - name: test_section_heading_lists_are_equal_across_every_produced_document
+    target_dir: unit_tests/docs/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    description: "Produce a document for every kind the declaration lists as current at every tier it can occupy, extract the ordered list of section headings from each, and require the lists pairwise equal — with no stored expected shape anywhere in the test."
+  - name: test_no_named_section_appears_twice_in_any_produced_document
+    target_dir: unit_tests/docs/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: "Each produced document's heading list has no repeated entry, and no document omits a heading another has or carries one the others do not."
+  - name: test_only_the_three_permitted_axes_differ_between_two_produced_documents
+    target_dir: unit_tests/docs/
+    framework: pytest
+    type: integration
+    angle: boundary
+    description: "A unified diff of two documents produced for different kinds at different tiers is partitioned, and every differing region is shown to fall inside a request value, the kind's mermaid skeleton, or the kind's explanatory key; a fourth kind of difference fails."
+  - name: test_kind_set_is_read_from_the_declaration_not_written_into_the_test
+    target_dir: unit_tests/docs/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    description: "Adding a kind to the diagram_types.json the run resolves grows the compared set by itself, with no edit to the test or to the emitter."
+  - name: test_producing_the_same_kind_twice_yields_a_byte_identical_document
+    target_dir: unit_tests/docs/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: "Two runs with identical inputs produce byte-identical files, so a later difference between two documents cannot be attributed to run-to-run noise."
+test_rationale: >-
+  This is the one clause of INF-1300b that no commit-time check enforces, so the usual
+  proof of acceptance is unavailable and would be misleading if offered: a collection can
+  be entirely acceptable and still be nine documents in nine shapes, which is what is
+  already happening here. The only observation that discriminates is produced-against-
+  produced. A test comparing each produced document to a stored expected shape is worse than
+  no test, because it passes precisely when every document is equally wrong — the single
+  failure mode this record exists to catch. The diff-partition descriptor is the second
+  irreplaceable arm: equal heading lists say nothing about a fourth axis of variation
+  creeping in below the headings, and a fourth difference is exactly how drift starts.
+delivers_to:
+  agent: python-coder
+  contract: "The single ordered section-shape declaration the emitter reads — the named sections and their order, held in one place rather than implied separately by the emitting code and by each per-kind skeleton. INF-1300b-2 places the key within this shape and INF-1300b-3 partitions it into produced and open regions; both must read this one declaration."
+expects_from:
+  ac_id: INF-1300a-1
+  contract: "The generator CLI from INF-1300a-1's delivers_to, plus INF-1300a-4's run-time (kind, tier) enumeration, which this record sweeps rather than re-deriving."
+notes: |
+  THIS IS THE READER'S HALF OF THE GOAL AT ITS MOST LITERAL AND IT IS THE ONE CLAUSE OF
+  INF-1300b THAT NO CHECK ENFORCES. The project's checks decide whether a document is
+  acceptable; none of them has an opinion about whether it has the same sections as its
+  neighbour. So a collection can be entirely acceptable and still be nine documents in
+  nine shapes, which the L1 records is what is already happening: two documents carry
+  notes saying the sanctioned starting point was unavailable and their opening sections
+  were copied from whichever sibling the author picked.
+
+  FALSIFIABILITY. Produce a document for each kind the declaration lists as current, at
+  each tier it can occupy, into a scratch collection. Extract the ordered list of section
+  headings from each and require the lists to be equal. The record is falsified by any
+  document whose heading list differs from another's — a missing section, an extra one, a
+  different order, or the same section twice. It is also falsified by an observation that
+  compares a produced document against a stored expected shape rather than against another
+  produced document: that construction passes when every document is equally wrong, which
+  is the only failure mode this record exists to catch.
+
+  WHY THE DIFFERENCES ARE ENUMERATED RATHER THAN THE SAMENESS ASSERTED LOOSELY. "The
+  documents are consistent" is not observable. Naming the three permitted axes of variation
+  — the request's values, the kind's skeleton, the kind's key — makes any fourth difference
+  a failure, and a fourth difference is exactly how drift starts: one kind grows an extra
+  section because it seemed useful there, and the next author copies it.
+
+  FENCED. WHAT the key contains is INF-1300b-2's subject and is not re-decided here; this
+  record requires only that the key occupies the same place in every document. WHICH
+  documents must exist is BO-2200's; whether a document still matches what it describes is
+  the drift surface's and is outside the L0's fence.
+
+  NOT AUTHORED HERE, BY DESIGN: assigned_agent, estimated_complexity, it_requirements,
+  test_spec, test_rationale, delivers_to and expects_from. Those are the IT PO's.

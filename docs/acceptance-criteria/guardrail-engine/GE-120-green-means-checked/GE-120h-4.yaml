@@ -1,0 +1,253 @@
+id: GE-120h-4
+title: "The page a reader trusts says which one of its statements switches a check on, so a seriousness rating beside a check's name is never mistaken for protection"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - precommit_hooks
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the published index of checks that a reader — or an agent acting for one —
+    consults to learn what protects their work,
+  When that index is read,
+  Then it states which single statement about a check is what causes that check to run,
+    and states that a seriousness rating, a settings block, a configuration entry and
+    automatic-repair routing are descriptions of a check and that none of them switches
+    one on,
+  And for every check it lists, it says whether that check is reached on an ordinary
+    commit, so a check that is described while nothing runs it is distinguishable from
+    one that runs, at the place the reader is already looking,
+  And it states that a description of a check is reconciled against the list that runs
+    checks and that a disagreement refuses the change — as a rule in force, not as one
+    that is forthcoming, optional, or to be supplied by a later pass,
+  And what it says about any given check agrees with what that check's entry on the
+    running list actually does, so the written index and the executing list agree at the
+    one point where they could disagree,
+  And a reader who follows the index to decide whether a protection is in place reaches
+    the same answer as the reconciliation does — the page is not a second source of truth
+    beside it.
+
+  Coverage note: the agreement clause is the one that can be exercised rather than merely
+  written: it is a property of two artifacts and it fails when they diverge. The others
+  are satisfied by text, which is why the named mutations in the notes must be executed
+  rather than described.
+depends_on:
+  - GE-120h
+  - GE-120h-1
+  - GE-120h-3
+doc_links:
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-120-green-means-checked/GE-120h.yaml"
+    relationship: parent
+    status: exists
+    relevance: >-
+      The parent carries documentation_triggers [reference-doc] and names the reason: the
+      four reassurances a reader consults are all descriptive, and nothing written down
+      says so. Only the one trigger is set, so no diagram record is produced.
+  - path: templates/scripts/commit_guardian/README.md
+    relationship: modifies
+    status: exists
+    relevance: >-
+      THE SURFACE THAT CURRENTLY TEACHES THE WRONG LESSON, AND THE FIRST OF THE PARENT'S
+      FOUR FALSE SIGNALS. It is a table of checks with a hook id, a seriousness rating and
+      the settings keys that tune each one — a shape that reads as a statement of live
+      protection, with no column and no sentence anywhere saying whether the check is
+      reached. Verified 2026-09-14: rows 32, 38 and 41 describe three checks as Blocking
+      that no entry runs. GE-120f-5 records a second, independent way this same page has
+      already been wrong — describing an enforcement level that is not what runs — which
+      is the evidence that a page describing the state of the family is a page that can be
+      wrong about the family.
+  - path: docs/pre-commit-hooks.md
+    relationship: modifies
+    status: exists
+    relevance: >-
+      The other index a reader may reach first. Where the statements required here belong
+      — one page, both pages, or a dedicated reference page the two point at — is the
+      documentation author's decision; the criterion is that they sit where the reader is
+      already looking, and that the two pages do not end up disagreeing with each other.
+  - path: docs/how-to/managing-pre-commit-hooks.md
+    relationship: related
+    status: exists
+    relevance: >-
+      THE NEIGHBOURING SURFACE WITH TWO SIBLINGS ALREADY WRITING TO IT, AND NEITHER IS
+      THIS. GE-120f-5 requires the registration procedure to state that a check carries a
+      declared known-bad input and that a declaration is not a demonstration; GE-120g-3
+      requires the guidance to state what declaring a role obliges a check to do. This
+      record requires the INDEX to state which statement causes a check to run. Three
+      obligations, one neighbourhood; whichever lands later adds its section rather than
+      rewriting the others', and none may be closed as another.
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-120-green-means-checked/GE-120h-1.yaml"
+    relationship: related
+    status: exists
+    relevance: >-
+      THE BEHAVIOUR THIS PAGE DESCRIBES. The rule stated as in force must be the rule
+      GE-120h-1 enforces, in the same terms. If this page lands first it describes an
+      intention, which is the failure mode its own final clause exists to catch — hence
+      the depends_on edge rather than a doc_link.
+  - path: "docs/acceptance-criteria/guardrail-engine/GE-120-green-means-checked/GE-120h-3.yaml"
+    relationship: related
+    status: exists
+    relevance: >-
+      WHY THIS RECORD DEPENDS ON THE REGISTRATION TOO. Five of the per-check statements
+      this page must make change the moment those five are switched on. Writing the page
+      first guarantees it is stale on the day it ships, and stale in the specific direction
+      that under-promises rather than over-promises — which is less harmful but is still
+      the page being wrong.
+  - path: docs/known-issues/testing-quality.md
+    relationship: context
+    status: exists
+    relevance: >-
+      KI-TQ-007 is the reader-behaviour evidence this page is written against: six review
+      rounds each consulted a descriptive surface, each read it as confirmation, and none
+      asked what invoked the check. A page that does not answer that question is a page
+      that will be misread the same way again.
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+assigned_agent: documentation-expert
+estimated_complexity: M
+it_requirements:
+  - "THE ONE STATEMENT THAT SWITCHES A CHECK ON IS MEMBERSHIP IN hooks_manifest.hooks IN templates/scripts/commit_guardian/commit_guardian.json. Everything else the page shows is descriptive: a severity rating in the README table, a settings block in templates/scripts/commit_guardian/config.py, a top-level settings section in commit_guardian.json itself, and autofix routing in templates/scripts/precommit-autofix.json. All five artifacts were confirmed present on 2026-09-14. Name them exactly; a paraphrase like 'the hook config' is what makes the four signals interchangeable in a reader's mind."
+  - "THE CONFIGURATION-SECTION CASE IS THE COUNTERINTUITIVE ONE AND MUST BE STATED EXPLICITLY. A populated settings section IN THE SAME FILE as the executing list does not switch a check on. Measured 2026-09-14: folder_density, sql_complexity and debug_scripts each hold a populated, commented settings section in commit_guardian.json while no hooks_manifest entry names any of them. A reader who has understood 'the JSON file is the real one' still gets this wrong."
+  - "STATE THE RECONCILIATION RULE AS IN FORCE ONLY WHEN IT IS. The criterion requires the page to say the rule is in force, not forthcoming — which means this page must not land before GE-120h-1 does. Both depends_on edges already say so; the practical consequence is that a documentation pass run early produces a page whose central claim is false on the day it ships, and this component has already recorded a check documented as taking a remediation action its code never takes."
+  - "DO NOT WRITE A PER-CHECK REACHED/NOT-REACHED COLUMN BY HAND AND DO NOT INVENT A SEPARATE STATUS VOCABULARY. The final clause forbids the page being a second source of truth: whatever the page says per check must be the thing the reconciliation reads and can contradict. Free prose beside an entry is the failure mode the record's second named mutation exists to catch."
+  - "NO COUNT IN THE PROSE. Any figure must carry the date and the state it was measured at. The unregistered population moved 18 -> 16 -> 14 in a single day; a page stating how many checks are unreached is stale within the week, while a page stating per check whether it is reached is maintained by its own agreement clause."
+  - "THE THREE NEIGHBOURING OBLIGATIONS ON docs/how-to/managing-pre-commit-hooks.md ARE DISTINCT AND NONE MAY BE CLOSED AS ANOTHER. GE-120f-5 requires the registration procedure to state that a check carries a declared known-bad input and that a declaration is not a demonstration; GE-120g-3 requires the guidance to state what declaring a role obliges a check to do; this record requires the INDEX to state which statement causes a check to run. Add a section, do not rewrite theirs."
+  - "docs/pre-commit-hooks.md AND templates/scripts/commit_guardian/README.md BOTH EXIST AND BOTH ARE REACHED FIRST BY SOME READERS. Where the statements live is the documentation author's decision; the constraint is that the two do not end up disagreeing with each other, which is the same defect one level down from the one this page is about."
+  - "MENTION, FOR THE FIVE GE-120h-3 REGISTERS, THE TWO FACTS A READER WOULD OTHERWISE DISCOVER THE HARD WAY: check-test-fixture-bloat ships REGISTERED BUT UNARMED (its test_fixture_bloat settings key does not exist, so enabled resolves False and every violation path returns 0 — verified 2026-09-14), and check-ac-done-on-merge runs at the post-merge stage, which fires only where the post-merge hook shim is installed. A page that lists both as protecting the reader without those qualifications repeats this tree's own defect in its own remedy."
+test_spec:
+  - name: test_ge120h4_page_statements_agree_with_the_running_list
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: real_artifact
+    description: "For every check the index lists, what the page says about whether it is reached agrees with whether a hooks_manifest.hooks entry names it — the two artifacts are compared, not read."
+  - name: test_ge120h4_removing_one_entry_from_the_running_list_turns_the_agreement_test_red
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: "The record's first named mutation, executed: with the page unchanged and one of the five entries removed from the manifest, the agreement assertion fails; reverting restores green."
+  - name: test_ge120h4_changing_one_page_statement_turns_the_agreement_test_red
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: "The mirror mutation: with the manifest unchanged and one page statement altered, the agreement assertion fails — the gap is caught in both directions."
+  - name: test_ge120h4_a_status_stated_in_a_form_the_reconciliation_cannot_read_is_not_counted
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: "The second named mutation: a check's status written as free prose the reconciliation does not consult fails this assertion while the others stay green — the page cannot drift back into being a fifth independent signal."
+test_rationale: >-
+  This record is change_target docs and most of its clauses are discharged by writing
+  sentences, so test_required: false would be the reflexive answer — and it would be
+  wrong. The BA's own coverage note identifies the agreement clause as the one that can
+  be exercised rather than merely written: it is a property of two artifacts and it
+  fails when they diverge. That is the clause the component has an anti-precedent for —
+  a check documented as taking a remediation action its code never takes, believed for
+  months, and a page stating an enforcement level the running entry does not carry — so
+  it is the clause that must be machine-held rather than reviewed. The three mutation
+  cases are the record's own named injections, promoted to test cases because a
+  described mutation is not an executed one, and because each isolates a different way
+  the page can be wrong: stale about the list, wrong about a check, or correct in a form
+  nothing can contradict.
+declares_side_effect: false
+delivers_to: null
+expects_from:
+  - ac_id: GE-120h-1
+    contract: >-
+      The rule as actually enforced — which surfaces are reconciled against which list,
+      and that a reconciled disagreement refuses the change. The page states this; the
+      final clause fails if the two diverge.
+  - ac_id: GE-120h-3
+    contract: >-
+      The five entries on the running list, so the page's per-check statements about those
+      five are true when it ships rather than shortly afterwards.
+origin_agent: business-analyst
+created: 2026-09-14
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: docs
+risk_surface: contract_boundary
+notes: |
+  WHY A DOCUMENTATION RECORD IS REQUIRED AND WHY IT IS NOT OPTIONAL PADDING. The parent
+  sets documentation_triggers [reference-doc], and the trigger has a specific cause: of
+  the four reassurances the parent names, THREE ARE PURE DOCUMENTATION OR CONFIGURATION
+  and only one causes execution — and nothing written anywhere says which. A reader doing
+  everything right today reaches the wrong conclusion. GE-120h-1 makes the surfaces agree
+  from now on; it does not tell the next reader what they are looking at, and it cannot
+  reach the adopter who is reading the package's index before installing it.
+
+  ASSIGNED AGENT. This record's work is documentation and belongs to the documentation
+  author, on the precedent of GE-120g-3 in this same tree. The field is left unset here
+  because assigned_agent is the IT PO's to set; it is named so the routing is not
+  guessed.
+
+  THE AGREEMENT CLAUSE IS WHAT STOPS THIS BEING PROSE, AND THE COMPONENT HAS AN
+  ANTI-PRECEDENT FOR IT. Every other clause here is discharged by writing sentences. This
+  component has already recorded a check documented as taking a remediation action its
+  own code never takes, believed by authors for months, and a page that states an
+  enforcement level the running entry does not carry. A documented-but-false rule is worse
+  than no rule, because the reader stops checking.
+
+  NAMED MUTATION FOR THE AGREEMENT CLAUSE — EXECUTE IT, DO NOT DESCRIBE IT. INJECTION:
+  leave the page as written and remove one of the five entries from the running list.
+  Under that injection the page says a check is reached that nothing reaches, and this
+  clause must go RED and return to green on revert. The mirror injection is equally valid
+  and worth running: leave the list alone and change the page's statement about one check.
+  Either divergence must be caught, because the defect is the gap and not its direction.
+
+  SECOND NAMED MUTATION, FOR THE NO-SECOND-SOURCE CLAUSE. INJECTION: state a check's
+  status on the page in a form the reconciliation does not consult and cannot contradict —
+  free prose beside the entry rather than the statement the reconciliation reads. Under
+  that injection every other clause stays green and only this one goes red. That is the
+  shape by which a page drifts back into being a fifth independent signal, which is the
+  exact thing this tree exists to end.
+
+  NO COUNT MAY APPEAR IN THE TEXT THIS RECORD PRODUCES, beyond figures that carry the date
+  and the state they were measured at. The unregistered population moved three times in a
+  single day. A page stating how many checks are unreached is stale within the week; a
+  page stating, per check, whether that check is reached, is maintained by its own
+  agreement clause.
+
+  NOT AUTHORED HERE, BY DESIGN: assigned_agent, estimated_complexity, it_requirements,
+  test_spec, test_rationale and declares_side_effect. Those are the IT PO's fields.
+
+  ---- IT PO ENRICHMENT, 2026-09-14 ----
+
+  ROUTING TAKEN AS THE RECORD ASKED. assigned_agent: documentation-expert, on the
+  GE-120g-3 precedent in this tree, which carries the same value — confirmed by reading
+  that record rather than by assuming the convention.
+
+  test_required IS NOT SET TO false, DELIBERATELY. A docs-target record would normally
+  take it, and the S7b documentation trigger on the parent (reference-doc) is satisfied
+  by this record's existence. But the BA's coverage note singles out the agreement
+  clause as exercisable, and the record's three named mutations are all executable
+  against two real artifacts. Setting test_required: false would have discarded exactly
+  the clause that stops this being prose, so a test_spec was authored instead. The
+  documentation author writes the page; the agreement and mutation cases are a
+  test-writer surface over the page and the manifest, and should be dispatched as such
+  rather than expected from documentation-expert.
+
+  HOW EVERY NAME IN it_requirements WAS VERIFIED. All five artifacts named as the
+  descriptive-versus-executing surfaces were opened in this worktree on 2026-09-14:
+  templates/scripts/commit_guardian/README.md, .../config.py,
+  .../commit_guardian.json (38 top-level keys, 62-member hooks_manifest.hooks),
+  templates/scripts/precommit-autofix.json, and both documentation pages
+  (docs/pre-commit-hooks.md, docs/how-to/managing-pre-commit-hooks.md). The two
+  qualifications the page must carry about the newly registered five were measured, not
+  inferred: test_fixture_bloat is absent from the 38 top-level keys and
+  check_test_fixture_bloat.py reads load_config().get("test_fixture_bloat", {}) then
+  config.get("enabled", False), so it is inert; and the manifest's stages today are
+  pre-commit (60), commit-msg (1) and manual (1), so post-merge would be the first of
+  its kind and depends on a shim that install_pre_commit_shims.py writes from the
+  generated .pre-commit-config.yaml. No configuration key is asserted to exist anywhere
+  in this enrichment.

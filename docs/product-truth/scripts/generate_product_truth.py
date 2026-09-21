@@ -56,8 +56,19 @@ from datetime import date
 from pathlib import Path
 
 import yaml
+from product_truth_shapes import combine_statuses, expansion_targets, normalise_flow_shapes
 
 logger = logging.getLogger("generate_product_truth")
+
+# Re-exported so every existing caller keeps importing these from this module.
+from product_truth_derivations import (  # noqa: F401  # re-exported for callers
+    _ARTIFACT_SUMMARY_LENGTH,
+    _ELLIPSIS,
+    _preserve_entry_asof,
+    build_by_component,
+    build_by_entity,
+    derive_artifact_summary,
+)
 
 STORE = Path(__file__).resolve().parent.parent
 AC_STORE = STORE.parent / "acceptance-criteria"
@@ -125,14 +136,7 @@ def compute_node_impl_status(implements: list[str], ac_map: dict) -> str:
     not_started; anything else (any in_progress, or a done/not_started mix) ->
     in_progress.
     """
-    statuses = [impl_status_for_ac(ac_map.get(ac, {}).get("work_status")) for ac in implements]
-    if not statuses:
-        return "not_started"
-    if all(status == "done" for status in statuses):
-        return "done"
-    if all(status == "not_started" for status in statuses):
-        return "not_started"
-    return "in_progress"
+    return combine_statuses([impl_status_for_ac(ac_map.get(ac, {}).get("work_status")) for ac in implements])
 
 
 def compute_node_status(node: dict, ac_map: dict, flows: dict, _stack: tuple = ()) -> str:
@@ -147,12 +151,12 @@ def compute_node_status(node: dict, ac_map: dict, flows: dict, _stack: tuple = (
     deterministically; the validator ERRORs on both so this never masks a real
     authoring bug. Otherwise the status derives from `implements` via ac_map.
     """
-    child_id = node.get("expands_to")
-    if child_id:
-        child = flows.get(child_id)
-        if child is None or child_id in _stack:
-            return "not_started"
-        return flow_impl_status(compute_flow_impl_summary(child, ac_map, flows, _stack + (child_id,)))
+    child_ids = expansion_targets(node)
+    if child_ids:
+        return combine_statuses([
+            "not_started" if child_id not in flows or child_id in _stack
+            else flow_impl_status(compute_flow_impl_summary(flows[child_id], ac_map, flows, _stack + (child_id,)))
+            for child_id in child_ids])
     return compute_node_impl_status(node.get("implements", []), ac_map)
 
 
@@ -201,9 +205,9 @@ def build_parents_map(flows: dict) -> dict:
     parents: dict[str, list] = {flow_id: [] for flow_id in flows}
     for flow in sorted(flows.values(), key=lambda item: item["id"]):
         for step in flow.get("steps", []):
-            child_id = step.get("expands_to")
-            if child_id in parents:
-                parents[child_id].append({"flow": flow["id"], "step": step["id"]})
+            for child_id in expansion_targets(step):
+                if child_id in parents:
+                    parents[child_id].append({"flow": flow["id"], "step": step["id"]})
     for child_id in parents:
         parents[child_id].sort(key=lambda item: (item["flow"], item["step"]))
     return parents
@@ -212,7 +216,7 @@ def build_parents_map(flows: dict) -> dict:
 def build_expands_map(flows: dict) -> dict:
     """For every flow, the sorted child flow ids its steps drill into."""
     return {
-        flow_id: sorted({step["expands_to"] for step in flow.get("steps", []) if step.get("expands_to")})
+        flow_id: sorted({child for step in flow.get("steps", []) for child in expansion_targets(step)})
         for flow_id, flow in flows.items()
     }
 
@@ -247,43 +251,8 @@ def build_by_ac(flows: dict, run_date: str | None = None) -> dict:
     return dict(sorted(by_ac.items()))
 
 
-def build_by_component(artifacts: list) -> dict:
-    """Group artifact ids by component and type."""
-    type_key = {"flow": "flows", "mock_data": "mock_data", "mockup": "mockups"}
-    result: dict[str, dict] = {}
-    for artifact in artifacts:
-        key = type_key.get(artifact.get("type"))
-        if key is None:
-            continue
-        bucket = result.setdefault(artifact["component"], {"flows": [], "mock_data": [], "mockups": []})
-        bucket[key].append(artifact["id"])
-    for component in result:
-        for key in result[component]:
-            result[component][key] = sorted(result[component][key])
-    return dict(sorted(result.items()))
 
 
-def build_by_entity(flows: dict, mocks: dict) -> dict:
-    """Map each entity to its canonical mock-data and the flows that use it."""
-    result: dict[str, dict] = {}
-
-    def bucket(entity: str) -> dict:
-        return result.setdefault(entity, {"canonical_mock_data": {}, "flows": {}})
-
-    for mock in mocks.values():
-        for entity in mock.get("entities", {}):
-            bucket(entity)["canonical_mock_data"][mock["component"]] = mock["id"]
-    for flow in flows.values():
-        for entity in flow.get("entities", []):
-            flows_by_component = bucket(entity)["flows"].setdefault(flow["component"], [])
-            if flow["id"] not in flows_by_component:
-                flows_by_component.append(flow["id"])
-    for entity in result:
-        result[entity]["canonical_mock_data"] = dict(sorted(result[entity]["canonical_mock_data"].items()))
-        result[entity]["flows"] = {
-            component: sorted(ids) for component, ids in sorted(result[entity]["flows"].items())
-        }
-    return dict(sorted(result.items()))
 
 
 def build_by_flow(flows: dict, flow_paths: dict, ac_map: dict, run_date: str | None = None) -> dict:
@@ -412,13 +381,32 @@ def build_ac_map() -> dict:
     return ac_map
 
 
-def load_flows() -> tuple[dict, dict]:
-    """Return ({flow_id -> flow}, {flow_id -> store-relative path})."""
+def load_flows(unreadable: list[str] | None = None) -> tuple[dict, dict]:
+    """Return ({flow_id -> flow}, {flow_id -> store-relative path}).
+
+    A journey file that fails to parse as JSON is skipped (fail-open, GE-120 /
+    GE-116a-1-iii) rather than allowed to crash the whole run: its
+    store-relative path is appended to *unreadable* when the caller supplies a
+    list, and generation/validation proceeds over the remaining, well-formed
+    journeys. This is the single reader both the generator and the validator
+    consume, so both inherit the same skip-and-continue semantics from one
+    place. A genuine OSError (missing/unreadable file, permissions, disk
+    failure) still propagates unchanged -- only a malformed-CONTENT error
+    degrades instead of failing closed; that distinction matches the AC's own
+    Given clause ("cannot be read because its file is malformed").
+    """
     flows: dict[str, dict] = {}
     paths: dict[str, str] = {}
     for path in sorted((STORE / "flows").rglob("*.flow.json")):
-        flow = _load_json(path)
-        flows[flow["id"]] = flow
+        try:
+            flow = _load_json(path)
+        except json.JSONDecodeError:
+            rel = path.relative_to(STORE).as_posix()
+            logger.warning("skipping unreadable journey %s (invalid JSON) -- examining the rest", rel)
+            if unreadable is not None:
+                unreadable.append(rel)
+            continue
+        flows[flow["id"]] = normalise_flow_shapes(flow)
         paths[flow["id"]] = path.relative_to(STORE).as_posix()
     return flows, paths
 
@@ -472,29 +460,6 @@ def write_flows(flows: dict, flow_paths: dict, ac_map: dict, check: bool, run_da
     return changed
 
 
-def _preserve_entry_asof(new_entries: list[dict], existing_truth: list, run_date: str) -> list[dict]:
-    """Return new_entries with asof preserved from existing_truth where content matches.
-
-    For each new entry, locate the stored entry with the same (flow, node) key.
-    If the non-asof fields are identical, keep the stored asof; otherwise stamp
-    with run_date. This is a pure helper — no I/O.
-    """
-    if not isinstance(existing_truth, list):
-        return new_entries
-    existing_by_key: dict[tuple, dict] = {}
-    for ex in existing_truth:
-        if isinstance(ex, dict):
-            key = (ex.get("flow"), ex.get("node"))
-            existing_by_key[key] = ex
-    result = []
-    for entry in new_entries:
-        key = (entry.get("flow"), entry.get("node"))
-        existing = existing_by_key.get(key)
-        if existing is not None and _without_asof(existing) == _without_asof(entry) and "asof" in existing:
-            result.append({**_without_asof(entry), "asof": existing["asof"]})
-        else:
-            result.append(entry)
-    return result
 
 
 def write_ac_product_truth(ac_map: dict, by_ac: dict, check: bool, run_date: str) -> bool:
@@ -527,6 +492,11 @@ def write_ac_product_truth(ac_map: dict, by_ac: dict, check: bool, run_date: str
     return changed
 
 
+
+
+
+
+
 def write_index(
     flows: dict,
     flow_paths: dict,
@@ -540,9 +510,16 @@ def write_index(
     ``asof`` stamps inside ``by_flow[*].impl_summary`` and ``by_ac[*][i]`` are
     preserved from the existing ``index.json`` when the non-asof content is
     unchanged, preventing spurious date-only diffs on re-runs.
+
+    A missing ``index.json`` is rebuilt from the sources rather than crashing
+    (UXP-700a-2): this is the store's single writer, so it is the one thing that
+    can restore the index without anyone hand-authoring JSON. It starts from an
+    index declaring zero artifacts, and every derived lookup below is then
+    written into it, present and empty. A second run finds that file and writes
+    nothing, because the compare-before-write check sees identical text.
     """
     index_path = STORE / "index.json"
-    index = _load_json(index_path)
+    index = _load_json(index_path) if index_path.exists() else {"artifacts": [], "entity_registry": []}
 
     by_flow = build_by_flow(flows, flow_paths, ac_map, run_date)
 
@@ -560,6 +537,26 @@ def write_index(
         if artifact.get("type") == "flow" and artifact["id"] in by_flow:
             artifact["impl_summary"] = by_flow[artifact["id"]]["impl_summary"]
 
+    # Derive each flow artifact's `summary` from the journey's own, authoritative
+    # summary rather than leaving a second, separately-typed description sitting
+    # beside it (UXP-700e-2). Recomputed on every run like every other derived
+    # field here, so editing the journey is the only edit needed to change both.
+    for artifact in index.get("artifacts", []):
+        if artifact.get("type") == "flow" and artifact["id"] in flows:
+            derived = derive_artifact_summary(flows[artifact["id"]].get("summary", ""))
+            stored = artifact.get("summary")
+            if stored is not None and stored != derived:
+                # Name the journey, both texts, and the file to edit: whoever edited
+                # the index copy edited the text regeneration discards (UXP-700e-2-i).
+                logger.warning(
+                    "second authored description for %s: index holds %r, but the journey's "
+                    "own summary derives %r — the index copy is derived, not authored; edit "
+                    "the 'summary' field in %s instead, then regenerate",
+                    artifact["id"], stored, derived,
+                    flow_paths.get(artifact["id"], "the journey's own file"),
+                )
+            artifact["summary"] = derived
+
     # Rebuild by_ac and preserve per-entry asof from the existing index.
     new_by_ac = build_by_ac(flows, run_date)
     existing_by_ac = index.get("by_ac") or {}
@@ -573,7 +570,7 @@ def write_index(
     index["by_ac"] = new_by_ac
 
     new_text = json.dumps(index, indent=2, ensure_ascii=False) + "\n"
-    if new_text != _read_text(index_path):
+    if not index_path.exists() or new_text != _read_text(index_path):
         if not check:
             _write_text(index_path, new_text)
         return True
@@ -641,3 +638,28 @@ def main() -> int:
 
 if __name__ == "__main__":
     sys.exit(main())
+
+"""
+====================================================================
+DECISION HISTORY
+====================================================================
+- 2026-09-09 17:05 [python-coder]: UXP-700b-1-i -- load_flows() no longer lets
+  json.JSONDecodeError from one malformed journey file crash the whole read.
+  It now catches the decode error per-file, logs a warning, appends the
+  store-relative path to an optional *unreadable* out-list, and continues
+  over the remaining well-formed journeys (fail-open, GE-120 / GE-116a-1-iii).
+  The signature stays backward compatible (`unreadable` defaults to None and
+  the return value is still the same 2-tuple) so generate()'s own call site,
+  and unit_tests/portability/test_uxp_700c_3_i.py's `_flows, paths =
+  gpt.load_flows()` unpacking, are unaffected; validate_product_truth.py
+  (the sole other caller) now passes a list to observe which journeys were
+  skipped. A genuine OSError still propagates unchanged -- only malformed
+  CONTENT degrades instead of failing closed. (#EPIC-TruthfulProjectRecord/12)
+- 2026-09-14 [python-coder]: UXP-700e-3-i -- `expands_to` is read through
+  product_truth_shapes.expansion_targets (one id or a list) and load_flows()
+  normalises it to a list, so write_flows() writes only the new shape. A step
+  expanding into several journeys combines their rollups with the same rule a
+  node's own ACs use (combine_statuses); a dangling or cyclic child counts as
+  not_started, as before. (#EPIC-TruthfulProjectRecord/44)
+====================================================================
+"""
