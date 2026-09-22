@@ -1,8 +1,12 @@
-"""Tests for install_hooks() in build_helpers.py.
+"""Tests for install_hooks() in build_precommit_install.py.
 
-These tests are written BEFORE the implementation exists (TDD, test-first).
-All tests are expected to be RED (failing) until python-coder implements
-install_hooks() in build_helpers.py.
+These tests were originally written BEFORE the implementation existed
+(TDD, test-first) against build_helpers.py. BP-1500g-1's file-size split
+later extracted install_hooks(), _resolve_precommit_cmd(), and
+_precommit_known_paths() out of build_helpers.py into the new
+build_precommit_install.py module (build_helpers.py re-exports install_hooks
+by name only, for build.py's own import); this file was updated to load
+from the new module so the internal-symbol patches keep working.
 """
 
 from __future__ import annotations
@@ -16,7 +20,13 @@ from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 _REPO_ROOT = Path(__file__).resolve().parent.parent
-_MODULE_PATH = _REPO_ROOT / "scripts" / "build_helpers.py"
+# BP-1500g-1's file-size split extracted install_hooks, _resolve_precommit_cmd,
+# and _precommit_known_paths out of build_helpers.py into
+# build_precommit_install.py (see that module's own docstring). build_helpers.py
+# still re-exports install_hooks by name for build.py's existing import, but the
+# two private helpers live only on the new module now -- patch.object(mod, ...)
+# against them must target build_precommit_install, not build_helpers.
+_MODULE_PATH = _REPO_ROOT / "scripts" / "build_precommit_install.py"
 
 
 def _get_install_hooks():
@@ -31,7 +41,7 @@ def _get_install_hooks():
     _scripts_dir = str(_MODULE_PATH.parent)
     if _scripts_dir not in sys.path:
         sys.path.insert(0, _scripts_dir)
-    spec = importlib.util.spec_from_file_location("build_helpers_ih", _MODULE_PATH)
+    spec = importlib.util.spec_from_file_location("build_precommit_install_ih", _MODULE_PATH)
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
     return getattr(mod, "install_hooks"), mod

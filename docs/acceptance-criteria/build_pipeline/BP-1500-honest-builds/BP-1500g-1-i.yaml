@@ -9,7 +9,7 @@ req_status: draft
 readiness: approved
 priority: high
 roadmap_phase: phase_1
-work_status: todo
+work_status: done
 declares_side_effect: false
 criteria: |
   Given the same project and the same adopter-authored capability as BP-1500g-1,
@@ -141,7 +141,9 @@ amended_by:
     reason: "Added assigned_agent (python-coder), estimated_complexity (M), it_requirements, test_spec, test_rationale and expects_from. Criteria, title, depends_on and doc_links UNCHANGED; readiness remains draft. FINDINGS ADDED, verified against origin/main 1cce5b48a. (1) This AC's enforcement point is `clean_stale_artifacts` / `_MANAGED_ARTIFACT_DIRS` in `scripts/build_phases.py`, and it is genuinely disjoint from BP-1500g-1's: `clean_stale_artifacts` never reads `_PRE_CONSOLIDATION_PATHS`, so BP-1500g-1's repair does not reach it -- confirmed by reading both functions, not inferred. `--clean` is `store_true`, default False, gated by `if args.clean:`. (2) The mechanism is `iterdir()` traversing THROUGH the shim symlink into the generated tree, which is why the AC's two placements are one location and the third Then clause is a pincer; the test contract carries one entry per arm for that reason. (3) SEQUENCING HAZARD RAISED, NOT RESOLVED: KI-BP-010 (the doubled `.claude/` segment on the `workflows` entry of `_MANAGED_ARTIFACT_DIRS`) sits in the same dict, and normalising it during this work would ACTIVATE a never-run removal path over a directory whose safety is the subject of this very AC. KI-BP-010's own entry asks for deliberate sequencing; an it_requirement now says do not fix it in passing. (4) An over-correction control was added to the contract because six of the seven entries assert survival and `if args.clean: pass` would satisfy all six."
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+  - scripts/build_phases.py
+  - scripts/build_ownership.py
 change_target: pipeline
 risk_surface: safety
 notes: |
