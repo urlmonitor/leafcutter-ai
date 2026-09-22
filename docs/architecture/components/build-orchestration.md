@@ -106,3 +106,81 @@ asserts the required docs against the ticket's `## Agent Contracts` → `### doc
 brief and fails closed (blocking the commit) when a required doc is missing or placeholder.
 
 - [Documentation Coverage — Runtime Phase Flow Sequence](../diagrams/c3-004-documentation-coverage-phase-flow-sequence.md) — the ordered `coder → test-runner → documentation-expert → documentation-verifier → commit` flow, including the blocker path where the verifier prevents the commit when required docs are absent or placeholder.
+
+## Completion Across a Batch — One Run Gives One Answer Per Condition
+
+When one run of `templates/workflows-js/build-feature.js` carries several tickets, each
+ticket's close verdict is a pure function of that ticket's **own** read-back record. The
+demanded-step set comes only from that record per
+[ADR-046](../adrs/ADR-046-completion-demanded-set-is-record-only.md), and per
+[ADR-048](../adrs/ADR-048-order-independent-per-ticket-completion.md) no state the run
+accumulates as it proceeds — no memo, cache, running tally, batch index, chunk position,
+or shared sub-agent session — is an input to any ticket's verdict or to the close dispatch
+performed for it. Two consequences follow rather than being separately implemented: two
+tickets in the identical state always receive the identical answer regardless of the order
+the run reached them, and a second run over the same records reproduces the first run's
+answers ticket for ticket. This invariant holds today as a consequence of the record-only
+derivation landed for ADR-046; `BO-400e-4` confirmed it by executing a real four-ticket
+run rather than by reading the source, and no production behaviour changed to obtain it.
+
+One value genuinely is shared across tickets within a run, and it is worth naming so a
+future reader does not mistake it for a violation: `completedTicketOutcomes`. It is read
+**only** by the `depends_on` eligibility gate — whether a dependent ticket is dispatched at
+all — and is **never** read by the completion verdict itself (`concludeTicket` /
+`completionVerdictFromRecord`). Eligibility and verdict are separate questions; only the
+latter is under the no-shared-state rule.
+
+"All the tickets in the run agreed" is **not** sufficient evidence on its own: a run that
+refuses everything is trivially consistent, trivially repeatable, and trivially
+order-independent. The invariant therefore requires a contrasting case in the same run —
+at least one ticket whose record carries a passing sign-off for every phase it names must
+be written finished, through the single-writer mechanism. Determinism obtained by uniform
+refusal is inadmissible per
+[ADR-048](../adrs/ADR-048-order-independent-per-ticket-completion.md) §7, which also
+explains why that would convert a phantom-done into a phantom-blocked.
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant Run as One run of build-feature.js
+    participant R1 as Ticket 01 record
+    participant R2 as Ticket 03 record
+    participant R3 as Ticket 20 record
+    participant R4 as Control ticket record
+    participant Writer as scripts/set_ticket_status.py
+
+    Note over Run,R4: Tickets 01, 03 and 20 are in the identical state — same phases named<br/>needed, all signed off except pull-request, which none of the three carries.
+
+    Run->>R1: read back this ticket's own record
+    R1-->>Run: needed phases + sign-offs; no pull-request entry
+    Run->>Run: verdict — refuse; record left as found; outstanding phase: pull-request
+
+    Run->>R2: read back this ticket's own record
+    R2-->>Run: needed phases + sign-offs; no pull-request entry
+    Run->>Run: verdict — refuse; record left as found; outstanding phase: pull-request
+
+    Run->>R3: read back this ticket's own record
+    R3-->>Run: needed phases + sign-offs; no pull-request entry
+    Run->>Run: verdict — refuse; record left as found; outstanding phase: pull-request
+
+    Run->>R4: read back this ticket's own record
+    R4-->>Run: every phase this ticket names is signed off
+    Run->>Writer: close this ticket — unforced, own fresh dispatch
+    Writer-->>R4: status done written
+
+    Note over Run,Writer: Reach-order changes none of these four answers, and a second run<br/>over the same four records reproduces all four.
+```
+
+The contrast inside the single run is the whole point: three refusals that name the same
+outstanding phase and leave three records untouched, alongside one separately-signed-off
+control ticket written finished by the same run through the same single writer. Without the
+control, the three matching refusals would prove only that the run is consistent; with it,
+they are attributable to the missing sign-off. This is also why conformance is demonstrated
+by a four-ticket run and never by four independent single-ticket runs — at one ticket per
+run there is nothing to carry between tickets, so the property under test cannot fail.
+
+A future change that reintroduces cross-ticket state into the verdict — a run-scoped cache
+of a re-read record, a batch-level close dispatch, a sub-agent session reused across closes
+— is breaking something deliberate, not performing a harmless refactor. Both drivers
+(`build-feature.js` and `build-ticket.js`) are bound by this, in the same commit, even
+though the single-ticket driver cannot exhibit the disagreement.
