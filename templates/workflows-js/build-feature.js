@@ -1626,8 +1626,8 @@ if (!realWorktreePath) {
   const targetBranch = (target_type === "epic" ? "epic/" : "ticket/") + identity.replace(/^EPIC-/, "").replace(/([a-z0-9])([A-Z])/g, "$1-$2").toLowerCase();
   const locFacts = await repoFactsCall(`python {{config.output_root}}/scripts/worktree_repo_facts.py facts "${instructedLocation}" --reference "${repoAnchor}"`, "worktree-facts-location");
   if (locFacts && locFacts.exists) {
-    // scenario 2 — reuse a worktree of this repo already on the target's branch; refuse any other occupant.
-    if (locFacts.is_linked_worktree && !locFacts.is_main_checkout && locFacts.same_repository && locFacts.branch === targetBranch) realWorktreePath = instructedLocation;
+    // scenario 2 — reuse a worktree of this repo on the target's OWN branch, named either by the epic/<kebab> convention this driver mints for a NEW worktree or by the target's own identity, which is how existing epic worktrees are actually branched; any other occupant is still refused.
+    if (locFacts.is_linked_worktree && !locFacts.is_main_checkout && locFacts.same_repository && (locFacts.branch === targetBranch || locFacts.branch === identity)) realWorktreePath = instructedLocation;
     else return undetermined({ abort_reason: "worktree-location-occupied", location: instructedLocation, occupant: locFacts, message: `The named worktree location "${instructedLocation}" is occupied by something other than the target's own worktree. No phase agent has been spawned; nothing there was changed.` });
   } else {
     const standing = await repoFactsCall(`python {{config.output_root}}/scripts/worktree_repo_facts.py branch-standing "${targetBranch}" --repo "${repoAnchor}"`, "branch-standing");
