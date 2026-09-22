@@ -167,10 +167,11 @@ frontmatter; list the unconfirmed tasks instead.
 
 ## Auto-close trigger
 
-In addition to the user-gated closing path above, `status-checker` MUST check
-whether a ticket qualifies for **automatic closure** whenever it is invoked.
-The auto-close trigger fires when **both** of the following conditions hold
-simultaneously:
+This trigger serves an **investigation** invocation — someone asking what state a
+ticket is in, carrying no authorization to close it. It does NOT gate the
+driver-dispatched completion write above. `status-checker` MUST check this
+trigger whenever it is invoked WITHOUT one of the two authorizations above. It
+fires when **both** of the following conditions hold simultaneously:
 
 1. **All sign-offs complete.** Every entry in the ticket's frontmatter `agents:`
    map is `signed_off` or `not_needed` (no `needed` or `failed` entries remain).
@@ -188,9 +189,17 @@ simultaneously:
 
    Capture the first matching commit SHA for the audit entry.
 
-**Precedence:** Check the auto-close trigger **before** the user-gated close
+**Precedence:** Check the auto-close trigger **before** the *interactive* close
 path. If the auto-close fires, the ticket is closed immediately without
-requesting explicit user authorization; the user-gated path is not reached.
+requesting explicit user authorization; the interactive path is not reached.
+
+A **driver-dispatched** completion write does not reach this trigger at all. It
+arrives already authorized, and the merge-commit condition is one an epic-branch
+drive cannot satisfy by construction — the branch is unmerged precisely because
+the work is still being driven. Applying this trigger to that path turns every
+in-drive close into a refusal that names an unmet merge condition the driver was
+never supposed to meet, which is exactly what happened on 2026-09-22 when the
+two closing sections were left unreconciled.
 
 **When both conditions hold:**
 
