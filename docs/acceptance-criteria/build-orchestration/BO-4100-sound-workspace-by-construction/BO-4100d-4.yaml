@@ -1,0 +1,115 @@
+id: BO-4100d-4
+title: "A workspace is created in the tool's own repository, whichever copy of the tool was invoked"
+component: build-orchestration
+components:
+  - build_orchestration
+  - worktree_manager
+level: L2
+status: active
+req_status: draft
+work_status: done
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+change_target: code
+risk_surface: contract_boundary
+package_surface: false
+criteria: |
+  Given a copy of the workspace-creation tool that has been deployed to a
+    location outside the repository it manages,
+  When a workspace is created with that copy,
+  Then the workspace is created in the repository the tool belongs to, not in
+    whatever repository happens to contain the copy,
+  And when the tool cannot determine that repository, it refuses and names the
+    location it tried to resolve from,
+  And it never reports success for a workspace created in a different
+    repository from the one the caller asked about,
+  And the symptom ("the deployed copy aborts with a bare git exit status 128,
+    or silently resolves the adopter's repository") does not occur.
+depends_on: [BO-4100d]
+doc_links:
+  - path: docs/architecture/components/worktree-manager.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: describes
+    status: exists
+    relevance: "Establishes the layout in which the deployed copy lands outside the git root, which is the condition this record governs."
+  - path: templates/scripts/setup_ticket_worktree.py
+    relationship: modifies
+    status: exists
+    relevance: "The copy consumer installs receive via build_template_standalone_scripts(), and the copy build.py deploys to .leafcutter/scripts/. This is the copy that actually fails today, so a fix that lands only in scripts/ fixes nothing that runs."
+  - path: scripts/setup_ticket_worktree.py
+    relationship: modifies
+    status: exists
+    relevance: "The repo's own working copy. Carries the same defect and must be corrected in step, but note the two files have DELIBERATELY drifted (the template omits the create-time pre-commit gate); this record requires parity of the resolution behaviour only, never a wholesale resync."
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "The repository must be resolved from the SUBJECT of the operation -- the target path the subcommand was asked to act on -- not from the location of the running file. An implementation that keeps deriving the anchor from the script's own directory and merely improves the error message has not satisfied this record."
+  - "Correctness must be demonstrated with the tool invoked from a copy placed OUTSIDE the repository. A test that exercises only the in-repo copy passes today against the unfixed code and proves nothing: location is the entire defect."
+  - "The consumer-layout case is the silent one and must be asserted separately. There the deployed copy sits inside the adopter's git repository, so resolution SUCCEEDS and returns the wrong repository -- no exception is raised. An assertion that the call merely 'does not raise' therefore passes against the defect."
+  - "When resolution genuinely cannot succeed, the refusal must name the path it resolved from and state that the copy is deployed outside the repository. A bare CalledProcessError carrying only 'exit status 128' is the current behaviour and is not sufficient."
+  - "Both copies must carry the corrected resolution behaviour (ADR-001). Do NOT resync the files wholesale -- they differ deliberately."
+  - "Do not write the string 'probe_failure' into templates/scripts/setup_ticket_worktree.py, in code or in prose. unit_tests/build_orchestration/test_fastlane_template_deploy_parity.py asserts that symbol is absent from the template by plain substring match over the whole file, so even a comment mentioning it turns the suite red."
+delivers_to: null
+expects_from: null
+test_required: true
+test_spec:
+  - name: test_a_copy_outside_the_repository_still_creates_the_workspace_in_the_tools_own_repository
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "The tool is invoked from a copy placed outside the git root; the resolved repository equals the tool's own repository, not the copy's location."
+  - name: test_a_copy_deployed_inside_a_different_repository_does_not_resolve_that_repository
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: "Simulates the consumer layout: the copy sits inside an unrelated git repository. Resolution must not return that repository. This is the silent half of the defect -- it succeeds today and returns the wrong answer, so the assertion must compare the resolved path, never merely that no exception was raised."
+  - name: test_an_unresolvable_location_is_refused_with_the_path_it_tried
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: "With no repository reachable at all, the failure names the anchor path it resolved from and says the copy is deployed outside the repository, rather than surfacing a bare git exit status 128."
+  - name: test_the_in_repository_copy_keeps_working_unchanged
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: "The over-trigger control. Invoked from its normal in-repo location the tool resolves exactly as before. Without this, an implementation that refuses everything satisfies every entry above."
+test_rationale: |
+  The defect is entirely about WHERE the running file sits, so every test here must vary
+  that and nothing else. The in-repo copy works today and will keep working under any
+  implementation, which is why it appears only as the over-trigger control rather than as
+  evidence of the fix.
+
+  The second entry is the one that earns its place. In the dev layout the bug is loud --
+  the anchor is not in any repository and git exits 128 -- and a test written only against
+  that case can be satisfied by catching the error and re-raising it with a nicer message,
+  which leaves the consumer case exactly as wrong as it was. There the anchor IS inside a
+  repository, resolution succeeds, and the tool proceeds confidently against the adopter's
+  project. Only an assertion on the resolved path separates a real fix from a better
+  error message.
+origin_agent: BrainCandy
+created: 2026-09-22
+amended_by: []
+superseded_by: null
+covered_by:
+  - unit_tests/build_orchestration/test_bo_4100d_4.py
+implemented_by:
+  - scripts/setup_ticket_worktree.py
+  - templates/scripts/setup_ticket_worktree.py
+notes: >-
+  Found 2026-09-22 when the fast lane refused four consecutive runs. Its worktree phase
+  invokes the deployed copy under .leafcutter/scripts/, which aborts with a bare git exit
+  status 128 because its own directory is the untracked workspace parent. The in-repo copy,
+  identical code, succeeded immediately -- the only difference is location. Recorded as
+  KI-BP-20260922-0620. Sibling in shape to
+  KI-BO-20260921-worktree-base-resolver-defaults-to-cwd, which is the same family (context
+  taken from ambient state rather than from the subject named by the caller) in a different
+  file, and to KI-BP-011 (the build records its provenance where the deployed code cannot
+  read it). Distinct from BO-4100d-1/-2/-3, which govern the KIND of work a workspace is
+  labelled with; this record governs WHICH REPOSITORY it is created in.

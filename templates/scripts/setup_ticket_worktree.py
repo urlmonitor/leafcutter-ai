@@ -116,35 +116,48 @@ class BootstrapError(RuntimeError):
 def _git_toplevel(anchor: Path | None = None) -> Path:
     """Return the absolute path to the main repository root.
 
-    The repository root is resolved with ``git -C <anchor> rev-parse
-    --show-toplevel`` rather than relying on the process working directory.
-    This keeps the script correct when it is invoked from a parent workspace
-    that is not itself a git repository (e.g. the leafcutter dev layout where
-    ``leafcutter-ai/`` is the git root but the script may be launched from its
-    parent). When *anchor* is omitted, the script's own directory is used —
-    the script always lives physically inside the repository it operates on.
+    Resolves via ``git -C <candidate> rev-parse --show-toplevel`` against an
+    ORDERED list of candidate anchors, returning the first that resolves to a
+    git repository:
+
+      1. the explicit *anchor* argument, when supplied — AUTHORITATIVE,
+         never falls through to another candidate (BO-4100d-4);
+      2. the process's current working directory;
+      3. the script's own directory, kept only as a last resort.
+
+    This script is not always physically inside the repository it manages:
+    every copy ``build.py`` deploys (e.g. a consumer's
+    ``.leafcutter/scripts/``) sits outside it. Defaulting to the script's own
+    directory alone made a deployed copy either fail outright or silently
+    resolve the wrong repository; resolving from the calling context first
+    fixes both.
 
     Args:
-        anchor: A path inside the target repository to resolve from. Defaults
-            to the directory containing this script.
+        anchor: A path inside the target repository to resolve from. When
+            omitted, the process working directory is tried first, then the
+            directory containing this script.
 
     Returns:
         Absolute Path to the git toplevel directory.
+
+    Raises:
+        subprocess.SubprocessError: If no candidate anchor resolves to a git
+            repository. The message names every candidate tried.
     """
-    if anchor is None:
-        anchor = Path(__file__).resolve().parent
-    try:
-        result = subprocess.run(
-            ["git", "-C", str(anchor), "rev-parse", "--show-toplevel"],
-            capture_output=True,
-            text=True,
-            check=True,
-        )
-    except (subprocess.SubprocessError, OSError) as exc:
-        raise subprocess.SubprocessError(  # noqa: TRY003
-            f"Failed to resolve git toplevel from {anchor}: {exc}"
-        ) from exc
-    return Path(result.stdout.strip())
+    candidates: list[tuple[str, Path]] = [("explicit anchor argument", anchor)] if anchor is not None else [
+        ("process working directory", Path.cwd()), ("script's own directory", Path(__file__).resolve().parent)]
+    tried: list[str] = []
+    for label, candidate in candidates:
+        try:
+            result = subprocess.run(
+                ["git", "-C", str(candidate), "rev-parse", "--show-toplevel"], capture_output=True, text=True, check=True
+            )
+        except (subprocess.SubprocessError, OSError) as exc:
+            tried.append(f"{label} ({candidate}): {exc}")
+            continue
+        return Path(result.stdout.strip())
+    raise subprocess.SubprocessError(  # noqa: TRY003
+        "Could not resolve a git repository from any candidate anchor. Candidates tried:\n  - " + "\n  - ".join(tried))
 
 
 def _resolve_installed_layout(leafcutter_repo: Path) -> tuple[Path, Path]:
@@ -2019,6 +2032,20 @@ if __name__ == "__main__":
 ====================================================================
 DECISION HISTORY
 ====================================================================
+- 2026-09-22 [Agent/python-coder] (AC BO-4100d-4): Fixed ``_git_toplevel()``
+  defaulting to the script's own directory, true only of the checked-out
+  source copy — this is exactly the copy that fails in production, since
+  build.py deploys it outside the repository it manages (dev layout: bare
+  git exit 128; consumer layout: silently resolves the adopter's repo).
+  Replaced the single default with an ORDERED candidate list — explicit
+  anchor (AUTHORITATIVE, unchanged for existing callers) → cwd → script's
+  own directory (last resort) — returning the first that resolves. The
+  raised ``subprocess.SubprocessError`` now names every candidate tried
+  instead of a bare exit-128 message. Docstring updated to drop the false
+  "always lives inside the repository" claim. Mirror of the identical fix
+  in scripts/setup_ticket_worktree.py; per BO-4100d-4 it_requirement #5, no
+  other drift between the two files was touched (this copy still
+  deliberately omits the create-time pre-commit gate).
 - 2026-08-14 [Agent/python-coder] (AC BP-015): Mirrored the canonical
   scripts/setup_ticket_worktree.py .env fix into this template copy so
   consumer installs (which get this file, not the canonical copy, via
