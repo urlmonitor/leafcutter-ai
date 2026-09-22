@@ -86,7 +86,7 @@ _UNASSIGNED_WORK_AGENT_REFUSAL = "ERROR: generation refused — AC '{ac_id}': {e
 
 
 def _build_agents_map_for_write_path(
-    assigned_agent: str,
+    assigned_agent: str | None,
     *,
     change_targets: list[str] | None,
     risk_surface: str | None,
@@ -107,7 +107,9 @@ def _build_agents_map_for_write_path(
     resolves to the real default declaration rather than skipping the check.
 
     Args:
-        assigned_agent: The agent name from the AC's assigned_agent field.
+        assigned_agent: The agent name from the AC's assigned_agent field, or
+            None when the AC left the field unauthored — ``_build_agents_map``
+            then raises ``UnassignedWorkAgentError`` through this function.
         change_targets: Normalised change_target list from the AC.
         risk_surface: risk_surface field from the AC.
         files_touched: Computed files_touched list.
@@ -147,8 +149,15 @@ def _build_agents_map_for_write_path(
     return agents, None
 
 
-def _ac_inputs(ac: AcRecord) -> tuple[list[str], str, "list[str] | None", "str | None", bool]:
+def _ac_inputs(
+    ac: AcRecord,
+) -> tuple[list[str], "str | None", "list[str] | None", "str | None", bool]:
     """Extract the five AC-derived inputs both generation paths need.
+
+    ``assigned_agent`` is ``str | None``, not ``str``: the ``"python-coder"``
+    default below applies only to an ABSENT key. An AC that carries the key
+    with an explicit null yields None, which both generation paths forward to
+    ``_build_agents_map`` so it can refuse (TKT-600b-5).
 
     Args:
         ac: Parsed AC record.

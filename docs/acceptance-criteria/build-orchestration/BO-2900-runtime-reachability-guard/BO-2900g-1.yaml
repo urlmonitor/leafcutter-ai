@@ -33,10 +33,14 @@ doc_links:
     relationship: describes
     status: exists
     relevance: "Names the floor (criterion + reachability, never negotiable) and records the observed split: the floor is attached only to the criteria-derived route, and 394 of 2,888 store records author their own plan and bypass it."
-  - path: scripts/ac_store/generate_ticket_from_ac.py
+  - path: scripts/ac_store/_gtfa_tests_section.py
     relationship: describes
     status: exists
-    relevance: "Where the two planning routes diverge today: the criteria-derived fallback appends the reachability descriptor, the authored-test_spec path is taken as-is and gets no generator-added entries."
+    relevance: "The single place a plan is finalised: _build_test_requirements_section chooses between the authored-test_spec route (_test_descriptors_from_spec / _spec_entry) and the criteria-derived fallback, and its one return path is the route-agnostic attachment point the floor must hang on. This is what n_location_rule: '1' names. (Re-pointed 2026-09-22: scripts/ac_store/generate_ticket_from_ac.py is now a re-export shell with one real def; the implementation moved to the _gtfa_* siblings.)"
+  - path: scripts/ac_store/_gtfa_test_descriptors.py
+    relationship: describes
+    status: exists
+    relevance: "Holds the floor itself — _ensure_reachability_floor and _reachability_descriptor — and the criteria-derived route (_derive_tests_from_criteria) whose unconditional append is the asymmetry this AC removes."
   - path: config/ac_store_schema.json
     relationship: describes
     status: exists
@@ -51,9 +55,9 @@ doc_links:
     relevance: "Component page for the surrounding guarantees; the planning-time floor must be described there without being read as a completion signal."
 assigned_agent: python-coder
 estimated_complexity: M
-declares_side_effect: true
+declares_side_effect: false
 it_requirements:
-  reference_file_path: "scripts/ac_store/generate_ticket_from_ac.py"
+  reference_file_path: "scripts/ac_store/_gtfa_tests_section.py"
   n_location_rule: "1"
   required_skills:
     - python-coder
@@ -145,6 +149,52 @@ amended_by:
 - action: approved
   agent: approve_acs
   date: '2026-08-17'
+- reason: derived-field-correction
+  by: it-po
+  at: '2026-09-22'
+  note: 'declares_side_effect corrected true -> false. THE AUTHORED SIDE WAS WRONG,
+    not the derivation. The operative test is whether a process that performs NO durable
+    write can satisfy the Then clause. Here it can: the clause asserts what each plan
+    CONTAINS ("each plan contains a request for a proof ...", "work Y''s three authored
+    proofs are all still present, unaltered and in their authored order"). That is the
+    content of a produced structure, which a pure function returning a descriptor list
+    satisfies completely. The generator does write a ticket file, but the clause never
+    asserts that write — the file is transport, not the thing asserted. The record''s
+    own BOUNDARY paragraph agrees: "Planning-time only ... produces no gate, block or
+    done-state consequence."
+
+    WHERE THE WRONG VALUE CAME FROM. The 2026-08-17 it-po enrichment note states the
+    reason outright: "declares_side_effect is true because the observable is a ticket
+    file written to disk by the CLI." That reasons from the implementation rather than
+    from the Then clause, which is the basis the house rule rejects (9699d501, resolving
+    the same shape on BO-2900g-2: "The declaration follows what the Then clause states,
+    not what the implementation incidentally writes"). Note the deriver reads only
+    `criteria`, so a justification living in `notes` is invisible to the gate by
+    construction.
+
+    Adjudicated in docs/analysis/2026-09-21-declares-side-effect-five-record-audit.md,
+    written from two independent analyses with every claim re-verified against the tree.
+    Twelve prior records hit this disagreement; all twelve were resolved by flipping the
+    flag, none by rewording criteria. The BO-2900g-2-ii allowlist was shrunk from five
+    entries to two in the same change — the staleness test asserts every pinned id STILL
+    disagrees, so flipping without shrinking fails CI. criteria untouched.'
+- reason: edit-surface-repoint
+  by: it-po
+  at: '2026-09-22'
+  note: 'reference_file_path re-pointed from scripts/ac_store/generate_ticket_from_ac.py
+    to scripts/ac_store/_gtfa_tests_section.py, and the doc_links entry for the shell
+    replaced by _gtfa_tests_section.py + _gtfa_test_descriptors.py. The generator was
+    decomposed into 23 _gtfa_* siblings; generate_ticket_from_ac.py is now a 386-line
+    re-export shell carrying exactly one real def (_sibling) plus a TYPE_CHECKING block.
+    Declaring the shell as the edit surface sends a coder to a file of re-export
+    assignments, and — because files_touched drives the surface the phantom-done guards
+    check — a CORRECT fix touching the real sibling would read as touching an undeclared
+    file. _build_test_requirements_section (in _gtfa_tests_section.py) is the single
+    finalisation return path this AC''s n_location_rule: "1" designates; the floor itself
+    (_ensure_reachability_floor, _reachability_descriptor) lives in _gtfa_test_descriptors.py.
+    DELIBERATELY LEFT: the test_spec reachability descriptor still invokes
+    `python scripts/ac_store/generate_ticket_from_ac.py --ac ...` — that is the real
+    production CLI entry point and must stay the shell. criteria untouched.'
 superseded_by: null
 covered_by:
   - BO-2900g-1-i
@@ -182,11 +232,21 @@ notes: |
   consequence layer is BO-2900a (the verdict), BO-2900e (the refusal wording),
   BO-2900f (the never-ran record).
 
-  IT-PO ENRICHMENT NOTE (2026-08-17). Attachment point today:
+  IT-PO ENRICHMENT NOTE (2026-08-17, corrected 2026-09-22). Attachment point today:
   _build_test_requirements_section returns the spec-derived descriptors and only
   falls through to _derive_tests_from_criteria (which appends the floor) when the
-  spec path yielded nothing. That early return IS the exemption. declares_side_effect
-  is true because the observable is a ticket file written to disk by the CLI.
+  spec path yielded nothing. That early return IS the exemption. Since the
+  2026-09-14 decomposition those two live in _gtfa_tests_section.py and
+  _gtfa_test_descriptors.py respectively; generate_ticket_from_ac.py is a
+  re-export shell and is named here only as the CLI entry point.
+
+  SUPERSEDED CLAIM (was: "declares_side_effect is true because the observable is
+  a ticket file written to disk by the CLI"). That reasoning was wrong and the
+  flag is now false — see the derived-field-correction amendment above. The
+  declaration follows what the Then clause states, not what the implementation
+  incidentally writes; this clause asserts the CONTENT of a produced plan, which
+  a process writing nothing can satisfy.
+
   it_requirements uses the package-surface OBJECT form because
   config/ac_store_schema.json's root if/then makes it mandatory for
   assigned_agent: python-coder + component: build-orchestration; the policy-level

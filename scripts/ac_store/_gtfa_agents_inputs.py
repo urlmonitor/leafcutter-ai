@@ -81,6 +81,17 @@ def _require_work_agent(assigned_agent: "str | None") -> None:
       gate phase with nobody assigned to build it — the phantom-done shape one
       level up, where the gates run over an implementation nobody wrote.
 
+    Why ``_build_agents_map`` still annotates the parameter ``str``. This
+    guard returns ``None``, so it narrows nothing for a type checker, and
+    ``_gtfa_agents_map`` reaches it through the ``_sib()`` importlib seam,
+    whose result is ``Any`` — so mypy cannot see the call at all. Widening
+    that caller to ``str | None`` therefore makes its own post-guard handoff
+    to ``_legacy_agents_map`` (a ``dict[str, str]`` builder that genuinely
+    cannot take None) unprovable, and mypy reports an arg-type error on a
+    line the guard above has already made safe. Expressing the guarantee
+    needs this function to RETURN the narrowed value and the caller to bind
+    it to a new name — a signature change, not an annotation change.
+
     Args:
         assigned_agent: The agent name from the AC's ``assigned_agent`` field.
 
@@ -255,6 +266,9 @@ def _collect_needed_agents(
     Args:
         guardrail_set: Agents unioned from the guardrail config.
         assigned_agent: The agent name from the AC's assigned_agent field.
+            Never None: ``_build_agents_map`` calls ``_require_work_agent``
+            before reaching here, and ``all_needed`` below is a ``set[str]``
+            that a None would poison with a literal null phase.
         prod_code_agents: Agent ids whose ``produces`` is ``production_code``.
         files_touched: The computed files_touched list.
         declares_side_effect: Whether the AC declared a durable side-effect.
