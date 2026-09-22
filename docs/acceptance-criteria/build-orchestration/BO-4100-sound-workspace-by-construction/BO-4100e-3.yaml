@@ -1,0 +1,113 @@
+id: BO-4100e-3
+title: "A leftover is reported as a local remnant, never as damage to the shared record"
+component: build-orchestration
+components:
+  - build_orchestration
+  - worktree_manager
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+change_target: code
+risk_surface: contract_boundary
+package_surface: false
+criteria: |
+  Given a leftover has been surfaced while the shared record is intact,
+  When its presence is reported,
+  Then the report identifies it as a remnant local to this machine and names the
+    location it occupies,
+  And the report states that the shared record is intact,
+  And the report attributes no fault to the shared record and asks for no repair
+    of it,
+  And given the shared record genuinely is damaged, that is reported as a
+    separate finding, distinguishable from the presence of a leftover.
+depends_on: [BO-4100e, BO-4100e-1]
+doc_links:
+  - path: docs/architecture/components/worktree-manager.md
+    relationship: describes
+    status: exists
+  - path: docs/known-issues/build-orchestration.md
+    relationship: describes
+    status: exists
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+    relevance: "Angle taxonomy this record's test_spec entries declare."
+  - path: scripts/worktree/list_workspaces.py
+    relationship: modifies
+    status: planned
+    relevance: "Created by BO-4100e-1. The two findings -- 'a local remnant exists' and 'the shared record is damaged' -- must be modelled separately and separately reportable, the intactness claim must be DERIVED from an actual check of the shared record rather than printed, and a failure to check it is a third outcome."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "TWO findings must be modelled separately and be separately reportable: 'a local remnant exists' and 'the shared record is damaged'. Collapsing them into one message in EITHER direction is what produced the recorded misdiagnosis, and collapsing them the other way is the cheapest way to pass this record."
+  - "The report's statement about the shared record must be DERIVED from an actual check of it, never asserted. 'The shared record is intact' printed without checking is the same class of untrue report BO-4100d exists to remove, arriving one component over."
+  - "No remedy addressed at the shared record may be emitted on the leftover-only path. The recorded harm is not just a wrong word -- it sends the operator to repair the shared record, which is unnecessary and dangerous, while the actual remnant goes untouched."
+  - "The leftover finding must name the location it occupies as a path, so the operator can act without searching."
+  - "The two findings must be distinguishable by a machine-readable discriminator, not by wording, for the same reason BO-4100c-3's two refusals must be: they call for different follow-ups."
+  - "Error handling follows the project error handling policy. A failure to CHECK the shared record is a third outcome -- it must not be reported as 'intact', and it must not be reported as 'damaged' either."
+delivers_to: null
+expects_from:
+  ac_id: BO-4100e-1
+  contract: "The listing entry { path, origin: 'discovered', branch } -- the subject this report describes, and the `origin` field it branches on to decide that a local-remnant finding is what applies."
+test_required: true
+test_spec:
+  - name: test_a_leftover_with_an_intact_shared_record_is_reported_as_a_local_remnant_naming_its_location
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "The report identifies the finding as local to this machine, names the leftover's path, states the shared record is intact, attributes no fault to the shared record, and asks for no repair of it. All four are asserted -- the last two negatively."
+  - name: test_a_genuinely_damaged_shared_record_is_still_reported_as_its_own_distinguishable_finding
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: "With the shared record genuinely damaged, a finding ABOUT the shared record is produced and is distinguishable by a machine-readable discriminator from any leftover finding. This is the clause that blocks the cheapest pass -- silencing all mention of the shared record -- which would trade a false alarm for a suppressed true one and satisfy every other assertion here."
+  - name: test_a_leftover_and_a_damaged_shared_record_present_together_are_two_separate_findings
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "Both conditions are induced in one run. The report carries exactly two findings, neither folded into the other, and the leftover finding still asks for no repair of the shared record even though a repair is genuinely warranted for the other finding."
+  - name: test_the_intactness_statement_is_derived_from_a_check_of_the_shared_record
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: seam
+    description: "The shared record is damaged while the leftover is left unchanged; the report must NOT state the shared record is intact. A hard-coded reassurance line -- the obvious way to satisfy the first test -- fails exactly here."
+test_rationale: |
+  This record is the one an implementer drops quietly: a leftover can be listed (e-1),
+  removable (e-2) and unadoptable (e-4) while still being described as store-wide
+  corruption, and every sibling stays green. So its test contract has to be written with
+  the drop in mind.
+  The trap is that the first clause and the last clause pull in opposite directions. Stop
+  mentioning the shared record at all and the leftover is no longer misdescribed as
+  corruption -- the first three clauses pass perfectly, and a genuine failure of the shared
+  record has become invisible. That is a false alarm traded for a silenced true one, which
+  is a worse position than the one this record started from. The second and fourth tests
+  exist solely to close it: one requires the damaged case to still produce its own
+  distinguishable finding, the other requires the intactness claim to be earned by an
+  actual check rather than printed.
+  The combined-condition test is separate because an implementation can report each
+  condition correctly in isolation and fold them together when both hold -- which is the
+  exact state KI-BO-20260831-1331 describes, a local remnant reading as damage to the
+  shared record.
+origin_agent: BrainCandy
+created: 2026-09-21
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: >-
+  KI-BO-20260831-1331 records that the symptom READS AS store-wide corruption, and the
+  misdiagnosis is a distinct harm: it sends the operator to repair the shared record, which
+  is both unnecessary and dangerous, while the actual remnant goes untouched. Held as its
+  own L2 rather than folded into surfacing or removal because all three are separately
+  falsifiable, and this is the one an implementer drops quietly -- a leftover can be listed
+  and removable while still being described as corruption, and every other AC in this
+  family stays green. The last clause stops the fix being "never mention the shared record",
+  which would hide a real failure of it.

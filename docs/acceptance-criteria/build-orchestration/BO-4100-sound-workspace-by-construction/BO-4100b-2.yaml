@@ -1,0 +1,113 @@
+id: BO-4100b-2
+title: "A check that found nothing cannot refuse"
+component: build-orchestration
+components:
+  - build_orchestration
+  - worktree_manager
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+change_target: code
+risk_surface: contract_boundary
+package_surface: false
+criteria: |
+  Given a check whose own completed comparison reports zero items drifted and
+    zero items missing,
+  When the check issues its verdict,
+  Then the verdict permits the commit,
+  And given the check refuses a commit, its report names at least one specific
+    item it found,
+  And the number of items named in a refusal equals the non-zero finding count
+    the check reported for itself.
+depends_on: [BO-4100b]
+doc_links:
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+  - path: docs/known-issues/build-pipeline.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-038-commit-guardian-shared-change-set-derivation.md
+    relationship: describes
+    status: exists
+    relevance: "The gates whose finding-to-verdict invariant this record establishes."
+  - path: templates/scripts/commit_guardian/check_build_drift.py
+    relationship: modifies
+    status: exists
+    relevance: "Canonical source. main() returns 2 on gaps while drifted_total = len(violations) + missing excludes gaps from both reported counts -- the arithmetic that prints drifted=0 missing=0 next to a refusal. Every refusing condition must be represented in the reported counts, and the named-item count and the reported count must come from one data structure."
+  - path: scripts/commit_guardian/check_build_drift.py
+    relationship: modifies
+    status: exists
+    relevance: "Build output of the template above; the hook runs from this deployed copy. Must change in parity (ADR-001)."
+  - path: templates/scripts/commit_guardian/check_output_drift.py
+    relationship: modifies
+    status: exists
+    relevance: "Canonical source. The invariant must be enforced in both gates in the same change or the two RESULT vocabularies stop being comparable."
+  - path: scripts/commit_guardian/check_output_drift.py
+    relationship: modifies
+    status: exists
+    relevance: "Build output of the template above. Must change in parity (ADR-001)."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "The verdict must be a function of the reported finding set. Today it is not: check_build_drift.main() returns 2 on gaps, and gaps is excluded from BOTH the drifted and the missing fields of its own RESULT line (drifted_total = len(violations) + missing). That arithmetic is exactly how a run prints drifted=0 missing=0 and refuses anyway. Every condition that can refuse must be represented in the reported counts."
+  - "The invariant must hold for the INDETERMINATE exit (2) as well as the BLOCKED exit (1). An exit that is not a pass must either name findings or state, as its own reported category with a non-zero count, that it could not determine an answer. 'Refused with nothing named' must not be reachable by any path."
+  - "Applies to both drift gates in the same change; their RESULT vocabularies are required to stay identical, so an invariant enforced in one and not the other makes the two runs incomparable."
+  - "The named-item count and the reported finding count must be produced from one data structure, not computed twice. Two independent counts that agree today is the shape of the defect, not a fix for it."
+  - "The verified == 0 floor is an exception that must be preserved and made explicit: a gate that compared nothing refuses with no findings by design. It must report that as its own stated category rather than as an unexplained refusal."
+  - "Templates and their deployed scripts/commit_guardian/ copies change together and are verified in parity via the build.py round-trip (ADR-001)."
+delivers_to: null
+expects_from: null
+test_required: true
+test_spec:
+  - name: test_a_run_reporting_zero_findings_permits_the_commit
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "A completed comparison reporting zero drifted and zero missing exits 0."
+  - name: test_a_refusal_names_at_least_one_specific_item_it_found
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "Every non-zero exit the gate can produce is induced in turn; each carries at least one named item or an explicit stated category for why no item could be named."
+  - name: test_the_number_of_items_named_in_a_refusal_equals_the_reported_non_zero_finding_count
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "The count parsed out of the RESULT line and the number of items named in the BLOCKED block are asserted EQUAL, not merely both non-zero."
+  - name: test_the_gaps_exit_path_is_represented_in_the_reported_finding_counts
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: "The gaps condition is induced on its own; the run must not print drifted=0 missing=0 alongside a refusing exit code. This reproduces the exact 2026-09-14 observation and is the single assertion that fails against today's code."
+test_rationale: |
+  The recorded symptom is a summary line reading drifted=0 missing=0 next to a refusal.
+  A test contract written from the first two Then clauses alone -- zero findings permits,
+  a refusal names something -- passes against today's code, because the gaps path is
+  neither a finding in the reported sense nor an unnamed refusal in the BLOCKED-block
+  sense: it prints its own UNCOMPARABLE lines and returns 2. The count-equality assertion
+  and the gaps-specific test are what close that gap, and the count must be asserted
+  EQUAL rather than non-zero, since "both are greater than zero" is satisfied by a gate
+  that names three items while reporting seven.
+origin_agent: BrainCandy
+created: 2026-09-21
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: >-
+  Observed 2026-09-14: the refusing check's own summary line read "drifted=0 missing=0"
+  while it refused the commit anyway, so its verdict was not derived from its findings
+  at all. That is separately failable from BO-4100b-1: scoping a check to the changed
+  set does not stop a verdict being reached by some path other than the findings, and a
+  check whose verdict already followed its findings could still be scoped too widely.
+  This AC is the invariant linking the two halves of a check's own output, and it is
+  falsifiable without reference to what the commit changed.
