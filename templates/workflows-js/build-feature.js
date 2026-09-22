@@ -1300,9 +1300,9 @@ async function readTicketRecordBack(recordPath) {
  */
 async function writeTicketCompletion(recordPath, confirmedPhases) {
   return await agent(
-    `Record the ticket at "${recordPath}" as complete in its own record. ` +
-    `Every phase that ticket names as needed now carries a passing sign-off in the record itself, verified by reading it back: ${JSON.stringify(confirmedPhases)}. ` +
-    `Follow your own Closing protocol: write the finished state by invoking the checking mechanism exactly as it prescribes, python3 scripts/set_ticket_status.py --ticket "${recordPath}" --status done, with no additional flags and no override — never do this by any other route, and do not edit the ticket's record directly by any other means. ` +
+    `This is build-feature.js's completion-write step, writeTicketCompletion(), for the ticket at "${recordPath}". Per your Closing protocol this dispatch IS the authorization to close (the driver-dispatched authorization, not the interactive one): do not look for a same-turn user request, and do not apply the auto-close trigger's merge-commit condition — an epic-branch drive is unmerged by construction, so that condition can never hold here and is not what gates this write. ` +
+    `Every phase that ticket names as needed now carries a passing sign-off in the record itself, verified by reading it back: ${JSON.stringify(confirmedPhases)}. Do not re-litigate that from scratch. ` +
+    `Write the finished state by invoking the checking mechanism exactly as your protocol prescribes, python3 scripts/set_ticket_status.py --ticket "${recordPath}" --status done, with no additional flags and no override — never by any other route, and do not edit the ticket's record directly by any other means. ` +
     `If the script exits non-zero, the ticket is NOT closed: return {"status": "error", "error": "<what the script reported>"} rather than reporting success. ` +
     `Return ONLY the JSON object: {"status": "ok"|"error", "ticket_path": "${recordPath}"}.`,
     {
