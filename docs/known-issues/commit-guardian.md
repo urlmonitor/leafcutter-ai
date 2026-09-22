@@ -73,7 +73,7 @@ Severity in the **filename** is a three-level index bucket (`blocker` / `high` /
 
 Fixed issues move to [`commit-guardian/resolved/`](commit-guardian/resolved/) and are no longer listed as open. They are kept, not deleted.
 
-**Open: 67** (6 blocker, 25 high, 36 low) · **Resolved: 7**
+**Open: 68** (6 blocker, 25 high, 37 low) · **Resolved: 7**
 
 ## Open
 
@@ -147,6 +147,7 @@ Fixed issues move to [`commit-guardian/resolved/`](commit-guardian/resolved/) an
 | `low` | KI-CG-20260914-done-proof-precommit-ignores-test-required — the pre-commit done-proof gate demands a covers tag from an AC that declares it needs no test, while the CI gate it stands in for exempts that AC | [open-low-ki-cg-20260914-done-proof-precommit-ignores-test-required.md](commit-guardian/open-low-ki-cg-20260914-done-proof-precommit-ignores-test-required.md) |
 | `low` | KI-CG-20260914-exception-hook-blocks-silently — the PostToolUse exception-handling hook fails every Python write with an empty error when `ruff` is importable but not on PATH | [open-low-ki-cg-20260914-exception-hook-blocks-silently.md](commit-guardian/open-low-ki-cg-20260914-exception-hook-blocks-silently.md) |
 | `low` | KI-CG-20260914-post-merge-stage-registers-but-installs-no-shim — a hook on the post-merge stage is registered, renders into the config, and still never fires in any checkout that did not create a ticket worktree | [open-low-ki-cg-20260914-post-merge-stage-registers-but-installs-no-shim.md](commit-guardian/open-low-ki-cg-20260914-post-merge-stage-registers-but-installs-no-shim.md) |
+| `low` | KI-CG-20260923-contract-shrinking-guard-rename-blind — `check-contract-shrinking` correlates deleted test names against added test names, so a renamed test reads as a deleted one | [open-low-ki-cg-20260923-contract-shrinking-guard-rename-blind.md](commit-guardian/open-low-ki-cg-20260923-contract-shrinking-guard-rename-blind.md) |
 
 ## Resolved
 
