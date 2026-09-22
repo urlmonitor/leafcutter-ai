@@ -25,31 +25,165 @@ criteria: |
 depends_on:
   - BO-1500f
 doc_links:
-  - path: docs/architecture/agent_delivery_workflows.md
+  - path: scripts/worktree/check_workspace_setup_permission.py
+    relationship: implements
+    status: exists
+    relevance: "Primary landing site since ACD-2100b-5. This is where the charter decision this
+      criterion turns on is now made: _resolve_agent_outcome() returns 'granted' when the
+      registry entry's permits_shell is True and 'permission_denied' when it is not (line 301),
+      'agent_not_found' when the id is absent from a real agents list (line 300), and
+      'no_entries_collection' when agents is not a list at all; _load_registry() contributes
+      'read_failure' and 'parse_failure'. build_verdict() assembles these into the verdict object
+      described in it_requirements.config_schema_fragment. Confirmed live at these line numbers
+      on 2026-09-14."
+  - path: templates/workflows-js/plan-feature.js
+    relationship: implements
+    status: exists
+    relevance: "Still a landing site, but for the dispatch and the halt only -- NOT for the
+      registry read, which ACD-2100b-5 moved out. Lines 2374-2396 fail closed when no verdict
+      reaches the workflow at all; 2398-2463 render one distinct report per pre-flight outcome,
+      the permission_denied branch naming step='worktree-setup', the agent id, and the
+      permits_shell field to fix; 2496-2501 issue the single worktree-setup dispatch to
+      workspaceSetupAgentId, reached only after the granted verdict. The comment block at
+      2358-2372 states why this file cannot read the registry itself (ADR-030 sandbox)."
+  - path: templates/skills/plan-feature/SKILL.md
     relationship: describes
     status: exists
+    relevance: "SS-WSP.1/WSP.2 -- the skill runs the pre-flight in the main agent loop before the
+      workflow is invoked and passes its verdict through args.workspace_setup_permission. The
+      skill, not the workflow, is where the check is triggered from."
   - path: config/agent_registry.json
     relationship: reads
     status: exists
-  - path: templates/workflows-js/plan-feature.js
-    relationship: modifies
+    relevance: "The charter source of truth. permits_shell on the target agent's entry is the one
+      field the verdict turns on; it must never be replaced by a hardcoded agent name."
+  - path: docs/architecture/components/agent-registry.md
+    relationship: describes
     status: exists
+    relevance: "Line 25 documents permits_shell and names this exact gate (the plan-feature.js
+      isolated-workspace setup step) as its consumer."
+  - path: docs/architecture/agent_delivery_workflows.md
+    relationship: describes
+    status: exists
+    relevance: "SS-6 detail view -- the isolated authoring worktree lifecycle this step belongs to."
+  - path: docs/reference/plan-feature-layout-and-startup-checks.md
+    relationship: describes
+    status: exists
+    relevance: "Operator-facing statement that the startup check is a local pre-flight run by the
+      skill, not an in-workflow dispatch -- the page a reader hits when this gate halts a run."
+  - path: docs/architecture/adrs/ADR-030-dual-engine-workflow-support.md
+    relationship: describes
+    status: exists
+    relevance: "The constraint that put the check where it now is: the E2 engine contextifies a
+      workflow body with no module loader and no filesystem primitive, so the workflow cannot
+      resolve the charter itself."
+  - path: docs/reference/workflow-authoring-contract.md
+    relationship: describes
+    status: exists
+    relevance: "The injected-globals contract -- args is the only injected global carrying
+      caller-supplied data, hence the only channel the verdict can cross on."
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+    relevance: "Component doc for this record's namespace."
 assigned_agent: python-coder
-estimated_complexity: S
+estimated_complexity: M
 it_requirements:
   config_schema_fragment:
-    workspace_setup_dispatch:
+    workspace_setup_permission:
       type: object
-      description: "{ agent: '<registry agent id>', permits_shell: bool }. The dispatch target for the isolated-workspace setup step, resolved against the agent registry before spawn; permits_shell false must halt the run."
-  reference_file_path: "templates/workflows-js/plan-feature.js"
-  n_location_rule: "1"
+      description: "The pre-flight verdict object, emitted as one JSON line by
+        scripts/worktree/check_workspace_setup_permission.py's build_verdict() and carried into
+        the workflow as args.workspace_setup_permission. This is the data contract the criterion's
+        charter decision now travels on. An absent or non-object value is NOT a denial -- the
+        workflow reports it as a missing pre-flight and halts (plan-feature.js:2385-2396)."
+      required:
+        - permits
+        - outcome
+        - agent_id
+      properties:
+        permits:
+          type: boolean
+          description: "True only when outcome == 'granted'. The workflow proceeds past the gate on
+            true and halts on anything else; it never infers permission from any other field."
+        outcome:
+          type: string
+          enum:
+            - granted
+            - permission_denied
+            - agent_not_found
+            - read_failure
+            - parse_failure
+            - no_entries_collection
+          description: "The distinct fact the pre-flight established. Keeping these six separable
+            is what stops a failed read being reported as a charter denial (KI-ACD-009). The
+            workflow renders one message per value and must never reuse one value's wording for
+            another."
+        agent_id:
+          type: string
+          description: "The agent id the workspace-setup step was pointed at, echoed back so the
+            report can name it."
+        location:
+          type: string
+          description: "Absolute path of the registry the pre-flight actually read. Present on every
+            outcome except the no-repository read_failure."
+        reason:
+          type: string
+          description: "Human-readable cause, present on read_failure and parse_failure."
+        agents_type:
+          type: string
+          description: "Only on no_entries_collection: the type found where the agents list was
+            expected."
+        agents_value:
+          description: "Only on no_entries_collection, and only when the malformed value is a JSON
+            scalar: the value itself."
+    workspace_setup_agent:
+      type: string
+      default: "worktree-agent"
+      description: "The configured dispatch target for the workspace-setup step, read from args by
+        plan-feature.js:2373 and passed to the pre-flight as --agent-id. This is the 'configured
+        target' the criterion's third Then clause refers to."
+  reference_file_path: "scripts/worktree/check_workspace_setup_permission.py"
+  n_location_rule: "2 -- the charter verdict is RESOLVED in reference_file_path
+    (_resolve_agent_outcome / build_verdict) and ENFORCED in templates/workflows-js/plan-feature.js
+    (the args.workspace_setup_permission guard at ~2374-2463 and the single worktree-setup dispatch
+    at ~2496-2501). The enforcement point is the load-bearing one: a verdict the workflow does not
+    act on is inert, and a dispatch the workflow makes before reading the verdict is a fail-open.
+    Both locations must be considered together; changing only one is either a no-op or a bypass."
   required_skills:
     - python-coder
+    - test-writer
   post_write_commands:
     - "./build-self.sh"
+    - "python -m pytest unit_tests/workflows/test_bo_1500f_1.py unit_tests/workflows/test_bo_1500f_1_real_registry_read.py -q"
   constraints:
-    - "BA-supplied schema minimum — the IT PO refines this block during technical enrichment."
-    - "The permitted-agent decision must be resolved from config/agent_registry.json, not from a hardcoded agent name, so the guarantee survives an agent rename."
+    - "The permitted-agent decision must be resolved from config/agent_registry.json's permits_shell
+      field, never from a hardcoded agent name, so the guarantee survives an agent rename. This is
+      the constraint the two-registry differential test exists to detect."
+    - "Do NOT re-add any agent() dispatch or filesystem read for this check inside
+      templates/workflows-js/plan-feature.js. The E2 engine (ADR-030) contextifies the workflow body
+      with exactly agent, parallel, pipeline, phase, log, args, workflow and budget -- no module
+      loader and no filesystem primitive -- so the workflow physically cannot read the registry, and
+      the dispatch that used to work around that is what ACD-2100b-5 removed."
+    - "The halt must stay fail-CLOSED on an absent or malformed verdict. A caller that invokes the
+      deployed script directly (Workflow({ scriptPath: '.leafcutter/workflows/plan-feature.js' }))
+      supplies no verdict; that run must stop before any authoring agent and must report a missing
+      pre-flight, never assert a permission cause it never established."
+    - "No test or implementation in this record's scope may assert on the retired
+      'resolve-workspace-setup-permission' dispatch label, or on any agent() call made on the
+      permission check's behalf. That label no longer exists anywhere in the workflow; asserting it
+      is the direct cause of this record's 5 CI failures on PR #652. The behaviour is unchanged --
+      only the surface it is observable on moved."
+    - "Tests must obtain the verdict by RUNNING scripts/worktree/check_workspace_setup_permission.py
+      against a real on-disk config/agent_registry.json, never by hand-typing a verdict literal.
+      unit_tests/_workflow_engine_harness.py's _default_args_for_script() already does exactly this
+      for the permitted default; caller-supplied args override it, which is how a denial path is
+      exercised. A hand-typed verdict reintroduces the precise defect recorded in this file's notes:
+      the one operation that fails in production is the one the harness never performs."
+    - "All source changes land under templates/ and scripts/. The deployed workflow, skill and
+      script are build output."
+    - "Out of scope: templates/workflows-js/plan-feature.js:1929's orphaned
+      classifyWorkspaceSetupPermission() helper. See notes, 2026-09-14."
 delivers_to:
   agent: python-coder
   contract: "A workspace-setup dispatch whose target agent is charter-verified to run repository commands, so its result can be trusted as a real setup attempt rather than a refusal"
@@ -59,30 +193,114 @@ test_spec:
     target_dir: unit_tests/workflows/
     framework: pytest
     type: behavioral
-    description: "Runs plan-feature under the E2 workflow harness and captures the agent the workspace-setup step is actually dispatched to; resolves that agent id against config/agent_registry.json and asserts its registered charter permits shell/repository commands. Asserts on the dispatch the run really made, not on a name found in the source."
-  - name: test_setup_dispatch_to_a_read_only_agent_halts_before_any_authoring_agent
+    angle: criterion
+    surface_invoked: "templates/workflows-js/plan-feature.js driven through
+      run_workflow_under_e2(), taking the harness's registry-backed default
+      args.workspace_setup_permission (itself a real subprocess run of the pre-flight against the
+      on-disk config/agent_registry.json), with the harness's recorded agent-call list read back"
+    description: "Asserts the run makes exactly one agent call labelled 'worktree-setup', then
+      reads config/agent_registry.json in the test, finds the entry whose id equals that call's
+      agentType, and asserts its permits_shell is True. The permitted agent id is READ from the
+      registry, never written into the assertion."
+  - name: test_setup_target_without_shell_permission_halts_before_any_authoring_agent
     target_dir: unit_tests/workflows/
     framework: pytest
     type: behavioral
-    description: "Points the workspace-setup step at a registry agent whose charter excludes running commands (the status-reporting agent of the original incident), runs the workflow, and asserts the run halts AND that no authoring agent label (product-owner / business-analyst / it-po) appears anywhere in the harness agent_calls. Absence of the authoring dispatch is the assertion that matters — a halt message alone does not prove nothing was authored."
+    angle: failure
+    surface_invoked: "the same workflow run, with args overridden to point the step at a registry
+      agent whose entry lacks permits_shell (args.workspace_setup_agent) and to carry that agent's
+      real denying verdict (args.workspace_setup_permission, produced by running the pre-flight
+      against a registry in which that id is present and not shell-permitted)"
+    description: "Asserts the run terminates with status 'error' AND that the harness's recorded
+      agent-call list contains no call to an authoring agent (product-owner, business-analyst,
+      it-po) and no 'worktree-setup' call. The absence of the authoring dispatch is the assertion
+      that matters -- a halt message alone does not prove nothing was authored."
   - name: test_mis_assignment_halt_names_both_the_step_and_the_agent
     target_dir: unit_tests/workflows/
     framework: pytest
     type: behavioral
-    description: "On the read-only-agent halt above, asserts the user-visible output contains both the name of the workspace-setup step and the id of the agent it was pointed at, so a person reading the run can see what was mis-wired without opening the source."
-  - name: test_permitted_agent_is_resolved_from_the_registry_not_a_hardcoded_name
+    angle: criterion
+    surface_invoked: "the terminal payload of the denial run above (its 'message'), read as the
+      user-visible report"
+    description: "Asserts the report contains the step name 'worktree-setup' AND the exact agent id
+      it was pointed at AND the field to change ('permits_shell'), so an operator can see what was
+      mis-wired without opening the source. Also asserts the denial wording is not the
+      agent_not_found wording -- a present-but-unpermitted agent must not be reported as absent."
+  - name: test_permission_follows_the_registry_not_a_hardcoded_agent_name
     target_dir: unit_tests/workflows/
     framework: pytest
     type: behavioral
-    description: "Drives the same code path twice against two fixture registries that differ only in which agent id carries the shell permission; asserts the accept/halt verdict follows the registry in both runs. A hardcoded agent name passes the first run and fails the second, so this test distinguishes registry lookup from a name literal."
-test_rationale: "The regression was a dispatch that succeeded at the workflow level while the receiving agent refused the work, so every test here must observe a real dispatch under the harness rather than a string in plan-feature.js. The critical assertion is the negative one — that no authoring agent ran — because the incident's damage came from authoring proceeding, not from the refusal itself. The two-registry test exists because the constraint explicitly forbids a hardcoded agent name, and only a test that varies the registry can tell the two implementations apart."
+    angle: seam
+    surface_invoked: "scripts/worktree/check_workspace_setup_permission.py executed as a subprocess
+      in a fresh process against two temporary repositories, then each resulting verdict fed into
+      the workflow through run_workflow_under_e2(args=...)"
+    description: "Two registries differ only in WHICH agent id carries permits_shell: true. Asserts
+      the pre-flight returns outcome 'granted' for the permitted id and 'permission_denied' for the
+      other in each repository, and that the workflow proceeds to the worktree-setup dispatch or
+      halts accordingly. An implementation that hardcodes an agent name passes the first repository
+      and fails the second, so only this differential distinguishes registry lookup from a literal."
+  - name: test_verdict_under_test_is_produced_by_a_real_run_against_a_real_registry
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: real_artifact
+    surface_invoked: "the pre-flight script run as a subprocess against the repository's own
+      on-disk config/agent_registry.json, with its stdout parsed as the verdict the other tests
+      feed into the workflow"
+    description: "Asserts the script emits exactly one JSON object on stdout, exits 0 even when
+      denying, and that the object carries permits, outcome and agent_id; then asserts the workflow
+      accepts that object unmodified through args. This is the replacement for the retired
+      'real registry read' file: its old point was that the harness stubbed the registry read via
+      label_responses, and the read is no longer a dispatch at all -- the equivalent guard now is
+      that no test hand-types a verdict literal, so the one operation that fails in production is
+      the one the tests actually perform."
+test_rationale: "The behaviour under test is unchanged; only the surface it is observable on moved.
+  ACD-2100b-5 took the registry read out of the workflow body -- the E2 engine gives that body no
+  filesystem -- and put it in scripts/worktree/check_workspace_setup_permission.py, run by the
+  plan-feature skill, with the verdict crossing into the workflow as args.workspace_setup_permission.
+  So the charter decision and the dispatch are now on two surfaces, and a test must straddle them:
+  the dispatch assertions still read the run's own recorded agent calls under the E2 harness (a
+  source grep passes on dead code and fails on a live implementation that keeps a helper for
+  another caller), while the charter assertions run the real pre-flight in a fresh process against
+  a real registry file. The negative assertion -- that no authoring agent was dispatched -- remains
+  the critical one, because the original incident's damage came from authoring proceeding after the
+  setup step was refused, not from the refusal itself. The two-registry differential is what
+  distinguishes a registry lookup from a hardcoded agent name, and it is now cheaper and sharper
+  than before because the pre-flight is a directly-invokable script. The real-artifact entry exists
+  because this record's own notes record the previous test set passing while broken: it stubbed the
+  registry read via label_responses and thereby never performed the one operation that failed in
+  production. Nothing in this set may assert on the retired
+  'resolve-workspace-setup-permission' label -- that assertion is what is red in CI today, and it
+  tests a mechanism that no longer exists rather than the criterion, which still holds."
 origin_agent: business-analyst
 created: 2026-08-14
 amended_by:
   - reason: "split: BO-1500a -> BO-1500a + BO-1500f + BO-1500g [Pattern C intermediate, 11->5+3+3], 2026-08-14. Renamed from BO-1500a-4; re-parented to BO-1500f."
+  - reason: technical-enrichment
+    by: it-po
+    at: 2026-09-14
+    note: "Surface change only -- criteria untouched (the criteria name no dispatch label, no
+      agent() call and no path; they say 'the run stops', not 'the workflow stops', and are
+      correct as written). Re-derived it_requirements, doc_links, test_spec, test_rationale and
+      estimated_complexity (S -> M) for the surface ACD-2100b-5 established on 2026-09-07: the
+      charter verdict is now resolved by scripts/worktree/check_workspace_setup_permission.py,
+      run by the plan-feature skill, and reaches the workflow through
+      args.workspace_setup_permission. Retargeted reference_file_path from
+      templates/workflows-js/plan-feature.js to that script, with plan-feature.js retained as the
+      enforcement point named in n_location_rule and as a doc_link (relationship modifies ->
+      implements). Replaced config_schema_fragment.workspace_setup_dispatch, which described an
+      in-workflow registry resolution that no longer happens, with the verdict contract that
+      actually crosses into the workflow. Re-specified all four test_spec entries, which described
+      observing the retired dispatch under the E2 harness and are the direct cause of this
+      record's 5 red tests on PR #652, and added a fifth (real_artifact) so no test hand-types a
+      verdict literal. Added unit_tests/workflows/test_bo_1500f_1_real_registry_read.py to
+      covered_by -- it has covered this record since 2026-08-25 and was never listed.
+      assigned_agent stays python-coder. work_status deliberately left todo: the tests must go
+      green before anyone claims this."
 superseded_by: null
 covered_by:
 - unit_tests/workflows/test_bo_1500f_1.py
+- unit_tests/workflows/test_bo_1500f_1_real_registry_read.py
 implemented_by:
 - tickets/00_inbox/TICKET-20260817-BO-1500f-1.md
 change_target: pipeline
@@ -98,7 +316,12 @@ notes: |
   of BO-1500a. Criteria text is unchanged. BO-1500a-5 and BO-1500a-8 remain under
   BO-1500a and now depend on this AC across the f/a boundary.
 
-  REOPENED 2026-08-25 (was work_status: done). Filed as KI-ACD-009 and KI-ACD-019. The
+  REOPENED 2026-08-25 (was work_status: done). MECHANISM SUPERSEDED 2026-09-07 by ACD-2100b-5 --
+  read the 2026-09-14 block below BEFORE acting on anything in the next four paragraphs. The
+  file-and-line citations in them (plan-feature.js:1747-1773, the dispatched registry read, the
+  label_responses stub at test_bo_1500f_1.py:176-196) describe code that no longer exists. The
+  CAUSE they record is real history and the reason this record was reopened; the REMEDY they
+  imply is not. Filed as KI-ACD-009 and KI-ACD-019. The
   criterion requires that the workflow "dispatches it to an agent whose registered charter
   permits running repository and shell commands". Given worktree-agent, which
   config/agent_registry.json:1364-1368 gives "permits_shell": true, it does not dispatch at
@@ -124,3 +347,60 @@ notes: |
   invocation cwd. KI-ACD-004 is the same bug reaching a different file. Fixing e-2 properly
   should close this; verify rather than assume, and replace the stub with a test that lets the
   real path resolution run.
+
+  2026-09-14 (it-po): SURFACE AMENDMENT -- THE CRITERIA WERE NEVER THE PROBLEM. Confirmed by
+  direct inspection before writing this: the string "resolve-workspace-setup-permission" appears
+  ZERO times in this file and never has (git log -S on this path returns nothing). The criteria
+  contain no dispatch label, no agent() call and no path; the third Then clause says "the run
+  stops", not "the workflow stops", so it is deliberately agnostic about which layer halts and
+  survived ACD-2100b-5 unchanged. What was stale was this record's TECHNICAL SURFACE, and only
+  that has been amended.
+
+  WHERE THE BEHAVIOUR LIVES NOW, verified live on 2026-09-14:
+    - scripts/worktree/check_workspace_setup_permission.py resolves the charter locally.
+      _resolve_agent_outcome() returns "granted" when the entry's permits_shell is True and
+      "permission_denied" when it is not (line 301), "agent_not_found" when the id is absent from
+      a real agents list (line 300), "no_entries_collection" when agents is not a list;
+      _load_registry() contributes "read_failure" and "parse_failure". Six distinct outcomes, no
+      dispatch, no network.
+    - templates/workflows-js/plan-feature.js consumes the verdict at args.workspace_setup_permission
+      (line 2374), fails closed on an absent or non-object verdict (2385-2396) with a report that
+      names the MISSING PRE-FLIGHT rather than asserting a permission cause, renders one distinct
+      message per outcome (2398-2463) -- the permission_denied branch naming step='worktree-setup',
+      the agent id, and the permits_shell field to change -- and only then issues the single
+      worktree-setup dispatch to workspaceSetupAgentId (2496-2501).
+    - unit_tests/_workflow_engine_harness.py already supports this: _default_args_for_script()
+      supplies a registry-backed permitted default by really running the pre-flight against the
+      real config/agent_registry.json, and run_workflow_under_e2(args=...) lets a test override it
+      to exercise a denial. Its module docstring names THIS record at the "ACD-2100b-5" note.
+
+  A PARTIAL DISAGREEMENT WITH THE BRIEF, stated so it is not lost: plan-feature.js is not wholly
+  off this record's surface. Two of the three Then clauses -- the positive dispatch obligation and
+  the halt that names step and agent -- are still realised there, and it is the LOAD-BEARING
+  enforcement point: a verdict the workflow declines to act on is inert. What genuinely died is
+  the in-workflow registry RESOLUTION, which is what the old reference_file_path and the old
+  config_schema_fragment.workspace_setup_dispatch described. reference_file_path now names the
+  pre-flight script (the surface the stale field pointed away from) and n_location_rule names
+  plan-feature.js as the second, load-bearing location, so neither surface can be edited alone.
+
+  WHAT IS ACTUALLY LEFT TO DO. The production mechanism appears to satisfy all three Then clauses
+  already; the remaining work is most likely test-side. The two covering files assert the retired
+  dispatch label (4 occurrences in test_bo_1500f_1.py, 5 in test_bo_1500f_1_real_registry_read.py)
+  and are 5 real red tests on PR #652. Re-point them at the mechanism described above per
+  test_spec. Do NOT flip work_status until they are green -- and do not assume green means the
+  criterion holds: re-read the three Then clauses against the run, since a test set can be rewritten
+  to pass against the new surface while quietly dropping the negative assertion that no authoring
+  agent was dispatched.
+
+  ONE ORPHAN, DELIBERATELY LEFT ALONE. templates/workflows-js/plan-feature.js:1929 still defines
+  classifyWorkspaceSetupPermission(), carrying { stage: "resolve-workspace-setup-permission",
+  agent: "status-checker" }. Exactly one occurrence repository-wide -- the definition. No call
+  site, no test reference. ACD-2100b-5's own comment at plan-feature.js:2171-2179 claims it removed
+  the four now-dead interpretation helpers; this fifth one survived that sweep. It is NOT in this
+  record's scope: this record is about which agent the setup step is dispatched to, and a function
+  nothing calls dispatches nothing, so removing it changes no behaviour this criterion can observe
+  -- and ACD-2100b-5's own it_requirements already say the absence of a helper from the file is not
+  what satisfies that record either. It does deserve its own record, on two grounds: it is dead
+  code carrying the one string in this whole area that still reads as a live dispatch label, and it
+  is precisely the string that caused a reader to misdiagnose this AC on 2026-09-14. A one-line
+  removal AC under ACD-2100b (change_target: pipeline, risk_surface: internal) would close it.

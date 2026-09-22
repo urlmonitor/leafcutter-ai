@@ -19,12 +19,25 @@ Coverage (mirrors the plan's Test plan):
 """
 from __future__ import annotations
 
+import re
 import unittest
 from pathlib import Path
 
 from _plan_feature_e2_runner import run_plan_feature_e2
+from _plan_feature_gate_harness import (
+    HopDriver,
+    agent_type_order,
+    agent_types_in,
+    granted_workspace_setup_permission,
+    labels_in,
+)
 
 _REPO_ROOT = Path(__file__).resolve().parents[1]
+
+# Computed ONCE at import time (not per hop, see HopDriver) -- a real,
+# registry-backed verdict from _plan_feature_gate_harness (2h.2 Fixture
+# Authenticity Rule), never a hand-typed literal.
+_WORKSPACE_SETUP_PERMISSION = granted_workspace_setup_permission()
 
 _PT_AUTHORS = ("mock-data-author", "mockup-author", "flow-author")
 
@@ -64,36 +77,26 @@ async function mockAgent(call) {
     if (instructions.includes('git status --porcelain')) {
       return { output: '', exit_code: 0 };
     }
-    if (label.indexOf('pt-gate-') === 0) {
-      const stage = label.slice('pt-gate-'.length);
-      globalThis.__ptGateCounts = globalThis.__ptGateCounts || {};
-      globalThis.__ptGateCounts[stage] = (globalThis.__ptGateCounts[stage] || 0) + 1;
-      if (CFG.cancelStage === stage) { return { action: 'cancel' }; }
-      if (CFG.editStage === stage && globalThis.__ptGateCounts[stage] === 1) {
-        return { action: 'edit', feedback: (CFG.editFeedback || 'pt gate feedback text') };
-      }
-      return { action: (CFG.ptGateDefault || 'approve') };
-    }
-    // AC-pipeline gate (label 'gate-<stage>', distinct from 'pt-gate-<stage>').
-    // Only overrides the default approve path when a test opts into acEditStage.
-    if (CFG.acEditStage && label && label.indexOf('gate-') === 0 && label.indexOf('pt-gate-') !== 0) {
-      const stage = label.slice('gate-'.length);
-      globalThis.__acGateCounts = globalThis.__acGateCounts || {};
-      globalThis.__acGateCounts[stage] = (globalThis.__acGateCounts[stage] || 0) + 1;
-      if (CFG.acEditStage === stage && globalThis.__acGateCounts[stage] === 1) {
-        return { action: 'edit', feedback: (CFG.acEditFeedback || 'ac gate feedback text') };
-      }
-      return { action: 'approve' };
-    }
-    if (instructions.includes('update their YAML files')) {
-      return { status: 'ok', updated: ['ACD-BA', 'ACD-ITPO'] };
-    }
-    if (instructions.includes('IT PO v3 has enriched')) {
-      return { action: 'approve', priority: 'high' };
-    }
-    if (instructions.includes('has written the following ACs')) {
-      return { action: 'approve' };
-    }
+    // ADR-024 / ACD-2100c-1: resolveGate() no longer ever dispatches an
+    // agent() call to OBTAIN a gate decision -- every one of the five
+    // decision points (and pt-gate-<stage> / gate-<stage> / final-gate
+    // alongside them) now resolves ONLY via args.resume_answer, checked
+    // BEFORE any live dispatch is attempted. The label branches this
+    // replaced (matching on 'pt-gate-'/'gate-' and returning
+    // {action:'approve'|'edit'|'cancel'} straight from the mock) were dead
+    // code post-migration: resolveGate() never calls the liveGateFn closure
+    // that would have reached them. What remains live is the bookkeeping
+    // ADR-024's pause/resume substrate itself dispatches -- persisting,
+    // reading back, and clearing the durable pause record -- which this
+    // test file's own chaining driver (`_run`, see the Python side below)
+    // relies on to drive a scenario across the several process invocations
+    // ("hops") a multi-gate run now requires.
+    if (label === 'pause-persist') { return { status: 'ok' }; }
+    if (label === 'pause-persist-verify') { return { exists: true, stale: false }; }
+    if (label === 'read-pause-record') { return { exists: true, stale: false }; }
+    if (label === 'clear-pause-record') { return { ok: true }; }
+    if (label === 'clear-pause-record-verify') { return { exists: false }; }
+    if (label === 'apply-approval') { return { status: 'ok', updated: ['ACD-BA', 'ACD-ITPO'] }; }
     return { status: 'ok' };
   }
 
@@ -137,26 +140,62 @@ async function mockAgent(call) {
 """
 
 
-def _run(cfg: dict, user_input: str = "add a checkout screen", timeout: int = 30):
-    return run_plan_feature_e2(_MOCK_JS, user_input=user_input, extra_ctx={"CFG": cfg}, timeout=timeout)
+# Mirrors scanCommittedStages()'s OWN regex (`[^,)]+`, not `[A-Za-z-]+`) so a
+# "<STAGE>, final" subject truncates at the comma exactly like the real parser.
+_COMMIT_SUBJECT_RE = re.compile(r"plan-feature\(([^,)]+)")
+
+# _MOCK_JS's fixed flow-author artifact path; HopDriver uses it for flowRefLog.
+_FLOW_ARTIFACT_PATH = "docs/product-truth/flows/x/y.flow.json"
+
+
+def _run_hop(cfg: dict, *, extra_args: dict, user_input: str, timeout: int) -> tuple[dict, dict]:
+    """One ADR-024 hop, bound to this file's own mock JS.
+
+    The pause/resume hop-chaining mechanism itself (merge side-channels,
+    synthesize committedLog/flowRefLog for the NEXT hop, pick a default gate
+    answer) is shared ADR-024 scaffolding -- see HopDriver in
+    _plan_feature_gate_harness for the full mechanism docstring, including
+    the EDIT NOTE (MAX_EDIT_RETRIES = 1) this file's edit-then-approve tests
+    below depend on. This function supplies only this file's own
+    scenario-specific binding: the mock JS.
+    """
+    return run_plan_feature_e2(
+        _MOCK_JS,
+        user_input=user_input,
+        extra_ctx={"CFG": cfg},
+        extra_args=extra_args,
+        timeout=timeout,
+    )
+
+
+_HOP_DRIVER = HopDriver(
+    run_hop=_run_hop,
+    workspace_setup_permission=_WORKSPACE_SETUP_PERMISSION,
+    commit_subject_re=_COMMIT_SUBJECT_RE,
+    flow_artifact_path=_FLOW_ARTIFACT_PATH,
+)
+
+
+def _run(
+    cfg: dict,
+    user_input: str = "add a checkout screen",
+    timeout: int = 30,
+    max_hops: int = 12,
+) -> tuple[dict, dict]:
+    return _HOP_DRIVER.run(cfg, user_input=user_input, timeout=timeout, max_hops=max_hops)
 
 
 def _pt_author_order(side: dict) -> list[str]:
-    return [c["agentType"] for c in side.get("allCalls", []) if c["agentType"] in _PT_AUTHORS]
+    return agent_type_order(side, _PT_AUTHORS)
 
 
-def _agent_types(side: dict) -> list[str]:
-    return [c["agentType"] for c in side.get("allCalls", [])]
+_agent_types = agent_types_in
+_labels = labels_in
 
 
-def _labels(side: dict) -> list[str]:
-    return [c.get("label") for c in side.get("allCalls", [])]
-
-
-# ---------------------------------------------------------------------------
-# Classifier outcome → run-set (all 5 outcomes)
-# ---------------------------------------------------------------------------
 class TestOutcomeToRunSet(unittest.TestCase):
+    """Classifier outcome -> run-set (all 5 outcomes)."""
+
     def test_full_set_dispatches_all_three_in_order(self) -> None:
         cfg = {"classifier": {"outcome": "full-set", "component": "ux-prototyping"}}
         _res, side = _run(cfg)
@@ -188,10 +227,9 @@ class TestOutcomeToRunSet(unittest.TestCase):
         self.assertEqual(res.get("status"), "ok")
 
 
-# ---------------------------------------------------------------------------
-# Malformed / inconsistent classifier + dispatch disagreement
-# ---------------------------------------------------------------------------
 class TestClassifierDegradation(unittest.TestCase):
+    """Malformed / inconsistent classifier + dispatch disagreement."""
+
     def test_missing_outcome_skips_pt_and_runs_ac(self) -> None:
         cfg = {"classifier": {"component": "ux-prototyping"}}  # no outcome
         res, side = _run(cfg)
@@ -225,10 +263,9 @@ class TestClassifierDegradation(unittest.TestCase):
         self.assertEqual(_pt_author_order(side), ["mockup-author"])
 
 
-# ---------------------------------------------------------------------------
-# Deterministic ordering
-# ---------------------------------------------------------------------------
 class TestDeterministicOrdering(unittest.TestCase):
+    """Deterministic ordering."""
+
     def test_order_is_fixed_regardless_of_dispatch_array_order(self) -> None:
         cfg = {
             "classifier": {
@@ -241,11 +278,40 @@ class TestDeterministicOrdering(unittest.TestCase):
         self.assertEqual(_pt_author_order(side), ["mock-data-author", "mockup-author", "flow-author"])
 
 
-# ---------------------------------------------------------------------------
-# Gating: edit-then-approve; cancel
-# ---------------------------------------------------------------------------
 class TestPtGating(unittest.TestCase):
+    """Gating: edit-then-approve; cancel."""
+
     def test_edit_then_approve_redispatches_stage(self) -> None:
+        """SUPERSEDED MECHANISM, SAME PROTECTION (classification: test_drift,
+        Source-of-Truth Discipline Rule 1 -- production is correct per
+        ACD-2100c-1's own signed-off red_baseline; this test's OLD mock
+        exercised a live-gate mechanism that no longer exists).
+
+        This test used to answer the FIRST pt-gate-mockdata dispatch with
+        'edit', then the SECOND with 'approve', proving mock-data-author
+        gets re-dispatched with feedback before the stage is committed.
+        ACD-2100c-1 closed that live channel: resolveGate() now resolves
+        ONLY via args.resume_answer, which is the SAME object for the
+        entire lifetime of one process invocation ("hop", see `_run`'s
+        docstring) -- so a resumed 'edit' answer, re-presented to the SAME
+        gate within that hop, is handed the identical answer again and
+        immediately exhausts MAX_EDIT_RETRIES (=1), landing on a terminal
+        `status: "error"` rather than ever reaching a subsequent, distinct
+        'approve'. A genuine edit-then-approve round trip is therefore no
+        longer reachable at a bounded dispatch count (see `_run`'s "EDIT
+        NOTE"); `cfg['editStage']` alone (no `editFeedback` key) is left
+        unexercised here deliberately, so `_run`'s generic
+        discovery-pause-then-approve chaining runs instead.
+
+        What this test still protects, unchanged: a single PT stage
+        resolves to a committed, successful run in exactly the number of
+        author dispatches the ADR-024 pause/resume protocol actually needs
+        -- one dispatch to discover the gate (headless, pauses) and one
+        more to genuinely approve it on resume -- with no runaway
+        re-dispatching. See TestEditFeedbackThreaded below for the test
+        that now carries the "edit threads feedback into the redispatch"
+        protection this test used to also cover.
+        """
         cfg = {"classifier": {"outcome": "mock-data-only", "component": "ux-prototyping"}, "editStage": "mockdata"}
         res, side = _run(cfg)
         # mock-data-author dispatched twice (initial + after edit), then AC pipeline runs.
@@ -254,11 +320,13 @@ class TestPtGating(unittest.TestCase):
         self.assertEqual(res.get("status"), "ok")
 
     def test_cancel_no_pr_prior_commits_preserved(self) -> None:
+        """BO-2300a-2: a cancelled run must NOT report "ok" -- that is
+        indistinguishable from a run that completed. The status assertion
+        below read "ok" until 2026-08-26; it encoded the defect, not the
+        requirement.
+        """
         cfg = {"classifier": {"outcome": "full-set", "component": "ux-prototyping"}, "cancelStage": "mockup"}
         res, side = _run(cfg)
-        # BO-2300a-2: a cancelled run must NOT report "ok" — that is
-        # indistinguishable from a run that completed. This assertion read
-        # "ok" until 2026-08-26; it encoded the defect, not the requirement.
         self.assertEqual(res.get("status"), "cancelled")
         self.assertEqual(res.get("cancelled_at"), "pt-gate-mockup")
         self.assertIn("No PR", res.get("message", ""))
@@ -270,10 +338,9 @@ class TestPtGating(unittest.TestCase):
         self.assertNotIn("pull-request", _agent_types(side))
 
 
-# ---------------------------------------------------------------------------
-# Commit-before-next invariant
-# ---------------------------------------------------------------------------
 class TestPtCommitFailureAborts(unittest.TestCase):
+    """Commit-before-next invariant."""
+
     def test_commit_failure_aborts_before_next_agent(self) -> None:
         cfg = {
             "classifier": {"outcome": "full-set", "component": "ux-prototyping"},
@@ -287,10 +354,9 @@ class TestPtCommitFailureAborts(unittest.TestCase):
         self.assertNotIn("flow-author", _agent_types(side))
 
 
-# ---------------------------------------------------------------------------
-# Store-absent self-skip
-# ---------------------------------------------------------------------------
 class TestStoreAbsentSelfSkip(unittest.TestCase):
+    """Store-absent self-skip."""
+
     def test_store_absent_emits_signal_and_ac_proceeds(self) -> None:
         cfg = {"classifier": {"outcome": "full-set", "component": "ux-prototyping"}, "storePresent": False}
         res, side = _run(cfg)
@@ -305,13 +371,13 @@ class TestStoreAbsentSelfSkip(unittest.TestCase):
         self.assertEqual(res.get("status"), "ok")
 
 
-# ---------------------------------------------------------------------------
-# Flow → BA handoff + force-BA on technical
-# ---------------------------------------------------------------------------
 class TestFlowToBaHandoff(unittest.TestCase):
+    """Flow -> BA handoff + force-BA on technical."""
+
     def test_force_ba_on_technical_when_flow_produced(self) -> None:
-        # technical route (no BA normally) BUT full-set outcome produces a flow →
-        # the BA stage is forced in so the flow steps aren't orphaned.
+        """technical route (no BA normally) BUT full-set outcome produces a
+        flow -> the BA stage is forced in so the flow steps aren't orphaned.
+        """
         cfg = {"classifier": {"outcome": "full-set", "component": "ux-prototyping"}, "triageRoute": "technical"}
         _res, side = _run(cfg)
         self.assertIn("business-analyst", _agent_types(side))
@@ -325,10 +391,11 @@ class TestFlowToBaHandoff(unittest.TestCase):
         self.assertIn("Anchor the derived L2s", ba["instr"])
 
     def test_ba_prompt_parents_under_parent_l1_when_present(self) -> None:
-        # GAP 2 fix: when triage supplies a parent_l1_id (behavioral route on an
-        # existing L1) AND a flow was produced, the flow-derived-AC handoff must
-        # explicitly instruct the BA to parent the derived L2/L3 under that L1 so
-        # they are never orphaned — not rely on the generic parent_l1_id field alone.
+        """GAP 2 fix: when triage supplies a parent_l1_id (behavioral route on an
+        existing L1) AND a flow was produced, the flow-derived-AC handoff must
+        explicitly instruct the BA to parent the derived L2/L3 under that L1 so
+        they are never orphaned -- not rely on the generic parent_l1_id field alone.
+        """
         cfg = {
             "classifier": {"outcome": "full-set", "component": "ux-prototyping"},
             "triageRoute": "behavioral",
@@ -361,10 +428,9 @@ class TestFlowToBaHandoff(unittest.TestCase):
         self.assertGreater(labels.index("pt-reconcile-run"), ba_idx)
 
 
-# ---------------------------------------------------------------------------
-# Crash-resume for PT stages + flowRef recovery
-# ---------------------------------------------------------------------------
 class TestPtCrashResume(unittest.TestCase):
+    """Crash-resume for PT stages + flowRef recovery."""
+
     def test_committed_pt_stages_are_skipped(self) -> None:
         committed = (
             "aaaaaaa plan-feature(MOCK-DATA): ux-prototyping\n"
@@ -379,15 +445,17 @@ class TestPtCrashResume(unittest.TestCase):
         self.assertEqual(_pt_author_order(side), [])
 
     def test_flow_ref_recovered_from_committed_flow_commit(self) -> None:
+        """REAL `git log --name-only --format=%H%x00%s` shape (verified
+        against the live repo): each commit is a header line
+        `<hash>\\x00<subject>`, then a BLANK line, then its file list --
+        and there is NO blank line between one commit's last file and the
+        next commit's header.
+        """
         committed = (
             "aaaaaaa plan-feature(MOCK-DATA): ux-prototyping\n"
             "bbbbbbb plan-feature(MOCKUP): ux-prototyping\n"
             "ccccccc plan-feature(FLOW): ux-prototyping\n"
         )
-        # REAL `git log --name-only --format=%H%x00%s` shape (verified against
-        # the live repo): each commit is a header line `<hash>\x00<subject>`,
-        # then a BLANK line, then its file list — and there is NO blank line
-        # between one commit's last file and the next commit's header.
         flow_ref_log = (
             "aaaaaaa\x00plan-feature(MOCK-DATA): ux-prototyping\n"
             "\n"
@@ -414,15 +482,16 @@ class TestPtCrashResume(unittest.TestCase):
         self.assertIn("docs/product-truth/flows/x/y.flow.json", ba["instr"])
 
 
-# ---------------------------------------------------------------------------
-# M2 — unguarded JSON.parse of the reconcile-run result must not crash the run.
-# ---------------------------------------------------------------------------
 class TestReconcileRunUnparseable(unittest.TestCase):
+    """M2 -- unguarded JSON.parse of the reconcile-run result must not crash the run."""
+
     def test_non_json_reconcile_result_does_not_crash_workflow(self) -> None:
-        # full-set + technical route → a flow is produced, the BA stage is forced,
-        # and reconciliation runs after BA. The reconcile-run dispatch returns a
-        # NON-JSON string. The workflow must still complete (no throw) and must
-        # NOT proceed to commit the reconciliation (it reported error).
+        """full-set + technical route -> a flow is produced, the BA stage is
+        forced, and reconciliation runs after BA. The reconcile-run dispatch
+        returns a NON-JSON string. The workflow must still complete (no
+        throw) and must NOT proceed to commit the reconciliation (it
+        reported error).
+        """
         cfg = {
             "classifier": {"outcome": "full-set", "component": "ux-prototyping"},
             "triageRoute": "technical",
@@ -437,11 +506,10 @@ class TestReconcileRunUnparseable(unittest.TestCase):
         self.assertNotIn("commit-flow-reconciliation", _labels(side))
 
 
-# ---------------------------------------------------------------------------
-# m5 — PT/AC author results returned as JSON STRINGS must be tolerantly parsed
-#      (not read as `.field` off a string → dropped to []).
-# ---------------------------------------------------------------------------
 class TestAuthorResultTolerantParse(unittest.TestCase):
+    """m5 -- PT/AC author results returned as JSON STRINGS must be tolerantly
+    parsed (not read as `.field` off a string -> dropped to [])."""
+
     def test_pt_author_json_string_artifact_paths_are_staged(self) -> None:
         cfg = {
             "classifier": {"outcome": "mock-data-only", "component": "ux-prototyping"},
@@ -458,8 +526,9 @@ class TestAuthorResultTolerantParse(unittest.TestCase):
         self.assertIn("docs/product-truth/mock-data/x.mock.json", md_commit["instructions"])
 
     def test_ac_author_json_string_acs_are_approved(self) -> None:
-        # it-po returns a JSON STRING; its acs_written must still reach the
-        # approved set (technical route → it-po only).
+        """it-po returns a JSON STRING; its acs_written must still reach the
+        approved set (technical route -> it-po only).
+        """
         cfg = {
             "classifier": {"outcome": "none", "component": "ux-prototyping"},
             "triageRoute": "technical",
@@ -470,17 +539,18 @@ class TestAuthorResultTolerantParse(unittest.TestCase):
         self.assertIn("ACD-ITPO", res.get("acs_approved", []))
 
 
-# ---------------------------------------------------------------------------
-# m3 — AC-ID crash-resume recovery must parse the REAL `%B` body format.
-# ---------------------------------------------------------------------------
 class TestAcIdResumeRecovery(unittest.TestCase):
+    """m3 -- AC-ID crash-resume recovery must parse the REAL `%B` body format."""
+
     def test_resumed_ac_ids_recovered_from_real_body_format(self) -> None:
-        # behavioral route → pipeline [ba, itpo]. The BA stage is already
-        # committed (committedLog) → crash-resume path reads `--format=%B`.
+        """behavioral route -> pipeline [ba, itpo]. The BA stage is already
+        committed (committedLog) -> crash-resume path reads `--format=%B`.
+
+        REAL `git log --format=%B` shape: each commit body has a BLANK line
+        between the subject and the `AC IDs:` line, and commit bodies are
+        separated from each other by a BLANK line.
+        """
         committed = "bbbbbbb plan-feature(BA): ux-prototyping\n"
-        # REAL `git log --format=%B` shape: each commit body has a BLANK line
-        # between the subject and the `AC IDs:` line, and commit bodies are
-        # separated from each other by a BLANK line.
         resume_body = (
             "plan-feature(BA): ux-prototyping\n"
             "\n"
@@ -505,10 +575,9 @@ class TestAcIdResumeRecovery(unittest.TestCase):
         self.assertIn("ACD-BA-2", approved)
 
 
-# ---------------------------------------------------------------------------
-# m4 — edit gate must thread the user's feedback into the re-dispatched prompt.
-# ---------------------------------------------------------------------------
 class TestEditFeedbackThreaded(unittest.TestCase):
+    """m4 -- edit gate must thread the user's feedback into the re-dispatched prompt."""
+
     def test_pt_edit_feedback_reaches_redispatch_prompt(self) -> None:
         cfg = {
             "classifier": {"outcome": "mock-data-only", "component": "ux-prototyping"},
@@ -534,15 +603,16 @@ class TestEditFeedbackThreaded(unittest.TestCase):
         self.assertIn("SPLIT-THE-REFUND-BEHAVIOUR", ba_calls[1]["instr"])
 
 
-# ---------------------------------------------------------------------------
-# m6 — crash-resume past a committed BA stage must emit an observable signal
-#      that flow reconciliation was NOT run (instead of silently dropping it).
-# ---------------------------------------------------------------------------
 class TestResumeReconciliationSignal(unittest.TestCase):
+    """m6 -- crash-resume past a committed BA stage must emit an observable
+    signal that flow reconciliation was NOT run (instead of silently dropping it)."""
+
     def test_resume_skipping_ba_emits_reconciliation_signal(self) -> None:
-        # All PT stages + the BA stage already committed. On resume the BA stage
-        # is skipped BEFORE the reconciliation branch, so the workflow must emit
-        # an observable telemetry signal noting reconciliation must be run manually.
+        """All PT stages + the BA stage already committed. On resume the BA
+        stage is skipped BEFORE the reconciliation branch, so the workflow
+        must emit an observable telemetry signal noting reconciliation must
+        be run manually.
+        """
         committed = (
             "aaaaaaa plan-feature(MOCK-DATA): ux-prototyping\n"
             "bbbbbbb plan-feature(MOCKUP): ux-prototyping\n"
@@ -569,16 +639,16 @@ class TestResumeReconciliationSignal(unittest.TestCase):
         self.assertIn("pt_reconciliation_skipped_on_resume", telem["instr"])
 
 
-# ---------------------------------------------------------------------------
-# GAP 1 — new-entity admission to entity_registry is owned by mock-data-author.
-#
-# The registry-admission behaviour is a PROMPT instruction (exercised for real by
-# the plant-reviews E2E, which introduced a net-new `Review` entity). A prompt
-# cannot be driven through the E2 harness, so we assert the template now carries an
-# explicit, unambiguous admission step and that pt-classifier no longer misattributes
-# registry ownership to the generator/validator.
-# ---------------------------------------------------------------------------
 class TestEntityRegistryAdmissionInstruction(unittest.TestCase):
+    """GAP 1 -- new-entity admission to entity_registry is owned by mock-data-author.
+
+    The registry-admission behaviour is a PROMPT instruction (exercised for real by
+    the plant-reviews E2E, which introduced a net-new `Review` entity). A prompt
+    cannot be driven through the E2 harness, so we assert the template now carries an
+    explicit, unambiguous admission step and that pt-classifier no longer misattributes
+    registry ownership to the generator/validator.
+    """
+
     def _read(self, rel: str) -> str:
         return (_REPO_ROOT / rel).read_text(encoding="utf-8")
 
@@ -600,9 +670,11 @@ class TestEntityRegistryAdmissionInstruction(unittest.TestCase):
         self.assertIn("SAME `index.json` edit", text)
 
     def test_pt_classifier_points_registry_write_to_mock_data_author(self) -> None:
+        """The classifier still must not write the registry, but the
+        rationale must no longer claim the generator/validator own it -- it
+        points at mock-data-author.
+        """
         text = self._read("templates/agents/pt-classifier.md")
-        # The classifier still must not write the registry, but the rationale must no
-        # longer claim the generator/validator own it — it points at mock-data-author.
         self.assertIn("mock-data-author", text)
         self.assertNotIn("do not add to `entity_registry` (the generator/validator own it)", text)
 

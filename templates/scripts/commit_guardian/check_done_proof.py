@@ -22,6 +22,12 @@ ARCHITECTURE: Four public symbols consumed by tests and the CLI:
         legitimately exist. A composite with any unproven child is still a
         violation naming that child; composites are never skipped
         unconditionally. L2/L3 leaves keep the original direct-tag check.
+        On that leaf path only, ACs with ``test_required: false`` are silently
+        exempted — same exemption semantics as the two CI functions below, kept
+        in parity so a documentation-only AC does not pass CI while failing
+        pre-commit. The exemption waives the direct-tag obligation; it does not
+        waive a composite's child-derivation obligation, which is why the level
+        branch is evaluated first.
     check_all_done_acs(*, ac_root, test_root) -> list[dict]
         CI-authoritative check. Calls verify_done_eligible (from done_proof)
         for every done AC under ac_root; returns violation dicts for ineligible
@@ -649,6 +655,32 @@ def check_staged_done_proofs(
     file(s) — so a leaf (empty ``covered_by``, or one holding only test
     paths) keeps the original direct-covers-tag requirement below.
 
+    On the leaf path only, ACs with ``test_required: false`` (the Python
+    boolean ``False``, not the string ``"false"``) are silently exempted and
+    never checked for a covers tag.  This mirrors the exemption already applied
+    by the CI-authoritative functions :func:`check_all_done_acs` and
+    :func:`check_changed_done_acs` — it covers documentation ACs and
+    prompt-convention ACs where a covers-tagged test is structurally
+    impossible.  An absent or ``True`` value for ``test_required`` is always
+    enforced.  The exemption keys ONLY on the AC record's own declared
+    ``test_required`` field — never on whether a tag happens to be missing —
+    so it cannot be triggered by the very condition (no tag found) it is meant
+    to exempt from.
+
+    The two checks are ordered level-first deliberately.  ``test_required``
+    declares whether ``test-writer`` must author a direct test for this AC, so
+    it waives the direct-covers-tag obligation only.  A composite's obligation
+    is a different one — that its children are done and covered — and nothing
+    in ``test_required`` speaks to it.  Evaluating ``test_required`` first would
+    let a composite that legitimately declares ``test_required: false`` (e.g.
+    ACS-500g: ``level: L1``, seven children, ``test_required: false``) skip the
+    ACD-400a falsely-done-composite guard entirely, which is the exact shape of
+    defect that guard exists to catch.  The CI functions have no level branch
+    of their own (their composite handling lives inside
+    ``verify_done_eligible``, gated on ``covered_by`` resolving), so for that
+    one shape this pre-commit check is deliberately STRICTER than CI — a
+    fail-closed asymmetry.
+
     Args:
         staged_yaml_paths: Paths to staged AC YAML files to evaluate.  May
             include non-done ACs — they are skipped automatically.
@@ -697,6 +729,8 @@ def check_staged_done_proofs(
                 )
             continue
 
+        if data.get("test_required") is False:
+            continue
         if ac_id_str not in all_covered_ids:
             violations.append(
                 {

@@ -180,6 +180,7 @@ def _write(target: Path, content: str, dry_run: bool, force: bool) -> bool:
                 return False
         except OSError:
             pass  # Unreadable file -- fall through to write.
+        announce_if_local_change_replaced(target)
     target.parent.mkdir(parents=True, exist_ok=True)
     target.write_bytes(data)
     return True
@@ -190,6 +191,13 @@ def _files_content_identical(src: Path, dst: Path) -> bool:
 
     Uses SHA-256 hashes to compare binary files without loading both into
     memory simultaneously when files are large.
+
+    When the files differ and ``dst`` already exists, calls
+    ``announce_if_local_change_replaced(dst)`` before returning — every
+    caller's pattern is ``if _files_content_identical(...): skip else:
+    shutil.copy2(...)``, so a False return always precedes an overwrite
+    (ACD-2100d-2-i). This is the single instrumentation point for all
+    ``shutil.copy2``-based call sites in this module.
 
     Args:
         src: Source file path.
@@ -205,9 +213,12 @@ def _files_content_identical(src: Path, dst: Path) -> bool:
             h = hashlib.sha256()
             h.update(path.read_bytes())
             return h.hexdigest()
-        return _sha256(src) == _sha256(dst)
+        identical = _sha256(src) == _sha256(dst)
     except OSError:
         return False
+    if not identical:
+        announce_if_local_change_replaced(dst)
+    return identical
 
 
 # ---------------------------------------------------------------------------
@@ -224,6 +235,10 @@ from build_phases_deploy_failures import (  # noqa: E402, F401  # re-exported
     record_deploy_failure,
     get_deploy_failures,
     raise_if_deploy_failures,
+)
+from build_phases_local_change import (  # noqa: E402, F401  # re-exported for callers
+    set_local_change_baseline,
+    announce_if_local_change_replaced,
 )
 from build_precommit import (  # noqa: E402, F401  # re-exported for callers
     build_precommit_config,

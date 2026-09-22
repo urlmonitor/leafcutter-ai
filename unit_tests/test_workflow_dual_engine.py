@@ -534,14 +534,20 @@ def test_dispatch_order_plan_feature() -> None:
 
       Pre-Stage-0:
         1. status-checker   label='detect-current-branch'
-        2. status-checker   label='resolve-workspace-setup-permission' (BO-1500f-1:
-           registry-driven permission gate for the isolated-workspace setup step;
-           the harness's built-in default label_responses resolves this against
-           the REAL config/agent_registry.json, which grants the default target
-           agent, 'worktree-agent', permits_shell=true)
+        2. status-checker   label='resolve-worktree-setup-script-path' (ACD-2100a-1:
+           resolves .leafcutter/scripts/setup_ticket_worktree.py to an absolute,
+           repository-anchored path at runtime instead of trusting the cwd-relative
+           {{config.output_root}} placeholder, which resolved against the parent
+           copy when the cwd was not the repo root — KI-ACD-004)
         3. worktree-agent   label='worktree-setup' (BO-1500f-1: dispatched to the
            permission-gate's resolved target agent, no longer hardcoded to
-           'status-checker')
+           'status-checker'. ACD-2100b-5 moved the workspace-setup permission
+           gate itself OUT of this workflow body entirely -- it no longer makes
+           a 'resolve-workspace-setup-permission' agent() dispatch at all. The
+           verdict now arrives via `args.workspace_setup_permission`, which the
+           harness's own default-args builder supplies from the REAL
+           config/agent_registry.json for this in-repo script -- so no dispatch
+           for it appears in this sequence any more.)
 
       Orphan scan (scanOrphanedAcDrafts):
         4. status-checker  label='scan-orphans-git-status'
@@ -559,8 +565,12 @@ def test_dispatch_order_plan_feature() -> None:
       Authoring (it-po, technical route — ac-triage stub returns no 'route'):
         8. it-po           label='stage-itpo-author'
 
-      Final gate (stub returns action=defer):
-        9. status-checker  label='final-gate'
+      Final gate (ACD-2100c-1: resolveGate() no longer dispatches a live
+      "final-gate" agent() call to obtain an answer at all -- with no
+      args.resume_answer supplied, this default stub run is headless, so
+      resolveGate() falls straight through to pauseAtGate(), which persists a
+      durable pending-question record instead):
+        9. status-checker  label='pause-persist'
 
     A dropped, reordered, or mis-typed agent type FAILS this test (AC-2 / M-1).
     """
@@ -575,21 +585,20 @@ def test_dispatch_order_plan_feature() -> None:
     )
 
     expected_sequence = [
+        # See this test's docstring above for the rationale behind each step
+        # (ACD-2100a-1 script-path resolution, ACD-2100b-5's no-dispatch
+        # permission gate, BO-1500f-1's resolved worktree-setup target,
+        # the always-on self-skipping PT phase, and ACD-2100c-1's
+        # pauseAtGate()/"pause-persist" in place of a live final-gate answer).
         ("status-checker", "detect-current-branch"),
-        # BO-1500f-1: registry-driven permission gate ahead of worktree-setup.
-        ("status-checker", "resolve-workspace-setup-permission"),
-        # BO-1500f-1: dispatched to the resolved target agent (default
-        # 'worktree-agent'), not the retired hardcoded 'status-checker'.
+        ("status-checker", "resolve-worktree-setup-script-path"),
         ("worktree-agent", "worktree-setup"),
         ("status-checker", "scan-orphans-git-status"),
         ("status-checker", "scan-committed-stages"),
         ("ac-triage", "stage-0-triage"),
-        # Always-on product-truth classifier runs between triage and the AC
-        # pipeline; with the default stub it returns no valid `outcome`, so the
-        # PT phase self-skips (no store-check, no PT authors) and continues.
         ("pt-classifier", "pt-classify"),
         ("it-po", "stage-itpo-author"),
-        ("status-checker", "final-gate"),
+        ("status-checker", "pause-persist"),
     ]
 
     actual_count = result.dispatch_count
