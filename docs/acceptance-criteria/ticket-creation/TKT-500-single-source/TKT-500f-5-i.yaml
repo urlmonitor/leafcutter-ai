@@ -32,9 +32,14 @@ doc_links:
     relationship: constrains
     status: exists
     relevance: "Owns _call_generate_ticket_from_ac and generate_tickets_for_leaves — the goal-path half of the two generators this AC constrains."
-  - path: scripts/ac_store/generate_ticket_from_ac.py
+  - path: scripts/ac_store/_gtfa_agents_map.py
     relationship: constrains
     status: exists
+    relevance: "The generator's phase-agent emission point, where the unknown-agent path must reuse TKT-500f-5's substitution helper rather than branch separately. (Re-pointed 2026-09-22 off the generate_ticket_from_ac.py shell; see the amendment.)"
+  - path: scripts/ac_store/_gtfa_config.py
+    relationship: constrains
+    status: exists
+    relevance: "The generator's agent-registry read — 'no entry at all in the registry' is decided here, alongside the is_ticket_phase lookup TKT-500f-5 adds. This AC's rule that a missing entry is treated exactly as is_ticket_phase: false lives at this lookup, not at the emission point."
   - path: config/agent_registry.json
     relationship: specifies
     status: exists
@@ -52,6 +57,19 @@ origin_agent: business-analyst
 created: 2026-06-18
 amended_by:
   - reason: "renamed TKT-500d-10-i -> TKT-500f-5-i in split of TKT-500d, 2026-06-18"
+  - reason: edit-surface-repoint
+    by: it-po
+    at: '2026-09-22'
+    note: 'Re-pointed off scripts/ac_store/generate_ticket_from_ac.py, which is now a
+      re-export shell with one real def. constrains is an edit-surface relationship, so
+      the bare entry fed files_touched and the generated ticket named the shell. Targets
+      re-derived from the criteria: this AC adds NO new helper — its whole point is that
+      the unknown-agent path must reuse TKT-500f-5''s shared helper rather than become a
+      second divergent branch — so the surface is the registry lookup (_gtfa_config.py,
+      where "no entry at all" is decided) and the emission point (_gtfa_agents_map.py).
+      NO shell entry is declared here, unlike parent TKT-500f-5: this AC introduces
+      nothing that would need re-exporting, so a touch of the shell from this AC would be
+      a real signal that the reuse constraint was violated. criteria untouched.'
 superseded_by: null
 covered_by: []
 implemented_by: []

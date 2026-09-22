@@ -34,10 +34,14 @@ doc_links:
     relationship: describes
     status: exists
     relevance: "The definition a produced plan is measured against on the ticket side, and the one that advertises a checker for these descriptions. The reconciliation must land before that checker exists — this AC's depends_on edge on BO-2900g-3 is that ordering."
-  - path: scripts/ac_store/generate_ticket_from_ac.py
+  - path: scripts/ac_store/_gtfa_tests_section.py
     relationship: describes
     status: exists
-    relevance: "The producer whose emitted shape satisfies neither definition today (6+ counts, 2026-08-14). This AC is what makes the emitted shape conform rather than the definitions bend to it."
+    relevance: "The producer whose emitted shape satisfies neither definition today (6+ counts, 2026-08-14). Holds the authored-test_spec emitter (_test_descriptors_from_spec / _spec_entry) and the single finalisation path (_build_test_requirements_section) that serialises the ## Test Requirements block. (Re-pointed 2026-09-22: scripts/ac_store/generate_ticket_from_ac.py is now a re-export shell; the implementation moved to the _gtfa_* siblings.)"
+  - path: scripts/ac_store/_gtfa_test_descriptors.py
+    relationship: describes
+    status: exists
+    relevance: "The SECOND descriptor-emitting path — the criteria-derived route (_derive_tests_from_criteria) and the reachability descriptor (_reachability_descriptor). n_location_rule 'all' means EVERY descriptor-emitting path, and after the decomposition those span two modules rather than one file; this entry keeps the declared edit surface complete."
   - path: docs/testing/test-angles.md
     relationship: describes
     status: exists
@@ -52,9 +56,9 @@ doc_links:
     relevance: "After BO-2900g-3 this is the single definition the emitted plan must validate against. Its test_spec item schema is additionalProperties: false, so a conforming emitted entry can carry no key the definition does not declare."
 assigned_agent: python-coder
 estimated_complexity: M
-declares_side_effect: true
+declares_side_effect: false
 it_requirements:
-  reference_file_path: "scripts/ac_store/generate_ticket_from_ac.py"
+  reference_file_path: "scripts/ac_store/_gtfa_tests_section.py"
   n_location_rule: "all"
   required_skills:
     - python-coder
@@ -78,7 +82,7 @@ it_requirements:
         description: "Required on a reachability descriptor. Holds either a named production entry point or the single unresolved sentinel, which is a CONFORMING value."
   constraints:
     - "ORDERING IS A HARD CONSTRAINT, NOT A PREFERENCE. This AC must not be started before BO-2900g-3 has landed. Making the producer conform to an unreconciled vocabulary bakes one of the two competing definitions into the emitted shape and turns the reconciliation from an edit into a breaking change. The depends_on edge on BO-2900g-3 must not be reversed or dropped."
-    - "The two routes must validate identically. The acceptance evidence is a single validation function applied to a criteria-derived plan and to an authored plan, producing the same verdict — not two route-specific validators that happen to agree. n_location_rule: 'all' means every descriptor-emitting path in the reference file, not one of them."
+    - "The two routes must validate identically. The acceptance evidence is a single validation function applied to a criteria-derived plan and to an authored plan, producing the same verdict — not two route-specific validators that happen to agree. n_location_rule: 'all' means EVERY descriptor-emitting path, not one of them. Since the 2026-09-14 generator decomposition those paths span TWO modules, both declared in doc_links: scripts/ac_store/_gtfa_tests_section.py (the authored-test_spec emitter _spec_entry / _test_descriptors_from_spec, plus the finalisation path _build_test_requirements_section) and scripts/ac_store/_gtfa_test_descriptors.py (the criteria-derived route _derive_tests_from_criteria and _reachability_descriptor). Treating reference_file_path as the whole surface would miss the criteria-derived half and leave ~80% of real plans non-conforming."
     - "The 'way in is not yet resolved' value must be one stable, named sentinel emitted from a single constant, and must be a CONFORMING value under the definition rather than an accepted violation. BP-1100g-2 hands that exact value to the doer to resolve and BP-1100g-4 must be able to distinguish it from a named entry point without parsing prose."
     - "Conformance must be established against the definition file read from disk, never against a re-statement of the enum in the producer or in the test. Reconciling the definitions and then measuring the producer against a copy re-creates the drift BO-2900g-3 exists to remove."
     - "Conformance of a DESCRIPTION to a vocabulary only. No gate, no block, no done-state consequence, and no statement about whether any proof was achieved (BO-2900a-2)."
@@ -135,6 +139,53 @@ amended_by:
 - action: approved
   agent: approve_acs
   date: '2026-08-17'
+- reason: derived-field-correction
+  by: it-po
+  at: '2026-09-22'
+  note: 'declares_side_effect corrected true -> false. THE AUTHORED SIDE WAS WRONG,
+    not the derivation. The operative test is whether a process that performs NO durable
+    write can satisfy the Then clause. Here it can: every clause asserts VOCABULARY
+    CONFORMANCE OF A DESCRIPTION — "every proof each plan requests uses a kind the
+    definition permits", "every proof ... carries the facts the definition requires",
+    "the two plans read the same way against the definition". A pure function that reads
+    two plans and a definition and returns a verdict satisfies all of it, writing
+    nothing. The record states its own boundary in the same terms: "Conformance of a
+    DESCRIPTION to a vocabulary. No gate, no block, no done-state consequence."
+
+    Contrast the two records that KEEP true and stay pinned. BO-2400g-4 requires a halt
+    to release its claims — satisfying it needs release_claim''s on-disk write, because
+    claim_build_set has already written work_status: in_progress into the AC YAML by the
+    time a review stop happens, so inaction leaves it there. BO-2400g-4-i requires
+    findings to be visible on the pull request itself. Neither is satisfiable by a pure
+    function; this one is. That is the material difference.
+
+    Adjudicated in docs/analysis/2026-09-21-declares-side-effect-five-record-audit.md.
+    The wrong value dates to the 2026-08-17 it-po pass, whose own note lists
+    declares_side_effect among the fields it added with "criteria untouched" — i.e. the
+    flag was attached to criteria that were never re-read against it. The BO-2900g-2-ii
+    allowlist was shrunk from five entries to two in the same change, because the
+    staleness test asserts every pinned id STILL disagrees. criteria untouched.'
+- reason: edit-surface-repoint
+  by: it-po
+  at: '2026-09-22'
+  note: 'reference_file_path re-pointed from scripts/ac_store/generate_ticket_from_ac.py
+    to scripts/ac_store/_gtfa_tests_section.py, the shell''s doc_links entry replaced by
+    _gtfa_tests_section.py, and _gtfa_test_descriptors.py added as a second declared
+    surface. The generator was decomposed into 22 _gtfa_* siblings; the shell now carries
+    exactly one real def plus a TYPE_CHECKING block, so declaring it as the edit surface
+    sends a coder to re-export assignments and makes a correct fix look like a touch of
+    an undeclared file to the phantom-done guards.
+
+    THE n_location_rule: "all" SUBTLETY. "all" is scoped to reference_file_path, which
+    names one module — but the descriptor-emitting paths now span two. Rather than
+    overload n_location_rule with prose, the second module is declared in doc_links and
+    the governing it_requirements constraint was rewritten to name BOTH modules
+    explicitly. A reader who takes reference_file_path as the whole surface would miss
+    the criteria-derived route and leave ~80% of real plans non-conforming.
+
+    DELIBERATELY LEFT: the test_spec reachability descriptor still invokes
+    `python scripts/ac_store/generate_ticket_from_ac.py --ac ...` — the real production
+    CLI entry point, which must stay the shell. criteria untouched.'
 superseded_by: null
 covered_by: []
 implemented_by: []

@@ -19,13 +19,18 @@ criteria: |
 depends_on:
   - BO-2000c
 doc_links:
-  - path: scripts/ac_store/generate_ticket_from_ac.py
+  - path: scripts/ac_store/_gtfa_files_touched.py
     relationship: modifies
     status: exists
+    relevance: "Holds _resolve_reference_patterns, which expands the it_requirements reference_pattern glob to the one concrete path. (Re-pointed 2026-09-22: scripts/ac_store/generate_ticket_from_ac.py is now a re-export shell with one real def; the implementation moved to the _gtfa_* siblings.)"
+  - path: scripts/ac_store/_gtfa_body.py
+    relationship: modifies
+    status: exists
+    relevance: "Holds _build_implementation_notes_section, which calls _gtfa_files_touched._resolve_reference_patterns before serialising it_requirements — this is where the resolved path actually reaches the ticket."
 assigned_agent: python-coder
 estimated_complexity: M
 it_requirements:
-  - "generate_ticket_from_ac.py must resolve the AC's reference_pattern to a concrete file path and emit the resolved path in Implementation Notes."
+  - "_gtfa_files_touched._resolve_reference_patterns must resolve the AC's reference_pattern to a concrete file path, and _gtfa_body._build_implementation_notes_section must emit that resolved path in Implementation Notes."
   - "Test coverage: given a reference_pattern that resolves to one file, assert the emitted section shows the concrete path and not the raw pattern."
 delivers_to:
   agent: workflow-architect
@@ -35,8 +40,59 @@ expects_from:
   contract: "The Implementation Notes emit path this AC populates"
 origin_agent: BrainCandy
 created: 2026-07-08
-amended_by: []
+amended_by:
+- reason: edit-surface-repoint
+  by: it-po
+  at: '2026-09-22'
+  note: 'doc_links re-pointed off scripts/ac_store/generate_ticket_from_ac.py at
+    relationship: modifies. That file is now a 386-line re-export shell carrying exactly
+    one real def (_sibling) plus a TYPE_CHECKING block; the implementation lives in 22
+    _gtfa_* siblings. Because modifies is an edit-surface relationship, it fed
+    files_touched directly — a generated ticket emitted files_touched:
+    [scripts/ac_store/generate_ticket_from_ac.py] and nothing else, sending a coder to a
+    file of re-export assignments. Worse, files_touched drives the surface the
+    phantom-done guards check, so a CORRECT fix touching the real sibling would have
+    read as touching an undeclared file. Targets re-derived from the criteria text, not
+    the filename: the resolver (_resolve_reference_patterns) is in _gtfa_files_touched.py
+    and the Implementation Notes emitter (_build_implementation_notes_section) is in
+    _gtfa_body.py, which calls it at _gtfa_body.py:107. criteria untouched.'
+- reason: test-contract
+  by: it-po
+  at: '2026-09-22'
+  note: 'Added test_spec. check-ac-schema refuses an approved, not-done, leaf code AC
+    with no test contract ("approved code AC must declare a test contract"). The error
+    offers "reclassify as non-code" as an escape, which would be a lie here:
+    assigned_agent is python-coder and the AC governs real generator behaviour.
+    Descriptors derived from the two Then clauses, one test per clause plus a
+    real-artifact check through the production CLI. The second clause needs its own test
+    because an implementation that emits the resolved path ALONGSIDE the raw pattern
+    satisfies clause 1 and fails the AC. criteria untouched.'
 superseded_by: null
 covered_by:
   - BO-2000c-3-i
 implemented_by: []
+test_spec:
+  - name: test_reference_pattern_is_emitted_as_a_resolved_concrete_path
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "First Then: an AC whose it_requirements names a reference file via a reference_pattern matching exactly one existing file produces an Implementation Notes section carrying that one concrete file path."
+  - name: test_unresolved_glob_is_absent_from_implementation_notes
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "Second Then, and the discriminating one: the raw glob/pattern string does not appear in place of the path. An implementation that emits the resolved path ALONGSIDE the unresolved pattern passes the first test and still fails the AC, so absence must be asserted separately."
+  - name: test_resolution_happens_before_it_requirements_are_serialised
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    angle: seam
+    description: "The seam between the two modules this AC edits: _gtfa_body._build_implementation_notes_section must call _gtfa_files_touched._resolve_reference_patterns BEFORE serialising it_requirements. Resolving after serialisation would leave the pattern in the emitted text while a direct unit test of the resolver stayed green."
+  - name: test_resolved_path_reaches_the_ticket_via_the_generator_cli
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    description: "PRODUCTION ENTRY POINT: run generate_ticket_from_ac.py against a real on-disk AC YAML authoring a reference_pattern, then read the Implementation Notes out of the ticket the CLI actually wrote and assert the concrete path is there. Guards against a fix that is correct in the helper but never reaches the emitted artifact."
