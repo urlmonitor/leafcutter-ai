@@ -172,6 +172,7 @@ flowchart TD
 - BO-1800a-4: Component diagram of the per-drive isolated-clone topology
 - BO-1800a-5: Sequence diagram of the drive create-run-remove lifecycle in an isolated clone
 - BO-1800b-4: Sequence diagram of the gated PR-to-merge-queue landing flow
+- BO-1800f-3: The delivery boundary is drawn as one sequence diagram whose branches match the criteria they depict
 - BO-1900a-3: Sequence diagram documents the read -> preflight -> spawn flow
 - BO-1900b-3: Sequence diagram documents the dispatch-time premise re-check
 - BO-2100a-5: Sequence diagram of the live-surface-tester dispatch path

@@ -1302,8 +1302,8 @@ async function writeTicketCompletion(recordPath, confirmedPhases) {
   return await agent(
     `Record the ticket at "${recordPath}" as complete in its own record. ` +
     `Every phase that ticket names as needed now carries a passing sign-off in the record itself, verified by reading it back: ${JSON.stringify(confirmedPhases)}. ` +
-    `Edit the ticket's frontmatter so that "status:" reads done. Change nothing else — do not touch the agents: map, the ## Sign-offs checklist, or the ## Comments section. ` +
-    `If the record cannot be written, return {"status": "error", "error": "<what went wrong>"} rather than reporting success. ` +
+    `Follow your own Closing protocol: write the finished state by invoking the checking mechanism exactly as it prescribes, python3 scripts/set_ticket_status.py --ticket "${recordPath}" --status done, with no additional flags and no override — never do this by any other route, and do not edit the ticket's record directly by any other means. ` +
+    `If the script exits non-zero, the ticket is NOT closed: return {"status": "error", "error": "<what the script reported>"} rather than reporting success. ` +
     `Return ONLY the JSON object: {"status": "ok"|"error", "ticket_path": "${recordPath}"}.`,
     {
       agentType: "status-checker",

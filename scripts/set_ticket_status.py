@@ -46,9 +46,22 @@ from typing import TypedDict
 # ---------------------------------------------------------------------------
 
 # Transitions allowed without --force
+#
+# ADR-047 Decision 4 / architect-review Risk 2 (BO-400e-3): ("todo", "done")
+# is included here rather than left force-only. Once the drivers' completion
+# write routes through this script instead of an unguarded direct frontmatter
+# edit, an ordinary ticket that never visited "in_progress" (the common case)
+# must still close without --force -- otherwise every such close would fail
+# for a lifecycle-allow-list reason having nothing to do with the parity
+# check, manufacturing pressure to reach for --force just to get an ordinary
+# close through. --force also disables the parity check, so leaning on it for
+# this case would recreate the lenient direct-edit branch behind a flag. This
+# is a data-table widening only; it must not be accompanied by a change to
+# the parity check below.
 ALLOWED_TRANSITIONS: frozenset[tuple[str, str]] = frozenset(
     {
         ("todo", "in_progress"),
+        ("todo", "done"),
         ("in_progress", "done"),
         ("in_progress", "todo"),
     }
@@ -57,7 +70,6 @@ ALLOWED_TRANSITIONS: frozenset[tuple[str, str]] = frozenset(
 # Additional transitions allowed only with --force
 FORCE_ALLOWED_TRANSITIONS: frozenset[tuple[str, str]] = frozenset(
     {
-        ("todo", "done"),
         ("done", "todo"),
         ("done", "in_progress"),
         ("inbox", "todo"),

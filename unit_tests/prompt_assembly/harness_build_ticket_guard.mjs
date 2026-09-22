@@ -196,6 +196,15 @@
  *   }
  */
 import { readFileSync, writeFileSync, existsSync, rmSync } from "node:fs";
+import { execFileSync } from "node:child_process";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+
+// BO-400e-3: the repo root, computed from THIS file's own location
+// (unit_tests/prompt_assembly/harness_build_ticket_guard.mjs is two levels
+// below the root), so runSetTicketStatusScript() below can find the real
+// scripts/set_ticket_status.py regardless of the caller's cwd.
+const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 
 const [scriptPath, scenarioArg] = process.argv.slice(2);
 
@@ -420,6 +429,48 @@ function appendSignoff(path, agentName, status) {
 }
 
 /**
+ * Flip a dispatched agent's OWN frontmatter `agents:` entry from `needed` to
+ * `signed_off` — the other half of a real sign-off (BO-400e-3 fixture
+ * repair). `appendSignoff()` above only ever appended the `## Comments`
+ * heading; a REAL dispatched phase agent, per build-feature.js's own
+ * documented contract at `selectDispatchableByStatus`'s header ("On success
+ * the agent SETS `signed_off` ... rather than find-replacing the literal
+ * `needed`"), flips BOTH the frontmatter entry and the `## Comments` heading
+ * as one atomic recipe (the `signoff` skill). That gap in this mock was
+ * harmless while the ticket-completion write was an unconditional direct
+ * frontmatter edit (setLifecycleStatus, pre-BO-400e-3): the write never
+ * consulted any individual agent's frontmatter value, only the driver's own
+ * in-memory record of who reported success. Now that the completion write is
+ * routed through `scripts/set_ticket_status.py`'s OWN independent,
+ * frontmatter-only parity check (`_get_needed_agents`), a fixture whose
+ * frontmatter still literally reads `needed` for every phase is correctly
+ * refused by the real script — exactly as ADR-047 predicts for a real ticket
+ * left in the same state.
+ *
+ * Only called for a phase whose sign-off is a real, recorded one
+ * (`spec.record !== false`) AND whose own reported status is a genuine
+ * success (`status === "ok"`) — a blocked/failed/handoff report must never
+ * mark the record's own agents map as satisfied, or an unresolved refusal
+ * would look done to the checking mechanism. No-op when the frontmatter
+ * names no entry for this agent at all, or the entry is not currently
+ * `needed` (e.g. `not_needed`, or already `signed_off`) — mirrors a real
+ * sign-off, which only ever flips an entry that already names the agent as
+ * owing work.
+ */
+function flipAgentSignedOff(path, agentName) {
+  if (!existsSync(path)) return false;
+  const text = readFileSync(path, "utf8");
+  const fmMatch = text.match(/^---\n([\s\S]*?)\n---/);
+  if (!fmMatch) return false;
+  let fm = fmMatch[1];
+  const existing = new RegExp(`^(\\s+)${agentName}:\\s*needed\\s*$`, "m");
+  if (!existing.test(fm)) return false;
+  fm = fm.replace(existing, `$1${agentName}: signed_off`);
+  writeFileSync(path, text.replace(fmMatch[0], `---\n${fm}\n---`), "utf8");
+  return true;
+}
+
+/**
  * Promote an agent to `needed` in the record's frontmatter agents map — what
  * architect-review really does when it concludes an ADR or diagram is required
  * (BO-3700). Adds the key when absent, flips it when present.
@@ -497,6 +548,36 @@ function setLifecycleStatus(path, newStatus) {
 
 function deleteRecord(path) {
   if (existsSync(path)) rmSync(path);
+}
+
+/**
+ * BO-400e-3: actually EXECUTE the real scripts/set_ticket_status.py against
+ * the real on-disk ticket record — this is the "checking mechanism" the AC
+ * names, invoked exactly as a status-checker agent that obeys the dispatch
+ * prompt's instruction would invoke it (python3 scripts/set_ticket_status.py
+ * --ticket <path> --status done [--force]). Distinct from setLifecycleStatus()
+ * above, which is the OLD, unguarded direct-edit route this AC closes: it
+ * flips the frontmatter unconditionally and can never refuse, so it cannot
+ * stand in for the mechanism in any test that needs a genuine refusal.
+ *
+ * Returns the script's real exit code and captured stdout/stderr so a test
+ * can attribute the write (or the refusal) to the mechanism itself, not to a
+ * status value either route could have produced.
+ */
+function runSetTicketStatusScript(ticketPath, force) {
+  const scriptPath = join(REPO_ROOT, "scripts", "set_ticket_status.py");
+  const args = [scriptPath, "--ticket", ticketPath, "--status", "done"];
+  if (force) args.push("--force");
+  try {
+    const stdout = execFileSync("python3", args, { encoding: "utf8" });
+    return { exit_code: 0, stdout, stderr: "" };
+  } catch (err) {
+    return {
+      exit_code: typeof err.status === "number" ? err.status : 1,
+      stdout: err.stdout ? String(err.stdout) : "",
+      stderr: err.stderr ? String(err.stderr) : String(err.message || err),
+    };
+  }
 }
 
 /** Longest ticket path that appears in the prompt (handles parallel epics). */
@@ -715,13 +796,58 @@ async function agent(prompt, opts = {}) {
       });
       return { status: "error", error: "no ticket path in completion-write prompt" };
     }
-    const outcome = setLifecycleStatus(ticketPath, "done");
+    // BO-400e-3: which route this write actually took, attributed from the
+    // dispatch prompt itself rather than assumed. "set_ticket_status.py" is
+    // the exact command templates/agents/status-checker.md's own closing
+    // protocol already names; a dispatch prompt that names it is a prompt an
+    // obedient status-checker agent would honour by running the real script.
+    // A prompt that does NOT name it is the pre-fix direct-edit instruction
+    // ("Edit the ticket's frontmatter so that..."), simulated exactly as
+    // before: an unconditional flip that can never refuse.
+    const promptText = String(prompt);
+    const namesMechanism = /set_ticket_status\.py/.test(promptText);
+    // BO-400e-3: a naive `/--force\b/` substring test cannot distinguish an
+    // instruction to USE the override from one that FORBIDS it -- the
+    // wording this AC and ADR-047 actually prescribe for the ordinary path
+    // is "...--status done. Do not pass --force", which contains the
+    // substring "--force" while meaning the opposite. Require --force to
+    // appear directly adjacent to the invocation's own --status done flag
+    // (the shape of an actual command line a status-checker would run), so
+    // prose that only NAMES --force to prohibit it does not register as a
+    // request to use it.
+    const requestsForce = /--status\s+"?done"?\s+--force\b/.test(promptText);
+
+    let outcome;
+    let scriptResult = null;
+    const mechanism = namesMechanism ? "script" : "direct-edit";
+    if (namesMechanism) {
+      scriptResult = runSetTicketStatusScript(ticketPath, requestsForce);
+      outcome =
+        scriptResult.exit_code === 0
+          ? { applied: true, error: null }
+          : { applied: false, error: (scriptResult.stdout + scriptResult.stderr).trim() || "set_ticket_status.py refused" };
+    } else {
+      outcome = setLifecycleStatus(ticketPath, "done");
+    }
+
     writes.push({
       label,
       ticket_path: ticketPath,
       applied: outcome.applied,
       error: outcome.error || null,
-      prompt_excerpt: String(prompt).slice(0, 300),
+      // Attribution fields (BO-400e-3) — what a test must key on, per this
+      // AC's own instruction not to assert a state value either route could
+      // have produced.
+      mechanism,
+      used_force: requestsForce,
+      script_exit_code: scriptResult ? scriptResult.exit_code : null,
+      script_stdout: scriptResult ? scriptResult.stdout : null,
+      prompt_excerpt: promptText.slice(0, 300),
+      // Full verbatim prompt (BO-400e-3) — the 300-char excerpt above can
+      // truncate before a mechanism-naming instruction that appears after a
+      // long absolute ticket path; a test that must assert on the FULL
+      // instruction text needs the whole string, not a prefix.
+      prompt: promptText,
     });
     return outcome.applied
       ? { status: "ok", ticket_path: ticketPath }
@@ -884,6 +1010,12 @@ async function agent(prompt, opts = {}) {
   // with record:false reports success and leaves nothing — BUG-23.
   if (spec.record !== false && ticketPath) {
     appendSignoff(ticketPath, label, status);
+    // BO-400e-3 fixture repair: a genuine success also flips the agent's OWN
+    // frontmatter entry to signed_off, mirroring the real signoff skill's
+    // atomic recipe (see flipAgentSignedOff() above). Gated on status === "ok"
+    // so a blocker/failed/handoff report never marks the record's own agents
+    // map as satisfied.
+    if (status === "ok") flipAgentSignedOff(ticketPath, label);
   }
 
   // BO-3700: a running phase promoting another agent to `needed` in the real

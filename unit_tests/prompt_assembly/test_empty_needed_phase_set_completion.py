@@ -51,6 +51,29 @@ tests run against both drivers via subTest.
 
 Every test EXECUTES a real driver through harness_build_ticket_guard.mjs and
 asserts on the ticket .md the run left on disk.
+
+BO-400e-3 UPDATE (single-writer close path). The pull-request-only-needed
+scenario above ("no amount of sign-off editing can undo it") was fixed at the
+DECISION layer: requiredPhasesForCompletion's deferredPhases correctly excludes
+pull-request for an epic member, so verdict.completed is still true. What
+changed is the WRITE layer. Before BO-400e-3 the completion write was an
+unconditional direct-frontmatter edit that never consulted any individual
+agent's value, so a stale `pull-request: needed` entry was silently ignored and
+the write always succeeded. Now the write is routed through
+scripts/set_ticket_status.py's own independent, frontmatter-only parity check
+(ADR-046/047, no exclusion parameter, by design), which correctly refuses a
+ticket whose record still literally names a phase it will never receive
+per-ticket — exactly the accepted trade-off ADR-047's Negative Consequences
+section documents: "a ticket whose record still names a phase it will never
+receive will halt at the close ... the remedy is to fix the record." The
+documented remedy already has an owner: BO-400c-4 (work_status: todo, not part
+of BO-400e-3) specifies that status-checker's close-out itself flips
+`pull-request: needed -> signed_off` before invoking the checking mechanism
+("per the existing epic convention: one PR per epic, not per ticket"). Until
+BO-400c-4 lands, a ticket whose frontmatter still literally reads
+`pull-request: needed` correctly halts rather than closing silently — see
+``test_a_member_whose_only_needed_phase_is_pull_request_is_not_stranded``
+below, updated to assert the new, correct refusal.
 """
 
 from __future__ import annotations
@@ -386,13 +409,35 @@ class TestEmptyNeededSetDoesNotBlockTheEpic(_EmptyNeededSetCase):
 
     def test_a_member_whose_only_needed_phase_is_pull_request_is_not_stranded(self):
         # covers: BO-400a-2-ii
-        """The route no operator can fix by hand.
+        # angle: boundary
+        """The completion DECISION defers pull-request; the completion WRITE
+        correctly refuses a stale record naming it, and names it (BO-400e-3).
 
         selectDispatchPhases drops pull-request for epic members (the single
         epic PR is opened by finalize-feature) BEFORE the empty-set check, so a
         member whose last needed phase is pull-request has an empty dispatch set
         by construction. requiredPhasesForCompletion already defers that phase,
-        so the completion decision has everything it needs — if it is reached.
+        so the completion DECISION (verdict.completed) is still true here, same
+        as before BO-400e-3.
+
+        (classification: test_drift — production now correctly implements
+        ADR-047's deliberately-accepted trade-off; this test asserted the
+        pre-BO-400e-3 promise that the WRITE would also silently succeed, and
+        is updated to match. See this file's module docstring "BO-400e-3
+        UPDATE" section for the full account, including BO-400c-4 as the
+        tracked, not-yet-built remedy that would flip pull-request to
+        signed_off during close-out and let this ticket close automatically
+        again.)
+
+        Before BO-400e-3 the completion write was an unconditional direct-
+        frontmatter edit that never consulted any individual agent's own
+        frontmatter value, so this ticket's stale `pull-request: needed` entry
+        was silently ignored and the write always succeeded. Now the write is
+        routed through scripts/set_ticket_status.py's own independent,
+        frontmatter-only parity check (ADR-046/047, no exclusion parameter by
+        design), which correctly refuses — and the refusal is ACTIONABLE: the
+        real script's own error names "pull-request" by name, exactly what
+        AC-5/AC-6 of BO-400e-3 require of every refusal.
         """
         worktree = self._worktree()
         phases = EPIC_GATES + ["pull-request"]
@@ -404,17 +449,30 @@ class TestEmptyNeededSetDoesNotBlockTheEpic(_EmptyNeededSetCase):
 
         self.assertEqual(
             H.read_record(ticket_path)["lifecycle_status"],
-            "done",
-            "the only phase this member still names as needed is pull-request, "
-            "which the driver itself defers to finalize-feature. It can never be "
-            "satisfied per ticket, so leaving the member not-done strands it "
-            f"permanently. Result: {_serialized(result)}",
+            "todo",
+            "the ticket's own record still literally names pull-request as "
+            "needed -- a phase this per-ticket close will never dispatch -- so "
+            "the single-writer checking mechanism (scripts/set_ticket_status.py, "
+            "ADR-046/047, no exclusion parameter) must refuse the close rather "
+            "than silently write done over a record that still says otherwise. "
+            f"Result: {_serialized(result)}",
         )
-        self.assertNotIn(
+        not_completed = _not_completed_entries(result)
+        self.assertIn(
             ticket_path,
-            [e.get("ticket_path") for e in _not_completed_entries(result)],
-            "a member held open solely by the deferred pull-request phase was "
-            f"counted as not completed. Result: {_serialized(result)}",
+            [e.get("ticket_path") for e in not_completed],
+            "a member whose record still literally names a phase it will never "
+            "receive per-ticket (pull-request) must be reported not completed "
+            f"now that the write is guarded, not silently absorbed. Result: "
+            f"{_serialized(result)}",
+        )
+        matching = [e for e in not_completed if e.get("ticket_path") == ticket_path]
+        self.assertTrue(
+            matching and _entry_names_a_phase(matching[0]),
+            "the refusal must be ACTIONABLE: the run's own report must name "
+            "'pull-request' (or another canonical phase) so an operator can fix "
+            "the record -- ADR-047's documented remedy -- rather than reporting "
+            f"only that the ticket failed. Entry: {matching}",
         )
 
     def test_every_incomplete_member_the_epic_reports_names_an_actionable_phase(self):

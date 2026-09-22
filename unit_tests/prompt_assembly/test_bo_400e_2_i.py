@@ -93,11 +93,22 @@ class TestControlTicketInTheSameRunIsWrittenFinished(unittest.TestCase):
         epic_path = os.path.join(worktree, epic_subdir)
         os.makedirs(epic_path, exist_ok=True)
 
+        # BO-400e-3 fixture repair: `agent_statuses` is set to match each
+        # ticket's own `seeded_signoffs` exactly -- a REAL phase that left a
+        # genuine sign-off entry also has its frontmatter `agents:` entry
+        # flipped to signed_off (the signoff skill's atomic recipe), so a
+        # fixture that only seeds the Comments heading without also flipping
+        # the frontmatter is not a realistic ticket record. This matters now
+        # that the completion write is routed through
+        # scripts/set_ticket_status.py's own independent, frontmatter-only
+        # parity check (`_get_needed_agents`), which the refused ticket's
+        # missing `commit` sign-off must still correctly leave at `needed`.
         refused_path = H.write_ticket_record(
             worktree,
             "01_refused.md",
             NINE_PHASES,
             title=f"{TICKET_TITLE} (refused)",
+            agent_statuses={agent: "signed_off" for agent in EIGHT_PHASES},
             seeded_signoffs=[(agent, "ok") for agent in EIGHT_PHASES],
             subdir=epic_subdir,
             extra_frontmatter={"source_ac": "BO-400e-2"},
@@ -107,6 +118,7 @@ class TestControlTicketInTheSameRunIsWrittenFinished(unittest.TestCase):
             "02_control.md",
             NINE_PHASES,
             title=f"{TICKET_TITLE} (control)",
+            agent_statuses={agent: "signed_off" for agent in NINE_PHASES},
             seeded_signoffs=[(agent, "ok") for agent in NINE_PHASES],
             subdir=epic_subdir,
             extra_frontmatter={"source_ac": "BO-400e-2"},
