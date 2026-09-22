@@ -305,7 +305,6 @@ _extract_local_paths = _gtfa_files_touched._extract_local_paths
 _extract_paths_from_prose = _gtfa_files_touched._extract_paths_from_prose
 _resolve_worktree_root_or_none = _gtfa_files_touched._resolve_worktree_root_or_none
 _is_real_prose_path = _gtfa_files_touched._is_real_prose_path
-_is_prose_path_negated = _gtfa_files_touched._is_prose_path_negated
 _paths_declared_non_edit_surface_only = (
     _gtfa_files_touched._paths_declared_non_edit_surface_only
 )

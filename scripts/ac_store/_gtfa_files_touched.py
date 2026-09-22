@@ -8,33 +8,22 @@ GOAL: Derive a generated ticket's ``files_touched`` list from what the AC
 BUSINESS CONTEXT: ``files_touched`` is the ticket's file-scope signal: it
     drives change-scope review and, per the repo's own phantom-done history, a
     wrong list is a direct phantom-done vector — an illustrative path quoted in
-    prose that lands in ``files_touched`` can block a whole epic drive, a real
-    surface dropped from it leaves the coder with no scope at all, and (per
-    KI-ACD-023's 2026-09-21 recurrence) a path the record explicitly says must
-    NOT be touched landing in the list is worse than either — it points a
-    reviewer straight at the file the record exists to protect.
-ARCHITECTURE: Four independent filters sit in front of the prose harvest, and
+    prose that lands in ``files_touched`` can block a whole epic drive, and a
+    real surface dropped from it leaves the coder with no scope at all.
+ARCHITECTURE: Three independent filters sit in front of the prose harvest, and
     the ordering between them is deliberate:
 
     1. Token detection (``_extract_paths_from_prose``) — shape only.
     2. Structured self-declaration (``_paths_declared_non_edit_surface_only``)
        — the record's own ``doc_links`` relationship enum wins over a prose
        repetition of the same path.
-    3. Explicit negation (``_is_prose_path_negated``) — a bullet that says
-       "not <path>" excludes that mention. This is the one filter that DOES
-       read a lexical cue rather than asking a pure shape/existence question,
-       and it is scoped as narrowly as possible for exactly that reason: see
-       its own docstring for why "not" within a short lookback, and nothing
-       broader, is the line drawn.
-    4. On-disk existence (``_is_real_prose_path``) — a directory is never an
+    3. On-disk existence (``_is_real_prose_path``) — a directory is never an
        edit surface, so this asks ``is_file()`` and not ``exists()``.
 
-    Filters 1, 2 and 4 ask a mechanical question of the token or the record's
-    structured fields, never of the sentence's intent, which is why a false
-    exclusion (the worse error) stays bounded for them. Filter 3 is a
-    deliberate, narrow exception to that rule — see its docstring for the
-    evidence and the bound. The worktree root used by filter 4 is reached
-    through ``_gtfa_seams`` so a patch on the shell redirects it.
+    None of the three reads English prose for authorial intent; each asks a
+    mechanical question, which is why a false exclusion (the worse error) stays
+    bounded. The worktree root used by filter 3 is reached through
+    ``_gtfa_seams`` so a patch on the shell redirects it.
 """
 
 from __future__ import annotations
@@ -42,7 +31,6 @@ from __future__ import annotations
 import glob as _glob
 import importlib
 import logging
-import re
 from pathlib import Path
 from typing import Any
 
@@ -271,73 +259,13 @@ def _paths_declared_non_edit_surface_only(doc_links: list[Any]) -> frozenset[str
     )
 
 
-#: How many words immediately before a path token are scanned for the literal
-#: word "not" (see :func:`_is_prose_path_negated`). Four words covers both
-#: KI-ACD-023 "populated but wrong" occurrences verbatim: "not scripts/build.py"
-#: (0 words between) and "NOT BY CREATING docs/reference/README.md" (2 words).
-_NEGATION_LOOKBACK_WORDS = 4
-
-
-def _is_prose_path_negated(bullet: str, token: str) -> bool:
-    """Return True when *token*'s mention in *bullet* is an explicit negation.
-
-    KI-ACD-023 (2026-09-21 recurrence, "populated but wrong"): an
-    ``it_requirements`` bullet naming a path in a "must not touch it" sense —
-    "Run THAT script only — not scripts/build.py, whose ... overwrites the
-    tracked docs/INDEX.md" (BO-1800f-4), "DISCOVERABILITY IS ESTABLISHED
-    THROUGH docs/INDEX.md, NOT BY CREATING docs/reference/README.md"
-    (same record) — had the negated path scraped into ``files_touched``
-    anyway, including once the very file the record exists to protect from
-    being touched.
-
-    This is a narrow, LEXICAL rule, not a semantic-intent reader: it fires
-    only when the literal word "not" appears within
-    :data:`_NEGATION_LOOKBACK_WORDS` words immediately before the token's
-    position in the bullet. It does not attempt to recognise "must not be
-    edited", "should be avoided", or any other negation phrasing elsewhere in
-    the sentence. That narrowness is deliberate and mirrors this module's
-    existing stance (see :func:`_is_real_prose_path`): a prior attempt at
-    reading authorial intent out of prose was rejected because it fired on no
-    cue in the real failing bullet while risking real surfaces elsewhere —
-    the risk this project accepts is a false INCLUSION, never a false
-    EXCLUSION. Anchoring on the specific word "not" immediately before the
-    token, rather than inferring intent from the surrounding clause, keeps
-    the false-exclusion risk bounded to sentences that are already
-    unambiguous in what they exclude.
-
-    A token that occurs more than once in *bullet* is treated as negated if
-    ANY occurrence is preceded by "not" within the window — a legitimate
-    edit-surface mention and a negated mention of the same path in one bullet
-    is not a shape seen in practice, and this conservative choice matches the
-    project's stated false-inclusion-over-false-exclusion preference only in
-    the direction actually evidenced (both known occurrences negate the
-    ONLY mention of the path in their bullet).
-
-    Args:
-        bullet: The full prose bullet string the token was extracted from.
-        token: The path token, as returned by :func:`_extract_paths_from_prose`.
-
-    Returns:
-        True when an occurrence of *token* in *bullet* is immediately preceded
-        (within the lookback window) by the word "not".
-    """
-    for match in re.finditer(re.escape(token), bullet):
-        preceding_words = bullet[: match.start()].split()
-        window = preceding_words[-_NEGATION_LOOKBACK_WORDS:]
-        if any(word.strip(".,;:()'\"").lower() == "not" for word in window):
-            return True
-    return False
-
-
 def _prose_edit_surface(it_req: list, suppressed: frozenset[str]) -> set[str]:
     """Harvest edit-surface paths from list-form (prose) ``it_requirements``.
 
     Each bullet is scanned for file path tokens, then each candidate token is
     gated on NOT being a path the record's own doc_links already declared
-    non-edit-surface (TKT-600a-2), on NOT being an explicitly negated mention
-    in its own bullet (KI-ACD-023 — see :func:`_is_prose_path_negated`), and
-    on on-disk existence (TKT-600a-1), so illustrative example paths,
-    self-contradicted paths, and explicitly protected paths never leak into
+    non-edit-surface (TKT-600a-2) and on on-disk existence (TKT-600a-1), so
+    illustrative example paths and self-contradicted paths never leak into
     ``files_touched``.
 
     Args:
@@ -354,8 +282,6 @@ def _prose_edit_surface(it_req: list, suppressed: frozenset[str]) -> set[str]:
         if isinstance(bullet, str):
             for path_token in _extract_paths_from_prose(bullet):
                 if path_token in suppressed:
-                    continue
-                if _is_prose_path_negated(bullet, path_token):
                     continue
                 if _is_real_prose_path(path_token, worktree_root):
                     paths.add(path_token)
@@ -377,10 +303,7 @@ def _build_files_touched(ac: dict[str, Any]) -> list[str]:
        ``scripts/goal_to_epic.py``) survives — AND further filtered to exclude
        any token the record's own ``doc_links`` has already declared as
        non-edit-surface and nowhere as an edit surface (TKT-600a-2): the
-       record's structured self-declaration wins over a prose repetition —
-       AND further filtered to exclude any token whose own bullet negates it
-       (KI-ACD-023, "not scripts/build.py", "NOT BY CREATING
-       docs/reference/README.md") via :func:`_is_prose_path_negated`.
+       record's structured self-declaration wins over a prose repetition.
     2. Paths from ``doc_links`` whose ``relationship`` is one of the edit-surface
        relationships defined in ``_EDIT_SURFACE_RELATIONSHIPS`` (``constrains``,
        ``creates``, ``implements``, ``modifies``, ``specifies``).
