@@ -122,6 +122,98 @@ via the `emit_event.py` script (non-blocking; failures are ignored).
 
 ---
 
+## §WSP — Workspace-Setup Permission Pre-flight
+
+**This section runs BEFORE the workflow is invoked, and before §PRR below.**
+It must complete before `Workflow(...)` is called. If it is skipped, the
+workflow has no way to establish whether the isolated-workspace setup step
+(fetch, branch-create, `git worktree add`) is permitted to run, and its own
+fail-closed guard will halt the run at Stage 0 (see "§WSP.3 — Fail-closed
+guard" below).
+
+### §WSP.1 — Why this runs here, not inside the workflow (ACD-2100b-5)
+
+The isolated-workspace setup step the workflow dispatches later runs
+repository-mutating shell commands. It must only ever be dispatched to an
+agent whose registered charter (`config/agent_registry.json`) grants
+`permits_shell: true`. Establishing that fact requires reading a local file
+-- but the E2 workflow engine (ADR-030) contextifies a workflow script's body
+with EXACTLY the injected globals `agent`, `parallel`, `pipeline`, `phase`,
+`log`, `args`, `workflow`, and `budget` -- no module loader and no filesystem
+primitive of any kind (canonical statement: `unit_tests/
+_workflow_engine_harness.py`'s docstring, "ENGINE FIDELITY" section). A
+workflow body physically cannot read `config/agent_registry.json` itself.
+
+This skill runs in the main agent loop, which has real Bash/Read access, so
+it performs the read here and passes the result into the workflow through
+`args` -- the only injected global that carries caller-supplied data.
+Precedent for a skill-invoked pre-flight script on this same surface: §PRR
+below already invokes `scripts/ac_store/scan_ac_orphans.py` by absolute path
+from this skill for the identical reason.
+
+### §WSP.2 — Running the pre-flight
+
+Resolve `scripts/worktree/check_workspace_setup_permission.py` to its
+repository-anchored, absolute, deployed location (the same resolution
+mechanism §PRR.2 and the workflow's own `resolveRepoAnchoredScriptPath()`
+use), then run it:
+
+```bash
+python3 <resolved-absolute-path>/scripts/worktree/check_workspace_setup_permission.py \
+    --agent-id <workspace_setup_agent, default "worktree-agent">
+```
+
+The script makes NO agent dispatch and NO network call -- it reads
+`config/agent_registry.json` locally, resolved repository-anchored (the same
+worktree-aware, `git rev-parse --git-common-dir`-based way ACD-2100a-1 /
+ACD-2100a-3 already established), so it reaches the project's real registry
+even when this skill is running from inside a linked git worktree that holds
+no `.leafcutter/` of its own. It always prints exactly one JSON object to
+stdout and exits 0 -- including when the verdict denies permission or the
+registry could not be read or parsed; a non-zero exit here means the
+invocation itself was malformed, not that the check ran and denied.
+
+The verdict's shape is `{"permits": bool, "outcome": "<str>", ...}`, where
+`outcome` is one of `granted`, `read_failure`, `parse_failure`,
+`agent_not_found`, `no_entries_collection`, `permission_denied` -- kept
+distinguishable from one another so the workflow can report the SAME
+specific facts ACD-2100b-1 through -3 require, rather than a single
+collapsed boolean.
+
+**Error handling:** if the script itself cannot be found or fails to run at
+all (as opposed to running and reporting a verdict), do NOT fabricate a
+permitted verdict. Proceed to invoke the workflow without
+`args.workspace_setup_permission` set -- its own fail-closed guard (§WSP.3)
+will halt the run with a report naming the missing pre-flight, which is the
+honest fact in that situation.
+
+### §WSP.3 — Passing the verdict into the workflow
+
+Pass the pre-flight's raw stdout JSON through VERBATIM as
+`args.workspace_setup_permission` when invoking the workflow -- never
+re-derive or re-shape it. The workflow reads this key and nothing else for
+this check: no dispatch, no filesystem access, and it fails closed (halts
+before any authoring agent is dispatched) whenever the key is absent, not an
+object, or has `permits !== true`.
+
+This is also the guard against the bypass a skill-only check would otherwise
+open: a caller who invokes the deployed workflow directly (for example
+`Workflow({scriptPath: '.leafcutter/workflows/plan-feature.js'})`, a real and
+currently-used invocation path that skips this skill's own pre-flight step)
+supplies no `args.workspace_setup_permission` at all, so the workflow halts
+with a report naming the MISSING pre-flight -- never a permission verdict it
+never established.
+
+### §WSP.4 — Performance Constraint
+
+The pre-flight is a single local file read (plus, on the happy path, one
+`git rev-parse` call to resolve the repository root) -- no network call and
+no agent dispatch. It must not add a per-run cost beyond that; this section
+exists to REMOVE the latency of the round-trip dispatch it replaces, not to
+reintroduce it elsewhere.
+
+---
+
 ## §PRR — Partial-Run Recovery Pre-flight
 
 **This section runs BEFORE Stage 0.** It must complete before any authoring
@@ -535,6 +627,78 @@ the branch detection succeeding.
 
 ---
 
+## §RS — Resuming a Paused Run (ACD-2100c-1 / ACD-2100c-4)
+
+### §RS.1 — What `paused_awaiting_input` means
+
+When a gate along the pipeline needs a decision no live answerer can supply,
+the workflow's terminal payload carries:
+
+```json
+{ "status": "paused_awaiting_input", "run_id": "<run>", "gate_id": "<gate>", "question": { ... } }
+```
+
+The run is waiting on **one specific decision**, identified by the pair
+`run_id` + `gate_id` — both are required to resume it. The drafted work up to
+that point is intact on disk: committed stages stay committed, and the
+decision the run is waiting on is not applied until a genuine answer arrives.
+
+**The `reason` field.** When present, `reason` explains WHY a supplied answer
+was **not applied** — for example the provenance refusal in §RS.3 below, or a
+`resume_answer.gate_id` that does not match the gate the run is actually
+paused at. `reason` only appears on a refused resume attempt; a fresh pause
+(nothing supplied yet) carries `question` instead. Surface `reason` verbatim
+to the person — do not summarize, reword, or drop it. Swallowing it is the
+KI-ACD-005 defect this AC exists to close: a run that refused an answer for
+provenance reasons must never be reported as one that "could not understand"
+the answer, because the answer was perfectly well formed.
+
+### §RS.2 — How to resume
+
+Re-invoke the workflow, passing the person's decision as `args.resume_answer`:
+
+```json
+{
+  "gate_id": "<the gate_id from the paused terminal payload>",
+  "type": "single_choice",
+  "action": "approve",
+  "channel": "person"
+}
+```
+
+- `gate_id` — must match the gate the run is actually paused at; `resolveGate()`
+  refuses a mismatch and the run stays paused.
+- `type` — matches the gate's own question type (`single_choice`,
+  `priority_choice`, `free_text`), read from `question.type` in the paused
+  payload.
+- `action` (or `choice`) — the decision itself: `approve` / `edit` / `cancel` /
+  `defer`, or the free-text/priority payload the gate's question asked for.
+- `channel` — the provenance marker; see the obligation below.
+
+### §RS.3 — The provenance obligation (binding on whoever constructs this object)
+
+Set `channel: "person"` **only** when the value in `action` is the decision
+the actual human running the route gave. Never set it to relay a guess, a
+default, a retry, or an answer an agent composed on the human's behalf —
+provenance must be a true fact about where the answer came from, not a label
+that makes the answer look accepted.
+
+`resolveGate()` treats any `channel` other than exactly `"person"` — including
+its absence — as a refusal, by design: the run stays at the decision point
+and stays waiting, the named choice is not carried out, and the terminal
+payload's `reason` names provenance rather than a shape or parse problem.
+**That is the intended behaviour, not a bug to work around.**
+
+Stamping `channel: "person"` on an answer the person did not actually give
+defeats the gate this AC exists to enforce, and is **prohibited** — it puts
+an agent's own guess in place of the human decision the gate exists to wait
+for. If you are not relaying a decision the person made in this session,
+omit `channel` (or leave any other value in it) and let the run keep waiting;
+do not synthesize `"person"` to get past a wait it is legitimately still
+owed.
+
+---
+
 ## Related
 
 - `templates/agents/ac-triage.md` — Haiku-pinned triage agent.
@@ -549,16 +713,46 @@ the branch detection succeeding.
 - `docs/architecture/diagrams/c2-002-ac-authoring-pipeline.md` — the authoring
   pipeline sequence diagram, updated to reflect the Partial-Run Recovery step.
 - `scripts/ac_store/scan_ac_orphans.py` — orphan detection script.
+- `scripts/worktree/check_workspace_setup_permission.py` — workspace-setup
+  permission pre-flight (§WSP), invoked by this skill before the workflow;
+  reads `config/agent_registry.json` locally and emits the verdict passed
+  through `args.workspace_setup_permission`.
+- `docs/architecture/adrs/ADR-030-dual-engine-workflow-support.md` —
+  documents the E2 injected-globals sandbox that forced §WSP out of the
+  workflow body and into this skill.
+- `docs/architecture/adrs/ADR-024-interactive-pause-resume.md` — the
+  pause-resume mechanism; `resolveGate()`/`pauseAtGate()` implement it, and
+  §RS documents the producer (skill/caller) side of the same contract.
 
 <!--
 ====================================================================
 DECISION HISTORY
 ====================================================================
+- 2026-09-14 [TICKET-20260826-ACD-2100c-4/llm-expert]:
+  Added §RS (Resuming a Paused Run) documenting the resume_answer contract's
+  skill-side half: what a `paused_awaiting_input` terminal payload means
+  (run_id/gate_id identify the wait; drafted work stays on disk; `reason`
+  explains a refused resume attempt and must be surfaced, never swallowed),
+  how to construct `args.resume_answer` (gate_id/type/action/channel), and
+  the provenance obligation on `channel: "person"` (set only when relaying
+  the actual human's own decision; never to relay a guess, default, retry,
+  or agent-composed answer — doing so defeats the ACD-2100c-4 gate in
+  templates/workflows-js/plan-feature.js's resolveGate() by design).
+  Before this ticket, `channel` had no producer anywhere in the skill/command
+  surface, so the accept path was unreachable from documented behaviour.
 - 2026-06-29 [TICKET-20260629-CompleteACD1100c-MigrateCreateAcToplanFeature/llm-expert]:
   Migrated §PRR (Partial-Run Recovery Pre-flight), §1–§3 (Stage Pipeline with
   Commit-Before-Next-Stage Invariant), and §MP (Main-Branch Invocation) from
   templates/skills/create-ac/SKILL.md into this canonical plan-feature surface.
   References in templates/skills/build-single-ticket/SKILL.md repointed to this file.
   create-ac/SKILL.md and directory to be deleted by python-coder.
+- 2026-09-07 [TICKET-20260826-ACD-2100b-5/python-coder]:
+  Added §WSP (Workspace-Setup Permission Pre-flight), running BEFORE §PRR and
+  before the workflow is invoked. Moves the workflow's Pre-Stage-0 workspace-
+  setup permission gate's registry read OUT of templates/workflows-js/
+  plan-feature.js's own body (which the E2 engine's ADR-030 sandbox makes
+  physically incapable of reading a local file) and into a new script this
+  skill runs directly: scripts/worktree/check_workspace_setup_permission.py.
+  The verdict crosses into the workflow through args.workspace_setup_permission.
 ====================================================================
 -->
