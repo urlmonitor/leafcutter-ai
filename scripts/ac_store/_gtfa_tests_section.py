@@ -17,6 +17,11 @@ ARCHITECTURE: Source-of-truth order is spec first, criteria second, and the
     stay the first key of each entry or
     ``check_ticket_test_requirements._TESTS_ENTRY_RE`` stops matching and the
     guard silently sees a block with no tests in it.
+
+    Whichever route produced the descriptors, the finalised plan is annotated
+    with the implementation files in scope (TKT-500f-6) via the shared helper
+    in ``_gtfa_impl_py`` — the single owner of that classification. The helper
+    is called, never re-implemented here.
 """
 
 from __future__ import annotations
@@ -36,6 +41,12 @@ _gtfa_constants = importlib.import_module(
 )
 _gtfa_test_descriptors = importlib.import_module(
     f"{_PKG}._gtfa_test_descriptors" if _PKG else "_gtfa_test_descriptors"
+)
+_gtfa_files_touched = importlib.import_module(
+    f"{_PKG}._gtfa_files_touched" if _PKG else "_gtfa_files_touched"
+)
+_gtfa_impl_py = importlib.import_module(
+    f"{_PKG}._gtfa_impl_py" if _PKG else "_gtfa_impl_py"
 )
 
 logger = logging.getLogger(_gtfa_seams.logger_name())
@@ -161,7 +172,34 @@ def _has_authored_test_spec(ac: AcRecord) -> bool:
     return isinstance(spec, list) and len(spec) > 0
 
 
-def _build_test_requirements_section(ac: AcRecord, ac_id: str) -> str:
+def _implementation_files_in_scope(
+    ac: AcRecord, implementation_files: "list[str] | None"
+) -> list[str]:
+    """Resolve the qualifying implementation files for *ac*.
+
+    Derives them from the AC's own ``files_touched`` when the caller did not
+    already compute them, so the two-argument call sites that predate
+    TKT-500f-6 keep working and cannot disagree with the caller that did.
+
+    Args:
+        ac: Parsed AC record.
+        implementation_files: Pre-computed qualifying paths, or ``None``.
+
+    Returns:
+        list[str]: The qualifying implementation paths, possibly empty.
+    """
+    if implementation_files is not None:
+        return implementation_files
+    return _gtfa_impl_py.qualifying_implementation_paths(
+        _gtfa_files_touched._build_files_touched(ac)
+    )
+
+
+def _build_test_requirements_section(
+    ac: AcRecord,
+    ac_id: str,
+    implementation_files: "list[str] | None" = None,
+) -> str:
     """Build the ## Test Requirements section, derived from the AC.
 
     Source-of-truth order:
@@ -174,9 +212,18 @@ def _build_test_requirements_section(ac: AcRecord, ac_id: str) -> str:
     only when the AC explicitly sets ``test_required: false`` (genuinely
     test-free), in which case the caller omits the section.
 
+    Every emitted stub is then annotated with the implementation files in scope
+    (TKT-500f-6), so a downstream reader can map each requirement to the
+    production surface it constrains rather than only to a derived unit-test
+    path. The annotation is a no-op when no implementation file qualifies.
+
     Args:
         ac: Parsed AC record.
         ac_id: The AC id.
+        implementation_files: Qualifying implementation paths, when the caller
+            has already classified ``files_touched``. ``None`` (the default)
+            re-derives them from *ac*, which is what the pre-TKT-500f-6
+            two-argument call sites do.
 
     Returns:
         Formatted ``## Test Requirements`` markdown block, or ``""`` when the AC
@@ -196,6 +243,13 @@ def _build_test_requirements_section(ac: AcRecord, ac_id: str) -> str:
     # appends exactly one sentinel entry otherwise (the authored-test_spec
     # route, which previously received no generator-added entries at all).
     descriptors = _ensure_reachability_floor(ac_id, descriptors)
+
+    # TKT-500f-6: name the production surface each stub applies to. Applied
+    # after the floor so every entry in the finalised plan carries it, and
+    # through the shared helper so this module never re-states the rule.
+    descriptors = _gtfa_impl_py.annotate_descriptors(
+        descriptors, _implementation_files_in_scope(ac, implementation_files)
+    )
 
     try:
         # sort_keys=False is REQUIRED: 'name' must stay the first key in each test

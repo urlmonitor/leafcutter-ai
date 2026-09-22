@@ -26,6 +26,7 @@ ARCHITECTURE: CLI script in scripts/ac_store/; called by the /build-ac workflow 
       _gtfa_components       component vocabulary resolution
       _gtfa_phases           location-keyed phase deferral (+ its two error types)
       _gtfa_files_touched    files_touched derivation
+      _gtfa_impl_py          the implementation-.py classification predicate
       _gtfa_store            AC-store and ticket lookup, parent resolution
       _gtfa_test_descriptors criteria-derived descriptors + the reachability floor
       _gtfa_tests_section    the ## Test Requirements block
@@ -131,6 +132,7 @@ if TYPE_CHECKING:  # pragma: no cover - a static declaration, never executed
     from . import _gtfa_doc_genre  # noqa: F401
     from . import _gtfa_files_touched  # noqa: F401
     from . import _gtfa_frontmatter  # noqa: F401
+    from . import _gtfa_impl_py  # noqa: F401
     from . import _gtfa_implemented_by  # noqa: F401
     from . import _gtfa_paths  # noqa: F401
     from . import _gtfa_phases  # noqa: F401
@@ -190,6 +192,7 @@ _gtfa_config = _sibling("_gtfa_config")
 _gtfa_components = _sibling("_gtfa_components")
 _gtfa_phases = _sibling("_gtfa_phases")
 _gtfa_files_touched = _sibling("_gtfa_files_touched")
+_gtfa_impl_py = _sibling("_gtfa_impl_py")
 _gtfa_store = _sibling("_gtfa_store")
 _gtfa_test_descriptors = _sibling("_gtfa_test_descriptors")
 _gtfa_tests_section = _sibling("_gtfa_tests_section")
@@ -309,6 +312,13 @@ _paths_declared_non_edit_surface_only = (
 )
 _build_files_touched = _gtfa_files_touched._build_files_touched
 _resolve_reference_patterns = _gtfa_files_touched._resolve_reference_patterns
+
+# The single owner of the "implementation .py in scope" predicate (TKT-500f-6).
+# Re-exported on the shell so both generators and any downstream reader reach
+# the SAME function rather than restating the rule.
+is_implementation_python_path = _gtfa_impl_py.is_implementation_python_path
+qualifying_implementation_paths = _gtfa_impl_py.qualifying_implementation_paths
+requires_test_requirements_section = _gtfa_impl_py.requires_test_requirements_section
 
 
 # ---------------------------------------------------------------------------

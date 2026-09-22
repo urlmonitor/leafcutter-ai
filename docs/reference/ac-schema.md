@@ -4,7 +4,7 @@ description: "Field-by-field reference for AC YAML files, the hierarchical ID fo
 type: reference
 status: active
 created: 2026-06-04
-last_updated: 2026-09-17
+last_updated: 2026-09-22
 components:
   - build_pipeline
 related_docs:
@@ -39,7 +39,7 @@ Each AC file is a single YAML document with the following fields.
 | `created_by_ticket` | string or null | no | Path to the ticket that introduced this criterion. Used by newer authoring flows (10 % of records) alongside `created`. |
 | `superseded_by` | string, list of strings, or null | no | AC ID of the replacement criterion. Null when not superseded. A list form (`[ID-1, ID-2]`) is accepted when an AC is split into multiple successors. Must be set when `status` is `superseded_by`; null otherwise. |
 | `amended_by` | list | no | Amendment history. Items may be plain strings (ticket paths or free-form notes) or objects with a `reason` key (structured records produced by agent workflows). Default: `[]`. |
-| `covered_by` | list of strings | no | Test file paths (optionally with `::test_function`) or **direct-child** AC IDs that verify or cover this criterion. Direct children only — never grandchildren or deeper descendants; see [covered_by — Scope Convention](#covered_by--scope-convention). Default: `[]`. |
+| `covered_by` | list of strings | no | Test file paths (optionally with `::test_function`) or **direct-child** AC IDs that verify or cover this criterion. Direct children only — never grandchildren or deeper descendants; see [ac-id-hierarchy.md § covered_by — Scope Convention](ac-id-hierarchy.md#covered_by--scope-convention). Default: `[]`. |
 | `implemented_by` | list of strings | no | Source file paths (optionally with `#anchor`) that implement this criterion. Default: `[]`. |
 | `depends_on` | list of strings or null | no | List of AC IDs that this AC depends on. Used for two purposes: (1) parent-child hierarchy links — a child AC lists its structural parent ID so the hierarchy is navigable from the child direction; (2) pattern composition — a composite pattern AC lists the atomic pattern AC IDs it wires together. **Must not form a cycle.** The `check_ac_circular_deps` pre-commit hook enforces a directed-acyclic-graph (DAG) invariant on all `depends_on` edges and blocks commits that would introduce a cycle. Default: `[]`. |
 | `origin_agent` | string | no | Identity of the agent or workflow that created this AC file. Free-form provenance string — any non-empty value is valid. The field is **not** validated against the current agent registry. Historical agent names (including names of deleted, renamed, or decomissioned agents) remain valid and are never rewritten during schema upgrades. Example values: `business-analyst` (canonical name, also used historically as v1 and promoted from v3), `business-analyst-v2` (deleted agent), `business-analyst-v3` (legacy v3 name, now renamed to `business-analyst`), `create-ticket` (deleted agent), `refinement` (deleted agent), `BrainCandy` (human author), `ticket-wiring` (workflow). |
@@ -169,136 +169,15 @@ origin_agent: business-analyst
 
 ---
 
-## ID Format and Assignment
+## ID Format, Hierarchy, and `covered_by` Scope
 
-AC IDs follow the pattern `PREFIX-NNN`, where `NNN` may be followed by
-optional hierarchical suffix segments. Compound prefixes (two uppercase
-groups joined by a hyphen, e.g. `KM-DBF`) are also accepted.
+Moved to **[ac-id-hierarchy.md](ac-id-hierarchy.md)**. That document is the
+reference for the AC identifier format and its full regex, the id-derived
+`derive_parent_id()` parent algorithm and the L0–L3 level table, and the
+direct-children scope rule that governs every `covered_by` list.
 
-| Part | Rules |
-|---|---|
-| `PREFIX` | 2–6 uppercase ASCII letters. Derived from the component's `prefix` field in `docs/acceptance-criteria/index.yaml`. May itself contain a hyphen-separated uppercase sub-group for compound namespaces (e.g. `KM-DBF`, `KM-KQS`). |
-| `-` | Literal hyphen separator. |
-| `NNN` | One or more digits (historically three zero-padded digits, e.g. `001`; the schema accepts any positive integer). |
-| Hierarchical suffix | Optional. See the Hierarchical AC IDs table below. |
-
-**Examples:** `FIN-001`, `AUTH-007`, `BP-042`, `ACS-100`, `KM-DBF-001`.
-
-**Assignment:** IDs are assigned at creation time and never reused. If an
-AC is deprecated, its ID remains reserved so that historical references
-(e.g. in commit messages or tickets) remain resolvable.
-
-**Full ID regex:** `^[A-Z]{2,6}(-[A-Z]{2,6})?-\d+([a-z]\d*(-\d+[a-z\d]*(-[a-z\d]+)?)?|-\d+[a-z\d]*(-[a-z\d]+)?)?$`
-
-This single regex covers all supported forms:
-
-| Form | Example | Matches |
-|---|---|---|
-| Root / base | `ACS-100`, `FIN-001` | `PREFIX-\d+` |
-| Compound-prefix root | `KM-DBF-001` | `PREFIX-SUB-\d+` |
-| L1 alpha | `ACS-100a`, `ACS-200d` | `PREFIX-\d+[a-z]` |
-| L1 alpha with digit suffix | `BP-800a2` | `PREFIX-\d+[a-z]\d+` |
-| L2 alpha-first | `ACS-500a-1` | `PREFIX-\d+[a-z]-\d+` |
-| L2 numeric-only (no alpha L1) | `BO-510-1`, `BO-610-3` | `PREFIX-\d+-\d+` |
-| L2 with trailing alpha | `ACS-300g-4a`, `PER-100d-2a` | `PREFIX-\d+[a-z]-\d+[a-z]` |
-| L3 alpha extension (alpha-first) | `ACS-500a-1-i`, `ACS-1100b-3-i` | `PREFIX-\d+[a-z]-\d+-[a-z]+` |
-| L3 alpha extension (numeric-only) | `BO-510-3-i`, `BO-610-4-i` | `PREFIX-\d+-\d+-[a-z]+` |
-| L3 numeric extension | `BO-300a-2-1`, `BP-900a-1-1` | `PREFIX-\d+[a-z]-\d+-\d+` |
-
-### Hierarchical AC IDs and Parent Derivation
-
-ACs form a hierarchy. Child ACs extend the root pattern with additional
-segments. The parent ID is derived from the child ID by stripping the last
-segment. This derivation is implemented in `scripts/ac_store/ac_parent_id.py`
-and is the canonical algorithm for all parent-child enforcement (pre-commit
-hooks, store-wide scans, agent auto-updates).
-
-| Level | Format | Example | Parent |
-|---|---|---|---|
-| L0 (root) | `PREFIX-NNN` | `ACS-100` | (none) |
-| L1 (alpha) | `PREFIX-NNNx` | `ACS-100a` | `ACS-100` |
-| L2 (numeric) | `PREFIX-NNNx-N` | `ACS-100a-1` | `ACS-100a` |
-| L3 (extension) | `PREFIX-NNNx-N-y` | `ACS-100a-1-i` | `ACS-100a-1` |
-
-**Derivation rules (ACS-100i-1):**
-
-1. If the ID matches `^[A-Z]{2,6}-[0-9]{3}$` (root pattern): no parent (`None`).
-2. If the ID matches `^[A-Z]{2,6}-[0-9]{3}[a-z]+$` (alpha suffix directly on the
-   numeric part, no hyphen): strip the trailing lowercase letters.
-   Example: `ACS-100a` → `ACS-100`.
-3. Otherwise: strip the last hyphen-delimited segment (everything after the final `-`).
-   Examples: `ACS-300h-1` → `ACS-300h`; `ACS-300h-2-i` → `ACS-300h-2`.
-
-Use `derive_parent_id(ac_id)` from `scripts/ac_store/ac_parent_id.py` rather than
-re-implementing this logic inline.
-
----
-
-## covered_by — Scope Convention
-
-**`covered_by` is a DIRECT-CHILDREN list, not a subtree list.**
-
-A parent AC lists its immediate children only. It does **not** list
-grandchildren or any deeper descendant. A descendant is reached by following
-the chain one link at a time: `L0.covered_by → L1.covered_by → L2.covered_by → L3`.
-
-```yaml
-# CORRECT — ACS-100 lists only its L1s
-id: ACS-100        # L0
-covered_by:
-  - ACS-100a       # L1 (direct child)
-  - ACS-100b       # L1 (direct child)
-
-id: ACS-100a       # L1
-covered_by:
-  - ACS-100a-1     # L2 (direct child)
-
-# WRONG — ACS-100a-1 is a grandchild of ACS-100 and must NOT appear here
-id: ACS-100
-covered_by:
-  - ACS-100a
-  - ACS-100a-1     # <-- remove; ACS-100a already carries this link
-```
-
-Alongside child AC IDs, a **leaf** AC's `covered_by` may hold test file paths
-(`unit_tests/test_x.py`, optionally `::test_function`). Mixing the two on one
-record is legal and occurs in the store today; only AC-ID entries are subject
-to the direct-children rule.
-
-### Why direct children — derived from tool behaviour, not preference
-
-This convention is not a style choice. Every tool that reads `covered_by`
-already assumes single-link semantics; a subtree list breaks or degrades each
-of them:
-
-| Tool | Behaviour | What it implies |
-|---|---|---|
-| `check_ac_parent_covered_by.py` (pre-commit, blocking) | For a staged child, computes `derive_parent_id(child_id)` and requires the child to appear in **that one record's** `covered_by`. It never inspects a grandparent. Its ACS-100i-3 decision entry states it explicitly: *"grandparent ACs are not required to list grandchildren directly"*, with six `TestThreeLevelAncestryChain` tests pinning that behaviour. | A grandchild entry satisfies nothing. It is dead weight the hook cannot read. |
-| `scan_ac_orphans.py` (store-wide scan) | `find_orphaned_children()` does the same single-hop check for **every** record on disk, at every level including L2→L3. | Same conclusion, applied store-wide: only the immediate parent's list can clear an orphan. |
-| `done_proof.py` `_resolve_all_child_ids()` | Flattens a composite to its leaves by **recursing** into each entry's own `covered_by`. The recursion is only well-formed if each level lists direct children; a subtree list makes the same descendant reachable by two paths (survivable only because of the `_seen` cycle guard). | The traversal is designed around direct-children lists. |
-| `approve_acs.py` | Iterates a goal AC's `covered_by` and treats **every entry as a leaf** to promote `reviewed → approved`. | A subtree list would sweep intermediate nodes into a leaf-only promotion. |
-| `check_ac_limits.py` | Counts children via `_derive_parent_id` ID-string derivation, deliberately **not** via `covered_by` (GE-106, so cross-links cannot game the caps). | `covered_by` carries no cap weight either way — so a subtree list buys nothing and only adds ambiguity. |
-
-The decisive asymmetry: under direct-children semantics every entry is
-load-bearing and machine-checkable. Under subtree semantics a grandchild entry
-is unverifiable — no tool requires it, no tool reads it, and no tool would
-notice if it went stale or named a record that no longer exists.
-
-### Consequences
-
-1. **Do not add a descendant to an ancestor's `covered_by`.** If you find one,
-   remove it — but first confirm the descendant's own immediate parent lists
-   it, so the link is preserved rather than lost.
-2. **Do not "repair" a missing grandchild link by promoting it upward.** The
-   repair is to add it to its immediate parent, which is the only record any
-   tool consults.
-3. **A record whose ID does not follow the canonical scheme above cannot be
-   linked structurally at all.** `derive_parent_id` is purely lexical, so a
-   child whose declared `depends_on` parent is not its ID-derived parent is
-   invisible to both the hook and the scan, in both directions. Prefer
-   canonical child IDs (`ACS-100a-1`, not a numeric sibling like `ACS-101`
-   standing in as a child of `ACS-100`) so the link the store records is the
-   link the tooling can see.
+Look there for the shape of an AC `id`, for which record a child must be listed
+in, and for why `covered_by` names direct children only.
 
 ---
 
@@ -651,6 +530,69 @@ are not blocked (they must be remediated separately).
 **Fail-open:** Any unexpected exception (I/O error, parse failure, missing AC
 store) causes the hook to exit `0` with a warning on stderr so a script error
 never hard-blocks an unrelated commit.
+
+---
+
+## Implementation `.py` in Scope — the Test Requirements signal (TKT-500f-6)
+
+**This section is normative.** It is the single statement of the rule, and both
+sides that apply it are kept in step against this text by SPEC PARITY — not by a
+shared import. One side is Python (`scripts/ac_store/_gtfa_impl_py.py`), the
+other is markdown prose (`templates/agents/ticket-supervisor.md`); there is no
+portable code path across that boundary, so if you change the rule you must
+change this section and BOTH sides in the same commit.
+
+### The predicate
+
+A `files_touched` entry is an **implementation `.py` in scope** when **all** of
+the following hold:
+
+1. it ends in `.py` (which also settles the `.yaml` / `.json` exclusion — a path
+   cannot end in two extensions at once);
+2. no directory component of it is `docs`;
+3. no directory component of it is `tickets`;
+4. its basename matches neither `test_*.py` nor `*_test.py`.
+
+### The signal
+
+Classification is **per entry**, and the section-required decision is a logical
+**OR** over the entries — *any* one qualifying entry obliges the section,
+regardless of how many documentation or configuration entries accompany it. It
+is never a unanimity check: `all(...)` where `any(...)` was meant passes the
+single-file case and the all-excluded case and fails only the mixed one.
+
+- **At least one qualifying entry** → the generated ticket carries a
+  `## Test Requirements` section, and every stub in it names the qualifying
+  implementation files under `implementation_files`. Its presence is the
+  authoritative signal that the test-writer phase is **required**.
+- **Entries present, none qualifying** → no `## Test Requirements` section, and
+  the omission is **silent**. It is the correct answer, not a degraded one; a
+  warning on every docs/config-only ticket is how a warning channel becomes
+  noise. Its absence is the authoritative signal that a test-writer skip is
+  **legitimate**.
+- **`files_touched` empty** → *no evidence either way*, not a No. The AC declared
+  no edit surface the generator could derive anything from, so the decision falls
+  back to the computed agent map's production-code classification (the signal
+  that governed the section before this predicate existed). Reading an empty list
+  as "no implementation file in scope" would strip the section from 769 of the
+  1,100 coder-assigned records with no authored `test_spec` in the real store
+  (measured 2026-09-21). An unnecessary section is noise; a silently withheld one
+  skips test-writer, which is the strictly worse error.
+
+An it-po-authored `test_spec` is an **independent** ground for the section and is
+unaffected by this predicate (see `TKT-500g-1`); `test_required: false` outranks
+both.
+
+### Where it is implemented
+
+`is_implementation_python_path` in `scripts/ac_store/_gtfa_impl_py.py` is the
+**only** implementation of the predicate in the repository. Both AC-to-ticket
+generators reach it: the direct path (`generate_ticket_from_ac.py`, via
+`_gtfa_body` and `_gtfa_tests_section`) and the goal path
+(`scripts/ac_store/epic_tickets.py`, which delegates to that same script as a
+subprocess). Do not inline or duplicate it in either —
+`unit_tests/ac_store/test_tkt_500f_6_iii_a.py` fails on a second implementation
+as well as on none.
 
 ---
 

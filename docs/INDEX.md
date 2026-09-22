@@ -158,6 +158,7 @@ task, then pull only those files.
 
 | Name | Path | Description |
 |------|------|-------------|
+| ac id hierarchy | [docs/reference/ac-id-hierarchy.md](docs/reference/ac-id-hierarchy.md) | Lookup reference for the AC identifier format and full regex, the id-derived parent algorithm, and the direct-children scope rule that governs every covered_by list in the AC store. |
 | ac schema | [docs/reference/ac-schema.md](docs/reference/ac-schema.md) | Field-by-field reference for AC YAML files, the hierarchical ID format and parent derivation algorithm, status lifecycle, and pre-commit hooks that enforce the AC store at commit time. |
 | agent teams constraints | [docs/reference/agent-teams-constraints.md](docs/reference/agent-teams-constraints.md) | Reference: Claude Code Agent Teams Constraints |
 | agent template frontmatter | [docs/reference/agent-template-frontmatter.md](docs/reference/agent-template-frontmatter.md) | Overview of Reference: Agent Template Frontmatter Fields. |

@@ -65,7 +65,7 @@ AC_STORE_DEPLOY_MAP: tuple[tuple[str, str], ...] = (
     ("scripts/ac_store/scan_ac_store.py",            "scan_ac_store.py"),
     ("scripts/ac_store/generate_ticket_from_ac.py",  "generate_ticket_from_ac.py"),
     ("scripts/ac_store/_component_migration_map.py", "_component_migration_map.py"),
-    # generate_ticket_from_ac.py's 22 _gtfa_* siblings. The 4035-line original
+    # generate_ticket_from_ac.py's 23 _gtfa_* siblings. The 4035-line original
     # was split to clear the 400-line size gate; what remains at that path is a
     # 386-line re-export shell that is USELESS without every one of these. Omit
     # one and the deployed generator dies at import -- loudly, unlike the
@@ -93,6 +93,13 @@ AC_STORE_DEPLOY_MAP: tuple[tuple[str, str], ...] = (
     ("scripts/ac_store/_gtfa_doc_genre.py",           "_gtfa_doc_genre.py"),
     ("scripts/ac_store/_gtfa_files_touched.py",       "_gtfa_files_touched.py"),
     ("scripts/ac_store/_gtfa_frontmatter.py",         "_gtfa_frontmatter.py"),
+    # _gtfa_impl_py.py owns the "implementation .py in scope" predicate that
+    # gates the generated ticket's ## Test Requirements section (TKT-500f-6).
+    # _gtfa_body.py and _gtfa_tests_section.py import it at MODULE scope, so
+    # omitting it here ships a generator that dies at import with
+    # ModuleNotFoundError in the deployed layout while every unit test --
+    # importing from source -- stays green.
+    ("scripts/ac_store/_gtfa_impl_py.py",             "_gtfa_impl_py.py"),
     ("scripts/ac_store/_gtfa_implemented_by.py",      "_gtfa_implemented_by.py"),
     ("scripts/ac_store/_gtfa_paths.py",               "_gtfa_paths.py"),
     ("scripts/ac_store/_gtfa_phases.py",              "_gtfa_phases.py"),
