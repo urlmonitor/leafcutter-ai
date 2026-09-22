@@ -29,6 +29,20 @@ ARCHITECTURE: Each function is self-contained and safe to import independently.
     table install_shims() uses to create the shims — so a new deploy
     phase or a new shim entry extends coverage on both sides without a
     separate edit here.
+
+    ADR-041 Decision §3 (BP-1500g-1): the removal/claim reconciliation
+    check in ``build.py``'s ``main()`` must be assembled from ALL of the
+    claim tables named in the ADR's Context §4, not just ``shim_map`` --
+    which requires ``file_shims`` (previously a local variable inside
+    ``install_shims()``, holding the single-file shims
+    ``.pre-commit-config.yaml`` and ``.claude/settings.json``) to be
+    promoted to module scope so it is importable, reconcilable, and
+    testable. This is explicitly not incidental tidying (see the ADR's
+    Consequences/Negative). ``build_ownership.assemble_claim_set`` is what
+    combines it with ``shim_map`` into the full claim set ``build.py``
+    passes around -- kept in ``build_ownership`` rather than here so that
+    module never needs to import back from this one (it already imports
+    ``resolve_shim_ownership_veto`` the other way).
 """
 
 from __future__ import annotations
@@ -37,17 +51,17 @@ import hashlib
 import importlib.util
 import json
 import os
-import shutil
-import subprocess
 import sys
 from pathlib import Path
 from typing import Any
 
 from build_colors import dry_run as _dry_run
-from build_colors import error as _error
 from build_colors import info as _info
 from build_colors import success as _success
 from build_colors import warn as _warn
+from build_ownership import resolve_shim_ownership_veto, _create_shim, _create_file_shim
+from build_shim_probe import resolve_effective_shim_strategy
+from build_precommit_install import install_hooks  # noqa: F401 — re-exported for build.py's existing import
 
 # ---------------------------------------------------------------------------
 # Canonical (shimmed) output directory table — the SINGLE source of truth for
@@ -94,6 +108,10 @@ shim_map: list[tuple[str, str]] = [
 _OUTPUT_REL_TO_CANONICAL: dict[str, str] = {
     output_rel: canonical_rel for canonical_rel, output_rel in shim_map
 }
+file_shims: list[tuple[str, str]] = [  # File claim set (see module docstring).
+    (".pre-commit-config.yaml", "pre-commit-config.yaml"),
+    (".claude/settings.json", "settings.json"),
+]
 
 
 def _load_build_phases_module(package_root: Path):
@@ -1392,6 +1410,33 @@ def install_shims(
     - ``"copy"``: always use file copies (safe on all platforms).
     - ``"auto"`` (default): try symlinks first, fall back to copies on error.
 
+    ADR-041 review (second round): the declared ``config["shim_strategy"]``
+    is resolved through ``build_shim_probe.resolve_effective_shim_strategy``
+    before use here, exactly as ``build.py``'s ``main()`` already does for
+    its removal-side ownership decisions -- a real, disposable symlink probe,
+    not the declared string, so under ``"auto"`` this function's own veto
+    (``resolve_shim_ownership_veto``) and pre-removal guard (below) agree
+    with what THIS run can actually do, even after a genuine symlink failure
+    has degraded it to copies. Before this fix the two sides disagreed:
+    the claim side kept believing "auto" meant symlinks long after a real
+    failure proved otherwise, vetoing this build's own prior (degraded)
+    output as if it were foreign content.
+
+    ADR-041 review defect 2b: the directory-shim loop's pre-removal step
+    does NOT ``shutil.rmtree()`` an existing canonical directory when
+    *strategy* is ``"copy"`` (unlike symlink/auto, where an existing
+    directory is removed before the shim is created). Under copy strategy
+    the canonical directory can hold BOTH this build's own previously-
+    copied files AND genuine adopter content placed inside it -- a
+    co-claimed container is never the unit of removal (ADR-041 §2).
+    Pre-removing it wholesale used to destroy the latter before
+    ``_create_shim``'s ``shutil.copytree(source, canonical,
+    dirs_exist_ok=True)`` could merge the former back in. No pre-removal is
+    needed under copy strategy at all: that ``copytree`` call merges the
+    package's own current files in by name and never deletes a name it
+    doesn't overwrite, so anything genuinely adopter-owned inside the
+    container survives untouched.
+
     Args:
         target_root: Absolute path to the target project root.
         output_root: Absolute path to the consolidated output directory
@@ -1406,8 +1451,7 @@ def install_shims(
     """
     if config is None:
         config = {}
-
-    strategy = config.get("shim_strategy", "auto")
+    strategy = resolve_effective_shim_strategy(config.get("shim_strategy", "auto"), target_root)
     if output_root is None:
         output_root = target_root / config.get("output_root", ".leafcutter")
 
@@ -1426,6 +1470,14 @@ def install_shims(
             continue
 
         if canonical_path.exists() or canonical_path.is_symlink():
+            # BP-1500g-1: the ownership veto only applies when the build is
+            # about to replace the path with a symlink (see
+            # resolve_shim_ownership_veto's docstring for the "copy"
+            # strategy carve-out).
+            veto = resolve_shim_ownership_veto(canonical_path, strategy, canonical_rel, output_rel)
+            if veto is not None:
+                results.append(veto)
+                continue
             if not force:
                 results.append({
                     "canonical": canonical_rel,
@@ -1434,11 +1486,15 @@ def install_shims(
                 })
                 continue
             if not dry_run:
-                if canonical_path.is_symlink() or canonical_path.is_file():
-                    canonical_path.unlink()
-                elif canonical_path.is_dir():
-                    import shutil
-                    shutil.rmtree(canonical_path)
+                try:
+                    if canonical_path.is_symlink() or canonical_path.is_file():
+                        canonical_path.unlink()
+                    elif canonical_path.is_dir() and strategy != "copy":  # ADR-041 2b
+                        import shutil
+                        shutil.rmtree(canonical_path)
+                except OSError as exc:
+                    _warn(f"Failed to remove {canonical_path} before shim install: {exc}")
+                    raise
 
         if dry_run:
             method = "symlink" if strategy != "copy" else "copy"
@@ -1459,13 +1515,7 @@ def install_shims(
         })
         _info(f"shim: {canonical_rel} -> {output_rel} ({method})")
 
-    # Single-file shims (these are files, not directories)
-    file_shims: list[tuple[str, str]] = [
-        (".pre-commit-config.yaml", "pre-commit-config.yaml"),
-        (".claude/settings.json", "settings.json"),
-    ]
-
-    for canonical_rel, output_rel in file_shims:
+    for canonical_rel, output_rel in file_shims:  # single-file shims
         canonical_path = target_root / canonical_rel
         source_path = output_root / output_rel
 
@@ -1473,6 +1523,12 @@ def install_shims(
             continue
 
         if canonical_path.exists() or canonical_path.is_symlink():
+            veto = resolve_shim_ownership_veto(
+                canonical_path, strategy, canonical_rel, output_rel, kind="file"
+            )
+            if veto is not None:
+                results.append(veto)
+                continue
             if not force:
                 results.append({
                     "canonical": canonical_rel,
@@ -1481,7 +1537,11 @@ def install_shims(
                 })
                 continue
             if not dry_run:
-                canonical_path.unlink()
+                try:
+                    canonical_path.unlink()
+                except OSError as exc:
+                    _warn(f"Failed to remove {canonical_path} before shim install: {exc}")
+                    raise
 
         if dry_run:
             method = "symlink" if strategy != "copy" else "copy"
@@ -1505,237 +1565,15 @@ def install_shims(
     return results
 
 
-def _relative_symlink_target(canonical: Path, source: Path) -> str:
-    """Return the symlink target to record for ``canonical`` -> ``source``.
-
-    Computed relative to ``canonical``'s own parent directory (ADR-004 /
-    ADR-016) — not the process's working directory — so a rebuild from any
-    cwd, and a relocation/copy of the whole tree, still resolves. Falls back
-    to an absolute target when no relative path can be expressed (e.g. the
-    canonical location and the output root sit on different drives/mounts
-    with no common ancestor); the caller still completes in that case.
-
-    Args:
-        canonical: Absolute path where the shim link will be created.
-        source: Absolute path inside the output root the link must resolve to.
-
-    Returns:
-        The string to pass to ``Path.symlink_to()`` — a relative path when
-        one can be expressed, otherwise the absolute ``source`` path.
-    """
-    try:
-        return os.path.relpath(str(source), str(canonical.parent))
-    except ValueError:
-        return str(source)
-
-
-def _create_shim(canonical: Path, source: Path, strategy: str) -> str:
-    """Create a directory shim (symlink or copy) at canonical pointing to source.
-
-    Args:
-        canonical: Absolute path where the shim is created (e.g. `.claude/agents`).
-        source: Absolute path inside the output root the shim must resolve to.
-        strategy: ``"symlink"``, ``"copy"``, or ``"auto"`` (see ``install_shims``).
-
-    Returns:
-        The method used: ``"symlink"``, ``"copy"``, or ``"copy (symlink failed)"``.
-    """
-    import shutil
-
-    if strategy == "copy":
-        shutil.copytree(source, canonical, dirs_exist_ok=True)
-        return "copy"
-
-    target = _relative_symlink_target(canonical, source)
-    try:
-        canonical.symlink_to(target, target_is_directory=True)
-    except (OSError, PermissionError):
-        if strategy == "symlink":
-            raise
-        shutil.copytree(source, canonical, dirs_exist_ok=True)
-        return "copy (symlink failed)"
-    else:
-        return "symlink"
-
-
-def _create_file_shim(canonical: Path, source: Path, strategy: str) -> str:
-    """Create a file shim (symlink or copy) at canonical pointing to source.
-
-    Args:
-        canonical: Absolute path where the shim is created (e.g. `.gemini`).
-        source: Absolute path inside the output root the shim must resolve to.
-        strategy: ``"symlink"``, ``"copy"``, or ``"auto"`` (see ``install_shims``).
-
-    Returns:
-        The method used: ``"symlink"``, ``"copy"``, or ``"copy (symlink failed)"``.
-    """
-    import shutil
-
-    if strategy == "copy":
-        shutil.copy2(source, canonical)
-        return "copy"
-
-    target = _relative_symlink_target(canonical, source)
-    try:
-        canonical.symlink_to(target)
-    except (OSError, PermissionError):
-        if strategy == "symlink":
-            raise
-        shutil.copy2(source, canonical)
-        return "copy (symlink failed)"
-    else:
-        return "symlink"
-
-
-def _resolve_precommit_cmd():
-    """Return the command list to invoke pre-commit, or None if unavailable.
-
-    Three-tier detection:
-    1. ``shutil.which("pre-commit")`` — binary on PATH.
-    2. ``importlib.util.find_spec("pre_commit")`` — installed as a Python
-       package in the same environment running build.py (handles the common
-       case where pip installed it but the Scripts/ dir isn't on PATH).
-    3. Probe known pip/pipx install locations — handles non-interactive shells
-       where ~/.local/bin or Scripts/ aren't in PATH.
-    """
-    if shutil.which("pre-commit"):
-        return ["pre-commit"]
-    if importlib.util.find_spec("pre_commit"):
-        return [sys.executable, "-m", "pre_commit"]
-    for candidate in _precommit_known_paths():
-        if not candidate.is_file():
-            continue
-        try:
-            probe = subprocess.run(
-                [str(candidate), "--version"],
-                capture_output=True,
-                timeout=5,
-            )
-            if probe.returncode == 0:
-                return [str(candidate)]
-        except (OSError, subprocess.TimeoutExpired):
-            continue
-    return None
-
-
-def _precommit_known_paths():
-    """Yield common install locations for the pre-commit binary."""
-    home = Path.home()
-    yield home / ".local" / "bin" / "pre-commit"
-    exe_dir = Path(sys.executable).parent
-    yield exe_dir / "pre-commit"
-    if sys.platform == "win32":
-        yield exe_dir / "Scripts" / "pre-commit.exe"
-    else:
-        yield exe_dir / "Scripts" / "pre-commit"
-
-
-def install_hooks(target_root, dry_run=False):
-    """Run ``pre-commit install`` after build.py writes .pre-commit-config.yaml.
-
-    Closes the "last mile" gap: the generated config exists on disk but
-    ``pre-commit install`` must be run to wire ``.git/hooks/pre-commit`` to it.
-    This function is idempotent — calling it multiple times on the same project
-    is safe.
-
-    Args:
-        target_root: Absolute path to the target project root.
-        dry_run: When True, prints the action but does not run any subprocess.
-
-    Returns:
-        One of "installed", "dry-run", "failed",
-        "skipped (pre-commit not found)", "skipped (custom hooksPath)",
-        or "skipped (not a git repo)".
-    """
-    # 1. Resolve pre-commit binary (PATH lookup, then Python module fallback).
-    precommit_cmd = _resolve_precommit_cmd()
-    if precommit_cmd is None:
-        _warn("pre-commit not found; skipping hook install")
-        _info("         Pre-commit runs code-quality checks automatically before")
-        _info("         each commit. Install it with:")
-        _info("")
-        _info("           pip install pre-commit")
-        _info("")
-        _info("         Then re-run this build to complete hook setup.")
-        return "skipped (pre-commit not found)"
-
-    # 2. Dry-run guard (before any subprocess calls that mutate state).
-    if dry_run:
-        _dry_run("would run pre-commit install")
-        return "dry-run"
-
-    # 3. Check core.hooksPath git config.
-    try:
-        hooks_path_result = subprocess.run(
-            ["git", "-C", str(target_root), "config", "--get", "core.hooksPath"],
-            capture_output=True,
-            text=True,
-        )
-    except OSError as exc:
-        # git binary not found — degrade safely rather than hard-failing.
-        _warn(f"hooks: could not read core.hooksPath (git not found): {exc}")
-        hooks_path_result = None
-    if hooks_path_result is not None and hooks_path_result.returncode == 0:
-        hooks_path_value = hooks_path_result.stdout.strip()
-        default_hooks = Path(target_root) / ".git" / "hooks"
-        is_default = (
-            hooks_path_value.lower() in (".git/hooks", ".git\\hooks")
-            or Path(hooks_path_value).resolve() == default_hooks.resolve()
-        )
-        if is_default:
-            try:
-                subprocess.run(
-                    ["git", "-C", str(target_root), "config", "--unset", "core.hooksPath"],
-                    capture_output=True,
-                )
-            except OSError as exc:
-                _warn(f"hooks: could not unset core.hooksPath (git not found): {exc}")
-            else:
-                _info("hooks: cleared redundant core.hooksPath (.git/hooks)")
-        elif hooks_path_value:
-            _warn(
-                f"core.hooksPath is set to '{hooks_path_value}' "
-                "(non-default); skipping pre-commit install"
-            )
-            return "skipped (custom hooksPath)"
-
-    # 3.5. Guard: verify target_root is inside a git working tree.
-    # Using `git rev-parse --git-dir` is more robust than checking for a .git
-    # directory directly: it also handles worktrees and nested repos correctly.
-    try:
-        git_check = subprocess.run(
-            ["git", "-C", str(target_root), "rev-parse", "--git-dir"],
-            capture_output=True,
-        )
-    except OSError as exc:
-        # git binary not found — degrade safely rather than hard-failing.
-        _warn(f"hooks: could not verify git repo (git not found): {exc}")
-        git_check = None
-
-    if git_check is not None and git_check.returncode != 0:
-        _info("hooks: skipping pre-commit install (target is not a git repo)")
-        return "skipped (not a git repo)"
-
-    # 4. Run pre-commit install.
-    try:
-        subprocess.run(
-            [*precommit_cmd, "install"],
-            cwd=str(target_root),
-            check=True,
-            capture_output=True,
-        )
-    except subprocess.CalledProcessError as exc:
-        stderr = exc.stderr.decode("utf-8", errors="replace") if exc.stderr else ""
-        _error(f"pre-commit install failed: {stderr.strip()}")
-        return "failed"
-
-    _success("hooks: pre-commit install OK")
-    return "installed"
+# _relative_symlink_target, _create_shim, _create_file_shim moved to
+# build_ownership.py (headroom pass, ADR-041 review -- see that module's
+# decision history). Imported below, unchanged in behaviour.
 
 
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-09-14 [python-coder]: ADR-041 fixes -- see build_ownership.py. (#BP-1500g-1)
 # - 2026-08-26 [python-coder/EPIC-BuildPipelinePhantomRemediation, adversarial
 #   review round 2, B-1(b)]: Every per-file existence gate this round added to
 #   _compute_output_mappings() (phase_mappings, skills, direct-output
@@ -1964,4 +1802,15 @@ def install_hooks(target_root, dry_run=False):
 #   position left truthful but the template account emptied, both fall
 #   through to the pre-existing `verified == 0` floor (BP-100k-3/B-1(a)) and
 #   are correctly reported as not clean rather than as an absence.
+# - 2026-09-14 [python-coder]: Moved owns_installed_path to the new
+#   build_ownership.py (ADR-041) so this file shrinks back under the
+#   check-file-size ratchet; install_shims' two loops now share a
+#   deduplicated resolve_shim_ownership_veto() there instead of repeating
+#   the ownership-check block. Pure move, no behaviour change.
+#   (#BP-1500g-1/extract)
+# - 2026-09-14 [python-coder]: Moved install_hooks, _resolve_precommit_cmd,
+#   and _precommit_known_paths to the new build_precommit_install.py so this
+#   file shrinks further under the ratchet; install_hooks re-imported here
+#   for build.py's existing import. Pure move, no behaviour change.
+#   (#BP-1500g-1/extract-unrelated-headroom)
 # ====================================================================

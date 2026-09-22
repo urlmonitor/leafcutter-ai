@@ -1,0 +1,47 @@
+id: BO-4100d
+title: "The workspace you are told you got is the workspace you actually got"
+component: build-orchestration
+components:
+  - build_orchestration
+  - worktree_manager
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+risk_surface: contract_boundary
+criteria: |
+  What you are told about the workspace matches what was made -- including its name.
+
+  When you ask for a workspace for a particular kind of work, you get one for that
+  kind of work, and the name you are told it has is the name it really has. You are
+  never handed a confident description of something that was not made that way.
+depends_on: [BO-4100]
+documentation_triggers: []
+documentation_rationale: "Makes an existing report truthful rather than adding a surface; a document describing the discrepancy would preserve it instead of removing it."
+doc_links: []
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-09-21
+amended_by: []
+superseded_by: null
+covered_by: [BO-4100d-1, BO-4100d-2, BO-4100d-3]
+implemented_by: []
+notes: >-
+  Evidence, observed 2026-09-14: the canonical worktree-setup script labels every branch it
+  creates as a feature, regardless of the kind of work asked for -- fixes, chores and
+  hotfixes are all silently relabelled. An agent that reports having created a fix is
+  therefore simply wrong, and the operator acts on a name that does not exist. Two arms,
+  both required and separately failable: the workspace is made for the KIND of work
+  requested, and the account given of it AGREES with what was made. The second arm matters
+  on its own -- a caller that reads the name out of the tool's own reported output is
+  already the rule for one workflow (BP-600a-2) but is no help when the tool's own output
+  is the thing that is wrong. Distinct from BO-3600, which is about two written records of
+  the system disagreeing with each other (delivery state vs known defects), not about a tool
+  misreporting what it just did; and from BO-300c, which governs the form of the finalize
+  instruction printed at the end of a drive, not the branch that was created at the start.

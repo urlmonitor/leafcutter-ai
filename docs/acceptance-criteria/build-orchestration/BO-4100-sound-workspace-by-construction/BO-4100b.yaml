@@ -1,0 +1,50 @@
+id: BO-4100b
+title: "A workspace is judged on what you changed, not on what it borrowed"
+component: build-orchestration
+components:
+  - build_orchestration
+  - worktree_manager
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+risk_surface: safety
+criteria: |
+  Your workspace's supporting material is its own, so nothing borrowed is held against you.
+
+  A workspace carries the supporting material it needs rather than sharing another
+  session's, so a check never turns your work away over something you did not
+  touch, and putting your own workspace right can never disturb a session someone
+  else is running at the same time.
+depends_on: [BO-4100]
+documentation_triggers: []
+documentation_rationale: "Deferred, not denied: the shared-versus-own material topology may well deserve a component diagram as architecture documentation in its own right, but a diagram is not an enforcement behaviour and must not be accepted in place of one here."
+doc_links: []
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-09-21
+amended_by: []
+superseded_by: null
+covered_by: [BO-4100b-1, BO-4100b-2, BO-4100b-3, BO-4100b-4]
+implemented_by: []
+notes: >-
+  Evidence, observed 2026-09-14: the remedy this repository currently recommends points a
+  workspace's supporting material at the SHARED install tree. When the branch is behind the
+  main line, two checks then refuse the commit over files the commit never touched -- both
+  cleared once the main line was merged in, confirming the refusal was about the borrowed
+  material and not the work. The refusing check's own suggested remedy is to rebuild, which
+  is KI-BP-016 and would deploy an unmerged branch's material over the live shared install
+  that other concurrent sessions are reading. So there are two harms from one cause and both
+  belong here: a FALSE REFUSAL against the author, and CROSS-SESSION DAMAGE from the
+  documented cure. Polarity warning for decomposition: this is a check that wrongly FIRES.
+  BO-1700's whole family is about a check that wrongly stays SILENT. BO-1700h's "a stale
+  workspace is flagged rather than trusted" is the opposite reading of the same word and
+  must not be cited as covering this. Distinct too from BO-1700e (the guard working across
+  layouts) and BO-1700f (standing aside where a project genuinely has no checks, which is a
+  true negative, not a false positive).

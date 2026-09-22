@@ -2,7 +2,7 @@ id: KM-KGS-100d-3
 components:
   - knowledge_management
 readiness: draft
-priority: medium
+priority: critical
 title: "A relationship entry becomes an edge whichever accepted shape it uses"
 component: knowledge-management
 level: L2

@@ -71,6 +71,22 @@ class TestCleanRemovesOrphanedAgent(unittest.TestCase):
         Implementation needed:
           - build_phases.clean_stale_artifacts(target_dir, source_manifests) must exist.
           - When agents dir has a file not in source_manifests['agents'], remove it.
+
+        AMENDED 2026-09-21 (BP-1500g-1-i). This test used to call the sweep
+        once against a bare tmpdir and expect immediate removal. That premise
+        predates the provenance ledger: the sweep now removes an item only
+        when it is absent from the CURRENT manifest AND the ledger records an
+        earlier run having produced it. Non-attribution means keep, because a
+        file the build cannot attribute to itself may be the adopter's — the
+        defect KI-BP-009 was reported for.
+
+        So the orphan is now established the way a real one comes about: a
+        first run WITH the file in its manifest (the version that shipped
+        it), then a second run WITHOUT (the version that retired it). The
+        ledger is seeded by a real run rather than hand-written, matching the
+        fixture doctrine in unit_tests/portability/test_bp_1500g_1_i.py and
+        the amendment in
+        unit_tests/build_guards/test_ki_bp_010_clean_workflows.py.
         """
         build_phases = _load_build_phases()
 
@@ -84,7 +100,26 @@ class TestCleanRemovesOrphanedAgent(unittest.TestCase):
             orphan = agents_dir / "orphan-agent.md"
             orphan.write_text("# Orphaned agent")
 
-            # source_manifests with no agents → everything in agents_dir is orphaned
+            # The run that still shipped it: records provenance, removes nothing.
+            shipped_manifests = {
+                "agents": {"orphan-agent.md"},
+                "skills": set(),
+                "hooks": set(),
+            }
+            self.assertEqual(
+                clean_fn(target, shipped_manifests), 0,
+                "A file the current manifest still declares must never be "
+                "removed -- this first call exists only to record that the "
+                "build produced it.",
+            )
+            self.assertTrue(
+                orphan.exists(),
+                "Fixture premise broken: the seeding run removed the file it "
+                "was supposed to be recording.",
+            )
+
+            # The run that retired it: now attributable, and genuinely stale.
+            # source_manifests with no agents → the orphan is no longer shipped
             source_manifests = {
                 "agents": set(),
                 "skills": set(),
@@ -110,6 +145,22 @@ class TestCleanRemovesOrphanedSkill(unittest.TestCase):
         Implementation needed:
           - build_phases.clean_stale_artifacts must handle skills (directories, not files).
           - When skills dir has a subdir not in source_manifests['skills'], remove it.
+
+        AMENDED 2026-09-21 (BP-1500g-1-i). This test used to call the sweep
+        once against a bare tmpdir and expect immediate removal. That premise
+        predates the provenance ledger: the sweep now removes an item only
+        when it is absent from the CURRENT manifest AND the ledger records an
+        earlier run having produced it. Non-attribution means keep, because a
+        file the build cannot attribute to itself may be the adopter's — the
+        defect KI-BP-009 was reported for.
+
+        So the orphan is now established the way a real one comes about: a
+        first run WITH the directory in its manifest (the version that
+        shipped it), then a second run WITHOUT (the version that retired
+        it). The ledger is seeded by a real run rather than hand-written,
+        matching the fixture doctrine in
+        unit_tests/portability/test_bp_1500g_1_i.py and the amendment in
+        unit_tests/build_guards/test_ki_bp_010_clean_workflows.py.
         """
         build_phases = _load_build_phases()
         clean_fn = getattr(build_phases, "clean_stale_artifacts")
@@ -121,6 +172,25 @@ class TestCleanRemovesOrphanedSkill(unittest.TestCase):
             orphan_skill_dir.mkdir(parents=True)
             (orphan_skill_dir / "SKILL.md").write_text("# Orphaned skill")
 
+            # The run that still shipped it: records provenance, removes nothing.
+            shipped_manifests = {
+                "agents": set(),
+                "skills": {"orphan-skill"},
+                "hooks": set(),
+            }
+            self.assertEqual(
+                clean_fn(target, shipped_manifests), 0,
+                "A directory the current manifest still declares must never "
+                "be removed -- this first call exists only to record that "
+                "the build produced it.",
+            )
+            self.assertTrue(
+                orphan_skill_dir.exists(),
+                "Fixture premise broken: the seeding run removed the "
+                "directory it was supposed to be recording.",
+            )
+
+            # The run that retired it: now attributable, and genuinely stale.
             source_manifests = {
                 "agents": set(),
                 "skills": set(),
@@ -149,6 +219,22 @@ class TestCleanRemovesOrphanedHook(unittest.TestCase):
         Implementation needed:
           - build_phases.clean_stale_artifacts must handle hooks directory.
           - When hooks dir has a file not in source_manifests['hooks'], remove it.
+
+        AMENDED 2026-09-21 (BP-1500g-1-i). This test used to call the sweep
+        once against a bare tmpdir and expect immediate removal. That premise
+        predates the provenance ledger: the sweep now removes an item only
+        when it is absent from the CURRENT manifest AND the ledger records an
+        earlier run having produced it. Non-attribution means keep, because a
+        file the build cannot attribute to itself may be the adopter's — the
+        defect KI-BP-009 was reported for.
+
+        So the orphan is now established the way a real one comes about: a
+        first run WITH the file in its manifest (the version that shipped
+        it), then a second run WITHOUT (the version that retired it). The
+        ledger is seeded by a real run rather than hand-written, matching the
+        fixture doctrine in unit_tests/portability/test_bp_1500g_1_i.py and
+        the amendment in
+        unit_tests/build_guards/test_ki_bp_010_clean_workflows.py.
         """
         build_phases = _load_build_phases()
         clean_fn = getattr(build_phases, "clean_stale_artifacts")
@@ -160,6 +246,25 @@ class TestCleanRemovesOrphanedHook(unittest.TestCase):
             orphan_hook = hooks_dir / "orphan_hook.py"
             orphan_hook.write_text("# Orphaned hook")
 
+            # The run that still shipped it: records provenance, removes nothing.
+            shipped_manifests = {
+                "agents": set(),
+                "skills": set(),
+                "hooks": {"orphan_hook.py"},
+            }
+            self.assertEqual(
+                clean_fn(target, shipped_manifests), 0,
+                "A file the current manifest still declares must never be "
+                "removed -- this first call exists only to record that the "
+                "build produced it.",
+            )
+            self.assertTrue(
+                orphan_hook.exists(),
+                "Fixture premise broken: the seeding run removed the file it "
+                "was supposed to be recording.",
+            )
+
+            # The run that retired it: now attributable, and genuinely stale.
             source_manifests = {
                 "agents": set(),
                 "skills": set(),

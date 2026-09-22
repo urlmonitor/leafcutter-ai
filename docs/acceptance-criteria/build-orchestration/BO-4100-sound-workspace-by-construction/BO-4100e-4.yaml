@@ -1,0 +1,116 @@
+id: BO-4100e-4
+title: "Surfacing a leftover does not turn it into a workspace you can be handed"
+component: build-orchestration
+components:
+  - build_orchestration
+  - worktree_manager
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+change_target: code
+risk_surface: contract_boundary
+package_surface: false
+criteria: |
+  Given a leftover that appears in the listing through discovery rather than
+    registration,
+  When a workspace is requested to start work in,
+  Then the leftover is not the workspace handed over,
+  And when work is requested inside the leftover directly, the request is refused
+    and the refusal states that it is a remnant awaiting clearing,
+  And the leftover is never promoted to a registered workspace as a side effect
+    of having been listed.
+depends_on: [BO-4100e, BO-4100e-1]
+doc_links:
+  - path: docs/architecture/components/worktree-manager.md
+    relationship: describes
+    status: exists
+  - path: docs/known-issues/build-orchestration.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-039-fast-lane-occupied-workspace-refusal.md
+    relationship: describes
+    status: exists
+    relevance: "The nearest existing refusal shape -- an occupied location ends the run in a discriminated refusal payload rather than being adopted. The remnant refusal should reuse it."
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+    relevance: "Angle taxonomy this record's test_spec entries declare."
+  - path: scripts/worktree/list_workspaces.py
+    relationship: modifies
+    status: planned
+    relevance: "Created by BO-4100e-1. Discovery must stay a READ with no registration side effect on any path -- listing, reporting (BO-4100e-3) and removal (BO-4100e-2) alike -- and origin must survive a listing unchanged rather than being flipped to 'registered'."
+  - path: templates/scripts/setup_ticket_worktree.py
+    relationship: modifies
+    status: exists
+    relevance: "Canonical source of the handover/creation path, which must select on origin == 'registered' and must refuse a request to work inside a leftover with a discriminated remnant-awaiting-clearing payload (ADR-039 shape), distinguishable from the occupied-workspace refusal it resembles."
+  - path: scripts/setup_ticket_worktree.py
+    relationship: modifies
+    status: exists
+    relevance: "Build output of the template above. Must change in parity via the build.py round-trip (ADR-001)."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "Discovery is a READ with no registration side effect, on every path. Registering whatever is discovered is the cheapest way to make BO-4100e-1's listing complete and is precisely forbidden here: a half-created workspace carries no guarantee it was rooted at the shared tip (BO-4100a) and no guarantee it holds its own supporting material (BO-4100b), so adopting it hands someone a workspace both promises say they will never be given."
+  - "The handover path must select on origin == 'registered'. The filter must read BO-4100e-1's origin discriminator, never a name pattern and never a judgement about whether the directory 'looks complete' -- a half-created workspace can look complete."
+  - "A request to work inside a leftover directly must be refused with a reason naming it as a remnant awaiting clearing, and must not fall through to creating or adopting a workspace at that location. ADR-039's discriminated refusal payload is the shape to reuse, and its refusal must be distinguishable from the occupied-workspace refusal it resembles."
+  - "No code path may write a registration entry for a discovered leftover -- including the removal path, which CLEARS registration state (BO-4100e-2) rather than creating it, and including any repair or recovery helper added alongside."
+  - "Promotion would also defeat BO-4100e-3: a registered workspace is no longer described as a remnant, so the misdiagnosis this family removes would return by a different route."
+  - "Error handling follows the project error handling policy; a failure to classify an entry must not default to treating it as registered."
+delivers_to: null
+expects_from:
+  ac_id: BO-4100e-1
+  contract: "The origin discriminator on each listing entry, { path, origin: 'registered' | 'discovered', branch }. Handover filters to origin == 'registered'; the value must be a field, because a rendering difference cannot be filtered on, and it must survive a listing unchanged -- this record forbids listing from flipping it to 'registered'."
+test_required: true
+test_spec:
+  - name: test_a_discovered_leftover_is_never_the_workspace_handed_over_on_a_creation_request
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "A discovered leftover sits at a location a creation request would plausibly resolve to; the workspace handed back is not the leftover, and the leftover's directory is unchanged."
+  - name: test_requesting_work_inside_a_leftover_directly_is_refused_as_a_remnant_awaiting_clearing
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: "The refusal carries a machine-readable reason naming it a remnant awaiting clearing, distinguishable from the occupied-workspace refusal, and no workspace is created or adopted at that location."
+  - name: test_listing_a_leftover_does_not_register_it
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: "The registration record is captured before and after a listing that surfaces the leftover and must be byte-identical, and a second listing must still report origin == 'discovered'. This is the promotion side effect the record forbids, and it is the cheapest implementation of BO-4100e-1."
+  - name: test_no_code_path_registers_a_discovered_leftover
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: seam
+    description: "Listing, reporting (BO-4100e-3) and removal (BO-4100e-2) are each exercised against the same leftover; after each, the registration record holds no entry for it. A single path that registers on the way past defeats the guarantee, and three of the four paths passing hides it."
+test_rationale: |
+  The failure this record prevents is not a wrong output but a wrong success: BO-4100e-1
+  asks for a complete listing, and the cheapest way to produce one is to register whatever
+  is discovered. That implementation makes every clause of e-1 and e-2 true and hands an
+  operator a workspace that violates BO-4100a and BO-4100b -- unrooted and without its own
+  supporting material -- while reporting it as a normal workspace, which also defeats
+  BO-4100e-3's remnant description.
+  So the assertions are negative and they are made on the registration record itself rather
+  than on any command's output. The fourth test exercises all three consuming paths because
+  a promotion side effect only has to exist on one of them; testing only the listing path
+  leaves the reporting and removal paths free to register on the way past.
+origin_agent: BrainCandy
+created: 2026-09-21
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: >-
+  The cheapest way to make the listing complete is to register whatever is discovered, and
+  that reading of BO-4100e-1 is actively harmful: a half-created workspace has no guarantee
+  it was rooted at the shared tip and no guarantee it carries its own supporting material,
+  so adopting it hands someone a workspace BO-4100a and BO-4100b both promise they will
+  never be given. Promotion would also defeat BO-4100e-3, since a registered workspace is
+  no longer described as a remnant. Surfacing is for accounting and clearing, not for use.

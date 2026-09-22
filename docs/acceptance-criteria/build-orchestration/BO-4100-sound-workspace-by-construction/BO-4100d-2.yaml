@@ -1,0 +1,107 @@
+id: BO-4100d-2
+title: "A kind that cannot be honoured is refused, never quietly swapped for one that can"
+component: build-orchestration
+components:
+  - build_orchestration
+  - worktree_manager
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+change_target: code
+risk_surface: contract_boundary
+package_surface: false
+criteria: |
+  Given a request for a workspace naming a kind of work that creation does not
+    support,
+  When creation is attempted,
+  Then creation refuses and reports failure,
+  And no branch is created and no workspace is registered,
+  And the refusal names the kind that was asked for and lists the kinds that can
+    be honoured,
+  And no workspace is created under a different kind from the one requested.
+depends_on: [BO-4100d]
+doc_links:
+  - path: docs/architecture/components/worktree-manager.md
+    relationship: describes
+    status: exists
+  - path: docs/known-issues/build-orchestration.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-039-fast-lane-occupied-workspace-refusal.md
+    relationship: describes
+    status: exists
+    relevance: "The discriminated-refusal-payload shape this refusal should reuse."
+  - path: templates/scripts/setup_ticket_worktree.py
+    relationship: modifies
+    status: exists
+    relevance: "Canonical source. The membership test against the declared supported-kind set, the removal of any fallback kind on the creation path, and the refusal that renders the honourable kinds FROM that set all live here."
+  - path: scripts/setup_ticket_worktree.py
+    relationship: modifies
+    status: exists
+    relevance: "Build output of the template above. Must change in parity or CI's build overwrites the fix (ADR-001)."
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Acceptance must derive from MEMBERSHIP of the declared supported-kind set, never from a hard-coded name list in the refusal path. A fifth kind added to the declared set must become acceptable with no edit here -- the same data-driven rule BO-4100d-1 establishes, read rather than duplicated."
+  - "No fallback kind may exist anywhere on the creation path. An implementation that maps an unknown kind onto a default IS the defect this record closes, and it will reproduce the 2026-09-14 failure on the fifth kind while passing every test written for the four."
+  - "The listed honourable kinds must be rendered FROM the declared set, so the list cannot go stale when the set changes."
+  - "The refusal must be inert -- no branch, no directory, no registration entry -- and must reach that guarantee through BO-4100a-3-i's no-debris refusal behaviour rather than re-deriving it."
+  - "The refusal must be a discriminated structured outcome in the shape ADR-039 established, distinguishable from the unreadable-shared-line refusal of BO-4100a-3 and from the post-condition failure of BO-4100a-2."
+  - "Template and deployed copies change together and are verified in parity via the build.py round-trip (ADR-001)."
+delivers_to: null
+expects_from:
+  ac_id: BO-4100d-1
+  contract: "The declared supported-kind set. Membership of that set is the sole acceptance rule here, and the set is also what the refusal renders as the list of honourable kinds."
+test_required: true
+test_spec:
+  - name: test_an_unsupported_kind_is_refused_and_no_workspace_is_created
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: "A kind outside the declared set is requested; creation refuses, and the branch list and worktree list are unchanged."
+  - name: test_no_workspace_is_created_under_a_different_kind_from_the_one_requested
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "After the refusal, no branch exists carrying ANY kind for the requested slug. This is the assertion that fails against a fallback-to-default implementation, which the previous test's 'refuses' clause alone does not catch if the fallback still reports a warning."
+  - name: test_the_refusal_names_the_requested_kind_and_lists_the_honourable_ones
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "Both values are present in the refusal, and the listed kinds equal the declared set exactly."
+  - name: test_extending_the_declared_set_makes_a_previously_refused_kind_acceptable_with_no_other_edit
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: "A fifth kind is added to the declared set in the fixture; the same request that was refused now succeeds, and the refusal's printed list has grown by one. This is what distinguishes a data-driven rule from a hard-coded four-name check, and it is the clause that closes the defect class rather than the four observed cases."
+test_rationale: |
+  BO-4100d-1 closes four cases; this record closes the class. The difference is only
+  observable if the supported-kind set can be varied at test time, which is why the fourth
+  test extends it and asserts both the acceptance and the printed list change together.
+  Without that test, an implementation that hard-codes the four current kinds in the
+  refusal passes everything here and reproduces the original silent substitution the first
+  time a fifth kind is introduced.
+  The second test is stated separately from the first because "creation refuses" is
+  ambiguous about a fallback that warns and proceeds -- exactly the shape of the original
+  defect. Asserting that no branch exists under any kind removes the ambiguity.
+origin_agent: BrainCandy
+created: 2026-09-21
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260921-BO-4100d-2.md
+notes: >-
+  Closes the general defect class rather than the four cases in BO-4100d-1: silent
+  substitution is what made the 2026-09-14 failure invisible, and an implementation that
+  learns the four current kinds while keeping a fallback will reproduce it on the fifth.
+  Refusing also keeps the promise honest at the boundary -- there is no kind for which
+  the caller both gets a workspace and gets something other than what was asked for.

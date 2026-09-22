@@ -1,0 +1,83 @@
+id: BO-4100c-4-i
+title: "Disposing of one workspace removes only that workspace"
+component: build-orchestration
+components:
+  - build_orchestration
+  - worktree_manager
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+change_target: code
+risk_surface: safety
+package_surface: false
+criteria: |
+  Given a workspace carrying the holds-nothing verdict has been disposed of,
+  When the shared main line and the branch list are inspected afterwards,
+  Then the shared main line's tip is the same commit it was before the disposal,
+  And no branch other than the disposed workspace's own is absent from the branch
+    list,
+  And the live set contains exactly one fewer entry than it did before the
+    disposal.
+depends_on: [BO-4100c-4]
+doc_links:
+  - path: docs/architecture/components/worktree-manager.md
+    relationship: describes
+    status: exists
+  - path: scripts/worktree/dispose_workspace.py
+    relationship: modifies
+    status: planned
+    relevance: "Created by BO-4100c-2. This record bounds its blast radius: removal addressed to ONE resolved path (never a pattern, prefix or glob), branch deletion scoped the same way, and no touch of the shared main line at all."
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Removal must be addressed to ONE resolved workspace path. It must never be expressed as a pattern, a prefix, a glob or a name match over the live set -- an implementation that disposes of a matching set satisfies every clause of BO-4100c-4 and is the shape that does the most damage under repeated unwatched use."
+  - "Disposal must not touch the shared main line at all: no fetch, no merge, no ref update, no prune of remote-tracking refs. Its tip is asserted unchanged, so any of those fails."
+  - "The blast-radius assertions must be made against a fixture holding several workspaces with deliberately SIMILAR names and branches. Against a fixture with one workspace, or with obviously distinct names, a prefix-matching implementation passes."
+  - "Branch deletion must be scoped the same way as directory removal; a disposal that removes the right directory and the wrong branch passes the directory assertion."
+delivers_to: null
+expects_from:
+  ac_id: BO-4100c-4
+  contract: "The completed disposal of one named workspace, whose blast radius this record bounds. The disposal's own success outcome is assumed, not re-asserted here."
+test_required: true
+test_spec:
+  - name: test_the_shared_main_lines_tip_is_unchanged_by_disposal
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "git rev-parse of the shared main line is captured before and after the disposal and must be equal."
+  - name: test_no_branch_other_than_the_disposed_workspaces_own_is_absent_afterwards
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "The branch list before and after differ by exactly the disposed workspace's branch. Asserted as a set difference, so a disposal that deletes a similarly-named sibling branch fails."
+  - name: test_the_live_set_contains_exactly_one_fewer_entry_after_disposal
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: "The fixture holds several workspaces whose names share a prefix with the one being disposed of. The count assertion is exactly-one-fewer, which is what fails against an implementation that disposes of a matching set rather than the named workspace -- that implementation passes every other clause in BO-4100c-4."
+test_rationale: |
+  Routine disposal at the scale this family exists for is run repeatedly and largely
+  unwatched, so the failure that does the most damage is the one that takes one extra
+  thing each time. That failure is invisible to any assertion phrased as "the named
+  workspace is gone", which is true of it. Exactly-one-fewer, against a fixture of
+  deliberately similar names, is the only form that distinguishes removing the named
+  workspace from removing everything that matched.
+origin_agent: BrainCandy
+created: 2026-09-21
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: >-
+  Bounds the blast radius of BO-4100c-4. Routine disposal at the scale this AC family
+  exists for is run repeatedly and largely unwatched, so a disposal that takes one extra
+  thing with it each time is the shape of failure that does the most damage before anyone
+  notices. Exactly-one-fewer is asserted because an implementation that disposes of a
+  matching set rather than the named workspace passes every other clause.

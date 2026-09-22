@@ -1,0 +1,91 @@
+id: BO-4100e-1-i
+title: "Ordinary directories are not reported as leftover workspaces"
+component: build-orchestration
+components:
+  - build_orchestration
+  - worktree_manager
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+change_target: code
+risk_surface: internal
+package_surface: false
+criteria: |
+  Given a directory sitting where workspaces are created that carries none of a
+    workspace's own identifying state -- an unrelated folder, or an empty one,
+  When the set of workspaces is listed,
+  Then that directory does not appear in the listing,
+  And the listing's entry count is unchanged by its presence or absence.
+depends_on: [BO-4100e-1]
+doc_links:
+  - path: docs/architecture/components/worktree-manager.md
+    relationship: describes
+    status: exists
+  - path: scripts/worktree/list_workspaces.py
+    relationship: modifies
+    status: planned
+    relevance: "Created by BO-4100e-1. This record bounds what its location-inspection route admits: only directories carrying a linked worktree's own .git file pointing at a gitdir under THIS repository -- excluding populated strays, empty directories, and another project's worktree sharing the parent."
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "The discriminator for 'is a workspace' must be the presence of a workspace's OWN identifying state on disk (a linked worktree's .git file pointing at a gitdir under this repository), never the directory's name, its position in the listing order, or merely its being non-empty."
+  - "Both shapes must be excluded: an unrelated POPULATED folder and an EMPTY one. An implementation that filters on emptiness excludes one and admits the other, and passes half of this record."
+  - "The entry count must be computed from the same pass that produces the entries, so a listing cannot hide a stray folder from the rendering while still counting it."
+  - "A directory carrying a .git file that points OUTSIDE this repository is another project's worktree, not a leftover of this one. It must be excluded, or a shared parent directory turns every neighbouring project into a reported remnant."
+delivers_to: null
+expects_from:
+  ac_id: BO-4100e-1
+  contract: "The location-inspection discovery route. This record bounds what that route admits: only directories carrying a workspace's own identifying state belonging to this repository."
+test_required: true
+test_spec:
+  - name: test_an_unrelated_populated_directory_is_not_listed_as_a_workspace
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "A folder with ordinary files but no workspace identifying state, sitting where workspaces are created, does not appear."
+  - name: test_an_empty_directory_is_not_listed_as_a_workspace
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: "Stated separately from the populated case because the two are excluded by different rules, and an emptiness filter passes one and fails the other."
+  - name: test_the_listings_entry_count_is_unchanged_by_the_presence_of_such_directories
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "The count is read with the stray directories present and again with them absent, and asserted equal. This is the falsifiable form: it fails against an implementation that lists them AND against one that miscounts while hiding them from the rendering."
+  - name: test_another_projects_worktree_sharing_the_parent_directory_is_not_listed
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: "A directory carrying a .git file pointing at a different repository is present; it is not reported. Without this, a shared worktrees parent makes every neighbouring project a reported remnant of this one."
+test_rationale: |
+  A listing that reports every directory it finds is complete in the useless sense: the
+  real leftovers are buried among entries that were never workspaces and the operator goes
+  back to judging by hand, which is the state BO-4100c exists to end. So the bound matters
+  as much as the discovery.
+  The count assertion is the one that carries real weight, because it fails in both
+  directions -- against over-listing and against an implementation that quietly excludes
+  the stray folder from the output while still counting it. The two exclusion cases are
+  split because an emptiness filter is the obvious implementation and it admits the
+  populated stray folder, which is the one that actually occurs.
+origin_agent: BrainCandy
+created: 2026-09-21
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: >-
+  Bounds the discovery route BO-4100e-1 introduces. A listing that reports every directory
+  it finds is complete in the useless sense: the real leftovers are then buried among
+  entries that were never workspaces, and the operator goes back to judging by hand, which
+  is the state BO-4100c exists to end. Keeping the entry count stable is the falsifiable
+  form -- it fails against an implementation that lists a stray folder and also against one
+  that miscounts while hiding it.

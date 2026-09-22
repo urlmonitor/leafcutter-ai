@@ -27,6 +27,7 @@ import importlib
 import logging
 import re
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 # See the "Sibling wiring" note in generate_ticket_from_ac.py for why the
 # sibling package prefix is derived from __name__ rather than hard-coded.
@@ -39,7 +40,19 @@ _gtfa_store = importlib.import_module(f"{_PKG}._gtfa_store" if _PKG else "_gtfa_
 
 logger = logging.getLogger(_gtfa_seams.logger_name())
 
-AcRecord = _gtfa_constants.AcRecord
+# ``AcRecord`` is bound at RUNTIME by the ``else`` branch, off the sibling
+# module object resolved above through importlib under a prefix COMPUTED from
+# ``__name__`` -- see the "Sibling wiring" note in generate_ticket_from_ac.py
+# for why a literal relative import there would break one of the two supported
+# layouts. A computed name is opaque to a type checker, so that rebind reads as
+# a VARIABLE and mypy rejects every annotation using it ("Variable ... is not
+# valid as a type"). The TYPE_CHECKING branch declares the alias statically and
+# is never executed, so the runtime binding is unchanged.
+if TYPE_CHECKING:  # pragma: no cover - a static declaration, never executed
+    from ._gtfa_constants import AcRecord
+else:
+    AcRecord = _gtfa_constants.AcRecord
+
 _load_parent_ac = _gtfa_store._load_parent_ac
 
 

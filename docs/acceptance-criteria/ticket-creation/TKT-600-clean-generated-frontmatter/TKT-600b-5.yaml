@@ -1,0 +1,159 @@
+id: TKT-600b-5
+title: "An AC that names no work agent is refused by name, never generated into a ticket with a null phase"
+component: ticket-creation
+components:
+  - ticket_creation_pipeline
+  - build_orchestration
+level: L2
+status: active
+req_status: draft
+work_status: done
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given an acceptance criterion in the store whose assigned_agent field is present
+    but null, so the record names no agent to do the work,
+  When a ticket is generated from that acceptance criterion,
+  Then generation refuses,
+  And the refusal names the acceptance criterion's id and the assigned_agent field,
+  And the process exits non-zero,
+  And no ticket file is written.
+
+  Given the same acceptance criterion,
+  When the agents map is built for it,
+  Then no entry keyed on the null work agent appears in the map,
+  And no sign-off row for that null agent appears in any generated ticket body.
+
+  Given an acceptance criterion whose assigned_agent names a real agent,
+  When a ticket is generated from it,
+  Then generation succeeds exactly as before and the refusal does not fire.
+
+  Given a change that makes the generator drop the unnamed work agent silently
+    instead of refusing,
+  When a ticket is generated from a null-assigned_agent record,
+  Then that is a failure of this criterion, observable as a structurally valid
+    ticket with every gate phase present and nobody assigned to build it.
+depends_on: [TKT-600b]
+doc_links:
+  - path: scripts/ac_store/_gtfa_agents_map.py
+    relationship: modifies
+    status: exists
+    relevance: >-
+      _build_agents_map is the entry point that takes assigned_agent; _order_agents_map
+      is where a null agent currently either flows through into the map as a literal
+      null key or raises an undiagnosed TypeError inside sorted().
+  - path: scripts/ac_store/_gtfa_cli.py
+    relationship: related
+    status: exists
+    relevance: >-
+      _ac_inputs reads ac.get("assigned_agent", "python-coder"); the default applies
+      only to an ABSENT key, so an explicit null reaches the builder as None. Both the
+      preview path (_run_preview) and the write path surface the refusal.
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+    relevance: "The angle taxonomy the test_spec entries below are drawn from."
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - >-
+    Fix site: scripts/ac_store/_gtfa_agents_map.py. ONE location — the check belongs at
+    the single entry point _build_agents_map, before the legacy/computed branch, so BOTH
+    paths and every caller (preview, --verify and the write path) are covered by one
+    guard. A check added only inside _order_agents_map would leave the legacy path
+    emitting a null key, and a check added per call site would be a second copy of the
+    rule.
+  - >-
+    The refusal must be a diagnosed one: the message names the offending AC id and the
+    assigned_agent field. An unhandled TypeError from sorted() is not a refusal — it is
+    the current behaviour and it names neither.
+  - >-
+    Silently omitting the unnamed work agent is FORBIDDEN even though it produces a
+    structurally valid ticket. A ticket with every gate phase and no work agent is a
+    phantom-done shape one level up: the drive would run the gates over an
+    implementation nobody was dispatched to write.
+  - >-
+    355 records in the store currently carry assigned_agent: null. A loud refusal on all
+    of them is the intended outcome; this AC does not authorise a bulk sweep to populate
+    the field.
+  - >-
+    An AC with NO assigned_agent key at all must keep its existing python-coder default.
+    This AC constrains an explicit null, not an absent field.
+  - "Post-write: python -m pytest unit_tests/ac_store/ -q"
+delivers_to:
+  agent: python-coder
+  contract: >-
+    A generator that refuses, by AC id and field name, on any record whose
+    assigned_agent is null, on every path that builds an agents map, with a non-zero
+    exit and no ticket file written.
+expects_from: null
+test_spec:
+  - name: test_null_assigned_agent_is_refused_with_a_diagnosed_error
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: >-
+      Building the agents map for a record whose assigned_agent is None raises a
+      diagnosed error naming the assigned_agent field, rather than a TypeError from
+      sorted() or a map containing a null key. A sibling entry
+      (test_null_assigned_agent_is_refused_on_the_legacy_path_too) asserts the same for
+      the legacy path, which never reaches the orderer.
+  - name: test_real_store_null_agent_record_refuses_through_the_cli
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    angle: seam
+    description: >-
+      Run generate_ticket_from_ac.py in a fresh subprocess against a REAL store record
+      that carries assigned_agent: null (ACD-1000a for the silent-null path, ACD-1100d
+      for the crash path). Assert a non-zero exit, the AC id and assigned_agent in
+      stderr, and that neither "null:" nor a None sign-off row appears on stdout.
+  - name: test_named_assigned_agent_still_generates
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: >-
+      A record naming a real agent still produces a map with that agent needed, and an
+      AC dict with no assigned_agent key at all still defaults to python-coder. This is
+      the entry that goes red against a guard that refuses too widely.
+test_rationale: >-
+  The defect has two faces and a single-face test passes on a half fix. With ONE
+  non-canonical agent, sorted() never compares, so None flows through and the ticket
+  gets a literal null phase; with TWO, sorted() raises. A test written only against the
+  crash is satisfied by making sorted() total (e.g. keying on str), which leaves the
+  null entry in the map — the worse of the two outcomes, because it is silent. The
+  behavioural entry therefore runs the real CLI over real store records of BOTH shapes
+  in a fresh process: synthetic fixtures in this repo have repeatedly reproduced the
+  bug-hiding bias and passed while the code was broken.
+origin_agent: BrainCandy
+created: 2026-09-21
+amended_by: []
+superseded_by: null
+covered_by:
+  - unit_tests/ac_store/test_tkt_600b_5.py::TestNullAssignedAgentIsRefused::test_null_assigned_agent_is_refused_with_a_diagnosed_error
+  - unit_tests/ac_store/test_tkt_600b_5.py::TestNullAssignedAgentIsRefused::test_null_assigned_agent_is_refused_on_the_legacy_path_too
+  - unit_tests/ac_store/test_tkt_600b_5.py::TestNullAssignedAgentIsRefused::test_named_assigned_agent_still_generates
+  - unit_tests/ac_store/test_tkt_600b_5.py::TestNullAssignedAgentIsRefused::test_real_store_null_agent_record_refuses_through_the_cli
+implemented_by:
+  - scripts/ac_store/_gtfa_agents_inputs.py
+  - scripts/ac_store/_gtfa_agents_map.py
+  - scripts/ac_store/_gtfa_cli.py
+change_target: code
+risk_surface: contract_boundary
+declares_side_effect: true
+notes: |
+  WHY REFUSAL AND NOT A DEFAULT. Three candidate behaviours were considered for a null
+  work agent: silently omit it, substitute the python-coder default that an ABSENT
+  assigned_agent already gets, or refuse. Refusal is correct because the other two both
+  emit a ticket that looks complete and is not. Omission produces a ticket with every
+  gate phase wired and nobody assigned to build it. Substitution is worse in a quieter
+  way: it invents an answer to a question the AC author never answered, and the drive
+  then dispatches a Python coder at an AC that may be a prompt, doc or schema change.
+  The 355 affected records need authoring; the generator's job is to say so.
+
+  THE DEFECT PREDATES THE MODULE SPLIT. It is reproducible on origin/main at e5965006
+  and the decomposition into _gtfa_agents_map.py preserved it exactly — this is not a
+  regression introduced by the split.

@@ -59,6 +59,9 @@ _DEFAULT_GUARDRAIL_GATES = _gtfa_constants._DEFAULT_GUARDRAIL_GATES
 _NOT_NEEDED_AGENTS = _gtfa_constants._NOT_NEEDED_AGENTS
 _SQL_AGENTS = _gtfa_constants._SQL_AGENTS
 
+UnassignedWorkAgentError = _gtfa_agents_inputs.UnassignedWorkAgentError
+_require_work_agent = _gtfa_agents_inputs._require_work_agent
+
 _collect_needed_agents = _gtfa_agents_inputs._collect_needed_agents
 _load_gate_inputs = _gtfa_agents_inputs._load_gate_inputs
 _resolve_config_path = _gtfa_agents_inputs._resolve_config_path
@@ -301,6 +304,9 @@ def _build_agents_map(
         'needed' or 'not_needed' — never silently omitted (TKT-600b-1-ii).
 
     Raises:
+        UnassignedWorkAgentError: when *assigned_agent* is None — the AC names
+            no agent to do the work (TKT-600b-5). Checked before the
+            legacy/computed branch so both paths refuse identically.
         PhaseDeferralDeclarationError: propagated when a declaration lookup
             is requested (*resolved_destination* or *phase_deferral_path*
             given) and the declaration cannot be loaded.
@@ -308,6 +314,8 @@ def _build_agents_map(
             requested, the declaration is location-dependent, and
             *resolved_destination* is None.
     """
+    _require_work_agent(assigned_agent)
+
     overrides: dict[str, str] = not_needed_overrides or {}
 
     if change_targets is None or risk_surface is None:

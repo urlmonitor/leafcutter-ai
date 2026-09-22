@@ -1,0 +1,104 @@
+id: BO-4100e-2-i
+title: "Being a leftover is not a licence to delete work"
+component: build-orchestration
+components:
+  - build_orchestration
+  - worktree_manager
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+change_target: code
+risk_surface: safety
+package_surface: false
+criteria: |
+  Given a discovered leftover that holds work which has not reached the shared
+    main line,
+  When its removal is requested,
+  Then the removal is refused on the same grounds any other workspace holding
+    work would be refused on,
+  And the leftover and its contents are byte-identical to what they were before
+    the request,
+  And the refusal names what it still holds.
+depends_on: [BO-4100e-2, BO-4100c-1]
+doc_links:
+  - path: docs/architecture/components/worktree-manager.md
+    relationship: describes
+    status: exists
+  - path: scripts/worktree/dispose_workspace.py
+    relationship: modifies
+    status: planned
+    relevance: "Created by BO-4100c-2. The discovery removal route must run BO-4100c-1's verdict check, not a second one written for it, and no force option may bypass the verdict -- any force must be the same option registered workspaces use, subject to the same refusal."
+  - path: scripts/worktree/assess_workspaces.py
+    relationship: modifies
+    status: planned
+    relevance: "Created by BO-4100c-1. Its assessment must be applicable to an entry reached by discovery, producing the SAME record shape and the SAME verdict as for an identical registered workspace. No discovery-specific variant is defined."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "The verdict must come from BO-4100c-1's assessment applied to the discovered entry -- not from a check written for the discovery path. A second verdict implementation IS the defect: it will drift from the first, and the discovery path is the one where drifting means deleting work."
+  - "No forced-removal path may bypass the verdict. If a force option exists for genuinely unreachable cases it must be the same option registered workspaces use, and must be subject to the same refusal; a --force that only the discovery path honours is how BO-4100e-2 gets satisfied by a delete that skips every check."
+  - "The refusal must name what the leftover holds at the same granularity BO-4100c-2 requires -- paths, commit identifiers, stash reference -- not a count or a category."
+  - "A leftover whose own state cannot be read reaches BO-4100c-3's no-verdict refusal, not removal. Discovery must not turn an unreadable workspace into a deletable one."
+  - "The refusal path must be inert; byte-identity of the leftover's whole directory is asserted."
+delivers_to: null
+expects_from:
+  ac_id: BO-4100c-1
+  contract: "The assessment record { path, verdict, items, reason }, computed for a workspace reached by discovery rather than by registration. The SAME rule and the SAME record shape as for a registered workspace -- this record defines no new verdict and admits no discovery-specific variant."
+test_required: true
+test_spec:
+  - name: test_a_discovered_leftover_holding_undelivered_work_is_refused_removal
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "A leftover with no registration entry and an unreached commit on its branch is presented for removal; the removal is refused."
+  - name: test_the_leftover_and_its_contents_are_byte_identical_after_the_refusal
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "Recursive content hash of the leftover's whole directory before and after the refused request, asserted equal."
+  - name: test_the_refusal_names_what_it_still_holds
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "Every item the verdict produced appears in the refusal, at the same granularity BO-4100c-2 requires."
+  - name: test_the_same_content_yields_the_same_verdict_whether_reached_by_discovery_or_by_registration
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: seam
+    description: "One identical workspace state is presented twice -- once registered, once as a discovered leftover -- and the two verdicts and the two named item sets are asserted EQUAL. This is what distinguishes reusing BO-4100c-1's rule from writing a second, weaker one for the discovery path."
+  - name: test_no_force_option_removes_a_discovered_leftover_that_holds_work
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: "Every removal option the command exposes is exercised against a holds-work leftover; none of them deletes it. This closes the forced-delete route that satisfies BO-4100e-2 by swapping one harm for a worse one."
+test_rationale: |
+  The obvious way to satisfy BO-4100e-2 is a forced delete that skips every check: the
+  leftover stops being unremovable and starts being a silent way to lose work, which is
+  strictly worse than the defect. So the decisive tests here are the two that pin the rule
+  rather than the outcome -- the equality of verdicts across the two routes, and the
+  exhaustion of every removal option.
+  Presenting one identical workspace state through both routes is the only shape that
+  detects a second, weaker verdict implementation written for the discovery path. Two
+  separate fixtures, each asserted against its own expectation, would let the two rules
+  drift apart while both tests stay green.
+origin_agent: BrainCandy
+created: 2026-09-21
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: >-
+  The obvious way to satisfy BO-4100e-2 is a forced delete that skips every check, which
+  swaps one harm for the worse one: the leftover stops being unremovable and starts being
+  a silent way to lose work. Once BO-4100e-1 has put the leftover in the listing it is
+  inside BO-4100c-1's domain, so the verdict rule already exists and this AC asserts that
+  discovery reuses it rather than routing around it. No new verdict is defined here.
