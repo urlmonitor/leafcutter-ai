@@ -5,12 +5,13 @@ flight_level: L3-Component
 status: active
 type: reference
 created: 2026-07-10
-last_updated: 2026-09-21
+last_updated: 2026-09-22
 components:
   - build_orchestration
 related_docs:
   - docs/architecture/adrs/ADR-046-completion-demanded-set-is-record-only.md
   - docs/architecture/adrs/ADR-047-single-writer-ticket-close-path.md
+  - docs/architecture/adrs/ADR-048-order-independent-per-ticket-completion.md
 children:
   - docs/architecture/diagrams/c3-fast-lane-build-loop-sequence.md
 ---

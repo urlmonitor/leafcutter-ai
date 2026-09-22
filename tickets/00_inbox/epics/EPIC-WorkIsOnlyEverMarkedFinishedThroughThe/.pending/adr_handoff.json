@@ -1,10 +1,8 @@
 {
-  "adr_id": "ADR-047",
+  "adr_id": "ADR-048",
   "affected_files": [
-    "scripts/set_ticket_status.py",
-    "templates/agents/status-checker.md",
     "templates/workflows-js/build-feature.js",
     "templates/workflows-js/build-ticket.js"
   ],
-  "one_line_summary": "The done lifecycle state is written only by scripts/set_ticket_status.py, invoked without --force; the drivers' direct-frontmatter-edit route is removed and a refusal surfaces as not-closed."
+  "one_line_summary": "A run decides each ticket's close solely from that ticket's own record, carrying no state between tickets, so identical tickets get identical answers regardless of order."
 }
