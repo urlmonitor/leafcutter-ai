@@ -134,6 +134,16 @@ class TestInstalledRepairIsReportedAndNamed(unittest.TestCase):
         self.workspace = Path(self._tmpdir.name)
         self.bp2 = _load_bp100k2_module()
         self.pkg_root = self.bp2._build_synthetic_full_package(self.workspace)
+        # See test_bp_100k_2._isolate_build_phases_family's docstring — must
+        # run before any module load or phase call (BP-size-split Finding 1).
+        # This file was missing the call entirely (unlike every setUp in
+        # test_bp_100k_2.py itself), which is the ACD-2100d-2/isolation
+        # defect: without it, a bare build_phases_* sys.modules entry cached
+        # by an EARLIER test in this file/process keeps pointing at that
+        # earlier test's already-deleted TemporaryDirectory, so this test's
+        # own _load_pkg_modules() call binds build_phases functions to a
+        # stale synthetic package and silently deploys nothing.
+        self.bp2._isolate_build_phases_family(self)
 
     def test_installed_file_carrying_a_repair_its_source_lacks_is_reported(self) -> None:
         # covers: ACD-2100d-2
@@ -196,6 +206,9 @@ class TestDivergenceIsNotReportedAsDelivered(unittest.TestCase):
         self.workspace = Path(self._tmpdir.name)
         self.bp2 = _load_bp100k2_module()
         self.pkg_root = self.bp2._build_synthetic_full_package(self.workspace)
+        # See test_bp_100k_2._isolate_build_phases_family's docstring — must
+        # run before any module load or phase call (BP-size-split Finding 1).
+        self.bp2._isolate_build_phases_family(self)
 
     def test_change_is_not_reported_as_delivered_while_the_divergence_stands(self) -> None:
         # covers: ACD-2100d-2
@@ -269,6 +282,9 @@ class TestInstallerRunConfirmsReportByRemovingRepair(unittest.TestCase):
         self.workspace = Path(self._tmpdir.name)
         self.bp2 = _load_bp100k2_module()
         self.pkg_root = self.bp2._build_synthetic_full_package(self.workspace)
+        # See test_bp_100k_2._isolate_build_phases_family's docstring — must
+        # run before any module load or phase call (BP-size-split Finding 1).
+        self.bp2._isolate_build_phases_family(self)
 
     def test_running_the_installer_confirms_the_report_by_removing_the_repair(self) -> None:
         # covers: ACD-2100d-2
@@ -345,6 +361,9 @@ class TestGenerationOnlyDifferenceIsNotReported(unittest.TestCase):
         self.workspace = Path(self._tmpdir.name)
         self.bp2 = _load_bp100k2_module()
         self.pkg_root = self.bp2._build_synthetic_full_package(self.workspace)
+        # See test_bp_100k_2._isolate_build_phases_family's docstring — must
+        # run before any module load or phase call (BP-size-split Finding 1).
+        self.bp2._isolate_build_phases_family(self)
 
     def test_a_generated_file_that_only_differs_by_generation_is_not_reported(self) -> None:
         # covers: ACD-2100d-2
