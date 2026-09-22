@@ -180,7 +180,7 @@ def _git_toplevel(anchor: Path | None = None) -> Path:
             continue
         return Path(result.stdout.strip())
     raise subprocess.SubprocessError(  # noqa: TRY003
-        "Could not resolve a git repository from any candidate anchor. Candidates tried:\n  - " + "\n  - ".join(tried))
+        "Could not resolve a git repository from any candidate anchor. This copy of setup_ticket_worktree.py appears to be deployed outside the repository it manages. Candidates tried:\n  - " + "\n  - ".join(tried))
 
 
 def _resolve_installed_layout(leafcutter_repo: Path) -> tuple[Path, Path]:
