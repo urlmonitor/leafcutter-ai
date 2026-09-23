@@ -6,7 +6,7 @@ component: build-orchestration
 level: L3
 status: active
 req_status: active
-work_status: todo
+work_status: done
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -60,8 +60,14 @@ amended_by:
     guards the empty case passes a single-test contract and still emits a wrong path when
     a pattern is ambiguous. criteria untouched.'
 superseded_by: null
-covered_by: []
-implemented_by: []
+covered_by:
+- unit_tests/prompt_assembly/test_implementation_notes_emission.py::TestReferencePatternResolution::test_ac3i_unresolvable_pattern_errors
+- unit_tests/prompt_assembly/test_reference_pattern_resolution.py::TestAmbiguousReferencePatternIsAnAuthoringError::test_pattern_matching_more_than_one_file_raises_an_authoring_error
+- unit_tests/prompt_assembly/test_reference_pattern_resolution.py::TestNoImplementationNotesEmittedOnFailure::test_no_implementation_notes_emitted_on_zero_match
+- unit_tests/prompt_assembly/test_reference_pattern_resolution.py::TestNoImplementationNotesEmittedOnFailure::test_no_implementation_notes_emitted_on_multi_match
+implemented_by:
+- scripts/ac_store/_gtfa_files_touched.py
+- scripts/ac_store/_gtfa_body.py
 test_spec:
   - name: test_pattern_matching_no_file_raises_an_authoring_error
     target_dir: unit_tests/ac_store/
