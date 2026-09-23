@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: '2026-08-18'
-last_updated: '2026-08-18'
+last_updated: '2026-09-23'
 components:
   - ac_driven_dev
 related_docs:
@@ -57,5 +57,28 @@ detected on the next run rather than sitting in the user's checkout indefinitely
 **Workaround used 2026-08-18.** Moved the stranded mock-data file into the
 `safety-security` worktree, reverted `docs/product-truth/index.json` on `main`, and
 removed the untracked file — restoring `main` to clean.
+
+**Re-verified 2026-09-23:** still true. Read the current PT-authoring loop in
+`templates/workflows-js/plan-feature.js`. `ptStoreDir` is declared once as a bare
+relative literal — `const ptStoreDir = "docs/product-truth";` (`:2693`) — and is never
+reassigned to a worktree-anchored absolute path anywhere in the file. Compare this
+directly with the AC-store side, which received exactly the fix this entry's "Fix
+direction" asked for: `acStoreDir` is overridden from `wtPayload.ac_store_path` (an
+absolute path inside the authoring worktree) at `:2513`, and the AC-authoring dispatch
+prompt (`:3096-3098`) explicitly tells the agent `Write AC YAML files ONLY to
+${acStoreDir}. Do NOT write AC files to docs/acceptance-criteria/ relative to the
+current checkout — use the absolute path ${acStoreDir} instead.`
+
+The PT-authoring dispatch prompt that tells `mock-data-author` / `mockup-author` /
+`flow-author` where to write (`:2760-2774`) has no equivalent. It reads: `Draft or
+extend the ${ptStep.stage} artifact for this request in the product-truth store at
+${ptStoreDir}` — i.e. the bare relative string `"docs/product-truth"` — with no
+absolute-path anchor and no "do not write relative to the current checkout" warning.
+`grep -i "worktree\|cwd\|checkout" templates/agents/mock-data-author.md` returns
+nothing: the agent template itself has no independent awareness that it might be
+running against the wrong checkout, so it depends entirely on the dispatching prompt
+to tell it — and the PT-side prompt does not. The isolation fix landed for one store
+and was never mirrored to the other. The mechanism this entry describes is unchanged
+and still reproducible by the same path as the original sighting.
 
 ---

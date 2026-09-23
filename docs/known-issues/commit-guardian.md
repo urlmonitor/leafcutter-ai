@@ -73,13 +73,12 @@ Severity in the **filename** is a three-level index bucket (`blocker` / `high` /
 
 Fixed issues move to [`commit-guardian/resolved/`](commit-guardian/resolved/) and are no longer listed as open. They are kept, not deleted.
 
-**Open: 70** (6 blocker, 26 high, 38 low) · **Resolved: 7**
+**Open: 69** (5 blocker, 26 high, 38 low) · **Resolved: 8**
 
 ## Open
 
 | Severity | Issue | File |
 |---|---|---|
-| `blocker` | KI-CG-005 — `check-product-truth-validate` / `check-product-truth-generate` hard-fail on an absent, explicitly optional product-truth store, gating every AC YAML commit | [open-blocker-ki-cg-005.md](commit-guardian/open-blocker-ki-cg-005.md) |
 | `blocker` | KI-CG-008 — `check-doc-frontmatter` crashes with a `TypeError` on any non-string entry in `related_docs`, making the labelled-list form uncommittable | [open-blocker-ki-cg-008.md](commit-guardian/open-blocker-ki-cg-008.md) |
 | `blocker` | KI-CG-021 — The whole-collection uniqueness pass is registered in no hook config and no CI workflow, and has never run | [open-blocker-ki-cg-021.md](commit-guardian/open-blocker-ki-cg-021.md) |
 | `blocker` | KI-CG-20260831-0713 — PARTIALLY fixed by BP-100k-4-ii; the adopter still cannot commit, for a different reason | [open-blocker-ki-cg-20260831-0713.md](commit-guardian/open-blocker-ki-cg-20260831-0713.md) |
@@ -155,6 +154,7 @@ Fixed issues move to [`commit-guardian/resolved/`](commit-guardian/resolved/) an
 | Severity | Issue | File |
 |---|---|---|
 | `low` | KI-CG-004 — moved to `security-scanner` | [resolved-low-ki-cg-004.md](commit-guardian/resolved/resolved-low-ki-cg-004.md) |
+| `blocker` | KI-CG-005 — `check-product-truth-validate` / `check-product-truth-generate` hard-fail on an absent, explicitly optional product-truth store, gating every AC YAML commit — RESOLVED: EPIC-TruthfulProjectRecord's write-if-absent empty-record scaffold + fail-open "nothing-examined" outcome mean the described scenario now exits 0 | [resolved-blocker-ki-cg-005.md](commit-guardian/resolved/resolved-blocker-ki-cg-005.md) |
 | `high` | KI-CG-034 — `check_output_drift` examines every output file and compares none of them: the scanner and the installer key paths in two namespaces that never intersect | [resolved-high-ki-cg-034.md](commit-guardian/resolved/resolved-high-ki-cg-034.md) |
 | `low` | KI-CG-20260826-1334 — RETRACTED: "a missing schema makes `check-ac-schema` fail open" — tested and disproved; the real cause is the `KI-CG-012` at line 800 | [resolved-low-ki-cg-20260826-1334.md](commit-guardian/resolved/resolved-low-ki-cg-20260826-1334.md) |
 | `high` | KI-CG-20260826-package-surface-refuses-merge-commits — merging `origin/main` into a branch is refused as if the branch had added every registry entry landed upstream since it forked | [resolved-high-ki-cg-20260826-package-surface-refuses-merge-commits.md](commit-guardian/resolved/resolved-high-ki-cg-20260826-package-surface-refuses-merge-commits.md) |

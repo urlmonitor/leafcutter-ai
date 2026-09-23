@@ -134,6 +134,32 @@ completed phase or a completed epic) but does not close this issue: nothing yet 
 agent from parking in the first place, and the registry/hook enforcement above is not
 built.
 
+**Re-verified 2026-09-23: CANNOT DETERMINE — left open, blocker unchanged.** This entry's
+core claim is a live property of the Claude Code harness's subagent execution model ("a
+subagent has no idle state" / no wait primitive survives being stripped from a subagent's
+tool set). That is not something reading this repo's code can confirm or refute either way
+— it would take actually reproducing a background-then-wait stall at runtime, which is an
+orchestration-behaviour probe, not a code-inspection one, and this audit was scoped to
+reading and running repo code. So, per the letter of this re-verification: no verdict is
+asserted on whether the underlying stall still occurs.
+
+What COULD be checked from the repo, specifically because ACD-2100 reworked `/plan-feature`'s
+entry point and decision gates and this entry names `plan-feature.js` as one of the
+partially-remediated call sites: the mitigation is still there and unregressed.
+`templates/workflows-js/plan-feature.js` still carries five `status: "undetermined"` call
+sites after ACD-2100's rework of the entry point and gates — so that narrow protection (a
+parked phase can't be silently counted as `ok`) survived the rework. Also checked and still
+true today: no `SubagentStop` hook exists anywhere in the repo (a repo-wide search for
+`SubagentStop` finds only this entry and its own changelog record), and
+`scripts/registry_validator.py`'s spawn-related checks are limited to
+`spawn_allowlist`/`spawned_by` symmetry and self-loop detection — nothing there mechanically
+forbids an agent from backgrounding a child and waiting on it. Both "Fix direction" items
+(route fan-out into the depth-0 JS runtime; a fail-closed `SubagentStop` veto) remain
+unbuilt. None of this proves or disproves that a fresh stall can still happen; it only
+confirms the previously-recorded partial remediation has neither regressed nor grown since
+2026-08-25, and that this entry's own "does not close this issue" conclusion still applies to
+everything checkable from source.
+
 ---
 
 > **Entries `KI-SS-002` … `KI-SS-004` are recovered from an unmerged branch.** They were
