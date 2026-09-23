@@ -111,9 +111,11 @@ sequenceDiagram
     OP->>CHK: --force, for explicitly user-authorized manual repair only
     CHK->>REC: writes with the parity check AND the transition allow-list both skipped
     Note over OP,REC: Unreachable from either driver. A close that succeeds only because<br/>the override was passed is a failure of ADR-047 §3, not a close.
-    FF->>REC: raw frontmatter line replacement, at merge time, in bulk
-    Note over FF,REC: Not a close decision, and not gated by the mechanism. A live<br/>divergence from ADR-047 §1 — see "The route drawn in red" below.
     end
+
+    FF->>CHK: set_ticket_status.py --status done, per still-open ticket, at merge time
+    CHK->>REC: same parity check, same allow-list, same refusal — no override
+    Note over FF,REC: Was a second door until BO-400e-3-i: a raw frontmatter rewrite,<br/>ungated, in bulk. It now reaches the finished state only through PATH C.<br/>A ticket it cannot close honestly is left open and named.
 ```
 
 Parent: [Build Orchestration — Epic & Ticket Dispatch Sequencing](../components/build-orchestration.md)
@@ -122,13 +124,22 @@ Parent: [Build Orchestration — Epic & Ticket Dispatch Sequencing](../component
 
 ## How to count the doors
 
-**One.** Inside the close — the scope this diagram names in its first note — exactly one
-path ends with the finished state being written, and that path runs through
-`scripts/set_ticket_status.py`. Path A never reaches a writer. Path B reaches the writer
-and is turned away. Path C is the single door. Stating the count here rather than leaving
-a reader to tally lifelines is the point: a diagram that a second door could be quietly
-added under, without contradicting anything drawn, would have failed at the one job this
-one exists for.
+**One.** Exactly one path on this diagram ends with the finished state being written, and
+it runs through `scripts/set_ticket_status.py`. Path A never reaches a writer. Path B
+reaches the writer and is turned away. Path C is the door. The override reaches the writer
+only with its checks disabled and is unreachable from either driver; finalization reaches
+the finished state only by going through Path C.
+
+The count needs no qualifier, and that is recent. When this diagram was first drawn the
+answer was **two** — finalization rewrote the frontmatter itself — and the count had to be
+scoped to "inside the close" to read as one. That scoping was honest but it was also the
+tell: a criterion that only holds once you narrow it is a criterion that does not hold.
+`BO-400e-3-i` closed the second door rather than narrowing the question, and the count is
+now one unconditionally.
+
+Stating it here rather than leaving a reader to tally lifelines is the point: a diagram
+that a second door could be quietly added under, without contradicting anything drawn,
+would have failed at the one job this one exists for.
 
 ## What each path guarantees
 
@@ -174,24 +185,31 @@ one exists for.
    driver may reach it. It remains available only for explicitly user-authorized manual
    repair of a mis-recorded ticket.
 
-## The route drawn in red
+## The route that was drawn in red
 
-`finalize-feature.js` step 3.5 also writes the finished state. At merge time it collects
-the ticket files this branch changed, and for each one whose status is not already
-finished it **replaces the frontmatter status line directly** and writes the file back. It
-does not invoke `scripts/set_ticket_status.py`, so no parity check, no transition
-validation, and no refusal stands between that bulk edit and the finished state.
-
-It is on this diagram because leaving it off would break the promise the diagram makes.
-It is drawn outside the close because it is not a close decision — it reconciles tickets a
-drive has already finished with, at a different moment, for a different reason. But under
+`finalize-feature.js` step 3.5 also writes the finished state, at merge time, over every
+ticket of the branch whose status is not already finished. Until `BO-400e-3-i` it did so by
+**replacing the frontmatter status line directly** and writing the file back — no
+`scripts/set_ticket_status.py`, so no parity check, no transition validation, and no
+refusal between that bulk edit and the finished state. Under
 [ADR-047](../adrs/ADR-047-single-writer-ticket-close-path.md) §1 — *"No other agent,
-script, workflow step, or prompt MUST write that value by any other means"* — it is a
-second writer, and closing it was not in scope for `BO-400e-1` through `BO-400e-4`, which
-addressed the two drivers. It is recorded here so that the next reader meets it on the
-diagram rather than discovering it in a third file. The defect is filed as
-[`KI-BO-20260923-0630`](../../known-issues/build-orchestration/open-high-ki-bo-20260923-0630.md) —
-severity high, open, no fix landed yet.
+script, workflow step, or prompt MUST write that value by any other means"* — that was a
+second door, and closing it had not been in scope for `BO-400e-1` through `BO-400e-4`,
+which addressed the two drivers.
+
+It now invokes the mechanism like everything else: a non-zero exit leaves the ticket open
+and names it, and `--force` is explicitly forbidden there, so a refusal cannot be converted
+into a close. The route is still drawn, because it is still a participant that reaches the
+recorded state — but it reaches it through PATH C, which is why the count below is one.
+Filed as
+[`KI-BO-20260923-0630`](../../known-issues/build-orchestration/open-high-ki-bo-20260923-0630.md),
+now resolved by `BO-400e-3-i`.
+
+Worth keeping in view: this was found by drawing the diagram, not by the four
+implementation tickets or their tests. AC-2's completeness clause — every writer must
+appear, so that a route which is not drawn is a route which does not exist — is what forced
+the enumeration that surfaced it. Correctness checks find wrong things; only a completeness
+requirement finds missing ones.
 
 A dormant third claim sits in `templates/agents/ticket-supervisor.md`, whose Constraints
 section still names "flipping `status: todo` to `status: done`" as a write surface it
@@ -227,9 +245,9 @@ and stated here rather than left silent. The link from
   `KI-BO-20260831-1932`, the split outcome (one refusal, two writes, one condition) that
   this diagram exists to make impossible to misread.
 - [`KI-BO-20260923-0630`](../../known-issues/build-orchestration/open-high-ki-bo-20260923-0630.md) —
-  the second writer this diagram itself surfaced (`finalize-feature.js` step 3.5 sub-step C,
-  drawn in red above), open with no fix landed. This is why AC-7 is not checked on ticket
-  `05_TICKET-20260914-BO-400e-5.md`.
+  the second writer this diagram itself surfaced (`finalize-feature.js` step 3.5 sub-step C),
+  now resolved by `BO-400e-3-i`, which routes that step through the mechanism. The count
+  below is one because of that fix, not in spite of it.
 - [Documentation Coverage — Runtime Phase Flow Sequence](c3-004-documentation-coverage-phase-flow-sequence.md) —
   a sibling L3 sequence covering the pre-commit documentation gate in the same drive.
 
