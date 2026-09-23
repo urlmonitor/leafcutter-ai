@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: 2026-08-18
-last_updated: 2026-09-14
+last_updated: 2026-09-23
 components:
   - ac_store
 related_docs:
@@ -56,7 +56,7 @@ Severity in the **filename** is a three-level index bucket (`blocker` / `high` /
 
 Fixed issues move to [`ac-store/resolved/`](ac-store/resolved/) and are no longer listed as open. They are kept, not deleted.
 
-**Open: 23** (1 blocker, 14 high, 8 low) · **Resolved: 3**
+**Open: 24** (1 blocker, 14 high, 9 low) · **Resolved: 3**
 
 ## Open
 
@@ -85,6 +85,7 @@ Fixed issues move to [`ac-store/resolved/`](ac-store/resolved/) and are no longe
 | `low` | KI-ACS-20260907-approved-code-acs-with-no-test-contract-sit-on-main-until-something-stages-them — KI-ACS-20260907-approved-code-acs-with-no-test-contract-sit-on-main-until-something-stages-them | [open-low-ki-acs-20260907-approved-code-acs-with-no-test-contract-sit-on-main-until-something-stages-them.md](ac-store/open-low-ki-acs-20260907-approved-code-acs-with-no-test-contract-sit-on-main-until-something-stages-them.md) |
 | `low` | KI-ACS-20260907-reachability-boilerplate-denies-the-test_spec-printed-above-it — the generated ticket tells the test author the AC declared nothing, six paragraphs below the six things it declared | [open-low-ki-acs-20260907-reachability-boilerplate-denies-the-test_spec-printed-above-it.md](ac-store/open-low-ki-acs-20260907-reachability-boilerplate-denies-the-test_spec-printed-above-it.md) |
 | `low` | KI-ACS-20260909-standalone-validator-does-not-derive-declares-side-effect — `validate_ac_schema.py` passes records the commit hook then rejects, so a clean bulk run is not evidence on every field | [open-low-ki-acs-20260909-standalone-validator-does-not-derive-declares-side-effect.md](ac-store/open-low-ki-acs-20260909-standalone-validator-does-not-derive-declares-side-effect.md) |
+| `low` | KI-ACS-20260923-doc-links-status-not-reconciled — an AC's `doc_links[].status` field is never reconciled against whether its target document actually exists or shipped | [open-low-ki-acs-20260923-doc-links-status-not-reconciled.md](ac-store/open-low-ki-acs-20260923-doc-links-status-not-reconciled.md) |
 
 ## Resolved
 

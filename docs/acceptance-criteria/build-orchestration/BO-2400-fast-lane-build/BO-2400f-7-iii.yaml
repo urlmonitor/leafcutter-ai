@@ -1,0 +1,172 @@
+id: BO-2400f-7-iii
+components:
+  - build_orchestration
+title: "The claim is attempted by something permitted to make it, and a refusal to attempt it is never reported as contention"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: done
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a run has resolved a build set and reaches the point where it claims that
+    set,
+  When the step that would make the claim declines to attempt it at all — because
+    whatever was asked to perform it is not permitted to change the store,
+  Then the run halts saying the claim was never attempted, and why,
+  And it does not say the set is held by another run,
+  And given instead the claim is attempted and genuinely finds members already
+    held, the run reports contention and names the members that are held,
+  And no halt can report contention while naming no held member.
+depends_on: [BO-2400f-7]
+doc_links:
+  - path: templates/workflows-js/fast-lane-ship.js
+    relationship: modifies
+    status: exists
+  - path: docs/known-issues/build-orchestration.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "The two outcomes must be distinguishable by the run itself, not merely worded
+     differently. 'The claim was never attempted' and 'the claim was attempted and
+     lost' are different facts with different remedies — the first is fixed by
+     changing who attempts it, the second by waiting or releasing a stale hold.
+     A single branch that emits contention language for both is the defect."
+  - "A contention report must carry the held members. An empty held-set alongside a
+     contention message is self-contradicting on its face, and is the exact shape
+     the 2026-09-23 run emitted; it must not be expressible."
+  - "Whoever is asked to make the claim must be permitted to change the store. Do NOT
+     resolve this by editing config/agent_registry.json or its schema — the
+     three-state permits_shell problem behind it is recorded as
+     KI-BO-20260901-1620 and must stay open and visible rather than being absorbed
+     into this record."
+  - "Do NOT write a justifying comment asserting that the chosen performer is
+     permitted by the registry schema unless the schema actually says so. KI-BO-020's
+     fix did exactly that and KI-BO-20260901-1620 exists because the wrong
+     justification was 'written into the code as a comment future readers will copy'.
+     State the real reason for the choice, including its known weakness."
+  - "This record constrains the claim step only. The same file dispatches the same
+     performer at the resolve and producibility steps; both are read-only in effect
+     and neither has been observed to decline. Widening to them is a separate change."
+test_spec:
+  - name: test_a_performer_that_declines_to_attempt_the_claim_halts_as_not_attempted
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: integration
+    angle: failure
+    description: "The claim step returns a refusal to act rather than a result; the
+      run halts saying the claim was never attempted. Fails the behaviour that
+      reports this as another run holding the set."
+  - name: test_that_halt_does_not_claim_the_set_is_held_by_another_run
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "The not-attempted halt is checked for contention language and for
+      any assertion of concurrent ownership; neither is present."
+  - name: test_genuine_contention_still_reports_contention_and_names_the_members
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "The non-regression arm: a claim that is attempted and finds members
+      already held still reports contention, and the held members appear. Fails any
+      fix that turns every claim failure into 'not attempted'."
+  - name: test_a_contention_report_naming_no_held_member_is_impossible
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: integration
+    angle: boundary
+    description: "The exact 2026-09-23 shape — contention language with an empty held
+      set — cannot be produced by any input. This is the assertion that distinguishes
+      a real fix from one that only relabels the message."
+  - name: test_the_claim_is_attempted_by_a_performer_permitted_to_change_the_store
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: integration
+    angle: seam
+    description: "The claim step's performer is not the one whose declared charter
+      forbids changing the store. Asserted on the dispatch actually made, not on a
+      constant read from the source."
+test_rationale: |
+  The third and fourth descriptors are the pair that makes this falsifiable. A fix that
+  relabels every claim failure as "not attempted" passes the first two and fails the
+  third; a fix that changes nothing passes the third and fails the first two. Only a fix
+  that tells the two conditions apart passes all four.
+
+  The fourth exists separately from the second because they fail differently: the second
+  checks the wording of one halt, the fourth checks that a whole class of payload is
+  unreachable. The observed defect was not bad wording — it was a payload asserting
+  contention while carrying an empty held-set, which no amount of rephrasing prevents.
+
+  The fifth asserts on the dispatch the run actually makes rather than on a constant in
+  the source, because a constant naming the right performer proves nothing about which
+  performer the claim step passes to. This file's own history is the argument: the
+  release path's executor was corrected to a different performer and the claim path was
+  left unchanged in the same file, and nothing detected the divergence.
+
+  These run through unit_tests/_workflow_engine_harness.py with stubbed responses, the
+  vehicle unit_tests/workflows/test_bo2400f_13_workspace_refusal_workflow.py and
+  test_bo2400f_3_i_worktree_verify_workflow.py already use. A test that greps the
+  workflow for the performer's name satisfies nothing here — the defect is a dispatch
+  that was present, correct-looking and wrong.
+delivers_to: null
+expects_from:
+  ac_id: BO-2400f-7
+  contract: "The claim step BO-2400f-7 specifies. This record constrains who attempts
+    it and how the run describes an attempt that never happened, so it governs the same
+    step rather than a separate one."
+origin_agent: BrainCandy
+created: 2026-09-23
+amended_by: []
+superseded_by: null
+covered_by:
+  - unit_tests/workflows/test_bo2400f_7_iii_claim_refusal_workflow.py
+implemented_by:
+  - templates/workflows-js/fast-lane-ship.js
+change_target: pipeline
+risk_surface: safety
+notes: |
+  Observed 2026-09-23 on a fast-lane run aimed at BO-3500. The run passed the
+  worktree, verification, resolve and producibility steps -- further than any run
+  that day -- and then halted at the claim step reporting that the set was
+  "already claimed / in progress" and "owned by a concurrent run", while the same
+  payload carried an empty claimed list and an empty excluded list. Nothing was
+  held by anyone.
+
+  WHAT ACTUALLY HAPPENED. The claim step was dispatched to a performer whose
+  declared charter is investigating and reporting state, with edits restricted to
+  ticket files and code edits forbidden. Asked to run a command that changes the
+  AC store, it declined -- correctly, and in detail. The decline was then folded
+  into the contention branch, because the step's instructions treat a non-zero
+  exit OR a refusal flag as meaning the set is held elsewhere.
+
+  WHY THIS IS TWO FAULTS, NOT ONE. The wrong performer is the cause; reporting a
+  decline as contention is what made it expensive. An operator reading that halt
+  goes looking for a concurrent run that does not exist, and the empty held-set
+  that contradicts the message sits in the payload unread. The second fault would
+  survive fixing the first: any future refusal, for any reason, would be reported
+  the same way.
+
+  THE PERFORMER CHOICE IS CONSTRAINED AND IMPERFECT, AND THE RECORD SAYS SO.
+  KI-BO-20260901-1620 establishes that permits_shell is a three-state field read
+  as two: per the registry schema, false OR ABSENT means read-only, and only two
+  agents declare it at all. The performer the sibling release path switched to
+  declares nothing, so the schema also calls it read-only -- that KI exists
+  precisely because KI-BO-020's fix reasoned from "does not explicitly forbid"
+  rather than from what the schema says, and wrote that reasoning into a comment.
+  This record therefore requires a performer permitted to change the store, and
+  forbids both editing the registry to manufacture permission and writing a
+  comment claiming a schema blessing the schema does not give. The underlying
+  three-state defect stays open under its own KI.
+
+  Falsifiability. Four behavioural descriptors over one harness, two of them
+  opposed: a decline must halt as not-attempted, and genuine contention must still
+  report contention with its members named. A fix that cannot separate them fails
+  one whichever way it errs. The fourth descriptor pins the observed payload shape
+  -- contention asserted with nothing held -- as unreachable, which relabelling
+  alone does not achieve.

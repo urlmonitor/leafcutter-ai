@@ -1,0 +1,77 @@
+id: BO-4200b
+components:
+  - build_orchestration
+title: "A pass tells you what it actually looked at"
+component: build-orchestration
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Every all-clear states its own reach, so it is never read as wider than it was.
+
+  A result that says the work passed also says what was examined to reach that
+  conclusion. Nothing the run hands over — what you read at the end, and what
+  travels with the delivered change — claims more certainty than the checking it
+  actually did.
+depends_on: [BO-4200]
+doc_links:
+  - path: docs/reference/false-green-mechanisms.md
+    relationship: related
+    status: exists
+    relevance: >-
+      The named pattern this record answers: a narrow check reported in wide language.
+      The check did exactly what it says; the report does not say what it checked.
+  - path: docs/known-issues/build-orchestration/open-high-ki-bo-20260831-1520.md
+    relationship: related
+    status: exists
+    relevance: >-
+      Its fix (2), described there as "the floor" that "holds whether or not (1) ships"
+      — and, in the second occurrence, the demonstration that the floor alone is not
+      enough. Both halves of that judgement are load-bearing here.
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-09-22
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+documentation_triggers:
+  - reference-doc
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  THIS RECORD IS THE FLOOR AND IT IS NOT THE CEILING — say both, because each half has
+  been got wrong once. The origin entry's first occurrence prompted "just state the
+  scope"; its second occurrence had a report that was already scrupulously qualified
+  ("to the run's own knowledge", with a docblock naming the exact extent of that
+  knowledge) and a broken pull request was opened regardless. So this record must not
+  be treated as closing the goal, and BO-4200a must not be treated as making it
+  unnecessary: a wide check reported in vague language is still a report a reader will
+  over-trust, in the opposite direction.
+
+  IT IS ALSO NOT AN INSTRUCTION TO HEDGE. A qualifier that appears on every result
+  regardless of what ran is noise, and noise is how a caveat stops being read. What is
+  asked for is that the statement track the checking — which means it must be capable
+  of saying something different when the checking differs.
+
+  BOUNDARY vs BO-2400f-4-vi (work_status done). That record owns a different sentence:
+  a reported success must mean the delivered change is landable as far as the run can
+  tell, and it explicitly scopes itself to "the required checks whose satisfaction the
+  run itself determines before returning — today, the changelog-presence check", and
+  explicitly not to remote checks. It is about a CLAIM OF LANDABILITY over a known
+  list. This record is about a CLAIM OF SOUNDNESS carrying its own reach. They meet at
+  the same surface and neither covers the other: a result can name every required
+  check it knows of and still say "gates green" about tests it never ran. Note also
+  that record's own 2026-09-07 coverage note, which found the list it reports is a
+  fixed empty value at its only call site — evidence that the surface this record
+  lands on already has a sincerely-written field that is not computed from anything.
+
+  documentation_triggers: reference-doc. What a verdict asserts, and what it does not,
+  is exactly the kind of thing a reader needs one authoritative page for; it is the
+  vocabulary every other record in this tree is phrased against. No sequence diagram —
+  nothing here changes the order of anything.

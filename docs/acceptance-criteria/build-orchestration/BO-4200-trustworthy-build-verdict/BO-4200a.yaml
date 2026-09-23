@@ -1,0 +1,68 @@
+id: BO-4200a
+components:
+  - build_orchestration
+  - testing_quality
+title: "Nothing you did not touch is left broken"
+component: build-orchestration
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  The whole project is exercised before your work is handed on.
+
+  A run does not finish by checking only the part it was aimed at. Before the work
+  leaves it, everything the project already promised is put to the test too, so
+  damage the change did elsewhere is found by the run that caused it rather than
+  by whoever meets it next.
+depends_on: [BO-4200]
+doc_links:
+  - path: docs/known-issues/build-orchestration/open-high-ki-bo-20260831-1520.md
+    relationship: related
+    status: exists
+    relevance: >-
+      The measured harm, twice. 19 pre-existing checks broken and never mentioned in
+      the run's own report (2026-08-31); 18 regressed outcomes across 6 files on a
+      change that reached an open pull request (2026-09-07). The entry is explicit
+      that this arm, and only this arm, would have prevented the second.
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-09-22
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+documentation_triggers:
+  - sequence-diagram
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  THE SUBJECT IS EXISTENCE, NOT HONESTY AND NOT CONSEQUENCE. This record is satisfied
+  only by something wide actually running, and is NOT satisfied by a truthful
+  description of a narrow check (BO-4200b) nor by what happens when the wide check
+  fails (BO-4200c). Those are separate records because they fail separately: the
+  current route would satisfy b and c with its narrow check intact and still deliver
+  the broken result that prompted all three.
+
+  WHAT MUST NOT BE READ INTO IT. It does not say the wide check is the same check, run
+  the same way, as the narrow one the route already has; it does not say it runs at
+  every attempt (BO-4200d fences that deliberately); and it does not name a tool, a
+  command or a set of directories. The origin entry's own preferred shape — one run
+  after the producing loop settles and before the reading phase — is a fix direction,
+  not this criterion.
+
+  THE REPOSITORY ALREADY HOLDS THIS RULE FOR THE OTHER ROUTE, which is the strongest
+  argument that it is not a new demand. CLAUDE.md's "Full test suite + ruff at
+  epic-finalize (before merge)" exists because per-item sign-offs run only that item's
+  own checks and cross-cutting breakage slips through. The origin entry's words: "That
+  is this defect exactly, one pipeline over. The fast lane was built after that
+  instruction and did not inherit it."
+
+  documentation_triggers: sequence-diagram. The run's phase order is what changes, and
+  where the wide check sits relative to the producing loop, the reading phase and the
+  hand-off is the whole of the operator-visible difference. No how-to: the operator
+  types the same thing and does nothing new.

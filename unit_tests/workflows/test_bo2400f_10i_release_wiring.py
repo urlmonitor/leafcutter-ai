@@ -396,12 +396,20 @@ class TestClaimDispatchUnaltered(_FixtureCase):
     def test_the_claim_dispatch_is_not_altered_by_this_change(self) -> None:
         # covers: BO-2400f-10-i
         """No-collateral-change guard: exactly one claim-connected dispatch
-        is still recorded, with agentType status-checker (the claim dispatch
-        belongs to BO-2400f-7 and must be left alone by this fix)."""
+        is still recorded, and the release-path change does not alter its
+        performer.
+
+        The performer was status-checker when this guard was written. BO-2400f-7-iii
+        later changed it deliberately — status-checker declares permits_shell: false
+        and refused the claim command in a live run on 2026-09-23 — so the expected
+        value tracks that record, not the original literal. What this guard still
+        asserts is what it was always for: that the RELEASE path's wiring leaves the
+        claim dispatch alone, one call, performer unchanged by anything here.
+        """
         result = self._run_to(_HALT_SCENARIOS["coder-fail"])
         claim_calls = [c for c in result.agent_calls if c.label == "claim-connected"]
         self.assertEqual(len(claim_calls), 1, f"expected exactly one claim-connected call: {result.agent_calls}")
-        self.assertEqual(claim_calls[0].agent_type, "status-checker")
+        self.assertEqual(claim_calls[0].agent_type, "worktree-agent")
 
 
 if __name__ == "__main__":

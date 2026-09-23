@@ -16,7 +16,7 @@ related_docs:
 # KI-TQ-20260901-1310 — The red-baseline gate's 60-second pytest budget silently negotiates the AC's required test shape down to whatever fits
 
 > One known issue, split out of `docs/known-issues/testing-quality.md` on
-> 2026-09-14. Index: [testing-quality.md](../testing-quality.md).
+> 2026-09-14. Index: [testing-quality.md](../../testing-quality.md).
 > Filename severity is the three-level index bucket (`high`); the
 > original grading is the `**Severity:**` line below, unchanged.
 

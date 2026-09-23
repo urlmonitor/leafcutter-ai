@@ -16,7 +16,7 @@ related_docs:
 # KI-ACD-009 — `/plan-feature` halts before any authoring agent and blames a registry field that is correct
 
 > One known issue, split out of `docs/known-issues/ac-driven-dev.md` on
-> 2026-09-14. Index: [ac-driven-dev.md](../ac-driven-dev.md).
+> 2026-09-14. Index: [ac-driven-dev.md](../../ac-driven-dev.md).
 > Filename severity is the three-level index bucket (`blocker`); the
 > original grading is the `**Severity:**` line below, unchanged.
 
@@ -199,7 +199,7 @@ record, not a code defect.** Re-checked by running the code, not by reading the 
   exists to catch. **The remaining scope is one store transition, and no known code defect.**
 
 The standing reference page for `/plan-feature`'s layout and startup-time checks now exists
-at [`docs/reference/plan-feature-layout-and-startup-checks.md`](../../reference/plan-feature-layout-and-startup-checks.md)
+at [`docs/reference/plan-feature-layout-and-startup-checks.md`](../../../reference/plan-feature-layout-and-startup-checks.md)
 (planned per `ACD-2100d-4`, authored 2026-09-09). It should state this fix and cross-link
 back here rather than duplicating this narrative.
 

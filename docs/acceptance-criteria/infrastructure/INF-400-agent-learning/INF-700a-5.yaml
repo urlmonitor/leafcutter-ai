@@ -9,7 +9,7 @@ component: infrastructure
 level: L2
 status: active
 req_status: active
-work_status: todo
+work_status: done
 priority: high
 readiness: reviewed
 created_by: "docs/acceptance-criteria/infrastructure/INF-400-agent-learning/INF-700a.yaml"
@@ -96,7 +96,9 @@ covered_by:
   - INF-700a-5-i
   - INF-700a-5-ii
   - INF-700a-5-iii
-implemented_by: []
+implemented_by:
+- scripts/knowledge/completion_routing.py
+- scripts/knowledge/completion_routing_state.py
 test_spec:
   - name: test_the_learning_survives_removal_of_the_working_directory_the_work_ran_in
     target_dir: unit_tests/workflows/

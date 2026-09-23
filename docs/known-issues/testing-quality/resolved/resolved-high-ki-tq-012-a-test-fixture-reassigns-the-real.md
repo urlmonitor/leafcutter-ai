@@ -16,7 +16,7 @@ related_docs:
 # KI-TQ-012 — A test fixture reassigns the real repository's commit identity, and every commit made afterwards is authored by the fixture
 
 > One known issue, split out of `docs/known-issues/testing-quality.md` on
-> 2026-09-14. Index: [testing-quality.md](../testing-quality.md).
+> 2026-09-14. Index: [testing-quality.md](../../testing-quality.md).
 > Filename severity is the three-level index bucket (`high`); the
 > original grading is the `**Severity:**` line below, unchanged.
 
