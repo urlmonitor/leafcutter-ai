@@ -5,7 +5,7 @@ flight_level: L3-Component
 status: active
 type: reference
 created: 2026-07-10
-last_updated: 2026-09-22
+last_updated: 2026-09-23
 components:
   - build_orchestration
 related_docs:
@@ -14,6 +14,7 @@ related_docs:
   - docs/architecture/adrs/ADR-048-order-independent-per-ticket-completion.md
 children:
   - docs/architecture/diagrams/c3-fast-lane-build-loop-sequence.md
+  - docs/architecture/diagrams/c3-008-ticket-close-paths-sequence.md
 ---
 
 # Build Orchestration
@@ -96,6 +97,24 @@ must derive the set identically, in the same commit, per `BO-400a-2-ii`'s twin c
 rule closes (a caller-trusted union let the same ticket state produce a refusal or a
 phantom-done write depending on what the caller supplied) and includes a sequence diagram of
 the corrected, record-only decision path.
+
+## Completion Write — One Door, and It Is the One That Checks
+
+ADR-046 governs *which phases are checked*; [ADR-047](../adrs/ADR-047-single-writer-ticket-close-path.md)
+governs *which mechanism may write*. `scripts/set_ticket_status.py` is the only writer of a
+ticket's finished state on the close path: both drivers dispatch `status-checker`, which
+invokes that script unforced, and the script re-reads the ticket's own `agents:` map and
+refuses — leaving the record exactly as found — while any entry is still unaccounted for.
+A refusal is reported as *not closed*; it is never retried through another route and never
+retried with `--force`, which disables the parity check and the transition allow-list
+together.
+
+- [Ticket Close — Every Route to the Finished State](../diagrams/c3-008-ticket-close-paths-sequence.md) —
+  the close-path sequence: both drivers reaching the same mechanism, the mechanism deciding
+  from the record it read rather than from what the caller passed it, the refusal and the
+  blanket override drawn as their own paths, and the single path that ends in the finished
+  state being written. The diagram also records `finalize-feature.js` step 3.5 as a second
+  writer of that state which does not pass through the mechanism.
 
 ## Documentation Coverage — Runtime Phase Flow
 
