@@ -1598,10 +1598,10 @@ if (closureAlreadyCommitted) {
       "\n" +
       "=== SUB-STEP C: SET status: done ===\n" +
       "For each ticket in OPEN_TICKETS:\n" +
-      "  Read the file content.\n" +
-      "  Replace the `status: <value>` line in the YAML frontmatter with `status: done`.\n" +
-      "  Write the updated content back to the file.\n" +
-      "  Log: 'Set status: done on <ticket_path>'\n" +
+      `  Run: python3 ${WORKTREE_ROOT}/{{config.output_root}}/scripts/set_ticket_status.py --ticket <ticket_path> --status done\n` +
+      "  NEVER write that value yourself and NEVER add --force: this script is the single writer of the finished state (ADR-047), and the override switches off the parity check that makes it the only one.\n" +
+      "  If exit code is 0: log 'Set status: done on <ticket_path>' and increment tickets_closed.\n" +
+      "  If exit code is non-zero: the ticket is NOT closed. Log 'REFUSED: <ticket_path> left open — <script stderr>' and increment tickets_refused. Do NOT close it by any other route and do NOT retry with --force; leaving it open is the correct outcome, and the archive check at step 5 surfaces it.\n" +
       "\n" +
       "=== SUB-STEP D: CLOSE SOURCE ACs ===\n" +
       "For each ticket in OPEN_TICKETS:\n" +

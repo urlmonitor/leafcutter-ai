@@ -16,9 +16,9 @@ related_docs:
 
 # KI-BO-20260923-0630 — finalize-feature writes `status: done` by rewriting the frontmatter, so the single-writer close path has a second door
 
-- **Severity:** high — it defeats the invariant EPIC-WorkIsOnlyEverMarkedFinishedThroughThe
+- **Severity:** high — it defeated the invariant EPIC-WorkIsOnlyEverMarkedFinishedThroughThe
   was built to establish, on a path that runs against every ticket of a finalized epic.
-- **Status:** open — no AC yet
+- **Status:** resolved — see `BO-400e-3-i` (the fix), landed 2026-09-23 yet
 - **Occurrences:** 1 (found 2026-09-23 by BO-400e-5's own diagram, not by a drive)
 - **First seen:** 2026-09-23 · **Last seen:** 2026-09-23
 - **Where:** `templates/workflows-js/finalize-feature.js`, step 3.5 sub-step C, the
@@ -73,12 +73,24 @@ agent is no longer dispatched for phase execution (ADR-006 flattened the supervi
 so it is not a live route today — but a change that revives the agent revives an ungated
 writer with it.
 
-**Fix direction.** Route sub-step C through `scripts/set_ticket_status.py` like the drivers
-do, and let it refuse. A ticket that finalize cannot legitimately close should surface as a
-named refusal naming the outstanding phase, not be rewritten into compliance. Note the
-transition allow-list already permits `todo -> done` without `--force` (BO-400e-3), so the
-ordinary case needs no override; if some finalization case genuinely requires one, that is a
-decision to record, not a flag to reach for silently.
+**Fix (landed 2026-09-23, `BO-400e-3-i`).** Sub-step C now invokes
+`scripts/set_ticket_status.py --status done` per open ticket — the same shape sub-step D
+immediately below already used for `mark_ac_done.py`, which is what made the omission
+visible once anyone looked. `--force` is explicitly forbidden in the instruction, since the
+override also disables the parity check and would reinstate the ungated write behind a flag.
+A non-zero exit leaves the ticket open, names it in a `REFUSED:` log line, and increments a
+refused counter; the step does not fall back to any other write. Finalization is not made to
+fail on a refusal — the archive check at step 5 already refuses to archive an epic holding a
+non-done ticket, so the refusal surfaces there on its own terms rather than through a second
+mechanism invented for the purpose.
+
+The transition allow-list already permitted `todo -> done` without `--force` (BO-400e-3), so
+the ordinary finalization case needs no override.
+
+Covered by `unit_tests/test_finalize_feature_single_writer_close.py`, including a negative
+test that scans the whole finalization prompt — not just sub-step C — so the same defect
+reappearing in a different sub-step fails it too. Red baseline captured before the fix: 3 of
+4 failing.
 
 **Related.** `ADR-047` (the invariant this breaks), `ADR-046` (record-only demanded set),
 `BO-400e-1`/`-2`/`-3`/`-4` (the drivers' close, already correct),

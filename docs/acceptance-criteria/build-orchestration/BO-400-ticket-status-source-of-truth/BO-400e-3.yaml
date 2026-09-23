@@ -154,6 +154,7 @@ amended_by:
 superseded_by: null
 covered_by:
 - unit_tests/prompt_assembly/test_bo_400e_3.py
+- BO-400e-3-i
 implemented_by:
 - tickets/00_inbox/epics/EPIC-WorkIsOnlyEverMarkedFinishedThroughThe/03_TICKET-20260914-BO-400e-3.md
 - scripts/set_ticket_status.py
