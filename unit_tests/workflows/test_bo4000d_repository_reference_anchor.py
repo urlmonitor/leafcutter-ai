@@ -31,6 +31,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from typing import ClassVar
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(_REPO_ROOT) not in sys.path:
@@ -147,6 +148,16 @@ def _reference_argument(tokens: list[str]) -> tuple[str, str | None]:
 
 class _RealRepositoryFixture(unittest.TestCase):
     """A temporary REAL repository, a real linked worktree, and a non-git cwd."""
+
+    # Declared because setUpClass assigns them on `cls`, which mypy does not
+    # infer as class attributes. Bare annotations are never evaluated, so this
+    # has no runtime effect.
+    _tmp: ClassVar[tempfile.TemporaryDirectory]
+    main_checkout: ClassVar[Path]
+    worktree_base: ClassVar[Path]
+    linked: ClassVar[Path]
+    epic_target: ClassVar[Path]
+    not_a_repo: ClassVar[Path]
 
     @classmethod
     def setUpClass(cls) -> None:
@@ -328,11 +339,13 @@ class TestDriverAnchorsEveryInvocation(unittest.TestCase):
             with self.subTest(command=command):
                 subcommand, reference = _reference_argument(shlex.split(command))
                 seen.add(subcommand)
-                self.assertIsNotNone(
-                    reference,
-                    f"the {subcommand!r} invocation leaves its repository "
-                    "reference to the process cwd",
-                )
+                if reference is None:
+                    # self.fail is typed NoReturn, so this also narrows
+                    # `reference` to str for the interpolation check below.
+                    self.fail(
+                        f"the {subcommand!r} invocation leaves its repository "
+                        "reference to the process cwd"
+                    )
                 self.assertIn(
                     "${", reference,
                     f"the {subcommand!r} invocation's reference {reference!r} is a "
