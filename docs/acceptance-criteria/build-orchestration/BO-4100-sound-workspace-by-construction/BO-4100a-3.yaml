@@ -93,7 +93,8 @@ created: 2026-09-21
 amended_by: []
 superseded_by: null
 covered_by: [BO-4100a-3-i]
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260923-BO-4100a-3.md
 notes: >-
   The silent fallback to a local copy is the mechanism by which a stale workspace gets
   handed over without anybody choosing it. Refusing is the only option that keeps the

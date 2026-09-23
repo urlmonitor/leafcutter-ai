@@ -106,7 +106,8 @@ created: 2026-09-21
 amended_by: []
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260923-BO-4100e-4.md
 notes: >-
   The cheapest way to make the listing complete is to register whatever is discovered, and
   that reading of BO-4100e-1 is actively harmful: a half-created workspace has no guarantee

@@ -123,7 +123,8 @@ created: 2026-09-21
 amended_by: []
 superseded_by: null
 covered_by: [BO-4100b-1-i]
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260923-BO-4100b-1.md
 notes: >-
   The last clause is the decisive one and comes straight from the 2026-09-14 observation:
   the identical commit was refused while behind and accepted after the main line was

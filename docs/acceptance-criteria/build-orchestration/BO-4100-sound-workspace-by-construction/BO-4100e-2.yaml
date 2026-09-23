@@ -91,7 +91,8 @@ created: 2026-09-21
 amended_by: []
 superseded_by: null
 covered_by: [BO-4100e-2-i]
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260923-BO-4100e-2.md
 notes: >-
   KI-BO-20260831-1331's sharpest symptom: the leftover could not be removed at all, so it
   stayed forever. The first clause names the actual defect -- removal refusing BECAUSE

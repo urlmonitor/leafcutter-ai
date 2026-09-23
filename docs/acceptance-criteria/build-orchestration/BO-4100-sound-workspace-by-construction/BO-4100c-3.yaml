@@ -93,7 +93,8 @@ created: 2026-09-21
 amended_by: []
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260923-BO-4100c-3.md
 notes: >-
   Separately failable from BO-4100c-2 and the more dangerous of the two: an unreadable
   workspace is the one most likely to be the damaged one worth keeping, and the natural

@@ -86,7 +86,8 @@ created: 2026-09-21
 amended_by: []
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260923-BO-4100b-1-i.md
 notes: >-
   Written specifically so that BO-4100b-1 cannot be satisfied by weakening or disabling
   the check. Narrowing what a check may refuse over and stopping it refusing at all are
