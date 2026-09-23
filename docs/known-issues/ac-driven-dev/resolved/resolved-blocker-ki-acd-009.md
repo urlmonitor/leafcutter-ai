@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: '2026-08-19'
-last_updated: '2026-09-21'
+last_updated: '2026-09-23'
 components:
   - ac_driven_dev
 related_docs:
@@ -206,5 +206,13 @@ back here rather than duplicating this narrative.
 **Pattern:** `docs/reference/false-green-mechanisms.md` → M8, inverted — not a check
 reporting success it did not establish, but a check reporting a *specific failure cause*
 it did not establish.
+
+**Update 2026-09-23 — closed.** The remaining scope named by the 2026-09-21 update was one
+store transition, and it has now landed: `BO-1500f-1` is marked `work_status: done` via
+`scripts/ac_store/mark_ac_done.py`, recording against the store the remediation that the
+migrated coverage in `f3d4630b` ("test(ac-driven-dev): migrate gate mocks to the
+resume-answer protocol") already established behaviorally. That commit merged to `main` in
+PR #864. With the store now recording what the code and tests have shown since 2026-09-21,
+this entry is closed and moved to `resolved/`.
 
 ---
