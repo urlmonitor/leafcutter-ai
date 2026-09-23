@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: 2026-08-18
-last_updated: 2026-09-14
+last_updated: 2026-09-23
 components:
   - build_orchestration
 related_docs:
@@ -68,7 +68,7 @@ Severity in the **filename** is a three-level index bucket (`blocker` / `high` /
 
 Fixed issues move to [`build-orchestration/resolved/`](build-orchestration/resolved/) and are no longer listed as open. They are kept, not deleted.
 
-**Open: 49** (7 blocker, 26 high, 16 low) · **Resolved: 9**
+**Open: 51** (7 blocker, 27 high, 17 low) · **Resolved: 9**
 
 ## Open
 
@@ -107,6 +107,7 @@ Fixed issues move to [`build-orchestration/resolved/`](build-orchestration/resol
 | `high` | KI-BO-20260908-1030 — The fast lane guards its verdicts against fabrication and passes the pointers to their evidence through unchecked, so `tests_written` can name a file that does not contain the tests | [open-high-ki-bo-20260908-1030.md](build-orchestration/open-high-ki-bo-20260908-1030.md) |
 | `high` | KI-BO-20260909-worktrees-go-stale-within-minutes — a branch cut from `origin/main` is behind before the work finishes, and nothing rebases it; only a manual audit stands between that and a push that deletes other people's merged work | [open-high-ki-bo-20260909-worktrees-go-stale-within-minutes.md](build-orchestration/open-high-ki-bo-20260909-worktrees-go-stale-within-minutes.md) |
 | `high` | KI-BO-20260914-autofix-re-dispatch-is-specified-at-a-depth-that-cannot-execute — the commit agent is told to spawn the originating coder, and ADR-019 says that call is silently dropped | [open-high-ki-bo-20260914-autofix-re-dispatch-is-specified-at-a-depth-that-cannot-execute.md](build-orchestration/open-high-ki-bo-20260914-autofix-re-dispatch-is-specified-at-a-depth-that-cannot-execute.md) |
+| `high` | KI-BO-20260907-0804 — The epic planner omits only `done`, so a parked ticket is re-scheduled every run and halts the drive again | [open-high-ki-bo-20260907-0804.md](build-orchestration/open-high-ki-bo-20260907-0804.md) |
 | `low` | KI-BO-008 — A structural test makes code comments load-bearing | [open-low-ki-bo-008.md](build-orchestration/open-low-ki-bo-008.md) |
 | `low` | KI-BO-009 — The harness default stub is generically positive, so a new gate silently breaks older fixtures | [open-low-ki-bo-009.md](build-orchestration/open-low-ki-bo-009.md) |
 | `low` | KI-BO-021 — TODO: `BO-2400e-4` is closed on two of its four specified tests, and the two missing ones are the pair that would survive a writer swap | [open-low-ki-bo-021.md](build-orchestration/open-low-ki-bo-021.md) |
@@ -123,6 +124,7 @@ Fixed issues move to [`build-orchestration/resolved/`](build-orchestration/resol
 | `low` | KI-BO-20260907-0851 — Two agent templates use `(status: handoff)` to mean "stop, I need human authorization", so a deliberate halt is reported to the operator as a malformed result | [open-low-ki-bo-20260907-0851.md](build-orchestration/open-low-ki-bo-20260907-0851.md) |
 | `low` | KI-BO-20260914-a-cached-bad-path-makes-a-workflow-run-permanently-unresumable — resume replays the poisoned agent result in 32ms, so the only escape from a caught hallucination is a fresh run id | [open-low-ki-bo-20260914-a-cached-bad-path-makes-a-workflow-run-permanently-unresumable.md](build-orchestration/open-low-ki-bo-20260914-a-cached-bad-path-makes-a-workflow-run-permanently-unresumable.md) |
 | `low` | KI-BO-20260914-commit-agent-rewrites-co-author-trailer — the commit agent replaces the caller's `Co-Authored-By` trailer with its own model name, so a commit misattributes which model did the work | [open-low-ki-bo-20260914-commit-agent-rewrites-co-author-trailer.md](build-orchestration/open-low-ki-bo-20260914-commit-agent-rewrites-co-author-trailer.md) |
+| `low` | KI-BO-20260907-0803 — `blocked` and `deferred` are valid ticket statuses that no transition can reach, so the only way to park a ticket is to bypass the tool | [open-low-ki-bo-20260907-0803.md](build-orchestration/open-low-ki-bo-20260907-0803.md) |
 
 ## Resolved
 

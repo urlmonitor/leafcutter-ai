@@ -8,7 +8,7 @@ component: ticket-creation
 level: L2
 status: active
 req_status: active
-work_status: todo
+work_status: done
 created_by: "docs/acceptance-criteria/ticket-creation/TKT-500-single-source/TKT-500f.yaml"
 criteria: |
   Given a leaf AC whose assigned_agent names an agent whose agent registry

@@ -79,7 +79,7 @@ def _collect_workflow_scripts() -> list[Path]:
     return sorted(_WORKFLOWS_DIR.glob("*.js"))
 
 
-def _make_params(scripts: list[Path]) -> list[pytest.param]:
+def _make_params(scripts: list[Path]) -> list:
     """Build a pytest.param list, tagging E1-only scripts with xfail(strict=True).
 
     E1-only scripts are expected to fail (dispatch 0 agents) under the E2
@@ -92,7 +92,11 @@ def _make_params(scripts: list[Path]) -> list[pytest.param]:
         scripts: Sorted list of .js file paths to parametrize.
 
     Returns:
-        List of ``pytest.param`` instances, one per script.
+        List of ``pytest.param`` instances, one per script. The return type is
+        the bare ``list``: the element type is ``_pytest.mark.structures.
+        ParameterSet``, but naming it would mean importing a private pytest
+        module, and this file is already over the size ratchet. ``pytest.param``
+        itself cannot be named here -- it is a factory function, not a type.
     """
     params = []
     for script_path in scripts:
