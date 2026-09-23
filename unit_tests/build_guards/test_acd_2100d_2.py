@@ -112,6 +112,14 @@ def _load_bp100k2_module() -> types.ModuleType:
     _UNIQUE_COUNTER[0] += 1
     unique_name = f"_acd2100d2_test_bp_100k_2_{_UNIQUE_COUNTER[0]}"
     spec = importlib.util.spec_from_file_location(unique_name, _TEST_BP_100K_2_PATH)
+    # spec_from_file_location is typed to return ModuleSpec | None; it is None
+    # only when the target cannot be resolved to a loadable module at all. A
+    # None spec here would otherwise surface as a confusing AttributeError on
+    # module_from_spec's own internals below, so fail fast with a clear
+    # message naming the path that could not be resolved.
+    assert spec is not None, (
+        f"spec_from_file_location returned None for {_TEST_BP_100K_2_PATH}"
+    )
     module = importlib.util.module_from_spec(spec)
     sys.modules[unique_name] = module
     spec.loader.exec_module(module)  # type: ignore[union-attr]

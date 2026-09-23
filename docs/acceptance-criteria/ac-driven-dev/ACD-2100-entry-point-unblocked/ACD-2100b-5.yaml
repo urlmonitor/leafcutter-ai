@@ -177,6 +177,7 @@ amended_by:
       move would otherwise have left as a bypass."
 superseded_by: null
 covered_by:
+- ACD-2100b-5-i
 - unit_tests/ac_driven_dev/test_acd_2100b_5.py
 - unit_tests/workflows/test_acd_2100b_5.py
 implemented_by:

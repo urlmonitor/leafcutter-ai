@@ -16,7 +16,7 @@ related_docs:
 # KI-BP-20260910-1240 — build.py writes CRLF on Windows and then cannot see that it did, so every deployed script silently diverges from its template and a plain re-run never repairs it
 
 > One known issue, split out of `docs/known-issues/build-pipeline.md` on
-> 2026-09-14. Index: [build-pipeline.md](../build-pipeline.md).
+> 2026-09-14. Index: [build-pipeline.md](../../build-pipeline.md).
 > Filename severity is the three-level index bucket (`high`); the
 > original grading is the `**Severity:**` line below, unchanged.
 

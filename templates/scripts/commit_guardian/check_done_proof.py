@@ -583,24 +583,35 @@ def check_staged_done_proofs(
     file(s) — so a leaf (empty ``covered_by``, or one holding only test
     paths) keeps the original direct-covers-tag requirement below.
 
-    On the leaf path only, ACs with ``test_required: false`` (the Python
-    boolean ``False``, not the string ``"false"``) are silently exempted and
-    never checked for a covers tag.  This mirrors the exemption already applied
-    by the CI-authoritative functions :func:`check_all_done_acs` and
-    :func:`check_changed_done_acs` — it covers documentation ACs and
+    On the leaf path only, the covers-tag mandate is waived by
+    :func:`done_proof.is_covers_tag_waived` — the ONE shared BO-2500a-1-ii
+    predicate, which requires the CONJUNCTION of ``test_required: false`` (the
+    Python boolean ``False``, not the string ``"false"``) AND a non-empty,
+    non-whitespace ``test_rationale``.  This covers documentation ACs and
     prompt-convention ACs where a covers-tagged test is structurally
-    impossible.  An absent or ``True`` value for ``test_required`` is always
-    enforced.  The exemption keys ONLY on the AC record's own declared
-    ``test_required`` field — never on whether a tag happens to be missing —
-    so it cannot be triggered by the very condition (no tag found) it is meant
-    to exempt from.
+    impossible, while still refusing an AC that declares itself untestable
+    without recording why.  An absent or ``True`` value for ``test_required``
+    is always enforced, and so is ``test_required: false`` with a missing or
+    whitespace-only rationale.  The waiver keys ONLY on the AC record's own
+    declared fields — never on whether a tag happens to be missing — so it
+    cannot be triggered by the very condition (no tag found) it is meant to
+    exempt from.
 
-    The two checks are ordered level-first deliberately.  ``test_required``
-    declares whether ``test-writer`` must author a direct test for this AC, so
+    Until 2026-09-23 this path ALSO carried a standalone
+    ``if data.get("test_required") is False: continue`` ahead of the coverage
+    branch.  That early return made the conjunction below structurally
+    unreachable for exactly the records it was added to catch: a rationale-less
+    ``test_required: false`` AC returned before ``is_covers_tag_waived`` was
+    ever consulted, so the pre-commit arm kept the pre-BO-2500a-1-ii behaviour
+    while the CI arms had moved on.  The early return is gone; the shared
+    predicate is now the only waiver on this path.
+
+    The remaining checks are ordered level-first deliberately.  The waiver
+    speaks to whether ``test-writer`` must author a DIRECT test for this AC, so
     it waives the direct-covers-tag obligation only.  A composite's obligation
     is a different one — that its children are done and covered — and nothing
-    in ``test_required`` speaks to it.  Evaluating ``test_required`` first would
-    let a composite that legitimately declares ``test_required: false`` (e.g.
+    in ``test_required`` speaks to it.  Evaluating the waiver first would let a
+    composite that legitimately declares ``test_required: false`` (e.g.
     ACS-500g: ``level: L1``, seven children, ``test_required: false``) skip the
     ACD-400a falsely-done-composite guard entirely, which is the exact shape of
     defect that guard exists to catch.  The CI functions have no level branch
@@ -657,8 +668,6 @@ def check_staged_done_proofs(
                 )
             continue
 
-        if data.get("test_required") is False:
-            continue
         if ac_id_str not in all_covered_ids:
             if is_covers_tag_waived(data):
                 continue
