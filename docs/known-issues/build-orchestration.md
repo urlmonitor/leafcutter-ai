@@ -68,7 +68,7 @@ Severity in the **filename** is a three-level index bucket (`blocker` / `high` /
 
 Fixed issues move to [`build-orchestration/resolved/`](build-orchestration/resolved/) and are no longer listed as open. They are kept, not deleted.
 
-**Open: 51** (7 blocker, 27 high, 17 low) · **Resolved: 9**
+**Open: 50** (7 blocker, 26 high, 17 low) · **Resolved: 10**
 
 ## Open
 
@@ -83,7 +83,6 @@ Fixed issues move to [`build-orchestration/resolved/`](build-orchestration/resol
 | `blocker` | KI-BO-20260921-fastlane-worktree-agent-acts-on-leaked-conversation — the fast lane's worktree phase executed destructive git operations from the parent session's conversation, then asked for the authorization afterwards | [open-blocker-ki-bo-20260921-fastlane-worktree-agent-acts-on-leaked-conversation.md](build-orchestration/open-blocker-ki-bo-20260921-fastlane-worktree-agent-acts-on-leaked-conversation.md) |
 | `high` | KI-BO-007 — `build-feature` counts a phase as completed when the agent halted without doing it, yielding `status: ok` with no PR | [open-high-ki-bo-007.md](build-orchestration/open-high-ki-bo-007.md) |
 | `high` | KI-BO-20260921-worktree-base-resolver-defaults-to-cwd — build-feature calls the worktree-base resolver with no start path, so in the self-hosting layout it resolves against a directory outside the repository and every epic drive aborts | [open-high-ki-bo-20260921-worktree-base-resolver-defaults-to-cwd.md](build-orchestration/open-high-ki-bo-20260921-worktree-base-resolver-defaults-to-cwd.md) |
-| `high` | KI-BO-010 — `/quick-fix`'s divergence gate is a first-token substring match, and its own remedy loops | [open-high-ki-bo-010.md](build-orchestration/open-high-ki-bo-010.md) |
 | `high` | KI-BO-011 — A grep-only test aimed at an orphaned file kept a superseded criterion looking satisfied, hiding a direct contradiction between two `done` ACs | [open-high-ki-bo-011.md](build-orchestration/open-high-ki-bo-011.md) |
 | `high` | KI-BO-012 — The fast lane emits no telemetry, so the lane-comparison report can never contain fast-lane data | [open-high-ki-bo-012.md](build-orchestration/open-high-ki-bo-012.md) |
 | `high` | KI-BO-013 — A documentation-only AC anywhere in a resolved build set jams the fast lane at commit, because `test_required: false` is honoured by nothing | [open-high-ki-bo-013.md](build-orchestration/open-high-ki-bo-013.md) |
@@ -132,6 +131,7 @@ Fixed issues move to [`build-orchestration/resolved/`](build-orchestration/resol
 |---|---|---|
 | `low` | KI-BO-002 — moved to `ac-store` | [resolved-low-ki-bo-002.md](build-orchestration/resolved/resolved-low-ki-bo-002.md) |
 | `low` | KI-BO-006 — `fast-lane-build.js` is deployed but orphaned | [resolved-low-ki-bo-006.md](build-orchestration/resolved/resolved-low-ki-bo-006.md) |
+| `high` | KI-BO-010 — `/quick-fix`'s divergence gate was a first-token substring match with a looping remedy; both were replaced on 2026-08-26 and the entry was never closed | [resolved-high-ki-bo-010.md](build-orchestration/resolved/resolved-high-ki-bo-010.md) |
 | `high` | KI-BO-015 — `_worktree_exists` does not know the `fast-lane/` prefix, so a fast-lane run cannot recognise its own workspace and aborts at phase one | [resolved-high-ki-bo-015.md](build-orchestration/resolved/resolved-high-ki-bo-015.md) |
 | `high` | KI-BO-016 — Resolving a one-criterion build set takes ~3 minutes, because every traversal re-parses the entire AC store | [resolved-high-ki-bo-016.md](build-orchestration/resolved/resolved-high-ki-bo-016.md) |
 | `high` | KI-BO-020 — The fast lane's release-on-failure path is dead: it dispatches `status-checker`, which refuses the role, so aborted runs strand their claims | [resolved-high-ki-bo-020.md](build-orchestration/resolved/resolved-high-ki-bo-020.md) |
