@@ -20,12 +20,13 @@ Read this before authoring or decomposing ACs in this component.
 
 - L0s occupy hundreds: 100, 200, 201, 202, 300, 400, 500, 700, 800, 900, 1100,
   1200, 1300, 1400, 1500, 1600, 1700, 1800, 1900, 2000, 2100, 2200, 2300, 2400,
-  2500, 2600, 2700, 2800, 2900, 3100, 3200, 3500, 3600, 3800. Slots 3000, 3700
-  and 3701 are occupied by loose `BO-NNNN.yaml` L2/L3 records sitting at the
-  component root — a loose file reserves its slot exactly as a folder does.
-- Next free L0 hundred is **BO-4200** (correct as of 2026-09-21, when BO-4100 was
-  added; BO-3900 and BO-4000 are loose L2 records that reserve their slots). Pick
-  the next free hundred for any new L0.
+  2500, 2600, 2700, 2800, 2900, 3100, 3200, 3500, 3600, 3800, 4100, 4200. Slots
+  3000, 3700, 3701, 3900 and 4000 are occupied by loose `BO-NNNN.yaml` L2/L3
+  records sitting at the component root — a loose file reserves its slot exactly
+  as a folder does.
+- Next free L0 hundred is **BO-4300** (correct as of 2026-09-22, when BO-4200 was
+  added; verified against folders AND loose `BO-*.yaml` files). Pick the next free
+  hundred for any new L0.
 - **This line has now gone stale four times** — it has previously claimed
   BO-1900, BO-2300, BO-3300 and BO-3900 while the store had already moved past each.
   Treat the number above as a hint, never as an answer: `ls` the component
@@ -265,6 +266,14 @@ the restructuring WAS performed by the specialist. What is provable is the SEQUE
 that the specialist is actually asked on the refusal path before delivery is retried.
 That is a reachability-shaped claim, and `fast-lane-build.js` is this repo's scar on
 what happens when such a claim is covered by a grep-only test instead.
+
+## The three fast-lane goals — read before adding anything lane-shaped
+
+BO-2400 (+f, g) owns the ARC; **BO-3500** the RANGE it can carry (producer routing and
+the `test_required: false` proof gap of KI-BO-013 are deliberately ONE goal); **BO-4200**
+the TRUTH of the verdict. A roster/producer request belongs to BO-3500, not a new goal.
+Pattern C is unavailable on BO-2400f — BO-2400 sits at 7/7 L1s — so a sibling L0
+(Pattern A) is the answer. Both findings are argued in full in `BO-4200.yaml`'s notes.
 
 ## Cross-component placement notes (parity & registry — NOT build-orchestration)
 
