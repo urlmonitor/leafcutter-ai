@@ -16,7 +16,7 @@ related_docs:
 # KI-KM-005 — Six reviewed `KM-ADM-*` ACs sit as orphan L2s with no L0/L1 parent
 
 > One known issue, split out of `docs/known-issues/knowledge-management.md` on
-> 2026-09-14. Index: [knowledge-management.md](../knowledge-management.md).
+> 2026-09-14. Index: [knowledge-management.md](../../knowledge-management.md).
 > Filename severity is the three-level index bucket (`low`); the
 > original grading is the `**Severity:**` line below, unchanged.
 

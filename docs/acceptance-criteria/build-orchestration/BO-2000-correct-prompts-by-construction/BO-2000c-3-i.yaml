@@ -19,9 +19,14 @@ criteria: |
 depends_on:
   - BO-2000c-3
 doc_links:
-  - path: scripts/ac_store/generate_ticket_from_ac.py
+  - path: scripts/ac_store/_gtfa_files_touched.py
     relationship: modifies
     status: exists
+    relevance: "Holds _resolve_reference_patterns — the zero-match / multiple-match failure branch this scenario exercises, and the error that must name the AC id and the unresolvable pattern. (Re-pointed 2026-09-22: scripts/ac_store/generate_ticket_from_ac.py is now a re-export shell; the implementation moved to the _gtfa_* siblings.)"
+  - path: scripts/ac_store/_gtfa_body.py
+    relationship: modifies
+    status: exists
+    relevance: "Holds _build_implementation_notes_section, the caller (at _gtfa_body.py:107) that must let the authoring error surface rather than emitting a raw pattern or broken path into the ticket body."
 assigned_agent: python-coder
 estimated_complexity: S
 it_requirements:
@@ -33,7 +38,52 @@ expects_from:
   contract: "The path-resolution step whose failure branch this scenario exercises"
 origin_agent: BrainCandy
 created: 2026-07-08
-amended_by: []
+amended_by:
+- reason: edit-surface-repoint
+  by: it-po
+  at: '2026-09-22'
+  note: 'doc_links re-pointed off scripts/ac_store/generate_ticket_from_ac.py at
+    relationship: modifies, for the same reason as parent BO-2000c-3: that file is now a
+    re-export shell with one real def, and modifies is an edit-surface relationship, so
+    it fed files_touched and a generated ticket named only the shell. Targets re-derived
+    from the criteria: the zero-match / multiple-match failure branch lives in
+    _gtfa_files_touched._resolve_reference_patterns, and the caller that must let the
+    error surface rather than emit a broken path is
+    _gtfa_body._build_implementation_notes_section. criteria untouched.'
+- reason: test-contract
+  by: it-po
+  at: '2026-09-22'
+  note: 'Added test_spec. check-ac-schema refuses an approved, not-done, leaf code AC
+    with no test contract; reclassifying as non-code would be false here (python-coder,
+    real generator behaviour). Both failure modes named in the Given — zero matches and
+    more than one match — get their own descriptor, because an implementation that only
+    guards the empty case passes a single-test contract and still emits a wrong path when
+    a pattern is ambiguous. criteria untouched.'
 superseded_by: null
 covered_by: []
 implemented_by: []
+test_spec:
+  - name: test_pattern_matching_no_file_raises_an_authoring_error
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    angle: failure
+    description: "First half of the Given: a reference_pattern matching zero files surfaces an authoring error rather than resolving to nothing silently."
+  - name: test_pattern_matching_more_than_one_file_raises_an_authoring_error
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    angle: failure
+    description: "Second half of the Given, and separately discriminating: an implementation that guards only the empty case passes the zero-match test and still picks an arbitrary path when a pattern is ambiguous."
+  - name: test_authoring_error_names_both_the_ac_id_and_the_pattern
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "The error message names the AC id AND the unresolvable pattern — two separate assertions. A bare 'could not resolve reference pattern' satisfies neither half of the diagnostic purpose, since the author cannot tell which record or which pattern to fix."
+  - name: test_no_implementation_notes_path_line_is_emitted_on_failure
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: "The 'And it does not silently emit' clause: on the failure path no raw pattern and no broken path reaches the ticket body. This is the boundary that stops the error being raised and then swallowed by a caller that emits the unresolved value anyway."

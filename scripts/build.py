@@ -63,6 +63,8 @@ from build_phases import (
     _compute_phase_mappings,
     check_command_reachability,
     AC_STORE_DEPLOY_MAP,
+    set_local_change_baseline,
+    announce_if_local_change_replaced,
 )
 from build_phases_knowledge import _manifest_knowledge_scripts, _manifest_workflow_tool_scripts
 from build_deploy_manifest_helpers import (
@@ -88,6 +90,7 @@ from build_ownership import (
     run_migration_report,
 )
 from build_reconciliation_helpers import run_adr041_reconciliation, check_blocked_conflicts
+from build_closure_guard import _source_file_for_deploy_path, _phase_for_deploy_path
 from registry_validator import validate_agent_registry
 from project_context_discovery import (  # noqa: F401 — re-exported for callers
     find_project_contexts,
@@ -195,6 +198,11 @@ def write_file(target: Path, content: str, dry_run: bool, force: bool) -> bool:
     builds.  Binary or unreadable files fall through to an unconditional write
     (UnicodeDecodeError / OSError are caught and silently ignored).
 
+    When the target exists and IS about to be overwritten (content differs,
+    or its on-disk content could not be read for comparison), calls
+    ``announce_if_local_change_replaced(target)`` first — this is one of the
+    four named compare-before-write branches ACD-2100d-2-i instruments.
+
     In dry-run mode, prints what would happen but does not write. Creates
     parent directories as needed.
 
@@ -224,6 +232,7 @@ def write_file(target: Path, content: str, dry_run: bool, force: bool) -> bool:
                 return False
         except (UnicodeDecodeError, OSError):
             pass  # Binary or unreadable file — fall through to write.
+        announce_if_local_change_replaced(target)
     target.parent.mkdir(parents=True, exist_ok=True)
     target.write_text(content, encoding="utf-8")
     return True
@@ -1154,163 +1163,6 @@ def _check_tracked_source_guard(package_root: Path) -> int:
     return 1
 
 
-_AC_STORE_DEST_TO_SOURCE: dict[str, str] = {
-    dest_name: src_rel for src_rel, dest_name in AC_STORE_DEPLOY_MAP
-}
-
-# Deploy-path prefix -> owning build_phases.py phase function name, used only
-# to attribute a closure-guard finding to the phase that would have to carry
-# the missing dependency (AC BP-900g-8's Gherkin requires naming the phase).
-# Attribution is diagnostic, not load-bearing for the pass/fail verdict.
-_CLOSURE_GUARD_PHASE_BY_PREFIX: tuple[tuple[str, str], ...] = (
-    ("scripts/ac_store/", "build_ac_store"),
-    ("scripts/commit_guardian/", "build_commit_guardian"),
-    ("scripts/feedback/", "build_feedback"),
-    ("scripts/knowledge/", "build_knowledge_scripts"),
-    ("scripts/build_orchestration/", "build_build_orchestration_scripts"),
-)
-
-# AC BP-900g-8-ii review finding: `config/` and `docs/` are NOT reliable
-# phase discriminators by prefix. `config/feedback_categories.yaml` is
-# deployed by build_feedback, not build_ac_store, and several phases write
-# files under `docs/` (not only build_components_registry). A prefix
-# heuristic over these two directories was correct only by coincidence --
-# every `config/` entry the guard could see on the day it was written
-# happened to be a build_ac_store "core config" file, and the only `docs/`
-# entry was docs/components.json. Mapping by the file's EXACT deploy-path
-# name (derived from the same core-config tuples _get_source_deployable_
-# scripts/_get_source_paths_for_guard already enumerate) keeps this hint
-# honest for a name it does not recognise, rather than confidently naming
-# the wrong phase. This only affects the human-readable remediation hint in
-# the abort message -- never the pass/fail verdict.
-_CONFIG_FILE_PHASE_BY_NAME: dict[str, str] = {
-    "ac_store_schema.json": "build_ac_store",
-    "agent_registry.json": "build_ac_store",
-    "doc_types.json": "build_ac_store",
-    "diagram_types.json": "build_ac_store",
-    "skill_registry.json": "build_ac_store",
-    "guardrail_gates.yaml": "build_ac_store",
-    "paths.json": "build_ac_store",
-    "phase_deferral.yaml": "build_ac_store",
-    "feedback_categories.yaml": "build_feedback",
-    "knowledge_sink.json": "build_knowledge_sink_declaration",
-    "entry_kind_vocabulary.json": "build_knowledge_scripts",
-    "reachability_exemptions.yaml": "build_config_scaffolds",
-    "roadmap.schema.json": "build_commit_guardian",
-}
-_DOCS_FILE_PHASE_BY_NAME: dict[str, str] = {
-    "components.json": "build_components_registry",
-    "roadmap.json": "build_roadmap",
-}
-
-
-def _phase_for_deploy_path(deploy_path: str) -> str:
-    """Return the build_phases.py phase function name that owns *deploy_path*.
-
-    Args:
-        deploy_path: A ``scripts/<...>`` deploy-namespace path, e.g. one
-            returned in a script's intra-package closure.
-
-    Returns:
-        The best-effort ``build_<name>`` phase function name responsible for
-        deploying paths with this prefix. Falls back to a joined label naming
-        the remaining candidate phases when no prefix matches, since
-        attribution here is diagnostic rather than authoritative.
-    """
-    for prefix, phase in _CLOSURE_GUARD_PHASE_BY_PREFIX:
-        if deploy_path.startswith(prefix):
-            return phase
-    for dir_name in AGENT_SUPPORT_SCRIPT_DIRS:
-        if deploy_path.startswith(f"scripts/{dir_name}/"):
-            return "build_agent_support_scripts"
-    if deploy_path in {f"scripts/{f}" for f in AGENT_SUPPORT_SCRIPT_FILES}:
-        return "build_agent_support_scripts"
-    # AC BP-900g-8-ii: non-code (config/docs) deploy paths, added once the
-    # closure guard was taught to see data-file reads. Matched by EXACT
-    # filename, not prefix -- see the DECISION comment above
-    # _CONFIG_FILE_PHASE_BY_NAME for why a `config/`/`docs/` prefix match is
-    # not a safe discriminator on its own.
-    if deploy_path.startswith("config/"):
-        name = deploy_path[len("config/"):]
-        return _CONFIG_FILE_PHASE_BY_NAME.get(
-            name, "an unmapped config/-writing phase (see build_phases.py)"
-        )
-    if deploy_path.startswith("docs/"):
-        name = deploy_path[len("docs/"):]
-        return _DOCS_FILE_PHASE_BY_NAME.get(
-            name, "an unmapped docs/-writing phase (see build_phases.py)"
-        )
-    return "build_workflow_tools or build_template_standalone_scripts"
-
-
-def _source_file_for_deploy_path(
-    package_root: Path, deploy_path: str
-) -> tuple[Path, Path, str] | None:
-    """Resolve a Set-B deploy path to the source file and closure namespace to analyse.
-
-    Args:
-        package_root: Absolute path to the leafcutter package root.
-        deploy_path: A ``scripts/<...>`` entry from ``_get_source_deployable_scripts``.
-
-    Returns:
-        A ``(source_file, root, deploy_prefix)`` triple. Closure entries are
-        computed relative to *root* and then prefixed with *deploy_prefix*, so
-        the resulting strings land in the SAME deploy namespace as
-        *deploy_path* itself and can be compared against Set B directly.
-        *deploy_prefix* is ``""`` for every family whose source layout already
-        mirrors its deploy layout. Returns None when no real source file can be
-        located (the guard skips rather than crashes).
-    """
-    if deploy_path.startswith("scripts/ac_store/"):
-        dest_name = deploy_path[len("scripts/ac_store/"):]
-        src_rel = _AC_STORE_DEST_TO_SOURCE.get(dest_name)
-        if src_rel is not None:
-            return package_root / src_rel, package_root, ""
-
-    # doc-compliance is the one family whose source directory name differs from
-    # its deploy directory name (``templates/doc-compliance/`` ->
-    # ``scripts/doc_compliance/``, hyphen vs underscore). No choice of closure
-    # root can bridge that, so this family carries an explicit prefix.
-    #
-    # It must be checked BEFORE the `direct` fallback below. In a worktree that
-    # has run install_shims, ``<package_root>/scripts/doc_compliance`` exists as
-    # a SYMLINK into the deployed .leafcutter tree — so the fallback would
-    # resolve it, follow the link, and analyse BUILD OUTPUT as though it were
-    # source, returning dependencies prefixed ``.leafcutter/`` that match
-    # nothing in Set B. That produced 14 phantom "undeployed dependency"
-    # findings on a tree where nothing was actually missing.
-    if deploy_path.startswith("scripts/doc_compliance/"):
-        rel = deploy_path[len("scripts/doc_compliance/"):]
-        dc_source = package_root / "templates" / "doc-compliance" / rel
-        if dc_source.is_file():
-            return (
-                dc_source,
-                package_root / "templates" / "doc-compliance",
-                "scripts/doc_compliance/",
-            )
-
-    # Template-mirrored categories (commit_guardian, feedback, sync_platforms,
-    # template-standalone): source lives under templates/<deploy_path>;
-    # stripping the templates/ prefix on the CLOSURE ROOT (not the path itself)
-    # makes the returned dependency strings land directly in deploy namespace.
-    templated = package_root / "templates" / deploy_path
-    if templated.is_file():
-        return templated, package_root / "templates", ""
-
-    # Everything else (build_orchestration, knowledge, agent-support,
-    # workflow-tool scripts): source and deploy namespaces coincide directly
-    # under package_root.
-    #
-    # Only reached by families whose source genuinely lives at this path. Any
-    # future family that does NOT must be given an explicit branch above, or a
-    # deployed symlink here will silently stand in for its source.
-    direct = package_root / deploy_path
-    if direct.is_file():
-        return direct, package_root, ""
-
-    return None
-
-
 def _check_intra_package_closure_guard(package_root: Path) -> int:
     """Preflight guard: exit non-zero when a deployed script's own dependency is not deployed.
 
@@ -2087,6 +1939,12 @@ def main(argv: list[str] | None = None) -> int:
     # report accurate per-run numbers.
     reset_uptodate_count()
 
+    # Capture the PREVIOUS install's output_mappings as this run's
+    # local-change baseline (ACD-2100d-2-i) BEFORE any phase below writes a
+    # single file — the whole point is to see what the last install produced
+    # before this run's own manifest overwrites the record of it.
+    set_local_change_baseline(target_root, output_root)
+
     # Self-description validation: resolve enforcement level (CLI flag overrides
     # registry config key; registry key overrides the 'warning' built-in default).
     _sd_enforcement = _resolve_self_description_enforcement(args)
@@ -2390,6 +2248,18 @@ if __name__ == "__main__":
 #   previously-undiscovered instance: validate_ac_schema.py's missing
 #   _ac_components.py -- concrete evidence the mechanism is derived rather than
 #   an enumeration of the one known case. (#BP-900g-8)
+# - 2026-08-31 [python-coder/EPIC-StartingNewWorkTheProperWayAlways/21]:
+#   write_file() now calls announce_if_local_change_replaced(target) (new
+#   import from build_phases) right before overwriting an existing file whose
+#   on-disk content differs from what is about to be written -- the fourth
+#   named ACD-2100d-2-i compare-before-write branch. main() calls the new
+#   set_local_change_baseline(target_root, output_root) right after
+#   reset_uptodate_count(), before any build phase writes a file, so the
+#   announcement's baseline is the PREVIOUS install's recorded
+#   output_mappings (not this run's own, not-yet-written manifest). The
+#   divergence verdict itself is computed entirely in build_phases.py, which
+#   consumes ACD-2100d-2's own installer-derived mapping rather than a second,
+#   independent determination. (#EPIC-StartingNewWorkTheProperWayAlways/21)
 # - 2026-09-07 [python-coder]: Registered the new build_knowledge_sink_declaration
 #   internal phase (declares the build-time knowledge-emission sink absolute
 #   path -- see build_phases.py for the phase itself) right after "Knowledge

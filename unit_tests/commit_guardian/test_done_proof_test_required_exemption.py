@@ -2,23 +2,29 @@
 MODULE: unit_tests/commit_guardian/test_done_proof_test_required_exemption.py
 GOAL: Behavioral tests for the test_required:false exemption in check_done_proof.py.
     Done ACs with test_required explicitly False must be silently exempted from the
-    covers-tag mandate in both check_changed_done_acs and check_all_done_acs.
+    covers-tag mandate in check_changed_done_acs, check_all_done_acs, AND
+    check_staged_done_proofs (the pre-commit mode) — all three must agree.
 BUSINESS CONTEXT: Documentation ACs and prompt-convention ACs (e.g. BO-2400a-6,
     BO-2400b-4, BO-2500a-4) legitimately have test_required: false because no
     covers-tagged test can meaningfully verify prose documentation. Requiring a
     covers test for these ACs causes the CI done-proof gate to flag them as
     violations even though the AC type structurally cannot satisfy the mandate.
-    The fix exempts test_required: false ACs from verify_done_eligible so the
-    gate remains meaningful for code ACs while passing for docs ACs.
+    The fix exempts test_required: false ACs from verify_done_eligible (CI
+    modes) and from the covers-tag scan (pre-commit mode) so the gate remains
+    meaningful for code ACs while passing for docs ACs in EVERY mode. Before
+    this fix, check_staged_done_proofs had no such exemption, so a docs-only
+    AC (test_required: false) passed the CI-authoritative check but was
+    blocked at pre-commit — the asymmetry this test file's third class closes.
 ARCHITECTURE: Tests import from scripts/commit_guardian/check_done_proof.py
     (deployed layout; tests/imports wiring follows the same pattern as
     test_bo2500b_done_proof_hook.py).  All AC YAML fixtures are written with
     yaml.safe_dump (BO-2500c mandate) so YAML round-trip fidelity is guaranteed.
     Covers test fixtures are real .py files.  No mocking of pass/fail signals.
 
-    Two test classes:
-        TestCheckChangedDoneAcsExemption — tests check_changed_done_acs()
-        TestCheckAllDoneAcsExemption     — tests check_all_done_acs()
+    Three test classes:
+        TestCheckChangedDoneAcsExemption   — tests check_changed_done_acs()
+        TestCheckAllDoneAcsExemption       — tests check_all_done_acs()
+        TestCheckStagedDoneProofsExemption — tests check_staged_done_proofs()
 """
 from __future__ import annotations
 
@@ -41,6 +47,7 @@ sys.path.insert(0, str(_AC_STORE_DIR))
 
 from check_done_proof import check_all_done_acs  # noqa: E402
 from check_done_proof import check_changed_done_acs  # noqa: E402
+from check_done_proof import check_staged_done_proofs  # noqa: E402
 
 
 # ---------------------------------------------------------------------------
@@ -53,6 +60,7 @@ def _write_done_ac(
     ac_id: str,
     *,
     test_required: bool | None = None,
+    test_rationale: str | None = None,
 ) -> Path:
     """Write a minimal done AC YAML using yaml.safe_dump (mandate-compliant).
 
@@ -63,6 +71,11 @@ def _write_done_ac(
             the YAML.  When ``True``, ``test_required: true`` is included.
             When ``None`` (default), the field is omitted entirely — this
             represents the standard code AC that has no explicit setting.
+        test_rationale: When a non-``None`` string, ``test_rationale`` is
+            included in the YAML verbatim (BO-2500a-1-ii: the conjunction's
+            second half — a ``test_required: false`` AC is only waived when
+            this is also a non-empty, non-whitespace string). Omitted
+            entirely when ``None`` (default).
 
     Returns:
         Path to the written YAML file.
@@ -88,6 +101,8 @@ def _write_done_ac(
     }
     if test_required is not None:
         data["test_required"] = test_required
+    if test_rationale is not None:
+        data["test_rationale"] = test_rationale
     # Mandate: use yaml.safe_dump, not a hand-typed YAML literal (BO-2500c).
     path.write_text(yaml.safe_dump(data, allow_unicode=True), encoding="utf-8")
     return path
@@ -132,9 +147,26 @@ class TestCheckChangedDoneAcsExemption(unittest.TestCase):
         yaml.safe_dump serialises False as the YAML scalar 'false'; yaml.safe_load
         deserialises 'false' back to Python False.  The check
         ``data.get("test_required") is False`` must be True, triggering the exemption.
+
+        BO-2500a-1-ii: the exemption is now the CONJUNCTION of
+        ``test_required: false`` AND a non-empty ``test_rationale`` — a
+        ``test_required: false`` AC with no recorded reason is no longer
+        waived on its own. This fixture gained a real ``test_rationale`` so
+        it still exercises the intended "docs AC, no covers tag needed"
+        accept path under the corrected rule, rather than the now-closed
+        "no reason required" gap the fixture originally (and incompletely)
+        pinned.
         """
         ac_id = "BO-DOCS-EXEMPT-CHANGED-001"
-        ac_path = _write_done_ac(self.ac_root, ac_id, test_required=False)
+        ac_path = _write_done_ac(
+            self.ac_root,
+            ac_id,
+            test_required=False,
+            test_rationale=(
+                "Pure prose documentation change; no covers-tagged test can "
+                "meaningfully assert the correctness of explanatory prose."
+            ),
+        )
         # test_root is intentionally empty — no covers tag exists
 
         violations = check_changed_done_acs(
@@ -238,9 +270,26 @@ class TestCheckAllDoneAcsExemption(unittest.TestCase):
         must also silently skip ACs with test_required: false.  This is the path
         the required 'Proof-of-done coverage check' CI job takes when the done-proof
         gate runs across the whole branch.
+
+        BO-2500a-1-ii: the exemption is now the CONJUNCTION of
+        ``test_required: false`` AND a non-empty ``test_rationale`` — a
+        ``test_required: false`` AC with no recorded reason is no longer
+        waived on its own. This fixture gained a real ``test_rationale`` so
+        it still exercises the intended "docs AC, no covers tag needed"
+        accept path under the corrected rule, rather than the now-closed
+        "no reason required" gap the fixture originally (and incompletely)
+        pinned.
         """
         ac_id = "BO-DOCS-EXEMPT-ALL-001"
-        _write_done_ac(self.ac_root, ac_id, test_required=False)
+        _write_done_ac(
+            self.ac_root,
+            ac_id,
+            test_required=False,
+            test_rationale=(
+                "Pure prose documentation change; no covers-tagged test can "
+                "meaningfully assert the correctness of explanatory prose."
+            ),
+        )
         # test_root is intentionally empty — no covers tag
 
         violations = check_all_done_acs(
@@ -281,6 +330,143 @@ class TestCheckAllDoneAcsExemption(unittest.TestCase):
             f"A done AC with test_required: true must still be enforced by "
             f"check_all_done_acs. The exemption only applies to test_required: false. "
             f"Got violations: {violations}",
+        )
+
+
+# ---------------------------------------------------------------------------
+# TestCheckStagedDoneProofsExemption — check_staged_done_proofs (pre-commit mode)
+# ---------------------------------------------------------------------------
+
+
+class TestCheckStagedDoneProofsExemption(unittest.TestCase):
+    """test_required: false exemption for check_staged_done_proofs() (pre-commit mode).
+
+    Closes the asymmetry between the CI-authoritative functions (which already
+    exempt test_required: false ACs) and the pre-commit static scan (which, prior
+    to this fix, had no such exemption and blocked every documentation-only AC).
+
+    A done AC with test_required explicitly False must NOT be reported even when
+    no covers-tagged test exists anywhere under test_root. A done AC with
+    test_required True (or absent) must still be reported when no covers test
+    exists, and must NOT be reported when a covers tag IS present — the ordinary,
+    unexempted path must remain intact.
+    """
+
+    def setUp(self) -> None:
+        self._tmp = tempfile.TemporaryDirectory()
+        root = Path(self._tmp.name)
+        self.ac_root = root / "acs"
+        self.test_root = root / "tests"
+        self.test_root.mkdir(parents=True, exist_ok=True)
+
+    def tearDown(self) -> None:
+        self._tmp.cleanup()
+
+    def test_done_ac_with_test_required_false_and_no_covers_tag_passes(self) -> None:
+        # covers: BO-2500a-3
+        """A staged done AC with test_required: false must NOT be a violation,
+        even when no covers tag exists anywhere under test_root.
+
+        This is the case that was previously mis-handled: check_staged_done_proofs
+        had no test_required exemption, so a documentation AC (test_required: false)
+        passed check_all_done_acs / check_changed_done_acs in CI but was blocked at
+        pre-commit with "no covers tag found" — exactly the asymmetry this test
+        guards against. Confirmed RED against the unmodified guard (before this fix,
+        the AC appeared in violations because no covers-tag exemption existed).
+
+        AMENDED 2026-09-23 for BO-2500a-1-ii. The property under test is
+        unchanged — a documentation AC is exempt at pre-commit exactly as it is
+        in CI — but the waiver is now a CONJUNCTION, so the fixture carries the
+        ``test_rationale`` that BO-2500a-1-ii requires alongside
+        ``test_required: false``. The rationale-less case this fixture used to
+        assert passes is now REFUSED by design, and that refusal has its own
+        coverage in test_done_proof_test_required_rationale_gate.py
+        (TestPrecommitCliReachability). Adding the rationale here therefore
+        narrows nothing: it moves this test onto the amended contract and
+        leaves the case it vacated asserted, in the opposite direction, next
+        door.
+        """
+        ac_id = "BO-DOCS-EXEMPT-STAGED-001"
+        ac_path = _write_done_ac(
+            self.ac_root,
+            ac_id,
+            test_required=False,
+            test_rationale="Documentation AC — a covers-tagged test is structurally impossible.",
+        )
+        # test_root is intentionally empty — no covers tag exists anywhere
+
+        violations = check_staged_done_proofs(
+            [ac_path],
+            test_root=self.test_root,
+        )
+
+        ac_ids_in_violations = [v["ac_id"] for v in violations]
+        self.assertNotIn(
+            ac_id,
+            ac_ids_in_violations,
+            f"A staged done AC with test_required: false must NOT be reported by "
+            f"check_staged_done_proofs even when no covers tag exists. "
+            f"Got violations: {violations}",
+        )
+
+    def test_done_ac_with_test_required_true_and_no_covers_tag_still_fails(self) -> None:
+        # covers: BO-2500a-3
+        """A staged done AC with test_required: true must still be reported when
+        no covers tag exists — the exemption must NOT weaken enforcement for ACs
+        that genuinely require a test.
+
+        This is the safety-property test: a blanket exemption (or one that keys
+        on "no tag found" rather than the AC's own test_required field) would
+        silently retire the guard for every AC, not just documentation ones.
+        Confirmed this was ALREADY red/enforced before this fix (the pre-existing
+        behavior for test_required: true was correct; only the False case was
+        broken), so this test's purpose is to pin that correctness in place going
+        forward, not to catch a new defect.
+        """
+        ac_id = "BO-CODE-ENFORCED-STAGED-001"
+        ac_path = _write_done_ac(self.ac_root, ac_id, test_required=True)
+        # test_root is intentionally empty — no covers tag
+
+        violations = check_staged_done_proofs(
+            [ac_path],
+            test_root=self.test_root,
+        )
+
+        ac_ids_in_violations = [v["ac_id"] for v in violations]
+        self.assertIn(
+            ac_id,
+            ac_ids_in_violations,
+            f"A staged done AC with test_required: true must still be reported by "
+            f"check_staged_done_proofs when no covers tag exists — the exemption "
+            f"applies only to test_required: false. Got violations: {violations}",
+        )
+
+    def test_done_ac_with_test_required_true_and_covers_tag_present_passes(self) -> None:
+        # covers: BO-2500a-3
+        """A staged done AC with test_required: true AND a present covers tag
+        must NOT be reported — the ordinary, unexempted success path must
+        continue to work unchanged after adding the test_required: false
+        exemption alongside it.
+        """
+        ac_id = "BO-CODE-COVERED-STAGED-001"
+        ac_path = _write_done_ac(self.ac_root, ac_id, test_required=True)
+        covers_test_path = self.test_root / "test_covers_present_staged.py"
+        covers_test_path.write_text(
+            f"def test_something():\n    # covers: {ac_id}\n    pass\n",
+            encoding="utf-8",
+        )
+
+        violations = check_staged_done_proofs(
+            [ac_path],
+            test_root=self.test_root,
+        )
+
+        ac_ids_in_violations = [v["ac_id"] for v in violations]
+        self.assertNotIn(
+            ac_id,
+            ac_ids_in_violations,
+            f"A staged done AC with test_required: true and a present covers tag "
+            f"must NOT be reported. Got violations: {violations}",
         )
 
 

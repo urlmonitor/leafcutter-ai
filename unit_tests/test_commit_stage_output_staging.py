@@ -61,92 +61,37 @@ import subprocess
 import tempfile
 import textwrap
 import unittest
+from pathlib import Path
 
 from _plan_feature_e2_runner import (
     E2_PLAN_FEATURE_JS,
     NodeScriptError as _RunnerNodeError,
     run_plan_feature_e2,
 )
+from _plan_feature_gate_harness import (
+    NodeScriptError,
+    SourceParseError,
+    granted_workspace_setup_permission,
+    init_scratch_repo,
+    run_git as _run_git,
+    write_text_file,
+)
 
-# The E2 runtime file is the sole plan-feature.js consumer surface after
-# foundation cleanup deleted the legacy scripts/workflows/plan-feature.js. The
-# git-scratch tests below are dialect-independent; the instruction-prose tests
-# capture the ACTUAL commit prompt dispatched by the E2 pipeline instead of
-# calling the (now global-agent) commitStageOutput() directly.
+# Sole plan-feature.js consumer surface (E2). Git-scratch tests are
+# dialect-independent; the instruction-prose tests capture the ACTUAL commit
+# prompt the E2 pipeline dispatches instead of calling the (now global-agent)
+# commitStageOutput() directly. Real workspace-setup-permission verdict and
+# git-repo scaffolding (GitCommandError, _run_git, scratch-repo init) come
+# from the shared _plan_feature_gate_harness.
 _PLAN_FEATURE_JS = str(E2_PLAN_FEATURE_JS)
-
-
-# ---------------------------------------------------------------------------
-# Custom exception types (ruff TRY003 — no long inline messages)
-# ---------------------------------------------------------------------------
-
-
-class SourceParseError(Exception):
-    """Raised when the JS source cannot be parsed as expected by a test helper."""
-
-
-class NodeScriptError(Exception):
-    """Raised when an inline Node.js script exits non-zero."""
-
-
-class GitCommandError(Exception):
-    """Raised when a git sub-process command exits non-zero."""
-
-
-# ---------------------------------------------------------------------------
-# Helpers — source reading and Node.js script execution
-# ---------------------------------------------------------------------------
-
-
-def _run_git(args: list[str], cwd: str, timeout: int = 10) -> subprocess.CompletedProcess:
-    """Run a git command in the given directory, raising GitCommandError on failure."""
-    result = subprocess.run(
-        ["git"] + args,
-        cwd=cwd,
-        capture_output=True,
-        text=True,
-        timeout=timeout,
-    )
-    if result.returncode != 0:
-        msg = f"git {' '.join(args)} failed (exit {result.returncode}): {result.stderr!r}"
-        raise GitCommandError(msg)
-    return result
-
-
-# ---------------------------------------------------------------------------
-# Scratch git-repo fixture helpers
-# ---------------------------------------------------------------------------
-
-
-def _init_scratch_repo(tmpdir: str) -> None:
-    """
-    Initialise a scratch git repo in tmpdir with one baseline commit.
-
-    The initial commit seeds the repo so that git porcelain commands work
-    correctly (an empty repo has no HEAD and some commands misbehave).
-    """
-    _run_git(["init", "-b", "main"], cwd=tmpdir)
-    _run_git(["config", "user.email", "test@test.com"], cwd=tmpdir)
-    _run_git(["config", "user.name", "Test"], cwd=tmpdir)
-    # Write a sentinel file so the initial commit is non-empty.
-    sentinel = os.path.join(tmpdir, ".gitkeep")
-    try:
-        with open(sentinel, "w", encoding="utf-8") as fh:
-            fh.write("")
-    except OSError as exc:
-        raise RuntimeError(f"Failed to write sentinel file: {sentinel}") from exc
-    _run_git(["add", ".gitkeep"], cwd=tmpdir)
-    _run_git(["commit", "-m", "init"], cwd=tmpdir)
+_WORKTREE_ROOT = Path(__file__).resolve().parent.parent
+_granted_workspace_setup_permission = granted_workspace_setup_permission
+_init_scratch_repo = init_scratch_repo
 
 
 def _write_yaml(path: str, content: str = "id: placeholder\n") -> None:
     """Write a minimal YAML file to path, creating parent dirs as needed."""
-    os.makedirs(os.path.dirname(path), exist_ok=True)
-    try:
-        with open(path, "w", encoding="utf-8") as fh:
-            fh.write(content)
-    except OSError as exc:
-        raise RuntimeError(f"Failed to write YAML fixture: {path}") from exc
+    write_text_file(path, content)
 
 
 # ---------------------------------------------------------------------------
@@ -154,12 +99,25 @@ def _write_yaml(path: str, content: str = "id: placeholder\n") -> None:
 # ---------------------------------------------------------------------------
 
 
+#  ACD-2100c-1 removed the live-gate answer path from resolveGate(): a gate
+#  is resolved ONLY via a validated, person-attributed args.resume_answer.
+#  This helper's mock ac-triage response is always route='strategic', so the
+#  pipeline's first mid-gate is always 'gate-po' (product-owner stage) --
+#  supply a resume_answer naming that gate so the run proceeds past it and
+#  actually reaches commitStageOutput()'s dispatch of the commit agent,
+#  instead of pausing at the gate and never committing anything (see
+#  templates/skills/plan-feature/SKILL.md §RS.3 for the channel:"person"
+#  provenance rule this answer must satisfy).
+_GATE_PO_RESUME_ANSWER = {"gate_id": "gate-po", "channel": "person", "action": "approve"}
+
+
 def _capture_instructions(plan_feature_path: str, written: list[str]) -> str:
     """Return the commit prompt dispatched by the E2 pipeline's first stage commit.
 
-    Drives the real E2 body (strategic route → approve the first gate) so that
-    commitStageOutput() runs and dispatches the ``commit`` agent, then returns
-    that agent call's prompt — the staging instructions under test.
+    Drives the real E2 body (strategic route → approve the first gate via a
+    validated args.resume_answer, ACD-2100c-1) so that commitStageOutput()
+    runs and dispatches the ``commit`` agent, then returns that agent call's
+    prompt — the staging instructions under test.
 
     commitStageOutput() in the E2 file uses the global ``agent`` and a changed
     signature, so it can no longer be called directly; driving the pipeline
@@ -172,6 +130,7 @@ def _capture_instructions(plan_feature_path: str, written: list[str]) -> str:
     mock = textwrap.dedent(f"""
         async function mockAgent(call) {{
             const agentType = call.agentType || '';
+            const label = call.label || '';
             const instructions = (call.input && call.input.instructions) || '';
             globalThis.__capturedAllCalls.push({{ agentType }});
             if (agentType === 'ac-triage') {{
@@ -184,6 +143,21 @@ def _capture_instructions(plan_feature_path: str, written: list[str]) -> str:
                 globalThis.__capturedCommitCalls.push({{ instructions }});
                 return {{ status: 'ok', message: 'mock commit ok' }};
             }}
+            // ACD-2100c-1: resolveGate() consults the durable pause record via
+            // these agent-mediated read/clear dispatches ONLY after a
+            // channel:"person" resume_answer has already validated -- never to
+            // obtain the decision itself. A real "resumable" record must be
+            // reported here or resolveGate() fails CLOSED to
+            // "nothing_to_resume" and the commit dispatch is never reached.
+            if (label === 'read-pause-record') {{
+                return {{ exists: true, stale: false, record: {{ run_id: 'test-run', gate_id: 'gate-po' }} }};
+            }}
+            if (label === 'clear-pause-record') {{
+                return {{ ok: true }};
+            }}
+            if (label === 'clear-pause-record-verify') {{
+                return {{ exists: false, stale: false, record: null }};
+            }}
             if (agentType === 'status-checker') {{
                 if (instructions.includes('git branch --show-current')) {{
                     return {{ output: 'ac-authoring/test', exit_code: 0 }};
@@ -194,7 +168,13 @@ def _capture_instructions(plan_feature_path: str, written: list[str]) -> str:
         }}
     """)
     try:
-        _run_result, side = run_plan_feature_e2(mock)
+        _run_result, side = run_plan_feature_e2(
+            mock,
+            extra_args={
+                "workspace_setup_permission": _granted_workspace_setup_permission(),
+                "resume_answer": _GATE_PO_RESUME_ANSWER,
+            },
+        )
     except _RunnerNodeError as exc:
         raise NodeScriptError(str(exc)) from exc
     commit_calls = side.get("commitCalls", [])

@@ -3,11 +3,13 @@ title: Build-Drift Pre-Commit Hooks (Direction A + Direction B)
 type: how-to
 status: active
 created: 2026-05-13
-last_updated: 2026-08-18
+last_updated: 2026-08-31
 components:
 - commit_guardian
 - infrastructure
 description: Overview of Build-Drift Pre-Commit Hooks (Direction A + Direction B).
+related_docs:
+- docs/2b_direction_b_output_drift_detection.md
 ---
 # Build-Drift Pre-Commit Hooks
 
@@ -122,119 +124,7 @@ the same blind spot reappears.
 
 ## 2B. Direction B: Output Drift Detection
 
-Direction B catches the complementary failure: a developer (or agent) directly
-edits a built output file instead of its source template.
-
-### How it works
-
-`build.py`'s `write_build_manifest()` now records, for each template→output
-mapping, the SHA-256 of what `build.py` would write — i.e. after full template
-compilation and config injection. This is stored in the `output_mappings` section
-of `.build_manifest.json`:
-
-```json
-{
-  "leafcutter/templates/agents/commit.md": "a3f1...",
-  ...
-  "output_mappings": {
-    ".claude/agents/commit.md": {
-      "template": "leafcutter/templates/agents/commit.md",
-      "expected_output_hash": "7e2c..."
-    },
-    ".claude/skills/signoff/SKILL.md": {
-      "template": "leafcutter/templates/skills/signoff/SKILL.md",
-      "expected_output_hash": "b91a..."
-    }
-  }
-}
-```
-
-At commit time, `check_output_drift.py`:
-
-1. Reads `.build_manifest.json`.
-2. Scans all files under `.claude/agents/`, `.claude/skills/`, `.claude/commands/`,
-   and `.agents/rules/`.
-3. For each file, looks up its `expected_output_hash` in `output_mappings`.
-4. Computes the SHA-256 of the on-disk content.
-5. If the hashes differ: records a violation.
-6. After scanning all files: if any violations exist, prints a clear error message
-   naming both the offending output file and its source template, then exits 1.
-
-### Output directories covered
-
-| Output directory | Corresponding template directory |
-|---|---|
-| `.claude/agents/` | `leafcutter/templates/agents/` |
-| `.claude/skills/` | `leafcutter/templates/skills/` |
-| `.claude/commands/` | `leafcutter/templates/commands/` and `leafcutter/templates/workflows/` |
-| `.claude/hooks/` | `leafcutter/templates/hooks/` |
-| `.claude/workflows/` | `leafcutter/templates/workflows-js/` |
-| `.agents/rules/` | `leafcutter/templates/rules/` |
-
-`_compute_output_mappings()` keys every entry in `output_mappings` by the
-**canonical**, post-shim path shown in the left column above — the same path
-`check_output_drift.py` scans — never by the pre-shim,
-`output_root`-relative path (e.g. `agents/README.md`). Before BP-100k-2
-(2026-08-18), the agents/commands/workflows/hooks families were keyed by the
-pre-shim path, so no real deployed file ever matched an `output_mappings`
-entry and the gate reported every deployed output as unregistered. The
-agents/commands/workflows/hooks rows are now derived from
-`build_phases._compute_phase_mappings()` — the same enumeration `build.py`'s
-own deploy-collision guard uses — and translated to their canonical path via
-the module-level `shim_map` in `scripts/build_helpers.py` (the same table
-`install_shims()` uses to create the shims), so a new deploy phase or shim
-entry extends `output_mappings` coverage without a second, independently
-maintained list.
-
-### Edge cases — safe exits (no false-blocks)
-
-| Situation | Behaviour |
-|---|---|
-| `.build_manifest.json` absent (fresh clone) | Warn on stderr, exit 0 |
-| `output_mappings` section absent (old manifest format) | Warn on stderr, exit 0 |
-| Output file on disk but NOT in `output_mappings` | INFO warning on stderr, skip file, exit 0 |
-| Output file in `output_mappings` but missing on disk | INFO warning on stderr, skip entry, exit 0 |
-| Template AND output both changed in same commit, output matches re-render | Exit 0 (hashes agree) |
-
-### Fixing a Direction B block
-
-When a commit is blocked by `check-output-drift` you will see:
-
-```
-[check-output-drift] BLOCKED — output file(s) were directly edited
-instead of their source templates:
-
-  output:   .claude/agents/commit.md
-  template: leafcutter/templates/agents/commit.md
-
-Fix: Edit the template at the path shown above, re-run
-  build.py  (or: python leafcutter/scripts/build.py --force)
-then stage both the template and the updated output.
-```
-
-**Step-by-step fix:**
-
-1. Identify the source template named in the error.
-2. Make your change to the **template**, not the output.
-3. Re-run `build.py` to recompile outputs and update `.build_manifest.json`:
-   ```bash
-   python leafcutter/scripts/build.py --force
-   ```
-4. Stage both the template and the updated output:
-   ```bash
-   git add <template-path>
-   git add <output-path>
-   git add leafcutter/.build_manifest.json
-   ```
-5. Retry the commit.
-
-### Adding new output directories
-
-When `build.py` gains a new output phase (e.g. writing to a new directory),
-update `_compute_output_mappings()` in `build.py` to include the new
-template→output mapping, and add the new output directory to `_OUTPUT_DIRS`
-in `check_output_drift.py`. Both changes must land in the same commit to keep
-the manifest and hook in sync.
+> See [2b_direction_b_output_drift_detection.md](2b_direction_b_output_drift_detection.md) for full details.
 
 ---
 
@@ -486,3 +376,13 @@ disables the hook without removing it from `.pre-commit-config.yaml`.
 
 - `leafcutter/docs/build-pipeline.md` — architecture of the
   template compilation pipeline.
+
+- `docs/known-issues/commit-guardian.md` `KI-CG-034` — the scanner/installer namespace
+  mismatch and stale `files:` trigger that made Direction B report a false clean on every
+  deployed output; records when and how the fix (`BP-100k-3`, `BP-100k-4`, `BP-100k-6`)
+  landed, and what `ACD-2100d-2` added on top of it.
+
+- `unit_tests/build_guards/test_acd_2100d_2.py` — behavioural tests that hand-edit a real
+  deployed output file, confirm it is reported by name and blocks the commit, confirm the
+  verdict is consumed where "delivered" is decided, and confirm re-running `build.py`
+  removes the reported repair.

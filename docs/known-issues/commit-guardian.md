@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: 2026-08-18
-last_updated: 2026-09-14
+last_updated: 2026-09-23
 components:
   - commit_guardian
 related_docs:
@@ -73,7 +73,7 @@ Severity in the **filename** is a three-level index bucket (`blocker` / `high` /
 
 Fixed issues move to [`commit-guardian/resolved/`](commit-guardian/resolved/) and are no longer listed as open. They are kept, not deleted.
 
-**Open: 67** (6 blocker, 25 high, 36 low) · **Resolved: 7**
+**Open: 70** (6 blocker, 26 high, 38 low) · **Resolved: 7**
 
 ## Open
 
@@ -110,6 +110,7 @@ Fixed issues move to [`commit-guardian/resolved/`](commit-guardian/resolved/) an
 | `high` | KI-CG-20260909-gate-ticket-test-requirements — registered as configured, `check-ticket-test-requirements` would inspect nothing; wired correctly it fails 252 tickets | [open-high-ki-cg-20260909-gate-ticket-test-requirements.md](commit-guardian/open-high-ki-cg-20260909-gate-ticket-test-requirements.md) |
 | `high` | KI-CG-20260914-contract-guard-crashes-on-diff-bytes — the contract-shrinking guard decodes the staged diff in the console code page, crashes on the first non-cp1252 byte, and blocks the commit instead of failing open | [open-high-ki-cg-20260914-contract-guard-crashes-on-diff-bytes.md](commit-guardian/open-high-ki-cg-20260914-contract-guard-crashes-on-diff-bytes.md) |
 | `high` | KI-CG-20260914-ratchet-freezes-central-registries — a per-file ratchet makes any manifest or registry unmaintainable once it crosses its limit, because complying with the rule on one file forces violating it on another | [open-high-ki-cg-20260914-ratchet-freezes-central-registries.md](commit-guardian/open-high-ki-cg-20260914-ratchet-freezes-central-registries.md) |
+| `high` | KI-CG-20260914-ratchet-max-baseline-refuses-union-merges — `check-file-size`'s merge baseline is the MAXIMUM across parents, but a clean merge holds BOTH parents' additions, so a union that authored no new content still exceeds the permitted length and the gate refuses it | [open-high-ki-cg-20260914-ratchet-max-baseline-refuses-union-merges.md](commit-guardian/open-high-ki-cg-20260914-ratchet-max-baseline-refuses-union-merges.md) |
 | `low` | KI-CG-002 — The diagram-type guard silently swaps its enum source when its declaring file is unreachable | [open-low-ki-cg-002.md](commit-guardian/open-low-ki-cg-002.md) |
 | `low` | KI-CG-011 — The roadmap mirror strips its own `description` frontmatter and backdates `created` to today | [open-low-ki-cg-011.md](commit-guardian/open-low-ki-cg-011.md) |
 | `low` | KI-CG-013 — The schema hook and the done-proof oracle disagree about what a leaf is, so one AC can be required to satisfy both branches | [open-low-ki-cg-013.md](commit-guardian/open-low-ki-cg-013.md) |
@@ -146,6 +147,8 @@ Fixed issues move to [`commit-guardian/resolved/`](commit-guardian/resolved/) an
 | `low` | KI-CG-20260914-done-proof-precommit-ignores-test-required — the pre-commit done-proof gate demands a covers tag from an AC that declares it needs no test, while the CI gate it stands in for exempts that AC | [open-low-ki-cg-20260914-done-proof-precommit-ignores-test-required.md](commit-guardian/open-low-ki-cg-20260914-done-proof-precommit-ignores-test-required.md) |
 | `low` | KI-CG-20260914-exception-hook-blocks-silently — the PostToolUse exception-handling hook fails every Python write with an empty error when `ruff` is importable but not on PATH | [open-low-ki-cg-20260914-exception-hook-blocks-silently.md](commit-guardian/open-low-ki-cg-20260914-exception-hook-blocks-silently.md) |
 | `low` | KI-CG-20260914-post-merge-stage-registers-but-installs-no-shim — a hook on the post-merge stage is registered, renders into the config, and still never fires in any checkout that did not create a ticket worktree | [open-low-ki-cg-20260914-post-merge-stage-registers-but-installs-no-shim.md](commit-guardian/open-low-ki-cg-20260914-post-merge-stage-registers-but-installs-no-shim.md) |
+| `low` | KI-CG-20260923-contract-shrinking-guard-rename-blind — `check-contract-shrinking` correlates deleted test names against added test names, so a renamed test reads as a deleted one | [open-low-ki-cg-20260923-contract-shrinking-guard-rename-blind.md](commit-guardian/open-low-ki-cg-20260923-contract-shrinking-guard-rename-blind.md) |
+| `low` | KI-CG-20260923-no-gate-validates-doc-to-doc-markdown-links — no hook resolves a markdown link between two docs; `check-doc-links` covers code-to-doc only, by design, so a doc split that leaves two dead links and an orphaned anchor passes every gate | [open-low-ki-cg-20260923-no-gate-validates-doc-to-doc-markdown-links.md](commit-guardian/open-low-ki-cg-20260923-no-gate-validates-doc-to-doc-markdown-links.md) |
 
 ## Resolved
 

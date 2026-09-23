@@ -424,6 +424,24 @@ The build subprocess is the whole cost.
 (Source: test-suite profiling, 2026-09-21, origin/main 624d39ac. Full evidence and the
 read-vs-mutate boundary: `docs/acceptance-criteria/testing-quality/TQ-600-suite-feedback-latency/TQ-600.yaml`.)
 
+### Ticket-Mandated Sequential Resource Paths Go Stale on Long-Lived Branches
+
+When a ticket's Implementation Notes hardcode a shared numbered/sequential resource
+(a diagram id, a migration number, an allocated port) computed at ticket-authoring
+time, re-verify the allocation is still free immediately before publishing — do not
+trust the authoring-time computation, especially on an epic that spans multiple
+`origin/main` catch-up merges. Re-run the actual allocator (e.g.
+`scripts/next_diagram_seq.py`) rather than re-reading the ticket's stated number.
+
+**Why this matters:** `ACD-2100e-1`'s Implementation Notes (written 2026-08-26)
+asserted diagram id c3-006 was free. The ticket executed 19 days and two
+`origin/main` merges later (2026-09-14), by which point c3-006 and c3-007 had both
+landed from unrelated epics. `check-identifier-uniqueness` is `always_run: true`,
+so committing at the stale path would have blocked every commit in the repo, not
+just this ticket's. Caught only because `architecture-diagram-author` independently
+re-measured against the real tree before publishing rather than trusting the notes.
+(Source: EPIC-StartingNewWorkTheProperWayAlways retrospective KI-3, 2026-09-23.)
+
 ## Pre-Drive Checklist
 
 Run through these checks before invoking `/build-feature` or starting any epic drive.
@@ -734,6 +752,19 @@ command was never wrong — the ref it compared against was. A check that examin
 must not look like a check that found nothing. Treat a clean result from any audit command
 in this file as provisional until you've confirmed the ref or file it compares against is
 actually current.
+
+**The mirror image also occurred, and is not yet covered by the paragraph above.** During
+EPIC-StartingNewWorkTheProperWayAlways, `verify_precommit_active.py` returned `git_hook:
+false` on three separate agent dispatches purely because it was invoked from outside the
+worktree root (KI-CG-20260901); `check_identifier_uniqueness` and `validate_ac_schema`
+returned `FAILED (0 inspected)` from the workspace parent; and 9 of 11 `commit_guardian`
+failures traced to a stale deployment (`ModuleNotFoundError: No module named
+'_reachability_inventory'`), not real merge damage. Each was reported and initially read as
+a real finding, not as "the check couldn't look here." Before acting on a guard tool's
+FAILURE — not just before trusting its pass — confirm it ran from the worktree root against
+a freshly-built deployment, the same discipline this section already prescribes for a
+clean-looking audit result.
+(Source: EPIC-StartingNewWorkTheProperWayAlways retrospective KI-2, 2026-09-23.)
 
 ### Real-artifact behavioral spot-check before declaring done
 

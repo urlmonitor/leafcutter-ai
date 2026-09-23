@@ -8,7 +8,7 @@ component: ticket-creation
 level: L2
 status: active
 req_status: active
-work_status: todo
+work_status: done
 created_by: "docs/acceptance-criteria/ticket-creation/TKT-500-single-source/TKT-500f.yaml"
 criteria: |
   Given a leaf AC whose assigned_agent names an agent whose agent registry
@@ -36,9 +36,18 @@ doc_links:
     relationship: constrains
     status: exists
     relevance: "Owns _call_generate_ticket_from_ac and generate_tickets_for_leaves — the goal-path half of the two generators this AC constrains."
+  - path: scripts/ac_store/_gtfa_agents_map.py
+    relationship: constrains
+    status: exists
+    relevance: "The AC-store generator's phase-agent emission point (_build_agents_map / _legacy_agents_map) — where an ineligible assigned_agent must be substituted before it reaches the ticket. (Re-pointed 2026-09-22 off the generate_ticket_from_ac.py shell; see the amendment.)"
+  - path: scripts/ac_store/_gtfa_config.py
+    relationship: constrains
+    status: exists
+    relevance: "The generator's agent-registry read — its module docstring states its job as answering 'does this agent ...' from config/agent_registry.json. The is_ticket_phase lookup belongs alongside the existing _load_production_code_agents read rather than in a second reader."
   - path: scripts/ac_store/generate_ticket_from_ac.py
     relationship: constrains
     status: exists
+    relevance: "KEPT DELIBERATELY, but narrowly: the ONLY legitimate edit here is the shell's own re-export surface (plus the sibling list in its module docstring and the if TYPE_CHECKING: block). This AC's it_requirements mandate a SINGLE shared substitution helper, and the precedent for exactly that in this family is 4dcfd87c (TKT-500f-6), which added is_implementation_python_path to _gtfa_impl_py.py and re-exported it on the shell so every reader reaches one function. Do NOT put substitution logic in this file — it is a 386-line re-export shell with one real def (_sibling)."
   - path: config/agent_registry.json
     relationship: specifies
     status: exists
@@ -49,7 +58,7 @@ assigned_agent: python-coder
 estimated_complexity: M
 it_requirements:
   - "Read the is_ticket_phase boolean for the AC's assigned_agent from config/agent_registry.json; treat a true value as eligible and a false value as ineligible for emission as a ticket phase agent."
-  - "Apply the substitution in BOTH generators (scripts/goal_to_epic.py and scripts/ac_store/generate_ticket_from_ac.py) via a single shared helper so the two emission points cannot drift."
+  - "Apply the substitution in BOTH generators via a single shared helper so the two emission points cannot drift. Concretely, after the 2026-09-14/2026-09-22 decompositions: the AC-store generator's emission point is scripts/ac_store/_gtfa_agents_map.py and the goal path is scripts/ac_store/epic_tickets.py (scripts/goal_to_epic.py is a facade only). NOTE the precedent set by TKT-500f-6 in 4dcfd87c: the goal path already shells out to generate_ticket_from_ac.py as a subprocess, so it reaches a shared predicate through the SAME code — adding an import in epic_tickets.py would create a second entry point, which this constraint forbids. Verify which of the two shapes applies before writing a second call site."
   - "Substitution rule: choose llm-expert when the AC's work surface is agent/skill templates (templates/agents/*, templates/skills/*); choose python-coder otherwise. Both substitutes must themselves have is_ticket_phase: true in the registry."
   - "Emit the warning through the project logger at WARNING level; the message must include the original assigned_agent, the substitute, and the AC id. Wrap registry-file I/O per the project error handling policy."
 delivers_to:
@@ -62,6 +71,22 @@ origin_agent: business-analyst
 created: 2026-06-18
 amended_by:
   - reason: "renamed TKT-500d-10 -> TKT-500f-5 in split of TKT-500d, 2026-06-18"
+  - reason: edit-surface-repoint
+    by: it-po
+    at: '2026-09-22'
+    note: 'Re-pointed off scripts/ac_store/generate_ticket_from_ac.py as the primary edit
+      surface. That file is now a 386-line re-export shell with one real def (_sibling);
+      the implementation lives in 22 _gtfa_* siblings. constrains IS an edit-surface
+      relationship (_gtfa_constants._EDIT_SURFACE_RELATIONSHIPS = {constrains, creates,
+      implements, modifies, specifies}), so the bare entry fed files_touched and the
+      generated ticket named the shell — sending a coder to re-export assignments, and
+      making a correct fix in the real sibling look like a touch of an undeclared file to
+      the phantom-done guards. Targets re-derived from this AC''s criteria, not its
+      filename: the registry read (is_ticket_phase) belongs in _gtfa_config.py, whose
+      docstring names answering registry questions as its job; the phase-agent emission
+      point is _gtfa_agents_map.py (_build_agents_map / _legacy_agents_map). The shell
+      entry is KEPT but narrowed to its re-export surface only, following 4dcfd87c where
+      the single shared helper for TKT-500f-6 was re-exported there. criteria untouched.'
 superseded_by: null
 covered_by: [TKT-500f-5-i]
 implemented_by: []

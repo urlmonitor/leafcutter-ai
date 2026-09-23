@@ -3,15 +3,21 @@
 MODULE: _gtfa_store
 GOAL: Find things in the two stores the generator reads — an AC record by id in
     the acceptance-criteria store, an already-generated ticket by its
-    ``source_ac`` in the tickets tree — and turn an AC's ``depends_on`` (a list
-    of AC ids) into a ticket-level ``depends_on`` the frontmatter guard accepts.
+    ``source_ac`` in the tickets tree — and turn an AC's dependency edges
+    (``depends_on`` AND ``expects_from``, a list of AC ids either way) into a
+    ticket-level ``depends_on`` the frontmatter guard accepts.
 BUSINESS CONTEXT: A generated ticket is standalone — one ticket per AC — but
-    the source AC's ``depends_on`` speaks in AC ids. ``ticket_frontmatter_guard``
-    requires every ticket ``depends_on`` entry to resolve to a sibling ticket
-    FILE in the same folder, so copying the AC value verbatim hard-blocks the
-    generated ticket with "depends_on references missing file" (ACD-400b-7).
-    The translation is therefore not cosmetic: it is what makes the ticket
-    dispatchable at all.
+    the source AC's ``depends_on`` speaks in AC ids, and so does ``ac_id`` on
+    an ``expects_from`` entry: both name a producer AC this record's ticket
+    must run after. ``ticket_frontmatter_guard`` requires every ticket
+    ``depends_on`` entry to resolve to a sibling ticket FILE in the same
+    folder, so copying either AC value verbatim hard-blocks the generated
+    ticket with "depends_on references missing file" (ACD-400b-7). The
+    translation is therefore not cosmetic: it is what makes the ticket
+    dispatchable at all. KI-ACD-20260921 (Defect 1): before this module read
+    ``expects_from`` too, a record whose authoring convention omitted
+    ``depends_on`` lost the edge outright even when ``expects_from`` named the
+    exact same producer.
 ARCHITECTURE: Both lookups are whole-tree scans that swallow per-file read and
     parse errors and continue, because one unreadable record in a 4000-record
     store must not stop a generation. A dropped ``depends_on`` entry is
@@ -227,12 +233,49 @@ def _load_parent_ac(ac_id: str, ac_root: Path) -> "AcRecord | None":
     return parent_ac
 
 
+def _expects_from_ac_ids(value: object) -> list[str]:
+    """Extract the upstream AC ids named in an ``expects_from`` field.
+
+    KI-ACD-20260921 (Defect 1): ``expects_from`` names the AC that produces a
+    contract this record consumes, which is a genuine ticket-level ordering
+    dependency in exactly the same sense as an authored ``depends_on`` entry
+    — the confirmed defect is that :func:`_build_ticket_depends_on` read only
+    ``depends_on`` and never consulted this field at all, so a record whose
+    authoring convention left ``depends_on`` empty (observed to correlate
+    with, but NOT caused by, a null ``delivers_to`` on the *consuming*
+    record) silently lost the edge even though a genuine sibling dependency
+    was named right there in ``expects_from``.
+
+    ``expects_from`` may be authored as a single mapping or as a list of
+    mappings (mirrors ``_gtfa_contracts._as_contract_entries``'s normalisation
+    rule; duplicated here in miniature rather than imported, to avoid the
+    circular import ``_gtfa_contracts -> _gtfa_doc_genre -> _gtfa_store``).
+
+    Args:
+        value: The raw ``expects_from`` field from an AC record.
+
+    Returns:
+        List of upstream AC id strings named by the field (may be empty).
+    """
+    if isinstance(value, dict):
+        entries: list = [value]
+    elif isinstance(value, list):
+        entries = [entry for entry in value if isinstance(entry, dict)]
+    else:
+        entries = []
+    return [
+        entry["ac_id"]
+        for entry in entries
+        if isinstance(entry.get("ac_id"), str) and entry.get("ac_id")
+    ]
+
+
 def _build_ticket_depends_on(
     ac: AcRecord,
     ac_id: str,
     tickets_root: "Path | None",
 ) -> list[str]:
-    """Translate the source AC's ``depends_on`` into a guard-valid ticket list.
+    """Translate the source AC's dependency edges into a guard-valid ticket list.
 
     TKT-600a-1: a generated ticket is standalone (one ticket per AC), but the
     source AC's own ``depends_on`` lists AC identifiers — typically its
@@ -240,10 +283,21 @@ def _build_ticket_depends_on(
     ``templates/hooks/ticket_frontmatter_guard.py``'s ``_check_depends_on``
     requires every ticket ``depends_on`` entry to resolve to a sibling ticket
     file in the same tickets folder, so an AC id can never be copied verbatim.
-    This function classifies each entry:
+
+    KI-ACD-20260921 (Defect 1): the candidate id set is the UNION of
+    ``depends_on`` and any ``ac_id`` named in ``expects_from`` (via
+    :func:`_expects_from_ac_ids`) — an ``expects_from`` entry names a real
+    producer dependency regardless of whether the consuming record's own
+    ``delivers_to`` is null, so it must be classified on equal footing with
+    an authored ``depends_on`` entry, not silently dropped for want of a
+    mirrored ``depends_on`` value. Both sources are merged, order-preserved
+    and de-duplicated, before classification.
+
+    Each candidate id is then classified:
 
     * The AC's own structural parent (via ``ac_parent_id.derive_parent_id``)
-      is always dropped — it is not a ticket-level dependency.
+      is always dropped — it is not a ticket-level dependency (KI-ACD-021 is
+      the separate, already-tracked defect about this case).
     * An AC id with an already-generated, co-located ticket in *tickets_root*
       (found via :func:`_find_existing_ticket` matching ``source_ac``) is
       translated to that ticket's filename, preserving the dependency.
@@ -261,11 +315,22 @@ def _build_ticket_depends_on(
 
     Returns:
         List of ticket filenames (each a guard-valid ``depends_on`` entry).
-        Empty when the AC declares no dependencies, none survive
-        classification, or *tickets_root* is ``None``.
+        Empty when the AC declares no dependencies (from either source), none
+        survive classification, or *tickets_root* is ``None``.
     """
-    raw_deps = ac.get("depends_on") or []
-    if not isinstance(raw_deps, list) or not raw_deps or tickets_root is None:
+    raw_deps = ac.get("depends_on")
+    if not isinstance(raw_deps, list):
+        raw_deps = []
+    expects_ids = _expects_from_ac_ids(ac.get("expects_from"))
+
+    candidates: list[str] = []
+    seen: set[str] = set()
+    for dep in [*raw_deps, *expects_ids]:
+        if isinstance(dep, str) and dep and dep not in seen:
+            seen.add(dep)
+            candidates.append(dep)
+
+    if not candidates or tickets_root is None:
         return []
 
     own_parent_id = None
@@ -274,9 +339,7 @@ def _build_ticket_depends_on(
         own_parent_id = derive_fn(ac_id)
 
     resolved: list[str] = []
-    for dep in raw_deps:
-        if not isinstance(dep, str) or not dep:
-            continue
+    for dep in candidates:
         if dep == own_parent_id:
             # Structural parent — never a ticket-level dependency (dropped
             # silently; this is the expected, common case, not an omission).
@@ -286,8 +349,9 @@ def _build_ticket_depends_on(
             resolved.append(existing.name)
         else:
             logger.warning(
-                "AC '%s': depends_on entry %r has no co-located ticket in %s; "
-                "dropping it to keep the generated ticket's depends_on guard-valid.",
+                "AC '%s': dependency entry %r (from depends_on or expects_from) has "
+                "no co-located ticket in %s; dropping it to keep the generated "
+                "ticket's depends_on guard-valid.",
                 ac_id,
                 dep,
                 tickets_root,

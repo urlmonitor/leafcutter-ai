@@ -110,6 +110,18 @@ AGENT_SUPPORT_SCRIPT_FILES: tuple[str, ...] = (
     # are stdlib only (argparse, json, logging, sys, pathlib, typing) — no
     # sibling module to co-deploy.
     "injection_builders.py",
+    # ACD-2100b-5: templates/skills/plan-feature/SKILL.md's pre-flight
+    # invokes this script (by its deployed path) before the plan-feature
+    # workflow starts. No deploy phase shipped scripts/worktree/ before this,
+    # so the deployed skill would have found nothing there. Listed as a
+    # single file (not the whole scripts/worktree/ directory) because its
+    # sibling sweep_processes.py/__init__.py import scripts/config_loader.py,
+    # which no phase deploys — pulling in the whole directory here would trip
+    # the intra-package closure guard (AC BP-900g-8) over an unrelated,
+    # pre-existing gap. This script's own module-scope imports are stdlib
+    # only (argparse, json, logging, subprocess, sys, pathlib) — no sibling
+    # module to co-deploy.
+    "worktree/check_workspace_setup_permission.py",
 )
 
 
@@ -500,4 +512,16 @@ def build_template_standalone_scripts(target_root: Path, config: dict[str, Any],
 #   test_bp_900g_9_build_orchestration_and_fast_lane_dependency_both_named_in_one_run
 #   to unit_tests/test_bp_900g_9.py; confirmed it fails on the pre-fix code
 #   via a `git stash` of this file. (#BP-900g-9)
+# - 2026-09-21 [python-coder/EPIC-StartingNewWorkTheProperWayAlways]: Ported
+#   the ACD-2100b-5 entry ("worktree/check_workspace_setup_permission.py")
+#   into AGENT_SUPPORT_SCRIPT_FILES. It existed on the branch's pre-split
+#   build_phases.py but was absent from main's file-size-ratchet refactor
+#   (GE-127b-1), which took this module's shape from an earlier branch state
+#   that predated ACD-2100b-5. Without it, the deployed plan-feature skill's
+#   workspace-setup pre-flight (invoked by its deployed path) is dead in
+#   every consumer install. Carried the file's own single-file-not-directory
+#   justification across unchanged: its siblings import
+#   scripts/config_loader.py, which no phase deploys, so pulling in the whole
+#   scripts/worktree/ directory would trip the intra-package closure guard
+#   (AC BP-900g-8) over an unrelated, pre-existing gap. (#ACD-2100b-5)
 # ===========================================================================
