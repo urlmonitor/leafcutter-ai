@@ -114,6 +114,20 @@ ARCHITECTURE: Subprocess-invoking utility.  Scans the test tree for covers tags
     module's own docstring for the full rationale, including why that
     module's OWN dependency back on this one is a local (function-body)
     import rather than a top-level one.
+
+    Second relocation (BP-100n-4-ii-ii, BO-2500a-1-ii): ``is_covers_tag_waived``
+    -- the ONE shared predicate deciding whether an AC's ``test_required``/
+    ``test_rationale`` pair waives the covers-tag mandate -- and
+    ``_build_ac_status_map`` (the AC-store walk that feeds it) are now DEFINED
+    in _done_proof_phase_helpers.py (neither needs a symbol back from this
+    module, so the move needed no new circular-import seam) and re-exported
+    here via the same top-level import block, unchanged for every existing
+    consumer -- ``from done_proof import is_covers_tag_waived``
+    (check_done_proof.py chief among them) and every in-module call to
+    ``_build_ac_status_map`` alike. This second relocation was needed for the
+    same reason as the first: an in-place addition of the BO-2500a-1-ii
+    conjunction logic pushed this file back over the file-size ratchet a
+    second time.
 """
 
 from __future__ import annotations
@@ -126,8 +140,6 @@ import subprocess
 import sys
 import tempfile
 from pathlib import Path
-
-import yaml
 
 # Import the single shared covers-tag seam (BO-2500e-1).
 # test_enforcement lazily imports done_proof inside a function body,
@@ -142,6 +154,7 @@ from test_enforcement import COVERS_TAG_RE
 # still mid-definition.
 from _done_proof_phase_helpers import (
     _build_abs_path_map,
+    _build_ac_status_map,
     _build_failure_reason,
     _build_raw_results_from_json,
     _build_vitest_command,
@@ -153,6 +166,7 @@ from _done_proof_phase_helpers import (
     _run_python_test_phase,
     _run_ts_test_phase,
     _split_linked_tests_by_language,
+    is_covers_tag_waived,  # noqa: F401  # BP-100n-4-ii-ii: re-exported, see module docstring
 )
 
 # ---------------------------------------------------------------------------
@@ -729,53 +743,12 @@ def run_vitest_and_parse(
 
 # ---------------------------------------------------------------------------
 # Internal helpers — I/O layer
+#
+# BP-100n-4-ii-ii: _build_ac_status_map itself now lives in
+# _done_proof_phase_helpers.py (re-exported below, same pattern as
+# is_covers_tag_waived) — see this module's own docstring "Second relocation"
+# paragraph for why.
 # ---------------------------------------------------------------------------
-
-
-def _build_ac_status_map(ac_root: Path) -> dict[str, dict]:
-    """Walk *ac_root* and return ``{ac_id: {"status": ..., "covered_by": [...]}}``.
-
-    Only YAML files that can be parsed and contain both ``id`` and ``status``
-    fields are included.  Unreadable files are logged to stderr and skipped.
-    ``covered_by`` is retained (in addition to ``status``) so callers can
-    classify an AC as composite (non-empty ``covered_by``) vs leaf (empty or
-    absent) without a second store walk — see BO-2500a-6.  A ``covered_by``
-    value that is absent, ``null``, or not a list is normalised to ``[]``.
-
-    Args:
-        ac_root: Root directory of the AC YAML store.
-
-    Returns:
-        Dict mapping AC id strings to a dict with keys ``"status"`` (str) and
-        ``"covered_by"`` (list[str]).  An empty dict is returned when
-        *ac_root* does not exist or contains no parseable YAML files.
-    """
-    status_map: dict[str, dict] = {}
-    if not ac_root.exists():
-        return status_map
-    for yaml_path in sorted(ac_root.rglob("*.yaml")):
-        try:
-            with open(yaml_path, encoding="utf-8") as fh:
-                data = yaml.safe_load(fh)
-        except (yaml.YAMLError, OSError) as exc:
-            print(
-                f"WARNING: done_proof: cannot read {yaml_path}: {exc}",
-                file=sys.stderr,
-            )
-            continue
-        if not isinstance(data, dict):
-            continue
-        ac_id = data.get("id")
-        status = data.get("status")
-        if ac_id and status is not None:
-            covered_by = data.get("covered_by")
-            if not isinstance(covered_by, list):
-                covered_by = []
-            status_map[str(ac_id)] = {
-                "status": str(status),
-                "covered_by": [str(child_id) for child_id in covered_by],
-            }
-    return status_map
 
 
 def _is_excluded_path(path: Path) -> bool:
@@ -2345,3 +2318,6 @@ def verify_done_eligible(
 #   two real AC ids after the move, plus check_file_size.py, check_complexity.py,
 #   and a build.py --force-breaking deploy confirming the new module lands in
 #   the deployed layout. (#BP-100n-4)
+#   ADDENDUM 2026-09-22 [python-coder/BP-100n-4-ii-ii]: is_covers_tag_waived()
+#   relocated to _done_proof_phase_helpers.py, ratchet reason as above; see
+#   the module docstring's "Second relocation" paragraph. (#BO-2500a-1-ii)

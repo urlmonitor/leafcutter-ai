@@ -8,7 +8,7 @@ component: ac-driven-dev
 level: L2
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 roadmap_phase: phase_1
 criteria: |
   Given a run waiting at a decision point with drafted work on disk,
@@ -25,9 +25,9 @@ criteria: |
     is accepted and carried out.
 depends_on: [ACD-2100c, ACD-2100c-1]
 doc_links:
-  - path: docs/architecture/diagrams/c3-006-plan-feature-decision-gate-sequence.md
+  - path: docs/architecture/diagrams/c3-008-plan-feature-decision-gate-sequence.md
     relationship: describes
-    status: planned
+    status: exists
     relevance: "The sequence diagram authored by ACD-2100e-1 -- the refused-answer branch is one of the paths it depicts."
   - path: docs/known-issues/ac-driven-dev.md
     relationship: describes
@@ -112,9 +112,12 @@ origin_agent: business-analyst
 created: 2026-08-25
 amended_by: []
 superseded_by: null
-covered_by: []
+covered_by:
+- unit_tests/workflows/test_acd_2100c_4.py
 implemented_by:
 - tickets/00_inbox/epics/EPIC-StartingNewWorkTheProperWayAlways/17_TICKET-20260826-ACD-2100c-4.md
+- templates/workflows-js/plan-feature.js
+- templates/skills/plan-feature/SKILL.md
 change_target: pipeline
 risk_surface: safety
 notes: |

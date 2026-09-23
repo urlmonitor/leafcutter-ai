@@ -47,19 +47,6 @@ _PAUSE_RESUME_SUBSTRATE_JS = (
 
 _TIMEOUT = 30  # seconds; all agent() calls are synchronous mocks
 
-# Explicit cancel label_responses — simulates a human deliberately cancelling at
-# every gate, rather than the headless-timeout path.
-_EXPLICIT_CANCEL_RESPONSES = {
-    "covered-route-gate": {"choice": "cancel"},
-    "pt-gate-mockdata": {"action": "cancel"},
-    "pt-gate-mockup": {"action": "cancel"},
-    "pt-gate-flow": {"action": "cancel"},
-    "gate-po": {"action": "cancel"},
-    "gate-ba": {"action": "cancel"},
-    "final-gate": {"action": "defer"},
-    "step-4-merge-gate": {"status": "blocked"},
-}
-
 # Label responses that guide finalize-feature.js through pre-flight and steps
 # 1-3 so the step-4-merge-gate is actually reached in harness tests.
 # step-4-merge-gate is intentionally absent here; tests that need to pause it
@@ -259,9 +246,13 @@ def test_gate_pauses_instead_of_cancelling():
         f"A bare-object dispatch is phantom persistence — the agent never writes the file."
     )
 
-    # The string must contain the pause_store.py write instruction.
-    assert "scripts/pause_store.py write" in prompt, (
-        f"pause-persist prompt must contain 'scripts/pause_store.py write'. "
+    # The string must invoke pause_store.py's write subcommand. buildPauseStoreCommand()
+    # (ACD-2100a-4) moved the top-level --store-dir option ahead of the subcommand
+    # token, so the two are no longer contiguous — require both fragments instead of
+    # one literal substring (anti-phantom: still requires the real parameterized
+    # invocation, not merely a mention of the script name).
+    assert "pause_store.py" in prompt and "write --run-id" in prompt, (
+        f"pause-persist prompt must invoke 'pause_store.py' with 'write --run-id'. "
         f"Got: {prompt[:300]}"
     )
 
@@ -300,8 +291,31 @@ def test_paused_state_distinct_from_cancelled():
     # covers: BO-2300a-2
     """
     A paused run (headless, no answer available) dispatches pause-persist and
-    is resumable. A cancelled run (explicit cancel answer) does NOT dispatch
+    is resumable. A cancelled run — reached via a genuine args.resume_answer
+    cancel decision, the only channel that can still resolve a gate under
+    ACD-2100c-1 (docs/acceptance-criteria/ac-driven-dev/
+    ACD-2100-entry-point-unblocked/ACD-2100c-1.yaml) — does NOT dispatch
     pause-persist and is not resumable.
+
+    SUPERSEDED MECHANISM, SAME PROTECTION. The "cancelled" half of this test
+    originally fed `_EXPLICIT_CANCEL_RESPONSES` — direct replies to the
+    live-gate dispatch at every gate — into label_responses. ACD-2100c-1
+    closes that live channel entirely: `resolveGate()`
+    (templates/workflows-js/plan-feature.js) no longer ever calls
+    `liveGateFn`, for any gate, so those direct answers are never consulted
+    and the run pauses instead at whichever gate it reaches — the exact
+    behaviour unit_tests/workflows/test_acd_2100c_1.py's own
+    `test_run_does_not_advance_past_a_decision_point_before_an_answer_arrives`
+    requires. That collapsed both halves of this test onto the same
+    "pauses" outcome, making the paused-vs-cancelled distinction
+    unassertable via the old mechanism. Classified test_drift (Source-of-
+    Truth Discipline Rule 1) — production is correct per ACD-2100c-1's own
+    signed-off red_baseline; this test asserted the pre-ACD-2100c-1 contract.
+
+    What this test still protects, unchanged: "paused" and "cancelled" are
+    genuinely distinct terminal states, and reaching "cancelled" (now only
+    possible via args.resume_answer) still means no pause-persist dispatch
+    and a distinct "cancelled" status — never conflated with a paused run.
     """
     # Paused run: headless gate → must emit pause-persist
     paused_result = run_workflow_under_e2(
@@ -317,18 +331,40 @@ def test_paused_state_distinct_from_cancelled():
         f"Got labels: {[c.label for c in paused_result.agent_calls]}"
     )
 
-    # Cancelled run: explicit cancel → no pause-persist
+    # Cancelled run: a genuine cancel decision delivered on the ONLY channel
+    # that can resolve a gate under ACD-2100c-1 (args.resume_answer) → no
+    # pause-persist.
+    cancel_answer = {
+        "gate_id": "final-gate",
+        "type": "single_choice",
+        "action": "cancel",
+        "channel": "person",
+    }
     cancelled_result = run_workflow_under_e2(
         _PLAN_FEATURE_JS,
         timeout=_TIMEOUT,
-        label_responses=_with_workspace_permission(_EXPLICIT_CANCEL_RESPONSES),
+        label_responses=_with_workspace_permission(
+            {"read-pause-record": {"exists": True, "stale": False}}
+        ),
+        args={"run_id": "test-bo2300a2-cancelled-distinct", "resume_answer": cancel_answer},
     )
     assert cancelled_result.error == "", f"Harness error on cancelled run: {cancelled_result.error}"
 
     cancelled_pauses = _pause_calls(cancelled_result)
     assert len(cancelled_pauses) == 0, (
-        "Explicitly cancelled run must NOT dispatch pause-persist. "
+        "A genuine cancel decision delivered via args.resume_answer must NOT "
+        "dispatch pause-persist. "
         f"Got {len(cancelled_pauses)} pause-persist call(s)."
+    )
+
+    # The terminal status itself must be the distinct "cancelled" value — not
+    # merely "not paused" — preserving what this test exists to establish.
+    assert cancelled_result.result is not None and isinstance(cancelled_result.result, dict), (
+        f"Expected a terminal payload dict from the cancelled run. Got: {cancelled_result.result!r}"
+    )
+    assert cancelled_result.result.get("status") == "cancelled", (
+        "A genuinely cancelled run must report status 'cancelled', distinct "
+        f"from a paused run's 'paused_awaiting_input'. Got: {cancelled_result.result!r}"
     )
 
 
@@ -629,7 +665,12 @@ def test_valid_answer_applied_by_type_and_resumes_from_pause():
     run_id = rec1.get("run_id", "default-run")
 
     # Valid single_choice approve answer.
-    approve_answer = {"gate_id": gate_id, "type": "single_choice", "action": "approve"}
+    approve_answer = {
+        "gate_id": gate_id,
+        "type": "single_choice",
+        "action": "approve",
+        "channel": "person",
+    }
 
     # Fail-closed mock: read-pause-record must return exists:true to apply the answer.
     result2 = run_workflow_under_e2(
@@ -656,8 +697,16 @@ def test_valid_answer_applied_by_type_and_resumes_from_pause():
         f"Got labels: {[c.label for c in result2.agent_calls]}"
     )
     read_prompt = reads2[0].prompt
-    assert isinstance(read_prompt, str) and "pause_store.py read" in read_prompt, (
-        f"read-pause-record prompt must contain 'pause_store.py read' instruction. "
+    # buildPauseStoreCommand() (ACD-2100a-4) puts --store-dir ahead of the subcommand
+    # token, so 'pause_store.py' and 'read' are no longer contiguous — require both
+    # fragments (still anchored on the parameterized 'read --run-id' invocation, not
+    # a bare mention of the script name).
+    assert (
+        isinstance(read_prompt, str)
+        and "pause_store.py" in read_prompt
+        and "read --run-id" in read_prompt
+    ), (
+        f"read-pause-record prompt must invoke 'pause_store.py' with 'read --run-id'. "
         f"Got: {str(read_prompt)[:200]}"
     )
 
@@ -703,7 +752,12 @@ def test_resume_preserves_committed_earlier_stages():
     )
 
     # Run 2: approve with fail-closed mock.
-    approve_answer = {"gate_id": gate_id, "type": "single_choice", "action": "approve"}
+    approve_answer = {
+        "gate_id": gate_id,
+        "type": "single_choice",
+        "action": "approve",
+        "channel": "person",
+    }
     result2 = run_workflow_under_e2(
         _PLAN_FEATURE_JS,
         timeout=_TIMEOUT,
@@ -844,7 +898,12 @@ def test_paused_state_durable_across_process_exit():
 
     # Run 2: "new process" — agent-mocked record read returns {exists: true, stale: false}.
     # Simulates the durable record being present after the first process exited.
-    approve_answer = {"gate_id": gate_id, "type": "single_choice", "action": "approve"}
+    approve_answer = {
+        "gate_id": gate_id,
+        "type": "single_choice",
+        "action": "approve",
+        "channel": "person",
+    }
     result2 = run_workflow_under_e2(
         _PLAN_FEATURE_JS,
         timeout=_TIMEOUT,
@@ -943,7 +1002,12 @@ def test_resume_with_no_pending_pause_is_noop():
     Agent-mediated read contract (ADR-024): no real file is created or accessed.
     The gate wrapper dispatches read-pause-record; exists:false → nothing_to_resume.
     """
-    resume_answer = {"gate_id": "final-gate", "type": "single_choice", "action": "approve"}
+    resume_answer = {
+        "gate_id": "final-gate",
+        "type": "single_choice",
+        "action": "approve",
+        "channel": "person",
+    }
     result = run_workflow_under_e2(
         _PLAN_FEATURE_JS,
         timeout=_TIMEOUT,
@@ -1231,9 +1295,13 @@ def test_pause_persist_is_verified_by_readback():
     assert isinstance(prompt, str), (
         f"pause-persist-verify prompt must be an INSTRUCTION STRING, got {type(prompt)}"
     )
-    assert "pause_store.py read" in prompt, (
+    # buildPauseStoreCommand() (ACD-2100a-4) puts --store-dir ahead of the subcommand
+    # token, so 'pause_store.py' and 'read' are no longer contiguous — require both
+    # fragments (still anchored on the parameterized 'read --run-id' invocation, not
+    # a bare mention of the script name).
+    assert "pause_store.py" in prompt and "read --run-id" in prompt, (
         "The verify dispatch must actually run the read command; a prompt without "
-        f"'pause_store.py read' verifies nothing. Prompt: {prompt[:300]}"
+        f"'pause_store.py' + 'read --run-id' verifies nothing. Prompt: {prompt[:300]}"
     )
 
 
@@ -1268,6 +1336,7 @@ def test_edit_answer_preserves_feedback_through_resume():
                 "type": "single_choice",
                 "action": "edit",
                 "feedback": feedback_text,
+                "channel": "person",
             },
         },
     )

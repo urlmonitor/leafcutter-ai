@@ -21,7 +21,7 @@ PostToolUse hook contract:
 import json
 import sys
 from datetime import date
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 
 REQUIRED_FIELDS = ("title", "status", "components", "created", "depends_on")
 ALLOWED_STATUSES = ("todo", "in_progress", "blocked", "done", "deferred")
@@ -445,20 +445,52 @@ def _check_agents(fm: dict) -> list[str]:
 
 
 def _depends_candidates(entry: str, ticket_path: Path) -> list[Path]:
-    """Build the list of paths a ``depends_on`` filename may resolve to.
+    """Build the list of paths a ``depends_on`` entry may resolve to.
+
+    Two spellings are accepted for the same-epic constraint:
+
+    1. **Bare sibling filename** (e.g. ``06_TICKET-....md``) — resolved
+       relative to the ticket's own directory, as before.
+    2. **Repo-relative prefixed path** (e.g.
+       ``tickets/00_inbox/epics/EPIC-Foo/06_TICKET-....md``) — resolved by
+       basename, but ONLY after confirming the path's own parent-directory
+       component names the SAME epic folder the ticket itself lives in
+       (``ticket_path.parent.name``, or ``ticket_path.parent.parent.name``
+       when the ticket itself has already been filed into a ``done/``
+       subfolder). This directory-name check is what prevents a cross-epic
+       path (``tickets/.../EPIC-Other/99_foo.md``) from validating merely
+       because a same-named file happens to sit in THIS ticket's own epic
+       folder — resolving by basename alone, without it, would accept that.
+       No project-root plumbing is needed: the ticket's own parent directory
+       already IS the epic folder against which the comparison is made.
 
     Args:
-        entry: Filename listed in ``depends_on``.
+        entry: Filename or repo-relative path listed in ``depends_on``.
         ticket_path: Absolute path to the ticket being validated.
 
     Returns:
-        Candidate paths in resolution order: sibling, sibling/done/, then
-        epic-root if the ticket itself sits in a ``done/`` subfolder.
+        Candidate paths in resolution order: sibling, sibling/done/,
+        epic-root fallback (ticket itself in ``done/``), and — only when the
+        prefixed form names this ticket's own epic folder — the equivalent
+        candidates resolved by basename. A genuinely dangling entry (missing
+        under every spelling) still yields no existing candidate, so
+        ``_check_depends_on`` reports it (no fail-open).
     """
     parent = ticket_path.parent
     candidates = [parent / entry, parent / "done" / entry]
     if parent.name == "done":
         candidates.append(parent.parent / entry)
+
+    if "/" in entry:
+        entry_parts = PurePosixPath(entry).parts
+        if len(entry_parts) >= 2:
+            epic_dir_component, filename = entry_parts[-2], entry_parts[-1]
+            if epic_dir_component == parent.name:
+                candidates.append(parent / filename)
+                candidates.append(parent / "done" / filename)
+            elif parent.name == "done" and epic_dir_component == parent.parent.name:
+                candidates.append(parent.parent / filename)
+
     return candidates
 
 
@@ -693,6 +725,9 @@ def _violation_message(rel: str, errors: list[str]) -> str:
         "Allowed status: todo | in_progress | blocked | done | deferred.\n"
         "Allowed type (optional): epic.\n"
         "`depends_on` references must exist in the same epic folder (or its done/ subfolder).\n"
+        "Accepted spellings: a bare sibling filename (e.g. '06_TICKET-....md'), or a "
+        "repo-relative path whose parent directory names this same epic folder "
+        "(e.g. 'tickets/00_inbox/epics/EPIC-Foo/06_TICKET-....md').\n"
         "Run the 'create-ticket' skill for the full schema."
     )
 
@@ -806,5 +841,23 @@ DECISION HISTORY
   present, must be true or false; when absent, no error (field is optional). Wired
   _check_bool_field(fm, "declares_side_effect") into validate(). Backward-compatible:
   existing tickets without the field continue to pass without modification.
+- 2026-09-08 [EPIC-StartingNewWorkTheProperWayAlways]: _depends_candidates() now
+  accepts a second spelling for a depends_on entry: a repo-relative prefixed path
+  (e.g. "tickets/00_inbox/epics/EPIC-Foo/06_TICKET-....md"), in addition to the
+  existing bare sibling filename form. The build driver
+  (.leafcutter/workflows/build-feature.js toWorktreePath) resolves depends_on
+  entries relative to the worktree root, so a bare filename it is handed never
+  exists there and the dependant ticket is silently withheld from a build run
+  even though its prerequisite is done. Resolution is by basename, gated on the
+  prefixed path's own parent-directory component matching the ticket's own epic
+  folder name (ticket_path.parent.name, or .parent.parent.name when the ticket
+  itself sits in a done/ subfolder) — this is what stops a cross-epic path from
+  validating via a same-named sibling that happens to sit in THIS epic folder.
+  No project-root plumbing was added to validate()/_check_depends_on(): the
+  ticket's own parent directory already IS the epic folder being compared
+  against, so basename + directory-name equality is sufficient and keeps the
+  fix local to _depends_candidates(). Genuinely missing files still report an
+  error under either spelling (no fail-open). Bare sibling filenames continue
+  to resolve exactly as before (unchanged code path).
 ====================================================================
 """

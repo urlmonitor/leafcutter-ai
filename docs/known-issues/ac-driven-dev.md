@@ -69,15 +69,12 @@ Severity in the **filename** is a three-level index bucket (`blocker` / `high` /
 
 Fixed issues move to [`ac-driven-dev/resolved/`](ac-driven-dev/resolved/) and are no longer listed as open. They are kept, not deleted.
 
-**Open: 27** (3 blocker, 20 high, 4 low) · **Resolved: 1**
+**Open: 26** (0 blocker, 22 high, 4 low) · **Resolved: 4**
 
 ## Open
 
 | Severity | Issue | File |
 |---|---|---|
-| `blocker` | KI-ACD-004 — `/plan-feature` cannot start in the self-hosting layout: worktree setup resolves git from the untracked workspace | [open-blocker-ki-acd-004.md](ac-driven-dev/open-blocker-ki-acd-004.md) |
-| `blocker` | KI-ACD-005 — User approval gates are dispatched to a `status-checker` agent, whose out-of-scope refusal is parsed as "the user chose cancel" | [open-blocker-ki-acd-005.md](ac-driven-dev/open-blocker-ki-acd-005.md) |
-| `blocker` | KI-ACD-009 — `/plan-feature` halts before any authoring agent and blames a registry field that is correct | [open-blocker-ki-acd-009.md](ac-driven-dev/open-blocker-ki-acd-009.md) |
 | `high` | KI-ACD-001 — `ac_prioritizer` discards each AC's `priority` field, so `critical` never surfaces | [open-high-ki-acd-001.md](ac-driven-dev/open-high-ki-acd-001.md) |
 | `high` | KI-ACD-002 — Generated Agent Contracts lines have no pipe delimiters, so documentation-verifier fail-closes on every generated ticket | [open-high-ki-acd-002.md](ac-driven-dev/open-high-ki-acd-002.md) |
 | `high` | KI-ACD-003 — `ac-fulfillment-gate` returns `ok` on an AC it left with `covered_by: []` | [open-high-ki-acd-003.md](ac-driven-dev/open-high-ki-acd-003.md) |
@@ -109,4 +106,7 @@ Fixed issues move to [`ac-driven-dev/resolved/`](ac-driven-dev/resolved/) and ar
 
 | Severity | Issue | File |
 |---|---|---|
+| `blocker` | KI-ACD-004 — `/plan-feature` cannot start in the self-hosting layout: worktree setup resolves git from the untracked workspace | [resolved-blocker-ki-acd-004.md](ac-driven-dev/resolved/resolved-blocker-ki-acd-004.md) |
+| `blocker` | KI-ACD-005 — User approval gates are dispatched to a `status-checker` agent, whose out-of-scope refusal is parsed as "the user chose cancel" | [resolved-blocker-ki-acd-005.md](ac-driven-dev/resolved/resolved-blocker-ki-acd-005.md) |
+| `blocker` | KI-ACD-009 — `/plan-feature` halts before any authoring agent and blames a registry field that is correct | [resolved-blocker-ki-acd-009.md](ac-driven-dev/resolved/resolved-blocker-ki-acd-009.md) |
 | `high` | KI-ACD-013 — `goal_to_epic.py` writes a `target_epic` field the AC schema rejects, so every epic it generates fails the required store gate | [resolved-high-ki-acd-013.md](ac-driven-dev/resolved/resolved-high-ki-acd-013.md) |

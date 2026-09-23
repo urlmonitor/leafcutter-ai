@@ -56,7 +56,7 @@ Severity in the **filename** is a three-level index bucket (`blocker` / `high` /
 
 Fixed issues move to [`ac-store/resolved/`](ac-store/resolved/) and are no longer listed as open. They are kept, not deleted.
 
-**Open: 22** (1 blocker, 13 high, 8 low) · **Resolved: 3**
+**Open: 23** (1 blocker, 14 high, 8 low) · **Resolved: 3**
 
 ## Open
 
@@ -76,6 +76,7 @@ Fixed issues move to [`ac-store/resolved/`](ac-store/resolved/) and are no longe
 | `high` | KI-ACS-20260907-0920 — Nothing compares an AC's fields against each other, so a record can carry two clauses that contradict — and in one case the contradicted clause predicted verbatim the defect that shipped | [open-high-ki-acs-20260907-0920.md](ac-store/open-high-ki-acs-20260907-0920.md) |
 | `high` | KI-ACS-20260907-the-validator-everyone-runs-is-weaker-than-the-gate-that-blocks — KI-ACS-20260907-the-validator-everyone-runs-is-weaker-than-the-gate-that-blocks | [open-high-ki-acs-20260907-the-validator-everyone-runs-is-weaker-than-the-gate-that-blocks.md](ac-store/open-high-ki-acs-20260907-the-validator-everyone-runs-is-weaker-than-the-gate-that-blocks.md) |
 | `high` | KI-ACS-20260914-composite-proof-drops-path-leaves — the CI done-proof gate expands a leaf that lists its test file in `covered_by` as if it were a composite, finds no children, and refuses every parent goal above such leaves | [open-high-ki-acs-20260914-composite-proof-drops-path-leaves.md](ac-store/open-high-ki-acs-20260914-composite-proof-drops-path-leaves.md) |
+| `high` | KI-ACS-20260914-mark-ac-done-refuses-every-test-required-false-leaf — the sanctioned tool for marking an AC done cannot pass a single docs-only leaf, ever | [open-high-ki-acs-20260914-mark-ac-done-refuses-every-test-required-false-leaf.md](ac-store/open-high-ki-acs-20260914-mark-ac-done-refuses-every-test-required-false-leaf.md) |
 | `low` | KI-ACS-009 — The documented AC-store pre-flight runs a weaker validator than the required CI gate, so a clean local check does not predict CI | [open-low-ki-acs-009.md](ac-store/open-low-ki-acs-009.md) |
 | `low` | KI-ACS-011 — `documentation_triggers: []` is refused on an L2 while `null` is accepted, so declaring "no documentation needed" is uncommittable | [open-low-ki-acs-011.md](ac-store/open-low-ki-acs-011.md) |
 | `low` | KI-ACS-015 — A `test_spec` descriptor has no link to the criterion it was promised for, so "which behaviour is this proof for" is unrepresentable | [open-low-ki-acs-015.md](ac-store/open-low-ki-acs-015.md) |

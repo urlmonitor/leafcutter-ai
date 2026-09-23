@@ -29,19 +29,47 @@ HARDENING (ticket 08):
       top-level `return` statements unlike node --check (script mode).
 
 BO-1500f-1 REGRESSION HARDENING (second respawn, 2026-08-18):
-    - plan-feature.js dispatches an unconditional "resolve-workspace-setup-
-      permission" agent() call before Stage 0 on every invocation, and its
-      fail-closed default halts the run when that label's response is not a
-      real, parseable registry payload. A per-call-site test fix (mocking the
-      label at every run_workflow_under_e2(plan-feature.js, ...) call) was
-      applied twice and, both times, the same root cause resurfaced in a wider
-      set of caller files that were never updated. run_workflow_under_e2() now
-      merges a SCRIPT-SPECIFIC set of built-in defaults (see
+    - plan-feature.js used to dispatch an unconditional "resolve-workspace-
+      setup-permission" agent() call before Stage 0 on every invocation, and
+      its fail-closed default halted the run when that label's response was
+      not a real, parseable registry payload. A per-call-site test fix
+      (mocking the label at every run_workflow_under_e2(plan-feature.js, ...)
+      call) was applied twice and, both times, the same root cause resurfaced
+      in a wider set of caller files that were never updated. run_workflow_
+      under_e2() merged a SCRIPT-SPECIFIC set of built-in defaults (see
       _default_label_responses_for_script()) under any caller-supplied
-      label_responses, so every existing and future call — in any file — gets
-      a sane "permitted" default for that gate without having to know about it,
-      while a test that deliberately wants to exercise the denial path still
-      overrides the label explicitly (caller-supplied keys always win).
+      label_responses, so every existing and future call — in any file — got
+      a sane "permitted" default for that gate without having to know about
+      it, while a test that deliberately wanted to exercise the denial path
+      could still override the label explicitly (caller-supplied keys always
+      win). SUPERSEDED by ACD-2100b-5 below: the gate this note describes no
+      longer makes an agent() dispatch at all, so this label-shaped default
+      is gone from _default_label_responses_for_script() — see the
+      ACD-2100b-5 note for its args-shaped replacement.
+
+ACD-2100b-5 (2026-09-07): the Pre-Stage-0 workspace-setup permission gate
+    BO-1500f-1 hardened above no longer makes any agent() dispatch. The E2
+    engine (ADR-030) contextifies a workflow body with no filesystem
+    primitive, so plan-feature.js cannot read config/agent_registry.json
+    itself; the read now happens in a real script
+    (scripts/worktree/check_workspace_setup_permission.py) that the
+    plan-feature SKILL runs BEFORE invoking this workflow, passing its
+    verdict through `args.workspace_setup_permission` — the only injected
+    global that carries caller-supplied data. Every PRE-EXISTING caller of
+    run_workflow_under_e2(plan-feature.js, ...) supplies no such key in its
+    own `args`, exactly as it supplied no override for the old
+    "resolve-workspace-setup-permission" label — so the same class of
+    problem BO-1500f-1 solved for label_responses now applies to `args`
+    instead. run_workflow_under_e2() merges a SCRIPT-SPECIFIC ARGS default
+    (see _default_args_for_script()) under any caller-supplied `args`, real
+    and registry-backed exactly like the old label default was (sourced from
+    a REAL run of the real pre-flight script against the real, on-disk
+    config/agent_registry.json — never a hand-typed verdict literal), so
+    every existing and future caller is unaffected by this gate without
+    having to know about it. A test that deliberately wants to exercise the
+    denial path still can: caller-supplied `args` keys always take
+    precedence over this default (same merge-order convention as
+    label_responses).
 
 BO-2400f-12 (2026-08-25): the same script-specific-default mechanism now also
     covers fast-lane-ship.js's unconditional "check-producibility" dispatch —
@@ -140,6 +168,7 @@ from __future__ import annotations
 import json
 import logging
 import subprocess
+import sys
 import tempfile
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -818,13 +847,16 @@ Promise.resolve(__resultPromise__).then(function(__scriptResult__) {
 # Internal helpers
 # ---------------------------------------------------------------------------
 
-# BO-1500f-1: plan-feature.js's pre-Stage-0 workspace-setup permission gate
-# (see the module docstring's "REGRESSION HARDENING" note). Any caller that
-# drives this exact script gets a real, registry-backed "permitted" default
-# for this one label unless it supplies its own value for the same key.
+# ACD-2100b-5: plan-feature.js's pre-Stage-0 workspace-setup permission gate
+# no longer dispatches an agent() call at all (see the module docstring's
+# "ACD-2100b-5" note) — its default now lives in _default_args_for_script()
+# below, keyed by _WORKSPACE_SETUP_PERMISSION_ARGS_KEY, not here.
 _PLAN_FEATURE_SCRIPT_NAME = "plan-feature.js"
-_WORKSPACE_SETUP_PERMISSION_LABEL = "resolve-workspace-setup-permission"
 _AGENT_REGISTRY_RELATIVE_PATH = Path("config") / "agent_registry.json"
+_WORKSPACE_SETUP_PERMISSION_ARGS_KEY = "workspace_setup_permission"
+_PREFLIGHT_SCRIPT_RELATIVE_PATH = Path("scripts") / "worktree" / "check_workspace_setup_permission.py"
+_PREFLIGHT_DEFAULT_AGENT_ID = "worktree-agent"
+_PREFLIGHT_SUBPROCESS_TIMEOUT_SECONDS = 15
 
 # BO-2400f-12: fast-lane-ship.js dispatches an unconditional producibility-guard
 # check ("check-producibility") between Resolve and the claim step. Its
@@ -874,25 +906,20 @@ def _find_ancestor_containing(start: Path, relative_path: Path) -> Path | None:
 def _default_label_responses_for_script(script_path: Path) -> dict[str, Any]:
     """Return baseline label_responses every caller of `script_path` implicitly needs.
 
-    Currently only plan-feature.js has an unconditional pre-Stage-0 gate
-    (BO-1500f-1's "resolve-workspace-setup-permission" dispatch) whose
-    fail-closed default halts the run for any caller that does not mock it.
-    Rather than requiring every test file that drives plan-feature.js to know
-    about that gate, this returns a real, registry-backed "permitted" default
-    for it, sourced from the actual config/agent_registry.json on disk (never
-    a hand-authored fixture) — mirroring the {output, exit_code} shape every
-    other status-checker "run this command, return JSON" dispatch in
-    plan-feature.js uses.
+    Currently only fast-lane-ship.js has unconditional gates (BO-2400f-12's
+    "check-producibility" and the pre-existing "fastlane-context-bundle"
+    assembly) that this supplies real, schema-conforming defaults for so
+    every existing and future caller is unaffected without knowing about
+    them.
 
-    A test that wants to exercise the DENIAL path still can: caller-supplied
+    A test that wants to exercise a refusal path still can: caller-supplied
     label_responses always take precedence over this default (see
-    run_workflow_under_e2()'s merge order), so an explicit override for this
+    run_workflow_under_e2()'s merge order), so an explicit override for the
     same label replaces it entirely.
 
-    Returns an empty dict (no default) for any other script, or if the
-    registry cannot be located/parsed — in which case plan-feature.js's own
-    fail-closed behavior applies exactly as before this hardening pass, so
-    this is never a source of a false "permitted" verdict.
+    Returns an empty dict for any other script. plan-feature.js's own
+    workspace-setup permission gate is handled separately, via `args` rather
+    than a label — see _default_args_for_script() (ACD-2100b-5).
     """
     if script_path.name == _FAST_LANE_SHIP_SCRIPT_NAME:
         return {
@@ -908,6 +935,41 @@ def _default_label_responses_for_script(script_path: Path) -> dict[str, Any]:
             },
         }
 
+    return {}
+
+
+def _default_args_for_script(script_path: Path) -> dict[str, Any]:
+    """Return baseline `args` every caller of `script_path` implicitly needs.
+
+    ACD-2100b-5: plan-feature.js's Pre-Stage-0 workspace-setup permission
+    gate no longer makes an agent() dispatch (see the module docstring's
+    "ACD-2100b-5" note) — it reads `args.workspace_setup_permission`
+    directly and fails closed when that key is absent, so every
+    PRE-EXISTING caller of run_workflow_under_e2(plan-feature.js, ...) would
+    otherwise see its run halt at Stage 0 the moment this gate landed,
+    without ever knowing the new key exists.
+
+    This returns a real, registry-backed "permitted" default for that key by
+    running the ACTUAL pre-flight script (scripts/worktree/
+    check_workspace_setup_permission.py) as a real subprocess against the
+    real, on-disk config/agent_registry.json — never a hand-typed verdict
+    literal, so the exact shape the script emits is what every caller's
+    default is built from (mirrors this same "run the real thing, never
+    fake its output shape" discipline as the removed label-shaped default
+    it replaces).
+
+    A test that wants to exercise the DENIAL path still can: caller-supplied
+    `args` always take precedence over this default (see
+    run_workflow_under_e2()'s merge order), so an explicit
+    `args={"workspace_setup_permission": {...}}` override replaces it
+    entirely.
+
+    Returns an empty dict (no default) for any other script, or if the
+    pre-flight script cannot be located/run/parsed — in which case
+    plan-feature.js's own fail-closed behavior applies exactly as it would
+    for a caller that never learned about this gate, so this is never a
+    source of a false "permitted" verdict.
+    """
     if script_path.name != _PLAN_FEATURE_SCRIPT_NAME:
         return {}
 
@@ -916,27 +978,46 @@ def _default_label_responses_for_script(script_path: Path) -> dict[str, Any]:
     )
     if repo_root is None:
         logger.warning(
-            "Could not locate config/agent_registry.json above %s; "
-            "no default resolve-workspace-setup-permission response supplied.",
+            "Could not locate config/agent_registry.json above %s; no default "
+            "workspace_setup_permission response supplied.",
             script_path,
         )
         return {}
 
-    registry_path = repo_root / _AGENT_REGISTRY_RELATIVE_PATH
-    try:
-        registry = json.loads(registry_path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError) as exc:
+    preflight_script = repo_root / _PREFLIGHT_SCRIPT_RELATIVE_PATH
+    if not preflight_script.is_file():
         logger.warning(
-            "Could not load default agent registry from %s: %s", registry_path, exc
+            "Pre-flight script not found at %s; no default "
+            "workspace_setup_permission response supplied.",
+            preflight_script,
         )
         return {}
 
-    return {
-        _WORKSPACE_SETUP_PERMISSION_LABEL: {
-            "output": json.dumps(registry),
-            "exit_code": 0,
-        }
-    }
+    try:
+        proc = subprocess.run(
+            [sys.executable, str(preflight_script), "--agent-id", _PREFLIGHT_DEFAULT_AGENT_ID],
+            cwd=str(repo_root),
+            capture_output=True,
+            text=True,
+            timeout=_PREFLIGHT_SUBPROCESS_TIMEOUT_SECONDS,
+        )
+    except (OSError, subprocess.SubprocessError) as exc:
+        logger.warning("Failed to run pre-flight script %s: %s", preflight_script, exc)
+        return {}
+
+    if not proc.stdout.strip():
+        logger.warning("Pre-flight script %s produced no stdout.", preflight_script)
+        return {}
+
+    try:
+        verdict = json.loads(proc.stdout)
+    except json.JSONDecodeError as exc:
+        logger.warning(
+            "Pre-flight script %s produced non-JSON stdout: %s", preflight_script, exc
+        )
+        return {}
+
+    return {_WORKSPACE_SETUP_PERMISSION_ARGS_KEY: verdict}
 
 
 def _strip_exports(source: str) -> str:
@@ -1088,11 +1169,20 @@ def run_workflow_under_e2(
             return non-empty batches). Merged OVER
             ``_default_label_responses_for_script(script_path)`` — any
             script-specific built-in default (see that function; currently
-            only plan-feature.js's "resolve-workspace-setup-permission" gate)
+            fast-lane-ship.js's "check-producibility" and
+            "fastlane-context-bundle" gates) is included automatically
+            unless this argument supplies its own value for the same label,
+            in which case the caller's value wins.
+        args: Optional mapping merged OVER
+            ``_default_args_for_script(script_path)`` — any script-specific
+            built-in ARGS default (see that function; currently
+            plan-feature.js's ``workspace_setup_permission`` key, ACD-2100b-5)
             is included automatically unless this argument supplies its own
-            value for the same label, in which case the caller's value wins.
-        args: Optional mapping merged over the default stub ``args`` global.
-            Use this to inject workflow inputs such as ``resume_answer`` and
+            value for the same key, in which case the caller's value wins —
+            same merge-order convention as ``label_responses`` above. The
+            merged result is then further merged over the shim's own default
+            stub ``args`` global (inside the JS shim itself). Use this
+            argument to inject workflow inputs such as ``resume_answer`` and
             ``run_id`` so a second invocation can drive the resume path of a
             paused run (two-invocation pause->resume tests).
 
@@ -1113,18 +1203,27 @@ def run_workflow_under_e2(
             f"Expected a .js file, got: {script_path}"
         )
 
-    # Script-specific built-in defaults (currently just plan-feature.js's
-    # workspace-setup permission gate) are merged UNDER caller-supplied
-    # label_responses, so an explicit caller value for the same label always
-    # wins (e.g. a test deliberately exercising the denial path).
+    # Script-specific built-in defaults (currently fast-lane-ship.js's gates)
+    # are merged UNDER caller-supplied label_responses, so an explicit
+    # caller value for the same label always wins (e.g. a test deliberately
+    # exercising a refusal path).
     merged_label_responses = {
         **_default_label_responses_for_script(script_path),
         **(label_responses or {}),
     }
 
+    # Script-specific built-in ARGS defaults (currently plan-feature.js's
+    # `workspace_setup_permission` key, ACD-2100b-5) are merged UNDER
+    # caller-supplied args, so an explicit caller value for the same key
+    # always wins (e.g. a test deliberately exercising the denial path).
+    merged_args = {
+        **_default_args_for_script(script_path),
+        **(args or {}),
+    }
+
     try:
         shim_source = _build_shim(
-            script_path, label_responses=merged_label_responses, args=args
+            script_path, label_responses=merged_label_responses, args=merged_args
         )
     except OSError as exc:
         logger.warning("Failed to build shim for %s: %s", script_path, exc)
@@ -1314,3 +1413,51 @@ def run_e1_import_check(script_path: Path, timeout: int = 10) -> E1CheckResult:
         )
 
     return E1CheckResult(valid=True, stderr=proc.stderr, returncode=proc.returncode)
+
+
+# DECISION HISTORY
+# ================================================================================
+# - 2026-09-07 14:00 [python-coder]: Removed _default_label_responses_for_script()'s
+#   plan-feature.js branch (the "resolve-workspace-setup-permission" label-shaped
+#   default) now that plan-feature.js no longer makes that dispatch at all
+#   (ACD-2100b-5), and added _default_args_for_script() plus its merge into
+#   run_workflow_under_e2() so every pre-existing caller still gets a real,
+#   registry-backed default for args.workspace_setup_permission without
+#   needing to know the gate moved. (#EPIC-StartingNewWorkTheProperWayAlways/12)
+# - 2026-09-08 15:30 [python-coder]: Added `_resolve_preflight_invocation()`
+#   plus `_DEPLOYED_*` constants, on the claimed diagnosis that
+#   `_default_args_for_script()`'s single SOURCE-shape ancestor walk resolved
+#   `<target>/.leafcutter` as the repo root for a DEPLOYED `plan-feature.js`
+#   and then ran the pre-flight subprocess with `cwd=<target>/.leafcutter`,
+#   which was claimed to fail closed with "No repository could be resolved"
+#   because `resolve_repo_root()` "never walks upward past its cwd." REVERTED
+#   2026-09-08 (later same day) [python-coder], per pr-reviewer (status:
+#   blocker) and ac-validator's independent `git stash` A/B reproduction: the
+#   diagnosis does not hold under direct execution. `resolve_repo_root()`'s
+#   own first resolution step is `git rev-parse --git-common-dir` from the
+#   given cwd, which is git's native upward ancestor search and does walk
+#   past `cwd` — confirmed by invoking `check_workspace_setup_permission.py`
+#   directly with `cwd=<target>/.leafcutter` against a real
+#   `scripts/build.py --target-dir <tmp>` install: it returned
+#   `{"permits": true, "outcome": "granted", ...}` immediately, not a denial.
+#   Separately, `_find_ancestor_containing()`'s SOURCE-shape walk (looking for
+#   `config/agent_registry.json` relative to each ancestor, starting from
+#   `<target>/.leafcutter/workflows`) already matches at ancestor
+#   `<target>/.leafcutter` itself before ever reaching `<target>` — because a
+#   real deployed target always has `.leafcutter/config/agent_registry.json`,
+#   which satisfies the SOURCE-shape's relative path one level early — so the
+#   new DEPLOYED-shape branch in `_resolve_preflight_invocation()` was
+#   structurally unreachable for every real install, not just this one.
+#   Confirmed via direct execution (real `scripts/build.py` install into a
+#   scratch temp target, git-stash A/B on `unit_tests/portability/
+#   test_acd_2100d_1.py`'s three tests, and a full `unit_tests/workflows`
+#   run) that the pre-fix and post-fix harness are behaviourally identical:
+#   the same 22 tests fail and the same 596 pass either way, and the AC's own
+#   three tests pass against the unmodified pre-ticket harness. No defect
+#   ever existed in this harness's pre-flight resolution; the 2026-09-08
+#   15:30 entry above is retained struck through by this entry rather than
+#   deleted, per this repo's own convention that a disproven bugfix narrative
+#   must be corrected, not silently erased. See
+#   scripts/build_phases.py's own DECISION HISTORY entry, corrected in the
+#   same pass, for the parallel correction there.
+#   (#EPIC-StartingNewWorkTheProperWayAlways/19)

@@ -42,7 +42,7 @@ doc_links:
     relevance: "The proven two-run test shape this AC copies: assert a property across two runs that differ in exactly the suspected cause, rather than inspecting one run's output."
 assigned_agent: python-coder
 estimated_complexity: M
-declares_side_effect: true
+declares_side_effect: false
 it_requirements:
   reference_file_path: "scripts/commit_guardian/_ac_schema_validators.py"
   n_location_rule: "1"
@@ -102,6 +102,32 @@ amended_by:
 - action: approved
   agent: approve_acs
   date: '2026-08-17'
+- reason: derived-field-correction
+  by: it-po
+  at: '2026-09-22'
+  note: 'declares_side_effect corrected true -> false. THE AUTHORED SIDE WAS WRONG,
+    not the derivation. The operative Then clause is "that new record CARRIES the
+    declaration" — an assertion about the content of a record, which a process that
+    writes nothing can satisfy. This is the EXACT shape for which this record''s own
+    parent BO-2900g-2 was resolved to false in 9699d501, with the reason recorded there
+    as: "its Then clause states what a record CARRIES ... The declaration follows what
+    the Then clause states, not what the implementation incidentally writes." Its
+    sibling BO-2900g-2-ii is already false; -2-i was the last true left in its own
+    family, so this flip makes the family internally consistent rather than introducing
+    a new reading.
+
+    The remaining clauses do not change the answer: "the number of records that assert a
+    durable change without the declaration is zero again" is a count over a structure,
+    and the route-agnostic and sweep-never-run clauses are statements about invariance
+    across runs, not about a durable write.
+
+    Adjudicated in docs/analysis/2026-09-21-declares-side-effect-five-record-audit.md.
+    The wrong value dates to the 2026-08-17 it-po pass whose own note lists
+    declares_side_effect among the fields it added with "criteria untouched" — the flag
+    was attached to criteria never re-read against it. The BO-2900g-2-ii allowlist was
+    shrunk from five entries to two in the same change, because the staleness test
+    asserts every pinned id STILL disagrees and flipping without shrinking fails CI.
+    criteria untouched.'
 superseded_by: null
 covered_by: []
 implemented_by: []

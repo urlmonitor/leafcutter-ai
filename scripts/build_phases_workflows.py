@@ -310,7 +310,14 @@ def build_workflow_scripts(target_root: Path, config: dict[str, Any],
         if not _bp._should_overwrite(dest, force):
             continue
 
-        # Compare-before-write guard (binary — SHA-256).
+        # Compare-before-write guard (binary — SHA-256). This branch does NOT
+        # route through _bp._files_content_identical() (it compares the
+        # rendered `emitted` bytes to `dest`, not two on-disk files) —
+        # ACD-2100d-2-i names it as the load-bearing fourth branch precisely
+        # because of that: it is the path the route's own deployed copy
+        # (.claude/workflows/*.js) takes, so it must call
+        # _bp.announce_if_local_change_replaced() itself rather than relying
+        # on instrumentation elsewhere.
         if dest.exists():
             import hashlib as _hashlib
             existing_digest = _hashlib.sha256(dest.read_bytes()).hexdigest()
@@ -319,6 +326,7 @@ def build_workflow_scripts(target_root: Path, config: dict[str, Any],
                 _bp._uptodate_count += 1
                 unchanged += 1
                 continue
+            _bp.announce_if_local_change_replaced(dest)
 
         if dry_run:
             print(f"  [DRY-RUN] would write .claude/workflows/{js_file.name}")
