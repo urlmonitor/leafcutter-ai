@@ -511,12 +511,12 @@ def _get_ticket_scope(rel_path: str, repo_root: str) -> set[str] | None:
     if not files_touched and not out_of_scope:
         return None  # declared key present but resolves to empty — skip
 
-    # Docs/config-only guard (AC BP-1100e-1-iii): a ticket whose declared files are all
-    # non-source contributes no source paths of its own. What it declared OUT of scope
-    # still counts as declared (BP-1100e-1-viii) — returning a bare empty set here threw
-    # that list away, making this hook's own printed remedy the one thing that cannot help.
+    # Explicit docs/config-only guard (AC BP-1100e-1-iii): a ticket whose
+    # declared files are all non-source has no source paths to add to the
+    # reconciliation union.  Source changes are still caught because they are
+    # absent from the (empty) union declared scope.
     if is_docs_only_or_config_only_ticket(files_touched):
-        return {_normalise_path(p) for p in out_of_scope}
+        return set()
 
     return {_normalise_path(p) for p in files_touched + out_of_scope}
 
