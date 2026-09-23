@@ -140,6 +140,12 @@ class TestCommitStageOutputFailClosed(unittest.TestCase):
       - Well-formed {status:"ok"} → status "ok" (currently PASSES)
     """
 
+    # Assigned dynamically in setUpClass; declared here so mypy (which cannot
+    # see attributes set only inside a classmethod body) recognises them as
+    # real class attributes rather than reporting attr-defined.
+    source: str
+    coercion_block: str
+
     @classmethod
     def setUpClass(cls):
         cls.source = _read_source(_PLAN_FEATURE_JS)

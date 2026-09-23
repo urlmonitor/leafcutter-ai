@@ -16,7 +16,7 @@ related_docs:
 # KI-ACS-017 — `approve_acs.py` corrupts any record whose `amended_by` holds a multi-line entry, and returns success for the files it broke
 
 > One known issue, split out of `docs/known-issues/ac-store.md` on
-> 2026-09-14. Index: [ac-store.md](../ac-store.md).
+> 2026-09-14. Index: [ac-store.md](../../ac-store.md).
 > Filename severity is the three-level index bucket (`blocker`); the
 > original grading is the `**Severity:**` line below, unchanged.
 
