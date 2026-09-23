@@ -1,0 +1,87 @@
+id: BO-4200e
+components:
+  - build_orchestration
+  - testing_quality
+title: "A check that cannot judge your work says so, instead of failing it"
+component: build-orchestration
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Work the run is not in a position to judge is named as such, never blamed.
+
+  Some work can only be proved once it has been taken up into the project's own
+  history, and a run that checks before that point can never see it succeed. When
+  that is the situation, you are told that — plainly, and in time — instead of
+  being handed a refusal that reads as though the work itself is wrong. Being
+  unable to judge something is an answer you can act on; a misattributed failure
+  is not.
+depends_on: [BO-4200]
+doc_links:
+  - path: docs/known-issues/build-orchestration/open-high-ki-bo-20260907-0955.md
+    relationship: related
+    status: exists
+    relevance: >-
+      The whole of this record's origin, and the source of its shape. "Not a flaky run
+      and not a code defect — a structural impossibility": the check consults state the
+      run has not yet reached, so red-then-green inside one workspace is impossible for
+      that class of work and retrying cannot help. Observed once, diagnosed causally —
+      the same checks returned 9/9 green once the change was taken up. Its fix
+      direction (1), "let the lane detect this rather than the human", is the direction
+      this record is written to; its warning that the class is unmarked and will recur
+      is why the record exists at all.
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-09-22
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+documentation_triggers:
+  - how-to
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  THE OPPOSITE ERROR TO ITS SIBLINGS, AND THAT IS WHY IT IS HERE. BO-4200a through d
+  concern a verdict that passes work which is broken. This concerns a verdict that
+  fails work which is sound. Same sentence, same harm — an operator acting on a
+  statement that is not true — and the two are not reducible to one another. They also
+  interact: widening what a run checks (BO-4200a) enlarges the population of work whose
+  proof consults the project's history, so satisfying that record without this one
+  makes this failure MORE frequent, not less. Building a before e would be a net loss
+  for the operator who hits it.
+
+  WHY IT IS NOT A CHILD OF THE PRODUCING STEP'S RECORD, which is where the symptom
+  points. The observed halt blamed the producing agent and released the work; the real
+  cause was a phase boundary. The origin entry's own summary — "the failure names the
+  wrong culprit, which is what makes it worth an entry rather than a comment" — is the
+  placement argument: a record that owns verdicts must own a misattributed one, or the
+  misattribution gets fixed where it was seen rather than where it came from.
+
+  WHAT THIS DOES NOT LICENCE, and the prohibition is the origin entry's, not this
+  agent's. It may NOT be satisfied by relaxing the requirement whose proof needs the
+  project's real history: that entry is explicit that the affected requirement demands
+  a genuine copy because the condition it exists to catch cannot be reproduced any
+  other way, and that weakening it "would make the lane green and the coverage
+  worthless". It may equally not be satisfied by excusing the work — being unable to
+  judge something is not the same as it being finished, and treating it so is the
+  phantom-done route this whole family exists to close. Naming, and routing, is the
+  promise; a pass is not.
+
+  THE THREE CANDIDATE MECHANISMS ARE NOT DECIDED HERE — detection and routing,
+  supplying such checks with a history-shaped source that is not the shared one, or
+  permitting a reversible provisional step on the run's own branch. The origin entry
+  ranks them and the Business Analyst should read that ranking, but the criterion above
+  deliberately survives all three, because the operator-visible promise is identical
+  under each.
+
+  documentation_triggers: how-to. This is the one arm of the goal where the operator
+  has something to do. A class of work that the quick route cannot currently complete
+  at all, and whose failure currently points at the wrong place, needs a page saying
+  how to recognise the answer and what to do next; the origin entry records that the
+  diagnosis took reading a fixture and a hand-run of the same command to reach.

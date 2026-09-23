@@ -1,0 +1,284 @@
+id: BO-4200
+components:
+  - build_orchestration
+  - testing_quality
+title: "Know that an automated build's verdict on your change is the truth"
+component: build-orchestration
+level: L0
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  An all-clear covers the whole project; a refusal is about your work, not the tooling.
+
+  When work is built for you without you watching, the only thing you have is what
+  the run says about it. Today that sentence can be wrong in both directions: an
+  all-clear can be given while parts of the project the work never touched have
+  stopped working, and a refusal can be handed back blaming the work when the
+  run was simply never in a position to judge it. Both leave you worse off than
+  no verdict at all, because you act on them. After this goal, an all-clear means
+  the project as a whole still works and says plainly how far it looked; a
+  refusal means the work, and anything the run genuinely cannot judge is named as
+  such instead of being failed. You get this without giving up the speed that
+  made you choose the quick route in the first place.
+depends_on: []
+doc_links:
+  - path: docs/known-issues/build-orchestration/open-high-ki-bo-20260831-1520.md
+    relationship: related
+    status: exists
+    relevance: >-
+      THE ORIGIN OF THE GREEN ARM, AND THE MEASURED EVIDENCE. Severity high, two
+      occurrences. First (2026-08-31): a run reported "gates green" on a branch that
+      had broken 19 pre-existing tests, and the repair surfaced three further defects
+      the report said nothing about, including a regression against an
+      already-completed criterion. Second (2026-09-07): the same shape reached PULL
+      REQUEST #689, whose payload reported no unsatisfied required check; measured on
+      the same command both sides, 70 passed / 0 failed became 7 failed, 11 errors, 56
+      passed — 18 regressed outcomes across 6 files, one of them the repository's own
+      consumer-install harness. Read its closing instruction before decomposing: stating
+      the scope honestly is the floor and is NOT sufficient, because the second
+      occurrence's report was already honest and precisely qualified and a broken pull
+      request was opened anyway.
+  - path: docs/known-issues/build-orchestration/open-high-ki-bo-20260907-0955.md
+    relationship: related
+    status: exists
+    relevance: >-
+      THE ORIGIN OF THE RED ARM. Severity high. A whole class of work can never be
+      completed by the lean route, because the proof step runs before the point at
+      which the change becomes visible to tests that consult the project's history; the
+      run halts, blames the producing step, and the real cause is one phase boundary
+      away. Its own words: "It will recur. Nothing marks an AC as clone-based, so the
+      next one lands the same way... The failure names the wrong culprit." Its fix
+      direction (1) — let the run detect and route this rather than the human — is the
+      shape BO-4200e is written to, and its closing prohibition binds every child: do
+      not resolve this by weakening the requirement's own proof.
+  - path: docs/known-issues/build-orchestration/open-high-ki-bo-013.md
+    relationship: related
+    status: exists
+    relevance: >-
+      BOUNDARY, NOT SCOPE. The neighbouring lean-route defect, and the one this goal
+      does NOT cover: a requirement whose deliverable is not code has no test cycle at
+      all, so the run can neither produce it nor mark it finished. That is a question
+      about the RANGE of work the route can carry and is already owned end to end by
+      BO-3500 (L0, four L1s, eleven L2s). Nothing in this tree may be satisfied by work
+      that belongs there, and nothing there is restated here.
+  - path: docs/acceptance-criteria/build-orchestration/BO-3500-buildable-by-any-craft/BO-3500.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      THE SIBLING GOAL THIS ONE WAS SEPARATED FROM, AND THE REASON ONLY ONE L0 WAS
+      AUTHORED. BO-3500 ("Any requirement you point at can actually be built, not only
+      the code ones") already owns the producer half AND the proof-for-non-code half as
+      a single capability: BO-3500a is "work goes to the craft the requirement asks
+      for" and names frontend, documentation and prompt work in its own tagline;
+      BO-3500c is "work a test cannot prove still finishes with something you can
+      check". This goal is about whether the verdict on work the route CAN build is
+      true. Widening the range and telling the truth about the result fail
+      independently: every craft could be supported and every all-clear still be
+      scoped; every verdict could be honest while two thirds of the backlog is still
+      turned away.
+  - path: docs/acceptance-criteria/build-orchestration/BO-2400-fast-lane-build/BO-2400f.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      FENCED, AND THE RECORD THIS GOAL IS MOST LIKELY TO BE CONFUSED WITH. BO-2400f
+      owns the ARC — one requirement named, and either a pull request or an up-front
+      reason why not. It is satisfiable in full by a run that reliably produces a pull
+      request, and PR #689 is the proof that a fully satisfied arc can still hand over
+      a broken result. This goal owns whether the sentence attached to that result is
+      true. An implementer who satisfies one has not satisfied the other.
+  - path: docs/reference/false-green-mechanisms.md
+    relationship: related
+    status: exists
+    relevance: >-
+      The catalogue this goal's green arm is an instance of — a narrow check reported
+      in wide language. Named by the origin entry itself.
+  - path: docs/how-to/fast-lane-build.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      The operator-facing account of what a lean run promises. It will need to stop
+      implying that a reported all-clear is a statement about the project.
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-09-22
+amended_by: []
+superseded_by: null
+covered_by: [BO-4200a, BO-4200b, BO-4200c, BO-4200d, BO-4200e]
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  ORIGIN (2026-09-22, BrainCandy). Two open, high-severity known issues against the
+  lean build route, both recorded as having NO acceptance criterion: the green gate
+  runs only the tests belonging to the requirement being built
+  (KI-BO-20260831-1520), and the green gate runs before the point at which the
+  change becomes visible to tests that consult the project's history
+  (KI-BO-20260907-0955). Verified 2026-09-22 by grepping the whole AC store for both
+  identifiers: the first is cited in exactly one record (BO-2400f-4-vi, in a coverage
+  note) and the second in none. Neither is covered.
+
+  THE REQUEST ARRIVED AS TWO CAPABILITIES AND ONLY ONE NEW GOAL WAS AUTHORED. This is
+  the most important thing on this record; read it before adding anything here or
+  concluding that something is missing.
+
+  The request paired (1) widening the range of work the route can produce — naming
+  frontend, documentation and prompt work — with (2) the proof obligation that a
+  non-code deliverable admits, on the correct grounds that shipping one without the
+  other produces a route that dispatches a documentation craft and then jams at
+  delivery. That pairing is right, and it is already in the store, authored as one
+  goal for that exact reason: BO-3500, created 2026-08-31, four L1s, eleven L2s, all
+  todo. BO-3500a-1 is "each member of a build set is produced by the craft that member
+  declares"; BO-3500b-2 is "a member that cannot be produced fails the whole group";
+  BO-3500c-1 is "a non-code member is finished only with its artifact produced and a
+  proof established and recorded"; BO-3500c-4 is "a kind of artifact with no defined
+  proof is refused up front, never waived". The measurement quoted at BO-3500's own
+  notes is the same measurement the request carries, one scale up: 660 not-yet-done
+  records declare a producer the route does not have.
+
+  So no acceptance criterion was authored for capabilities (1) and (2). Restating them
+  would have produced a second tree saying what BO-3500 says, and the store's most
+  expensive failure is two records of the same promise that can be satisfied
+  independently. What the request contributes to BO-3500 is EVIDENCE, not scope, and
+  it is recorded here rather than by amending that tree, because changing another
+  goal's readiness or priority is the operator's call at an approval gate and not this
+  pass's:
+    - INF-1300: 31 records, 4 of 25 leaves declare a producer outside the roster.
+      Refused.
+    - BO-2600: of 3 unbuilt leaves, one declares the prompt craft and one the
+      documentation craft. EVERY possible starting point refuses, including one aimed
+      at the single code leaf, because the connected set drags the documentation
+      member in with it.
+    - The perverse consequence the operator named, which BO-3500's notes imply but do
+      not state: the better a tree is authored — giving documentation work to the
+      documentation craft and prompt work to the prompt craft, which is correct — the
+      less buildable it becomes. Good authoring is currently penalised.
+  RECOMMENDED TO THE OPERATOR, NOT DONE HERE: BO-3500 and all four of its L1s are
+  readiness draft, priority medium. On this evidence — whole trees with zero reachable
+  starting points — medium under-prices it. It is the better candidate for promotion
+  of the two.
+
+  WHY THE REMAINING CAPABILITY IS A GOAL OF ITS OWN AND NOT A THIRD ARM OF BO-3500.
+  BO-3500 asks what KINDS of work the route can carry. This asks whether what it says
+  about the work it did carry is TRUE. They fail independently in both directions, and
+  a reader can want either without the other: an operator who only ever builds code
+  requirements is entirely unaffected by BO-3500 and is exactly the person PR #689 was
+  handed to.
+
+  PLACEMENT — A NEW SIBLING L0 (the ac-tree-split skill's Pattern A destination), AND
+  WHY THE PATTERN C ALTERNATIVE IS NOT AVAILABLE AT ALL. Both candidate hosts inside
+  the existing fast-lane tree are closed by explicit prior decisions, and neither was
+  quietly overturned:
+    - BO-2400 carries child_limit_override: 7 with the note that 7 is also the default
+      hard cap, so it is full by both measures and "an eighth L1 needs an
+      ac-tree-split, not a further bump".
+    - BO-2400f carries child_limit_override: 13 and a standing Product Owner flag that
+      this must be the LAST bump — a fourteenth child must force a Pattern C
+      intermediate split.
+  A Pattern C split of BO-2400f was examined first, because the flag names it. It is
+  not merely expensive here; it is structurally unavailable. Pattern C replaces one
+  overcrowded L1 with two or more sibling L1s UNDER THE SAME L0 (skill, Pattern C step
+  5: "Create new L1 files under the same L0 parent"). BO-2400 has zero free L1 slots
+  and is fenced against an eighth. So the split would discharge BO-2400f's cap by
+  breaching BO-2400's — moving the violation up one level rather than resolving it,
+  and doing it to the record whose own note says an eighth L1 is exactly what must not
+  happen. Three further objections, each independently sufficient:
+    - Pattern C makes renaming the moved L2s MANDATORY (the tree-limit check derives a
+      parent by stripping the last id segment, so a moved child that keeps its prefix
+      still counts against its old parent). BO-2400f's thirteen children include
+      records that are work_status done with implemented_by populated —
+      BO-2400f-4-vi among them. Renaming shipped, cited identifiers to make room for a
+      NEW requirement inverts the cost: the store would pay a store-wide reference
+      rewrite across done work to house something that has not started.
+    - The new capability is not a behaviour of BO-2400f's promise. BO-2400f is the ARC;
+      a run can satisfy it perfectly and still hand over a broken result, which is
+      precisely what PR #689 was. A behaviour placed under it would be read as a
+      condition on producing the pull request rather than as a property of the verdict.
+    - Precedent, in this component, for this exact pair of fences: BO-3500's placement
+      notes reached the same conclusion on 2026-08-31 against the same two records and
+      chose a sibling L0. Following it keeps two full, actively-built trees untouched.
+  NOTHING WAS MOVED, RENAMED OR RE-PARENTED by this pass. This is an addition, not a
+  split, so no reference anywhere in the store needed rewiring and no existing record
+  changed except the parent bookkeeping inside this new folder.
+
+  ID ALLOCATION. BO-4200 taken. Verified 2026-09-22 rather than trusted: the component
+  directory was listed (folders AND loose BO-*.yaml records, since a loose file
+  reserves its slot exactly as a folder does) — the highest occupied slot is BO-4100 —
+  and the whole docs/ and tickets/ trees were grepped for BO-4200 and BO-4300, whose
+  only hit was the PROJECT_CONTEXT hint line itself. That line has gone stale four
+  times and was updated in the same pass, as it instructs.
+
+  WHY FIVE L1s, AND WHAT WOULD HAVE BEEN A RESTATEMENT. The verdict decomposes into
+  five separately failable promises: that a wide check exists at all (a), that the
+  claim states its own reach (b), that a wide failure has a consequence (c), that the
+  breadth is affordable (d), and that an unjudgeable piece of work is named rather
+  than failed (e). Each can be fully satisfied while another is fully broken, and the
+  first three are the ones most likely to be collapsed:
+    - Running the whole project's checks and still reporting an unqualified all-clear
+      satisfies (a) and fails (b). This is not hypothetical — it is the current
+      report's shape with a wider check bolted on.
+    - Reporting a wide failure accurately and continuing to deliver satisfies (a) and
+      (b) and fails (c). Also not hypothetical: the field that would carry an
+      unsatisfied check into the terminal report is a fixed empty value at its only
+      call site, so the blocked outcome is unreachable in the running route
+      (BO-2400f-4-vi's 2026-09-07 coverage note, verified there against the source).
+    - Buying breadth by running everything at every attempt satisfies (a), (b) and (c)
+      and destroys the reason the lean route exists — the origin entry measures a full
+      run at ~18 minutes against a route designed to be lean. (d) is the record that
+      makes that trade explicit instead of leaving an implementer to discover it.
+  Nothing was padded to reach five and nothing was dropped to stay under seven; two
+  free slots remain.
+
+  WHY THE RED ARM (e) IS IN THIS GOAL AND IS ITS OWN L1 — the operator asked for this
+  decision explicitly. It is NOT folded into (a): the two are opposite errors. (a)
+  concerns a check that passes work that is broken; (e) concerns a check that fails
+  work that is sound. An implementation of (a) that runs everything, everywhere, makes
+  (e) strictly worse, because the unjudgeable class grows with the breadth of what is
+  run. Nor is it a separate goal: its subject is the same sentence — what the run says
+  about your work — and its harm is the same harm, a verdict the operator cannot act
+  on correctly. Its placement here also settles something the origin entry leaves
+  open: the failure is not the producing step's, so the record that owns it must be
+  the one that owns verdicts, not the one that owns producers.
+
+  PRIORITY: high, and deliberately not critical. Both origin entries are severity
+  high; the green arm has two occurrences and the second reached an open pull request
+  that read as landable. The reason it stops short of critical is that a required
+  merge check does run the whole project's tests, so the shared branch is not directly
+  exposed — of PR #689's ten checks, nine passed and the one failure was that check.
+  What is lost is review cycles, rework, and the ability to believe a report at all,
+  which is the asset the lean route is made of. That is serious and it is not silent
+  data loss.
+
+  A STANDING CONSTRAINT INHERITED FROM BOTH ORIGIN ENTRIES, AND IT MUST SURVIVE
+  DECOMPOSITION. Neither arm may be discharged by making the report more modest and
+  stopping there, and neither may be discharged by narrowing what is checked until it
+  always passes. The green arm's entry says it in terms: honesty about scope is the
+  floor and is insufficient, because the occurrence that reached a pull request was
+  already honest about its scope. The red arm's says the mirror: do not weaken a
+  requirement's own proof to make the route green, because a requirement that demands
+  a real copy of the project demands it for a reason.
+
+  roadmap_phase: phase_1, matching BO-2400, BO-3500 and the rest of this family. The
+  phase_1 outcome is a stable MVP "reliable enough to use across multiple repos", and
+  its fourth exit criterion is already this property one layer down — "reports
+  truthfully: ... no false all-clear". A route that says green over a project it has
+  broken is that exit criterion failing inside the tool that is supposed to enforce
+  it.
+
+  DELIBERATELY NOT AUTHORED, named so a decomposer does not annex them:
+    - WHICH checks constitute "the whole project", how often, and in what order. That
+      is a shape question for the Business Analyst and a cost question for the IT
+      Product Owner; stating it here would fix an implementation before either has
+      looked.
+    - The five review-adjacent phases the lean route omits (recorded as an open
+      question in BO-2400g's notes). An absent gate and an untrue verdict are
+      different problems, and BO-2400g already owns the review half.
+    - Anything about the range of producible work — see BO-3500 above.
+    - L2 Gherkin, assigned_agent, it_requirements, test_spec, estimated_complexity and
+      declares_side_effect. This is a Product Owner pass; its jurisdiction ends at L1.

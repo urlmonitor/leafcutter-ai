@@ -1,0 +1,68 @@
+id: BO-4200d
+components:
+  - build_orchestration
+  - testing_quality
+title: "The wider assurance does not cost you the speed you came for"
+component: build-orchestration
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Broad proof once per run, placed where it saves the most wasted effort.
+
+  The project-wide check is paid for once in a run, not over and over as the work
+  is shaped, and it happens early enough that a broken change never consumes a
+  reading cycle or arrives as a delivery that looks ready. You still get the quick
+  route you chose; what you stop getting is a fast answer that is wrong.
+depends_on: [BO-4200]
+doc_links:
+  - path: docs/known-issues/build-orchestration/open-high-ki-bo-20260831-1520.md
+    relationship: related
+    status: exists
+    relevance: >-
+      The measured cost this record exists to bound: a full project run took ~18
+      minutes (4538 checks in 1098s) "against a lane designed to be lean", which is the
+      entry's own reason for proposing one run after the producing loop settles rather
+      than a wider gate. It also records the waste on the other side — a full reading
+      cycle spent on a branch that did not build.
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-09-22
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+documentation_triggers: []
+documentation_rationale: >-
+  A cost and placement property of a run the operator already knows how to start. It
+  introduces no surface to interact with and no procedure to follow; where the check
+  sits is carried by BO-4200a's sequence diagram.
+change_target: pipeline
+risk_surface: internal
+notes: |
+  WHY THIS IS A REQUIREMENT AND NOT A NOTE ON BO-4200a. Because the cheapest way to
+  satisfy a, b and c is to widen the existing gate in place, and the existing gate runs
+  on every attempt of the producing loop. That implementation is correct against all
+  three and destroys the reason the quick route exists — the trade BO-2400's own goal
+  text is built on ("you stop paying big-job overhead for small-job work"). A
+  requirement that is systematically violated by the cheapest implementation of its
+  siblings has to be written down, or it will be discovered as a complaint about
+  speed after the work has shipped.
+
+  THE SECOND HALF IS ABOUT WASTE, NOT LATENCY, and they are easy to confuse. Placing
+  the broad check after the producing loop but before the reading phase is not only
+  cheaper for the run; it stops two specific costs the origin entry measured — a
+  reading cycle spent on a branch that was already broken, and a delivery that reads
+  as ready and is not. A placement that is fast but leaves either cost in place has
+  met half of this record.
+
+  NO NUMBER IS STATED, DELIBERATELY. "Once per run" is a shape; the budget, the
+  ordering relative to each phase, and what to do when the broad check itself is slow
+  are for the Business Analyst and the IT Product Owner. Stating a minute count here
+  would fix an implementation at goal level and would be obsolete the first time the
+  project's own checks get faster — which is itself active work (TQ-600).
