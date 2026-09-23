@@ -15,9 +15,9 @@ related_docs:
 
 # KI-BO-20260923-0700 — the docs-only guard discards `out_of_scope`, so a documentation ticket on a multi-ticket branch can never be marked done
 
-- **Severity:** high — it has no workaround that is both honest and effective. The hook's
-  own printed remedy cannot be followed.
-- **Status:** open — no AC
+- **Severity:** high — it had no workaround that was both honest and effective. The hook's
+  own printed remedy could not be followed.
+- **Status:** resolved — see `BP-1100e-1-viii` (the fix), landed 2026-09-23
 - **Occurrences:** 1 observed (BO-400e-5, 2026-09-23), but it applies to every docs-only
   ticket in every multi-ticket epic.
 - **First seen:** 2026-09-23 · **Last seen:** 2026-09-23
@@ -75,17 +75,31 @@ implementation commit lists four files, all `.md`: the diagram, the component do
 known-issue, and the ticket itself. Zero source files. The ticket's declaration is accurate;
 the hook's verdict is not.
 
-**Fix direction.** Union `out_of_scope` into the declared scope before the docs-only early
-return, or drop the early return entirely — a docs-only ticket with an explicit
-`out_of_scope` list has declared its position, and that is the whole purpose of the field.
-The guard's stated intent ("source changes are still caught because they are absent from the
-empty union") is preserved for a docs-only ticket that declares **nothing**, which is the
-case it was written for. Whatever the shape, pair it with a test that a docs-only ticket
-with a populated `out_of_scope` passes, since that is the case with no coverage today.
+**Fix (landed 2026-09-23, `BP-1100e-1-viii`).** The docs-only branch now returns the
+normalised `out_of_scope` set instead of a bare empty one:
 
-**Workaround until fixed.** `SKIP=check-predone-scope` on that one commit, with the
-ticket's own zero-source diff quoted as the evidence. Do not add source files to
-`files_touched` to get past it.
+```python
+if is_docs_only_or_config_only_ticket(files_touched):
+    return {_normalise_path(p) for p in out_of_scope}
+```
+
+This is a narrowing of the guard, not a removal, and `BP-1100e-1-iii` is preserved
+unchanged in effect. A docs-only ticket that declares **nothing** out of scope still yields
+an empty declared scope, so it still cannot silently absorb source changes it never
+mentioned — which is the case that guard was written for. A source file named in neither
+list is still flagged.
+
+Covered by `unit_tests/commit_guardian/test_predone_scope_docs_only_out_of_scope.py`, three
+cases: the one that was broken, the one that must stay strict, and `BP-1100e-1-iii`'s own
+case. The middle one is load-bearing — a "fix" that simply deleted the docs-only branch
+would satisfy the first test and still be wrong. Red baseline before the fix: 1 of 3
+failing, and exactly the broken case. Full commit_guardian suite after: 1515 passed.
+
+**Historical note on the workaround.** Before the fix, the only routes were
+`SKIP=check-predone-scope` with the ticket's zero-source diff quoted as evidence, or listing
+source files the ticket never touched. It was skipped twice on BO-400e-5, with the reason
+recorded in both commit messages. Do not reintroduce the `files_touched` padding route: a
+false record is exactly what this component exists to prevent.
 
 **Pattern:** a guard whose early return drops the very field its failure message tells you
 to use — the check and its own advice disagree, and following the advice changes nothing.

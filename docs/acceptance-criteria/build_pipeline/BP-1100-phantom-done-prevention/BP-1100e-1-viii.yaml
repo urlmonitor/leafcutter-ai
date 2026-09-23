@@ -1,0 +1,128 @@
+id: BP-1100e-1-viii
+title: "A docs-only ticket that declares work as out of scope is answered on that declaration, not on an empty one"
+component: build-pipeline
+components:
+  - build_pipeline
+  - commit_guardian
+level: L3
+status: active
+req_status: draft
+work_status: done
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+change_target: pipeline
+risk_surface: contract_boundary
+package_surface: false
+criteria: |
+  Given a ticket whose declared files_touched are documentation-only or config-only
+    And whose out_of_scope explicitly names the source files changed by other tickets
+      on the same branch
+  When the pre-done reconciliation runs
+  Then those named files are treated as declared
+  And the ticket is not flagged for them.
+
+  Given the same ticket
+  When a source file is changed that appears in neither files_touched nor out_of_scope
+  Then it is still flagged, exactly as for any other ticket.
+
+  Given a docs-only ticket that declares nothing out of scope
+    And whose actual changes touch only its own documentation or config files
+  When the reconciliation runs
+  Then it is not flagged, as BP-1100e-1-iii already requires.
+
+  Given a docs-only ticket that declares nothing out of scope
+    And a source file has changed
+  Then it is flagged, because an empty declaration remains an empty declaration.
+depends_on:
+  - BP-1100e-1
+doc_links:
+  - path: scripts/commit_guardian/hooks/check_files_touched_reconciliation.py
+    relationship: implements
+    status: exists
+    relevance: "The declared-scope computation whose docs-only early return discarded out_of_scope."
+  - path: docs/acceptance-criteria/build_pipeline/BP-1100-phantom-done-prevention/BP-1100e-1-iii.yaml
+    relationship: related
+    status: exists
+    relevance: "The narrow-scope protection this record preserves; the defect was its implementation being broader than its criterion."
+  - path: docs/known-issues/build-orchestration/open-high-ki-bo-20260923-0700.md
+    relationship: related
+    status: exists
+    relevance: "The filed defect this record closes."
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "The docs-only branch returns the normalised out_of_scope set rather than an empty set. It must not return files_touched, which for a docs-only ticket contains no source paths and would change nothing."
+  - "BP-1100e-1-iii is preserved unchanged in effect: a docs-only ticket whose diff contains no source file is flagged in neither the old behaviour nor the new, because the reconciliation only ever flags on changed source files."
+  - "An empty or absent out_of_scope on a docs-only ticket still yields an empty declared scope, so the guard's original purpose — a docs ticket cannot silently absorb source changes it never mentioned — is unchanged."
+delivers_to: null
+expects_from:
+  ac_id: BP-1100e-1
+  contract: "The reconciliation's declared-scope union of files_touched and out_of_scope, and its rule that only changed source files are ever flagged."
+test_required: true
+test_spec:
+  - name: test_docs_only_ticket_honours_its_out_of_scope_declaration
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "A docs-only files_touched plus an out_of_scope naming the changed source file yields a declared scope containing that file."
+  - name: test_docs_only_ticket_still_flags_a_file_it_declared_nowhere
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: behavioral
+    angle: failure
+    description: "A source file in neither list is still absent from the declared scope, so the guard is narrowed and not removed."
+  - name: test_docs_only_ticket_with_no_out_of_scope_is_unchanged
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: behavioral
+    angle: boundary
+    description: "BP-1100e-1-iii's own case: declaring nothing out of scope still yields an empty declared scope."
+test_rationale: |
+  The three cases are the whole of the change: the one that was broken, the one that must
+  stay broken-on-purpose (an undeclared source file is still flagged), and the one that
+  BP-1100e-1-iii already owned and that must not regress. They call the hook's own
+  declared-scope function against real ticket text rather than asserting on the source,
+  because the defect was precisely that the function's behaviour diverged from the
+  criterion its own comment cited.
+
+  The middle case is the one that makes this a narrowing rather than a removal. Without it,
+  a fix that simply deleted the docs-only branch would pass the other two.
+covered_by:
+  - unit_tests/commit_guardian/test_predone_scope_docs_only_out_of_scope.py
+implemented_by:
+  - templates/scripts/commit_guardian/hooks/check_files_touched_reconciliation.py
+origin_agent: BrainCandy
+created: 2026-09-23
+amended_by: []
+superseded_by: null
+notes: |
+  FIELD EVIDENCE — 2026-09-23, closing BO-400e-5, the documentation ticket of
+  EPIC-WorkIsOnlyEverMarkedFinishedThroughThe. The commit was refused with 24 undeclared
+  source files, every one of which was already listed in that ticket's out_of_scope. The
+  hook's own parser read them correctly — _parse_yaml_list_field returned 25 entries
+  against the staged blob — and they were discarded one line later by:
+
+      if is_docs_only_or_config_only_ticket(files_touched):
+          return set()
+
+  The remedy the hook prints ("add the above files to files_touched or out_of_scope") was
+  therefore the one thing that could not work. The only other routes were to list source
+  files the ticket had not touched, which is a false record of exactly the kind this
+  component exists to prevent, or to skip the hook. It was skipped twice, under protest,
+  with the reason recorded in both commit messages.
+
+  It is not an edge case: it fires for every documentation ticket in every epic that also
+  contains implementation tickets, because the changed-file set is computed over the branch
+  range. A docs ticket is usually last in such an epic, so it meets the whole branch's
+  accumulated source diff.
+
+  NAMED MUTATIONS (each turns only this record's tests red):
+    M1 — restore `return set()`. Caught by
+         test_docs_only_ticket_honours_its_out_of_scope_declaration.
+    M2 — delete the docs-only branch entirely, so files_touched is unioned too. Passes M1's
+         test but is caught by test_docs_only_ticket_with_no_out_of_scope_is_unchanged only
+         if files_touched ever contained source — so the real guard against over-fixing is
+         test_docs_only_ticket_still_flags_a_file_it_declared_nowhere.
+    M3 — return every changed file as declared. Caught by the same middle test.
