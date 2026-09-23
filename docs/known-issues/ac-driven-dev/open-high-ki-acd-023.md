@@ -22,8 +22,9 @@ related_docs:
 
 - **Severity:** high
 - **Status:** open
-- **Occurrences:** 2 (five records in one epic; then 10 of 27 in a second)
-- **First seen:** 2026-08-26 · **Last seen:** 2026-08-31
+- **Occurrences:** 3 (five records in one epic; 10 of 27 in a second; then a
+  "populated but wrong" pair on an unmodified record, 2026-09-21)
+- **First seen:** 2026-08-26 · **Last seen:** 2026-09-21
 - **Where:** `scripts/ac_store/generate_ticket_from_ac.py::_build_files_touched` — the
   prose-token extractor and its on-disk existence gate
 - **This is the entry that stopped a live drive.** See the 2026-08-31 recurrence at the end.
@@ -137,5 +138,53 @@ relationship to the ticket's own title you cannot state in a sentence.
 
 **Pattern:** a derived field whose derivation is invisible to its author, failing in three
 directions at once — and whose most damaging failure is the one that looks correct.
+
+**2026-09-21 — third occurrence, and a fix that was written, measured, and withdrawn.**
+
+`BO-1800f-4` — unmodified, already in the store — says `"Run THAT script only — not
+scripts/build.py"` and `"DISCOVERABILITY IS ESTABLISHED THROUGH docs/INDEX.md, NOT BY
+CREATING docs/reference/README.md"`. Both negated paths appear in its generated
+`files_touched`. This is the "populated but wrong" direction again, in its sharpest form:
+the surface names the two files the record exists to keep people away from.
+
+**Do not fix this with a negation lookback.** That was attempted on branch
+`feature/acd-generator-edges` (`_is_prose_path_negated`: exclude a harvested token when the
+literal word "not" appears within four words before it) and **reverted before merge**.
+Measured against all 4,175 store records:
+
+| Lookback | Net removals | Records emptied | Motivating cases caught | **False exclusions** |
+|---|---|---|---|---|
+| 2 | 6 | 1 | 1 / 2 | 0 |
+| 3 | 17 | 3 | 2 / 2 | 3 |
+| 4 (what was written) | 25 | 5 | 2 / 2 | **5** |
+| 5 | 33 | 8 | 2 / 2 | 5 |
+
+Five of 25 removals were wrong, and two left the record naming **no edit surface at all**:
+`ACS-200f` lost `scripts/ac_store/mark_ac_done.py`, the root-cause file its own text says the
+fix lands in, to the phrase *"a self-defeating interaction, **not** a missing check:
+mark_ac_done.py …"*. `INF-700c-1-i` lost `scripts/knowledge/harvest_learnings.py` — the file
+named in its own `implemented_by` — to *"implement the gap, do **not** rewrite the loop"*.
+`GE-124c-2-i` and `INF-700b-2-i` lost their primary surface the same way; `ACD-1900b-3` names
+two templates as surfaces and the filter dropped one and kept the other.
+
+The failure mode is uniform and not tunable away: the rule cannot distinguish `"NOT <path>"`
+from `"not <verb phrase>. <Imperative> <path>"`, and sentence-ending punctuation is not a
+barrier. Every false exclusion is a "not" ending one clause before a new clause that names a
+real edit surface. Dropping the window to 3 removes 2 of the 5 at no coverage cost, but 3 is
+still not 0.
+
+**Why this matters beyond the numbers.** `TKT-600a-1`'s 2026-09-01 amendment already ruled on
+this exact trade: *"a false exclusion (silently dropping a real edit surface) is the worse of
+the two errors"*, and *"it belongs in its own AC with a mechanism that is not
+phrase-matching"*. A lexical negation rule is the rejected mechanism. The sanctioned successor
+already shipped — `TKT-600a-2` (2026-09-07, `34cb133a`) suppresses a prose path when the
+record's own `doc_links` declare it non-edit-surface: *"There is no phrase to match and no
+intent to infer."* **The honest fix for `BO-1800f-4` is to declare those two paths in its
+`doc_links` with an informational relationship**, which costs one record edit and cannot
+mis-fire on any other.
+
+A strict `xfail` in `tests/ac_store/test_tkt_600a_1_depends_on_and_files_touched.py` guards
+this: it turns the suite RED if prose-negation handling starts working, so the decision is
+re-opened deliberately rather than drifted into. It caught the withdrawn fix.
 
 ---

@@ -8,7 +8,7 @@ component: ticket-creation
 level: L3
 status: active
 req_status: active
-work_status: todo
+work_status: done
 created_by: "docs/acceptance-criteria/ticket-creation/TKT-500-single-source/TKT-500f-6-iii.yaml"
 criteria: |
   Given a leaf AC whose files_touched list contains an implementation
@@ -28,9 +28,27 @@ doc_links:
   - path: scripts/goal_to_epic.py
     relationship: constrains
     status: exists
+    relevance: "Facade only since the 2026-09-14 decomposition. The goal-path consumer of the SINGLE shared files_touched classification helper is now scripts/ac_store/epic_tickets.py, below — the predicate must not be inlined or duplicated there either."
+  - path: scripts/ac_store/epic_tickets.py
+    relationship: constrains
+    status: exists
+    relevance: "Owns _call_generate_ticket_from_ac and generate_tickets_for_leaves — the goal-path half of the two generators that must share one classification helper."
+  - path: scripts/ac_store/_gtfa_impl_py.py
+    relationship: constrains
+    status: exists
+    relevance: "THE module this AC's title means by 'owns the shared implementation-.py classification helper'. It is the single owner of is_implementation_python_path; the three folds over it (qualifying_implementation_paths, requires_test_requirements_section, annotate_descriptors) call it and none restates the rule. test_tkt_500f_6_iii_a.py enforces single ownership by AST fingerprint across scripts/, failing on zero implementations and on two alike. (Re-pointed 2026-09-22 off the generate_ticket_from_ac.py shell; see the amendment.)"
+  - path: scripts/ac_store/_gtfa_body.py
+    relationship: constrains
+    status: exists
+    relevance: "The emission gate — where section presence/absence becomes the authoritative test-writer-required signal this AC's delivers_to promises."
+  - path: scripts/ac_store/_gtfa_tests_section.py
+    relationship: constrains
+    status: exists
+    relevance: "Stub annotation: the second consumer of the predicate, and the reason single ownership is load-bearing rather than cosmetic."
   - path: scripts/ac_store/generate_ticket_from_ac.py
     relationship: constrains
     status: exists
+    relevance: "KEPT, narrowly: the shell carries this AC's re-export surface and nothing else. In 4dcfd87c its only changes were the three legitimate shell categories — docstring sibling list, if TYPE_CHECKING: block, and the three re-export assignments that let every reader reach ONE function. Predicate logic here would itself violate this AC's single-owner constraint."
   - path: docs/reference/ac-schema.md
     relationship: specifies
     status: exists
@@ -40,7 +58,7 @@ doc_links:
 assigned_agent: python-coder
 estimated_complexity: M
 it_requirements:
-  - "Own the SINGLE shared files_touched classification helper used by both scripts/goal_to_epic.py and scripts/ac_store/generate_ticket_from_ac.py: a path is a qualifying implementation .py when it ends in .py AND is not under docs/ AND is not a .yaml/.json file AND is not under tickets/ AND its basename does NOT match test_*.py or *_test.py. Do not duplicate or inline the predicate in either generator."
+  - "Own the SINGLE shared files_touched classification helper: a path is a qualifying implementation .py when it ends in .py AND is not under docs/ AND is not a .yaml/.json file AND is not under tickets/ AND its basename does NOT match test_*.py or *_test.py. Do not duplicate or inline the predicate anywhere. As built in 4dcfd87c the owner is scripts/ac_store/_gtfa_impl_py.py (is_implementation_python_path), consumed by _gtfa_body.py and _gtfa_tests_section.py and re-exported on the generate_ticket_from_ac.py shell. The goal path is NOT a second import site: epic_tickets.py shells out to the generator as a subprocess and reaches the same predicate through the same code, so adding an import there would create the second entry point this constraint forbids."
   - "The generated ticket's presence-or-absence of the '## Test Requirements' section must be a RELIABLE signal: present iff at least one qualifying implementation .py is in files_touched. This is the signal TKT-500f-6-iii-b's ticket-supervisor rule consumes."
   - "Reconcile this predicate with the ticket-supervisor template (markdown prose) by SPEC PARITY, not code import: the supervisor cannot import this helper, so state the classification rule once normatively in docs/reference/ac-schema.md and keep both the generator helper and the supervisor template matching that single normative definition."
   - "Idempotent on re-runs: regenerating a ticket from the same AC produces the same section presence/absence and the same stub set."
@@ -54,8 +72,52 @@ origin_agent: it-po
 created: 2026-06-22
 amended_by:
   - reason: "it-po split 2026-06-22: TKT-500f-6-iii crossed a .py/.md owner boundary; this child carries the python-coder generator + shared classification-helper portion. Sibling TKT-500f-6-iii-b carries the ticket-supervisor template skip-rule change (llm-expert)."
+  - reason: edit-surface-repoint
+    by: it-po
+    at: '2026-09-22'
+    note: 'Re-pointed off the bare scripts/ac_store/generate_ticket_from_ac.py entry,
+      which named a re-export shell as the edit surface via the edit-surface relationship
+      constrains. This AC''s title says it OWNS the shared classification helper, so
+      naming the shell was the sharpest version of the defect: the owner is
+      scripts/ac_store/_gtfa_impl_py.py (is_implementation_python_path, created for this
+      purpose in 4dcfd87c), consumed by _gtfa_body.py and _gtfa_tests_section.py. The
+      shell is KEPT but narrowed to its re-export surface, which is genuinely part of
+      this AC''s work — putting predicate logic there would violate this record''s own
+      single-owner constraint.
+
+      NOTE ON THE CRITERIA, WHICH ARE UNTOUCHED: the
+      "scripts/ac_store/generate_ticket_from_ac.py" in the first Given is an EXAMPLE
+      files_touched value in the scenario, not the edit surface.
+
+      Recorded on an already-done record for accuracy only; work_status, readiness and
+      priority are unchanged.'
 superseded_by: null
 covered_by: []
 implemented_by: []
+test_spec:
+  - name: test_section_presence_is_the_signal_that_test_writer_is_required
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "An AC with an implementation .py generates a ticket carrying '## Test Requirements', and the consumer that decides whether the test-writer phase runs reads that heading and answers 'required'. Assert the decision, not just the text — presence is only a signal if something consumes it."
+  - name: test_section_absence_is_the_signal_that_a_skip_is_legitimate
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "An AC whose files_touched is only docs/.yaml/.json/tickets paths generates a ticket with no such heading, and the same consumer answers 'skip is legitimate'."
+  - name: test_shared_classification_helper_is_the_single_owner_of_the_predicate
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: seam
+    description: "The it_requirements constraint that one helper owns the qualifying-.py predicate for BOTH generate_ticket_from_ac.py and the goal path (epic_tickets.py). A duplicated or inlined predicate in either generator fails this test even while both produce correct output today."
+  - name: test_absent_section_is_distinguishable_from_an_ungenerated_ticket
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: failure
+    description: "A legitimately absent section must not be indistinguishable from a generation that silently failed — the skip signal has to mean 'deliberately omitted', which is the phantom-done risk this AC guards."
 change_target: code
 risk_surface: contract_boundary

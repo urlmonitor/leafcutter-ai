@@ -114,6 +114,20 @@ ARCHITECTURE: Subprocess-invoking utility.  Scans the test tree for covers tags
     module's own docstring for the full rationale, including why that
     module's OWN dependency back on this one is a local (function-body)
     import rather than a top-level one.
+
+    Second relocation (BP-100n-4-ii-ii, BO-2500a-1-ii): ``is_covers_tag_waived``
+    -- the ONE shared predicate deciding whether an AC's ``test_required``/
+    ``test_rationale`` pair waives the covers-tag mandate -- and
+    ``_build_ac_status_map`` (the AC-store walk that feeds it) are now DEFINED
+    in _done_proof_phase_helpers.py (neither needs a symbol back from this
+    module, so the move needed no new circular-import seam) and re-exported
+    here via the same top-level import block, unchanged for every existing
+    consumer -- ``from done_proof import is_covers_tag_waived``
+    (check_done_proof.py chief among them) and every in-module call to
+    ``_build_ac_status_map`` alike. This second relocation was needed for the
+    same reason as the first: an in-place addition of the BO-2500a-1-ii
+    conjunction logic pushed this file back over the file-size ratchet a
+    second time.
 """
 
 from __future__ import annotations
@@ -126,8 +140,6 @@ import subprocess
 import sys
 import tempfile
 from pathlib import Path
-
-import yaml
 
 # Import the single shared covers-tag seam (BO-2500e-1).
 # test_enforcement lazily imports done_proof inside a function body,
@@ -142,6 +154,7 @@ from test_enforcement import COVERS_TAG_RE
 # still mid-definition.
 from _done_proof_phase_helpers import (
     _build_abs_path_map,
+    _build_ac_status_map,
     _build_failure_reason,
     _build_raw_results_from_json,
     _build_vitest_command,
@@ -153,6 +166,7 @@ from _done_proof_phase_helpers import (
     _run_python_test_phase,
     _run_ts_test_phase,
     _split_linked_tests_by_language,
+    is_covers_tag_waived,  # noqa: F401  # BP-100n-4-ii-ii: re-exported, see module docstring
 )
 
 # ---------------------------------------------------------------------------
@@ -300,18 +314,12 @@ _PYTEST_PER_FILE_BUDGET_SECONDS = 300.0
 # otherwise. See _resolve_pytest_timeout_seconds.
 _ENV_TIMEOUT_OVERRIDE_VAR = "LEAFCUTTER_DONE_PROOF_PYTEST_TIMEOUT_SECONDS"
 
-# Sentinel key stored in the dict _run_pytest_and_parse returns on a genuine
-# subprocess timeout. Deliberately shaped so it can never collide with a real
-# pytest nodeid: every real nodeid contains "::" and ends in a "test_..."
-# segment (see _nodeid_function_name), so both this module's own
-# _classify_outcomes/_find_nodeid_for_test and fast_lane.py's
-# _resolve_tag_outcome look it up by nodeid, miss it, and fall through to
-# their existing "no result found" handling — identical to what they already
-# do for a genuinely empty dict. Only the two call sites that build the
-# operator-facing eligibility reason (verify_done_eligible's leaf path and
-# _verify_composite_eligible) read this key directly, to make a timeout
-# distinguishable from "no test found" (KI-TQ-20260901-1310 bullet 2).
-_PYTEST_TIMEOUT_SENTINEL = "__done_proof_pytest_timeout__"
+# Sentinel key _run_pytest_and_parse returns whenever the run did not finish
+# -- a subprocess timeout OR a completed-but-truncated process, e.g. killed by
+# machine/OOM/scheduler contention (BO-2500a-7). Shaped so it never collides
+# with a real nodeid (every real nodeid contains "::"); only the two
+# eligibility-reason call sites read it directly (KI-TQ-20260901-1310 bullet 2).
+_PYTEST_RUN_INCOMPLETE_SENTINEL = "__done_proof_pytest_timeout__"
 
 
 def _resolve_pytest_timeout_seconds(test_files: list[Path]) -> float:
@@ -735,53 +743,12 @@ def run_vitest_and_parse(
 
 # ---------------------------------------------------------------------------
 # Internal helpers — I/O layer
+#
+# BP-100n-4-ii-ii: _build_ac_status_map itself now lives in
+# _done_proof_phase_helpers.py (re-exported below, same pattern as
+# is_covers_tag_waived) — see this module's own docstring "Second relocation"
+# paragraph for why.
 # ---------------------------------------------------------------------------
-
-
-def _build_ac_status_map(ac_root: Path) -> dict[str, dict]:
-    """Walk *ac_root* and return ``{ac_id: {"status": ..., "covered_by": [...]}}``.
-
-    Only YAML files that can be parsed and contain both ``id`` and ``status``
-    fields are included.  Unreadable files are logged to stderr and skipped.
-    ``covered_by`` is retained (in addition to ``status``) so callers can
-    classify an AC as composite (non-empty ``covered_by``) vs leaf (empty or
-    absent) without a second store walk — see BO-2500a-6.  A ``covered_by``
-    value that is absent, ``null``, or not a list is normalised to ``[]``.
-
-    Args:
-        ac_root: Root directory of the AC YAML store.
-
-    Returns:
-        Dict mapping AC id strings to a dict with keys ``"status"`` (str) and
-        ``"covered_by"`` (list[str]).  An empty dict is returned when
-        *ac_root* does not exist or contains no parseable YAML files.
-    """
-    status_map: dict[str, dict] = {}
-    if not ac_root.exists():
-        return status_map
-    for yaml_path in sorted(ac_root.rglob("*.yaml")):
-        try:
-            with open(yaml_path, encoding="utf-8") as fh:
-                data = yaml.safe_load(fh)
-        except (yaml.YAMLError, OSError) as exc:
-            print(
-                f"WARNING: done_proof: cannot read {yaml_path}: {exc}",
-                file=sys.stderr,
-            )
-            continue
-        if not isinstance(data, dict):
-            continue
-        ac_id = data.get("id")
-        status = data.get("status")
-        if ac_id and status is not None:
-            covered_by = data.get("covered_by")
-            if not isinstance(covered_by, list):
-                covered_by = []
-            status_map[str(ac_id)] = {
-                "status": str(status),
-                "covered_by": [str(child_id) for child_id in covered_by],
-            }
-    return status_map
 
 
 def _is_excluded_path(path: Path) -> bool:
@@ -1283,10 +1250,20 @@ def _run_pytest_and_parse(test_files: list[Path]) -> dict[str, str]:
 
     A genuine timeout still fails closed exactly as before — no test can be
     reported as passing — but the returned dict now carries
-    :data:`_PYTEST_TIMEOUT_SENTINEL` instead of being silently empty, so a
-    caller building the operator-facing reason can name the budget and the
-    command instead of the ambiguous bare "not run" phrasing (bullet 2 of the
-    KI; see :func:`verify_done_eligible` and :func:`_verify_composite_eligible`).
+    :data:`_PYTEST_RUN_INCOMPLETE_SENTINEL` instead of being silently empty,
+    so a caller building the operator-facing reason can name the budget and
+    the command instead of the ambiguous bare "not run" phrasing (bullet 2 of
+    the KI; see :func:`verify_done_eligible` and
+    :func:`_verify_composite_eligible`).
+
+    BO-2500a-7 generalises this beyond the timeout path: a subprocess that
+    ends WITHOUT raising ``TimeoutExpired`` — killed outright by the OS
+    (OOM, scheduler contention, any signal) — returns a normal
+    ``CompletedProcess`` with partial stdout and a returncode that is not one
+    of pytest's two "ran every collected test to conclusion" codes (``0`` all
+    passed, ``1`` some failed). That case is detected the same way and
+    reported with the same sentinel, so a killed run is never mistaken for a
+    completed run whose named tests genuinely failed.
 
     Args:
         test_files: Absolute paths to Python test files to execute.
@@ -1294,8 +1271,9 @@ def _run_pytest_and_parse(test_files: list[Path]) -> dict[str, str]:
     Returns:
         Dict mapping pytest nodeid strings to outcome strings.  Returns an
         empty dict when *test_files* is empty or the subprocess cannot be
-        started.  Returns ``{_PYTEST_TIMEOUT_SENTINEL: <message>}`` — never a
-        real nodeid — when the subprocess exceeds its computed budget.
+        started.  Returns ``{_PYTEST_RUN_INCOMPLETE_SENTINEL: <message>}`` —
+        never a real nodeid — when the subprocess exceeds its computed
+        budget, or ends with a returncode inconsistent with a completed run.
     """
     if not test_files:
         return {}
@@ -1317,13 +1295,17 @@ def _run_pytest_and_parse(test_files: list[Path]) -> dict[str, str]:
             f"its {timeout_seconds:.1f}s timeout budget (command: pytest): {exc}"
         )
         print(f"WARNING: done_proof: {message}", file=sys.stderr)
-        return {_PYTEST_TIMEOUT_SENTINEL: message}
+        return {_PYTEST_RUN_INCOMPLETE_SENTINEL: message}
     except OSError as exc:
         print(
             f"WARNING: done_proof: cannot run pytest: {exc}",
             file=sys.stderr,
         )
         return {}
+    if proc.returncode not in (0, 1):
+        message = f"pytest run unfinished: {len(test_files)} file(s), returncode {proc.returncode}"
+        print(f"WARNING: done_proof: {message}", file=sys.stderr)
+        return {_PYTEST_RUN_INCOMPLETE_SENTINEL: message}
     return _parse_pytest_verbose_output(proc.stdout)
 
 
@@ -1535,33 +1517,35 @@ def _describe_non_passing(nodeid: str, pytest_results: dict[str, str]) -> str:
     return f"linked test {label}: {nodeid}"
 
 
-def _pytest_timeout_reason(ac_id: str, pytest_results: dict[str, str]) -> str | None:
-    """Return a distinguishable timeout reason, or ``None`` when no timeout occurred.
+def _pytest_incomplete_run_reason(ac_id: str, pytest_results: dict[str, str]) -> str | None:
+    """Return a distinguishable "run did not finish" reason, or ``None``.
 
-    KI-TQ-20260901-1310 bullet 2: a genuine pytest timeout must not read like
-    "the tests do not exist" — ``_describe_non_passing``'s bare ``"not run"``
-    fallback is exactly that ambiguous phrase, and a timeout empties
-    *pytest_results* of every real nodeid, so every linked test would
-    otherwise report it. Checking for :data:`_PYTEST_TIMEOUT_SENTINEL` here
-    lets both call sites (:func:`verify_done_eligible`'s leaf path and
+    KI-TQ-20260901-1310 bullet 2 (generalised by BO-2500a-7 beyond the
+    timeout-only case): a run that did not finish — whether via a genuine
+    pytest timeout or a subprocess killed outright by the OS — must not read
+    like "the tests do not exist" or "these tests failed".
+    ``_describe_non_passing``'s bare ``"not run"`` fallback is exactly that
+    ambiguous phrase, and an incomplete run empties *pytest_results* of every
+    real nodeid, so every linked test would otherwise report it as if it had
+    individually failed. Checking for :data:`_PYTEST_RUN_INCOMPLETE_SENTINEL`
+    here lets both call sites (:func:`verify_done_eligible`'s leaf path and
     :func:`_verify_composite_eligible`) short-circuit to a reason that names
-    the AC, the budget, and the command *before* any per-test classification
-    runs.
+    the AC and the run failure *before* any per-test classification runs.
 
     Args:
         ac_id: The AC identifier being evaluated (leaf) or the composite's own
             identifier — folded into the reason for operator context.
         pytest_results: ``{nodeid: outcome}`` from :func:`_run_pytest_and_parse`,
-            or the sentinel-only dict it returns on timeout.
+            or the sentinel-only dict it returns when the run did not finish.
 
     Returns:
         The operator-facing reason string when *pytest_results* is the
-        timeout sentinel dict; ``None`` otherwise.
+        incomplete-run sentinel dict; ``None`` otherwise.
     """
-    message = pytest_results.get(_PYTEST_TIMEOUT_SENTINEL)
+    message = pytest_results.get(_PYTEST_RUN_INCOMPLETE_SENTINEL)
     if message is None:
         return None
-    return f"could not verify {ac_id}: {message}"
+    return f"could not verify {ac_id}: the run did not finish -- {message}"
 
 
 def _classify_outcomes(
@@ -1670,11 +1654,11 @@ def _verify_composite_eligible(
     all_child_tests = [test for tests in per_child_tests.values() for test in tests]
     test_files = list({t["file"] for t in all_child_tests})
     pytest_results = _run_pytest_and_parse(test_files)
-    timeout_reason = _pytest_timeout_reason(ac_id, pytest_results)
-    if timeout_reason is not None:
+    incomplete_reason = _pytest_incomplete_run_reason(ac_id, pytest_results)
+    if incomplete_reason is not None:
         return {
             "eligible": False,
-            "reason": timeout_reason,
+            "reason": incomplete_reason,
             "passing_tests": [],
             "failing_tests": [],
             "dangling_tags": dangling_tags,
@@ -2188,13 +2172,13 @@ def verify_done_eligible(
         return reachability_verdict
 
     # --- Python path ---
-    py_passing, py_failing, pytest_results, timeout_reason = _run_python_test_phase(
+    py_passing, py_failing, pytest_results, incomplete_reason = _run_python_test_phase(
         ac_id, py_linked
     )
-    if timeout_reason is not None:
+    if incomplete_reason is not None:
         return {
             "eligible": False,
-            "reason": timeout_reason,
+            "reason": incomplete_reason,
             "passing_tests": [],
             "failing_tests": [],
             "dangling_tags": dangling_tags,
@@ -2334,3 +2318,6 @@ def verify_done_eligible(
 #   two real AC ids after the move, plus check_file_size.py, check_complexity.py,
 #   and a build.py --force-breaking deploy confirming the new module lands in
 #   the deployed layout. (#BP-100n-4)
+#   ADDENDUM 2026-09-22 [python-coder/BP-100n-4-ii-ii]: is_covers_tag_waived()
+#   relocated to _done_proof_phase_helpers.py, ratchet reason as above; see
+#   the module docstring's "Second relocation" paragraph. (#BO-2500a-1-ii)

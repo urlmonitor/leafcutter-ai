@@ -1,0 +1,102 @@
+id: TQ-600c
+components:
+  - testing_quality
+title: "A suite that slows down says so, instead of drifting back"
+component: testing-quality
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  How long the suite takes is measured on every run, held to an agreed limit,
+  and reported by name when something crosses it.
+
+  Today nobody knows what the suite costs until they sit through it, and there
+  is nothing that would notice it getting worse — which is how it reached an
+  hour and a half without any single change ever looking like the culprit.
+  Speeding it up once only helps if it stays fast. After this, every run
+  records what it cost and where, exceeding the agreed limit is a failure
+  rather than a note, and the report names the specific tests responsible so
+  the next person does not have to repeat the investigation from scratch.
+depends_on:
+  - TQ-600
+doc_links:
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-09-21
+amended_by:
+  - reason: >-
+      child_limit_override raised 5 -> 6 to admit TQ-600c-6, the how-to this L1's
+      documentation_triggers ([how-to]) require. WHAT THE OVERRIDE ADMITS: exactly one
+      child beyond the cap, and it is documentation of the five behaviours already
+      here rather than a sixth behaviour. WHY REDISTRIBUTING WOULD BE WORSE: the five
+      behavioural children form one chain that only works whole — the record (c-1), the
+      guard that reads it and can fail (c-2), the single-source measured limit the
+      guard looks up (c-3), the per-test regression that catches what a whole-run total
+      hides (c-4), and the gating that makes the guard run at all (c-5). Cutting that
+      chain across two L1s would let a future author satisfy one L1 and ship a guard
+      that reports clean forever, which is the exact failure this L1's notes name three
+      precedents for. The documentation child is the reader's end of the same chain:
+      separating it would leave the guidance free to drift from the guard, and its
+      load-bearing clause is that it never states a limit the guard does not. REMOVE
+      THIS OVERRIDE when a PO-owned split rebalances the TQ-600 tree, or if the budget
+      guard and the per-test regression detector (c-4) prove to be independently
+      useful enough that the PO decides they are two goals rather than one — that is a
+      PO call, not one an override should pre-empt.
+    by: business-analyst
+    at: 2026-09-21
+superseded_by: null
+covered_by:
+  - TQ-600c-1
+  - TQ-600c-2
+  - TQ-600c-3
+  - TQ-600c-4
+  - TQ-600c-5
+  - TQ-600c-6
+implemented_by: []
+child_limit_override: 6
+change_target: pipeline
+risk_surface: internal
+documentation_triggers:
+  - how-to
+notes: |
+  Authoring evidence (2026-09-21, origin/main 624d39ac):
+    - The 1:29:47 runtime was discovered only because somebody sat through a
+      run and asked. There is no existing measurement surface.
+    - Cost is extremely concentrated: the top 60 of 5318 tests are 3404s, or
+      63% of total wall clock. Naming offenders is therefore high-value and
+      cheap — a short list explains most of the time.
+    - A working profiler already exists in prototype form (junit-xml based,
+      aggregating per-directory / per-file / per-test with mean-per-test). It
+      currently lives in /tmp and was REAPED mid-investigation by the hourly
+      wsl-reclaim timer, which is itself an argument for a durable location.
+
+  IMPORTANT BOUNDARY for the BA decomposing this L1: this repo's own history
+  says a guard that cannot fail is worse than no guard, because it reports
+  clean forever. Three documented precedents — the feedback_categories.yaml
+  path that reported "missing" on every worktree, the AC validator that
+  exited 0 having checked zero files for eight days, and the merge audit that
+  compared against a stale ref — are all the same defect: a check that
+  examined nothing looked like a check that found nothing.
+
+  So a child AC asserting "the budget check exists" or "the budget check
+  passes" is NOT sufficient and will be rejected in review. At least one child
+  must prove the check CAN fail: feed it a deliberately over-budget run and
+  assert it exits non-zero AND names the offending test. See TQ-500 (checks
+  that can fail) for the sibling goal this mirrors — TQ-500 is about test
+  strength generally; this is the same discipline applied to this guard.
+
+  The budget VALUE is deliberately left to the it-po/BA: it depends on what
+  TQ-600a and TQ-600b actually recover, and must be set from a measured
+  post-fix baseline rather than picked now. Do not hardcode a number into a
+  child AC before that baseline exists; specify how the number is derived and
+  where it is recorded.

@@ -1,0 +1,139 @@
+id: GE-118d-1
+components:
+  - commit_guardian
+title: "An entry in a shape the guard does not accept is refused by name, and the guard never raises"
+component: guardrail-engine
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: critical
+roadmap_phase: phase_1
+criteria: |
+  Given a document whose related_docs list holds three entries the guard does not
+    accept — the integer 7, a nested list, and a mapping whose single value is
+    itself a mapping rather than a path string,
+  And whose related_code list holds one bare entry naming a path that exists,
+  When the document-frontmatter guard checks the document,
+  Then it reports one error per unaccepted entry, each naming the field, the
+    offending entry and the two entry shapes the guard does accept,
+  And it reports no error for the related_code entry, so one unaccepted entry in
+    one field does not stop the remaining entries and the remaining fields being
+    checked,
+  And the guard reaches a refusing verdict with no traceback on any stream,
+  And the refusal names the document, so an author can act on it without reading
+    the guard's source.
+depends_on:
+  - GE-118d
+doc_links:
+  - path: templates/scripts/commit_guardian/frontmatter_validators.py
+    relationship: modifies
+    status: exists
+    relevance: "validate_paths() — the element loop that must classify before it uses. The classification has three outcomes, not two: accepted-bare, accepted-labelled, and refused-by-name. There is no fourth outcome in which the element reaches an operator."
+  - path: docs/known-issues/commit-guardian/open-blocker-ki-cg-008.md
+    relationship: context
+    status: exists
+    relevance: "The sharpest sentence in the register, and the one this record exists to satisfy: 'A hook that crashes on valid-looking YAML cannot be complied with, only bypassed.' The practical workaround observed in the field was SKIP=check-doc-frontmatter, which also disables the ~40 sibling hooks that were working."
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+    relevance: "Where the fail-open convention for INTERNAL errors is described. Read it to see why this record is not an exception to it: a frontmatter element in an unaccepted shape is a finding about the subject under inspection, not an internal error, so it produces a refusing verdict rather than an exit-zero warning."
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "FIX THE TEMPLATE, NOT THE BUILD OUTPUT. The source is templates/scripts/commit_guardian/frontmatter_validators.py; scripts/commit_guardian/ and .leafcutter/scripts/commit_guardian/ are regenerated from it by build_commit_guardian."
+  - "THE REFUSAL IS A VALIDATION VERDICT, NOT A FAIL-OPEN. The guard must exit non-zero and report the finding. This component's standing fail-open rule covers INTERNAL errors — a crash, a parse failure, a git failure — and is not repealed; an element in an unaccepted shape is a finding about the file under inspection and is therefore reported, not tolerated. A wrapper that catches and continues satisfies 'no traceback' while reintroducing the silent drop this feature exists to end, and is explicitly out of bounds."
+  - "THE CLASSIFICATION MUST BE TOTAL. Every element reaches exactly one of the resolver's three outcomes; there is no fourth path on which an element reaches a path operator. The check for 'no traceback on any stream' is therefore an observable on top of a design property, not a try/except."
+  - "THE PASS MUST COMPLETE. One refusal must not end the element loop, the field loop, or the document. Report every unaccepted entry in every field, then reach one verdict — an implementation that stops at the first refusal passes a test that only checks the first entry."
+  - "THE MESSAGE MUST NAME THE ACCEPTED SET BY READING IT, NOT BY RESTATING IT. The refusal text is formatted from the same single declaration GE-118d establishes, so that admitting a further shape changes the message with no second edit. A literal sentence hard-coded in the message string drifts from the rule the first time the set changes."
+  - "THE REFUSAL NAMES THE DOCUMENT, THE FIELD AND THE ENTRY AS PARSED. An author must be able to act on the message without opening the guard's source; the entry is shown as the parser rendered it because that is what distinguishes the integer 7 from the string '7'."
+  - "ERROR-HANDLING POLICY APPLIES UNCHANGED (CLAUDE.md Rules 1-4): no bare except, no swallowed exception, and no try/except around the pure classification step."
+test_spec:
+  - name: test_ge_118d_1_each_unaccepted_entry_is_reported_by_name_with_the_accepted_shape_set
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: deployed
+    surface_invoked: ".leafcutter/scripts/commit_guardian/run_hook.py check_doc_frontmatter.py"
+    description: "Run the deployed hook against a document whose related_docs holds the integer 7, a nested list, and a mapping whose single value is itself a mapping. Assert one error per entry, each naming the field, the offending entry as parsed, and both accepted shapes — and that the accepted-shape text in the message equals the resolver's declared set rather than a hard-coded sentence."
+  - name: test_ge_118d_1_remaining_entries_and_remaining_fields_are_still_checked_after_a_refusal
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "THE CONTROL THAT A WEAK TEST DROPS. The same document carries one bare related_code entry naming a path that exists. Assert the total error count is exactly three and that no error mentions related_code — proving the pass completed rather than terminating at the first refusal."
+  - name: test_ge_118d_1_refusing_verdict_reached_with_no_traceback_on_any_stream
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: failure
+    description: "Assert a non-zero exit, that the document path appears in the output, and that neither stdout nor stderr contains 'Traceback (most recent call last)' or 'TypeError'. Exit zero must also fail this test: a swallow-and-continue implementation produces no traceback and no refusal, which is the trade this record forbids."
+  - name: test_ge_118d_1_resolver_refuses_every_unaccepted_shape_without_raising
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: "Direct on the resolver, over an open set of inputs — integer, float, None, empty string, empty mapping, nested list, mapping-of-mapping, object without __fspath__. Every one returns a refusal; none raises. This is the arm an implementer is most likely to leave as 'whatever Python does'."
+test_rationale: |
+  The two arms that matter here are both easy to drop. Asserting that the bad
+  entry is named passes on an implementation that stops at the first refusal,
+  so the related_code control entry in the same document is a separate,
+  explicit assertion rather than an incidental one. And 'no traceback' is
+  satisfied by a try/except that swallows — which trades a loud defect for the
+  silent one KM-KGS-100d-3-i describes on the other side of the same field — so
+  the stream assertion is paired with a non-zero exit assertion; neither alone
+  distinguishes a refusal from a suppression. The open-set unit arm exists
+  because the unaccepted shapes are an open set that no accept-list test can
+  enumerate; it asserts totality of the classification, not coverage of the
+  inputs.
+delivers_to: null
+expects_from:
+  ac_id: GE-118d
+  contract: "STEP 2, WITH GE-118d-2 — consumes GE-118d's resolver and its accepted-shape set. Requires the refusal outcome to carry the field, the entry as parsed, and the accepted-shape set itself, so the message names that set by reading it rather than restating it. Adds no new accepted shape; constrains only what happens on the refused outcome."
+origin_agent: BrainCandy
+created: 2026-09-21
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  ID SHAPE. This record is an L3 technical constraint on GE-118d. It is numbered
+  GE-118d-1 rather than GE-118d-i because the store's id grammar requires a
+  numeric segment between the alpha segment and any roman one — GE-118d-i is
+  rejected by config/ac_store_schema.json. GE-118d itself carries an L1-shaped id
+  while declaring level L2, following its siblings GE-118b and GE-118c; level and
+  id shape are decoupled throughout this folder and no gate enforces the pairing.
+  derive_parent_id("GE-118d-1") resolves to GE-118d, so the back-link is
+  mechanically policed, which is the property that matters.
+
+  WHY THIS IS AN L3 ON GE-118d AND NOT A CLAUSE INSIDE IT. GE-118d is about
+  resolving the two shapes the project accepts. This is about every shape it does
+  not — an open set that no accept-list can enumerate, and the arm an implementer
+  is most likely to leave as "whatever Python does". Merged, an implementation
+  that handles the two accepted shapes and lets anything else fall through to the
+  operator satisfies the merged record.
+
+  THE FAIL-OPEN CONVENTION IS NOT REPEALED HERE, AND THIS IS NOT AN EXCEPTION TO
+  IT. This component deliberately fails open on an INTERNAL error — a crash, a
+  parse failure, a git failure — with a stderr warning, so a script bug never
+  blocks an unrelated commit (guardrail-engine PROJECT_CONTEXT; approved as
+  GE-116a-1-iii). A frontmatter element in an unaccepted shape is not an internal
+  error. It is a finding about the file under inspection, which is the guard's
+  subject, so it is reported as a validation error and it refuses. The line
+  GE-120 drew applies unchanged: failing open on one bad input while the check
+  still ran is fine; this criterion is the stronger statement that the check must
+  still RUN, and reach a verdict, rather than terminate mid-pass.
+
+  "NO TRACEBACK ON ANY STREAM" IS LOAD-BEARING AND IS NOT SATISFIED BY A
+  try/except THAT SWALLOWS. The observable is a named error plus a refusing
+  verdict. An implementation that wraps the loop and continues silently turns a
+  loud defect into the silent one KM-KGS-100d-3-i describes on the other side of
+  the same field — trading a crash for an invisible gap is not a fix.
+
+  THE REMAINING-WORK CLAUSE IS THE ONE A WEAK TEST MISSES. Asserting only that
+  the bad entry is named passes on an implementation that stops at the first
+  refusal. The related_code entry in the same document is the control that proves
+  the pass completed.

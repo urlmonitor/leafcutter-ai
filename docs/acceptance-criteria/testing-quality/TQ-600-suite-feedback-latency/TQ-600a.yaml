@@ -1,0 +1,96 @@
+id: TQ-600a
+components:
+  - testing_quality
+  - build_pipeline
+title: "Expensive setup is paid for once, not once per test"
+component: testing-quality
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  The costly preparation a test needs is produced once and shared, not rebuilt
+  for every test that reads it.
+
+  Today the single most expensive thing in the suite is producing a deployed
+  copy of the package, and the suite produces one over and over — most often
+  for tests that only need to LOOK at the result and never change it. The wait
+  is not the testing; it is the same preparation repeated. This makes that
+  preparation a shared resource, so a test that only reads it gets it
+  immediately, while a test that genuinely needs its own altered copy still
+  gets one.
+depends_on:
+  - TQ-600
+doc_links:
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-09-21
+amended_by:
+  - reason: >-
+      child_limit_override raised 5 -> 7 to admit TQ-600a-6 and TQ-600a-7. TQ-600a-6
+      is the deploy-count reporting surface split out of TQ-600a-1, which bundled two
+      surfaces with different consumers — the shared fixture (consumed by a-1-i,
+      a-1-ii, a-2, a-3, a-4, a-5) and the reported figure plus its relational bound
+      (consumed by TQ-600c-1). TQ-600a-7 is the how-to this L1's documentation_triggers
+      ([how-to]) require, and it is urgent independently: the standing rule in the root
+      CLAUDE.md says "Until that fixture exists, the prohibition alone applies", which
+      goes stale the moment TQ-600a-1 lands. WHAT THE OVERRIDE ADMITS: two children
+      beyond the cap, one behavioural and one documentation, both about the same single
+      behaviour the other five are about — producing the reference layout once and
+      routing tests to it or away from it. WHY REDISTRIBUTING WOULD BE WORSE: a sibling
+      L1 holding the reported count would separate the figure from the fixture it
+      measures, and the whole point of splitting a-1 was that the two must be checkable
+      against each other; a sibling L1 holding the documentation would separate the
+      guide from the mechanism it documents and from the CLAUDE.md rule both must agree
+      with. Neither of the five existing children clusters away from the other four —
+      they are one behaviour seen from five angles, which is the case the override
+      exists for and the case Pattern C handles badly. REMOVE THIS OVERRIDE when a
+      PO-owned split rebalances the TQ-600 tree, or when the migration of the 77
+      measured deploy sites completes and TQ-600a-5 (the undeclared-test safety net) is
+      superseded, which frees a slot back toward 5.
+    by: business-analyst
+    at: 2026-09-21
+superseded_by: null
+covered_by:
+  - TQ-600a-1
+  - TQ-600a-2
+  - TQ-600a-3
+  - TQ-600a-4
+  - TQ-600a-5
+  - TQ-600a-6
+  - TQ-600a-7
+implemented_by: []
+child_limit_override: 7
+change_target: pipeline
+risk_surface: internal
+documentation_triggers:
+  - how-to
+notes: |
+  Authoring evidence (2026-09-21, origin/main 624d39ac):
+    - One `python scripts/build.py --target-dir <tmp>` measures 59.8s.
+    - 77 `--target-dir` invocation sites across 52 test files.
+    - ZERO `scope="session"` fixtures exist in the suite; only 15 are
+      module-scoped. Everything else is function-scoped.
+    - Two of the three slowest entries in the duration table are fixture
+      `setup`, not `call`: 206.74s for a single test in
+      unit_tests/portability/test_bp_1500d_1_i.py, and 73.03s in
+      unit_tests/portability/test_ge_120c_1.py.
+
+  IMPORTANT BOUNDARY for the BA decomposing this L1: the read/mutate split is
+  the whole point and must survive into the children. A shared layout is only
+  safe for tests that treat it as read-only. The tests in
+  unit_tests/test_bp_900g_8*.py deliberately MUTATE the package copy (withhold
+  a dependency, edit build.py's declaration tuples) before building, and then
+  assert the build FAILS. Those must keep building their own copy — sharing a
+  layout with them would both corrupt the shared copy and destroy the very
+  behaviour they exist to prove. A child AC that says "all tests reuse one
+  build" is wrong and will be caught in review.

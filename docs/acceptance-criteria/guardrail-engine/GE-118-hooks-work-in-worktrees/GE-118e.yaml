@@ -1,0 +1,142 @@
+id: GE-118e
+components:
+  - commit_guardian
+  - documentation_system
+title: "An author learns the accepted entry shapes from the project's own documentation, before a guard tells them"
+component: guardrail-engine
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: critical
+roadmap_phase: phase_1
+criteria: |
+  Given an author about to add related_docs, related_code or architecture_diagrams
+    to a document, who has not yet run the document-frontmatter guard,
+  When they read the project's document-frontmatter reference and the
+    pre-commit-hooks guide's entry for that guard,
+  Then both state the two accepted entry shapes and show one example of each,
+  And both name the bare path string as the form to use in a new document, and
+    the single-label mapping as accepted on equal terms for documents that
+    already use it,
+  And both state that an entry in any other shape is refused with a message
+    naming the entry — never accepted, and never passed over,
+  And both state that the same rule governs all three fields,
+  And neither describes the guard as checking only "path existence of
+    related_docs / related_code", which is the whole of what the guide says today.
+depends_on:
+  - GE-118
+  - GE-118d
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: context
+    status: exists
+    relevance: "The precedent for what a field-shape declaration reads like when the project has bothered to write one — field, type, required, and the rule stated in prose. The document-frontmatter fields have no equivalent anywhere, which is the gap this record closes."
+  - path: config/doc_types.json
+    relationship: context
+    status: exists
+    relevance: "GE-118c's declaring file. It says nothing about related_docs. Named here so the implementer checks whether the shape declaration belongs beside the type declaration rather than only in prose — a decision to take deliberately, not by default."
+  - path: docs/known-issues/commit-guardian/open-blocker-ki-cg-008.md
+    relationship: context
+    status: exists
+    relevance: "Root cause, stated by the register as a root cause and not an aside: 'Nothing in the package declares which shape is canonical... So an adopter has no way to learn the constraint except by crashing into it.' The two documents this criterion names are the two an adopter actually reads."
+  - path: templates/docs/architecture/FRONTMATTER.md
+    relationship: modifies
+    status: exists
+    relevance: "DOCUMENT ONE, identified by reading rather than assumed: this is the project's document-frontmatter reference, the package SOURCE deployed to a consumer as docs/architecture/FRONTMATTER.md. Its table describes related_docs and related_code as type 'list' with no statement about what an element is — the gap in exactly the place an author looks. It is a template, so ADR-001 parity applies: edit here, never the deployed copy."
+  - path: templates/scripts/commit_guardian/README.md
+    relationship: modifies
+    status: exists
+    relevance: "DOCUMENT TWO — the guard's entry in the pre-commit-hooks guide. Line 35 carries the sentence the final criterion requires be removed: the check-doc-frontmatter row describes the guard as validating 'path existence of related_docs / related_code'. That row also links to ../../docs/FRONTMATTER.md, which resolves to templates/docs/FRONTMATTER.md and does not exist — the reference actually lives at templates/docs/architecture/FRONTMATTER.md. Fix the link in the same pass or the document this record writes stays unreachable from the one an adopter starts at."
+  - path: docs/how-to/managing-pre-commit-hooks.md
+    relationship: context
+    status: exists
+    relevance: "The user-facing hooks guide. It documents the two transform hooks and the hook ordering in detail and says nothing about the frontmatter field shapes, so an author following it learns nothing about the rule. Named so the implementer decides deliberately whether the guide needs a pointer rather than discovering the omission later."
+assigned_agent: documentation-expert
+estimated_complexity: S
+it_requirements:
+  - "BOTH DOCUMENTS ARE PACKAGE SOURCES, NOT REPOSITORY DOCS. templates/docs/architecture/FRONTMATTER.md and templates/scripts/commit_guardian/README.md are deployed to consumers by build.py. Editing a deployed copy is reverted by the next build. This also means the audience is the ADOPTER, not this repository's maintainers — the ~33-of-50 documents that motivated this record are in an adopter repo and will never read anything under this repo's own docs/."
+  - "THE EXAMPLES MUST BE MACHINE-EXTRACTABLE, BECAUSE A TEST EXECUTES THEM. Put every example entry in a fenced yaml block containing frontmatter that parses standalone, and mark the refused example distinctly from the accepted ones. The test for this record lifts the examples out of both documents and runs them through the guard; an example embedded in prose, or one abbreviated with an ellipsis, cannot be executed and silently drops out of the coverage."
+  - "QUOTE THE REFUSAL MESSAGE THE GUARD ACTUALLY EMITS, NOT A PARAPHRASE. The message text is GE-118d-1's output. A paraphrase is indistinguishable from the real thing to a reader and invisible to a reviewer, and it is what the author will search for when the guard refuses them."
+  - "THE DELETION IS PART OF THE WORK, NOT A TIDY-UP. The 'path existence of related_docs / related_code' description in templates/scripts/commit_guardian/README.md line 35 must be replaced, not supplemented. Leaving it beside a fuller paragraph leaves two true-looking statements, one of which is the sentence that persuaded an adopter there was nothing more to know."
+  - "ALL THREE FIELDS MUST BE NAMED IN BOTH DOCUMENTS. architecture_diagrams is currently absent from the reference's field tables in the places related_docs and related_code appear; a rule stated for two of the three fields recreates the inconsistency the guard would otherwise have."
+  - "SAY WHICH FORM TO USE IN A NEW DOCUMENT AND SAY THE OTHER IS NOT DEPRECATED. The bare string is the form for new documents; the single-label mapping is accepted on equal terms. Do not write a deprecation notice, a migration note, or a 'preferred/legacy' table — the decision recorded in GE-118d explicitly rejected deprecating the labelled form, and a document that hints otherwise will be read as the rule."
+  - "DO NOT DOCUMENT A SHAPE THE RESOLVER DOES NOT ACCEPT. Multi-key mappings are refused (GE-118d-2); nothing in either document may show one, including as a counter-example that is not clearly marked as refused."
+test_spec:
+  - name: test_ge_118e_every_example_entry_in_both_documents_behaves_as_the_documents_claim
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    description: "EXECUTABLE DOCUMENTATION, NOT A GREP. Extract the fenced yaml examples from templates/docs/architecture/FRONTMATTER.md and templates/scripts/commit_guardian/README.md, assemble each into a document, and run the guard over it. Every example the documents present as accepted must be accepted; the example they present as refused must be refused. A grep for the word 'labelled' passes on a sentence saying the labelled form is rejected — this asserts the reader's outcome instead."
+  - name: test_ge_118e_the_shape_set_the_documents_enumerate_equals_the_resolvers_accepted_set
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: seam
+    description: "Read the accepted-shape set from the resolver, not from a literal in the test, and assert the documents enumerate exactly that set — no more, no fewer. This is what keeps the prose from drifting the next time the set changes, and it fails if either document documents a shape the resolver refuses."
+  - name: test_ge_118e_the_superseded_path_existence_only_description_is_gone_and_the_reference_link_resolves
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "SUPPORTING NEGATIVE CHECK, deliberately narrow. Assert the check-doc-frontmatter row in templates/scripts/commit_guardian/README.md no longer describes the guard as checking only path existence of related_docs / related_code, and that the reference link in that row resolves to a file that exists. Text assertions prove only that a specific wrong sentence is absent; the two arms above carry the actual proof."
+  - name: test_ge_118e_all_three_path_fields_are_documented_with_the_same_rule
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: "Assert related_docs, related_code and architecture_diagrams each appear in the reference with the shape rule stated, derived from the guard's own path_fields list rather than from three hard-coded names, so a fourth field added to that list makes this test fail until the document catches up."
+test_rationale: |
+  The BA's notes name the vacuity risk precisely: a test that greps either
+  document for the word 'labelled' passes on a sentence saying the labelled form
+  is rejected. So the primary arm executes the documents' own examples through
+  the guard and asserts the reader's outcome — an author who copies an example
+  gets the behaviour the document promised — and the secondary arm ties the
+  enumerated shape set to the resolver's declared set so the prose cannot drift
+  from the code without a red test. The text assertion is kept, but scoped to
+  the one thing only a text assertion can establish: that a specific superseded
+  sentence is no longer present. It is labelled as supporting for that reason.
+
+  This record is assigned documentation-expert; the tests above are test-writer's
+  to author and run against the documents that agent produces. The obligation
+  documentation-expert carries from them is structural — the examples must be
+  extractable and the refused example must be marked as refused — which is stated
+  as an it_requirement rather than left for the test to discover.
+delivers_to: null
+expects_from:
+  ac_id: GE-118d
+  contract: "STEP 5, AND LAST IN THE CHAIN. Needs from GE-118d the settled accepted-shape set and which form is named for new documents; from GE-118d-1 the exact refusal message text an author sees, quoted rather than paraphrased; from GE-118d-2 the fact that a multi-key mapping is refused, so no example shows one. Authoring before those three land produces a document describing a rule the guard does not hold — which is the state the project is in today, one level up."
+origin_agent: BrainCandy
+created: 2026-09-21
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: docs
+risk_surface: contract_boundary
+notes: |
+  THIS IS NOT DOCUMENTATION-OF-A-FIX. It is the other half of the defect. The
+  register names the absence of any declaration as a root cause in its own right,
+  alongside the crash: doc_types.json says nothing about related_docs, and the
+  guard's README documents only "path existence of related_docs / related_code".
+  A guard whose rule exists only inside the guard is discoverable by one method,
+  and that method is being refused.
+
+  ORDER MATTERS AND IS ENCODED IN depends_on. This record depends on GE-118d
+  because the decision it publishes is GE-118d's to make. A document written
+  before the decision settles would describe a shape rule that the guard does not
+  hold — which is the state the project is in today, one level up.
+
+  THE LAST CLAUSE IS A DELETION, NOT AN ADDITION, and it is the one most likely
+  to be skipped. The existing sentence in the hooks guide is not merely
+  incomplete; it is the sentence that persuaded an adopter there was nothing more
+  to know. Leaving it in place beside a new, fuller paragraph leaves both true-
+  looking and one of them wrong.
+
+  WHAT WOULD MAKE THIS RECORD VACUOUS. A test that greps either document for the
+  word "labelled" passes on a sentence that says the labelled form is rejected.
+  The observable has to be that a reader who follows only these two documents
+  authors an entry the guard accepts, and knows what happens if they do not —
+  which is why the criterion names the examples and the refusal, not the topic.

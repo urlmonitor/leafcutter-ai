@@ -23,10 +23,18 @@ doc_links:
     relationship: describes
     status: exists
     relevance: "KI-BO-20260831-1930 — the blocker this L1 answers. KI-BO-20260831-1932 is its runtime half and KI-BO-20260831-1931 its class-sibling; both are deliberately out of scope here and both belong to build-orchestration."
-  - path: scripts/ac_store/generate_ticket_from_ac.py
+  - path: scripts/ac_store/_gtfa_agents_inputs.py
     relationship: modifies
     status: exists
-    relevance: "Line ~965-967 adds `pull-request` to every generated ticket's agent map unconditionally. That is the write side this L1 constrains."
+    relevance: "_collect_needed_agents adds `commit` and `pull-request` to every generated ticket's needed set unconditionally. That is the write side this L1 constrains."
+  - path: scripts/ac_store/_gtfa_phases.py
+    relationship: modifies
+    status: exists
+    relevance: "_load_phase_deferral / _resolve_deferred_phases hold the location-keyed deferral rule the generated record must agree with — the account of which steps the build will actually run."
+  - path: scripts/ac_store/_gtfa_agents_map.py
+    relationship: modifies
+    status: exists
+    relevance: "_build_agents_map applies the deferral to the needed set and renders the agents map the Sign-offs rows are derived from."
   - path: templates/workflows-js/build-feature.js
     relationship: related
     status: exists
@@ -48,6 +56,7 @@ covered_by:
   - TKT-600b-2
   - TKT-600b-3
   - TKT-600b-4
+  - TKT-600b-5
 implemented_by: []
 change_target: code
 risk_surface: contract_boundary

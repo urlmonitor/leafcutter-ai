@@ -14,7 +14,7 @@ related_docs:
   - docs/architecture/adrs/ADR-048-order-independent-per-ticket-completion.md
 children:
   - docs/architecture/diagrams/c3-fast-lane-build-loop-sequence.md
-  - docs/architecture/diagrams/c3-008-ticket-close-paths-sequence.md
+  - docs/architecture/diagrams/c3-009-ticket-close-paths-sequence.md
 ---
 
 # Build Orchestration
@@ -109,7 +109,7 @@ A refusal is reported as *not closed*; it is never retried through another route
 retried with `--force`, which disables the parity check and the transition allow-list
 together.
 
-- [Ticket Close — Every Route to the Finished State](../diagrams/c3-008-ticket-close-paths-sequence.md) —
+- [Ticket Close — Every Route to the Finished State](../diagrams/c3-009-ticket-close-paths-sequence.md) —
   the close-path sequence: both drivers reaching the same mechanism, the mechanism deciding
   from the record it read rather than from what the caller passed it, the refusal and the
   blanket override drawn as their own paths, and the single path that ends in the finished

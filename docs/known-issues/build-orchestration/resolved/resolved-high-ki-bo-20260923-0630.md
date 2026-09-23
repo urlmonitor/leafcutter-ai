@@ -11,7 +11,7 @@ components:
 related_docs:
   - docs/known-issues/build-orchestration.md
   - docs/architecture/adrs/ADR-047-single-writer-ticket-close-path.md
-  - docs/architecture/diagrams/c3-008-ticket-close-paths-sequence.md
+  - docs/architecture/diagrams/c3-009-ticket-close-paths-sequence.md
 ---
 
 # KI-BO-20260923-0630 — finalize-feature writes `status: done` by rewriting the frontmatter, so the single-writer close path has a second door
@@ -94,7 +94,7 @@ reappearing in a different sub-step fails it too. Red baseline captured before t
 
 **Related.** `ADR-047` (the invariant this breaks), `ADR-046` (record-only demanded set),
 `BO-400e-1`/`-2`/`-3`/`-4` (the drivers' close, already correct),
-[c3-008](../../architecture/diagrams/c3-008-ticket-close-paths-sequence.md) (the diagram
+[c3-008](../../architecture/diagrams/c3-009-ticket-close-paths-sequence.md) (the diagram
 that found it, where this route is drawn in red outside the close boundary).
 
 **Pattern:** an invariant established at one layer and left unenforced at the layer that

@@ -244,7 +244,7 @@ def build_workflow_scripts(target_root: Path, config: dict[str, Any],
 
     version_known = version_str is not None
     version_ok = False
-    if version_known:
+    if version_str is not None:  # not `version_known`: mypy cannot narrow via a bool
         try:
             version_ok = Version(version_str) >= Version(_MINIMUM_VERSION)
         except InvalidVersion:
@@ -310,7 +310,14 @@ def build_workflow_scripts(target_root: Path, config: dict[str, Any],
         if not _bp._should_overwrite(dest, force):
             continue
 
-        # Compare-before-write guard (binary — SHA-256).
+        # Compare-before-write guard (binary — SHA-256). This branch does NOT
+        # route through _bp._files_content_identical() (it compares the
+        # rendered `emitted` bytes to `dest`, not two on-disk files) —
+        # ACD-2100d-2-i names it as the load-bearing fourth branch precisely
+        # because of that: it is the path the route's own deployed copy
+        # (.claude/workflows/*.js) takes, so it must call
+        # _bp.announce_if_local_change_replaced() itself rather than relying
+        # on instrumentation elsewhere.
         if dest.exists():
             import hashlib as _hashlib
             existing_digest = _hashlib.sha256(dest.read_bytes()).hexdigest()
@@ -319,6 +326,7 @@ def build_workflow_scripts(target_root: Path, config: dict[str, Any],
                 _bp._uptodate_count += 1
                 unchanged += 1
                 continue
+            _bp.announce_if_local_change_replaced(dest)
 
         if dry_run:
             print(f"  [DRY-RUN] would write .claude/workflows/{js_file.name}")
@@ -552,4 +560,12 @@ def build_workflow_tools(target_root: Path, config: dict[str, Any],
 #   build_phases.py under the 400-counted-line check-file-size limit.
 #   Re-exported from build_phases.py so build.py and every test import
 #   keeps working. (#refactor/build-phases-size-limit)
+# - 2026-09-14 [python-coder/KI-BP-20260831-0620]: Reapplied the mypy narrowing
+#   fix to build_workflow_scripts() after the bp-size-split moved it here:
+#   `if version_str is not None:` in place of `if version_known:` -- mypy
+#   cannot narrow an Optional through an intermediate bool, so the widened
+#   CI pathspec (this file now being checked for the first time) flagged
+#   Version(version_str) as str | None where str is required. version_known
+#   still holds the same value and is still consulted below; behaviour is
+#   unchanged. (#KI-BP-20260831-0620)
 # ===========================================================================

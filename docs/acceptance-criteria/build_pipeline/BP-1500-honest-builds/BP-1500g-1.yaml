@@ -9,7 +9,7 @@ req_status: draft
 readiness: approved
 priority: high
 roadmap_phase: phase_1
-work_status: todo
+work_status: done
 declares_side_effect: false
 criteria: |
   Given a project that has the package installed, and the adopter has added one
@@ -159,7 +159,11 @@ superseded_by: null
 covered_by:
   - BP-1500g-1-i
   - BP-1500g-1-ii
-implemented_by: []
+implemented_by:
+  - scripts/build_ownership.py
+  - scripts/build_shim_probe.py
+  - scripts/build.py
+  - scripts/build_helpers.py
 change_target: pipeline
 risk_surface: safety
 notes: |

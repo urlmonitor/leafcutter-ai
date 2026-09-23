@@ -1,0 +1,245 @@
+id: TQ-600c-4
+components:
+  - testing_quality
+title: "One test that got much slower is named, even when the run as a whole is still within budget"
+component: testing-quality
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given the cost record of a previous run kept as the comparison point, and the cost
+    record of a new run whose total is within the budget in force,
+  When one test in the new run has grown more expensive than its counterpart in the
+    comparison point by more than the allowed per-test growth,
+  Then the guard names that test, states its cost in each of the two runs, and
+    finishes with a failing status even though the run's total was within budget,
+    And a test that has become cheaper, and a test that has grown by less than the
+      allowed growth, are both left unreported,
+    And a test present in the new run but absent from the comparison point is
+      reported as new rather than as a regression, with its cost stated,
+    And the allowed per-test growth is taken from the same declared record that
+      holds the budget.
+depends_on:
+  - TQ-600c
+  - TQ-600c-1
+  - TQ-600c-3
+doc_links:
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      The boundary angle carries this AC: grown-too-much, grown-a-little, got-
+      cheaper and newly-present are four cases on one line, and an implementation
+      that handles only the first is the likely shape.
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - >-
+    THE COMPARISON POINT MUST BE A SELECTED RECORD, NOT "THE LAST RUN". On a
+    branch, "the last run" is ambiguous and can silently mean a run of different
+    code. State the selection rule — the most recent record from the base branch,
+    or a pinned record — in the same declared record that holds the budget, and
+    make the guard report which record it compared against.
+  - >-
+    THE ALLOWED PER-TEST GROWTH COMES FROM THE SAME DECLARED RECORD AS THE
+    BUDGET. One record, two numbers, both revisable in one place with their
+    justification beside them. Not a second file, not a literal, not a flag.
+  - >-
+    COMPARE SIGNED GROWTH, NEVER ABSOLUTE DIFFERENCE. A comparison written on
+    absolute difference reports improvements as regressions, which trains readers
+    to ignore the output and is how the guard gets disabled.
+  - >-
+    PAIR A RELATIVE THRESHOLD WITH AN ABSOLUTE FLOOR, both recorded. A purely
+    relative threshold fires constantly on short tests under ordinary host
+    variation — and the measured baseline was taken on a WSL host shared with
+    concurrent agent activity, so variation here is large and real. Record both
+    numbers; hardcode neither.
+  - >-
+    FOUR CASES ARE NAMED IN THE CRITERIA AND A FIFTH IS NOT: a test present in
+    the comparison point but ABSENT from the new run. Decide and state the
+    behaviour — the recommendation is to report it as removed rather than drop it
+    silently, because a silently dropped test is how deleting an expensive test
+    hides a regression elsewhere in the same change.
+  - >-
+    FAIL NON-ZERO EVEN WHEN THE RUN TOTAL IS WITHIN BUDGET. That is the entire
+    point: a total-only guard is how the suite reached an hour and a half without
+    any single change ever looking like the culprit.
+  - >-
+    REPORT THE COMPARED COUNT, and fail rather than pass when either record is
+    empty or unreadable — the same anti-vacuity rule that governs every other
+    comparison in this tree.
+  - >-
+    Reuse TQ-600c-2's cost-record reader and declared-record lookup rather than
+    writing a second copy of either; two readers of one format drift, and the
+    drift surfaces as the two guards disagreeing about the same run.
+delivers_to: null
+expects_from:
+  - ac_id: TQ-600c-1
+    contract: >-
+      The per-test cost record for the new run, plus a retained previous record
+      under the declared retention rule, which is this AC's comparison point.
+  - ac_id: TQ-600c-3
+    contract: >-
+      The allowed per-test growth and its absolute floor, held in the same
+      declared record as the budget, so both numbers are revised in one place.
+  - ac_id: TQ-600c-2
+    contract: >-
+      The shared cost-record reader and the declared-record lookup, so this
+      per-test regression check consumes the same record and the same single
+      source of budget figures rather than a second copy of either.
+test_spec:
+  - name: test_tq600c_4_a_test_that_grew_beyond_the_allowed_growth_is_named_with_its_cost_in_both_runs
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: >-
+      With the new run's total within the budget in force, a single test that
+      grew past the allowed growth is named and its cost in each of the two runs
+      is stated.
+  - name: test_tq600c_4_a_within_budget_run_with_a_per_test_regression_still_exits_non_zero
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: failure
+    description: >-
+      THE POINT OF THE AC, asserted as an exit status. NAMED MUTATION: gate the
+      per-test check behind an over-budget total; the regression is then silent
+      and this test must go RED — which is precisely how the suite reached an
+      hour and a half with no single change ever looking like the culprit.
+  - name: test_tq600c_4_a_test_that_grew_by_less_than_the_allowed_growth_is_not_reported
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: >-
+      The false-positive control on the permitted side of the line.
+  - name: test_tq600c_4_a_test_that_became_cheaper_is_not_reported
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: >-
+      NAMED MUTATION: compare absolute difference rather than signed growth.
+      Improvements are then reported as regressions and this test must go RED —
+      the fastest way to train readers to ignore the output.
+  - name: test_tq600c_4_a_test_present_only_in_the_new_run_is_reported_as_new_with_its_cost
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: >-
+      Reported as new, never as an infinite regression against a zero baseline.
+      NAMED MUTATION: treat a missing prior cost as zero; every added test then
+      fires the guard and this test must go RED. Without this clause the guard is
+      disabled within a fortnight.
+  - name: test_tq600c_4_a_test_present_only_in_the_comparison_point_is_reported_as_removed
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: >-
+      The fifth case the criteria do not name. NAMED MUTATION: iterate the new
+      run's keys only; a deleted expensive test then vanishes silently and this
+      test must go RED, which is how removing a test can hide a regression
+      elsewhere in the same change.
+  - name: test_tq600c_4_the_allowed_growth_is_taken_from_the_declared_budget_record
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: seam
+    description: >-
+      With both cost records byte-identical and only the declared growth
+      allowance changed, the verdict flips. NAMED MUTATION: hardcode the
+      allowance; this test must go RED. No growth figure is written into the
+      test — both values come from the record under test.
+  - name: test_tq600c_4_the_absolute_floor_suppresses_a_large_relative_growth_on_a_trivially_short_test
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: >-
+      A test going from a few milliseconds to several times that is not reported
+      while the recorded floor is not exceeded. Without the floor, ordinary host
+      variation on a shared machine fires the guard continuously.
+  - name: test_tq600c_4_the_comparison_states_how_many_tests_it_compared_and_which_record_it_compared_against
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: >-
+      Both facts appear in the output, and two empty records produce a compared
+      count of 0 and a failure rather than a clean pass.
+test_rationale: |
+  A total-only budget is exactly how the suite reached an hour and a half. The
+  parent L1 puts it plainly: it got there without any single change ever looking
+  like the culprit. Under a total-only guard that history repeats — one test
+  gets four minutes slower, another was made faster last week, the total holds,
+  nothing fires, and the headroom is consumed one invisible increment at a time.
+
+  Four of the descriptors are boundary controls because grown-too-much,
+  grown-a-little, got-cheaper and newly-present are four cases on one line and
+  an implementation that handles only the first is the likely shape. Each names
+  the injection that would collapse it into that shape.
+
+  Two descriptors exist beyond the criteria's four cases and both are real. The
+  removed-test descriptor covers a fifth case the criteria do not name:
+  iterating the new run's keys only is the natural implementation and lets a
+  deleted expensive test vanish silently, which is how removing a test can hide
+  a regression elsewhere in the same change. The absolute-floor descriptor
+  exists because the measured baseline was taken on a WSL host shared with
+  concurrent agent activity, so a purely relative threshold would fire
+  continuously on short tests and the guard would be turned off.
+
+  No growth figure and no budget figure appear in this contract. Both come from
+  TQ-600c-3's declared record, which is also what makes the seam descriptor —
+  change only the record, watch the verdict flip — assertable at all.
+origin_agent: business-analyst
+created: 2026-09-21
+amended_by:
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-09-21
+  note: 'python-coder, M. Added two cases beyond the criteria''s four: a test present
+    only in the comparison point (reported removed, not dropped silently — otherwise
+    deleting an expensive test hides a regression in the same change), and an absolute
+    growth floor alongside the relative threshold, because the baseline was measured
+    on a WSL host shared with concurrent agents and a purely relative rule fires continuously
+    on short tests. Required the comparison point to be a SELECTED record with a stated
+    selection rule, since "the last run" is ambiguous on a branch. No growth or budget
+    figure appears in the contract. criteria untouched.'
+- action: approved
+  agent: approve_acs
+  date: '2026-09-21'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: internal
+notes: |
+  A TOTAL-ONLY BUDGET IS EXACTLY HOW THE SUITE REACHED AN HOUR AND A HALF. The
+  parent L1 puts it plainly: it got there without any single change ever looking
+  like the culprit. Under a total-only guard that history repeats — one test gets
+  four minutes slower, another was made faster last week, the total holds, nothing
+  fires, and the headroom is consumed one invisible increment at a time until the
+  guard fires on a change that is not the cause. Per-test comparison is what makes
+  the increment attributable to the change that caused it, while that change is
+  still in review.
+
+  THE NEW-TEST CLAUSE PREVENTS A GUARD NOBODY CAN LIVE WITH. Without it, every
+  added test is an infinite regression against a zero baseline, the guard fires on
+  every honest change, and it is disabled within a fortnight. Reporting new tests
+  as new, with their cost, keeps the information — a new 200s test should be seen —
+  without making the guard a nuisance.
+
+  THE GOT-CHEAPER CLAUSE IS A REAL ASSERTION, NOT SYMMETRY FOR ITS OWN SAKE. A
+  comparison written on absolute difference rather than signed growth reports
+  improvements as regressions, which trains readers to ignore the output.
+
+  THE PER-TEST GROWTH ALLOWANCE LIVES WITH THE BUDGET DELIBERATELY. One declared
+  record, two numbers, both revisable in one place with their justification beside
+  them — see TQ-600c-3.

@@ -22,7 +22,19 @@ ARCHITECTURE: Pure extraction, no new behaviour. Each function is one
     parameters. This keeps this module import-cycle-free: it only ever
     imports from build.py's OTHER dependencies (build_colors, build_helpers,
     build_halt_guard, build_phases, build_placeholder_detection,
-    build_referential_integrity), never from build.py itself.
+    build_referential_integrity, build_ownership), never from build.py itself.
+
+    BP-1500g-1 (merged from fast-lane/bp-1500g-1): ``_run_stale_cleanup`` and
+    ``_run_shim_and_hook_install`` additionally thread a *blocked_conflicts*
+    list end to end (mutated in place by ``_cleanup_stale_paths`` and the
+    shim-install step) so a path the build's ownership verdict could not
+    attribute to itself fails the run rather than being silently kept or
+    silently removed. The ADR-041 Section 3 reconciliation check that
+    computes the recomputed effective strategy this all runs under, and the
+    final gate that reads *blocked_conflicts*, live in the sibling
+    ``build_reconciliation_helpers.py`` (own module: adding them here would
+    have crossed this file's own check-file-size limit) and are called
+    directly from ``build.py``'s ``main()``, not re-exported from here.
 """
 
 from __future__ import annotations
@@ -48,7 +60,10 @@ from build_helpers import (
     install_shims as _install_shims,
     install_hooks as _install_hooks,
     write_build_manifest,
+    shim_map,
+    file_shims,
 )
+from build_ownership import assemble_claim_set
 from seed_example_product import run_as_build_step as _seed_example_product
 from build_halt_guard import (
     check_halt_guard,
@@ -188,15 +203,25 @@ def _maybe_run_migration_report(
 
     Returns the report's exit code when --migrate was passed, else None.
 
+    BP-1500g-1: *run_migration_report* is now ``build_ownership``'s
+    ownership-aware report, which takes the DECLARED ``shim_strategy`` (not
+    the recomputed effective one -- that recomputation only matters for the
+    real build's removal/claim reconciliation below, not this report-only
+    path) and this run's claim set, so a migration report never instructs
+    the adopter to remove a path the build itself would claim as a shim.
+
     Args:
-        run_migration_report: build.py's local ``_run_migration_report``
-            (passed in rather than imported, to avoid a circular import).
+        run_migration_report: build_ownership's ``run_migration_report``
+            (passed in rather than imported here, matching every other
+            build.py-local callback in this module).
     """
     if not args.migrate:
         return None
     output_root_name = config.get("output_root", ".leafcutter")
     output_root = target_root / output_root_name
-    return run_migration_report(target_root, output_root)
+    strategy = config.get("shim_strategy", "auto")
+    claim_set = assemble_claim_set(shim_map, file_shims)
+    return run_migration_report(target_root, output_root, strategy, claim_set)
 
 
 def _run_halt_guard(target_root: Path, package_root: Path, args: argparse.Namespace) -> int | None:
@@ -325,6 +350,44 @@ def _check_command_reachability_if_live(
     return None
 
 
+def _check_knowledge_routing_wiring_if_live(output_root: Path, dry_run: bool) -> int | None:
+    """Run the knowledge-routing wiring guard on a real (non-dry-run) build.
+
+    Same shape as ``_check_command_reachability_if_live`` above, and here for
+    the same reason: the guard's call site is three lines of main() plus the
+    paragraph explaining it, and scripts/build.py is grandfathered ~4.5x over
+    its 400-content-line limit with a ratchet (GE-127b-1, and now the pinned
+    CI ceiling in test_km_kgs_100a_3_xi) that refuses any growth at all. The
+    explanation lives in this docstring rather than as ``#`` comments in
+    main() because it belongs beside the function it describes -- not to
+    duck the count, though the counting rule does strip docstrings and not
+    ``#`` lines.
+
+    AC INF-700a-1-i. After the deploy phases have written
+    ``config/guardrail_gates.yaml``, abort the build when any real
+    ``templates/workflows-js/*.js`` artefact is neither declared wired to a
+    knowledge-routing step nor declared excluded. Skipped under ``--dry-run``
+    for the same reason as the reachability guard: no files were written to
+    ``output_root`` for it to scan.
+
+    The guard is imported at function scope, mirroring how
+    ``build_phases_knowledge`` itself defers its ``build_phases`` imports, so
+    this module stays importable regardless of module load order.
+
+    Args:
+        output_root: Absolute path to the deployed ``.leafcutter`` tree.
+        dry_run: When True the guard is skipped and None is returned.
+
+    Returns:
+        1 when the guard refuses the build, otherwise None.
+    """
+    from build_phases_knowledge import check_knowledge_routing_wiring_guard
+
+    if not dry_run and check_knowledge_routing_wiring_guard(output_root):
+        return 1
+    return None
+
+
 def _print_write_summary(total: int, dry_run: bool) -> None:
     """Print the total-files-written/would-write summary lines (BP-100n-4 split)."""
     uptodate = get_uptodate_count()
@@ -401,9 +464,20 @@ def _write_lock_file_if_applicable(target_root: Path, package_root: Path, dry_ru
 
 
 def _run_stale_cleanup(
-    target_root: Path, output_root: Path, dry_run: bool, cleanup_stale_paths
+    target_root: Path,
+    output_root: Path,
+    dry_run: bool,
+    cleanup_stale_paths,
+    blocked_paths: list[str],
+    strategy: str,
 ) -> None:
     """Print the stale-file-cleanup heading and report (BP-100n-4 split).
+
+    BP-1500g-1: forwards *blocked_paths* (mutated in place by
+    ``cleanup_stale_paths`` with any path whose ownership verdict was not
+    ``"package_produced"``) and the recomputed effective *strategy* through
+    to ``cleanup_stale_paths``, and only prints the "no stale files" message
+    when nothing was removed AND nothing was blocked.
 
     Args:
         cleanup_stale_paths: build.py's local ``_cleanup_stale_paths`` (passed
@@ -411,8 +485,10 @@ def _run_stale_cleanup(
     """
     print()
     _heading("Stale file cleanup")
-    stale_count = cleanup_stale_paths(target_root, output_root, dry_run)
-    if stale_count == 0:
+    stale_count = cleanup_stale_paths(
+        target_root, output_root, dry_run, blocked_paths, strategy
+    )
+    if stale_count == 0 and not blocked_paths:
         print(f"  {DIM}(no stale files found){RESET}")
 
 
@@ -440,19 +516,28 @@ def _run_shim_and_hook_install(
     dry_run: bool,
     effective_force: bool,
     no_shims: bool,
+    blocked_conflicts: list[str],
 ) -> None:
-    """Install pre-commit shims and hooks unless --no-shims (BP-100n-4 split)."""
+    """Install pre-commit shims and hooks unless --no-shims (BP-100n-4 split).
+
+    BP-1500g-1: any shim result whose ``method`` starts with ``"blocked"``
+    appends its canonical path to *blocked_conflicts* (mutated in place)
+    instead of being silently treated as installed.
+    """
     if no_shims:
         return
     print()
     _heading("Shim install")
-    _install_shims(
+    shim_results = _install_shims(
         target_root,
         output_root=output_root,
         config=config,
         dry_run=dry_run,
         force=effective_force,
     )
+    for shim_result in shim_results:
+        if shim_result["method"].startswith("blocked"):
+            blocked_conflicts.append(shim_result["canonical"])
 
     print()
     _heading("Hook install")

@@ -73,7 +73,7 @@ Severity in the **filename** is a three-level index bucket (`blocker` / `high` /
 
 Fixed issues move to [`commit-guardian/resolved/`](commit-guardian/resolved/) and are no longer listed as open. They are kept, not deleted.
 
-**Open: 67** (6 blocker, 25 high, 36 low) · **Resolved: 6**
+**Open: 68** (6 blocker, 25 high, 37 low) · **Resolved: 7**
 
 ## Open
 
@@ -95,6 +95,7 @@ Fixed issues move to [`commit-guardian/resolved/`](commit-guardian/resolved/) an
 | `high` | KI-CG-014 — `declares_side_effect` derivation is negation-blind, so an AC asserting that nothing is written is forced to declare that something is | [open-high-ki-cg-014.md](commit-guardian/open-high-ki-cg-014.md) |
 | `high` | KI-CG-017 — `check-build-drift` is filtered on the consumer layout path, so it has never run on this repo's own template changes | [open-high-ki-cg-017.md](commit-guardian/open-high-ki-cg-017.md) |
 | `high` | KI-CG-018 — `check_ac_governance` exits 0 without inspecting anything, and its own "did I look?" diagnostic cannot fire on the paths where it did not | [open-high-ki-cg-018.md](commit-guardian/open-high-ki-cg-018.md) |
+| `high` | KI-CG-20260914-ac-hooks-resolve-root-from-cwd — all six AC gates take their project root AND their file set from the current directory, so from the wrong cwd they validate zero files and exit 0 | [open-high-ki-cg-20260914-ac-hooks-resolve-root-from-cwd.md](commit-guardian/open-high-ki-cg-20260914-ac-hooks-resolve-root-from-cwd.md) |
 | `high` | KI-CG-022 — `check_adr_collision.py` exists but is registered nowhere, and the branch that registers it also makes it fail closed without `origin/main` | [open-high-ki-cg-022.md](commit-guardian/open-high-ki-cg-022.md) |
 | `high` | KI-CG-035 — `check-proof-promise-claim` is a done-time gate that fires at creation time, so no generated epic scaffold can be committed | [open-high-ki-cg-035.md](commit-guardian/open-high-ki-cg-035.md) |
 | `high` | KI-CG-20260826-1612 — Every AC guardian filters the index on `--diff-filter=AM`, so a *renamed* AC record is invisible to all six — and renaming is exactly what a tree split requires | [open-high-ki-cg-20260826-1612.md](commit-guardian/open-high-ki-cg-20260826-1612.md) |
@@ -109,6 +110,7 @@ Fixed issues move to [`commit-guardian/resolved/`](commit-guardian/resolved/) an
 | `high` | KI-CG-20260909-gate-ticket-test-requirements — registered as configured, `check-ticket-test-requirements` would inspect nothing; wired correctly it fails 252 tickets | [open-high-ki-cg-20260909-gate-ticket-test-requirements.md](commit-guardian/open-high-ki-cg-20260909-gate-ticket-test-requirements.md) |
 | `high` | KI-CG-20260914-contract-guard-crashes-on-diff-bytes — the contract-shrinking guard decodes the staged diff in the console code page, crashes on the first non-cp1252 byte, and blocks the commit instead of failing open | [open-high-ki-cg-20260914-contract-guard-crashes-on-diff-bytes.md](commit-guardian/open-high-ki-cg-20260914-contract-guard-crashes-on-diff-bytes.md) |
 | `high` | KI-CG-20260914-ratchet-freezes-central-registries — a per-file ratchet makes any manifest or registry unmaintainable once it crosses its limit, because complying with the rule on one file forces violating it on another | [open-high-ki-cg-20260914-ratchet-freezes-central-registries.md](commit-guardian/open-high-ki-cg-20260914-ratchet-freezes-central-registries.md) |
+| `high` | KI-CG-20260914-ratchet-max-baseline-refuses-union-merges — `check-file-size`'s merge baseline is the MAXIMUM across parents, but a clean merge holds BOTH parents' additions, so a union that authored no new content still exceeds the permitted length and the gate refuses it | [open-high-ki-cg-20260914-ratchet-max-baseline-refuses-union-merges.md](commit-guardian/open-high-ki-cg-20260914-ratchet-max-baseline-refuses-union-merges.md) |
 | `low` | KI-CG-002 — The diagram-type guard silently swaps its enum source when its declaring file is unreachable | [open-low-ki-cg-002.md](commit-guardian/open-low-ki-cg-002.md) |
 | `low` | KI-CG-011 — The roadmap mirror strips its own `description` frontmatter and backdates `created` to today | [open-low-ki-cg-011.md](commit-guardian/open-low-ki-cg-011.md) |
 | `low` | KI-CG-013 — The schema hook and the done-proof oracle disagree about what a leaf is, so one AC can be required to satisfy both branches | [open-low-ki-cg-013.md](commit-guardian/open-low-ki-cg-013.md) |
@@ -145,6 +147,7 @@ Fixed issues move to [`commit-guardian/resolved/`](commit-guardian/resolved/) an
 | `low` | KI-CG-20260914-done-proof-precommit-ignores-test-required — the pre-commit done-proof gate demands a covers tag from an AC that declares it needs no test, while the CI gate it stands in for exempts that AC | [open-low-ki-cg-20260914-done-proof-precommit-ignores-test-required.md](commit-guardian/open-low-ki-cg-20260914-done-proof-precommit-ignores-test-required.md) |
 | `low` | KI-CG-20260914-exception-hook-blocks-silently — the PostToolUse exception-handling hook fails every Python write with an empty error when `ruff` is importable but not on PATH | [open-low-ki-cg-20260914-exception-hook-blocks-silently.md](commit-guardian/open-low-ki-cg-20260914-exception-hook-blocks-silently.md) |
 | `low` | KI-CG-20260914-post-merge-stage-registers-but-installs-no-shim — a hook on the post-merge stage is registered, renders into the config, and still never fires in any checkout that did not create a ticket worktree | [open-low-ki-cg-20260914-post-merge-stage-registers-but-installs-no-shim.md](commit-guardian/open-low-ki-cg-20260914-post-merge-stage-registers-but-installs-no-shim.md) |
+| `low` | KI-CG-20260923-contract-shrinking-guard-rename-blind — `check-contract-shrinking` correlates deleted test names against added test names, so a renamed test reads as a deleted one | [open-low-ki-cg-20260923-contract-shrinking-guard-rename-blind.md](commit-guardian/open-low-ki-cg-20260923-contract-shrinking-guard-rename-blind.md) |
 
 ## Resolved
 

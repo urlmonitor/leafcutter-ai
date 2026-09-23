@@ -22,6 +22,12 @@ ARCHITECTURE: Four public symbols consumed by tests and the CLI:
         legitimately exist. A composite with any unproven child is still a
         violation naming that child; composites are never skipped
         unconditionally. L2/L3 leaves keep the original direct-tag check.
+        On that leaf path only, ACs with ``test_required: false`` are silently
+        exempted — same exemption semantics as the two CI functions below, kept
+        in parity so a documentation-only AC does not pass CI while failing
+        pre-commit. The exemption waives the direct-tag obligation; it does not
+        waive a composite's child-derivation obligation, which is why the level
+        branch is evaluated first.
     check_all_done_acs(*, ac_root, test_root) -> list[dict]
         CI-authoritative check. Calls verify_done_eligible (from done_proof)
         for every done AC under ac_root; returns violation dicts for ineligible
@@ -39,9 +45,11 @@ ARCHITECTURE: Four public symbols consumed by tests and the CLI:
         --mode ci-changed (with --base <ref>, default origin/main).
 
     Root resolution: uses _resolve_root.find_project_root() for project-root
-    defaults in main(); sibling-directory lookup (__file__ parent / ac_store)
-    for the done_proof import — safe because the directory relationship is fixed
-    in both source and deployed layouts.
+    defaults in main(); the done_proof import's own sibling-directory lookup
+    (BP-100n-4-ii-ii) lives in the sibling module _ac_store_locator.py — safe
+    because the directory relationship is fixed in both source and deployed
+    layouts. Staged-AC-yaml-path resolution similarly lives in the sibling
+    module _staged_ac_yaml_paths.py.
 
     Error handling: all I/O wrapped per the Error Handling Policy (Rules 1-3).
     Pre-commit hook fail-open: the if __name__ == '__main__' guard exits 0 on
@@ -100,12 +108,18 @@ import yaml
 
 # ---------------------------------------------------------------------------
 # Resolve ac_store so done_proof is importable from commit_guardian context.
-# Works in source layout (scripts/commit_guardian/ → parent/ac_store/) and
-# deployed layout (.leafcutter/scripts/commit_guardian/ → parent/ac_store/).
+# BP-100n-4-ii-ii: resolution logic lives in sibling _ac_store_locator.py
+# (see its own docstring for the full layout rationale) -- moved out of this
+# file for file-size-ratchet headroom; pure move, no behaviour change.
 # ---------------------------------------------------------------------------
-_HERE = Path(__file__).resolve().parent
-
 from _resolve_root import find_project_root  # noqa: E402
+from _ac_store_locator import ensure_ac_store_on_syspath  # noqa: E402
+from _staged_ac_yaml_paths import (  # noqa: E402
+    _get_staged_ac_yaml_paths,
+    _is_gated_ac_yaml,
+)
+
+ensure_ac_store_on_syspath()
 
 # ---------------------------------------------------------------------------
 # BO-2900d-2: shared reachability-exemption seam (same module BO-2900d-1's
@@ -140,10 +154,7 @@ except ImportError as _reachability_import_exc:  # pragma: no cover - see below
 # helper below is kept as the None-fallback path.
 # ---------------------------------------------------------------------------
 try:
-    _ac_store = _HERE.parent / "ac_store"
-    if str(_ac_store) not in sys.path:
-        sys.path.insert(0, str(_ac_store))
-    from done_proof import verify_done_eligible
+    from done_proof import is_covers_tag_waived, verify_done_eligible
     # Import the shared covers-tag seam (BO-2500e-1) — handles both
     # Python "# covers:" and JavaScript/TypeScript "// covers:".
     from test_enforcement import COVERS_TAG_RE
@@ -162,6 +173,16 @@ except (ImportError, ModuleNotFoundError):
         """
         return _load_verify_done_eligible()(*args, **kwargs)
 
+    def is_covers_tag_waived(*args, **kwargs):
+        """Lazy shim used when done_proof is not importable at module load.
+
+        Mirrors ``verify_done_eligible``'s lazy-shim pattern above (see its
+        docstring) so ``is_covers_tag_waived`` — the ONE shared BO-2500a-1-ii
+        predicate — stays a real, patchable module-level attribute even when
+        the ac_store sibling is not yet on ``sys.path`` at import time.
+        """
+        return _load_is_covers_tag_waived()(*args, **kwargs)
+
 
 def _load_verify_done_eligible():
     """Import ``done_proof.verify_done_eligible`` from the sibling ac_store.
@@ -177,12 +198,28 @@ def _load_verify_done_eligible():
     Returns:
         The ``verify_done_eligible`` callable from the ac_store ``done_proof`` module.
     """
-    ac_store = _HERE.parent / "ac_store"
-    if str(ac_store) not in sys.path:
-        sys.path.insert(0, str(ac_store))
+    ensure_ac_store_on_syspath()
     from done_proof import verify_done_eligible
 
     return verify_done_eligible
+
+
+def _load_is_covers_tag_waived():
+    """Import ``done_proof.is_covers_tag_waived`` from the sibling ac_store.
+
+    See :func:`_load_verify_done_eligible` for the None-fallback rationale —
+    the same pattern applies here so the ONE shared BO-2500a-1-ii predicate
+    (test_required is False AND a non-empty, non-whitespace test_rationale)
+    is never re-derived as a second copy in this module.
+
+    Returns:
+        The ``is_covers_tag_waived`` callable from the ac_store ``done_proof``
+        module.
+    """
+    ensure_ac_store_on_syspath()
+    from done_proof import is_covers_tag_waived
+
+    return is_covers_tag_waived
 
 # Directory names excluded from all test-file scanning (both .py and .ts/.tsx).
 # Prevents traversal into node_modules and other non-test subtrees.
@@ -443,114 +480,11 @@ def _unproven_composite_children(
     return unproven
 
 
-def _is_gated_ac_yaml(rel: Path) -> bool:
-    """True when a repo-relative path is a real AC YAML the done-proof gate
-    should evaluate.
-
-    Excludes non-YAML files, paths outside an ``acceptance-criteria`` tree, and
-    bundled fixture/demo copies (e.g. under
-    ``leafcutter-web/fixtures/docs/acceptance-criteria/**``) — those are canned
-    data for the Atlas to render in mock mode, not real store entries, so the
-    gate must never evaluate them.
-    """
-    if rel.suffix != ".yaml":
-        return False
-    if "acceptance-criteria" not in rel.parts:
-        return False
-    if "fixtures" in rel.parts:
-        return False
-    return True
-
-
-def _get_staged_ac_yaml_paths(project_root: Path) -> list[Path]:
-    """Return absolute paths of staged AC YAML files via ``git diff --cached``.
-
-    Only files within ``docs/acceptance-criteria/`` with a ``.yaml`` extension
-    are returned.  Files that no longer exist on disk are skipped.
-
-    Args:
-        project_root: Absolute path to the project (git) root.
-
-    Returns:
-        List of absolute Paths for staged AC YAML files.  Returns an empty list
-        when the git command fails or no matching files are staged.
-    """
-    try:
-        proc = subprocess.run(
-            ["git", "diff", "--cached", "--name-only", "--diff-filter=ACM"],
-            capture_output=True,
-            text=True,
-            timeout=10,
-        )
-    except (OSError, subprocess.TimeoutExpired) as exc:
-        print(
-            f"WARNING: check_done_proof: git diff failed: {exc}",
-            file=sys.stderr,
-        )
-        return []
-
-    staged_lines = proc.stdout.splitlines()
-
-    # Merge commits: a merge stages the ENTIRE incoming branch, so this
-    # PRE-COMMIT presence check would demand a covers tag for every done AC the
-    # other side carries — including ones already marked done there without a
-    # discoverable tag. The merge inherits those byte-for-byte and can neither
-    # improve nor worsen them, so blocking here only makes merging impossible.
-    # Narrow to files whose result differs from BOTH parents.
-    #
-    # This does NOT weaken the phantom-done guarantee. This function feeds only
-    # check_staged_done_proofs (the fast, static, staged-only tag-presence
-    # check). The authoritative whole-store sweep is check_all_done_acs, which
-    # walks ac_root recursively for EVERY done AC and runs verify_done_eligible
-    # on each; it never consults the staged set and is untouched by this scope.
-    # Same fix as check_ac_limits / check_ac_parent_covered_by / check_ac_schema.
-    try:
-        merge_probe = subprocess.run(
-            ["git", "rev-parse", "-q", "--verify", "MERGE_HEAD"],
-            capture_output=True,
-            text=True,
-            timeout=10,
-        )
-        in_merge = merge_probe.returncode == 0
-    except (OSError, subprocess.TimeoutExpired) as exc:
-        print(
-            f"WARNING: check_done_proof: MERGE_HEAD probe failed: {exc}",
-            file=sys.stderr,
-        )
-        in_merge = False
-
-    if in_merge:
-        try:
-            other = subprocess.run(
-                [
-                    "git", "diff", "--cached", "--name-only",
-                    "--diff-filter=ACM", "MERGE_HEAD",
-                ],
-                capture_output=True,
-                text=True,
-                timeout=10,
-            )
-        except (OSError, subprocess.TimeoutExpired) as exc:
-            print(
-                f"WARNING: check_done_proof: MERGE_HEAD diff failed: {exc}",
-                file=sys.stderr,
-            )
-        else:
-            if other.returncode == 0:
-                vs_other = {
-                    ln.strip() for ln in other.stdout.splitlines() if ln.strip()
-                }
-                staged_lines = [ln for ln in staged_lines if ln.strip() in vs_other]
-
-    result: list[Path] = []
-    for line in staged_lines:
-        rel = Path(line.strip())
-        if not _is_gated_ac_yaml(rel):
-            continue
-        abs_path = project_root / rel
-        if abs_path.exists():
-            result.append(abs_path)
-    return result
+# BP-100n-4-ii-ii: _is_gated_ac_yaml and _get_staged_ac_yaml_paths now live in
+# the sibling module _staged_ac_yaml_paths.py (imported at top level, see
+# that module's own docstring) -- moved verbatim, no behaviour change, to buy
+# back file-size-ratchet headroom. _get_changed_ac_yaml_paths below calls the
+# re-exported _is_gated_ac_yaml unchanged.
 
 
 def _get_changed_ac_yaml_paths(base_ref: str, project_root: Path) -> list[Path]:
@@ -649,6 +583,32 @@ def check_staged_done_proofs(
     file(s) — so a leaf (empty ``covered_by``, or one holding only test
     paths) keeps the original direct-covers-tag requirement below.
 
+    On the leaf path only, ACs with ``test_required: false`` (the Python
+    boolean ``False``, not the string ``"false"``) are silently exempted and
+    never checked for a covers tag.  This mirrors the exemption already applied
+    by the CI-authoritative functions :func:`check_all_done_acs` and
+    :func:`check_changed_done_acs` — it covers documentation ACs and
+    prompt-convention ACs where a covers-tagged test is structurally
+    impossible.  An absent or ``True`` value for ``test_required`` is always
+    enforced.  The exemption keys ONLY on the AC record's own declared
+    ``test_required`` field — never on whether a tag happens to be missing —
+    so it cannot be triggered by the very condition (no tag found) it is meant
+    to exempt from.
+
+    The two checks are ordered level-first deliberately.  ``test_required``
+    declares whether ``test-writer`` must author a direct test for this AC, so
+    it waives the direct-covers-tag obligation only.  A composite's obligation
+    is a different one — that its children are done and covered — and nothing
+    in ``test_required`` speaks to it.  Evaluating ``test_required`` first would
+    let a composite that legitimately declares ``test_required: false`` (e.g.
+    ACS-500g: ``level: L1``, seven children, ``test_required: false``) skip the
+    ACD-400a falsely-done-composite guard entirely, which is the exact shape of
+    defect that guard exists to catch.  The CI functions have no level branch
+    of their own (their composite handling lives inside
+    ``verify_done_eligible``, gated on ``covered_by`` resolving), so for that
+    one shape this pre-commit check is deliberately STRICTER than CI — a
+    fail-closed asymmetry.
+
     Args:
         staged_yaml_paths: Paths to staged AC YAML files to evaluate.  May
             include non-done ACs — they are skipped automatically.
@@ -697,7 +657,11 @@ def check_staged_done_proofs(
                 )
             continue
 
+        if data.get("test_required") is False:
+            continue
         if ac_id_str not in all_covered_ids:
+            if is_covers_tag_waived(data):
+                continue
             violations.append(
                 {
                     "ac_id": ac_id_str,
@@ -721,11 +685,16 @@ def check_all_done_acs(
     ``"done"``, then calls :func:`done_proof.verify_done_eligible` for each.
     ACs for which ``eligible`` is ``False`` are reported as violations.
 
-    ACs with ``test_required: false`` (the Python boolean ``False``, not the
-    string ``"false"``) are silently exempted and never passed to
-    verify_done_eligible.  This covers documentation ACs and prompt-convention
-    ACs where a covers-tagged test is structurally impossible.  An absent or
-    ``True`` value for ``test_required`` is always enforced.
+    ACs for which :func:`done_proof.is_covers_tag_waived` accepts the
+    conjunction of ``test_required: false`` (the Python boolean ``False``,
+    not the string ``"false"``) AND a non-empty, non-whitespace
+    ``test_rationale`` are silently exempted and never passed to
+    verify_done_eligible (BO-2500a-1-ii). This covers documentation ACs and
+    prompt-convention ACs where a covers-tagged test is structurally
+    impossible. ``test_required: false`` with NO recorded rationale is
+    tightened by this predicate — it is NOT exempted and is still passed to
+    verify_done_eligible, closing a hole this CI sweep previously left open.
+    An absent or ``True`` value for ``test_required`` is always enforced.
 
     Unlike the pre-commit check, this function DOES run pytest (via
     verify_done_eligible → subprocess) so that a covers tag whose linked test
@@ -772,7 +741,7 @@ def check_all_done_acs(
         if not ac_id:
             continue
         ac_id_str = str(ac_id)
-        if data.get("test_required") is False:
+        if is_covers_tag_waived(data):
             continue
         verdict = verify_done_eligible(ac_id_str, ac_root=ac_root, test_root=test_root)
         if not verdict.get("eligible"):
@@ -800,11 +769,16 @@ def check_changed_done_acs(
     to a required CI gate without failing on pre-existing done ACs that predate
     the covers-tag mandate (BO-2500b-3).
 
-    ACs with ``test_required: false`` (the Python boolean ``False``, not the
-    string ``"false"``) are silently exempted and never passed to
-    verify_done_eligible.  This covers documentation ACs and prompt-convention
-    ACs where a covers-tagged test is structurally impossible.  An absent or
-    ``True`` value for ``test_required`` is always enforced.
+    ACs for which :func:`done_proof.is_covers_tag_waived` accepts the
+    conjunction of ``test_required: false`` (the Python boolean ``False``,
+    not the string ``"false"``) AND a non-empty, non-whitespace
+    ``test_rationale`` are silently exempted and never passed to
+    verify_done_eligible (BO-2500a-1-ii). This covers documentation ACs and
+    prompt-convention ACs where a covers-tagged test is structurally
+    impossible. ``test_required: false`` with NO recorded rationale is
+    tightened by this predicate — it is NOT exempted and is still passed to
+    verify_done_eligible, closing a hole this CI sweep previously left open.
+    An absent or ``True`` value for ``test_required`` is always enforced.
 
     Args:
         changed_yaml_paths: AC YAML paths changed in the current PR (e.g. from
@@ -842,7 +816,7 @@ def check_changed_done_acs(
         if not ac_id:
             continue
         ac_id_str = str(ac_id)
-        if data.get("test_required") is False:
+        if is_covers_tag_waived(data):
             continue
         verdict = verify_done_eligible(ac_id_str, ac_root=ac_root, test_root=test_root)
         if not verdict.get("eligible"):

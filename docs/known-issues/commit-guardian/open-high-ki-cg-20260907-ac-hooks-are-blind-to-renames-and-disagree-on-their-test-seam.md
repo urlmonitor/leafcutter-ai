@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: '2026-08-18'
-last_updated: '2026-08-18'
+last_updated: '2026-09-21'
 components:
   - commit_guardian
 related_docs:
@@ -92,6 +92,43 @@ the seam was read from source — including one invocation written specifically 
 against no-op verification, and a colon-joined control handed to `check_ac_limits`, which
 discards anything not newline-separated.
 
+#### 3. `check_ac_limits` resolves the store from `cwd`, so the *right* seam with the *right* paths still passes silently
+
+Distinct from #2, and it survives fixing #2. Feed `check_ac_limits.py` its correct seam variable
+(`HOOK_TEST_FILES`) with correct, existing, absolute paths, and it still exits 0 having checked
+nothing — because `_find_ac_store_root()` (`:694`) resolves the store from `cwd`, while the match
+at `:711` is `str(node.source_path).endswith(staged_path.lstrip("/"))`. Run from any directory
+whose git root is not the tree holding those files and the loaded nodes come from a *different*
+store, nothing matches, and `:716` returns 0 with no output at all.
+
+So the hook has two silent zero-exits that cannot be told apart from the outside: "no AC files
+staged" (`:691`) and "your files matched nothing I loaded" (`:716`). Only the second is a defect,
+and it is the one an operator hits while verifying.
+
+Reproduced 2026-09-21 on `ac-authoring/tq-600-suite-speed`, against a tree with three live
+`child_limit_override`s:
+
+```
+# absolute path, cwd outside the worktree
+$ HOOK_TEST_FILES=<abs>/TQ-600a.yaml python <worktree>/.leafcutter/.../check_ac_limits.py
+exit: 0                                    # <- no output. examined nothing.
+
+# same file, worktree-relative, cwd inside the worktree
+$ env --chdir=<worktree> HOOK_TEST_FILES=docs/acceptance-criteria/.../TQ-600a.yaml \
+    python .leafcutter/.../check_ac_limits.py
+[check-ac-limits] OVERRIDE ACTIVE: parent 'TQ-600a' (L1) has 7 L2 children; ...
+exit: 0
+```
+
+Both exit 0. Only the second one looked. A control run with the override *removed* and 7 children
+also exited 0 silently from the wrong cwd — so this cannot be caught by "did the hook pass?", only
+by "did the hook say what it examined?".
+
+The real pre-commit path is unaffected: pre-commit runs from the repo root and the paths from
+`git diff --cached` are already root-relative. This is a *verification* defect — it makes the
+obvious way to check a guard report a confident false pass, which is how #1 and #2 above went
+unnoticed.
+
 **Remediation.**
 
 1. Change the staged-file query to include renames. `--diff-filter=AMR` with `--name-only`
@@ -104,6 +141,14 @@ discards anything not newline-separated.
    hard error rather than a silent fall-through. A typo in a test seam must not read as a pass.
 4. When the census work under `BP-1600a-2` lands, the population it walks should come from the
    same helper, so the two cannot drift.
+5. (for #3) Make the two silent zero-exits distinguishable. `check_ac_limits.py:716` — staged
+   paths that matched no loaded node — must say so on stderr, naming how many paths it was given
+   and how many it resolved, rather than returning 0 mutely; "0 of 1 staged paths resolved against
+   the store at `<root>`" turns the false pass into an obvious operator error. The same applies to
+   the sibling hooks once they share the helper from item 2. Normalising the staged path against
+   the resolved store root before comparing would fix the absolute-path case outright, but the
+   reporting matters more than the normalisation: a hook that cannot examine its input must not be
+   able to say nothing about it.
 
 **Related.** `KI-CG-034` (a check that examined nothing exiting 0). The CLAUDE.md note under
 "AC-store commits — stage the parent alongside the child", which already records that these

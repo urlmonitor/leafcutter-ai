@@ -1,0 +1,204 @@
+id: TQ-600b-4
+components:
+  - testing_quality
+title: "A test that reads back what it emitted sees its own entries and nobody else's"
+component: testing-quality
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given tests that make an assertion about the contents of a shared append-only sink
+    — the run's telemetry and feedback records — by reading back what their own
+    subject emitted,
+  When several such tests run at the same moment on different workers,
+  Then each of those tests sees exactly the entries its own subject caused, and sees
+    no entry caused by a concurrently running test,
+    And a test that asserts on the total number of entries in the sink reaches the
+      same number it reaches when it is the only test running,
+    And when two such tests are deliberately made to emit at the same moment, both
+      still reach the outcome each reaches alone.
+depends_on:
+  - TQ-600b
+doc_links:
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      The seam angle governs this AC: the defect lives between the test and the
+      sink, so a test that exercises one test in isolation cannot see it. The last
+      clause forces the concurrent case to be exercised rather than reasoned about.
+  - path: CLAUDE.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      The Pre-Drive Checklist documents the feedback and telemetry sinks these
+      tests read back, and records that the sink's location already resolves
+      differently in a worktree than in the install tree — a second way two runs
+      can disagree about what a sink contains.
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - >-
+    ISOLATE THE SINK, DO NOT FILTER THE VIEW. A per-test filtered read satisfies
+    the content clause and still fails the count clause — a test asserting "the
+    sink now holds three entries" breaks under load however well the view is
+    filtered. Each test's subject must write to a sink unique to that test
+    instance.
+  - >-
+    THE SINK ALREADY RESOLVES TO TWO DIFFERENT FILES AND THAT MUST BE FIXED
+    ALONGSIDE THE ISOLATION. CLAUDE.md records it: `submit_feedback.py` resolves
+    `__file__` through the `.leafcutter` symlink, so its walk-up for `.claude/`
+    lands in the INSTALL tree and entries are written to the install tree's
+    `debugging/logs/feedback.jsonl` rather than the worktree's (KI-BP-017,
+    KI-FC-001). A test that reads back the worktree sink while its subject wrote
+    to the install tree's is asserting over the wrong file, and isolating a sink
+    nobody writes to proves nothing.
+  - >-
+    THE SIMULTANEITY CASE MUST BE FORCED, NOT HOPED FOR. Use an explicit
+    synchronisation barrier so both subjects emit in the same instant. A parallel
+    run that happens not to interleave proves nothing, and the first two clauses
+    are both satisfiable by a run where the collision simply did not occur.
+  - >-
+    IF ANY SINK GENUINELY REMAINS SHARED, appends must be atomic at the line
+    level. A partially written JSON line is a third failure mode neither clause
+    names and it presents as an unparseable record rather than a wrong count.
+  - >-
+    Treat sink writes and reads as external I/O under the project error handling
+    policy: wrap, log at WARNING or above, never swallow. A silently dropped
+    append makes the count clause fail for a reason that looks like a collision
+    and is not one.
+delivers_to:
+  - agent: python-coder
+    ac_id: TQ-600b-1
+    contract: >-
+      Removal of the shared-sink collision class, so TQ-600b-1's
+      serial-versus-parallel comparison is not contaminated by flakes whose cause
+      is another worker's writes rather than a genuine parallelism defect.
+expects_from: null
+test_spec:
+  - name: test_tq600b_4_a_test_reading_back_its_sink_sees_only_its_own_subjects_entries
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: >-
+      With several such tests running at once on different workers, each sees
+      exactly the entries its own subject caused and none caused by a
+      concurrently running test.
+  - name: test_tq600b_4_a_total_count_assertion_reaches_the_same_number_under_load_as_alone
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: >-
+      A test asserting on the total number of entries in the sink reaches the
+      same number under concurrent load as it does running alone. NAMED MUTATION:
+      replace isolation with a per-test filtered view; the content assertion then
+      still passes and THIS test must go RED — the asymmetry that shows the two
+      clauses are not the same clause.
+  - name: test_tq600b_4_two_tests_forced_to_emit_at_the_same_instant_both_reach_their_solo_outcome
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: failure
+    description: >-
+      THE FORCED-COLLISION PROOF. Two such tests are held at a synchronisation
+      barrier and released so their subjects emit simultaneously on different
+      workers; both reach the outcome each reaches alone. NAMED MUTATION: point
+      both subjects at one shared sink path; this test must go RED. Without the
+      barrier the case is an observation rather than a proof.
+  - name: test_tq600b_4_the_sink_a_test_reads_back_is_the_sink_its_subject_wrote
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: unit
+    angle: seam
+    description: >-
+      The written path and the read path resolve to the same file, asserted in
+      both the worktree layout and the symlinked install-tree layout. NAMED
+      MUTATION: resolve the sink from the module's own `__file__` walk-up; the
+      two paths then diverge in the symlinked layout and this test must go RED.
+      This is the documented KI-BP-017 / KI-FC-001 defect, asserted rather than
+      assumed away.
+  - name: test_tq600b_4_a_concurrently_written_entry_from_another_worker_is_never_visible
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: failure
+    description: >-
+      The negative half of the content clause: an entry a different worker's
+      subject caused, written during the window under test, does not appear in
+      this test's read-back.
+  - name: test_tq600b_4_a_line_appended_during_a_concurrent_append_is_never_partially_written
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: >-
+      For any sink that genuinely remains shared, every line read back parses
+      whole. A truncated record is a third failure mode that presents as an
+      unparseable entry rather than a wrong count and is caught by no other
+      descriptor here.
+test_rationale: |
+  This is the quietest of the three named collision sources. The other two
+  corrupt something; this one produces a test that passes or fails depending on
+  what an unrelated test was doing a millisecond earlier — the flake that gets
+  rerun until green and never diagnosed. That teaches everyone a red run means
+  nothing, which dismantles the safety net as effectively as a slow suite does.
+
+  The count descriptor and the content descriptor are deliberately separate and
+  the count descriptor names the injection that proves it: a per-test filtered
+  view satisfies the content clause completely while a test asserting "the sink
+  holds three entries" still fails under load. Only isolation satisfies both.
+
+  The forced-collision descriptor cannot be skipped. Concurrency defects are
+  probabilistic, so a parallel run that happens not to interleave proves
+  nothing, and the first two clauses are both satisfiable by a run where the
+  collision simply did not occur. The barrier is what converts an observation
+  into a proof.
+
+  The seam descriptor asserts a defect that already exists rather than a
+  hypothetical one: the sink currently resolves to the install tree rather than
+  the worktree when reached through the `.leafcutter` symlink. Isolating a sink
+  nobody writes to would satisfy every other descriptor here and prove nothing.
+origin_agent: business-analyst
+created: 2026-09-21
+amended_by:
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-09-21
+  note: 'python-coder, M. Required isolation rather than a filtered view, and named
+    the filtered-view injection on the count descriptor because it satisfies the content
+    clause completely. Added the sink-resolution seam: CLAUDE.md records that the
+    sink already resolves to the install tree rather than the worktree through the
+    .leafcutter symlink, so isolating a sink nobody writes to would satisfy every
+    other descriptor. criteria untouched.'
+- action: approved
+  agent: approve_acs
+  date: '2026-09-21'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+notes: |
+  THE THIRD OF THE THREE NAMED COLLISION SOURCES, AND THE QUIETEST. The other two
+  corrupt something. This one produces a test that passes or fails depending on
+  what an unrelated test happened to be doing a millisecond earlier — the flake
+  that gets rerun until green and never diagnosed. That is corrosive in a
+  particular way: it teaches everyone that a red run means nothing, which
+  dismantles the safety net just as effectively as a slow suite does.
+
+  THE COUNT CLAUSE IS SEPARATE FROM THE CONTENT CLAUSE ON PURPOSE. A per-test view
+  filtered by the test's own identifier satisfies the first clause while a test
+  asserting "the sink now holds three entries" still fails under load. Both shapes
+  exist in suites of this kind and only the second is caught by the count clause.
+
+  THE LAST CLAUSE IS THE ONE THAT CANNOT BE SKIPPED. Concurrency defects are
+  probabilistic: a parallel run that happens not to interleave proves nothing, and
+  the first two clauses are both satisfiable by a run where the collision simply
+  did not occur. Forcing the simultaneous emission is what converts this from an
+  observation into a proof.

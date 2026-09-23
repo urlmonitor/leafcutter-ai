@@ -38,7 +38,7 @@ doc_links:
     relationship: related
     status: exists
     relevance: "The single-writer invariant this record extends from the drivers to the finalization path."
-  - path: docs/architecture/diagrams/c3-008-ticket-close-paths-sequence.md
+  - path: docs/architecture/diagrams/c3-009-ticket-close-paths-sequence.md
     relationship: describes
     status: exists
     relevance: "The diagram that found this route; the red out-of-close region becomes empty once this record is met."

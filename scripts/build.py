@@ -63,8 +63,34 @@ from build_phases import (
     _compute_phase_mappings,
     check_command_reachability,
     AC_STORE_DEPLOY_MAP,
+    set_local_change_baseline,
+    announce_if_local_change_replaced,
 )
 from build_phases_knowledge import _manifest_knowledge_scripts, _manifest_workflow_tool_scripts
+from build_deploy_manifest_helpers import (
+    _manifest_ac_store_scripts,
+    _manifest_commit_guardian_scripts,
+    _manifest_feedback_scripts,
+    _manifest_build_orchestration_scripts,
+    _manifest_agent_support_scripts,
+    _manifest_template_standalone_scripts,
+    _manifest_doc_compliance_scripts,
+    _manifest_sync_platforms_scripts,
+)
+# BP-1500g-1 (ADR-041): shim_map/file_shims are genuinely called below in
+# _cleanup_stale_paths and main(); the rest re-export build_ownership names
+# existing callers (including unit_tests/build_guards/test_bp_1500g_1.py)
+# resolve via build.<name> -- see build_ownership.py's own docstring.
+from build_helpers import shim_map, file_shims
+from build_ownership import (
+    _PRE_CONSOLIDATION_PATHS,
+    paths_scheduled_for_both_removal_and_claim,  # noqa: F401 -- re-exported
+    resolve_removal_verdict,
+    assemble_claim_set,
+    run_migration_report,
+)
+from build_reconciliation_helpers import run_adr041_reconciliation, check_blocked_conflicts
+from build_closure_guard import _source_file_for_deploy_path, _phase_for_deploy_path
 from registry_validator import validate_agent_registry
 from project_context_discovery import (  # noqa: F401 — re-exported for callers
     find_project_contexts,
@@ -127,6 +153,7 @@ from build_main_helpers import (
     _check_self_description_error_gate,
     _raise_deploy_failures_if_any,
     _check_command_reachability_if_live,
+    _check_knowledge_routing_wiring_if_live,
     _print_write_summary,
     _write_version_files,
     _write_and_verify_manifest,
@@ -171,6 +198,11 @@ def write_file(target: Path, content: str, dry_run: bool, force: bool) -> bool:
     builds.  Binary or unreadable files fall through to an unconditional write
     (UnicodeDecodeError / OSError are caught and silently ignored).
 
+    When the target exists and IS about to be overwritten (content differs,
+    or its on-disk content could not be read for comparison), calls
+    ``announce_if_local_change_replaced(target)`` first — this is one of the
+    four named compare-before-write branches ACD-2100d-2-i instruments.
+
     In dry-run mode, prints what would happen but does not write. Creates
     parent directories as needed.
 
@@ -200,6 +232,7 @@ def write_file(target: Path, content: str, dry_run: bool, force: bool) -> bool:
                 return False
         except (UnicodeDecodeError, OSError):
             pass  # Binary or unreadable file — fall through to write.
+        announce_if_local_change_replaced(target)
     target.parent.mkdir(parents=True, exist_ok=True)
     target.write_text(content, encoding="utf-8")
     return True
@@ -342,237 +375,35 @@ def _validate_all(config: dict, package_root: Path, validate_only: bool, dry_run
     return 0
 
 
-def _manifest_ac_store_scripts(package_root: Path) -> set[str]:  # noqa: ARG001
-    """Return ``scripts/ac_store/<name>`` entries for every AC_STORE_DEPLOY_MAP entry.
-
-    Derives Set C (the guard's model of what has been deployed) directly from
-    ``build_phases.AC_STORE_DEPLOY_MAP`` -- the SAME constant ``build_ac_store``
-    iterates to perform the actual copy -- per BP-900g-5's fifth
-    it_requirement: "Make the manifest derive FROM the deploy_map so the two
-    cannot diverge."
-
-    Before this (BP-900g-8), this function scanned every file physically
-    present in ``package_root/scripts/ac_store/`` regardless of whether
-    ``build_ac_store`` actually deployed it. That made the guard's view of
-    "deployed" really mean "exists in the source directory" -- structurally
-    incapable of detecting a file present in source but absent from the deploy
-    map, which is exactly the defect class BP-900g-8 closes
-    (``_component_migration_map.py`` was such a file).
-
-    Args:
-        package_root: Present for interface parity with the other
-            ``_manifest_*`` helpers; unused because ``AC_STORE_DEPLOY_MAP`` is
-            already resolved relative to ``build_phases.PACKAGE_ROOT``.
-
-    Returns:
-        Set of ``scripts/ac_store/<name>`` strings, one per
-        ``AC_STORE_DEPLOY_MAP`` entry.
-    """
-    return {f"scripts/ac_store/{dest_name}" for _src_rel, dest_name in AC_STORE_DEPLOY_MAP}
+# _manifest_ac_store_scripts moved to build_deploy_manifest_helpers.py
+# (BP-1500g-1 headroom pass); imported above, unchanged in behaviour.
 
 
-def _manifest_commit_guardian_scripts(package_root: Path) -> set[str]:
-    """Return ``scripts/commit_guardian/<rel>`` entries for all template .py files.
-
-    Scans ``templates/scripts/commit_guardian/`` (canonical) and returns one
-    manifest entry per ``.py`` file, matching what ``build_commit_guardian``
-    deploys to the target project.
-
-    Args:
-        package_root: Absolute path to the leafcutter package root.
-
-    Returns:
-        Set of ``scripts/commit_guardian/<rel>`` strings, or empty set when
-        the source directory is absent.
-    """
-    result: set[str] = set()
-    src = package_root / "templates" / "scripts" / "commit_guardian"
-    if src.is_dir():
-        for f in src.rglob("*"):
-            if f.is_file() and f.suffix == ".py":
-                result.add(f"scripts/commit_guardian/{f.relative_to(src).as_posix()}")
-        # AC BP-900g-8-ii: commit_guardian.json is deployed verbatim alongside
-        # the .py files (build_commit_guardian's rglob copies every file in
-        # this directory, .json included) and is read at runtime by several
-        # of them (e.g. check_hook_parity.py). The .py-only filter above never
-        # registered it, so the widened intra-package closure -- which now
-        # sees this read the same way it sees a module import -- reported it
-        # as an undeployed dependency even though the phase already ships it.
-        if (src / "commit_guardian.json").is_file():
-            result.add("scripts/commit_guardian/commit_guardian.json")
-    return result
+# _manifest_commit_guardian_scripts moved to build_deploy_manifest_helpers.py.
 
 
-def _manifest_feedback_scripts(package_root: Path) -> set[str]:
-    """Return ``scripts/feedback/<name>`` entries for all source .py files.
-
-    Scans ``templates/scripts/feedback/`` (the canonical tracked source
-    introduced in ADR-016) so that the manifest is correct on a fresh clone
-    where ``scripts/feedback/`` (a gitignored build output) does not yet exist.
-    This mirrors ``_manifest_commit_guardian_scripts``, which scans
-    ``templates/scripts/commit_guardian/`` for the same reason.
-
-    Args:
-        package_root: Absolute path to the leafcutter package root.
-
-    Returns:
-        Set of ``scripts/feedback/<name>`` strings, or empty set when absent.
-    """
-    result: set[str] = set()
-    src = package_root / "templates" / "scripts" / "feedback"
-    if src.is_dir():
-        for f in src.rglob("*"):
-            if f.is_file() and f.suffix == ".py":
-                result.add(f"scripts/feedback/{f.relative_to(src).as_posix()}")
-    return result
+# _manifest_feedback_scripts moved to build_deploy_manifest_helpers.py.
 
 
-def _manifest_build_orchestration_scripts(package_root: Path) -> set[str]:
-    """Return ``scripts/build_orchestration/<name>`` entries for all source ``.py`` files.
-
-    Scans ``package_root/scripts/build_orchestration/`` and returns one manifest
-    entry per Python file, matching what ``build_build_orchestration_scripts``
-    deploys to the target project.  The scan is dynamic (rather than a hardcoded
-    file list) so a module added to that directory cannot silently drop out of the
-    deployable set and reintroduce the BP-900g-4 gap.
-
-    Args:
-        package_root: Absolute path to the leafcutter package root.
-
-    Returns:
-        Set of ``scripts/build_orchestration/<name>`` strings, or empty set when
-        the directory is absent.
-    """
-    result: set[str] = set()
-    src = package_root / "scripts" / "build_orchestration"
-    if src.is_dir():
-        for f in src.glob("*.py"):
-            if f.is_file():
-                result.add(f"scripts/build_orchestration/{f.name}")
-    return result
+# _manifest_build_orchestration_scripts moved to build_deploy_manifest_helpers.py.
 
 
-def _manifest_agent_support_scripts(package_root: Path) -> set[str]:
-    """Return ``scripts/<rel>`` entries for the scripts ``build_agent_support_scripts`` deploys.
-
-    Derived from the SAME module-level spec the deploy phase iterates
-    (``AGENT_SUPPORT_SCRIPT_DIRS`` / ``AGENT_SUPPORT_SCRIPT_FILES`` in
-    build_phases), so the declared set and the deployed set cannot drift apart.
-    A manifest that disagrees with what is actually deployed is the BP-900g-4
-    defect; deriving both from one spec removes the opportunity.
-
-    Args:
-        package_root: Absolute path to the leafcutter package root.
-
-    Returns:
-        Set of ``scripts/<rel>`` strings, or empty set when the sources are absent.
-    """
-    result: set[str] = set()
-    scripts_src = package_root / "scripts"
-
-    for dir_name in AGENT_SUPPORT_SCRIPT_DIRS:
-        src_dir = scripts_src / dir_name
-        if src_dir.is_dir():
-            for f in src_dir.rglob("*.py"):
-                if f.is_file():
-                    result.add(f"scripts/{f.relative_to(scripts_src).as_posix()}")
-
-    for file_name in AGENT_SUPPORT_SCRIPT_FILES:
-        if (scripts_src / file_name).is_file():
-            result.add(f"scripts/{file_name}")
-
-    return result
+# _manifest_agent_support_scripts moved to build_deploy_manifest_helpers.py.
 
 
-def _manifest_template_standalone_scripts(package_root: Path) -> set[str]:
-    """Return ``scripts/<name>`` entries for standalone scripts from ``templates/scripts/``.
-
-    Scans the top-level ``templates/scripts/`` directory (non-recursive) for
-    ``.py`` files and returns manifest entries.  These are deployed by
-    ``build_template_standalone_scripts``.
-
-    Args:
-        package_root: Absolute path to the leafcutter package root.
-
-    Returns:
-        Set of ``scripts/<name>`` strings for deployable template-standalone scripts.
-    """
-    result: set[str] = set()
-    templates_scripts = package_root / "templates" / "scripts"
-    if templates_scripts.is_dir():
-        for f in templates_scripts.glob("*.py"):
-            if f.is_file():
-                result.add(f"scripts/{f.name}")
-    return result
+# _manifest_template_standalone_scripts moved to build_deploy_manifest_helpers.py.
 
 
-def _manifest_doc_compliance_scripts(package_root: Path) -> set[str]:
-    """Return ``scripts/doc_compliance/<rel>`` entries for the doc-compliance package.
-
-    Mirrors ``build_phases.build_doc_compliance``, which rglobs
-    ``templates/doc-compliance/`` and copies every file to
-    ``<target>/scripts/doc_compliance/`` preserving relative structure.
-
-    KI-BP-023: this phase had no manifest helper, so none of its files entered
-    Set B and the closure loop never called the analyser on any of them --
-    an entire deployed Python package (``cli.py`` alone has five sibling
-    imports) sat outside the guard with no warning and no error.
-
-    Args:
-        package_root: Absolute path to the leafcutter package root.
-
-    Returns:
-        Set of ``scripts/doc_compliance/<rel>`` strings, empty when the source
-        directory is absent.
-    """
-    result: set[str] = set()
-    dc_dir = package_root / "templates" / "doc-compliance"
-    if dc_dir.is_dir():
-        for f in dc_dir.rglob("*.py"):
-            if f.is_file():
-                rel = f.relative_to(dc_dir).as_posix()
-                result.add(f"scripts/doc_compliance/{rel}")
-        # AC BP-900g-8-ii: doc_compliance.json is deployed verbatim alongside
-        # the .py files (build_doc_compliance's rglob copies every file in
-        # this directory) and is read at runtime by config.py. The .py-only
-        # filter above never registered it -- same shape as the
-        # commit_guardian.json fix just above.
-        if (dc_dir / "doc_compliance.json").is_file():
-            result.add("scripts/doc_compliance/doc_compliance.json")
-    return result
+# _manifest_doc_compliance_scripts moved to build_deploy_manifest_helpers.py.
 
 
-def _manifest_sync_platforms_scripts(package_root: Path) -> set[str]:
-    """Return ``scripts/sync_platforms/<rel>`` entries for the sync-platforms package.
-
-    Mirrors ``build_phases.build_sync_platforms``, which rglobs
-    ``templates/scripts/sync_platforms/`` into
-    ``<target>/scripts/sync_platforms/``.
-
-    KI-BP-023 originally proposed fixing this by switching
-    ``_manifest_template_standalone_scripts`` from ``glob`` to ``rglob``. That
-    would have been wrong: ``build_template_standalone_scripts`` is
-    deliberately non-recursive ("excluding subdirectories"), so its manifest's
-    shallow glob correctly mirrors it. Widening the glob would have registered
-    ``scripts/<name>`` deploy paths for files that phase never writes, adding
-    FALSE entries to Set B and generating spurious findings. A manifest helper
-    must mirror its phase, not its directory -- so this is a separate helper.
-
-    Args:
-        package_root: Absolute path to the leafcutter package root.
-
-    Returns:
-        Set of ``scripts/sync_platforms/<rel>`` strings, empty when the source
-        directory is absent.
-    """
-    result: set[str] = set()
-    sp_dir = package_root / "templates" / "scripts" / "sync_platforms"
-    if sp_dir.is_dir():
-        for f in sp_dir.rglob("*.py"):
-            if f.is_file():
-                rel = f.relative_to(sp_dir).as_posix()
-                result.add(f"scripts/sync_platforms/{rel}")
-    return result
+# _manifest_sync_platforms_scripts moved to build_deploy_manifest_helpers.py.
+# All eight moves above are the BP-1500g-1 headroom pass; imported from that
+# module above, unchanged in behaviour. _get_source_deployable_scripts and
+# _get_source_paths_for_guard stay here: unit_tests/test_bp_900g_8_ii.py
+# counts a text anchor inside those two functions' own on-disk copy in this
+# file (see build_deploy_manifest_helpers.py's own docstring for the fixture
+# premise this preserves).
 
 
 def _get_source_deployable_scripts(package_root: Path) -> set[str]:
@@ -634,16 +465,12 @@ def _get_source_deployable_scripts(package_root: Path) -> set[str]:
         | _manifest_sync_platforms_scripts(package_root)
     )
 
-    # goal_to_epic.py and build_ac_mode_detection.py are sourced from the package
-    # ``scripts/`` directory but build_ac_store deploys them INTO ``scripts/ac_store/``
-    # (see the deploy_map in build_phases.build_ac_store). The manifest must record
-    # the DEPLOY path, because that is the namespace template references resolve in.
-    #
-    # This previously registered ``scripts/<name>`` and only when the file was found
-    # under ``templates/scripts/`` — where neither script has ever lived — so the
-    # block was a silent no-op and both scripts were absent from the deployable set.
-    # Nothing noticed, because the guard could not see the ``{{config.output_root}}/``
-    # form these are referenced in either (BP-900g-4).
+    # goal_to_epic.py / build_ac_mode_detection.py are sourced from package
+    # ``scripts/`` but build_ac_store deploys them INTO ``scripts/ac_store/`` (see
+    # its deploy_map) -- record the DEPLOY path, since that's the namespace
+    # templates resolve in. Previously this matched only under ``templates/
+    # scripts/``, where neither script ever lived -- a silent no-op invisible
+    # because the guard couldn't see the ``{{config.output_root}}/`` form (BP-900g-4).
     scripts_src = package_root / "scripts"
     for fname in ("goal_to_epic.py", "build_ac_mode_detection.py"):
         if (scripts_src / fname).is_file():
@@ -718,6 +545,8 @@ def _get_source_deployable_scripts(package_root: Path) -> set[str]:
         # resolving _reachability_inventory.py's import of this file
         # (BO-2900d-1/-2 fast-lane build, 2026-09-07).
         "reachability_exemptions.yaml",
+        # Read by check_roadmap_schema.py; undeclared until KI-CG-010 fixed its path.
+        "roadmap.schema.json",
         # config/entry_kind_vocabulary.json: a fixed, tracked source asset
         # (no install-specific values) read by scripts/knowledge/
         # entry_kind_vocabulary.py's default_vocabulary_path() via a
@@ -1012,6 +841,8 @@ def _guard_source_paths_core_config(package_root: Path) -> set[str]:
         # _get_source_deployable_scripts just above -- see that block's
         # DECISION note.
         "entry_kind_vocabulary.json",
+        # Read by check_roadmap_schema.py; undeclared until KI-CG-010 fixed its path.
+        "roadmap.schema.json",
         # Deployed by build_ac_store's own block (added with TKT-600b), but
         # never DECLARED here -- so Set B did not contain it and the widened
         # closure correctly aborted the build once ac_coverage_resolver.py and
@@ -1330,162 +1161,6 @@ def _check_tracked_source_guard(package_root: Path) -> int:
         file=sys.stderr,
     )
     return 1
-
-
-_AC_STORE_DEST_TO_SOURCE: dict[str, str] = {
-    dest_name: src_rel for src_rel, dest_name in AC_STORE_DEPLOY_MAP
-}
-
-# Deploy-path prefix -> owning build_phases.py phase function name, used only
-# to attribute a closure-guard finding to the phase that would have to carry
-# the missing dependency (AC BP-900g-8's Gherkin requires naming the phase).
-# Attribution is diagnostic, not load-bearing for the pass/fail verdict.
-_CLOSURE_GUARD_PHASE_BY_PREFIX: tuple[tuple[str, str], ...] = (
-    ("scripts/ac_store/", "build_ac_store"),
-    ("scripts/commit_guardian/", "build_commit_guardian"),
-    ("scripts/feedback/", "build_feedback"),
-    ("scripts/knowledge/", "build_knowledge_scripts"),
-    ("scripts/build_orchestration/", "build_build_orchestration_scripts"),
-)
-
-# AC BP-900g-8-ii review finding: `config/` and `docs/` are NOT reliable
-# phase discriminators by prefix. `config/feedback_categories.yaml` is
-# deployed by build_feedback, not build_ac_store, and several phases write
-# files under `docs/` (not only build_components_registry). A prefix
-# heuristic over these two directories was correct only by coincidence --
-# every `config/` entry the guard could see on the day it was written
-# happened to be a build_ac_store "core config" file, and the only `docs/`
-# entry was docs/components.json. Mapping by the file's EXACT deploy-path
-# name (derived from the same core-config tuples _get_source_deployable_
-# scripts/_get_source_paths_for_guard already enumerate) keeps this hint
-# honest for a name it does not recognise, rather than confidently naming
-# the wrong phase. This only affects the human-readable remediation hint in
-# the abort message -- never the pass/fail verdict.
-_CONFIG_FILE_PHASE_BY_NAME: dict[str, str] = {
-    "ac_store_schema.json": "build_ac_store",
-    "agent_registry.json": "build_ac_store",
-    "doc_types.json": "build_ac_store",
-    "diagram_types.json": "build_ac_store",
-    "skill_registry.json": "build_ac_store",
-    "guardrail_gates.yaml": "build_ac_store",
-    "paths.json": "build_ac_store",
-    "phase_deferral.yaml": "build_ac_store",
-    "feedback_categories.yaml": "build_feedback",
-    "knowledge_sink.json": "build_knowledge_sink_declaration",
-    "entry_kind_vocabulary.json": "build_knowledge_scripts",
-    "reachability_exemptions.yaml": "build_config_scaffolds",
-}
-_DOCS_FILE_PHASE_BY_NAME: dict[str, str] = {
-    "components.json": "build_components_registry",
-    "roadmap.json": "build_roadmap",
-}
-
-
-def _phase_for_deploy_path(deploy_path: str) -> str:
-    """Return the build_phases.py phase function name that owns *deploy_path*.
-
-    Args:
-        deploy_path: A ``scripts/<...>`` deploy-namespace path, e.g. one
-            returned in a script's intra-package closure.
-
-    Returns:
-        The best-effort ``build_<name>`` phase function name responsible for
-        deploying paths with this prefix. Falls back to a joined label naming
-        the remaining candidate phases when no prefix matches, since
-        attribution here is diagnostic rather than authoritative.
-    """
-    for prefix, phase in _CLOSURE_GUARD_PHASE_BY_PREFIX:
-        if deploy_path.startswith(prefix):
-            return phase
-    for dir_name in AGENT_SUPPORT_SCRIPT_DIRS:
-        if deploy_path.startswith(f"scripts/{dir_name}/"):
-            return "build_agent_support_scripts"
-    if deploy_path in {f"scripts/{f}" for f in AGENT_SUPPORT_SCRIPT_FILES}:
-        return "build_agent_support_scripts"
-    # AC BP-900g-8-ii: non-code (config/docs) deploy paths, added once the
-    # closure guard was taught to see data-file reads. Matched by EXACT
-    # filename, not prefix -- see the DECISION comment above
-    # _CONFIG_FILE_PHASE_BY_NAME for why a `config/`/`docs/` prefix match is
-    # not a safe discriminator on its own.
-    if deploy_path.startswith("config/"):
-        name = deploy_path[len("config/"):]
-        return _CONFIG_FILE_PHASE_BY_NAME.get(
-            name, "an unmapped config/-writing phase (see build_phases.py)"
-        )
-    if deploy_path.startswith("docs/"):
-        name = deploy_path[len("docs/"):]
-        return _DOCS_FILE_PHASE_BY_NAME.get(
-            name, "an unmapped docs/-writing phase (see build_phases.py)"
-        )
-    return "build_workflow_tools or build_template_standalone_scripts"
-
-
-def _source_file_for_deploy_path(
-    package_root: Path, deploy_path: str
-) -> tuple[Path, Path, str] | None:
-    """Resolve a Set-B deploy path to the source file and closure namespace to analyse.
-
-    Args:
-        package_root: Absolute path to the leafcutter package root.
-        deploy_path: A ``scripts/<...>`` entry from ``_get_source_deployable_scripts``.
-
-    Returns:
-        A ``(source_file, root, deploy_prefix)`` triple. Closure entries are
-        computed relative to *root* and then prefixed with *deploy_prefix*, so
-        the resulting strings land in the SAME deploy namespace as
-        *deploy_path* itself and can be compared against Set B directly.
-        *deploy_prefix* is ``""`` for every family whose source layout already
-        mirrors its deploy layout. Returns None when no real source file can be
-        located (the guard skips rather than crashes).
-    """
-    if deploy_path.startswith("scripts/ac_store/"):
-        dest_name = deploy_path[len("scripts/ac_store/"):]
-        src_rel = _AC_STORE_DEST_TO_SOURCE.get(dest_name)
-        if src_rel is not None:
-            return package_root / src_rel, package_root, ""
-
-    # doc-compliance is the one family whose source directory name differs from
-    # its deploy directory name (``templates/doc-compliance/`` ->
-    # ``scripts/doc_compliance/``, hyphen vs underscore). No choice of closure
-    # root can bridge that, so this family carries an explicit prefix.
-    #
-    # It must be checked BEFORE the `direct` fallback below. In a worktree that
-    # has run install_shims, ``<package_root>/scripts/doc_compliance`` exists as
-    # a SYMLINK into the deployed .leafcutter tree — so the fallback would
-    # resolve it, follow the link, and analyse BUILD OUTPUT as though it were
-    # source, returning dependencies prefixed ``.leafcutter/`` that match
-    # nothing in Set B. That produced 14 phantom "undeployed dependency"
-    # findings on a tree where nothing was actually missing.
-    if deploy_path.startswith("scripts/doc_compliance/"):
-        rel = deploy_path[len("scripts/doc_compliance/"):]
-        dc_source = package_root / "templates" / "doc-compliance" / rel
-        if dc_source.is_file():
-            return (
-                dc_source,
-                package_root / "templates" / "doc-compliance",
-                "scripts/doc_compliance/",
-            )
-
-    # Template-mirrored categories (commit_guardian, feedback, sync_platforms,
-    # template-standalone): source lives under templates/<deploy_path>;
-    # stripping the templates/ prefix on the CLOSURE ROOT (not the path itself)
-    # makes the returned dependency strings land directly in deploy namespace.
-    templated = package_root / "templates" / deploy_path
-    if templated.is_file():
-        return templated, package_root / "templates", ""
-
-    # Everything else (build_orchestration, knowledge, agent-support,
-    # workflow-tool scripts): source and deploy namespaces coincide directly
-    # under package_root.
-    #
-    # Only reached by families whose source genuinely lives at this path. Any
-    # future family that does NOT must be given an explicit branch above, or a
-    # deployed symlink here will silently stand in for its source.
-    direct = package_root / deploy_path
-    if direct.is_file():
-        return direct, package_root, ""
-
-    return None
 
 
 def _check_intra_package_closure_guard(package_root: Path) -> int:
@@ -1883,19 +1558,8 @@ def _run_phases(
     return total
 
 
-_PRE_CONSOLIDATION_PATHS = [
-    ".claude/agents",
-    ".claude/skills",
-    ".claude/commands",
-    ".claude/hooks",
-    ".claude/settings.json",
-    ".pre-commit-config.yaml",
-    ".gemini",
-    "scripts/commit_guardian",
-    "scripts/doc_compliance",
-    "scripts/feedback",
-    "scripts/sync_platforms",
-]
+# _PRE_CONSOLIDATION_PATHS moved to build_ownership.py (BP-1500g-1 / ADR-041);
+# imported above, unchanged in value.
 
 
 def _build_source_manifests(output_root: Path) -> dict:
@@ -1958,34 +1622,74 @@ def _build_source_manifests(output_root: Path) -> dict:
     }
 
 
-def _cleanup_stale_paths(target_root: Path, output_root: Path, dry_run: bool) -> int:
+def _cleanup_stale_paths(
+    target_root: Path,
+    output_root: Path,
+    dry_run: bool,
+    blocked_paths: list[str] | None = None,
+    strategy: str = "auto",
+) -> int:
     """Auto-remove stale pre-consolidation files that have moved into .leafcutter/.
 
-    Only removes paths that are real directories/files (not symlinks pointing
-    into the output root — those are shims we created).
+    Only removes a path when BP-1500g-1's recomputed ownership verdict
+    (``owns_installed_path``) says ``"package_produced"`` — a symlink
+    (harmless to replace, it never touches its target's content) or a real,
+    empty directory/file. A real path holding content the build cannot
+    attribute to itself is left untouched and its relative path is appended
+    to *blocked_paths* (when provided) rather than removed — non-attribution
+    is treated as keep, never as stale.
 
-    Returns count of paths removed.
+    Under ``shim_strategy: "copy"``, a co-claimed path (see
+    ``resolve_removal_verdict``'s *is_claimed* parameter) is never treated
+    as a removal candidate at all — see that function's docstring for why
+    content alone cannot distinguish a stale leftover from the build's own
+    current copy-strategy output (ADR-041 review defect 2a).
+
+    Args:
+        target_root: Root of the target project.
+        output_root: The consolidated output directory (symlinks resolving
+            here are always safe to replace).
+        dry_run: When True, prints intent but removes nothing.
+        blocked_paths: Optional list to append the relative path of any
+            entry whose content could not be removed because it is not
+            ``package_produced``.
+        strategy: The configured ``shim_strategy`` (``"symlink"``,
+            ``"copy"``, or ``"auto"``), forwarded to ``resolve_removal_verdict``.
+
+    Returns:
+        Count of paths removed.
     """
     import shutil
 
+    claimed = assemble_claim_set(shim_map, file_shims)
     removed = 0
     for rel_path in _PRE_CONSOLIDATION_PATHS:
         full = target_root / rel_path
-        if not full.exists() and not full.is_symlink():
+        verdict = resolve_removal_verdict(full, output_root, strategy, rel_path in claimed)
+        if verdict is None:
             continue
-        if full.is_symlink():
-            link_target = full.resolve()
-            if str(link_target).startswith(str(output_root.resolve())):
-                continue
+        if verdict != "package_produced":
+            _error(
+                f"cannot remove stale path {rel_path}: it holds content this "
+                f"build did not produce and cannot verify is safe to discard "
+                f"({verdict}). Leaving it in place."
+            )
+            if blocked_paths is not None:
+                blocked_paths.append(rel_path)
+            continue
         if dry_run:
             kind = "directory" if full.is_dir() else "file"
             _dry_run_msg(f"would remove stale {kind}: {rel_path}")
             removed += 1
             continue
-        if full.is_symlink() or full.is_file():
-            full.unlink()
-        elif full.is_dir():
-            shutil.rmtree(full)
+        try:
+            if full.is_symlink() or full.is_file():
+                full.unlink()
+            elif full.is_dir():
+                shutil.rmtree(full)
+        except OSError as exc:
+            _warn(f"Failed to remove stale path {full}: {exc}")
+            raise
         _success(f"removed stale: {rel_path}")
         removed += 1
     return removed
@@ -2123,7 +1827,7 @@ def _migrate_skills_config(
         return
 
     data, raw = _read_skills_config_json(resolved)
-    if raw is None:
+    if data is None or raw is None:  # coupled pair; mypy can't narrow 2 names
         return
 
     optional_skills = _get_frontend_optional_skills(data, resolved)
@@ -2141,48 +1845,13 @@ def _migrate_skills_config(
     _write_migrated_skills_config(resolved, data, raw, removed, dry_run)
 
 
-def _run_migration_report(target_root: Path, output_root: Path) -> int:
-    """Scan for stale pre-consolidation files and print a migration report.
-
-    Checks known pre-consolidation output paths. If a path exists and is NOT
-    a symlink pointing into the output root, it is reported as stale.
-
-    Returns 0 always (report-only, no deletions).
-    """
-    print(f"\nMigration report for: {target_root}")
-    print(f"Output root: {output_root}\n")
-
-    stale: list[str] = []
-    for rel_path in _PRE_CONSOLIDATION_PATHS:
-        full = target_root / rel_path
-        if not full.exists() and not full.is_symlink():
-            continue
-        if full.is_symlink():
-            link_target = full.resolve()
-            if str(link_target).startswith(str(output_root.resolve())):
-                continue
-        stale.append(rel_path)
-
-    if not stale:
-        print("No stale pre-consolidation files found. Migration complete.")
-        return 0
-
-    print(f"Found {len(stale)} stale pre-consolidation path(s):\n")
-    for p in stale:
-        full = target_root / p
-        kind = "directory" if full.is_dir() else "file"
-        print(f"  STALE: {p} ({kind})")
-
-    print("\nTo remove stale files, run:")
-    for p in stale:
-        full = target_root / p
-        if full.is_dir():
-            print(f"  rm -rf {p}")
-        else:
-            print(f"  rm {p}")
-
-    print(f"\nThen re-run: python {Path(__file__).name} --target-dir {target_root}")
-    return 0
+# The old naive _run_migration_report(target_root, output_root) (report-only,
+# no ownership verdict) moved to build_ownership.run_migration_report as part
+# of BP-1500g-1 (ADR-041), which also made it ownership-aware -- see that
+# module's docstring and DECISION HISTORY. Imported above and passed to
+# _maybe_run_migration_report(), unchanged in call shape from a caller's
+# perspective except for the two new args (strategy, claim_set) that call
+# site now supplies.
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -2241,7 +1910,7 @@ def main(argv: list[str] | None = None) -> int:
     package_version = _read_package_version(package_root)
 
     migration_exit = _maybe_run_migration_report(
-        args, target_root, config, _run_migration_report
+        args, target_root, config, run_migration_report
     )
     if migration_exit is not None:
         return migration_exit
@@ -2269,6 +1938,12 @@ def main(argv: list[str] | None = None) -> int:
     # Reset the up-to-date counter before this run so consecutive CLI calls
     # report accurate per-run numbers.
     reset_uptodate_count()
+
+    # Capture the PREVIOUS install's output_mappings as this run's
+    # local-change baseline (ACD-2100d-2-i) BEFORE any phase below writes a
+    # single file — the whole point is to see what the last install produced
+    # before this run's own manifest overwrites the record of it.
+    set_local_change_baseline(target_root, output_root)
 
     # Self-description validation: resolve enforcement level (CLI flag overrides
     # registry config key; registry key overrides the 'warning' built-in default).
@@ -2314,6 +1989,10 @@ def main(argv: list[str] | None = None) -> int:
     if reachability_exit is not None:
         return reachability_exit
 
+    knowledge_exit = _check_knowledge_routing_wiring_if_live(output_root, args.dry_run)
+    if knowledge_exit is not None:
+        return knowledge_exit
+
     _print_write_summary(total, args.dry_run)
 
     print(f"Build version: {GREEN}{computed_version}{RESET}")
@@ -2329,15 +2008,45 @@ def main(argv: list[str] | None = None) -> int:
 
     _write_lock_file_if_applicable(target_root, package_root, args.dry_run)
 
-    _run_stale_cleanup(target_root, output_root, args.dry_run, _cleanup_stale_paths)
+    # BP-1500g-1-ii: paths BP-1500g-1's ownership verdict blocked from
+    # removal or re-claim, collected across both the stale-cleanup and
+    # shim-install steps. A non-empty set at the end of the run means the
+    # build reached a step it could not complete without taking adopter-
+    # owned (or unattributable) content -- the backstop this AC specifies:
+    # the content survives, but the run does not report success.
+    blocked_conflicts: list[str] = []
+
+    # ADR-041 §3 reconciliation -- recomputed effective strategy (see
+    # build_shim_probe.py), never declared; claim set empty under --no-shims.
+    reconciliation_exit, eff_strategy = run_adr041_reconciliation(
+        target_root,
+        output_root,
+        config,
+        args.no_shims,
+        shim_map,
+        file_shims,
+        _PRE_CONSOLIDATION_PATHS,
+    )
+    if reconciliation_exit is not None:
+        return reconciliation_exit
+
+    _run_stale_cleanup(
+        target_root, output_root, args.dry_run, _cleanup_stale_paths,
+        blocked_conflicts, eff_strategy,
+    )
 
     _run_clean_mode_if_requested(args, target_root, output_root, _build_source_manifests)
 
     _run_shim_and_hook_install(
-        target_root, output_root, config, args.dry_run, effective_force, args.no_shims
+        target_root, output_root, config, args.dry_run, effective_force, args.no_shims,
+        blocked_conflicts,
     )
 
     _run_post_build_scans(target_root, config, args.dry_run)
+
+    blocked_exit = check_blocked_conflicts(blocked_conflicts, args.dry_run)
+    if blocked_exit is not None:
+        return blocked_exit
 
     return 0
 
@@ -2539,6 +2248,18 @@ if __name__ == "__main__":
 #   previously-undiscovered instance: validate_ac_schema.py's missing
 #   _ac_components.py -- concrete evidence the mechanism is derived rather than
 #   an enumeration of the one known case. (#BP-900g-8)
+# - 2026-08-31 [python-coder/EPIC-StartingNewWorkTheProperWayAlways/21]:
+#   write_file() now calls announce_if_local_change_replaced(target) (new
+#   import from build_phases) right before overwriting an existing file whose
+#   on-disk content differs from what is about to be written -- the fourth
+#   named ACD-2100d-2-i compare-before-write branch. main() calls the new
+#   set_local_change_baseline(target_root, output_root) right after
+#   reset_uptodate_count(), before any build phase writes a file, so the
+#   announcement's baseline is the PREVIOUS install's recorded
+#   output_mappings (not this run's own, not-yet-written manifest). The
+#   divergence verdict itself is computed entirely in build_phases.py, which
+#   consumes ACD-2100d-2's own installer-derived mapping rather than a second,
+#   independent determination. (#EPIC-StartingNewWorkTheProperWayAlways/21)
 # - 2026-09-07 [python-coder]: Registered the new build_knowledge_sink_declaration
 #   internal phase (declares the build-time knowledge-emission sink absolute
 #   path -- see build_phases.py for the phase itself) right after "Knowledge

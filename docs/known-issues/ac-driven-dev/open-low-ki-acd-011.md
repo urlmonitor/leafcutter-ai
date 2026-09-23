@@ -33,7 +33,7 @@ related_docs:
   the script offers **no name override**, so the only remedy is to rename the folder and every
   `target_epic` stamp afterwards — 28 files for a 27-ticket epic. An `--epic-name` flag would
   make the defect survivable even unfixed.
-- **Where:** `scripts/goal_to_epic.py:385-433` — `_truncate_pascal_at()`
+- **Where:** `scripts/ac_store/epic_naming.py:251-299` — `_truncate_pascal_at()`
 - **Reported by:** customer bug report 2026-08-25
 
 **Symptom.** A long AC title yields an epic name that stops mid-phrase, on a word that

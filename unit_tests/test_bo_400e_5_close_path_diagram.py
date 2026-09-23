@@ -32,7 +32,7 @@ _DIAGRAM = (
     / "docs"
     / "architecture"
     / "diagrams"
-    / "c3-008-ticket-close-paths-sequence.md"
+    / "c3-009-ticket-close-paths-sequence.md"
 )
 
 # The record's lifeline, and the only lifelines permitted to address it: the two

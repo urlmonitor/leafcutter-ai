@@ -426,8 +426,8 @@ Where `<id-1>,<id-2>,...` is the `select_connected` JSON id list joined into a
 single comma-separated string — the target AC plus all un-built co-dependents,
 with the structural parent already excluded by `--exclude-structural-parent`.
 Join the list with commas and pass as one argument to `--ids`; `goal_to_epic.py`
-does not accept space-separated tokens for this flag (it splits on commas: line
-2496 of goal_to_epic.py).
+does not accept space-separated tokens for this flag (it splits on commas in
+`_run_ids_mode`, `scripts/ac_store/epic_cli.py`).
 
 **Dependency ordering and ticket cross-wiring (handled internally by `goal_to_epic.py`):**
 

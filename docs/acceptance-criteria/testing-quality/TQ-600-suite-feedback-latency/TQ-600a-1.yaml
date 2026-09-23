@@ -1,0 +1,362 @@
+id: TQ-600a-1
+components:
+  - testing_quality
+  - build_pipeline
+title: "The reference layout is produced once for the whole run, and shared across workers rather than rebuilt by each"
+component: testing-quality
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a selection of tests that need a deployed copy of the package only in order
+    to read it — they inspect what the deploy produced and never alter the package
+    beforehand nor the result afterwards,
+  When that selection is run,
+  Then the package is really deployed exactly once for the whole run, however many
+    of those tests there are,
+    And that stays one deploy for the whole run when the run is spread across several
+      workers — the first worker to ask for the layout produces it while the others
+      wait for that same one, rather than each worker producing a copy of its own, so
+      "once per run" does not quietly come to mean "once per worker",
+    And every one of those tests is handed the same layout root path, including tests
+      running on different workers, so two of them asked for the root receive the
+      identical answer,
+    And no test is handed the root before the layout behind it is complete: a test
+      that starts reading a layout another worker is still producing is not a case
+      that can arise.
+depends_on:
+  - TQ-600a
+doc_links:
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      The set-cover angle taxonomy this AC's test contract will be written against.
+      The count-of-deploys clause is a reachability assertion, not a criterion one:
+      a shared fixture that exists but that no test is routed to satisfies a
+      criterion test and still deploys 77 times.
+  - path: CLAUDE.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      Carries the standing rule "Tests must not spawn their own build.py — reuse a
+      shared deployed layout", which states the read-only reuse obligation this AC
+      makes mechanically true. The rule currently says "until that fixture exists,
+      the prohibition alone applies"; this AC is the fixture.
+  - path: docs/acceptance-criteria/testing-quality/TQ-600-suite-feedback-latency/TQ-600.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      Holds the full measured evidence (2026-09-21, origin/main 624d39ac) the
+      numbers in these criteria are taken from, including the honest caveat that
+      the absolute 5387s figure may be inflated by shared-host load while the
+      59.8s deploy and the 63%-concentration finding are not.
+assigned_agent: python-coder
+estimated_complexity: L
+it_requirements:
+  - >-
+    THE FIXTURE MUST BE REGISTERED WHERE A WHOLE-SUITE RUN LOADS IT, AND THE
+    LOAD-BEARING REGISTRATION MUST BE NAMED. Verified at enrichment: this repo
+    has NO root conftest.py and no unit_tests/conftest.py — the only conftest
+    files are per-directory (e.g. unit_tests/portability/conftest.py). A fixture
+    defined in a per-directory conftest is invisible to the other test files
+    holding the 77 measured sites, so it would be shared across a fraction of the
+    run while reading as shared across all of it. Register the fixture and its
+    deploy signal in a surface the whole run loads (a plugin named in pytest.ini,
+    or a root conftest), enumerate every place it is registered, and state which
+    one actually gates.
+  - >-
+    ONE PRODUCTION PER RUN ACROSS WORKERS IS NOW A CRITERION, NOT AN OPEN
+    DECISION. The first enrichment pass left this as a choice between sharing
+    across workers and reporting N honestly; the rewritten criteria took the
+    first branch, so only the mechanism is open. A pytest session-scoped fixture
+    runs once PER WORKER under pytest-xdist, so the plain session fixture does
+    NOT satisfy these criteria once TQ-600b-5 makes parallel the default:
+    production must be serialised on a cross-process lock, and the layout must
+    live in a run-scoped directory derived from the workers' COMMON base
+    temporary directory rather than from each worker's own. TQ-600b-5 carries
+    the same decision; neither AC may assume the other resolved it.
+  - >-
+    THE ROOT IS PUBLISHED ONLY AFTER THE LAYOUT BEHIND IT IS COMPLETE. A waiting
+    consumer must be unable to observe a root whose layout is still being
+    written — produce into a private location and publish atomically, or gate
+    the handout on a completion marker consulted under the same lock. A path
+    that exists is not evidence that the deploy behind it finished, and a
+    half-read layout surfaces as a mysterious assertion failure in an unrelated
+    test on another worker.
+  - >-
+    THE DEPLOY SIGNAL FIRES ON EXECUTION, NOT ON HANDOUT. This AC owns the single
+    point at which a `python scripts/build.py --target-dir <path>` subprocess is
+    really executed (measured 59.8s) and the signal emitted there; TQ-600a-6 owns
+    the figure derived from it. Emit on execution only, and make the signal
+    reachable from the whole run rather than from the producing worker alone —
+    a signal visible only inside the worker that produced the layout leaves
+    TQ-600a-6's whole-run clause unsatisfiable from here.
+  - >-
+    Production must be lazy, on first demand — see TQ-600a-1-i. An eagerly
+    created shared layout satisfies every other clause here and taxes every
+    single-test debugging run by the full 59.8s.
+  - >-
+    Deploy failure must not be swallowed. The deploy is a subprocess, so it is
+    external I/O under the project error handling policy: wrap it, log at WARNING
+    or above, and raise a typed error. Never hand out an empty or half-written
+    layout (TQ-600a-1-ii).
+  - >-
+    The new test directory `unit_tests/suite_performance/` needs an `__init__.py`
+    to match every other directory under unit_tests/; omitting it changes
+    collection behaviour relative to its siblings.
+  - >-
+    THE STANDING RULE IN CLAUDE.md GOES STALE THE MOMENT THIS LANDS. Verified at
+    enrichment: the sentence "Until that fixture exists, the prohibition alone
+    applies" sits at CLAUDE.md line 416, inside the rule authors actually read.
+    The reconciliation is TQ-600a-7's to make — it was a caveat at the first
+    enrichment pass and the BA has since authored the AC — so this record's
+    obligation is only sequencing: this must not reach main in a state that
+    leaves the rule teaching authors to do nothing rather than to declare.
+delivers_to:
+  - agent: python-coder
+    ac_id: TQ-600a-1-i
+    contract: >-
+      A shared reference layout produced on first demand only, and the deploy
+      signal that fires when — and only when — production really happens. A
+      selection with no consumer must produce no layout and fire no signal; the
+      figure that makes that observable is TQ-600a-6's.
+  - agent: python-coder
+    ac_id: TQ-600a-1-ii
+    contract: >-
+      The single deploy's result cached as either success (a layout root path) or
+      failure (the deploy's captured stdout/stderr and exit status), so every
+      waiting consumer raises from the cached failure and the attempt count stays
+      at 1.
+  - agent: python-coder
+    ac_id: TQ-600a-2
+    contract: >-
+      A routing decision point at fixture-request time that can refuse to hand the
+      shared layout to a declared mutator, plus the unshared-path count the
+      relational bound in this AC's fourth clause consumes.
+  - agent: python-coder
+    ac_id: TQ-600a-5
+    contract: >-
+      The shared reference layout and the routing decision point at
+      fixture-request time, which TQ-600a-5 supplies the per-test selector for.
+      The decision point must be reachable before the layout is produced, so an
+      undeclared or mutator-declared test never triggers the shared production
+      merely by being collected.
+  - agent: python-coder
+    ac_id: TQ-600a-3
+    contract: >-
+      The layout root path and the instant the single deploy finished, so the
+      contents record of TQ-600a-3 is taken before any consumer runs.
+  - agent: python-coder
+    ac_id: TQ-600a-4
+    contract: >-
+      The converted set — the identity of every test moved from deploying its own
+      copy to consuming the shared layout — as the population TQ-600a-4's per-test
+      outcome comparison is sized against.
+  - agent: python-coder
+    ac_id: TQ-600a-6
+    contract: >-
+      A single point at which a real package deploy is executed, and a signal each
+      time one is, so TQ-600a-6 counts executions rather than handouts of the cached
+      layout. Under several workers the producer must make the whole-run figure
+      reachable, not only each worker's own, since that is the only way the
+      "once per run, not once per worker" claim above stays auditable after the fact.
+  - agent: documentation-expert
+    ac_id: TQ-600a-7
+    contract: >-
+      The shared reference layout as delivered, and the exact means by which a
+      declared reader obtains its root — the step the guidance teaches an author
+      to take, quoted from the implementation rather than paraphrased from
+      intent.
+expects_from: null
+test_spec:
+  - name: test_tq600a_1_a_selection_of_read_only_consumers_deploys_the_package_once
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: >-
+      A child pytest session over at least three read-only consumer tests
+      executes exactly one real `build.py --target-dir` subprocess, observed
+      independently of anything the run reports about itself.
+  - name: test_tq600a_1_every_consumer_receives_the_identical_layout_root
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: >-
+      Two consumers in the same session that ask for the layout root receive the
+      identical path string, not two paths whose contents happen to match.
+  - name: test_tq600a_1_a_run_spread_across_several_workers_still_executes_exactly_one_deploy
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: criterion
+    surface_invoked: "python -m pytest -n <N> (child session over read-only consumers on several workers)"
+    description: >-
+      THE DESCRIPTOR THE REWRITTEN SECOND CLAUSE ADDS, AND THE ONE THE EARLIER
+      CONTRACT COULD NOT HAVE CARRIED. With more than one worker, the number of
+      `build.py --target-dir` subprocesses observed across ALL workers is exactly
+      one — counted by the harness itself, not read from anything the run
+      reports. NAMED MUTATION: make the layout a plain pytest session-scoped
+      fixture with no cross-process lock; the observed count becomes the worker
+      count and this test must go RED while the single-worker descriptor above
+      stays green. A contract that cannot separate "once per run" from "once per
+      worker" gives back most of what this AC recovers.
+  - name: test_tq600a_1_consumers_on_different_workers_receive_the_identical_root_path
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: >-
+      Two consumers pinned to different workers report root paths that are the
+      identical string. NAMED MUTATION: derive the run-scoped directory from each
+      worker's own base temporary directory rather than from the workers' common
+      base; every worker then receives a valid, existing, DIFFERENT root, the
+      same-session identity descriptor above stays green, and only this test goes
+      RED.
+  - name: test_tq600a_1_no_consumer_is_handed_a_root_before_its_layout_is_complete
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: failure
+    description: >-
+      A second requester arriving while the first is mid-production waits, and
+      the layout it is then handed is complete — the deploy's full expected file
+      set, not a partially written tree. NAMED MUTATION: publish the root when
+      production begins instead of when it finishes; the waiter observes an
+      incomplete layout and this test must go RED. The fourth clause says this
+      case cannot arise, so it must be provoked deliberately to be checked.
+  - name: test_tq600a_1_a_cached_layout_requested_many_times_executes_only_one_deploy
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: >-
+      Fifty requests within one run execute one deploy subprocess. The
+      observation is of executions the harness counted, not of any figure the run
+      reported — the reported figure and its bound are TQ-600a-6's. NAMED
+      MUTATION: produce a fresh layout on every request; this test must go RED.
+test_rationale: |
+  The measurable is a count, not a duration, because wall clock on this
+  workspace is contaminated — the profiling run shared a WSL host with other
+  agent activity. A timing assertion is unfalsifiable here on a bad day and
+  falsely satisfiable on a good one; the number of real deploys is
+  host-load-independent and is what the change actually controls.
+
+  Every descriptor here OBSERVES deploy subprocesses and root paths directly.
+  Nothing in this contract reads what the run reported about itself: the
+  reported figure, its relational bound and the function-of-the-selection
+  control moved to TQ-600a-6 with the reporting surface. That separation is the
+  point of the split — a fixture that deploys once and reports a hardcoded 1
+  must fail on TQ-600a-6's evidence, not on this record's.
+
+  The three cross-worker descriptors exist because the criteria were rewritten
+  to claim cross-worker single production, and the earlier contract could not
+  have covered a claim that did not yet exist. They are deliberately separable:
+  a plain session-scoped fixture passes the single-worker descriptor and fails
+  the multi-worker one; a per-worker base temp directory passes both of those
+  and fails only the identical-root one; publishing the root at the start of
+  production passes all three and fails only the completeness one. Each names
+  the mutation it alone catches, because each of those three implementations is
+  a plausible reading of "session-scoped, produced once" in the source.
+
+  No literal deploy count appears anywhere in this contract. The measured 77 is
+  a count of invocation SITES across 52 files, not of invocations: a looped or
+  parametrised site may deploy more than once, and the true per-run figure was
+  not established at authoring time because doing so requires reading test
+  source.
+origin_agent: business-analyst
+created: 2026-09-21
+amended_by:
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-09-21
+  note: python-coder, L. Verified at enrichment that the repo has no root conftest.py
+    and no unit_tests/conftest.py, so the registration surface is the load-bearing
+    constraint. Recorded the per-worker multiplication problem (a session fixture
+    runs once per xdist worker) on both this AC and TQ-600b-5. Kept the bound relational
+    and forbade any literal deploy count in the test contract — 77 counts invocation
+    sites, not invocations. criteria untouched.
+- reason: 'Split. This record bundled two surfaces with different consumers: the shared
+    fixture (consumed by TQ-600a-1-i, TQ-600a-1-ii, a-2, a-3, a-4, a-5) and the deploy-count
+    reporting surface (consumed by TQ-600c-1). The reporting surface and the relational
+    bound `reported_deploys <= 1 + unshared_routed` moved to the new TQ-600a-6, because
+    that bound is an assertion over two REPORTED figures and is only auditable from
+    what the run emitted. This record keeps the fixture. criteria REWRITTEN to drop
+    the two reporting clauses and to carry the per-worker conflict the it-po found:
+    a pytest session-scoped fixture runs once per xdist worker, so once TQ-600b-5
+    makes parallel the default the old wording "once per run" would have been satisfied
+    by a per-worker build. The claim is now explicitly first-worker-produces-and-the-
+    rest-wait. Both L3 children stay here: both constrain the fixture, not the figure.
+    delivers_to rewired — the TQ-600c-1 entry moved to TQ-600a-6. NOTE FOR THE NEXT
+    it-po PASS: it_requirements 2, 4 and 5 (count emitted by the run, per-worker multiplication,
+    the relational bound) and test_spec entries 3, 4 and 5 now describe TQ-600a-6''s
+    criteria rather than this record''s, and need re-homing. They were left in place
+    because those fields are it-po-owned.'
+  by: business-analyst
+  at: 2026-09-21
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-09-21
+  note: 'Second pass, acting on the BA''s re-homing note. it_requirements 2 and 5
+    (count emitted by the run; the relational bound) moved verbatim in substance to
+    TQ-600a-6. Requirement 4 was SPLIT rather than moved: the criteria now settle
+    the per-worker question, so the production half stays here as a mechanism constraint
+    (cross-process lock, run-scoped directory derived from the workers'' COMMON base
+    temp dir, no "state N honestly" escape hatch) and the audit half — a figure that
+    distinguishes whole-run from per-worker — went to TQ-600a-6. Requirement 3 was
+    narrowed to the signal this record owns, since the counting is now TQ-600a-6''s.
+    The CLAUDE.md requirement now names TQ-600a-7 instead of a caveat and cites the
+    verified line (CLAUDE.md:416). test_spec entries 3, 4 and 5 moved to TQ-600a-6
+    and were replaced by three descriptors for the rewritten criteria: cross-worker
+    single execution, identical root across workers, and no root published before
+    its layout is complete — each with the mutation it alone catches, because the
+    old contract could not tell "once per run" from "once per worker". Added the missing
+    delivers_to entries for TQ-600a-5 (which already expected from here) and TQ-600a-7.
+    criteria untouched.'
+- action: approved
+  agent: approve_acs
+  date: '2026-09-21'
+superseded_by: null
+covered_by:
+  - TQ-600a-1-i
+  - TQ-600a-1-ii
+implemented_by:
+- tickets/00_inbox/TICKET-20260921-TQ-600a-1.md
+change_target: pipeline
+risk_surface: internal
+notes: |
+  THE MEASURABLE IS A COUNT, NOT A DURATION. Wall clock on this workspace is
+  contaminated — the profiling run shared a WSL host with other agent activity, so
+  a criterion phrased as "the suite is faster" is unfalsifiable here on a bad day
+  and falsely satisfiable on a good one. The number of real package deploys
+  executed in a run is host-load-independent and is the thing the change actually
+  controls. Assert the count.
+
+  WHERE THE COUNT LIVES. The figure itself, the bound it must satisfy, and the
+  obligation to emit it into the run's own output and into the TQ-600c-1 cost
+  record are TQ-600a-6, split out of this record. This one owns the behaviour; that
+  one owns the audit. They fail independently, which is why they are separate: a
+  fixture that deploys once and reports a hardcoded 1 satisfies this record and
+  defeats every use of the figure, and a faithful counter over a per-worker build
+  satisfies that record and defeats this one.
+
+  "ONCE PER RUN" MUST NOT SILENTLY MEAN "ONCE PER WORKER". A pytest session-scoped
+  fixture runs once per xdist worker, not once per run. TQ-600b-5 makes parallel
+  execution the default, so the obvious implementation of this record produces the
+  layout N times at a measured 59.8s each and gives back most of what this L1
+  recovers — while still reading as "session-scoped, produced once" in the source.
+  The resolution stated in the criteria is a lock plus a run-scoped directory shared
+  across workers: the first worker to ask produces, the rest wait. TQ-600a-6's
+  whole-run figure is what makes a regression to a per-worker build visible, because
+  the reported count then rises to the worker count instead of staying at one.
+
+  THE LIMIT IS DELIBERATELY NOT "EVERY TEST SHARES ONE LAYOUT". Collapsing every
+  test onto a single layout is the wrong answer and is ruled out by TQ-600a-2 —
+  see the read-vs-mutate boundary in the parent L1's notes. That is why TQ-600a-6's
+  bound is one plus the tests routed to a copy of their own, not one.

@@ -260,6 +260,24 @@ ENTROPY_HIGH:unit_tests/commit_guardian/test_ge_127c_1_dividing_advice.py:*
 # still shift.
 ENTROPY_HIGH:unit_tests/product_truth/test_uxp_700e_3_i.py:*
 
+# unit_tests/test_plan_feature_pt_phase.py's flagged line is a Python keyword
+# argument passing a module constant into the shared HopDriver -- the same
+# long-identifier false-positive pattern as the entries above, and not reproduced
+# here for the same reason: quoting it would trip the scanner this entry
+# suppresses. Glob, not per-line: the construction sits mid-file and its line
+# number moves whenever a helper is added above it, which is exactly what the
+# 2026-09-21 shared-harness extraction did.
+ENTROPY_HIGH:unit_tests/test_plan_feature_pt_phase.py:*
+
+# INF-700a-1-i's reachability suite. Its TestCase class names spell out the whole
+# behaviour being reached through the real entry point, so they are long CamelCase
+# identifiers -- the same false-positive pattern as the test-class-name entries
+# above, and not reproduced here for the same reason: quoting it would trip the
+# scanner this entry suppresses. Glob, not per-line: these tests copy real trees
+# into a synthetic package root, so setup helpers get added above the classes and
+# the line numbers move.
+ENTROPY_HIGH:unit_tests/build_guards/test_inf_700a_1_i_reachability.py:*
+
 # The known-issues split (2026-09-14) put each issue's id in its filename, its
 # frontmatter title, its description and its H1. A long kebab-case KI id reads to
 # the entropy detector as a high-entropy string, so the same slug trips it three
@@ -276,3 +294,12 @@ ENTROPY_HIGH:unit_tests/product_truth/test_uxp_700e_3_i.py:*
 # key. Until then these two entries stop it blocking the register.
 ENTROPY_HIGH:docs/known-issues/commit-guardian.md:*
 ENTROPY_HIGH:docs/known-issues/testing-quality/open-high-ki-tq-20260831-mutation-probe-lands-in-the-wrong-copy.md:*
+
+# A keyword argument passing a module-level constant of edit-surface relationship
+# names into a helper call -- ordinary code, no credential (not reproduced here for
+# the same reason as the entries above: quoting it would trip the scanner this entry
+# suppresses). The long SCREAMING_SNAKE identifier reads as high entropy. Glob, not
+# per-line: the call sits mid-file and its line number moves whenever anything is
+# added above it. This module was carved out of generate_ticket_from_ac.py when the
+# 4035-line original was split to clear the 400-line size gate.
+ENTROPY_HIGH:scripts/ac_store/_gtfa_files_touched.py:*

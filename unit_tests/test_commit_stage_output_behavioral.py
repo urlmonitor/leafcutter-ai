@@ -39,19 +39,22 @@ import re
 import subprocess
 import textwrap
 import unittest
+from pathlib import Path
 
 from _plan_feature_e2_runner import (
     E2_PLAN_FEATURE_JS,
     extract_js_function,
     run_plan_feature_e2,
 )
+from _plan_feature_gate_harness import granted_workspace_setup_permission
 
-# The E2 runtime file is the sole plan-feature.js consumer surface after
-# foundation cleanup deleted the legacy scripts/workflows/plan-feature.js.
-# The fail-closed coercion tests read this file's source directly and replay
-# the exact coercion block; the hook-safe tests drive the E2 body via
-# run_plan_feature_e2 and inspect the real dispatched commit agent call.
+# Sole plan-feature.js consumer surface (E2). Fail-closed coercion tests read
+# this file's source directly and replay the exact coercion block; hook-safe
+# tests drive the E2 body via run_plan_feature_e2 and inspect the real
+# dispatched commit agent call. Real granted verdict via _plan_feature_gate_harness.
 _PLAN_FEATURE_JS = str(E2_PLAN_FEATURE_JS)
+_WORKTREE_ROOT = Path(__file__).resolve().parent.parent
+_granted_workspace_setup_permission = granted_workspace_setup_permission
 
 
 # ---------------------------------------------------------------------------
@@ -384,11 +387,22 @@ class TestCommitStageOutputHookSafePath(unittest.TestCase):
 
     PLAN_FEATURE_PATH = _PLAN_FEATURE_JS
 
+    # ACD-2100c-1 removed the live-gate answer path from resolveGate(): a gate
+    # is resolved ONLY via a validated, person-attributed args.resume_answer.
+    # This mock's ac-triage response is always route='strategic', so the
+    # pipeline's first mid-gate is always 'gate-po' (product-owner stage) --
+    # _capture_first_commit() below supplies a resume_answer naming that gate
+    # so the run proceeds past it and actually reaches commitStageOutput()'s
+    # dispatch of the commit agent (see templates/skills/plan-feature/SKILL.md
+    # §RS.3 for the channel:"person" provenance rule this answer must satisfy).
+    _GATE_PO_RESUME_ANSWER = {"gate_id": "gate-po", "channel": "person", "action": "approve"}
+
     # Mock that drives a strategic pipeline far enough to reach the first
     # (product-owner) stage commit, and records every commit dispatch.
     _COMMIT_CAPTURE_MOCK = textwrap.dedent("""
         async function mockAgent(call) {
             const agentType = call.agentType || '';
+            const label = call.label || '';
             const instructions = (call.input && call.input.instructions) || '';
             globalThis.__capturedAllCalls.push({ agentType });
 
@@ -402,6 +416,21 @@ class TestCommitStageOutputHookSafePath(unittest.TestCase):
                 // Capture the real dispatched commit call (prompt + agentType).
                 globalThis.__capturedCommitCalls.push({ instructions, agentType });
                 return { status: 'ok', message: 'mock commit ok' };
+            }
+            // ACD-2100c-1: resolveGate() consults the durable pause record via
+            // these agent-mediated read/clear dispatches ONLY after a
+            // channel:"person" resume_answer has already validated -- never to
+            // obtain the decision itself. A real "resumable" record must be
+            // reported here or resolveGate() fails CLOSED to
+            // "nothing_to_resume" and the commit dispatch is never reached.
+            if (label === 'read-pause-record') {
+                return { exists: true, stale: false, record: { run_id: 'test-run', gate_id: 'gate-po' } };
+            }
+            if (label === 'clear-pause-record') {
+                return { ok: true };
+            }
+            if (label === 'clear-pause-record-verify') {
+                return { exists: false, stale: false, record: null };
             }
             if (agentType === 'status-checker') {
                 // Confirm a non-main authoring branch so the fail-closed commit
@@ -422,7 +451,13 @@ class TestCommitStageOutputHookSafePath(unittest.TestCase):
         Returns the dict {instructions, agentType} recorded by the mock for the
         first dispatched commit agent call.
         """
-        _run_result, side = run_plan_feature_e2(self._COMMIT_CAPTURE_MOCK)
+        _run_result, side = run_plan_feature_e2(
+            self._COMMIT_CAPTURE_MOCK,
+            extra_args={
+                "workspace_setup_permission": _granted_workspace_setup_permission(),
+                "resume_answer": self._GATE_PO_RESUME_ANSWER,
+            },
+        )
         commit_calls = side.get("commitCalls", [])
         if not commit_calls:
             self.fail(

@@ -120,11 +120,11 @@ amended_by:
   date: '2026-09-07'
 superseded_by: null
 covered_by:
-- docs/architecture/diagrams/c3-008-ticket-close-paths-sequence.md
+- docs/architecture/diagrams/c3-009-ticket-close-paths-sequence.md
 - unit_tests/test_bo_400e_5_close_path_diagram.py
 implemented_by:
 - tickets/00_inbox/epics/EPIC-WorkIsOnlyEverMarkedFinishedThroughThe/05_TICKET-20260914-BO-400e-5.md
-- docs/architecture/diagrams/c3-008-ticket-close-paths-sequence.md
+- docs/architecture/diagrams/c3-009-ticket-close-paths-sequence.md
 change_target: docs
 risk_surface: internal
 notes: |

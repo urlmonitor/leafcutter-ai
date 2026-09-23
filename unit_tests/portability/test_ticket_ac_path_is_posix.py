@@ -22,7 +22,11 @@ import unittest
 from pathlib import Path
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
-_GENERATOR = _REPO_ROOT / "scripts" / "ac_store" / "generate_ticket_from_ac.py"
+# The construction site, not the module's public face. generate_ticket_from_ac.py
+# was decomposed on 2026-09-14 into a shell plus `_gtfa_*` siblings; main() — and
+# with it the ac_traceability line this test reads — now lives in _gtfa_cli.py.
+# Only the file being read changed; both assertions below are unaltered.
+_GENERATOR = _REPO_ROOT / "scripts" / "ac_store" / "_gtfa_cli.py"
 _BACKSLASH = chr(92)
 
 

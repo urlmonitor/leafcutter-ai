@@ -27,10 +27,18 @@ doc_links:
     relationship: specifies
     status: exists
     relevance: "Defines the explicit waiver as the field that distinguishes 'intentionally no proof' from 'no demand authored yet', and makes it the one thing that suppresses an authored demand."
-  - path: scripts/ac_store/generate_ticket_from_ac.py
+  - path: scripts/ac_store/_gtfa_tests_section.py
     relationship: constrains
     status: exists
-    relevance: "Where the waiver is applied and where the omission reason is written. The recorded reason is the observable: a waived record and a discarded record must never be indistinguishable after the fact."
+    relevance: "Where the waiver is applied: _has_authored_test_spec already returns False on `test_required: false`. The omission reason has to be written here rather than inferred — a waived record and a discarded record must never be indistinguishable after the fact."
+  - path: scripts/ac_store/_gtfa_body.py
+    relationship: constrains
+    status: exists
+    relevance: "_build_ticket_body's proof-section gate consumes the waiver decision and is where the recorded reason reaches the generated work item."
+  - path: scripts/ac_store/_gtfa_agents_inputs.py
+    relationship: constrains
+    status: exists
+    relevance: "_collect_needed_agents — the suppression and the phase list must move together, so a waived record must not leave test-writer or test-runner marked owed here."
   - path: unit_tests/ac_store/test_authored_test_spec_survives_generation.py
     relationship: verifies
     status: exists

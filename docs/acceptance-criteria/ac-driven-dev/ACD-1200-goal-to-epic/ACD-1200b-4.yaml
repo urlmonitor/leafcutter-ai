@@ -38,6 +38,15 @@ doc_links:
   - path: scripts/goal_to_epic.py
     relationship: modifies
     status: exists
+    relevance: "Historical: this is where the gate lived when the AC was implemented. Since the 2026-09-14 decomposition goal_to_epic.py is a CLI facade; the two modules below own the behaviour now, and it_requirements.reference_file_path was retargeted to epic_readiness_gate.py in the same pass."
+  - path: scripts/ac_store/epic_readiness_gate.py
+    relationship: modifies
+    status: exists
+    relevance: "Owns readiness_gate_prompt / _route_answer / _gate_select_approved_ids — the TTY-aware approve / review-all / cancel prompt site named by n_location_rule."
+  - path: scripts/ac_store/epic_cli.py
+    relationship: modifies
+    status: exists
+    relevance: "Declares the --yes and --approved-only flags (see its docstring's ACD-1200b-4 annotation) and forwards them to the gate."
   - path: docs/reference/ac-schema.md
     relationship: describes
     status: exists
@@ -61,8 +70,8 @@ assigned_agent: python-coder
 estimated_complexity: M
 it_requirements:
   config_schema_fragment: null
-  reference_file_path: "scripts/goal_to_epic.py"
-  n_location_rule: "1 (the readiness-gate approve / review-all / cancel prompt site)"
+  reference_file_path: "scripts/ac_store/epic_readiness_gate.py"
+  n_location_rule: "1 (the readiness-gate approve / review-all / cancel prompt site, readiness_gate_prompt / _route_answer). Retargeted from scripts/goal_to_epic.py on 2026-09-14: the decomposition moved the gate into epic_readiness_gate.py and the --yes / --approved-only flag declarations into scripts/ac_store/epic_cli.py; goal_to_epic.py now only re-exports them."
   required_skills:
     - python-coder
   post_write_commands:

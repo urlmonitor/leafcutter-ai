@@ -25,7 +25,9 @@ from __future__ import annotations
 
 import os
 import sys
+import tempfile
 import unittest
+from pathlib import Path
 
 # ---------------------------------------------------------------------------
 # Path setup — make templates/hooks/ importable regardless of working directory.
@@ -40,6 +42,7 @@ from ticket_frontmatter_guard import (
     ALLOWED_RISK_SURFACES,
     _check_change_target,
     _check_risk_surface,
+    _depends_candidates,
 )
 
 
@@ -427,6 +430,22 @@ _GUARDRAIL_YAML_PATH = _os.path.join(
     _REPO_ROOT_FOR_YAML, "config", "guardrail_gates.yaml"
 )
 
+# Top-level sections of guardrail_gates.yaml that are meta-policy blocks rather
+# than per-change_target gate maps, and so are excluded from the vocabulary
+# contract below. Both tests in this class read this ONE set: the list used to
+# be written out inline in each of them, which meant adding a section to one
+# and forgetting the other produced a half-updated contract. INF-700a-1 hit
+# exactly that -- knowledge_routing_wiring was added to the equivalent set in
+# unit_tests/commit_guardian/test_check_ac_schema.py, this file's two copies
+# were missed, and both tests went red in CI having been green on the branch
+# only because that suite had not been run locally.
+_NON_CHANGE_TARGET_SECTIONS = {
+    "flow_change_gates",
+    "documentation_gates",
+    "surgical_removal_guard",
+    "knowledge_routing_wiring",
+}
+
 
 class TestGuardrailYamlVocabularyContract(unittest.TestCase):
     """AC-2: guardrail_gates.yaml vocabulary must match the ADR-017 guard enums.
@@ -453,12 +472,8 @@ class TestGuardrailYamlVocabularyContract(unittest.TestCase):
         is disjoint from the guard enum.
         """
         data = self._load_yaml()
-        # flow_change_gates, documentation_gates, and surgical_removal_guard are
-        # meta-policy sections, not per-change_target gate maps — exclude them from
-        # the vocab contract.
-        _non_target_sections = {"flow_change_gates", "documentation_gates", "surgical_removal_guard"}
         yaml_change_targets = {
-            k for k in data.keys() if k not in _non_target_sections
+            k for k in data.keys() if k not in _NON_CHANGE_TARGET_SECTIONS
         }
         guard_set = set(ALLOWED_CHANGE_TARGETS)
 
@@ -490,7 +505,7 @@ class TestGuardrailYamlVocabularyContract(unittest.TestCase):
         failures: list[str] = []
 
         for change_target, surface_map in data.items():
-            if change_target in {"flow_change_gates", "documentation_gates", "surgical_removal_guard"}:
+            if change_target in _NON_CHANGE_TARGET_SECTIONS:
                 continue
             if not isinstance(surface_map, dict):
                 continue
@@ -712,6 +727,90 @@ class TestEstimatedComplexityBO6301i(unittest.TestCase):
             "Valid values:",
             combined,
             msg="Error must use 'Valid values:' wording (BO-630-1-i).",
+        )
+
+
+# ===========================================================================
+# EPIC-StartingNewWorkTheProperWayAlways
+# _depends_candidates() must accept BOTH legitimate spellings of a
+# depends_on entry: the bare sibling filename (unchanged) and a
+# repo-relative prefixed path of the form
+# tickets/.../<epic-folder>/<filename> (what build-feature.js's
+# toWorktreePath resolves against). Must not fail open (a genuinely
+# dangling reference must still be reported) and must not let a
+# cross-epic prefixed path validate via a same-named sibling.
+# ===========================================================================
+
+
+class TestDependsOnAcceptsBareAndPrefixedForms(unittest.TestCase):
+    """_depends_candidates() dual-spelling support for depends_on entries."""
+
+    def setUp(self):
+        self._tmpdir = tempfile.TemporaryDirectory()
+        self.addCleanup(self._tmpdir.cleanup)
+        root = Path(self._tmpdir.name)
+        self.epic_dir = root / "tickets" / "00_inbox" / "epics" / "EPIC-Foo"
+        self.epic_dir.mkdir(parents=True)
+        self.other_epic_dir = root / "tickets" / "00_inbox" / "epics" / "EPIC-Other"
+        self.other_epic_dir.mkdir(parents=True)
+        self.ticket_path = self.epic_dir / "07_TICKET-consumer.md"
+        self.ticket_path.write_text("---\n---\n", encoding="utf-8")
+
+    def test_bare_sibling_filename_still_resolves(self):
+        """Existing bare-filename spelling must keep resolving unchanged."""
+        dep = self.epic_dir / "06_TICKET-dep.md"
+        dep.write_text("---\n---\n", encoding="utf-8")
+        candidates = _depends_candidates("06_TICKET-dep.md", self.ticket_path)
+        self.assertTrue(
+            any(c.exists() for c in candidates),
+            msg=f"bare sibling filename did not resolve; candidates={candidates}",
+        )
+
+    def test_prefixed_same_epic_path_now_resolves(self):
+        """New repo-relative prefixed spelling must resolve to the same-epic sibling."""
+        dep = self.epic_dir / "06_TICKET-dep.md"
+        dep.write_text("---\n---\n", encoding="utf-8")
+        entry = "tickets/00_inbox/epics/EPIC-Foo/06_TICKET-dep.md"
+        candidates = _depends_candidates(entry, self.ticket_path)
+        self.assertTrue(
+            any(c.exists() for c in candidates),
+            msg=f"prefixed same-epic path did not resolve; candidates={candidates}",
+        )
+
+    def test_genuinely_missing_file_stays_invalid_bare_form(self):
+        """A dangling bare-filename reference must never resolve (no fail-open)."""
+        candidates = _depends_candidates("99_TICKET-missing.md", self.ticket_path)
+        self.assertFalse(
+            any(c.exists() for c in candidates),
+            msg=f"dangling bare filename unexpectedly resolved; candidates={candidates}",
+        )
+
+    def test_genuinely_missing_file_stays_invalid_prefixed_form(self):
+        """A dangling prefixed reference must never resolve (no fail-open)."""
+        entry = "tickets/00_inbox/epics/EPIC-Foo/99_TICKET-missing.md"
+        candidates = _depends_candidates(entry, self.ticket_path)
+        self.assertFalse(
+            any(c.exists() for c in candidates),
+            msg=f"dangling prefixed path unexpectedly resolved; candidates={candidates}",
+        )
+
+    def test_cross_epic_prefixed_path_does_not_validate_via_samename_sibling(self):
+        """A prefixed path naming a DIFFERENT epic must not validate merely because
+        a same-named file happens to sit in this ticket's own epic folder — a
+        naive basename-only resolution would accept this; the directory-name
+        check must reject it.
+        """
+        samename = self.epic_dir / "99_TICKET-foo.md"
+        samename.write_text("---\n---\n", encoding="utf-8")
+        entry = "tickets/00_inbox/epics/EPIC-Other/99_TICKET-foo.md"
+        candidates = _depends_candidates(entry, self.ticket_path)
+        self.assertFalse(
+            any(c.exists() for c in candidates),
+            msg=(
+                "cross-epic prefixed path incorrectly validated via a "
+                f"same-named sibling in the ticket's own epic folder; "
+                f"candidates={candidates}"
+            ),
         )
 
 

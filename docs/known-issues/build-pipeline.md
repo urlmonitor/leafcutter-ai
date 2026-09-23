@@ -101,7 +101,7 @@ Severity in the **filename** is a three-level index bucket (`blocker` / `high` /
 
 Fixed issues move to [`build-pipeline/resolved/`](build-pipeline/resolved/) and are no longer listed as open. They are kept, not deleted.
 
-**Open: 45** (1 blocker, 23 high, 21 low) · **Resolved: 8**
+**Open: 47** (1 blocker, 24 high, 22 low) · **Resolved: 8**
 
 ## Open
 
@@ -131,6 +131,7 @@ Fixed issues move to [`build-pipeline/resolved/`](build-pipeline/resolved/) and 
 | `high` | KI-BP-20260907-1620 — The doc-index phase derives the index from the target tree and writes it into the package tree, so every self-hosting build truncates `docs/INDEX.md` by 75% | [open-high-ki-bp-20260907-1620.md](build-pipeline/open-high-ki-bp-20260907-1620.md) |
 | `high` | KI-BP-20260907-bootstrap-swallows-build-failure — `_bootstrap()` catches `build.py`'s own `CalledProcessError` and prints a WARNING instead of failing, so a now-loud build failure still ships a half-deployed worktree | [open-high-ki-bp-20260907-bootstrap-swallows-build-failure.md](build-pipeline/open-high-ki-bp-20260907-bootstrap-swallows-build-failure.md) |
 | `high` | KI-BP-20260907-no-gitignore-for-consumers — `build.py` deploys no `.gitignore` to consumers, so a deployed module's compiled bytecode gets tracked and every import re-fails the next commit | [open-high-ki-bp-20260907-no-gitignore-for-consumers.md](build-pipeline/open-high-ki-bp-20260907-no-gitignore-for-consumers.md) |
+| `high` | KI-BP-20260921-1630 — the clean-mode provenance ledger can only ever learn about artifacts the build still produces, so every orphan that predates it is permanently unremovable | [open-high-ki-bp-20260921-1630.md](build-pipeline/open-high-ki-bp-20260921-1630.md) |
 | `low` | KI-BP-002 — Generated agent cards are tracked but never regenerated, so every build dirties six of them | [open-low-ki-bp-002.md](build-pipeline/open-low-ki-bp-002.md) |
 | `low` | KI-BP-010 — Clean-mode's `workflows` entry has a doubled path segment, so it has never run and a real orphan survives every `--clean` | [open-low-ki-bp-010.md](build-pipeline/open-low-ki-bp-010.md) |
 | `low` | KI-BP-013 — The mypy gate checks only changed files, so untouched debt is invisible until an unrelated edit drops a wall of it on whoever touched the file | [open-low-ki-bp-013.md](build-pipeline/open-low-ki-bp-013.md) |
@@ -152,6 +153,7 @@ Fixed issues move to [`build-pipeline/resolved/`](build-pipeline/resolved/) and 
 | `low` | KI-BP-20260909-injector-falls-back-to-a-literal-400 — the build's file-size injector swallows every read failure and tells every agent 400, whatever the config actually declares | [open-low-ki-bp-20260909-injector-falls-back-to-a-literal-400.md](build-pipeline/open-low-ki-bp-20260909-injector-falls-back-to-a-literal-400.md) |
 | `low` | KI-BP-20260909-standards-declare-no-applicability — only one of four configured guardrails says which kinds of file it governs; for the rest it lives in the script's filename | [open-low-ki-bp-20260909-standards-declare-no-applicability.md](build-pipeline/open-low-ki-bp-20260909-standards-declare-no-applicability.md) |
 | `low` | KI-BP-20260914-build-crashes-on-a-cp1252-stdout — build.py dies with UnicodeEncodeError when its output is piped on Windows, so every test that runs the build as a subprocess fails locally | [open-low-ki-bp-20260914-build-crashes-on-a-cp1252-stdout.md](build-pipeline/open-low-ki-bp-20260914-build-crashes-on-a-cp1252-stdout.md) |
+| `low` | KI-BP-20260914-1415 — a test asserts a literal string appears exactly twice in `build.py`'s source text, so relocating either function fails a fixture premise far from the cause | [open-low-ki-bp-20260914-1415.md](build-pipeline/open-low-ki-bp-20260914-1415.md) |
 
 ## Resolved
 
