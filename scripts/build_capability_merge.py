@@ -38,11 +38,23 @@ ARCHITECTURE: ``resolve_veto_or_merge`` is ``install_shims``' (build_helpers.py)
     ``detect_capability_collisions`` (BP-1500g-2-i's own named contract --
     a plain set intersection over the shipped names and the names this run
     cannot attribute to itself).
+
+    ``detect_skill_local_changes`` and ``propagate_capability_winner`` back
+    ``build_phases_agents_skills.build_skills``'s OWN direct-overwrite write
+    path -- a second caller with no container to merge into at all (every
+    platform surface is written as loose files, never through a shared
+    directory), so it needs its own pair of primitives rather than reusing
+    ``merge_capability_items``. Both callers converge on the same fix
+    (BP-1500g-2-i design review, 2026-09-23): report a contested name
+    EXACTLY ONCE (defect 1), and make the declared winner true of EVERY
+    active platform surface, not only the one the divergence was detected
+    on (defects 2 and 3).
 """
 
 from __future__ import annotations
 
 import shutil
+from collections.abc import Callable
 from pathlib import Path
 
 from build_ownership import (
@@ -104,25 +116,99 @@ def _copy_item(source: Path, target: Path) -> None:
         shutil.copy2(source, target)
 
 
-def report_capability_collision(name: str) -> None:
+def report_capability_collision(name: str, winner: str) -> None:
     """Print BP-1500g-2-i's prescribed collision line for *name*.
 
-    The EXACT line format ``unit_tests/portability/_bp1500g1_harness.
+    The EXACT line format ``unit_tests/portability/_bp1500g2_harness.
     parse_stated_collision_winner`` parses back -- any drift here silently
     breaks that parser, which is the observability half of this AC's own
     contract. Printed via plain ``print()``, never through build_colors'
     ``warn()``/``info()``, whose prefixes fall outside this line's own
-    anchored, line-start-to-line-end format. This module's own policy: the
-    adopter's version always wins a contested name (BP-1500g-2-i's first
-    Then clause is unconditional -- "not overwritten, not emptied, not
-    moved and not removed" -- and the AC does not require the package's
-    version to win instead), so every caller of this function reports
-    ``"adopter"``.
+    anchored, line-start-to-line-end format.
+
+    *winner* is supplied by the CALLER, never decided here: which side wins
+    a contested name is settled by ADR-041 §5 ("A name claimed by both sides
+    resolves to the adopter's item", ``docs/architecture/adrs/
+    ADR-041-recomputed-attribution-at-item-granularity.md``), served by
+    ``docs/acceptance-criteria/build_pipeline/BP-1500-honest-builds/
+    BP-1500g-2-i.yaml``. It is not a policy this helper is entitled to assume
+    on its own, and it is not restated here -- a convention written down in
+    two places drifts. Every caller in this codebase today passes
+    ``"adopter"``,
+    because BP-1500g-2-i's first Then clause makes that convention
+    unconditional ("not overwritten, not emptied, not moved and not
+    removed") -- but this function itself carries no opinion and reports
+    exactly what the resolution site determined, so the line can never
+    disagree with the caller that did the actual resolving.
 
     Args:
         name: The contested capability name.
+        winner: Which version the finished project resolves *name* to --
+            ``"adopter"`` or ``"package"`` -- matching
+            `_bp1500g2_harness._COLLISION_LINE_RE`'s ``winner`` group.
     """
-    print(f"collision: {name} -- resolves to adopter")
+    print(f"collision: {name} -- resolves to {winner}")
+
+
+def _sibling_capability_dir(output_root: Path, output_rel: str) -> Path | None:
+    """The antigravity-mirrored physical directory for *output_rel*, if any.
+
+    BP-1500g-2-i defect 3: the merge path only ever touched the
+    ``.claude``-side container, leaving the antigravity mirror holding the
+    package's own bytes while the run declared "resolves to adopter" --
+    dishonest on that surface. ``build_agents``/``build_skills`` both
+    already write a second, physically distinct copy of every deploy
+    family at ``<output_root>/gemini/<output_rel>`` when the antigravity
+    platform is active; this reuses that SAME convention rather than
+    re-deriving platform activity from config here, so a platform this run
+    never wrote to is a directory that simply does not exist and this
+    returns None -- no propagation attempted, no error.
+
+    Excluded when *output_rel* already names the ``gemini`` family itself
+    (the ``.gemini`` shim_map entry): mirroring ``gemini`` under
+    ``gemini/gemini`` would be nonsense, not a second surface.
+
+    Args:
+        output_root: The consolidated output directory.
+        output_rel: The output-root-relative family being merged (e.g.
+            ``"skills"``, ``"agents"``).
+
+    Returns:
+        The sibling directory if it exists on disk, else None.
+    """
+    if output_rel == "gemini" or output_rel.startswith("gemini/"):
+        return None
+    sibling = output_root / "gemini" / output_rel
+    return sibling if sibling.is_dir() else None
+
+
+def _propagate_winner_to_siblings(
+    canonical_path: Path,
+    name: str,
+    output_root: Path | None,
+    output_rel: str,
+    dry_run: bool,
+) -> None:
+    """Copy *canonical_path*'s already-preserved adopter item, by name, into
+    every OTHER active surface that mirrors this deploy family -- so the
+    declared winner (always "adopter": see `report_capability_collision`)
+    is true of every active surface a real build leaves behind, not only
+    the one this container-level merge itself covers (BP-1500g-2-i defect
+    3). *canonical_path* itself (the adopter's real, already-preserved
+    item) is never read as a source of truth to be modified, only copied
+    FROM -- this function writes exclusively into the sibling directory.
+
+    A no-op when *output_root* is None (callers that do not have one, or
+    do not want propagation) or when no sibling directory exists (see
+    `_sibling_capability_dir`) or under ``dry_run`` (writes nothing, same
+    as every other branch of this module under dry-run).
+    """
+    if output_root is None or dry_run:
+        return
+    sibling_dir = _sibling_capability_dir(output_root, output_rel)
+    if sibling_dir is None:
+        return
+    _copy_item(canonical_path / name, sibling_dir / name)
 
 
 def merge_capability_items(
@@ -131,6 +217,7 @@ def merge_capability_items(
     canonical_rel: str,
     output_rel: str,
     dry_run: bool,
+    output_root: Path | None = None,
 ) -> dict[str, str]:
     """Item-granular merge of *source_path*'s children into *canonical_path*.
 
@@ -160,6 +247,16 @@ def merge_capability_items(
             through unchanged into the returned result dict so its shape
             matches every other ``install_shims`` entry.
         dry_run: When True, reports intent but writes nothing.
+        output_root: The consolidated output directory, when known --
+            BP-1500g-2-i defect 3: without it, a colliding name is only
+            ever preserved on *canonical_path*'s own surface, leaving any
+            other active surface (e.g. the antigravity mirror under
+            ``<output_root>/gemini/<output_rel>``) holding the package's
+            bytes while this run still declares "resolves to adopter".
+            Passing it lets `_propagate_winner_to_siblings` make the
+            adopter's item the one every active surface resolves to, not
+            only this one. None (the default) disables propagation, e.g.
+            for a caller with no such directory to reason about.
 
     Returns:
         A ``{"canonical", "target", "method"}`` result dict matching every
@@ -179,7 +276,8 @@ def merge_capability_items(
         installed.append(name)
 
     for name in sorted(collisions):
-        report_capability_collision(name)
+        report_capability_collision(name, "adopter")
+        _propagate_winner_to_siblings(canonical_path, name, output_root, output_rel, dry_run)
 
     if installed or collisions:
         label = "would merge" if dry_run else "merged"
@@ -206,6 +304,7 @@ def resolve_veto_or_merge(
     canonical_rel: str,
     output_rel: str,
     dry_run: bool,
+    output_root: Path | None = None,
 ) -> dict[str, str] | None:
     """install_shims' single call site: veto, merge, or proceed.
 
@@ -228,6 +327,10 @@ def resolve_veto_or_merge(
         canonical_rel: *canonical_path*'s target-root-relative string.
         output_rel: *source_path*'s output-root-relative string.
         dry_run: Forwarded to ``merge_capability_items``.
+        output_root: Forwarded to ``merge_capability_items`` for its
+            cross-surface collision propagation (BP-1500g-2-i defect 3).
+            None when the caller has no such directory (e.g. tests
+            exercising the veto in isolation).
 
     Returns:
         None when the caller should proceed with its normal shim
@@ -237,13 +340,129 @@ def resolve_veto_or_merge(
     if veto is None:
         return None
     if canonical_path.is_dir() and not canonical_path.is_symlink():
-        return merge_capability_items(canonical_path, source_path, canonical_rel, output_rel, dry_run)
+        return merge_capability_items(
+            canonical_path, source_path, canonical_rel, output_rel, dry_run, output_root=output_root
+        )
     return veto
+
+
+def detect_skill_local_changes(
+    rels: list[Path],
+    active_output_dirs: dict[str, Path],
+    target_locally_changed: Callable[[Path], bool],
+) -> dict[Path, tuple[str, Path]]:
+    """For each of *rels*, the first ACTIVE platform (dict iteration order)
+    whose own physical output already diverged from the previous install.
+
+    Backs ``build_phases_agents_skills.build_skills``'s direct-overwrite
+    write path -- there is no shared container to merge into there (every
+    platform writes its own loose files at its own physical location), so
+    BP-1500g-2-i defect 2's per-surface divergence lookup is generalised
+    here rather than folded into ``merge_capability_items``, which needs a
+    real directory to operate on.
+
+    Args:
+        rels: The deploy-family-relative paths to check (e.g. one skill's
+            own deploy files, relative to its template root).
+        active_output_dirs: ``{platform: output_dir}`` for every ACTIVE
+            platform this deploy family writes to (already resolved, e.g.
+            ``{"claude": <output_root>/"skills", "antigravity":
+            <output_root>/"gemini/skills"}``).
+        target_locally_changed: The caller's own divergence predicate
+            (``build_phases_local_change.target_locally_changed``),
+            injected rather than imported directly here to avoid a
+            circular import between this module and the deploy-phase
+            modules that already import it.
+
+    Returns:
+        ``{rel: (platform, output_path)}`` for every rel where at least
+        one active surface diverged -- the platform named is the FIRST one
+        found, i.e. the adopter's own authoritative copy of that file. A
+        rel absent from the returned dict diverged on no active surface.
+    """
+    divergent: dict[Path, tuple[str, Path]] = {}
+    for rel in rels:
+        for platform, output_dir in active_output_dirs.items():
+            output_path = output_dir / rel
+            if target_locally_changed(output_path):
+                divergent[rel] = (platform, output_path)
+                break
+    return divergent
+
+
+def propagate_capability_winner(
+    name: str,
+    divergence: dict[Path, tuple[str, Path]],
+    active_output_dirs: dict[str, Path],
+    dry_run: bool,
+) -> int:
+    """Report *name* EXACTLY ONCE (BP-1500g-2-i defect 1 -- the caller
+    invokes this once per contested skill, never once per (file, platform)
+    pair) and copy every diverged file's adopter bytes into every OTHER
+    active surface's own physical copy (defect 2), so the declared winner
+    -- always ``"adopter"``, per the settled ownership convention
+    `report_capability_collision` cites -- is true of every active
+    surface, not only the one the divergence happened to be detected on.
+    The file's own originating surface (``divergence``'s recorded
+    platform) is never read as a write target: this function only ever
+    writes into a DIFFERENT platform's copy.
+
+    Args:
+        name: The contested capability name (reported once).
+        divergence: `detect_skill_local_changes`'s own return value for
+            this capability's deploy files.
+        active_output_dirs: The same mapping passed to
+            `detect_skill_local_changes`.
+        dry_run: When True, reports intent but copies nothing.
+
+    Returns:
+        The number of files actually copied (0 under ``dry_run``).
+    """
+    report_capability_collision(name, "adopter")
+    if dry_run:
+        return 0
+    copied = 0
+    for rel, (adopter_platform, adopter_path) in divergence.items():
+        for platform, output_dir in active_output_dirs.items():
+            if platform == adopter_platform:
+                continue
+            _copy_item(adopter_path, output_dir / rel)
+            copied += 1
+    return copied
 
 
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-09-23 [python-coder/BP-1500g-2-i design-review defect fixes]:
+#   Fixed three confirmed defects against BP-1500g-2-i's own failing tests.
+#   DEFECT 1 (duplicate declarations): `build_skills()`'s per-deploy-file,
+#   per-platform loop used to call `report_capability_collision` once per
+#   (file, platform) pair that diverged, so a multi-file skill printed the
+#   same collision line N times. Fixed by moving detection to a single
+#   pre-pass (`detect_skill_local_changes`) and reporting once per
+#   contested NAME (`propagate_capability_winner`), never once per file.
+#   DEFECT 2 (false declaration on a second surface): `platform_dirs` maps
+#   `claude` and `antigravity` to two PHYSICALLY DISTINCT output
+#   directories (`skills` vs `gemini/skills`); an adopter editing only the
+#   `.claude/skills` copy left the `antigravity` copy untouched and
+#   overwritable, while the run still declared "resolves to adopter"
+#   unconditionally -- true on one surface, false on the other. Fixed by
+#   making the settled convention ("adopter wins a contested name") hold on
+#   EVERY active surface: once ANY surface diverges, that surface's bytes
+#   are copied into every OTHER active surface for the same relative file
+#   (`propagate_capability_winner`), never into the originating surface.
+#   DEFECT 3 (merge path, same bug): `merge_capability_items` only ever
+#   touched the `.claude`-side canonical directory; a real-container
+#   collision left the antigravity mirror holding the package's own bytes.
+#   Fixed the same way, via `_propagate_winner_to_siblings`, reusing the
+#   `<output_root>/gemini/<output_rel>` convention `build_agents`/
+#   `build_skills` already establish rather than re-deriving platform
+#   activity from config.
+#   `report_capability_collision` now takes an explicit `winner` parameter
+#   instead of hardcoding it in an f-string, and its docstring cites the
+#   AC/ADR record for the ownership convention rather than stating it as
+#   this module's own policy. (#BP-1500g-2-i)
 # - 2026-09-23 [python-coder/BP-1500g-2, BP-1500g-2-i]: New module. See its
 #   own docstring for the full design account. Item-granular merge
 #   (ADR-041 §2) replaces install_shims' previous all-or-nothing container

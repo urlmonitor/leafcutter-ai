@@ -1471,9 +1471,8 @@ def install_shims(
             continue
 
         if canonical_path.exists() or canonical_path.is_symlink():
-            # BP-1500g-1/BP-1500g-2: veto, merge, or proceed -- see
-            # build_capability_merge.resolve_veto_or_merge's own docstring.
-            outcome = resolve_veto_or_merge(canonical_path, source_path, strategy, canonical_rel, output_rel, dry_run)
+            # BP-1500g-1/BP-1500g-2/BP-1500g-2-i: veto, merge, or proceed -- output_root is threaded through so a real-container merge can also fix up the antigravity mirror; see build_capability_merge.resolve_veto_or_merge's own docstring.
+            outcome = resolve_veto_or_merge(canonical_path, source_path, strategy, canonical_rel, output_rel, dry_run, output_root=output_root)
             if outcome is not None:
                 results.append(outcome)
                 continue
@@ -1573,7 +1572,7 @@ def install_shims(
 # DECISION HISTORY
 # ====================================================================
 # - 2026-09-14 [python-coder]: ADR-041 fixes -- see build_ownership.py. (#BP-1500g-1)
-# - 2026-09-23 [python-coder]: BP-1500g-2/BP-1500g-2-i fixes -- install_shims' directory-shim loop now routes through build_capability_merge.resolve_veto_or_merge; see that module and build_ownership.py for the full account. (#BP-1500g-2)
+# - 2026-09-23 [python-coder]: BP-1500g-2/BP-1500g-2-i fixes -- install_shims' directory-shim loop now routes through build_capability_merge.resolve_veto_or_merge, now also passed output_root so a real-container merge collision can fix up the antigravity mirror too (BP-1500g-2-i defect 3); see that module and build_ownership.py for the full account. (#BP-1500g-2-i)
 # - 2026-08-26 [python-coder/EPIC-BuildPipelinePhantomRemediation, adversarial
 #   review round 2, B-1(b)]: Every per-file existence gate this round added to
 #   _compute_output_mappings() (phase_mappings, skills, direct-output
