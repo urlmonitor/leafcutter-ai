@@ -33,4 +33,29 @@ related_docs:
 
 **Definition of done.** All 49 files remain committable and editable; a NEW function over 15, or an existing one made worse, is refused; the gate is registered. Prove the second clause with a mutation test, not a grep.
 
+**Re-verified 2026-09-23: STILL TRUE — unchanged in mechanism, kept open.** `check-complexity`
+is still absent from `hooks_manifest.hooks` and still carried only in the `declared_non_gates`
+catalogue:
+
+```
+$ grep -n '"id": "check-complexity"' templates/scripts/commit_guardian/commit_guardian.json
+(no match)
+
+$ python3 templates/scripts/commit_guardian/check_hook_trigger_reachability.py   (run from repo root)
+DECLARED-NON-GATE: check_complexity.py ground=BP-100n-4 correction: FUNCTIONAL, not broken --
+  ... It is withheld from registration solely because this repository currently carries 65
+  functions over the complexity.max_score threshold (15) ...
+```
+
+Git history shows the gate was briefly registered (commit `89e8cb33`, "13 registered as real
+gates", 2026-09-15) and then walked back to withheld (`be557d10`, "eleven gates registered and
+two withheld for different reasons") — the ratchet-shape gap this entry describes was the
+reason it came back out. `unit_tests/commit_guardian/test_hook_registration_inventory.py`'s
+`UNREGISTERED_BASELINE` still lists `check_complexity.py` today, with a comment citing "79
+over-limit functions across 50 files at max_score 15" — the population has grown since this
+entry's 49/915, not shrunk, and no per-file or per-function ratchet (option (a) or (b) from
+this entry's own "Ratchet shape" section) has been implemented. `main()` still recomputes
+absolute scores with no `HEAD` comparison anywhere in `check_complexity.py`. Mechanism
+confirmed present; kept open.
+
 ---

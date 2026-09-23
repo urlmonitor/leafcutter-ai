@@ -150,4 +150,30 @@ the deployed tree does not correspond to any revision. The fixes are complementa
 overlapping — BP-900g-8/9 derive the deploy closure and fail closed; a source-revision stamp on
 each deployed artifact makes provenance checkable.
 
+**Re-verified 2026-09-23: STILL TRUE (as the entry itself already states) — Finding 2 remains
+open, kept open at its already-downgraded medium severity.** This entry pre-emptively
+downgraded itself to medium on 2026-09-01 because Findings 1 and 3 were fixed and merged;
+Finding 2 ("the deploy set is hand-listed in ~26 places and derived in none") is the part this
+re-verification checked, and it is unchanged:
+
+```
+$ grep -n "extract_compiled_script_path_refs" scripts/*.py
+build_propagation_audit.py:21   (docstring cross-reference only)
+build_referential_integrity.py:34,333,671   (definition + docstring, no caller)
+# no call site in build.py or anywhere else — still zero production callers
+
+$ grep -n "AGENT_SUPPORT_SCRIPT_DIRS\|AGENT_SUPPORT_SCRIPT_FILES" scripts/build.py
+58,59: import                       762: for dir_name in AGENT_SUPPORT_SCRIPT_DIRS:
+770: for file_name in AGENT_SUPPORT_SCRIPT_FILES:
+# still hand-maintained tuples, still consumed by iteration rather than derived from a scan
+```
+
+`AC_STORE_DEPLOY_MAP` itself is also still a hand-written tuple (`build_phases_ac_store.py:64`)
+— separately, per KI-ACS-007's re-verification today, three new entries were added to it
+(`_component_migration_map.py`, `_ac_components.py`, `validate_ac_schema.py`), which is exactly
+the kind of hand-maintenance-by-addition this entry's Finding 2 describes as the ongoing cost,
+not a derivation. `extract_compiled_script_path_refs()` — the function that would verify the
+*deployed* tree — still has no production call site. Nothing in the repo suggests Finding 2 has
+progressed since this entry's own 2026-09-01 assessment; kept open, medium, as already recorded.
+
 ---

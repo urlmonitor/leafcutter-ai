@@ -146,4 +146,32 @@ authoring time.
 **Pattern:** `docs/reference/false-green-mechanisms.md` → M5 (a validator that cannot run
 is indistinguishable from one that passes).
 
+**Re-verified 2026-09-23: STILL TRUE — core defect unchanged, one remediation item done, kept
+open.** The headline claim — `components` required and hand-authored while the package ships
+its own deriver — is unchanged in the current schema:
+
+```
+$ grep -n '"required"' -A6 config/ac_store_schema.json | head -8
+    "required": [ "id", "title", "component", "components", "status", "criteria" ]
+
+$ sed -n '541,594p' config/ac_store_schema.json
+    "components": { ... "type": "array", "minItems": 1, "items": { "enum": [
+        "ac_driven_dev", "ac_store", ... 42 hand-listed ids ... "worktree_manager" ] } }
+```
+
+`components` is still `required` and the schema `enum` is still a hand-maintained,
+42(+)-entry literal transcription of `docs/components.json`, not generated from it —
+the "third copy" this entry's second occurrence flagged is unchanged. `MIGRATION_MAP` in
+`scripts/ac_store/_component_migration_map.py` still holds exactly 13 entries and still
+omits `code-review` → `review_system`, the entry's own cited gap.
+
+One of the three "Fix direction" items is genuinely done: `_component_migration_map.py`,
+`_ac_components.py`, and `validate_ac_schema.py` are now all present in
+`AC_STORE_DEPLOY_MAP` (`scripts/build_phases_ac_store.py:67,153,162` — confirmed against the
+current file), closing the specific deploy-manifest gap (item 3 / the KI-BP-006 trigger) that
+made 972-of-973 ACs invalid in a consumer install. That is real progress but is explicitly not
+the entry's core complaint: items 1 (`components` optional, defaulting to the deriver) and 2
+(reconcile the two vocabularies) are both still undone, so a hand-authored, separately-spelled,
+required field remains on every AC record. Mechanism confirmed present; kept open.
+
 ---

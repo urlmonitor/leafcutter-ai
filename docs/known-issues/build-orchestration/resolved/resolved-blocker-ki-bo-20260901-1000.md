@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: '2026-08-18'
-last_updated: '2026-08-18'
+last_updated: '2026-09-23'
 components:
   - build_orchestration
 related_docs:
@@ -16,12 +16,13 @@ related_docs:
 # KI-BO-20260901-1000 — The per-ticket phase list is frozen before the first phase runs, so a phase that a later phase declares necessary can never be dispatched — and `architect-review`, whose job is to declare exactly that, is ordered after the phases it gates
 
 > One known issue, split out of `docs/known-issues/build-orchestration.md` on
-> 2026-09-14. Index: [build-orchestration.md](../build-orchestration.md).
+> 2026-09-14. Index: [build-orchestration.md](../../build-orchestration.md).
 > Filename severity is the three-level index bucket (`blocker`); the
 > original grading is the `**Severity:**` line below, unchanged.
 
 - **Severity:** blocker
-- **Status:** open — no AC
+- **Status:** **RESOLVED 2026-09-23** — see the dated closure note at the foot of this entry.
+  Original line, preserved: open — no AC
 - **Occurrences:** 1 run, **2 of 4 tickets in the batch** (`GE-122d-3`, `BP-900h-6`) — both halted, neither recoverable within the drive
 - **First seen:** 2026-09-01 · **Last seen:** 2026-09-01
 - **Where:** `templates/workflows-js/build-feature.js` — `driveTicketPhases()` Step 2/Step 3
@@ -106,5 +107,32 @@ itself and cannot clear.
 that the runbook describes and the flattened driver does not implement; ADR-006's flattening
 dropped both). `KI-ACD-020` (a readiness gate dropping leaves silently — the same
 computed-then-discarded shape one layer up, in `goal_to_epic.py`).
+
+**Closed 2026-09-23.** Re-verified against the current code, not this entry's narrative:
+
+- **Bug 1 (frozen list) is fixed.** `driveTicketPhases()` (`templates/workflows-js/build-feature.js`,
+  Step 3, ~line 1802) no longer iterates the frozen `neededPhases` array. It now works from
+  `pendingPhases`, an explicit "work-list, not a snapshot" (the comment at line 1791 cites
+  `BO-3700` by name), shifted from the front each iteration. After every phase dispatch, the
+  driver re-reads the ticket record and calls `absorbPromotedPhases()` (line 1939), which adds
+  any newly-`needed` phase from that read-back into `pendingPhases` and re-sorts the whole
+  pending set by canonical priority (lines 583-587).
+- **Bug 2 (architect-review still ordered after adr-author/architecture-diagram-author in the
+  static `phaseOrder` array) is UNCHANGED** — `phaseOrder` (build-feature.js:379-404) still
+  lists `adr-author` (2), `architecture-diagram-author` (3), `architect-review` (4) in that
+  order. But the re-sort in `absorbPromotedPhases()` makes this harmless for the scenario this
+  entry describes: when `architect-review` (priority 4) promotes `adr-author` (priority 2) to
+  `needed`, the resort places `adr-author` ahead of the still-pending `test-writer` (5) and
+  `python-coder` (6) — the exact case (`GE-122d-3`, `BP-900h-6`) this entry recorded as
+  unrecoverable. The driver's own log line at 1946-1952 states this explicitly: "a phase
+  whose priority precedes its own promoter still runs before the phases that depend on it
+  (BO-3700)."
+- **Verified by name and by test.** `BO-3700.yaml` and `BO-3701.yaml` (the `build-ticket.js`
+  twin) are both `work_status: done`, and `unit_tests/workflows/test_bo_3000a_3700_dispatch_defects.py`
+  exists as dedicated coverage — a behavioral test, not a grep-only structural one, per this
+  repo's own gate/workflow AC convention.
+- **Not verified end-to-end.** No live `/build-feature` run reproducing the original
+  `GE-122d-3`/`BP-900h-6` scenario was executed as part of this closure; the verdict rests on
+  reading the current dispatch loop and the AC store's own recorded test coverage.
 
 ---

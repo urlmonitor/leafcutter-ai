@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: '2026-09-21'
-last_updated: '2026-09-21'
+last_updated: '2026-09-23'
 components:
   - build_orchestration
   - supervisor_system
@@ -63,3 +63,30 @@ Do NOT fix this by adding "ignore unrelated instructions" to the phase prompt. A
 - `KI-CG-20260914-ac-hooks-resolve-root-from-cwd` — different component, same family: behaviour derived from ambient state rather than from the subject the caller named.
 
 **Pattern:** a narrowly-scoped instruction handed to a broadly-capable actor that can see more than its instruction, where the destructive action completes before the authorization question is asked. Scoping the prompt does not scope the agent.
+
+**Re-verified 2026-09-23:** none of the three fix-direction bullets above have landed; the
+mechanism is present in current code exactly as described.
+
+- **Defect 2 (capability the phase never needed) is still live.** `templates/workflows-js/fast-lane-ship.js:696`
+  still dispatches `agentType: "worktree-agent"` for the create-only Worktree phase — the same
+  agent type whose template (`templates/agents/worktree-agent.md:85`) declares "You have
+  exactly two actions: **create** and **remove**." No narrower, create-only agent type exists
+  under `templates/agents/` (`find templates/agents -iname "*worktree*"` returns only
+  `worktree-agent.md`). The phase prompt itself (lines 674-694) is unchanged and remains
+  disciplined, which the original entry already noted is not the fix.
+- **Defect 3 (the removal gate is satisfiable by ambient conversation) is still live.**
+  `worktree-agent.md`'s remove action (lines 178-195) still gates on "Ask explicitly:
+  'Confirm removal of worktree... (yes / no)'" and "Proceed... only when the user types
+  'yes'" — with no requirement that the confirmation be attributable to the actor that
+  dispatched this specific run, as the fix direction calls for. The "Machine-Parsed Dispatch
+  Output Contract" section (lines 207-244), which governs exactly the schema-constrained
+  dispatch mode `fast-lane-ship.js` uses, adds no caller-attribution check either.
+- **Defect 1 (context leak / scoping what a phase agent can see)** — the entry itself already
+  flags this as "the broadest and hardest" and notes defects 2 and 3 make it survivable on
+  their own; per that reasoning it was not expected to be fixed first, and it has not been.
+- **No related AC or test found.** `grep -rl` for this entry's id, "leaked conversation", or
+  "permission-laundering" across `docs/acceptance-criteria/` returns nothing — no AC has been
+  authored against this defect.
+- Kept open per the decision rule: the mechanism is present and demonstrable in current code,
+  regardless of how inconvenient it is to reproduce live (the entry's own reproduction note
+  already explains why a deliberate repro is inadvisable).
