@@ -16,12 +16,13 @@ related_docs:
 # KI-SS-001 — An agent that backgrounds a sub-agent then waits for it parks forever, and the stall cascades down the chain
 
 > One known issue, split out of `docs/known-issues/supervisor-system.md` on
-> 2026-09-14. Index: [supervisor-system.md](../supervisor-system.md).
+> 2026-09-14. Index: [supervisor-system.md](../../supervisor-system.md).
 > Filename severity is the three-level index bucket (`blocker`); the
 > original grading is the `**Severity:**` line below, unchanged.
 
 - **Severity:** blocker
-- **Status:** open
+- **Status:** closed — not reproducible. See "Closed 2026-09-23" at the foot of this entry.
+  Not marked fixed: no code change closes the mechanism this entry names.
 - **Occurrences:** 2 (same drive, two levels of the chain)
 - **First seen:** 2026-08-18 · **Last seen:** 2026-08-18
 - **Where:** `ticket-supervisor` and `architect-review` dispatch behaviour; the sub-agent spawn convention generally
@@ -168,5 +169,58 @@ everything checkable from source.
 > invented (as `KI-SUP-1` … `KI-SUP-3`), which was discarded during reconciliation. All three
 > were re-verified against `main` at `37655862`; `KI-SS-002`'s mechanism had to be **corrected**
 > in the process and the correction is recorded in the entry rather than edited away.
+
+---
+
+**Closed 2026-09-23 — CLOSED, NOT REPRODUCIBLE (not fixed).** This entry already carries a
+same-day "Re-verified 2026-09-23: CANNOT DETERMINE" note (above) concluding that the core
+claim — a subagent backgrounding a child and waiting on it parks forever — is a live property
+of the Claude Code harness's execution model, unconfirmable and unrefutable by reading or
+running repo code. That conclusion is adopted here rather than redone: this pass re-checked
+each of its three checkable facts independently and found all three unchanged:
+
+```
+$ grep -c '"undetermined"' templates/workflows-js/plan-feature.js       # (status: assignments)
+4   (lines 2663, 2847, 3212, 3368 — a fifth reference at line 3363 is the file's own
+     comment, "...the other four call sites...", naming the same set)
+
+$ grep -rl "SubagentStop" .                     # whole worktree
+docs/known-issues/supervisor-system/resolved/resolved-blocker-ki-ss-001.md   (this entry)
+changelogs/2026-08-25-2210-a-dead-agent-is-no-longer-counted-as-a-completed-phase-ticket-or-epic.md
+# no hook config, no settings.json entry — the hook still does not exist anywhere
+
+$ grep -n "spawn_allowlist\|self.loop" scripts/registry_validator.py
+# still limited to _check_spawn_bidirectionality / _check_self_loops — no mechanical
+# check forbids an agent from backgrounding a child and waiting on it
+```
+
+So: the `status: "undetermined"` mitigation in `plan-feature.js` is intact and unregressed
+(the file has been substantially reworked since by ACD-2100, and the mitigation survived
+that rework); no `SubagentStop` hook has been added; `registry_validator.py`'s spawn checks
+are unchanged. Nothing here is capable of proving or disproving a fresh stall.
+
+Per the ticket's own decision rule, this qualifies for **closed — not reproducible** rather
+than **still true** or an indefinite **cannot determine**, on the following reasoning: the
+entry is now over five weeks old (first seen 2026-08-18), its only two occurrences were both
+observed in a single drive on that one day, and every checkable artifact tied to those two
+occurrences (the `ticket-supervisor` / `architect-review` dispatch path recorded in "Evidence"
+above, and the `plan-feature.js` call sites recorded in the prior re-verification) has since
+been reworked at least once (ACD-2100 for `plan-feature.js`) without reproducing or
+regressing the described stall. No fix is identified for the underlying claim — the harness
+property this entry names may still be entirely true today, and nothing above says otherwise.
+
+**One discrepancy worth flagging rather than quietly correcting:** this closure was requested
+under a premise that described the entry as carrying `Occurrences: 1`. The entry's own
+`Occurrences` line (above) has read `2 (same drive, two levels of the chain)` since it was
+filed on 2026-08-18, and that has not changed. The reasoning above treats "two levels of one
+drive, one day" as substantively the single-incident case the closure criterion contemplates,
+but the literal field value is 2, not 1 — recorded here so the count is never misquoted from
+this entry going forward.
+
+**Reopen if:** a fresh background-then-wait stall is observed and can be tied to a specific
+dispatch (as the original two were), or the harness's fork-mode default-on-background change
+(flagged as "one release away" in the original entry) lands and removes `run_in_background`
+from the `Agent` tool — at which point the workaround this entry documents stops being
+available and the underlying risk becomes untestable by a different route.
 
 ---

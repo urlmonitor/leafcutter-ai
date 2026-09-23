@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: '2026-08-18'
-last_updated: '2026-08-18'
+last_updated: '2026-09-23'
 components:
   - build_orchestration
 related_docs:
@@ -16,12 +16,13 @@ related_docs:
 # KI-BO-20260901-1045 — Every handoff halts the drive: the driver routes on a `handoff_target` field that no agent template tells any agent to emit
 
 > One known issue, split out of `docs/known-issues/build-orchestration.md` on
-> 2026-09-14. Index: [build-orchestration.md](../build-orchestration.md).
+> 2026-09-14. Index: [build-orchestration.md](../../build-orchestration.md).
 > Filename severity is the three-level index bucket (`blocker`); the
 > original grading is the `**Severity:**` line below, unchanged.
 
 - **Severity:** blocker
-- **Status:** open — no AC
+- **Status:** **RESOLVED 2026-09-23** — see the dated closure note at the foot of this entry.
+  Original line, preserved: open — no AC
 - **Occurrences:** 2 observed (ACD-2100a-1 on 2026-08-26, ACD-2100a-4 on 2026-09-01),
   but the mechanism guarantees it for every handoff from every agent
 - **First seen:** 2026-08-26 · **Last seen:** 2026-09-01
@@ -99,5 +100,36 @@ and never reconciled, failing closed in a way that reads as a ticket defect.
 
 **Pattern:** `docs/reference/false-green-mechanisms.md` — the inverse face: a gate that fails
 closed correctly, on a field the other side of its own contract was never told to provide.
+
+**Closed 2026-09-23.** Re-verified against the current code, not this entry's narrative:
+
+- **The emitter side was fixed, not the driver side** — matching this entry's own second fix
+  option ("every agent template that can emit `handoff` must be told to set
+  `handoff_target`"). `grep -c handoff_target templates/agents/python-coder.md` now returns
+  **3** and `test-writer.md` returns **2** (both were 0 at the time this entry was filed).
+  `python-coder.md`'s "Test Delegation" behavior line (142) now reads: "...uses `(status:
+  handoff)` instead of `(status: ok)`, and returns `handoff_target: \"test-writer\"` in the
+  JSON result" — the exact two-part instruction (ticket prose AND the return-value field) this
+  entry says was missing. `test-writer.md:530-534` carries the mirror instruction for handing
+  back to `python-coder`/`sql-coder`.
+- **No other template emits `(status: handoff)` for the driver to route on.**
+  `grep -rl "status: handoff" templates/agents/*.md` returns exactly three files:
+  `python-coder.md`, `test-writer.md`, and `retrospective-agent.md`. The third's only match is
+  itself PARSING a historical `## Comments` status tag from ticket files during a retrospective
+  — it does not itself emit a handoff for the driver to route on, so it is not a gap in this
+  fix's coverage.
+- **The driver side is unchanged, correctly** — `build-feature.js:2020` still reads
+  `phaseResult.handoff_target` and still refuses diagnosably when absent (lines 2020-2058).
+  That refusal is the fail-closed behavior this entry explicitly says to keep; only the
+  emitter's silence needed fixing.
+- **Verified by name and by test.** `BO-3000a.yaml` — "A handoff is routed by the target the
+  handing-off agent named in its own result, and is refused diagnosably... never inferred from
+  the ticket body" — is `work_status: done`, with its own amendment note recording that an
+  earlier "infer from ticket body" design was rejected by code review in favor of the
+  emitter-side fix, and that its coverage was rewritten and verified 1:1 against
+  `unit_tests/workflows/test_bo_3000a_3700_dispatch_defects.py` by an AC-fulfillment gate.
+- **Not verified end-to-end.** No live handoff dispatch was executed as part of this closure;
+  the verdict rests on the current templates, the current driver code, and the AC store's own
+  recorded test-mapping verification.
 
 ---

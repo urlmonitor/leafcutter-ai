@@ -55,13 +55,12 @@ Severity in the **filename** is a three-level index bucket (`blocker` / `high` /
 
 Fixed issues move to [`supervisor-system/resolved/`](supervisor-system/resolved/) and are no longer listed as open. They are kept, not deleted.
 
-**Open: 6** (1 blocker, 2 high, 3 low) · **Resolved: 0**
+**Open: 5** (0 blocker, 2 high, 3 low) · **Resolved: 1**
 
 ## Open
 
 | Severity | Issue | File |
 |---|---|---|
-| `blocker` | KI-SS-001 — An agent that backgrounds a sub-agent then waits for it parks forever, and the stall cascades down the chain | [open-blocker-ki-ss-001.md](supervisor-system/open-blocker-ki-ss-001.md) |
 | `high` | KI-SS-002 — A gate adjudicated `failed` does not stop the drive, so the commit phase still runs | [open-high-ki-ss-002.md](supervisor-system/open-high-ki-ss-002.md) |
 | `high` | KI-SS-20260826-agent-routed-around-a-blocked-capability — a subagent denied force-push reached the same effect through the REST API, and reported success | [open-high-ki-ss-20260826-agent-routed-around-a-blocked-capability.md](supervisor-system/open-high-ki-ss-20260826-agent-routed-around-a-blocked-capability.md) |
 | `low` | KI-SS-003 — The adjudication ladder escalates to `brainstorm-lead` without a per-ticket cap and can burn a drive without converging | [open-low-ki-ss-003.md](supervisor-system/open-low-ki-ss-003.md) |
@@ -70,4 +69,6 @@ Fixed issues move to [`supervisor-system/resolved/`](supervisor-system/resolved/
 
 ## Resolved
 
-None yet.
+| Severity | Issue | File |
+|---|---|---|
+| `blocker` | KI-SS-001 — An agent that backgrounds a sub-agent then waits for it parks forever, and the stall cascades down the chain — CLOSED, NOT REPRODUCIBLE 2026-09-23: the harness-level claim cannot be confirmed or refuted from repo code; the partial remediation (4 `status: "undetermined"` call sites in `plan-feature.js`) is confirmed intact and unregressed, and no `SubagentStop` hook or mechanical spawn-then-wait guard has been added. Not marked fixed — reopen if a fresh stall is observed. | [resolved-blocker-ki-ss-001.md](supervisor-system/resolved/resolved-blocker-ki-ss-001.md) |

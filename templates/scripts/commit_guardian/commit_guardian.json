@@ -666,7 +666,7 @@
         ],
         "pass_filenames": false,
         "change_set_source": "handed_by_commit_path",
-        "_comment": "BP-1100e-1 / BP-1100e-2: Advisory by default (files_touched_reconciliation.enabled: true, strict: false) — reports undeclared source files (.py/.sql/.ts/.tsx/.js) without blocking. Set strict:true in the files_touched_reconciliation section to block commits on scope violations, or enabled:false to turn the check off. Fail-open on git errors. See docs/acceptance-criteria/build_pipeline/BP-1100-phantom-done-prevention/BP-1100e-1.yaml."
+        "_comment": "BP-1100e-1 / BP-1100e-2: Blocking by default (files_touched_reconciliation.enabled: true, strict: true, per a36837dc 2026-08-13) — reports AND blocks commits on undeclared source files (.py/.sql/.ts/.tsx/.js) when a tickets/**.md staged as status: done omits them from files_touched/out_of_scope. Set strict:false in the files_touched_reconciliation section for advisory-only (report, do not block), or enabled:false to turn the check off. Fail-open on git errors. See docs/acceptance-criteria/build_pipeline/BP-1100-phantom-done-prevention/BP-1100e-1.yaml."
       },
       {
         "id": "check-mermaid-drift",
@@ -1418,7 +1418,7 @@
     ]
   },
   "files_touched_reconciliation": {
-    "_comment": "check_files_touched_reconciliation.py — BP-1100e-2: three-state enforcement. enabled:true (default) + strict:false = ADVISORY (report undeclared source files, do not block) — the guard is active out of the box. enabled:false = check is OFF (no output). enabled:true + strict:true = BLOCK on undeclared source files. Fails open on internal error regardless of strict setting.",
+    "_comment": "check_files_touched_reconciliation.py — BP-1100e-2: three-state enforcement. SHIPPED DEFAULT since a36837dc (2026-08-13): enabled:true + strict:true = BLOCK on undeclared source files at done-time — the guard is active and blocking out of the box. enabled:true + strict:false = ADVISORY (report undeclared source files, do not block) remains available. enabled:false = check is OFF (no output). Fails open on internal error regardless of strict setting.",
     "enabled": true,
     "strict": true
   },

@@ -33,4 +33,35 @@ related_docs:
 
 **Definition of done.** The five are allowlisted deliberately, one line of rationale each; a genuinely new unauthorized root file is still refused; the gate is registered. Watch the consumer case — the allowlist ships to adopters, so anything added must be defensible as a general default, not just as this repo's convenience.
 
+**Re-verified 2026-09-23: STILL TRUE, and WORSE than filed — the gate is now actually
+registered and live, kept open.** This entry was filed 2026-09-09 warning what registration
+*would* do. As of `commit_guardian.json`'s `hooks_manifest.hooks` (id `check-root-files`,
+`commit_guardian.json:1349-1360`, no `enabled: false`) and the generated
+`.pre-commit-config.yaml:501` (`- id: check-root-files`, no `always_run`/skip), the hook is now
+**registered and wired into the live pre-commit config** — confirmed via
+`git log -S'"id": "check-root-files"'`, landed in `89e8cb33` (2026-09-15, "BP-100n-4") among
+13 gates "verified exit 0 under real invocation." The allowlist gap this entry names is
+unfixed:
+
+```
+$ grep -n "allowed_files\|allowed_extensions" -A35 templates/scripts/commit_guardian/commit_guardian.json | head -40
+    "allowed_files": [ ... 30 entries, still none of: ruff.toml, requirements-dev.txt,
+                        build-self.sh, SETUP.md, LEAFCUTTER_VERSION ... ]
+    "allowed_extensions": [ ".json" ]        # still no ".toml"
+
+$ git ls-files ruff.toml requirements-dev.txt build-self.sh SETUP.md LEAFCUTTER_VERSION
+LEAFCUTTER_VERSION
+SETUP.md
+build-self.sh
+requirements-dev.txt
+ruff.toml
+```
+
+All five files are still tracked at the repo root and still absent from the allowlist; the
+status filter in `check_root_files.py:51` still matches `A`, `M`, **and** `R`. Since the gate
+is now live rather than hypothetical, staging a modification to any of the five (e.g. bumping
+`LEAFCUTTER_VERSION` for a release, or editing `ruff.toml`) would be refused today. This raises
+the entry's practical urgency; it does not change the verdict. Mechanism confirmed present and
+now demonstrably live; kept open.
+
 ---

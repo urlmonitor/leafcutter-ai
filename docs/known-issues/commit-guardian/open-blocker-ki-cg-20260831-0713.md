@@ -86,6 +86,36 @@ this class is caught by CI rather than by hand).
 for a fix that closes the *symptom* — because the symptom had two independent causes and only
 one was in scope.
 
+**Re-verified 2026-09-23: STILL TRUE — unchanged, kept open.** The kind-based/location-based
+distinction this entry describes (and that `BP-100k-4-ii` introduced in direct response to it)
+is still exactly as documented — the mechanism is even self-documenting in the current source,
+which names this entry by id:
+
+```
+$ grep -n "KI-CG-20260831-0713" templates/scripts/commit_guardian/commit_guardian.json
+             (appears in __hook_trigger_reachability_nothing_to_match_doc, describing the
+             COULD-EVER/DOES-NOW split this entry's "kind-based half" section documents)
+```
+
+`hook_trigger_reachability_exemption_registry` still exists and still governs only
+location-anchored conditions (`_hook_trigger_reachability_helpers.py`'s
+`has_location_anchor()` / `evaluate_gate()`, unchanged in shape from BP-100k-4-ii). The two
+named residuals are still live and still un-exempted: `check-surface-components-e3`
+(`files: "^(config/agent_registry\\.json|config/skill_registry\\.json|docs/roadmap\\.json)$"`,
+`commit_guardian.json:1104`) and `check-eval-staleness`
+(`files: "(^scripts/evals/|^docs/product-truth/|^templates/agents/)"`,
+`commit_guardian.json:1147`) are both location-anchored `enabled: true` conditions, and neither
+appears in `hook_trigger_reachability_exemption_registry`'s entry list. Running
+`check_hook_trigger_reachability.py` against this self-hosted checkout (where nearly every
+package-internal path is tracked) naturally reports `unreachable=0` — that is the exact trap
+"Verify against source, not build output" warns about, since this repo is not the fresh,
+minimal consumer install the entry's claim is about, and reproducing the consumer case would
+require running `build.py` into a scratch target, which is out of scope for this pass. The
+static evidence — the residual conditions exist, are location-anchored, are enabled, and carry
+no exemption entry — is unchanged from the entry's own description. Mechanism confirmed
+present in code; kept open per the letter of the decision rule (a live mechanism is not closed
+for being inconvenient to reproduce).
+
 **Scope note — this closes only the too-strict half.** The check still walks only
 *registered* hooks, so a script the registry never mentions remains invisible to it
 (`BP-1600a-2` and its siblings, `todo` on `main` as of this fix). That is a distinct, still-open

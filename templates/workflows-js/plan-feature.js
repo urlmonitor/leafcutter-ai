@@ -1125,10 +1125,10 @@ function derivePtRunSet(classifier) {
  * @returns {Promise<boolean>}
  */
 async function checkProductTruthStorePresent(ptStorePath, authoringWorktreePath) {
-  const root = authoringWorktreePath ? authoringWorktreePath.replace(/\/$/, "") + "/" : "";
-  const storeDir = root + ptStorePath;
-  const genScript = root + ptStorePath + "/scripts/generate_product_truth.py";
-  const reconcileScript = root + ptStorePath + "/scripts/apply_flow_backlinks.py";
+  const _r = authoringWorktreePath ? resolvePathOntoRoot(authoringWorktreePath, ptStorePath) : null; // KI-ACD-007 (see ptStoreDir): avoid double-anchoring an already-anchored path
+  const storeDir = (_r && _r.ok) ? _r.path : ptStorePath;
+  const genScript = storeDir + "/scripts/generate_product_truth.py";
+  const reconcileScript = storeDir + "/scripts/apply_flow_backlinks.py";
   const checkCmd =
     `test -d "${storeDir}" && test -f "${genScript}" && test -f "${reconcileScript}" ` +
     `&& echo present || echo absent`;
@@ -1439,17 +1439,12 @@ async function runFlowReconciliation(flowRef, flowBacklinks, component, runId, p
     return { status: "skipped", message: "no flow_backlinks reported by the business-analyst — reconciliation skipped" };
   }
 
-  /*
-   * BO-3900 — normalise the worktree root's own separator spelling before
-   * it is prefixed onto ptStorePath/flowRef (always forward-slash store
-   * identifiers): a Windows-backslash authoringWorktreePath concatenated
-   * as-is here previously produced a MIXED-separator path.
-   */
-  const root = authoringWorktreePath ? normalizePathForm(authoringWorktreePath).replace(/\/$/, "") + "/" : "";
-  const scriptPath = root + ptStorePath + "/scripts/apply_flow_backlinks.py";
+  const _r = authoringWorktreePath ? resolvePathOntoRoot(authoringWorktreePath, ptStorePath) : null; // BO-3900 / KI-ACD-007 (see ptStoreDir): avoid double-anchoring
+  const resolvedPtStorePath = (_r && _r.ok) ? _r.path : ptStorePath;
+  const scriptPath = resolvedPtStorePath + "/scripts/apply_flow_backlinks.py";
   // flowRef is store-relative (e.g. flows/foo/bar.flow.json); resolve it for the CLI.
   // NOT-A-PATH: idempotent de-duplication of an already-prefixed product-truth store identifier (forward-slash by convention, UXP-700c-3-i) — not a Windows/POSIX absoluteness decision.
-  const flowArg = root + ptStorePath + "/" + flowRef.replace(/^\/+/, "").replace(new RegExp("^" + ptStorePath + "/"), "");
+  const flowArg = resolvedPtStorePath + "/" + flowRef.replace(/^\/+/, "").replace(new RegExp("^" + ptStorePath + "/"), "");
   const backlinksJson = JSON.stringify(JSON.stringify(flowBacklinks));
 
   // Step 1 — run the reconciliation script (writes step.implements + regenerates derived data).
@@ -2690,7 +2685,9 @@ if (route === "covered" && !force) {
 // -------------------------------------------------------------------------
 phase('Product-Truth Phase')
 
-const ptStoreDir = "docs/product-truth";
+// KI-ACD-007: anchor to the worktree like acStoreDir above, via resolvePathOntoRoot() (BO-3900) — else this resolves against the caller's own checkout, not the authoring worktree.
+let ptStoreDir = "docs/product-truth";
+if (authoringWorktreePath) { const _r = resolvePathOntoRoot(authoringWorktreePath, ptStoreDir); ptStoreDir = _r.ok ? _r.path : ptStoreDir; }
 
 // State the PT phase hands forward to the AC pipeline.
 let ptFlowProduced = false;
@@ -2759,7 +2756,8 @@ if (ptRunSet.skip) {
       while (!ptApproved) {
         ptResult = await agent(
           `You are running as part of the /plan-feature product-truth phase (outcome: ${ptRunSet.outcome}). ` +
-          `Draft or extend the ${ptStep.stage} artifact for this request in the product-truth store at ${ptStoreDir}. ` +
+          `Draft or extend the ${ptStep.stage} artifact for this request. Write it ONLY to ${ptStoreDir} — ` +
+          "do NOT write to docs/product-truth/ relative to the current checkout. " +
           (ptFeedback
             ? `The user reviewed your previous attempt and requested changes — address this feedback: ${ptFeedback}. `
             : "") +

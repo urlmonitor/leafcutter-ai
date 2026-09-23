@@ -1,0 +1,100 @@
+id: ACD-2400
+components:
+  - ac_driven_dev
+readiness: approved
+priority: high
+title: "Product-truth artifacts are written inside the authoring worktree, not the caller's checkout"
+component: ac-driven-dev
+status: active
+req_status: approved
+work_status: done
+roadmap_phase: phase_1
+criteria: |
+  Given the /plan-feature workflow has created a dedicated authoring worktree
+    (authoringWorktreePath is a non-null absolute path) for this run,
+  When the product-truth (PT) phase dispatches mock-data-author, mockup-author,
+    or flow-author to draft an artifact,
+  Then the dispatched agent is told the product-truth store path as an
+    absolute path anchored inside the authoring worktree, so the artifact
+    file it writes is written inside that worktree rather than the caller's
+    own checkout,
+  And the dispatch prompt explicitly warns the agent not to write relative to
+    docs/product-truth/ in its own checkout, mirroring the equivalent warning
+    already carried by the AC-authoring dispatch prompt,
+  And every other consumer of the product-truth store path (the store-presence
+    check and the flow-backlink reconciliation step) resolves that same
+    worktree-anchored location without joining the worktree root onto it a
+    second time,
+  And when no authoring worktree exists for this run, the store path remains
+    the plain relative "docs/product-truth" default, unchanged from before
+    this fix.
+depends_on: []
+doc_links:
+  - path: docs/known-issues/ac-driven-dev/resolved/resolved-high-ki-acd-007.md
+    relationship: describes
+    status: exists
+    relevance: "KI-ACD-007 -- the defect this AC closes: the PT authoring dispatch had no worktree anchor, unlike the AC store's own acStoreDir."
+  - path: templates/workflows-js/plan-feature.js
+    relationship: implements
+    status: exists
+    relevance: "ptStoreDir is now reassigned from the literal 'docs/product-truth' to a worktree-anchored absolute path via resolvePathOntoRoot(), mirroring acStoreDir's own treatment; checkProductTruthStorePresent() and runFlowReconciliation() were updated to resolve ptStorePath through the same helper instead of unconditionally prefixing the worktree root a second time."
+assigned_agent: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-09-23
+amended_by: []
+superseded_by: null
+covered_by:
+  - "unit_tests/workflows/test_acd_2400_pt_store_worktree_anchor.py::test_pt_authoring_dispatch_is_anchored_to_the_authoring_worktree"
+  - "unit_tests/workflows/test_acd_2400_pt_store_worktree_anchor.py::test_pt_authoring_dispatch_carries_an_explicit_anchor_warning"
+  - "unit_tests/workflows/test_acd_2400_pt_store_worktree_anchor.py::test_pt_store_path_without_a_worktree_stays_the_plain_relative_default"
+implemented_by:
+  - "templates/workflows-js/plan-feature.js#ptStoreDir"
+change_target: pipeline
+risk_surface: internal
+declares_side_effect: false
+test_required: true
+test_rationale: >-
+  Behavioral, not grep-only, per CLAUDE.md's "Gate / Workflow ACs" rule: the test drives
+  the real plan-feature.js top-level body under the E2 stub harness
+  (run_workflow_under_e2), configures a worktree-setup response naming a specific fake
+  authoring worktree, and asserts on the ACTUAL PROMPT TEXT the running script's own
+  control flow assembled for the pt-mockdata-author dispatch -- proving the anchored
+  value is consumed, not merely present as a string in the source.
+notes: |
+  DELIBERATELY STANDALONE, NOT NESTED UNDER ACD-2100. ACD-2100's own notes list
+  KI-ACD-007 explicitly under "DELIBERATELY OUT OF SCOPE (named so the BA does not
+  absorb them)" -- and its L1 children (ACD-2100a..e) are each independently
+  documented as FULL at their 5-child L2 cap. This AC is therefore authored as its
+  own root-level record (PREFIX-NNN, no parent per the ID hierarchy's L0/root shape)
+  rather than forced into a tree that has explicitly excluded it and has no free
+  slot regardless.
+
+  RE-VERIFIED DEFECT (2026-09-23, this worktree, HEAD, before this fix): ptStoreDir
+  was declared once as a bare relative literal at plan-feature.js:2693
+  (`const ptStoreDir = "docs/product-truth";`) and never reassigned, while acStoreDir
+  (the AC store's equivalent) is overridden from wtPayload.ac_store_path -- an
+  absolute path inside the authoring worktree -- at :2513. The PT-authoring dispatch
+  prompt (~:2762) had no equivalent anchor and no "do not write relative to the
+  current checkout" warning, unlike the AC-authoring dispatch prompt (~:3096-3098).
+
+  THE FIX MIRRORS THE AC-STORE TREATMENT, NOT A NEW MECHANISM: ptStoreDir is now
+  reassigned via the existing resolvePathOntoRoot() helper (BO-3900) when
+  authoringWorktreePath is set -- the same helper already used elsewhere in this
+  file to anchor a possibly-relative path onto the worktree root without ever
+  double-joining an already-absolute one. Two internal consumers,
+  checkProductTruthStorePresent() and runFlowReconciliation(), previously did their
+  OWN unconditional `root + ptStorePath` string concatenation assuming ptStorePath
+  was always store-relative; both were updated to resolve through the same helper
+  instead, so an already-anchored ptStoreDir is never joined onto the worktree root
+  a second time. commitStageOutputProductTruth() needed no change: it already used
+  ptStorePath directly as a git-add pathspec (fine whether absolute or relative,
+  combined with `git -C <worktree>`), never prefixing it with a computed root.
+
+  RED-BASELINE EVIDENCE: the covering test file was run against the unmodified
+  source (`git stash` on templates/workflows-js/plan-feature.js only) before this
+  fix landed -- 2 of 3 tests failed exactly as this AC's criteria predicts (the
+  dispatch prompt named the bare relative literal and carried no anchor warning);
+  the no-worktree negative-form test passed unchanged, confirming it was not
+  accidentally asserting new behaviour on the fallback path.
