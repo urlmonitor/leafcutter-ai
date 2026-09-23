@@ -163,3 +163,17 @@ class HarvestResult:
                 f"required digest field at line(s) {self.missing_required_field_lines}"
             )
         return base
+
+    def exit_code(self) -> int:
+        """Return the process exit code this result implies.
+
+        ``4`` outranks ``3``: a broken run (a write failed, or the state
+        file could not be persisted) is more urgent than a merely retained
+        backlog of unroutable events. Moved out of ``harvest_learnings.main()``
+        (GE-127b-1 ratchet relief, INF-700a-2) -- deriving the exit code is a
+        pure function of this result's own fields, so it belongs beside them
+        rather than in the CLI entry point.
+        """
+        if self.write_failures or self.state_persist_failed:
+            return 4
+        return 3 if self.skipped_unknown else 0

@@ -50,6 +50,12 @@ ARCHITECTURE: Helper module for the Knowledge System component
 #   ``resolve_sink_or_log_stale``, ``warn_if_diverging_from_legacy``); the
 #   rest are called only internally within this module.
 #   (#INF-400c-5, GE-127b-1)
+# - 2026-09-23 [python-coder/INF-700a-2]: Added ``deployed_output_root``
+#   (moved verbatim from ``harvest_learnings._deployed_output_root``, same
+#   GE-127b-1 ratchet-relief reasoning -- every caller here already needs an
+#   ``output_root``) and ``resolve_sink_for_status`` (the ``--status`` flag's
+#   never-refuses sink resolution, reusing ``resolve_default_sink`` rather
+#   than a second resolver).
 """
 
 from __future__ import annotations
@@ -90,6 +96,24 @@ def read_sink_declaration(output_root: Path) -> str | None:
         return None
     value = data.get("knowledge_emission_sink")
     return value if isinstance(value, str) and value else None
+
+
+def deployed_output_root() -> Path:
+    """Return the output root this deployed copy of the package lives under.
+
+    The build deploys this file to ``<output_root>/scripts/knowledge/
+    sink_resolution.py`` (see ``build_knowledge_scripts`` in
+    ``scripts/build_phases_knowledge.py``), so the output root is always
+    exactly two directories above this file's own location -- the same
+    arithmetic every other build-time-declaration path in this module
+    already keys off of. Moved here from ``harvest_learnings.py`` (GE-127b-1
+    ratchet relief): every caller of this function already needs an
+    ``output_root`` to resolve a sink against, so it belongs in this
+    cluster rather than beside the sink-draining logic.
+
+    Pure function: no I/O, no shared-state mutation.
+    """
+    return Path(__file__).resolve().parents[2]
 
 
 def resolve_default_sink(output_root: Path) -> Path:
@@ -207,6 +231,21 @@ def resolve_sink_or_log_stale(args: argparse.Namespace, output_root: Path) -> Pa
     if stale_message is not None:
         logger.error(stale_message)
         return None
+    return resolve_default_sink(output_root)
+
+
+def resolve_sink_for_status(args: argparse.Namespace, output_root: Path) -> Path:
+    """Resolve the sink path a ``--status`` query should report against.
+
+    Reuses the SAME declaration/CWD-relative-default resolution an ordinary
+    run and ``--print-sink`` already use (``resolve_default_sink``) -- INF-700a-2
+    requires no second resolver. Unlike ``resolve_sink_or_log_stale``, this
+    never refuses on staleness: ``--status`` is a read-only report that must
+    always answer (exit 0), even against a declaration that no longer
+    matches this install's current location.
+    """
+    if args.sink is not None:
+        return args.sink
     return resolve_default_sink(output_root)
 
 

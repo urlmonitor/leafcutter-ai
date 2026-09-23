@@ -38,7 +38,7 @@ logger = logging.getLogger("entry_kind_vocabulary")
 def default_vocabulary_path() -> Path:
     """Return the vocabulary config path beside this deployed script.
 
-    Mirrors ``harvest_learnings._deployed_output_root()``: this file deploys
+    Mirrors ``sink_resolution.deployed_output_root()``: this file deploys
     to ``<output_root>/scripts/knowledge/entry_kind_vocabulary.py``, so the
     output root is always two directories above this file's own location,
     and the vocabulary lives at ``<output_root>/config/entry_kind_vocabulary
