@@ -86,7 +86,8 @@ created: 2026-09-21
 amended_by: []
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260923-BO-4100b-3-i.md
 notes: >-
   Guards the fidelity of the per-workspace copy introduced by BO-4100b-3: giving each
   workspace an empty or reduced copy would satisfy independence and quietly cost the

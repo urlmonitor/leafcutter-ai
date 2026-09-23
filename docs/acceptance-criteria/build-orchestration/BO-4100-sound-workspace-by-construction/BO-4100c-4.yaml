@@ -105,7 +105,8 @@ created: 2026-09-21
 amended_by: []
 superseded_by: null
 covered_by: [BO-4100c-4-i]
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260923-BO-4100c-4.md
 notes: >-
   The anti-accumulation arm: 150 live workspaces only comes down if a disposal that is
   allowed actually finishes. The completeness clauses are there because a half-disposal

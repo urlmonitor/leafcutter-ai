@@ -81,7 +81,8 @@ created: 2026-09-21
 amended_by: []
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260923-BO-4100e-1-i.md
 notes: >-
   Bounds the discovery route BO-4100e-1 introduces. A listing that reports every directory
   it finds is complete in the useless sense: the real leftovers are then buried among

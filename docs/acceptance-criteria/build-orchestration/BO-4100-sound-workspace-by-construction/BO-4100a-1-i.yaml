@@ -76,7 +76,8 @@ created: 2026-09-21
 amended_by: []
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260923-BO-4100a-1-i.md
 notes: >-
   Rules out the cheapest wrong implementation of BO-4100a-1: bringing the shared line
   down into the machine's local copy and then branching from that copy. That satisfies
