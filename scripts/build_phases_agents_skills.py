@@ -52,6 +52,7 @@ import shutil
 from pathlib import Path
 from typing import Any
 
+from build_capability_merge import report_capability_collision
 from template_compiler import (
     _load_registry,
     compile_agent_template,
@@ -411,6 +412,17 @@ def build_skills(target_root: Path, config: dict[str, Any],
                 output_dir = target_root / output_subpath
                 output_path = output_dir / rel
 
+                # BP-1500g-2-i: `.claude/skills` (and `.gemini/skills`) is a
+                # SYMLINK straight into this same output_path when the shim
+                # is intact, so an adopter's content written at the
+                # discoverable name IS this physical file. A local change
+                # here is a name-level collision, not an ordinary generated-
+                # file edit -- report it and leave it untouched, never
+                # silently overwrite it like every other deployed family.
+                if _bp.target_locally_changed(output_path):
+                    report_capability_collision(skill_dir.name)
+                    continue
+
                 if template_file.suffix == ".md":
                     compiled = compile_skill_template(template_file, config)
                     if _bp._write(output_path, compiled, dry_run, force):
@@ -470,4 +482,18 @@ def build_skills(target_root: Path, config: dict[str, Any],
 #   to frontend-design/SKILL.md prevents it from being deployed, satisfying
 #   AC BP-700d-1-i (fresh install must not create .claude/skills/frontend-design/).
 #   (#EPIC-Oneagenthandlesboththelookandthecodefor/14)
+# - 2026-09-23 [python-coder/BP-1500g-2-i]: build_skills() now checks
+#   _bp.target_locally_changed(output_path) (build_phases_local_change.py)
+#   before writing EITHER a compiled .md or a verbatim-copied non-.md skill
+#   file. `.claude/skills` (and `.gemini/skills`) is a symlink straight into
+#   this same output_path when the shim is intact, so an adopter's content
+#   written at a package-shipped, discoverable capability name IS this
+#   physical file -- previously silently overwritten with no ownership check
+#   at all. A detected local change is now reported via
+#   build_capability_merge.report_capability_collision (the prescribed
+#   `collision: <name> -- resolves to adopter` line) and left completely
+#   untouched, never silently replaced. Every other generated-file family
+#   (agents, commands, workflows, hooks) is unaffected: their own write
+#   paths still call announce_if_local_change_replaced, whose "the install
+#   always wins" behaviour is unchanged. (#BP-1500g-2-i)
 # ====================================================================

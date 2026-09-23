@@ -174,42 +174,48 @@ def resolve_removal_verdict(
     skip it identically. Anything else is handed to ``owns_installed_path``
     for its full verdict — EXCEPT one further case, below.
 
-    Under ``shim_strategy: "copy"``, a co-claimed canonical path (one a
-    shim table will also reclaim this run, per *is_claimed*) is never a
-    removal candidate at all, regardless of what ``owns_installed_path``
-    would say about it. This is not the same carve-out
-    ``resolve_shim_ownership_veto`` makes on the claim side: it is not
-    "copy strategy is always safe", it is "this removal step has no way to
-    tell a stale pre-consolidation leftover apart from the build's own
-    current copy-strategy output by content alone" — the same
-    container-vs-item conflation ADR-041 §1 rejects for the old
-    is-symlink signal, now showing up on the removal side under copy
-    strategy instead. A real, non-empty directory at a co-claimed path is
-    exactly what a correct copy-strategy build looks like after its first
-    run; ``owns_installed_path`` cannot distinguish that from a genuine
-    orphan, so this function does not try. Ownership of what is
-    individually INSIDE that container (ADR-041 §2: never the container as
-    a whole) is decided at item granularity by ``install_shims``' own
-    non-destructive copy-merge instead — see that function's directory-shim
-    loop. A removal-only entry (not *is_claimed*, e.g.
-    ``scripts/sync_platforms``) is unaffected by *strategy* and still gets
-    the normal content-based verdict.
+    A co-claimed canonical path (one a shim table will also reclaim this
+    run, per *is_claimed*) whose verdict is anything other than
+    ``"package_produced"`` is never a removal candidate at all, REGARDLESS
+    OF *strategy* (BP-1500g-2 generalisation: this carve-out previously
+    fired only under ``shim_strategy: "copy"`` — see this function's own
+    DECISION HISTORY pointer in build_ownership.py's module docstring).
+    ADR-041 §2 states the rule with no strategy qualifier: a co-claimed
+    container is never removed wholesale, full stop. It is not "this
+    strategy is always safe", it is "this removal step has no way to tell
+    a stale pre-consolidation leftover apart from content this run cannot
+    attribute to itself, or from the build's own current copy-strategy
+    output, by content alone" — the same container-vs-item conflation
+    ADR-041 §1 rejects for the old is-symlink signal. Ownership of what is
+    individually INSIDE that container is decided at item granularity
+    instead — by ``install_shims``' non-destructive copy-merge under
+    ``shim_strategy: "copy"``, and by ``build_capability_merge.
+    merge_capability_items`` under ``"symlink"``/``"auto"`` (BP-1500g-2).
+    A removal-only entry (not *is_claimed*, e.g. ``scripts/sync_platforms``)
+    is unaffected and still gets the normal content-based verdict. A
+    co-claimed path whose verdict genuinely IS ``"package_produced"`` (e.g.
+    a real, EMPTY directory) is NOT carved out here — it remains a real
+    removal candidate, so ADR-041 §3's removal/claim reconciliation can
+    still detect and refuse the genuine contradiction of scheduling the
+    same safe-to-remove path for both removal and reclaim in one run.
 
     Args:
         full: Absolute candidate path for removal.
         output_root: The consolidated output directory; a symlink resolving
             here is always our own, already-correct shim.
         strategy: The configured ``shim_strategy`` (``"symlink"``,
-            ``"copy"``, or ``"auto"``). Defaults to ``"auto"`` for callers
-            that have no strategy-specific behaviour to preserve.
+            ``"copy"``, or ``"auto"``). No longer branches this function's
+            own decision (see above) — kept for call-site signature
+            stability; every existing caller passes it positionally.
         is_claimed: Whether *full*'s relative path also appears in a claim
             table (``shim_map`` or ``file_shims``) — i.e. whether some shim
             step will also try to (re)claim it this run.
 
     Returns:
         None when *full* should be skipped (absent, already a correct shim
-        into *output_root*, or a co-claimed copy-strategy container);
-        otherwise the ``owns_installed_path`` verdict string.
+        into *output_root*, or a co-claimed container this run cannot
+        attribute to itself); otherwise the ``owns_installed_path`` verdict
+        string.
     """
     if not full.exists() and not full.is_symlink():
         return None
@@ -219,9 +225,8 @@ def resolve_removal_verdict(
             # Already the correct shim into our own output root — nothing
             # stale here, leave it silently alone.
             return None
-    if strategy == "copy" and is_claimed:
-        return None
-    return owns_installed_path(full)
+    verdict = owns_installed_path(full)
+    return None if is_claimed and verdict != "package_produced" else verdict
 
 
 def resolve_shim_ownership_veto(
@@ -317,6 +322,30 @@ def paths_scheduled_for_both_removal_and_claim(
         The (possibly empty) intersection of the two sets.
     """
     return set(removal_set) & set(claim_set)
+
+
+def detect_capability_collisions(shipped_names: set[str], adopter_names: set[str]) -> set[str]:
+    """Return the names present in BOTH *shipped_names* and *adopter_names*.
+
+    BP-1500g-2-i's own detection contract: "a name present in both the
+    recomputed shipped set and the adopter-owned set — a set intersection
+    over two collections BP-1500g-1 and BP-1500g-2 already compute." Pure
+    function mirroring ``paths_scheduled_for_both_removal_and_claim``'s own
+    shape exactly: no I/O, so any exception is a caller bug and must
+    propagate rather than being caught here. Never a hardcoded or
+    pre-registered list of known-colliding names — callers recompute both
+    sets fresh from real data on every run.
+
+    Args:
+        shipped_names: The recomputed set of capability names the package
+            currently ships (e.g. skill directory names).
+        adopter_names: Capability names already present at the discoverable
+            location that this run cannot attribute to itself.
+
+    Returns:
+        The (possibly empty) intersection: names claimed by both sides.
+    """
+    return set(shipped_names) & set(adopter_names)
 
 
 def assemble_claim_set(
@@ -716,4 +745,8 @@ def _create_file_shim(canonical: Path, source: Path, strategy: str) -> str:
 #   unit_tests/build_guards/ suite (152 passed, 4 subtests passed, no
 #   regressions) under AC_ENFORCE_STRICT=1, both before and after the
 #   headroom pass. (#BP-1500g-1/adr-041-review)
+# - 2026-09-23 [python-coder]: BP-1500g-2/BP-1500g-2-i -- generalised
+#   resolve_removal_verdict's co-claimed carve-out to any strategy (not just
+#   "copy"); added detect_capability_collisions(). Full account in
+#   build_capability_merge.py's own DECISION HISTORY. (#BP-1500g-2)
 # ====================================================================
