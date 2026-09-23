@@ -46,9 +46,21 @@ which is the first time in this branch's history that the parent entered an inde
 It is the same shape as the store-wide sweep recorded in that section, which found 20
 composites marked `done` with unfinished children.
 
-**Not caused by the change that surfaced it.** `BP-1100e-1-viii`'s commit only appends one
-entry to `covered_by`. It does not set the parent's `work_status`, and the unproven state is
-identical before and after.
+**Not caused by the change that surfaced it.** The parent's `work_status: done` and its
+children's missing proof both predate this branch.
+
+**A back-link is owed.** `BP-1100e-1-viii` was added on this branch and is deliberately NOT
+listed in this parent's `covered_by`. Adding it put the parent into `check-done-proof`'s
+`ci-changed` scope, where it fails on the debt above and blocks the merge — and adding an
+entry to a composite that is already failing its own proof gate decorates a record that is
+already wrong rather than making it accurate. The child records the relationship in its own
+`depends_on: [BP-1100e-1]`, so the link is not lost. **Add `BP-1100e-1-viii` to this
+parent's `covered_by` as part of clearing the debt below**, not before: the two changes have
+to land together or the parent goes straight back to blocking.
+
+Note that until `BO-2500a-6-ii` landed on the same branch, this failure was reported as
+"composite BP-1100e-1 has no coverable children" — a misclassification that hid the real
+state. The message quoted above is the accurate one.
 
 **Fix direction.** Either supply the missing covers-tag proof for the seven children — the
 honest route, since they are genuinely implemented — or demote the parent's `work_status`
