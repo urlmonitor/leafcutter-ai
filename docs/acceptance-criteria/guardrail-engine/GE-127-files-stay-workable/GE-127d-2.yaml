@@ -6,7 +6,7 @@ components:
 level: L2
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: medium
 roadmap_phase: phase_1
@@ -391,9 +391,16 @@ amended_by:
   agent: approve_acs
   date: '2026-09-14'
 superseded_by: null
-covered_by: []
+covered_by:
+- unit_tests/commit_guardian/test_ge_127d_2.py
+- unit_tests/commit_guardian/test_ge_127d_2_reachability_and_deployed.py
+- unit_tests/commit_guardian/test_ge_127d_2_real_artifact_and_seam.py
 implemented_by:
 - tickets/00_inbox/epics/EPIC-FilesStayWorkable/02_TICKET-20260914-GE-127d-2.md
+- templates/scripts/commit_guardian/README.md
+- templates/scripts/commit_guardian/_file_size_ratchet.py
+- templates/scripts/commit_guardian/check_file_size.py
+- templates/scripts/commit_guardian/commit_guardian.json
 change_target:
   - code
   - docs

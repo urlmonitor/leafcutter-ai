@@ -74,6 +74,7 @@ from _file_size_ratchet import (
     EMPTY_HISTORY_REASON,
     CurrentLengthUnmeasurableError,
     PreviousLengthSourceError,
+    describe_measurement_rule,
     measure_current_length,
     resolve_head_covered_paths,
     resolve_parent_revisions,
@@ -87,6 +88,20 @@ from config import (
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.WARNING, format="%(levelname)s: %(message)s")
+
+# GE-127d-2: the label the "what does this length measure" line is printed
+# under, and the dividing-advice sentences that replace the prior
+# undifferentiated "DO NOT simply delete blank lines, comments, or
+# docstrings" sentence -- which named a helpful and a useless action in one
+# breath. These two sentences are pinned, free-text guidance (not derived
+# from count_content_lines the way describe_measurement_rule() is; see that
+# function for the reproducibility-critical line).
+_MEASURES_LABEL = "Measures:"
+_HELPS_MARKER = "blank lines and '#' comments count toward this length and removing them WILL reduce it"
+_NO_HELP_MARKER = (
+    "content inside triple-quoted strings or block comments does NOT count toward "
+    "this length and removing it will NOT reduce it"
+)
 
 
 def get_staged_files() -> dict[str, bool]:
@@ -256,27 +271,73 @@ def _print_file_description(filepath: str, quoted_length: int) -> None:
     print()
 
 
-def _print_grown_file(filepath: str, previous_length: int, current_length: int) -> None:
+def _print_measures_line() -> None:
+    """Print the shared ``Measures:`` line for a refusal block.
+
+    Generated (GE-127d-2) from ``count_content_lines`` at call time via
+    ``describe_measurement_rule`` -- never a hardcoded sentence -- so an
+    author who counts every line themselves and arrives at a different
+    figure can reconcile the difference from the outcome alone. Shared by
+    both refusal printers (``_print_too_large_file`` and
+    ``_print_grown_file``) so the wording can never drift between them.
+    """
+    print(f"   {_MEASURES_LABEL} {describe_measurement_rule()}")
+
+
+def _print_asymmetry_advice() -> None:
+    """Print the shared HELPS_MARKER / NO_HELP_MARKER asymmetry guidance.
+
+    Distinguishes the action that actually reduces the quoted length
+    (deleting blank lines / '#' comments) from the one that cannot
+    (deleting an already-discarded triple-quoted or block-comment
+    region). Shared by both refusal printers so an author sees identical
+    guidance regardless of which refusal path (absolute-limit crossing or
+    ratchet growth) they tripped.
+    """
+    print(f"   {_HELPS_MARKER}.")
+    print(f"   {_NO_HELP_MARKER}.")
+
+
+def _print_grown_file(filepath: str, previous_length: int, current_length: int, limit: int) -> None:
     """Print the refusal block for a file that grew while already oversized.
+
+    By construction this file also stands above its permitted length
+    under the rule in force (``previous_length`` already exceeds
+    ``limit`` -- see ``_classify_file``), so GE-127d-2's requirement
+    applies to this refusal exactly as it does to ``_print_too_large_file``'s:
+    the block states the length arrived at, the length permitted, and
+    (via the shared ``Measures:`` line and asymmetry advice) what that
+    length measures.
 
     Args:
         filepath: The staged file's path.
         previous_length: The length it stood at, at HEAD, before the change.
         current_length: The length it stands at after the staged change.
+        limit: The permitted length for this file's extension.
     """
     print("❌ FILE GREW WHILE ALREADY OVER ITS LIMIT:")
     print(f"   {filepath}")
     print(f"   Previous length: {previous_length} lines")
     print(f"   New length: {current_length} lines")
+    print(f"   Limit: {limit} lines")
+    _print_measures_line()
     print()
     _print_file_description(filepath, current_length)
     print("   An already-oversized file may still be worked on, but a change")
     print("   that leaves it LONGER than it stood before is refused. Shrink")
-    print("   it, or leave its length unchanged, to commit this edit.\n")
+    print("   it, or leave its length unchanged, to commit this edit.")
+    _print_asymmetry_advice()
+    print()
 
 
 def _print_too_large_file(filepath: str, lines: int, limit: int) -> None:
     """Print the refusal block for a file over its absolute limit.
+
+    The block also states what ``lines`` measures, on the shared
+    ``Measures:`` line (see ``_print_measures_line``), and the shared
+    dividing advice (see ``_print_asymmetry_advice``) distinguishing the
+    action that actually reduces the quoted length from the one that
+    cannot, replacing the prior sentence that forbade both in one breath.
 
     Args:
         filepath: The staged file's path.
@@ -286,10 +347,11 @@ def _print_too_large_file(filepath: str, lines: int, limit: int) -> None:
     print("❌ FILE TOO LARGE:")
     print(f"   {filepath}")
     print(f"   Lines: {lines} (Limit: {limit})")
+    _print_measures_line()
     print()
     _print_file_description(filepath, lines)
     print("   Please refactor and split this file before committing.")
-    print("   DO NOT simply delete blank lines, comments, or docstrings to bypass this.")
+    _print_asymmetry_advice()
     print("   You MUST split the file to make it easier and less token consuming for agents.")
     if filepath.endswith(".py"):
         print("   Use the `/code-refactoring-specialist` slash command to intelligently split this Python file.")
@@ -488,7 +550,7 @@ def main() -> int:
     print(f"📊 Compared {len(previous_lengths)} file(s) against their previous length.\n")
 
     for filepath, previous, lines in grown_files:
-        _print_grown_file(filepath, previous, lines)
+        _print_grown_file(filepath, previous, lines, get_limit_for_extension(filepath))
 
     for filepath, lines, limit in failed_files:
         _print_too_large_file(filepath, lines, limit)
@@ -512,6 +574,43 @@ if __name__ == "__main__":
 ====================================================================
 DECISION HISTORY
 ====================================================================
+- 2026-09-23 [python-coder/GE-127d-2 rework, H-1]: pr-reviewer found
+  `_print_grown_file` (the GE-127b-1 ratchet-growth "grew" refusal) was left
+  entirely outside the prior round's fix -- no permitted length, no
+  `Measures:` line, no asymmetry guidance -- even though a "grew" verdict is,
+  by construction, also a file standing above its permitted length
+  (`_classify_file` only returns "grew" when `previous > limit`), so this
+  AC's Gherkin applies to it exactly as it does to `_print_too_large_file`'s
+  "too_large" verdict. Extracted the shared `Measures:` line and
+  HELPS_MARKER/NO_HELP_MARKER advice into two new helpers,
+  `_print_measures_line()` and `_print_asymmetry_advice()`, so the wording
+  cannot drift between the two refusal printers, and had both printers call
+  them -- `_print_too_large_file`'s own printed output is byte-for-byte
+  unchanged, only its implementation was refactored. Extended
+  `_print_grown_file`'s signature to accept `limit` (the sole call site, in
+  `main()`, updated to pass `get_limit_for_extension(filepath)` -- confirmed
+  by grep this is the only caller anywhere in the tree); it now also prints
+  a `Limit: N lines` line, the shared `Measures:` line, and the shared
+  asymmetry advice. test-writer's 9th descriptor
+  (`test_ge_127d_2_a_grown_already_oversized_file_states_the_new_length_the_permitted_length_and_what_is_measured`)
+  drives this path through a real `git commit` and confirms all three
+  requirements now hold for the "grew" verdict too.
+- 2026-09-22 [python-coder/GE-127d-2]: `_print_too_large_file` now prints a
+  `Measures:` line generated (never hardcoded) from
+  `_file_size_ratchet.describe_measurement_rule`, so the length quoted for a
+  refused file can be reproduced independently by applying the SAME
+  published statement -- the statement moves automatically with the rule
+  in force because `describe_measurement_rule` probes `count_content_lines`
+  as an ordinary module-global reference resolved at call time. Replaced
+  the prior undifferentiated "DO NOT simply delete blank lines, comments,
+  or docstrings to bypass this." sentence -- which forbade both a helpful
+  and a useless action in one breath -- with two sentences that name each
+  action's actual effect on the quoted length. Per architect-review's
+  fifth ruling on this ticket, the discard rule is ALSO stated in
+  commit_guardian.json's `file_size._comment` (already-published static
+  surface) alongside the dynamic `Measures:` line, since a per-refusal
+  stdout line cannot be a `published_rule_surfaces` entry
+  `check_file_size_rule_parity.py` (GE-127d-1) can reconcile.
 - 2026-09-21 [python-coder/GE-127d-1 rework, H-1]: pr-reviewer (10:45) and
   ac-validator (11:05) independently found the 2026-09-15 fix below had
   removed `is_new_file` from the WRONG function: `check_file()` (below) has

@@ -72,9 +72,9 @@ _SUBPROCESS_TIMEOUT_SECONDS = 15
 # than by each caller reimplementing the git plumbing around its own counter.
 Measure = Callable[[str], int]
 
-_TRIPLE_DOUBLE_QUOTE_RE = re.compile(r'""".*?"""', re.DOTALL)
-_TRIPLE_SINGLE_QUOTE_RE = re.compile(r"'''.*?'''", re.DOTALL)
-_BLOCK_COMMENT_RE = re.compile(r"/\*.*?\*/", re.DOTALL)
+_TRIPLE_DOUBLE_QUOTE_RE = re.compile(r'""".*?"""\r?\n?', re.DOTALL)
+_TRIPLE_SINGLE_QUOTE_RE = re.compile(r"'''.*?'''\r?\n?", re.DOTALL)
+_BLOCK_COMMENT_RE = re.compile(r"/\*.*?\*/\r?\n?", re.DOTALL)
 
 
 class PreviousLengthSourceError(Exception):
@@ -142,12 +142,130 @@ def count_content_lines(content: str) -> int:
 
     Returns:
         The number of lines remaining after stripping docstring and
-        block-comment regions.
+        block-comment regions. A discarded region contributes ZERO lines,
+        including the newline that terminated its own closing delimiter
+        (see this module's 2026-09-22 GE-127d-2 DECISION HISTORY entry) --
+        every one of the three patterns below consumes that trailing
+        newline as part of the matched, discarded span, so a stripped
+        region never leaves a phantom blank line behind.
     """
     stripped = _TRIPLE_DOUBLE_QUOTE_RE.sub("", content)
     stripped = _TRIPLE_SINGLE_QUOTE_RE.sub("", stripped)
     stripped = _BLOCK_COMMENT_RE.sub("", stripped)
     return len(stripped.splitlines())
+
+
+# ---------------------------------------------------------------------------
+# GE-127d-2: the published measurement-rule statement, GENERATED FROM
+# count_content_lines() by probing its actual behaviour, rather than
+# maintained as a separately-written sentence. See describe_measurement_rule()
+# below for the reproducibility guarantee this buys.
+# ---------------------------------------------------------------------------
+
+# Each probe is a SELF-CONTAINED block of only one category's own content --
+# no anchor line, no other content for the count to fall back on -- so a rule
+# that fully discards the category reduces its measured length to exactly
+# zero, and a rule that counts it leaves the measured length unchanged from
+# the probe's own raw physical line count. This is what lets
+# _probe_discarded_categories() read "does this rule discard triple-quoted
+# strings/block comments/hash comments" from the rule's own behaviour, for
+# WHATEVER function is currently bound to the module-level name
+# count_content_lines, without inspecting that function's source.
+_PROBE_TRIPLE_QUOTED = '"""\nprobe body line one\nprobe body line two\n"""'
+_PROBE_BLOCK_COMMENT = "/*\nprobe body line one\nprobe body line two\n*/"
+_PROBE_HASH_COMMENT = "# probe body line one\n# probe body line two\n# probe body line three"
+
+_CATEGORY_PROBES: dict[str, str] = {
+    "triple_quoted": _PROBE_TRIPLE_QUOTED,
+    "block_comment": _PROBE_BLOCK_COMMENT,
+    "hash_comment": _PROBE_HASH_COMMENT,
+}
+
+
+def _probe_discarded_categories(measure: Measure) -> set[str]:
+    """Empirically determine which content categories *measure* discards.
+
+    Never hardcodes which categories the rule in force discards: applies
+    *measure* to synthetic, single-category probe content and reads the
+    result rather than inspecting *measure*'s source. A category is
+    DISCARDED when its own probe measures to zero (the whole probe was
+    stripped); it is COUNTED when *measure* leaves it as-is. This is the
+    mechanism that lets ``describe_measurement_rule`` move automatically
+    when the rule in force changes -- including a rebinding of the
+    module-level ``count_content_lines`` name to a different function
+    entirely (see this module's own DECISION HISTORY, GE-127d-2 entry) --
+    rather than being maintained as a separately-written sentence.
+
+    Args:
+        measure: The counting rule to probe. Callers pass
+            ``count_content_lines`` resolved as an ordinary module-global
+            reference AT CALL TIME (never captured into a default
+            argument or a local alias bound once at import/definition
+            time), so a later rebinding of that name is reflected here
+            without this function's own definition changing.
+
+    Returns:
+        The set of category keys (a subset of "triple_quoted",
+        "block_comment", "hash_comment") *measure* discards.
+    """
+    return {category for category, probe in _CATEGORY_PROBES.items() if measure(probe) == 0}
+
+
+def _join_with_and(items: list[str]) -> str:
+    """Join *items* with commas and a trailing "and", English-list style.
+
+    Args:
+        items: The phrases to join. Must be non-empty.
+
+    Returns:
+        A single string, e.g. ``"a, b and c"`` for three items, or just
+        ``"a"`` for one.
+    """
+    if len(items) == 1:
+        return items[0]
+    return ", ".join(items[:-1]) + " and " + items[-1]
+
+
+def describe_measurement_rule() -> str:
+    """Describe, from the rule actually in force, what a quoted length counts.
+
+    GENERATED FROM ``count_content_lines`` by probing its behaviour
+    (``_probe_discarded_categories``) every time this is called, never
+    maintained as a separately-written sentence -- the GE-127d-2
+    reproducibility requirement this function exists to satisfy: a
+    hand-written description would pass every check on the day it is
+    written and silently drift the moment the rule in force changes.
+    ``count_content_lines`` is referenced here as an ordinary, unqualified
+    module-global name, so Python resolves it fresh on every call
+    (ordinary late binding) -- a rule change that rebinds that name
+    changes what this function reports in the very same call that changes
+    the quoted length, without this function needing to change.
+
+    Returns:
+        A one-line description naming which content categories are
+        discarded (never counted toward a quoted length) and confirming
+        blank lines and any surviving categories are counted. Suitable for
+        appending, verbatim, after a ``Measures:`` label.
+    """
+    discarded = _probe_discarded_categories(count_content_lines)
+
+    discard_fragments = []
+    if "triple_quoted" in discarded:
+        discard_fragments.append("triple-quoted strings")
+    if "block_comment" in discarded:
+        discard_fragments.append("block comments")
+
+    hash_discarded = "hash_comment" in discarded
+    counted_fragments = ["blank lines"] if hash_discarded else ["blank lines", "'#' comments"]
+
+    sentences = []
+    if discard_fragments:
+        sentences.append(f"discards content inside {_join_with_and(discard_fragments)}")
+    sentences.append(f"counts every remaining line, including {_join_with_and(counted_fragments)}")
+    if hash_discarded:
+        sentences.append("'#' comments are discarded")
+
+    return "; ".join(sentences) + "."
 
 
 def measure_current_length(filepath: str) -> int:
@@ -536,6 +654,21 @@ def resolve_previous_lengths(
 ====================================================================
 DECISION HISTORY
 ====================================================================
+- 2026-09-23 [python-coder/GE-127d-2 rework, M-1]: pr-reviewer found the
+  trailing `\n?` on all three discard regexes matches a bare LF only, so a
+  CRLF-terminated file's discarded region leaves its own `\r` behind as a
+  phantom entry under `str.splitlines()` -- the same overcount this record
+  exists to fix, surviving for CRLF. Changed `\n?` to `\r?\n?` on all three
+  patterns (`_TRIPLE_DOUBLE_QUOTE_RE`, `_TRIPLE_SINGLE_QUOTE_RE`,
+  `_BLOCK_COMMENT_RE`). Verified this does not perturb any LF-input result
+  before applying it: `\r?` matches zero characters when no `\r` is present,
+  so on pure-LF content the substitution result is byte-for-byte identical
+  to before (checked directly against representative probes, and by
+  re-running the full GE-127d-2 (9) and GE-127b-1/-1-i (18) descriptor sets,
+  27/27 green, unchanged from immediately before this one-token edit).
+  `.gitattributes`'s `* text=auto eol=lf` still means CRLF is not expected to
+  reach this function in practice; this closes the gap for the case where it
+  does.
 - 2026-09-01 [python-coder/GE-127b-1 + GE-127b-1-i]: Initial authoring.
   Shared count_content_lines() measurement function, HEAD-blob previous
   -length resolution via `git show HEAD:<path>` (no persisted baseline, no
@@ -580,5 +713,48 @@ DECISION HISTORY
   prefix plus an exclusion list is not expressible as a set of extensions.
   No behaviour change for check_file_size.py — the sole in-tree caller of
   either generalised function passes neither new argument.
+- 2026-09-22 [python-coder/GE-127d-2]: Added describe_measurement_rule(),
+  GENERATED from count_content_lines() by empirically probing its behaviour
+  (_probe_discarded_categories(), against single-category synthetic probes)
+  rather than maintained as a separately-written sentence -- the AC's own
+  reproducibility requirement and its NAMED MUTATION 2 defence (a hand
+  -written published statement must diverge from the quoted length the
+  moment the rule changes; a generated one cannot). count_content_lines is
+  referenced as an ordinary, unqualified module-global name inside
+  describe_measurement_rule() and _probe_discarded_categories() is always
+  called with it resolved AT CALL TIME, so a later rebinding of that name
+  (e.g. a test's disposable override appended to this file) changes what
+  is described in the same call that changes what is measured -- ordinary
+  Python late binding, never a default-argument or import-time capture.
+  check_file_size.py's _print_too_large_file() prints the result on a new
+  "Measures:" line and replaces the prior undifferentiated dividing advice
+  with two sentences that distinguish the action that reduces the quoted
+  length (deleting blank lines / '#' comments) from the one that cannot
+  (deleting a triple-quoted or block-comment region, already discarded).
+- 2026-09-22 [python-coder/GE-127d-2 correction]: Fixed a universal off-by
+  -one OVERCOUNT in count_content_lines() that GE-127d-2's own reproducibility
+  descriptors surfaced: all three patterns (_TRIPLE_DOUBLE_QUOTE_RE,
+  _TRIPLE_SINGLE_QUOTE_RE, _BLOCK_COMMENT_RE) stripped a matched region via
+  re.sub() but never consumed the newline immediately following its closing
+  delimiter, so every discarded region left a phantom blank line behind --
+  overcounting by exactly one line PER DISCARDED REGION, regardless of that
+  region's position in the file. This was first misdiagnosed (by an earlier
+  attempt at this same record) as a position-0 edge case affecting only a
+  file's leading docstring; a direct probe disproved that and showed the
+  defect is universal and scales with the number of discarded regions, not
+  their position (1 region -> +3 measured lines of overcount across a set of
+  probes; 5 -> +7; 10 -> +12; 25 -> +27 -- the constant +2 offset is probe
+  -harness overhead, not evidence of a floor). check_file_size.py's own
+  previously-reported count of 293 was therefore roughly 16 too high (one per
+  triple-quote pair in that file). Fixed by appending an optional trailing
+  `\n?` to all three patterns, so a discarded region now contributes zero
+  lines, trailing newline included -- matching the rule as PUBLISHED by
+  describe_measurement_rule() above ("discards content inside ...") rather
+  than the off-by-one rule the code had actually been running. Every Python
+  file's counted length becomes smaller as a result (the gate only relaxes;
+  nothing newly refused) and GE-127b-1's ratchet is unaffected in comparison
+  outcome, because get_previous_length() recomputes the HEAD blob's length
+  with this SAME corrected function, so both sides of every before/after
+  comparison shift down together.
 ====================================================================
 """
