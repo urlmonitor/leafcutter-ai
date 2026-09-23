@@ -23,8 +23,19 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from typing import TYPE_CHECKING
 
 import yaml
+
+if TYPE_CHECKING:
+    # The mixins below are only ever mixed into a unittest.TestCase, and they
+    # call its addCleanup/skipTest. Declaring that base statically lets a type
+    # checker resolve those methods; at runtime the base stays ``object`` so the
+    # mixins compose freely and unittest never collects a mixin as a test case
+    # in its own right.
+    _MixinBase = unittest.TestCase
+else:
+    _MixinBase = object
 
 # ---------------------------------------------------------------------------
 # Path bootstrap — make scripts/ importable
@@ -71,7 +82,7 @@ def _make_ac_with_pattern(ac_id: str, reference_pattern: str) -> dict:
     }
 
 
-class _GlobFixtureMixin:
+class _GlobFixtureMixin(_MixinBase):
     """Creates a temp directory holding the three glob-target shapes."""
 
     def _make_glob_dir(self) -> str:
