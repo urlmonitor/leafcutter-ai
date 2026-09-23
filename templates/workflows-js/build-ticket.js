@@ -192,10 +192,34 @@ const RECORD_READBACK_SCHEMA = {
       type: 'array',
       items: {
         type: 'object',
-        properties: { agent: { type: 'string' }, status: { type: 'string' } },
+        properties: {
+          agent: { type: 'string' },
+          status: { type: 'string' },
+          // handoff_target (BO-400e-1-i): present ONLY on an entry whose
+          // status is "handoff" — the name of the agent that entry's OWN
+          // comment text names as the recipient. The signoff skill requires
+          // a handoff comment to name who it is handing off to, so this is
+          // read FROM the comment, not supplied by any caller. Optional: an
+          // older record, or a reader that predates this field, simply
+          // omits it, and isHandoffResolved() treats an absent target as
+          // UNRESOLVED rather than falling back to any proxy — see that
+          // function's docstring.
+          handoff_target: { type: 'string' },
+        },
       },
     },
     signed_off_agents: { type: 'array', items: { type: 'string' } },
+    // failed_phases (BO-400e-1, pr-reviewer H-1, 2026-09-14): every agent in
+    // the frontmatter agents: map whose value is literally "failed" at this
+    // instant. Neither `needed_phases` (status is "failed", not "needed") nor
+    // `signed_off_agents` (a failed phase that left NO ## Comments heading —
+    // the documented BUG-23 self-report-vs-persisted-evidence divergence —
+    // has zero entries there) captures it, so a `failed`-with-no-comment
+    // phase silently dropped out of the demanded set entirely and the ticket
+    // could be recorded done having had a phase actively fail and leave no
+    // trace. See demandedPhasesFromRecord's header for the union this feeds.
+    // TWIN: mirrors build-feature.js RECORD_READBACK_SCHEMA. Keep in sync.
+    failed_phases: { type: 'array', items: { type: 'string' } },
     error: { type: 'string' },
   },
   required: ['readable'],
@@ -492,6 +516,113 @@ function isPassingSignoff(entry) {
 }
 
 /**
+ * Whether a handing phase's `handoff` counts as accounted for (BO-400e-1-i).
+ *
+ * CONDITIONAL BY DESIGN — resist the urge to fold this into
+ * POSITIVE_SIGNOFF_STATUSES. `handoff` records that the phase moved its work
+ * to a named sibling, not that the work is done. Accepting it unconditionally
+ * lets a DANGLING handover — one nobody ever picked up — pass the close with
+ * real work missing, trading a visible (and recoverable, by dispatching the
+ * sibling) deadlock for a silent, unrecoverable phantom-done. That trade is
+ * the exact failure this whole BO-400e family exists to prevent, so the
+ * condition below is the point of this function, not an obstacle to simplify
+ * away.
+ *
+ * NAMED, NOT STRUCTURAL. An earlier version of this function resolved the
+ * recipient by position — "whoever the record's last entry belongs to" —
+ * rather than by name. That is a phantom-done hole of its own: a handoff to
+ * test-writer that test-writer never picks up, followed by some UNRELATED
+ * later phase (documentation-expert, say) recording `ok`, would read as
+ * resolved, because the last entry in the whole record happens to pass and
+ * happens to belong to someone else. The last entry being a pass proves
+ * nothing about THIS handoff unless it is also the recipient THIS handoff
+ * named. So resolution here is anchored to `latest.handoff_target` — the
+ * name the handing phase's own comment recorded — never to "whoever spoke
+ * last".
+ *
+ * FAIL CLOSED ON AN UNNAMED TARGET. `handoff_target` is optional in the
+ * schema (an older record, or a reader that predates the field, omits it).
+ * Absent means UNRESOLVED, never "fall back to the old proxy" — a handover
+ * whose recipient cannot be determined has not been shown to be resolved,
+ * and guessing one back in would reopen the exact hole this rewrite closes.
+ *
+ * ORDER, AND REOPENING. The named recipient must carry a PASSING entry
+ * STRICTLY AFTER the handover — existing anywhere is not enough (a sibling
+ * that passed on unrelated earlier work has not discharged this handoff).
+ * And a later reopening is checked for explicitly: after the handover, any
+ * entry that is ITSELF a handoff naming this phase as ITS target (a reviewer
+ * handing work back) means the record's own last word about this phase is
+ * "more was wanted" — so the search below takes the LATEST of (a) the named
+ * recipient's entries after the handover and (b) any later hand-back-to-this-
+ * phase entries, and only resolves when that latest relevant event is (a).
+ *
+ * Only ever called once a caller has already established that `agentName`'s
+ * OWN latest entry reads `handoff` — see the two call sites.
+ *
+ * TWIN: mirrors build-feature.js. Keep in sync with that file.
+ *
+ * @param {object} record — a `record.readable === true` reply
+ * @param {string} agentName — the handing phase
+ * @param {{status: string, handoff_target: (string|undefined)}} latest —
+ *        agentName's own latest signoff entry (already known to be a handoff)
+ * @returns {boolean}
+ */
+function isHandoffResolved(record, agentName, latest) {
+  const all = record.signoffs;
+  if (!Array.isArray(all) || all.length === 0 || !latest) {
+    return false;
+  }
+  const target = latest.handoff_target;
+  if (!target) {
+    // FAIL CLOSED — see docstring. No named recipient, no resolution.
+    return false;
+  }
+  const handoffIndex = all.indexOf(latest);
+  if (handoffIndex === -1) {
+    return false;
+  }
+
+  // The recipient's own entries after the handover — candidates for having
+  // discharged it.
+  const recipientEntriesAfter = all.filter(
+    (entry, index) => index > handoffIndex && entry && entry.agent === target
+  );
+  // Anyone handing work BACK to agentName after the handover — candidates
+  // for having reopened it, however the recipient's own entries turned out.
+  const handbackEntriesAfter = all.filter(
+    (entry, index) =>
+      index > handoffIndex &&
+      entry &&
+      String(entry.status) === 'handoff' &&
+      entry.handoff_target === agentName
+  );
+
+  const candidates = recipientEntriesAfter.concat(handbackEntriesAfter);
+  if (candidates.length === 0) {
+    return false; // dangling — nothing followed the handover at all
+  }
+
+  // The record's own LAST word relevant to this handoff decides it: find the
+  // candidate with the greatest position in `all` (ties cannot occur — every
+  // entry in `all` is a distinct array slot).
+  let lastRelevant = candidates[0];
+  let lastRelevantIndex = all.indexOf(lastRelevant);
+  for (const candidate of candidates) {
+    const index = all.indexOf(candidate);
+    if (index > lastRelevantIndex) {
+      lastRelevant = candidate;
+      lastRelevantIndex = index;
+    }
+  }
+
+  return (
+    isPassingSignoff(lastRelevant) &&
+    lastRelevant.agent === target &&
+    lastRelevant.agent !== agentName
+  );
+}
+
+/**
  * Adjudicate ONE dispatched gate against the record that was read back.
  *
  * This is the single generic post-dispatch verification (BO-2900f-1-iii): it
@@ -530,6 +661,9 @@ function adjudicatePhaseAgainstRecord(record, phaseName) {
   }
   const latest = entries[entries.length - 1];
   if (!isPassingSignoff(latest)) {
+    if (String(latest.status) === "handoff" && isHandoffResolved(record, phaseName, latest)) {
+      return { verified: true, entries: entries.length, reason: null };
+    }
     return {
       verified: false,
       entries: entries.length,
@@ -661,6 +795,13 @@ function completionVerdictFromRecord(record, ctx) {
     }
     const latest = entries[entries.length - 1];
     if (!isPassingSignoff(latest)) {
+      // BO-400e-1-i — a `handoff` is not automatically a failure to prove:
+      // check whether the record's own last word resolves it (see
+      // isHandoffResolved's docstring for why the condition is conditional)
+      // before naming this phase outstanding.
+      if (String(latest.status) === "handoff" && isHandoffResolved(record, agentName, latest)) {
+        continue;
+      }
       outstanding.push({
         agent: agentName,
         reason:
@@ -680,52 +821,97 @@ function completionVerdictFromRecord(record, ctx) {
 }
 
 /**
- * The phases whose sign-offs the completion decision requires.
+ * Every phase the ticket's OWN record currently demands — from the read-back
+ * alone, never from a caller-supplied list.
  *
- * Union of what the drive was asked to run and what the RECORD still names as
- * needed (the record is the source of truth), minus phases the driver
- * deliberately deferred — an epic member's pull-request phase is opened once
- * per epic by finalize-feature, so it must not block the ticket forever.
+ * BO-400e-1 + BO-400a-2-iv. `record.needed_phases` (agents literally marked
+ * `needed` in the frontmatter at this instant) is NOT by itself the full
+ * demanded set: a phase that has already signed off — this same drive, or a
+ * previous one that was resumed — has its frontmatter value flipped away from
+ * `needed` (commonly to `signed_off`), so a ticket whose every phase already
+ * finished would otherwise report an EMPTY demanded set and could never be
+ * recorded done. `record.signed_off_agents` (agents carrying a real sign-off
+ * heading in the ticket's ## Comments, also reported by the SAME read-back) is
+ * unioned in to cover exactly that phase. Both fields come from the one
+ * trusted read-back of the one record; neither is a caller's claim about what
+ * the ticket needs.
  *
- * @param {Array<string>} drivenPhases
- * @param {Array<string>} recordNeededPhases
- * @param {Array<string>} deferredPhases
+ * pr-reviewer H-1 (2026-09-14): the union of those two fields alone still
+ * dropped a phase whose frontmatter reads `failed` if that phase left NO
+ * `## Comments` heading at all — the same self-report-vs-persisted-evidence
+ * divergence this codebase already guards against on the success path
+ * (`adjudicatePhaseAgainstRecord`, the BUG-23 pattern) was unguarded on the
+ * failure/`cross_agent`-skip path: `needed_phases` excludes it (status is
+ * `failed`, not `needed`) and `signed_off_agents` excludes it (no heading to
+ * report), so the phase vanished from the demanded set entirely and the
+ * ticket could be recorded done having had a phase actively fail and leave no
+ * trace. `record.failed_phases` (agents literally marked `failed` in the
+ * frontmatter, reported by the SAME trusted read-back) is unioned in for
+ * exactly that case.
+ *
+ * TWIN: mirrors build-feature.js. Keep in sync with that file.
+ *
+ * @param {object|null} record — a read-back reply; ignored unless present
  * @returns {Array<string>}
  */
-function requiredPhasesForCompletion(drivenPhases, recordNeededPhases, deferredPhases) {
-  const deferred = deferredPhases || [];
+function demandedPhasesFromRecord(record) {
+  if (!record) return [];
   const out = [];
-  for (const name of (drivenPhases || []).concat(recordNeededPhases || [])) {
+  const merged = (record.needed_phases || [])
+    .concat(record.signed_off_agents || [])
+    .concat(record.failed_phases || []);
+  for (const name of merged) {
     if (!name) continue;
-    if (deferred.indexOf(name) !== -1) continue;
     if (out.indexOf(name) === -1) out.push(name);
   }
   return out;
 }
 
 /**
- * The phases a ticket CLAIMS are already complete.
+ * The phases whose sign-offs the completion decision requires.
  *
- * Used only when the drive has nothing to dispatch. "What the drive was asked
- * to run" is then empty, and a completion decision taken from an empty required
- * set is vacuous: it says yes to every ticket, including one whose frontmatter
- * reads signed_off while its record carries no sign-off entry at all — the
- * BUG-23 signature, inverted into a phantom-done write. The honest basis is
- * what the ticket itself claims: every agent in its map except the ones it
- * declares not_needed. Each of those must still be backed by a passing entry in
- * the record before the ticket may be recorded done.
+ * BO-400e-1: THE RECORD IS THE ONLY SOURCE. This used to be a UNION of
+ * `drivenPhases` (whatever the caller — a ticket-planner reply, or this
+ * drive's own dispatch tally — claimed was needed) with the record's own
+ * demanded-agents list. That let a caller's list ADD phases the ticket's
+ * record never names (a widened list smuggled extra required phases into the
+ * decision) while never being able to REMOVE one the record does name (a
+ * narrowed list could not make an unaccounted phase disappear, which looked
+ * safe in isolation but proved the caller's list was being consulted at all).
+ * Three reconciliation strategies were considered and all three are wrong:
+ * intersect the caller's list with the record's, union them (the bug this
+ * closes), or fall back to the record only when the caller offers no list.
+ * Each of those still lets an input OTHER than the record influence the
+ * decision in at least one case. The only implementation that survives a
+ * narrowed list, a widened list and no list at all producing the SAME answer
+ * is one that never reads the caller's list in the first place.
+ *
+ * `deferredPhases` is not a caller override of the demanded set — it is a
+ * fixed structural fact about this driver (an epic member's pull-request
+ * phase is opened once per epic by finalize-feature, so it must not block the
+ * ticket forever) and is applied identically regardless of what any caller
+ * claims.
+ *
+ * There is deliberately no `drivenPhases` (or equivalent) parameter here.
+ * Adding one back — an "exclusion list", a "claimed phases" list, or any
+ * other caller-supplied narrowing/widening channel — reopens exactly the
+ * defect this function exists to close.
  *
  * TWIN: mirrors build-feature.js. Keep in sync with that file.
  *
- * @param {Array<{agent: string, status: string}>} orderedPhases
+ * @param {Array<string>} recordDemandedPhases — the output of
+ *        demandedPhasesFromRecord(), i.e. every agent the ticket's OWN record
+ *        (its frontmatter agents: map plus its own sign-off headings) demands
+ * @param {Array<string>} deferredPhases
  * @returns {Array<string>}
  */
-function claimedPhasesForCompletion(orderedPhases) {
+function requiredPhasesForCompletion(recordDemandedPhases, deferredPhases) {
+  const deferred = deferredPhases || [];
   const out = [];
-  for (const entry of orderedPhases || []) {
-    if (!entry || !entry.agent) continue;
-    if (entry.status === "not_needed") continue;
-    if (out.indexOf(entry.agent) === -1) out.push(entry.agent);
+  for (const name of recordDemandedPhases || []) {
+    if (!name) continue;
+    if (deferred.indexOf(name) !== -1) continue;
+    if (out.indexOf(name) === -1) out.push(name);
   }
   return out;
 }
@@ -921,10 +1107,12 @@ async function readTicketRecordBack(recordPath) {
     `Read the ticket record at "${recordPath}" back off disk RIGHT NOW and report what it actually contains. ` +
     `Do not infer, do not remember, do not trust any earlier report about this ticket — open the file. ` +
     `Report: "lifecycle_status" (the frontmatter status: value), "needed_phases" (every agent in the frontmatter agents: map whose value is "needed"), ` +
+    `"failed_phases" (every agent in the frontmatter agents: map whose value is literally "failed" — report it even when that agent has no ## Comments heading at all), ` +
     `and "signoffs": one entry per sign-off heading in the ## Comments section, in the order they appear, as {"agent": "<name>", "status": "<status>"} ` +
     `(heading form: "### YYYY-MM-DD HH:MM — <agent> (status: <status>)"). List EVERY matching heading, including repeats — do not de-duplicate them. ` +
+    `For any entry whose status is "handoff", ALSO report "handoff_target": "<name>" — the agent that entry's OWN comment text names as the one it is handing off to (the signoff skill requires a handoff comment to name its recipient in its own prose; report exactly who that comment names, verbatim). Omit the "handoff_target" key entirely on that entry if the comment does not name a recipient — do not guess one. ` +
     `If the record cannot be opened for any reason, return {"readable": false, "error": "<what went wrong>"} — an unreadable record is a real answer and will be treated as a failure, so never guess its contents. ` +
-    `Otherwise return {"readable": true, "ticket_path": "${recordPath}", "lifecycle_status": "...", "needed_phases": [...], "signoffs": [...], "signed_off_agents": [...]}. ` +
+    `Otherwise return {"readable": true, "ticket_path": "${recordPath}", "lifecycle_status": "...", "needed_phases": [...], "failed_phases": [...], "signoffs": [{"agent": "...", "status": "...", "handoff_target": "..."}, ...], "signed_off_agents": [...]}. ` +
     `Return ONLY the JSON object, no prose.`,
     {
       agentType: "status-checker",
@@ -952,10 +1140,10 @@ async function readTicketRecordBack(recordPath) {
  */
 async function writeTicketCompletion(recordPath, confirmedPhases) {
   return await agent(
-    `Record the ticket at "${recordPath}" as complete in its own record. ` +
-    `Every phase that ticket names as needed now carries a passing sign-off in the record itself, verified by reading it back: ${JSON.stringify(confirmedPhases)}. ` +
-    `Edit the ticket's frontmatter so that "status:" reads done. Change nothing else — do not touch the agents: map, the ## Sign-offs checklist, or the ## Comments section. ` +
-    `If the record cannot be written, return {"status": "error", "error": "<what went wrong>"} rather than reporting success. ` +
+    `This is build-ticket.js's completion-write step, writeTicketCompletion(), for the ticket at "${recordPath}". Per your Closing protocol this dispatch IS the authorization to close (the driver-dispatched authorization, not the interactive one): do not look for a same-turn user request, and do not apply the auto-close trigger's merge-commit condition — a ticket branch is unmerged by construction, so that condition can never hold here and is not what gates this write. ` +
+    `Every phase that ticket names as needed now carries a passing sign-off in the record itself, verified by reading it back: ${JSON.stringify(confirmedPhases)}. Do not re-litigate that from scratch. ` +
+    `Write the finished state by invoking the checking mechanism exactly as your protocol prescribes, python3 scripts/set_ticket_status.py --ticket "${recordPath}" --status done, with no additional flags and no override — never by any other route, and do not edit the ticket's record directly by any other means. ` +
+    `If the script exits non-zero, the ticket is NOT closed: return {"status": "error", "error": "<what the script reported>"} rather than reporting success. ` +
     `Return ONLY the JSON object: {"status": "ok"|"error", "ticket_path": "${recordPath}"}.`,
     {
       agentType: "status-checker",
@@ -1109,8 +1297,21 @@ function buildTicketOutcome(spec) {
  *
  * TWIN: mirrors build-feature.js. Keep in sync with that file.
  *
+ * BO-400e-1: `spec` deliberately carries no `basePhases` (or equivalent)
+ * caller-supplied field. `spec.record` and `spec.demandedRecord` are BOTH
+ * read-backs of the ticket's own record and nothing else, kept as two fields
+ * for one reason only: `spec.record` is the CURRENT read (used to decide
+ * whether the record is readable right now) and can legitimately be
+ * unreadable at the instant of decision (the record vanished mid-drive, or a
+ * transient read failure), while `spec.demandedRecord` is the most recent
+ * READABLE read-back (falls back to whatever the caller last saw readable) —
+ * used only to name what the ticket demands so an outstanding-phase list
+ * survives a read failure that happens at the exact moment the decision is
+ * taken. See requiredPhasesForCompletion's and demandedPhasesFromRecord's
+ * headers for why no caller-supplied list may feed either field.
+ *
  * @param {{recordPath: string, title: string, record: object|null,
- *          basePhases: Array<string>, deferredPhases: Array<string>,
+ *          demandedRecord: object|null, deferredPhases: Array<string>,
  *          completedPhases: Array<object>, skippedPhases: Array<object>,
  *          unverifiedPhases: Array<object>, unverifiedReasons: object,
  *          dispatchedAgents: Array<string>, noPhasesToRun: boolean}} spec
@@ -1120,8 +1321,7 @@ async function concludeTicket(spec) {
   const record = spec.record;
 
   const requiredPhases = requiredPhasesForCompletion(
-    spec.basePhases,
-    (record && record.needed_phases) || [],
+    demandedPhasesFromRecord(spec.demandedRecord),
     spec.deferredPhases
   );
 
@@ -1378,16 +1578,21 @@ const deferredPhases = [];
 // this driver's twin drove it (see concludeTicket's header for the full
 // failure).
 //
-// The required set is what the ticket CLAIMS is complete, not what the drive
-// ran — the drive ran nothing, and an empty required set would say yes to every
-// ticket, including one whose frontmatter reads signed_off while its record
-// carries no sign-off entry at all.
+// BO-400e-1: the required set comes from the fresh read-back's own record
+// below — NOT from `orderedPhases` (this drive's planner reply) — even
+// though the drive ran nothing. The record is the sole source regardless of
+// whether any phase was dispatched this run; an empty required set would
+// say yes to every ticket, including one whose frontmatter reads signed_off
+// while its record carries no sign-off entry at all, and that guard belongs
+// to completionVerdictFromRecord acting on the record itself, not to a
+// caller-supplied stand-in for it.
 if (neededPhases.length === 0) {
+  const freshRecord = await readTicketRecordBack(ticketPath);
   return await concludeTicket({
     recordPath: ticketPath,
     title,
-    record: await readTicketRecordBack(ticketPath),
-    basePhases: claimedPhasesForCompletion(orderedPhases),
+    record: freshRecord,
+    demandedRecord: freshRecord,
     deferredPhases,
     completedPhases: [],
     skippedPhases: [],
@@ -1403,15 +1608,29 @@ const completedPhases = [];
 const skippedPhases = [];
 
 // Post-dispatch verification state (BO-2900f-1-i/-iii).
-//   unverifiedPhases — gates that reported success and could not be confirmed
-//                      against the record. Their verdict is FAILED.
-//   lastRecord       — the most recent readable read-back. The completion
-//                      decision is taken from this and nothing else, so it is
-//                      never taken from the drive's own tally (BO-400a-2-ii).
+//   unverifiedPhases   — gates that reported success and could not be
+//                        confirmed against the record. Their verdict is
+//                        FAILED.
+//   lastRecord         — the CURRENT read-back: null the instant the record
+//                        cannot be read, so completionVerdictFromRecord can
+//                        tell "unreadable right now" from "readable". The
+//                        completion decision's readable/unreadable branch is
+//                        taken from this and nothing else — never from the
+//                        drive's own tally (BO-400a-2-ii).
+//   lastReadableRecord — BO-400e-1: the most recent read-back that WAS
+//                        readable, kept even after a later read fails. Used
+//                        only to name what the ticket demands
+//                        (demandedPhasesFromRecord) so a record that goes
+//                        unreadable at the exact instant of the completion
+//                        decision still reports what it could not confirm,
+//                        rather than an empty list. This is still the
+//                        ticket's own record — a slightly earlier read of
+//                        the same file — never a caller's claim about it.
 const unverifiedPhases = [];
 const unverifiedReasons = {};
 const dispatchedAgents = [];
 let lastRecord = null;
+let lastReadableRecord = null;
 
 // BO-3701 — the pending set is a WORK-LIST, not a snapshot.
 //
@@ -1421,9 +1640,12 @@ let lastRecord = null;
 // `pendingPhases` is re-derived after every dispatch from the record
 // read-back this driver already performs — see absorbPromotedPhases().
 //
-// `neededPhases` is left intact and still names the OPENING set: the
-// completion decision reports against `plannedPhaseNames`, which starts as
-// that set and grows only as promotions are genuinely absorbed.
+// `neededPhases` is left intact and still names the OPENING set.
+// `plannedPhaseNames` starts as that set and grows only as promotions are
+// genuinely absorbed; it feeds the CODER_PHASES test-writer check below, not
+// the completion decision (BO-400e-1: that decision reads the record's own
+// `needed_phases` back off disk, which already reflects any mid-drive
+// promotion via absorbPromotedPhases' on-disk write).
 //
 // TWIN: mirrors build-feature.js's `pendingPhases` work-list. Keep in sync.
 const pendingPhases = [...neededPhases];
@@ -1546,6 +1768,7 @@ while (pendingPhases.length > 0) {
     const phaseRecord = await readTicketRecordBack(ticketPath);
     if (phaseRecord && phaseRecord.readable === true) {
       lastRecord = phaseRecord;
+      lastReadableRecord = phaseRecord;
     } else {
       lastRecord = null;
     }
@@ -1848,15 +2071,21 @@ while (pendingPhases.length > 0) {
 // archive check. The missing half is this write — and its boundary: the write
 // happens only when the ticket's OWN record proves every needed phase passed.
 
+// BO-400e-1: no `basePhases` here. The required set is derived below purely
+// from `lastReadableRecord` — the most recent READABLE read-back of the
+// ticket's own record — never from `plannedPhaseNames` (this drive's own
+// dispatch tally). `record: lastRecord` still decides the readable/
+// unreadable branch itself (see concludeTicket's header). BO-3701's concern
+// (a phase promoted to needed mid-drive must not pass unexamined) is still
+// satisfied: absorbPromotedPhases writes a promotion into the ON-DISK
+// record itself, so the next read-back — and therefore lastReadableRecord —
+// already reflects it by the time this decision is taken; no separate
+// "opening set plus promotions" list is needed to account for it.
 return await concludeTicket({
   recordPath: ticketPath,
   title,
   record: lastRecord,
-  // BO-3701: the opening set PLUS anything genuinely promoted mid-drive. A
-  // phase that became needed and was dispatched must be accounted for by the
-  // completion decision like any other; reporting only the opening set would
-  // let a promoted phase pass unexamined.
-  basePhases: [...plannedPhaseNames],
+  demandedRecord: lastReadableRecord,
   deferredPhases,
   completedPhases,
   skippedPhases,

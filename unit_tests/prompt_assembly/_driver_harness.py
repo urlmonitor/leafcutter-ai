@@ -110,7 +110,14 @@ def write_ticket_record(
     ``agent_statuses`` overrides that per agent (e.g. ``signed_off``), which is
     how a scenario expresses a ticket that carries no needed phase at all.
     ``seeded_signoffs`` is an iterable of ``(agent, status)`` pairs already
-    present in the record before the drive starts.
+    present in the record before the drive starts. An entry may instead be a
+    3-tuple ``(agent, status, handoff_target)`` (BO-400e-1-i) to additionally
+    emit a ``handoff_target: <name>`` line in that entry's own comment body —
+    the on-disk shape ``harness_build_ticket_guard.mjs``'s ``parseRecord()``
+    reads back and attaches to that specific signoff entry. Omit the third
+    element (or pass a falsy value for it) for an entry that names no
+    recipient; every existing 2-tuple caller emits byte-identical output to
+    before this was added.
 
     ``omit_agents`` (BO-400a-2-iv) leaves the ``agents:`` key OUT of the
     frontmatter entirely, which is the on-disk shape of a ticket that names no
@@ -175,9 +182,13 @@ def write_ticket_record(
         else:
             body.append(f"- [ ] {agent}")
     body.extend(["", "## Comments", ""])
-    for agent, agent_status in seeded_signoffs:
+    for seeded in seeded_signoffs:
+        agent, agent_status, *rest = seeded
+        handoff_target = rest[0] if rest else None
         body.append(f"### 2026-08-18 09:00 — {agent} (status: {agent_status})")
         body.append("pre-existing sign-off from an earlier drive")
+        if handoff_target:
+            body.append(f"handoff_target: {handoff_target}")
         body.append("")
 
     with open(path, "w", encoding="utf-8") as fh:

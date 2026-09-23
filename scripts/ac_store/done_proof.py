@@ -1391,10 +1391,10 @@ def _resolve_all_child_ids(
 ) -> list[str]:
     """Flatten a composite's ``covered_by`` tree into its leaf descendant ids.
 
-    A child that is itself a composite (its own ``covered_by`` is non-empty)
-    is expanded recursively rather than treated as a leaf requiring a direct
-    test — only leaf descendants (empty/absent ``covered_by``) need their own
-    covers-tagged test.  Cycles are broken defensively via *_seen* (a
+    A child that is itself a composite (its own ``covered_by`` RESOLVES to real
+    ACs — BO-2500a-6-ii) is expanded recursively rather than treated as a leaf
+    requiring a direct test; a child holding only test-file paths is a LEAF
+    needing its own covers-tagged test.  Cycles are broken via *_seen* (a
     malformed store could otherwise recurse forever); a child id already
     visited is not expanded a second time.
 
@@ -1427,7 +1427,7 @@ def _resolve_all_child_ids(
         if child_info is None:
             continue  # unresolvable entry (e.g. legacy test-file path) — skip
         child_covered_by = child_info.get("covered_by", [])
-        if child_covered_by:
+        if _has_resolvable_child(child_covered_by, ac_status_map):
             leaf_ids.extend(_resolve_all_child_ids(child_covered_by, ac_status_map, seen))
         else:
             leaf_ids.append(child_id)

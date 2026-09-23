@@ -1,0 +1,140 @@
+id: BO-400e-3-i
+title: "Finalization closes a ticket through the same checking mechanism as the drivers, or leaves it open"
+component: build-orchestration
+components:
+  - build_orchestration
+level: L3
+status: active
+req_status: draft
+work_status: done
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+change_target: pipeline
+risk_surface: contract_boundary
+package_surface: false
+criteria: |
+  Given an epic is being finalized
+    And its branch still carries tickets whose recorded state is not the finished one
+  When finalization closes those tickets
+  Then each close is performed by invoking the same checking mechanism the drivers invoke
+  And no step writes the finished state by editing the record directly
+  And the blanket override is not used to force a close through.
+
+  Given one of those tickets names a phase as needed that carries no sign-off
+  When finalization attempts its close
+  Then the mechanism refuses
+  And that ticket's recorded state is left unchanged
+  And the refusal is reported against that ticket by name
+  And finalization does not substitute a direct write to close it anyway.
+depends_on:
+  - BO-400e-3
+doc_links:
+  - path: templates/workflows-js/finalize-feature.js
+    relationship: implements
+    status: exists
+    relevance: "Step 3.5 sub-step C, the second writer of the finished state this record removes."
+  - path: docs/architecture/adrs/ADR-047-single-writer-ticket-close-path.md
+    relationship: related
+    status: exists
+    relevance: "The single-writer invariant this record extends from the drivers to the finalization path."
+  - path: docs/architecture/diagrams/c3-009-ticket-close-paths-sequence.md
+    relationship: describes
+    status: exists
+    relevance: "The diagram that found this route; the red out-of-close region becomes empty once this record is met."
+  - path: docs/known-issues/build-orchestration/open-high-ki-bo-20260923-0630.md
+    relationship: related
+    status: exists
+    relevance: "The filed defect this record closes."
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Sub-step C invokes scripts/set_ticket_status.py with --status done, in the same shape sub-step D already uses for mark_ac_done.py. No step in the finalization prompt may instruct a direct frontmatter write of the finished state."
+  - "--force is never passed. It disables the parity check, so using it here would reinstate the ungated write behind a flag rather than removing it."
+  - "A non-zero exit is reported against the ticket by name and the ticket is left unclosed. It is not retried with an override and not written by another route; the existing archive check then surfaces the unclosed ticket downstream, which is the correct end state."
+  - "The change is confined to the prompt text of sub-step C. finalize-feature.js is already over its line-count limit, so the edit must be length-neutral or shrinking."
+delivers_to: null
+expects_from:
+  ac_id: BO-400e-3
+  contract: "scripts/set_ticket_status.py as the sole writer of the finished state, with its parity check and its transition allow-list — including the todo to done edge that BO-400e-3 made available without --force."
+test_required: true
+test_spec:
+  - name: test_finalization_closes_through_the_checking_mechanism
+    target_dir: unit_tests/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "Step 3.5's prompt instructs set_ticket_status.py --status done for each open ticket."
+  - name: test_no_step_writes_the_finished_state_directly
+    target_dir: unit_tests/
+    framework: pytest
+    type: behavioral
+    angle: failure
+    description: "No instruction anywhere in the finalization prompt tells the agent to replace or write a status line in the frontmatter. Derived by scanning the prompt rather than checking one known location, so a direct write reintroduced elsewhere fails too."
+  - name: test_the_blanket_override_is_not_used
+    target_dir: unit_tests/
+    framework: pytest
+    type: behavioral
+    angle: failure
+    description: "No --force appears on any set_ticket_status.py invocation in the finalization prompt."
+  - name: test_a_refused_close_leaves_the_ticket_open_and_is_reported
+    target_dir: unit_tests/
+    framework: pytest
+    type: behavioral
+    angle: boundary
+    description: "The non-zero-exit branch names the ticket, does not write the status by another means, and does not retry with an override."
+test_rationale: |
+  This record's deliverable is the text of a dispatch prompt: sub-step C is instructions an
+  agent receives, not control flow the unit layer can execute. Asserting on that text is
+  therefore asserting on the artifact itself, not on a proxy for it — the usual objection to
+  a source-level test, that it passes on dead code, does not apply when the source IS the
+  deliverable being shipped to the agent.
+
+  This also follows the established precedent for this exact file and this exact step:
+  unit_tests/test_finalize_feature_step35_scope.py already guards step 3.5's instructions
+  the same way, including two negative assertions of the same shape as the one here
+  (test_no_whole_store_scan_instruction, test_no_worktree_walk_instruction).
+
+  The negative test is written as a scan for the direct-write pattern across the whole
+  finalization prompt rather than an inspection of sub-step C, so that a direct write
+  reintroduced in a different sub-step fails it too. A test that only checked sub-step C
+  would pass on the defect simply moving.
+covered_by:
+  - unit_tests/test_finalize_feature_single_writer_close.py
+implemented_by:
+  - templates/workflows-js/finalize-feature.js
+origin_agent: BrainCandy
+created: 2026-09-23
+amended_by: []
+superseded_by: null
+notes: |
+  FIELD EVIDENCE — found 2026-09-23 by BO-400e-5's own sequence diagram, not by a drive and
+  not by a test. That record required every participant able to write the recorded state to
+  appear, "so that a route which is not drawn is a route which does not exist". Enumerating
+  the writers to satisfy that clause is what surfaced this one. Filed as
+  KI-BO-20260923-0630.
+
+  The defect: finalize-feature.js step 3.5 sub-step C read the ticket, replaced the status
+  line in the frontmatter, and wrote the file back. No parity check, no transition
+  validation, no possibility of refusal. It runs over every still-open ticket of the epic
+  being finalized, so a ticket the drivers had correctly REFUSED to close was closed anyway
+  one step later in the lifecycle, silently.
+
+  Note the contrast that made it obvious once seen: sub-step D, immediately below, already
+  invoked mark_ac_done.py as a script and handled its exit code. Sub-step C was the only
+  step in that prompt that reached for the file directly.
+
+  NAMED MUTATIONS (each turns only this record's tests red):
+    M1 — restore the direct frontmatter rewrite. Caught by
+         test_no_step_writes_the_finished_state_directly.
+    M2 — invoke the script but add --force so a refusal cannot stop finalization. Caught by
+         test_the_blanket_override_is_not_used.
+    M3 — invoke the script, then fall back to a direct write when it exits non-zero. Caught
+         by the negative scan plus test_a_refused_close_leaves_the_ticket_open_and_is_reported.
+    M4 — move the direct write into a different sub-step. Caught, because the negative test
+         scans the whole prompt rather than sub-step C.
+
+  This record does NOT make finalization fail when a close is refused. It makes it stop
+  lying: the ticket is left open and named. The archive check at finalize step 5 already
+  refuses to archive an epic with a non-done ticket, so the refusal surfaces there on its
+  own terms rather than through a second mechanism invented here.
