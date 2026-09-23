@@ -583,17 +583,24 @@ def check_staged_done_proofs(
     file(s) — so a leaf (empty ``covered_by``, or one holding only test
     paths) keeps the original direct-covers-tag requirement below.
 
-    On the leaf path only, ACs with ``test_required: false`` (the Python
-    boolean ``False``, not the string ``"false"``) are silently exempted and
-    never checked for a covers tag.  This mirrors the exemption already applied
-    by the CI-authoritative functions :func:`check_all_done_acs` and
-    :func:`check_changed_done_acs` — it covers documentation ACs and
-    prompt-convention ACs where a covers-tagged test is structurally
-    impossible.  An absent or ``True`` value for ``test_required`` is always
-    enforced.  The exemption keys ONLY on the AC record's own declared
-    ``test_required`` field — never on whether a tag happens to be missing —
-    so it cannot be triggered by the very condition (no tag found) it is meant
-    to exempt from.
+    On the leaf path only, an AC may be exempted from the covers-tag
+    requirement — but the decision is delegated to :func:`is_covers_tag_waived`,
+    the ONE shared BO-2500a-1-ii predicate, exactly as the CI-authoritative
+    functions :func:`check_all_done_acs` and :func:`check_changed_done_acs` do.
+    That predicate requires the *conjunction* of ``test_required: false`` (the
+    Python boolean ``False``, not the string ``"false"``) AND a non-empty,
+    non-whitespace ``test_rationale``, so "untestable" must be stated, not just
+    asserted.  It covers documentation ACs and prompt-convention ACs where a
+    covers-tagged test is structurally impossible.  An absent or ``True`` value
+    for ``test_required`` is always enforced.
+
+    This path previously carried its own inline ``test_required is False``
+    short-circuit ABOVE the waiver call, which made the shared predicate dead
+    code for precisely the records it governs: a ``test_required: false`` AC
+    with no rationale was exempted here while CI refused it.  BO-2500a-1-ii
+    hardened the two CI functions and left this copy behind, so the pre-commit
+    hook and the required CI gate disagreed.  Do not reintroduce a second copy
+    of the rule here — call the shared predicate.
 
     The two checks are ordered level-first deliberately.  ``test_required``
     declares whether ``test-writer`` must author a direct test for this AC, so
@@ -657,8 +664,6 @@ def check_staged_done_proofs(
                 )
             continue
 
-        if data.get("test_required") is False:
-            continue
         if ac_id_str not in all_covered_ids:
             if is_covers_tag_waived(data):
                 continue
