@@ -102,7 +102,8 @@ created: 2026-09-21
 amended_by: []
 superseded_by: null
 covered_by: [BO-4100a-1-i]
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260923-BO-4100a-1.md
 notes: >-
   The observable is the commit the branch is rooted at after creation, never a warning
   printed before it -- see BO-4100a's notes for why a pre-flight check is explicitly not
