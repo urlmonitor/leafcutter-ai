@@ -68,7 +68,7 @@ Severity in the **filename** is a three-level index bucket (`blocker` / `high` /
 
 Fixed issues move to [`build-orchestration/resolved/`](build-orchestration/resolved/) and are no longer listed as open. They are kept, not deleted.
 
-**Open: 49** (7 blocker, 26 high, 16 low) · **Resolved: 9**
+**Open: 50** (7 blocker, 27 high, 16 low) · **Resolved: 9**
 
 ## Open
 
@@ -83,6 +83,7 @@ Fixed issues move to [`build-orchestration/resolved/`](build-orchestration/resol
 | `blocker` | KI-BO-20260921-fastlane-worktree-agent-acts-on-leaked-conversation — the fast lane's worktree phase executed destructive git operations from the parent session's conversation, then asked for the authorization afterwards | [open-blocker-ki-bo-20260921-fastlane-worktree-agent-acts-on-leaked-conversation.md](build-orchestration/open-blocker-ki-bo-20260921-fastlane-worktree-agent-acts-on-leaked-conversation.md) |
 | `high` | KI-BO-007 — `build-feature` counts a phase as completed when the agent halted without doing it, yielding `status: ok` with no PR | [open-high-ki-bo-007.md](build-orchestration/open-high-ki-bo-007.md) |
 | `high` | KI-BO-20260921-worktree-base-resolver-defaults-to-cwd — build-feature calls the worktree-base resolver with no start path, so in the self-hosting layout it resolves against a directory outside the repository and every epic drive aborts | [open-high-ki-bo-20260921-worktree-base-resolver-defaults-to-cwd.md](build-orchestration/open-high-ki-bo-20260921-worktree-base-resolver-defaults-to-cwd.md) |
+| `high` | KI-BO-20260922-0500 — the fast lane renders a crashed resolver as an empty build set, returning `status: ok` and `nothing_to_build` with a confident prose diagnosis for an AC that had two not-done leaves to build | [open-high-ki-bo-20260922-0500.md](build-orchestration/open-high-ki-bo-20260922-0500.md) |
 | `high` | KI-BO-010 — `/quick-fix`'s divergence gate is a first-token substring match, and its own remedy loops | [open-high-ki-bo-010.md](build-orchestration/open-high-ki-bo-010.md) |
 | `high` | KI-BO-011 — A grep-only test aimed at an orphaned file kept a superseded criterion looking satisfied, hiding a direct contradiction between two `done` ACs | [open-high-ki-bo-011.md](build-orchestration/open-high-ki-bo-011.md) |
 | `high` | KI-BO-012 — The fast lane emits no telemetry, so the lane-comparison report can never contain fast-lane data | [open-high-ki-bo-012.md](build-orchestration/open-high-ki-bo-012.md) |
