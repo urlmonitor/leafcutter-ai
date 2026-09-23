@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: '2026-08-18'
-last_updated: '2026-09-14'
+last_updated: '2026-09-23'
 components:
   - ac_driven_dev
 related_docs:
@@ -90,5 +90,34 @@ current `templates/workflows-js/plan-feature.js`, not taken on the epic's own sa
 - Covered by `unit_tests/workflows/test_acd_2100c_1.py` (re-run 2026-09-14: 4 passed, 15
   subtests passed) and `unit_tests/workflows/test_acd_2100c_4.py` (re-run 2026-09-14: 6
   passed).
+
+**Residual gap, addendum 2026-09-23.** The incoming-provenance half's entire security
+property is that `resolveGate()` only honours `resume_answer.channel === "person"`.
+Nothing in the shipped system *produces* that field mechanically:
+`templates/commands/plan-feature.md` is a one-line `Workflow("plan-feature", {
+userInput: $ARGUMENTS })` dispatch with no resume/channel wiring, and the only
+construction site is prose in `templates/skills/plan-feature/SKILL.md` §RS.3
+instructing an agent to set `channel: "person"` only when genuinely relaying a real
+human's decision. No runtime check distinguishes an agent that followed that
+instruction from one that fabricated the field to pass the gate. During
+`ACD-2100c-4`'s own build, `python-coder` and `test-writer` both correctly reasoned
+about the consumer side and reclassified 16 newly-red sibling tests as `test_drift` —
+but nothing in either agent's reasoning checked whether a producer existed at all, and
+the drive would have shipped this way had it not independently stalled on an unrelated
+blocker first. Recommend: a mechanical companion check (e.g. a reachability/producer-
+audit test asserting at least one real, non-test call site constructs
+`resume_answer.channel` before a ticket closing a provenance-discriminator AC is
+allowed to sign off `ac-fulfillment-gate`).
+
+Re-verified 2026-09-23 against current source: `resolveGate()`'s `channel !== "person"`
+check (`templates/workflows-js/plan-feature.js:1671`) and the SKILL.md-only producer
+instruction (`templates/skills/plan-feature/SKILL.md` §RS.3, ~:680-692) are unchanged.
+`unit_tests/workflows/test_acd_2100c_4.py` (~:522-584) asserts only that the SKILL.md
+*prose* documenting the obligation is present — a grep-only check on the producer's
+documentation, not a check that a real, non-test call site ever constructs
+`channel: "person"`. The gap is judged substantial enough — the entire safety property
+of a provenance discriminator resting on undocumented-in-code agent honesty — to also
+carry its own OPEN entry rather than live only as a note here: see
+[`KI-ACD-20260923-provenance-producer-unverified`](../open-high-ki-acd-20260923-provenance-producer-unverified.md).
 
 ---

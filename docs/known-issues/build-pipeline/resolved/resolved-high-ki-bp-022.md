@@ -16,7 +16,7 @@ related_docs:
 # KI-BP-022 — A deployable script that fails to parse gets an empty closure and a clean bill of health — and 107 of the 152 scripts the guard parses are in `templates/`, which CI's ruff run excludes
 
 > One known issue, split out of `docs/known-issues/build-pipeline.md` on
-> 2026-09-14. Index: [build-pipeline.md](../build-pipeline.md).
+> 2026-09-14. Index: [build-pipeline.md](../../build-pipeline.md).
 > Filename severity is the three-level index bucket (`high`); the
 > original grading is the `**Severity:**` line below, unchanged.
 

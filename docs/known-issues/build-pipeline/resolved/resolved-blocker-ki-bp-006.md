@@ -16,7 +16,7 @@ related_docs:
 # KI-BP-006 — `build_ac_store`'s hardcoded deploy list omits the AC-store validator and both its helpers
 
 > One known issue, split out of `docs/known-issues/build-pipeline.md` on
-> 2026-09-14. Index: [build-pipeline.md](../build-pipeline.md).
+> 2026-09-14. Index: [build-pipeline.md](../../build-pipeline.md).
 > Filename severity is the three-level index bucket (`blocker`); the
 > original grading is the `**Severity:**` line below, unchanged.
 
