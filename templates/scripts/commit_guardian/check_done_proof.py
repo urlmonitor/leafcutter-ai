@@ -95,6 +95,26 @@ DECISION HISTORY:
     test file(s) (e.g. this very AC's own record), and the first version of
     the fix misread every such leaf's test path as an unresolved child,
     which would have blocked this very commit.
+  - 2026-09-23 [python-coder/INF-700c-3 fail-open fix]: Removed a bare
+    ``if data.get("test_required") is False: continue`` from
+    check_staged_done_proofs's leaf path. It predated the BO-2500a-1-ii
+    conjunction predicate (``is_covers_tag_waived``, added 2026-09-23 by
+    01601fbbc) and was left in place alongside it rather than replaced by
+    it, so it short-circuited BEFORE the new conjunction check ever ran —
+    silently waiving the covers-tag mandate for any uncovered AC declaring
+    ``test_required: false`` with no ``test_rationale`` at all (or a
+    whitespace-only one), the exact fail-open CI's two regression fences
+    (``test_ac_refuse_test_required_false_missing_rationale`` and
+    ``test_ac_refuse_test_required_false_whitespace_rationale`` in
+    unit_tests/commit_guardian/test_done_proof_test_required_rationale_gate.py)
+    exist to catch. Root cause confirmed by direct reproduction in the plain
+    source tree (no build/deploy step needed): the two fences failed
+    identically to CI's report before this fix and passed after it, with the
+    rest of the file's control flow (composite handling, the
+    test_required:true fence, the CI-layer functions) untouched. Fix:
+    delete the bare check; the pre-existing ``is_covers_tag_waived(data)``
+    check inside the ``ac_id_str not in all_covered_ids`` branch is now the
+    only gate on this path, matching check_all_done_acs/check_changed_done_acs.
 """
 from __future__ import annotations
 
@@ -583,17 +603,24 @@ def check_staged_done_proofs(
     file(s) — so a leaf (empty ``covered_by``, or one holding only test
     paths) keeps the original direct-covers-tag requirement below.
 
-    On the leaf path only, ACs with ``test_required: false`` (the Python
-    boolean ``False``, not the string ``"false"``) are silently exempted and
-    never checked for a covers tag.  This mirrors the exemption already applied
-    by the CI-authoritative functions :func:`check_all_done_acs` and
-    :func:`check_changed_done_acs` — it covers documentation ACs and
-    prompt-convention ACs where a covers-tagged test is structurally
-    impossible.  An absent or ``True`` value for ``test_required`` is always
-    enforced.  The exemption keys ONLY on the AC record's own declared
-    ``test_required`` field — never on whether a tag happens to be missing —
-    so it cannot be triggered by the very condition (no tag found) it is meant
-    to exempt from.
+    On the leaf path only, ACs are exempted from the covers-tag mandate via
+    :func:`is_covers_tag_waived` (BO-2500a-1-ii) — the ONE shared predicate
+    also consulted by :func:`check_all_done_acs` and
+    :func:`check_changed_done_acs` below, so all three layers agree.  The
+    waiver requires BOTH ``test_required`` to be exactly ``False`` (the
+    Python boolean, not the string ``"false"``) AND a non-empty,
+    non-whitespace ``test_rationale`` — ``test_required: false`` ALONE, with
+    no recorded reason, does NOT waive and is still refused when uncovered.
+    An absent or ``True`` value for ``test_required`` is always enforced.
+    INF-700c-3 (2026-09-23): a bare ``if test_required is False: continue``
+    predating the conjunction predicate previously short-circuited this leaf
+    path before :func:`is_covers_tag_waived` was ever consulted, silently
+    waiving any uncovered AC that declared ``test_required: false`` with no
+    rationale at all — a fail-open regression CI's own regression fences
+    (``test_ac_refuse_test_required_false_missing_rationale`` and
+    ``test_ac_refuse_test_required_false_whitespace_rationale``) caught. The
+    lone bare check is removed; the conjunction check a few lines below is
+    now the only gate on this path.
 
     The two checks are ordered level-first deliberately.  ``test_required``
     declares whether ``test-writer`` must author a direct test for this AC, so
@@ -657,8 +684,6 @@ def check_staged_done_proofs(
                 )
             continue
 
-        if data.get("test_required") is False:
-            continue
         if ac_id_str not in all_covered_ids:
             if is_covers_tag_waived(data):
                 continue

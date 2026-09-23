@@ -375,7 +375,27 @@ class TestCheckStagedDoneProofsExemption(unittest.TestCase):
         the AC appeared in violations because no covers-tag exemption existed).
         """
         ac_id = "BO-DOCS-EXEMPT-STAGED-001"
-        ac_path = _write_done_ac(self.ac_root, ac_id, test_required=False)
+        # BO-2500a-1-ii: the exemption is the CONJUNCTION of test_required:
+        # false AND a non-empty test_rationale — test_required alone, with no
+        # recorded reason, no longer waives. This fixture gained a real
+        # rationale so it still exercises the intended "docs AC, no covers tag
+        # needed" accept path under the corrected rule. The assertion below is
+        # unchanged: the fixture was incomplete, not the assertion wrong.
+        #
+        # This is the THIRD class in this file to need it. 01601fbbc updated
+        # TestCheckChangedDoneAcsExemption and TestCheckAllDoneAcsExemption and
+        # missed this one, which exercises the same exemption on the pre-commit
+        # path — the same miss that left the bare test_required check in
+        # check_staged_done_proofs and took main red.
+        ac_path = _write_done_ac(
+            self.ac_root,
+            ac_id,
+            test_required=False,
+            test_rationale=(
+                "Pure prose documentation change; no covers-tagged test can "
+                "meaningfully assert the correctness of explanatory prose."
+            ),
+        )
         # test_root is intentionally empty — no covers tag exists anywhere
 
         violations = check_staged_done_proofs(
