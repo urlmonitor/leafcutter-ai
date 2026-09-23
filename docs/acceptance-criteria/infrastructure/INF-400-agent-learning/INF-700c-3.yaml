@@ -8,7 +8,7 @@ component: infrastructure
 level: L2
 status: active
 req_status: active
-work_status: todo
+work_status: done
 priority: medium
 readiness: approved
 created_by: "docs/acceptance-criteria/infrastructure/INF-400-agent-learning/INF-700c.yaml"
@@ -83,7 +83,8 @@ amended_by:
     at: 2026-08-26
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- docs/architecture/agent_knowledge_system.md
 notes: |
   Satisfies the reference-doc entry in INF-700c's documentation_triggers. The
   "does not describe a recovery as pending" clause matters because two ACs
