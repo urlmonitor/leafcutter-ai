@@ -351,9 +351,17 @@ def _resolve_reference_patterns(it_req: dict, ac_id: str) -> dict:
     """Resolve ``reference_pattern`` globs in an it_requirements dict to concrete paths.
 
     When the ``reference_pattern`` key is present, the glob is expanded against
-    the filesystem.  Exactly one match is required — zero matches raises
-    ``ValueError`` (authoring error: the pattern resolves to nothing, or the
-    target file is missing).
+    the filesystem.  Exactly one match is required, and both ways of missing
+    that raise ``ValueError``:
+
+    - **Zero matches** — the pattern resolves to nothing, or the target file is
+      missing.
+    - **More than one match** — the pattern is ambiguous.  This cannot be
+      resolved by picking a match: ``glob`` returns ``os.scandir`` order, so
+      any choice is arbitrary and non-deterministic, and writing it into the
+      generated ticket would be worse than emitting the raw glob because it
+      would look like a deliberate answer.  The error lists every match so the
+      author can narrow the pattern without re-running the glob.
 
     The function returns a shallow copy of *it_req* with ``reference_pattern``
     replaced by the single resolved concrete path string.  When the key is
@@ -369,7 +377,8 @@ def _resolve_reference_patterns(it_req: dict, ac_id: str) -> dict:
         resolved concrete path, or *it_req* unchanged when the key is absent.
 
     Raises:
-        ValueError: When ``reference_pattern`` resolves to zero files.
+        ValueError: When ``reference_pattern`` resolves to zero files, or to
+            more than one file.
     """
     if "reference_pattern" not in it_req:
         return it_req
@@ -386,6 +395,13 @@ def _resolve_reference_patterns(it_req: dict, ac_id: str) -> dict:
         raise ValueError(  # noqa: TRY003
             f"AC '{ac_id}': reference_pattern {pattern!r} resolves to no files. "
             "Ensure the referenced file exists or correct the pattern in the AC."
+        )
+
+    if len(matches) > 1:
+        raise ValueError(  # noqa: TRY003
+            f"AC '{ac_id}': reference_pattern {pattern!r} is ambiguous — it "
+            f"resolves to {len(matches)} files: {sorted(matches)}. Narrow the "
+            "pattern in the AC so it names exactly one file."
         )
 
     resolved_req = dict(it_req)
