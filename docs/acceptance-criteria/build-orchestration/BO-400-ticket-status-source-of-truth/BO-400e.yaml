@@ -7,7 +7,7 @@ components:
 level: L1
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: draft
 priority: medium   # validator-forced placeholder, NOT a judgement — see notes; PO recommends high (not critical: this closes a false-green, it does not clear the blocker)
 roadmap_phase: phase_1
