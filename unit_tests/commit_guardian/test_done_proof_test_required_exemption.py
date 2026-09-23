@@ -374,27 +374,24 @@ class TestCheckStagedDoneProofsExemption(unittest.TestCase):
         guards against. Confirmed RED against the unmodified guard (before this fix,
         the AC appeared in violations because no covers-tag exemption existed).
 
-        BO-2500a-1-ii later made the waiver a CONJUNCTION — ``test_required:
-        false`` AND a non-empty ``test_rationale`` — and added the
-        ``test_rationale`` parameter to ``_write_done_ac`` for exactly that.
-        Two of the three ``test_required=False`` call sites in this file were
-        updated; this one was missed, so it kept asserting the pre-conjunction
-        contract and contradicted
-        ``test_done_proof_test_required_rationale_gate.py``'s
-        ``TestPrecommitCliReachability``, which requires the SAME function to
-        refuse an unexplained waiver. A rationale is now supplied, so this test
-        pins the exemption's positive case under the current rule. The
-        no-rationale case is pinned by that other file, not by weakening this one.
+        AMENDED 2026-09-23 for BO-2500a-1-ii. The property under test is
+        unchanged — a documentation AC is exempt at pre-commit exactly as it is
+        in CI — but the waiver is now a CONJUNCTION, so the fixture carries the
+        ``test_rationale`` that BO-2500a-1-ii requires alongside
+        ``test_required: false``. The rationale-less case this fixture used to
+        assert passes is now REFUSED by design, and that refusal has its own
+        coverage in test_done_proof_test_required_rationale_gate.py
+        (TestPrecommitCliReachability). Adding the rationale here therefore
+        narrows nothing: it moves this test onto the amended contract and
+        leaves the case it vacated asserted, in the opposite direction, next
+        door.
         """
         ac_id = "BO-DOCS-EXEMPT-STAGED-001"
         ac_path = _write_done_ac(
             self.ac_root,
             ac_id,
             test_required=False,
-            test_rationale=(
-                "Pure prose documentation change; no covers-tagged test can "
-                "meaningfully assert the correctness of explanatory prose."
-            ),
+            test_rationale="Documentation AC — a covers-tagged test is structurally impossible.",
         )
         # test_root is intentionally empty — no covers tag exists anywhere
 

@@ -13,7 +13,7 @@ components:
   - testing_quality
   - documentation_system
 summary: "Cleared six follow-up items deferred while landing the ACD-2100 epic (a type-checking cleanup, a dead-code removal, retrospective conventions, known-issue paperwork, and a documentation split), and fixed a bug that let the pre-commit hook and the required CI gate disagree about which acceptance criteria still need a test, which had been keeping main's required test gate red."
-description: "Two commits on chore/flagged-followups. 3778f8a7 clears six independent follow-ups from PRs #864/#865: mypy annotated to zero errors across six test files (no suppressions, no weakened tests); dead code classifyWorkspaceSetupPermission removed from templates/workflows-js/plan-feature.js (-112 lines, filed as ACD-2100b-5-i with a new 3-test file); two retrospective conventions added to CLAUDE.md (KI-2, KI-3); four known-issues entries filed and a 34-file resolved/-index backlink depth fix; and docs/build-drift-hook.md's Direction B section extracted verbatim into docs/2b_direction_b_output_drift_detection.md. A second change fixes the most significant item: check-done-proof's pre-commit path carried its own inline `test_required is False` short-circuit above the shared is_covers_tag_waived() call, making that predicate dead code for the records it governs and leaving the pre-commit hook and the required CI gate disagreeing -- introduced when BO-2500a-1-ii (PR #861) hardened the two CI paths to require test_required:false AND a non-blank test_rationale but left this copy behind, which had put main's required pytest gate red. The duplicate short-circuit is removed so the single shared predicate governs all three paths."
+description: "Two commits on chore/flagged-followups. 3778f8a7 clears six independent follow-ups from PRs #864/#865: mypy annotated to zero errors across six test files (no suppressions, no weakened tests); dead code classifyWorkspaceSetupPermission removed from templates/workflows-js/plan-feature.js (-112 lines, filed as ACD-2100b-5-i with a new 3-test file); two retrospective conventions added to CLAUDE.md (KI-2, KI-3); four known-issues entries filed and a 34-file resolved/-index backlink depth fix; and docs/build-drift-hook.md's Direction B section extracted verbatim into docs/2b_direction_b_output_drift_detection.md. This branch also diagnosed, and briefly carried a fix for, the check-done-proof pre-commit/CI disagreement that had put main's required pytest gate red; PR #878 landed an equivalent fix on main independently while this branch was in review, so that fix is NOT part of this diff and the conflicting files were resolved to main's version."
 pr: 873
 commits: 
   - 3778f8a7
@@ -60,16 +60,25 @@ under `<component>/resolved/` had a broken index backlink corrected
 verbatim into `docs/2b_direction_b_output_drift_detection.md`, cross-linked
 both ways. The parent drops from 524 to 388 lines.
 
-**6. A main-breaking defect fixed.** `check-done-proof`'s
-pre-commit path carried its own inline `test_required is False` short-circuit
-placed ABOVE the shared `is_covers_tag_waived()` call, making that predicate
-dead code for exactly the records it governs. `BO-2500a-1-ii` (PR #861)
-hardened the two CI paths to require the conjunction of `test_required:
-false` AND a non-blank `test_rationale`, but left this copy behind — so the
-pre-commit hook and the required CI gate disagreed, and `main` went red on
-the required pytest gate. The duplicate is removed; the single shared
-predicate now governs all three paths
-(`templates/scripts/commit_guardian/check_done_proof.py`).
+**6. A main-breaking defect diagnosed here, fixed on main by someone else.**
+Not part of this diff — recorded because the diagnosis is worth keeping.
+`check-done-proof`'s pre-commit path carried its own inline `test_required is
+False` short-circuit placed ABOVE the shared `is_covers_tag_waived()` call,
+making that predicate dead code for exactly the records it governs.
+`BO-2500a-1-ii` (PR #861) hardened the two CI paths to require the conjunction
+of `test_required: false` AND a non-blank `test_rationale`, but left this copy
+behind — so the pre-commit hook and the required CI gate disagreed, and `main`
+went red on the required pytest gate. #861 had also extended
+`_write_done_ac`'s signature and updated two of its three
+`test_required=False` call sites, leaving the third asserting the superseded
+contract.
+
+This branch carried an equivalent fix for both for several hours. **PR #878
+landed the same fix on main independently while this branch was in review**,
+so the two collided on exactly those files; the conflict was resolved to
+main's version, which is complete and better documented. Nothing from this
+branch's own attempt survives in this diff, and no credit for the fix belongs
+to it.
 
 Verified (commit 3778f8a7): `unit_tests/workflows` + `unit_tests/ac_driven_dev`
 gave 815 passed before the new test file was added (matching the pre-change
