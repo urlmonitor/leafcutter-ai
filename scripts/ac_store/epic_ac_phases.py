@@ -23,7 +23,11 @@ ARCHITECTURE: Each function is a run() phase lifted out whole, including its
 AC coverage owned by this module:
     ACD-1200a-1 / -1-i: traversal returns only leaf ACs; L1-scoped traversal
                         excludes sibling branches.
-    ACD-1200a-3-i:      zero-leaf condition exits non-zero with no files written.
+    ACD-1200a-3-i:      zero-leaf condition exits non-zero with no files written
+                        (the structurally-undecomposed cause).
+    ACD-1200a-10-i:     a goal whose leaves all exist but are excluded as done
+                        or superseded gets its own diagnostic, distinct from
+                        ACD-1200a-3-i's "decompose the L1s" wording.
     ACD-1200b-1-i:      all-approved fast path bypasses the gate entirely.
     ACD-1200c-1-i:      cycle detection exits non-zero before any write.
     ACD-1200c-2:        tickets are generated in topological order, so the
@@ -34,6 +38,7 @@ from __future__ import annotations
 
 import subprocess
 import sys
+from collections.abc import Callable
 from pathlib import Path
 
 from epic_assembly import assemble_epic_folder
@@ -47,6 +52,57 @@ from epic_tickets import generate_tickets_for_leaves
 # epic_tickets.py for the full explanation), so its siblings — including
 # scan_ac_store.py — are unconditionally alongside it.
 _sibling_dir = Path(__file__).resolve().parent
+
+
+def _zero_leaf_diagnostic(
+    ac_id: str,
+    ac_store_root: Path,
+    traverse_ac_tree: Callable[..., list[str]],
+) -> str:
+    """Return the stderr diagnostic naming the real cause of an empty leaf set.
+
+    Two distinct conditions both collapse to zero buildable leaves, and they
+    call for opposite remedies, so they must not share one message:
+
+    * **All excluded (ACD-1200a-10-i).** L2/L3 leaves do exist beneath *ac_id*,
+      but every one was filtered out as ``work_status: done`` or
+      ``status: superseded*``. The goal is already complete or has been
+      retired; telling the user to decompose it would be wrong, because it is
+      decomposed — the remedy is to choose a different goal.
+    * **Structurally leaf-less (ACD-1200a-3-i).** The subtree has no L2/L3
+      descendants at all, because its L1s were never decomposed. That wording
+      is pinned by ACD-1200a-3-i and is reproduced here verbatim.
+
+    The two are told apart by re-running the traversal with both exclusion
+    flags off: a non-empty unfiltered set proves the leaves are present on disk
+    and were removed by the filter, rather than never having been written.
+
+    Args:
+        ac_id: The goal or L1 AC id whose subtree produced no leaves.
+        ac_store_root: Root directory of the AC YAML store.
+        traverse_ac_tree: The traversal callable, passed in by the caller so
+            the unfiltered re-walk resolves the same (possibly patched) name
+            the filtered walk used.
+
+    Returns:
+        str: The diagnostic for whichever condition actually applies.
+    """
+    unfiltered = traverse_ac_tree(
+        ac_id, ac_store_root, exclude_done=False, exclude_superseded=False
+    )
+
+    if unfiltered:
+        return (
+            f"No buildable leaf ACs remain beneath {ac_id}: all "
+            f"{len(unfiltered)} of its leaf ACs are already done or "
+            "superseded. This goal is complete or retired — there is nothing "
+            "left to build, so pick a different goal."
+        )
+
+    return (
+        f"No leaf-level ACs found beneath {ac_id}. "
+        "Decompose the L1s into L2/L3 ACs first."
+    )
 
 
 def _collect_leaf_ids(ac_id: str, ac_store_root: Path) -> list[str]:
@@ -65,7 +121,10 @@ def _collect_leaf_ids(ac_id: str, ac_store_root: Path) -> list[str]:
         list[str]: The leaf AC ids beneath *ac_id*, in traversal order.
 
     Raises:
-        SystemExit: Code 1 when the subtree contains no leaves (ACD-1200a-3-i).
+        SystemExit: Code 1 when no buildable leaves remain. The message is
+            chosen by :func:`_zero_leaf_diagnostic`, which distinguishes an
+            undecomposed subtree (ACD-1200a-3-i) from one whose leaves were all
+            excluded as done or superseded (ACD-1200a-10-i).
     """
     if str(_sibling_dir) not in sys.path:
         sys.path.insert(0, str(_sibling_dir))
@@ -76,8 +135,7 @@ def _collect_leaf_ids(ac_id: str, ac_store_root: Path) -> list[str]:
 
     if not leaf_ids:
         print(
-            f"No leaf-level ACs found beneath {ac_id}. "
-            "Decompose the L1s into L2/L3 ACs first.",
+            _zero_leaf_diagnostic(ac_id, ac_store_root, traverse_ac_tree),
             file=sys.stderr,
         )
         sys.exit(1)
@@ -214,5 +272,14 @@ DECISION HISTORY
   --ac-mode only: build_epic_from_ids() lets the equivalent failures propagate
   to its caller instead.
   (#TICKETLESS reason=file-size-decomposition-refactor)
+- 2026-09-22 [ACD-1200a-10-i/python-coder]: Split the single unconditional
+  zero-leaf string into _zero_leaf_diagnostic(). Until now both zero-leaf
+  causes printed "Decompose the L1s into L2/L3 ACs first.", which is actively
+  misleading for a goal that IS decomposed and merely finished — the user was
+  told to do work that was already done. The two are separated by re-running
+  traverse_ac_tree with exclude_done/exclude_superseded both False: leaves that
+  reappear unfiltered prove the set was emptied by the filter rather than never
+  populated. ACD-1200a-3-i's message is returned byte-identical on the
+  structurally-leafless branch, since that AC pins its exact text.
 ====================================================================
 """
