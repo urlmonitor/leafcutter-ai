@@ -59,6 +59,109 @@ import subprocess
 import sys
 from pathlib import Path
 
+import yaml
+
+# ---------------------------------------------------------------------------
+# AC-store status map + shared BO-2500a-1-ii predicate (BP-100n-4-ii-ii
+# relocation from done_proof.py -- pure move, no behaviour change; see
+# done_proof.py's own module docstring, "Second relocation" paragraph, for
+# why a SECOND relocation out of that file was needed). Neither function
+# needs a symbol back from done_proof.py, so -- unlike the helper groups
+# below -- both are plain top-level definitions here with no local
+# function-body import required.
+# ---------------------------------------------------------------------------
+
+
+def _build_ac_status_map(ac_root: Path) -> dict[str, dict]:
+    """Walk *ac_root* and return ``{ac_id: {"status": ..., "covered_by": [...]}}``.
+
+    Only YAML files that can be parsed and contain both ``id`` and ``status``
+    fields are included.  Unreadable files are logged to stderr and skipped.
+    ``covered_by`` is retained (in addition to ``status``) so callers can
+    classify an AC as composite (non-empty ``covered_by``) vs leaf (empty or
+    absent) without a second store walk — see BO-2500a-6.  A ``covered_by``
+    value that is absent, ``null``, or not a list is normalised to ``[]``.
+    ``test_required`` and ``test_rationale`` are also retained verbatim
+    (BO-2500a-1-ii) so callers can consult :func:`is_covers_tag_waived`
+    without a second store walk.
+
+    Args:
+        ac_root: Root directory of the AC YAML store.
+
+    Returns:
+        Dict mapping AC id strings to a dict with keys ``"status"`` (str),
+        ``"covered_by"`` (list[str]), ``"test_required"`` (bool | None), and
+        ``"test_rationale"`` (str | None).  An empty dict is returned when
+        *ac_root* does not exist or contains no parseable YAML files.
+    """
+    status_map: dict[str, dict] = {}
+    if not ac_root.exists():
+        return status_map
+    for yaml_path in sorted(ac_root.rglob("*.yaml")):
+        try:
+            with open(yaml_path, encoding="utf-8") as fh:
+                data = yaml.safe_load(fh)
+        except (yaml.YAMLError, OSError) as exc:
+            print(
+                f"WARNING: done_proof: cannot read {yaml_path}: {exc}",
+                file=sys.stderr,
+            )
+            continue
+        if not isinstance(data, dict):
+            continue
+        ac_id = data.get("id")
+        status = data.get("status")
+        if ac_id and status is not None:
+            covered_by = data.get("covered_by")
+            if not isinstance(covered_by, list):
+                covered_by = []
+            status_map[str(ac_id)] = {
+                "status": str(status),
+                "covered_by": [str(child_id) for child_id in covered_by],
+                "test_required": data.get("test_required"),
+                "test_rationale": data.get("test_rationale"),
+            }
+    return status_map
+
+
+def is_covers_tag_waived(ac_info: dict | None) -> bool:
+    """Return whether *ac_info* waives the ``# covers:`` tag mandate (BO-2500a-1-ii).
+
+    This is the ONE shared predicate every layer that decides done-proof
+    eligibility must consult — the static pre-commit scan
+    (``check_staged_done_proofs``), the oracle (``verify_done_eligible`` via
+    ``_handle_no_direct_tests`` below), and the CI sweeps
+    (``check_all_done_acs``, ``check_changed_done_acs``). Three independently
+    hand-written copies of this conjunction is exactly how those layers came
+    to disagree before this AC — see BO-2500a-1-ii's notes.
+
+    The waiver applies if and only if BOTH:
+
+    * ``test_required`` is exactly ``False`` (the Python boolean, not a
+      falsy/absent value — an absent or ``True`` ``test_required`` is always
+      enforced), AND
+    * ``test_rationale`` is a string that is non-empty after whitespace
+      stripping (an absent, ``None``, non-string, or whitespace-only
+      rationale does NOT waive — the waiver cannot be taken by omitting the
+      reason).
+
+    Args:
+        ac_info: A mapping carrying (at least) ``test_required`` and
+            ``test_rationale`` keys — either a raw parsed AC YAML mapping, or
+            an entry from :func:`_build_ac_status_map`'s status map. ``None``
+            (e.g. an unresolvable ac id) never waives.
+
+    Returns:
+        ``True`` iff both halves of the conjunction hold.
+    """
+    if not ac_info:
+        return False
+    if ac_info.get("test_required") is not False:
+        return False
+    rationale = ac_info.get("test_rationale")
+    return isinstance(rationale, str) and bool(rationale.strip())
+
+
 # ---------------------------------------------------------------------------
 # JS runner seam internals (BP-100n-4-ii relocation from done_proof.py --
 # pure move, no behaviour change; see done_proof.py's own DECISION HISTORY,
@@ -274,14 +377,19 @@ def _handle_no_direct_tests(
     BO-2500a-6: an AC with no direct linked test is classified as a
     COMPOSITE (deriving its proof from its children — see
     :func:`done_proof._verify_composite_eligible`) when its own
-    ``covered_by`` field resolves to at least one real AC record; otherwise
-    it is a LEAF and is refused with the original "no linked test found"
-    message.
+    ``covered_by`` field resolves to at least one real AC record.
+
+    Otherwise it is a LEAF. A leaf is exempt from the covers-tag mandate
+    (BO-2500a-1-ii) when :func:`done_proof.is_covers_tag_waived` accepts its
+    ``test_required``/``test_rationale`` pair — the same shared predicate the
+    static pre-commit scan and the CI sweeps consult, so this oracle can
+    never disagree with them. A leaf that is not waived is refused with the
+    original "no linked test found" message, unchanged.
 
     Args:
         ac_id: The AC identifier string being evaluated.
-        ac_status_map: Mapping ``{ac_id: {"status": ..., "covered_by": [...]}}``
-            from the AC store.
+        ac_status_map: Mapping ``{ac_id: {"status": ..., "covered_by": [...],
+            "test_required": ..., "test_rationale": ...}}`` from the AC store.
         all_tags: All covers tag dicts produced by the scanner.
         dangling_tags: Dangling-tag entries computed once by the caller.
 
@@ -289,6 +397,8 @@ def _handle_no_direct_tests(
         A verdict dict with the same shape as
         :func:`done_proof.verify_done_eligible`.
     """
+    # is_covers_tag_waived is a same-module sibling (BP-100n-4-ii-ii) — no
+    # import needed, unlike the two done_proof.py symbols below.
     from done_proof import _has_resolvable_child, _verify_composite_eligible
 
     ac_info = ac_status_map.get(ac_id)
@@ -301,6 +411,14 @@ def _handle_no_direct_tests(
             all_tags=all_tags,
             dangling_tags=dangling_tags,
         )
+    if is_covers_tag_waived(ac_info):
+        return {
+            "eligible": True,
+            "reason": "",
+            "passing_tests": [],
+            "failing_tests": [],
+            "dangling_tags": dangling_tags,
+        }
     return {
         "eligible": False,
         "reason": f"no linked test found for {ac_id}",

@@ -65,7 +65,7 @@ AC_STORE_DEPLOY_MAP: tuple[tuple[str, str], ...] = (
     ("scripts/ac_store/scan_ac_store.py",            "scan_ac_store.py"),
     ("scripts/ac_store/generate_ticket_from_ac.py",  "generate_ticket_from_ac.py"),
     ("scripts/ac_store/_component_migration_map.py", "_component_migration_map.py"),
-    # generate_ticket_from_ac.py's 23 _gtfa_* siblings. The 4035-line original
+    # generate_ticket_from_ac.py's 24 _gtfa_* siblings. The 4035-line original
     # was split to clear the 400-line size gate; what remains at that path is a
     # 386-line re-export shell that is USELESS without every one of these. Omit
     # one and the deployed generator dies at import -- loudly, unlike the
@@ -102,6 +102,12 @@ AC_STORE_DEPLOY_MAP: tuple[tuple[str, str], ...] = (
     ("scripts/ac_store/_gtfa_impl_py.py",             "_gtfa_impl_py.py"),
     ("scripts/ac_store/_gtfa_implemented_by.py",      "_gtfa_implemented_by.py"),
     ("scripts/ac_store/_gtfa_paths.py",               "_gtfa_paths.py"),
+    # _gtfa_phase_agent.py owns the ticket-phase eligibility check and the
+    # substitution rule (TKT-500f-5 / -5-i). _gtfa_cli.py imports it at MODULE
+    # scope, so omitting it here ships a generator that dies at import with
+    # ModuleNotFoundError on every consumer install while the source-tree tests
+    # stay green.
+    ("scripts/ac_store/_gtfa_phase_agent.py",         "_gtfa_phase_agent.py"),
     ("scripts/ac_store/_gtfa_phases.py",              "_gtfa_phases.py"),
     ("scripts/ac_store/_gtfa_report.py",              "_gtfa_report.py"),
     ("scripts/ac_store/_gtfa_seams.py",               "_gtfa_seams.py"),
