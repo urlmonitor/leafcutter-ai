@@ -1032,19 +1032,30 @@ if (producibilityResult.producible !== true) {
   };
 }
 
-// ---------------------------------------------------------------------------
-// Lifecycle: claim the connected set (flip todo → in_progress)
-// ---------------------------------------------------------------------------
+/**
+ * Lifecycle: claim the connected set (flip todo → in_progress).
+ *
+ * Performer (BO-2400f-7-iii): the claim command MUTATES the store, so per
+ * config/agent_registry.schema.json the dispatched agent needs
+ * `permits_shell: true` — not merely "does not explicitly forbid it", the
+ * wrong reading KI-BO-20260901-1620 documents for python-coder above.
+ * `worktree-agent` is the ONLY registry entry declaring `permits_shell:
+ * true`; that is the sole (real) reason it is picked here. Honest
+ * weakness: its charter is worktree lifecycle, not AC-store claims, so it
+ * may still decline on role grounds exactly as status-checker did — a
+ * dedicated chartered executor for this dispatch class remains out of
+ * scope (KI-BO-20260901-1620, item 4). A decline is handled below as
+ * "not attempted", never as contention.
+ */
+const CLAIM_EXECUTOR_AGENT_TYPE = "worktree-agent";
 const claimResult = await agent(
   `You are the claim-phase agent for a fast-lane build.\n\n` +
   `Run this single Bash command and parse its JSON stdout:\n` +
   `   python3 ${gateScript} claim --ac-ids ${batchIdsCsv} --ac-root ${acStoreRoot}\n\n` +
-  `Returns {"claimed":[...],"excluded_claimed":[...],"target_refused":<bool>}.\n` +
-  `If the command exits non-zero or target_refused is true, the connected set is\n` +
-  `already in_progress (owned by a concurrent run) — return the JSON plus "message".\n` +
-  `Otherwise return the parsed JSON with message "claimed <N> ACs".`,
+  `Returns {"claimed":[...],"excluded_claimed":[...],"target_refused":<bool>}. Return that JSON verbatim. If you cannot run this command at all, do NOT report contention — return ` +
+  `{"claimed":[],"excluded_claimed":[],"target_refused":true,"message":"<why>"}, leaving excluded_claimed EMPTY. If it DOES run and finds members already in_progress, put those ids in "excluded_claimed" — that is genuine contention.`,
   {
-    agentType: "status-checker",
+    agentType: CLAIM_EXECUTOR_AGENT_TYPE,
     schema: {
       type: "object",
       required: ["claimed", "target_refused"],
@@ -1059,18 +1070,31 @@ const claimResult = await agent(
     phase: "Resolve",
   }
 );
-
-if (!claimResult || claimResult.target_refused) {
+/**
+ * A decline and genuine contention are different facts (BO-2400f-7-iii): the
+ * first means nothing was checked against the store, the second means it was
+ * checked and found held. `claimUsable` gates on the two arrays the engine's
+ * schema does not actually enforce — a real refusal-shaped reply (or the
+ * harness) can hand back an object missing them, or null. `claimUsable`
+ * short-circuits before `.excluded_claimed` is ever read on an unusable
+ * reply. A `target_refused` with nothing in `excluded_claimed` is a decline,
+ * not a report of a hold — contention wording there would send an operator
+ * looking for a concurrent run that does not exist.
+ */
+const claimUsable = !!claimResult && Array.isArray(claimResult.claimed) && Array.isArray(claimResult.excluded_claimed);
+const claimHaltFields = { worktree_path: worktreePath, branch, ac_ids: acIds };
+if (!claimUsable || (claimResult.target_refused && claimResult.excluded_claimed.length === 0)) {
   return {
-    status: "halt",
-    classification: "halt",
-    message:
-      "connected set already claimed / in progress — a concurrent fast-lane run " +
-      "owns these ACs. Wait for that run to complete or release stuck claims. " +
-      `Detail: ${JSON.stringify(claimResult)}`,
-    worktree_path: worktreePath,
-    branch,
-    ac_ids: acIds,
+    status: "halt", classification: "halt",
+    message: `The claim was never attempted: the dispatched performer either declined to run the repository-mutating claim command or returned no usable result, so no AC was flipped to in_progress — this is not a report of another run's ownership. Detail: ${JSON.stringify(claimResult)}`,
+    ...claimHaltFields,
+  };
+}
+if (claimResult.target_refused) {
+  return {
+    status: "halt", classification: "halt",
+    message: `connected set already claimed / in progress — a concurrent fast-lane run owns these ACs: ${claimResult.excluded_claimed.join(", ")}. Wait for that run to complete or release stuck claims. Detail: ${JSON.stringify(claimResult)}`,
+    ...claimHaltFields,
   };
 }
 
