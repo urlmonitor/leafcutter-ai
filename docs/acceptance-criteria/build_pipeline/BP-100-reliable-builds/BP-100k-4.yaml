@@ -170,6 +170,7 @@ superseded_by: null
 covered_by:
   - BP-100k-4-i
   - BP-100k-4-ii
+  - BP-100k-4-iii
   - unit_tests/commit_guardian/test_bp_100k_4.py
 implemented_by:
   - templates/scripts/commit_guardian/check_hook_trigger_reachability.py
