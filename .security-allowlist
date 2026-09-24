@@ -1,4 +1,6 @@
 # Allowlist for bypass tokens in commit-guardian scripts
+# False positives: public npm SHA-512 integrity digests, not credentials; regex secret rules remain active.
+ENTROPY_HIGH:scripts/background_worker/reviewer_sdk/package-lock.json:*
 GENERIC_SECRET:scripts/commit_guardian/check_architecture_scaffolds.py:*
 GENERIC_SECRET:scripts/commit_guardian/check_diagram_naming.py:*
 GENERIC_SECRET:scripts/commit_guardian/check_feedback_id.py:*

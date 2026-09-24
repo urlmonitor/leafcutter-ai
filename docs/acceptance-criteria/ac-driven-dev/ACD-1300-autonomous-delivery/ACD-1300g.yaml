@@ -1,0 +1,62 @@
+id: ACD-1300g
+components:
+  - ac_driven_dev
+readiness: approved
+priority: medium
+title: "Use local models to prepare reviewed changes for your decision"
+component: ac-driven-dev
+level: L1
+status: active
+req_status: approved
+work_status: in_progress
+criteria: |
+  Spend local capacity on implementation and cloud capacity on focused review.
+
+  The worker builds and checks a complete feature locally, then obtains review
+  using the reviewer and model you configure. Successful work becomes a draft
+  change proposal with supporting evidence; unresolved review findings return
+  to you, and merging always remains your decision.
+depends_on:
+  - ACD-1300
+doc_links:
+  - docs/product-truth/flows/leafcutter/background-ac-worker.flow.json
+delivers_to: null
+expects_from: null
+origin_agent: product-owner
+created: 2026-09-24
+amended_by:
+- '2026-09-24 Codex: Reviewed and approved under the user explicit delegation; implementation remains todo and priority
+  remains medium.'
+superseded_by: null
+covered_by:
+  - ACD-1300g-1
+  - ACD-1300g-2
+  - ACD-1300g-3
+  - ACD-1300g-4
+  - ACD-1300g-5
+implemented_by:
+- scripts/background_worker/engine.py
+- scripts/background_worker/executors.py
+- scripts/background_worker/git_ops.py
+- scripts/background_worker/reviewer_sdk/bridge.mjs
+- unit_tests/ac_driven_dev/test_background_worker_engine.py
+- unit_tests/ac_driven_dev/test_background_worker_executors.py
+documentation_triggers:
+  - how-to
+  - sequence-diagram
+  - component-diagram
+  - reference-doc
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  Drafted under the existing autonomous-delivery goal at the user's request.
+  Local inference is Qwen3.5 9B via Ollama with a tool-capable harness; the first
+  workflow uses LangGraph. The reviewer executor and model are configurable,
+  with Codex SDK and Claude Agent SDK adapter options. These implementation
+  constraints belong in BA/IT PO decomposition, not the benefit statement.
+  The user chose at most two automatic feature reviews, then human attention,
+  and draft PR publication with manual merge. No daily or token caps were asked
+  for. Publication and provider failures must not become false success.
+  Intentionally unphased: the current vision defers non-Anthropic support, while
+  the user explicitly authorizes this local pilot. No roadmap or vision change
+  or readiness approval is claimed by creating these draft requirements.

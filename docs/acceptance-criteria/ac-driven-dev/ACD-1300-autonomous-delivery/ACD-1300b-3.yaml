@@ -1,0 +1,118 @@
+id: ACD-1300b-3
+title: Switching off drains active work to a safe checkpoint
+component: ac-driven-dev
+components:
+- ac_driven_dev
+level: L2
+status: active
+req_status: approved
+readiness: approved
+work_status: in_progress
+priority: medium
+criteria: |
+  Given an implementation, repair, review, validation or publication action is in flight
+  When the user switches the worker off
+  Then admission of all subsequent agent calls and feature work stops immediately
+  And the in-flight action may finish within its existing bounds
+  And its result and next safe step are persisted before the run becomes paused
+  And the feature worktree remains available until the user re-enables the worker
+depends_on:
+- ACD-1300b
+doc_links:
+- path: docs/product-truth/flows/leafcutter/background-ac-worker.flow.json
+  relationship: implements
+  status: exists
+- path: docs/reference/ac-schema.md
+  relationship: reference
+  status: exists
+- path: docs/architecture/components/ac-driven-dev.md
+  relationship: describes
+  status: exists
+- path: docs/architecture/components/build-orchestration.md
+  relationship: describes
+  status: exists
+- path: docs/architecture/adrs/ADR-030-dual-engine-workflow-support.md
+  relationship: describes
+  status: exists
+assigned_agent: python-coder
+delivers_to:
+- agent: architecture-diagram-author
+  contract: ACD-1300b-3 supplies ACD-1300b-5 with PauseCheckpoint {run_id:string, completed_action_id:string|null,
+    next_step:string, state:draining|paused, checkpoint_revision:string}. Runtime handoff/reference contract;
+    it does not add build-order edges.
+- agent: documentation-expert
+  contract: ACD-1300b-3 supplies ACD-1300c-3 with PauseCheckpoint {run_id:string, completed_action_id:string|null,
+    next_step:string, state:draining|paused, checkpoint_revision:string}. Runtime handoff/reference contract;
+    it does not add build-order edges.
+expects_from: null
+origin_agent: business-analyst
+created: '2026-09-24'
+amended_by:
+- '2026-09-24 Codex: Reviewed and approved under the user explicit delegation; implementation remains todo and priority
+  remains medium.'
+superseded_by: null
+covered_by: []
+implemented_by:
+- scripts/background_worker/cli.py
+- scripts/background_worker/store.py
+- scripts/background_worker/engine.py
+- unit_tests/ac_driven_dev/test_background_worker_cli.py
+- unit_tests/ac_driven_dev/test_background_worker_store.py
+change_target: pipeline
+risk_surface: contract_boundary
+notes: Approved requirements; implementation is under review; live execution remains blocked by the native Windows isolation requirement. Pattern inventory found
+  no matching reusable worker behavior.
+declares_side_effect: true
+estimated_complexity: L
+it_requirements:
+- The persisted enabled state must gate every transition that starts feature work, including validation/publication
+  and SDK/nested calls, not only initial selection.
+- Handle off-versus-dispatch races so work either began under the prior admission decision or remains
+  pending; persist the completed in-flight result before exposing a safe paused checkpoint.
+- Verification must execute the installed CLI/workflow or its real control-flow boundary with controlled
+  external executors; source-string presence and model self-report are not evidence of behavior.
+- 'Runtime interface from ACD-1300b-1 (data handoff, not an additional build-order prerequisite): WorkerSettings
+  {enabled:boolean, max_agent_calls:integer>=1, implementation:{executor:string, provider:string, model:string,
+  endpoint:string, credential_ref:string|null}, reviewer:{executor:codex-sdk|claude-agent-sdk, provider:string,
+  model:string, credential_ref:string|null}, settings_revision:string}.'
+- 'Runtime interface from ACD-1300b-2 (data handoff, not an additional build-order prerequisite): CapacityLease
+  {lease_id:string, run_id:string, call_id:string, role:string, settings_revision:string, acquired_at:string,
+  released_at:string|null}.'
+- 'Runtime interface from ACD-1300e-2 (data handoff, not an additional build-order prerequisite): RunCheckpoint
+  {schema_version:integer, run_id:string, feature_id:string, source_revision:string, target_sha:string,
+  workspace_claim:object, settings_revision:string, next_step:string, ac_evidence:object[], ac_budgets:object[],
+  review_count:integer, in_flight_action:object|null, publication:object|null}.'
+test_spec:
+- name: test_background_worker_off_gates_all_next_phases
+  target_dir: unit_tests/ac_driven_dev/
+  framework: pytest
+  type: integration
+  angle: reachability
+  description: Parameterize off during implementation, repair, review, validation and publication; current
+    action may finish but the following action never starts.
+  covers:
+  - ACD-1300b-3
+  surface_invoked: Installed background-worker CLI entry point specified by ACD-1300b-1 (concrete command
+    name to be declared by implementation)
+- name: test_background_worker_drain_records_result_before_pause
+  target_dir: unit_tests/ac_driven_dev/
+  framework: pytest
+  type: behavioral
+  angle: criterion
+  description: Delay a live action's result, switch off, then release it; assert saved result, next step
+    and same worktree survive a new process and no extra call occurs.
+  covers:
+  - ACD-1300b-3
+product_truth:
+  - flow: leafcutter/background-ac-worker
+    node: stopped
+    node_kind: branch
+    flow_kind: data
+    screen: null
+    mock_data: leafcutter/background-ac-worker-data
+    entities:
+      - Ac
+      - BuildRun
+      - WorkerSettings
+    source: real
+    asof: '2026-09-24'

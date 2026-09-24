@@ -1,0 +1,66 @@
+id: ACD-1300c-3
+title: Provide one operator guide for the complete background-worker journey
+component: ac-driven-dev
+components:
+- ac_driven_dev
+level: L2
+status: active
+req_status: approved
+readiness: approved
+work_status: in_progress
+priority: medium
+criteria: |
+  Given a user wants to run approved background work without monitoring every agent
+  When they follow the worker's operator guide
+  Then they can configure local implementation and reviewer models, enable and disable the worker, change capacity, and inspect selection reasons
+  And the guide explains how to answer blockers, resume preserved work and inspect a draft PR before a human merge
+  And it states the whole-feature eligibility, least-urgent ordering, three-attempt sixty-minute AC budget and two-review limit
+depends_on:
+- ACD-1300c
+doc_links:
+- path: docs/product-truth/flows/leafcutter/background-ac-worker.flow.json
+  relationship: implements
+  status: exists
+- path: docs/reference/ac-schema.md
+  relationship: reference
+  status: exists
+- path: docs/architecture/components/ac-driven-dev.md
+  relationship: describes
+  status: exists
+- path: docs/architecture/components/build-orchestration.md
+  relationship: describes
+  status: exists
+- path: docs/architecture/adrs/ADR-018-agent-isolation-topology.md
+  relationship: describes
+  status: exists
+assigned_agent: documentation-expert
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: '2026-09-24'
+amended_by:
+- '2026-09-24 Codex: Reviewed and approved under the user explicit delegation; implementation remains todo and priority
+  remains medium.'
+superseded_by: null
+covered_by: []
+implemented_by:
+- docs/how-to/background-ac-worker.md
+change_target: docs
+risk_surface: internal
+notes: Approved requirements; implementation is under review; live execution remains blocked by the native Windows isolation requirement. Pattern inventory found
+  no matching reusable worker behavior. One shared how-to satisfies the how-to documentation triggers
+  on ACD-1300a/b/c/d/e/g; do not create duplicate guides.
+declares_side_effect: false
+
+# Cross-feature documentation coverage is a reference, not a build prerequisite.
+estimated_complexity: M
+it_requirements:
+- Document runnable installed CLI examples and prerequisite diagnostics; distinguish implementation harness,
+  local inference and SDK reviewer credentials without embedding secrets.
+- State first-runtime bootstrap may require manual implementation when honest estimates are L; the worker's
+  S/M admission rule does not justify understating complexity.
+- Explain the user-authorized worktree exception, human-only merge and local-state recovery limits; no
+  cloud/Postgres requirement or silent fallback.
+- Describe the contracts and outcomes of ACD-1300b-1, ACD-1300b-3, ACD-1300d-1, ACD-1300e-1, ACD-1300f-4,
+  ACD-1300g-4 as reference subjects, not additional build prerequisites.
+test_required: false

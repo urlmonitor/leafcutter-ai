@@ -1,36 +1,51 @@
 id: ACD-1300c
 components:
   - ac_driven_dev
-readiness: draft
+readiness: approved
 priority: medium
 title: "Blocked agents save their work and ask for help without losing progress"
 component: ac-driven-dev
 level: L1
 status: active
-req_status: draft
-work_status: todo
+req_status: approved
+work_status: in_progress
 roadmap_phase: phase_1
 criteria: |
-  When an agent cannot continue, it preserves everything and tells you what it needs.
+  Get useful help requests without losing the work already completed.
 
-  If an agent encounters ambiguity, a missing answer, or a test failure it
-  cannot resolve, it saves all its work in its feature workspace (no progress
-  is lost), then submits a structured request explaining what it needs to
-  continue. The request includes enough context for you to answer without
-  re-reading the agent's entire history.
+  When work cannot continue or repeated attempts fail, the worker preserves its
+  progress and explains what needs your attention. Other eligible features can
+  continue while the blocked feature waits for your decision.
 depends_on:
   - ACD-1300
-doc_links: []
+doc_links:
+  - docs/product-truth/flows/leafcutter/background-ac-worker.flow.json
 delivers_to: null
 expects_from: null
 origin_agent: product-owner-v3
 created: 2026-06-06
-amended_by: []
+amended_by:
+- '2026-09-24 product-owner: Refined this existing draft for the user-authorized local background worker; approval
+  remains pending.'
+- '2026-09-24 Codex: Reviewed and approved under the user explicit delegation; implementation remains todo and priority
+  remains medium.'
 superseded_by: null
-covered_by: []
-implemented_by: []
+covered_by:
+  - ACD-1300c-1
+  - ACD-1300c-2
+  - ACD-1300c-3
+  - ACD-1300c-4
+implemented_by:
+- scripts/background_worker/engine.py
+- scripts/background_worker/store.py
+- unit_tests/ac_driven_dev/test_background_worker_engine.py
 documentation_triggers:
   - how-to
   - sequence-diagram
 change_target: pipeline
 risk_surface: contract_boundary
+notes: |
+  Scoped draft refinement requested by the user on 2026-09-24. This tree describes
+  the optional local background lane; it does not alter the regular scanner,
+  fast-lane eligibility, or the ACD-500 complexity-to-priority mapping. Runtime
+  scheduling priority is distinct from this requirement record's draft priority.

@@ -1,0 +1,549 @@
+{
+  "id": "leafcutter/background-ac-worker-data",
+  "component": "ac-driven-dev",
+  "status": "active",
+  "readiness": "approved",
+  "version": 3,
+  "shape_version": 2,
+  "realization": "spec",
+  "reusable": true,
+  "tags": [
+    "background-worker",
+    "local-llm",
+    "supporting-fixtures"
+  ],
+  "invariants": [
+    "All fixture: identifiers, paths, commits and PR references are synthetic examples, not execution evidence.",
+    "Every BuildRun.settings_id resolves to a WorkerSettings record; feature_id, ac_ids and depends_on references resolve to Ac records.",
+    "BuildRun records are independent scenario snapshots, not events from one chronological execution.",
+    "A locally_checked AC progress entry refers to the same feature and worktree; its Ac.work_status can remain todo until merge.",
+    "A ready_for_user_review record has matching head_commit, validated_commit and reviewed_commit and a draft_pr reference.",
+    "A pre-admission excluded or waiting record has no workspace or checkpoint."
+  ],
+  "entities": {
+    "Ac": {
+      "fields": {
+        "id": "string: synthetic fixture identity",
+        "title": "string",
+        "level": "enum: L0 | L1 | L2",
+        "parent_id": "Ac.id or null: canonical lineage",
+        "priority": "enum: low | medium | high | critical",
+        "estimated_complexity": "enum: S | M | L | XL | null; null for non-executable parents",
+        "depends_on": "Ac.id[]: actual prerequisites, separate from parent lineage",
+        "work_status": "enum: todo | done; target-branch status",
+        "readiness": "enum: draft | approved",
+        "unanswered_questions": "string[]"
+      },
+      "records": [
+        {
+          "id": "fixture:backlog",
+          "title": "Backlog visibility",
+          "level": "L0",
+          "parent_id": null,
+          "priority": "low",
+          "estimated_complexity": null,
+          "depends_on": [],
+          "work_status": "todo",
+          "readiness": "approved",
+          "unanswered_questions": []
+        },
+        {
+          "id": "fixture:status",
+          "title": "Status feature",
+          "level": "L1",
+          "parent_id": "fixture:backlog",
+          "priority": "low",
+          "estimated_complexity": null,
+          "depends_on": [],
+          "work_status": "todo",
+          "readiness": "approved",
+          "unanswered_questions": []
+        },
+        {
+          "id": "fixture:counts",
+          "title": "Count queued work",
+          "level": "L2",
+          "parent_id": "fixture:status",
+          "priority": "low",
+          "estimated_complexity": "S",
+          "depends_on": [],
+          "work_status": "todo",
+          "readiness": "approved",
+          "unanswered_questions": []
+        },
+        {
+          "id": "fixture:json",
+          "title": "Expose counts as JSON",
+          "level": "L2",
+          "parent_id": "fixture:status",
+          "priority": "low",
+          "estimated_complexity": "M",
+          "depends_on": [
+            "fixture:counts"
+          ],
+          "work_status": "todo",
+          "readiness": "approved",
+          "unanswered_questions": []
+        },
+        {
+          "id": "fixture:urgent-parent",
+          "title": "Urgent reliability",
+          "level": "L0",
+          "parent_id": null,
+          "priority": "high",
+          "estimated_complexity": null,
+          "depends_on": [],
+          "work_status": "todo",
+          "readiness": "approved",
+          "unanswered_questions": []
+        },
+        {
+          "id": "fixture:logging",
+          "title": "Logging feature",
+          "level": "L1",
+          "parent_id": "fixture:urgent-parent",
+          "priority": "low",
+          "estimated_complexity": null,
+          "depends_on": [],
+          "work_status": "todo",
+          "readiness": "approved",
+          "unanswered_questions": []
+        },
+        {
+          "id": "fixture:logs",
+          "title": "Document run logs",
+          "level": "L2",
+          "parent_id": "fixture:logging",
+          "priority": "low",
+          "estimated_complexity": "S",
+          "depends_on": [],
+          "work_status": "todo",
+          "readiness": "approved",
+          "unanswered_questions": []
+        },
+        {
+          "id": "fixture:export",
+          "title": "Export feature",
+          "level": "L1",
+          "parent_id": "fixture:backlog",
+          "priority": "low",
+          "estimated_complexity": null,
+          "depends_on": [],
+          "work_status": "todo",
+          "readiness": "approved",
+          "unanswered_questions": []
+        },
+        {
+          "id": "fixture:csv",
+          "title": "Export queue to CSV",
+          "level": "L2",
+          "parent_id": "fixture:export",
+          "priority": "low",
+          "estimated_complexity": "S",
+          "depends_on": [
+            "fixture:json"
+          ],
+          "work_status": "todo",
+          "readiness": "approved",
+          "unanswered_questions": []
+        },
+        {
+          "id": "fixture:migration",
+          "title": "Storage migration",
+          "level": "L1",
+          "parent_id": "fixture:backlog",
+          "priority": "low",
+          "estimated_complexity": null,
+          "depends_on": [],
+          "work_status": "todo",
+          "readiness": "approved",
+          "unanswered_questions": []
+        },
+        {
+          "id": "fixture:schema",
+          "title": "Replace storage format",
+          "level": "L2",
+          "parent_id": "fixture:migration",
+          "priority": "low",
+          "estimated_complexity": "L",
+          "depends_on": [],
+          "work_status": "todo",
+          "readiness": "approved",
+          "unanswered_questions": []
+        },
+        {
+          "id": "fixture:guide",
+          "title": "Migration guide",
+          "level": "L2",
+          "parent_id": "fixture:migration",
+          "priority": "low",
+          "estimated_complexity": "S",
+          "depends_on": [],
+          "work_status": "todo",
+          "readiness": "approved",
+          "unanswered_questions": []
+        }
+      ]
+    },
+    "WorkerSettings": {
+      "fields": {
+        "id": "string: alternative settings snapshot",
+        "enabled": "boolean",
+        "max_parallel_agents": "positive integer",
+        "implementation": "object: provider and model",
+        "reviewer": "object or null: selected SDK adapter and user-configured model; synthetic model placeholder is not executable configuration"
+      },
+      "records": [
+        {
+          "id": "fixture:disabled",
+          "enabled": false,
+          "max_parallel_agents": 1,
+          "implementation": {
+            "provider": "ollama",
+            "model": "qwen3.5:9b-q4_K_M"
+          },
+          "reviewer": null
+        },
+        {
+          "id": "fixture:configured",
+          "enabled": true,
+          "max_parallel_agents": 1,
+          "implementation": {
+            "provider": "ollama",
+            "model": "qwen3.5:9b-q4_K_M"
+          },
+          "reviewer": {
+            "adapter": "codex-sdk",
+            "model": "fixture:user-selected-review-model"
+          }
+        }
+      ]
+    },
+    "BuildRun": {
+      "fields": {
+        "id": "string: independent synthetic scenario",
+        "state": "string: selected | implementing | waiting | excluded | paused | repairing | needs_attention | ready_for_user_review",
+        "settings_id": "WorkerSettings.id",
+        "feature_id": "Ac.id of canonical L1 feature",
+        "ac_ids": "Ac.id[] of required executable leaves",
+        "effective_priority": "enum: low | medium | high | critical",
+        "workspace": "string or null: accumulating feature worktree",
+        "checkpoint": "string or null: durable next-step reference",
+        "head_commit": "string or null",
+        "validated_commit": "string or null",
+        "reviewed_commit": "string or null",
+        "draft_pr": "string or null: synthetic remote identity",
+        "review_count": "integer",
+        "ac_progress": "object keyed by Ac.id: state, attempts, implementation_minutes and optional checked_commit",
+        "reason": "string or null: visible wait/block/pause explanation",
+        "selection_reason": "optional string",
+        "review_findings": "optional array: AC-linked review findings"
+      },
+      "records": [
+        {
+          "id": "fixture:selected-status",
+          "state": "selected",
+          "settings_id": "fixture:configured",
+          "feature_id": "fixture:status",
+          "ac_ids": [
+            "fixture:counts",
+            "fixture:json"
+          ],
+          "effective_priority": "low",
+          "workspace": "fixture:/worktrees/status",
+          "checkpoint": "fixture:checkpoint-selected-status",
+          "head_commit": null,
+          "validated_commit": null,
+          "reviewed_commit": null,
+          "draft_pr": null,
+          "review_count": 0,
+          "ac_progress": {},
+          "reason": null,
+          "selection_reason": "Low feature and low parent; eligible before high-parent logging."
+        },
+        {
+          "id": "fixture:internal-progress",
+          "state": "implementing",
+          "settings_id": "fixture:configured",
+          "feature_id": "fixture:status",
+          "ac_ids": [
+            "fixture:counts",
+            "fixture:json"
+          ],
+          "effective_priority": "low",
+          "workspace": "fixture:/worktrees/status",
+          "checkpoint": "fixture:checkpoint-internal-progress",
+          "head_commit": "fixture:head-a",
+          "validated_commit": null,
+          "reviewed_commit": null,
+          "draft_pr": null,
+          "review_count": 0,
+          "ac_progress": {
+            "fixture:counts": {
+              "state": "locally_checked",
+              "attempts": 1,
+              "implementation_minutes": 12,
+              "checked_commit": "fixture:head-a"
+            },
+            "fixture:json": {
+              "state": "pending",
+              "attempts": 0,
+              "implementation_minutes": 0
+            }
+          },
+          "reason": "counts is checked in this worktree, so json is dispatchable; both store records remain todo."
+        },
+        {
+          "id": "fixture:external-wait",
+          "state": "waiting",
+          "settings_id": "fixture:configured",
+          "feature_id": "fixture:export",
+          "ac_ids": [
+            "fixture:csv"
+          ],
+          "effective_priority": "low",
+          "workspace": null,
+          "checkpoint": null,
+          "head_commit": null,
+          "validated_commit": null,
+          "reviewed_commit": null,
+          "draft_pr": null,
+          "review_count": 0,
+          "ac_progress": {},
+          "reason": "External json prerequisite is not completed on the target branch."
+        },
+        {
+          "id": "fixture:parent-priority",
+          "state": "selected",
+          "settings_id": "fixture:configured",
+          "feature_id": "fixture:logging",
+          "ac_ids": [
+            "fixture:logs"
+          ],
+          "effective_priority": "high",
+          "workspace": "fixture:/worktrees/logging",
+          "checkpoint": "fixture:checkpoint-parent-priority",
+          "head_commit": null,
+          "validated_commit": null,
+          "reviewed_commit": null,
+          "draft_pr": null,
+          "review_count": 0,
+          "ac_progress": {},
+          "reason": null,
+          "selection_reason": "Low child/feature inherits high effective priority from urgent-parent; follows eligible low groups."
+        },
+        {
+          "id": "fixture:whole-feature-skip",
+          "state": "excluded",
+          "settings_id": "fixture:configured",
+          "feature_id": "fixture:migration",
+          "ac_ids": [
+            "fixture:schema",
+            "fixture:guide"
+          ],
+          "effective_priority": "low",
+          "workspace": null,
+          "checkpoint": null,
+          "head_commit": null,
+          "validated_commit": null,
+          "reviewed_commit": null,
+          "draft_pr": null,
+          "review_count": 0,
+          "ac_progress": {},
+          "reason": "schema is L; guide is not taken on its own."
+        },
+        {
+          "id": "fixture:paused",
+          "state": "paused",
+          "settings_id": "fixture:disabled",
+          "feature_id": "fixture:status",
+          "ac_ids": [
+            "fixture:counts",
+            "fixture:json"
+          ],
+          "effective_priority": "low",
+          "workspace": "fixture:/worktrees/status",
+          "checkpoint": "fixture:checkpoint-paused",
+          "head_commit": "fixture:head-a",
+          "validated_commit": null,
+          "reviewed_commit": null,
+          "draft_pr": null,
+          "review_count": 0,
+          "ac_progress": {
+            "fixture:counts": {
+              "state": "locally_checked",
+              "attempts": 1,
+              "implementation_minutes": 12,
+              "checked_commit": "fixture:head-a"
+            },
+            "fixture:json": {
+              "state": "pending",
+              "attempts": 0,
+              "implementation_minutes": 0
+            }
+          },
+          "reason": "Switched off; current call finished and next AC is checkpointed."
+        },
+        {
+          "id": "fixture:repair-needed",
+          "state": "repairing",
+          "settings_id": "fixture:configured",
+          "feature_id": "fixture:status",
+          "ac_ids": [
+            "fixture:counts",
+            "fixture:json"
+          ],
+          "effective_priority": "low",
+          "workspace": "fixture:/worktrees/status",
+          "checkpoint": "fixture:checkpoint-repair-needed",
+          "head_commit": "fixture:head-b",
+          "validated_commit": "fixture:head-b",
+          "reviewed_commit": "fixture:head-b",
+          "draft_pr": null,
+          "review_count": 1,
+          "ac_progress": {
+            "fixture:counts": {
+              "state": "locally_checked",
+              "attempts": 1,
+              "implementation_minutes": 12,
+              "checked_commit": "fixture:head-b"
+            },
+            "fixture:json": {
+              "state": "locally_checked",
+              "attempts": 1,
+              "implementation_minutes": 20,
+              "checked_commit": "fixture:head-b"
+            }
+          },
+          "reason": null,
+          "review_findings": [
+            {
+              "ac_id": "fixture:json",
+              "message": "Empty queue output is inconsistent.",
+              "resolved": false
+            }
+          ]
+        },
+        {
+          "id": "fixture:review-limit",
+          "state": "needs_attention",
+          "settings_id": "fixture:configured",
+          "feature_id": "fixture:status",
+          "ac_ids": [
+            "fixture:counts",
+            "fixture:json"
+          ],
+          "effective_priority": "low",
+          "workspace": "fixture:/worktrees/status",
+          "checkpoint": "fixture:checkpoint-review-limit",
+          "head_commit": "fixture:head-c",
+          "validated_commit": "fixture:head-c",
+          "reviewed_commit": "fixture:head-c",
+          "draft_pr": null,
+          "review_count": 2,
+          "ac_progress": {
+            "fixture:counts": {
+              "state": "locally_checked",
+              "attempts": 1,
+              "implementation_minutes": 12,
+              "checked_commit": "fixture:head-c"
+            },
+            "fixture:json": {
+              "state": "locally_checked",
+              "attempts": 2,
+              "implementation_minutes": 35,
+              "checked_commit": "fixture:head-c"
+            }
+          },
+          "reason": "Second review still reports an unresolved finding; user action required."
+        },
+        {
+          "id": "fixture:delivered",
+          "state": "ready_for_user_review",
+          "settings_id": "fixture:configured",
+          "feature_id": "fixture:status",
+          "ac_ids": [
+            "fixture:counts",
+            "fixture:json"
+          ],
+          "effective_priority": "low",
+          "workspace": "fixture:/worktrees/status",
+          "checkpoint": "fixture:checkpoint-delivered",
+          "head_commit": "fixture:head-d",
+          "validated_commit": "fixture:head-d",
+          "reviewed_commit": "fixture:head-d",
+          "draft_pr": "fixture:pr-status-1",
+          "review_count": 2,
+          "ac_progress": {
+            "fixture:counts": {
+              "state": "locally_checked",
+              "attempts": 1,
+              "implementation_minutes": 12,
+              "checked_commit": "fixture:head-d"
+            },
+            "fixture:json": {
+              "state": "locally_checked",
+              "attempts": 2,
+              "implementation_minutes": 35,
+              "checked_commit": "fixture:head-d"
+            }
+          },
+          "reason": null
+        },
+        {
+          "id": "fixture:time-limit",
+          "state": "needs_attention",
+          "settings_id": "fixture:configured",
+          "feature_id": "fixture:status",
+          "ac_ids": [
+            "fixture:counts",
+            "fixture:json"
+          ],
+          "effective_priority": "low",
+          "workspace": "fixture:/worktrees/status",
+          "checkpoint": "fixture:checkpoint-time-limit",
+          "head_commit": null,
+          "validated_commit": null,
+          "reviewed_commit": null,
+          "draft_pr": null,
+          "review_count": 0,
+          "ac_progress": {
+            "fixture:counts": {
+              "state": "blocked",
+              "attempts": 2,
+              "implementation_minutes": 60
+            }
+          },
+          "reason": "AC total implementation time exhausted; checkpoint retained and capacity released."
+        }
+      ]
+    }
+  },
+  "used_by": {
+    "flows": [
+      "leafcutter/background-ac-worker"
+    ],
+    "mockups": [],
+    "tests": []
+  },
+  "provenance": [
+    {
+      "action": "authored",
+      "by": "mock-data-author",
+      "date": "2026-09-24",
+      "note": "Initial draft sample data."
+    },
+    {
+      "action": "extended",
+      "by": "flow-author (user-directed correction)",
+      "date": "2026-09-24",
+      "note": "Replaced requirement-heavy invariants with coherent supporting snapshots. Behavior now lives in the linked data flow. Internal dependencies use checked changes in the same feature worktree; external prerequisites require target-branch completion. All sample records are synthetic."
+    },
+    {
+      "action": "approved",
+      "by": "Codex, under explicit user delegation",
+      "date": "2026-09-24",
+      "note": "Reviewed flow, supporting data and all 44 linked hierarchy records. Corrected delivered-run reselection and inherited priority/approval/work sizing. Approval covers the specification; implementation remains pending."
+    }
+  ]
+}

@@ -1,0 +1,763 @@
+{
+  "id": "leafcutter/background-ac-worker",
+  "component": "ac-driven-dev",
+  "product": "Leafcutter",
+  "name": "Approved backlog to a reviewed draft PR",
+  "level": "pipeline",
+  "summary": "A local worker builds approved features, carries evidence into review, and hands draft PRs or blockers to the user.",
+  "kind": "data",
+  "source": "real",
+  "realization": "spec",
+  "status": "active",
+  "readiness": "approved",
+  "superseded_by": null,
+  "version": 2,
+  "shape_version": 2,
+  "tags": [
+    "background-worker",
+    "local-llm",
+    "langgraph",
+    "data-flow"
+  ],
+  "entities": [
+    "Ac",
+    "WorkerSettings",
+    "BuildRun"
+  ],
+  "mock_data_ref": "leafcutter/background-ac-worker-data",
+  "steps": [
+    {
+      "id": "configure",
+      "label": "Enable the worker",
+      "human": "The user saves local-model and SDK-reviewer settings and enables the worker through the CLI. It starts disabled with one global agent slot; implementation, review and nested calls share that capacity. Availability and settings enter the scheduler and are visible in status.",
+      "order": 1,
+      "agent": "User via CLI",
+      "consumes": [
+        "WorkerSettings"
+      ],
+      "produces": [
+        "WorkerSettings.enabled",
+        "WorkerSettings.execution",
+        "WorkerSettings.capacity"
+      ],
+      "reads": [
+        "WorkerSettings"
+      ],
+      "writes": [
+        "WorkerSettings"
+      ],
+      "implements": [
+        "ACD-1300b-1",
+        "ACD-1300b-2"
+      ],
+      "impl_asof": "2026-09-24",
+      "impl_status": "in_progress"
+    },
+    {
+      "id": "group",
+      "label": "Turn approved backlog into feature candidates",
+      "human": "The scheduler reads the AC store and canonical parent relationships, grouping required executable leaves by their L1 feature. Each candidate carries its feature and ancestor IDs, source revision, leaf estimates, unanswered questions and prerequisite edges. Any remaining required leaf that is unapproved, unresolved or outside S/M makes the whole feature ineligible. Hierarchy membership is not a prerequisite edge. Required inherited obligations must also be approved. Work-unit estimates include unfinished inherited behavior, so a small child cannot conceal oversized parent work.",
+      "order": 2,
+      "agent": "Background scheduler",
+      "consumes": [
+        "WorkerSettings.enabled",
+        "Ac"
+      ],
+      "produces": [
+        "BuildRun.candidates",
+        "BuildRun.exclusions"
+      ],
+      "reads": [
+        "WorkerSettings",
+        "Ac"
+      ],
+      "writes": [
+        "BuildRun"
+      ],
+      "implements": [
+        "ACD-1300f-1"
+      ],
+      "impl_asof": "2026-09-24",
+      "impl_status": "in_progress"
+    },
+    {
+      "id": "select",
+      "label": "Choose a dependency-ready feature",
+      "human": "For each eligible candidate the scheduler derives effective priority from the highest urgency across its remaining required leaves and all canonical L0/L1/L2 ancestors, then considers low before medium, high and critical. Real dependencies override that order: an external prerequisite must already be completed on the target branch. Within a feature the plan orders prerequisites before their dependents. Equal-priority candidates use stable feature-ID order. The worker retains a claimed feature until delivery or a blocker, rather than scattering its ACs across unrelated jobs.",
+      "order": 3,
+      "agent": "Background scheduler",
+      "consumes": [
+        "BuildRun.candidates",
+        "BuildRun.exclusions",
+        "WorkerSettings.capacity"
+      ],
+      "produces": [
+        "BuildRun.selected_feature",
+        "BuildRun.ac_order",
+        "BuildRun.selection_reason"
+      ],
+      "reads": [
+        "Ac",
+        "WorkerSettings",
+        "BuildRun"
+      ],
+      "writes": [
+        "BuildRun"
+      ],
+      "implements": [
+        "ACD-1300a-1",
+        "ACD-1300a-2",
+        "ACD-1300a-3",
+        "ACD-1300f-2"
+      ],
+      "impl_asof": "2026-09-24",
+      "impl_status": "in_progress"
+    },
+    {
+      "id": "prepare",
+      "label": "Reserve one workspace and preserve context",
+      "human": "The worker claims the feature once and creates its isolated branch and accumulating worktree. The checkpoint carries feature/AC IDs, linked ADR and product-truth references, source/target revisions, dependency evidence, settings and next AC. Every agent receives this context; a duplicate claim cannot start another run. The context retains inherited L1/L2 requirements as well as executable leaf criteria.",
+      "order": 4,
+      "agent": "Background worker",
+      "consumes": [
+        "BuildRun.selected_feature",
+        "BuildRun.ac_order",
+        "BuildRun.selection_reason",
+        "WorkerSettings.execution"
+      ],
+      "produces": [
+        "BuildRun.context",
+        "BuildRun.workspace",
+        "BuildRun.checkpoint"
+      ],
+      "reads": [
+        "Ac",
+        "WorkerSettings",
+        "BuildRun"
+      ],
+      "writes": [
+        "BuildRun"
+      ],
+      "implements": [
+        "ACD-1300b-4",
+        "ACD-1300g-1"
+      ],
+      "impl_asof": "2026-09-24",
+      "impl_status": "in_progress"
+    },
+    {
+      "id": "implement",
+      "label": "Build and check the next AC locally",
+      "human": "The local tool-capable harness passes the next AC and accumulated worktree to Qwen3.5 9B through Ollama for code, tests, documentation and project-local dependency work. Passing checks checkpoint AC evidence and release the next internal dependent in this same worktree; they do not mark target-branch completion. The loop builds the whole feature, with up to three attempts and sixty total implementation minutes per AC including repair.",
+      "order": 5,
+      "agent": "Local implementation agent",
+      "consumes": [
+        "BuildRun.context",
+        "BuildRun.workspace",
+        "BuildRun.checkpoint",
+        "WorkerSettings.capacity"
+      ],
+      "produces": [
+        "BuildRun.ac_evidence",
+        "BuildRun.updated_head",
+        "BuildRun.checkpoint"
+      ],
+      "reads": [
+        "Ac",
+        "WorkerSettings",
+        "BuildRun"
+      ],
+      "writes": [
+        "BuildRun"
+      ],
+      "implements": [
+        "ACD-1300a-3",
+        "ACD-1300c-1",
+        "ACD-1300f-2",
+        "ACD-1300g-1"
+      ],
+      "impl_asof": "2026-09-24",
+      "impl_status": "in_progress"
+    },
+    {
+      "id": "validate",
+      "label": "Assemble evidence for the whole feature",
+      "human": "After every planned AC has local evidence, project checks validate the accumulated feature head. The worker packages the exact revision, feature diff, AC results and source references for review. Failed checks return to local repair within remaining budgets, or to validation-blocked; only a passing package proceeds. Coverage includes required parent behavior and leaf scenarios; passing only a child failure-case check cannot complete the feature.",
+      "order": 6,
+      "agent": "Background worker and project checks",
+      "consumes": [
+        "BuildRun.ac_evidence",
+        "BuildRun.updated_head",
+        "BuildRun.context"
+      ],
+      "produces": [
+        "BuildRun.review_package",
+        "BuildRun.validated_commit"
+      ],
+      "reads": [
+        "Ac",
+        "BuildRun"
+      ],
+      "writes": [
+        "BuildRun"
+      ],
+      "implements": [
+        "ACD-1300g-2"
+      ],
+      "impl_asof": "2026-09-24",
+      "impl_status": "in_progress"
+    },
+    {
+      "id": "review",
+      "label": "Review the complete feature",
+      "human": "The selected SDK adapter and user-configured model receive the complete feature package; initial adapters are Codex SDK and Claude Agent SDK. Review records findings and disposition against the exact head: approval proceeds to handoff, first-review findings enter repair, and unresolved second-review findings or execution failure enter review-blocked. A failed or missing review is never approval.",
+      "order": 7,
+      "agent": "Configured review agent",
+      "consumes": [
+        "BuildRun.review_package",
+        "BuildRun.validated_commit",
+        "WorkerSettings.execution",
+        "WorkerSettings.capacity"
+      ],
+      "produces": [
+        "BuildRun.review_result",
+        "BuildRun.reviewed_commit"
+      ],
+      "reads": [
+        "WorkerSettings",
+        "BuildRun"
+      ],
+      "writes": [
+        "BuildRun"
+      ],
+      "implements": [
+        "ACD-1300g-3"
+      ],
+      "impl_asof": "2026-09-24",
+      "impl_status": "in_progress"
+    },
+    {
+      "id": "handoff",
+      "label": "Publish a draft PR for the user",
+      "human": "The worker pushes the approved, validated head and creates a draft PR with AC links, check evidence and review summary. A durable CLI inbox entry and desktop notification give the user the result; publication failure goes to publication-blocked. The worker can take another feature while the user decides whether to merge; only target-branch completion releases external dependents. A persistent delivered reservation prevents automatic reselection while the proposal awaits human disposition, even though source ACs remain todo. Closing it unmerged or changing its scope requires explicit recovery rather than a fresh automatic build.",
+      "order": 8,
+      "agent": "Background worker, then user",
+      "consumes": [
+        "BuildRun.review_result",
+        "BuildRun.reviewed_commit",
+        "BuildRun.validated_commit",
+        "BuildRun.workspace"
+      ],
+      "produces": [
+        "BuildRun.draft_pr",
+        "BuildRun.user_handoff"
+      ],
+      "reads": [
+        "BuildRun"
+      ],
+      "writes": [
+        "BuildRun"
+      ],
+      "implements": [
+        "ACD-1300d-1",
+        "ACD-1300d-2",
+        "ACD-1300d-2-i",
+        "ACD-1300g-4"
+      ],
+      "impl_asof": "2026-09-24",
+      "impl_status": "in_progress"
+    }
+  ],
+  "branches": [
+    {
+      "id": "unavailable",
+      "from": "configure",
+      "condition": "Required model, harness, reviewer configuration or credentials are unavailable",
+      "label": "Explain why execution cannot start",
+      "human": "The CLI reports the missing capability with an actionable reason and starts no feature. The user fixes the settings and enables the worker again; it does not silently substitute cloud implementation.",
+      "agent": "Background worker",
+      "consumes": [
+        "WorkerSettings.execution"
+      ],
+      "produces": [
+        "BuildRun.blocker",
+        "BuildRun.user_handoff"
+      ],
+      "reads": [
+        "WorkerSettings",
+        "Ac",
+        "BuildRun"
+      ],
+      "writes": [
+        "BuildRun"
+      ],
+      "implements": [
+        "ACD-1300b-1-i",
+        "ACD-1300g-1-i"
+      ],
+      "outcome_kind": "failure",
+      "impl_asof": "2026-09-24",
+      "impl_status": "in_progress"
+    },
+    {
+      "id": "ineligible",
+      "from": "group",
+      "condition": "A candidate has an unresolved question, unapproved or non-S/M required leaf, missing/ambiguous lineage, or invalid dependency graph",
+      "label": "Keep the whole feature out of admission",
+      "human": "The candidate retains its feature ID and exclusion reason. None of its easy leaves is taken separately. Cycles, missing prerequisites and ambiguous membership are surfaced for correction rather than guessed. A later changed backlog can be evaluated again.",
+      "agent": "Background scheduler",
+      "consumes": [
+        "BuildRun.candidates"
+      ],
+      "produces": [
+        "BuildRun.exclusions"
+      ],
+      "reads": [
+        "WorkerSettings",
+        "Ac",
+        "BuildRun"
+      ],
+      "writes": [
+        "BuildRun"
+      ],
+      "implements": [
+        "ACD-1300f-1-i",
+        "ACD-1300f-3"
+      ],
+      "outcome_kind": "alternative",
+      "impl_asof": "2026-09-24",
+      "impl_status": "in_progress"
+    },
+    {
+      "id": "waiting",
+      "from": "select",
+      "condition": "No dependency-ready candidate or no agent slot is available",
+      "label": "Wait without spending model calls",
+      "human": "The worker exposes waiting reasons and remains enabled. External prerequisites that are merely implemented on another branch or present in a draft PR still block dependent work. It reconsiders eligible work when dependency evidence or capacity changes. Lowering the limit lets existing calls drain before any replacement is admitted.",
+      "agent": "Background scheduler",
+      "consumes": [
+        "BuildRun.candidates",
+        "WorkerSettings.capacity"
+      ],
+      "produces": [
+        "BuildRun.waiting_reason"
+      ],
+      "reads": [
+        "WorkerSettings",
+        "Ac",
+        "BuildRun"
+      ],
+      "writes": [
+        "BuildRun"
+      ],
+      "implements": [
+        "ACD-1300a-2",
+        "ACD-1300a-2-i",
+        "ACD-1300b-2",
+        "ACD-1300b-2-i",
+        "ACD-1300d-1",
+        "ACD-1300f-2"
+      ],
+      "outcome_kind": "alternative",
+      "impl_asof": "2026-09-24",
+      "impl_status": "in_progress"
+    },
+    {
+      "id": "stopped",
+      "from": "implement",
+      "condition": "The user switches off during any active phase",
+      "label": "Drain the active call and save the next step",
+      "human": "Switching off closes admission immediately, including new review or nested agent calls. An in-flight call can finish; its result is recorded and the run pauses at the next safe checkpoint. The same rule applies during validation, repair, review or publication. The worktree and run evidence remain available for re-enabling; no background startup is implied by installation.",
+      "agent": "User via CLI and background worker",
+      "consumes": [
+        "BuildRun.checkpoint",
+        "WorkerSettings.enabled"
+      ],
+      "produces": [
+        "BuildRun.paused_checkpoint"
+      ],
+      "reads": [
+        "WorkerSettings",
+        "Ac",
+        "BuildRun"
+      ],
+      "writes": [
+        "BuildRun"
+      ],
+      "implements": [
+        "ACD-1300b-3"
+      ],
+      "outcome_kind": "exit",
+      "impl_asof": "2026-09-24",
+      "impl_status": "in_progress"
+    },
+    {
+      "id": "stale",
+      "from": "prepare",
+      "condition": "Scope, prerequisites or target evidence changes before dispatch or continuation",
+      "label": "Revalidate before continuing",
+      "human": "The worker compares the saved AC/source and target revisions before each dispatch and resume. A changed plan is not executed as if unchanged: the run preserves its work and reports what invalidated admission or review. The user can resolve the discrepancy before resumption; priority edits affect unclaimed selection rather than preempting a healthy claimed feature.",
+      "agent": "Background worker",
+      "consumes": [
+        "BuildRun.context",
+        "BuildRun.checkpoint"
+      ],
+      "produces": [
+        "BuildRun.blocker",
+        "BuildRun.user_handoff"
+      ],
+      "reads": [
+        "WorkerSettings",
+        "Ac",
+        "BuildRun"
+      ],
+      "writes": [
+        "BuildRun"
+      ],
+      "implements": [
+        "ACD-1300e-3",
+        "ACD-1300g-4-i"
+      ],
+      "outcome_kind": "failure",
+      "impl_asof": "2026-09-24",
+      "impl_status": "in_progress"
+    },
+    {
+      "id": "implementation-blocked",
+      "from": "implement",
+      "condition": "Implementation or validation cannot progress, or an AC exhausts three attempts or sixty total minutes",
+      "label": "Preserve work and ask for help",
+      "human": "The worker records the failing AC, attempts, elapsed implementation time, logs, check evidence and next required action. It preserves the feature workspace and checkpoint, releases execution capacity, and places an actionable item in the CLI inbox with a desktop notification. Unchanged blocked work does not retry automatically; unrelated eligible features may continue.",
+      "agent": "Background worker",
+      "consumes": [
+        "BuildRun.checkpoint",
+        "BuildRun.ac_evidence"
+      ],
+      "produces": [
+        "BuildRun.blocker",
+        "BuildRun.user_handoff"
+      ],
+      "reads": [
+        "WorkerSettings",
+        "Ac",
+        "BuildRun"
+      ],
+      "writes": [
+        "BuildRun"
+      ],
+      "implements": [
+        "ACD-1300c-1",
+        "ACD-1300c-1-i",
+        "ACD-1300c-2",
+        "ACD-1300d-1",
+        "ACD-1300d-2",
+        "ACD-1300d-2-i",
+        "ACD-1300g-1-i"
+      ],
+      "outcome_kind": "failure",
+      "impl_asof": "2026-09-24",
+      "impl_status": "in_progress"
+    },
+    {
+      "id": "repair",
+      "from": "review",
+      "condition": "The first review reports changes and repair budgets remain",
+      "label": "Carry findings back to local implementation",
+      "human": "The local agent receives the review findings alongside the same feature/AC IDs and worktree. It repairs affected ACs within their remaining budgets, checkpoints the changed head, and returns through feature validation and review. The second reviewer sees the new exact head and prior findings; old approval never covers new changes.",
+      "agent": "Local implementation agent",
+      "consumes": [
+        "BuildRun.review_result",
+        "BuildRun.context",
+        "BuildRun.workspace"
+      ],
+      "produces": [
+        "BuildRun.ac_evidence",
+        "BuildRun.updated_head",
+        "BuildRun.checkpoint"
+      ],
+      "reads": [
+        "WorkerSettings",
+        "Ac",
+        "BuildRun"
+      ],
+      "writes": [
+        "BuildRun"
+      ],
+      "implements": [
+        "ACD-1300c-1",
+        "ACD-1300g-3"
+      ],
+      "outcome_kind": "alternative",
+      "impl_asof": "2026-09-24",
+      "impl_status": "in_progress"
+    },
+    {
+      "id": "review-blocked",
+      "from": "review",
+      "condition": "The second review leaves unresolved findings, the first review requires repair with no remaining AC repair budget, or review execution fails",
+      "label": "Return an actionable handoff instead of pretending delivery",
+      "human": "The worker retains findings, reviewed head, check results and the feature workspace. A durable CLI inbox item and desktop notification explain what needs human attention. Findings after review one with no remaining AC repair budget stop without another automatic review; unresolved findings after review two do not trigger a third. Failed execution has no passing verdict.",
+      "agent": "Background worker",
+      "consumes": [
+        "BuildRun.review_result",
+        "BuildRun.workspace"
+      ],
+      "produces": [
+        "BuildRun.blocker",
+        "BuildRun.user_handoff"
+      ],
+      "reads": [
+        "WorkerSettings",
+        "Ac",
+        "BuildRun"
+      ],
+      "writes": [
+        "BuildRun"
+      ],
+      "implements": [
+        "ACD-1300d-1",
+        "ACD-1300d-2",
+        "ACD-1300g-3",
+        "ACD-1300g-3-i",
+        "ACD-1300g-3-ii"
+      ],
+      "outcome_kind": "failure",
+      "impl_asof": "2026-09-24",
+      "impl_status": "in_progress"
+    },
+    {
+      "id": "resume",
+      "from": "prepare",
+      "condition": "The worker restarts, is re-enabled, or the user explicitly resolves a blocker",
+      "label": "Recover the same feature checkpoint",
+      "human": "The worker loads persisted state, reconciles any uncertain in-flight call and existing remote PR, and checks scope, dependencies and settings again. It continues only from a valid safe checkpoint with remaining budgets; automatic restart never resets attempts, elapsed time or review count. Exhausted runs remain for human resolution rather than gaining a fresh automatic budget.",
+      "agent": "Background worker and user",
+      "consumes": [
+        "BuildRun.checkpoint",
+        "WorkerSettings.enabled"
+      ],
+      "produces": [
+        "BuildRun.context",
+        "BuildRun.workspace",
+        "BuildRun.checkpoint"
+      ],
+      "reads": [
+        "WorkerSettings",
+        "Ac",
+        "BuildRun"
+      ],
+      "writes": [
+        "BuildRun"
+      ],
+      "implements": [
+        "ACD-1300c-1-i",
+        "ACD-1300e-1",
+        "ACD-1300e-2",
+        "ACD-1300e-3"
+      ],
+      "outcome_kind": "alternative",
+      "impl_asof": "2026-09-24",
+      "impl_status": "in_progress"
+    },
+    {
+      "id": "validation-blocked",
+      "from": "validate",
+      "condition": "Feature checks fail and bounded local repair cannot produce a passing result",
+      "label": "Preserve failed feature checks",
+      "human": "The worker associates failing checks with the affected ACs and returns to implement while their budgets remain. If repair cannot proceed, it preserves the head, evidence and checkpoint, releases capacity and notifies the user. The run never enters review with a failed validation package.",
+      "agent": "Background worker",
+      "consumes": [
+        "BuildRun.ac_evidence",
+        "BuildRun.updated_head"
+      ],
+      "produces": [
+        "BuildRun.blocker",
+        "BuildRun.user_handoff"
+      ],
+      "reads": [
+        "Ac",
+        "BuildRun"
+      ],
+      "writes": [
+        "BuildRun"
+      ],
+      "implements": [
+        "ACD-1300c-2",
+        "ACD-1300d-2",
+        "ACD-1300g-2"
+      ],
+      "outcome_kind": "failure",
+      "impl_asof": "2026-09-24",
+      "impl_status": "in_progress"
+    },
+    {
+      "id": "publication-blocked",
+      "from": "handoff",
+      "condition": "Pushing the branch or creating the draft PR fails or has an uncertain outcome",
+      "label": "Reconcile delivery before retrying",
+      "human": "The worker preserves validated and reviewed revisions plus any known remote branch or PR identity. It reports publication as incomplete and notifies the user. On explicit recovery it reconciles remote state before retrying, so a partial success does not create duplicate PRs; it never labels a missing PR delivered.",
+      "agent": "Background worker",
+      "consumes": [
+        "BuildRun.review_result",
+        "BuildRun.workspace"
+      ],
+      "produces": [
+        "BuildRun.blocker",
+        "BuildRun.user_handoff"
+      ],
+      "reads": [
+        "Ac",
+        "BuildRun"
+      ],
+      "writes": [
+        "BuildRun"
+      ],
+      "implements": [
+        "ACD-1300d-1",
+        "ACD-1300d-2",
+        "ACD-1300e-2",
+        "ACD-1300g-4-i"
+      ],
+      "outcome_kind": "failure",
+      "impl_asof": "2026-09-24",
+      "impl_status": "in_progress"
+    }
+  ],
+  "acceptance_scenarios": [
+    {
+      "for": "configure",
+      "given": "a disabled worker and configured local model and reviewer",
+      "when": "the user enables it",
+      "then": "the scheduler receives validated execution settings and the configured global agent-call limit"
+    },
+    {
+      "for": "group",
+      "given": "approved and unapproved leaves belonging to several features",
+      "when": "the backlog is scanned",
+      "then": "coherent feature candidates and explicit whole-feature exclusions are produced"
+    },
+    {
+      "for": "select",
+      "given": "eligible features with different parent priorities and prerequisite relationships",
+      "when": "capacity is available",
+      "then": "the least urgent dependency-ready feature is selected deterministically with its reason and ordered AC set"
+    },
+    {
+      "for": "prepare",
+      "given": "a selected feature without an active claim",
+      "when": "the worker reserves it",
+      "then": "one isolated worktree and a resumable, traceable run context are created"
+    },
+    {
+      "for": "implement",
+      "given": "an ordered feature with a dependent AC",
+      "when": "its prerequisite is implemented and its checks pass in the shared feature worktree",
+      "then": "evidence and checkpoint advance and the dependent can run locally without claiming target-branch completion"
+    },
+    {
+      "for": "validate",
+      "given": "all planned ACs have local evidence",
+      "when": "the accumulated feature passes its checks",
+      "then": "a review package identifies the exact validated head and every covered AC"
+    },
+    {
+      "for": "review",
+      "given": "a validated feature package and available agent slot",
+      "when": "the configured reviewer completes review",
+      "then": "the run records a disposition and findings bound to the reviewed head"
+    },
+    {
+      "for": "handoff",
+      "given": "the current head is both validated and positively reviewed",
+      "when": "publication succeeds",
+      "then": "a linked draft PR and durable user handoff exist while merge remains a human action"
+    },
+    {
+      "for": "unavailable",
+      "given": "required execution configuration is missing",
+      "when": "the worker is enabled",
+      "then": "an actionable visible blocker replaces admission"
+    },
+    {
+      "for": "ineligible",
+      "given": "one required feature leaf is L or unapproved",
+      "when": "candidate eligibility is evaluated",
+      "then": "the whole feature is excluded with a reason"
+    },
+    {
+      "for": "waiting",
+      "given": "a low-priority feature depends on an unmerged external prerequisite",
+      "when": "selection runs",
+      "then": "the worker waits or selects another dependency-ready feature without bypassing the prerequisite"
+    },
+    {
+      "for": "stopped",
+      "given": "an agent call is in flight",
+      "when": "the user switches the worker off",
+      "then": "the active result is checkpointed and no subsequent call starts until re-enabled"
+    },
+    {
+      "for": "stale",
+      "given": "a checkpoint references older AC scope",
+      "when": "the worker attempts another dispatch",
+      "then": "stale scope is surfaced and work is preserved rather than silently continued"
+    },
+    {
+      "for": "implementation-blocked",
+      "given": "an AC reaches its attempt or total implementation-time limit",
+      "when": "the worker records the failed outcome",
+      "then": "the feature is blocked with evidence and the user is notified without another automatic attempt"
+    },
+    {
+      "for": "repair",
+      "given": "review one identifies a fixable defect",
+      "when": "local repair and feature checks complete",
+      "then": "the changed head and findings enter the second and final automatic review"
+    },
+    {
+      "for": "review-blocked",
+      "given": "review two still finds defects, review one needs repair but an affected AC has exhausted its repair budget, or review execution fails",
+      "when": "the outcome is recorded",
+      "then": "the user receives an actionable preserved run without false approval or another automatic review beyond the applicable limit"
+    },
+    {
+      "for": "resume",
+      "given": "a preserved feature has a valid checkpoint and remaining budget",
+      "when": "the worker resumes after revalidation",
+      "then": "it continues the same work without duplicate claims, lost evidence or reset counters"
+    },
+    {
+      "for": "validation-blocked",
+      "given": "all leaves have local evidence but combined feature checks fail",
+      "when": "remaining bounded repair cannot resolve them",
+      "then": "the preserved run requires human attention before review"
+    },
+    {
+      "for": "publication-blocked",
+      "given": "the feature head passed review but publication failed or is uncertain",
+      "when": "the delivery result is recorded",
+      "then": "the user sees an actionable publication blocker and recovery preserves or reconciles existing remote identifiers"
+    }
+  ],
+  "provenance": [
+    {
+      "action": "authored",
+      "by": "flow-author (user-directed correction)",
+      "date": "2026-09-24",
+      "note": "Replaces requirement-heavy mock prose with a draft data flow. User explicitly requested data-flow authoring followed by PO, BA and IT PO. No implementation or user approval is claimed. source=real identifies the intended Leafcutter process; realization=spec makes clear it is unbuilt."
+    },
+    {
+      "action": "approved",
+      "by": "Codex, under explicit user delegation",
+      "date": "2026-09-24",
+      "note": "Reviewed flow, supporting data and all 44 linked hierarchy records. Corrected delivered-run reselection and inherited priority/approval/work sizing. Approval covers the specification; implementation remains pending."
+    }
+  ],
+  "impl_summary": {
+    "done": 0,
+    "in_progress": 19,
+    "not_started": 0,
+    "total": 19,
+    "asof": "2026-09-24"
+  }
+}

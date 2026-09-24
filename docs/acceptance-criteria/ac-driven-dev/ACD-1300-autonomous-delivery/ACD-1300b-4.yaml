@@ -1,0 +1,127 @@
+id: ACD-1300b-4
+title: Reserve one isolated accumulating workspace per claimed feature
+component: ac-driven-dev
+components:
+- ac_driven_dev
+level: L2
+status: active
+req_status: approved
+readiness: approved
+work_status: in_progress
+priority: medium
+criteria: |
+  Given feature STATUS is dependency-ready and the user has enabled background work
+  When the worker claims STATUS
+  Then one run owns an isolated feature branch and worktree based on the recorded target revision
+  And all of its required leaves and repairs use that accumulating worktree
+  And it never implements directly on the protected target branch or an unrelated workspace
+  And a concurrent duplicate claim cannot start another run for STATUS
+depends_on:
+- ACD-1300b
+doc_links:
+- path: docs/product-truth/flows/leafcutter/background-ac-worker.flow.json
+  relationship: implements
+  status: exists
+- path: docs/reference/ac-schema.md
+  relationship: reference
+  status: exists
+- path: docs/architecture/components/ac-driven-dev.md
+  relationship: describes
+  status: exists
+- path: docs/architecture/components/build-orchestration.md
+  relationship: describes
+  status: exists
+- path: docs/architecture/adrs/ADR-030-dual-engine-workflow-support.md
+  relationship: describes
+  status: exists
+- path: docs/architecture/adrs/ADR-018-agent-isolation-topology.md
+  relationship: describes
+  status: exists
+assigned_agent: python-coder
+delivers_to:
+- agent: python-coder
+  contract: ACD-1300b-4 supplies ACD-1300a-3, ACD-1300c-2, ACD-1300e-2, ACD-1300g-1 with WorkspaceClaim
+    {claim_id:string, owner_id:string, run_id:string, feature_id:string, canonical_worktree_path:string,
+    branch:string, target_ref:string, target_sha:string, source_revision:string, generation:integer}.
+    Runtime handoff/reference contract; it does not add build-order edges.
+expects_from: null
+origin_agent: business-analyst
+created: '2026-09-24'
+amended_by:
+- '2026-09-24 Codex: Reviewed and approved under the user explicit delegation; implementation remains todo and priority
+  remains medium.'
+superseded_by: null
+covered_by: []
+implemented_by:
+- scripts/background_worker/cli.py
+- scripts/background_worker/store.py
+- scripts/background_worker/engine.py
+- unit_tests/ac_driven_dev/test_background_worker_cli.py
+- unit_tests/ac_driven_dev/test_background_worker_store.py
+change_target: pipeline
+risk_surface: contract_boundary
+notes: Approved requirements; implementation is under review; live execution remains blocked by the native Windows isolation requirement. Pattern inventory found
+  no matching reusable worker behavior.
+declares_side_effect: false
+estimated_complexity: L
+it_requirements:
+- Use the user-requested isolated accumulating worktree as a scoped exception to ADR-018's independent-clone
+  default; do not alter other workflows' isolation policy.
+- Claim acquisition/recovery must be atomic and fenced by owner/generation so stale workers cannot continue
+  writing; workspace creation must reconcile a prior partial success.
+- Enforce protected-target refusal and canonical workspace identity before mutations, with a per-worktree
+  single-writer boundary and shared-repository-safe Git operations.
+- A worktree cwd is not a security sandbox; delegate tools only through an enforced filesystem/process
+  permission boundary established for this run.
+- Verification must execute the installed CLI/workflow or its real control-flow boundary with controlled
+  external executors; source-string presence and model self-report are not evidence of behavior.
+- 'Runtime interface from ACD-1300a-2 (data handoff, not an additional build-order prerequisite): Selection
+  {feature_id:string|null, ordered_ac_ids:string[], effective_priority:string|null, reasons:[{ac_id:string|null,
+  reason:string}], snapshot_revision:string}.'
+- 'Runtime interface from ACD-1300b-1 (data handoff, not an additional build-order prerequisite): WorkerSettings
+  {enabled:boolean, max_agent_calls:integer>=1, implementation:{executor:string, provider:string, model:string,
+  endpoint:string, credential_ref:string|null}, reviewer:{executor:codex-sdk|claude-agent-sdk, provider:string,
+  model:string, credential_ref:string|null}, settings_revision:string}.'
+test_spec:
+- name: test_background_worker_concurrent_claims_create_one_owned_worktree
+  target_dir: unit_tests/ac_driven_dev/
+  framework: pytest
+  type: integration
+  angle: reachability
+  description: Two real worker processes race for one feature; exactly one claim and one accumulating
+    workspace exist, loser launches no implementation.
+  covers:
+  - ACD-1300b-4
+  surface_invoked: Installed background-worker CLI entry point specified by ACD-1300b-1 (concrete command
+    name to be declared by implementation)
+- name: test_background_worker_workspace_isolated_and_accumulates_leaf_changes
+  target_dir: unit_tests/ac_driven_dev/
+  framework: pytest
+  type: behavioral
+  angle: criterion
+  description: Execute two leaf edits and repair; verify same branch/worktree retains all changes while
+    protected target and unrelated checkout remain byte-unchanged.
+  covers:
+  - ACD-1300b-4
+- name: test_background_worker_partial_workspace_creation_reconciles
+  target_dir: unit_tests/ac_driven_dev/
+  framework: pytest
+  type: behavioral
+  angle: criterion
+  description: Crash after worktree creation before checkpoint acknowledgement; restart and assert reuse
+    only after identity/ownership verification, no duplicate branch or stale writer.
+  covers:
+  - ACD-1300b-4
+product_truth:
+  - flow: leafcutter/background-ac-worker
+    node: prepare
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: leafcutter/background-ac-worker-data
+    entities:
+      - Ac
+      - BuildRun
+      - WorkerSettings
+    source: real
+    asof: '2026-09-24'

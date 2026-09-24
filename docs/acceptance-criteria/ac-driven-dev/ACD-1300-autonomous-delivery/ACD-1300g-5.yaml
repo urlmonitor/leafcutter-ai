@@ -1,0 +1,64 @@
+id: ACD-1300g-5
+title: Document execution and persistence boundaries in a component diagram
+component: ac-driven-dev
+components:
+- ac_driven_dev
+level: L2
+status: active
+req_status: approved
+readiness: approved
+work_status: in_progress
+priority: medium
+criteria: |
+  Given a maintainer needs to extend the worker with another reviewer executor
+  When they consult its component diagram
+  Then it distinguishes the deterministic workflow, local model, tool harness, reviewer adapters, project worktree, durable state, CLI inbox and desktop notifier
+  And their connections show which component invokes tools, owns checkpoints and controls draft-PR publication
+  And the diagram identifies the human merge boundary
+depends_on:
+- ACD-1300g
+doc_links:
+- path: docs/product-truth/flows/leafcutter/background-ac-worker.flow.json
+  relationship: implements
+  status: exists
+- path: docs/reference/ac-schema.md
+  relationship: reference
+  status: exists
+- path: docs/architecture/components/ac-driven-dev.md
+  relationship: describes
+  status: exists
+- path: docs/architecture/components/build-orchestration.md
+  relationship: describes
+  status: exists
+- path: docs/architecture/adrs/ADR-030-dual-engine-workflow-support.md
+  relationship: describes
+  status: exists
+- path: docs/architecture/adrs/ADR-018-agent-isolation-topology.md
+  relationship: describes
+  status: exists
+assigned_agent: architecture-diagram-author
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: '2026-09-24'
+amended_by:
+- '2026-09-24 Codex: Reviewed and approved under the user explicit delegation; implementation remains todo and priority
+  remains medium.'
+superseded_by: null
+covered_by: []
+implemented_by:
+- docs/architecture/diagrams/background-ac-worker-components.md
+change_target: docs
+risk_surface: internal
+notes: Approved requirements; implementation is under review; live execution remains blocked by the native Windows isolation requirement. Pattern inventory found
+  no matching reusable worker behavior.
+declares_side_effect: false
+estimated_complexity: M
+it_requirements:
+- 'Make the tool/process permission boundary explicit: local model endpoint, harness tool loop, workspace
+  filesystem and shell sandbox are distinct components.'
+- Show local durable state as required and hosted orchestration/Postgres as unnecessary; preserve native
+  E2 as a separate existing path and identify the scoped worktree exception.
+- Describe the contracts and outcomes of ACD-1300b-1, ACD-1300g-1, ACD-1300g-3, ACD-1300g-4, ACD-1300e-2,
+  ACD-1300d-1, ACD-1300d-2 as reference subjects, not additional build prerequisites.
+test_required: false

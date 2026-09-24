@@ -1,35 +1,51 @@
 id: ACD-1300a
 components:
   - ac_driven_dev
-readiness: draft
+readiness: approved
 priority: medium
-title: "Priorities you set on goals decide what gets built next"
+title: "Finish coherent features from the backlog in a predictable order"
 component: ac-driven-dev
 level: L1
 status: active
-req_status: draft
-work_status: todo
+req_status: approved
+work_status: in_progress
 roadmap_phase: phase_1
 criteria: |
-  Your L0/L1 priority settings are the autopilot's steering wheel.
+  Finish whole features instead of scattering effort across unrelated tasks.
 
-  The system reads the priority field on your goals (L0) and features (L1) and
-  uses it to rank the build queue. When you change a priority, the queue
-  reorders itself. The highest-priority refined work is always what gets built
-  next. You never need to manually select work items -- your priority choices
-  do it for you.
+  The background worker keeps related requirements together and selects the least
+  urgent eligible feature using its remaining work, feature and parent priorities. Dependencies
+  come first, and a selected feature keeps its place until delivery or a blocker.
 depends_on:
   - ACD-1300
-doc_links: []
+doc_links:
+  - docs/product-truth/flows/leafcutter/background-ac-worker.flow.json
 delivers_to: null
 expects_from: null
 origin_agent: product-owner-v3
 created: 2026-06-06
-amended_by: []
+amended_by:
+- '2026-09-24 product-owner: Refined this existing draft for the user-authorized local background worker; approval
+  remains pending.'
+- '2026-09-24 Codex: Reviewed and approved under the user explicit delegation; implementation remains todo and priority
+  remains medium.'
 superseded_by: null
-covered_by: []
-implemented_by: []
+covered_by:
+  - ACD-1300a-1
+  - ACD-1300a-2
+  - ACD-1300a-3
+implemented_by:
+- scripts/background_worker/planning.py
+- unit_tests/ac_driven_dev/test_background_worker_planning.py
 documentation_triggers:
   - how-to
 change_target: pipeline
 risk_surface: contract_boundary
+notes: |
+  Scoped draft refinement requested by the user on 2026-09-24. This tree describes
+  the optional local background lane; it does not alter the regular scanner,
+  fast-lane eligibility, or the ACD-500 complexity-to-priority mapping. Runtime
+  scheduling priority is distinct from this requirement record's draft priority.
+  Lowest effective feature urgency first replaces the earlier highest-first
+  wording for this background lane. Effective urgency honors remaining required leaves, L1 and L0 ancestry;
+  real prerequisites override ordering. Structural ancestry is not a prerequisite.

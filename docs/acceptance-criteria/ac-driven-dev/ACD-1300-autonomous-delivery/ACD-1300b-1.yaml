@@ -1,0 +1,133 @@
+id: ACD-1300b-1
+title: Enable background work explicitly with validated execution settings
+component: ac-driven-dev
+components:
+- ac_driven_dev
+level: L2
+status: active
+req_status: approved
+readiness: approved
+work_status: in_progress
+priority: medium
+criteria: |
+  Given the worker is newly installed and disabled with a global agent-call limit of one
+  And the local implementation and reviewer settings are available
+  When the user enables background work through the CLI
+  Then the enabled setting is persisted and status identifies the selected executors, models and global limit
+  And the worker can admit eligible features without another per-feature opt-in
+  And installation alone starts no background work
+  And there is no daily or token-count quota
+depends_on:
+- ACD-1300b
+doc_links:
+- path: docs/product-truth/flows/leafcutter/background-ac-worker.flow.json
+  relationship: implements
+  status: exists
+- path: docs/reference/ac-schema.md
+  relationship: reference
+  status: exists
+- path: docs/architecture/components/ac-driven-dev.md
+  relationship: describes
+  status: exists
+- path: docs/architecture/components/build-orchestration.md
+  relationship: describes
+  status: exists
+- path: docs/architecture/adrs/ADR-030-dual-engine-workflow-support.md
+  relationship: describes
+  status: exists
+- path: docs/architecture/adrs/ADR-033-agent-model-tiers.md
+  relationship: describes
+  status: exists
+assigned_agent: python-coder
+delivers_to:
+- agent: python-coder
+  contract: ACD-1300b-1 supplies ACD-1300b-1-i, ACD-1300b-2, ACD-1300b-3, ACD-1300b-4, ACD-1300e-3, ACD-1300g-1,
+    ACD-1300g-3 with WorkerSettings {enabled:boolean, max_agent_calls:integer>=1, implementation:{executor:string,
+    provider:string, model:string, endpoint:string, credential_ref:string|null}, reviewer:{executor:codex-sdk|claude-agent-sdk,
+    provider:string, model:string, credential_ref:string|null}, settings_revision:string}. Runtime handoff/reference
+    contract; it does not add build-order edges.
+- agent: architecture-diagram-author
+  contract: ACD-1300b-1 supplies ACD-1300b-5, ACD-1300g-5 with WorkerSettings {enabled:boolean, max_agent_calls:integer>=1,
+    implementation:{executor:string, provider:string, model:string, endpoint:string, credential_ref:string|null},
+    reviewer:{executor:codex-sdk|claude-agent-sdk, provider:string, model:string, credential_ref:string|null},
+    settings_revision:string}. Runtime handoff/reference contract; it does not add build-order edges.
+- agent: documentation-expert
+  contract: ACD-1300b-1 supplies ACD-1300c-3, ACD-1300f-4 with WorkerSettings {enabled:boolean, max_agent_calls:integer>=1,
+    implementation:{executor:string, provider:string, model:string, endpoint:string, credential_ref:string|null},
+    reviewer:{executor:codex-sdk|claude-agent-sdk, provider:string, model:string, credential_ref:string|null},
+    settings_revision:string}. Runtime handoff/reference contract; it does not add build-order edges.
+expects_from: null
+origin_agent: business-analyst
+created: '2026-09-24'
+amended_by:
+- '2026-09-24 Codex: Reviewed and approved under the user explicit delegation; implementation remains todo and priority
+  remains medium.'
+superseded_by: null
+covered_by:
+  - ACD-1300b-1-i
+implemented_by:
+- scripts/background_worker/cli.py
+- scripts/background_worker/store.py
+- scripts/background_worker/engine.py
+- unit_tests/ac_driven_dev/test_background_worker_cli.py
+- unit_tests/ac_driven_dev/test_background_worker_store.py
+change_target: pipeline
+risk_surface: contract_boundary
+notes: Approved requirements; implementation is under review; live execution remains blocked by the native Windows isolation requirement. Pattern inventory found
+  no matching reusable worker behavior.
+declares_side_effect: true
+estimated_complexity: L
+it_requirements:
+- Expose an installed CLI entry point with repository-root-explicit operation; require no developer checkout,
+  hidden cwd-relative dependency, cloud orchestration service or Postgres for startup/local state.
+- Keep executor/harness separate from provider/model/endpoint; retain native Claude-tier registry and
+  E2 behavior unchanged for existing paths.
+- Use Qwen3.5 9B through a local Ollama implementation endpoint and configurable Codex SDK or Claude Agent
+  SDK review; reject incompatible model/executor combinations rather than translating them silently.
+- Resolve credentials by reference at invocation time; never persist raw credentials in run checkpoints,
+  status or logs.
+- The first pilot may diagnose missing runtime/model prerequisites clearly; installation itself must remain
+  disabled and must not start inference or review.
+- Verification must execute the installed CLI/workflow or its real control-flow boundary with controlled
+  external executors; source-string presence and model self-report are not evidence of behavior.
+test_spec:
+- name: test_background_worker_fresh_install_is_disabled_and_reachable
+  target_dir: unit_tests/ac_driven_dev/
+  framework: pytest
+  type: integration
+  angle: reachability
+  description: Invoke the installed CLI from a fresh consumer layout outside the developer checkout; assert
+    disabled state, limit one and zero worker/agent starts.
+  covers:
+  - ACD-1300b-1
+  surface_invoked: Installed background-worker CLI entry point specified by ACD-1300b-1 (concrete command
+    name to be declared by implementation)
+- name: test_background_worker_enable_persists_validated_distinct_executor_models
+  target_dir: unit_tests/ac_driven_dev/
+  framework: pytest
+  type: behavioral
+  angle: criterion
+  description: Enable with local implementation plus each SDK reviewer configuration in separate cases;
+    restart status and assert selected executors, models and positive capacity persist.
+  covers:
+  - ACD-1300b-1
+- name: test_background_worker_local_runtime_does_not_require_hosted_state_or_quotas
+  target_dir: unit_tests/ac_driven_dev/
+  framework: pytest
+  type: behavioral
+  angle: criterion
+  description: Start/status with cloud orchestration endpoints unavailable and assert local settings/state
+    operate; crossing hypothetical daily/token counts does not block admission.
+  covers:
+  - ACD-1300b-1
+product_truth:
+  - flow: leafcutter/background-ac-worker
+    node: configure
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: leafcutter/background-ac-worker-data
+    entities:
+      - WorkerSettings
+    source: real
+    asof: '2026-09-24'

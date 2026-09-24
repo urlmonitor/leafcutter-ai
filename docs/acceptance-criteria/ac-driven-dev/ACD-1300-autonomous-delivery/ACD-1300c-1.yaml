@@ -1,0 +1,143 @@
+id: ACD-1300c-1
+title: Bound each AC to three attempts and sixty total implementation minutes
+component: ac-driven-dev
+components:
+- ac_driven_dev
+level: L2
+status: active
+req_status: approved
+readiness: approved
+work_status: in_progress
+priority: medium
+criteria: |
+  Given an AC has consumed two attempts and fifty implementation minutes
+  When another implementation or repair attempt is considered
+  Then at most one further attempt and ten implementation minutes remain for that AC
+  And the run blocks when either the third unsuccessful attempt or the sixty-minute total is reached
+  And initial work and later validation or review repair share these counters
+  And no new automatic attempt starts after either limit is exhausted
+depends_on:
+- ACD-1300c
+doc_links:
+- path: docs/product-truth/flows/leafcutter/background-ac-worker.flow.json
+  relationship: implements
+  status: exists
+- path: docs/reference/ac-schema.md
+  relationship: reference
+  status: exists
+- path: docs/architecture/components/ac-driven-dev.md
+  relationship: describes
+  status: exists
+- path: docs/architecture/components/build-orchestration.md
+  relationship: describes
+  status: exists
+assigned_agent: python-coder
+delivers_to:
+- agent: python-coder
+  contract: ACD-1300c-1 supplies ACD-1300c-1-i, ACD-1300c-2, ACD-1300e-1, ACD-1300g-1, ACD-1300g-2, ACD-1300g-3,
+    ACD-1300g-3-ii with ACBudget {run_id:string, ac_id:string, attempts_used:integer, implementation_elapsed_ms:integer,
+    remaining_attempts:integer, remaining_ms:integer, exhausted:boolean}. Runtime handoff/reference contract;
+    it does not add build-order edges.
+- agent: documentation-expert
+  contract: ACD-1300c-1 supplies ACD-1300f-4 with ACBudget {run_id:string, ac_id:string, attempts_used:integer,
+    implementation_elapsed_ms:integer, remaining_attempts:integer, remaining_ms:integer, exhausted:boolean}.
+    Runtime handoff/reference contract; it does not add build-order edges.
+expects_from: null
+origin_agent: business-analyst
+created: '2026-09-24'
+amended_by:
+- '2026-09-24 Codex: Reviewed and approved under the user explicit delegation; implementation remains todo and priority
+  remains medium.'
+superseded_by: null
+covered_by:
+  - ACD-1300c-1-i
+implemented_by:
+- scripts/background_worker/engine.py
+- scripts/background_worker/store.py
+- unit_tests/ac_driven_dev/test_background_worker_engine.py
+change_target: pipeline
+risk_surface: contract_boundary
+notes: Approved requirements; implementation is under review; live execution remains blocked by the native Windows isolation requirement. Pattern inventory found
+  no matching reusable worker behavior.
+declares_side_effect: false
+estimated_complexity: M
+it_requirements:
+- Persist budget reservation before dispatch and cumulative elapsed implementation time at recoverable
+  checkpoints; repairs and initial implementation share the same AC identity.
+- Use elapsed-time accounting robust to wall-clock adjustments; reconcile interrupted in-flight time conservatively
+  rather than resetting it.
+- Budget exhaustion terminates or bounds the active implementation action so a timeout cannot leave an
+  unaccounted writer running.
+- Verification must execute the installed CLI/workflow or its real control-flow boundary with controlled
+  external executors; source-string presence and model self-report are not evidence of behavior.
+- 'Runtime interface from ACD-1300e-2 (data handoff, not an additional build-order prerequisite): RunCheckpoint
+  {schema_version:integer, run_id:string, feature_id:string, source_revision:string, target_sha:string,
+  workspace_claim:object, settings_revision:string, next_step:string, ac_evidence:object[], ac_budgets:object[],
+  review_count:integer, in_flight_action:object|null, publication:object|null}.'
+test_spec:
+- name: test_background_worker_two_attempts_fifty_minutes_leave_one_and_ten
+  target_dir: unit_tests/ac_driven_dev/
+  framework: pytest
+  type: integration
+  angle: reachability
+  description: Recorded two attempts/fifty minutes permits one call with ten-minute remaining bound; recorded
+    third failure or sixty total minutes blocks the next call.
+  covers:
+  - ACD-1300c-1
+  surface_invoked: Installed background-worker CLI entry point specified by ACD-1300b-1 (concrete command
+    name to be declared by implementation)
+- name: test_background_worker_initial_validation_and_review_repairs_share_budget
+  target_dir: unit_tests/ac_driven_dev/
+  framework: pytest
+  type: behavioral
+  angle: boundary
+  description: Combine initial work and repairs from both validation and review; assert a single cumulative
+    per-AC counter rather than per-phase allowances.
+  covers:
+  - ACD-1300c-1
+- name: test_background_worker_timeout_cannot_leave_background_writer
+  target_dir: unit_tests/ac_driven_dev/
+  framework: pytest
+  type: behavioral
+  angle: failure
+  description: Simulate a nonresponsive implementation process at the remaining deadline; assert its write-capable
+    execution is bounded and no replacement bypasses unresolved termination.
+  covers:
+  - ACD-1300c-1
+product_truth:
+  - flow: leafcutter/background-ac-worker
+    node: implement
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: leafcutter/background-ac-worker-data
+    entities:
+      - Ac
+      - BuildRun
+      - WorkerSettings
+    source: real
+    asof: '2026-09-24'
+  - flow: leafcutter/background-ac-worker
+    node: implementation-blocked
+    node_kind: branch
+    flow_kind: data
+    screen: null
+    mock_data: leafcutter/background-ac-worker-data
+    entities:
+      - Ac
+      - BuildRun
+      - WorkerSettings
+    source: real
+    asof: '2026-09-24'
+  - flow: leafcutter/background-ac-worker
+    node: repair
+    node_kind: branch
+    flow_kind: data
+    screen: null
+    mock_data: leafcutter/background-ac-worker-data
+    entities:
+      - Ac
+      - BuildRun
+      - WorkerSettings
+    source: real
+    asof: '2026-09-24'

@@ -1,34 +1,54 @@
 id: ACD-1300b
 components:
   - ac_driven_dev
-readiness: draft
+readiness: approved
 priority: medium
-title: "Multiple features build at the same time up to a limit you choose"
+title: "Choose when background work runs and how much runs at once"
 component: ac-driven-dev
 level: L1
 status: active
-req_status: draft
-work_status: todo
+req_status: approved
+work_status: in_progress
 roadmap_phase: phase_1
 criteria: |
-  The system works on several features in parallel, each in its own workspace.
+  Switch background work on or off and choose how much can run together.
 
-  Rather than building one feature at a time, the autopilot runs multiple
-  builds concurrently -- each in an isolated workspace so they cannot interfere
-  with each other. You configure the concurrency limit based on your resources
-  and comfort level. The system respects dependency order within the limit.
+  The worker starts only when you enable it, with one agent running by default.
+  You can adjust its capacity and pause it without losing progress; each feature
+  keeps its own workspace so concurrent work stays separate.
 depends_on:
   - ACD-1300
-doc_links: []
+doc_links:
+  - docs/product-truth/flows/leafcutter/background-ac-worker.flow.json
 delivers_to: null
 expects_from: null
 origin_agent: product-owner-v3
 created: 2026-06-06
-amended_by: []
+amended_by:
+- '2026-09-24 product-owner: Refined this existing draft for the user-authorized local background worker; approval
+  remains pending.'
+- '2026-09-24 Codex: Reviewed and approved under the user explicit delegation; implementation remains todo and priority
+  remains medium.'
 superseded_by: null
-covered_by: []
-implemented_by: []
+covered_by:
+  - ACD-1300b-1
+  - ACD-1300b-2
+  - ACD-1300b-3
+  - ACD-1300b-4
+  - ACD-1300b-5
+implemented_by:
+- scripts/background_worker/cli.py
+- scripts/background_worker/store.py
+- scripts/background_worker/engine.py
+- unit_tests/ac_driven_dev/test_background_worker_cli.py
+- unit_tests/ac_driven_dev/test_background_worker_store.py
 documentation_triggers:
   - how-to
+  - state-diagram
 change_target: infrastructure
 risk_surface: contract_boundary
+notes: |
+  Scoped draft refinement requested by the user on 2026-09-24. This tree describes
+  the optional local background lane; it does not alter the regular scanner,
+  fast-lane eligibility, or the ACD-500 complexity-to-priority mapping. Runtime
+  scheduling priority is distinct from this requirement record's draft priority.

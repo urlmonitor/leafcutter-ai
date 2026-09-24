@@ -300,6 +300,7 @@ from build_phases_agent_validation import (  # noqa: E402, F401  # re-exported
     validate_agent_self_description,
     build_agent_cards,
 )
+from build_phases_background_worker import build_background_worker  # noqa: E402, F401
 from build_phases_script_deploy import (  # noqa: E402, F401  # re-exported for callers
     AGENT_SUPPORT_SCRIPT_DIRS,
     AGENT_SUPPORT_SCRIPT_FILES,

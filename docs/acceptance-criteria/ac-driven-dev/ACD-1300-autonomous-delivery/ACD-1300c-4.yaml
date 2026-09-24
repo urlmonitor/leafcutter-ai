@@ -1,0 +1,57 @@
+id: ACD-1300c-4
+title: Diagram blocker recovery and reviewed delivery end to end
+component: ac-driven-dev
+components:
+- ac_driven_dev
+level: L2
+status: active
+req_status: approved
+readiness: approved
+work_status: in_progress
+priority: medium
+criteria: |
+  Given a user or maintainer needs to understand the worker's handoffs
+  When they consult the delivery sequence diagram
+  Then it shows scheduling, local implementation, feature checks, configurable review, bounded repair and draft-PR handoff
+  And it shows the persisted blocker inbox, desktop notification, explicit answer and checkpoint recovery between the same participants
+  And automatic publication ends before human merge
+depends_on:
+- ACD-1300c
+doc_links:
+- path: docs/product-truth/flows/leafcutter/background-ac-worker.flow.json
+  relationship: implements
+  status: exists
+- path: docs/reference/ac-schema.md
+  relationship: reference
+  status: exists
+- path: docs/architecture/components/ac-driven-dev.md
+  relationship: describes
+  status: exists
+- path: docs/architecture/components/build-orchestration.md
+  relationship: describes
+  status: exists
+assigned_agent: architecture-diagram-author
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: '2026-09-24'
+amended_by:
+- '2026-09-24 Codex: Reviewed and approved under the user explicit delegation; implementation remains todo and priority
+  remains medium.'
+superseded_by: null
+covered_by: []
+implemented_by:
+- docs/architecture/diagrams/background-ac-worker-sequence.md
+change_target: docs
+risk_surface: internal
+notes: Approved requirements; implementation is under review; live execution remains blocked by the native Windows isolation requirement. Pattern inventory found
+  no matching reusable worker behavior. One shared sequence diagram satisfies the sequence-diagram triggers
+  on ACD-1300c/d/e/g.
+declares_side_effect: true
+estimated_complexity: M
+it_requirements:
+- Show persistent state and side-effect reconciliation as separate from LangGraph checkpoint replay; include
+  failure/uncertain review and publication paths.
+- Describe the contracts and outcomes of ACD-1300c-2, ACD-1300d-1, ACD-1300d-2, ACD-1300e-1, ACD-1300e-2,
+  ACD-1300g-3, ACD-1300g-4 as reference subjects, not additional build prerequisites.
+test_required: false

@@ -1,0 +1,201 @@
+id: ACD-1300g-1
+title: Execute local implementation with tools and traceable feature context
+component: ac-driven-dev
+components:
+- ac_driven_dev
+level: L2
+status: active
+req_status: approved
+readiness: approved
+work_status: in_progress
+priority: medium
+criteria: |
+  Given an admitted feature has an isolated worktree and an ordered next AC
+  When the worker dispatches local implementation
+  Then the local tool-capable agent can read and edit scoped project files, run required checks, maintain documentation and perform permitted project-local dependency work
+  And it receives the same feature and AC identifiers, source revisions, linked ADRs, product-truth references, prerequisite evidence and prior results
+  And each passing AC produces evidence for that exact worktree and revision before its dependent is released
+  And local implementation evidence alone is not target-branch completion
+depends_on:
+- ACD-1300g
+- ACD-1300b-4
+- ACD-1300f-2
+doc_links:
+- path: docs/product-truth/flows/leafcutter/background-ac-worker.flow.json
+  relationship: implements
+  status: exists
+- path: docs/reference/ac-schema.md
+  relationship: reference
+  status: exists
+- path: docs/architecture/components/ac-driven-dev.md
+  relationship: describes
+  status: exists
+- path: docs/architecture/components/build-orchestration.md
+  relationship: describes
+  status: exists
+- path: docs/architecture/adrs/ADR-030-dual-engine-workflow-support.md
+  relationship: describes
+  status: exists
+- path: docs/architecture/adrs/ADR-018-agent-isolation-topology.md
+  relationship: describes
+  status: exists
+assigned_agent: python-coder
+delivers_to:
+- agent: python-coder
+  contract: ACD-1300g-1 supplies ACD-1300b-1-i, ACD-1300g-1-i, ACD-1300g-2 with ACEvidence {run_id:string,
+    feature_id:string, ac_id:string, obligation_ids:string[], source_revisions:object, workspace_id:string,
+    head_sha:string, changed_files:string[], checks:[{command:string, exit_code:integer, evidence_ref:string}],
+    outcome:passed|blocked|failed}. Runtime handoff/reference contract; it does not add build-order edges.
+- agent: architecture-diagram-author
+  contract: ACD-1300g-1 supplies ACD-1300g-5 with ACEvidence {run_id:string, feature_id:string, ac_id:string,
+    obligation_ids:string[], source_revisions:object, workspace_id:string, head_sha:string, changed_files:string[],
+    checks:[{command:string, exit_code:integer, evidence_ref:string}], outcome:passed|blocked|failed}.
+    Runtime handoff/reference contract; it does not add build-order edges.
+expects_from:
+- ac_id: ACD-1300b-4
+  contract: WorkspaceClaim {claim_id:string, owner_id:string, run_id:string, feature_id:string, canonical_worktree_path:string,
+    branch:string, target_ref:string, target_sha:string, source_revision:string, generation:integer}.
+- ac_id: ACD-1300f-2
+  contract: DependencyPlan {feature_id:string, ordered_ac_ids:string[], internal_edges:object[], external_edges:object[],
+    evidence:[{ac_id:string, scope:worktree|target, revision:string, checks:object[], completed:boolean}],
+    blockers:object[]}.
+origin_agent: business-analyst
+created: '2026-09-24'
+amended_by:
+- '2026-09-24 Codex: Reviewed and approved under the user explicit delegation; implementation remains todo and priority
+  remains medium.'
+superseded_by: null
+covered_by:
+  - ACD-1300g-1-i
+implemented_by:
+- scripts/background_worker/engine.py
+- scripts/background_worker/executors.py
+- scripts/background_worker/git_ops.py
+- scripts/background_worker/reviewer_sdk/bridge.mjs
+- unit_tests/ac_driven_dev/test_background_worker_engine.py
+- unit_tests/ac_driven_dev/test_background_worker_executors.py
+change_target: pipeline
+risk_surface: contract_boundary
+notes: 'Approved requirements; implementation is under review; live execution remains blocked by the native Windows isolation requirement. Pattern inventory found
+  no matching reusable worker behavior. User-selected technical constraints for IT PO: Qwen3.5 9B through
+  Ollama; first workflow LangGraph with durable local-first state. No hosted database or global migration
+  required.'
+declares_side_effect: false
+estimated_complexity: L
+it_requirements:
+- Run the first worker workflow through LangGraph and a real tool-executing harness using Qwen3.5 9B on
+  local Ollama; endpoint invocation alone is not a coding agent.
+- The execution envelope must carry leaf criteria plus inherited L1/L2 obligations, exact source/ADR/product-truth
+  references and prior evidence, not merely titles or negative edge-case text.
+- Enforce scoped filesystem access, permitted project-local dependency operations and process/network
+  permissions outside the model prompt; canonical paths and symlink traversal cannot escape the assigned
+  workspace.
+- Raw shell access must use an execution sandbox/permission boundary or validated command broker; cwd
+  or filesystem-tool root alone cannot constrain an arbitrary process.
+- Delegate no authority to merge or write the protected target; collect actual tool/check results and
+  inspect repository effects, rather than accepting model self-reported success.
+- Keep native E2 workflows unchanged; this portable worker path must not depend on Claude-only injected
+  globals or silently select cloud implementation.
+- Verification must execute the installed CLI/workflow or its real control-flow boundary with controlled
+  external executors; source-string presence and model self-report are not evidence of behavior.
+- 'Runtime interface from ACD-1300b-1 (data handoff, not an additional build-order prerequisite): WorkerSettings
+  {enabled:boolean, max_agent_calls:integer>=1, implementation:{executor:string, provider:string, model:string,
+  endpoint:string, credential_ref:string|null}, reviewer:{executor:codex-sdk|claude-agent-sdk, provider:string,
+  model:string, credential_ref:string|null}, settings_revision:string}.'
+- 'Runtime interface from ACD-1300b-2 (data handoff, not an additional build-order prerequisite): CapacityLease
+  {lease_id:string, run_id:string, call_id:string, role:string, settings_revision:string, acquired_at:string,
+  released_at:string|null}.'
+- 'Runtime interface from ACD-1300b-4 (data handoff, not an additional build-order prerequisite): WorkspaceClaim
+  {claim_id:string, owner_id:string, run_id:string, feature_id:string, canonical_worktree_path:string,
+  branch:string, target_ref:string, target_sha:string, source_revision:string, generation:integer}.'
+- 'Runtime interface from ACD-1300f-1 (data handoff, not an additional build-order prerequisite): FeatureCandidate
+  {feature_id:string, ancestor_ids:string[], source_revision:string, obligations:[{ac_id:string, parent_id:string|null,
+  level:string, criteria:string, revision:string}], remaining_ac_ids:string[], completed_context_ids:string[],
+  readiness:object, estimates:object, unanswered_questions:object[], dependency_edges:object[]}.'
+- 'Runtime interface from ACD-1300f-2 (data handoff, not an additional build-order prerequisite): DependencyPlan
+  {feature_id:string, ordered_ac_ids:string[], internal_edges:object[], external_edges:object[], evidence:[{ac_id:string,
+  scope:worktree|target, revision:string, checks:object[], completed:boolean}], blockers:object[]}.'
+- 'Runtime interface from ACD-1300c-1 (data handoff, not an additional build-order prerequisite): ACBudget
+  {run_id:string, ac_id:string, attempts_used:integer, implementation_elapsed_ms:integer, remaining_attempts:integer,
+  remaining_ms:integer, exhausted:boolean}.'
+- 'Runtime interface from ACD-1300e-2 (data handoff, not an additional build-order prerequisite): RunCheckpoint
+  {schema_version:integer, run_id:string, feature_id:string, source_revision:string, target_sha:string,
+  workspace_claim:object, settings_revision:string, next_step:string, ac_evidence:object[], ac_budgets:object[],
+  review_count:integer, in_flight_action:object|null, publication:object|null}.'
+- 'Runtime interface from ACD-1300e-3 (data handoff, not an additional build-order prerequisite): Revalidation
+  {run_id:string, admissible:boolean, source_revisions:object, target_sha:string, evidence_revision:string,
+  changed_fields:string[], blocker:string|null}.'
+test_spec:
+- name: test_background_worker_local_harness_executes_scoped_project_work
+  target_dir: unit_tests/ac_driven_dev/
+  framework: pytest
+  type: integration
+  angle: reachability
+  description: Use controlled local model/tool fixtures to read/edit code and docs, run checks and permitted
+    project-local dependency work; assert real resulting files and check exits tied to exact worktree
+    head.
+  covers:
+  - ACD-1300g-1
+  surface_invoked: Installed background-worker CLI entry point specified by ACD-1300b-1 (concrete command
+    name to be declared by implementation)
+- name: test_background_worker_dispatch_carries_full_traceable_obligation_context
+  target_dir: unit_tests/ac_driven_dev/
+  framework: pytest
+  type: behavioral
+  angle: criterion
+  description: Capture next executor input and assert feature/leaf/ancestor IDs and criteria, AC/ADR/product-truth
+    revisions, prerequisite evidence and prior results are all present.
+  covers:
+  - ACD-1300g-1
+- name: test_background_worker_tool_boundary_blocks_workspace_escape
+  target_dir: unit_tests/ac_driven_dev/
+  framework: pytest
+  type: behavioral
+  angle: boundary
+  description: Attempt parent path, symlink escape, unrelated checkout write and shell command escaping
+    allowed roots; assert enforced denial with target/unrelated bytes unchanged.
+  covers:
+  - ACD-1300g-1
+- name: test_background_worker_passing_evidence_releases_internal_not_external_dependency
+  target_dir: unit_tests/ac_driven_dev/
+  framework: pytest
+  type: behavioral
+  angle: criterion
+  description: Actual passing check evidence releases same-run dependent only; false success prose and
+    zero executed checks release neither.
+  covers:
+  - ACD-1300g-1
+- name: test_background_worker_installed_langgraph_path_runs_without_e2_globals
+  target_dir: unit_tests/ac_driven_dev/
+  framework: pytest
+  type: integration
+  angle: criterion
+  description: Invoke installed worker entry with local model stub and no Claude Workflow globals; observe
+    full tool loop and persisted evidence rather than a no-op.
+  covers:
+  - ACD-1300g-1
+product_truth:
+  - flow: leafcutter/background-ac-worker
+    node: implement
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: leafcutter/background-ac-worker-data
+    entities:
+      - Ac
+      - BuildRun
+      - WorkerSettings
+    source: real
+    asof: '2026-09-24'
+  - flow: leafcutter/background-ac-worker
+    node: prepare
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: leafcutter/background-ac-worker-data
+    entities:
+      - Ac
+      - BuildRun
+      - WorkerSettings
+    source: real
+    asof: '2026-09-24'

@@ -1,0 +1,104 @@
+id: ACD-1300f-3
+title: Reject ambiguous membership and invalid prerequisite graphs
+component: ac-driven-dev
+components:
+- ac_driven_dev
+level: L2
+status: active
+req_status: approved
+readiness: approved
+work_status: in_progress
+priority: medium
+criteria: |
+  Given a candidate contains an unresolved dependency identifier, a dependency cycle or ambiguous canonical parent membership
+  When the worker evaluates the candidate
+  Then it excludes the whole candidate and identifies the offending references or cycle
+  And it neither guesses membership nor drops the prerequisite to make the feature selectable
+  And no model call or feature workspace is created for this excluded candidate
+depends_on:
+- ACD-1300f
+doc_links:
+- path: docs/product-truth/flows/leafcutter/background-ac-worker.flow.json
+  relationship: implements
+  status: exists
+- path: docs/reference/ac-schema.md
+  relationship: reference
+  status: exists
+- path: docs/architecture/components/ac-driven-dev.md
+  relationship: describes
+  status: exists
+- path: docs/architecture/components/build-orchestration.md
+  relationship: describes
+  status: exists
+- path: docs/architecture/adrs/ADR-010-ac-store-as-authoritative-backlog.md
+  relationship: describes
+  status: exists
+assigned_agent: python-coder
+delivers_to:
+- agent: python-coder
+  contract: ACD-1300f-3 supplies ACD-1300a-2 with InvalidCandidate {feature_id:string, error_kind:missing_dependency|cycle|ambiguous_parent,
+    offending_ids:string[], cycle_path:string[]|null}. Runtime handoff/reference contract; it does not
+    add build-order edges.
+expects_from: null
+origin_agent: business-analyst
+created: '2026-09-24'
+amended_by:
+- '2026-09-24 Codex: Reviewed and approved under the user explicit delegation; implementation remains todo and priority
+  remains medium.'
+superseded_by: null
+covered_by: []
+implemented_by:
+- scripts/background_worker/planning.py
+- scripts/background_worker/sources.py
+- unit_tests/ac_driven_dev/test_background_worker_planning.py
+- unit_tests/ac_driven_dev/test_background_worker_target_sync.py
+change_target: pipeline
+risk_surface: contract_boundary
+notes: Approved requirements; implementation is under review; live execution remains blocked by the native Windows isolation requirement. Pattern inventory found
+  no matching reusable worker behavior.
+declares_side_effect: false
+estimated_complexity: M
+it_requirements:
+- Validate the entire candidate graph before workspace creation or model dispatch; diagnostics identify
+  the unresolved canonical IDs or complete cycle path.
+- Repeated validation of the same snapshot is side-effect-free and deterministic.
+- Verification must execute the installed CLI/workflow or its real control-flow boundary with controlled
+  external executors; source-string presence and model self-report are not evidence of behavior.
+- 'Runtime interface from ACD-1300f-1 (data handoff, not an additional build-order prerequisite): FeatureCandidate
+  {feature_id:string, ancestor_ids:string[], source_revision:string, obligations:[{ac_id:string, parent_id:string|null,
+  level:string, criteria:string, revision:string}], remaining_ac_ids:string[], completed_context_ids:string[],
+  readiness:object, estimates:object, unanswered_questions:object[], dependency_edges:object[]}.'
+test_spec:
+- name: test_background_worker_invalid_graph_excluded_before_side_effects
+  target_dir: unit_tests/ac_driven_dev/
+  framework: pytest
+  type: integration
+  angle: failure
+  description: Missing dependency, multi-node cycle and ambiguous parent each exclude whole candidate
+    with exact offending IDs, zero model calls and no new workspace.
+  covers:
+  - ACD-1300f-3
+  surface_invoked: Installed background-worker CLI entry point specified by ACD-1300b-1 (concrete command
+    name to be declared by implementation)
+- name: test_background_worker_cycle_diagnostic_identifies_closed_path
+  target_dir: unit_tests/ac_driven_dev/
+  framework: pytest
+  type: behavioral
+  angle: criterion
+  description: Cycle A to B to C to A reports all members in a usable path instead of silently dropping
+    an edge.
+  covers:
+  - ACD-1300f-3
+product_truth:
+  - flow: leafcutter/background-ac-worker
+    node: ineligible
+    node_kind: branch
+    flow_kind: data
+    screen: null
+    mock_data: leafcutter/background-ac-worker-data
+    entities:
+      - Ac
+      - BuildRun
+      - WorkerSettings
+    source: real
+    asof: '2026-09-24'

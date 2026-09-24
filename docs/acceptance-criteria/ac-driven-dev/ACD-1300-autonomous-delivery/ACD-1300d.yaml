@@ -1,35 +1,50 @@
 id: ACD-1300d
 components:
   - ac_driven_dev
-readiness: draft
+readiness: approved
 priority: medium
 title: "One place to see everything agents are waiting on"
 component: ac-driven-dev
 level: L1
 status: active
-req_status: draft
-work_status: todo
+req_status: approved
+work_status: in_progress
 roadmap_phase: phase_1
 criteria: |
-  All pending questions, blockers, and feedback from halted agents in one view.
+  See progress, delivered changes and requests for your attention together.
 
-  Every structured request from every halted agent is available from a single
-  retrieval point. Today that is a command you run; in the future it becomes
-  a frontend. You never have to hunt across workspaces or log files to find
-  out what agents need from you.
+  A single command gives you a lasting account of waiting, active and blocked
+  work, with links to completed proposals and the evidence behind each outcome.
+  You are notified when work needs your attention or is ready for your decision.
 depends_on:
+  - ACD-1300
   - ACD-1300c
-doc_links: []
+doc_links:
+  - docs/product-truth/flows/leafcutter/background-ac-worker.flow.json
 delivers_to: null
 expects_from: null
 origin_agent: product-owner-v3
 created: 2026-06-06
-amended_by: []
+amended_by:
+- '2026-09-24 product-owner: Refined this existing draft for the user-authorized local background worker; approval
+  remains pending.'
+- '2026-09-24 Codex: Reviewed and approved under the user explicit delegation; implementation remains todo and priority
+  remains medium.'
 superseded_by: null
-covered_by: []
-implemented_by: []
+covered_by:
+  - ACD-1300d-1
+  - ACD-1300d-2
+implemented_by:
+- scripts/background_worker/cli.py
+- scripts/background_worker/notifications.py
+- unit_tests/ac_driven_dev/test_background_worker_sources_notifications.py
 documentation_triggers:
   - how-to
   - sequence-diagram
 change_target: ui
 risk_surface: contract_boundary
+notes: |
+  Scoped draft refinement requested by the user on 2026-09-24. This tree describes
+  the optional local background lane; it does not alter the regular scanner,
+  fast-lane eligibility, or the ACD-500 complexity-to-priority mapping. Runtime
+  scheduling priority is distinct from this requirement record's draft priority.

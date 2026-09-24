@@ -1,35 +1,52 @@
 id: ACD-1300f
 components:
   - ac_driven_dev
-readiness: draft
+readiness: approved
 priority: medium
-title: "Only fully refined work enters the build queue"
+title: "Only fully refined and manageable features enter the build queue"
 component: ac-driven-dev
 level: L1
 status: active
-req_status: draft
-work_status: todo
+req_status: approved
+work_status: in_progress
 roadmap_phase: phase_1
 criteria: |
-  The autopilot never builds ambiguous or incomplete requirements.
+  Let background work start only when the whole feature is ready.
 
-  Only ACs that have passed through all authoring stages (PO, BA, IT PO),
-  have readiness set to approved, and have no unanswered questions are
-  eligible for the build queue. Everything else stays in the backlog until
-  it is fully refined. This guarantees that agents start building with
-  clear, complete instructions every time.
+  Every approved feature is considered without a separate opt-in, but it enters
+  only when all remaining required work is clear, small or medium in size, and
+  its prerequisites can be respected. A feature with unresolved or oversized
+  work stays intact in the backlog with an explanation instead of being partly built.
 depends_on:
   - ACD-1300
-doc_links: []
+doc_links:
+  - docs/product-truth/flows/leafcutter/background-ac-worker.flow.json
 delivers_to: null
 expects_from: null
 origin_agent: product-owner-v3
 created: 2026-06-06
-amended_by: []
+amended_by:
+- '2026-09-24 product-owner: Refined this existing draft for the user-authorized local background worker; approval
+  remains pending.'
+- '2026-09-24 Codex: Reviewed and approved under the user explicit delegation; implementation remains todo and priority
+  remains medium.'
 superseded_by: null
-covered_by: []
-implemented_by: []
-documentation_triggers: []
-documentation_rationale: "Enforces an existing readiness gate -- no new user-facing behavior to document."
+covered_by:
+  - ACD-1300f-1
+  - ACD-1300f-2
+  - ACD-1300f-3
+  - ACD-1300f-4
+implemented_by:
+- scripts/background_worker/planning.py
+- scripts/background_worker/sources.py
+- unit_tests/ac_driven_dev/test_background_worker_planning.py
+- unit_tests/ac_driven_dev/test_background_worker_target_sync.py
+documentation_triggers:
+  - reference-doc
 change_target: pipeline
 risk_surface: contract_boundary
+notes: |
+  Scoped draft refinement requested by the user on 2026-09-24. This tree describes
+  the optional local background lane; it does not alter the regular scanner,
+  fast-lane eligibility, or the ACD-500 complexity-to-priority mapping. Runtime
+  scheduling priority is distinct from this requirement record's draft priority.

@@ -54,6 +54,7 @@ from build_phases import (
     build_knowledge_scripts,
     build_knowledge_sink_declaration,
     build_build_orchestration_scripts,
+    build_background_worker,
     build_agent_support_scripts,
     AGENT_SUPPORT_SCRIPT_DIRS,
     AGENT_SUPPORT_SCRIPT_FILES,
@@ -66,6 +67,8 @@ from build_phases import (
     set_local_change_baseline,
     announce_if_local_change_replaced,
 )
+from build_artifact_manifests import _build_source_manifests
+from build_phases_background_worker import manifest_background_worker
 from build_phases_knowledge import _manifest_knowledge_scripts, _manifest_workflow_tool_scripts
 from build_deploy_manifest_helpers import (
     _manifest_ac_store_scripts,
@@ -425,7 +428,7 @@ def _get_source_deployable_scripts(package_root: Path) -> set[str]:
     Deriving this set from the ``build_*`` functions is the real fix and is
     BP-900g-9's job; until then the enumeration is explicit about being one.
 
-    Ten deployment locations are covered:
+    Eleven deployment locations are covered:
 
     * ``scripts/ac_store/`` — from ``_manifest_ac_store_scripts``.
     * ``scripts/commit_guardian/`` — from ``_manifest_commit_guardian_scripts``.
@@ -437,6 +440,7 @@ def _get_source_deployable_scripts(package_root: Path) -> set[str]:
       (includes ``setup_ticket_worktree.py``).
     * ``scripts/<name>`` — two named AC-pipeline scripts from ``templates/scripts/``.
     * ``scripts/doc_compliance/`` — from ``_manifest_doc_compliance_scripts``.
+    * ``scripts/background_worker/`` and its CLI/helper dependencies.
     * ``scripts/sync_platforms/`` — from ``_manifest_sync_platforms_scripts``.
 
     This function is intentionally source-only and never reads the target
@@ -463,6 +467,7 @@ def _get_source_deployable_scripts(package_root: Path) -> set[str]:
         | _manifest_template_standalone_scripts(package_root)
         | _manifest_doc_compliance_scripts(package_root)
         | _manifest_sync_platforms_scripts(package_root)
+        | manifest_background_worker(package_root)
     )
 
     # goal_to_epic.py / build_ac_mode_detection.py are sourced from package
@@ -917,6 +922,7 @@ def _get_source_paths_for_guard(package_root: Path) -> set[str]:
     source_paths |= _guard_source_paths_template_standalone(package_root)
     source_paths |= _guard_source_paths_release(package_root)
     source_paths |= _guard_source_paths_core_config(package_root)
+    source_paths |= manifest_background_worker(package_root)
     return source_paths
 
 
@@ -1518,6 +1524,7 @@ def _run_phases(
         ("Knowledge scripts", build_knowledge_scripts),
         ("Knowledge sink declaration", build_knowledge_sink_declaration),
         ("Build orchestration scripts", build_build_orchestration_scripts),
+        ("Background worker", build_background_worker),
         ("Agent support scripts", build_agent_support_scripts),
         ("Template standalone scripts", build_template_standalone_scripts),
     ]
@@ -1560,66 +1567,6 @@ def _run_phases(
 
 # _PRE_CONSOLIDATION_PATHS moved to build_ownership.py (BP-1500g-1 / ADR-041);
 # imported above, unchanged in value.
-
-
-def _build_source_manifests(output_root: Path) -> dict:
-    """Compute the set of artifact names that build.py currently manages.
-
-    Scans the template directories for each artifact type and returns a dict
-    mapping artifact type names to the set of expected output file/directory
-    base names that a build pass would produce. This set is used by
-    clean_stale_artifacts() to determine which compiled outputs are stale.
-
-    Args:
-        output_root: The consolidated output directory (e.g. ``<target>/.leafcutter``
-            or ``<target>`` when shims are used). The cleaned directories are
-            ``agents/``, ``skills/``, and ``hooks/`` under this root.
-
-    Returns:
-        Dict with keys ``"agents"``, ``"skills"``, ``"hooks"``, each mapping to
-        a ``set[str]`` of expected base names.
-    """
-    package_root = Path(__file__).resolve().parent.parent
-    templates_dir = package_root / "templates"
-
-    # Agents: each *.md file in templates/agents/ (excluding helper _*.md files)
-    agents_template_dir = templates_dir / "agents"
-    agents: set[str] = set()
-    if agents_template_dir.exists():
-        for f in agents_template_dir.glob("*.md"):
-            if not f.name.startswith("_"):
-                agents.add(f.name)
-
-    # Skills: each subdirectory in templates/skills/
-    skills_template_dir = templates_dir / "skills"
-    skills: set[str] = set()
-    if skills_template_dir.exists():
-        for d in skills_template_dir.iterdir():
-            if d.is_dir():
-                skills.add(d.name)
-
-    # Hooks: each *.py (or other files) in templates/hooks/ (if it exists)
-    hooks_template_dir = templates_dir / "hooks"
-    hooks: set[str] = set()
-    if hooks_template_dir.exists():
-        for f in hooks_template_dir.iterdir():
-            if f.is_file():
-                hooks.add(f.name)
-
-    # Workflow scripts: each *.js file in templates/workflows-js/
-    workflows_js_dir = templates_dir / "workflows-js"
-    workflows: set[str] = set()
-    if workflows_js_dir.exists():
-        for f in workflows_js_dir.glob("*.js"):
-            if f.is_file():
-                workflows.add(f.name)
-
-    return {
-        "agents": agents,
-        "skills": skills,
-        "hooks": hooks,
-        "workflows": workflows,
-    }
 
 
 def _cleanup_stale_paths(

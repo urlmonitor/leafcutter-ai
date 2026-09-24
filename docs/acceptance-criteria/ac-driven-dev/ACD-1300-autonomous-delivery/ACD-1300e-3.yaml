@@ -1,0 +1,138 @@
+id: ACD-1300e-3
+title: Revalidate saved scope and evidence before dispatch or continuation
+component: ac-driven-dev
+components:
+- ac_driven_dev
+level: L2
+status: active
+req_status: approved
+readiness: approved
+work_status: in_progress
+priority: medium
+criteria: |
+  Given a saved run refers to approved AC and ADR revisions, a target revision and dependency evidence
+  When the worker prepares any further dispatch or resumes that run
+  Then it verifies the saved scope, approval, prerequisites, execution settings and evidence against their current sources
+  And a scope change, revoked approval or invalidated evidence preserves the work and reports a blocker before further implementation or publication
+  And a priority-only change leaves a healthy claimed feature in place
+depends_on:
+- ACD-1300e
+doc_links:
+- path: docs/product-truth/flows/leafcutter/background-ac-worker.flow.json
+  relationship: implements
+  status: exists
+- path: docs/reference/ac-schema.md
+  relationship: reference
+  status: exists
+- path: docs/architecture/components/ac-driven-dev.md
+  relationship: describes
+  status: exists
+- path: docs/architecture/components/build-orchestration.md
+  relationship: describes
+  status: exists
+- path: docs/architecture/adrs/ADR-030-dual-engine-workflow-support.md
+  relationship: describes
+  status: exists
+assigned_agent: python-coder
+delivers_to:
+- agent: python-coder
+  contract: ACD-1300e-3 supplies ACD-1300e-1, ACD-1300g-1, ACD-1300g-4 with Revalidation {run_id:string,
+    admissible:boolean, source_revisions:object, target_sha:string, evidence_revision:string, changed_fields:string[],
+    blocker:string|null}. Runtime handoff/reference contract; it does not add build-order edges.
+expects_from: null
+origin_agent: business-analyst
+created: '2026-09-24'
+amended_by:
+- '2026-09-24 Codex: Reviewed and approved under the user explicit delegation; implementation remains todo and priority
+  remains medium.'
+superseded_by: null
+covered_by: []
+implemented_by:
+- scripts/background_worker/engine.py
+- scripts/background_worker/store.py
+- scripts/background_worker/sources.py
+- unit_tests/ac_driven_dev/test_background_worker_engine.py
+change_target: pipeline
+risk_surface: contract_boundary
+notes: Approved requirements; implementation is under review; live execution remains blocked by the native Windows isolation requirement. Pattern inventory found
+  no matching reusable worker behavior.
+declares_side_effect: false
+estimated_complexity: M
+it_requirements:
+- Record canonical AC, ancestor criteria, ADR and product-truth identities with their content/source revisions;
+  do not let a changed parent obligation hide behind an unchanged leaf ID.
+- Compare semantic scope/approval/dependency/settings evidence separately from priority-only edits, so
+  priority does not invalidate an otherwise healthy owned feature.
+- Revalidation must precede implementation, reviewer and publication dispatch, not just restart.
+- Verification must execute the installed CLI/workflow or its real control-flow boundary with controlled
+  external executors; source-string presence and model self-report are not evidence of behavior.
+- 'Runtime interface from ACD-1300e-2 (data handoff, not an additional build-order prerequisite): RunCheckpoint
+  {schema_version:integer, run_id:string, feature_id:string, source_revision:string, target_sha:string,
+  workspace_claim:object, settings_revision:string, next_step:string, ac_evidence:object[], ac_budgets:object[],
+  review_count:integer, in_flight_action:object|null, publication:object|null}.'
+- 'Runtime interface from ACD-1300f-1 (data handoff, not an additional build-order prerequisite): FeatureCandidate
+  {feature_id:string, ancestor_ids:string[], source_revision:string, obligations:[{ac_id:string, parent_id:string|null,
+  level:string, criteria:string, revision:string}], remaining_ac_ids:string[], completed_context_ids:string[],
+  readiness:object, estimates:object, unanswered_questions:object[], dependency_edges:object[]}.'
+- 'Runtime interface from ACD-1300f-2 (data handoff, not an additional build-order prerequisite): DependencyPlan
+  {feature_id:string, ordered_ac_ids:string[], internal_edges:object[], external_edges:object[], evidence:[{ac_id:string,
+  scope:worktree|target, revision:string, checks:object[], completed:boolean}], blockers:object[]}.'
+- 'Runtime interface from ACD-1300b-1 (data handoff, not an additional build-order prerequisite): WorkerSettings
+  {enabled:boolean, max_agent_calls:integer>=1, implementation:{executor:string, provider:string, model:string,
+  endpoint:string, credential_ref:string|null}, reviewer:{executor:codex-sdk|claude-agent-sdk, provider:string,
+  model:string, credential_ref:string|null}, settings_revision:string}.'
+test_spec:
+- name: test_background_worker_scope_and_evidence_changes_block_next_dispatch
+  target_dir: unit_tests/ac_driven_dev/
+  framework: pytest
+  type: integration
+  angle: reachability
+  description: Parameterize edited ancestor criteria, revoked leaf approval, changed ADR, invalid target
+    prerequisite proof and incompatible settings; preserve work and assert no next implementation/publication.
+  covers:
+  - ACD-1300e-3
+  surface_invoked: Installed background-worker CLI entry point specified by ACD-1300b-1 (concrete command
+    name to be declared by implementation)
+- name: test_background_worker_priority_only_edit_preserves_claim
+  target_dir: unit_tests/ac_driven_dev/
+  framework: pytest
+  type: behavioral
+  angle: criterion
+  description: Change only unclaimed selection priority metadata on healthy claimed feature; assert same
+    run and next planned AC remain valid.
+  covers:
+  - ACD-1300e-3
+- name: test_background_worker_unchanged_scope_validates_exact_saved_sources
+  target_dir: unit_tests/ac_driven_dev/
+  framework: pytest
+  type: behavioral
+  angle: criterion
+  description: Same snapshot returns admissible with exact AC/ADR/product-truth revisions and current
+    dependency evidence.
+  covers:
+  - ACD-1300e-3
+product_truth:
+  - flow: leafcutter/background-ac-worker
+    node: resume
+    node_kind: branch
+    flow_kind: data
+    screen: null
+    mock_data: leafcutter/background-ac-worker-data
+    entities:
+      - Ac
+      - BuildRun
+      - WorkerSettings
+    source: real
+    asof: '2026-09-24'
+  - flow: leafcutter/background-ac-worker
+    node: stale
+    node_kind: branch
+    flow_kind: data
+    screen: null
+    mock_data: leafcutter/background-ac-worker-data
+    entities:
+      - Ac
+      - BuildRun
+      - WorkerSettings
+    source: real
+    asof: '2026-09-24'

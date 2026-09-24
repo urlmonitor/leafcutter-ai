@@ -1,0 +1,173 @@
+id: ACD-1300d-1
+title: Expose durable status and actionable attention items in one CLI view
+component: ac-driven-dev
+components:
+- ac_driven_dev
+level: L2
+status: active
+req_status: approved
+readiness: approved
+work_status: in_progress
+priority: medium
+criteria: |
+  Given one feature is waiting on an external prerequisite, another is blocked and another has a draft PR
+  When the user inspects worker status and the blocker inbox after reopening the CLI
+  Then the same durable run identities, states and pending requests are visible
+  And each blocked item identifies the feature, affected AC, reason, required answer and supporting evidence
+  And delivered items link the draft PR and its checked and reviewed revision
+  And local checks, reviewed proposal and merged completion remain distinct outcomes
+depends_on:
+- ACD-1300d
+doc_links:
+- path: docs/product-truth/flows/leafcutter/background-ac-worker.flow.json
+  relationship: implements
+  status: exists
+- path: docs/reference/ac-schema.md
+  relationship: reference
+  status: exists
+- path: docs/architecture/components/ac-driven-dev.md
+  relationship: describes
+  status: exists
+- path: docs/architecture/components/build-orchestration.md
+  relationship: describes
+  status: exists
+assigned_agent: python-coder
+delivers_to:
+- agent: documentation-expert
+  contract: ACD-1300d-1 supplies ACD-1300c-3 with InboxItem {item_id:string, run_id:string, feature_id:string,
+    ac_id:string|null, request_id:string|null, state:string, reason:string|null, required_answer:string|null,
+    evidence_refs:string[], pr_url:string|null, validated_sha:string|null, reviewed_sha:string|null}.
+    Runtime handoff/reference contract; it does not add build-order edges.
+- agent: architecture-diagram-author
+  contract: ACD-1300d-1 supplies ACD-1300c-4, ACD-1300g-5 with InboxItem {item_id:string, run_id:string,
+    feature_id:string, ac_id:string|null, request_id:string|null, state:string, reason:string|null, required_answer:string|null,
+    evidence_refs:string[], pr_url:string|null, validated_sha:string|null, reviewed_sha:string|null}.
+    Runtime handoff/reference contract; it does not add build-order edges.
+- agent: python-coder
+  contract: ACD-1300d-1 supplies ACD-1300d-2, ACD-1300d-2-i, ACD-1300e-1 with InboxItem {item_id:string,
+    run_id:string, feature_id:string, ac_id:string|null, request_id:string|null, state:string, reason:string|null,
+    required_answer:string|null, evidence_refs:string[], pr_url:string|null, validated_sha:string|null,
+    reviewed_sha:string|null}. Runtime handoff/reference contract; it does not add build-order edges.
+expects_from: null
+origin_agent: business-analyst
+created: '2026-09-24'
+amended_by:
+- '2026-09-24 Codex: Reviewed and approved under the user explicit delegation; implementation remains todo and priority
+  remains medium.'
+superseded_by: null
+covered_by: []
+implemented_by:
+- scripts/background_worker/cli.py
+- scripts/background_worker/notifications.py
+- unit_tests/ac_driven_dev/test_background_worker_sources_notifications.py
+change_target: pipeline
+risk_surface: contract_boundary
+notes: Approved requirements; implementation is under review; live execution remains blocked by the native Windows isolation requirement. Pattern inventory found
+  no matching reusable worker behavior.
+declares_side_effect: false
+estimated_complexity: M
+it_requirements:
+- Status/inbox read from durable local state and preserve run/request identities across processes; do
+  not infer delivered or merged state from prose.
+- Apply credential redaction and stable evidence references to both machine-readable and human-readable
+  output.
+- Verification must execute the installed CLI/workflow or its real control-flow boundary with controlled
+  external executors; source-string presence and model self-report are not evidence of behavior.
+- 'Runtime interface from ACD-1300c-2 (data handoff, not an additional build-order prerequisite): BlockedRun
+  {run_id:string, feature_id:string, ac_id:string|null, reason:string, required_action:string, checkpoint_revision:string,
+  workspace_id:string, evidence_refs:string[], budget:object}.'
+- 'Runtime interface from ACD-1300g-4 (data handoff, not an additional build-order prerequisite): PublishedProposal
+  {run_id:string, feature_id:string, publication_id:string, remote:string, branch:string, target_ref:string,
+  head_sha:string, validated_sha:string, reviewed_sha:string, pr_id:string, pr_url:string, draft:true,
+  outcome:delivered}.'
+- 'Runtime interface from ACD-1300a-2 (data handoff, not an additional build-order prerequisite): Selection
+  {feature_id:string|null, ordered_ac_ids:string[], effective_priority:string|null, reasons:[{ac_id:string|null,
+  reason:string}], snapshot_revision:string}.'
+test_spec:
+- name: test_background_worker_reopened_cli_shows_durable_run_and_request_identity
+  target_dir: unit_tests/ac_driven_dev/
+  framework: pytest
+  type: integration
+  angle: reachability
+  description: Create waiting, blocked and draft-delivered outcomes; new CLI process shows same IDs, reasons,
+    answer request, evidence and PR revision links.
+  covers:
+  - ACD-1300d-1
+  surface_invoked: Installed background-worker CLI entry point specified by ACD-1300b-1 (concrete command
+    name to be declared by implementation)
+- name: test_background_worker_local_reviewed_and_merged_states_stay_distinct
+  target_dir: unit_tests/ac_driven_dev/
+  framework: pytest
+  type: behavioral
+  angle: criterion
+  description: Provide local checks and draft review approval without target merge proof; status never
+    reports target completion.
+  covers:
+  - ACD-1300d-1
+- name: test_background_worker_status_does_not_expose_credentials
+  target_dir: unit_tests/ac_driven_dev/
+  framework: pytest
+  type: behavioral
+  angle: criterion
+  description: Inject credential-bearing adapter diagnostics and assert displayed/persisted attention
+    payload excludes secret values.
+  covers:
+  - ACD-1300d-1
+product_truth:
+  - flow: leafcutter/background-ac-worker
+    node: handoff
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: leafcutter/background-ac-worker-data
+    entities:
+      - BuildRun
+    source: real
+    asof: '2026-09-24'
+  - flow: leafcutter/background-ac-worker
+    node: implementation-blocked
+    node_kind: branch
+    flow_kind: data
+    screen: null
+    mock_data: leafcutter/background-ac-worker-data
+    entities:
+      - Ac
+      - BuildRun
+      - WorkerSettings
+    source: real
+    asof: '2026-09-24'
+  - flow: leafcutter/background-ac-worker
+    node: publication-blocked
+    node_kind: branch
+    flow_kind: data
+    screen: null
+    mock_data: leafcutter/background-ac-worker-data
+    entities:
+      - Ac
+      - BuildRun
+    source: real
+    asof: '2026-09-24'
+  - flow: leafcutter/background-ac-worker
+    node: review-blocked
+    node_kind: branch
+    flow_kind: data
+    screen: null
+    mock_data: leafcutter/background-ac-worker-data
+    entities:
+      - Ac
+      - BuildRun
+      - WorkerSettings
+    source: real
+    asof: '2026-09-24'
+  - flow: leafcutter/background-ac-worker
+    node: waiting
+    node_kind: branch
+    flow_kind: data
+    screen: null
+    mock_data: leafcutter/background-ac-worker-data
+    entities:
+      - Ac
+      - BuildRun
+      - WorkerSettings
+    source: real
+    asof: '2026-09-24'

@@ -1,0 +1,151 @@
+id: ACD-1300g-2
+title: Validate the accumulated feature before submitting complete evidence to review
+component: ac-driven-dev
+components:
+- ac_driven_dev
+level: L2
+status: active
+req_status: approved
+readiness: approved
+work_status: in_progress
+priority: medium
+criteria: |
+  Given every planned required AC has local evidence in one accumulated feature worktree
+  When the feature's required project checks run
+  Then only a passing result produces a review package containing the exact head revision, full feature diff, per-AC evidence and source references
+  And failed combined checks return to local repair within the affected AC budgets or produce a validation blocker
+  And evidence covers every required L1, L2 and L3 behavior, including parent positive behavior above executable negative leaves
+  And no failing or incomplete package is presented as ready for review
+depends_on:
+- ACD-1300g
+doc_links:
+- path: docs/product-truth/flows/leafcutter/background-ac-worker.flow.json
+  relationship: implements
+  status: exists
+- path: docs/reference/ac-schema.md
+  relationship: reference
+  status: exists
+- path: docs/architecture/components/ac-driven-dev.md
+  relationship: describes
+  status: exists
+- path: docs/architecture/components/build-orchestration.md
+  relationship: describes
+  status: exists
+- path: docs/architecture/adrs/ADR-030-dual-engine-workflow-support.md
+  relationship: describes
+  status: exists
+- path: docs/architecture/adrs/ADR-027-tdd-workflow-enforcement.md
+  relationship: describes
+  status: exists
+assigned_agent: python-coder
+delivers_to:
+- agent: python-coder
+  contract: ACD-1300g-2 supplies ACD-1300g-3, ACD-1300g-4 with ReviewPackage {run_id:string, feature_id:string,
+    head_sha:string, target_sha:string, full_diff:string|evidence_ref, ac_ids:string[], obligation_ids:string[],
+    source_revisions:object, ac_evidence:object[], feature_checks:object[], validated_sha:string}. Runtime
+    handoff/reference contract; it does not add build-order edges.
+expects_from: null
+origin_agent: business-analyst
+created: '2026-09-24'
+amended_by:
+- '2026-09-24 Codex: Reviewed and approved under the user explicit delegation; implementation remains todo and priority
+  remains medium.'
+superseded_by: null
+covered_by: []
+implemented_by:
+- scripts/background_worker/engine.py
+- scripts/background_worker/executors.py
+- scripts/background_worker/git_ops.py
+- scripts/background_worker/reviewer_sdk/bridge.mjs
+- unit_tests/ac_driven_dev/test_background_worker_engine.py
+- unit_tests/ac_driven_dev/test_background_worker_executors.py
+change_target: pipeline
+risk_surface: contract_boundary
+notes: Approved requirements; implementation is under review; live execution remains blocked by the native Windows isolation requirement. Pattern inventory found
+  no matching reusable worker behavior.
+declares_side_effect: false
+estimated_complexity: L
+it_requirements:
+- Validate complete feature obligations, including positive parent behavior and all required child scenarios;
+  a leaf-only negative-test pass is insufficient.
+- Bind the diff, checks and evidence to one immutable head/target pair; changed files after validation
+  invalidate the package.
+- Execute actual required project checks and preserve outputs; missing, failed or zero-inspected checks
+  cannot count as passing validation.
+- Return repairs to affected ACs under their existing shared counters, preserving the full accumulated
+  worktree.
+- Verification must execute the installed CLI/workflow or its real control-flow boundary with controlled
+  external executors; source-string presence and model self-report are not evidence of behavior.
+- 'Runtime interface from ACD-1300g-1 (data handoff, not an additional build-order prerequisite): ACEvidence
+  {run_id:string, feature_id:string, ac_id:string, obligation_ids:string[], source_revisions:object, workspace_id:string,
+  head_sha:string, changed_files:string[], checks:[{command:string, exit_code:integer, evidence_ref:string}],
+  outcome:passed|blocked|failed}.'
+- 'Runtime interface from ACD-1300f-1 (data handoff, not an additional build-order prerequisite): FeatureCandidate
+  {feature_id:string, ancestor_ids:string[], source_revision:string, obligations:[{ac_id:string, parent_id:string|null,
+  level:string, criteria:string, revision:string}], remaining_ac_ids:string[], completed_context_ids:string[],
+  readiness:object, estimates:object, unanswered_questions:object[], dependency_edges:object[]}.'
+- 'Runtime interface from ACD-1300c-1 (data handoff, not an additional build-order prerequisite): ACBudget
+  {run_id:string, ac_id:string, attempts_used:integer, implementation_elapsed_ms:integer, remaining_attempts:integer,
+  remaining_ms:integer, exhausted:boolean}.'
+test_spec:
+- name: test_background_worker_full_feature_pass_produces_exact_revision_package
+  target_dir: unit_tests/ac_driven_dev/
+  framework: pytest
+  type: integration
+  angle: reachability
+  description: Execute combined checks on accumulated feature; package contains full diff, all AC/ancestor
+    obligation IDs, source refs and one exact validated head.
+  covers:
+  - ACD-1300g-2
+  surface_invoked: Installed background-worker CLI entry point specified by ACD-1300b-1 (concrete command
+    name to be declared by implementation)
+- name: test_background_worker_negative_children_alone_cannot_validate_positive_parent
+  target_dir: unit_tests/ac_driven_dev/
+  framework: pytest
+  type: behavioral
+  angle: criterion
+  description: Only negative g3-i-style checks pass while parent positive review behavior lacks proof;
+    assert incomplete package and no reviewer dispatch.
+  covers:
+  - ACD-1300g-2
+- name: test_background_worker_combined_check_failure_enters_bounded_repair
+  target_dir: unit_tests/ac_driven_dev/
+  framework: pytest
+  type: behavioral
+  angle: failure
+  description: All leaf checks pass but combined check fails; assert affected AC budget retained and repair
+    or blocker, never review-ready.
+  covers:
+  - ACD-1300g-2
+- name: test_background_worker_changed_head_invalidates_validation
+  target_dir: unit_tests/ac_driven_dev/
+  framework: pytest
+  type: behavioral
+  angle: failure
+  description: Mutate head after passing checks and assert stale package cannot be submitted as current
+    validation.
+  covers:
+  - ACD-1300g-2
+product_truth:
+  - flow: leafcutter/background-ac-worker
+    node: validate
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: leafcutter/background-ac-worker-data
+    entities:
+      - Ac
+      - BuildRun
+    source: real
+    asof: '2026-09-24'
+  - flow: leafcutter/background-ac-worker
+    node: validation-blocked
+    node_kind: branch
+    flow_kind: data
+    screen: null
+    mock_data: leafcutter/background-ac-worker-data
+    entities:
+      - Ac
+      - BuildRun
+    source: real
+    asof: '2026-09-24'

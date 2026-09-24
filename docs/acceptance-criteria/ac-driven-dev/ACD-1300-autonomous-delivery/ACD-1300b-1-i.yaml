@@ -1,0 +1,122 @@
+id: ACD-1300b-1-i
+title: Unavailable or invalid execution settings prevent admission
+component: ac-driven-dev
+components:
+- ac_driven_dev
+level: L3
+status: active
+req_status: approved
+readiness: approved
+work_status: in_progress
+priority: medium
+criteria: |
+  Given the local model cannot use required tools, the reviewer lacks credentials, or the global limit is zero
+  When the user enables the worker
+  Then status names the invalid setting or unavailable capability and its required correction
+  And no feature is admitted
+  And no cloud implementation or different reviewer is silently substituted
+depends_on:
+- ACD-1300b-1
+doc_links:
+- path: docs/product-truth/flows/leafcutter/background-ac-worker.flow.json
+  relationship: implements
+  status: exists
+- path: docs/reference/ac-schema.md
+  relationship: reference
+  status: exists
+- path: docs/architecture/components/ac-driven-dev.md
+  relationship: describes
+  status: exists
+- path: docs/architecture/components/build-orchestration.md
+  relationship: describes
+  status: exists
+- path: docs/architecture/adrs/ADR-030-dual-engine-workflow-support.md
+  relationship: describes
+  status: exists
+- path: docs/architecture/adrs/ADR-033-agent-model-tiers.md
+  relationship: describes
+  status: exists
+assigned_agent: python-coder
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: '2026-09-24'
+amended_by:
+- '2026-09-24 Codex: Reviewed and approved under the user explicit delegation; implementation remains todo and priority
+  remains medium.'
+superseded_by: null
+covered_by: []
+implemented_by:
+- scripts/background_worker/cli.py
+- scripts/background_worker/store.py
+- scripts/background_worker/engine.py
+- unit_tests/ac_driven_dev/test_background_worker_cli.py
+- unit_tests/ac_driven_dev/test_background_worker_store.py
+change_target: pipeline
+risk_surface: contract_boundary
+notes: Approved requirements; implementation is under review; live execution remains blocked by the native Windows isolation requirement. Pattern inventory found
+  no matching reusable worker behavior.
+declares_side_effect: false
+estimated_complexity: M
+it_requirements:
+- Capability checks must cover harness tools and executor compatibility, not just an endpoint responding
+  or a model claiming tool support.
+- Availability failures preserve requested settings and expose an actionable diagnosis without credential
+  contents or alternate-provider execution.
+- Verification must execute the installed CLI/workflow or its real control-flow boundary with controlled
+  external executors; source-string presence and model self-report are not evidence of behavior.
+- 'Runtime interface from ACD-1300b-1 (data handoff, not an additional build-order prerequisite): WorkerSettings
+  {enabled:boolean, max_agent_calls:integer>=1, implementation:{executor:string, provider:string, model:string,
+  endpoint:string, credential_ref:string|null}, reviewer:{executor:codex-sdk|claude-agent-sdk, provider:string,
+  model:string, credential_ref:string|null}, settings_revision:string}.'
+- 'Runtime interface from ACD-1300g-1 (data handoff, not an additional build-order prerequisite): ACEvidence
+  {run_id:string, feature_id:string, ac_id:string, obligation_ids:string[], source_revisions:object, workspace_id:string,
+  head_sha:string, changed_files:string[], checks:[{command:string, exit_code:integer, evidence_ref:string}],
+  outcome:passed|blocked|failed}.'
+- 'Runtime interface from ACD-1300g-3 (data handoff, not an additional build-order prerequisite): ReviewResult
+  {run_id:string, review_id:string, review_number:1|2, executor:codex-sdk|claude-agent-sdk, provider:string,
+  model:string, reviewed_sha:string, disposition:approved|changes_required|failed, findings:[{finding_id:string,
+  ac_ids:string[], severity:string, description:string}], execution_id:string, evidence_refs:string[]}.'
+test_spec:
+- name: test_background_worker_invalid_capacity_and_credentials_block_enable
+  target_dir: unit_tests/ac_driven_dev/
+  framework: pytest
+  type: integration
+  angle: failure
+  description: Parameterize zero/negative/noninteger limit and missing reviewer credentials; assert actionable
+    setting-specific failure and zero admitted features.
+  covers:
+  - ACD-1300b-1-i
+  surface_invoked: Installed background-worker CLI entry point specified by ACD-1300b-1 (concrete command
+    name to be declared by implementation)
+- name: test_background_worker_model_without_required_tool_execution_fails_closed
+  target_dir: unit_tests/ac_driven_dev/
+  framework: pytest
+  type: behavioral
+  angle: failure
+  description: Use an endpoint that returns text but cannot complete read/edit/check tool round trip;
+    assert blocked admission and no substitute executor.
+  covers:
+  - ACD-1300b-1-i
+- name: test_background_worker_missing_runtime_has_consumer_diagnosis
+  target_dir: unit_tests/ac_driven_dev/
+  framework: pytest
+  type: behavioral
+  angle: failure
+  description: Fresh consumer lacking a required harness/runtime gets a named missing prerequisite, not
+    a dev-checkout import fallback.
+  covers:
+  - ACD-1300b-1-i
+product_truth:
+  - flow: leafcutter/background-ac-worker
+    node: unavailable
+    node_kind: branch
+    flow_kind: data
+    screen: null
+    mock_data: leafcutter/background-ac-worker-data
+    entities:
+      - Ac
+      - BuildRun
+      - WorkerSettings
+    source: real
+    asof: '2026-09-24'

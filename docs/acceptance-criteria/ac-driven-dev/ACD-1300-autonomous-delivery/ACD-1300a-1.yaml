@@ -1,0 +1,113 @@
+id: ACD-1300a-1
+title: Effective feature urgency includes its remaining work and ancestors
+component: ac-driven-dev
+components:
+- ac_driven_dev
+level: L2
+status: active
+req_status: approved
+readiness: approved
+work_status: in_progress
+priority: medium
+criteria: |
+  Given one approved feature has low urgency, a high-urgency L0 ancestor and two low-urgency remaining leaves
+  And another approved feature has low-urgency ancestors and one critical remaining required leaf
+  When the background worker computes their effective priorities
+  Then their effective priorities are high and critical respectively
+  And the strongest urgency among all remaining required leaves and every ancestor on their canonical L0/L1/L2 paths determines each result
+  And a low-priority child cannot lower the urgency inherited from that group
+  And a high-priority L2 parent with low-priority L3 leaves raises the feature to high even when its L0 and L1 are low
+depends_on:
+- ACD-1300a
+doc_links:
+- path: docs/product-truth/flows/leafcutter/background-ac-worker.flow.json
+  relationship: implements
+  status: exists
+- path: docs/reference/ac-schema.md
+  relationship: reference
+  status: exists
+- path: docs/architecture/components/ac-driven-dev.md
+  relationship: describes
+  status: exists
+- path: docs/architecture/components/build-orchestration.md
+  relationship: describes
+  status: exists
+- path: docs/architecture/adrs/ADR-010-ac-store-as-authoritative-backlog.md
+  relationship: describes
+  status: exists
+assigned_agent: python-coder
+delivers_to:
+- agent: python-coder
+  contract: ACD-1300a-1 supplies ACD-1300a-2 with EffectivePriority {feature_id:string, rank:integer,
+    urgency:low|medium|high|critical, contributors:[{ac_id:string, source_revision:string, urgency:string}]}.
+    Runtime handoff/reference contract; it does not add build-order edges.
+- agent: documentation-expert
+  contract: ACD-1300a-1 supplies ACD-1300f-4 with EffectivePriority {feature_id:string, rank:integer,
+    urgency:low|medium|high|critical, contributors:[{ac_id:string, source_revision:string, urgency:string}]}.
+    Runtime handoff/reference contract; it does not add build-order edges.
+expects_from: null
+origin_agent: business-analyst
+created: '2026-09-24'
+amended_by:
+- '2026-09-24 Codex: Reviewed and approved under the user explicit delegation; implementation remains todo and priority
+  remains medium.'
+superseded_by: null
+covered_by: []
+implemented_by:
+- scripts/background_worker/planning.py
+- unit_tests/ac_driven_dev/test_background_worker_planning.py
+change_target: pipeline
+risk_surface: contract_boundary
+notes: Approved requirements; implementation is under review; live execution remains blocked by the native Windows isolation requirement. Pattern inventory found
+  no matching reusable worker behavior.
+declares_side_effect: false
+estimated_complexity: M
+it_requirements:
+- Compute urgency from canonical AC data and declared ancestry only; the same snapshot must produce the
+  same result without a model call.
+- Preserve the ordinary scanner and ACD-500 complexity-to-priority behavior; background priority is a
+  distinct policy.
+- Verification must execute the installed CLI/workflow or its real control-flow boundary with controlled
+  external executors; source-string presence and model self-report are not evidence of behavior.
+test_spec:
+- name: test_background_worker_intermediate_parent_priority_is_inherited
+  target_dir: unit_tests/ac_driven_dev/
+  framework: pytest
+  type: behavioral
+  angle: criterion
+  description: A low L0/L1 and low L3 leaves under a high L2 produce high effective feature priority.
+  covers:
+  - ACD-1300a-1
+- name: test_background_worker_priority_retains_strongest_ancestor_and_leaf
+  target_dir: unit_tests/ac_driven_dev/
+  framework: pytest
+  type: integration
+  angle: reachability
+  description: Two real YAML groups resolve high from L0 and critical from a remaining leaf; low child
+    values never reduce either rank.
+  covers:
+  - ACD-1300a-1
+  surface_invoked: Installed background-worker CLI entry point specified by ACD-1300b-1 (concrete command
+    name to be declared by implementation)
+- name: test_background_worker_priority_provenance_is_deterministic
+  target_dir: unit_tests/ac_driven_dev/
+  framework: pytest
+  type: behavioral
+  angle: criterion
+  description: Reordering filesystem entries produces identical feature priorities and contributor AC
+    IDs/revisions with zero inference calls.
+  covers:
+  - ACD-1300a-1
+product_truth:
+  - flow: leafcutter/background-ac-worker
+    node: select
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: leafcutter/background-ac-worker-data
+    entities:
+      - Ac
+      - BuildRun
+      - WorkerSettings
+    source: real
+    asof: '2026-09-24'

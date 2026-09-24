@@ -1,0 +1,123 @@
+id: ACD-1300e-1
+title: An explicit blocker answer resumes the identified preserved run
+component: ac-driven-dev
+components:
+- ac_driven_dev
+level: L2
+status: active
+req_status: approved
+readiness: approved
+work_status: in_progress
+priority: medium
+criteria: |
+  Given a blocked feature has pending request QUESTION-1 and remaining automatic budget
+  When the user explicitly answers QUESTION-1 and requests continuation while the worker is enabled
+  Then that answer is persisted against the same request and run
+  And after revalidation the next agent receives the answer with its preserved work and evidence
+  And a reply to an unknown, already-resolved or different run's request cannot resume this feature
+depends_on:
+- ACD-1300e
+doc_links:
+- path: docs/product-truth/flows/leafcutter/background-ac-worker.flow.json
+  relationship: implements
+  status: exists
+- path: docs/reference/ac-schema.md
+  relationship: reference
+  status: exists
+- path: docs/architecture/components/ac-driven-dev.md
+  relationship: describes
+  status: exists
+- path: docs/architecture/components/build-orchestration.md
+  relationship: describes
+  status: exists
+- path: docs/architecture/adrs/ADR-030-dual-engine-workflow-support.md
+  relationship: describes
+  status: exists
+assigned_agent: python-coder
+delivers_to:
+- agent: documentation-expert
+  contract: ACD-1300e-1 supplies ACD-1300c-3 with ResolvedRequest {request_id:string, run_id:string, answer:object|string,
+    answered_at:string, continuation_requested:boolean, checkpoint_revision:string}. Runtime handoff/reference
+    contract; it does not add build-order edges.
+- agent: architecture-diagram-author
+  contract: ACD-1300e-1 supplies ACD-1300c-4 with ResolvedRequest {request_id:string, run_id:string, answer:object|string,
+    answered_at:string, continuation_requested:boolean, checkpoint_revision:string}. Runtime handoff/reference
+    contract; it does not add build-order edges.
+expects_from: null
+origin_agent: business-analyst
+created: '2026-09-24'
+amended_by:
+- '2026-09-24 Codex: Reviewed and approved under the user explicit delegation; implementation remains todo and priority
+  remains medium.'
+superseded_by: null
+covered_by: []
+implemented_by:
+- scripts/background_worker/engine.py
+- scripts/background_worker/store.py
+- scripts/background_worker/sources.py
+- unit_tests/ac_driven_dev/test_background_worker_engine.py
+change_target: pipeline
+risk_surface: contract_boundary
+notes: Approved requirements; implementation is under review; live execution remains blocked by the native Windows isolation requirement. Pattern inventory found
+  no matching reusable worker behavior.
+declares_side_effect: true
+estimated_complexity: M
+it_requirements:
+- Bind the answer atomically to unresolved request ID and run ID; repeated or cross-run answers must not
+  dispatch duplicate work.
+- Continuation requires enabled admission, revalidation and remaining budget; the answer is data in the
+  resumed context, never proof of implementation or review.
+- Verification must execute the installed CLI/workflow or its real control-flow boundary with controlled
+  external executors; source-string presence and model self-report are not evidence of behavior.
+- 'Runtime interface from ACD-1300d-1 (data handoff, not an additional build-order prerequisite): InboxItem
+  {item_id:string, run_id:string, feature_id:string, ac_id:string|null, request_id:string|null, state:string,
+  reason:string|null, required_answer:string|null, evidence_refs:string[], pr_url:string|null, validated_sha:string|null,
+  reviewed_sha:string|null}.'
+- 'Runtime interface from ACD-1300e-3 (data handoff, not an additional build-order prerequisite): Revalidation
+  {run_id:string, admissible:boolean, source_revisions:object, target_sha:string, evidence_revision:string,
+  changed_fields:string[], blocker:string|null}.'
+- 'Runtime interface from ACD-1300c-1 (data handoff, not an additional build-order prerequisite): ACBudget
+  {run_id:string, ac_id:string, attempts_used:integer, implementation_elapsed_ms:integer, remaining_attempts:integer,
+  remaining_ms:integer, exhausted:boolean}.'
+test_spec:
+- name: test_background_worker_valid_answer_reaches_same_resumed_run
+  target_dir: unit_tests/ac_driven_dev/
+  framework: pytest
+  type: integration
+  angle: reachability
+  description: Answer QUESTION-1 and continue enabled run with budget; next controlled executor receives
+    answer, same worktree, prior evidence and run ID.
+  covers:
+  - ACD-1300e-1
+  surface_invoked: Installed background-worker CLI entry point specified by ACD-1300b-1 (concrete command
+    name to be declared by implementation)
+- name: test_background_worker_wrong_or_replayed_answer_cannot_resume
+  target_dir: unit_tests/ac_driven_dev/
+  framework: pytest
+  type: behavioral
+  angle: criterion
+  description: Unknown, other-run and resolved request IDs each leave current run paused/blocked with
+    zero dispatches.
+  covers:
+  - ACD-1300e-1
+- name: test_background_worker_answer_while_disabled_does_not_dispatch
+  target_dir: unit_tests/ac_driven_dev/
+  framework: pytest
+  type: behavioral
+  angle: criterion
+  description: Persist an explicit answer while disabled and assert no call until enabled and revalidated.
+  covers:
+  - ACD-1300e-1
+product_truth:
+  - flow: leafcutter/background-ac-worker
+    node: resume
+    node_kind: branch
+    flow_kind: data
+    screen: null
+    mock_data: leafcutter/background-ac-worker-data
+    entities:
+      - Ac
+      - BuildRun
+      - WorkerSettings
+    source: real
+    asof: '2026-09-24'

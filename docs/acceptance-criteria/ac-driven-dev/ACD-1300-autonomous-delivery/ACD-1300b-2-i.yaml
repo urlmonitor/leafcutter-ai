@@ -1,0 +1,99 @@
+id: ACD-1300b-2-i
+title: Lowering capacity drains existing calls before replacements
+component: ac-driven-dev
+components:
+- ac_driven_dev
+level: L3
+status: active
+req_status: approved
+readiness: approved
+work_status: in_progress
+priority: medium
+criteria: |
+  Given two agent calls are already running with a limit of two
+  When the user changes the limit to one
+  Then both existing calls may finish
+  And no replacement starts until the running-call count is below one
+  And status distinguishes the configured limit from the draining calls
+depends_on:
+- ACD-1300b-2
+doc_links:
+- path: docs/product-truth/flows/leafcutter/background-ac-worker.flow.json
+  relationship: implements
+  status: exists
+- path: docs/reference/ac-schema.md
+  relationship: reference
+  status: exists
+- path: docs/architecture/components/ac-driven-dev.md
+  relationship: describes
+  status: exists
+- path: docs/architecture/components/build-orchestration.md
+  relationship: describes
+  status: exists
+- path: docs/architecture/adrs/ADR-030-dual-engine-workflow-support.md
+  relationship: describes
+  status: exists
+assigned_agent: python-coder
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: '2026-09-24'
+amended_by:
+- '2026-09-24 Codex: Reviewed and approved under the user explicit delegation; implementation remains todo and priority
+  remains medium.'
+superseded_by: null
+covered_by: []
+implemented_by:
+- scripts/background_worker/cli.py
+- scripts/background_worker/store.py
+- scripts/background_worker/engine.py
+- unit_tests/ac_driven_dev/test_background_worker_cli.py
+- unit_tests/ac_driven_dev/test_background_worker_store.py
+change_target: pipeline
+risk_surface: contract_boundary
+notes: Approved requirements; implementation is under review; live execution remains blocked by the native Windows isolation requirement. Pattern inventory found
+  no matching reusable worker behavior.
+declares_side_effect: false
+estimated_complexity: M
+it_requirements:
+- Apply limit changes atomically at admission; never rewrite the observed active-call count to equal a
+  newly lowered limit.
+- Verification must execute the installed CLI/workflow or its real control-flow boundary with controlled
+  external executors; source-string presence and model self-report are not evidence of behavior.
+- 'Runtime interface from ACD-1300b-2 (data handoff, not an additional build-order prerequisite): CapacityLease
+  {lease_id:string, run_id:string, call_id:string, role:string, settings_revision:string, acquired_at:string,
+  released_at:string|null}.'
+test_spec:
+- name: test_background_worker_lowered_limit_waits_for_both_calls_to_drain
+  target_dir: unit_tests/ac_driven_dev/
+  framework: pytest
+  type: integration
+  angle: boundary
+  description: Start two controlled calls then lower two to one; after first completion no replacement
+    starts, after second completion exactly one may start.
+  covers:
+  - ACD-1300b-2-i
+  surface_invoked: Installed background-worker CLI entry point specified by ACD-1300b-1 (concrete command
+    name to be declared by implementation)
+- name: test_background_worker_status_reports_limit_and_actual_running_count
+  target_dir: unit_tests/ac_driven_dev/
+  framework: pytest
+  type: behavioral
+  angle: boundary
+  description: While two calls drain under limit one, status reports configured one and running two without
+    cancelling either call.
+  covers:
+  - ACD-1300b-2-i
+product_truth:
+  - flow: leafcutter/background-ac-worker
+    node: waiting
+    node_kind: branch
+    flow_kind: data
+    screen: null
+    mock_data: leafcutter/background-ac-worker-data
+    entities:
+      - Ac
+      - BuildRun
+      - WorkerSettings
+    source: real
+    asof: '2026-09-24'

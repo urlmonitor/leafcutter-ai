@@ -1,0 +1,58 @@
+id: ACD-1300b-5
+title: Document the worker lifecycle and drain transitions
+component: ac-driven-dev
+components:
+- ac_driven_dev
+level: L2
+status: active
+req_status: approved
+readiness: approved
+work_status: in_progress
+priority: medium
+criteria: |
+  Given the worker exposes disabled, waiting, running, draining, paused, blocked and delivered states
+  When the user consults its state diagram
+  Then the diagram shows how enable, off, completion, failure and explicit recovery change those states
+  And it shows that off prevents new work while existing work drains to a checkpoint
+depends_on:
+- ACD-1300b
+doc_links:
+- path: docs/product-truth/flows/leafcutter/background-ac-worker.flow.json
+  relationship: implements
+  status: exists
+- path: docs/reference/ac-schema.md
+  relationship: reference
+  status: exists
+- path: docs/architecture/components/ac-driven-dev.md
+  relationship: describes
+  status: exists
+- path: docs/architecture/components/build-orchestration.md
+  relationship: describes
+  status: exists
+- path: docs/architecture/adrs/ADR-030-dual-engine-workflow-support.md
+  relationship: describes
+  status: exists
+assigned_agent: architecture-diagram-author
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: '2026-09-24'
+amended_by:
+- '2026-09-24 Codex: Reviewed and approved under the user explicit delegation; implementation remains todo and priority
+  remains medium.'
+superseded_by: null
+covered_by: []
+implemented_by:
+- docs/architecture/diagrams/background-ac-worker-state.md
+change_target: docs
+risk_surface: internal
+notes: Approved requirements; implementation is under review; live execution remains blocked by the native Windows isolation requirement. Pattern inventory found
+  no matching reusable worker behavior.
+declares_side_effect: false
+estimated_complexity: M
+it_requirements:
+- Use the same state vocabulary as the worker reference and distinguish a process crash from a user off
+  action; describe the scoped worktree path without claiming ADR-018 global compliance.
+- Describe the contracts and outcomes of ACD-1300b-1, ACD-1300b-2, ACD-1300b-3, ACD-1300c-2, ACD-1300e-2
+  as reference subjects, not additional build prerequisites.
+test_required: false

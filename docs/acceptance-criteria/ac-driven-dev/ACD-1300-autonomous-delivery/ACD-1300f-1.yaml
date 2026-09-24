@@ -1,0 +1,134 @@
+id: ACD-1300f-1
+title: Admit complete approved S or M feature groups only
+component: ac-driven-dev
+components:
+- ac_driven_dev
+level: L2
+status: active
+req_status: approved
+readiness: approved
+work_status: in_progress
+priority: medium
+criteria: |
+  Given canonical parent relationships place two remaining required executable leaves under feature STATUS
+  And every remaining required leaf and its inherited L0/L1/L2 obligations are approved and have no unanswered questions, and the executable work units are estimated S and M
+  When the background worker evaluates the backlog
+  Then STATUS is considered as one complete candidate containing both leaves without a separate feature opt-in
+  And completed leaves are retained as context rather than selected again
+  And the grouping follows the canonical L1 hierarchy rather than text similarity or a convenient subset
+  And each executable leaf retains the required behavior inherited from its L1 and L2 ancestors, so a negative L3 scenario cannot replace its parent positive behavior
+  And a draft or revoked required ancestor prevents admission even when its descendants are approved
+depends_on:
+- ACD-1300f
+doc_links:
+- path: docs/product-truth/flows/leafcutter/background-ac-worker.flow.json
+  relationship: implements
+  status: exists
+- path: docs/reference/ac-schema.md
+  relationship: reference
+  status: exists
+- path: docs/architecture/components/ac-driven-dev.md
+  relationship: describes
+  status: exists
+- path: docs/architecture/components/build-orchestration.md
+  relationship: describes
+  status: exists
+- path: docs/architecture/adrs/ADR-010-ac-store-as-authoritative-backlog.md
+  relationship: describes
+  status: exists
+assigned_agent: python-coder
+delivers_to:
+- agent: python-coder
+  contract: ACD-1300f-1 supplies ACD-1300e-3, ACD-1300f-1-i, ACD-1300f-2, ACD-1300f-3, ACD-1300g-1, ACD-1300g-2
+    with FeatureCandidate {feature_id:string, ancestor_ids:string[], source_revision:string, obligations:[{ac_id:string,
+    parent_id:string|null, level:string, criteria:string, revision:string}], remaining_ac_ids:string[],
+    completed_context_ids:string[], readiness:object, estimates:object, unanswered_questions:object[],
+    dependency_edges:object[]}. Runtime handoff/reference contract; it does not add build-order edges.
+- agent: documentation-expert
+  contract: ACD-1300f-1 supplies ACD-1300f-4 with FeatureCandidate {feature_id:string, ancestor_ids:string[],
+    source_revision:string, obligations:[{ac_id:string, parent_id:string|null, level:string, criteria:string,
+    revision:string}], remaining_ac_ids:string[], completed_context_ids:string[], readiness:object, estimates:object,
+    unanswered_questions:object[], dependency_edges:object[]}. Runtime handoff/reference contract; it
+    does not add build-order edges.
+expects_from: null
+origin_agent: business-analyst
+created: '2026-09-24'
+amended_by:
+- '2026-09-24 Codex: Reviewed and approved under the user explicit delegation; implementation remains todo and priority
+  remains medium.'
+superseded_by: null
+covered_by:
+  - ACD-1300f-1-i
+implemented_by:
+- scripts/background_worker/planning.py
+- scripts/background_worker/sources.py
+- unit_tests/ac_driven_dev/test_background_worker_planning.py
+- unit_tests/ac_driven_dev/test_background_worker_target_sync.py
+change_target: pipeline
+risk_surface: contract_boundary
+notes: Approved requirements; implementation is under review; live execution remains blocked by the native Windows isolation requirement. Pattern inventory found
+  no matching reusable worker behavior.
+declares_side_effect: false
+estimated_complexity: L
+it_requirements:
+- Estimate each executable work unit including its inherited implementation obligations; an S/M negative scenario cannot conceal an unimplemented L/XL parent behavior. Reuse complete target-branch behavior only with evidence.
+- Resolve canonical hierarchy deterministically from explicit parent/ID contract and preserve all inherited
+  L1/L2 positive obligations when selecting executable L3 leaves.
+- The candidate must retain the complete required scope, completed context and source revisions; never
+  equate only negative L3 child tests with parent behavior fulfilled.
+- Whole-feature admissibility is a separate background-lane result and must not mutate ordinary scanner
+  rules or AC work_status.
+- Verification must execute the installed CLI/workflow or its real control-flow boundary with controlled
+  external executors; source-string presence and model self-report are not evidence of behavior.
+test_spec:
+- name: test_background_worker_ancestor_approval_and_inherited_size_gate
+  target_dir: unit_tests/ac_driven_dev/
+  framework: pytest
+  type: behavioral
+  angle: criterion
+  description: Approved S leaves under a draft required L2 are excluded; an S negative scenario requiring
+    unimplemented L parent behavior is excluded rather than underestimating the complete work unit.
+  covers:
+  - ACD-1300f-1
+- name: test_background_worker_canonical_feature_groups_all_required_leaves
+  target_dir: unit_tests/ac_driven_dev/
+  framework: pytest
+  type: integration
+  angle: reachability
+  description: Load actual serialized AC YAML with two S/M approved leaves and a completed sibling; candidate
+    includes both remaining IDs and retains completed context, without extra feature opt-in.
+  covers:
+  - ACD-1300f-1
+  surface_invoked: Installed background-worker CLI entry point specified by ACD-1300b-1 (concrete command
+    name to be declared by implementation)
+- name: test_background_worker_child_context_retains_parent_positive_obligations
+  target_dir: unit_tests/ac_driven_dev/
+  framework: pytest
+  type: behavioral
+  angle: criterion
+  description: L2 positive behavior with negative L3 children yields candidate obligations containing
+    both ancestor positive clauses and every required edge case; no parent prerequisite deadlock.
+  covers:
+  - ACD-1300f-1
+- name: test_background_worker_grouping_is_not_text_similarity_or_easy_subset
+  target_dir: unit_tests/ac_driven_dev/
+  framework: pytest
+  type: behavioral
+  angle: criterion
+  description: Similar unrelated titles and reordered files leave canonical membership unchanged; no missing
+    required sibling is dropped.
+  covers:
+  - ACD-1300f-1
+product_truth:
+  - flow: leafcutter/background-ac-worker
+    node: group
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: leafcutter/background-ac-worker-data
+    entities:
+      - Ac
+      - BuildRun
+      - WorkerSettings
+    source: real
+    asof: '2026-09-24'
