@@ -1,0 +1,70 @@
+id: BP-100k-4-iii
+components:
+  - build_pipeline
+title: "Consumer installs count existing untracked, stageable files when checking hook reachability"
+component: build-pipeline
+level: L3
+status: active
+req_status: active
+work_status: done
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given Leafcutter is installed into a consumer repository that tracks only
+    its initial project configuration and the Leafcutter submodule,
+  And build.py has created untracked, unignored documentation and hook files
+    that Git can stage in a later commit,
+  When the hook-trigger reachability check evaluates the deployed registry,
+  Then a valid trigger matching an existing stageable file is reachable and
+    does not block merely because that file is not tracked yet,
+  And a trigger naming only files ignored by Git remains unreachable,
+  And an invalid regular expression or a whole-tree gate with a files filter
+    still blocks in either layout,
+  And the check still fails closed when Git cannot enumerate stageable paths.
+depends_on:
+  - BP-100k-4
+doc_links:
+  - path: "docs/acceptance-criteria/build_pipeline/BP-100-reliable-builds/BP-100k-4.yaml"
+    relationship: parent
+    status: exists
+  - path: "templates/scripts/commit_guardian/_hook_trigger_tracked_paths.py"
+    relationship: modifies
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: BP-100k-4
+  contract: "The registry-wide reachability verdict remains blocking for genuinely invalid hook definitions."
+origin_agent: Codex
+created: 2026-09-24
+amended_by: []
+superseded_by: null
+covered_by:
+  - unit_tests/commit_guardian/test_bp_100k_4_iii.py
+implemented_by:
+  - templates/scripts/commit_guardian/_hook_trigger_tracked_paths.py
+change_target: pipeline
+risk_surface: contract_boundary
+test_spec:
+  - name: test_consumer_location_trigger_matching_untracked_stageable_file_does_not_block
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: behavioral
+    description: "The real hook process in a minimal consumer Git repository treats an existing untracked, unignored docs file as reachable and exits zero."
+  - name: test_ignored_only_location_trigger_still_blocks
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: behavioral
+    description: "An existing docs file excluded by .gitignore does not make its trigger reachable."
+  - name: test_consumer_still_blocks_invalid_hook_definitions
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: behavioral
+    description: "Malformed regex and always-run plus files-filter definitions remain blocking in a consumer checkout."
+  - name: test_built_consumer_with_real_registry_has_no_unreachable_hooks
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    description: "A fresh build.py consumer layout with the real deployed registry reports zero unreachable hooks."

@@ -418,8 +418,8 @@ def _build_consumer_layout_tracking_no_python(workspace: Path) -> Path:
             f"isolated synthetic package copy. stdout:\n{build_result.stdout}\n"
             f"stderr:\n{build_result.stderr}"
         )
-
     _init_repo(workspace)
+    (workspace / ".gitignore").write_text("*.py\n", encoding="utf-8")
     placeholder = workspace / "CONSUMER-NOTES.txt"
     placeholder.write_text(
         "Placeholder consumer-project file. Deliberately the ONLY file "
