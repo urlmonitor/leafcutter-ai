@@ -15,6 +15,7 @@ related_docs:
   - docs/architecture/adrs/ADR-043-journey-record-carries-its-own-behind-mark.md
   - docs/architecture/adrs/ADR-049-record-checker-trigger-scope.md
   - docs/reference/example-content-separation.md
+  - docs/architecture/diagrams/c3-009-record-freshness-check-sequence.md
 ---
 
 # UX Prototyping — The Product-Truth Store
@@ -191,6 +192,7 @@ flow are **read-only views**; the `.flow.json` stays the single source of truth.
 
 ## Cross-Links
 
+- [c3-009 — The Record's Freshness Check: How a Change Reaches a Drift Finding](../diagrams/c3-009-record-freshness-check-sequence.md) — the ordered sequence from a staged change through the record checker's pointer resolution and freshness comparison to the reported verdict and the durable `behind` mark, with the three verdict outcomes (checked-and-sound, nothing-examined, not-checked) drawn as distinct terminations.
 - [ADR-023 — Product-Truth Store as the Flow-First Upstream Layer](../adrs/ADR-023-product-truth-flow-first-upstream-layer.md) — the decision, and the reconciliation with ADR-010.
 - [ADR-043 — A Journey Known to Be Behind Carries a Durable `behind` Mark in the Record Itself](../adrs/ADR-043-journey-record-carries-its-own-behind-mark.md) — the `confirmed.against` identity contract and the durable `behind` mark this check's verdict feeds.
 - [ADR-010 — AC Store as Authoritative Backlog](../adrs/ADR-010-ac-store-as-authoritative-backlog.md) — the downstream backlog this store feeds.

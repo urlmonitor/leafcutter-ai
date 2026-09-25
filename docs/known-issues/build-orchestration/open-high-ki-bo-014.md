@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: '2026-08-18'
-last_updated: '2026-08-18'
+last_updated: '2026-09-25'
 components:
   - build_orchestration
 related_docs:
@@ -21,7 +21,32 @@ related_docs:
 > original grading is the `**Severity:**` line below, unchanged.
 
 - **Severity:** high
-- **Status:** **RESOLVED 2026-09-14 — verified behaviourally on both entry paths, with one
+- **Status:** **PARTIAL (open) — re-verified 2026-09-25.** Both named symptoms and the
+  root cause (two inline copies) are fixed on `main`; residuals (a) and (b) below are still
+  present, and a Windows-only residual (c) was found. Neither is tracked by another KI.
+  *2026-09-25 re-verification, on `main` at `d2fe85a1`.*
+  **Fixed:** `4711c9c7` (TKT-016, #759) and `88c6b58e` (TKT-017, #765) are on `main`. The
+  consolidation cited below as `8b2b899ae` does not exist in this repository: it was a branch
+  commit squashed into **`fb07b48d`** (#844, "split goal_to_epic.py into 14 modules").
+  **(a) still present:** `scripts/ac_store/epic_pipeline.py` `run()` (`:60`) calls
+  `_apply_epic_backrefs(..., warn_unrelativisable=True)` at `:146-150`, and
+  `build_epic_from_ids()` (`:175`) calls it with `warn_unrelativisable=False` at `:243-247`.
+  A probe of `epic_phases._relativise_backref_pair` with an underivable root and with an epic
+  path outside the root returned the same absolute value for both flag settings, but logged
+  2 WARNINGs with True and 0 with False.
+  **(b) still present:** `test_bo_2600a_5.py`'s only `run()` test is still
+  `test_ac_mode_preserved_backward_compatible` (a signature check).
+  **(c) new, Windows only:** `_relativise_backref_pair` (`epic_phases.py:165,171`) builds its
+  result with `str(Path(...).relative_to(root))`, so on Windows it records
+  `tickets\00_inbox\epics\...` with backslashes. `python -m pytest
+  unit_tests/ac_store/test_tkt_016_epic_backref_is_relative.py
+  unit_tests/ac_store/test_tkt_017_epic_depends_on_resolves.py
+  unit_tests/build_orchestration/test_bo_2600a_5.py -q` gave **1 failed, 9 passed** on
+  Windows. The failure is `test_bo_2600a_5.py::TestBuildEpicFromIds::test_implemented_by_written_repo_relative`,
+  which got `'tickets\\00_inbox\\epics\\EPIC-TestAcBo5d1\\01_TICKET-BO-5D1.md'` where it
+  expects the `tickets/` prefix. The helper is shared, so both entry paths are affected. The
+  "10/10 green" result below was presumably a POSIX run.
+  *Original 2026-09-14 status, kept as the historical record:* **RESOLVED 2026-09-14 — verified behaviourally on both entry paths, with one
   residual noted below.** Both symptoms were closed on `main` *before* this register's
   citations were retargeted: TKT-016 (`4711c9c79`) relativised the `implemented_by` pair in
   `run()`, TKT-017 (`88c6b58e8`) back-ported the `depends_on` translation to it. Each landed
@@ -57,7 +82,9 @@ related_docs:
 - **Occurrences:** 1
 - **First seen:** 2026-08-25 · **Last seen:** 2026-08-25
 - **Where:** `scripts/ac_store/epic_pipeline.py` — `run()` (`:60`), against
-  `build_epic_from_ids()` (`:175`); call sites at `:135` and `:237`
+  `build_epic_from_ids()` (`:175`). The `_apply_epic_backrefs` call sites are at `:146-150`
+  and `:243-247` (re-checked 2026-09-25). The helper is in `scripts/ac_store/epic_phases.py`
+  (`_relativise_backref_pair` `:118`, `_apply_epic_backrefs` `:185`).
 - **Reported by:** customer bug report 2026-08-25
 
 **This entry deliberately covers two symptoms under one root cause.** They present as

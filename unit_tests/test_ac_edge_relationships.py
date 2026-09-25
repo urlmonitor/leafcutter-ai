@@ -81,15 +81,10 @@ def ac_surface_tmp(tmp_path):
     )
     (acs_dir / "KM-EX-009.yaml").write_text(ac_009_content, encoding="utf-8")
 
-    paths_data = {
-        "surfaces": {
-            "acs": {
-                "path": "docs/acceptance-criteria/",
-                "edge_fields": ["implemented_by", "covered_by", "depends_on", "components"],
-                "_optional": True,
-            }
-        }
-    }
+    # KM-KGS-100d-4-iv: copy the real acs entry so this fixture can never
+    # drift from production's own file_path_fields declaration.
+    real_data = json.loads((_REPO_ROOT / "config" / "paths.json").read_text(encoding="utf-8"))
+    paths_data = {"surfaces": {"acs": real_data["surfaces"]["acs"]}}
     (config_dir / "paths.json").write_text(json.dumps(paths_data), encoding="utf-8")
 
     return tmp_path
@@ -255,6 +250,7 @@ class TestCollectAllAcsSurface:
 
     def test_ac1_implemented_by_edge_in_collect_all(self, ac_surface_tmp):
         # covers: UNKNOWN
+        # angle: criterion
         """AC-1 (KM-KGS-100a-3): _collect_all produces implemented_by edge from KM-EX-010 to scripts/foo.py."""
         project_root = ac_surface_tmp
         paths_json = project_root / "config" / "paths.json"
@@ -272,9 +268,11 @@ class TestCollectAllAcsSurface:
         assert "scripts/foo.py" in targets, (
             "implemented_by edge target must be 'scripts/foo.py' in _collect_all output"
         )
+        assert [n for n in nodes if n.id == "scripts/foo.py" and n.surface == "files"], nodes  # KM-KGS-100d-4-iv
 
     def test_ac2_covered_by_edge_in_collect_all(self, ac_surface_tmp):
         # covers: UNKNOWN
+        # angle: criterion
         """AC-2 (KM-KGS-100a-3): _collect_all produces covered_by edge from KM-EX-010 to unit_tests/test_foo.py."""
         project_root = ac_surface_tmp
         paths_json = project_root / "config" / "paths.json"
@@ -292,6 +290,7 @@ class TestCollectAllAcsSurface:
         assert "unit_tests/test_foo.py" in targets, (
             "covered_by edge target must be 'unit_tests/test_foo.py' in _collect_all output"
         )
+        assert [n for n in nodes if n.id == "unit_tests/test_foo.py" and n.surface == "files"], nodes  # KM-KGS-100d-4-iv
 
     def test_ac3_depends_on_edge_in_collect_all(self, ac_surface_tmp):
         # covers: UNKNOWN
@@ -360,6 +359,7 @@ class TestCollectAllAcsSurface:
 
     def test_all_four_edges_present_in_collect_all(self, ac_surface_tmp):
         # covers: UNKNOWN
+        # angle: criterion
         """AC (KM-KGS-100a-3): all four edge types are produced together by _collect_all."""
         project_root = ac_surface_tmp
         paths_json = project_root / "config" / "paths.json"
@@ -380,62 +380,44 @@ class TestCollectAllAcsSurface:
         assert "component_membership" in edge_types, (
             "component_membership edge type must be present in _collect_all output for KM-EX-010"
         )
+        files_ids = {n.id for n in nodes if n.surface == "files"}  # KM-KGS-100d-4-iv
+        assert {"scripts/foo.py", "unit_tests/test_foo.py"} <= files_ids, files_ids
 
 
 # ---------------------------------------------------------------------------
-# Regression: phantom-edge filtering must not drop implemented_by / covered_by
+# KM-KGS-100d-4-iv restatement: AC file edges end on files-surface nodes
 # ---------------------------------------------------------------------------
 
 
-class TestPhantomFilterDoesNotDropAcEdges:
-    """Phantom filter must not drop implemented_by / covered_by edges from acs surface.
+class TestAcFileEdgesEndOnFileNodes:
+    """implemented_by / covered_by file targets end on real files-surface
+    nodes. RENAMED from TestPhantomFilterDoesNotDropAcEdges (KM-KGS-100d-4-iv):
+    once the file_path_fields exemption retires (KM-KGS-100d-2), these edges
+    survive only by resolving to a files-surface node, not as a raw-string
+    leaf that merely "will NOT have corresponding nodes"."""
 
-    The _collect_all post-processing step filters edges where the target_id is not
-    in the node set. For implemented_by and covered_by, the targets are file paths
-    (e.g. 'scripts/foo.py') that will NOT have corresponding nodes. This test verifies
-    that these edges are NOT silently dropped — they must appear in final output.
-    """
-
-    def test_implemented_by_edge_not_phantom_filtered(self, ac_surface_tmp):
-        # covers: UNKNOWN
-        """implemented_by edges must survive phantom-edge filtering in _collect_all.
-
-        The target 'scripts/foo.py' is a file path, not a knowledge graph node.
-        The phantom filter (which drops edges whose target is not in the node set)
-        must not drop this edge — file-path targets for implemented_by and covered_by
-        are expected and must be preserved.
-        """
+    def test_implemented_by_edge_ends_on_files_node_under_acs_restriction(self, ac_surface_tmp):
+        # covers: KM-KGS-100d-4-iv
+        # angle: criterion
+        """implemented_by's file target must be a files-surface node."""
         project_root = ac_surface_tmp
         paths_json = project_root / "config" / "paths.json"
         nodes, edges = _collect_all(project_root, paths_json, surface_filter="acs")
 
-        impl_edges = [
-            e for e in edges
-            if e.edge_type == "implemented_by" and e.source_id == "KM-EX-010"
-        ]
-        assert len(impl_edges) >= 1, (
-            "implemented_by edges must NOT be phantom-filtered even when target "
-            "'scripts/foo.py' is a file path with no matching node. "
-            "The phantom filter must be adjusted to preserve implemented_by and covered_by edges."
-        )
+        impl_edges = [e for e in edges if e.edge_type == "implemented_by" and e.source_id == "KM-EX-010"]
+        assert len(impl_edges) >= 1 and impl_edges[0].target_id == "scripts/foo.py", impl_edges
+        target_nodes = [n for n in nodes if n.id == "scripts/foo.py"]
+        assert target_nodes and target_nodes[0].surface == "files", target_nodes
 
-    def test_covered_by_edge_not_phantom_filtered(self, ac_surface_tmp):
-        # covers: UNKNOWN
-        """covered_by edges must survive phantom-edge filtering in _collect_all.
-
-        The target 'unit_tests/test_foo.py' is a file path, not a knowledge graph node.
-        The phantom filter must not drop this edge.
-        """
+    def test_covered_by_edge_ends_on_files_node_under_acs_restriction(self, ac_surface_tmp):
+        # covers: KM-KGS-100d-4-iv
+        # angle: criterion
+        """covered_by's file target must be a files-surface node."""
         project_root = ac_surface_tmp
         paths_json = project_root / "config" / "paths.json"
         nodes, edges = _collect_all(project_root, paths_json, surface_filter="acs")
 
-        cov_edges = [
-            e for e in edges
-            if e.edge_type == "covered_by" and e.source_id == "KM-EX-010"
-        ]
-        assert len(cov_edges) >= 1, (
-            "covered_by edges must NOT be phantom-filtered even when target "
-            "'unit_tests/test_foo.py' is a file path with no matching node. "
-            "The phantom filter must be adjusted to preserve covered_by edges."
-        )
+        cov_edges = [e for e in edges if e.edge_type == "covered_by" and e.source_id == "KM-EX-010"]
+        assert len(cov_edges) >= 1 and cov_edges[0].target_id == "unit_tests/test_foo.py", cov_edges
+        target_nodes = [n for n in nodes if n.id == "unit_tests/test_foo.py"]
+        assert target_nodes and target_nodes[0].surface == "files", target_nodes
