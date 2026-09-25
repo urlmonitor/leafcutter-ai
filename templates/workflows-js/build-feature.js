@@ -334,7 +334,7 @@ const PHASE_RESULT_SCHEMA = {
   // JSON-Schema `if`/`then` conditionals is unverified from this repo — see
   // this ticket's completion report.
   if: {
-    properties: { status: { const: "handoff" } },
+    required: ["status"], properties: { status: { const: "handoff" } },
   },
   then: {
     required: ["handoff_target"],

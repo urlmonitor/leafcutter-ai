@@ -144,7 +144,7 @@ const PHASE_RESULT_SCHEMA = {
   //
   // TWIN: mirrors build-feature.js PHASE_RESULT_SCHEMA. Keep in sync.
   if: {
-    properties: { status: { const: 'handoff' } },
+    required: ['status'], properties: { status: { const: 'handoff' } },
   },
   then: {
     required: ['handoff_target'],
