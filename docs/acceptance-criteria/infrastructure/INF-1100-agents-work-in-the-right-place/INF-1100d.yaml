@@ -1,0 +1,78 @@
+id: INF-1100d
+components:
+  - infrastructure
+  - testing_quality
+title: "Agents test against your project's database, never one built in from someone else's"
+component: infrastructure
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Tests connect where your settings say, and a missing setting is said out loud.
+
+  Nothing leafcutter installs carries a ready-made database address; every agent
+  and guide that needs one takes it from your project's own configuration. When
+  none is configured, you are told it is missing, instead of the work quietly
+  pointing at an address that belongs to some other project.
+depends_on:
+  - INF-1100
+doc_links:
+  - path: docs/analysis/2026-09-25-test-writers-prove-failure-not-discrimination.md
+    relationship: describes
+    status: exists
+    relevance: "Incident 7 and remedy item 8: a portable template ships one adopter's local database address, so every other install inherits it."
+  - path: docs/reference/skills-config-fields.md
+    relationship: relates-to
+    status: exists
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: product-owner
+created: 2026-09-25
+amended_by:
+  - reason: "Authored by product-owner from BrainCandy's /plan-feature request 'Tests must prove they can tell right from wrong' (request item 8, re-homed from TQ-500 per user decision Q3)."
+superseded_by: null
+covered_by:
+  - INF-1100d-1
+  - INF-1100d-2
+  - INF-1100d-3
+  - INF-1100d-4
+  - INF-1100d-5
+implemented_by: []
+change_target:
+  - prompt
+  - config
+  - docs
+risk_surface: safety
+documentation_triggers:
+  - reference-doc
+notes: |
+  ORIGIN. Request item 8 from the discrimination initiative (TQ-500f/g). User
+  decision Q3: the adopter address postgresql://trader:trader@localhost:5403/LIVE
+  is removed from ALL shipped defaults and templates — seven source places found
+  by the PO, including the default for testing_context.db_connection_test in the
+  shipped skills-config default, the test-writer and test-runner agent templates,
+  the test workflow, the skills-config schema, the skills-config field reference,
+  and the testing README (generated copies follow from the build). A missing
+  connection is reported, never guessed. Phase A: decompose in this pass.
+
+  WHY HERE AND NOT UNDER TQ-500. This is portability, not test discrimination.
+  INF-1100 ("Agents always do their work where your project keeps it") already
+  owns "your configuration, not a hard-coded guess, decides where agents work";
+  the database a project tests against is one more such place. Searched first:
+  BP-900 (installed capabilities work) is at 8 L1s under an override and is about
+  missing scripts; BP-1500 is about what a build writes; neither fits better.
+
+  DELIBERATE CONTRAST WITH INF-1100a. INF-1100a-1-i lets a missing test folder
+  fall back to a documented default — a harmless default. For a database address
+  there is NO safe default: a guessed address can point tests at a real database
+  (the shipped one is named LIVE). So this L1 has no fallback; absence is
+  reported. The BA must not copy INF-1100a's fallback pattern here.
+
+  FOR IT-PO: the shipped value also embeds a username and password; consider
+  whether the risk surface should be raised beyond contract_boundary.

@@ -1,0 +1,109 @@
+id: INF-1100d-1-i
+components:
+  - infrastructure
+  - testing_quality
+title: "Upgrading keeps a project's own database setting and never writes a shipped default back"
+component: infrastructure
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given two projects on a leafcutter version that still shipped the address —
+      project A, whose own settings set db_connection_test to
+        postgresql://app:app@db.internal:5432/app_test,
+      project B, whose own settings never mention db_connection_test and
+        which until now received the shipped address as a default,
+  When both are upgraded to the version that ships no address,
+  Then project A's setting is unchanged, character for character — the
+      upgrade removes and rewrites nothing the project set,
+    And project B's resolved setting is unset after the upgrade; nothing from the shipped
+      defaults is added to its settings, and the old shipped address does
+      not reappear from a leftover default, a merged defaults file, or a
+      cached copy of the previous settings,
+    And when project B next needs a database test, it gets the ordinary
+      "not configured" report (INF-1100d-3), not a connection attempt.
+depends_on:
+  - INF-1100d-1
+  - INF-1100d-3-i
+doc_links:
+  - path: config/skills_config.default.json
+    relationship: describes
+    status: exists
+  - path: docs/reference/skills-config-fields.md
+    relationship: relates-to
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: INF-1100d-1
+  contract: "Resolved settings carry no shipped database address."
+it_requirements:
+  - The upgrade path never writes this setting into a project's own settings file. Project A's
+    skills_config.json is byte-identical after the upgrade's settings steps run.
+  - Nothing from the shipped defaults is written into project B's settings file, and B's resolved
+    value is unset afterwards.
+  - No stale-default detection, fingerprint or warning (user decision NQ1). Legacy adopters
+    migrate by hand.
+  - 'Exercise the upgrade''s settings-touching steps in-process: build.py''s skills-config migration
+    step, then config resolution. Tests must not spawn scripts/build.py (CLAUDE.md ''Tests must
+    not spawn their own build.py''). Until TQ-600a''s shared session layout lands, exercise
+    the in-process steps and source roots instead.'
+test_spec:
+  - name: test_upgrade_leaves_project_owned_db_setting_byte_identical
+    target_dir: unit_tests/portability/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: Project A's skills_config.json (db_connection_test = postgresql://app:app@db.internal:5432/app_test)
+      has the same bytes before and after the upgrade's settings steps, and resolves to the
+      same value.
+  - name: test_upgrade_leaves_project_without_setting_unset
+    target_dir: unit_tests/portability/
+    framework: pytest
+    type: integration
+    angle: reachability
+    surface_invoked: build.py's skills-config migration step followed by scripts/config_loader.py
+      load_config, called in-process as an upgrade runs them (no build.py spawn)
+    description: Project B, which never set db_connection_test, has an unchanged settings file
+      after the upgrade and resolves the setting as unset.
+  - name: test_project_b_db_check_reports_not_configured_after_upgrade
+    target_dir: unit_tests/portability/
+    framework: pytest
+    type: integration
+    angle: seam
+    description: After the upgrade, INF-1100d-3-i's test-database checker, run for project B,
+      reports 'not configured' naming testing_context.db_connection_test and makes no connection
+      attempt.
+test_rationale: Project A is the control against an upgrade that 'cleans up' settings. The
+  seam test proves the downstream consumer sees 'unset', not merely that a dict lacks a key.
+  The full-build variant is deferred to TQ-600a's shared layout because spawning build.py
+  is prohibited.
+origin_agent: business-analyst
+created: 2026-09-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: config
+risk_surface: safety
+notes: |
+  USER DECISION AT THE BA GATE (NQ1, reversing the earlier Q4 answer): there is
+  NO stale-default detection — no warning, no exact-match comparison, no
+  fingerprint. The shipped address is a legacy of one adopter (bybit-trader),
+  which will be migrated by hand; that migration is out of scope here. Future
+  projects never receive the address, so nothing on the upgrade path needs to
+  recognise it.
+
+  Project A is the control: an upgrade that "cleans up" settings would pass
+  project B and destroy a project's own configuration.
+
+  IT-PO ENRICHMENT (2026-09-25)
+  The seam test needs INF-1100d-3-i's checker, which is not in depends_on. Build INF-1100d-3-i
+  first, or recommend the BA add it to depends_on.
+  INTENDED must_catch: "migration step rewrites the settings file with defaults merged in" -> the A test
+  goes red; "defaults still carry the address" -> the B test goes red.

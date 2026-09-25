@@ -1,0 +1,195 @@
+id: TQ-500f-3-ii
+components:
+  - testing_quality
+  - build_orchestration
+title: "The /build-feature path runs the same red-baseline reader the fast lane uses, and does not take the test writer's word for it"
+component: testing-quality
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given two tickets driven through /build-feature, each with a newly added
+    test covering the same requirement, whose test requirements entry
+    carries must_catch: ["revert the fix"],
+      K1: the test writer's sign-off reports its red baseline as red, and the
+          test's only failure is
+          "ImportError: cannot import name 'refresh_config_v2'",
+      K2: the test writer's sign-off reports red, and the test fails with
+          "AssertionError: expected 1 refresh call, got 3",
+    and a third ticket K3 that has no source requirement (no source_ac),
+  When the ticket reaches the step between the test writer and the coder,
+  Then the /build-feature path runs the same red-baseline reader the fast
+      lane runs, over the same inputs (the requirement ids and the test
+      root), before the coder is dispatched,
+    And K1 does not reach the coder: the drive stops that ticket with the
+      reader's report naming the test and the absence-only red, even though
+      the test writer's own sign-off said red,
+    And K2 reaches the coder as it does today,
+    And for K1 and K2, which have a source requirement, the full shared reader
+      applies, including every halt reason it already has in the fast lane
+      (for example no newly added test tagged as covering the requirement),
+    And K3 records "red-baseline reader not applicable: no source requirement"
+      and continues to the coder; it is never recorded as verified,
+    And for the same tests and run outcomes, the /build-feature verdict and the
+      fast-lane verdict are identical.
+depends_on:
+  - TQ-500f-3
+  - TQ-500f-3-i
+doc_links:
+  - path: docs/how-to/fast-lane-build.md
+    relationship: describes
+    status: exists
+    relevance: "Step 3 — verify_red_baseline: its inputs, its pass condition and its halt reasons, which the heavy lane must reuse unchanged."
+  - path: scripts/build_orchestration/fast_lane.py
+    relationship: describes
+    status: exists
+    relevance: "The verify_red_baseline subcommand the heavy lane must invoke, rather than a copy of it."
+  - path: scripts/build_orchestration/_fl_red_baseline_support.py
+    relationship: describes
+    status: exists
+  - path: templates/agents/test-writer.md
+    relationship: relates-to
+    status: exists
+    relevance: "Today's heavy-lane evidence: the red_baseline block in the test writer's own sign-off comment."
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from:
+  ac_id: TQ-500f-3-i
+  contract: "The one red-baseline reader, carrying the absence-only rule, callable with requirement ids and a test root."
+it_requirements:
+  - 'Wire the call into /build-feature''s per-ticket phase driver in templates/workflows-js/build-feature.js
+    AND its declared twin templates/workflows-js/build-ticket.js (see the TWIN rule in the build-feature.js
+    header): after the test-writer phase and before the first coder dispatch, never after commit.'
+  - 'Invoke the same CLI the fast lane invokes (fast_lane.py verify_red_baseline) with the same
+    inputs: the ticket''s source_ac id(s), the ticket worktree as test root, and the AC store
+    root if TQ-500f-3-i adds one. Build the command with one shared constructor or template
+    string so the two lanes cannot drift.'
+  - The workflow must consume the reader's JSON verdict in control flow. gate_passed false halts
+    the ticket with the reader's report, which names the test and the absence-only red, and
+    dispatches no coder. The test writer's red_baseline_verified or sign-off claim is never
+    a substitute.
+  - 'Tickets WITH source_ac get the full shared reader, including every existing halt reason
+    (e.g. no_new_covering_tests), exactly as in the fast lane (user decision; the regression
+    risk is accepted). Tickets WITHOUT source_ac record the exact outcome ''red-baseline reader
+    not applicable: no source requirement'' in the drive''s recorded outcome and continue to
+    the coder. They are never recorded as verified, and red_baseline_verified from the writer
+    is not promoted to verified.'
+  - 'Resume safety: a resumed ticket whose test-writer phase is already signed_off re-runs the
+    reader before the coder rather than trusting the earlier sign-off.'
+  - 'Respect the E2 leaf invariant and ADR-006: no workflow() call from inside the workflow.
+    Run the gate with a depth-1 executor agent, the same pattern fast-lane-ship.js uses.'
+  - Edit only the templates/workflows-js/ sources. Deployed mirrors regenerate through build.py.
+  - 'Out of scope, recorded as a gap: /build-epic dispatches ticket-supervisor (building-epics
+    skill, prompt text), which this AC does not wire. That needs its own llm-expert AC.'
+test_spec:
+  - name: test_build_feature_runs_red_baseline_reader_between_test_writer_and_coder
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: integration
+    angle: reachability
+    surface_invoked: templates/workflows-js/build-feature.js driven under unit_tests/_workflow_engine_harness.py
+      (single-ticket target)
+    description: The recorded dispatch sequence has a verify_red_baseline execution after the
+      test-writer phase and before any python-coder dispatch, carrying the ticket's source_ac
+      and worktree.
+  - name: test_build_feature_halts_k1_before_coder_despite_writer_claiming_red
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: 'K1: the test writer returns red_baseline_verified true, and the gate executor
+      returns gate_passed false with an absence refusal. No coder is dispatched, and the halt
+      payload names the test and the absence-only red (must_block). K2: gate_passed true, and
+      the coder is dispatched as today.'
+  - name: test_heavy_and_fast_lane_invocations_yield_identical_verdict
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: integration
+    angle: seam
+    description: The gate commands recorded from build-feature.js and fast-lane-ship.js, executed
+      for real against the same fixture repo and AC store (K1 and K2), produce identical JSON
+      verdicts.
+  - name: test_build_ticket_twin_gates_coder_identically
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: integration
+    angle: deployed
+    description: build-ticket.js, driven under the same harness with the K1/K2 responses, halts
+      K1 before the coder and dispatches the coder for K2, so the twin cannot drift from build-feature.js.
+  - name: test_build_feature_records_reader_not_applicable_for_ticket_without_source_ac
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: integration
+    angle: failure
+    description: 'K3 (no source_ac): no verify_red_baseline execution is dispatched, the drive
+      records ''red-baseline reader not applicable: no source requirement'', the coder is dispatched,
+      and no recorded field marks the red baseline verified.'
+test_rationale: 'A workflow gate is only proven by driving the workflow and asserting that
+  its verdict is consumed in control flow (coder dispatched or not). A grep of the workflow
+  source for the script name is forbidden by CLAUDE.md. The seam test executes the recorded
+  commands for real, so ''same reader, same inputs'' is proven rather than asserted. The twin
+  test uses the deployed angle''s slot: build-ticket.js is the second production surface the
+  same change ships to.'
+origin_agent: business-analyst
+created: 2026-09-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - pipeline
+  - code
+risk_surface: contract_boundary
+notes: |
+  USER DIRECTION AT THE BA GATE (Q3): the fast lane and /build-feature must use
+  the SAME existing scripts rather than reinvent them.
+
+  WHAT HAPPENS IN THE HEAVY LANE TODAY (per the user's gate answer; the BA did
+  not read the source to confirm): /build-feature has no mechanical red-baseline
+  reader. The only evidence is the test writer's own statement, the red_baseline
+  block in its sign-off comment. The record shows only that such a block exists
+  (red_baseline_captured). Nothing re-runs the tests or classifies the red
+  before the coder is dispatched. K1 is the case that statement cannot catch.
+
+  WHY THIS IS SEPARATE FROM TQ-500f-3-i. That AC owns the rule inside the
+  reader. This one owns wiring the reader into the heavy lane's phase sequence
+  (ticket-supervisor / the build workflow). Either can ship and fail on its own.
+
+  FOR IT-PO: the wiring surface is the /build-feature workflow and
+  ticket-supervisor path, not the test-writer prompt. Place the call so a
+  failure halts before the coder, matching the fast lane. Do not put it after
+  commit: test-angles.md records gates that run after commit as a known process
+  failure. Covering tests must drive the workflow under the workflow-engine
+  harness and assert on the recorded dispatches. A grep of the workflow source
+  for the script name is not acceptable (CLAUDE.md "Verify Behaviorally, Not by
+  Grep").
+
+  IT-PO ENRICHMENT (2026-09-25)
+  WIRING SURFACE CONFIRMED FROM ARCHITECTURE (ADR-006, build-feature.js header): /build-feature
+  does not dispatch ticket-supervisor. Its per-ticket driver is inlined JS (driveTicketPhases)
+  and twinned in build-ticket.js, so this is a pure workflow-JS change -> python-coder. The
+  ticket-supervisor path (/build-epic, building-epics skill) is NOT covered. Recommend a
+  follow-up llm-expert AC.
+  INTENDED must_catch: "gate placed after the coder" / "gate dispatched but verdict ignored" /
+  "trusts red_baseline_verified" -> the K1 test goes red; "build-ticket.js twin not updated" -> the twin
+  test goes red; "heavy lane passes different ids or omits the AC root" -> the seam test goes red.
+  REGRESSION RISK: the heavy lane now inherits every existing verify_red_baseline halt reason
+  (e.g. no_new_covering_tests when heavy-lane tests lack a '# covers: <source_ac>' tag). That
+  follows from "verdicts identical", but it may block tickets that pass today. See open question.
+
+  USER DECISION AT THE IT-PO GATE: tickets WITH source_ac get the full shared
+  reader, including its existing halt reasons. The regression risk above is
+  accepted: a heavy-lane ticket that lacks covers-tagged tests now halts as it
+  would in the fast lane. Tickets WITHOUT source_ac record "red-baseline reader
+  not applicable" and continue. K3 in the criteria. IT-PO: add a K3 case to
+  test_spec (the outcome is recorded, the coder is dispatched, and nothing
+  says it was verified).
+
+  IT-PO PASS 2 (2026-09-25): K3 case added (failure angle). The it_requirement for tickets
+  without source_ac now states the decided outcome. Added must_catch: "run the reader for K3 and halt on
+  no_new_covering_tests" / "record K3 as verified" -> the K3 test goes red.

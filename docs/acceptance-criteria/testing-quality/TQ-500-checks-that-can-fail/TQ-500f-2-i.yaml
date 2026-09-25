@@ -1,0 +1,112 @@
+id: TQ-500f-2-i
+components:
+  - testing_quality
+  - ac_store
+title: "An empty or malformed wrong-versions list is refused, and the fallback route never invents one"
+component: testing-quality
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given five requirements, each with one test plan entry named
+    test_gate_blocks_on_missing_input, differing only in must_catch:
+      A: must_catch: []
+      B: must_catch: ["revert the fix", ""]
+      C: must_catch: ["   "]
+      D: must_catch: "revert the fix"      (a single string, not a list)
+      E: must_catch: ["revert the fix"]
+    and a sixth requirement F with no test plan at all, whose test
+    requirements come from the criteria-derived fallback,
+  When the requirement store's validator checks A to E,
+    And work is generated from E and from F,
+  Then A, B, C and D are each rejected with a message naming the test entry
+      and the field "must_catch", and saying which rule failed (empty list,
+      blank entry, or not a list),
+    And E is accepted, and its generated test requirements carry
+      must_catch: ["revert the fix"],
+    And the test requirements generated from F carry no must_catch on any
+      entry — the fallback route never fabricates a wrong version.
+depends_on:
+  - TQ-500f-2
+doc_links:
+  - path: config/ac_store_schema.json
+    relationship: describes
+    status: exists
+  - path: config/test_requirements.schema.json
+    relationship: describes
+    status: exists
+  - path: docs/reference/ac-schema.md
+    relationship: relates-to
+    status: exists
+    relevance: "Precedent: an empty test_spec list is not permitted (absence and 'nothing' are different statements) — the same reasoning applies to an empty must_catch."
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: TQ-500f-2
+  contract: "must_catch accepted on test_spec items and carried verbatim to generated test requirements."
+it_requirements:
+  - 'Each rejection must name the test_spec entry (by name), the field ''must_catch'', and the
+    rule that failed: empty list, blank entry (empty or whitespace-only string), or not a list.
+    A raw JSON-schema error dump that does not say which rule failed does not satisfy this.'
+  - Whitespace-only strings count as blank (case C). A length-only rule is not enough.
+  - The same constraints hold on the generated-work side (config/test_requirements.schema.json),
+    so a hand-edited ticket cannot carry an empty or blank list either.
+  - The criteria-derived fallback route (taken when an AC has no test_spec) must never emit
+    must_catch. Wrong versions are never inferred from criteria text (TQ-500 non-goal).
+  - 'IT-PO concurs with the BA assumption: an empty list is rejected, because absence already
+    means ''none named''.'
+test_spec:
+  - name: test_validator_cli_rejects_empty_blank_and_scalar_must_catch
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: integration
+    angle: reachability
+    surface_invoked: scripts/ac_store/validate_ac_schema.py CLI (the check-ac-schema commit
+      gate)
+    description: The validator CLI rejects A ([]), B (blank entry), C (whitespace-only) and
+      D (scalar string), each non-zero with a message naming test_gate_blocks_on_missing_input,
+      'must_catch' and the failed rule (must_block).
+  - name: test_single_item_must_catch_is_accepted_and_carried_to_ticket
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: 'E is accepted, and the ticket generated from it carries must_catch: [''revert
+      the fix''] (the adversarial control against a validator that rejects every must_catch).'
+  - name: test_criteria_fallback_ticket_never_carries_must_catch
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: integration
+    angle: failure
+    description: The ticket generated from F (no test_spec, criteria-derived fallback route)
+      has no must_catch key on any Test Requirements entry.
+test_rationale: Validator edge cases are only meaningful through the gate that runs at commit
+  time. E is the control and F covers the fallback path, which must fail safe by inventing
+  nothing.
+origin_agent: business-analyst
+created: 2026-09-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  ASSUMPTION (not a user decision): an empty must_catch list is rejected rather
+  than treated as "none named". Absence already means "none named"; an empty
+  list would be a second spelling of the same thing, and a list that looks
+  present but names nothing is exactly the kind of vacuous record this tree
+  exists to remove. IT-PO may overturn with a reason.
+
+  E is the adversarial control: without it, a validator that rejects every
+  must_catch passes A-D.
+
+  IT-PO ENRICHMENT (2026-09-25)
+  INTENDED must_catch: "minLength 1 without a non-whitespace rule" -> C is accepted, test red;
+  "reject any must_catch" -> E is rejected, test red; "fallback copies criteria phrases into
+  must_catch" -> the F test goes red.

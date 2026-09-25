@@ -1,0 +1,116 @@
+id: TQ-500f-3
+components:
+  - testing_quality
+  - build_orchestration
+title: "Failing because the code was missing is recorded as just that, and never proves a test guards code that already exists"
+component: testing-quality
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given the test writer writes two tests for one piece of work, before any
+    code for it exists —
+      test A, for a new function summarise_window() that does not exist yet,
+      test B, a regression test for the existing function refresh_config(),
+        whose bug (it retries on every call during a database outage) the
+        work fixes,
+  When the writer runs both tests and records its red baseline,
+  Then each red baseline entry states which kind of red it is:
+      absence — the named thing could not be imported or found, so no code
+        under test ran; or
+      assertion — the code under test ran and produced the wrong result,
+    And test A's absence red is accepted as evidence that summarise_window()
+      does not exist yet, and as nothing more,
+    And test B counts as red only if its red is assertion-shaped — it reached
+      the existing refresh_config() and observed the retry-on-every-call
+      result; an absence red for test B (for example a failed import of a
+      helper name the writer invented) is not accepted, and the writer rewrites
+      test B to reach the existing code before handing on,
+    And when any test passes before the work is done because it asserts too
+      little, the writer's remedy is a stronger assertion; adding a comment is
+      never given as a way to make a passing test fail.
+depends_on:
+  - TQ-500f
+doc_links:
+  - path: templates/agents/test-writer.md
+    relationship: describes
+    status: exists
+    relevance: "Step 2g (ImportError / AttributeError / AssertionError listed as equally valid reds), Step 4 outcome table (zero-exit row: 'Add a stronger assertion or a TODO comment'), and the red_baseline entry format (test_name, file, error, note) that gains the kind of red."
+  - path: docs/analysis/2026-09-25-test-writers-prove-failure-not-discrimination.md
+    relationship: describes
+    status: exists
+    relevance: "Remedy item 4 and 'Why the red baseline is not enough', points 1 and 2."
+  - path: docs/acceptance-criteria/testing-quality/TQ-500-checks-that-can-fail/TQ-500d-1.yaml
+    relationship: relates-to
+    status: exists
+    relevance: "Edits the same zero-exit row for work whose tests are correct on arrival. The two must not contradict each other."
+assigned_agent: llm-expert
+estimated_complexity: S
+delivers_to:
+  - agent: python-coder
+    ac_id: TQ-500f-3-i
+    contract: 'Shared DEFINITIONS of ''absence'' and ''assertion'' red. The mechanical reader
+      derives the kind of red from the test run''s own output. It never reads the writer''s
+      self-reported kind as input: the writer''s label informs the writer''s own conduct and
+      its hand-off, and is not evidence the reader trusts (see TQ-500f-3-ii: ''does not take
+      the test writer''s word for it'').'
+expects_from: null
+it_requirements:
+  - Edit templates/agents/test-writer.md (source) only. The machine-extracted TAUGHT-TEST-ANGLES
+    block belongs to TQ-500f-1 and must not be reshaped here.
+  - 'Each red_baseline entry gains a kind of red with exactly two values, ''absence'' and ''assertion''.
+    The definitions must match the mechanical reader''s classification in TQ-500f-3-i: absence
+    means the import or lookup of the named thing failed before any code under test ran; assertion
+    means the code under test ran and produced the wrong result.'
+  - 'Step 2g''s list of equally valid reds (ImportError / AttributeError / AssertionError) must
+    be qualified. An absence red is valid evidence only for a test whose Test Requirements entry
+    declares no must_catch and no angle: discrimination.'
+  - 'Step 4''s zero-exit row: replace ''or a TODO comment'' with ''a stronger assertion'' for
+    the under-asserting cause only. TQ-500d-1''s reading of the same row (tests correct on arrival
+    owe substitute evidence) stays intact: one row, both readings.'
+test_required: false
+test_rationale: 'Prompt-only: the deliverable is the test writer''s instruction text. The
+  falsifiable half (absence-only red is refused for a test that declares wrong versions to
+  catch) is enforced mechanically by the red-baseline reader in TQ-500f-3-i, which classifies
+  the kind of red from the run itself, and is wired into /build-feature by TQ-500f-3-ii. Neither
+  trusts the writer''s label. The writer''s conduct (rewriting test B to reach refresh_config(),
+  preferring a stronger assertion over a comment) cannot be unit-tested without a template-text
+  search, which CLAUDE.md forbids. Substitutes: pr-reviewer against the Then clauses, plus
+  a recommended test-writer eval row (test A new summarise_window / test B regression of existing
+  refresh_config) once a test-writer eval set exists (follow-up AC).'
+origin_agent: business-analyst
+created: 2026-09-25
+amended_by: []
+superseded_by: null
+covered_by:
+  - TQ-500f-3-i
+  - TQ-500f-3-ii
+implemented_by: []
+change_target: prompt
+risk_surface: contract_boundary
+notes: |
+  REQUEST ITEM 4. The red baseline is a mutation test with one mutant ("the code
+  is absent"); an import error satisfies it for any new name regardless of what
+  the test asserts. For a regression test of EXISTING code that is not evidence
+  at all — the existing code was never reached.
+
+  COORDINATION WITH TQ-500d-1. TQ-500d-1 changes the same zero-exit row for work
+  whose tests are correct from the moment they are written (a pass on arrival is
+  expected there, and the substitute answer is owed). This AC's last clause
+  governs only the other cause of a pass on arrival: a test that asserts too
+  little. The implementer must keep both readings in the one row; a row that
+  says "always strengthen until red" reopens the exit TQ-500d-1 closes.
+
+  MOSTLY PROMPT. The writer's conduct is instruction text. The one observable,
+  mechanically checkable part — the kind of red on each red baseline entry — is
+  delivered to TQ-500f-3-i, which carries the falsifiable test contract.
+
+  IT-PO ENRICHMENT (2026-09-25)
+  CONTRACT CORRECTED. The BA's delivers_to said the reader consumes a machine-readable kind
+  written by the writer. That contradicts TQ-500f-3-i ("uses only what the test requirements
+  declare and the outcome of the run") and TQ-500f-3-ii ("does not take the test writer's word
+  for it"). The reader classifies from the run; this AC delivers only the shared definitions.
