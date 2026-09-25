@@ -73,7 +73,19 @@ ARCHITECTURE: Subprocess-invoking utility.  Scans the test tree for covers tags
             │       └── _classify_ts_outcomes(ts_linked, vitest_results)
             └── [failing] _build_failure_reason(ac_id, py_failing, ts_failing, ...)
             │       └── _describe_non_passing(nodeid, pytest_results)
-            └── [success] _apply_reachability_gate(...)
+            └── [success] _apply_reachability_gate(
+                    _apply_entry_point_reachability_gate(success_verdict, ...), ...)
+                    (BO-2900a-1: mechanical auto-detected-main gate, evaluated
+                    BEFORE the a-3 no-entry-point-anywhere gate it wraps)
+                    └── _detect_module_entry_point(test_file, project_root,
+                    │       test_root) -- AST-only, checks test_file itself
+                    │       THEN each module it imports (resolved via
+                    │       _local_import_module_names/_resolve_candidate_unit,
+                    │       the same resolution the a-3 gate uses) -- never
+                    │       filename/docstring/if-__main__-text
+                    └── _observe_reachability(...) -- execution-derived,
+                            never source-text (consumes the same observer
+                            _check_reachability_for_linked_tests already uses)
 
     run_vitest_and_parse's body is likewise orchestration-only (BP-100n-4):
         run_vitest_and_parse(test_files, *, project_dir) -> dict[str, str]
@@ -128,6 +140,27 @@ ARCHITECTURE: Subprocess-invoking utility.  Scans the test tree for covers tags
     same reason as the first: an in-place addition of the BO-2500a-1-ii
     conjunction logic pushed this file back over the file-size ratchet a
     second time.
+
+    Third addition (BO-2900a-1): ``_module_defines_main``,
+    ``_detect_module_entry_point``, and ``_apply_entry_point_reachability_gate``
+    -- the MECHANICAL, auto-detected entry-point gate the 2026-09-07
+    ``reachability_spec`` addendum below explicitly scoped out -- are
+    DEFINED in a DEDICATED third sibling module, _done_proof_entry_point_gate.py
+    (imported at this module's top level, same seam as the block above),
+    rather than in _done_proof_phase_helpers.py: placing them there first
+    pushed that file's own content length over its 400-line absolute cap
+    (its length was under the cap at HEAD, so the growth-while-oversized
+    ratchet did not shield it). This file's own length is unchanged (the
+    new import line replaces one line removed from the block above).
+    ``_detect_module_entry_point`` checks *test_file* itself for a
+    module-level ``main`` AND each module *test_file* imports (resolved via
+    ``_local_import_module_names``/``_resolve_candidate_unit``, the same
+    resolution the sibling BO-2900a-3 gate uses below) -- so a linked test
+    that direct-imports a SEPARATE implementation module (e.g.
+    ``fast_lane.main``) is covered, not only the single-file fixture case.
+    Consumes the same execution-derived observer (``_observe_reachability``,
+    defined in THIS file) the a-1-i opt-in gate already uses -- never a new,
+    second reachability mechanism, and never a source-text signal.
 """
 
 from __future__ import annotations
@@ -160,14 +193,14 @@ from _done_proof_phase_helpers import (
     _build_vitest_command,
     _ensure_vitest_binary,
     _execute_vitest,
-    _handle_no_direct_tests,
-    _maybe_reachability_verdict,
+    _handle_no_direct_tests, _maybe_reachability_verdict,
     _parse_vitest_stdout,
     _run_python_test_phase,
     _run_ts_test_phase,
     _split_linked_tests_by_language,
     is_covers_tag_waived,  # noqa: F401  # BP-100n-4-ii-ii: re-exported, see module docstring
 )
+from _done_proof_entry_point_gate import _apply_entry_point_reachability_gate  # BO-2900a-1
 
 # ---------------------------------------------------------------------------
 # BO-2900d-1: shared reachability-exemption seam import.
@@ -1946,27 +1979,41 @@ def _apply_reachability_gate(
 ) -> dict:
     """Apply the BO-2900d-1 reachability gate to an otherwise-eligible verdict.
 
-    Only called when *verdict* is already ``eligible: True`` (leaf path, all
-    linked tests passing). Finds the first linked unit with no runtime way
-    in of its own (see :func:`_find_no_entry_point_unit`); when none exists,
-    returns *verdict* unchanged. When one exists, checks the shared
+    Intended to run only when *verdict* is already ``eligible: True`` (leaf
+    path, all linked tests passing) — an EARLIER gate in the same
+    composition (BO-2900a-1's ``_apply_entry_point_reachability_gate``) may
+    already have refused the verdict for its OWN, distinct
+    ``refusal_cause`` before this function ever runs. This function must
+    not overwrite that refusal with its own, different "no way in" verdict
+    for the same unit (BO-2900e-1 requires two disjoint refusal_cause
+    values, never one merged verdict), so an already-ineligible *verdict*
+    is returned unchanged, restoring this function's documented
+    precondition mechanically rather than by convention alone. When
+    *verdict* is eligible, finds the first linked unit with no runtime way
+    in of its own (see :func:`_find_no_entry_point_unit`); when none
+    exists, returns *verdict* unchanged. When one exists, checks the shared
     reachability-exemption seam (BO-2900d-1): a recorded, reasoned exemption
     for that exact unit releases the refusal and is announced on the
     returned verdict (never silently absorbed); the absence of one refuses
     the criterion with ``refusal_cause: "no_entry_point_reaches_code"``.
 
     Args:
-        verdict: The eligibility verdict computed so far (``eligible: True``).
+        verdict: The eligibility verdict computed so far. May already be
+            ``eligible: False`` (an earlier gate's refusal, passed through
+            unchanged) or ``eligible: True`` (the case this gate evaluates).
         ac_id: The AC identifier being evaluated (for the refusal message).
         linked_tests: The AC's Python covers-tagged linked tests.
         ac_root: Root directory of the AC YAML store.
         test_root: Root directory of the test tree.
 
     Returns:
-        *verdict* unchanged when no no-way-in unit is found or the unit is
-        exempted (with exemption details attached); an ``eligible: False``
-        verdict carrying ``refusal_cause`` and ``unit`` otherwise.
+        *verdict* unchanged when it arrived already ineligible, when no
+        no-way-in unit is found, or when the unit is exempted (with
+        exemption details attached); an ``eligible: False`` verdict
+        carrying ``refusal_cause`` and ``unit`` otherwise.
     """
+    if not verdict.get("eligible"):
+        return verdict
     project_root = _infer_project_root(ac_root, test_root)
     unit = _find_no_entry_point_unit(linked_tests, project_root, test_root)
     if unit is None:
@@ -1985,8 +2032,7 @@ def _apply_reachability_gate(
     except ImportError as exc:
         print(
             f"WARNING: done_proof: reachability-exemption seam unavailable, "
-            f"treating {unit} as unexempted: {exc}",
-            file=sys.stderr,
+            f"treating {unit} as unexempted: {exc}", file=sys.stderr,
         )
     else:
         registry_path = project_root / "config" / "reachability_exemptions.yaml"
@@ -1994,8 +2040,7 @@ def _apply_reachability_gate(
             exemptions = load_exemptions(registry_path)
         except ReachabilityRegistryError as exc:
             print(
-                f"WARNING: done_proof: cannot load {registry_path}: {exc}",
-                file=sys.stderr,
+                f"WARNING: done_proof: cannot load {registry_path}: {exc}", file=sys.stderr,
             )
         exempt_verdict = is_exempt(unit, exemptions)
 
@@ -2099,6 +2144,31 @@ def verify_done_eligible(
     ``None`` (the default), this paragraph does not apply and behaviour is
     unchanged from before this ticket.
 
+    Reachability (BO-2900a-1, MECHANICAL — no keyword argument required):
+    on top of the opt-in paragraph above, every real caller (this function's
+    own default signature, unchanged) also gets this unconditional check
+    after the pass/fail gate succeeds. For each linked Python test, its unit
+    — the covers-tagged test's own module (this AC family's single-file
+    fixture convention), OR a module that test imports (resolved the same
+    way the sibling BO-2900a-3 gate resolves candidate units, so a
+    ``fast_lane.main``-style implementation living in a SEPARATE file from
+    its test is covered too) — is inspected purely by AST for a module-level
+    ``main`` function (never by filename, folder, docstring, or an
+    ``if __name__`` text match; see :func:`_detect_module_entry_point`). A
+    linked test whose unit defines no ``main`` anywhere is not judged by
+    this rule at all — the scope fence to BO-2900a-3, which decides the
+    no-way-in-anywhere case separately. A linked test whose unit DOES
+    define ``main`` must have entered it during its own run — consumed from
+    the same execution-derived observation :func:`_observe_reachability`
+    already provides, never re-derived from source text — or the criterion
+    is refused with ``refusal_cause: "proof_not_through_entry_point"`` and a
+    ``reason`` naming "direct import", plus ``unit``, ``entry_point``, and
+    ``offending_test`` populated. An observation that could not be made at
+    all (subprocess failure, unparseable output), or whose isolated
+    re-execution did not pass, fails closed with
+    ``refusal_cause: "observation_unavailable"`` rather than being read as
+    "did not enter".
+
     Args:
         ac_id: The AC identifier string to evaluate.
         ac_root: Root directory of the AC YAML store, used for active-status
@@ -2135,8 +2205,26 @@ def verify_done_eligible(
         ``refusal_cause`` (str | None)
             ``"proof_not_through_entry_point"`` when *reachability_spec* was
             supplied and at least one linked test entered the way in without
-            reaching the target through it; ``None`` otherwise (including
-            every pre-existing refusal reason, unaffected by this ticket).
+            reaching the target through it, OR (BO-2900a-1, no keyword
+            required) when a linked test's own module defines ``main`` and
+            that test's own run never entered it; ``"observation_unavailable"``
+            when that observation itself could not be made; ``None``
+            otherwise (including every pre-existing refusal reason,
+            unaffected by this ticket).
+
+        ``unit`` (str | None)
+            BO-2900a-1: the module (stem) that defines the ``main`` never
+            entered by its own proof — the linked test's own module, or a
+            module it imports; ``None`` unless that refusal fires.
+
+        ``entry_point`` (str | None)
+            BO-2900a-1: ``"<module-stem>:main"`` for the un-entered way in;
+            ``None`` unless that refusal fires.
+
+        ``offending_test`` (str | None)
+            BO-2900a-1: ``"<file>::<function>"`` of the covers-tagged proof
+            that reached the code by direct import instead; ``None`` unless
+            that refusal fires.
     """
     # BP-100n-4: this body is orchestration only — each phase (splitting by
     # language, the reachability pre-gate, the pytest phase, the vitest
@@ -2227,11 +2315,11 @@ def verify_done_eligible(
     # nothing reaches when the product runs. Only reached once every linked
     # test already passes — this gate never overrides a genuine test failure.
     return _apply_reachability_gate(
-        success_verdict,
-        ac_id=ac_id,
-        linked_tests=py_linked,
-        ac_root=ac_root,
-        test_root=test_root,
+        _apply_entry_point_reachability_gate(
+            success_verdict, py_linked=py_linked,
+            project_root=_infer_project_root(ac_root, test_root), test_root=test_root,
+        ),
+        ac_id=ac_id, linked_tests=py_linked, ac_root=ac_root, test_root=test_root,
     )
 
 

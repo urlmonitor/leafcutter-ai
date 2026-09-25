@@ -5,11 +5,12 @@ type: architecture
 status: active
 flight_level: L2-Container
 created: 2026-07-21
-last_updated: 2026-09-01
+last_updated: 2026-09-25
 source_ticket: tickets/00_inbox/TICKET-20260721-BP-1100f-6.md
 components:
   - build_pipeline
   - build_orchestration
+  - ac_store
 children:
   - docs/architecture/diagrams/c3-003-phantom-done-real-effect-intent-verification.md
   - docs/architecture/diagrams/c3-007-promise-versus-claim-sequence.md
@@ -18,6 +19,8 @@ related_docs:
   - docs/architecture/agent_delivery_workflows.md
   - docs/architecture/diagrams/c2-006-feature-to-merged-pr.md
   - docs/architecture/diagrams/c3-003-phantom-done-real-effect-intent-verification.md
+  - docs/how-to/done-proof-enforcement.md
+  - docs/architecture/diagrams/c3-done-proof-evaluation-sequence.md
 related_adrs:
   - ADR-001
   - ADR-020
@@ -46,7 +49,24 @@ gates do not depend on the leafcutter repo's own root `CLAUDE.md`.
 This container is documented by two L3 child diagrams at the component level:
 
 - [Phantom-Done Prevention — Proving a Durable Change by Real Effect and Intent](../diagrams/c3-003-phantom-done-real-effect-intent-verification.md) — the end-to-end sequence showing where each of the five gates sits relative to dispatch and to the done state.
-- [Promise versus Claim — Where the Boundary to the Execution Observer Lies](../diagrams/c3-007-promise-versus-claim-sequence.md) — the `BP-1100g` sequence: a plan promises a kind of proof, a test claims it, and the hand-off check refuses by name when a promised kind has no claim. Draws the boundary explicitly — the check reads only authored declarations, never a test's body, so whether a test does what it claims is left to the execution observer (`BO-2900a`) on the far side.
+- [Promise versus Claim — Where the Boundary to the Execution Observer Lies](../diagrams/c3-007-promise-versus-claim-sequence.md) — the `BP-1100g` sequence: a plan promises a kind of proof, a test claims it, and the hand-off check refuses by name when a promised kind has no claim. Draws the boundary explicitly — the check reads only authored declarations, never a test's body, so whether a test does what it claims is left to the execution observer (`BO-2900a`) on the far side — concretely, [BO-2900a-1](#a-sixth-adjacent-axis-did-the-proof-go-in-through-the-real-way-in-bo-2900a-1) below.
+
+## A sixth, adjacent axis: did the proof go in through the real way in? (BO-2900a-1)
+
+The five BP-1100f gates above all fire **before or at** dispatch and implementation —
+they defend against a step running without a real, coherent effect or intent. `BO-2900a-1`
+is a sixth, adjacent honesty axis that fires later, at **done-eligibility time**, and
+belongs to a different owner (`ac_store`, not `build_pipeline`): even when a covers-tagged
+test genuinely executes and passes — satisfying the incumbent `BO-2500a-3` pass/fail rule —
+`verify_done_eligible()` (`scripts/ac_store/done_proof.py`) now also asks *what that test
+reached*. A test that imports the implementing function directly, bypassing the unit's own
+runtime way in (a module-level `main(argv)`), no longer counts as proof that an operator can
+reach the fix — the criterion is refused with `refusal_cause: "proof_not_through_entry_point"`
+until the proof is rewritten to drive the same behaviour through that entry point. See
+[How to understand proof-of-done enforcement — section 3](../../how-to/done-proof-enforcement.md#3-the-third-eligibility-axis-did-the-proof-go-in-through-the-real-way-in-bo-2900a-1)
+and the [Done-Proof Evaluation sequence diagram, Phase 6](../diagrams/c3-done-proof-evaluation-sequence.md#3-the-mechanical-entry-point-reachability-gate-bo-2900a-1)
+for the full mechanism. This axis is disjoint from the five gates above: it does not gate
+dispatch or implementation, and it is not one of the `BP-1100f-*` ACs.
 
 ## The five gates
 
@@ -72,3 +92,5 @@ This container is documented by two L3 child diagrams at the component level:
 - [Reference: Proof Claims and What They Do Not Mean](../../reference/proof-claims-and-completeness.md) — the `BP-1100g` claim-side reference: what claiming each of the seven kinds of proof means and does not mean, the accepted-paste design decision, and the seam rule's hand-off record.
 - [ADR-001 — Self-Hosting Boundary](adrs/ADR-001-self-hosting-boundary.md) — why each gate is packaged and portable.
 - [ADR-020 — Live Surface Tester](adrs/ADR-020-live-surface-tester.md) — the observable-side-effect smoke surface Gate 5 routes to.
+- [How to understand proof-of-done enforcement — section 3](../../how-to/done-proof-enforcement.md#3-the-third-eligibility-axis-did-the-proof-go-in-through-the-real-way-in-bo-2900a-1) — the sixth, adjacent honesty axis (`BO-2900a-1`) at done-eligibility time, described above.
+- [Done-Proof Evaluation — Sequence Diagram, Phase 6](../diagrams/c3-done-proof-evaluation-sequence.md#3-the-mechanical-entry-point-reachability-gate-bo-2900a-1) — the message-level flow for `BO-2900a-1`.

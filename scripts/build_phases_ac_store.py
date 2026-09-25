@@ -133,6 +133,11 @@ AC_STORE_DEPLOY_MAP: tuple[tuple[str, str], ...] = (
     # name — unit_tests/ac_store/test_bp_1100g_3_ii.py::_MODULE_FILES builds its
     # own simulated deployed tree and does not read this map.
     ("scripts/ac_store/_done_proof_phase_helpers.py", "_done_proof_phase_helpers.py"),
+    # _done_proof_entry_point_gate.py (BO-2900a-1) is a THIRD sibling
+    # extracted out of done_proof.py, alongside _done_proof_phase_helpers.py,
+    # and done_proof.py imports it at MODULE scope too. Same fast-lane gate,
+    # same failure mode, same second-copy note above.
+    ("scripts/ac_store/_done_proof_entry_point_gate.py", "_done_proof_entry_point_gate.py"),
     # ac_parent_id.py provides derive_parent_id, imported at module scope by
     # scripts/build_orchestration/fast_lane.py. Without it the deployed
     # fast_lane.py exists but dies at import with ModuleNotFoundError, so
