@@ -419,8 +419,17 @@
                             },
                             "angle": {
                                 "type": "string",
-                                "enum": ["criterion", "reachability", "seam", "real_artifact", "deployed", "boundary", "failure"],
-                                "description": "Which proof-of-done question this test answers, from the set-cover taxonomy in docs/testing/test-angles.md — five core angles (criterion, reachability, seam, real_artifact, deployed) plus two conditional ones (boundary, failure). Authoring it here is how an it-po declares that this test already covers a given angle: generate_ticket_from_ac.py passes the value straight through onto the ticket's ## Test Requirements entry. Note the criteria-derived fallback (used when no test_spec is authored) tags its own descriptors 'criterion' and appends one mandatory 'reachability' descriptor; an authored test_spec that already carries one 'reachability'-angle entry keeps it unaltered and gains no second one (BO-2900g-1-i). Omit when the angle has not been classified."
+                                "enum": ["criterion", "reachability", "seam", "real_artifact", "deployed", "boundary", "failure", "discrimination"],
+                                "description": "Which proof-of-done question this test answers, from the set-cover taxonomy in docs/testing/test-angles.md — five core angles (criterion, reachability, seam, real_artifact, deployed) plus three conditional ones (boundary, failure, discrimination). Authoring it here is how an it-po declares that this test already covers a given angle: generate_ticket_from_ac.py passes the value straight through onto the ticket's ## Test Requirements entry. Note the criteria-derived fallback (used when no test_spec is authored) tags its own descriptors 'criterion' and appends one mandatory 'reachability' descriptor; an authored test_spec that already carries one 'reachability'-angle entry keeps it unaltered and gains no second one (BO-2900g-1-i). 'discrimination' (TQ-500f-1) fires for bug-fix or gate ACs, or when must_catch is present: the test must go red under at least one named plausible wrong version of the code, not only when the code is absent. Omit when the angle has not been classified."
+                            },
+                            "must_catch": {
+                                "type": "array",
+                                "minItems": 1,
+                                "items": {
+                                    "type": "string",
+                                    "pattern": "\\S"
+                                },
+                                "description": "TQ-500f-2: an ordered list of wrong versions this entry's test must go red under, in the requirement author's own words. Copied verbatim (same strings, same order, no trimming/case-change/dedupe) onto the generated ticket's Test Requirements entry by generate_ticket_from_ac.py — MUST be kept identical in shape to the same property in config/test_requirements.schema.json (the same copy-through coupling documented for framework/type/angle), or a well-formed AC produces a ticket that violates its own schema. Optional; when present, must be non-empty and every item must contain at least one non-whitespace character (an empty list or a blank-only entry is rejected, since absence already means 'none named'). Omit when the requirement names no specific wrong version."
                             },
                             "surface_invoked": {
                                 "type": "string",

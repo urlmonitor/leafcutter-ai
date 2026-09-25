@@ -93,15 +93,11 @@ _REACHABILITY_NAME_SUFFIX = "reachable_from_entry_point"
 _CODER_AGENTS = frozenset({"python-coder", "sql-coder", "frontend-coder"})
 
 # The full angle vocabulary, as literals. Same reasoning as the two constants
-# above: asserted, never imported from the code under test.
+# above: asserted, never imported from the code under test. "discrimination"
+# is the eighth member (TQ-500f-1; see test_bp_1100g_1.py's 3-way comparator).
 _ALL_TEST_ANGLES = frozenset({
-    "criterion",
-    "reachability",
-    "seam",
-    "real_artifact",
-    "deployed",
-    "boundary",
-    "failure",
+    "criterion", "reachability", "seam", "real_artifact",
+    "deployed", "boundary", "failure", "discrimination",
 })
 
 

@@ -5,15 +5,13 @@ GOAL: Pre-commit hook validating staged AC YAML files against the JSON Schema,
 BUSINESS CONTEXT: Malformed AC files are rejected at commit time. The
     pattern_bindings completeness and field-preservation checks enforce ACS-500f.
 ARCHITECTURE: Phase 1 validates only STAGED AC YAML files against
-    config/ac_store_schema.json; staged files are determined via
-    `git diff --cached --name-only --diff-filter=AM` (or the
-    HOOK_TEST_STAGED_FILES env var seam for tests). Cross-file checks are
-    delegated to _ac_schema_validators.py and use the full on-disk store as a
-    lookup index (not narrowed to staged only). Phase 2 compares HEAD vs staged
-    for each modified AC and blocks if implements_pattern was present in HEAD
-    but absent in staged. HEAD blobs for all modified files are fetched in a
-    single batched ``git cat-file --batch`` invocation (O(1) subprocesses
-    regardless of the number of staged-modified files). Fail-open.
+    config/ac_store_schema.json; staged files come from `git diff --cached
+    --name-only --diff-filter=AM` (or HOOK_TEST_STAGED_FILES for tests).
+    Cross-file checks (_ac_schema_validators.py) and per-entry angle/
+    must_catch naming (_test_spec_entry_bridge.py, TQ-500f-1/-2-i) both use
+    the full on-disk store, not narrowed to staged only. Phase 2 compares
+    HEAD vs staged per modified AC, blocking a dropped implements_pattern,
+    via one batched ``git cat-file --batch`` HEAD-blob fetch. Fail-open.
 
 Exit codes:
     0 - All staged AC YAML files pass validation
@@ -76,6 +74,8 @@ from _ac_schema_validators import (  # noqa: E402
     validate_pattern_bindings_completeness, validate_test_contract,
     validate_with_jsonschema,
 )
+from _test_spec_entry_bridge import test_spec_entry_errors  # noqa: E402
+from _ac_store_file_discovery import find_ac_files  # noqa: E402
 
 try:
     from _ac_store_index import get_ac_index  # type: ignore[import]
@@ -519,21 +519,7 @@ def _check_implements_pattern_preserved(
 # ---------------------------------------------------------------------------
 # File discovery and schema loading
 # ---------------------------------------------------------------------------
-
-def _find_ac_files(root: Path) -> list[Path]:
-    """Discover all .yaml files under docs/acceptance-criteria/.
-
-    Args:
-        root: Repository root directory.
-
-    Returns:
-        Sorted list of Paths.
-    """
-    ac_dir = root / AC_GLOB_PATTERN
-    if not ac_dir.is_dir():
-        return []
-    return sorted(p for p in ac_dir.rglob("*.yaml") if p.name != "index.yaml")
-
+# find_ac_files relocated to sibling _ac_store_file_discovery.py.
 
 def _load_schema(root: Path) -> dict[str, Any] | None:
     """Load config/ac_store_schema.json; None if absent.
@@ -613,6 +599,7 @@ def _validate_file(
     if not schema_validated:
         errors.extend(validate_manually(data))
 
+    errors.extend(test_spec_entry_errors(path, data, schema))  # TQ-500f-1/-2-i
     # Test-contract gate (single-file, semantic): a leaf code AC must declare a
     # test_spec or an explicit test_required: false. ACs are the source of truth
     # for what test-writer must test.
@@ -688,12 +675,12 @@ def main() -> int:
     else:
         # Build the full-store lookup index for cross-file checks (AC-4: not narrowed).
         # Use the shared mtime-cached index when available; fall back to the
-        # direct _find_ac_files + _build_ac_index walk otherwise.
+        # direct find_ac_files + _build_ac_index walk otherwise.
         ac_store_dir = root / AC_GLOB_PATTERN
         if _AC_STORE_INDEX_AVAILABLE:
             all_ac_data = get_ac_index(str(ac_store_dir))
         else:
-            all_store_files = _find_ac_files(root)
+            all_store_files = find_ac_files(root)
             all_ac_data = _build_ac_index(all_store_files)
         failed = []
         for path in staged_files:
