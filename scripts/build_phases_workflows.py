@@ -425,6 +425,10 @@ def build_workflow_tools(target_root: Path, config: dict[str, Any],
       sibling module (KM-KGS-100d-4), resolving file-path relationship
       values to path-keyed graph nodes; must also ship alongside it for the
       same reason.
+    - ``scripts/knowledge_surface_check.py`` — knowledge_query.py's third
+      sibling module (KM-KGS-100c-1/-i/-ii), the surface-set completeness
+      check; loaded on demand by knowledge_query.check_surface_set() and
+      must also ship alongside it.
     - ``scripts/set_ticket_status.py`` — used by ticket-lifecycle agents and skills.
     - ``scripts/ticket_prioritizer.py`` — used by the ticket-prioritizer skill.
     - ``scripts/port_registry.py`` — used by the live-surface-tester agent.
@@ -467,6 +471,11 @@ def build_workflow_tools(target_root: Path, config: dict[str, Any],
     #   knowledge_query.py's second sibling module, loaded the same eager way
     #   at import time, so a consumer install missing it fails to import
     #   knowledge_query.py at all. (#TICKETLESS reason=km-fast-lane-file-nodes)
+    # - 2026-09-25 15:16 [python-coder/KM-KGS-100c-1 surface-check]: Added
+    #   knowledge_surface_check.py right after knowledge_file_nodes.py --
+    #   knowledge_query.py's third sibling module, loaded on demand via
+    #   _load_sibling_module() by check_surface_set(), so a consumer install
+    #   missing it fails that call. (#TICKETLESS reason=km-kgs-100c-1-surface-check)
     """
     import shutil
 
@@ -478,6 +487,7 @@ def build_workflow_tools(target_root: Path, config: dict[str, Any],
         "knowledge_query.py",
         "knowledge_frontmatter_reader.py",
         "knowledge_file_nodes.py",
+        "knowledge_surface_check.py",
         "set_ticket_status.py",
         "ticket_prioritizer.py",
         "port_registry.py",
