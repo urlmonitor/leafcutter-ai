@@ -1,0 +1,100 @@
+id: KM-300c-2
+components:
+  - knowledge_management
+  - documentation_system
+  - precommit_hooks
+readiness: approved
+priority: high
+title: "A commit carrying a map with a link that opens nothing is refused with an explanation"
+component: knowledge-management
+level: L2
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/knowledge-management/KM-300-docs-same-everywhere/KM-300c.yaml"
+criteria: |
+  Given the version of the documentation map about to be committed contains an
+    entry whose link target, resolved from the folder containing the map, names
+    a file that does not exist in the commit — e.g. target
+    "docs/architecture/adrs/ADR-001-self-hosting-boundary.md" written inside
+    the docs folder (resolving to docs/docs/...), or a target for a page that
+    was deleted in the same commit
+  When the contributor commits
+  Then the commit is refused
+  And the refusal message names the map, the line number of each unresolvable
+    entry, the link target as written, and the path it resolved to
+  And the message tells the contributor how to regenerate the map
+  And when every entry's link target resolves to a file that exists in the
+    commit, the commit is not refused by this check
+  And the check reaches the same verdict on Windows, Linux and macOS for the
+    same commit contents (a target differing from the real file only in letter
+    case is refused on every host, because it opens nothing on a case-sensitive
+    host or code host)
+depends_on:
+  - KM-300c
+  - KM-300a-2
+doc_links:
+  - path: templates/scripts/commit_guardian/transform_doc_index.py
+    relationship: context
+    status: exists
+  - path: templates/scripts/commit_guardian/check_doc_index_links.py
+    relationship: implements
+    status: planned
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+  - path: docs/INDEX.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "Implement in the same hook as KM-300c-1 (templates/scripts/commit_guardian/check_doc_index_links.py), reusing its link recognition and inspected-link count"
+  - "Existence must be judged against the commit's staged tree (the git index), not the working tree, so a page deleted in the same commit counts as missing and an unstaged new page does not count as present"
+  - "Existence must be case-exact on every host (compare against the index's path list), never a file-system existence test, which is case-insensitive on Windows and macOS"
+  - "Resolve each target from the folder containing the map, normalising ./ and ../ as POSIX paths; a target that climbs outside the repository is refused"
+  - "Refusal message must name the map, each unresolvable line number, the target as written, the path it resolved to, and the regenerate command valid for the running layout"
+  - "Must complete within 1 second for a map of 1,000 entries (one index listing, not one git call per link)"
+  - "Must not ship before KM-300a-2 is merged, or it refuses every commit"
+  - "Hook file must stay under the 400-line .py limit"
+delivers_to: null
+expects_from:
+  ac_id: KM-300a-2
+  contract: "Map link targets relative to the map's own folder, so a correctly generated map resolves fully"
+origin_agent: business-analyst
+created: 2026-09-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: internal
+test_spec:
+  - name: test_root_relative_target_inside_docs_is_refused
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    description: "Temp git repo with the ADR file staged and a staged docs/INDEX.md whose ADR target is docs/architecture/adrs/ADR-001-self-hosting-boundary.md; asserts refusal naming docs/INDEX.md, the line number, the target as written, the resolved docs/docs/... path and the regenerate command."
+  - name: test_target_to_page_deleted_in_same_commit_is_refused
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    description: "Stages deletion of a page while the staged map still links it; asserts refusal."
+  - name: test_all_targets_resolve_passes
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    description: "A staged map whose targets are all relative to docs/ and exist in the index exits 0."
+  - name: test_case_mismatched_target_is_refused_on_every_host
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    description: "Target glossary.MD while the staged file is glossary.md; asserts refusal, including on a case-insensitive file system."
+test_rationale: "Resolution must be judged against the commit being made, so the tests use a real temp git index with staged adds and deletions; a working-tree test would miss the same-commit deletion and the case-mismatch case would pass on Windows."
+notes: |
+  ORDERING HAZARD: must not ship before KM-300a-2. As of 2026-09-25 every link
+  target in the map is project-root-relative inside docs/, so every entry is
+  unresolvable and this check would refuse every commit.
+  The case-sensitivity clause is deliberate: a case-insensitive existence test
+  on Windows would pass a link that is broken on the code host — exactly the
+  "works only on the machine that produced it" failure KM-300c targets.

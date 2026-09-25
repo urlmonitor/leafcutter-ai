@@ -25,7 +25,7 @@ origin_agent: product-owner-v3
 created: 2026-06-05
 amended_by: []
 superseded_by: null
-covered_by: [ACS-400e-1, ACS-400e-1-i, ACS-400e-2, ACS-400e-3]
+covered_by: [ACS-400e-1, ACS-400e-1-i, ACS-400e-2, ACS-400e-3, ACS-400e-4, ACS-400e-5]
 implemented_by: []
 change_target: code
 risk_surface: auth

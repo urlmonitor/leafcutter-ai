@@ -162,7 +162,7 @@ class TestGenerateIndexPosixLinkSeparators(unittest.TestCase):
 
 class TestGenerateIndexLinksResolve(unittest.TestCase):
     """AC-2: every link target in a freshly generated index resolves,
-    relative to the repository root, to a file that actually exists — so the
+    relative to docs/ (where INDEX.md lives, KM-300a-2), to a file that exists — so the
     fix does not trade backslashes for broken paths.
     """
 
@@ -197,13 +197,13 @@ class TestGenerateIndexLinksResolve(unittest.TestCase):
 
         missing = [
             target for _text, target in links
-            if not (_REPO_ROOT / target).exists()
+            if not (_REPO_ROOT / "docs" / target).exists()
         ]
         self.assertEqual(
             missing,
             [],
             f"{len(missing)} link target(s) do not resolve to an existing "
-            f"file relative to the repo root: {missing[:5]!r}",
+            f"file relative to docs/ (the folder INDEX.md lives in): {missing[:5]!r}",
         )
 
 

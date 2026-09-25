@@ -1,0 +1,42 @@
+id: KM-300b
+title: "Refreshing the documentation map on another machine changes nothing"
+component: knowledge-management
+components:
+  - knowledge_management
+  - documentation_system
+level: L1
+status: active
+req_status: draft
+readiness: approved
+priority: high
+work_status: todo
+criteria: |
+  Same documentation, same map — byte for byte, on every operating system.
+
+  When the written material has not changed, refreshing the map on any
+  contributor's machine produces exactly the same result, so change history is
+  never cluttered by the map flipping between versions and commits never pick
+  up a change nobody made.
+depends_on:
+  - KM-300
+doc_links: []
+documentation_triggers: []
+documentation_rationale: "Stability guarantee on existing generated output; no new user-facing behavior or workflow is introduced."
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-09-25
+amended_by: []
+superseded_by: null
+covered_by:
+  - KM-300b-1
+  - KM-300b-2
+  - KM-300b-3
+implemented_by: []
+change_target: code
+risk_surface: internal
+notes: |
+  Cross-OS extension of KM-DBF-014 (same machine, done). Candidate for BA
+  adoption of KM-DBF-014 as a child. Beyond path separators, the BA should
+  consider every other host-dependent input to the output (ordering, line
+  endings, encoding) — "byte-identical across Windows and Linux" is the bar.

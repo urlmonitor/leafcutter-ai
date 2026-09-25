@@ -1,0 +1,41 @@
+id: KM-300c
+title: "A map that would break for other contributors never gets shared"
+component: knowledge-management
+components:
+  - knowledge_management
+  - documentation_system
+  - precommit_hooks
+level: L1
+status: active
+req_status: draft
+readiness: approved
+priority: high
+work_status: todo
+criteria: |
+  A machine-specific or broken documentation map is caught before it lands.
+
+  If a refreshed map ever contains an entry that only works on the machine
+  that produced it, the problem is stopped and explained at the moment of
+  saving work, instead of being discovered later by someone on another system.
+depends_on:
+  - KM-300
+doc_links: []
+documentation_triggers: []
+documentation_rationale: "Protective check on existing generated output; surfaces only as an explained refusal at commit time, which the check's own message documents."
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-09-25
+amended_by: []
+superseded_by: null
+covered_by:
+  - KM-300c-1
+  - KM-300c-2
+implemented_by: []
+change_target: code
+risk_surface: internal
+notes: |
+  Added by the PO (not in the original request): the request fixes the
+  defect but names no guard against its return. Whether this is a new check
+  or an assertion inside the existing auto-regeneration step is the IT PO's
+  call.

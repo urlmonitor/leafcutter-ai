@@ -1,0 +1,40 @@
+id: KM-300a
+title: "Every entry in the documentation map opens the page it names"
+component: knowledge-management
+components:
+  - knowledge_management
+  - documentation_system
+level: L1
+status: active
+req_status: draft
+readiness: approved
+priority: high
+work_status: todo
+criteria: |
+  Links in the documentation map work online and locally, from any machine.
+
+  Whichever operating system refreshed the map, every entry resolves when the
+  project is browsed on its online code host and when it is opened locally —
+  no entry is broken for readers because of where it was produced.
+depends_on:
+  - KM-300
+doc_links: []
+documentation_triggers: []
+documentation_rationale: "Corrects existing generated output to behave as readers already expect; no new user-facing capability or workflow to document."
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-09-25
+amended_by: []
+superseded_by: null
+covered_by:
+  - KM-300a-1
+  - KM-300a-2
+implemented_by: []
+change_target: code
+risk_surface: internal
+notes: |
+  Intended home of the /quick-fix L2 for the known defect: the doc-index
+  generator emits OS-native (backslash) link paths on Windows, which do not
+  resolve on GitHub. The BA should cover every link-producing site in the
+  generator, not only the first one found.
