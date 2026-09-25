@@ -89,7 +89,6 @@
     },
     "max_test_duration_seconds": 5,
     "manual_test_suffix": "_MANUAL",
-    "db_connection_test": "postgresql://trader:trader@localhost:5403/LIVE",
     "naming_pattern": "test_*.py",
     "test_output_rules": "Never write to project dirs; use tmp_path or %TEMP%"
   }
