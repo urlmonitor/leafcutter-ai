@@ -1,0 +1,79 @@
+id: ACD-2400a-2
+components:
+  - ac_driven_dev
+  - ac_store
+readiness: draft
+priority: medium
+title: "Five one-right-answer rule families are checked; safe ones are repaired, the rest reported"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  Given a set of requirement records produced by an authoring stage,
+  When the requirement rule check runs,
+  Then every record is evaluated against each of these rule families:
+    parent-to-child back-links,
+    non-empty graph component list,
+    readiness never raised to approved by an authoring agent,
+    producer/consumer contract symmetry,
+    documentation trigger to documentation requirement mapping,
+  And for the three families that have exactly one correct repair (parent back-links,
+    graph component list when the namespace maps to a single graph id, and readiness
+    raised to approved by an authoring agent) the check applies the repair and lists each
+    one in its report with disposition "fixed", naming the file and the value changed,
+  And for contract symmetry and documentation mapping it changes nothing and reports each
+    finding with disposition "needs a decision",
+  And after applying repairs the check evaluates the repaired records again, and reports
+    passed only when that second evaluation produces no finding,
+  And each family's rule is read from the same rule source the store's existing record
+    checks read, so changing a rule in that source changes this check's verdict with no
+    second edit.
+depends_on:
+  - ACD-2400a
+  - ACD-2400a-1
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+  - path: templates/agents/it-po.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-09-25
+amended_by: []
+superseded_by: null
+covered_by:
+  - ACD-2400a-2-i
+  - ACD-2400a-2-ii
+  - ACD-2400a-2-iii
+  - ACD-2400a-2-iv
+  - ACD-2400a-2-v
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  Mapping to the technical planner's current instructions (templates/agents/it-po.md),
+  which ACD-2400e-2 removes once this ships:
+    parent back-links             -> it-po "covered_by update protocol" (S3 split / S7)
+    graph component list fix-up   -> it-po S7 write rules + S8 item 15
+    readiness never approved      -> it-po S7 write rules + S8 item 12
+    contract symmetry             -> it-po S5 steps 1-3 (presence of both sides only)
+    documentation-trigger mapping -> it-po S7b Documentation Gate
+    specialist-versus-surface     -> it-po S2.8 table (ACD-2400a-3, not here)
+  "Most of the final self-check list" (L1 notes) is covered by the union of these six
+  plus the existing record check; S8 items 6 (no weasel words) and 11 (caveats logged)
+  are judgment and stay with the planner.
+
+  SEMANTIC CONTRACT COMPATIBILITY STAYS WITH THE PLANNER (user decision 2 at PO gate;
+  TKT-300a-3 "contract descriptions on both sides are compatible"). This check only
+  asserts that both sides exist and point at each other.
+
+  Safe-repair definition used here: the repair is fully determined by data already in
+  the store and can only restore a documented invariant (append a missing id, fill an
+  unambiguous id, restore a prior readiness). Anything else is reported.

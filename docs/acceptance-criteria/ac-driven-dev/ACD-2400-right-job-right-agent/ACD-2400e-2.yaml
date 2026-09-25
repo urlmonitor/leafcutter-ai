@@ -1,0 +1,67 @@
+id: ACD-2400e-2
+components:
+  - ac_driven_dev
+  - agent_registry
+  - llm_authoring
+readiness: draft
+priority: medium
+title: "The technical planner's instructions hold only the duties it keeps"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  Given the technical planner's instructions after ACD-2400a, ACD-2400b and ACD-2400d have
+    shipped,
+  When they are read,
+  Then they cover routing and splitting, sizing, technical requirements, producer/consumer
+    contracts including judging whether both sides agree in meaning, test intent, and the
+    knowledge loop,
+  And they contain no procedure for authoring test designs, no file-type compatibility table,
+    no graph-component-list fill-up, no parent back-link procedure, no documentation-trigger
+    coverage gate, no reference-file choice, and no judging of whether declared files hold
+    the behaviour,
+  And where a removed duty matters to the planner's work, they point to the rule check or the
+    step that now owns it,
+  And the planner's final self-check list keeps only the items that need judgment.
+depends_on:
+  - ACD-2400e
+  - ACD-2400a-2
+  - ACD-2400a-3
+  - ACD-2400b-1
+  - ACD-2400d-2
+doc_links:
+  - path: templates/agents/it-po.md
+    relationship: describes
+    status: exists
+  - path: docs/acceptance-criteria/ac-driven-dev/ACD-200b-1.yaml
+    relationship: related
+    status: exists
+  - path: docs/acceptance-criteria/build-orchestration/BO-2000-correct-prompts-by-construction/BO-2000d-3.yaml
+    relationship: related
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-09-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: prompt
+risk_surface: internal
+notes: |
+  Sections affected in templates/agents/it-po.md: 2.7 (test_spec authoring -> test intent),
+  S2.8 (table + procedure -> ACD-2400a-3 / ACD-2400d-1), S5 steps 1-3 presence-only part
+  (-> ACD-2400a-2-iii; semantic compatibility stays), S7 components/readiness write rules
+  and covered_by protocol (-> ACD-2400a-2-i/ii/iv), S7b (-> ACD-2400a-2-v), BO-2000d
+  reference_file_path (-> ACD-2400d-2), S8 items 1-2, 4, 12, 13, 15 (-> rule check).
+  AMENDMENTS NEEDED before this builds: ACD-200b-1 (template contains Documentation Gate),
+  BO-2000d-3 (template states reference-file obligation). Unchanged and still binding:
+  TKT-300a-1, TKT-300a-2, TKT-300a-3, TKT-300a-4, ACS-500c-2, BO-550-1-i, TKT-500b-3.
+  ACD-1700 role scoping must follow this split (ACD-2400 L0 doc_links).
+  Named alteration: leave S2.8's table in place -> clause 3 goes red, and ACD-2400a-3-i
+  shows the two tables disagreeing on workflow .js.

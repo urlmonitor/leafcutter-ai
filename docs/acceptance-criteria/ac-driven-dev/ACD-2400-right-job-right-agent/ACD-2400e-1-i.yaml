@@ -1,0 +1,43 @@
+id: ACD-2400e-1-i
+components:
+  - ac_driven_dev
+  - agent_registry
+readiness: draft
+priority: medium
+title: "An agent whose tools can edit files but whose profile says it changes nothing is flagged"
+component: ac-driven-dev
+level: L3
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  Given the agent registry,
+  When the profile consistency check runs,
+  Then every agent whose tools include writing or editing files and whose profile declares
+    it changes nothing is listed, naming the agent,
+  And the technical planner's profile as it stood before ACD-2400e-1 is listed,
+  And an agent with read-only tools that declares it changes nothing is not listed,
+  And the report states how many agents were examined.
+depends_on:
+  - ACD-2400e-1
+doc_links:
+  - path: templates/agents/it-po.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-09-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: internal
+notes: |
+  Makes ACD-2400e-1 durable: without it the next profile drifts the same way. Scope is
+  registry-wide, so IT-PO should measure how many agents are listed today and ship it
+  advisory first (ADR-026 warn-before-required). If the user wants the scope limited to
+  the planner, this L3 can be dropped - see open questions.

@@ -1,0 +1,65 @@
+id: ACD-2400c-1
+components:
+  - ac_driven_dev
+  - testing_quality
+  - build_orchestration
+readiness: draft
+priority: medium
+title: "The code-aware step turns test intent into a test design grounded in files it opened"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  Given a leaf code requirement whose test intent marks clauses (1) and (2) needs-test and
+    clause (3) not needed, and whose declared files exist in the repository,
+  When the code-aware test-design step runs on it,
+  Then the record carries a test design with at least one test entry per needs-test clause,
+    and each entry names the outcome clause it proves,
+  And no entry names clause (3),
+  And each entry names a target test directory that exists and the code file it exercises,
+    and that file exists at the time of design,
+  And for a clause about code that does not exist yet, the entry names the file as
+    to-be-created and cites an existing neighbouring test file it read as the convention
+    the new test follows,
+  And the design carries the step's authorship mark and the list of repository files the
+    step opened,
+  And criteria, test intent, assigned specialist, pattern reference and pattern bindings
+    are byte-identical before and after the step.
+depends_on:
+  - ACD-2400c
+  - ACD-2400b-1
+doc_links:
+  - path: templates/agents/it-po.md
+    relationship: describes
+    status: exists
+  - path: templates/agents/test-writer.md
+    relationship: describes
+    status: exists
+  - path: docs/testing/test-angles.md
+    relationship: related
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-09-25
+amended_by: []
+superseded_by: null
+covered_by:
+  - ACD-2400c-1-i
+implemented_by: []
+change_target: prompt
+risk_surface: contract_boundary
+notes: |
+  The step is the "test-planner with source access" decided at the PO gate (user decision
+  1). No such agent exists yet in templates/agents/; IT-PO: creating and registering it
+  is part of this AC's delivery or a sibling AC - decide at enrichment.
+  ADR-009 (planner has no source access) is left intact: the code-reading work moves to a
+  step that is allowed to read code, rather than the planner gaining access.
+  ACS-500c-2 (preserve implements_pattern / pattern_bindings) and TKT-300a-4 (criteria
+  byte-identical) now bind this step too - last clause.
+  Named alteration: design an entry from the criteria text alone without opening the
+  file -> the "files opened" list is empty and ACD-2400c-1-i rejects the ungrounded path.

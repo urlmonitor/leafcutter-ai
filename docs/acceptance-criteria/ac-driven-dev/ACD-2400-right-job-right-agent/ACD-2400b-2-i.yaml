@@ -1,0 +1,51 @@
+id: ACD-2400b-2-i
+components:
+  - ac_driven_dev
+  - testing_quality
+readiness: draft
+priority: medium
+title: "A requirement that reaches approved with its test design pending is still never built"
+component: ac-driven-dev
+level: L3
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  Given a leaf code requirement at readiness "approved" (set by hand) that carries test
+    intent and no test design,
+  When the implementation-readiness gate evaluates the buildable queue,
+  Then the requirement is flagged not implementation-ready with the reason
+    "test design pending", which is distinct from the reason "missing test contract",
+  And it is excluded from the set dispatched to builders,
+  And no test list is derived for it from its Then clauses (the per-clause fallback used
+    when no test contract has been authored does not apply to a record that carries test
+    intent),
+  And the store's commit-time record check rejects a change that leaves it in this state,
+    naming the file and "test design pending".
+depends_on:
+  - ACD-2400b-2
+doc_links:
+  - path: docs/acceptance-criteria/ac-driven-dev/ACD-1600-single-source-buildable/ACD-1600c-1.yaml
+    relationship: related
+    status: exists
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-09-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  "Never silently treated as buildable" (user brief). The ticket generator today falls
+  back to one descriptor per Then clause when test_spec is null (ac-schema.md, test_spec
+  row). For a record with test intent that fallback is exactly the silent path, so clause
+  3 forbids it. Named alteration: remove the intent exclusion from the fallback -> clause
+  3 goes red while b-2 stays green.

@@ -33,7 +33,11 @@ origin_agent: product-owner
 created: 2026-09-25
 amended_by: []
 superseded_by: null
-covered_by: []
+covered_by:
+  - ACD-2400d-1
+  - ACD-2400d-2
+  - ACD-2400d-3
+  - ACD-2400d-4
 implemented_by: []
 change_target: prompt
 risk_surface: internal

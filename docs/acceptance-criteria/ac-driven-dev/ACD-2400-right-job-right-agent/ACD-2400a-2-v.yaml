@@ -1,0 +1,57 @@
+id: ACD-2400a-2-v
+components:
+  - ac_driven_dev
+  - ac_store
+readiness: draft
+priority: medium
+title: "A documentation trigger with no matching documentation requirement is reported by trigger and specialist"
+component: ac-driven-dev
+level: L3
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  Given L1 ACD-9990a declares documentation triggers [sequence-diagram, reference-doc],
+    and its feature folder holds one documentation requirement assigned to
+    architecture-diagram-author and none assigned to documentation-expert,
+  When the requirement rule check runs,
+  Then one finding with disposition "needs a decision" names ACD-9990a, the trigger
+    "reference-doc" and the expected specialist documentation-expert,
+  And no finding is raised for "sequence-diagram",
+  And no documentation requirement comes into existence as a result of the check,
+  And the expected specialist per trigger is how-to -> documentation-expert,
+    sequence-diagram / state-diagram / component-diagram -> architecture-diagram-author,
+    reference-doc -> documentation-expert,
+  And an L1 with an empty trigger list and a stated rationale produces no finding, while an
+    L1 with an empty trigger list and no rationale is reported.
+depends_on:
+  - ACD-2400a-2
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+  - path: docs/acceptance-criteria/ac-driven-dev/ACD-200b-1.yaml
+    relationship: related
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-09-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  AMENDMENT NEEDED: ACD-200b / ACD-200b-1 promise that the IT PO template contains a
+  "Documentation Gate" section and that the IT PO itself checks and fills documentation
+  ACs before setting readiness: reviewed. With this AC the CHECK moves to the rule check;
+  ACD-200b-1's "template contains the section" clause becomes false once ACD-2400e-2
+  removes S7b. Amend ACD-200b-1 (or supersede it by this AC) before ACD-2400e-2 builds.
+  ACD-200b's option (a) "IT PO creates the missing doc ACs itself" is authoring, not a
+  rule; it is not relocated here (this check never creates records).
+  ACD-200b-1's table lists 4 triggers and omits reference-doc; the it-po S7b table and
+  this AC list 5. The 5-entry table is the one to keep.

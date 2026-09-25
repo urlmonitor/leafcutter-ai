@@ -1,0 +1,63 @@
+id: ACD-2400a-3
+components:
+  - ac_driven_dev
+  - ac_store
+readiness: draft
+priority: medium
+title: "Specialist-versus-surface compatibility is judged from the one surface-to-specialist map"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  Given record P is assigned to python-coder and declares the files scripts/x.py and
+    web/app/page.tsx,
+    and record Q is assigned to llm-expert and declares only templates/agents/foo.md,
+    and record S declares no files,
+  When the requirement rule check runs,
+  Then P gets exactly one finding with disposition "needs a decision" that names
+    web/app/page.tsx, the specialist the store's surface-to-specialist map gives for it,
+    and python-coder,
+  And scripts/x.py is not named in P's finding,
+  And Q produces no finding,
+  And S is listed in the report as "not evaluated: no declared files" for this family and
+    is not counted as passed,
+  And the verdicts come from the single surface-to-specialist map the assignment-quality
+    check reads; there is no second file-type compatibility table anywhere.
+depends_on:
+  - ACD-2400a
+  - ACD-2400a-1
+  - ACD-1700b-1
+doc_links:
+  - path: docs/acceptance-criteria/ac-driven-dev/ACD-1700-role-scoped-context/ACD-1700b-1.yaml
+    relationship: related
+    status: exists
+  - path: templates/agents/it-po.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-09-25
+amended_by: []
+superseded_by: null
+covered_by:
+  - ACD-2400a-3-i
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  CONFLICT RESOLVED BY THIS AC: the technical planner's S2.8 table says python-coder
+  "cannot act on .js", while ACD-1700b-1 (user decision 2026-08-11) pins a path-aware,
+  first-match-wins map in which templates/workflows-js/**/*.js belongs to python-coder.
+  Two tables answering one question already disagree. This AC makes the ACD-1700b-1 map
+  the only source; ACD-2400e-2 deletes the S2.8 table. See ACD-2400a-3-i for the case
+  that goes red if the old table survives.
+
+  S2.8's partial-flag behaviour (BP-1100f-3-i: flag only the unmatched part of a mixed
+  surface) is preserved by the second Then clause.
+  The mechanical half of ACD-1700b's match belongs here; the judgment half (does the
+  intent live in those files) belongs to ACD-2400d.

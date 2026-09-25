@@ -1,0 +1,49 @@
+id: ACD-2400c-2
+components:
+  - ac_driven_dev
+  - testing_quality
+  - build_orchestration
+readiness: draft
+priority: medium
+title: "The test design is produced after technical planning and before the approval gate"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  Given the feature-planning workflow has finished the technical planner stage for a batch
+    of 4 leaf code requirements,
+  When the workflow continues,
+  Then the code-aware test-design step runs on those 4 requirements before the final
+    approval gate is shown,
+  And the approval gate shows each requirement's test design next to its criteria,
+  And a requirement the step could not design (for example its declared files could not
+    be opened) is shown at the gate as "test design pending" and is not offered for approval,
+  And when the step is skipped or fails for the whole batch, none of the 4 is offered for
+    approval.
+depends_on:
+  - ACD-2400c
+  - ACD-2400c-1
+  - ACD-2400b-2
+doc_links:
+  - path: templates/agents/it-po.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-09-25
+amended_by: []
+superseded_by: null
+covered_by:
+  - ACD-2400c-2-i
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  Ordering inside the goal: ACD-2400b and ACD-2400c ship together (ACD-2400 notes). If
+  this AC ships without ACD-2400c-1, ACD-2400b-2 holds every new code requirement at
+  "test design pending" - visible, not silent, but blocking. IT-PO should batch them.

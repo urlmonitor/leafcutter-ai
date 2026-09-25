@@ -1,0 +1,53 @@
+id: ACD-2400d-2
+components:
+  - ac_driven_dev
+  - agent_registry
+readiness: draft
+priority: medium
+title: "The reference file a piece of work should follow is chosen by a step that opened it"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  Given a package-surface requirement assigned to python-coder whose work must follow the
+    pattern of an existing file,
+  When the file-aware step runs on it,
+  Then the requirement names a reference file that exists at that moment,
+  And the reference file is of the same file type as the deliverable and lives in the same
+    area of the repository,
+  And the step states in one sentence why it chose that file,
+  And the technical planner's output for that requirement names no reference file.
+depends_on:
+  - ACD-2400d
+  - ACD-2400d-1
+doc_links:
+  - path: docs/acceptance-criteria/build-orchestration/BO-2000-correct-prompts-by-construction/BO-2000d-1.yaml
+    relationship: related
+    status: exists
+  - path: docs/acceptance-criteria/build-orchestration/BO-2000-correct-prompts-by-construction/BO-2000d-3.yaml
+    relationship: related
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-09-25
+amended_by: []
+superseded_by: null
+covered_by:
+  - ACD-2400d-2-i
+implemented_by: []
+change_target: prompt
+risk_surface: internal
+notes: |
+  AMENDMENT NEEDED: BO-2000d-3 promises that the IT PO template states the obligation to
+  supply five package-surface fields including the resolved reference-file path. After
+  this AC the reference-file path comes from the file-aware step; amend BO-2000d-3 so the
+  planner's obligation covers the other four fields and the reference file is attributed
+  to the file-aware step. BO-2000d-1 (validation fails when any of the five is missing) is
+  unchanged in substance but its TIMING changes - see ACD-2400d-2-i.
+  TKT-300a-2 (no implementation prescriptions in it_requirements) sits uneasily with a
+  planner-written file path today; moving the choice out removes that tension.

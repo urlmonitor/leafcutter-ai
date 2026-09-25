@@ -1,0 +1,41 @@
+id: ACD-2400a-1-ii
+components:
+  - ac_driven_dev
+  - ac_store
+readiness: draft
+priority: medium
+title: "An unreadable record or a rule that errors is a failure, never a skipped pass"
+component: ac-driven-dev
+level: L3
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  Given a feature folder holds 3 requirement records and one of them cannot be read as a
+    requirement record (a YAML syntax error at line 7),
+  When the requirement rule check runs,
+  Then the overall result is failed,
+  And one finding names that file, states that it could not be read, and gives line 7,
+  And the other 2 records are still checked in the same run and their own findings,
+    if any, are reported,
+  And when one rule family raises an internal error while evaluating a readable record,
+    that is reported as a failure for that record and that rule family, and the overall
+    result is failed rather than passed with the rule silently skipped.
+depends_on:
+  - ACD-2400a-1
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-09-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary

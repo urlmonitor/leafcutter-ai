@@ -1,0 +1,41 @@
+id: ACD-2400c-5
+components:
+  - ac_driven_dev
+  - testing_quality
+  - build_orchestration
+readiness: draft
+priority: medium
+title: "Component diagram of who writes which part of a requirement"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  Given the ownership split of ACD-2400 (planner, rule check, code-aware step, test writer),
+  When its component diagram is authored,
+  Then it shows each part of a requirement (criteria, routing and contracts, technical
+    requirements, test intent, test design, reference file, rule-checked fields) and the
+    single owner that writes it,
+  And it shows which owners may read source code and which may not.
+depends_on:
+  - ACD-2400c
+  - ACD-2400c-1
+doc_links:
+  - path: templates/agents/it-po.md
+    relationship: describes
+    status: exists
+assigned_agent: architecture-diagram-author
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-09-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: docs
+risk_surface: internal
+notes: |
+  Answers ACD-2400c's component-diagram trigger.

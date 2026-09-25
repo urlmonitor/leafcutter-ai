@@ -1,0 +1,48 @@
+id: ACD-2400c-4
+components:
+  - ac_driven_dev
+  - testing_quality
+  - build_orchestration
+readiness: draft
+priority: medium
+title: "Sequence diagram from technical planning through test design to the test writer"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  Given the flow specified by ACD-2400b-1, ACD-2400c-1, ACD-2400c-2 and ACD-2400c-2-i,
+  When its sequence diagram is authored,
+  Then it shows, in order: technical planner records test intent, requirement rule check,
+    code-aware step writes the test design, approval gate, build, test writer consumes the
+    design,
+  And it shows the "test design pending" branch at the approval gate and at the test writer,
+  And it shows the file-aware checks of ACD-2400d in the same pre-approval step when they
+    share a host.
+depends_on:
+  - ACD-2400c
+  - ACD-2400c-1
+  - ACD-2400c-2
+doc_links:
+  - path: templates/agents/it-po.md
+    relationship: describes
+    status: exists
+  - path: templates/agents/test-writer.md
+    relationship: describes
+    status: exists
+assigned_agent: architecture-diagram-author
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-09-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: docs
+risk_surface: internal
+notes: |
+  Answers ACD-2400c's sequence-diagram trigger and, if ACD-2400d shares the host,
+  ACD-2400d's as well (then ACD-2400d-4 may be merged into this one by IT-PO).

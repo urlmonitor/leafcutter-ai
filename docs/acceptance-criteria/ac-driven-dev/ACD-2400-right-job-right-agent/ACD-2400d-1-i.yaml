@@ -1,0 +1,38 @@
+id: ACD-2400d-1-i
+components:
+  - ac_driven_dev
+  - agent_registry
+readiness: draft
+priority: medium
+title: "Behaviour found outside every declared file is reported, not quietly added"
+component: ac-driven-dev
+level: L3
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  Given a requirement declares 2 existing files, neither of which contains the behaviour its
+    criteria change, and the behaviour is found in a third file,
+  When the file-aware step runs,
+  Then it reports a surface mismatch naming the 2 declared files and the third file where
+    it found the behaviour,
+  And the declared files of the requirement are unchanged by the step,
+  And the requirement is not offered for approval until the mismatch is resolved.
+depends_on:
+  - ACD-2400d-1
+doc_links:
+  - path: templates/agents/it-po.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-09-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: prompt
+risk_surface: internal

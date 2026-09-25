@@ -1,0 +1,63 @@
+id: ACD-2400b-1
+components:
+  - ac_driven_dev
+  - testing_quality
+readiness: draft
+priority: medium
+title: "The technical planner records per outcome clause whether a test is needed and why"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  Given an L2 leaf code requirement whose criteria carry 3 outcome clauses (Then/And):
+    (1) the check reports that 4 records were checked,
+    (2) the overall result is failed,
+    (3) the report heading uses the project's house wording,
+  When the technical planner enriches it,
+  Then the record carries one test-intent entry per outcome clause, 3 in total,
+  And each entry names its clause, states needs-test yes or no, and gives a one-sentence
+    reason,
+  And the record carries no test design written by the planner: no test names, target
+    directories, frameworks, test types or test angles,
+  And the criteria text is byte-identical before and after enrichment,
+  And for a requirement that produces no executable behaviour (a prompt- or docs-only
+    change) the planner may instead record that no tests are required, as today.
+depends_on:
+  - ACD-2400b
+doc_links:
+  - path: templates/agents/it-po.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-009-itpo-no-source-code-access.md
+    relationship: related
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-09-25
+amended_by: []
+superseded_by: null
+covered_by:
+  - ACD-2400b-1-i
+implemented_by: []
+change_target: prompt
+risk_surface: contract_boundary
+notes: |
+  Field name is IT-PO's call; `test_intent` (list of {clause, needs_test, reason}) is the
+  BA's suggestion. It must not reuse `test_spec`, whose presence already means "a test
+  contract exists" to the readiness gate (ACD-1600c-1) and to the ticket generator.
+
+  Compatibility with touched ACs:
+  - TKT-300a-4 (planner never modifies criteria) - preserved, restated in clause 5.
+  - BO-550-1-i (test_constraints is the ONLY channel for the IT PO to influence test
+    strategy): test intent states WHICH outcomes need proof, not HOW to test. It is not a
+    second strategy channel and must not carry isolation level. test_constraints stays
+    where it is (see open question on whether isolation choice moves to the test-design
+    step).
+  - TKT-500b-3 (tests_after set by IT-PO reverses order): unaffected; sequencing stays a
+    planner call.
+  Named alteration: planner writes a test_spec alongside intent -> clause 4 must go red.

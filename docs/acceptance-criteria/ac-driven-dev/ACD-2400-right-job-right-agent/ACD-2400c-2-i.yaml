@@ -1,0 +1,45 @@
+id: ACD-2400c-2-i
+components:
+  - ac_driven_dev
+  - testing_quality
+readiness: draft
+priority: medium
+title: "The test writer builds from the design and never authors one"
+component: ac-driven-dev
+level: L3
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  Given a requirement at readiness "approved" whose test design has 3 entries,
+  When the test writer runs at build time,
+  Then it writes tests whose names and directories match the 3 entries, each tagged with the
+    requirement id,
+  And it adds no entry to, removes no entry from, and edits no entry of the requirement's
+    test design,
+  And when a requirement carrying test intent but no test design reaches the test writer,
+    it writes no test, derives nothing from the Then clauses, and stops with the reason
+    "test design pending" naming the requirement.
+depends_on:
+  - ACD-2400c-2
+doc_links:
+  - path: templates/agents/test-writer.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-09-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: prompt
+risk_surface: contract_boundary
+notes: |
+  User decision 1: test-writer consumes the design at build time; it does not author it.
+  The halt clause is the build-time twin of ACD-2400b-2-i (gate) - both are needed
+  because a record can reach the test writer through a path other than the queue
+  (fast lane, quick-fix).

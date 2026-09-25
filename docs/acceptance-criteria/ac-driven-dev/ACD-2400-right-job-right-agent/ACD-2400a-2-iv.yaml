@@ -1,0 +1,47 @@
+id: ACD-2400a-2-iv
+components:
+  - ac_driven_dev
+  - ac_store
+readiness: draft
+priority: medium
+title: "Readiness raised to approved by an authoring agent is restored to its prior value"
+component: ac-driven-dev
+level: L3
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  Given record R had readiness "draft" when the technical planner's stage began,
+    and at the end of that stage R carries readiness "approved",
+  When the requirement rule check runs at the end of the stage,
+  Then R's readiness reads "draft" again,
+  And the report lists one "fixed" entry naming R's file, the value "approved" that was
+    removed and the value "draft" that was restored,
+  And R is not in the buildable queue after the stage,
+  And, as the paired acceptable input, a record raised from "reviewed" to "approved" by the
+    approval step the user runs produces no finding and keeps "approved".
+depends_on:
+  - ACD-2400a-2
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+  - path: templates/agents/it-po.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-09-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  Standing rule honoured: ACD-400c ("a requirement only joins the buildable queue once a
+  person has approved it"). IT-PO: the check needs to know each record's readiness at
+  stage start (the stage's before-state); how it obtains that is an enrichment decision.

@@ -1,0 +1,42 @@
+id: ACD-2400a-2-i
+components:
+  - ac_driven_dev
+  - ac_store
+readiness: draft
+priority: medium
+title: "A missing parent back-link is appended once and nothing else in the parent changes"
+component: ac-driven-dev
+level: L3
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  Given the business analyst added ACD-9990a-3 with depends_on [ACD-9990a],
+    and the parent ACD-9990a in the same feature folder lists covered_by
+    [ACD-9990a-1, ACD-9990a-2],
+  When the requirement rule check runs,
+  Then the parent's covered_by reads [ACD-9990a-1, ACD-9990a-2, ACD-9990a-3],
+  And every other field of the parent is byte-identical to before the run,
+  And the report lists one "fixed" entry naming the parent's file and the id added,
+  And a second run immediately afterwards changes nothing and reports no "fixed" entry,
+  And a child whose derived parent has no record in the same feature folder is reported
+    "needs a decision" naming the child id and the missing parent id, and no parent record
+    comes into existence as a result of the check.
+depends_on:
+  - ACD-2400a-2
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-09-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary

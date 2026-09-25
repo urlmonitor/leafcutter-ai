@@ -31,7 +31,11 @@ origin_agent: product-owner
 created: 2026-09-25
 amended_by: []
 superseded_by: null
-covered_by: []
+covered_by:
+  - ACD-2400e-1
+  - ACD-2400e-2
+  - ACD-2400e-3
+  - ACD-2400e-4
 implemented_by: []
 change_target:
   - prompt

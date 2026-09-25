@@ -1,0 +1,43 @@
+id: ACD-2400a-2-ii
+components:
+  - ac_driven_dev
+  - ac_store
+readiness: draft
+priority: medium
+title: "The graph component list is filled only when the namespace maps to exactly one graph id"
+component: ac-driven-dev
+level: L3
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  Given record A has namespace component "ac-driven-dev" and an empty graph component list,
+    and the store's namespace-to-graph mapping gives exactly one graph id, "ac_driven_dev",
+    for "ac-driven-dev",
+    and record B has an empty graph component list and a namespace component for which the
+    mapping gives two candidate graph ids,
+    and record C lists the graph component "ac-driven-dev" (the namespace spelling, which is
+    not a graph component id),
+  When the requirement rule check runs,
+  Then A's graph component list reads ["ac_driven_dev"] and is reported "fixed",
+  And B is left unchanged and reported "needs a decision" naming both candidate ids,
+  And C is left unchanged and reported "needs a decision" naming "ac-driven-dev" as a value
+    that is not a graph component id.
+depends_on:
+  - ACD-2400a-2
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-09-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary

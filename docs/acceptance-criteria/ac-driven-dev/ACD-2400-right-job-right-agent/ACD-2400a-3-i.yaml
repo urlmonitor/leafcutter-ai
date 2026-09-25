@@ -1,0 +1,39 @@
+id: ACD-2400a-3-i
+components:
+  - ac_driven_dev
+  - ac_store
+readiness: draft
+priority: medium
+title: "A Node workflow body assigned to python-coder passes; a SQL file assigned to python-coder does not"
+component: ac-driven-dev
+level: L3
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  Given record W is assigned to python-coder and declares templates/workflows-js/plan-feature.js,
+    and record Y is assigned to python-coder and declares queries/report.sql,
+  When the requirement rule check runs,
+  Then W produces no finding,
+  And Y produces one finding naming queries/report.sql, the resolved specialist sql-coder
+    and python-coder,
+  And when the map's entry for workflow bodies is changed to another specialist, W's verdict
+    changes on the next run with no other edit.
+depends_on:
+  - ACD-2400a-3
+doc_links:
+  - path: docs/acceptance-criteria/ac-driven-dev/ACD-1700-role-scoped-context/ACD-1700b-1.yaml
+    relationship: related
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-09-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary

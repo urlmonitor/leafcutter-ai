@@ -1,0 +1,42 @@
+id: ACD-2400c-1-i
+components:
+  - ac_driven_dev
+  - testing_quality
+  - build_orchestration
+readiness: draft
+priority: medium
+title: "A test-design entry naming a file that neither exists nor is declared to-be-created is rejected"
+component: ac-driven-dev
+level: L3
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  Given a test design with 3 entries:
+    E1 names an existing code file and an existing test directory,
+    E2 names a code file marked to-be-created that the requirement also declares,
+    E3 names scripts/does_not_exist.py, which is neither in the repository nor declared,
+  When the requirement rule check runs,
+  Then one finding names the record, entry E3 and the path scripts/does_not_exist.py,
+  And E1 and E2 produce no finding,
+  And a design whose list of opened files is empty is reported as not grounded, naming the
+    record.
+depends_on:
+  - ACD-2400c-1
+  - ACD-2400a-1
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-09-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary

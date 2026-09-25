@@ -1,0 +1,52 @@
+id: ACD-2400d-1
+components:
+  - ac_driven_dev
+  - agent_registry
+readiness: draft
+priority: medium
+title: "A file-aware step confirms each declared file actually holds the behaviour"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  Given a requirement whose criteria change the retry cap applied when a build step fails,
+    and whose declared files are (a) the runbook in which that cap is defined and (b) a
+    reference document that only describes the cap,
+  When the file-aware step runs on it,
+  Then it reports (a) as consistent with the requirement's intent,
+  And it reports (b) as "describes, does not implement", naming the file and the line range
+    it read,
+  And it reports a declared file that is absent from the repository and not marked
+    to-be-created, naming its path,
+  And its report names every file it opened.
+depends_on:
+  - ACD-2400d
+doc_links:
+  - path: templates/agents/it-po.md
+    relationship: describes
+    status: exists
+  - path: docs/acceptance-criteria/ac-driven-dev/ACD-1700-role-scoped-context/ACD-1700b-1.yaml
+    relationship: related
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-09-25
+amended_by: []
+superseded_by: null
+covered_by:
+  - ACD-2400d-1-i
+implemented_by: []
+change_target: prompt
+risk_surface: internal
+notes: |
+  This is the judgment half of the planner's S2.8 intent-vs-surface check; the mechanical
+  half (file type -> specialist) is ACD-2400a-3.
+  HOST: the ACD-2400d L1 notes allow merging with the ACD-2400c code-aware step. BA view:
+  same host is fine (both need the declared files open, both run before approval) as long
+  as the outputs stay separate (test design vs surface findings). Left to IT-PO / user -
+  see open questions.

@@ -1,0 +1,45 @@
+id: ACD-2400a-5
+components:
+  - ac_driven_dev
+  - ac_store
+readiness: draft
+priority: medium
+title: "Reference doc for the requirement rule check"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  Given the requirement rule check specified by ACD-2400a-1, ACD-2400a-2 and ACD-2400a-3,
+  When its reference documentation is authored,
+  Then it lists each of the six rule families with its disposition ("fixed" or
+    "needs a decision"),
+  And it states the finding format: file, record id, rule family, disposition,
+  And it states the outcomes for zero records checked and for an unreadable record,
+  And it names which existing store check owns each rule shared with this check,
+  And it states that judging whether two contract descriptions agree stays with the
+    technical planner.
+depends_on:
+  - ACD-2400a
+  - ACD-2400a-1
+  - ACD-2400a-2
+  - ACD-2400a-3
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+assigned_agent: documentation-expert
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-09-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: docs
+risk_surface: internal
+notes: |
+  Answers ACD-2400a's reference-doc trigger. Deliverable is the document only.

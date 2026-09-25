@@ -1,0 +1,71 @@
+id: ACD-2400a-1
+components:
+  - ac_driven_dev
+  - ac_store
+readiness: draft
+priority: medium
+title: "The requirement rule check runs after every authoring stage and fails closed, naming file and rule"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  Given an authoring stage (product owner, business analyst, technical planner or the
+    code-aware test-design step) has just added or changed 4 requirement records in one
+    feature folder,
+    and exactly one of them, ACD-9990a-2, declares it expects a contract from ACD-9990a-1
+    while ACD-9990a-1 declares no delivery,
+  When the requirement rule check runs at the end of that stage,
+  Then it reports exactly one finding for ACD-9990a-2, and that finding names the record's
+    file, the record id and the rule family "producer/consumer contract symmetry",
+  And the overall result of the check is failed,
+  And the authoring stage is not reported complete while the check result is failed,
+  And the 3 records with no violation produce no findings,
+  And the report states that 4 records were checked, and states 5 when a fifth record is
+    added in the same stage and the check is run again,
+  And a record that violates a rule the store's existing commit-time record check already
+    enforces (for example an empty graph component list) produces exactly one finding for
+    that rule, not one finding per check that knows the rule.
+depends_on:
+  - ACD-2400a
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+  - path: templates/agents/it-po.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-09-25
+amended_by: []
+superseded_by: null
+covered_by:
+  - ACD-2400a-1-i
+  - ACD-2400a-1-ii
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  Rule families this check owns are enumerated in ACD-2400a-2 (five families) and
+  ACD-2400a-3 (the sixth, specialist-versus-surface). This AC is the contract every
+  family reports through: file + record id + rule family + disposition, fail-closed.
+
+  "Extend, do not duplicate" (ACD-2400a L1 notes): the store already has a blocking
+  commit-time record check (required fields incl. non-empty components), a parent
+  back-link check and an orphan scanner. The last clause is the observable form of
+  that instruction: one violated rule, one finding. IT-PO decides whether the new
+  check is an extension of the existing record check or a caller of it; either way
+  the finding count must not double.
+
+  Contrast deliberately with the circular-dependency check, which is documented as
+  FAIL-OPEN (exception -> exit 0). This check is fail-closed: see ACD-2400a-1-i
+  (zero records) and ACD-2400a-1-ii (unreadable record / rule error).
+
+  Named alteration for the implementer: make the check return passed whenever the
+  finding list is empty regardless of records checked -> ACD-2400a-1-i must go red;
+  parent clauses here stay green. That asymmetry is why -i is its own record.

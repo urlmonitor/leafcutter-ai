@@ -1,0 +1,52 @@
+id: ACD-2400a-2-iii
+components:
+  - ac_driven_dev
+  - ac_store
+readiness: draft
+priority: medium
+title: "One-sided producer/consumer contracts are reported with both ends named, never completed"
+component: ac-driven-dev
+level: L3
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  Given ACD-9990a-1 (assigned to python-coder) declares a delivery to llm-expert, and no
+    record assigned to llm-expert declares it expects anything from ACD-9990a-1,
+    and ACD-9990a-4 declares it expects a contract from ACD-9990a-2, and ACD-9990a-2
+    declares no delivery,
+    and ACD-9990a-5 declares it expects a contract from ACD-9990a-7, an id that exists
+    nowhere in the store,
+  When the requirement rule check runs,
+  Then exactly three findings are reported, each with disposition "needs a decision",
+  And the first names ACD-9990a-1 and states no llm-expert record expects from it,
+  And the second names ACD-9990a-4 and ACD-9990a-2 and states the delivery side is absent,
+  And the third names ACD-9990a-5 and the unknown id ACD-9990a-7,
+  And no contract text is added to or removed from any record,
+  And a pair whose two sides both exist and point at each other produces no finding even
+    when their contract descriptions differ in wording.
+depends_on:
+  - ACD-2400a-2
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+  - path: docs/acceptance-criteria/ticket-creation/TKT-300-review-gates/TKT-300a-3.yaml
+    relationship: related
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-09-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  Last clause is the line between this check and the planner: whether two descriptions
+  mean the same thing is judgment (TKT-300a-3 keeps it with the planner). Named
+  alteration: make the check compare description text -> the last clause goes red.

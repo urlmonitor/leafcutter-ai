@@ -1,0 +1,48 @@
+id: ACD-2400d-3
+components:
+  - ac_driven_dev
+  - agent_registry
+readiness: draft
+priority: medium
+title: "The file-aware step reports findings; the technical planner still decides routing"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  Given the file-aware step finds that a requirement assigned to python-coder describes
+    behaviour that lives partly in a Python helper and partly in an agent template,
+  When it reports that finding,
+  Then the requirement's assigned specialist, split, technical requirements, contracts and
+    criteria are unchanged by the step,
+  And the finding reaches the technical planner, whose next pass either reassigns, splits,
+    or states why the assignment stands,
+  And the requirement is not offered for approval while such a finding has no recorded
+    decision.
+depends_on:
+  - ACD-2400d
+  - ACD-2400d-1
+doc_links:
+  - path: templates/agents/it-po.md
+    relationship: describes
+    status: exists
+  - path: docs/acceptance-criteria/ticket-creation/TKT-300-review-gates/TKT-300a-4.yaml
+    relationship: related
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-09-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: prompt
+risk_surface: internal
+notes: |
+  User decision 2: the IT PO keeps routing/splitting. TKT-300a-1 (IT PO assigns exactly
+  one agent) and TKT-300a-3 (IT PO wires contracts) remain the planner's; this step only
+  informs them.

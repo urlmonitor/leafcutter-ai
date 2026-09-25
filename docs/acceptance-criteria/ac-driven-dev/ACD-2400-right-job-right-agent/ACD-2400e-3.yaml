@@ -1,0 +1,50 @@
+id: ACD-2400e-3
+components:
+  - ac_driven_dev
+  - agent_registry
+  - llm_authoring
+readiness: draft
+priority: medium
+title: "An enrichment run's output carries none of the relocated fields"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  Given a batch of 3 business-analyst requirements (one code, one prompt-only, one
+    documentation) and one of them declares a pattern reference with bindings,
+  When the technical planner enriches the batch,
+  Then each requirement gains an assigned specialist, a size, technical requirements, and
+    contracts where one requirement's output feeds another,
+  And the code requirement gains test intent and no test design,
+  And no requirement gains a reference-file choice or a readiness above "reviewed",
+  And criteria, pattern reference and pattern bindings are byte-identical before and after.
+depends_on:
+  - ACD-2400e
+  - ACD-2400e-2
+doc_links:
+  - path: templates/agents/it-po.md
+    relationship: describes
+    status: exists
+  - path: docs/acceptance-criteria/ticket-creation/TKT-300-review-gates/TKT-300a-4.yaml
+    relationship: related
+    status: exists
+  - path: docs/acceptance-criteria/ac-store/ACS-500-shared-pattern-specs/ACS-500c-2.yaml
+    relationship: related
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-09-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: prompt
+risk_surface: internal
+notes: |
+  Output-level proof for ACD-2400e-2, which alone is a prose-presence claim. Keeps
+  TKT-300a-1, TKT-300a-4 and ACS-500c-2 visibly true after the shrink.

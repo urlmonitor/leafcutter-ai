@@ -1,0 +1,46 @@
+id: ACD-2400b-1-i
+components:
+  - ac_driven_dev
+  - testing_quality
+readiness: draft
+priority: medium
+title: "An outcome clause with no test-intent entry, or an entry for a clause that no longer exists, is reported"
+component: ac-driven-dev
+level: L3
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  Given a record whose criteria carry 4 outcome clauses and whose test intent has entries
+    for only 3 of them,
+  When the requirement rule check runs,
+  Then one finding names the record and quotes the clause that has no entry,
+  And when a test-intent entry names a clause whose text no longer appears in the criteria,
+    a finding reports that entry as stale,
+  And after a fifth outcome clause is added to the criteria, the next run reports the
+    fifth clause as having no entry,
+  And a record whose every outcome clause has exactly one entry produces no finding for
+    this rule.
+depends_on:
+  - ACD-2400b-1
+  - ACD-2400a-1
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-09-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  Why this is a check and not planner prose: a silently skipped clause becomes "no test
+  needed" by omission, which is exactly the untested-Then gap the test contract exists
+  to close. Reports through the ACD-2400a-1 finding contract.

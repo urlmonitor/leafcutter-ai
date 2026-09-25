@@ -1,0 +1,60 @@
+id: ACD-2400b-2
+components:
+  - ac_driven_dev
+  - testing_quality
+readiness: draft
+priority: medium
+title: "A requirement with test intent but no test design cannot be approved"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  Given three leaf code requirements at readiness "reviewed":
+    R1 carries test intent marking 2 clauses needs-test and carries no test design,
+    R2 carries test intent and a test design covering both needs-test clauses,
+    R3 is recorded as requiring no tests,
+  When the user runs the approval step over all three,
+  Then R1 stays at "reviewed" and the approval report names R1 with the reason
+    "test design pending",
+  And R2 and R3 move to "approved",
+  And test intent on its own is never accepted as the test contract that an approved leaf
+    code requirement must carry.
+depends_on:
+  - ACD-2400b
+  - ACD-2400b-1
+  - ACD-1600c-1
+doc_links:
+  - path: docs/acceptance-criteria/ac-driven-dev/ACD-1600-single-source-buildable/ACD-1600c-1.yaml
+    relationship: related
+    status: exists
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-09-25
+amended_by: []
+superseded_by: null
+covered_by:
+  - ACD-2400b-2-i
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  READINESS CONFLICT (ACD-2400 notes) - RESOLUTION CHOSEN: the design must exist BEFORE
+  approval (user decision 1: test-planner runs before the build, before approval). The
+  rule in ACD-1600c-1/-2 and the check-ac-schema guard ("an approved leaf code AC carries
+  a test contract") is NOT weakened: intent is not a contract. What is added is a
+  distinct, named not-yet-approvable state ("test design pending") so the gap is visible
+  instead of surfacing as a generic missing-contract error.
+
+  AMENDMENT NEEDED: ACD-1600c-1 promises the flag names "which of {file targets, test
+  contract} is missing". This tree adds a third reason ("test design pending", plus
+  "reference file pending" from ACD-2400d-2-i). Amend ACD-1600c-1 to allow the added
+  reasons; its two existing reasons are unchanged. ACD-1600c-3 (reference doc) should
+  list them too.

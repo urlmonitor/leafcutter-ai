@@ -1,0 +1,48 @@
+id: ACD-2400d-2-i
+components:
+  - ac_driven_dev
+  - agent_registry
+readiness: draft
+priority: medium
+title: "A package-surface requirement whose reference file is still pending cannot be approved"
+component: ac-driven-dev
+level: L3
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  Given a package-surface requirement for which the technical planner has supplied the other
+    four package-surface fields and the file-aware step has not yet run,
+  When the user runs the approval step,
+  Then the requirement stays at "reviewed" with the reason "reference file pending",
+  And the technical planner's stage is not failed for the missing reference file,
+  And once the file-aware step has named the reference file, validation of the five
+    package-surface fields runs exactly as before this change, failing and naming each
+    missing field.
+depends_on:
+  - ACD-2400d-2
+  - ACD-2400b-2
+doc_links:
+  - path: docs/acceptance-criteria/build-orchestration/BO-2000-correct-prompts-by-construction/BO-2000d-1.yaml
+    relationship: related
+    status: exists
+  - path: docs/acceptance-criteria/ac-driven-dev/ACD-1600-single-source-buildable/ACD-1600c-1.yaml
+    relationship: related
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-09-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: internal
+notes: |
+  Clause 2 resolves the timing conflict with BO-2000d-1: that rule rejects a thin spec
+  "at authoring time"; if it fired after the planner's stage it would reject every
+  package-surface AC the planner hands off. The rule moves to after the file-aware step;
+  its content is unchanged (clause 3).
