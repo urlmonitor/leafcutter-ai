@@ -121,7 +121,7 @@ def _build_isolated_layout(root: Path) -> tuple[Path, Path]:
 
     ac_dir = root / "docs" / "acceptance-criteria"
     ac_dir.mkdir(parents=True, exist_ok=True)
-    record = dict(_BASE_FIELDS)
+    record: dict = dict(_BASE_FIELDS)
     record["id"] = "ZZP-920"
     record["title"] = "TQ-500f missing-bridge probe"
     record["criteria"] = "Given x\nWhen y\nThen z\n"

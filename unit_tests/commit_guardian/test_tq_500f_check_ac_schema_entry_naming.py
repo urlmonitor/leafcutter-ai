@@ -73,7 +73,7 @@ _BASE_FIELDS = {
 
 
 def _ac_dict(ac_id: str, test_spec_entry: dict) -> dict:
-    record = dict(_BASE_FIELDS)
+    record: dict = dict(_BASE_FIELDS)
     record["id"] = ac_id
     record["title"] = "TQ-500f entry-naming probe"
     record["criteria"] = "Given x\nWhen y\nThen z\n"

@@ -69,7 +69,7 @@ _MUST_CATCH_STRINGS = [
     "new column cvd_delta_30 left NULL",
 ]
 
-_TWO_ENTRY_TEST_SPEC = [
+_TWO_ENTRY_TEST_SPEC: list[dict] = [
     {
         "name": "test_retry_gate_runs_when_both_conditions_due",
         "target_dir": "unit_tests/ac_store/",
