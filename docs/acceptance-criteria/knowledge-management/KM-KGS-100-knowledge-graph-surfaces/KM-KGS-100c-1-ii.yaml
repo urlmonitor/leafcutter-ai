@@ -1,0 +1,117 @@
+id: KM-KGS-100c-1-ii
+components:
+  - knowledge_management
+readiness: approved
+priority: high
+title: "A node on a surface that is neither declared nor one of the map's named synthetic surfaces fails the surface check"
+component: knowledge-management
+level: L3
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+parent: KM-KGS-100c-1
+created_by: "docs/acceptance-criteria/knowledge-management/KM-KGS-100-knowledge-graph-surfaces/KM-KGS-100c-1.yaml"
+criteria: |
+  Given a surfaces configuration that declares the agents and tickets surfaces and
+    no surface named "files" or "gizmos",
+  And the map's named set of synthetic surface labels is exactly "components"
+    (component hub nodes) and "files" (path-keyed file nodes),
+  And a built map holds agent node "python-coder", ticket node "T-1", hub node
+    "build-pipeline" labelled "components", file node "scripts/foo.py" labelled
+    "files", and node "stray-1" labelled "gizmos",
+  When the surface-set check runs over that map,
+  Then the check fails and its message names the label "gizmos" and the node
+    "stray-1",
+  And the nodes labelled "components" and "files" raise no failure,
+  And removing node "stray-1" makes the check pass with the same configuration.
+depends_on:
+  - KM-KGS-100c-1
+doc_links:
+  - path: docs/acceptance-criteria/knowledge-management/KM-KGS-100-knowledge-graph-surfaces/KM-KGS-100c-1.yaml
+    relationship: context
+    status: exists
+    relevance: "The parent's 'no surface is read that was not declared' clause. Today a node with an undeclared label never enters contributing_surfaces, so the subset check is true by construction and cannot catch it. This record makes that clause checkable."
+  - path: docs/acceptance-criteria/knowledge-management/KM-KGS-100-knowledge-graph-surfaces/KM-KGS-100d-4.yaml
+    relationship: context
+    status: exists
+    relevance: "Introduces the synthetic 'files' surface label. Its nodes are created only for referenced files, so 'files' is a synthetic label and must never be a declared, traversed surface."
+  - path: scripts/knowledge_query.py
+    relationship: modifies
+    status: exists
+    relevance: "The surface-set check on the built map (validate_knowledge_map and the KnowledgeMap audit sets)."
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "EVIDENCE (IT-PO reading of code and tests, recorded 2026-09-25): build_knowledge_map adds a label to contributing_surfaces only if it is already in the declared set, so an undeclared label never enters the set and never fails a check. test_contributing_surfaces_subset_of_declared is therefore true by construction. KM-KGS-100d-4 is about to add a synthetic 'files' label, and nothing today would notice a mislabelled or stray node."
+  - "ONE NAMED SET: the synthetic surface labels are one explicit, named collection that the check reads. Today it holds the component-hub label and 'files'. A new kind of synthetic node joins it by adding its label there, not by a conditional elsewhere. The check reads the declared labels from the surfaces configuration and adds this set. It hard-codes no declared surface name."
+  - "DO NOT DECLARE 'files' IN config/paths.json. A surface entry needs a path and is traversed, which would break KM-KGS-100d-4's 'only referenced files become nodes; never walk the repository'."
+  - "The hub label 'components' is in both the synthetic set and the declared set. That is allowed here; KM-KGS-100c-1-i makes sure the hubs do not count as that surface contributing."
+  - "The failure message names each offending label and at least one node carrying it, so the fault can be traced without a debugger."
+  - "RESTRICTED BUILDS (IT-PO reading of code, 2026-09-25): build_knowledge_map(..., surface_filter=NAME) already narrows declared_surfaces to the one filtered surface, and nothing stops the surface-set check from being run on that map. So the check DOES apply to restricted builds, and there the declared set is exactly {NAME}, not every surface in config/paths.json. On a restricted map a node labelled with another configured-but-not-traversed surface (e.g. 'agents' under a tickets restriction) is neither declared nor synthetic and fails. Synthetic labels ('components' hubs, 'files' nodes, which KM-KGS-100d-4-iv creates under a restriction too) pass. The check reads declared_surfaces from the map it is given and never re-reads config/paths.json to widen it."
+test_spec:
+  - name: test_stray_label_fails_the_check_naming_label_and_node
+    target_dir: unit_tests/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "FIXTURE (the stray-label fixture): a temp project whose config/paths.json is a byte copy of the real one (it declares agents and tickets and no surface named 'files' or 'gizmos'), with config/agent_registry.json holding agent 'python-coder', tickets/T-1.md whose frontmatter lists components ['build-pipeline'] and files_touched ['scripts/foo.py'], and a real scripts/foo.py. The map is built with the public build_knowledge_map. PRECONDITION, asserted so the test cannot pass vacuously: the real builder produced 'python-coder' (agents), 'T-1' (tickets), 'build-pipeline' (components) and 'scripts/foo.py' (files). The stray is then INJECTED by wrapping the real output: km._replace(nodes=km.nodes + [NodeRecord(id='stray-1', surface='gizmos', ...)]), because no real reader emits a stray label. The public surface-set check run over the wrapped map fails, and its message contains both 'gizmos' and 'stray-1'"
+  - name: test_components_and_files_labels_raise_no_failure_and_removing_stray_passes
+    target_dir: unit_tests/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "On the stray-label fixture, the check's failure lists no offending label other than 'gizmos' (the 'components' hub and the 'files' node are not named), and the unwrapped real map (the same build without 'stray-1', same configuration) passes the check with no failure"
+  - name: test_synthetic_labels_are_one_named_collection_and_files_is_never_declared
+    target_dir: unit_tests/
+    framework: pytest
+    type: unit
+    angle: seam
+    description: "knowledge_query exposes ONE named module-level collection of synthetic surface labels (the test imports it by the name the coder chooses) and it equals exactly {'components', 'files'}. The real config/paths.json has no surface named 'files' (declaring it would make it a traversed surface, which KM-KGS-100d-4 forbids)"
+  - name: test_check_reads_declared_labels_from_configuration_not_from_code
+    target_dir: unit_tests/
+    framework: pytest
+    type: integration
+    angle: boundary
+    description: "Two configs derived programmatically from the real config/paths.json: (a) with an extra surface 'widgets' (a name no production code can know) whose path is a folder holding one .md file, and (b) the unaltered copy. The same project is built under each with build_knowledge_map. Under (a) the widgets node passes the check. Under (b), a node labelled 'widgets' injected into the real output by wrapping fails the check, naming 'widgets'. Only the configuration differs, which proves the check reads the declared labels from configuration and hard-codes no surface name"
+  - name: test_restricted_build_limits_declared_set_to_the_filtered_surface
+    target_dir: unit_tests/
+    framework: pytest
+    type: integration
+    angle: boundary
+    description: "On the stray-label fixture, build_knowledge_map(..., surface_filter='tickets'). declared_surfaces is exactly {'tickets'}. The restricted map (T-1, the 'build-pipeline' hub and the 'scripts/foo.py' files node, which KM-KGS-100d-4-iv creates under a restriction) passes the check. The same restricted map with one injected node labelled 'agents' (configured, but not traversed under this restriction) fails, naming 'agents' and that node"
+  - name: test_real_repository_passes_and_an_injected_stray_fails
+    target_dir: unit_tests/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    description: "Module-scoped builds of the real repository through build_knowledge_map(<repo root>, <repo root>/config/paths.json): unrestricted, and with surface_filter='acs' (about 5 s each). Both pass the check unaltered, and every node's surface in each is in that map's declared_surfaces or the named synthetic collection. The unrestricted real map with one injected node (id 'stray-1', surface 'gizmos') fails, naming both. A missing repo root or paths.json FAILS naming the path; it never calls pytest.skip"
+test_required: true
+test_rationale: >-
+  No real reader emits a stray label, so the failing case is built by wrapping the output of the
+  real builder (config/paths.json byte copy, public build_knowledge_map) and appending one node. A
+  hand-assembled map is not used. A precondition assertion pins the real agent, ticket, hub and
+  files nodes first, so 'components' and 'files' passing is proven on nodes the builder made, not on
+  an empty map. The check is proven to read declared labels from configuration: two configs derived
+  from the real one differ only in a fictional 'widgets' surface, and only the configuration flips
+  the verdict. The restricted-build question was checked in code: build_knowledge_map already
+  narrows declared_surfaces to the filtered surface, so the check runs there too, with declared =
+  {filtered surface}. A test pins that, including that another configured surface's label fails on
+  a restricted map while synthetic labels pass. The real-repository arm proves the check passes on
+  unaltered unrestricted and acs-restricted maps and fails on an injected stray. The 'files' node in
+  the fixture comes from files_touched, so this is RED until KM-KGS-100d-4 (and the files_touched
+  declaration from KM-KGS-100c-4) land, as well as the check itself. File:
+  unit_tests/test_km_kgs_100c_1_ii.py (under 400 content lines), reusing the shared temp-project
+  helper. No git ref, no skip.
+delivers_to: null
+expects_from:
+  ac_id: KM-KGS-100c-1
+  contract: "declared_surfaces on the built map and the surface-set check that compares node surfaces against it"
+origin_agent: business-analyst
+created: 2026-09-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary

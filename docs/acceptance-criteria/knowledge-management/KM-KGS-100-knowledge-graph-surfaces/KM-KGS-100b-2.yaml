@@ -8,7 +8,7 @@ component: knowledge-management
 level: L2
 status: active
 req_status: draft
-work_status: done
+work_status: in_progress
 roadmap_phase: phase_1
 created_by: "docs/acceptance-criteria/knowledge-management/KM-KGS-100-knowledge-graph-surfaces/KM-KGS-100b.yaml"
 criteria: |
@@ -34,15 +34,68 @@ it_requirements:
   - "SURFACE_COLORS in visualise_knowledge_graph.py has no 'acs' entry today; the acs surface must be given a distinct legend colour so acs nodes are visually separable from the existing surfaces (the legend is rendered only for surfaces present in the data, so the colour entry is what makes acs appear)"
   - "The visualization must keep delegating node/edge assembly to knowledge_query._collect_all rather than re-deriving the graph, so acs nodes and their four edge kinds flow through automatically once the builder emits them — no second ingestion path"
   - "Adding the acs colour must not perturb existing surface colours or break the legend rendering for any other surface"
+test_spec:
+  - name: test_page_data_holds_criteria_and_edges_to_files_tests_dependencies_and_component
+    target_dir: unit_tests/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "FIXTURE: the KM-KGS-100d-4 criteria fixture from the shared helper (byte copy of the real config/paths.json; KM-EX-010, KM-EX-011, KM-EX-011-i, KM-EX-012, tickets/T-1.md, real scripts/foo.py and unit_tests/test_foo.py), with the helper's option that also gives KM-EX-010 depends_on ['KM-EX-012'] and components ['build-pipeline']. The fixture itself is not changed. The page is generated through the visualiser's real main(['--no-open', '--output', <tmp html>, '--project-root', <fixture>, ...]), and the embedded 'const DATA = {...};' JSON is extracted with the same shared extractor KM-KGS-100b-2-i and -ii use. Parametrised over the no-restriction branch and the --surface acs branch. In each, DATA.nodes holds the four criterion ids with surface 'acs', and DATA.edges holds: KM-EX-010 implemented_by 'scripts/foo.py' (a DATA node with surface 'files'); KM-EX-011 covered_by 'unit_tests/test_foo.py' (surface 'files'); KM-EX-010 depends_on 'KM-EX-012' (surface 'acs'); and KM-EX-010 component_membership 'build-pipeline' (surface 'components'). KM-EX-012's implemented_by edge ends on DATA node 'T-1' (surface 'tickets') with no restriction, and on DATA node 'tickets/T-1.md' (surface 'files') under --surface acs, consistent with KM-KGS-100d-4-iv. Every endpoint asserted is a DATA.nodes id"
+  - name: test_multi_surface_page_keeps_criterion_edges_whose_ends_are_drawn
+    target_dir: unit_tests/
+    framework: pytest
+    type: integration
+    angle: boundary
+    description: "The same fixture and extractor, in the third branch: --surface acs tickets. DATA.nodes holds the four criterion ids (surface 'acs') and 'T-1' (surface 'tickets'). DATA.edges holds KM-EX-010 depends_on KM-EX-012 and KM-EX-012 implemented_by T-1. The adjacency and forceLink replay from KM-KGS-100b-2-i's shared helper passes (every edge endpoint is drawn). The test deliberately does NOT assert the files and component-hub edges in this branch: the multi-surface branch keeps only nodes whose surface is in the list, so 'files' and 'components' nodes are filtered out there. That gap is recorded in test_rationale and is not pinned either way"
+  - name: test_acs_surface_is_in_the_page_legend_with_its_own_colour
+    target_dir: unit_tests/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "On the no-restriction page from the first test, the embedded SURFACE_COLORS JSON has an 'acs' entry whose value differs from every entry whose key is not 'acs', and every DATA node with surface 'acs' carries that colour. A static anchor proves the shipped script still builds the legend from SURFACE_COLORS filtered by the surfaces present in DATA.nodes (the shownSurfaces set). A Python replay of that loop over the extracted DATA and SURFACE_COLORS yields a legend that includes 'acs'"
+  - name: test_real_repository_default_page_draws_criteria_with_all_four_edge_kinds
+    target_dir: unit_tests/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    description: "The shipped visualiser runs as a subprocess against the real repository (--no-open --output <tmp html> --project-root <repo root>, no restriction, UTF-8 env vars set, about 5 s). The extracted DATA holds more than 0 nodes with surface 'acs'. For each of implemented_by, covered_by, depends_on and component_membership, at least one DATA edge comes from an acs node and both its ends are DATA.nodes ids. At least one implemented_by edge and one covered_by edge from an acs node end on a 'files' node; at least one covered_by or depends_on edge ends on another 'acs' node; and at least one component_membership edge ends on a 'components' node. The legend replay includes 'acs'. The page-wide both-ends-drawn and left-out-count checks are NOT repeated here; they belong to KM-KGS-100b-2-i. A missing repo root FAILS; it is never skipped"
+test_required: true
+test_rationale: >-
+  This L2 was marked done while its default page could not render, because nothing tested the data
+  actually handed to the page. So every test here goes through the real HTML that the visualiser's
+  main writes, extracts the embedded DATA, and asserts this record's own promise: criterion nodes,
+  their four edge kinds, and endpoints of the right surface, plus acs in the legend. It reuses the
+  browser-free proof designed for KM-KGS-100b-2-i and -ii (the shared temp-project helper, DATA
+  extractor, and adjacency/forceLink replay) and does NOT duplicate those children's dangling-edge,
+  left-out-count or missing-file tests. All three generator branches are exercised: the four edge
+  kinds are pinned with no restriction and under --surface acs, where KM-KGS-100d-4-iv's
+  ticket-path fallback is also checked. KNOWN GAP, recorded rather than pinned: under --surface acs
+  tickets, the multi-surface branch keeps only nodes whose surface is listed, so files nodes and
+  component hubs, and with them the criterion-to-file and criterion-to-component edges, are
+  filtered out. The criteria do not speak to restricted views, so this record only asserts the
+  edges whose ends survive there. A follow-up AC should decide whether synthetic surfaces follow
+  their referrers into a multi-surface view. BROWSER GAP, inherited from KM-KGS-100b-2-i: no
+  headless browser exists in the repository or in CI, so rendering is proven by the static anchor
+  plus Python replay, not by a browser. The real-repository arm proves the four edge kinds on
+  unaltered data. RED until KM-KGS-100b-2-i and KM-KGS-100d-4 (with -iv) land. File:
+  unit_tests/test_km_kgs_100b_2.py (under 400 content lines). No git ref, no skip.
 delivers_to: null
 expects_from:
   ac_id: KM-KGS-100b-1
   contract: "Acceptance-criterion nodes and their four outbound edge types (implemented_by, covered_by, depends_on, component_membership) in the exported graph from _collect_all"
 origin_agent: business-analyst
 created: 2026-06-22
+notes: |
+  2026-09-25: the default full-map page cannot render. _assemble_graph() filters edges
+  only in the multi-surface branch; 2,286 edges with no target node (1,608
+  implemented_by, 678 covered_by) reach d3 forceLink().id(), which throws 'node not
+  found', and adjacency[t].add(s) throws on the same edges. Reset done -> in_progress
+  pending KM-KGS-100b-2-i and -ii.
 amended_by: []
 superseded_by: null
-covered_by: []
+covered_by:
+  - KM-KGS-100b-2-i
+  - KM-KGS-100b-2-ii
 implemented_by:
 - tickets/00_inbox/epics/EPIC-ACCodeTraceabilityGraph/07_TICKET-20260622-KM-KGS-100b-2.md
 change_target: code

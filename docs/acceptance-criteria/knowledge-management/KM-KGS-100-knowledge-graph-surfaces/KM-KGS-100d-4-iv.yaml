@@ -1,0 +1,147 @@
+id: KM-KGS-100d-4-iv
+components:
+  - knowledge_management
+readiness: approved
+priority: high
+title: "A map restricted to one surface still shows the files that surface's relationships name"
+component: knowledge-management
+level: L3
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+parent: KM-KGS-100d-4
+created_by: "docs/acceptance-criteria/knowledge-management/KM-KGS-100-knowledge-graph-surfaces/KM-KGS-100d-4.yaml"
+criteria: |
+  Given the project of KM-KGS-100d-4: criteria KM-EX-010, KM-EX-011, KM-EX-011-i
+    and KM-EX-012, ticket T-1 at tickets/T-1.md, and the files scripts/foo.py and
+    unit_tests/test_foo.py,
+  When the knowledge map is built restricted to the acceptance-criteria surface,
+  Then the map holds the criterion nodes KM-EX-010, KM-EX-011, KM-EX-011-i and
+    KM-EX-012 and the files-surface nodes "scripts/foo.py" and
+    "unit_tests/test_foo.py",
+  And the implemented_by edge from KM-EX-010 ends on "scripts/foo.py" with anchor
+    "_check_limits", and the covered_by edge from KM-EX-011 ends on
+    "unit_tests/test_foo.py" with anchor "test_limits",
+  And the covered_by edge from KM-EX-011 to KM-EX-011-i still ends on that
+    criterion's node,
+  And the implemented_by edge from KM-EX-012 ends on a files-surface node
+    "tickets/T-1.md", because ticket T-1 is not on the restricted map,
+  And the map holds no tickets-surface node and no files_touched edge,
+  And every edge on the restricted map ends on a node on the restricted map,
+  And the machine-readable export of a query restricted to the acceptance-criteria
+    surface lists the files-surface nodes and these edges.
+  Given the same project,
+  When the knowledge map is built with no restriction,
+  Then the implemented_by edge from KM-EX-012 ends on ticket T-1's node and no
+    files-surface node "tickets/T-1.md" exists, as KM-KGS-100d-4 states.
+depends_on:
+  - KM-KGS-100d-4
+doc_links:
+  - path: docs/acceptance-criteria/knowledge-management/KM-KGS-100-knowledge-graph-surfaces/KM-KGS-100d-4.yaml
+    relationship: context
+    status: exists
+    relevance: "Owns canonicalisation, the path-keyed index and file-node creation. This record states which nodes that index may see when the map is restricted to one surface."
+  - path: templates/skills/knowledge-query/SKILL.md
+    relationship: describes
+    status: exists
+    relevance: "Documents the --surface NAME restriction. A user running --surface acs expects each criterion's files to appear; this record keeps that true once file edges need a node to survive."
+  - path: scripts/knowledge_query.py
+    relationship: modifies
+    status: exists
+    relevance: "build_knowledge_map(..., surface_filter=...) and the CLI --surface option restrict traversal to one surface. File nodes are created in the same post-processing step as component hubs, under a restriction too."
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "EVIDENCE (IT-PO reading of code and tests, recorded 2026-09-25): build_knowledge_map(..., surface_filter=...) and the CLI --surface option restrict traversal to one surface. The tests in unit_tests/test_ac_edge_relationships.py build with surface_filter='acs'. Once the file_path_fields exemption is retired (KM-KGS-100d-2, amended 2026-09-25), an implemented_by or covered_by edge survives only if its target is a node. If file nodes are not created under a restriction, those tests and every --surface acs query lose every file edge."
+  - "INDEX SCOPE UNDER A RESTRICTION: the path-keyed index is built only over nodes read from the surfaces that were traversed. Under a restriction that is the one included surface. A value that names another surface's file (e.g. a ticket's path) therefore becomes a files-surface node in the restricted view, and lands on that surface's node in the unrestricted view. RATIONALE: (1) the restriction's promise is that other surfaces are not traversed, and indexing them requires reading them; (2) landing an edge on a node that is not on the restricted map would make it a dangling edge, which KM-KGS-100d-2 forbids; (3) the fallback is readable, because the node id is the file's repo-relative path, so a reader can still see which file was named. The restricted map is a function of the included surface's files alone."
+  - "SAME RULES OTHERWISE: under a restriction, canonicalisation, the ambiguity rule (KM-KGS-100d-4-i), the present-or-missing mark (KM-KGS-100d-4-ii) and declines with their reported figure (KM-KGS-100d-4-iii) apply to the included surface's file-path fields exactly as in an unrestricted build. Only the included surface's own file_path_fields are resolved; other surfaces' fields (e.g. tickets' files_touched) are not, because those surfaces are not traversed."
+  - "No surface name may appear in a conditional (KM-KGS-100c-2). The same rule must hold for --surface tickets (files_touched values resolve to files nodes) with no tickets-specific code."
+  - "The tests in unit_tests/test_ac_edge_relationships.py that say file edges survive 'because they are exempt from the phantom filter' become stale in the KM-KGS-100d-4 change. Restate them in terms of file nodes on the restricted map, as KM-KGS-100a-3's amended test_rationale already notes."
+test_spec:
+  - name: test_acs_restricted_map_holds_criteria_and_their_file_nodes_with_anchors
+    target_dir: unit_tests/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "The KM-KGS-100d-4 criteria fixture from the shared helper (byte copy of the real config/paths.json; KM-EX-010, KM-EX-011, KM-EX-011-i, KM-EX-012, tickets/T-1.md, real scripts/foo.py and unit_tests/test_foo.py), built with the public build_knowledge_map(<fixture>, <fixture>/config/paths.json, surface_filter='acs'). The map holds the four criterion nodes on the acs surface and nodes 'scripts/foo.py' and 'unit_tests/test_foo.py' with surface 'files'. KM-EX-010's implemented_by edge has target_id 'scripts/foo.py' and anchor '_check_limits'. KM-EX-011's covered_by edge has target_id 'unit_tests/test_foo.py' and anchor 'test_limits'. KM-EX-011's covered_by edge to 'KM-EX-011-i' ends on that acs node, and no files node has id 'KM-EX-011-i'"
+  - name: test_ticket_path_is_a_files_node_when_restricted_and_the_ticket_node_when_not
+    target_dir: unit_tests/
+    framework: pytest
+    type: integration
+    angle: boundary
+    description: "Both sides pinned in one test on the criteria fixture. RESTRICTED (surface_filter='acs'): KM-EX-012's implemented_by edge has target_id 'tickets/T-1.md', and that id is a node with surface 'files'. UNRESTRICTED (no filter): the same edge has target_id 'T-1', whose node has surface 'tickets', and no node with id 'tickets/T-1.md' exists. The restricted index covers only the traversed surface's nodes, so the fallback is expected and not a regression"
+  - name: test_acs_restricted_map_has_no_ticket_node_no_files_touched_edge_and_no_dangling_edge
+    target_dir: unit_tests/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "On the criteria fixture restricted to acs: no node has surface 'tickets', no edge has edge_type 'files_touched', and every edge's source_id and target_id is the id of a node on the restricted map (zero dangling edges, the KM-KGS-100d-2 invariant). The restricted map has more than 0 implemented_by and covered_by edges, so zero-dangling cannot come from dropping them"
+  - name: test_acs_restricted_json_export_lists_file_nodes_and_their_edges
+    target_dir: unit_tests/
+    framework: pytest
+    type: integration
+    angle: reachability
+    description: "The shipped CLI run as a subprocess (knowledge_query.py --surface acs --format json --project-root <criteria fixture>, UTF-8 env vars set) exits 0. The parsed payload's nodes include 'scripts/foo.py', 'unit_tests/test_foo.py' and 'tickets/T-1.md' with surface 'files'. Its edges include KM-EX-010 -> scripts/foo.py (implemented_by, anchor '_check_limits'), KM-EX-011 -> unit_tests/test_foo.py (covered_by, anchor 'test_limits') and KM-EX-012 -> tickets/T-1.md. Every edge endpoint in the payload is a payload node id"
+  - name: test_restriction_applies_the_same_resolution_rules_to_the_included_surface
+    target_dir: unit_tests/
+    framework: pytest
+    type: integration
+    angle: boundary
+    description: "The criteria fixture plus one AC naming 'scripts/removed_tool.py' (absent on disk) and one naming an absolute path outside the project root, both in implemented_by. Built once unrestricted and once with surface_filter='acs': in both, 'scripts/removed_tool.py' is a files node marked missing (KM-KGS-100d-4-ii), no node id is the outside path, and the decline figure KM-KGS-100d-4-iii reports counts that value in both builds. Canonicalisation is equal across the two builds: the set of files-node ids of the restricted map, minus 'tickets/T-1.md', equals the unrestricted set"
+  - name: test_restriction_to_another_surface_resolves_its_own_file_path_fields_by_declaration
+    target_dir: unit_tests/
+    framework: pytest
+    type: integration
+    angle: boundary
+    description: "Parametrised, with no surface-specific code path. (a) The criteria fixture with surface_filter='tickets': T-1's files_touched edges end on files nodes 'scripts/foo.py' and 'unit_tests/test_foo.py' (the backslash spelling canonicalised); no acs node and no implemented_by or covered_by edge exists; zero dangling edges. (b) A config derived from the real config/paths.json adds surface 'widgets' (a name no production code can know) listing 'touches' in both edge_fields and file_path_fields; with surface_filter='widgets', a widget naming 'scripts/foo.py' in touches has its edge end on files node 'scripts/foo.py'"
+  - name: test_implemented_by_edge_ends_on_files_node_under_acs_restriction
+    target_dir: unit_tests/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "RESTATEMENT in unit_tests/test_ac_edge_relationships.py. It REPLACES TestPhantomFilterDoesNotDropAcEdges.test_implemented_by_edge_not_phantom_filtered (renamed; the class is renamed to TestAcFileEdgesEndOnFileNodes and its docstring no longer says file paths 'will NOT have corresponding nodes'). _collect_all(..., surface_filter='acs') on ac_surface_tmp yields an implemented_by edge from KM-EX-010 whose target_id 'scripts/foo.py' is the id of a returned node with surface 'files'. FIXTURE CHANGE REQUIRED: ac_surface_tmp's hand-written paths.json acs entry declares no file_path_fields. Once resolution is per-surface and declaration-driven and the legacy _PHANTOM_FILTER_EXEMPT_EDGE_TYPES carve-out is retired (KM-KGS-100d-2), these edges would be DROPPED, not resolved. So the fixture must copy the acs entry from the real config/paths.json at test time (it then cannot drift). Tag '# covers: KM-KGS-100d-4-iv'"
+  - name: test_covered_by_edge_ends_on_files_node_under_acs_restriction
+    target_dir: unit_tests/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "RESTATEMENT in unit_tests/test_ac_edge_relationships.py. It REPLACES TestPhantomFilterDoesNotDropAcEdges.test_covered_by_edge_not_phantom_filtered. The covered_by edge from KM-EX-010 has target_id 'unit_tests/test_foo.py', and that id is a returned node with surface 'files'. In the same file, TestCollectAllAcsSurface.test_ac1_implemented_by_edge_in_collect_all, test_ac2_covered_by_edge_in_collect_all and test_all_four_edges_present_in_collect_all keep their names and assertions and gain one assertion each: the file target is a files-surface node. test_ac3_depends_on_edge_in_collect_all, test_ac4_component_membership_edge_in_collect_all, test_component_hub_node_created_for_build_pipeline, test_ac_node_km_ex_010_present and all TestExtractEdgesAcRelationshipFields tests are unaffected. The restatement must not grow the file (about 441 lines today). Tag '# covers: KM-KGS-100d-4-iv'"
+  - name: test_real_repository_acs_restricted_map_has_file_nodes_and_no_dangling_edge
+    target_dir: unit_tests/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    description: "One module-scoped build of the real repository through build_knowledge_map(<repo root>, <repo root>/config/paths.json, surface_filter='acs'), about 5 s. declared_surfaces is {'acs'}. More than 0 nodes have surface 'files'; no node has surface 'tickets'; every edge endpoint is a node on the map. implemented_by and covered_by edge counts are at or above pinned floors named as module constants with their measurement date (implemented_by >= 1500 and covered_by >= 4500, against 1609 and 4713 measured 2026-09-25). At least one files-node id starts with 'tickets/' (635 implemented_by values were ticket paths on 2026-09-25). The failure message states the files-node count. A missing repo root or paths.json FAILS naming the path; it never calls pytest.skip"
+test_required: true
+test_rationale: >-
+  The restriction is where the retired exemption bites first. Every --surface acs query and the
+  existing surface_filter='acs' tests keep file edges today only because they are exempt, so the
+  proof builds restricted maps through the real config/paths.json (byte copy, public
+  build_knowledge_map and the shipped CLI) and asserts that file targets are files-surface nodes.
+  Asserting only that the edge exists is not enough. The index-scope decision is pinned from both
+  sides in one test: the ticket path is a files node under the restriction and the ticket node
+  without it, so neither side can drift silently. 'Same rules otherwise' is proven by comparing a
+  restricted and an unrestricted build of one fixture: missing mark, decline figure and equal
+  canonical ids. A tickets restriction and a fictional 'widgets' restriction prove that nothing is
+  special-cased by surface name. The existing tests in unit_tests/test_ac_edge_relationships.py are
+  named and restated rather than left to go stale: the two phantom-filter tests are renamed and
+  re-asserted as file nodes, and three collect_all tests gain a files-node assertion. Their fixture
+  must copy the real acs entry, because its hand-written paths.json declares no file_path_fields
+  and would lose the edges once resolution is declaration-driven. The real-repository arm has pinned
+  edge floors, so zero-dangling cannot be reached by dropping edges. RED until KM-KGS-100d-4 is
+  built; the tickets arm is also RED until KM-KGS-100c-4 declares files_touched. File:
+  unit_tests/test_km_kgs_100d_4_iv.py (under 400 content lines) plus the in-place restatement,
+  reusing the shared temp-project helper and CLI runner. No git ref, no skip.
+delivers_to: null
+expects_from:
+  ac_id: KM-KGS-100d-4
+  contract: "Canonicalisation, the path-keyed index over nodes read from a file, and files-surface node creation in the post-processing step that also creates component hubs"
+origin_agent: business-analyst
+created: 2026-09-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary

@@ -31,6 +31,7 @@ it_requirements:
   - "Edge validation must check both source_id and target_id against the full node-id set (including synthetic component hub nodes created during _collect_all), exactly as the existing phantom-edge filter does — no hand-maintained allow-list of target ids may be introduced"
   - "Component-membership edges target synthetic hub nodes that are created before the filter runs; the validation ordering must preserve that hubs exist in the node set at filter time so legitimate component edges are not dropped as dead ends"
   - "Validation must apply uniformly to edges from every declared surface, including the new acs surface, with no surface-specific exemption"
+  - "AMENDED 2026-09-25 (user-approved decision, business-analyst) — NO EDGE TYPE IS EXEMPT. Today the filter and the validation report derive an exempt edge-type set from every surface's file_path_fields (implemented_by, covered_by, and files_touched once KM-KGS-100c-4 lands). That set is retired. After it, file-path values resolve to real path-keyed nodes (KM-KGS-100d-4), so their edges pass the full-node-set membership check like every other edge, the validation report states no exempt edge types, and an edge of any type whose target is not a node is dropped (KM-KGS-100d-2-i). The criteria then hold literally, with no carve-out. EVIDENCE (measured 2026-09-25): 1,608 of 1,609 implemented_by and 678 of 4,713 covered_by edges currently survive only through the exemption. SEQUENCING: retire the exemption in the same change that delivers KM-KGS-100d-4. Retiring it first drops about 1,600 edges, and keeping it afterwards leaves a dead carve-out that would hide a resolution regression."
 test_spec:
   - name: test_every_edge_source_exists_in_node_set
     target_dir: unit_tests/
@@ -38,12 +39,24 @@ test_spec:
     type: integration
     angle: criterion
     description: "In a knowledge map built from all declared surfaces including acs, the source id of every validated edge, of every edge type, is present in the full node-id set"
-  - name: test_non_deferred_edge_targets_exist_in_node_set
+  - name: test_every_edge_target_exists_in_node_set
     target_dir: unit_tests/
     framework: pytest
     type: integration
     angle: criterion
-    description: "In the same map, the target id of every validated edge whose type is not implemented_by or covered_by (e.g. depends_on, component_membership and the other declared edge types) is present in the full node-id set, including synthetic component hub nodes; the excluded types come from one named constant marked pending the deferred decision"
+    description: "In the same map, built through a byte copy of the real config/paths.json in a temp project whose ACs and tickets carry implemented_by, covered_by and files_touched file-path values, the target id of every validated edge of EVERY edge type is present in the full node-id set, including synthetic component hub nodes and files-surface nodes. implemented_by, covered_by and files_touched are included, and no edge type is excluded on the test side"
+  - name: test_validation_reports_no_exempt_edge_types
+    target_dir: unit_tests/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "validate_edges_integrity over that map returns exempt_edge_types == frozenset(), even though the real config declares file_path_fields on acs (implemented_by, covered_by) and tickets (files_touched). Every implemented_by, covered_by and files_touched edge in the map is in validated_edges because its target is a node, not passed through as exempt"
+  - name: test_real_repository_every_edge_endpoint_is_a_node_with_no_exemption
+    target_dir: unit_tests/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    description: "Real repository built through build_knowledge_map and the real config/paths.json (module-scoped). validate_edges_integrity reports exempt_edge_types empty and invalid_edges empty, and every edge in the map has source_id and target_id in the full node-id set. The implemented_by edge count is greater than 0 and is stated in the failure message, so the result is not vacuous. A missing repo root FAILS; it is never skipped"
   - name: test_component_membership_edges_reach_hub_nodes_after_validation
     target_dir: unit_tests/
     framework: pytest
@@ -58,13 +71,18 @@ test_spec:
     description: "A declared non-acs surface fixture with one node-to-node edge naming a non-existent id and one naming an existing node of another surface keeps only the resolvable edge, with membership judged against the full built node set rather than an allow-list"
 test_required: true
 test_rationale: >-
-  The criteria's every-edge-hits-a-real-node property is entangled with the deferred raw-path vs
-  resolved-node decision for file-path AC edges. This contract asserts it for edge sources of all
-  types and for targets of every edge type except implemented_by and covered_by, and explicitly
-  excludes those two targets until the decision is made. The exclusion is test-side only, and no
-  test asserts either that those edges are kept or that they are dropped. Uniform full-node-set
-  membership is pinned with a non-acs surface fixture, so this does not duplicate the depends_on
-  drop case owned by KM-KGS-100d-2-i.
+  The raw-path vs resolved-node decision is settled (user-approved 2026-09-25, KM-KGS-100d-4):
+  file-path values resolve to path-keyed nodes, and the file_path_fields exemption is retired in
+  the same change. The criteria's every-edge-hits-a-real-node property therefore holds literally.
+  The target test covers every edge type with no test-side exclusion, and was renamed from
+  test_non_deferred_edge_targets_exist_in_node_set because the old name encoded the exclusion. A
+  separate arm asserts the validation report's exempt edge-type set is empty, so a leftover
+  carve-out cannot hide a resolution regression. A whole-store arm checks the real graph end to
+  end, with a non-zero implemented_by count so it cannot pass on an empty map. Uniform
+  full-node-set membership is still pinned with a non-acs surface fixture, so this does not
+  duplicate the depends_on drop case owned by KM-KGS-100d-2-i. The target, exempt-set and
+  real-repository tests describe the target state and are RED until the KM-KGS-100d-4 epic is
+  built (today 1,608 implemented_by and 678 covered_by edges survive only through the exemption).
 delivers_to: null
 expects_from:
   ac_id: KM-KGS-100d-1
@@ -81,7 +99,8 @@ notes: |
   covered_by). The existing checks did not catch either, because they exercise a single
   indented-and-unquoted fixture and largely bypass the reader with a pre-built field
   dictionary. Reset done -> in_progress pending KM-KGS-100a-3-i..-viii.
-amended_by: []
+amended_by:
+  - reason: "it_requirements amended in place, criteria unchanged: the file_path_fields-derived phantom-filter exemption is retired together with KM-KGS-100d-4 (file-path values resolve to path-keyed file nodes), so the criteria hold with no carve-out. User-approved decision; test_spec tightening left to IT-PO, business-analyst, 2026-09-25"
 superseded_by: null
 covered_by: [KM-KGS-100d-2-i]
 implemented_by:
