@@ -1,0 +1,87 @@
+id: KM-300b-1
+components:
+  - knowledge_management
+  - documentation_system
+readiness: approved
+priority: high
+title: "Entries in the documentation map appear in the same order on every operating system"
+component: knowledge-management
+level: L2
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/knowledge-management/KM-300-docs-same-everywhere/KM-300b.yaml"
+criteria: |
+  Given the docs/retrospectives folder contains exactly these files:
+    - EPIC-ACDrivenDevelopment.md
+    - EPIC-AcPatternEnforcementIsMechanically.md
+    - epic-lowercase-example.md
+    - 2026-05-22-epic-antigravity-support.md
+  And the files were created in a different order from their names' order
+  When the documentation map is generated on a Windows host and, separately, on
+    a Linux host from identical file contents
+  Then the Retrospectives section lists the four entries in the same order on
+    both hosts
+  And that order is determined solely by the entries' paths under one fixed
+    comparison rule stated in the map's generator documentation — not by the
+    order the file system happens to return files, by file creation time, or by
+    the host's locale or case-sensitivity setting
+  And the same holds for the order of the sections themselves and the order of
+    entries in every other section
+depends_on:
+  - KM-300b
+doc_links:
+  - path: docs/INDEX.md
+    relationship: describes
+    status: exists
+  - path: scripts/generate_doc_index.py
+    relationship: implements
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "The fixed comparison rule is: case-sensitive Unicode code-point order over the forward-slash repo-relative path, compared segment by segment (the ordering a PurePosixPath gives on every host). Sorting host path objects directly is not acceptable, because Windows path objects compare case-insensitively"
+  - "The rule must be stated in the generator's module docstring (the generator documentation the criteria refer to)"
+  - "Section order must come from the generator's declared section list, never from file-system enumeration order"
+  - "Must not depend on locale, file creation time or modification time"
+  - "check-file-size ratchet: scripts/generate_doc_index.py is 480 lines against the 400-line .py limit (already over). The change must leave it no longer than at HEAD (net-zero or shrink). If new logic does not fit, extract it to a new module and add that module to every deploy list that already names generate_doc_index.py (scripts/build_deploy_manifest_helpers.py, scripts/build_phases_knowledge.py, scripts/build_phases_workflows.py) so the deployed transform-doc-index hook can still import it"
+  - "Record the change in the generator's DECISION HISTORY with the AC id, per the doc-enforcer convention"
+delivers_to:
+  agent: python-coder
+  contract: "Host-independent entry and section ordering; consumed by KM-300b-3's cross-OS byte-identity check"
+expects_from: null
+origin_agent: business-analyst
+created: 2026-09-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: internal
+test_spec:
+  - name: test_retrospectives_order_is_code_point_by_posix_path
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    description: "Creates the four named retrospectives plus a discriminating pair (Zeta-retro.md, alpha-retro.md) in a shuffled creation order with shuffled mtimes; generates the map; asserts the Retrospectives rows appear in case-sensitive code-point order (2026-..., EPIC-ACD..., EPIC-AcP..., Zeta-retro, alpha-retro, epic-lowercase...). Red on a Windows host with the current case-insensitive sort."
+  - name: test_recursive_section_order_is_segment_wise
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    description: "In a recursively scanned section, creates a/x.md and a-b/x.md and asserts the fixed segment-wise rule orders a/x.md before a-b/x.md."
+  - name: test_section_order_follows_declared_list
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    description: "Asserts the section headings appear in the generator's declared order regardless of the order sub-folders were created."
+  - name: test_generator_docstring_states_ordering_rule
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    description: "Asserts the generate_doc_index module docstring states the ordering rule (case-sensitive code-point order over the forward-slash path). Red on every host until the rule is documented."
+test_rationale: "The BA's four example names order the same under case-sensitive and case-insensitive rules, so the test adds a discriminating pair (Zeta/alpha); without it the ordering test is green on every host and proves nothing. The ordering assertion is red only on Windows; the docstring assertion gives a POSIX-red signal for the documented-rule clause."
+notes: |
+  Mixed-case names (EPIC- vs epic-) are deliberate in the example: Windows
+  file systems are case-insensitive and a locale-aware or case-folding sort can
+  order them differently from a byte-wise sort. Which rule is chosen is the
+  IT PO's call; that the rule is fixed and host-independent is the behaviour.

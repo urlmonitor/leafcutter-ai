@@ -1,0 +1,52 @@
+id: ACS-400e-5
+title: "The governance hook reads an AC file's HEAD version as UTF-8, so non-ASCII text never looks changed"
+component: ac-store
+components:
+  - ac_store
+level: L2
+status: active
+req_status: active
+work_status: done
+readiness: reviewed
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given an AC YAML file under docs/acceptance-criteria/ that already exists in HEAD
+    and whose protected fields (e.g. criteria) contain non-ASCII text such as an
+    em dash (U+2014),
+  And the file is staged with an edit to an open field only (e.g. covered_by),
+    leaving every protected field byte-identical to HEAD,
+  When the check-ac-governance pre-commit hook loads the HEAD version via
+    `git show HEAD:<path>` on a host whose locale encoding is not UTF-8
+    (e.g. cp1252 on Windows),
+  Then the HEAD content is decoded as UTF-8, matching how the staged copy is read,
+  And the protected fields compare equal, so the commit is not blocked with
+    "criteria was modified but amended_by was not updated",
+  And every other git subprocess the hook reads text from decodes its output as
+    UTF-8 as well, independent of the host locale.
+depends_on: [ACS-400e]
+doc_links:
+  - path: docs/architecture/adrs/ADR-008-ac-store-schema-id-format-enforcement.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: XS
+it_requirements:
+  - "Pass encoding=\"utf-8\" to every subprocess.run(..., text=True) call in check_ac_governance.py"
+  - "Must not change behaviour on hosts whose locale encoding is already UTF-8"
+test_spec:
+  - name: test_open_field_edit_on_non_ascii_ac_is_not_blocked
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    description: "Commits an AC YAML whose criteria contains an em dash to a real fixture git repo, edits only covered_by, runs the real hook via subprocess, and asserts exit 0 with no 'criteria was modified' message. On a non-UTF-8-locale host the unfixed hook mis-decodes the HEAD copy and blocks."
+test_rationale: "The defect is a decoding mismatch between the HEAD read and the staged read, which only shows up end-to-end through a real git show. A real fixture repo and a real hook subprocess reproduce it on the host that hit it (Windows, cp1252) without mocking git or the locale."
+origin_agent: BrainCandy
+created: 2026-09-25
+amended_by: []
+superseded_by: null
+covered_by: [unit_tests/commit_guardian/test_acs_400e_5_head_content_utf8.py]
+implemented_by: [templates/scripts/commit_guardian/check_ac_governance.py]
+change_target: code
+risk_surface: auth
+notes: "Surfaced while committing ACS-400e-4: once the HEAD lookup succeeded on Windows, the unfixed text=True decode (locale cp1252) turned an em dash in ACS-400e.yaml's criteria into mojibake and falsely blocked the commit. Ships in the same commit as ACS-400e-4 because that fix alone would expose this false block."

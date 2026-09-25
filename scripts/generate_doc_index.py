@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import argparse
 import logging
+import os
 import re
 import sys
 from datetime import datetime, timezone
@@ -244,13 +245,20 @@ def _extract_description(path: Path) -> str:
 # Category rendering
 # ---------------------------------------------------------------------------
 
-def _render_single_file(heading: str, path: Path, repo_root: Path) -> str:
+def _link(path: Path, repo_root: Path, map_dir: Path) -> str:
+    """Link text is the project-root path; the target is relative to map_dir (KM-300a-2)."""
+    target = Path(os.path.relpath(path, map_dir)).as_posix()
+    return f"[{path.relative_to(repo_root).as_posix()}]({target})"
+
+
+def _render_single_file(heading: str, path: Path, repo_root: Path, map_dir: Path) -> str:
     """Render a single-file category (e.g. docs/glossary.md).
 
     Args:
         heading: Section heading string.
         path: Absolute path to the single file.
-        repo_root: Absolute path to the repo root (used for relative links).
+        repo_root: Absolute path to the repo root (used for link text).
+        map_dir: Folder the map is written to (link targets are relative to it).
 
     Returns:
         Markdown section string.
@@ -258,9 +266,8 @@ def _render_single_file(heading: str, path: Path, repo_root: Path) -> str:
     if not path.exists():
         return f"## {heading}\n\nNo docs found.\n\n"
 
-    rel = path.relative_to(repo_root).as_posix()
     desc = _extract_description(path)
-    return f"## {heading}\n\n- [{rel}]({rel}) — {desc}\n\n"
+    return f"## {heading}\n\n- {_link(path, repo_root, map_dir)} — {desc}\n\n"
 
 
 def _render_directory(
@@ -268,6 +275,7 @@ def _render_directory(
     dir_path: Path,
     repo_root: Path,
     recursive: bool,
+    map_dir: Path,
 ) -> str:
     """Render a multi-file directory category as a Markdown table.
 
@@ -276,6 +284,7 @@ def _render_directory(
         dir_path: Absolute path to the docs subdirectory to scan.
         repo_root: Absolute path to the repo root.
         recursive: When True, scan subdirectories recursively.
+        map_dir: Folder the map is written to (link targets are relative to it).
 
     Returns:
         Markdown section string.  Empty directories emit "No docs found."
@@ -285,20 +294,16 @@ def _render_directory(
 
     glob_pattern = "**/*.md" if recursive else "*.md"
     files = sorted(dir_path.glob(glob_pattern))
-    files = [
-        f for f in files
-        if f.name not in _ALWAYS_EXCLUDE and f.is_file()
-    ]
+    files = [f for f in files if f.name not in _ALWAYS_EXCLUDE and f.is_file()]
 
     if not files:
         return f"## {heading}\n\nNo docs found.\n\n"
 
     rows: list[str] = []
     for f in files:
-        rel = f.relative_to(repo_root).as_posix()
         name = f.stem.replace("-", " ").replace("_", " ")
         desc = _extract_description(f)
-        rows.append(f"| {name} | [{rel}]({rel}) | {desc} |")
+        rows.append(f"| {name} | {_link(f, repo_root, map_dir)} | {desc} |")
 
     table = "\n".join(
         [
@@ -314,7 +319,7 @@ def _render_directory(
 # Index generation
 # ---------------------------------------------------------------------------
 
-def generate_index(repo_root: Path) -> str:
+def generate_index(repo_root: Path, map_dir: Path | None = None) -> str:
     """Generate the full INDEX.md content for the given repo root.
 
     Walks each canonical category defined in ``_CATEGORIES``, builds one
@@ -327,25 +332,18 @@ def generate_index(repo_root: Path) -> str:
     needlessly.  When the existing file has no ``last_updated`` field, the value
     falls back to ``created`` (never to ``datetime.now()``).
 
-    The rendered header intentionally carries no wall-clock ``Generated:`` stamp.
-    An earlier revision stamped the header with ``datetime.now(timezone.utc)`` on
-    every call, which meant regenerating the index with zero documentation changes
-    still produced a byte-different file — directly contradicting the idempotency
-    this docstring already promised for ``created``/``last_updated`` (KM-DBF-014).
-    Dropping the stamp keeps the whole header idempotent: identical doc content
-    now always renders identical bytes, and a genuine doc change is still visible
-    via the changed table rows and (when present) an explicitly bumped
-    ``last_updated`` in the source frontmatter — never via the current clock.
-
     Args:
         repo_root: Absolute path to the repository root.  All relative paths
             in the generated index are computed relative to this directory.
+        map_dir: Folder the map is written to; link targets are relative to it.
+            Defaults to ``<repo_root>/docs``.
 
     Returns:
         Complete INDEX.md content as a UTF-8 string (starting with YAML
         frontmatter delimited by ``---``).
     """
     today_date = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    map_dir = map_dir or repo_root / "docs"
 
     # Preserve existing created and last_updated dates for idempotency across
     # regeneration runs.  last_updated falls back to the created value rather than
@@ -362,9 +360,9 @@ def generate_index(repo_root: Path) -> str:
         abs_path = repo_root / rel_path
         if recursive is None:
             # Single-file entry
-            sections.append(_render_single_file(heading, abs_path, repo_root))
+            sections.append(_render_single_file(heading, abs_path, repo_root, map_dir))
         else:
-            sections.append(_render_directory(heading, abs_path, repo_root, recursive))
+            sections.append(_render_directory(heading, abs_path, repo_root, recursive, map_dir))
 
     sections.append(_FOOTER)
     return "".join(sections)
@@ -386,7 +384,7 @@ def write_index(repo_root: Path, output_path: Path | None = None) -> Path:
     if output_path is None:
         output_path = repo_root / "docs" / "INDEX.md"
 
-    content = generate_index(repo_root)
+    content = generate_index(repo_root, output_path.parent)
 
     try:
         output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -468,24 +466,15 @@ if __name__ == "__main__":
 # DECISION HISTORY
 # ====================================================================
 # - 2026-08-14 00:00 [python-coder]: Dropped the `> Generated: {timestamp}` (#TICKETLESS reason=KM-DBF-014-doc-index-fix)
-#   header line (and the `datetime.now()` call that fed it) from
-#   _HEADER_TEMPLATE / generate_index(). The header was stamped with the
-#   wall clock on every call, so regenerating docs/INDEX.md with zero
-#   documentation changes still produced a byte-different file — the doc-index
-#   pre-commit hook then created an unstaged change on essentially every
-#   commit, which is the reliable trigger behind "Stashed changes conflicted
-#   with hook auto-fixes" restore failures. This contradicted the module's
-#   own stated idempotency intent for `created`/`last_updated`. A genuine doc
-#   change is still visible via the changed table rows, so the fix does not
-#   mask real content changes.
-# - 2026-09-25 [python-coder/TICKET-20260925-DocIndexPosixPaths]: Switched
-#   both link-emitting interpolation sites (_render_single_file,
-#   _render_directory) from bare `f"[{rel}]({rel})"` to
-#   `path.relative_to(repo_root).as_posix()`. `Path.relative_to()` on a
-#   Windows host returns a `WindowsPath`, whose `str()` uses `\` — so on
-#   Windows every commit that touched `docs/*.md` had the transform-doc-index
-#   pre-commit hook regenerate `docs/INDEX.md` with every link rewritten to
-#   backslash separators (observed corrupting a real branch's index; see the
-#   ticket's Context section for four prior manual workarounds of the same
-#   defect). `.as_posix()` always renders `/` regardless of host OS, so the
-#   emitted Markdown is now byte-identical across platforms.
+#   header line (and the `datetime.now()` call that fed it) from _HEADER_TEMPLATE /
+#   generate_index(). The header was stamped with the wall clock on every call, so regenerating
+#   docs/INDEX.md with zero documentation changes still produced a byte-different file — the
+#   doc-index pre-commit hook then created an unstaged change on essentially every commit, which is
+#   the reliable trigger behind "Stashed changes conflicted with hook auto-fixes" restore failures.
+#   This contradicted the module's own stated idempotency intent for `created`/`last_updated`. A
+#   genuine doc change is still visible via the changed table rows, so the fix does not mask real
+#   content changes.
+# - 2026-09-25 [python-coder]: Map links use Path.as_posix(), not str(Path) (KM-300a-1)
+#   so they keep forward slashes on Windows; backslash links broke on GitHub.
+# - 2026-09-25 [python-coder]: Link targets are relative to the map's folder (KM-300a-2)
+#   (_link, map_dir); link text keeps the project-root path. Fixes docs/docs/ 404s.

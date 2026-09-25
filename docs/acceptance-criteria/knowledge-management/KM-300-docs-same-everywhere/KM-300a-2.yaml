@@ -1,0 +1,99 @@
+id: KM-300a-2
+components:
+  - knowledge_management
+  - documentation_system
+readiness: approved
+priority: high
+title: "Each link in the documentation map points at its page relative to where the map itself lives"
+component: knowledge-management
+level: L2
+status: active
+req_status: draft
+work_status: done
+created_by: "docs/acceptance-criteria/knowledge-management/KM-300-docs-same-everywhere/KM-300a.yaml"
+criteria: |
+  Given the documentation map lives in the project's docs folder
+  And the docs folder contains docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    and docs/glossary.md
+  When the documentation map is generated
+  Then the link target for the ADR entry is
+    "architecture/adrs/ADR-001-self-hosting-boundary.md" — i.e. the path from
+    the folder containing the map to the page, not a path from the project root
+    (a target of "docs/architecture/adrs/ADR-001-self-hosting-boundary.md"
+    written inside the docs folder resolves to docs/docs/... and opens nothing)
+  And the link target for the Glossary entry is "glossary.md"
+  And for every entry in the map, joining the folder that contains the map with
+    the entry's link target names a file that exists in the project
+  And following any entry's link on the project's online code host opens the
+    named page rather than a "not found" page
+  And following any entry's link from a local copy of the map in a Markdown
+    viewer opens the named page
+  And the visible link text continues to show the project-root path
+    (e.g. "docs/architecture/adrs/ADR-001-self-hosting-boundary.md") so readers
+    see where the page lives
+depends_on:
+  - KM-300a
+  - KM-300a-1
+doc_links:
+  - path: docs/INDEX.md
+    relationship: describes
+    status: exists
+  - path: scripts/generate_doc_index.py
+    relationship: implements
+    status: exists
+  - path: templates/scripts/commit_guardian/transform_doc_index.py
+    relationship: context
+    status: exists
+  - path: docs/architecture/agent_knowledge_system.md
+    relationship: context
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "The base a link target is relative to must be derived from where the map is actually written (the output path), not from a hard-coded 'docs/' prefix strip, so a map written to a non-default output path still resolves"
+  - "Every caller that produces the map (the generator CLI and write_index, the transform-doc-index pre-commit hook in templates/scripts/commit_guardian/transform_doc_index.py, and the build.py call site) must produce byte-identical content for the same docs tree"
+  - "Link targets must stay forward-slash only (KM-300a-1) and link text must keep the project-root path"
+  - "Must not break the Markdown table: a target must not introduce characters that split a table cell"
+  - "check-file-size ratchet: scripts/generate_doc_index.py is 480 lines against the 400-line .py limit (already over). The change must leave it no longer than at HEAD (net-zero or shrink). If new logic does not fit, extract it to a new module and add that module to every deploy list that already names generate_doc_index.py (scripts/build_deploy_manifest_helpers.py, scripts/build_phases_knowledge.py, scripts/build_phases_workflows.py) so the deployed transform-doc-index hook can still import it"
+  - "The committed docs/INDEX.md must be regenerated in the same change, so the tracked map already shows the fixed output (it currently holds backslash links generated on Windows)"
+  - "Record the change in the generator's DECISION HISTORY with the AC id, per the doc-enforcer convention"
+delivers_to:
+  agent: python-coder
+  contract: "Map link targets relative to the map's own folder, so that every target resolves to an existing file; the precondition KM-300c-2's resolution guard relies on"
+expects_from:
+  ac_id: KM-300a-1
+  contract: "Forward-slash-only link text and link targets"
+origin_agent: business-analyst
+created: 2026-09-25
+amended_by: []
+superseded_by: null
+covered_by: [unit_tests/commit_guardian/test_km_300a_2_doc_index_relative_targets.py]
+implemented_by: [scripts/generate_doc_index.py, scripts/build.py]
+change_target: code
+risk_surface: internal
+test_spec:
+  - name: test_doc_index_link_targets_are_relative_to_map_folder
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    description: "Temp repo with docs/architecture/adrs/ADR-001-self-hosting-boundary.md and docs/glossary.md; generates the map; asserts the ADR link target is architecture/adrs/ADR-001-self-hosting-boundary.md and the Glossary target is glossary.md, while their link text stays docs/architecture/adrs/ADR-001-self-hosting-boundary.md and docs/glossary.md."
+  - name: test_every_doc_index_link_target_resolves_from_map_folder
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    description: "Writes the map into the temp docs/ via write_index, then for every [text](target) in it asserts (map_folder / target) is an existing file whose on-disk name matches the target case-exactly; asserts at least one link per non-empty section was checked so the loop cannot pass on zero links."
+  - name: test_transform_hook_and_generator_emit_same_relative_targets
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    description: "Runs the transform-doc-index hook main(repo_root=tmp) against a temp git repo with a staged doc and asserts the docs/INDEX.md it writes equals the generator's write_index output byte for byte."
+test_rationale: "Resolvability is a property of the relationship between the map's location and each target, so the test must write the map to disk and resolve every target from its folder rather than string-match one row; the case-exact check keeps the verdict host-independent, and the hook-vs-generator comparison catches a caller that computes a different base."
+notes: |
+  BA finding, not in the original request: the map is written INSIDE docs/ but
+  (as of 2026-09-25) its link targets are project-root paths starting with
+  "docs/". Relative Markdown links resolve against the linking file's folder,
+  so even with forward slashes every link resolves to docs/docs/... and is
+  broken on the code host and locally. Fixing the separator (KM-300a-1) alone
+  does NOT make KM-300a's L1 promise ("every entry opens the page it names")
+  true. Kept as a separate L2 so the /quick-fix for the separator stays a
+  single, minimal behaviour.

@@ -1,0 +1,87 @@
+id: KM-300b-2
+components:
+  - knowledge_management
+  - documentation_system
+readiness: approved
+priority: high
+title: "The documentation map is written with the same line endings and encoding on every operating system"
+component: knowledge-management
+level: L2
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/knowledge-management/KM-300-docs-same-everywhere/KM-300b.yaml"
+criteria: |
+  Given a docs folder whose pages include a description containing the
+    non-ASCII characters "—" (em dash) and "ü"
+  When the documentation map is generated on a Windows host, whose default
+    text line ending is CR LF and whose default text encoding may not be UTF-8
+  Then every line of the map ends with a single LF character and the map
+    contains zero CR characters
+  And the map is encoded as UTF-8 without a byte-order mark
+  And the "—" and "ü" characters appear in the map as their UTF-8 encodings,
+    not as replacement characters or escape sequences
+  And the map ends with exactly one trailing LF
+  And generating from the same docs folder on a Linux host yields a file with
+    the same line endings, encoding and trailing newline
+depends_on:
+  - KM-300b
+doc_links:
+  - path: docs/INDEX.md
+    relationship: describes
+    status: exists
+  - path: scripts/generate_doc_index.py
+    relationship: implements
+    status: exists
+  - path: templates/scripts/commit_guardian/transform_doc_index.py
+    relationship: implements
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Every site that writes the map must write LF line endings and UTF-8 without a BOM regardless of the host's default newline translation and default encoding: write_index in scripts/generate_doc_index.py AND the transform-doc-index hook's own write in templates/scripts/commit_guardian/transform_doc_index.py (tracked source; scripts/commit_guardian/ is a gitignored build output)"
+  - "The transform hook's 'write only when changed' comparison must compare the same normalised form it writes, so a CR LF file on disk is detected as different and rewritten"
+  - "If a test proves a site already complies, record that in the DECISION HISTORY instead of changing behaviour"
+  - "check-file-size ratchet: scripts/generate_doc_index.py is 480 lines against the 400-line .py limit (already over). The change must leave it no longer than at HEAD (net-zero or shrink). If new logic does not fit, extract it to a new module and add that module to every deploy list that already names generate_doc_index.py (scripts/build_deploy_manifest_helpers.py, scripts/build_phases_knowledge.py, scripts/build_phases_workflows.py) so the deployed transform-doc-index hook can still import it"
+  - "templates/scripts/commit_guardian/transform_doc_index.py is 319 lines (limit 400); keep it under the limit"
+  - "Record the change in the generator's DECISION HISTORY with the AC id, per the doc-enforcer convention"
+delivers_to:
+  agent: python-coder
+  contract: "LF-only, UTF-8 (no BOM) map output on every host; consumed by KM-300b-3's cross-OS byte-identity check"
+expects_from: null
+origin_agent: business-analyst
+created: 2026-09-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: internal
+test_spec:
+  - name: test_write_index_emits_lf_utf8_no_bom
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    description: "Temp docs tree with a page whose description contains an em dash and ü; calls write_index; reads the file as bytes and asserts no b'\\r', no UTF-8 BOM prefix, the em dash as e2 80 94 and ü as c3 bc, and exactly one trailing b'\\n'. Red on a Windows host if the write uses text-mode newline translation."
+  - name: test_transform_hook_writes_lf_utf8_no_bom
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    description: "Runs transform_doc_index.main(repo_root=tmp) on a temp git repo with a staged doc and asserts the same byte-level properties on the docs/INDEX.md it writes."
+  - name: test_transform_hook_rewrites_crlf_map
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    description: "Seeds docs/INDEX.md with CR LF line endings but otherwise correct content, runs the hook, and asserts the file on disk now contains zero CR bytes."
+  - name: test_map_bytes_independent_of_preferred_encoding
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    description: "Patches locale.getpreferredencoding to return cp1252 and asserts write_index output bytes are unchanged."
+test_rationale: "Line endings and encoding are only observable in the bytes on disk, so the tests must read files back as bytes; a string-level assertion on generate_index() output cannot see text-mode newline translation. Both write sites are covered because either can produce the committed map."
+notes: |
+  The committed map on 2026-09-25 contains zero CR characters, so this may
+  already hold in practice; the AC pins it so it cannot silently regress
+  (e.g. via a text-mode write on a host with a non-UTF-8 default encoding).
+  If a test proves it already holds, the implementing agent should record that
+  rather than change behaviour.

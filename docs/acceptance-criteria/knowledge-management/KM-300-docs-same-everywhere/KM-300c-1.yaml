@@ -1,0 +1,109 @@
+id: KM-300c-1
+components:
+  - knowledge_management
+  - documentation_system
+  - precommit_hooks
+readiness: approved
+priority: high
+title: "A commit carrying a map with machine-specific link paths is refused with an explanation"
+component: knowledge-management
+level: L2
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/knowledge-management/KM-300-docs-same-everywhere/KM-300c.yaml"
+criteria: |
+  Given the version of the documentation map about to be committed (after any
+    automatic refresh has run) contains, in its ADR table, the entry
+    "[docs\architecture\adrs\ADR-001-self-hosting-boundary.md](docs\architecture\adrs\ADR-001-self-hosting-boundary.md)"
+  When the contributor commits
+  Then the commit is refused
+  And the refusal message names the map, the line number of the offending
+    entry, and the offending link text or target
+  And the message states that link paths must use "/" and tells the
+    contributor how to regenerate the map
+  And the same refusal occurs when a link target is a machine-specific
+    absolute path, e.g. "C:/Users/alice/project/docs/glossary.md",
+    "/home/alice/project/docs/glossary.md" or "file:///C:/..."
+  And when every link text and target in the map is a forward-slash path
+    relative to the project, the commit is not refused by this check
+depends_on:
+  - KM-300c
+  - KM-300a-1
+doc_links:
+  - path: templates/scripts/commit_guardian/transform_doc_index.py
+    relationship: context
+    status: exists
+  - path: templates/scripts/commit_guardian/check_doc_index_links.py
+    relationship: implements
+    status: planned
+  - path: templates/scripts/commit_guardian/commit_guardian.json
+    relationship: implements
+    status: exists
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+  - path: docs/INDEX.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "Implement as a new blocking check hook in its own tracked source file (templates/scripts/commit_guardian/check_doc_index_links.py), not inside transform-doc-index: that hook is fail-open by contract (always exits 0) and only runs when a doc other than INDEX.md is staged, so it cannot refuse a commit"
+  - "Register it in the tracked templates/scripts/commit_guardian/commit_guardian.json hooks_manifest (tier judgment, files matching docs/*.md so it also runs when only docs/INDEX.md is staged), ordered AFTER transform-doc-index, plus a row in the package README Commit-Guardian hooks table, following the create-hook scaffold pattern. Rebuild with python scripts/build.py so the deployed scripts/commit_guardian/ copy and .pre-commit-config.yaml (both gitignored) pick it up"
+  - "Must read the map as staged (the index version after the transform hook re-staged it), not the working-tree file and not HEAD"
+  - "Must inspect only map entries' link text and link targets; link recognition must cover both the table rows and the single-file list entries, and be shared with KM-300c-2's resolution check"
+  - "A link target is machine-specific if it contains a backslash, a drive letter, a leading '/', or a URL scheme such as file:"
+  - "The refusal message must name the map path, each offending line number and the offending text or target, state that link paths must use '/', and give the regenerate command with the path valid in the layout the hook runs from (deployed or source), not a hard-coded source path"
+  - "Must complete within 1 second for a map of 1,000 entries"
+  - "Must not ship before KM-300a-1 is merged, or it refuses every commit made on Windows"
+  - "New hook file must stay under the 400-line .py limit"
+delivers_to: null
+expects_from:
+  ac_id: KM-300a-1
+  contract: "The generator emits forward-slash-only links, so a correctly generated map passes this check"
+origin_agent: business-analyst
+created: 2026-09-25
+amended_by: []
+superseded_by: null
+covered_by:
+  - KM-300c-1-i
+  - KM-300c-1-ii
+implemented_by: []
+change_target:
+  - code
+  - config
+risk_surface: internal
+test_spec:
+  - name: test_backslash_link_in_adr_table_is_refused_with_line_and_text
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    description: "Temp git repo with a staged docs/INDEX.md whose ADR row is [docs\\architecture\\adrs\\ADR-001-self-hosting-boundary.md](docs\\architecture\\adrs\\ADR-001-self-hosting-boundary.md); runs the check; asserts a non-zero exit and that the output names docs/INDEX.md, the row's line number, the offending text, the word '/' requirement and the regenerate command."
+  - name: test_absolute_and_file_url_targets_are_refused
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    description: "Parametrised over C:/Users/alice/project/docs/glossary.md, /home/alice/project/docs/glossary.md and file:///C:/x: each as a link target is refused."
+  - name: test_forward_slash_relative_map_passes
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    description: "A map whose every link is a forward-slash relative path exits 0."
+  - name: test_check_reads_staged_map_not_working_tree
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    description: "Stages a backslash map, then overwrites the working-tree file with a clean map; asserts the check still refuses (it judged the staged version)."
+  - name: test_hook_registered_after_transform_doc_index
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    description: "Loads templates/scripts/commit_guardian/commit_guardian.json and asserts the new hook entry exists, is not fail-open, matches docs/INDEX.md, and appears after transform-doc-index in hooks_manifest order."
+test_rationale: "The behaviour is a commit refusal over the STAGED map, so the core tests run the hook against a real temp git index; a pure-function test of the link parser would pass while the hook reads the wrong version or runs before the refresh. The manifest-order test pins the after-refresh clause."
+notes: |
+  Must inspect the map as it will be committed — i.e. after the automatic
+  refresh — otherwise a stale committed map passes while the refreshed one is
+  broken. Whether this lives in the existing refresh step or as a separate
+  check is the IT PO's call (per KM-300c notes). Must ship after or with
+  KM-300a-1, or it refuses every commit made on Windows.
