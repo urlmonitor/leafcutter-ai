@@ -48,7 +48,7 @@ it_requirements:
 - Data-driven on field presence (test_intent present, design absent), never on AC ids.
 - The commit-time rule is a forward ratchet on staged files, like validate_test_contract; canonical and
   deployed copies kept in parity via the build (ADR-001).
-- ACD-1600c-1 must be amended to allow the added reasons before this builds (see caveats).
+- ACD-1600c-1 was amended (2026-09-25) to report reasons from the single ACD-2500b-2 list; this AC adds 'test design pending' to that gate.
 delivers_to: null
 expects_from:
   ac_id: ACD-2500b-2
@@ -87,6 +87,10 @@ amended_by:
 - reason: it-po-technical-enrichment
   date: '2026-09-25'
   by: it-po
+- reason: "back-pointer: the amend-before-build note now points at the amendment made on 2026-09-25 (it_requirements / notes only; criteria unchanged)."
+  date: '2026-09-25'
+  by: it-po
+  directed_by: user
 superseded_by: null
 covered_by: []
 implemented_by: []

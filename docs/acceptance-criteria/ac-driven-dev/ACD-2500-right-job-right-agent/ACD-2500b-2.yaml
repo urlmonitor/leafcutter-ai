@@ -88,6 +88,10 @@ amended_by:
 - reason: it-po-technical-enrichment
   date: '2026-09-25'
   by: it-po
+- reason: "back-pointer: the amend-before-build note now points at the amendment made on 2026-09-25 (it_requirements / notes only; criteria unchanged)."
+  date: '2026-09-25'
+  by: it-po
+  directed_by: user
 superseded_by: null
 covered_by:
   - ACD-2500b-2-i
@@ -102,8 +106,8 @@ notes: |
   distinct, named not-yet-approvable state ("test design pending") so the gap is visible
   instead of surfacing as a generic missing-contract error.
 
-  AMENDMENT NEEDED: ACD-1600c-1 promises the flag names "which of {file targets, test
-  contract} is missing". This tree adds a third reason ("test design pending", plus
-  "reference file pending" from ACD-2500d-2-i). Amend ACD-1600c-1 to allow the added
-  reasons; its two existing reasons are unchanged. ACD-1600c-3 (reference doc) should
-  list them too.
+  AMENDMENT DONE (2026-09-25): ACD-1600c-1 amended in place — its two reasons are
+  unchanged and are now values of this AC's single hold-reason list; the other three are
+  reported under their own names. ACD-1600c-1 may build first (this AC depends_on it and
+  extends the list). ACD-1600c-3 (reference doc) amended to list all five reasons and now
+  depends_on this AC, ACD-2500d-2-i and ACD-2500d-3-i.

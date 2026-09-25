@@ -57,7 +57,9 @@ it_requirements:
 - 'Keeps: routing and splitting, sizing, it_requirements, contracts including semantic agreement, test
   intent, test_constraints and tests_after, the knowledge loop (S9), and the machine-parsed output contract.'
 - 'Stays true after the shrink: TKT-300a-1..4, ACS-500c-2, BO-550-1-i, TKT-500b-3.'
-- 'Needs amendments before build: ACD-200b-1 and BO-2000d-3 (see caveats).'
+- 'Amended 2026-09-25: ACD-200b-1 and BO-2000d-3 now describe the post-shrink template and depends_on this AC.
+  This build must also update unit_tests/prompt_assembly/test_package_surface_spec.py (BO-2000d-3 five-field
+  assertion) in the same change.'
 - Canonical/deployed parity via the build (ADR-001).
 delivers_to: null
 expects_from:
@@ -76,6 +78,10 @@ amended_by:
 - reason: it-po-technical-enrichment
   date: '2026-09-25'
   by: it-po
+- reason: "back-pointer: the amend-before-build note now points at the amendment made on 2026-09-25 (it_requirements / notes only; criteria unchanged)."
+  date: '2026-09-25'
+  by: it-po
+  directed_by: user
 superseded_by: null
 covered_by: []
 implemented_by: []
@@ -87,8 +93,9 @@ notes: |
   (-> ACD-2500a-2-iii; semantic compatibility stays), S7 components/readiness write rules
   and covered_by protocol (-> ACD-2500a-2-i/ii/iv), S7b (-> ACD-2500a-2-v), BO-2000d
   reference_file_path (-> ACD-2500d-2), S8 items 1-2, 4, 12, 13, 15 (-> rule check).
-  AMENDMENTS NEEDED before this builds: ACD-200b-1 (template contains Documentation Gate),
-  BO-2000d-3 (template states reference-file obligation). Unchanged and still binding:
+  AMENDMENTS DONE (2026-09-25): ACD-200b-1 (template names the rule check as owner of the
+  documentation-coverage check) and BO-2000d-3 (four planner fields; reference file from
+  ACD-2500d-2) both amended in place and now depends_on this AC. Unchanged and still binding:
   TKT-300a-1, TKT-300a-2, TKT-300a-3, TKT-300a-4, ACS-500c-2, BO-550-1-i, TKT-500b-3.
   ACD-1700 role scoping must follow this split (ACD-2500 L0 doc_links).
   Named alteration: leave S2.8's table in place -> clause 3 goes red, and ACD-2500a-3-i

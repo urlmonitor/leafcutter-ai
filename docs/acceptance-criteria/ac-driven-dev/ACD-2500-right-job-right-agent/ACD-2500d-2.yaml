@@ -36,8 +36,8 @@ it_requirements:
   object only (field-targeted); the planner's other four keys stay as written.
 - Existence, same file type and same area are checked by the pre-pass script (ACD-2500d-5-i); the agent
   chooses among qualifying candidates and records its one-sentence reason in the file-findings output.
-- The planner-side change (planner names no reference file) is owned by ACD-2500e-2; BO-2000d-3 must be
-  amended first (see caveats).
+- The planner-side change (planner names no reference file) is owned by ACD-2500e-2; BO-2000d-3 was amended
+  (2026-09-25) to attribute the reference file to this step and now depends_on this AC and ACD-2500e-2.
 delivers_to:
   agent: python-coder
   contract: 'reference_file_path filled on a package_surface: true record and the ''reference file pending''
@@ -55,6 +55,10 @@ amended_by:
 - reason: it-po-technical-enrichment
   date: '2026-09-25'
   by: it-po
+- reason: "back-pointer: the amend-before-build note now points at the amendment made on 2026-09-25 (it_requirements / notes only; criteria unchanged)."
+  date: '2026-09-25'
+  by: it-po
+  directed_by: user
 superseded_by: null
 covered_by:
   - ACD-2500d-2-i
@@ -62,7 +66,10 @@ implemented_by: []
 change_target: prompt
 risk_surface: internal
 notes: |
-  AMENDMENT NEEDED: BO-2000d-3 promises that the IT PO template states the obligation to
+  AMENDMENT DONE (2026-09-25): BO-2000d-3 amended in place (four planner fields; reference
+  file from this step; work_status kept done, depends_on this AC + ACD-2500e-2). BO-2000d-1
+  amended for timing (depends_on ACD-2500d-2-i). Original note follows.
+  WAS: BO-2000d-3 promises that the IT PO template states the obligation to
   supply five package-surface fields including the resolved reference-file path. After
   this AC the reference-file path comes from the file-aware step; amend BO-2000d-3 so the
   planner's obligation covers the other four fields and the reference file is attributed

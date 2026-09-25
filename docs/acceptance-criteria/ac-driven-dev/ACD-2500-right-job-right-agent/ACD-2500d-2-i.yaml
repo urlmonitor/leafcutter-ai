@@ -41,7 +41,9 @@ it_requirements:
 - The approval step refuses a pending record with 'reference file pending' from the ACD-2500b-2 vocabulary.
 - Once the reference file is named, five-field validation runs unchanged (same messages, each missing
   field named).
-- 'Needs amendments before build: BO-2000d-1 (timing) and ACS-100i-6-i (object-form refusal); see caveats.'
+- 'Amended 2026-09-25: BO-2000d-1 (timing clause + pending-marker scenario, work_status kept done) and ACS-100i-6-i
+  (fourth scenario accepting the marker); both now depends_on this AC. This AC fixes the marker''s name and
+  schema declaration that both consume.'
 delivers_to: null
 expects_from:
 - ac_id: ACD-2500b-2
@@ -81,6 +83,10 @@ amended_by:
 - reason: it-po-technical-enrichment
   date: '2026-09-25'
   by: it-po
+- reason: "back-pointer: the amend-before-build note now points at the amendment made on 2026-09-25 (it_requirements / notes only; criteria unchanged)."
+  date: '2026-09-25'
+  by: it-po
+  directed_by: user
 superseded_by: null
 covered_by: []
 implemented_by: []
