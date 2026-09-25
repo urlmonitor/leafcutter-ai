@@ -238,7 +238,7 @@ def _load_head_content(file_path: str) -> dict | None:
         result = subprocess.run(
             [*git_cmd, "show", f"HEAD:{file_path}"],
             capture_output=True,
-            text=True,
+            text=True, encoding="utf-8",
             timeout=10,
         )
     except (subprocess.SubprocessError, OSError) as exc:
@@ -309,7 +309,7 @@ def _get_staged_ac_paths() -> list[str]:
         result = subprocess.run(
             ["git", "diff", "--cached", "--name-only", "--diff-filter=AM"],
             capture_output=True,
-            text=True,
+            text=True, encoding="utf-8",
             timeout=10,
         )
     except (subprocess.SubprocessError, OSError) as exc:
@@ -443,7 +443,7 @@ def _check_file(
                 rel_path = str(Path(file_path).relative_to(project_root))
             except ValueError:
                 rel_path = file_path
-        head = _load_head_content(rel_path)
+        head = _load_head_content(Path(rel_path).as_posix())
 
     is_new_file = (head is None)
     authorized = _is_authorized(agent_id, registry_path=registry_path)
@@ -649,7 +649,7 @@ def main() -> int:
             result = subprocess.run(
                 ["git", "config", "user.name"],
                 capture_output=True,
-                text=True,
+                text=True, encoding="utf-8",
                 timeout=5,
             )
             agent_id = result.stdout.strip() if result.returncode == 0 else "unknown"

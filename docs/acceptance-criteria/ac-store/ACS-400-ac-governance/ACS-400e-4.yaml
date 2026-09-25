@@ -1,0 +1,52 @@
+id: ACS-400e-4
+title: "The governance hook compares an existing AC file against its HEAD version on every platform, including Windows"
+component: ac-store
+components:
+  - ac_store
+level: L2
+status: active
+req_status: active
+work_status: done
+readiness: reviewed
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given an AC YAML file under docs/acceptance-criteria/ that already exists in HEAD
+    (e.g. docs/acceptance-criteria/index.yaml or any committed AC record),
+  And the check-ac-governance pre-commit hook receives that file as an absolute
+    path and converts it to a repo-relative path before loading the HEAD version,
+  When the hook runs on Windows, where Path.relative_to(...) yields an OS-native
+    backslash path (docs\acceptance-criteria\index.yaml),
+  Then the repo-relative path handed to `git show HEAD:<path>` uses forward
+    slashes (docs/acceptance-criteria/index.yaml) on every platform,
+  And the HEAD version is loaded, so the file is treated as an existing file and
+    immutable/protected-field governance checks compare staged against HEAD,
+  And editing an existing AC file that carries no origin_agent is not rejected
+    with "new AC file requires origin_agent",
+  And the bug symptom ("On Windows, the check-ac-governance pre-commit hook treats an EXISTING AC-store file as brand-new: `git show HEAD:docs\acceptance-criteria\index.yaml` fails (exit 128, 'exists on disk, but not in HEAD'), so the HEAD version is never loaded. Result: editing the existing docs/acceptance-criteria/index.yaml is blocked with 'new AC file requires origin_agent', and edits to existing AC files are never compared against HEAD, so immutable-field governance checks are silently skipped on Windows.") must not occur
+depends_on: [ACS-400e]
+doc_links:
+  - path: docs/architecture/adrs/ADR-008-ac-store-schema-id-format-enforcement.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: XS
+it_requirements:
+  - "Convert the repo-relative path with .as_posix() before building the `git show HEAD:<path>` revision spec"
+  - "Must not change behaviour for paths already passed in as repo-relative forward-slash strings"
+test_spec:
+  - name: test_head_lookup_uses_posix_path_for_absolute_windows_style_input
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    description: "Feeds the governance check an absolute path to an existing AC file whose relative_to() result stringifies with backslashes (simulated via PureWindowsPath or by patching Path), captures the path passed to _load_head_content / the git show argv, and asserts it is the forward-slash form docs/acceptance-criteria/<file>.yaml with no backslash; also asserts the file is not reported with 'new AC file requires origin_agent'."
+test_rationale: "The defect is purely a path-separator conversion at the git revision:path boundary, so a unit test that pins the exact string handed to git show is the tightest proof; it fails on the unfixed code wherever a backslash path is produced and passes once .as_posix() is applied, without needing a real Windows host."
+origin_agent: BrainCandy
+created: 2026-09-25
+amended_by: []
+superseded_by: null
+covered_by: [unit_tests/commit_guardian/test_acs_400e_4_head_lookup_posix_path.py]
+implemented_by: [templates/scripts/commit_guardian/check_ac_governance.py]
+change_target: code
+risk_surface: auth
+notes: "Authored by /quick-fix. Root cause: str(Path.relative_to(...)) yields an OS-native backslash path on Windows; git revision:path syntax requires forward slashes. Missing .as_posix() before the path is used in `git show HEAD:<path>`. Same bug class as KI-BP-20260907-0812 (product-truth index) and the doc-index generator.. Component note: scripts/commit_guardian/check_ac_governance.py also matches the guardrail-engine directory glob (scripts/commit_guardian/check_*.py), but the behaviour is AC governance, whose L1 tree (ACS-400) lives in ac-store; no guardrail-engine L1 covers governance HEAD comparison."
