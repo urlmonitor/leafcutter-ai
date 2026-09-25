@@ -1,0 +1,68 @@
+id: KM-300a-2
+components:
+  - knowledge_management
+  - documentation_system
+readiness: draft
+priority: medium
+title: "Each link in the documentation map points at its page relative to where the map itself lives"
+component: knowledge-management
+level: L2
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/knowledge-management/KM-300-docs-same-everywhere/KM-300a.yaml"
+criteria: |
+  Given the documentation map lives in the project's docs folder
+  And the docs folder contains docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    and docs/glossary.md
+  When the documentation map is generated
+  Then the link target for the ADR entry is
+    "architecture/adrs/ADR-001-self-hosting-boundary.md" — i.e. the path from
+    the folder containing the map to the page, not a path from the project root
+    (a target of "docs/architecture/adrs/ADR-001-self-hosting-boundary.md"
+    written inside the docs folder resolves to docs/docs/... and opens nothing)
+  And the link target for the Glossary entry is "glossary.md"
+  And for every entry in the map, joining the folder that contains the map with
+    the entry's link target names a file that exists in the project
+  And following any entry's link on the project's online code host opens the
+    named page rather than a "not found" page
+  And following any entry's link from a local copy of the map in a Markdown
+    viewer opens the named page
+  And the visible link text continues to show the project-root path
+    (e.g. "docs/architecture/adrs/ADR-001-self-hosting-boundary.md") so readers
+    see where the page lives
+depends_on:
+  - KM-300a
+  - KM-300a-1
+doc_links:
+  - path: docs/INDEX.md
+    relationship: describes
+    status: exists
+  - path: scripts/generate_doc_index.py
+    relationship: implements
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to:
+  agent: python-coder
+  contract: "Map link targets relative to the map's own folder, so that every target resolves to an existing file; the precondition KM-300c-2's resolution guard relies on"
+expects_from:
+  ac_id: KM-300a-1
+  contract: "Forward-slash-only link text and link targets"
+origin_agent: business-analyst
+created: 2026-09-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: internal
+notes: |
+  BA finding, not in the original request: the map is written INSIDE docs/ but
+  (as of 2026-09-25) its link targets are project-root paths starting with
+  "docs/". Relative Markdown links resolve against the linking file's folder,
+  so even with forward slashes every link resolves to docs/docs/... and is
+  broken on the code host and locally. Fixing the separator (KM-300a-1) alone
+  does NOT make KM-300a's L1 promise ("every entry opens the page it names")
+  true. Kept as a separate L2 so the /quick-fix for the separator stays a
+  single, minimal behaviour.

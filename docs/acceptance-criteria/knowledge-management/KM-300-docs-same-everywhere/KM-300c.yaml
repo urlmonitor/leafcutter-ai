@@ -28,7 +28,9 @@ origin_agent: BrainCandy
 created: 2026-09-25
 amended_by: []
 superseded_by: null
-covered_by: []
+covered_by:
+  - KM-300c-1
+  - KM-300c-2
 implemented_by: []
 change_target: code
 risk_surface: internal

@@ -1,0 +1,55 @@
+id: KM-300b-2
+components:
+  - knowledge_management
+  - documentation_system
+readiness: draft
+priority: medium
+title: "The documentation map is written with the same line endings and encoding on every operating system"
+component: knowledge-management
+level: L2
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/knowledge-management/KM-300-docs-same-everywhere/KM-300b.yaml"
+criteria: |
+  Given a docs folder whose pages include a description containing the
+    non-ASCII characters "—" (em dash) and "ü"
+  When the documentation map is generated on a Windows host, whose default
+    text line ending is CR LF and whose default text encoding may not be UTF-8
+  Then every line of the map ends with a single LF character and the map
+    contains zero CR characters
+  And the map is encoded as UTF-8 without a byte-order mark
+  And the "—" and "ü" characters appear in the map as their UTF-8 encodings,
+    not as replacement characters or escape sequences
+  And the map ends with exactly one trailing LF
+  And generating from the same docs folder on a Linux host yields a file with
+    the same line endings, encoding and trailing newline
+depends_on:
+  - KM-300b
+doc_links:
+  - path: docs/INDEX.md
+    relationship: describes
+    status: exists
+  - path: scripts/generate_doc_index.py
+    relationship: implements
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to:
+  agent: python-coder
+  contract: "LF-only, UTF-8 (no BOM) map output on every host; consumed by KM-300b-3's cross-OS byte-identity check"
+expects_from: null
+origin_agent: business-analyst
+created: 2026-09-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: internal
+notes: |
+  The committed map on 2026-09-25 contains zero CR characters, so this may
+  already hold in practice; the AC pins it so it cannot silently regress
+  (e.g. via a text-mode write on a host with a non-UTF-8 default encoding).
+  If a test proves it already holds, the implementing agent should record that
+  rather than change behaviour.

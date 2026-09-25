@@ -1,0 +1,76 @@
+id: KM-300b-3
+components:
+  - knowledge_management
+  - documentation_system
+readiness: draft
+priority: medium
+title: "A map committed from one operating system is left untouched when refreshed on another"
+component: knowledge-management
+level: L2
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/knowledge-management/KM-300-docs-same-everywhere/KM-300b.yaml"
+criteria: |
+  Given the documentation map was generated and committed from a Linux host
+  And a contributor on a Windows host checks out that commit into a fresh
+    clone, so every file's modification time is the time of the checkout
+  And no documentation page has changed since the map was generated
+  When the map is refreshed on the Windows host — either by running the
+    generator directly or by the automatic refresh that runs when work is saved
+    with a commit
+  Then the refreshed map is byte-identical to the committed map
+  And the version-control status reports no modification to the map
+  And no date, time, user name, host name or absolute path that differs between
+    the two hosts or between the two checkouts appears anywhere in the map,
+    including its front-matter header
+  And the same holds in the reverse direction (committed from Windows, refreshed
+    on Linux or macOS)
+  And when a documentation page HAS changed, the refreshed map reflects that
+    change on either host
+depends_on:
+  - KM-300b
+  - KM-300b-1
+  - KM-300b-2
+  - KM-300a-1
+  - KM-DBF-014
+doc_links:
+  - path: docs/INDEX.md
+    relationship: describes
+    status: exists
+  - path: scripts/generate_doc_index.py
+    relationship: implements
+    status: exists
+  - path: scripts/commit_guardian/transform_doc_index.py
+    relationship: implements
+    status: exists
+  - path: docs/acceptance-criteria/knowledge-management/KM-DBF-014.yaml
+    relationship: context
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from:
+  ac_id: KM-300b-1
+  contract: "Host-independent ordering (plus KM-300b-2 line endings/encoding and KM-300a-1 forward-slash links) — the host-dependent inputs this AC asserts the sum of"
+origin_agent: business-analyst
+created: 2026-09-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: internal
+notes: |
+  Cross-OS extension of KM-DBF-014, which proves byte identity on ONE machine
+  (done). This AC is the round-trip across hosts and checkouts. The fresh-clone
+  condition is deliberate: KM-DBF-014's notes say per-doc dates must never come
+  from the wall clock — a date taken from file modification time would pass
+  KM-DBF-014 on one machine yet differ on every fresh clone.
+
+  KM-DBF-014 adoption: the KM-300 L0 note suggests re-parenting KM-DBF-014
+  under KM-300b. Not done by this BA run: KM-DBF-014 lives outside this feature
+  folder (out of this run's write scope), and its compound KM-DBF prefix
+  derives to parent "KM-DBF", so it would need an explicit `parent: KM-300b`
+  field plus depends_on/covered_by. KM-DBF-014 is referenced here via
+  depends_on instead.

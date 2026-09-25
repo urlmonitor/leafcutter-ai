@@ -1,0 +1,55 @@
+id: KM-300c-1-ii
+components:
+  - knowledge_management
+  - documentation_system
+  - precommit_hooks
+readiness: draft
+priority: medium
+title: "A map check that finds no links to inspect refuses instead of passing silently"
+component: knowledge-management
+level: L3
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/knowledge-management/KM-300-docs-same-everywhere/KM-300c-1.yaml"
+criteria: |
+  Given the documentation map about to be committed has section headings such
+    as "## Components" and "## Glossary"
+  And its entries are written in a form the map checks do not recognise as
+    links (e.g. a changed table layout), so the checks recognise zero links
+  When the contributor commits
+  Then the commit is refused
+  And the refusal message states that the map was inspected and 0 links were
+    found, and that the check could therefore not verify the map
+  And when the checks recognise at least one link per non-empty section, the
+    message (on pass or refusal) or the check's output states how many links
+    were inspected
+depends_on:
+  - KM-300c-1
+doc_links:
+  - path: docs/INDEX.md
+    relationship: describes
+    status: exists
+  - path: docs/acceptance-criteria/knowledge-management/PROJECT_CONTEXT.md
+    relationship: context
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: KM-300c-1
+  contract: "The separator check (and KM-300c-2's resolution check) whose inspected-link count this edge case asserts"
+origin_agent: business-analyst
+created: 2026-09-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: internal
+notes: |
+  Standing constraint inherited in this component (see PROJECT_CONTEXT,
+  KM-ADM-100d / ACS-1100): a check must assert a minimum matched count or it
+  degrades to a zero-denominator silent pass. Applies equally to KM-300c-2's
+  resolution check; parented under KM-300c-1 because derive_parent_id allows
+  one parent.

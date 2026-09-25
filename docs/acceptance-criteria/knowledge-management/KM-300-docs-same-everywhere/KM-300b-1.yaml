@@ -1,0 +1,58 @@
+id: KM-300b-1
+components:
+  - knowledge_management
+  - documentation_system
+readiness: draft
+priority: medium
+title: "Entries in the documentation map appear in the same order on every operating system"
+component: knowledge-management
+level: L2
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/knowledge-management/KM-300-docs-same-everywhere/KM-300b.yaml"
+criteria: |
+  Given the docs/retrospectives folder contains exactly these files:
+    - EPIC-ACDrivenDevelopment.md
+    - EPIC-AcPatternEnforcementIsMechanically.md
+    - epic-lowercase-example.md
+    - 2026-05-22-epic-antigravity-support.md
+  And the files were created in a different order from their names' order
+  When the documentation map is generated on a Windows host and, separately, on
+    a Linux host from identical file contents
+  Then the Retrospectives section lists the four entries in the same order on
+    both hosts
+  And that order is determined solely by the entries' paths under one fixed
+    comparison rule stated in the map's generator documentation — not by the
+    order the file system happens to return files, by file creation time, or by
+    the host's locale or case-sensitivity setting
+  And the same holds for the order of the sections themselves and the order of
+    entries in every other section
+depends_on:
+  - KM-300b
+doc_links:
+  - path: docs/INDEX.md
+    relationship: describes
+    status: exists
+  - path: scripts/generate_doc_index.py
+    relationship: implements
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to:
+  agent: python-coder
+  contract: "Host-independent entry and section ordering; consumed by KM-300b-3's cross-OS byte-identity check"
+expects_from: null
+origin_agent: business-analyst
+created: 2026-09-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: internal
+notes: |
+  Mixed-case names (EPIC- vs epic-) are deliberate in the example: Windows
+  file systems are case-insensitive and a locale-aware or case-folding sort can
+  order them differently from a byte-wise sort. Which rule is chosen is the
+  IT PO's call; that the rule is fixed and host-independent is the behaviour.

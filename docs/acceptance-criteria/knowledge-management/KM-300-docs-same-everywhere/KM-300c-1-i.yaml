@@ -1,0 +1,49 @@
+id: KM-300c-1-i
+components:
+  - knowledge_management
+  - documentation_system
+  - precommit_hooks
+readiness: draft
+priority: medium
+title: "Backslashes outside link paths, such as in a page description, do not trip the separator check"
+component: knowledge-management
+level: L3
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/knowledge-management/KM-300-docs-same-everywhere/KM-300c-1.yaml"
+criteria: |
+  Given the documentation map about to be committed has forward-slash link text
+    and link targets on every entry
+  And one entry's Description cell reads
+    "Matches ticket ids with the pattern \d{8} and escapes \| in tables"
+  And another entry's Description cell reads "Windows paths look like C:\Users\name"
+  When the contributor commits
+  Then the separator check does not refuse the commit
+  And the check's verdict depends only on the characters inside link text
+    ("[...]") and link targets ("(...)") of map entries, not on backslashes
+    anywhere else in the map
+depends_on:
+  - KM-300c-1
+doc_links:
+  - path: docs/INDEX.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: KM-300c-1
+  contract: "The separator check this edge case constrains"
+origin_agent: business-analyst
+created: 2026-09-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: internal
+notes: |
+  Descriptions are copied from page front matter and legitimately contain
+  regexes and escaped pipes. A naive "no backslash anywhere in the file" check
+  would produce false refusals on unrelated commits.
