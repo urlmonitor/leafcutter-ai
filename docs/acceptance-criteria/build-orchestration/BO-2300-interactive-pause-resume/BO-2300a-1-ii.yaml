@@ -1,0 +1,74 @@
+id: BO-2300a-1-ii
+components:
+  - build_orchestration
+title: "The pause record is written and read by an agent chartered to run commands, so a pause never fails on a scope refusal"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: done
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given /plan-feature reaches an interactive gate with no human attached, so it must
+    persist a pause record (write, then read back to verify),
+  When it dispatches the pause-store write, the verify read, and the resume-side
+    peek / read / clear / clear-verify steps, and the step that locates the
+    worktree-setup script,
+  Then each of those dispatches goes to the agent the registry marks as permitted to
+    run repository/shell commands (worktree-agent, permits_shell: true),
+  And none of them goes to status-checker, whose charter is ticket-state investigation
+    and whose registry entry has permits_shell: false,
+  And the symptom ("status-checker refuses the pause-store write as outside its role,
+    so the run ends pause_persist_failed and cannot be resumed") must not occur.
+depends_on: [BO-2300a-1]
+assigned_agent: python-coder
+estimated_complexity: S
+doc_links:
+  - path: templates/workflows-js/plan-feature.js
+    relationship: modifies
+    status: exists
+  - path: docs/architecture/adrs/ADR-024-interactive-pause-resume.md
+    relationship: describes
+    status: exists
+  - path: docs/known-issues/build-orchestration/open-high-ki-bo-20260901-1620.md
+    relationship: related
+    status: exists
+it_requirements:
+  - "The executor agent id is defined once in plan-feature.js and reused by every listed dispatch; it is not repeated as a literal per call site."
+  - "The parseAgentJson `agent` labels on those dispatches name the same executor, so a refusal is attributed to the agent that actually replied."
+  - "Scope is plan-feature.js only. The identical pause-store dispatches in finalize-feature.js are a known residual, filed separately, not fixed here."
+delivers_to: null
+expects_from:
+  ac_id: BO-2300a-1
+  contract: "The pauseAtGate / resolveGate pause-store round trip whose dispatch target this edge constrains."
+origin_agent: BrainCandy
+created: 2026-09-25
+amended_by: []
+superseded_by: null
+covered_by: [unit_tests/workflows/test_bo_2300a_1_ii.py]
+implemented_by: [templates/workflows-js/plan-feature.js]
+change_target: code
+risk_surface: internal
+test_spec:
+  - name: test_pause_store_and_script_resolution_dispatch_to_shell_permitted_agent
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    description: "Runs plan-feature under the E2 harness to an unanswered gate and through a resume; asserts every pause-persist, pause-persist-verify, peek/read/clear/clear-verify-pause-record and resolve-worktree-setup-script-path dispatch in agent_calls has agent_type worktree-agent and none has status-checker."
+  - name: test_status_checker_scope_refusal_no_longer_reachable_on_pause
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    description: "Feeds a status-checker-shaped scope refusal to any status-checker dispatch; asserts the pause still persists (result status is the paused state, not pause_persist_failed), proving the pause path does not depend on status-checker."
+notes: |
+  Authored by /quick-fix on 2026-09-25 from a live failure: run itpo-split-20260925
+  (workflow wf_734389cf-248) ended pause_persist_failed at gate-po because status-checker
+  refused `pause_store.py write` as outside its ticket-state role. Diagnosis: status-checker
+  has permits_shell: false (config/agent_registry.json), worktree-agent is the only entry
+  with permits_shell: true and is already plan-feature's workspace-setup executor.
+  Implemented together with BO-1500a-5-i (bootstrap fail-closed) in one change, because
+  both touch the resolve-worktree-setup-script-path dispatch.
+  Residual: worktree-agent's charter names worktree lifecycle, not pause-store I/O; a
+  dedicated shell-executor agent (KI-BO-20260901-1620 item 4) would be the durable fix.
