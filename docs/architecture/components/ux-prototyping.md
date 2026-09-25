@@ -6,13 +6,15 @@ diagram_type: component
 status: active
 type: reference
 created: 2026-07-14
-last_updated: 2026-09-16
+last_updated: 2026-09-25
 components:
   - ux_prototyping
   - ac_store
   - build_pipeline
 related_docs:
   - docs/architecture/adrs/ADR-043-journey-record-carries-its-own-behind-mark.md
+  - docs/architecture/adrs/ADR-049-record-checker-trigger-scope.md
+  - docs/reference/example-content-separation.md
 ---
 
 # UX Prototyping — The Product-Truth Store
@@ -195,6 +197,7 @@ flow are **read-only views**; the `.flow.json` stays the single source of truth.
 - [How to author product-truth artifacts by hand](../../how-to/authoring-product-truth-artifacts.md) — the search → add-vs-create protocol.
 - [Product-truth schema reference](../../how-to/product-truth-schema-reference.md) — field-by-field reference for the four schemas.
 - [docs/product-truth/README.md](../../product-truth/README.md) — the store's operational README.
+- [How example content is kept apart from the project's own record](../../reference/example-content-separation.md) — the product-root ownership rule, every surface that honours the separation, and how to add a new example artifact or product.
 
 ## Legend
 
