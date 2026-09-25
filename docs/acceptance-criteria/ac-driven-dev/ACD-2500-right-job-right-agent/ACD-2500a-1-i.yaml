@@ -1,0 +1,74 @@
+id: ACD-2500a-1-i
+components:
+  - ac_driven_dev
+  - ac_store
+readiness: approved
+priority: high
+title: "A rule check that examined zero records does not pass"
+component: ac-driven-dev
+level: L3
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  Given the requirement rule check is pointed at a location that resolves to 0 requirement
+    records (a misspelled feature-folder name, or a folder that holds only a README),
+  When the check runs,
+  Then its overall result is failed, not passed,
+  And its report states that 0 records were checked and names the location it was given,
+  And, as a paired acceptable input, the same run pointed at a folder holding exactly 1
+    valid record reports passed with a stated count of 1.
+depends_on:
+  - ACD-2500a-1
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+- The zero-record verdict is computed from records_checked, independent of the findings list.
+- The report names the exact location argument it was given, unchanged.
+delivers_to: null
+expects_from:
+  ac_id: ACD-2500a-1
+  contract: 'Requirement rule-check report: JSON on stdout, exit 0 iff verdict is passed. Shape: {verdict:
+    ''passed''|''failed'', location: str (the path given, repo-root-relative POSIX), records_checked:
+    int, findings: [{file: str (repo-root-relative POSIX), record_id: str|null (null only when the file
+    could not be read), rule_family: str (human family name, e.g. ''producer/consumer contract symmetry''),
+    disposition: ''fixed''|''needs a decision''|''failed''|''not evaluated'', message: str, line: int|null,
+    detail: object|null}]}. Findings sorted by file then rule_family; at most one finding per (file, record_id,
+    rule_family, subject).'
+test_spec:
+- name: test_misspelled_folder_is_failed_with_zero_count_and_location
+  target_dir: unit_tests/ac_store/
+  framework: pytest
+  type: unit
+  description: A path resolving to 0 records yields verdict failed, records_checked 0 and the given location.
+  angle: failure
+- name: test_readme_only_folder_is_failed
+  target_dir: unit_tests/ac_store/
+  framework: pytest
+  type: unit
+  description: A folder holding only a README yields verdict failed with records_checked 0.
+  angle: failure
+- name: test_single_valid_record_passes_with_count_one
+  target_dir: unit_tests/ac_store/
+  framework: pytest
+  type: unit
+  description: A folder with exactly 1 valid record yields passed with records_checked 1.
+  angle: boundary
+origin_agent: business-analyst
+created: 2026-09-25
+amended_by:
+- reason: it-po-technical-enrichment
+  date: '2026-09-25'
+  by: it-po
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  The paired acceptable input exists so this rule cannot be satisfied by a check that
+  fails everything (memory: guard-liveness, "refuses everything is the off switch").

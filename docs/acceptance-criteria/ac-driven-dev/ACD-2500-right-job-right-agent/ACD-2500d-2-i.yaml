@@ -1,0 +1,93 @@
+id: ACD-2500d-2-i
+components:
+  - ac_driven_dev
+  - agent_registry
+readiness: approved
+priority: high
+title: "A package-surface requirement whose reference file is still pending cannot be approved"
+component: ac-driven-dev
+level: L3
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  Given a package-surface requirement for which the technical planner has supplied the other
+    four package-surface fields and the file-aware step has not yet run,
+  When the user runs the approval step,
+  Then the requirement stays at "reviewed" with the reason "reference file pending",
+  And the technical planner's stage is not failed for the missing reference file,
+  And once the file-aware step has named the reference file, validation of the five
+    package-surface fields runs exactly as before this change, failing and naming each
+    missing field.
+depends_on:
+  - ACD-2500d-2
+  - ACD-2500b-2
+doc_links:
+  - path: docs/acceptance-criteria/build-orchestration/BO-2000-correct-prompts-by-construction/BO-2000d-1.yaml
+    relationship: related
+    status: exists
+  - path: docs/acceptance-criteria/ac-driven-dev/ACD-1600-single-source-buildable/ACD-1600c-1.yaml
+    relationship: related
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+- 'Three enforcement points for the five-field package-surface rule move together: validate_ac.py (authoring
+  time, BO-2000d-1), the structured-object branch of config/ac_store_schema.json enforced by check_ac_schema.py
+  and validate_ac_schema.py (ACS-100i-6-i refuses a four-field object today), and the rule check at stage
+  end. All three accept the pending state between the planner stage and the code-aware stage.'
+- '''Reference file pending'' is an explicit, schema-declared marker on the record, never inferred from
+  the key''s absence, so a thin spec cannot pass silently (keeps the intent of ACS-100i-6-i).'
+- The approval step refuses a pending record with 'reference file pending' from the ACD-2500b-2 vocabulary.
+- Once the reference file is named, five-field validation runs unchanged (same messages, each missing
+  field named).
+- 'Needs amendments before build: BO-2000d-1 (timing) and ACS-100i-6-i (object-form refusal); see caveats.'
+delivers_to: null
+expects_from:
+- ac_id: ACD-2500b-2
+  contract: 'Closed hold-reason vocabulary, defined once (docs/reference/ac-schema.md plus one code constant):
+    ''missing file targets'', ''missing test contract'' (ACD-1600c-1, unchanged), ''test design pending''
+    (ACD-2500b-2), ''reference file pending'' (ACD-2500d-2-i), ''file finding undecided'' (ACD-2500d-3-i).
+    Approval report shape: {approved: [id], held: [{id: str, file: str, reason: <vocabulary value>}]}.'
+- ac_id: ACD-2500d-2
+  contract: reference_file_path filled and pending marker cleared by the code-aware step.
+test_spec:
+- name: test_pending_reference_file_held_at_reviewed
+  target_dir: unit_tests/ac_store/
+  framework: pytest
+  type: unit
+  description: A package-surface record with the pending marker stays reviewed with 'reference file pending'.
+- name: test_planner_stage_not_failed_for_pending_reference
+  target_dir: unit_tests/ac_store/
+  framework: pytest
+  type: unit
+  description: Validation at the planner stage end accepts four fields plus the pending marker.
+- name: test_after_naming_five_field_validation_unchanged
+  target_dir: unit_tests/ac_store/
+  framework: pytest
+  type: unit
+  description: With the reference file named, a missing field is refused naming each missing field, as
+    before.
+  angle: seam
+- name: test_four_fields_without_marker_still_refused
+  target_dir: unit_tests/ac_store/
+  framework: pytest
+  type: unit
+  description: A four-field object without the pending marker is still refused.
+  angle: failure
+origin_agent: business-analyst
+created: 2026-09-25
+amended_by:
+- reason: it-po-technical-enrichment
+  date: '2026-09-25'
+  by: it-po
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: internal
+notes: |
+  Clause 2 resolves the timing conflict with BO-2000d-1: that rule rejects a thin spec
+  "at authoring time"; if it fired after the planner's stage it would reject every
+  package-surface AC the planner hands off. The rule moves to after the file-aware step;
+  its content is unchanged (clause 3).

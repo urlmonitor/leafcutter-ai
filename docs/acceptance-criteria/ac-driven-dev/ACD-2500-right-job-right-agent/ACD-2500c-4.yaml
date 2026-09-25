@@ -1,0 +1,74 @@
+id: ACD-2500c-4
+components:
+  - ac_driven_dev
+  - testing_quality
+  - build_orchestration
+readiness: approved
+priority: high
+title: "Sequence diagram from technical planning through test design to the test writer"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  Given the flow specified by ACD-2500b-1, ACD-2500c-1, ACD-2500c-2 and ACD-2500c-2-i,
+  When its sequence diagram is authored,
+  Then it shows, in order: technical planner records test intent, requirement rule check,
+    code-aware step writes the test design, approval gate, build, test writer consumes the
+    design,
+  And it shows the "test design pending" branch at the approval gate and at the test writer,
+  And it shows the file-aware checks of ACD-2500d in the same pre-approval step when they
+    share a host.
+depends_on:
+  - ACD-2500c
+  - ACD-2500c-1
+  - ACD-2500c-2
+doc_links:
+- path: templates/agents/it-po.md
+  relationship: describes
+  status: exists
+- path: templates/agents/test-writer.md
+  relationship: describes
+  status: exists
+- path: docs/architecture/diagrams/c3-008-plan-feature-decision-gate-sequence.md
+  relationship: describes
+  status: exists
+- path: docs/architecture/components/ac-driven-dev.md
+  relationship: describes
+  status: exists
+assigned_agent: architecture-diagram-author
+estimated_complexity: M
+it_requirements:
+- 'MERGED DIAGRAM (IT-PO, user decision 3: one shared host): this diagram also carries ACD-2500d-4, which
+  is superseded by it. It must additionally show (a) the planner''s output entering the file-aware step,
+  files opened, surface findings and the reference-file choice, and the hand-back of findings to the planner,
+  and (b) that the approval gate is reached only after every finding has a recorded decision.'
+- Shows the deterministic pre-pass script as its own step before the code-aware agent.
+- Lives under docs/architecture/diagrams/ and is linked from docs/architecture/components/ac-driven-dev.md
+  next to c3-008.
+delivers_to: null
+expects_from:
+  ac_id: ACD-2500c-2
+  contract: 'Stage order: technical planner -> rule check -> pre-pass script -> code-aware agent -> rule
+    check -> approval gate; pending branch at the gate.'
+test_required: false
+origin_agent: business-analyst
+created: 2026-09-25
+amended_by:
+- reason: it-po-technical-enrichment
+  date: '2026-09-25'
+  by: it-po
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: docs
+risk_surface: internal
+notes: |
+  Answers ACD-2500c's sequence-diagram trigger and, if ACD-2500d shares the host,
+  ACD-2500d's as well (then ACD-2500d-4 may be merged into this one by IT-PO).
+
+  IT-PO (2026-09-25): now also answers ACD-2500d's sequence-diagram trigger; ACD-2500d-4 is
+  superseded by this record (one shared host, user decision 3). See it_requirements for the two
+  ACD-2500d-4 clauses this diagram must also show. depends_on is BA-owned and still lists only
+  ACD-2500c items; the orchestrator should also wait for ACD-2500d-1 and ACD-2500d-3.

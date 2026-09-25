@@ -1,0 +1,94 @@
+id: ACD-2500b-3
+components:
+  - ac_driven_dev
+  - testing_quality
+readiness: approved
+priority: high
+title: "Requirements whose test design the planner wrote before this change keep it and stay buildable"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  Given the store holds requirements whose test design was written by the technical planner
+    before this change (1,357 records on 2026-09-25, 941 of them approved),
+  When the change to test intent ships,
+  Then every such record keeps its existing test design unchanged,
+  And none is reclassified as test intent, reset to "reviewed" or flagged "test design pending",
+  And each is still classified implementation-ready when it was before the change,
+  And each is distinguishable from a design produced by the code-aware step, because it
+    carries no code-aware authorship mark (ACD-2500c-3),
+  And a user can send any single one of them through the code-aware step on request,
+    after which it carries the new design and the authorship mark.
+depends_on:
+  - ACD-2500b
+  - ACD-2500b-2
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+- 'No migration writes: no existing test_spec record is rewritten, reclassified or re-readied; verified
+  by a store-wide before/after diff showing zero changed legacy records.'
+- Legacy = test_spec present without the code-aware authorship mark (ACD-2500c-3); every consumer (gate,
+  approval step, queries) uses that one predicate.
+- Tests use a fixture store; the 1,357 / 941 counts in the criteria are a dated measurement and must not
+  be hard-coded.
+- The on-request redesign runs the code-aware step on exactly one named record and replaces its test_spec
+  only after the new design passes the rule check; on failure the legacy design is left unchanged.
+- The implementation-ready set for legacy records is identical before and after the change (compared on
+  the fixture store).
+delivers_to: null
+expects_from:
+  ac_id: ACD-2500c-3
+  contract: Code-aware authorship mark {step, date} at record level; its absence marks a legacy design.
+test_spec:
+- name: test_legacy_design_unchanged_after_change
+  target_dir: unit_tests/ac_store/
+  framework: pytest
+  type: unit
+  description: Every legacy test_spec in the fixture store is byte-identical after the change.
+  angle: real_artifact
+- name: test_legacy_not_reclassified_reset_or_flagged
+  target_dir: unit_tests/ac_store/
+  framework: pytest
+  type: unit
+  description: No legacy record gains test_intent, drops to reviewed or is flagged 'test design pending'.
+- name: test_legacy_ready_set_unchanged
+  target_dir: unit_tests/ac_store/
+  framework: pytest
+  type: unit
+  description: The implementation-ready set of legacy records is identical before and after.
+- name: test_legacy_distinguished_by_missing_authorship_mark
+  target_dir: unit_tests/ac_store/
+  framework: pytest
+  type: unit
+  description: A by-author query lists legacy records separately from code-aware designs.
+- name: test_single_record_redesign_adds_mark
+  target_dir: unit_tests/ac_store/
+  framework: pytest
+  type: integration
+  description: Sending one legacy record through the code-aware step yields the new design and the authorship
+    mark.
+origin_agent: business-analyst
+created: 2026-09-25
+amended_by:
+- reason: it-po-technical-enrichment
+  date: '2026-09-25'
+  by: it-po
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  DECISION (BA, asked for by ACD-2500b notes): legacy planner-written designs are KEPT AS
+  DESIGNS, not demoted to intent. Reason: demoting 941 approved records would pull them
+  out of the buildable queue in one step (the ACD-1600c-1 gate would hold them all),
+  which is a regression with no user-visible gain. The authorship mark makes them
+  findable for the later must_catch work, which can choose to re-design them. Flagged as
+  an open question for the user in the BA report.
+  Counts measured with a grep over the store on 2026-09-25; they drift.

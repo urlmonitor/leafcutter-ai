@@ -1,0 +1,92 @@
+id: ACD-2500a-2-iv
+components:
+  - ac_driven_dev
+  - ac_store
+readiness: approved
+priority: high
+title: "Readiness raised to approved by an authoring agent is restored to its prior value"
+component: ac-driven-dev
+level: L3
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  Given record R had readiness "draft" when the technical planner's stage began,
+    and at the end of that stage R carries readiness "approved",
+  When the requirement rule check runs at the end of the stage,
+  Then R's readiness reads "draft" again,
+  And the report lists one "fixed" entry naming R's file, the value "approved" that was
+    removed and the value "draft" that was restored,
+  And R is not in the buildable queue after the stage,
+  And, as the paired acceptable input, a record raised from "reviewed" to "approved" by the
+    approval step the user runs produces no finding and keeps "approved".
+depends_on:
+  - ACD-2500a-2
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+  - path: templates/agents/it-po.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+- The before-state is a snapshot the workflow takes before it dispatches the stage (for example the committed
+  state at stage start), passed to the check; never the stage agent's self-report.
+- The stage identity is passed in by the workflow; the user-run approval step is exempt by stage identity,
+  not by inspecting readiness values.
+- A record created during the stage that ends at 'approved' is restored to 'draft' (the store's authoring
+  default) and reported 'fixed' with its before-state stated as absent. See caveat, user to confirm.
+- 'Every write is a field-targeted edit: only the named field changes and every other byte of the record
+  is preserved (no whole-file YAML load/dump rewrite; see the fast_lane.py round-trip hazard in the ac-driven-dev
+  PROJECT_CONTEXT).'
+delivers_to: null
+expects_from:
+  ac_id: ACD-2500a-2
+  contract: 'Requirement rule-check report: JSON on stdout, exit 0 iff verdict is passed. Shape: {verdict:
+    ''passed''|''failed'', location: str (the path given, repo-root-relative POSIX), records_checked:
+    int, findings: [{file: str (repo-root-relative POSIX), record_id: str|null (null only when the file
+    could not be read), rule_family: str (human family name, e.g. ''producer/consumer contract symmetry''),
+    disposition: ''fixed''|''needs a decision''|''failed''|''not evaluated'', message: str, line: int|null,
+    detail: object|null}]}. Findings sorted by file then rule_family; at most one finding per (file, record_id,
+    rule_family, subject).'
+test_spec:
+- name: test_agent_raised_approved_restored_to_prior_value
+  target_dir: unit_tests/ac_store/
+  framework: pytest
+  type: unit
+  description: R, draft at stage start and approved at stage end, reads draft after the check.
+- name: test_readiness_fix_names_file_removed_and_restored_values
+  target_dir: unit_tests/ac_store/
+  framework: pytest
+  type: unit
+  description: One 'fixed' entry names R's file, 'approved' removed and 'draft' restored.
+- name: test_restored_record_not_in_buildable_queue
+  target_dir: unit_tests/ac_store/
+  framework: pytest
+  type: integration
+  description: After the stage, R is absent from the scan_ac_store ready set.
+  angle: reachability
+- name: test_user_approval_step_raise_not_flagged
+  target_dir: unit_tests/ac_store/
+  framework: pytest
+  type: unit
+  description: A reviewed -> approved raise made by the user-run approval step produces no finding and
+    stays approved.
+  angle: boundary
+origin_agent: business-analyst
+created: 2026-09-25
+amended_by:
+- reason: it-po-technical-enrichment
+  date: '2026-09-25'
+  by: it-po
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  Standing rule honoured: ACD-400c ("a requirement only joins the buildable queue once a
+  person has approved it"). IT-PO: the check needs to know each record's readiness at
+  stage start (the stage's before-state); how it obtains that is an enrichment decision.
