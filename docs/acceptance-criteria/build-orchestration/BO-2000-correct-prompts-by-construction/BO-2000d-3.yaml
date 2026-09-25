@@ -1,7 +1,7 @@
 id: BO-2000d-3
 components:
   - build_orchestration
-title: "The IT-PO template states the package-surface spec obligation"
+title: "The IT-PO template states the package-surface spec obligation (four planner fields; reference file from the file-aware step)"
 component: build-orchestration
 level: L2
 status: active
@@ -15,30 +15,56 @@ criteria: |
   When it describes enrichment of package-surface ACs,
   Then it states the obligation that for ACs assigned to python-coder in the
     build_pipeline or build-orchestration components, it_requirements must carry the
-    config-schema fragment, resolved reference-file path, N-location rule,
-    required-skills list, and post-write commands,
+    config-schema fragment, N-location rule, required-skills list, and post-write
+    commands,
+  And it states that the resolved reference-file path is not the IT PO's to supply: it is
+    chosen by the file-aware step (ACD-2500d-2), and until that step runs the AC carries
+    the explicit "reference file pending" marker (ACD-2500d-2-i),
   So the human-readable obligation backs the machine-checkable schema.
 depends_on:
   - BO-2000d
+  - ACD-2500d-2
+  - ACD-2500e-2
 doc_links:
   - path: docs/architecture/agent_knowledge_plane.md
     relationship: describes
+    status: exists
+  - path: docs/acceptance-criteria/ac-driven-dev/ACD-2500-right-job-right-agent/ACD-2500d-2.yaml
+    relationship: related
+    status: exists
+  - path: docs/acceptance-criteria/ac-driven-dev/ACD-2500-right-job-right-agent/ACD-2500e-2.yaml
+    relationship: related
     status: exists
 assigned_agent: llm-expert
 estimated_complexity: S
 it_requirements:
   - "The it-po template must carry the package-surface it_requirements obligation matching the schema rule in BO-2000d-1."
-  - "Test coverage: assert the it-po template text enumerates the five mandatory fields for package-surface ACs."
+  - "Test coverage: assert the it-po template text enumerates the four planner-owned fields for package-surface ACs and attributes reference_file_path to the file-aware step (ACD-2500d-2) with the 'reference file pending' marker (ACD-2500d-2-i)."
+  - "The existing assertion in unit_tests/prompt_assembly/test_package_surface_spec.py (five fields in the template) must be updated in the same change that removes the reference-file obligation from the template (ACD-2500e-2) — never left red, never deleted without replacement."
 delivers_to:
   agent: it-po
-  contract: "A package-surface spec obligation clause in the it-po template"
+  contract: "A package-surface spec obligation clause in the it-po template naming four planner-owned fields (config_schema_fragment, n_location_rule, required_skills, post_write_commands) and attributing reference_file_path to the file-aware step (ACD-2500d-2)"
 expects_from:
   ac_id: BO-2000d-1
-  contract: "The schema rule this template obligation must stay consistent with"
+  contract: "The schema rule this template obligation must stay consistent with, including its accepted 'reference file pending' state (amended BO-2000d-1)"
 origin_agent: BrainCandy
 created: 2026-07-08
-amended_by: []
+amended_by:
+  - reason: "amend: reference-file-path obligation moves from the IT PO template to the file-aware step (ACD-2500d-2); planner obligation covers the other four fields. work_status kept done (records the pre-amendment clause); amended clause delivered by ACD-2500e-2 + ACD-2500d-2, now in depends_on. Criteria and title edited in place by it-po under explicit user direction."
+    date: '2026-09-25'
+    by: it-po
+    directed_by: user
 superseded_by: null
 covered_by:
 - unit_tests/prompt_assembly/test_package_surface_spec.py
 implemented_by: []
+notes: |
+  AMENDMENT (2026-09-25, ACD-2500): the reference-file-path obligation moves from the IT PO
+  template to the file-aware step (ACD-2500d-2); the planner keeps the other four fields.
+  work_status is deliberately LEFT at done and NOT flipped to todo: "done" records the
+  pre-amendment five-field clause, which is what the template states today. The amended
+  clause is delivered by ACD-2500e-2 (template shrink) together with ACD-2500d-2, and this
+  AC now depends_on both so any rebuild is ordered after them. When ACD-2500e-2 builds it
+  must also update unit_tests/prompt_assembly/test_package_surface_spec.py (the five-field
+  assertion goes red once the reference-file obligation leaves the template); until then
+  the covered_by test asserts the pre-amendment text.

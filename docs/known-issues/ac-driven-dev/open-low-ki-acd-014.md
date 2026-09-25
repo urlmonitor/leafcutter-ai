@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: '2026-08-18'
-last_updated: '2026-08-18'
+last_updated: '2026-09-25'
 components:
   - ac_driven_dev
 related_docs:
@@ -21,7 +21,19 @@ related_docs:
 > original grading is the `**Severity:**` line below, unchanged.
 
 - **Severity:** medium
-- **Status:** open (data corrected by hand 2026-08-25 and again 2026-08-31; generator unchanged)
+- **Status:** open, **partially fixed** (verified 2026-09-25). **Fixed: the generator.**
+  TKT-016 (`4711c9c7`, #759, 2026-09-08) relativises both halves of the back-reference pair.
+  The code now lives in `scripts/ac_store/epic_phases.py::_relativise_backref_pair` /
+  `_apply_epic_backrefs`, after the #844 split (`fb07b48d`), and it warns when a path cannot be
+  relativised. **Remaining: legacy data and a guard.** 10 store records on `main` still carry
+  `/home/henzeh/...` `implemented_by` entries. There are 8 under
+  `build-orchestration/BO-1900-dispatch-preflight/` (`BO-1900b-1`, `-b-1-i`, `-b-1-ii`, `-b-2`,
+  `BO-1900c-1`, `-c-1-i`, `-c-1-ii`, `-c-2`) and 2 under
+  `build_pipeline/BP-1400-web-app-ci-gate/` (`BP-1400c-1`, `BP-1400c-1-i`). All 10 predate the
+  fix: they were written by the scaffold commits `12b01120` (#261, 2026-07-10) and `69c63293`
+  (#371, 2026-07-21). Nothing in the store rejects an absolute entry either.
+  `check_ac_governance.py` has no such check. `_gtfa_implemented_by.py` only normalises a
+  legacy absolute entry when that AC is regenerated. No other KI tracks this leftover.
 - **Occurrences:** 3
 - **First seen:** 2026-08-25 · **Last seen:** 2026-08-31
 - **2026-08-31 recurrence, with a store-wide count:** all 27 leaf ACs of
@@ -68,5 +80,20 @@ including locally.
 **Fix direction for the tool.** Make the back-reference relative to the project root at
 the point of write, and assert repo-relativity in the same test that covers KI-ACD-013 —
 both are "the generator writes store data the store's own conventions reject."
+
+**2026-09-25 — verification note.** The generator half of this entry is fixed, and the
+"generator unchanged" status was stale. The fix direction above was implemented by TKT-016
+(`4711c9c7`, #759), including the regression test
+`unit_tests/ac_store/test_tkt_016_epic_backref_is_relative.py`. The `--ac` entry path is
+tracked separately as `KI-BO-014`. This run of
+`python -m pytest unit_tests/ac_store/test_tkt_016_epic_backref_is_relative.py
+unit_tests/ac_store/test_acd_1200a_12.py unit_tests/ac_store/test_acd_1200a_13.py -q` gave
+**6 passed**. The store sweep `grep -rl "^- /home/" docs/acceptance-criteria/` now finds
+**10** files, down from 60. All 10 predate the fix, and they are listed in the Status line.
+This entry stays open for two things:
+
+- rewrite those 10 records to repo-relative;
+- add a store-level check that rejects an absolute `implemented_by` entry. Without it, a
+  hand edit or another generator could reintroduce one unnoticed.
 
 ---

@@ -55,6 +55,7 @@ criteria: |
     never re-dispatched") must not occur
 covered_by:
   - BO-3000a
+  - BO-3000b
 implemented_by: []
 notes: |
   Authored by /quick-fix.

@@ -1,0 +1,104 @@
+id: ACD-2500b-2-i
+components:
+  - ac_driven_dev
+  - testing_quality
+readiness: approved
+priority: high
+title: "A requirement that reaches approved with its test design pending is still never built"
+component: ac-driven-dev
+level: L3
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  Given a leaf code requirement at readiness "approved" (set by hand) that carries test
+    intent and no test design,
+  When the implementation-readiness gate evaluates the buildable queue,
+  Then the requirement is flagged not implementation-ready with the reason
+    "test design pending", which is distinct from the reason "missing test contract",
+  And it is excluded from the set dispatched to builders,
+  And no test list is derived for it from its Then clauses (the per-clause fallback used
+    when no test contract has been authored does not apply to a record that carries test
+    intent),
+  And the store's commit-time record check rejects a change that leaves it in this state,
+    naming the file and "test design pending".
+depends_on:
+  - ACD-2500b-2
+doc_links:
+- path: docs/acceptance-criteria/ac-driven-dev/ACD-1600-single-source-buildable/ACD-1600c-1.yaml
+  relationship: related
+  status: exists
+- path: docs/reference/ac-schema.md
+  relationship: describes
+  status: exists
+- path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+  relationship: describes
+  status: exists
+assigned_agent: python-coder
+estimated_complexity: L
+it_requirements:
+- 'Three enforcement points, all required: (1) the implementation-readiness gate in scripts/ac_store/scan_ac_store.py
+  (ACD-1600c-1) excludes the record from the ready/dispatch set with ''test design pending''; (2) the
+  ticket generator''s per-Then fallback in generate_ticket_from_ac.py does not apply to a record carrying
+  test_intent; (3) the commit-time record check (templates/scripts/commit_guardian/check_ac_schema.py
+  canonical, deployed copy built) rejects a change leaving approved + test_intent + no design. (3) is
+  load-bearing for entry, (1) for the queue, (2) for non-queue paths (fast lane, quick-fix).'
+- Reason strings come from the ACD-2500b-2 hold-reason vocabulary and are distinct from 'missing test
+  contract'.
+- Data-driven on field presence (test_intent present, design absent), never on AC ids.
+- The commit-time rule is a forward ratchet on staged files, like validate_test_contract; canonical and
+  deployed copies kept in parity via the build (ADR-001).
+- ACD-1600c-1 was amended (2026-09-25) to report reasons from the single ACD-2500b-2 list; this AC adds 'test design pending' to that gate.
+delivers_to: null
+expects_from:
+  ac_id: ACD-2500b-2
+  contract: 'Closed hold-reason vocabulary, defined once (docs/reference/ac-schema.md plus one code constant):
+    ''missing file targets'', ''missing test contract'' (ACD-1600c-1, unchanged), ''test design pending''
+    (ACD-2500b-2), ''reference file pending'' (ACD-2500d-2-i), ''file finding undecided'' (ACD-2500d-3-i).
+    Approval report shape: {approved: [id], held: [{id: str, file: str, reason: <vocabulary value>}]}.'
+test_spec:
+- name: test_gate_flags_intent_record_test_design_pending
+  target_dir: unit_tests/ac_store/
+  framework: pytest
+  type: unit
+  description: The readiness gate flags the record not implementation-ready with 'test design pending',
+    distinct from 'missing test contract'.
+- name: test_intent_record_excluded_from_dispatch_set
+  target_dir: unit_tests/ac_store/
+  framework: pytest
+  type: integration
+  description: The record is absent from the set dispatched to builders.
+  angle: reachability
+- name: test_generator_derives_no_tests_for_intent_record
+  target_dir: unit_tests/ac_store/
+  framework: pytest
+  type: unit
+  description: The ticket generator derives no Then-clause test list for a record carrying test_intent.
+  angle: seam
+- name: test_commit_check_rejects_approved_intent_without_design
+  target_dir: unit_tests/commit_guardian/
+  framework: pytest
+  type: unit
+  description: The commit-time record check rejects the change, naming the file and 'test design pending'.
+  angle: failure
+origin_agent: business-analyst
+created: 2026-09-25
+amended_by:
+- reason: it-po-technical-enrichment
+  date: '2026-09-25'
+  by: it-po
+- reason: "back-pointer: the amend-before-build note now points at the amendment made on 2026-09-25 (it_requirements / notes only; criteria unchanged)."
+  date: '2026-09-25'
+  by: it-po
+  directed_by: user
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  "Never silently treated as buildable" (user brief). The ticket generator today falls
+  back to one descriptor per Then clause when test_spec is null (ac-schema.md, test_spec
+  row). For a record with test intent that fallback is exactly the silent path, so clause
+  3 forbids it. Named alteration: remove the intent exclusion from the fallback -> clause
+  3 goes red while b-2 stays green.
