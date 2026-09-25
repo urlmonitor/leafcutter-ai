@@ -1,0 +1,103 @@
+id: TQ-500g
+components:
+  - testing_quality
+  - build_orchestration
+title: "Once the fix exists, its tests are run against the wrong versions, and the runs decide"
+component: testing-quality
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  A fix or gate isn't done while a named wrong version still passes its tests.
+
+  After the code is written, each named wrong version, plus the fix simply
+  undone, is actually applied and the guarding tests are run against it,
+  database tests included. Any wrong version the tests fail to notice stops the
+  work, and the verdict comes from those runs, not from anyone's opinion of the
+  tests. Existing tests that lean on a changed check are part of that set; they
+  may be strengthened, and every change to one is listed, but none may be
+  weakened to get a green result.
+depends_on:
+  - TQ-500
+  - TQ-500f
+doc_links:
+  - path: docs/analysis/2026-09-25-test-writers-prove-failure-not-discrimination.md
+    relationship: describes
+    status: exists
+    relevance: "Request items 3, 6 and 7 (Phase B). 'Nothing runs after the coder': no step perturbs the finished implementation and checks the tests notice."
+  - path: docs/known-issues/testing-quality.md
+    relationship: relates-to
+    status: exists
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: product-owner
+created: 2026-09-25
+amended_by:
+  - reason: "Authored by product-owner from BrainCandy's /plan-feature request 'Tests must prove they can tell right from wrong' (Phase B: request items 3, 6, 7; Phase C recorded as a deferred note)."
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - pipeline
+  - prompt
+risk_surface: contract_boundary
+documentation_triggers:
+  - component-diagram
+  - sequence-diagram
+  - reference-doc
+notes: |
+  PHASE B — L1 ONLY IN THIS RUN. Do not decompose until Phase A (TQ-500f,
+  INF-1100d) has shipped; a later /plan-feature pass will plan it informed by
+  what Phase A teaches.
+
+  WHAT THIS L1 HOLDS (request items):
+    3. A step after the code is written (working name "test-breaker"), scoped to
+       regression and gate tests only — never every test, because wrong-version
+       runs are slow on database-backed suites. It applies each wrong version the
+       requirement named (TQ-500f) plus "the fix undone", runs the tagged tests,
+       restores the code exactly, and blocks sign-off if any wrong version
+       survives. Starting point named by the request: the quick-fix workflow's
+       existing revert-the-fix proof (no stash; temp-file revert; byte-compare
+       restore). The request asks that the existing fail-closed outcome
+       classifier used for done proofs is reused rather than a second one built.
+    6. Consumer-test sweep: when a check or shared helper changes, every existing
+       test that exercises it is listed and either strengthened or stated to be
+       unaffected. GUARDRAIL: this replaces a blanket ban on touching existing
+       tests, and that ban exists to stop tests being weakened to go green —
+       so the sweep may only strengthen, and every edit to an existing test is
+       listed in the sign-off. Related, not duplicated: TQ-100c (protection
+       cannot be quietly removed via links/allowlist).
+    7. The database test writer runs what it writes, including a run against the
+       unfixed code for regression tests. A run in which the suite silently
+       re-installs the database code and so undoes the deliberate break (the
+       "setUpClass re-deploy trap") is not a valid run and must not count as
+       the test noticing — it must be documented and detected.
+
+  COVERED BY EXISTING SIBLINGS — DO NOT RE-SPECIFY HERE:
+    - Per-test, per-wrong-version outcomes and naming the test that slept
+      through a break: TQ-500c. Its criteria ("when the guarded behaviour is
+      deliberately broken, the outcome is reported for each test on its own")
+      already applies to these runs unchanged.
+    - A wrong-version run that was owed and never taken reads as incomplete, not
+      as passed: TQ-500b.
+    - What was broken and what each test did is recorded with the work for a
+      later reader: TQ-500e.
+    - Work whose tests pass the moment they are written, and the substitute proof
+      its writer declares: TQ-500a. This L1 is not that: it applies to regression
+      and gate tests that DO have an ordinary before-and-after, and it runs after
+      the code exists rather than relying on the writer's own alteration.
+
+  PHASE C — DEFERRED, RECORDED HERE RATHER THAN AS ITS OWN L1. Wrong versions
+  proposed by the agent itself, beyond the ones the requirement named. Only
+  worth building if Phase B shows, in practice, wrong versions surviving that
+  nobody named. Not given its own L1 because (a) it is conditional on evidence
+  that does not exist yet, and (b) TQ-500 now holds 7 L1s, its cap — a
+  speculative child would force a cap override. When Phase B runs produce that
+  evidence, promote it via /plan-feature: either as an extension of this L1 or
+  as a new L1 (which will require splitting TQ-500 or an explicit override).
