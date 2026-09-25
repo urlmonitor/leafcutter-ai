@@ -1,0 +1,184 @@
+id: INF-1100d-4
+components:
+  - infrastructure
+  - testing_quality
+title: "The package refuses to ship a database address again"
+component: infrastructure
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given the package's shipped sources — the templates/ tree (including
+    templates/docs/) and the config/ tree, which are what a build copies into
+    an install — and the output of a build into a fresh, empty target
+    directory,
+  When the shipped-address check runs over those shipped sources and that
+    build output,
+  Then it passes when no shipped file contains a database connection address,
+    And it fails when any shipped file contains one, naming each file and
+      line — for example a template that reintroduces
+      postgresql://trader:trader@localhost:5403/LIVE, or any other address of
+      the form <scheme>://<user>:<password>@<host>:<port>/<database> with
+      scheme postgresql, postgres or mysql,
+    And run against the shipped sources as they stood before this work, it
+      fails and names every shipped place the address came from — at least
+      templates/agents/test-writer.md, templates/agents/test-runner.md,
+      templates/workflows/test.md, config/skills_config.default.json and
+      config/skills_config.schema.json, and their built copies,
+    And leafcutter's own documentation tree (docs/, including the settings
+      field reference, the testing guide, the analysis pages and the AC
+      store) is not scanned, because a build does not ship it; those pages
+      are cleaned by hand under INF-1100d-5,
+    And it runs with the normal test suite, so reintroducing the address
+      fails before a merge rather than after an install.
+depends_on:
+  - INF-1100d
+  - INF-1100d-1
+  - INF-1100d-2
+  - INF-1100d-5
+doc_links:
+  - path: docs/analysis/2026-09-25-test-writers-prove-failure-not-discrimination.md
+    relationship: describes
+    status: exists
+    relevance: "Incident 7: the package template propagates one adopter's local address to every install."
+  - path: config/skills_config.default.json
+    relationship: describes
+    status: exists
+  - path: templates/agents/test-writer.md
+    relationship: describes
+    status: exists
+  - path: templates/agents/test-runner.md
+    relationship: describes
+    status: exists
+  - path: templates/workflows/test.md
+    relationship: describes
+    status: exists
+  - path: config/skills_config.schema.json
+    relationship: describes
+    status: exists
+  - path: docs/reference/skills-config-fields.md
+    relationship: describes
+    status: exists
+  - path: docs/testing/README.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from: null
+it_requirements:
+  - '''Shipped'' = templates/ (including templates/docs/) and config/, i.e. what build.py copies
+    into an install (user decision at the IT-PO gate). Declare these roots positively in ONE
+    place that the check and its tests share. Leafcutter''s own docs/ tree and the AC store
+    are not scanned because they are outside the declared roots. There is no exclusion list
+    of any paths or files.'
+  - 'Detection: <scheme>://[<user>[:<password>]@]<host>:<port>[/<database>] for schemes postgresql,
+    postgres and mysql. A concrete host plus port is an address even without credentials. Angle-bracket
+    placeholders, ${ENV} references, {{config.*}} placeholders and prose that names the setting
+    are not addresses.'
+  - Report every hit as file:line and exit non-zero. On a clean run, exit 0 with a summary that
+    states how many shipped files were scanned. A scan that found zero files must not report
+    success.
+  - Accept both the source roots and a build-output directory as scan targets.
+  - 'Runs in the normal test suite (no _MANUAL marker) in under 10 s. It must not spawn build.py
+    (CLAUDE.md): built-output coverage uses TQ-600a''s shared session layout once it lands,
+    and until then a synthetic built tree.'
+  - The pre-fix proof must use the real bytes of the five shipped source files (templates/agents/test-writer.md,
+    templates/agents/test-runner.md, templates/workflows/test.md, config/skills_config.default.json,
+    config/skills_config.schema.json) as they stood at the pinned pre-work commit e919a24f.
+    If that history is unavailable (e.g. a shallow CI clone), fail closed; never skip silently.
+  - The check itself contains no literal of the old address (no stale-default detection, NQ1).
+  - 'Build order: the real-roots scan goes green only after INF-1100d-1 and INF-1100d-2 remove
+    the addresses (both now in depends_on). The implementer must not make it green by editing
+    those templates or config files itself.'
+test_spec:
+  - name: test_shipped_address_check_passes_on_current_shipped_roots
+    target_dir: unit_tests/portability/
+    framework: pytest
+    type: integration
+    angle: reachability
+    surface_invoked: the shipped-address check CLI, run as a subprocess over the declared shipped
+      roots templates/ and config/ (the normal-suite entry point)
+    description: Over the real templates/ and config/ trees, the check exits 0 and reports a
+      non-zero count of scanned files.
+  - name: test_shipped_address_check_fails_on_pre_fix_sources_naming_every_file
+    target_dir: unit_tests/portability/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    description: Over a temp shipped tree holding the five shipped source files' real bytes
+      from commit e919a24f, the check exits non-zero and names each of the five files with a
+      line number.
+  - name: test_shipped_address_check_flags_reintroduced_address_with_file_and_line
+    target_dir: unit_tests/portability/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: A template in a temp shipped tree that reintroduces postgresql://trader:trader@localhost:5403/LIVE,
+      and another with a mysql://u:p@h:3306/d address, are each reported with file and line,
+      with a non-zero exit (must_block).
+  - name: test_shipped_address_check_scans_build_output_directory
+    target_dir: unit_tests/portability/
+    framework: pytest
+    type: integration
+    angle: deployed
+    description: Pointed at a built-layout directory (TQ-600a's shared layout when available,
+      otherwise a synthetic .leafcutter/.claude tree), the check flags an address in a built
+      agent file.
+test_rationale: 'This check is the behavioural proof for the whole L1, so it must be shown
+  to fail on the real pre-fix bytes. A check that passes only on fixed sources proves nothing.
+  The build-output half is honest about the build.py spawn ban: it uses the shared layout
+  once it exists and a synthetic built tree until then.'
+origin_agent: business-analyst
+created: 2026-09-25
+amended_by: []
+superseded_by: null
+covered_by:
+  - INF-1100d-4-i
+implemented_by: []
+change_target: code
+risk_surface: safety
+notes: |
+  THE BEHAVIOURAL PROOF FOR THE WHOLE L1. INF-1100d-2 and -3 are mostly prompt
+  text; this check is what makes "nothing leafcutter installs carries a
+  ready-made database address" deterministic and permanent.
+
+  The third Then clause is the adversarial case: a check that scans the wrong
+  tree, or matches only the one literal, passes on the fixed sources and proves
+  nothing. It must be shown to fail on the pre-fix sources. Of the PO's seven source
+  files, five are shipped and scanned: templates/agents/test-writer.md,
+  templates/agents/test-runner.md, templates/workflows/test.md,
+  config/skills_config.default.json, config/skills_config.schema.json. The other
+  two (docs/reference/skills-config-fields.md, docs/testing/README.md) are
+  leafcutter's own docs. They are not shipped, and INF-1100d-5 cleans them by
+  hand.
+
+  "Shipped" means what a build puts into an install, not the whole repository —
+  see INF-1100d-4-i for what is deliberately out of scope.
+
+  IT-PO ENRICHMENT (2026-09-25)
+  EIGHTH SOURCE FOUND: docs/agents/utility/test-runner.md carries port-5403 prose, and
+  docs/testing/README.md:214 carries postgresql://myuser:mypass@localhost:5432/mydb, which
+  this check's own rule (a concrete host plus port) flags. Both need owners: INF-1100d-5 for
+  docs.
+  INTENDED must_catch: "match only the one literal" -> the mysql case goes red; "scan only
+  templates/" -> the pre-fix test does not name the two config/ files, test goes red; "exclude
+  docs/analysis by path" -> INF-1100d-4-i S7 goes red; "zero-file scan exits 0" -> the reachability
+  count assertion goes red.
+
+  SHIPPED SCOPE (user decision at the IT-PO gate): shipped = what build.py
+  copies into installs, i.e. templates/ (templates/docs/ included) and config/.
+  Leafcutter's own docs/ tree (docs/reference, docs/testing, docs/analysis,
+  docs/agents, the AC store) is NOT shipped and NOT scanned. The docs/ sources
+  named in the IT-PO enrichment above (docs/testing/README.md:214,
+  docs/agents/utility/test-runner.md) are still cleaned by hand under
+  INF-1100d-5, but this check does not guard them.
+
+  IT-PO PASS 2 (2026-09-25): it_requirements and test_spec aligned to shipped =
+  templates/ + config/. The pre-fix proof now names five shipped sources instead of seven, and
+  the docs/ exclusion is covered by INF-1100d-4-i. must_catch "scan only templates/" -> the pre-fix
+  test misses the two config/ files and goes red.

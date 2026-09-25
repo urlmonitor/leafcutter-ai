@@ -104,7 +104,8 @@ amended_by: []
 superseded_by: null
 covered_by:
   - BO-2900a-1-i
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-AProofThatReachedTheCodeByDirectImport/01_TICKET-20260925-BO-2900a-1.md
 change_target: pipeline
 risk_surface: internal
 notes: |

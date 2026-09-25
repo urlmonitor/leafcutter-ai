@@ -1,0 +1,115 @@
+id: INF-1100d-3-i
+components:
+  - infrastructure
+  - testing_quality
+title: "\"Not configured\" and \"configured but unreachable\" are different reports, and neither shows a password"
+component: infrastructure
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given three projects about to run database tests —
+      P1: db_connection_test not set,
+      P2: db_connection_test set to "" (or only spaces),
+      P3: db_connection_test set to
+          postgresql://app:s3cret@db.internal:5432/app_test, with that
+          database stopped,
+  When the test runner checks the test database before running,
+  Then P1 and P2 are both reported as not configured, naming the setting —
+      an empty value counts as missing, not as an address,
+    And P3 is reported as configured but unreachable, naming the host
+      db.internal, the port 5432 and the database app_test,
+    And no report shows the password s3cret or any other credential from the
+      address.
+depends_on:
+  - INF-1100d-3
+doc_links:
+  - path: templates/agents/test-runner.md
+    relationship: describes
+    status: exists
+    relevance: "The pre-run reachability check and its 'requires the local database container' wording."
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to:
+  - agent: llm-expert
+    ac_id: INF-1100d-2
+    contract: 'CLI (deployed under the install''s scripts tree) printing JSON {status: ''not_configured''|''unreachable''|''reachable'',
+      setting: ''testing_context.db_connection_test'', host: str|null, port: int|null, database:
+      str|null, message: str}. Exit 0 only when reachable. No field ever contains a password
+      or user:password pair.'
+expects_from:
+  ac_id: INF-1100d-1
+  contract: An unset connection is absent from resolved settings, not a placeholder.
+it_requirements:
+  - Implement the pre-run check as a shipped, deterministic CLI that the test runner calls (INF-1100d-2
+    wires the prompt to it). Place it under a scripts/ subtree that build.py already deploys
+    whole, so the deployed test-runner can invoke it from the install. Name the deployed path
+    in the change.
+  - Resolve the setting with the same semantics as config_loader (package defaults under the
+    project's settings). Unset, empty and whitespace-only values all count as not configured.
+  - 'Three distinct outcomes, each with its own exit code and a JSON result: not_configured
+    (names testing_context.db_connection_test; no connection attempted), unreachable (names
+    host, port and database), reachable.'
+  - No credential in stdout, stderr, the JSON result or any relayed exception text, including
+    driver error messages that echo the connection string.
+  - Reporting not_configured must not require any database driver. The reachability probe is
+    bounded by a timeout of no more than 5 s so an unresolvable host cannot stall a run.
+  - 'One reader of the setting: INF-1100d-3-ii''s resolver lives in this same module, and the
+    checker uses it, so blank-means-unconfigured is decided in one place.'
+test_spec:
+  - name: test_db_check_reports_not_configured_for_unset_and_blank
+    target_dir: unit_tests/portability/
+    framework: pytest
+    type: integration
+    angle: reachability
+    surface_invoked: the shipped test-database checker CLI, run as a subprocess the way the
+      test runner invokes it
+    description: P1 (unset) and P2 ('' and whitespace-only) each report not configured, naming
+      testing_context.db_connection_test, with a non-zero exit and no connection attempt.
+  - name: test_db_check_reports_unreachable_naming_host_port_database
+    target_dir: unit_tests/portability/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: P3 (postgresql://app:s3cret@db.internal:5432/app_test, nothing listening) reports
+      configured but unreachable, naming db.internal, 5432 and app_test, within the timeout.
+  - name: test_db_check_output_never_contains_credentials
+    target_dir: unit_tests/portability/
+    framework: pytest
+    type: integration
+    angle: failure
+    description: For P3, and for a variant whose driver error text echoes the connection string,
+      neither stdout nor stderr nor the JSON contains 's3cret' or 'app:s3cret'.
+test_rationale: 'Moving the check from inline prompt code into a shipped script turns a prompt-only
+  AC into a deterministic one: the script''s reports are the observable behaviour. Running
+  it as a subprocess is how the test runner reaches it. The credential test covers the safety
+  risk (a report echoed into a committed hand-off).'
+origin_agent: business-analyst
+created: 2026-09-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: safety
+notes: |
+  EDGE CASES: an empty string that slips past "is it set?" and becomes a
+  connection attempt to a driver default; and a report that echoes the full
+  connection string into a hand-off that is committed to the repo. Both are
+  safety concerns on a surface already marked safety.
+
+  If IT-PO moves the reachability check into a script, this becomes a
+  deterministic python-coder AC; as instruction text it is prompt-only.
+
+  IT-PO ENRICHMENT (2026-09-25)
+  REASSIGNED llm-expert -> python-coder, and change_target prompt -> code, following the BA's own
+  note ("If IT-PO moves the reachability check into a script, this becomes a deterministic
+  python-coder AC"). The test-runner prompt change that calls the script is INF-1100d-2's
+  scope. Criteria unchanged.
+  INTENDED must_catch: "treat '' as a configured address" -> P2 attempts a connection, test goes red;
+  "echo the full connection string in the unreachable message" -> the credential test goes red;
+  "report not-configured as unreachable" -> the P1 test goes red.

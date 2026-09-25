@@ -54,6 +54,8 @@ from product_truth_index_checks import (  # noqa: F401
     _strip_by_flow_asof,
 )
 from product_truth_example_checks import check_example_product  # noqa: F401  # re-exported for callers
+# Re-exported (ADR-049 sub-decision 2): record-checker trigger scope, kept in its own sibling module -- no ratchet headroom for it inline.
+from product_truth_trigger_scope import RESOLVABLE_POINTER_TRIGGER_PATTERNS, resolvable_pointer_trigger_pattern  # noqa: F401
 
 #: The three artifact-type directories a record is made of. Shared with
 #: validate_product_truth, which reports emptiness per type.
@@ -590,5 +592,19 @@ DECISION HISTORY
   396/400 headroom had no room for that check's full body), one import line,
   same precedent product_truth_index_checks.py already set above.
   (#EPIC-TruthfulProjectRecord/35)
+- 2026-09-25 09:00 [python-coder]: UXP-700c-3 / ADR-049 sub-decision 2 -- the
+  record checker's own automatic-check `files:` scope
+  (check-product-truth-validate, already registered in .pre-commit-config.yaml
+  + both commit_guardian.json copies) is now DERIVED from
+  `RESOLVABLE_POINTER_TRIGGER_PATTERNS` / `resolvable_pointer_trigger_pattern()`,
+  re-exported here from the new sibling product_truth_trigger_scope.py (this
+  file had no headroom left under its own GE-127a-1/GE-127b-1 ratchet for the
+  constant + docstring inline) -- same re-export shape as
+  product_truth_index_checks.py / product_truth_example_checks.py above. The
+  existing hand-written regex already equalled the derived value, so no
+  config file changed. Widening `is_resolvable_pointer_target()` to a new
+  pointer kind MUST add that kind's root to the new constant in the same
+  commit, or the equality test in unit_tests/product_truth/test_uxp_700c_3.py
+  fails. (#EPIC-TruthfulProjectRecord/24) (ADR-049)
 ====================================================================
 """

@@ -37,6 +37,7 @@ covered_by:
   - KM-KGS-100c-1
   - KM-KGS-100c-2
   - KM-KGS-100c-3
+  - KM-KGS-100c-4
 implemented_by: []
 change_target: code
 risk_surface: contract_boundary
