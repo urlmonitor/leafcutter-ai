@@ -258,7 +258,7 @@ def _render_single_file(heading: str, path: Path, repo_root: Path) -> str:
     if not path.exists():
         return f"## {heading}\n\nNo docs found.\n\n"
 
-    rel = path.relative_to(repo_root)
+    rel = path.relative_to(repo_root).as_posix()
     desc = _extract_description(path)
     return f"## {heading}\n\n- [{rel}]({rel}) — {desc}\n\n"
 
@@ -295,7 +295,7 @@ def _render_directory(
 
     rows: list[str] = []
     for f in files:
-        rel = f.relative_to(repo_root)
+        rel = f.relative_to(repo_root).as_posix()
         name = f.stem.replace("-", " ").replace("_", " ")
         desc = _extract_description(f)
         rows.append(f"| {name} | [{rel}]({rel}) | {desc} |")
@@ -478,3 +478,14 @@ if __name__ == "__main__":
 #   own stated idempotency intent for `created`/`last_updated`. A genuine doc
 #   change is still visible via the changed table rows, so the fix does not
 #   mask real content changes.
+# - 2026-09-25 [python-coder/TICKET-20260925-DocIndexPosixPaths]: Switched
+#   both link-emitting interpolation sites (_render_single_file,
+#   _render_directory) from bare `f"[{rel}]({rel})"` to
+#   `path.relative_to(repo_root).as_posix()`. `Path.relative_to()` on a
+#   Windows host returns a `WindowsPath`, whose `str()` uses `\` — so on
+#   Windows every commit that touched `docs/*.md` had the transform-doc-index
+#   pre-commit hook regenerate `docs/INDEX.md` with every link rewritten to
+#   backslash separators (observed corrupting a real branch's index; see the
+#   ticket's Context section for four prior manual workarounds of the same
+#   defect). `.as_posix()` always renders `/` regardless of host OS, so the
+#   emitted Markdown is now byte-identical across platforms.
