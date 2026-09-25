@@ -3,8 +3,8 @@ components:
   - ac_driven_dev
   - testing_quality
   - build_orchestration
-readiness: draft
-priority: medium
+readiness: reviewed
+priority: high
 title: "A test-design entry naming a file that neither exists nor is declared to-be-created is rejected"
 component: ac-driven-dev
 level: L3
@@ -29,14 +29,67 @@ doc_links:
     relationship: describes
     status: exists
 assigned_agent: python-coder
-estimated_complexity: null
+estimated_complexity: S
+it_requirements:
+- Reports under rule family 'test design grounding' through the ACD-2400a-1 contract.
+- Path existence is judged against the authoring worktree's tree at check time.
+- '''To-be-created'' is accepted only when the path is also among the record''s declared files (same derivation
+  as ACD-2400a-3).'
+- Applies only to designs carrying the code-aware authorship mark; legacy designs are exempt (ACD-2400b-3).
 delivers_to: null
-expects_from: null
+expects_from:
+- ac_id: ACD-2400a-1
+  contract: 'Requirement rule-check report: JSON on stdout, exit 0 iff verdict is passed. Shape: {verdict:
+    ''passed''|''failed'', location: str (the path given, repo-root-relative POSIX), records_checked:
+    int, findings: [{file: str (repo-root-relative POSIX), record_id: str|null (null only when the file
+    could not be read), rule_family: str (human family name, e.g. ''producer/consumer contract symmetry''),
+    disposition: ''fixed''|''needs a decision''|''failed''|''not evaluated'', message: str, line: int|null,
+    detail: object|null}]}. Findings sorted by file then rule_family; at most one finding per (file, record_id,
+    rule_family, subject).'
+- ac_id: ACD-2400c-3
+  contract: 'Code-aware test design = the record''s test_spec list, each item carrying the existing keys
+    (name, target_dir, description, framework, type, angle) plus the ACD-2400c-3 per-entry keys (the outcome
+    clause it proves, verbatim test_intent.clause text; the code file it exercises; a to-be-created flag;
+    the neighbouring test file cited as convention), and record-level provenance: authorship mark {step:
+    <code-aware agent id>, date: YYYY-MM-DD} and the list of repository files the step opened (repo-root-relative
+    POSIX). No must_catch key.'
+test_spec:
+- name: test_entry_naming_undeclared_missing_file_rejected
+  target_dir: unit_tests/ac_store/
+  framework: pytest
+  type: unit
+  description: E3 (scripts/does_not_exist.py, neither present nor declared) yields one finding naming
+    the record, E3 and the path.
+  angle: failure
+- name: test_existing_and_declared_to_be_created_entries_pass
+  target_dir: unit_tests/ac_store/
+  framework: pytest
+  type: unit
+  description: E1 and E2 produce no finding.
+- name: test_empty_opened_files_reported_not_grounded
+  target_dir: unit_tests/ac_store/
+  framework: pytest
+  type: unit
+  description: A design with an empty opened-files list is reported not grounded, naming the record.
+  angle: boundary
+- name: test_legacy_design_not_evaluated_for_grounding
+  target_dir: unit_tests/ac_store/
+  framework: pytest
+  type: unit
+  description: A test_spec without the authorship mark is not evaluated by this family.
 origin_agent: business-analyst
 created: 2026-09-25
-amended_by: []
+amended_by:
+- reason: it-po-technical-enrichment
+  date: '2026-09-25'
+  by: it-po
 superseded_by: null
 covered_by: []
 implemented_by: []
 change_target: code
 risk_surface: contract_boundary
+notes: |
+  BLOCKED AT FINAL GATE (user, 2026-09-25): held at readiness: reviewed until a
+  declared-files schema AC (AC-level list of files a piece of work changes, with a
+  to-be-created marker) is authored via a separate /plan-feature run and added to
+  depends_on here. Today's file list is derived from doc_links (KI-ACS-002).

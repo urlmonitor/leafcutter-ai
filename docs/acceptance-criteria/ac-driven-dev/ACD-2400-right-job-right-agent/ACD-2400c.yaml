@@ -3,8 +3,8 @@ components:
   - ac_driven_dev
   - testing_quality
   - build_orchestration
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 title: "Test designs are written by someone who has read the code"
 component: ac-driven-dev
 level: L1

@@ -2,8 +2,8 @@ id: ACD-2400a-3
 components:
   - ac_driven_dev
   - ac_store
-readiness: draft
-priority: medium
+readiness: reviewed
+priority: high
 title: "Specialist-versus-surface compatibility is judged from the one surface-to-specialist map"
 component: ac-driven-dev
 level: L2
@@ -30,19 +30,81 @@ depends_on:
   - ACD-2400a-1
   - ACD-1700b-1
 doc_links:
-  - path: docs/acceptance-criteria/ac-driven-dev/ACD-1700-role-scoped-context/ACD-1700b-1.yaml
-    relationship: related
-    status: exists
-  - path: templates/agents/it-po.md
-    relationship: describes
-    status: exists
+- path: docs/acceptance-criteria/ac-driven-dev/ACD-1700-role-scoped-context/ACD-1700b-1.yaml
+  relationship: related
+  status: exists
+- path: templates/agents/it-po.md
+  relationship: describes
+  status: exists
+- path: docs/architecture/adrs/ADR-010-ac-store-as-authoritative-backlog.md
+  relationship: describes
+  status: exists
 assigned_agent: python-coder
-estimated_complexity: null
-delivers_to: null
-expects_from: null
+estimated_complexity: M
+it_requirements:
+- 'Reads config/surface_craft_map.yaml (the path-aware, first-match-wins map pinned by ACD-1700b-1) as
+  the only surface-to-specialist source; no file-type table inside the check. Build prerequisite: ACD-1700b-1
+  has delivered the map (the file does not exist in the repo today).'
+- 'Declared files are read through the one derivation the ticket generator uses to build files_touched
+  (ADR-010 doc_links -> files_touched); no second derivation may be added. See caveat: that derivation
+  is imprecise today (KI-ACS-002) and no AC-level to-be-created marker exists.'
+- 'A declared file matching no map entry is reported ''not evaluated: unresolved surface'', never passed
+  and never a mismatch.'
+- Only the unmatched part of a mixed surface is named (BP-1100f-3-i partial-flag behaviour).
+- 'A record with no declared files is listed ''not evaluated: no declared files'' and excluded from the
+  passed count.'
+delivers_to:
+  agent: llm-expert
+  contract: Specialist-versus-surface family replaces the it-po.md S2.8 table; ACD-2400e-2 deletes S2.8
+    and points here.
+expects_from:
+- ac_id: ACD-2400a-1
+  contract: 'Requirement rule-check report: JSON on stdout, exit 0 iff verdict is passed. Shape: {verdict:
+    ''passed''|''failed'', location: str (the path given, repo-root-relative POSIX), records_checked:
+    int, findings: [{file: str (repo-root-relative POSIX), record_id: str|null (null only when the file
+    could not be read), rule_family: str (human family name, e.g. ''producer/consumer contract symmetry''),
+    disposition: ''fixed''|''needs a decision''|''failed''|''not evaluated'', message: str, line: int|null,
+    detail: object|null}]}. Findings sorted by file then rule_family; at most one finding per (file, record_id,
+    rule_family, subject).'
+- ac_id: ACD-1700b-1
+  contract: 'config/surface_craft_map.yaml: ordered list of {glob, craft}; first match wins; templates/workflows-js/**/*.{js,mjs}
+    -> python-coder.'
+test_spec:
+- name: test_mismatched_file_named_with_resolved_specialist_and_agent
+  target_dir: unit_tests/ac_store/
+  framework: pytest
+  type: unit
+  description: P gets one 'needs a decision' finding naming web/app/page.tsx, the map's specialist and
+    python-coder.
+- name: test_matched_file_not_named_in_finding
+  target_dir: unit_tests/ac_store/
+  framework: pytest
+  type: unit
+  description: scripts/x.py is not named in P's finding.
+- name: test_llm_expert_template_only_no_finding
+  target_dir: unit_tests/ac_store/
+  framework: pytest
+  type: unit
+  description: Q (llm-expert, templates/agents/foo.md only) produces no finding.
+- name: test_no_declared_files_listed_not_evaluated
+  target_dir: unit_tests/ac_store/
+  framework: pytest
+  type: unit
+  description: 'S is listed ''not evaluated: no declared files'' and not counted as passed.'
+  angle: boundary
+- name: test_verdict_source_is_surface_craft_map
+  target_dir: unit_tests/ac_store/
+  framework: pytest
+  type: unit
+  description: Verdicts come from config/surface_craft_map.yaml; a fixture map with a changed entry changes
+    the verdict.
+  angle: seam
 origin_agent: business-analyst
 created: 2026-09-25
-amended_by: []
+amended_by:
+- reason: it-po-technical-enrichment
+  date: '2026-09-25'
+  by: it-po
 superseded_by: null
 covered_by:
   - ACD-2400a-3-i
@@ -50,6 +112,11 @@ implemented_by: []
 change_target: code
 risk_surface: contract_boundary
 notes: |
+  BLOCKED AT FINAL GATE (user, 2026-09-25): held at readiness: reviewed until a
+  declared-files schema AC (AC-level list of files a piece of work changes, with a
+  to-be-created marker) is authored via a separate /plan-feature run and added to
+  depends_on here. Today's file list is derived from doc_links (KI-ACS-002).
+
   CONFLICT RESOLVED BY THIS AC: the technical planner's S2.8 table says python-coder
   "cannot act on .js", while ACD-1700b-1 (user decision 2026-08-11) pins a path-aware,
   first-match-wins map in which templates/workflows-js/**/*.js belongs to python-coder.

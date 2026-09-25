@@ -3,8 +3,8 @@ components:
   - ac_driven_dev
   - testing_quality
   - build_orchestration
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 title: "Component diagram of who writes which part of a requirement"
 component: ac-driven-dev
 level: L2
@@ -22,16 +22,30 @@ depends_on:
   - ACD-2400c
   - ACD-2400c-1
 doc_links:
-  - path: templates/agents/it-po.md
-    relationship: describes
-    status: exists
+- path: templates/agents/it-po.md
+  relationship: describes
+  status: exists
+- path: docs/architecture/components/ac-driven-dev.md
+  relationship: describes
+  status: exists
+- path: docs/architecture/adrs/ADR-009-itpo-no-source-code-access.md
+  relationship: describes
+  status: exists
 assigned_agent: architecture-diagram-author
-estimated_complexity: null
+estimated_complexity: S
+it_requirements:
+- 'Shows five owners: technical planner (no source access, ADR-009), requirement rule check (deterministic),
+  pre-pass script (deterministic), code-aware agent (Sonnet, source access), test writer (build time).'
+- Lives under docs/architecture/diagrams/ and is linked from docs/architecture/components/ac-driven-dev.md.
 delivers_to: null
 expects_from: null
+test_required: false
 origin_agent: business-analyst
 created: 2026-09-25
-amended_by: []
+amended_by:
+- reason: it-po-technical-enrichment
+  date: '2026-09-25'
+  by: it-po
 superseded_by: null
 covered_by: []
 implemented_by: []

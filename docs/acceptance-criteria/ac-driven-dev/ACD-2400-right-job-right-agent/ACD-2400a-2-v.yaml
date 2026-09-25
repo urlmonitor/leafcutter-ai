@@ -2,8 +2,8 @@ id: ACD-2400a-2-v
 components:
   - ac_driven_dev
   - ac_store
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 title: "A documentation trigger with no matching documentation requirement is reported by trigger and specialist"
 component: ac-driven-dev
 level: L3
@@ -34,12 +34,60 @@ doc_links:
     relationship: related
     status: exists
 assigned_agent: python-coder
-estimated_complexity: null
+estimated_complexity: S
+it_requirements:
+- Trigger-to-specialist mapping read from the single config source named in ACD-2400a-2; all 5 triggers
+  present.
+- The coverage-matching rule (how a documentation requirement is counted against a trigger) is stated
+  once in the ACD-2400a-5 reference doc and applied identically here. See caveat on per-specialist counting.
+- The 'stated rationale' is the documentation_rationale field.
+- The check never creates a documentation requirement (ACD-200b option (a) authoring is not relocated
+  here).
 delivers_to: null
-expects_from: null
+expects_from:
+  ac_id: ACD-2400a-2
+  contract: 'Requirement rule-check report: JSON on stdout, exit 0 iff verdict is passed. Shape: {verdict:
+    ''passed''|''failed'', location: str (the path given, repo-root-relative POSIX), records_checked:
+    int, findings: [{file: str (repo-root-relative POSIX), record_id: str|null (null only when the file
+    could not be read), rule_family: str (human family name, e.g. ''producer/consumer contract symmetry''),
+    disposition: ''fixed''|''needs a decision''|''failed''|''not evaluated'', message: str, line: int|null,
+    detail: object|null}]}. Findings sorted by file then rule_family; at most one finding per (file, record_id,
+    rule_family, subject).'
+test_spec:
+- name: test_missing_reference_doc_reported_by_trigger_and_specialist
+  target_dir: unit_tests/ac_store/
+  framework: pytest
+  type: unit
+  description: An L1 with [sequence-diagram, reference-doc] and only a diagram AC yields one finding naming
+    the L1, 'reference-doc' and documentation-expert.
+- name: test_covered_trigger_not_reported
+  target_dir: unit_tests/ac_store/
+  framework: pytest
+  type: unit
+  description: No finding is raised for 'sequence-diagram'.
+- name: test_no_documentation_record_created
+  target_dir: unit_tests/ac_store/
+  framework: pytest
+  type: unit
+  description: The folder's file set is unchanged after the run.
+- name: test_trigger_specialist_map_covers_all_five
+  target_dir: unit_tests/ac_store/
+  framework: pytest
+  type: unit
+  description: how-to/reference-doc map to documentation-expert; the three diagram triggers map to architecture-diagram-author.
+  angle: real_artifact
+- name: test_empty_triggers_rationale_rule
+  target_dir: unit_tests/ac_store/
+  framework: pytest
+  type: unit
+  description: Empty triggers with a rationale yield no finding; empty triggers without one are reported.
+  angle: boundary
 origin_agent: business-analyst
 created: 2026-09-25
-amended_by: []
+amended_by:
+- reason: it-po-technical-enrichment
+  date: '2026-09-25'
+  by: it-po
 superseded_by: null
 covered_by: []
 implemented_by: []

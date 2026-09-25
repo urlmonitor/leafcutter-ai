@@ -3,8 +3,8 @@ components:
   - ac_driven_dev
   - agent_registry
   - llm_authoring
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 title: "An enrichment run's output carries none of the relocated fields"
 component: ac-driven-dev
 level: L2
@@ -34,12 +34,22 @@ doc_links:
     relationship: related
     status: exists
 assigned_agent: llm-expert
-estimated_complexity: null
+estimated_complexity: S
+it_requirements:
+- 'Proof is operational: the requirement rule check (ACD-2400a) at the end of a real technical-planner
+  stage on a 3-record batch, shown at the final gate. No unit test can exercise an LLM run, hence test_required:
+  false (see caveat).'
 delivers_to: null
-expects_from: null
+expects_from:
+  ac_id: ACD-2400e-2
+  contract: Reduced it-po.md instructions.
+test_required: false
 origin_agent: business-analyst
 created: 2026-09-25
-amended_by: []
+amended_by:
+- reason: it-po-technical-enrichment
+  date: '2026-09-25'
+  by: it-po
 superseded_by: null
 covered_by: []
 implemented_by: []

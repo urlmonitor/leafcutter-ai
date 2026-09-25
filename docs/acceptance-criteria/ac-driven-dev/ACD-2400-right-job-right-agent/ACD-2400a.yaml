@@ -2,8 +2,8 @@ id: ACD-2400a
 components:
   - ac_driven_dev
   - ac_store
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 title: "Rules that never need judgment are checked the same way every time"
 component: ac-driven-dev
 level: L1

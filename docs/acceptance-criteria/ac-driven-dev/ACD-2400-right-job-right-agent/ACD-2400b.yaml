@@ -2,8 +2,8 @@ id: ACD-2400b
 components:
   - ac_driven_dev
   - testing_quality
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 title: "The planner says what must be proven, not how to prove it"
 component: ac-driven-dev
 level: L1

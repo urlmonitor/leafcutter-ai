@@ -2,8 +2,8 @@ id: ACD-2400a-2-i
 components:
   - ac_driven_dev
   - ac_store
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 title: "A missing parent back-link is appended once and nothing else in the parent changes"
 component: ac-driven-dev
 level: L3
@@ -29,12 +29,60 @@ doc_links:
     relationship: describes
     status: exists
 assigned_agent: python-coder
-estimated_complexity: null
+estimated_complexity: S
+it_requirements:
+- Parent ids come from the store's one parent-id derivation (the one check_ac_limits.py and check_ac_parent_covered_by.py
+  use); no second derivation.
+- 'Only covered_by changes: existing order preserved, the missing id appended at the end.'
+- The check never creates a record.
+- 'Every write is a field-targeted edit: only the named field changes and every other byte of the record
+  is preserved (no whole-file YAML load/dump rewrite; see the fast_lane.py round-trip hazard in the ac-driven-dev
+  PROJECT_CONTEXT).'
 delivers_to: null
-expects_from: null
+expects_from:
+  ac_id: ACD-2400a-2
+  contract: 'Requirement rule-check report: JSON on stdout, exit 0 iff verdict is passed. Shape: {verdict:
+    ''passed''|''failed'', location: str (the path given, repo-root-relative POSIX), records_checked:
+    int, findings: [{file: str (repo-root-relative POSIX), record_id: str|null (null only when the file
+    could not be read), rule_family: str (human family name, e.g. ''producer/consumer contract symmetry''),
+    disposition: ''fixed''|''needs a decision''|''failed''|''not evaluated'', message: str, line: int|null,
+    detail: object|null}]}. Findings sorted by file then rule_family; at most one finding per (file, record_id,
+    rule_family, subject).'
+test_spec:
+- name: test_missing_backlink_appended_in_order
+  target_dir: unit_tests/ac_store/
+  framework: pytest
+  type: unit
+  description: Parent covered_by becomes [ACD-9990a-1, ACD-9990a-2, ACD-9990a-3].
+- name: test_parent_other_fields_byte_identical
+  target_dir: unit_tests/ac_store/
+  framework: pytest
+  type: unit
+  description: Every other byte of the parent record is unchanged.
+  angle: real_artifact
+- name: test_backlink_fix_reported_once_naming_parent_and_id
+  target_dir: unit_tests/ac_store/
+  framework: pytest
+  type: unit
+  description: One 'fixed' entry names the parent's file and the added id.
+- name: test_second_run_changes_nothing
+  target_dir: unit_tests/ac_store/
+  framework: pytest
+  type: unit
+  description: An immediate second run changes no file and reports no 'fixed' entry.
+- name: test_missing_parent_reported_and_not_created
+  target_dir: unit_tests/ac_store/
+  framework: pytest
+  type: unit
+  description: A child whose derived parent is absent is 'needs a decision' naming both ids, and no parent
+    file appears.
+  angle: failure
 origin_agent: business-analyst
 created: 2026-09-25
-amended_by: []
+amended_by:
+- reason: it-po-technical-enrichment
+  date: '2026-09-25'
+  by: it-po
 superseded_by: null
 covered_by: []
 implemented_by: []

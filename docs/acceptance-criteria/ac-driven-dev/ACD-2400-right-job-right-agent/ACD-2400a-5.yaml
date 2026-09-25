@@ -2,8 +2,8 @@ id: ACD-2400a-5
 components:
   - ac_driven_dev
   - ac_store
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 title: "Reference doc for the requirement rule check"
 component: ac-driven-dev
 level: L2
@@ -26,16 +26,36 @@ depends_on:
   - ACD-2400a-2
   - ACD-2400a-3
 doc_links:
-  - path: docs/reference/ac-schema.md
-    relationship: describes
-    status: exists
+- path: docs/reference/ac-schema.md
+  relationship: describes
+  status: exists
+- path: docs/architecture/components/ac-driven-dev.md
+  relationship: describes
+  status: exists
 assigned_agent: documentation-expert
-estimated_complexity: null
+estimated_complexity: S
+it_requirements:
+- Reference genre; lives in docs/reference/ and links docs/reference/ac-schema.md rather than restating
+  field rules.
+- States the documentation-trigger coverage-matching rule that ACD-2400a-2-v applies.
+- States the CLI invocation and the JSON report shape exactly as ACD-2400a-1 delivers it.
 delivers_to: null
-expects_from: null
+expects_from:
+  ac_id: ACD-2400a-1
+  contract: 'Requirement rule-check report: JSON on stdout, exit 0 iff verdict is passed. Shape: {verdict:
+    ''passed''|''failed'', location: str (the path given, repo-root-relative POSIX), records_checked:
+    int, findings: [{file: str (repo-root-relative POSIX), record_id: str|null (null only when the file
+    could not be read), rule_family: str (human family name, e.g. ''producer/consumer contract symmetry''),
+    disposition: ''fixed''|''needs a decision''|''failed''|''not evaluated'', message: str, line: int|null,
+    detail: object|null}]}. Findings sorted by file then rule_family; at most one finding per (file, record_id,
+    rule_family, subject).'
+test_required: false
 origin_agent: business-analyst
 created: 2026-09-25
-amended_by: []
+amended_by:
+- reason: it-po-technical-enrichment
+  date: '2026-09-25'
+  by: it-po
 superseded_by: null
 covered_by: []
 implemented_by: []

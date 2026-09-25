@@ -3,8 +3,8 @@ components:
   - ac_driven_dev
   - testing_quality
   - build_orchestration
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 title: "Each test-design entry is tied to its outcome clause and the design carries its author"
 component: ac-driven-dev
 level: L2
@@ -33,12 +33,68 @@ doc_links:
     relationship: related
     status: exists
 assigned_agent: python-coder
-estimated_complexity: null
-delivers_to: null
+estimated_complexity: M
+it_requirements:
+- 'Extends the test_spec item schema in config/ac_store_schema.json with the per-entry keys the code-aware
+  step writes (outcome clause proved, code file exercised, to-be-created flag, convention test file) and
+  adds record-level provenance (authorship mark {step, date}, opened-files list). additionalProperties:
+  false stays on test_spec items.'
+- must_catch is NOT added; an unknown key stays rejected, so the discrimination work has to specify it
+  first (its schema AC must depend on this AC).
+- 'Legacy test_spec (no provenance, no new keys) stays valid: the new keys are optional in the schema,
+  and their presence on code-aware designs is enforced by ACD-2400c-1-i, not by the schema.'
+- The ticket generator passes the new keys through or drops them without producing a ticket that violates
+  config/test_requirements.schema.json (the two schemas are coupled by hand).
+- Field rows are added to docs/reference/ac-schema.md in the same change.
+- A by-author query in the store's existing reporting tooling returns code-aware designs by step and lists
+  the rest as legacy.
+- The commit-time check and validate_ac_schema.py read the one schema file and give identical verdicts.
+delivers_to:
+- agent: python-coder
+  contract: 'Code-aware test design = the record''s test_spec list, each item carrying the existing keys
+    (name, target_dir, description, framework, type, angle) plus the ACD-2400c-3 per-entry keys (the outcome
+    clause it proves, verbatim test_intent.clause text; the code file it exercises; a to-be-created flag;
+    the neighbouring test file cited as convention), and record-level provenance: authorship mark {step:
+    <code-aware agent id>, date: YYYY-MM-DD} and the list of repository files the step opened (repo-root-relative
+    POSIX). No must_catch key. Read by ACD-2400b-2, ACD-2400b-3 and ACD-2400c-1-i.'
+- agent: llm-expert
+  contract: 'Code-aware test design = the record''s test_spec list, each item carrying the existing keys
+    (name, target_dir, description, framework, type, angle) plus the ACD-2400c-3 per-entry keys (the outcome
+    clause it proves, verbatim test_intent.clause text; the code file it exercises; a to-be-created flag;
+    the neighbouring test file cited as convention), and record-level provenance: authorship mark {step:
+    <code-aware agent id>, date: YYYY-MM-DD} and the list of repository files the step opened (repo-root-relative
+    POSIX). No must_catch key. Written by the code-aware agent (ACD-2400c-1).'
 expects_from: null
+test_spec:
+- name: test_code_aware_design_accepted_with_provenance
+  target_dir: unit_tests/ac_store/
+  framework: pytest
+  type: unit
+  description: A design with the authorship mark, opened files and a clause on every entry is accepted.
+  angle: real_artifact
+- name: test_legacy_design_accepted_and_reported_legacy
+  target_dir: unit_tests/ac_store/
+  framework: pytest
+  type: unit
+  description: A legacy design validates and the by-author query reports it as legacy.
+- name: test_unknown_entry_key_rejected_naming_key
+  target_dir: unit_tests/ac_store/
+  framework: pytest
+  type: unit
+  description: An entry with an undeclared key is rejected and the message names the key.
+  angle: failure
+- name: test_generated_ticket_valid_against_test_requirements_schema
+  target_dir: unit_tests/ac_store/
+  framework: pytest
+  type: unit
+  description: A ticket generated from a code-aware design validates against config/test_requirements.schema.json.
+  angle: seam
 origin_agent: business-analyst
 created: 2026-09-25
-amended_by: []
+amended_by:
+- reason: it-po-technical-enrichment
+  date: '2026-09-25'
+  by: it-po
 superseded_by: null
 covered_by: []
 implemented_by: []

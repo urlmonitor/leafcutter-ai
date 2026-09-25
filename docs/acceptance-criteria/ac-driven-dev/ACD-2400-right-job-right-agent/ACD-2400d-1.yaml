@@ -2,8 +2,8 @@ id: ACD-2400d-1
 components:
   - ac_driven_dev
   - agent_registry
-readiness: draft
-priority: medium
+readiness: reviewed
+priority: high
 title: "A file-aware step confirms each declared file actually holds the behaviour"
 component: ac-driven-dev
 level: L2
@@ -24,19 +24,59 @@ criteria: |
 depends_on:
   - ACD-2400d
 doc_links:
-  - path: templates/agents/it-po.md
-    relationship: describes
-    status: exists
-  - path: docs/acceptance-criteria/ac-driven-dev/ACD-1700-role-scoped-context/ACD-1700b-1.yaml
-    relationship: related
-    status: exists
+- path: templates/agents/it-po.md
+  relationship: describes
+  status: exists
+- path: docs/acceptance-criteria/ac-driven-dev/ACD-1700-role-scoped-context/ACD-1700b-1.yaml
+  relationship: related
+  status: exists
+- path: docs/architecture/adrs/ADR-033-agent-model-tiers.md
+  relationship: describes
+  status: exists
 assigned_agent: llm-expert
-estimated_complexity: null
-delivers_to: null
-expects_from: null
+estimated_complexity: M
+it_requirements:
+- Procedure lives in the code-aware agent template (ACD-2400d-5); serialise with ACD-2400c-1 (same file).
+- 'Writes the file-findings record (File-findings record on the AC (schema-declared, closed): list of
+  {file: str, verdict: ''consistent''|''describes, does not implement''|''absent, not to-be-created''|''behaviour
+  found elsewhere'', line_range: str|null, found_in: str|null, reason: str (one sentence), decision: null|{choice:
+  ''reassign''|''split''|''assignment stands'', reason: str, by: ''it-po''}} plus the list of files opened.
+  Written by the code-aware agent (decision null); decision filled only by the technical planner''s next
+  pass.), separate from the test design.'
+- Existence and to-be-created facts come from the pre-pass report (ACD-2400d-5-i); the agent judges only
+  whether the file holds the behaviour.
+- Every file opened is listed; no verdict on a file that was not opened.
+- 'Tools per ADR-033 §2.6: no Grep/Glob/MCP search. Behaviour outside the declared files is located from
+  candidate paths in the pre-pass report or research delegated by the depth-0 workflow.'
+- Never edits declared files, assigned_agent, splits, contracts, criteria or it_requirements (except reference_file_path,
+  ACD-2400d-2).
+delivers_to:
+  agent: python-coder
+  contract: 'File-findings record on the AC (schema-declared, closed): list of {file: str, verdict: ''consistent''|''describes,
+    does not implement''|''absent, not to-be-created''|''behaviour found elsewhere'', line_range: str|null,
+    found_in: str|null, reason: str (one sentence), decision: null|{choice: ''reassign''|''split''|''assignment
+    stands'', reason: str, by: ''it-po''}} plus the list of files opened. Written by the code-aware agent
+    (decision null); decision filled only by the technical planner''s next pass. Read by the approval
+    hold (ACD-2400d-3-i).'
+expects_from:
+- ac_id: ACD-2400d-5-i
+  contract: 'Pre-pass report (JSON, deterministic, sorted): {batch: [ac_id], records: [{id: str, declared_files:
+    [{path: str, state: ''exists''|''to_be_created''|''neither''}], test_dirs: [{path: str, exists: bool}],
+    reference_files: [{path: str, exists: bool, same_type: bool, same_area: bool}]}]}; paths repo-root-relative
+    POSIX. Non-zero exit and no report on error.'
+- ac_id: ACD-2400d-3-i
+  contract: 'File-findings record on the AC (schema-declared, closed): list of {file: str, verdict: ''consistent''|''describes,
+    does not implement''|''absent, not to-be-created''|''behaviour found elsewhere'', line_range: str|null,
+    found_in: str|null, reason: str (one sentence), decision: null|{choice: ''reassign''|''split''|''assignment
+    stands'', reason: str, by: ''it-po''}} plus the list of files opened. Written by the code-aware agent
+    (decision null); decision filled only by the technical planner''s next pass.'
+test_required: false
 origin_agent: business-analyst
 created: 2026-09-25
-amended_by: []
+amended_by:
+- reason: it-po-technical-enrichment
+  date: '2026-09-25'
+  by: it-po
 superseded_by: null
 covered_by:
   - ACD-2400d-1-i
@@ -44,6 +84,11 @@ implemented_by: []
 change_target: prompt
 risk_surface: internal
 notes: |
+  BLOCKED AT FINAL GATE (user, 2026-09-25): held at readiness: reviewed until a
+  declared-files schema AC (AC-level list of files a piece of work changes, with a
+  to-be-created marker) is authored via a separate /plan-feature run and added to
+  depends_on here. Today's file list is derived from doc_links (KI-ACS-002).
+
   This is the judgment half of the planner's S2.8 intent-vs-surface check; the mechanical
   half (file type -> specialist) is ACD-2400a-3.
   HOST: the ACD-2400d L1 notes allow merging with the ACD-2400c code-aware step. BA view:

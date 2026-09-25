@@ -3,8 +3,8 @@ components:
   - ac_driven_dev
   - agent_registry
   - llm_authoring
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 title: "The technical planner does only its own job, and describes itself truthfully"
 component: ac-driven-dev
 level: L1

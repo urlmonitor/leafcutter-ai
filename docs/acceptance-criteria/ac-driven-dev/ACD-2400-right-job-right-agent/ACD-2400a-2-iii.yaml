@@ -2,8 +2,8 @@ id: ACD-2400a-2-iii
 components:
   - ac_driven_dev
   - ac_store
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 title: "One-sided producer/consumer contracts are reported with both ends named, never completed"
 component: ac-driven-dev
 level: L3
@@ -35,12 +35,60 @@ doc_links:
     relationship: related
     status: exists
 assigned_agent: python-coder
-estimated_complexity: null
+estimated_complexity: S
+it_requirements:
+- Handles every schema-allowed shape of delivers_to/expects_from (null, string, object, list).
+- An agent-addressed delivery is satisfied by any record assigned that agent whose expects_from names
+  the producer id.
+- '''Unknown id'' means absent from the whole store, not only the feature folder; the store-wide id lookup
+  must still meet the ACD-2400a-1 time budget.'
+- No contract text is ever added, removed or compared.
 delivers_to: null
-expects_from: null
+expects_from:
+  ac_id: ACD-2400a-2
+  contract: 'Requirement rule-check report: JSON on stdout, exit 0 iff verdict is passed. Shape: {verdict:
+    ''passed''|''failed'', location: str (the path given, repo-root-relative POSIX), records_checked:
+    int, findings: [{file: str (repo-root-relative POSIX), record_id: str|null (null only when the file
+    could not be read), rule_family: str (human family name, e.g. ''producer/consumer contract symmetry''),
+    disposition: ''fixed''|''needs a decision''|''failed''|''not evaluated'', message: str, line: int|null,
+    detail: object|null}]}. Findings sorted by file then rule_family; at most one finding per (file, record_id,
+    rule_family, subject).'
+test_spec:
+- name: test_delivery_without_consumer_reported
+  target_dir: unit_tests/ac_store/
+  framework: pytest
+  type: unit
+  description: ACD-9990a-1 delivering to llm-expert with no llm-expert consumer yields a 'needs a decision'
+    finding stating so.
+- name: test_expects_without_delivery_names_both_ends
+  target_dir: unit_tests/ac_store/
+  framework: pytest
+  type: unit
+  description: ACD-9990a-4 expecting from ACD-9990a-2 (no delivery) yields a finding naming both ids.
+- name: test_expects_from_unknown_id_reported
+  target_dir: unit_tests/ac_store/
+  framework: pytest
+  type: unit
+  description: ACD-9990a-5 expecting from ACD-9990a-7 (absent from the store) yields a finding naming
+    the unknown id.
+  angle: failure
+- name: test_exactly_three_findings_and_no_text_changed
+  target_dir: unit_tests/ac_store/
+  framework: pytest
+  type: unit
+  description: Exactly three findings are reported and no contract text in any record changes.
+- name: test_mutual_pair_with_different_wording_passes
+  target_dir: unit_tests/ac_store/
+  framework: pytest
+  type: unit
+  description: A mutually pointing pair whose descriptions differ in wording yields no finding.
+  angle: boundary
 origin_agent: business-analyst
 created: 2026-09-25
-amended_by: []
+amended_by:
+- reason: it-po-technical-enrichment
+  date: '2026-09-25'
+  by: it-po
 superseded_by: null
 covered_by: []
 implemented_by: []

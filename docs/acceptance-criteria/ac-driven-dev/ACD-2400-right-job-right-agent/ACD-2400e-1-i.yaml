@@ -2,8 +2,8 @@ id: ACD-2400e-1-i
 components:
   - ac_driven_dev
   - agent_registry
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 title: "An agent whose tools can edit files but whose profile says it changes nothing is flagged"
 component: ac-driven-dev
 level: L3
@@ -21,16 +21,64 @@ criteria: |
 depends_on:
   - ACD-2400e-1
 doc_links:
-  - path: templates/agents/it-po.md
-    relationship: describes
-    status: exists
+- path: templates/agents/it-po.md
+  relationship: describes
+  status: exists
+- path: docs/architecture/components/agent-registry.md
+  relationship: describes
+  status: exists
+- path: docs/architecture/adrs/ADR-026-ac-driven-build-v2-phased-migration.md
+  relationship: describes
+  status: exists
 assigned_agent: python-coder
-estimated_complexity: null
+estimated_complexity: M
+it_requirements:
+- Extends the existing agent self-description / produces validation (the INF-600 family) rather than adding
+  a parallel checker.
+- Covers every agent in config/agent_registry.json (user decision) and ships as a warning first (ADR-026
+  warn-before-required); promotion to blocking is a separate later decision.
+- '''Can write or edit'' is derived from the declared tools and ''changes nothing'' from mutates entries
+  of none; both read from template frontmatter/registry, with no hard-coded agent list.'
+- The ticket records how many agents are flagged on the day the check ships.
+- An unreadable registry or template is reported as an error, never as zero flagged agents.
 delivers_to: null
-expects_from: null
+expects_from:
+  ac_id: ACD-2400e-1
+  contract: it-po profile corrected; used as the before/after fixture.
+test_spec:
+- name: test_write_capable_agent_declaring_no_change_listed
+  target_dir: unit_tests/agents/
+  framework: pytest
+  type: unit
+  description: An agent with Write/Edit tools whose mutates is none is listed by name.
+- name: test_pre_fix_it_po_profile_listed
+  target_dir: unit_tests/agents/
+  framework: pytest
+  type: unit
+  description: A fixture of the pre-ACD-2400e-1 it-po profile is listed.
+- name: test_read_only_agent_declaring_no_change_not_listed
+  target_dir: unit_tests/agents/
+  framework: pytest
+  type: unit
+  description: An agent with read-only tools and mutates none is not listed.
+  angle: boundary
+- name: test_report_states_agents_examined
+  target_dir: unit_tests/agents/
+  framework: pytest
+  type: unit
+  description: The report states the number of agents examined.
+- name: test_check_warns_not_blocks
+  target_dir: unit_tests/agents/
+  framework: pytest
+  type: unit
+  description: A flagged agent produces a warning and a zero exit while the check is in warning mode.
+  angle: seam
 origin_agent: business-analyst
 created: 2026-09-25
-amended_by: []
+amended_by:
+- reason: it-po-technical-enrichment
+  date: '2026-09-25'
+  by: it-po
 superseded_by: null
 covered_by: []
 implemented_by: []

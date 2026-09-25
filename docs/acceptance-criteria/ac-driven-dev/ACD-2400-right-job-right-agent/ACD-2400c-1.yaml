@@ -3,8 +3,8 @@ components:
   - ac_driven_dev
   - testing_quality
   - build_orchestration
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 title: "The code-aware step turns test intent into a test design grounded in files it opened"
 component: ac-driven-dev
 level: L2
@@ -31,22 +31,81 @@ depends_on:
   - ACD-2400c
   - ACD-2400b-1
 doc_links:
-  - path: templates/agents/it-po.md
-    relationship: describes
-    status: exists
-  - path: templates/agents/test-writer.md
-    relationship: describes
-    status: exists
-  - path: docs/testing/test-angles.md
-    relationship: related
-    status: exists
+- path: templates/agents/it-po.md
+  relationship: describes
+  status: exists
+- path: templates/agents/test-writer.md
+  relationship: describes
+  status: exists
+- path: docs/testing/test-angles.md
+  relationship: related
+  status: exists
+- path: docs/architecture/adrs/ADR-009-itpo-no-source-code-access.md
+  relationship: describes
+  status: exists
+- path: docs/architecture/adrs/ADR-033-agent-model-tiers.md
+  relationship: describes
+  status: exists
 assigned_agent: llm-expert
-estimated_complexity: null
-delivers_to: null
-expects_from: null
+estimated_complexity: L
+it_requirements:
+- Implemented in the code-aware agent template created by ACD-2400d-5 (templates/agents/test-designer.md).
+  This AC adds the test-design procedure; ACD-2400d-1/-2/-3 add the file procedures to the same file,
+  so these builds must be serialised.
+- 'Designs only needs_test: true clauses; writes no entry for needs_test: false.'
+- 'Grounding: every file named in an entry and every file cited as a convention is one the agent opened
+  in this run and recorded in the opened-files list; ACD-2400c-1-i verifies the paths.'
+- Takes existence, to-be-created and test-directory facts from the pre-pass report (ACD-2400d-5-i) rather
+  than re-deriving them.
+- Writes only the test-design fields (test_spec with the ACD-2400c-3 keys, authorship mark, opened-files
+  list) as field-targeted edits; criteria, test_intent, assigned_agent, implements_pattern and pattern_bindings
+  stay byte-identical (TKT-300a-4, ACS-500c-2).
+- The test design is kept separate from the file-findings output (ACD-2400d-1); neither is written into
+  the other's field.
+- Adds no must_catch or other undeclared key. The optional Opus sub-call for must_catch is deferred until
+  must_catch is specified.
+- 'ADR-009 stays intact: the technical planner gains no source access; source reading happens only in
+  this step.'
+delivers_to:
+- agent: python-coder
+  contract: 'Code-aware test design = the record''s test_spec list, each item carrying the existing keys
+    (name, target_dir, description, framework, type, angle) plus the ACD-2400c-3 per-entry keys (the outcome
+    clause it proves, verbatim test_intent.clause text; the code file it exercises; a to-be-created flag;
+    the neighbouring test file cited as convention), and record-level provenance: authorship mark {step:
+    <code-aware agent id>, date: YYYY-MM-DD} and the list of repository files the step opened (repo-root-relative
+    POSIX). No must_catch key. Consumed by ACD-2400c-1-i (grounding), ACD-2400b-2 (approval coverage)
+    and the ticket generator.'
+- agent: llm-expert
+  contract: 'Code-aware test design = the record''s test_spec list, each item carrying the existing keys
+    (name, target_dir, description, framework, type, angle) plus the ACD-2400c-3 per-entry keys (the outcome
+    clause it proves, verbatim test_intent.clause text; the code file it exercises; a to-be-created flag;
+    the neighbouring test file cited as convention), and record-level provenance: authorship mark {step:
+    <code-aware agent id>, date: YYYY-MM-DD} and the list of repository files the step opened (repo-root-relative
+    POSIX). No must_catch key. Consumed by the test writer at build time (ACD-2400c-2-i).'
+expects_from:
+- ac_id: ACD-2400b-1
+  contract: 'test_intent: list of {clause: str (the outcome clause text, verbatim from criteria), needs_test:
+    bool, reason: str (one sentence)}; exactly one entry per Then/And outcome clause; no test names, directories,
+    frameworks, types, angles or strategy.'
+- ac_id: ACD-2400c-3
+  contract: 'Code-aware test design = the record''s test_spec list, each item carrying the existing keys
+    (name, target_dir, description, framework, type, angle) plus the ACD-2400c-3 per-entry keys (the outcome
+    clause it proves, verbatim test_intent.clause text; the code file it exercises; a to-be-created flag;
+    the neighbouring test file cited as convention), and record-level provenance: authorship mark {step:
+    <code-aware agent id>, date: YYYY-MM-DD} and the list of repository files the step opened (repo-root-relative
+    POSIX). No must_catch key.'
+- ac_id: ACD-2400d-5-i
+  contract: 'Pre-pass report (JSON, deterministic, sorted): {batch: [ac_id], records: [{id: str, declared_files:
+    [{path: str, state: ''exists''|''to_be_created''|''neither''}], test_dirs: [{path: str, exists: bool}],
+    reference_files: [{path: str, exists: bool, same_type: bool, same_area: bool}]}]}; paths repo-root-relative
+    POSIX. Non-zero exit and no report on error.'
+test_required: false
 origin_agent: business-analyst
 created: 2026-09-25
-amended_by: []
+amended_by:
+- reason: it-po-technical-enrichment
+  date: '2026-09-25'
+  by: it-po
 superseded_by: null
 covered_by:
   - ACD-2400c-1-i
@@ -63,3 +122,7 @@ notes: |
   byte-identical) now bind this step too - last clause.
   Named alteration: design an entry from the criteria text alone without opening the
   file -> the "files opened" list is empty and ACD-2400c-1-i rejects the ungrounded path.
+
+  IT-PO (2026-09-25): the code-aware agent is created and registered by ACD-2400d-5 (placed under
+  ACD-2400d because ACD-2400c is at the 5-L2 cap). This AC writes the test-design procedure into
+  that agent's template.

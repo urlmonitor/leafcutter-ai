@@ -7,7 +7,7 @@ priority: medium
 title: "Sequence diagram of the file-aware checks and the hand-back to the planner"
 component: ac-driven-dev
 level: L2
-status: active
+status: superseded_by
 req_status: draft
 work_status: todo
 criteria: |
@@ -30,10 +30,14 @@ assigned_agent: architecture-diagram-author
 estimated_complexity: null
 delivers_to: null
 expects_from: null
+test_required: false
 origin_agent: business-analyst
 created: 2026-09-25
-amended_by: []
-superseded_by: null
+amended_by:
+- reason: it-po-merge-into-ACD-2400c-4
+  date: '2026-09-25'
+  by: it-po
+superseded_by: ACD-2400c-4
 covered_by: []
 implemented_by: []
 change_target: docs
@@ -41,3 +45,10 @@ risk_surface: internal
 notes: |
   Answers ACD-2400d's sequence-diagram trigger. May be merged into ACD-2400c-4 by IT-PO if
   both steps share one host.
+
+  IT-PO (2026-09-25): SUPERSEDED BY ACD-2400c-4. User decision 3 puts the ACD-2400c and
+  ACD-2400d steps in one code-aware agent, so the two sequence diagrams are one flow. Both Then
+  clauses of this record are carried into ACD-2400c-4 through its it_requirements (hand-back of
+  findings to the planner; approval gate reached only after every finding has a recorded decision).
+  This file is kept, not deleted (AC permanence). ACD-2400d's sequence-diagram trigger is answered by
+  ACD-2400c-4.
