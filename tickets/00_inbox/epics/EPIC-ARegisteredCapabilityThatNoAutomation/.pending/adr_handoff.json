@@ -1,0 +1,5 @@
+{
+  "adr_id": "ADR-050",
+  "affected_files": ["scripts/commit_guardian/commit_guardian.json"],
+  "one_line_summary": "The reachability guard inventories capabilities from the built argparse surface, counts only executed invocations as callers, and refuses uncalled capabilities in hook and CI, relieved only by recorded exemptions."
+}
