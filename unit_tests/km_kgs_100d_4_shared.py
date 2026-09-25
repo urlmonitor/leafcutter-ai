@@ -94,7 +94,7 @@ def write_ticket(tickets_dir: Path, ticket_id: str, files_touched=None, filename
     return path
 
 
-def build_criteria_fixture(tmp_path: Path) -> Path:
+def build_criteria_fixture(tmp_path: Path, km_ex_010_extra: dict | None = None) -> Path:
     """Build the KM-KGS-100d-4 Gherkin's "criteria fixture" project.
 
     Criteria KM-EX-010 (implemented_by "./scripts/foo.py#_check_limits"),
@@ -105,10 +105,22 @@ def build_criteria_fixture(tmp_path: Path) -> Path:
     scripts/foo.py, unit_tests/test_foo.py and an unreferenced
     scripts/unreferenced.py. config/paths.json is a byte copy of the real
     one, so acs/tickets file_path_fields declarations are the real ones.
+
+    Args:
+        tmp_path: The temp project root to build into.
+        km_ex_010_extra: Optional extra AC-YAML fields (e.g.
+            ``{"depends_on": [...], "components": [...]}``) merged onto
+            KM-EX-010's frontmatter, on top of its default implemented_by.
+            Callers that omit this argument get the exact fixture that
+            existed before this parameter was added (KM-KGS-100b-2's
+            test_spec: "The fixture itself is not changed").
     """
     copy_real_paths_json(tmp_path)
     acs_dir = tmp_path / "docs" / "acceptance-criteria" / "example-component"
-    write_ac_yaml(acs_dir, "KM-EX-010", implemented_by=["./scripts/foo.py#_check_limits"])
+    km_ex_010_fields = {"implemented_by": ["./scripts/foo.py#_check_limits"]}
+    if km_ex_010_extra:
+        km_ex_010_fields.update(km_ex_010_extra)
+    write_ac_yaml(acs_dir, "KM-EX-010", **km_ex_010_fields)
     write_ac_yaml(
         acs_dir,
         "KM-EX-011",
