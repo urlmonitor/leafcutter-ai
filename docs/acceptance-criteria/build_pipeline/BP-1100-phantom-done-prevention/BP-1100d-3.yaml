@@ -1,0 +1,107 @@
+id: BP-1100d-3
+components:
+  - build_pipeline
+  - commit_guardian
+title: "The commit-delegation hook recognises a git commit by the command that runs, not by the words in the command text"
+component: build-pipeline
+level: L2
+status: active
+req_status: draft
+work_status: done
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given the enforce_commit_delegation PreToolUse hook receives a Bash command
+    and COMMIT_AGENT_MODE is not set to "1" (neither in the environment nor as
+    an inline COMMIT_AGENT_MODE=1 prefix token),
+  When any simple command in it (split on &&, ||, ;, |, & and newlines, and
+    including the body of a $(...) or backtick substitution) runs the git
+    program with commit as its subcommand, after optional leading VAR=value
+    assignments and after git global options such as -C <dir>, -c <key=value>,
+    --git-dir, --work-tree or --namespace,
+  Then the hook emits a block decision,
+  And "git -C <path> commit -m ..." and "cd x && git commit -m ..." are blocked
+    exactly like a plain "git commit",
+  And a command that only mentions the words "git commit" inside a quoted
+    argument (for example gh pr create --body "... run git commit ...",
+    echo "git commit") or that runs git with a different subcommand
+    (git status, git log --grep commit) is allowed,
+  And a command whose quoting cannot be parsed fails closed: it is blocked
+    when a git token is followed by a commit token,
+  And the bug symptom ("git -C <path> commit is never blocked, while a command
+    that merely mentions git commit is blocked") must not occur.
+depends_on:
+  - BP-1100d
+doc_links:
+  - path: templates/hooks/enforce_commit_delegation.py
+    relationship: modifies
+    status: exists
+  - path: docs/known-issues/commit-guardian/open-high-ki-cg-20260925-commit-delegation-hook-misses-git-dash-c.md
+    relationship: describes
+    status: exists
+  - path: docs/known-issues/commit-guardian/open-low-ki-cg-016.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Split the command into simple commands with a quote-aware scanner, then tokenise each with shlex.split; never match on a substring of the raw command."
+  - "On a shlex ValueError (unbalanced quote), fail closed: treat the segment as a commit when a commit token follows a git token."
+  - "Keep the COMMIT_AGENT_MODE=1 exemption (environment variable or inline prefix token) unchanged."
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-09-25
+amended_by: []
+superseded_by: null
+covered_by:
+  - unit_tests/commit_guardian/test_enforce_commit_delegation_parses_git_argv.py
+implemented_by:
+  - templates/hooks/enforce_commit_delegation.py
+change_target: code
+risk_surface: safety
+test_spec:
+  - name: test_ac_bp1100d3_commit_spellings_are_blocked
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: >-
+      Running the real hook as a subprocess with a PreToolUse payload for
+      git -C /x commit, git -c user.name=a commit, cd x && git commit and a
+      plain git commit (plus --git-dir, a path-qualified git, a VAR=value
+      prefix and a $(...) substitution) emits a block decision for each.
+    covers:
+      - BP-1100d-3
+  - name: test_ac_bp1100d3_commands_that_only_mention_commit_are_allowed
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: behavioral
+    angle: boundary
+    description: >-
+      gh pr create --body "run git commit later", echo "git commit",
+      git status and git log --grep commit each exit 0 with no block
+      decision on stdout.
+    covers:
+      - BP-1100d-3
+  - name: test_ac_bp1100d3_inline_commit_agent_mode_allows_dash_c_commit
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: behavioral
+    angle: seam
+    description: >-
+      COMMIT_AGENT_MODE=1 git -C /x commit -m m is allowed, so the commit
+      agent's own spelling keeps working once -C spellings are recognised.
+    covers:
+      - BP-1100d-3
+  - name: test_ac_bp1100d3_unparseable_quoting_fails_closed
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: behavioral
+    angle: failure
+    description: >-
+      git -C "unterminated commit -m m, which shlex cannot tokenise, is
+      still blocked rather than waved through.
+    covers:
+      - BP-1100d-3
