@@ -1,0 +1,138 @@
+id: INF-1100d-4-i
+components:
+  - infrastructure
+  - testing_quality
+title: "The address check flags real-looking addresses, allows obvious placeholders, and leaves unshipped history alone"
+component: infrastructure
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given six shipped files, each containing one of these lines —
+      S1: postgresql://localhost:5403/LIVE          (no credentials),
+      S2: postgres://app:app@127.0.0.1:5432/app     (other scheme spelling),
+      S3: postgresql://<user>:<password>@<host>:<port>/<database>,
+      S4: ${DB_CONNECTION_TEST},
+      S5: {{config.testing_context.db_connection_test}},
+      S6: the prose "set testing_context.db_connection_test to your test
+          database's address",
+    and S7, a shipped documentation page under templates/docs/ that quotes
+      postgresql://trader:trader@localhost:5403/LIVE as history,
+    and two unshipped project records that quote the same address — a
+      requirement record in the AC store, and an analysis page in leafcutter's
+      own docs/ tree,
+  When the shipped-address check runs,
+  Then S1 and S2 are flagged — a concrete host and port is an address even
+      without a password, and both scheme spellings count,
+    And S3, S4, S5 and S6 are not flagged — angle-bracket placeholders,
+      environment-variable references, settings placeholders and prose that
+      names the setting are how the guidance should read,
+    And S7 is flagged like any other shipped file — being history is no
+      exemption, and the check has no list of excluded paths; the remedy is
+      to replace the address in the page with a placeholder, after which S7
+      passes,
+    And neither unshipped record is flagged, because a build copies only
+      templates/ and config/ into an install; leafcutter's own docs/ tree and
+      the AC store are not scanned.
+depends_on:
+  - INF-1100d-4
+doc_links:
+  - path: docs/reference/skills-config-fields.md
+    relationship: relates-to
+    status: exists
+  - path: docs/analysis/2026-09-25-test-writers-prove-failure-not-discrimination.md
+    relationship: relates-to
+    status: exists
+    relevance: "An UNSHIPPED history page in leafcutter's own docs/ tree that quotes the address. It is not scanned. Its quotes are replaced with a placeholder by hand under INF-1100d-5."
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: INF-1100d-4
+  contract: "The shipped-address check and its definition of 'shipped'."
+it_requirements:
+  - Same detector and same declared shipped roots (templates/ and config/) as INF-1100d-4. No
+    second implementation.
+  - 'S1 and S2 are flagged: a concrete host plus port counts without credentials, and both postgres
+    and postgresql spellings count.'
+  - 'S3-S6 are not flagged: angle-bracket placeholders, ${ENV} references, {{config.*}} placeholders,
+    and prose naming the setting.'
+  - No exclusion list of any kind. S7 (a templates/docs/ history page) is flagged until the
+    address in it is replaced with a placeholder.
+  - Records outside the declared roots (an AC-store YAML and a page in leafcutter's own docs/
+    tree) are never scanned, so they are never flagged. This must follow from the positive root
+    declaration, not from a path exclusion.
+test_spec:
+  - name: test_address_check_flags_bare_host_port_and_both_scheme_spellings
+    target_dir: unit_tests/portability/
+    framework: pytest
+    type: integration
+    angle: reachability
+    surface_invoked: the shipped-address check CLI, run as a subprocess over a temp shipped
+      tree
+    description: S1 (postgresql://localhost:5403/LIVE) and S2 (postgres://app:app@127.0.0.1:5432/app)
+      are each flagged with file and line.
+  - name: test_address_check_allows_placeholders_env_refs_and_setting_prose
+    target_dir: unit_tests/portability/
+    framework: pytest
+    type: unit
+    angle: boundary
+    description: S3, S4, S5 and S6 produce no findings.
+  - name: test_address_check_flags_history_page_until_redacted
+    target_dir: unit_tests/portability/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: S7 (a templates/docs/ page quoting postgresql://trader:trader@localhost:5403/LIVE)
+      is flagged. After the quote is replaced with the placeholder, the same file passes.
+  - name: test_address_check_ignores_ac_store_record_and_own_docs_page
+    target_dir: unit_tests/portability/
+    framework: pytest
+    type: integration
+    angle: seam
+    description: Run over a temp repository-shaped tree, the check reports neither an AC-store
+      YAML nor a docs/analysis page that quotes the same address. Only templates/ and config/
+      are declared shipped, and there is no exclusion list.
+test_rationale: The edge cases sit on both sides of the line. S1/S2 stop a narrow literal
+  match, S3-S6 stop an over-broad check from forbidding the guidance INF-1100d-5 writes, and
+  S7 before/after proves there is no path exemption.
+origin_agent: business-analyst
+created: 2026-09-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: safety
+notes: |
+  EDGE CASES on both sides of the line: S1/S2 stop a narrow literal match from
+  passing; S3-S6 stop an over-broad check from forbidding the guidance
+  INF-1100d-5 needs to write.
+
+  USER DECISION AT THE BA GATE (Q5): shipped documentation that quotes the
+  address as history is edited to use a placeholder. It is never exempted by
+  path. The check therefore has NO exclusion list. S7 is the case that proves
+  it: it must fail before the edit and pass after. The doc edits themselves are
+  owned by INF-1100d-5.
+
+  No shipped code needs a literal of the old address (the user dropped
+  stale-default detection at the BA gate, NQ1), so the check has no exceptions
+  of any kind.
+
+  IT-PO ENRICHMENT (2026-09-25)
+  INTENDED must_catch: "exclude history pages by path" -> S7 before-redaction passes, test goes red;
+  "require user:password@" -> S1 not flagged, test goes red; "flag any scheme://" -> S3/S4 flagged,
+  test goes red; "scan the whole repo" -> the AC-store record is flagged, test goes red.
+
+  SHIPPED SCOPE (user decision at the IT-PO gate): shipped = templates/
+  (including templates/docs/) and config/, i.e. what build.py copies into
+  installs. S7 is therefore a templates/docs/ page. The analysis page and every
+  other page in leafcutter's own docs/ tree are unshipped, like the AC store: not
+  scanned, and cleaned by hand under INF-1100d-5.
+
+  IT-PO PASS 2 (2026-09-25): aligned to shipped = templates/ + config/. S7 is a
+  templates/docs/ page, and the unshipped-records test covers both the AC store and a docs/ page.

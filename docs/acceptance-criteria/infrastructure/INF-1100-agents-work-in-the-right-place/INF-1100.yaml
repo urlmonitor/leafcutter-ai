@@ -35,6 +35,7 @@ covered_by:
   - INF-1100a
   - INF-1100b
   - INF-1100c
+  - INF-1100d
 implemented_by: []
 notes: "User-authored intent: BrainCandy. Framed by product-owner-v3."
 change_target:
