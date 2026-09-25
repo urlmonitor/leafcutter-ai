@@ -68,7 +68,7 @@ import json
 import subprocess
 import tempfile
 from pathlib import Path
-
+from unit_tests._plan_feature_harness_defaults import worktree_setup_default_responses
 _WORKTREE_ROOT = Path(__file__).resolve().parent.parent.parent
 _PLAN_FEATURE_JS = _WORKTREE_ROOT / "templates" / "workflows-js" / "plan-feature.js"
 _REAL_PAUSE_STORE_PY = _WORKTREE_ROOT / "scripts" / "pause_store.py"
@@ -184,11 +184,15 @@ def _snapshot_files(root: Path) -> set:
     """Return the set of file paths (relative to `root`) present under it,
     excluding `.git`. Used to detect any file created as a side effect of
     the run -- 'no authoring output from a later step exists on disk'.
+    Rendered via `as_posix()` (forward slashes) rather than `str()` so the
+    later `.startswith(".leafcutter/paused_runs/")` comparison is not
+    platform-dependent -- `str(Path.relative_to())` uses `os.sep`, which is
+    a backslash on Windows and would falsely flag every real match there.
     """
     out = set()
     for p in root.rglob("*"):
         if p.is_file() and ".git" not in p.relative_to(root).parts:
-            out.add(str(p.relative_to(root)))
+            out.add(p.relative_to(root).as_posix())
     return out
 
 
@@ -335,6 +339,13 @@ def _run_plan_feature_real(cwd: Path, label_responses: dict, args: dict) -> dict
     ACTUALLY EXECUTED via a real Node child_process with `cwd` set to the
     given directory. Returns the parsed
     {calls: [...], result: ..., error?: ...} payload.
+
+    `label_responses` is merged UNDER `worktree_setup_default_responses()`
+    (BO-1500a-5-i) so a caller that never overrides 'worktree-setup' /
+    'resolve-worktree-setup-script-path' still gets a real, confirming
+    reply for both and reaches the pause-store dispatches this file tests,
+    instead of halting fail-closed at Pre-Stage-0. A caller-supplied entry
+    for either label still wins (dict merge order below).
     """
     source = _PLAN_FEATURE_JS.read_text(encoding="utf-8")
     body = _strip_exports(source)
@@ -342,7 +353,7 @@ def _run_plan_feature_real(cwd: Path, label_responses: dict, args: dict) -> dict
     shim = (
         _SHIM_TEMPLATE
         .replace("__RUN_CWD_JSON__", json.dumps(str(cwd)))
-        .replace("__LABEL_RESPONSES_JSON__", json.dumps(label_responses))
+        .replace("__LABEL_RESPONSES_JSON__", json.dumps({**worktree_setup_default_responses(), **label_responses}))
         .replace("__ARGS_JSON__", json.dumps(args))
         .replace("__SCRIPT_BODY__", body)
     )

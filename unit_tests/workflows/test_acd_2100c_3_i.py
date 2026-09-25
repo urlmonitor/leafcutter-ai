@@ -81,7 +81,7 @@ import json
 import subprocess
 import tempfile
 from pathlib import Path
-
+from unit_tests._plan_feature_harness_defaults import worktree_setup_default_responses
 _WORKTREE_ROOT = Path(__file__).resolve().parent.parent.parent
 _PLAN_FEATURE_JS = _WORKTREE_ROOT / "templates" / "workflows-js" / "plan-feature.js"
 _REAL_PAUSE_STORE_PY = _WORKTREE_ROOT / "scripts" / "pause_store.py"
@@ -351,6 +351,13 @@ def _run_plan_feature_real(cwd: Path, label_responses: dict, args: dict) -> dict
     -- never an import of an inner function. Resolved identically to sibling
     ticket ACD-2100c-3's own test_acd_2100c_3.py (same script, no CLI
     wrapper, no live `claude` engine available in this test environment).
+
+    `label_responses` is merged UNDER `worktree_setup_default_responses()`
+    (BO-1500a-5-i) so a caller that never overrides 'worktree-setup' /
+    'resolve-worktree-setup-script-path' still gets a real, confirming
+    reply for both and reaches the pause-store dispatches this file tests,
+    instead of halting fail-closed at Pre-Stage-0. A caller-supplied entry
+    for either label still wins (dict merge order below).
     """
     source = _PLAN_FEATURE_JS.read_text(encoding="utf-8")
     body = _strip_exports(source)
@@ -358,7 +365,7 @@ def _run_plan_feature_real(cwd: Path, label_responses: dict, args: dict) -> dict
     shim = (
         _SHIM_TEMPLATE
         .replace("__RUN_CWD_JSON__", json.dumps(str(cwd)))
-        .replace("__LABEL_RESPONSES_JSON__", json.dumps(label_responses))
+        .replace("__LABEL_RESPONSES_JSON__", json.dumps({**worktree_setup_default_responses(), **label_responses}))
         .replace("__ARGS_JSON__", json.dumps(args))
         .replace("__DRAFT_RELATIVE_PATH_JSON__", json.dumps(_DRAFT_RELATIVE_PATH))
         .replace("__SCRIPT_BODY__", body)
