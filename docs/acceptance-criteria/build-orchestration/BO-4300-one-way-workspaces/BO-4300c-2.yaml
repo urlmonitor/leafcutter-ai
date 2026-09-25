@@ -1,0 +1,51 @@
+id: BO-4300c-2
+title: "The maker's answer is one readable answer and nothing else"
+component: build-orchestration
+components:
+  - worktree_manager
+  - build_orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+change_target: code
+risk_surface: contract_boundary
+criteria: |
+  Given each of these outcomes -- ready; refused because the location is
+    occupied; refused because the shared project cannot be reached; refused
+    because the install failed -- and underlying tools that print their own
+    progress messages during the request, such as "HEAD is now at bc5d638 init",
+  When the channel that carries the workspace maker's answer is read,
+  Then it holds exactly one answer and nothing else, in every one of the four
+    outcomes,
+  And the answer always states whether the result is ready or refused,
+  And the underlying tools' own messages are available separately and never
+    appear in the answer,
+  And the way the maker's run ends signals the same outcome that the answer
+    states.
+depends_on: [BO-4300c]
+doc_links:
+  - path: docs/analysis/2026-09-25-worktree-failure-modes.md
+    relationship: describes
+    status: exists
+  - path: docs/analysis/2026-09-25-worktree-component-proposal.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-09-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  F4: a sandbox run of create-ac-worktree printed git's own tracking and HEAD messages before
+  the JSON, and set-up let package installers and the build write to the same channel. Whether
+  a caller could parse the result then depended on an assistant picking the right line. Field
+  names and exit codes are IT PO's to fix (the proposal's section 5.3 is a starting point).

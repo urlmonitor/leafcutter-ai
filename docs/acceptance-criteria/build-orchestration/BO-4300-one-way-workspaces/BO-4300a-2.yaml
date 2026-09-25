@@ -1,0 +1,57 @@
+id: BO-4300a-2
+title: "The same piece of work is always recognised as the same workspace"
+component: build-orchestration
+components:
+  - worktree_manager
+  - build_orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+change_target: code
+risk_surface: safety
+criteria: |
+  Given the epic "Files Stay Workable" has a ready workspace that was obtained
+    through the long-running build route, and its line of work carries two
+    commits,
+  When the same epic is asked for again through the feature skill's epic route,
+    which today names epics differently, and again through the long-running
+    build route,
+  Then both requests are answered ready with the location of the existing
+    workspace,
+  And afterwards exactly one workspace and exactly one line of work exist for
+    that epic,
+  And the two commits are still on the line of work the workspace is on,
+  And given a different epic, "Files Stay Portable", is requested, it is answered
+    with a workspace of its own, at a different location from the first.
+depends_on: [BO-4300a]
+doc_links:
+  - path: docs/analysis/2026-09-25-worktree-creation-consolidation.md
+    relationship: describes
+    status: exists
+  - path: docs/analysis/2026-09-25-worktree-failure-modes.md
+    relationship: describes
+    status: exists
+  - path: docs/analysis/2026-09-25-worktree-component-proposal.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-09-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  F10 and KI-BO-20260921 "abandons the epic worktree branch": a re-run moved the epic from
+  EPIC-FilesStayWorkable to a fresh epic/files-stay-workable cut from the shared main line
+  and drove the epic from the main checkout. OPEN (Q4, not decided here): which naming scheme
+  achieves this. This record fixes only the observable -- one piece of work, one workspace,
+  whichever route asked -- so it holds under any scheme the user picks, including an alias
+  for the old EPIC-<Name> spelling.

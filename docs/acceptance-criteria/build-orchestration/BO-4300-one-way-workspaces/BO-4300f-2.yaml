@@ -1,0 +1,50 @@
+id: BO-4300f-2
+title: "The former ways of making a workspace are gone from what an install delivers"
+component: build-orchestration
+components:
+  - worktree_manager
+  - build_orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+change_target: pipeline
+risk_surface: contract_boundary
+criteria: |
+  Given a fresh project that has installed these tools,
+  When each former way of making, finding or clearing a workspace is invoked by
+    the name an install used to deliver it under -- the former workspace set-up
+    script and each of its sub-commands, the workspace-facts helper's base
+    lookup, and the recovery fallback that re-adds a workspace --
+  Then each is either absent from the install, or, for at most one release,
+    passes the request to the one workspace maker and returns the maker's answer
+    unchanged,
+  And no former way makes, finds or clears a workspace by its own means.
+depends_on: [BO-4300f]
+doc_links:
+  - path: docs/analysis/2026-09-25-worktree-migration-plan.md
+    relationship: describes
+    status: exists
+  - path: docs/analysis/2026-09-25-worktree-creation-consolidation.md
+    relationship: describes
+    status: exists
+  - path: docs/analysis/2026-09-25-worktree-failure-modes.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-09-25
+amended_by: []
+superseded_by: null
+covered_by: [BO-4300f-2-i]
+implemented_by: []
+notes: |
+  Migration plan step 9. "Removed rather than left alongside" is the point: the tracked and
+  deployed copies of today's script already differ on purpose and a test enforces the drift
+  (F13). Script names and the one-release shim decision are IT PO's.

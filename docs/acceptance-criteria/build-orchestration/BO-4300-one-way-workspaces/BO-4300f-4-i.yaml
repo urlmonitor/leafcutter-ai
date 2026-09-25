@@ -1,0 +1,44 @@
+id: BO-4300f-4-i
+title: "Running the proof leaves the developer's own project unchanged"
+component: build-orchestration
+components:
+  - worktree_manager
+  - build_orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+change_target: pipeline
+risk_surface: internal
+criteria: |
+  Given the developer's own project, with its registered workspaces, branches and
+    version-control settings recorded,
+  When the whole workspace proof suite runs from inside that project,
+  Then its registered workspaces, branches and version-control settings are
+    identical afterwards,
+  And no temporary project or workspace made by the suite is registered in, or
+    linked from, the developer's project.
+depends_on: [BO-4300f-4]
+doc_links:
+  - path: docs/analysis/2026-09-25-worktree-failure-modes.md
+    relationship: describes
+    status: exists
+  - path: docs/analysis/2026-09-25-worktree-migration-plan.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-09-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  F14: git worktree list in leafcutter-ai includes a worktree under the pytest temp directory;
+  KI-TQ-012 wrote fixture identity into the real repository's config.

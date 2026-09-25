@@ -1,0 +1,38 @@
+id: BO-4300b-5-i
+title: "A project under a folder whose name contains spaces gets a usable workspace"
+component: build-orchestration
+components:
+  - worktree_manager
+  - build_orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+change_target: code
+risk_surface: safety
+criteria: |
+  Given a project located under a folder named "My Projects",
+  When a workspace for "alpha" is requested,
+  Then it is answered ready,
+  And the location in the answer reproduces "My Projects" exactly,
+  And a version-control command run at that exact location succeeds.
+depends_on: [BO-4300b-5]
+doc_links:
+  - path: docs/analysis/2026-09-25-worktree-migration-plan.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-09-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  "Path with spaces" is an environment axis in the migration plan's test matrix.

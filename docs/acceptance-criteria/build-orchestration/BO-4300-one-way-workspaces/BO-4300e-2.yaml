@@ -1,0 +1,49 @@
+id: BO-4300e-2
+title: "Clearing a workspace answers at once and never waits for someone to say yes"
+component: build-orchestration
+components:
+  - worktree_manager
+  - build_orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+change_target: code
+risk_surface: safety
+criteria: |
+  Given an unattended run, with no person available to answer questions, asks the
+    workspace maker to clear two workspaces: "alpha", holding nothing that has
+    not reached the shared project, and "beta", holding one unpushed commit and
+    one uncommitted change, with no authorisation to lose work given,
+  When each clearing request is made,
+  Then each request ends with an answer without waiting for any input,
+  And "alpha" is gone completely,
+  And "beta" is refused, and the refusal names the unpushed commit by identifier
+    and the uncommitted file by path,
+  And "beta"'s files and commits are identical before and after.
+depends_on: [BO-4300e]
+doc_links:
+  - path: docs/analysis/2026-09-25-worktree-creation-consolidation.md
+    relationship: describes
+    status: exists
+  - path: docs/analysis/2026-09-25-worktree-component-proposal.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-09-25
+amended_by: []
+superseded_by: null
+covered_by: [BO-4300e-2-i, BO-4300e-2-ii]
+implemented_by: []
+notes: |
+  finalize's teardown deadlocks today on worktree-agent's interactive "yes" it cannot give. The
+  verdict "does it hold undelivered work" is BO-4100c-1 and the refusal content is BO-4100c-2 --
+  cited, not re-derived; this record adds that clearing goes through the one maker and never
+  blocks on a question.

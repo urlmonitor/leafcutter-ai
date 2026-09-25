@@ -1,0 +1,64 @@
+id: BO-4300a-1
+title: "Every route that asks gets the same kind of workspace from the same maker"
+component: build-orchestration
+components:
+  - worktree_manager
+  - build_orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+change_target: code
+risk_surface: safety
+criteria: |
+  Given a test project with a shared project it was copied from, whose shared main
+    line is at commit S,
+  And a workspace is requested once from each of these routes -- a long-running
+    build, a quick fix, a requirements-authoring session, an agent following the
+    workspace skill, and a person at a terminal -- each for its own piece of work,
+  When each request is answered ready,
+  Then every one of the five workspaces carries the record the workspace maker
+    leaves in each workspace it makes, and that record agrees with the answer the
+    route received,
+  And each of the five is an independent copy of the project, started from S as
+    read at the time of its request, with its tools installed inside it from its
+    own contents, with its protections shown to fire, and located in the
+    project's one landing place for workspaces,
+  And each route receives its answer in the same form, stating ready and the
+    workspace's location,
+  And no route's workspace lacks any of those properties that another route's
+    workspace has.
+depends_on: [BO-4300a]
+doc_links:
+  - path: docs/analysis/2026-09-25-worktree-creation-consolidation.md
+    relationship: describes
+    status: exists
+  - path: docs/analysis/2026-09-25-worktree-component-proposal.md
+    relationship: describes
+    status: exists
+  - path: docs/analysis/2026-09-25-worktree-isolation-decision-memo.md
+    relationship: constrains
+    status: exists
+  - path: docs/architecture/components/worktree-manager.md
+    relationship: modifies
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-09-25
+amended_by: []
+superseded_by: null
+covered_by: [BO-4300a-1-i]
+implemented_by: []
+notes: |
+  The load-bearing "one maker, one shape" behaviour (decision 4; decisions 1-3 define the
+  shape). Freshness itself stays BO-4100a, protections firing stays BO-1700a/d -- this
+  record asserts only that every route gets the SAME set of properties from the SAME maker.
+  The five routes are the entry points in the consolidation inventory (section 2). Proof is
+  behavioural: real test projects with a real shared project, the installed maker run as a
+  separate process (BO-4300f-4).

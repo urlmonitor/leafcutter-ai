@@ -1,0 +1,46 @@
+id: BO-4300c-4-i
+title: "A location handed in by a caller is confirmed with the maker before any step runs"
+component: build-orchestration
+components:
+  - worktree_manager
+  - build_orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+change_target: pipeline
+risk_surface: contract_boundary
+criteria: |
+  Given a workflow is started with a workspace location supplied by whoever
+    started it,
+  When the workflow begins,
+  Then it asks the workspace maker whether that location is a ready workspace for
+    this work before any authoring, phase or delivery step runs,
+  And when the maker does not confirm it, the workflow ends with a failure naming
+    the location it was given,
+  And when the maker confirms it, the workflow proceeds in that location.
+depends_on: [BO-4300c-4, BO-4300e-1]
+doc_links:
+  - path: docs/analysis/2026-09-25-worktree-creation-consolidation.md
+    relationship: describes
+    status: exists
+  - path: docs/analysis/2026-09-25-worktree-component-proposal.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-09-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  build-ticket.js trusts args.worktree_path unchecked (consolidation inventory 2.2). Decision 4
+  has workflows receive the maker's result passed in -- this record keeps a hand-supplied
+  location from bypassing it. Uses the lookup of BO-4300e-1.

@@ -1,0 +1,47 @@
+id: BO-4300d-2-ii
+title: "Whatever stage an interruption hit, the next request ends fully ready"
+component: build-orchestration
+components:
+  - worktree_manager
+  - build_orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+change_target: code
+risk_surface: safety
+criteria: |
+  Given four half-made workspaces, each left by a request interrupted at a
+    different stage: after the copy was made but before its line of work existed;
+    after the line of work existed but before the install; after the install but
+    before the protections were shown to fire; and while the maker was recording
+    that it made the workspace,
+  When each is requested again with the cause removed,
+  Then each is answered ready, and every part of readiness from BO-4300c-1 holds
+    for each,
+  And none of the four is answered ready at any point while a part of readiness
+    is missing.
+depends_on: [BO-4300d-2]
+doc_links:
+  - path: docs/analysis/2026-09-25-worktree-migration-plan.md
+    relationship: describes
+    status: exists
+  - path: docs/analysis/2026-09-25-worktree-isolation-decision-memo.md
+    relationship: constrains
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-09-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  The "prior state" axis of the migration plan's test matrix. Decision memo: a half-made clone
+  is a directory without the maker's record and can be deleted and redone.

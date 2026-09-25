@@ -1,0 +1,48 @@
+id: BO-4300d-3
+title: "A location already holding different work is left untouched and reported"
+component: build-orchestration
+components:
+  - worktree_manager
+  - build_orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+change_target: code
+risk_surface: safety
+criteria: |
+  Given the location the workspace maker would use for "alpha" is already
+    occupied, in turn, by: a copy of the project on a different line of work; a
+    copy of a different project; and an ordinary folder of files that is not a
+    workspace,
+  When "alpha" is requested in each case,
+  Then the answer is a refusal stating that the location is occupied and what
+    occupies it,
+  And the occupant's files and, where it has one, its line of work are identical
+    before and after,
+  And no workspace for "alpha" is made at any other location instead.
+depends_on: [BO-4300d]
+doc_links:
+  - path: docs/analysis/2026-09-25-worktree-component-proposal.md
+    relationship: describes
+    status: exists
+  - path: docs/analysis/2026-09-25-worktree-failure-modes.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-09-25
+amended_by: []
+superseded_by: null
+covered_by: [BO-4300d-3-i]
+implemented_by: []
+notes: |
+  BO-1500f ("never take over another's space") is the AC-authoring instance of this -- cite, do
+  not duplicate. "Not made at any other location instead" closes the substitute-location
+  fallback that BO-4300c-3 closes on the caller side.

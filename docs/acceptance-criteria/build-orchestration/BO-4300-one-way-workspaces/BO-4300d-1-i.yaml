@@ -1,0 +1,41 @@
+id: BO-4300d-1-i
+title: "Re-readying never overwrites a change the work made to a file the set-up also writes"
+component: build-orchestration
+components:
+  - worktree_manager
+  - build_orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+change_target: code
+risk_surface: safety
+criteria: |
+  Given a ready workspace in which the work has changed, and not yet committed, a
+    version-controlled file that setting up the workspace also rewrites,
+  When the same work is requested again,
+  Then the work's change to that file is identical before and after,
+  And the answer is either ready with the change intact, or a refusal naming the
+    file whose change would otherwise have been lost.
+depends_on: [BO-4300d-1]
+doc_links:
+  - path: docs/analysis/2026-09-25-worktree-isolation-decision-memo.md
+    relationship: constrains
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-09-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Interaction between BO-4300c-1-iii (put back files the build altered) and d-1 (re-ready on
+  every request): restoring the 61 build-touched files to their committed content must not
+  revert the work's own edits to one of them.

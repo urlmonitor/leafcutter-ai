@@ -1,0 +1,45 @@
+id: BO-4300f-4
+title: "The proof runs the copy of the maker that a project actually receives"
+component: build-orchestration
+components:
+  - worktree_manager
+  - build_orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+change_target: pipeline
+risk_surface: internal
+criteria: |
+  Given the workspace maker's proof suite, and a deliberate fault placed only in
+    the copy of the maker that an install delivers, with its source left correct,
+  When the proof suite runs,
+  Then it fails, naming the behaviour the fault broke,
+  And the suite runs the delivered maker as a separate process from each starting
+    point in BO-4300b-1, against real test projects with a real shared project,
+    with no stand-in for version control.
+depends_on: [BO-4300f]
+doc_links:
+  - path: docs/analysis/2026-09-25-worktree-migration-plan.md
+    relationship: describes
+    status: exists
+  - path: docs/analysis/2026-09-25-worktree-failure-modes.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-09-25
+amended_by: []
+superseded_by: null
+covered_by: [BO-4300f-4-i]
+implemented_by: []
+notes: |
+  F13: most behavioural fast-lane tests exercise the tracked scripts/ copy rather than the
+  deployed template, no test runs the template's ac or fast-lane create against a real
+  repository, and tests/test_setup_ticket_worktree.py has 41 mock sites. Migration plan 6.1.

@@ -1,0 +1,42 @@
+id: BO-4300d-2-iii
+title: "A half-made workspace in which work has since been done is not wiped to finish it"
+component: build-orchestration
+components:
+  - worktree_manager
+  - build_orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+change_target: code
+risk_surface: safety
+criteria: |
+  Given a half-made workspace for "alpha" in which a file has since been changed
+    by hand,
+  When "alpha" is requested again,
+  Then the changed file is identical before and after,
+  And the answer is either ready with the change intact, or a refusal naming the
+    changed file,
+  And the folder is never deleted and made again while it holds that change.
+depends_on: [BO-4300d-2]
+doc_links:
+  - path: docs/analysis/2026-09-25-worktree-isolation-decision-memo.md
+    relationship: constrains
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-09-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  The decision memo's "delete and redo" remedy for a half-made clone is safe only while the
+  folder holds nothing but what the interrupted request put there. BO-4100c's holds-work
+  verdict is the test for "something is in it".

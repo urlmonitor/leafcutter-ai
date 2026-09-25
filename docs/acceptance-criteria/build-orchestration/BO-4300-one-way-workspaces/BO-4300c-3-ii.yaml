@@ -1,0 +1,48 @@
+id: BO-4300c-3-ii
+title: "An agent that declines the workspace step ends the run, and no other command is substituted"
+component: build-orchestration
+components:
+  - worktree_manager
+  - build_orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+change_target: pipeline
+risk_surface: safety
+criteria: |
+  Given the agent asked to obtain the workspace declines, stating that the task is
+    outside its role,
+  When the workflow receives the decline,
+  Then the workflow ends with a failure that names the decline,
+  And it does not send a different command in place of the one declined,
+  And no later step is dispatched.
+depends_on: [BO-4300c-3]
+doc_links:
+  - path: docs/analysis/2026-09-25-worktree-creation-consolidation.md
+    relationship: describes
+    status: exists
+  - path: docs/analysis/2026-09-25-worktree-failure-modes.md
+    relationship: describes
+    status: exists
+  - path: docs/analysis/2026-09-25-worktree-migration-plan.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-09-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  F1 and the incident's steps 3-4: status-checker refused the resolver on charter grounds, and
+  the workflow then re-sent the resolution command to worktree-agent instead of halting. F13:
+  today's harness executes every dispatched command, so a refusing agent is never modelled --
+  the proof for this record must model one.

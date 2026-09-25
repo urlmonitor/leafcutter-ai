@@ -1,0 +1,43 @@
+id: BO-4300f-3-ii
+title: "Until the cut-over completes, automatic housekeeping cannot prune the shared history"
+component: build-orchestration
+components:
+  - worktree_manager
+  - build_orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+change_target: pipeline
+risk_surface: safety
+criteria: |
+  Given old-style workspaces still share the main copy's version history,
+  When enough commits are made in the main copy that version control's automatic
+    housekeeping would otherwise start,
+  Then that housekeeping does not run until the cut-over has retired or brought
+    over the last old-style workspace,
+  And every commit each old-style workspace refers to is still readable afterwards.
+depends_on: [BO-4300f-3]
+doc_links:
+  - path: docs/analysis/2026-09-25-worktree-isolation-decision-memo.md
+    relationship: constrains
+    status: exists
+  - path: docs/architecture/adrs/ADR-018-agent-isolation-topology.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-09-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  ADR-018 migration step 2 (gc.auto=0) was never applied; .git/lost-found already holds 81
+  objects including 18 commits from an fsck recovery on this host (decision memo).

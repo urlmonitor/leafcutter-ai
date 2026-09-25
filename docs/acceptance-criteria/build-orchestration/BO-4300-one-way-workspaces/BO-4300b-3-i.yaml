@@ -1,0 +1,42 @@
+id: BO-4300b-3-i
+title: "Started where no project can be found, the request is refused and says where it looked"
+component: build-orchestration
+components:
+  - worktree_manager
+  - build_orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+change_target: code
+risk_surface: safety
+criteria: |
+  Given an empty folder with no project in it, beneath it or beside it,
+  When a workspace is requested from that folder,
+  Then the request is refused,
+  And the refusal states that no project was found and names the folder the
+    request was started from,
+  And the folder and its neighbours contain exactly what they contained before.
+depends_on: [BO-4300b-3]
+doc_links:
+  - path: docs/analysis/2026-09-25-worktree-migration-plan.md
+    relationship: describes
+    status: exists
+  - path: docs/analysis/2026-09-25-worktree-component-proposal.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-09-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  The "unrelated directory" cell of the migration plan's test matrix.

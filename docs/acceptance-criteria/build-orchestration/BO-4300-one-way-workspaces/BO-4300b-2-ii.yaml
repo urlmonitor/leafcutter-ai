@@ -1,0 +1,49 @@
+id: BO-4300b-2-ii
+title: "An out-of-date installed copy inside the project does not change which project is found"
+component: build-orchestration
+components:
+  - worktree_manager
+  - build_orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+change_target: code
+risk_surface: safety
+criteria: |
+  Given the tools' own package project contains an out-of-date installed copy of
+    the tools inside it, and the current installed copy sits in the folder above
+    it, as in the package's development layout,
+  When a workspace for "alpha" is requested from the folder above, from the
+    package project's top folder, and from inside an existing workspace,
+  Then all three requests find the same project and are answered with the same
+    location,
+  And the tools installed inside the workspace are built from the workspace's own
+    contents, not taken from the out-of-date copy.
+depends_on: [BO-4300b-2]
+doc_links:
+  - path: docs/analysis/2026-09-25-worktree-creation-consolidation.md
+    relationship: describes
+    status: exists
+  - path: docs/analysis/2026-09-25-worktree-failure-modes.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-09-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Section 1 of the consolidation analysis: the resolver always preferred the stale gitignored
+  leafcutter-ai/.leafcutter copy (2026-09-09) over the current deployment (2026-09-24). OPEN
+  (Q6, not decided here): whether that inner copy should exist at all. This record holds
+  either way -- if the copy is removed it is trivially true; if it stays it must not steer the
+  outcome.

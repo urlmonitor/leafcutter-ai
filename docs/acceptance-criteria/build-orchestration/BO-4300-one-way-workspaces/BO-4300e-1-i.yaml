@@ -1,0 +1,40 @@
+id: BO-4300e-1-i
+title: "Looking a workspace up never creates or changes one"
+component: build-orchestration
+components:
+  - worktree_manager
+  - build_orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+change_target: code
+risk_surface: safety
+criteria: |
+  Given no workspace exists for "gamma", and a half-made workspace exists for
+    "delta",
+  When "gamma" and "delta" are looked up,
+  Then no workspace for "gamma" exists afterwards,
+  And "delta" is reported as incomplete, not as ready,
+  And "delta"'s files are identical before and after the lookup.
+depends_on: [BO-4300e-1]
+doc_links:
+  - path: docs/analysis/2026-09-25-worktree-component-proposal.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-09-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Keeps "find" distinct from "ask for" (BO-4300d), so a lookup used as a check (BO-4300c-4-i)
+  has no side effects.

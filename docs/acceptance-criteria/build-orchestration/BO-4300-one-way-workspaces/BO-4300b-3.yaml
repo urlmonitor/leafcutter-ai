@@ -1,0 +1,47 @@
+id: BO-4300b-3
+title: "When more than one project could be meant, the request is refused and names them"
+component: build-orchestration
+components:
+  - worktree_manager
+  - build_orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+change_target: code
+risk_surface: safety
+criteria: |
+  Given a folder that is not a project and contains two projects, "shop" and
+    "blog",
+  When a workspace is requested from that folder without saying which project,
+  Then the request is refused,
+  And the refusal names both "shop" and "blog" as the candidates it could not
+    choose between,
+  And no workspace and no line of work is created in either project,
+  And given the same request names "shop" as its project, it is answered ready
+    with a workspace that is a copy of shop.
+depends_on: [BO-4300b]
+doc_links:
+  - path: docs/analysis/2026-09-25-worktree-failure-modes.md
+    relationship: describes
+    status: exists
+  - path: docs/analysis/2026-09-25-worktree-component-proposal.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-09-25
+amended_by: []
+superseded_by: null
+covered_by: [BO-4300b-3-i]
+implemented_by: []
+notes: |
+  F11's second half: the resolvers disagree on ambiguity -- one takes the first child
+  repository it finds, another refuses anything but exactly one. The customer intent is
+  "refuse when ambiguous, never guess".

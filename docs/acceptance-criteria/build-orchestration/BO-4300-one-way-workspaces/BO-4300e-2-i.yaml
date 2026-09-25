@@ -1,0 +1,42 @@
+id: BO-4300e-2-i
+title: "A workspace with very long file paths on Windows is cleared completely"
+component: build-orchestration
+components:
+  - worktree_manager
+  - build_orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+change_target: code
+risk_surface: safety
+criteria: |
+  Given a Windows machine, and a workspace holding nothing unsent whose contents
+    include a file path longer than 260 characters,
+  When the workspace is cleared,
+  Then the answer states it was cleared,
+  And no folder or file of it remains at its location.
+depends_on: [BO-4300e-2]
+doc_links:
+  - path: docs/analysis/2026-09-25-worktree-isolation-decision-memo.md
+    relationship: constrains
+    status: exists
+  - path: docs/analysis/2026-09-25-worktree-creation-consolidation.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-09-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  close-worktree.md carries a \\?\ escape for MAX_PATH on remove; the decision memo keeps it
+  for the clone rmtree. Without it, removal half-succeeds on Windows.

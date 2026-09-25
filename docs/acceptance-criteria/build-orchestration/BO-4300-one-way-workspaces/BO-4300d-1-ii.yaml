@@ -1,0 +1,43 @@
+id: BO-4300d-1-ii
+title: "Two requests for the same work at the same moment never make two workspaces"
+component: build-orchestration
+components:
+  - worktree_manager
+  - build_orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+change_target: code
+risk_surface: safety
+criteria: |
+  Given no workspace exists for "alpha",
+  When two requests for "alpha" are started at the same moment from two different
+    routes,
+  Then exactly one workspace for "alpha" exists afterwards, and it meets every
+    part of readiness,
+  And each request is answered either ready with that one workspace's location,
+    or refused stating that the same work is already being prepared,
+  And neither request is answered ready with a location other than that one.
+depends_on: [BO-4300d-1]
+doc_links:
+  - path: docs/analysis/2026-09-25-worktree-component-proposal.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-09-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  "Never makes a twin" under concurrency: two parallel drives or a retry racing its original.
+  Not in the analysis as a measured failure; added because an idempotent single-caller design
+  passes every other record here and still races.

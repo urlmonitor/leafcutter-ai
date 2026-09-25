@@ -33,7 +33,7 @@ origin_agent: BrainCandy
 created: 2026-09-25
 amended_by: []
 superseded_by: null
-covered_by: []
+covered_by: [BO-4300c-1, BO-4300c-2, BO-4300c-3, BO-4300c-4, BO-4300c-5]
 implemented_by: []
 documentation_triggers:
   - sequence-diagram

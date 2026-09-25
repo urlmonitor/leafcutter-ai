@@ -1,0 +1,45 @@
+id: BO-4300e-2-ii
+title: "A workspace with a program still running inside it is never left half-cleared"
+component: build-orchestration
+components:
+  - worktree_manager
+  - build_orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+change_target: code
+risk_surface: safety
+criteria: |
+  Given a workspace holding nothing unsent, in which a program started from the
+    workspace is still running and holding files open,
+  When the workspace is cleared,
+  Then either the program is stopped and no part of the workspace remains, or
+    the request is refused naming the program and the workspace is identical
+    before and after,
+  And the answer never states the workspace was cleared while any part of it
+    remains.
+depends_on: [BO-4300e-2]
+doc_links:
+  - path: docs/analysis/2026-09-25-worktree-creation-consolidation.md
+    relationship: describes
+    status: exists
+  - path: docs/analysis/2026-09-25-worktree-component-proposal.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-09-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  The close-worktree sweep of leftover processes (a prefix that today matches neither layout).
+  The failure this prevents is a partial deletion reported as success.

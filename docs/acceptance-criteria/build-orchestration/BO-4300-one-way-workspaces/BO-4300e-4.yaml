@@ -1,0 +1,50 @@
+id: BO-4300e-4
+title: "Temporary comparison workspaces come and go through the same maker and leave nothing behind"
+component: build-orchestration
+components:
+  - worktree_manager
+  - build_orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+change_target: pipeline
+risk_surface: safety
+criteria: |
+  Given finalizing a feature needs a temporary copy of the shared main line to
+    run a before-and-after comparison,
+  When it obtains that copy and later clears it, once with the comparison
+    succeeding and once with the comparison failing part-way,
+  Then in both cases the copy was started from the shared main line tip as read
+    after fetching,
+  And in both cases, afterwards, no folder of the copy remains and the project's
+    branches, registered workspaces and settings are identical to before,
+  And in both cases the clearing is reported in finalize's own result.
+depends_on: [BO-4300e]
+doc_links:
+  - path: docs/analysis/2026-09-25-worktree-creation-consolidation.md
+    relationship: describes
+    status: exists
+  - path: docs/analysis/2026-09-25-worktree-failure-modes.md
+    relationship: describes
+    status: exists
+  - path: docs/analysis/2026-09-25-worktree-isolation-decision-memo.md
+    relationship: constrains
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-09-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  F14 and the finalize inventory rows: baselines were added from origin/main without a fetch,
+  registered in the real repository, and "degrade and continue" on failure. Under decision 1 a
+  temporary clone registers nothing in the real project.

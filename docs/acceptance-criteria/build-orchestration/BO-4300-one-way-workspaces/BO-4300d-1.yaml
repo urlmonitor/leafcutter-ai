@@ -1,0 +1,52 @@
+id: BO-4300d-1
+title: "Asking again for a healthy workspace hands it back re-readied, with the work in it untouched"
+component: build-orchestration
+components:
+  - worktree_manager
+  - build_orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+change_target: code
+risk_surface: safety
+criteria: |
+  Given a ready workspace for "alpha" whose line of work carries two commits, and
+    which has one uncommitted change and one new file not yet under version
+    control,
+  When "alpha" is requested again,
+  Then the answer is ready, gives the same location, and states that an existing
+    workspace was re-readied,
+  And during this request the tools inside it were rebuilt from its own contents
+    and its protections were shown to fire again,
+  And the two commits, the uncommitted change and the new file are identical
+    before and after,
+  And exactly one workspace for "alpha" exists afterwards.
+depends_on: [BO-4300d]
+doc_links:
+  - path: docs/analysis/2026-09-25-worktree-isolation-decision-memo.md
+    relationship: constrains
+    status: exists
+  - path: docs/analysis/2026-09-25-worktree-component-proposal.md
+    relationship: describes
+    status: exists
+  - path: docs/analysis/2026-09-25-worktree-failure-modes.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-09-25
+amended_by: []
+superseded_by: null
+covered_by: [BO-4300d-1-i, BO-4300d-1-ii]
+implemented_by: []
+notes: |
+  Decision 2: the install is rebuilt on every request, reused or not, so "handed back" always
+  means "re-readied", never "trusted as last seen" (BO-4300d notes). BO-1700c repairs only
+  missing check set-up; this record is readiness as a whole.

@@ -1,0 +1,48 @@
+id: BO-4300f-1
+title: "Every existing route now gets its workspace from the one maker"
+component: build-orchestration
+components:
+  - worktree_manager
+  - build_orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+change_target: pipeline
+risk_surface: contract_boundary
+criteria: |
+  Given each existing route that works in a workspace -- the long-running build
+    for an epic and for a single ticket, the single-ticket build skill, the quick
+    fix, requirements authoring, the fast lane, finalize's comparison copies, the
+    backlog build, and a person following the project's written instructions --
+    is run against a real test project with a real shared project,
+  When each route obtains its workspace,
+  Then the workspace it works in carries the one workspace maker's record of
+    having made it, and that record agrees with the answer the maker gave,
+  And no route works in a workspace the maker did not make.
+depends_on: [BO-4300f]
+doc_links:
+  - path: docs/analysis/2026-09-25-worktree-migration-plan.md
+    relationship: describes
+    status: exists
+  - path: docs/analysis/2026-09-25-worktree-creation-consolidation.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-09-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Migration plan steps 2-7. The neighbours named in BO-4300's notes (BO-1500f, ACD-2100a,
+  FIN-100g, BP-600f, BO-2400e) each become a caller through this record; their own promises are
+  unchanged. The migration order (component first, incident path next, deletions last) is a
+  recommendation, not a criterion.

@@ -1,0 +1,52 @@
+id: BO-4300b-4
+title: "On Windows without permission to create links, the workspace is still fully ready"
+component: build-orchestration
+components:
+  - worktree_manager
+  - build_orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+change_target: code
+risk_surface: safety
+criteria: |
+  Given a Windows machine on which the user is not permitted to create symbolic
+    links,
+  When a workspace is requested,
+  Then it is answered ready,
+  And every installed tool and every protection setting in the workspace is an
+    ordinary file or folder, not a link,
+  And a commit of a known-bad file inside the workspace is rejected by its
+    protections,
+  And the answer and the workspace are the same as those produced for the same
+    request on a machine where links are permitted.
+depends_on: [BO-4300b]
+doc_links:
+  - path: docs/analysis/2026-09-25-worktree-failure-modes.md
+    relationship: describes
+    status: exists
+  - path: docs/analysis/2026-09-25-worktree-isolation-decision-memo.md
+    relationship: constrains
+    status: exists
+  - path: docs/analysis/2026-09-25-worktree-migration-plan.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-09-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  F5's sandbox run: without Developer Mode, WinError 1314 on both links, bootstrap failed and
+  left a half-made worktree. Decision 2 (real install files, never a symlink) is the answer;
+  this record is its observable. The migration plan asks for this to run for real on a Windows
+  runner without Developer Mode, not only with a simulated failure.

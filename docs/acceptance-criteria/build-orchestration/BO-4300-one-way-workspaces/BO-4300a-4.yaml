@@ -1,0 +1,50 @@
+id: BO-4300a-4
+title: "Component diagram: the one workspace maker and everyone who calls it"
+component: build-orchestration
+components:
+  - worktree_manager
+  - build_orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+change_target: docs
+risk_surface: internal
+criteria: |
+  Given a reader wants to see where workspaces come from,
+  When they open the component diagram for the workspace maker,
+  Then it shows the workspace maker as one standalone component,
+  And it shows each caller -- workflows receiving its answer, the skill agents
+    run it from, agents, and a person at a terminal -- reaching workspaces only
+    through it,
+  And it shows the main copy, the shared project, the landing place for
+    workspaces, and each workspace holding its own installed tools,
+  And it shows no second path by which a workspace is made, found or cleared.
+depends_on: [BO-4300a, BO-4300a-1]
+doc_links:
+  - path: docs/architecture/components/worktree-manager.md
+    relationship: modifies
+    status: exists
+  - path: docs/analysis/2026-09-25-worktree-component-proposal.md
+    relationship: describes
+    status: exists
+  - path: docs/analysis/2026-09-25-worktree-isolation-decision-memo.md
+    relationship: constrains
+    status: exists
+assigned_agent: architecture-diagram-author
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-09-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  documentation_trigger component-diagram on BO-4300a. The existing worktree-manager
+  component page describes git worktree lifecycle management, which decision 1 makes
+  inaccurate; the diagram is drawn for per-feature copies (clones).

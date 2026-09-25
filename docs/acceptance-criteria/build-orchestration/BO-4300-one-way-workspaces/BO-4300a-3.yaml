@@ -1,0 +1,53 @@
+id: BO-4300a-3
+title: "How-to: getting a workspace, for agents and people alike"
+component: build-orchestration
+components:
+  - worktree_manager
+  - build_orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+change_target: docs
+risk_surface: internal
+criteria: |
+  Given an agent or a person needs a workspace to work in,
+  When they open the how-to guide for getting one,
+  Then it shows the single way to request a workspace, and that the same request
+    works from the project's top folder, the folder above it and inside another
+    workspace,
+  And it shows how to read a ready answer and where the workspace's location is
+    given in it,
+  And it shows what to do on a refusal: stop, remedy the cause the refusal
+    names, and ask again,
+  And it states that asking again for the same work is always safe,
+  And it gives no alternative step-by-step recipe for making, linking or setting
+    up a workspace by hand.
+depends_on: [BO-4300a, BO-4300a-1]
+doc_links:
+  - path: docs/analysis/2026-09-25-worktree-creation-consolidation.md
+    relationship: describes
+    status: exists
+  - path: docs/analysis/2026-09-25-worktree-component-proposal.md
+    relationship: describes
+    status: exists
+  - path: docs/how-to/get-a-workspace.md
+    relationship: describes
+    status: planned
+assigned_agent: documentation-expert
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-09-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  documentation_trigger how-to on BO-4300a. This is the single page every retired recipe
+  points to under BO-4300f-2-i. Clearing a workspace by hand is BO-4300e-5's how-to, which
+  this page links to rather than repeats.

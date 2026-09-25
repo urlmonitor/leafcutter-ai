@@ -1,0 +1,41 @@
+id: BO-4300c-1-i
+title: "A failed install inside the workspace is a refusal, never a warning"
+component: build-orchestration
+components:
+  - worktree_manager
+  - build_orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+change_target: code
+risk_surface: safety
+criteria: |
+  Given the build that installs the tools inside a new workspace fails after
+    producing part of its output,
+  When the workspace maker answers,
+  Then the answer is a refusal naming the failed install and quoting the build's
+    own failure message,
+  And the answer is not ready, even though the copy and its line of work exist.
+depends_on: [BO-4300c-1]
+doc_links:
+  - path: docs/analysis/2026-09-25-worktree-failure-modes.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-09-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  F6 and KI-BP-20260907-bootstrap-swallows-build-failure: the build failing inside set-up only
+  warned, a fast-lane workspace was missing build_orchestration/, and the run died four steps
+  later.

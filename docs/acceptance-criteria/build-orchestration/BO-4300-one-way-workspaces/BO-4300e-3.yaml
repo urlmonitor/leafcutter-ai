@@ -1,0 +1,49 @@
+id: BO-4300e-3
+title: "Loss of unsent work happens only when authorised up front"
+component: build-orchestration
+components:
+  - worktree_manager
+  - build_orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+change_target: code
+risk_surface: safety
+criteria: |
+  Given a workspace holding one unpushed commit and one uncommitted change,
+  When clearing it is requested with authorisation to discard its unsent work
+    given in the request itself,
+  Then the workspace is gone completely, without any question being asked,
+  And the answer lists what was discarded: the unpushed commit by identifier and
+    the uncommitted file by path,
+  And the line of work on the shared project and the shared main line are
+    identical before and after.
+depends_on: [BO-4300e]
+doc_links:
+  - path: docs/analysis/2026-09-25-worktree-creation-consolidation.md
+    relationship: describes
+    status: exists
+  - path: docs/analysis/2026-09-25-worktree-component-proposal.md
+    relationship: describes
+    status: exists
+  - path: docs/analysis/2026-09-25-worktree-isolation-decision-memo.md
+    relationship: constrains
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-09-25
+amended_by: []
+superseded_by: null
+covered_by: [BO-4300e-3-i]
+implemented_by: []
+notes: |
+  OPEN (Q8, not decided here): whether authorisation is a caller-supplied confirmation token or
+  an explicit flag. The customer intent this record fixes is only that authorisation is given up
+  front, in the request, never asked interactively.

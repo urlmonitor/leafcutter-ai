@@ -1,0 +1,49 @@
+id: BO-4300e-1
+title: "Asking where a piece of work's workspace is gets a definite answer from the same maker"
+component: build-orchestration
+components:
+  - worktree_manager
+  - build_orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+change_target: code
+risk_surface: contract_boundary
+criteria: |
+  Given a project with ready workspaces for "alpha", "alpha-v2" and "beta", none
+    for "gamma", and version control's own list of linked workspaces for the
+    project empty,
+  When "alpha", "beta" and "gamma" are each looked up through the workspace
+    maker, from the project's top folder and from the folder above it,
+  Then "alpha" and "beta" are each answered with their own location, the same
+    from both starting folders,
+  And "gamma" is answered with a definite statement that no workspace exists for
+    it,
+  And the lookup of "alpha" never returns the location of "alpha-v2".
+depends_on: [BO-4300e]
+doc_links:
+  - path: docs/analysis/2026-09-25-worktree-isolation-decision-memo.md
+    relationship: constrains
+    status: exists
+  - path: docs/analysis/2026-09-25-worktree-component-proposal.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-09-25
+amended_by: []
+superseded_by: null
+covered_by: [BO-4300e-1-i]
+implemented_by: []
+notes: |
+  Under decision 1 no version-control command lists the workspaces (clones), so "find" cannot
+  lean on one -- the empty linked-workspace list in the Given makes a lookup that still does
+  fail. Listing completeness is BO-4100e; this record is the single-item lookup through the
+  same maker (decision 4).

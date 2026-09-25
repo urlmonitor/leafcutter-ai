@@ -1,0 +1,47 @@
+id: BO-4300b-2-i
+title: "Two projects in the same folder never share or collide on a workspace"
+component: build-orchestration
+components:
+  - worktree_manager
+  - build_orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+change_target: code
+risk_surface: safety
+criteria: |
+  Given two projects, "shop" and "blog", that each installed these tools, sit side
+    by side in the same parent folder,
+  When a workspace for work named "alpha" is requested in shop, and then a
+    workspace for work named "alpha" is requested in blog,
+  Then two distinct workspaces exist, each a copy of its own project,
+  And shop's "alpha" workspace is identical before and after blog's request,
+  And asking shop where its "alpha" workspace is returns shop's, and asking blog
+    returns blog's, never the other project's.
+depends_on: [BO-4300b-2]
+doc_links:
+  - path: docs/analysis/2026-09-25-worktree-creation-consolidation.md
+    relationship: describes
+    status: exists
+  - path: docs/analysis/2026-09-25-worktree-component-proposal.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-09-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Holds whichever way Q5 goes. If workspaces live inside each project it is automatic; if
+  they live in a folder shared by every project in the parent (the deployed copy's current
+  behaviour), the location or naming must still keep the two apart. Flagged as a constraint
+  on Q5's option (b).

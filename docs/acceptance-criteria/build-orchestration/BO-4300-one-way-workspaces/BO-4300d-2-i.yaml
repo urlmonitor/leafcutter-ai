@@ -1,0 +1,39 @@
+id: BO-4300d-2-i
+title: "A half-made workspace is never answered ready while the cause remains"
+component: build-orchestration
+components:
+  - worktree_manager
+  - build_orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+change_target: code
+risk_surface: safety
+criteria: |
+  Given the same half-made workspace for "alpha", and the cause of the install
+    failure still present,
+  When "alpha" is requested again,
+  Then the answer is a refusal naming the install failure,
+  And the answer is never ready and never states that the workspace was reused,
+  And no second workspace for "alpha" is created beside it.
+depends_on: [BO-4300d-2]
+doc_links:
+  - path: docs/analysis/2026-09-25-worktree-failure-modes.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-09-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  The literal F5 re-run: "ok, reused" on a workspace containing almost nothing.

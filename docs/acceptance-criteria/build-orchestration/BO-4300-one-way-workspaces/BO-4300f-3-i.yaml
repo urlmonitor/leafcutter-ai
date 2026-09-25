@@ -1,0 +1,38 @@
+id: BO-4300f-3-i
+title: "Running the cut-over again changes nothing further"
+component: build-orchestration
+components:
+  - worktree_manager
+  - build_orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+change_target: code
+risk_surface: safety
+criteria: |
+  Given the cut-over has run once to completion,
+  When it is run a second time,
+  Then no workspace is retired, brought over or changed,
+  And its report states that there is nothing left to do other than the
+    workspaces already listed as needing a decision.
+depends_on: [BO-4300f-3]
+doc_links:
+  - path: docs/analysis/2026-09-25-worktree-migration-plan.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-09-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Cut-over is run by hand across machines; it must be safe to repeat.

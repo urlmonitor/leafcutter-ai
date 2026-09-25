@@ -1,0 +1,54 @@
+id: BO-4300c-3
+title: "Every caller stops on anything but a ready answer"
+component: build-orchestration
+components:
+  - worktree_manager
+  - build_orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+change_target: pipeline
+risk_surface: safety
+criteria: |
+  Given each workflow that needs a workspace -- the long-running build, the
+    single-ticket build, the quick fix, the requirements-authoring session, the
+    fast lane and finalize -- is run with the workspace maker's answer replaced,
+    in turn, by: a refusal; an error; a paragraph of prose; an answer that states
+    neither ready nor refused; and no answer at all,
+  When the workflow receives that answer,
+  Then it ends with a failure that quotes what it received,
+  And its recorded dispatches contain no authoring, phase, commit or delivery
+    step after the workspace step,
+  And it does not continue in the main copy, in the epic folder, in the folder it
+    was started from, or in any location it was not given in a ready answer.
+depends_on: [BO-4300c]
+doc_links:
+  - path: docs/analysis/2026-09-25-worktree-creation-consolidation.md
+    relationship: describes
+    status: exists
+  - path: docs/analysis/2026-09-25-worktree-failure-modes.md
+    relationship: describes
+    status: exists
+  - path: docs/analysis/2026-09-25-worktree-migration-plan.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-09-25
+amended_by: []
+superseded_by: null
+covered_by: [BO-4300c-3-i, BO-4300c-3-ii]
+implemented_by: []
+notes: |
+  The CALLER half of BO-4300c -- the half the incident violated. F2: plan-feature's
+  no-workspace mode, build-epic's fallback to the epic folder, finalize's "unknown", the fast
+  lane trusting a path the agent claimed. Asserted on the recorded dispatch list (migration
+  plan 6.1, last paragraph), not on source text. Never-straight-to-main as an end state is
+  BO-1800e; this record is the halt at the start.

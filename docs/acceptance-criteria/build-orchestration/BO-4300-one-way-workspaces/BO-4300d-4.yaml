@@ -1,0 +1,54 @@
+id: BO-4300d-4
+title: "Asking for work whose line already exists on the shared project resumes that line"
+component: build-orchestration
+components:
+  - worktree_manager
+  - build_orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+change_target: code
+risk_surface: safety
+criteria: |
+  Given the line of work "alpha" exists on the shared project with three commits
+    that are not on the shared main line, and no workspace for "alpha" exists on
+    this machine,
+  When "alpha" is requested,
+  Then the ready workspace is on the line of work "alpha" and contains those
+    three commits,
+  And the ready answer says the line of work was resumed, not newly started,
+  And no workspace for "alpha" is made on a freshly started line of work while
+    those three commits exist only on the shared project,
+  And the line of work "alpha" on the shared project is identical before and
+    after.
+depends_on: [BO-4300d]
+doc_links:
+  - path: docs/analysis/2026-09-25-worktree-failure-modes.md
+    relationship: describes
+    status: exists
+  - path: docs/analysis/2026-09-25-worktree-isolation-decision-memo.md
+    relationship: constrains
+    status: exists
+  - path: docs/analysis/2026-09-25-worktree-component-proposal.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-09-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  KI-BO-20260921 "abandons the epic worktree branch" and F9 (ac-authoring reused a branch at its
+  old tip; fast lane force-resets). DECIDED by the user at the BA gate, 2026-09-25 (Q9): an
+  existing line with unmerged commits is RESUMED, not refused and never reset -- so the fast
+  lane's force-reset behaviour is retired. Fresh lines still start at the shared main line tip
+  (decision 3, BO-4100a).

@@ -1,0 +1,42 @@
+id: BO-4300c-1-iii
+title: "Setting up a workspace never leaves stray changes in the project's own files"
+component: build-orchestration
+components:
+  - worktree_manager
+  - build_orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+change_target: code
+risk_surface: safety
+criteria: |
+  Given building the tools inside a new workspace alters 61 files that the
+    project keeps under version control,
+  When the workspace maker answers,
+  Then either those 61 files have been put back to their committed content and
+    the answer lists them as restored, or the answer is a refusal naming them,
+  And a ready workspace never starts with changes to version-controlled files
+    that the work itself did not make.
+depends_on: [BO-4300c-1]
+doc_links:
+  - path: docs/analysis/2026-09-25-worktree-isolation-decision-memo.md
+    relationship: constrains
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-09-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Decision memo, Q2 side effects: the build dirtied 61 tracked files (docs/INDEX.md link
+  spelling, 59 agent cards, LEAFCUTTER_VERSION), and a later add-all in the commit phase would
+  sweep them into a ticket commit. Both mitigations the memo offers satisfy this record.

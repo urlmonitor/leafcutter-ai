@@ -92,6 +92,12 @@ notes: |
   - Q8 a confirmation token for removal (BO-4300e: authorisation is given up front, not
     asked interactively; the mechanism is open).
 
+  DECIDED AT THE BA GATE (2026-09-25, user):
+  - Q9 an existing line of work with unmerged commits is RESUMED (BO-4300d-4).
+  - Q10 the cut-over never retires a workspace that holds unsent work (BO-4300f-3).
+  - BO-4100e-4 covers only leftovers not identifiable as the requested work; a half-made
+    copy of the same work is completed (BO-4300d-2). IT PO amends BO-4100e-4's wording.
+
   WHY A NEW L0 AND NOT MORE CHILDREN OF BO-4100 / BO-1700 / BO-1800. Those goals state
   PROPERTIES a workspace must have (BO-4100: fresh at creation, own supporting material,
   disposability knowable, truthful account, complete listing; BO-1700: quality gates

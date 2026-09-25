@@ -1,0 +1,57 @@
+id: BO-4300f-3
+title: "Workspaces made the old way are brought over or retired without losing work"
+component: build-orchestration
+components:
+  - worktree_manager
+  - build_orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+change_target: pipeline
+risk_surface: safety
+criteria: |
+  Given a project with 19 workspaces made the old way -- some holding work that
+    has not reached the shared project and some holding none -- and 2 entries in
+    the project's workspace register that were started from a Linux shell and
+    never finished,
+  When the cut-over is run,
+  Then each old workspace holding nothing unsent is retired: its folder is gone
+    and its register entry is gone,
+  And each old workspace holding unsent work is either brought over as a
+    workspace the one maker recognises, with that work intact, or left untouched
+    and listed as needing a decision,
+  And the 2 unfinished entries are gone from the register, and nothing else is
+    changed by their removal,
+  And afterwards the register of old-style workspaces lists only those left for a
+    decision.
+depends_on: [BO-4300f]
+doc_links:
+  - path: docs/analysis/2026-09-25-worktree-isolation-decision-memo.md
+    relationship: constrains
+    status: exists
+  - path: docs/analysis/2026-09-25-worktree-creation-consolidation.md
+    relationship: describes
+    status: exists
+  - path: docs/analysis/2026-09-25-worktree-migration-plan.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-09-25
+amended_by: []
+superseded_by: null
+covered_by: [BO-4300f-3-i, BO-4300f-3-ii]
+implemented_by: []
+notes: |
+  Cut-over chore from the decision memo and section 8 of the consolidation analysis (19
+  registered worktrees plus the WSL background-worktrees entries stuck "initializing"). The
+  holds-work verdict is BO-4100c-1. DECIDED by the user at the BA gate, 2026-09-25 (Q10): a
+  workspace that still holds unsent work is never retired by the cut-over -- it is brought over,
+  or left untouched and listed for a human decision, as the criteria say.

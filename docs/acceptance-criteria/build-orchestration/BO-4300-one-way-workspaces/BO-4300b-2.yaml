@@ -1,0 +1,52 @@
+id: BO-4300b-2
+title: "A project that installed the tools gets its workspaces the same way"
+component: build-orchestration
+components:
+  - worktree_manager
+  - build_orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+change_target: code
+risk_surface: safety
+criteria: |
+  Given a project "shop" that installed these tools, whose installed copy of the
+    workspace maker lives in a folder outside shop's version history,
+  When a workspace for the work "alpha" is requested from shop's top folder, and
+    again from the folder above shop,
+  Then both requests are answered ready with the same location,
+  And the workspace is a copy of shop, started from shop's shared main line tip,
+    with shop's own tools installed inside it,
+  And that location is the same on every request for "alpha" in shop, and lies
+    in the one place set aside for shop's workspaces.
+depends_on: [BO-4300b]
+doc_links:
+  - path: docs/analysis/2026-09-25-worktree-failure-modes.md
+    relationship: describes
+    status: exists
+  - path: docs/analysis/2026-09-25-worktree-creation-consolidation.md
+    relationship: describes
+    status: exists
+  - path: docs/analysis/2026-09-25-worktree-component-proposal.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-09-25
+amended_by: []
+superseded_by: null
+covered_by: [BO-4300b-2-i, BO-4300b-2-ii]
+implemented_by: []
+notes: |
+  F11: the installed copy of today's script cannot find the repository when it lives outside
+  it (KI-ACD-004). OPEN (Q5, not decided here): whether shop's workspaces live inside shop
+  (ignored by version control) or beside it in the parent folder. This record requires only
+  that the place is predictable per project; BO-4300b-2-i adds the constraint that any
+  shared-parent choice must still keep projects apart.

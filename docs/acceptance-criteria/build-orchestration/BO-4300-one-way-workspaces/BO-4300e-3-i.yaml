@@ -1,0 +1,40 @@
+id: BO-4300e-3-i
+title: "Authorisation given for one workspace clears no other"
+component: build-orchestration
+components:
+  - worktree_manager
+  - build_orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+change_target: code
+risk_surface: safety
+criteria: |
+  Given an unattended clean-up clears "alpha" and "beta", both holding unsent
+    work, with authorisation to discard unsent work given only in the request for
+    "alpha",
+  When both clearing requests are made,
+  Then "alpha" is gone,
+  And "beta" is refused, and its files and commits are identical before and after.
+depends_on: [BO-4300e-3]
+doc_links:
+  - path: docs/analysis/2026-09-25-worktree-component-proposal.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-09-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Holds whichever way Q8 goes: authorisation belongs to the request that carries it and is never
+  remembered or applied to the next one.

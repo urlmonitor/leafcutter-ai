@@ -1,0 +1,45 @@
+id: BO-4300d-3-i
+title: "A workspace for the same work made the old way is not quietly taken over"
+component: build-orchestration
+components:
+  - worktree_manager
+  - build_orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+change_target: code
+risk_surface: safety
+criteria: |
+  Given the location for "alpha" holds a workspace for "alpha" that was made the
+    old way, sharing the main copy's version history, with one commit not on the
+    shared main line,
+  When "alpha" is requested,
+  Then the answer is a refusal stating that an old-style workspace for this work
+    occupies the location and that it must be brought over first,
+  And that workspace, its commit and its registration are identical before and
+    after.
+depends_on: [BO-4300d-3]
+doc_links:
+  - path: docs/analysis/2026-09-25-worktree-isolation-decision-memo.md
+    relationship: constrains
+    status: exists
+  - path: docs/analysis/2026-09-25-worktree-migration-plan.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-09-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Bridges to the cut-over under BO-4300f-3: until an old-style worktree is brought over, the one
+  maker must not silently convert, reuse or overwrite it.

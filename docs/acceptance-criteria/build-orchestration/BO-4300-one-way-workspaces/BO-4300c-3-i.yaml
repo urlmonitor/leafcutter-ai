@@ -1,0 +1,52 @@
+id: BO-4300c-3-i
+title: "Success reported with output that is not a valid answer is a failure, never 'use the current checkout'"
+component: build-orchestration
+components:
+  - worktree_manager
+  - build_orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+change_target: pipeline
+risk_surface: safety
+criteria: |
+  Given the requirements-authoring session is started from the workspace parent
+    folder,
+  And the step meant to obtain its workspace ends reporting success, but its
+    output is the file path of a script rather than a valid answer from the
+    workspace maker,
+  When the session receives that result,
+  Then the session ends with a failure stating that no valid answer was received,
+    and quoting the output it got,
+  And that result is not treated as "no workspace needed" or as "use the current
+    checkout",
+  And the main copy's working files are identical before and after the session,
+  And the recorded dispatches contain no authoring step.
+depends_on: [BO-4300c-3]
+doc_links:
+  - path: docs/analysis/2026-09-25-worktree-creation-consolidation.md
+    relationship: describes
+    status: exists
+  - path: docs/analysis/2026-09-25-worktree-failure-modes.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-09-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  The exact 2026-09-25 incident (consolidation analysis, section 1, steps 4-7): the
+  path-resolution command was re-sent in place of the create command, returned exit 0 with the
+  script's path, JSON.parse threw and was caught, the worktree path stayed null, and the product
+  owner wrote INF-1400* ACs untracked into the main checkout on main. The session starts from
+  the workspace parent because that is where it ran.

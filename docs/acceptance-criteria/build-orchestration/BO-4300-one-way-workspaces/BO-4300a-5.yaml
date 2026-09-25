@@ -1,0 +1,51 @@
+id: BO-4300a-5
+title: "Reference: the answer every caller receives, and what a caller must do with it"
+component: build-orchestration
+components:
+  - worktree_manager
+  - build_orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+change_target: docs
+risk_surface: internal
+criteria: |
+  Given a workflow author, skill author or person needs to act on the workspace
+    maker's answer,
+  When they open the reference document for that answer,
+  Then it lists every outcome the maker can give -- ready, and each cause of a
+    refusal -- with the meaning of each,
+  And it states that anything other than a ready answer means the caller stops,
+  And it states that the workspace's location is taken only from a ready answer,
+    never from an agent's own words or from the folder the caller happens to be in,
+  And it states that the answer has the same form whichever route asked.
+depends_on: [BO-4300a, BO-4300a-1, BO-4300c-2, BO-4300c-3]
+doc_links:
+  - path: docs/analysis/2026-09-25-worktree-component-proposal.md
+    relationship: describes
+    status: exists
+  - path: docs/analysis/2026-09-25-worktree-creation-consolidation.md
+    relationship: describes
+    status: exists
+  - path: docs/reference/workspace-maker-answer.md
+    relationship: describes
+    status: planned
+assigned_agent: documentation-expert
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-09-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  documentation_trigger reference-doc on BO-4300a. It documents the contract that
+  BO-4300c-2 (one readable answer) and BO-4300c-3/c-4 (callers stop; location only from the
+  answer) specify behaviourally. Field names are IT PO's to fix; this page names them once
+  they exist.
