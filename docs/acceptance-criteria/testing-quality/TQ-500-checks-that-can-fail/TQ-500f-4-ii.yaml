@@ -1,0 +1,62 @@
+id: TQ-500f-4-ii
+components:
+  - testing_quality
+  - build_orchestration
+title: "A check that passes best when nothing happened is caught by the second question"
+component: testing-quality
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a writer drafts either of two checks —
+      C1: "every row in the window has buy_volume >= 0", over a window the
+          pipeline fills, where rows the pipeline never processed carry NULL
+          and the comparison skips NULLs,
+      C2: "every symbol has a value in the live context", where the value is
+          present but may be wrong,
+  When it answers Q2 (what result would show this assertion can fail, and does
+    the fixture produce it) for each check,
+  Then for C1 it identifies that an empty or all-NULL window passes, so the
+      check passes most reliably when the pipeline is dead, and it adds an
+      exact count of processed rows and a non-NULL count before handing on,
+    And for C2 it identifies that presence is not correctness, and it adds an
+      assertion on at least one known expected value seeded in the fixture,
+    And in both cases the report records the vacuous version as a wrong
+      version the strengthened test now catches.
+depends_on:
+  - TQ-500f-4
+doc_links:
+  - path: docs/analysis/2026-09-25-test-writers-prove-failure-not-discrimination.md
+    relationship: describes
+    status: exists
+    relevance: "Incident 2 (the buy_volume >= 0 probe that passed when the pipeline was dead) and incident 8 (parity measured presence, not correctness)."
+  - path: templates/agents/test-writer.md
+    relationship: relates-to
+    status: exists
+  - path: templates/agents/sql-test-writer.md
+    relationship: relates-to
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: TQ-500f-4
+  contract: "The three questions and the vacuity checklist are in both writers' instructions."
+origin_agent: business-analyst
+created: 2026-09-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: prompt
+risk_surface: contract_boundary
+notes: |
+  INCIDENT REPLAY as an edge-case specification. C1 and C2 are the two
+  incidents where the check itself, not the fixture, was vacuous. They make
+  good eval fixtures for the prompt change.
+
+  PROMPT-ONLY, for the same reason as TQ-500f-4.

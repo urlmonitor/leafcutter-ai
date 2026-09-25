@@ -37,7 +37,12 @@ created: 2026-09-25
 amended_by:
   - reason: "Authored by product-owner from BrainCandy's /plan-feature request 'Tests must prove they can tell right from wrong' (request item 8, re-homed from TQ-500 per user decision Q3)."
 superseded_by: null
-covered_by: []
+covered_by:
+  - INF-1100d-1
+  - INF-1100d-2
+  - INF-1100d-3
+  - INF-1100d-4
+  - INF-1100d-5
 implemented_by: []
 change_target:
   - prompt

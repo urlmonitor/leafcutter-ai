@@ -1,0 +1,89 @@
+id: TQ-500f-1
+components:
+  - testing_quality
+  - ac_store
+  - build_orchestration
+title: "\"Discrimination\" is a kind of test a requirement can ask for, and the work generated from it accepts it"
+component: testing-quality
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a requirement whose test plan has one entry
+      name: test_retry_gate_runs_when_both_conditions_due
+      angle: discrimination
+    and a second requirement whose test plan has one entry with
+      angle: discriminating   (a misspelling),
+  When the requirement store's validator checks both requirements,
+    And work is generated from the first requirement,
+  Then the first requirement is accepted and the second is rejected with a
+    message naming the entry, the field "angle", and the permitted values,
+    which include "discrimination",
+    And the generated work's test requirements carry that entry with
+      angle: discrimination, and those test requirements conform to the
+      schema that governs generated test requirements,
+    And the test writer's taught set of test kinds lists "discrimination"
+      beside the seven existing kinds, with its distinguishing rule: the test
+      goes red under at least one named plausible wrong version of the code,
+      not only when the code is absent,
+    And the existing lockstep check between the permitted kinds and the
+      taught set passes with the eighth kind present.
+depends_on:
+  - TQ-500f
+doc_links:
+  - path: config/ac_store_schema.json
+    relationship: describes
+    status: exists
+    relevance: "test_spec[].angle enum — the requirement-side list of permitted kinds."
+  - path: config/test_requirements.schema.json
+    relationship: describes
+    status: exists
+    relevance: "tests[].angle enum — the generated-work-side list. additionalProperties is false, so a value legal on the requirement side and absent here yields generated work that violates its own schema."
+  - path: templates/agents/test-writer.md
+    relationship: describes
+    status: exists
+    relevance: "The TAUGHT-TEST-ANGLES start/end block — the taught set that must gain the eighth kind."
+  - path: docs/testing/test-angles.md
+    relationship: relates-to
+    status: exists
+  - path: docs/analysis/2026-09-25-test-writers-prove-failure-not-discrimination.md
+    relationship: describes
+    status: exists
+    relevance: "Remedy item 1."
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to:
+  - agent: python-coder
+    ac_id: TQ-500f-2
+    contract: "A permitted kind 'discrimination' on both the requirement side and the generated-work side, so a test entry that names wrong versions to catch can also declare itself a discrimination test."
+expects_from: null
+origin_agent: business-analyst
+created: 2026-09-25
+amended_by: []
+superseded_by: null
+covered_by:
+  - TQ-500f-1-i
+implemented_by: []
+change_target:
+  - schema
+  - prompt
+risk_surface: contract_boundary
+notes: |
+  USER DECISION Q2 (binding): "discrimination" is an ENUM VALUE (not a modifier
+  like must_block) in BOTH the requirement-side and the generated-work-side
+  lists of kinds, plus the taught set, in lockstep. The lockstep check is widened
+  to cover both lists in TQ-500f-1-i.
+
+  SINGLE-AGENT NOTE FOR IT-PO. The taught-set edit is prompt text, but it is a
+  one-line vocabulary addition held in step by an existing mechanical check, so
+  it rides with the schema change under python-coder rather than being split
+  into an llm-expert AC. The substantive teaching of HOW to write a
+  discrimination test is TQ-500f-4 (llm-expert). Split if you disagree.
+
+  BEHAVIOURAL, NOT TEXT-SEARCH. Every Then clause is observable through the
+  validator's verdict, the generator's output checked against its schema, or the
+  existing lockstep check — none needs a search of template text.

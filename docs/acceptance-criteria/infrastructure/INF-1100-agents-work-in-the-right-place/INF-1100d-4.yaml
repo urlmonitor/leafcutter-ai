@@ -1,0 +1,85 @@
+id: INF-1100d-4
+components:
+  - infrastructure
+  - testing_quality
+title: "The package refuses to ship a database address again"
+component: infrastructure
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the package's sources and the output of a build into a fresh,
+    empty target directory,
+  When the shipped-address check runs over everything that build puts into
+    an install,
+  Then it passes when no shipped file contains a database connection address,
+    And it fails when any shipped file contains one, naming each file and
+      line — for example a template that reintroduces
+      postgresql://trader:trader@localhost:5403/LIVE, or any other address of
+      the form <scheme>://<user>:<password>@<host>:<port>/<database> with
+      scheme postgresql, postgres or mysql,
+    And run against the sources as they stood before this work, it fails and
+      names every place the address was shipped from — at least the seven
+      source files the product owner listed and their built copies,
+    And it runs with the normal test suite, so reintroducing the address
+      fails before a merge rather than after an install.
+depends_on:
+  - INF-1100d
+doc_links:
+  - path: docs/analysis/2026-09-25-test-writers-prove-failure-not-discrimination.md
+    relationship: describes
+    status: exists
+    relevance: "Incident 7: the package template propagates one adopter's local address to every install."
+  - path: config/skills_config.default.json
+    relationship: describes
+    status: exists
+  - path: templates/agents/test-writer.md
+    relationship: describes
+    status: exists
+  - path: templates/agents/test-runner.md
+    relationship: describes
+    status: exists
+  - path: templates/workflows/test.md
+    relationship: describes
+    status: exists
+  - path: config/skills_config.schema.json
+    relationship: describes
+    status: exists
+  - path: docs/reference/skills-config-fields.md
+    relationship: describes
+    status: exists
+  - path: docs/testing/README.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-09-25
+amended_by: []
+superseded_by: null
+covered_by:
+  - INF-1100d-4-i
+implemented_by: []
+change_target: code
+risk_surface: safety
+notes: |
+  THE BEHAVIOURAL PROOF FOR THE WHOLE L1. INF-1100d-2 and -3 are mostly prompt
+  text; this check is what makes "nothing leafcutter installs carries a
+  ready-made database address" deterministic and permanent.
+
+  The third Then clause is the adversarial case: a check that scans the wrong
+  tree, or matches only the one literal, passes on the fixed sources and proves
+  nothing. It must be shown to fail on the pre-fix sources. The seven source
+  files: templates/agents/test-writer.md, templates/agents/test-runner.md,
+  templates/workflows/test.md, config/skills_config.default.json,
+  config/skills_config.schema.json, docs/reference/skills-config-fields.md,
+  docs/testing/README.md.
+
+  "Shipped" means what a build puts into an install, not the whole repository —
+  see INF-1100d-4-i for what is deliberately out of scope.

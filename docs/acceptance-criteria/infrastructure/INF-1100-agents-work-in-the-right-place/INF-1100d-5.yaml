@@ -1,0 +1,73 @@
+id: INF-1100d-5
+components:
+  - infrastructure
+  - testing_quality
+title: "Reference documentation says the test database setting has no default and what happens when it is missing"
+component: infrastructure
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a user looks up how their tests find the test database,
+  When they read the settings field reference and the testing guide,
+  Then the field reference's row for testing_context.db_connection_test shows
+      no default and says that when it is unset, database tests are reported
+      as not configured and are not run,
+    And the row gives an example that is plainly a placeholder
+      (postgresql://<user>:<password>@<host>:<port>/<database>), not an
+      address that could work on someone's machine,
+    And the testing guide's example database test takes its connection from
+      that setting rather than from a literal address,
+    And neither page names a host, port or database as the place leafcutter's
+      tests run,
+    And every other shipped documentation page that quotes
+      postgresql://trader:trader@localhost:5403/LIVE as history — including
+      the analysis page on test writers proving failure rather than
+      discrimination — quotes a placeholder instead, while still saying that
+      the template shipped one adopter's local address, with username and
+      password, to every install.
+depends_on:
+  - INF-1100d
+  - INF-1100d-3
+doc_links:
+  - path: docs/reference/skills-config-fields.md
+    relationship: describes
+    status: exists
+    relevance: "Row for testing_context.db_connection_test currently lists the adopter address as its default."
+  - path: docs/testing/README.md
+    relationship: describes
+    status: exists
+    relevance: "The example DB test connects to the adopter address."
+  - path: docs/analysis/2026-09-25-test-writers-prove-failure-not-discrimination.md
+    relationship: describes
+    status: exists
+    relevance: "Quotes the address (and localhost:5403) as incident evidence. Replace each quote with a placeholder (user decision Q5). This page is not in the authoring worktree yet; it exists in the main checkout."
+assigned_agent: documentation-expert
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: INF-1100d-3
+  contract: "The exact wording of the not-configured report, so the reference describes it accurately."
+origin_agent: business-analyst
+created: 2026-09-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: docs
+risk_surface: safety
+notes: |
+  DOCUMENTATION AC — answers INF-1100d's `reference-doc` trigger. Its
+  deliverable is the two pages only. FIREWALL: no behavioural AC in this L1 may
+  be closed by pointing at these pages. The absence of a real address on them is
+  also checked mechanically by INF-1100d-4, which must allow the placeholder
+  form used here (INF-1100d-4-i, S3).
+
+  USER DECISION AT THE BA GATE (Q5): history pages are redacted to a
+  placeholder, not excluded by path. The last Then clause keeps the history
+  itself — what shipped, and why it was dangerous — so the redaction does not
+  erase the evidence.

@@ -1,0 +1,69 @@
+id: TQ-500f-1-i
+components:
+  - testing_quality
+  - ac_store
+title: "All three lists of test kinds move together, or the lockstep check names the one that did not"
+component: testing-quality
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given three places that list the permitted test kinds —
+      R, the requirement-side list,
+      G, the generated-work-side list,
+      T, the test writer's taught set —
+    and four prepared variants of them:
+      V1: "discrimination" present in R, G and T,
+      V2: present in R and T, absent from G,
+      V3: present in R and G, absent from T,
+      V4: present in G and T, absent from R,
+  When the lockstep check runs against each variant,
+  Then V1 passes,
+    And V2, V3 and V4 each fail, and each failure names the list that lacks
+      "discrimination" and the lists that carry it,
+    And V2 in particular fails — today's check compares only R with T, so a
+      kind dropped from G alone goes unnoticed; after this work it does not,
+    And the check compares the full sets of kinds, so a kind present in G but
+      in neither R nor T (for example a stray "discriminating") also fails,
+      naming G.
+depends_on:
+  - TQ-500f-1
+doc_links:
+  - path: config/ac_store_schema.json
+    relationship: describes
+    status: exists
+  - path: config/test_requirements.schema.json
+    relationship: describes
+    status: exists
+  - path: templates/agents/test-writer.md
+    relationship: describes
+    status: exists
+  - path: docs/testing/test-angles.md
+    relationship: relates-to
+    status: exists
+    relevance: "Names the existing lockstep check (BP-1100g-1) that today holds only the requirement-side list and the taught set in step."
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: TQ-500f-1
+  contract: "The eighth permitted kind present in R, G and T."
+origin_agent: business-analyst
+created: 2026-09-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  USER DECISION Q2: the lockstep test must cover BOTH enums (it checks only one
+  today). V2 is the case that proves the widening; V1 alone is green on arrival
+  and proves nothing (per the TQ-500 rule: an AC whose passes are all controls
+  needs an adversarial case in the same Given). The deliberate alteration for
+  the implementer to record: remove "discrimination" from G only and show the
+  check objects.

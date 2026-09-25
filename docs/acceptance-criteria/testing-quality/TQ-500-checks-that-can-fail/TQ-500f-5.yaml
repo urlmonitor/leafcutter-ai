@@ -1,0 +1,85 @@
+id: TQ-500f-5
+components:
+  - testing_quality
+  - ac_store
+title: "Reference guidance names the discrimination-shaped failure family, its catalogue, the new test kind and the wrong-versions field"
+component: testing-quality
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a reader opens the test-angle taxonomy to learn why a green test that
+    reaches the real code can still be useless,
+  When they read the taxonomy and its failure catalogue,
+  Then they find a discrimination-shaped failure family beside the existing
+      wiring-shaped one, with one catalogue entry for each of the adopter's
+      incidents 1, 2, 3, 4 and 8, each giving the mechanism, the cost, and
+      which of the three questions or checklist items would have caught it,
+    And they find "discrimination" in the taxonomy table as a conditional
+      angle, with when it fires (the work fixes a bug, or adds or changes a
+      condition of a gate or guard, or a test entry carries must_catch), the
+      question it answers (would this test go red under a named plausible
+      wrong version, not only when the code is absent), and the rule that it
+      never takes one of the four slots by default and may share a test with
+      criterion,
+    And every count of angles on the page reads eight, so no sentence
+      contradicts the lists of permitted kinds,
+    And the page states that incidents 5, 6 and 7 belong elsewhere — 5 to
+      skip hygiene, 6 to process, 7 to where the test database address comes
+      from — rather than leaving them out without a word,
+    And the catalogue says the incidents come from one adopter's written
+      record and were not re-verified against its history,
+    And the requirement-schema reference lists "discrimination" among the
+      permitted test kinds and describes must_catch: optional, a non-empty
+      list of non-empty strings, copied word for word onto the generated
+      work's test requirements, and expected on bug-fix and gate requirements.
+depends_on:
+  - TQ-500f
+  - TQ-500f-1
+  - TQ-500f-2
+doc_links:
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+    relevance: "The reference page to extend. Its taxonomy table, 'seven angles' wording, failure catalogue and 'What this taxonomy does NOT fix' section all change."
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+    relevance: "test_spec item fields table — the angle row and a new must_catch row."
+  - path: docs/analysis/2026-09-25-test-writers-prove-failure-not-discrimination.md
+    relationship: describes
+    status: exists
+    relevance: "The incident table (1-8), the three questions, remedy item 1, and 'What this analysis does not show'."
+assigned_agent: documentation-expert
+estimated_complexity: M
+delivers_to: null
+expects_from:
+  - ac_id: TQ-500f-1
+    contract: "The final spelling and meaning of the eighth kind."
+  - ac_id: TQ-500f-2
+    contract: "The final validation rules for must_catch."
+origin_agent: business-analyst
+created: 2026-09-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: docs
+risk_surface: internal
+notes: |
+  DOCUMENTATION AC — answers TQ-500f's `reference-doc` trigger (request item 1,
+  text half). Its deliverable is the documents only. FIREWALL: no behavioural AC
+  in this tree may be closed by pointing at this page — that would make the doc
+  the prose-presence proxy the anti-grep rule forbids.
+
+  HOW-TO TRIGGER: answered by TQ-500f-6 (user answer at the BA gate:
+  child_limit_override: 6 on TQ-500f).
+
+  CAP OF FOUR (user decision Q2, confirmed at the BA gate). "discrimination" is
+  a conditional angle that fires on a trigger: the requirement is a bug fix or a
+  gate, or a test entry carries must_catch. It never takes one of the four slots
+  by default, and it may share a test with criterion.

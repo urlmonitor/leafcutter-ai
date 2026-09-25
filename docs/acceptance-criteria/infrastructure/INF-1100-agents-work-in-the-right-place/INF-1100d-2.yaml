@@ -1,0 +1,71 @@
+id: INF-1100d-2
+components:
+  - infrastructure
+  - testing_quality
+title: "Agents that write or run database tests use the connection your settings name, and no other"
+component: infrastructure
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a project whose settings set db_connection_test to
+    postgresql://app:app@db.internal:5432/app_test,
+  When the test writer writes a database test,
+    And the test runner checks that the test database is reachable before
+      running database tests,
+    And the test workflow describes how to run the database suites,
+  Then the database test takes its connection from that setting,
+    And the test runner's reachability check uses that setting,
+    And the workflow's description refers to the configured test database,
+    And none of the three names a host, port or database of its own — for
+      example "requires the database on port 5403" is not presented as a fact
+      about the user's project.
+depends_on:
+  - INF-1100d
+doc_links:
+  - path: templates/agents/test-writer.md
+    relationship: describes
+    status: exists
+    relevance: "Step 2b DB test pattern hard-codes the adopter's address in setUp."
+  - path: templates/agents/test-runner.md
+    relationship: describes
+    status: exists
+    relevance: "Pre-run database reachability check connects to the hard-coded address; two prose lines name port 5403."
+  - path: templates/workflows/test.md
+    relationship: describes
+    status: exists
+    relevance: "Suite table says 'Requires running DB on port 5403'."
+  - path: docs/reference/skills-config-fields.md
+    relationship: relates-to
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: INF-1100d-1
+  contract: "The project's own db_connection_test value, or its absence, is what resolved settings carry."
+origin_agent: business-analyst
+created: 2026-09-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: prompt
+risk_surface: safety
+notes: |
+  MOSTLY PROMPT. Two of the three surfaces are agent instructions and one is a
+  workflow description. Whether the setting is read when the test runs or
+  compiled into the instructions at install (the INF-1100c route) is IT-PO's
+  call. If it is compiled, the compiled output for a configured project is
+  observable and testable. If it is read at run time, the only
+  deterministic proof is the absence half, which INF-1100d-4 guards
+  mechanically. Say which in test_rationale; do not write a text search for the
+  setting's name.
+
+  The PO's list of seven places counts full address strings. The port-only
+  mentions in test-runner prose and the test workflow are the same address in
+  fragments and fall under this AC's last clause.

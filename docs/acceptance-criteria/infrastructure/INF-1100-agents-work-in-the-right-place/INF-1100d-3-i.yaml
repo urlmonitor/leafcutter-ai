@@ -1,0 +1,56 @@
+id: INF-1100d-3-i
+components:
+  - infrastructure
+  - testing_quality
+title: "\"Not configured\" and \"configured but unreachable\" are different reports, and neither shows a password"
+component: infrastructure
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given three projects about to run database tests —
+      P1: db_connection_test not set,
+      P2: db_connection_test set to "" (or only spaces),
+      P3: db_connection_test set to
+          postgresql://app:s3cret@db.internal:5432/app_test, with that
+          database stopped,
+  When the test runner checks the test database before running,
+  Then P1 and P2 are both reported as not configured, naming the setting —
+      an empty value counts as missing, not as an address,
+    And P3 is reported as configured but unreachable, naming the host
+      db.internal, the port 5432 and the database app_test,
+    And no report shows the password s3cret or any other credential from the
+      address.
+depends_on:
+  - INF-1100d-3
+doc_links:
+  - path: templates/agents/test-runner.md
+    relationship: describes
+    status: exists
+    relevance: "The pre-run reachability check and its 'requires the local database container' wording."
+assigned_agent: llm-expert
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: INF-1100d-3
+  contract: "Missing configuration is reported by name."
+origin_agent: business-analyst
+created: 2026-09-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: prompt
+risk_surface: safety
+notes: |
+  EDGE CASES: an empty string that slips past "is it set?" and becomes a
+  connection attempt to a driver default; and a report that echoes the full
+  connection string into a hand-off that is committed to the repo. Both are
+  safety concerns on a surface already marked safety.
+
+  If IT-PO moves the reachability check into a script, this becomes a
+  deterministic python-coder AC; as instruction text it is prompt-only.

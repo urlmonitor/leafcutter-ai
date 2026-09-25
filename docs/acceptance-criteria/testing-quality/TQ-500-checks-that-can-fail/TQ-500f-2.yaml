@@ -1,0 +1,96 @@
+id: TQ-500f-2
+components:
+  - testing_quality
+  - ac_store
+  - build_orchestration
+title: "A requirement names the wrong versions its test must catch, and the test writer receives them word for word"
+component: testing-quality
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a requirement whose test plan has two entries —
+      entry 1: name: test_retry_gate_runs_when_both_conditions_due
+               must_catch:
+                 - "revert the fix"
+                 - "drop the second gate condition (retry_due)"
+                 - "new column cvd_delta_30 left NULL"
+      entry 2: name: test_retry_gate_idle_when_nothing_due
+               (no must_catch)
+  When the requirement store's validator checks the requirement,
+    And work is generated from it,
+  Then the validator accepts the requirement,
+    And the generated work's test requirements entry for
+      test_retry_gate_runs_when_both_conditions_due carries must_catch with
+      exactly those three strings, in that order, character for character —
+      not reworded, not merged, not reordered, not trimmed,
+    And the generated work's test requirements entry for
+      test_retry_gate_idle_when_nothing_due carries no must_catch at all —
+      nothing is invented for an entry whose requirement named none,
+    And the generated test requirements, including the must_catch list,
+      conform to the schema that governs generated test requirements,
+    And the test writer, reading the generated work, sees the three named
+      wrong versions against the test they belong to.
+depends_on:
+  - TQ-500f
+doc_links:
+  - path: config/ac_store_schema.json
+    relationship: describes
+    status: exists
+    relevance: "test_spec[] item properties (additionalProperties: false) — gains the optional must_catch list."
+  - path: config/test_requirements.schema.json
+    relationship: describes
+    status: exists
+    relevance: "tests[] descriptor (additionalProperties: false) — must be widened to accept must_catch (user decision Q4), or the carried list makes generated work violate its own schema."
+  - path: docs/reference/ac-schema.md
+    relationship: relates-to
+    status: exists
+    relevance: "test_spec item field table and the copy-through coupling note on framework/type — the same coupling now applies to must_catch."
+  - path: templates/agents/test-writer.md
+    relationship: relates-to
+    status: exists
+    relevance: "The reader of the generated test requirements; the Bug-Fix Test Mandate is where named wrong versions become checkable."
+  - path: docs/analysis/2026-09-25-test-writers-prove-failure-not-discrimination.md
+    relationship: describes
+    status: exists
+    relevance: "Remedy item 2; the example strings come from incident 1 (PR #612) and incident 2 (cvd_delta_30)."
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to:
+  - agent: llm-expert
+    ac_id: TQ-500f-4
+    contract: "Each generated test requirements entry may carry must_catch: a non-empty ordered list of non-empty strings, copied verbatim from the requirement. The test writer treats each string as a wrong version its test must go red under."
+expects_from:
+  ac_id: TQ-500f-1
+  contract: "The 'discrimination' kind is permitted on both sides, so an entry carrying must_catch can also declare angle: discrimination."
+origin_agent: business-analyst
+created: 2026-09-25
+amended_by: []
+superseded_by: null
+covered_by:
+  - TQ-500f-2-i
+  - TQ-500f-2-ii
+implemented_by: []
+change_target:
+  - schema
+  - code
+risk_surface: contract_boundary
+notes: |
+  USER DECISION Q4 (binding): must_catch is copied VERBATIM onto the generated
+  work's test requirements, and the generated-work schema is widened. Both
+  schemas reject unknown keys today, so this is a coupled change on both sides —
+  the same copy-through coupling ac-schema.md already documents for framework
+  and type.
+
+  WHY ORDER AND EXACT TEXT ARE IN THE THEN CLAUSE. The value of the list is that
+  the test writer sees exactly what the requirement author named. A generator
+  that "normalises" wording (lower-cases, trims, dedupes, joins) silently turns
+  a named wrong version into a different one; the verbatim clause is what makes
+  that failure visible.
+
+  NOT IN SCOPE HERE: running the named wrong versions against the finished code
+  (TQ-500g), and who fills the list (TQ-500f-2-ii).

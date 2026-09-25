@@ -1,0 +1,63 @@
+id: INF-1100d-1
+components:
+  - infrastructure
+  - testing_quality
+title: "A fresh install carries no test database address"
+component: infrastructure
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given leafcutter is installed into a new project whose own settings do not
+    mention a test database,
+  When the project's resolved settings are read for the test database
+    connection (testing_context.db_connection_test),
+  Then no value is returned — the connection is unset, not an address,
+    And neither the shipped settings defaults nor the settings schema offer a
+      default value for it,
+    And the settings schema still accepts a project that sets it to its own
+      address, for example postgresql://app:app@db.internal:5432/app_test.
+depends_on:
+  - INF-1100d
+doc_links:
+  - path: config/skills_config.default.json
+    relationship: describes
+    status: exists
+    relevance: "Ships testing_context.db_connection_test = postgresql://trader:trader@localhost:5403/LIVE today."
+  - path: config/skills_config.schema.json
+    relationship: describes
+    status: exists
+    relevance: "Declares the same address as the schema default for db_connection_test."
+  - path: docs/analysis/2026-09-25-test-writers-prove-failure-not-discrimination.md
+    relationship: describes
+    status: exists
+    relevance: "Incident 7 and remedy item 8."
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to:
+  - agent: llm-expert
+    ac_id: INF-1100d-3
+    contract: "An unset test database connection is represented as absent (no key, or no value) in resolved settings — never as a placeholder address the agents could mistake for a real one."
+expects_from: null
+origin_agent: business-analyst
+created: 2026-09-25
+amended_by: []
+superseded_by: null
+covered_by:
+  - INF-1100d-1-i
+implemented_by: []
+change_target: config
+risk_surface: safety
+notes: |
+  USER DECISION Q3 (binding): no default address anywhere. DELIBERATE CONTRAST
+  WITH INF-1100a-1-i, which falls back to a documented default test folder:
+  there is no safe default for a database address, so there is no fallback
+  here. Do not copy that pattern.
+
+  The last Then clause is the control: a schema change that simply forbids the
+  field would satisfy the first two clauses and break every project that
+  configures its own test database.

@@ -1,0 +1,92 @@
+id: TQ-500f-3-i
+components:
+  - testing_quality
+  - build_orchestration
+title: "The red-baseline check refuses absence-only red for a test that names wrong versions to catch"
+component: testing-quality
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given one piece of work with three newly added tests, each tagged as covering
+    the same requirement,
+      T1: its test requirements entry carries must_catch: ["revert the fix"];
+          before the work, it fails with
+          "ImportError: cannot import name 'refresh_config_v2'",
+      T2: its entry carries must_catch: ["revert the fix"]; before the work,
+          it fails with "AssertionError: expected 1 refresh call, got 3",
+      T3: its entry carries no must_catch and no angle: discrimination; before
+          the work, it fails with
+          "ImportError: cannot import name 'summarise_window'",
+  When the existing red-baseline check runs for that work — the same check in
+    the fast lane and in /build-feature,
+  Then T1 is refused as red evidence, and the check's report names T1, states
+      that its only red was an absence red, and states that a test naming
+      wrong versions to catch must fail by reaching the code,
+    And T2 is accepted as red evidence,
+    And T3 is accepted as red evidence — absence red stays valid for a test
+      that declares no wrong version to catch,
+    And an entry declaring angle: discrimination with no must_catch is treated
+      as T1 is when its only red is an absence red,
+    And the decision uses only what the test requirements declare and the
+      outcome of the run — never the wording of the requirement,
+    And the refusal comes from the one existing red-baseline reader; no
+      second reader is built for this rule, so a given set of tests and run
+      outcomes gets the same verdict in either lane.
+depends_on:
+  - TQ-500f-3
+doc_links:
+  - path: docs/how-to/fast-lane-build.md
+    relationship: describes
+    status: exists
+    relevance: "Step 3 — verify_red_baseline, the existing deterministic red-baseline gate (classifies newly added covering tests as red or not)."
+  - path: scripts/build_orchestration/fast_lane.py
+    relationship: implemented-by
+    status: exists
+    relevance: "verify_red_baseline subcommand — the one reader this rule extends."
+  - path: scripts/build_orchestration/_fl_red_baseline_support.py
+    relationship: implemented-by
+    status: exists
+    relevance: "Red-baseline support module behind verify_red_baseline."
+  - path: templates/agents/test-writer.md
+    relationship: relates-to
+    status: exists
+  - path: config/test_requirements.schema.json
+    relationship: relates-to
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from:
+  - ac_id: TQ-500f-3
+    contract: "The kind of red (absence or assertion) is distinguishable per test."
+  - ac_id: TQ-500f-2
+    contract: "must_catch present on the test's requirement entry is the declared signal that the test guards against a named wrong version."
+origin_agent: business-analyst
+created: 2026-09-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  THE FALSIFIABLE HALF OF TQ-500f-3 (the TQ-500 pattern: the writer-must-state
+  AC is prompt; its L3 is the reader that refuses a bad statement).
+
+  DECLARED, NOT INFERRED. "Guards existing code" is not guessed from the
+  requirement text (TQ-500's non-goal). The declared signal is must_catch or
+  angle: discrimination on the test's own requirement entry. T3 is the control:
+  a check that refuses every import-error red passes T1 and breaks all ordinary
+  new-code work.
+
+  BOTH LANES, ONE READER (user direction at the BA gate). The rule is added to
+  the existing verify_red_baseline reader
+  (scripts/build_orchestration/fast_lane.py with
+  scripts/build_orchestration/_fl_red_baseline_support.py). No second reader.
+  This AC owns the RULE inside that reader. Making /build-feature actually run
+  that reader is a distinct behaviour, owned by TQ-500f-3-ii.

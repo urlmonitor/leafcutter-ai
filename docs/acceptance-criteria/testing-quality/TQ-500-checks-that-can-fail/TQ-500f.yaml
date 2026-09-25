@@ -44,7 +44,14 @@ created: 2026-09-25
 amended_by:
   - reason: "Authored by product-owner from BrainCandy's /plan-feature request 'Tests must prove they can tell right from wrong' (Phase A: request items 1, 2, 4, 5)."
 superseded_by: null
-covered_by: []
+covered_by:
+  - TQ-500f-1
+  - TQ-500f-2
+  - TQ-500f-3
+  - TQ-500f-4
+  - TQ-500f-5
+  - TQ-500f-6
+child_limit_override: 6
 implemented_by: []
 change_target:
   - docs

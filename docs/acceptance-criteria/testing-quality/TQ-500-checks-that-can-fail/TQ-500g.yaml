@@ -101,3 +101,12 @@ notes: |
   speculative child would force a cap override. When Phase B runs produce that
   evidence, promote it via /plan-feature: either as an extension of this L1 or
   as a new L1 (which will require splitting TQ-500 or an explicit override).
+
+  BOTH LANES, SHARED SCRIPTS (user direction at the Phase A BA gate,
+  2026-09-25). The wrong-version guard this L1 describes must run in BOTH
+  /build-feature and the fast lane, through the same shared scripts — never a
+  lane-specific reimplementation. In the fast lane it is an ADDITIONAL guard
+  alongside verify_red_baseline and verify_green_and_coverage, not a
+  replacement for either. Precedent set in Phase A: TQ-500f-3-i / TQ-500f-3-ii
+  make both lanes use the one existing red-baseline reader. Decompose with this
+  constraint when Phase B is planned.

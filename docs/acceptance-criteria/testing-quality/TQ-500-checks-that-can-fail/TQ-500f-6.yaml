@@ -1,0 +1,70 @@
+id: TQ-500f-6
+components:
+  - testing_quality
+  - ac_store
+title: "A how-to: write a test that catches the plausible wrong version"
+component: testing-quality
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a developer or requirement author who has to guard a bug fix or a
+    change to a gate — for example the refresh gate that changed from
+    "if refresh_due" to "if refresh_due and retry_due" —
+  When they follow the how-to from start to finish,
+  Then it takes them through naming the wrong versions first (at least "revert
+      the fix" and one "drop condition X" per condition of the gate) and
+      recording them as must_catch on the requirement's test entry,
+    And through answering the three questions for the test, with the worked
+      answers for the refresh-gate example, including the fixture that set
+      refresh_due but never retry_due, so the branch ran 0 times,
+    And through the vacuity checklist item by item, showing the weak version
+      and the strengthened version of the test side by side for each item,
+    And it shows that a red caused only by a missing import counts as proof
+      that the code is absent, not as proof that the test guards existing code,
+      and what an assertion-shaped red looks like instead,
+    And it ends by pointing the reader to the reference taxonomy (TQ-500f-5)
+      for the full catalogue, instead of repeating the catalogue.
+depends_on:
+  - TQ-500f
+  - TQ-500f-2
+  - TQ-500f-3
+  - TQ-500f-4
+doc_links:
+  - path: docs/testing/test-angles.md
+    relationship: relates-to
+    status: exists
+    relevance: "The reference the how-to points to; it must not duplicate the catalogue."
+  - path: docs/analysis/2026-09-25-test-writers-prove-failure-not-discrimination.md
+    relationship: describes
+    status: exists
+    relevance: "Incident 1 is the worked example; 'The three questions no template asks'."
+  - path: docs/acceptance-criteria/testing-quality/TQ-500-checks-that-can-fail/TQ-500d-2.yaml
+    relationship: relates-to
+    status: exists
+    relevance: "The sibling how-to (substitute evidence for work that passes on arrival). The two how-tos cross-link and do not overlap."
+assigned_agent: documentation-expert
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  - ac_id: TQ-500f-2
+    contract: "Final rules for must_catch."
+  - ac_id: TQ-500f-4
+    contract: "Final wording of the three questions and the vacuity checklist as the writers carry them."
+origin_agent: business-analyst
+created: 2026-09-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: docs
+risk_surface: internal
+notes: |
+  DOCUMENTATION AC — answers TQ-500f's `how-to` trigger. Added after the BA gate
+  (user answer to Q1: child_limit_override: 6 on TQ-500f). Its deliverable is the
+  how-to only. FIREWALL: no behavioural AC in this tree may be closed by
+  pointing at it.

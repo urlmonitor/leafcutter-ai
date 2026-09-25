@@ -1,0 +1,90 @@
+id: TQ-500f-3-ii
+components:
+  - testing_quality
+  - build_orchestration
+title: "The /build-feature path runs the same red-baseline reader the fast lane uses, and does not take the test writer's word for it"
+component: testing-quality
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given two tickets driven through /build-feature, each with a newly added
+    test covering the same requirement, whose test requirements entry
+    carries must_catch: ["revert the fix"],
+      K1: the test writer's sign-off reports its red baseline as red, and the
+          test's only failure is
+          "ImportError: cannot import name 'refresh_config_v2'",
+      K2: the test writer's sign-off reports red, and the test fails with
+          "AssertionError: expected 1 refresh call, got 3",
+  When the ticket reaches the step between the test writer and the coder,
+  Then the /build-feature path runs the same red-baseline reader the fast
+      lane runs, over the same inputs (the requirement ids and the test
+      root), before the coder is dispatched,
+    And K1 does not reach the coder: the drive stops that ticket with the
+      reader's report naming the test and the absence-only red, even though
+      the test writer's own sign-off said red,
+    And K2 reaches the coder as it does today,
+    And for the same tests and run outcomes, the /build-feature verdict and the
+      fast-lane verdict are identical.
+depends_on:
+  - TQ-500f-3
+  - TQ-500f-3-i
+doc_links:
+  - path: docs/how-to/fast-lane-build.md
+    relationship: describes
+    status: exists
+    relevance: "Step 3 — verify_red_baseline: its inputs, its pass condition and its halt reasons, which the heavy lane must reuse unchanged."
+  - path: scripts/build_orchestration/fast_lane.py
+    relationship: describes
+    status: exists
+    relevance: "The verify_red_baseline subcommand the heavy lane must invoke, rather than a copy of it."
+  - path: scripts/build_orchestration/_fl_red_baseline_support.py
+    relationship: describes
+    status: exists
+  - path: templates/agents/test-writer.md
+    relationship: relates-to
+    status: exists
+    relevance: "Today's heavy-lane evidence: the red_baseline block in the test writer's own sign-off comment."
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from:
+  ac_id: TQ-500f-3-i
+  contract: "The one red-baseline reader, carrying the absence-only rule, callable with requirement ids and a test root."
+origin_agent: business-analyst
+created: 2026-09-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - pipeline
+  - code
+risk_surface: contract_boundary
+notes: |
+  USER DIRECTION AT THE BA GATE (Q3): the fast lane and /build-feature must use
+  the SAME existing scripts rather than reinvent them.
+
+  WHAT HAPPENS IN THE HEAVY LANE TODAY (per the user's gate answer; the BA did
+  not read the source to confirm): /build-feature has no mechanical red-baseline
+  reader. The only evidence is the test writer's own statement, the red_baseline
+  block in its sign-off comment. The record shows only that such a block exists
+  (red_baseline_captured). Nothing re-runs the tests or classifies the red
+  before the coder is dispatched. K1 is the case that statement cannot catch.
+
+  WHY THIS IS SEPARATE FROM TQ-500f-3-i. That AC owns the rule inside the
+  reader. This one owns wiring the reader into the heavy lane's phase sequence
+  (ticket-supervisor / the build workflow). Either can ship and fail on its own.
+
+  FOR IT-PO: the wiring surface is the /build-feature workflow and
+  ticket-supervisor path, not the test-writer prompt. Place the call so a
+  failure halts before the coder, matching the fast lane. Do not put it after
+  commit: test-angles.md records gates that run after commit as a known process
+  failure. Covering tests must drive the workflow under the workflow-engine
+  harness and assert on the recorded dispatches. A grep of the workflow source
+  for the script name is not acceptable (CLAUDE.md "Verify Behaviorally, Not by
+  Grep").
