@@ -1,0 +1,101 @@
+id: KM-KGS-100b-2-i
+components:
+  - knowledge_management
+readiness: approved
+priority: high
+title: "The knowledge-map page draws even when a relationship's far end is not on the page"
+component: knowledge-management
+level: L3
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+parent: KM-KGS-100b-2
+created_by: "docs/acceptance-criteria/knowledge-management/KM-KGS-100-knowledge-graph-surfaces/KM-KGS-100b-2.yaml"
+criteria: |
+  Given map data in which criterion KM-EX-060 has one edge to a node on the map and
+    one edge whose far end is an id that no node on the map carries,
+  When the visualisation page is generated three times: with no surface restriction,
+    restricted to the acs surface alone, and restricted to acs and tickets,
+  Then each page draws every node it was given and every relationship whose two ends
+    are both drawn,
+  And the relationship with the missing end is left out instead of stopping the page
+    from drawing,
+  And hovering KM-EX-060 highlights its drawn neighbours and the browser console shows
+    no script error,
+  And the generator states how many relationships it left out and out of how many,
+    zero included.
+depends_on:
+  - KM-KGS-100b-2
+doc_links:
+  - path: scripts/visualise_knowledge_graph.py
+    relationship: modifies
+    status: exists
+    relevance: "_assemble_graph() filters edges to kept node ids only in the multi-surface branch. With no restriction or a single-surface one, every edge goes to the page unfiltered. The page passes them to d3.forceLink(...).id(d => d.id), which throws 'node not found' on an unknown endpoint, and the hover adjacency build (adjacency[t].add(s), around line 197) throws on the same edges."
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "EVIDENCE (measured 2026-09-25): the unrestricted map carries 2,286 edges whose target is no node (1,608 implemented_by, 678 covered_by). They all reach the page in the default mode, so the full-map page cannot render. KM-KGS-100b-2 is marked done but its default path is broken; see the recommended work_status correction in the authoring report."
+  - "THIS RECORD DOES NOT DEPEND ON KM-KGS-100d-4. Today the dangling edges are the exempt file-path edges, in the no-restriction and single-surface branches alike. KM-KGS-100d-4 (with -iv) removes that source, but the guard is the page's own contract: any future edge whose end is not drawn (a new edge kind, a dedup change, a builder regression) must be left out, not crash the page. The guard is needed in every mode, permanently, and can ship first. (Corrected 2026-09-25, IT-PO second pass: the first pass cited edges to component hubs under --surface acs as dangling, but _collect_all creates hub nodes under a restriction too.)"
+  - "THE CONTRACT IS ON THE DATA HANDED TO THE PAGE: after surface restriction AND after the id dedup, the edge list must contain only edges whose source and target are both ids in the final node list. Filter against the post-dedup node set, not the pre-dedup one. Apply it uniformly in all three branches (no restriction, one surface, several surfaces). Do not special-case edge types."
+  - "The left-out count and its denominator are printed by the generator (stderr) on every run, zero included. Silent omission would make the page look complete when it is not (ACS-1100, inherited)."
+  - "At least one proof must generate the real HTML file and load it in a headless browser (webapp-testing / Playwright) with no surface restriction, asserting no page error. A unit test of _assemble_graph alone would pass on a page that still crashes in d3."
+  - "OUT OF SCOPE, NOTED: the page's dedup by node id with surface priority collapses the 4,380 ids that more than one node carries (see KM-KGS-100d-4, out-of-scope collisions). This record does not change the dedup."
+test_spec:
+  - name: test_page_edges_have_both_ends_drawn_in_every_branch
+    target_dir: unit_tests/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "FIXTURE (the dangling-edge fixture): a temp project whose config/paths.json is a byte copy of the real one, with AC files KM-EX-060 (depends_on [KM-EX-059], components [build-pipeline]) and KM-EX-059, and ticket tickets/T-6.md. The real knowledge_query._collect_all is WRAPPED, not replaced: its real output is returned plus one appended EdgeRecord from KM-EX-060 to 'KM-EX-GHOST', an id no node carries (the criterion's 'map data in which ...'). Parametrised over the three branches: no --surface, --surface acs, --surface acs tickets. For each, the visualiser's main(['--no-open', '--output', <tmp html>, '--project-root', <fixture>, ...]) writes the page, the embedded 'const DATA = {...};' JSON is extracted, and every edge's source and target is the id of a node in DATA.nodes (the post-dedup set); the edge KM-EX-060 -> KM-EX-059 is present; the ghost edge is absent; and every node the assembler received after surface restriction and dedup is in DATA.nodes"
+  - name: test_page_script_link_and_adjacency_builds_cannot_hit_unknown_id
+    target_dir: unit_tests/
+    framework: pytest
+    type: integration
+    angle: seam
+    description: "Browser-free replay of the page's two crash sites, for all three branches of the dangling-edge fixture. First, a static anchor on the generated HTML: the script still keys adjacency from DATA.nodes (the 'DATA.nodes.forEach(n => { adjacency[n.id] = ...' form), still calls adjacency[s].add(t) and adjacency[t].add(s) for every DATA.edges entry, and still resolves forceLink by '.id(d => d.id)'. So the replay models the shipped script, and the test fails if the script changes shape. Then the replay: adjacency is built as a Python dict keyed only by DATA.nodes ids, each edge does adjacency[source].add(target) and adjacency[target].add(source) with plain indexing (a KeyError fails the test naming the edge), and a forceLink id map from DATA.nodes resolves every edge endpoint. Finally, KM-EX-060's adjacency set is exactly itself plus its drawn neighbours"
+  - name: test_left_out_count_and_denominator_on_stderr_zero_included
+    target_dir: unit_tests/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "The visualiser's main is called in-process with stderr captured (capsys), over the dangling-edge fixture with the ghost edge (the same _collect_all wrapper, installed with monkeypatch on the module _load_kq_module returns) and, separately, over the same fixture without the ghost edge, for each of the three branches. stderr states how many relationships were left out and out of how many. In the no-ghost, no-restriction run the left-out figure is an explicit 0. The left-out figure always equals (edges handed to the assembler) minus (len(DATA.edges)), so the stated denominator reconciles with the page"
+  - name: test_real_repository_pages_draw_with_no_dangling_edge_in_every_branch
+    target_dir: unit_tests/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    description: "The shipped visualiser, run as a subprocess (--no-open --output <tmp html>, UTF-8 env vars set), generates three pages for the real repository (--project-root <repo root>, no restriction, --surface acs, --surface acs tickets, about 5 s each). For each page the extracted DATA has more than 0 nodes, every edge endpoint is a DATA.nodes id, the adjacency and forceLink replay from test_page_script_link_and_adjacency_builds_cannot_hit_unknown_id passes, and stderr states a left-out figure with its denominator. RED today: the unrestricted page carries 2,286 dangling edges (1,608 implemented_by, 678 covered_by, measured 2026-09-25). Does NOT depend on KM-KGS-100d-4: it asserts the guard, not the source of dangling edges, so it stays valid after file nodes land. A missing repo root FAILS; it is never skipped"
+test_required: true
+test_rationale: >-
+  The contract is on the data handed to the page, so every test generates the real HTML through the
+  visualiser's main, extracts the embedded DATA, and asserts that both ends of every edge are
+  drawn in all three branches (none, one surface, two surfaces). The dangling edge comes from
+  wrapping the real _collect_all output, which is exactly the criterion's 'map data in which ...',
+  so the branch filtering and dedup are what is under test. The real-repository arm proves the
+  guard on unaltered data. BROWSER GAP, recorded honestly: the repository has no headless browser.
+  Playwright, Selenium and pyppeteer are not in requirements-dev.txt and are not importable locally.
+  The CI 'Test suite (pytest)' job installs only requirements-dev.txt. leafcutter-web has
+  vitest+jsdom, but only in a separate npm job. The page loads D3 from a CDN, so even a browser
+  test would need network. The criterion's 'hovering highlights neighbours and the console shows
+  no script error' clause and the it_requirement asking for a headless-browser load are therefore
+  NOT proven by a browser. The strongest browser-free substitute is used instead: a static anchor
+  proving the shipped script still builds adjacency and forceLink the modelled way, and a Python
+  replay of both crash sites (d3.forceLink id lookup and adjacency[t].add(s)) that fails on any
+  unknown id, for all three branches. A real-browser arm should be a follow-up AC that adds a
+  Playwright CI job with D3 vendored or served offline. The left-out figure reconciles with
+  len(DATA.edges) and states 0 explicitly (ACS-1100). RED today and independent of KM-KGS-100d-4.
+  File: unit_tests/test_km_kgs_100b_2_i.py (under 400 content lines), reusing the shared
+  temp-project helper. No git ref, no skip.
+delivers_to: null
+expects_from:
+  ac_id: KM-KGS-100b-2
+  contract: "The visualisation generator delegating node and edge assembly to knowledge_query._collect_all"
+origin_agent: business-analyst
+created: 2026-09-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: internal

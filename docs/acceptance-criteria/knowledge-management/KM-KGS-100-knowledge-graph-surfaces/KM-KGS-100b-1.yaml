@@ -45,12 +45,18 @@ test_spec:
     type: integration
     angle: criterion
     description: "Every edge in the machine-readable (JSON) export carries source id, target id and edge_type as separate fields, so outbound edges can be collected and grouped without parsing display text"
-  - name: test_ac_node_outbound_edge_kinds_within_four_declared_kinds
+  - name: test_ac_node_outbound_edge_kinds_equal_four_declared_kinds
     target_dir: unit_tests/
     framework: pytest
     type: integration
     angle: criterion
-    description: "For KM-EX-010 with all four relationship fields populated, the set of edge_type values across its outbound edges in the export is a subset of implemented_by, covered_by, depends_on and component_membership; no other kind appears"
+    description: "For KM-EX-010 with all four relationship fields populated, in a temp project whose config/paths.json is a byte copy of the real one, the set of edge type values across its outbound edges in the JSON export (shipped CLI, --format json --project-root <fixture>) EQUALS {implemented_by, covered_by, depends_on, component_membership}: each of the four appears and no other kind appears"
+  - name: test_ac_node_implemented_by_and_covered_by_edges_present_with_node_targets
+    target_dir: unit_tests/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "In the same JSON export, KM-EX-010 has an implemented_by edge whose target is 'scripts/foo.py' and a covered_by edge whose target is 'unit_tests/test_foo.py'. Each target is the id of a node in payload['nodes'] with surface 'files', so the reader follows the edge to a real node naming the source file and the test"
   - name: test_ac_node_depends_on_and_component_membership_grouped_by_kind
     target_dir: unit_tests/
     framework: pytest
@@ -63,14 +69,26 @@ test_spec:
     type: integration
     angle: reachability
     description: "Selecting node KM-EX-010 by id through the existing knowledge-query interface returns edges whose source is KM-EX-010 only, with no new bespoke command"
+  - name: test_real_repository_ac_outbound_kinds_are_the_four_and_file_targets_are_nodes
+    target_dir: unit_tests/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    description: "The shipped CLI's JSON export of the real repository (--format json --project-root <repo root>, module-scoped). The outbound edge types of every acs-surface node are a subset of the four kinds, and their union across all acs nodes equals all four. Every implemented_by and covered_by edge from an acs node has a target that is a node id in the export. The implemented_by edge count is greater than 0 and is stated in the failure message. A missing repo root FAILS; it is never skipped"
 test_required: true
 test_rationale: >-
-  The contract checks the export shape, that outbound kinds stay within the four declared kinds
-  (the 'no extra kind' clause), grouping for the two node-to-node kinds, and single-node selection
-  through the existing interface. It does not assert that implemented_by or covered_by edges are
-  present in the export or that their targets name nodes: whether those edges survive
-  edge-target validation depends on the deferred raw-path vs resolved-node decision. Once that is
-  decided, the subset assertion can be tightened to exact equality of the four kinds.
+  The contract checks the export shape, that an AC's outbound kinds are exactly the four declared
+  kinds (all four present, no extra kind, now exact equality instead of a subset), grouping for
+  the two node-to-node kinds, and single-node selection through the existing interface. The
+  raw-path vs resolved-node decision is settled (user-approved 2026-09-25, KM-KGS-100d-4):
+  implemented_by and covered_by edges end on path-keyed files-surface nodes. So the contract now
+  asserts that those edges are present in the export and that their targets are nodes, which is
+  what lets a reader answer 'which code file delivers this criterion' by following edges. A
+  real-repository arm checks the same properties over every AC in the store. The node-target test
+  and the real-repository arm describe the target state and are RED until the KM-KGS-100d-4 epic
+  is built (today 1,608 of 1,609 implemented_by targets are not nodes). The equality test may
+  already pass, because the exemption keeps those edges today. Its job is to stay green once the
+  exemption is retired, so file-path edges are kept by resolution and not by the exemption.
 delivers_to:
   agent: documentation-expert
   contract: "A stable knowledge-query invocation that selects one acs node by id and returns its outbound edges grouped as implemented_by (source files), covered_by (tests), depends_on (criteria), component_membership (component hub) in the machine-readable export"

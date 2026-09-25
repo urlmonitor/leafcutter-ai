@@ -1,0 +1,122 @@
+id: KM-KGS-100d-4-ii
+components:
+  - knowledge_management
+readiness: approved
+priority: high
+title: "A file a relationship names that does not exist stays on the map, marked missing"
+component: knowledge-management
+level: L3
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+parent: KM-KGS-100d-4
+created_by: "docs/acceptance-criteria/knowledge-management/KM-KGS-100-knowledge-graph-surfaces/KM-KGS-100d-4.yaml"
+criteria: |
+  Given criterion KM-EX-040 names "scripts/removed_tool.py" in implemented_by and
+    ticket T-2 names the same path in files_touched, and no file exists at that path
+    in the project,
+  And criterion KM-EX-041 names "scripts/foo.py" in implemented_by, and that file
+    exists,
+  When the knowledge map is built,
+  Then the map holds one files-surface node "scripts/removed_tool.py" marked missing,
+    and the edges from KM-EX-040 and T-2 both end on it,
+  And node "scripts/foo.py" is marked present,
+  And the machine-readable export carries the present-or-missing mark on every
+    files-surface node, so a reader can list the missing files without checking the
+    disk,
+  And the build states how many files-surface nodes it created and how many of them
+    are missing, zero included.
+depends_on:
+  - KM-KGS-100d-4
+doc_links:
+  - path: docs/acceptance-criteria/knowledge-management/KM-ADM-100b.yaml
+    relationship: context
+    status: exists
+    relevance: "The inherited principle: a connection the project does not have is recorded and shown as a gap, never quietly left out, and a gap is never mistaken for a working link. A missing file dropped from the map is 'quietly left out'. A missing file drawn like a present one is 'mistaken for a working link'."
+  - path: docs/acceptance-criteria/knowledge-management/KM-ADM-003.yaml
+    relationship: context
+    status: exists
+    relevance: "The matched-pair trap. Recording absent things without a distinct visual treatment made the rendered map worse. The visual half of this record is KM-KGS-100b-2-ii, and the two must ship together."
+  - path: docs/acceptance-criteria/ac-store/ACS-1100-honest-coverage-answers/ACS-1100.yaml
+    relationship: context
+    status: exists
+    relevance: "Inherited, not restated: the missing figure is reported against the total it was measured over (file nodes created), and zero is stated."
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "EVIDENCE (measured 2026-09-25): 149 of the 650 distinct file paths the AC surface references outside any node's source path (22.9%) do not exist on disk. The independent review measured about 20% across AC and ticket references. Today these edges are either raw-string leaves or, once the exemption is retired without this record, silently dropped. Both hide the gap."
+  - "The mark is an explicit field on every files-surface node (e.g. `missing: true|false`), set when the node is created by testing existence at the canonical path under the project root. Do not infer 'missing' from the absence of another field (the KM-ADM-003 lesson). A consumer reading map data produced before this change must treat an unmarked file node as present, which KM-KGS-100b-2-ii relies on."
+  - "A missing file is a real node. The membership filter keeps its edges exactly as it keeps edges to present files. Missing is never grounds to drop an edge or to decline a value; that is KM-KGS-100d-4-iii's territory and it concerns values that are not repo paths at all."
+  - "Existence is tested once per distinct canonical path per build, not once per edge. The build must not walk the repository."
+  - "The counts go where the edge count already goes, in both renderers (text summary line and JSON payload), and are carried out of the builder as data, not printed from inside a generator (the KM-KGS-100d-3-i reasoning applies unchanged)."
+test_spec:
+  - name: test_missing_file_is_one_node_marked_missing_with_both_edges
+    target_dir: unit_tests/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "FIXTURE (the missing-file fixture): a temp project whose config/paths.json is a byte copy of the real one, AC files KM-EX-040 and KM-EX-041 and ticket tickets/T-2.md as the Gherkin states them, a real scripts/foo.py, and no scripts/removed_tool.py. Built with build_knowledge_map: exactly one node has id 'scripts/removed_tool.py', its surface is 'files' and its missing mark is True (identity with True, not truthiness), and the implemented_by edge from KM-EX-040 and the files_touched edge from T-2 both have that target_id"
+  - name: test_existing_file_is_marked_present_explicitly
+    target_dir: unit_tests/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "On the missing-file fixture, node 'scripts/foo.py' carries a missing mark that is False (present as a field, not merely absent or None)"
+  - name: test_json_export_carries_missing_mark_on_every_files_node
+    target_dir: unit_tests/
+    framework: pytest
+    type: integration
+    angle: reachability
+    description: "The shipped CLI run as a subprocess (knowledge_query.py --format json --project-root <missing-file fixture>) exits 0, and every node object whose surface is 'files' has a 'missing' key whose value is a JSON boolean; 'scripts/removed_tool.py' is true and 'scripts/foo.py' is false, read from the payload alone without touching the disk"
+  - name: test_files_node_counts_stated_in_both_renderers_zero_included
+    target_dir: unit_tests/
+    framework: pytest
+    type: integration
+    angle: boundary
+    description: "Three fixtures, each rendered with --format json and with the default text format: (a) the missing-file fixture reports 2 files nodes and 1 missing; (b) the same fixture with scripts/removed_tool.py created reports 2 and 0; (c) a fixture whose ACs name no file reports 0 and 0. In every case the JSON payload carries both figures as numbers, the text summary line carries both beside the edge count, the zero figures are present as an explicit 0 and never omitted, and the two renderers agree within one fixture"
+  - name: test_missing_file_edges_are_kept_not_dropped_or_declined
+    target_dir: unit_tests/
+    framework: pytest
+    type: integration
+    angle: failure
+    description: "On the missing-file fixture, both edges to 'scripts/removed_tool.py' are in validate_edges_integrity(...).validated_edges and not in dropped_edges, and the declined figure (KM-KGS-100d-4-iii channel) is 0"
+  - name: test_existence_is_judged_under_project_root_not_cwd
+    target_dir: unit_tests/
+    framework: pytest
+    type: integration
+    angle: boundary
+    description: "The CLI is run with --project-root <missing-file fixture> and with cwd set to a different temp directory that DOES contain scripts/removed_tool.py; the node is still reported missing: true"
+  - name: test_real_repository_missing_files_are_counted_and_match_disk
+    target_dir: unit_tests/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    description: "Real repository via the shipped CLI (--format json --project-root <repo root>, module-scoped). Every files-surface node carries a boolean 'missing'. The number of missing files nodes is greater than 0 (149 of 650 AC-only references measured 2026-09-25) and is stated in the failure message together with the files-node total. For every files node, missing is true exactly when os.path.exists(<repo root>/<id>) is false, so the mark is checked independently of the builder. The payload's stated files-node and missing figures equal the counts computed from the node list. A missing repo root FAILS naming it; it is never skipped"
+test_required: true
+test_rationale: >-
+  The record's claim is that a missing file is a real node with an explicit mark, so the tests
+  assert the mark by identity (True or False, never truthiness or absence) on both the in-process
+  map and the JSON export, which is what a reader and the visualiser consume. The counts test runs
+  three fixtures because a single one cannot tell 'no missing files' from 'figure not emitted'. It
+  asserts the zero figures appear as explicit 0 in both renderers and agree within a run. The
+  kept-not-declined arm pins the boundary with KM-KGS-100d-4-iii: missing is never a reason to drop
+  or decline. The cwd arm catches existence being tested against the working directory, not the
+  project root. The whole-store arm is a real-artifact check that earns its place: it states a
+  non-zero missing count and cross-checks every mark against the disk independently of the builder.
+  RED until the epic is built. File: unit_tests/test_km_kgs_100d_4_ii.py (under 400 content lines),
+  reusing the shared temp-project helper. No git ref, no skip.
+delivers_to:
+  agent: python-coder
+  contract: "An explicit present/missing mark on every files-surface node in the JSON export, drawn distinctly by KM-KGS-100b-2-ii"
+expects_from:
+  ac_id: KM-KGS-100d-4
+  contract: "Files-surface nodes created once per distinct canonical path"
+origin_agent: business-analyst
+created: 2026-09-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary

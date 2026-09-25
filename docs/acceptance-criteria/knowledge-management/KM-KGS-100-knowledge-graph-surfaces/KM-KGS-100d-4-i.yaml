@@ -1,0 +1,113 @@
+id: KM-KGS-100d-4-i
+components:
+  - knowledge_management
+readiness: approved
+priority: high
+title: "A file path never lands on a node because a name matches or because several items share it"
+component: knowledge-management
+level: L3
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+parent: KM-KGS-100d-4
+created_by: "docs/acceptance-criteria/knowledge-management/KM-KGS-100-knowledge-graph-surfaces/KM-KGS-100d-4.yaml"
+criteria: |
+  Given the map holds a skill whose id is "it-po",
+  And criterion KM-EX-030 names ".claude/commands/it-po.md" in implemented_by, a file
+    that no item on the map was read from,
+  And criterion KM-EX-031 names "config/agent_registry.json" in implemented_by, the
+    one file every agent on the map is read from,
+  And criterion KM-EX-032 names in implemented_by the file of a ticket whose id is
+    also carried by a document on the docs surface,
+  When the knowledge map is built,
+  Then the edge from KM-EX-030 ends on a files-surface node ".claude/commands/it-po.md"
+    and not on the skill "it-po",
+  And the edge from KM-EX-031 ends on a files-surface node "config/agent_registry.json"
+    and on no agent node,
+  And the edge from KM-EX-032 ends on a files-surface node for that ticket's path, and
+    not on the ticket node or the document node that share its id,
+  And none of the three edges is dropped.
+depends_on:
+  - KM-KGS-100d-4
+doc_links:
+  - path: scripts/knowledge_query.py
+    relationship: modifies
+    status: exists
+    relevance: "The path index built for KM-KGS-100d-4. Registry surfaces (agents, skills, roadmap) read many nodes from one file, and component hubs all carry the components directory as their path, so a source path is not unique per node."
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "EVIDENCE (measured 2026-09-25, same run as KM-KGS-100d-4): four source paths are shared by several nodes: config/agent_registry.json (60 nodes), config/skill_registry.json (42), docs/architecture/components (40 synthetic component hubs) and docs/roadmap.json (8). 12 implemented_by values name one of them. Of the 525 implemented_by values whose canonical path is the source of exactly one node, 16 would land on a node whose id is also carried by another node, e.g. docs/agents/llm-expert/PROJECT_CONTEXT.md onto id PROJECT_CONTEXT, which 15 nodes share. 4,380 node ids are shared in total (see KM-KGS-100d-4, out-of-scope collisions)."
+  - "AMBIGUITY RULE: an index hit is unambiguous only if (a) exactly one node was read from that canonical path AND (b) no other node on the map, on any surface, carries that node's id. In every other case, the value resolves to a files-surface node keyed by the canonical path, exactly as if the index had no entry. Never choose among candidates by surface order, surface priority or traversal order. The coordinator's verified example: docs is traversed after tickets, so any id-keyed lookup silently picks the docs node."
+  - "The index is keyed by path and returns a node. It must never produce a node id that an id-keyed consumer (the membership filter, the visualiser's dedup, the JSON reader) would resolve to a different surface's node. That is why rule (b) checks id uniqueness map-wide, not only among nodes with the same path."
+  - "NO NAME-BASED FALLBACK OF ANY KIND: no filename-stem match, no basename match, no path-suffix match, no case-insensitive match. The independent review measured 239 of 950 implemented_by file edges that stem matching would join to the wrong node."
+  - "The consequence is deliberate and should be stated in the implementation's docstring: while node ids stay un-namespaced, an edge naming a colliding artifact's file lands on a file node beside that artifact's node, not on it. Once ids are namespaced (the out-of-scope follow-up named in KM-KGS-100d-4), those edges move to the artifact node with no change to this rule."
+test_spec:
+  - name: test_file_named_like_a_skill_does_not_land_on_the_skill
+    target_dir: unit_tests/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "FIXTURE (the ambiguity fixture): a temp project whose config/paths.json is a byte copy of the real one, with config/skill_registry.json holding skill 'it-po', config/agent_registry.json holding at least two agents, ticket tickets/T-3.md (id T-3) plus a document docs/retrospectives/T-3.md that also yields id 'T-3', a uniquely-named ticket tickets/T-4.md (id T-4), and AC files KM-EX-030, KM-EX-031, KM-EX-032 as the Gherkin states them. Built with build_knowledge_map. KM-EX-030's implemented_by edge has target_id '.claude/commands/it-po.md', that node's surface is 'files', and no edge from KM-EX-030 targets 'it-po'"
+  - name: test_file_shared_by_many_registry_nodes_lands_on_files_node
+    target_dir: unit_tests/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "On the ambiguity fixture, KM-EX-031's implemented_by edge has target_id 'config/agent_registry.json' on the files surface, and its target is not the id of any agents-surface node"
+  - name: test_file_of_a_ticket_whose_id_collides_lands_on_files_node
+    target_dir: unit_tests/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "On the ambiguity fixture, KM-EX-032's implemented_by edge (value 'tickets/T-3.md') has target_id 'tickets/T-3.md' on the files surface, and not 'T-3', which both the ticket node and the docs node carry"
+  - name: test_none_of_the_three_ambiguous_edges_is_dropped
+    target_dir: unit_tests/
+    framework: pytest
+    type: integration
+    angle: failure
+    description: "On the ambiguity fixture, each of KM-EX-030, KM-EX-031 and KM-EX-032 has exactly one implemented_by edge in the built map and in the shipped CLI's JSON export (subprocess, --format json --project-root <fixture>), and none of the three appears in validate_edges_integrity(...).dropped_edges"
+  - name: test_unambiguous_ticket_file_still_lands_on_ticket_node
+    target_dir: unit_tests/
+    framework: pytest
+    type: integration
+    angle: boundary
+    description: "CONTROL, so the rule cannot be met by always creating a files node: on the ambiguity fixture a further AC naming 'tickets/T-4.md' (one node read from that path, id T-4 carried by no other node) has an implemented_by edge with target_id 'T-4' on the tickets surface, and no files-surface node 'tickets/T-4.md' exists"
+  - name: test_case_and_suffix_variants_never_land_on_indexed_node
+    target_dir: unit_tests/
+    framework: pytest
+    type: integration
+    angle: boundary
+    description: "On the ambiguity fixture, ACs naming 'Tickets/T-4.md' (case variant), 'archive/tickets/T-4.md' (the indexed path is a suffix of it) and 'T-4.md' (basename only) each get an implemented_by edge ending on a files-surface node whose id is exactly that value, and none of the three edges targets 'T-4'"
+  - name: test_real_repository_path_resolved_edges_avoid_shared_ids_and_shared_sources
+    target_dir: unit_tests/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    description: "Real repository build through build_knowledge_map and the real config/paths.json (module-scoped). The file-path edge types are read from every surface's file_path_fields in that config, never a hard-coded list. For every edge of those types whose target node is neither on the files surface nor on the source node's own surface (so it was reached through the path index): the target id is carried by exactly one node map-wide, and the target node's source path is carried by no other node (so config/agent_registry.json, config/skill_registry.json, docs/roadmap.json and the component-hub directory are never landed on). There is at least one such edge, and the count is in the failure message. A missing repo root FAILS; it is never skipped"
+test_required: true
+test_rationale: >-
+  The rule is a negative (never land on a wrong node), so each test pins one specific trap from the
+  Gherkin: a stem that equals a skill id, a registry file shared by many nodes, and a ticket id that
+  a docs node also carries. The fixture reproduces the real traversal order (docs after tickets), so
+  a surface-priority pick fails it. Two boundaries keep the rule from being satisfied trivially. The
+  T-4 control proves an unambiguous hit still lands on the artifact node. The case, suffix and
+  basename variants prove there is no name-based fallback of any kind. 'Never dropped' is checked
+  in the built map, the JSON export and the validation report. The whole-store arm uses data-driven
+  multiplicity (id count and source-path count computed from the real node list), not a list of
+  known offenders, so a new registry surface or a new id collision is covered automatically. RED
+  until KM-KGS-100d-4 and this record are built. File: unit_tests/test_km_kgs_100d_4_i.py (under
+  400 content lines), reusing the shared temp-project helper named in KM-KGS-100d-4. No git ref.
+delivers_to: null
+expects_from:
+  ac_id: KM-KGS-100d-4
+  contract: "The path index over nodes read from files, and the files-surface fallback node"
+origin_agent: business-analyst
+created: 2026-09-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary

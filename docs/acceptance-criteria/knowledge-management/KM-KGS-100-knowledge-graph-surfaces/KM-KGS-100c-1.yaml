@@ -8,7 +8,7 @@ component: knowledge-management
 level: L2
 status: active
 req_status: draft
-work_status: done
+work_status: in_progress
 roadmap_phase: phase_1
 created_by: "docs/acceptance-criteria/knowledge-management/KM-KGS-100-knowledge-graph-surfaces/KM-KGS-100c.yaml"
 criteria: |
@@ -36,13 +36,67 @@ it_requirements:
   - "The set of surfaces ingested must be derived solely from the paths.json 'surfaces' map (via load_surfaces) — no surface name may be enumerated in a hard-coded list, count check, or fixed expected set anywhere in the builder; the existing hard-coded _SURFACE_EDGE_FIELDS dict is the chief anti-pattern this AC closes"
   - "Optional surfaces (_optional: true) whose path is absent must be silently skipped (existing behavior); non-optional declared surfaces must be attempted, and a missing path must be handled gracefully per the error-handling policy rather than aborting the whole build"
   - "Any equality assertion the build makes about contributing surfaces must compare against the declared set itself (computed from config), never against a magic number, so adding or removing a surface needs no code edit"
+  - "AMENDED 2026-09-25 (business-analyst, from an IT-PO gap finding) — WHAT 'CONTRIBUTES' AND 'DECLARED' MEAN. (1) A declared surface counts as contributing only when the builder read items from that surface's own declared path. A synthetic node that shares its label does not count (KM-KGS-100c-1-i). (2) The map's synthetic surface labels (component hubs, and 'files' from KM-KGS-100d-4) are one explicit, named set. Every node's surface is either a declared surface or one of those labels, and any other label fails the surface-set check (KM-KGS-100c-1-ii). 'files' must never be declared in config/paths.json, because a declared surface has a path and is traversed. EVIDENCE (IT-PO reading of code and tests, 2026-09-25): contributing_surfaces is computed from node labels filtered to the declared set, so an undeclared label never enters it and test_contributing_surfaces_subset_of_declared is true by construction; the about 40 component hub nodes are labelled 'components', a real declared optional surface, so they can make it look as if that surface contributed when its own path produced nothing. The criteria stand unchanged; these two L3s make them checkable."
+test_spec:
+  - name: test_real_repository_every_existing_path_declared_surface_contributes_by_provenance
+    target_dir: unit_tests/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    description: "One module-scoped build of the real repository through the public build_knowledge_map(<repo root>, <repo root>/config/paths.json), about 5 s. The expected set is computed from configuration, never hard-coded: every surface that load_surfaces_with_meta returns whose resolved path exists. That set equals contributing_surfaces, and its size is stated in the failure message. For EACH surface in it, at least one node carrying that label has a path that is an existing file equal to the surface's declared path (a single-file surface) or inside it (a directory surface). So each surface is proven to contribute by an item read from its own path; a component hub, whose path is not a file, cannot satisfy it. The public surface-set check (from KM-KGS-100c-1-i/-ii) passes on this map. A missing repo root or paths.json FAILS naming the path; it never calls pytest.skip"
+  - name: test_every_declared_surface_is_ingested_whatever_the_surface_count
+    target_dir: unit_tests/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "Parametrised over 0, 1 and 3 extra surfaces. The fixture is the stray-label fixture from KM-KGS-100c-1-ii (temp project, byte copy of the real config/paths.json, agent registry, tickets/T-1.md), reused through the shared helper and not rebuilt. For each case a config is derived programmatically from that byte copy by adding N fictional directory surfaces (names generated in the test, e.g. 'extra_0'..'extra_2', each a folder with one .md file). After build_knowledge_map, contributing_surfaces equals the set of configured surfaces whose path exists, computed from the derived config, so the count grows by exactly N with no code change. Every extra surface has a node whose path is a file inside that surface's folder"
+  - name: test_optional_absent_surface_is_skipped_and_a_missing_non_optional_path_does_not_abort
+    target_dir: unit_tests/
+    framework: pytest
+    type: integration
+    angle: boundary
+    description: "On the same reused fixture (no docs/architecture/components/ folder, no config/skill_registry.json): the optional components and skills surfaces are absent from declared_surfaces and raise no surface-set failure. The build returns normally (no SystemExit, no exception) even though non-optional surfaces such as adrs, roadmap and glossary have no path in the temp project; those surfaces are not reported as 'path exists, nothing read'. The optional-absent set is computed from the derived config's _optional flags, not from a list in the test"
+  - name: test_no_surface_is_read_that_was_not_declared
+    target_dir: unit_tests/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "On the same reused fixture, a config derived from the byte copy omits the one surface whose declared path is a file that lies outside every other declared surface's path. The test chooses it programmatically; in the real config that is the agent registry. After build_knowledge_map: no node carries the omitted label, no node's path is the omitted surface's path, and the omitted label is not in declared_surfaces or contributing_surfaces. With the unaltered byte copy, the same items do appear, so the omission is what removes them"
+test_required: true
+test_rationale: >-
+  This L2 promises that every declared surface is ingested, however many there are. It was marked
+  done on a check that could not fail: contributing_surfaces was computed from node labels filtered
+  to the declared set, and component hubs could stand in for the components surface. So the tests
+  prove ingestion by provenance, never by label. The central proof runs on the real repository:
+  the expected set is derived from configuration as every declared surface whose path exists, it
+  must equal contributing_surfaces, and each member must have a node whose path is a real file
+  inside that surface's own declared path, which a hub cannot satisfy. The criteria's other
+  clauses are tested on the KM-KGS-100c-1-ii stray-label fixture, reused through the shared helper
+  and built from a byte copy of the real config/paths.json: any surface count (0, 1 and 3 extra
+  generated surfaces, no code change), optional-absent skipping and a non-aborting build, and 'no
+  surface is read that was not declared'. The omitted surface is chosen programmatically and
+  checked against the unaltered copy. The hub-masking case and the stray-label case are NOT
+  repeated here; they are KM-KGS-100c-1-i's and -ii's tests, which this composite's done-proof
+  reads through covered_by. The existing TestSurfaceContributionCompleteness tests in
+  unit_tests/test_knowledge_query.py stay as they are; its subset test is true by construction,
+  which is why -ii exists. RED until the provenance-based check from -i/-ii lands. File:
+  unit_tests/test_km_kgs_100c_1.py (under 400 content lines). No git ref, no skip.
 delivers_to: null
 expects_from: null
 origin_agent: business-analyst
 created: 2026-06-22
-amended_by: []
+notes: |
+  2026-09-25: reset done -> in_progress. The surface-set check its criteria rely on
+  cannot fail: build_knowledge_map counts a surface as contributing only when a node's
+  label is in the declared set, so an undeclared label never registers. Component hub
+  nodes labelled 'components' also make that declared surface look contributing when
+  its own path produced nothing. Pending KM-KGS-100c-1-i and -ii.
+amended_by:
+  - reason: "it_requirements amended in place, criteria unchanged: 'contributes' means items were read from the surface's own path, and node surfaces are limited to declared surfaces plus one named set of synthetic labels (component hubs, files). Detailed in KM-KGS-100c-1-i and -ii. IT-PO gap finding; test_spec tightening left to IT-PO, business-analyst, 2026-09-25"
 superseded_by: null
-covered_by: []
+covered_by:
+  - KM-KGS-100c-1-i
+  - KM-KGS-100c-1-ii
 implemented_by:
 - tickets/00_inbox/epics/EPIC-ACCodeTraceabilityGraph/10_TICKET-20260622-KM-KGS-100c-1.md
 change_target: code
