@@ -8,8 +8,8 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
-priority: medium
+readiness: approved
+priority: critical
 roadmap_phase: phase_1
 change_target: docs
 risk_surface: internal
@@ -24,16 +24,33 @@ criteria: |
     any other state.
 depends_on: [BO-4300d, BO-4300d-1, BO-4300d-2, BO-4300d-3]
 doc_links:
-  - path: docs/analysis/2026-09-25-worktree-component-proposal.md
-    relationship: describes
-    status: exists
-  - path: docs/analysis/2026-09-25-worktree-isolation-decision-memo.md
-    relationship: constrains
-    status: exists
+- path: docs/analysis/2026-09-25-worktree-component-proposal.md
+  relationship: describes
+  status: exists
+- path: docs/analysis/2026-09-25-worktree-isolation-decision-memo.md
+  relationship: constrains
+  status: exists
+- path: docs/architecture/components/worktree-manager.md
+  relationship: describes
+  status: exists
+  relevance: Component page for the one maker; rewritten for clones under BO-4300a-4.
+- path: docs/architecture/diagrams/c3-010-workspace-request-states.md
+  relationship: describes
+  status: planned
 assigned_agent: architecture-diagram-author
-estimated_complexity: null
+estimated_complexity: S
 delivers_to: null
-expects_from: null
+expects_from:
+  ac_id: BO-4300d-2
+  contract: Half-made identification (maker 'creating' record) and completion semantics.
+package_surface: false
+it_requirements:
+- 'Location: docs/architecture/diagrams/c3-010-workspace-request-states.md (next free c3 number; verify
+  before writing), Mermaid state diagram per the write-c4-diagram skill, linked from docs/architecture/components/worktree-manager.md.'
+- States absent, half-made, ready, occupied-by-other-work (the legacy-worktree occupant may be shown as
+  a sub-state); transitions exactly as the criteria list, with the refusal code on each refused edge;
+  no edge leaves occupied.
+test_required: false
 origin_agent: business-analyst
 created: 2026-09-25
 amended_by: []

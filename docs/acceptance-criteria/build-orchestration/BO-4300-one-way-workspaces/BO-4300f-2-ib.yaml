@@ -1,0 +1,81 @@
+id: BO-4300f-2-ib
+title: How-to guides carry no second recipe for workspaces
+component: build-orchestration
+components:
+- worktree_manager
+- build_orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: critical
+roadmap_phase: phase_1
+change_target: docs
+risk_surface: contract_boundary
+criteria: |
+  Given the instructions an install delivers to agents and people -- how-to
+    guides,
+  When each passage about making, finding or clearing a workspace is read,
+  Then it directs the reader to the one workspace maker and to the how-to guide
+    for getting a workspace,
+  And none gives its own steps to copy the project, start a line of work,
+    install tools into a workspace, link or copy protection settings into one, or
+    delete one by hand.
+depends_on:
+- BO-4300f-2
+- BO-4300a-3
+doc_links:
+- path: docs/analysis/2026-09-25-worktree-migration-plan.md
+  relationship: describes
+  status: exists
+- path: docs/analysis/2026-09-25-worktree-creation-consolidation.md
+  relationship: describes
+  status: exists
+- path: docs/architecture/components/worktree-manager.md
+  relationship: describes
+  status: exists
+  relevance: Component page for the one maker; rewritten for clones under BO-4300a-4.
+- path: docs/how-to/get-a-workspace.md
+  relationship: describes
+  status: planned
+  relevance: Authored under BO-4300a-3.
+assigned_agent: documentation-expert
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: BO-4300a-3
+  contract: docs/how-to/get-a-workspace.md exists as the single replacement page.
+package_surface: false
+it_requirements:
+- 'Surfaces: docs/how-to/drive-epic-manually.md (EnterWorktree with no bootstrap, ''do not use any shell
+  script''), docs/how-to/verify-precommit-active.md (stale claims), and any other docs/how-to page that
+  makes, finds or clears a workspace.'
+- Each passage directs the reader to the maker and to docs/how-to/get-a-workspace.md; no own steps remain.
+- 'Frontmatter per the project doc conventions (title, description, type, status, created, last_updated,
+  components: [worktree_manager, build_orchestration]); must pass the doc-related pre-commit hooks and
+  be reachable from docs/INDEX.md via the build''s doc index.'
+test_required: true
+test_spec:
+- name: test_howto_workspace_passages_point_to_the_maker
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: unit
+  angle: criterion
+  description: Every workspace passage in the delivered how-to guides names the maker and the get-a-workspace
+    how-to.
+- name: test_no_howto_carries_its_own_workspace_recipe
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: unit
+  angle: criterion
+  description: No how-to guide contains its own clone, worktree, link, install or delete steps for a workspace.
+test_rationale: Delivered text is the subject; reading it is the behaviour.
+origin_agent: it-po
+created: 2026-09-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: 'IT PO split of BO-4300f-2-i (2026-09-25): the how-to guides (documentation-expert). With BO-4300f-2-ia
+  the union of the two Givens is the parent''s.'

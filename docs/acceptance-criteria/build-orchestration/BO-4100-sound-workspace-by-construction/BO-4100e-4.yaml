@@ -16,7 +16,8 @@ risk_surface: contract_boundary
 package_surface: false
 criteria: |
   Given a leftover that appears in the listing through discovery rather than
-    registration,
+    registration, and that is not identifiable as the piece of work being
+    requested,
   When a workspace is requested to start work in,
   Then the leftover is not the workspace handed over,
   And when work is requested inside the leftover directly, the request is refused
@@ -60,6 +61,7 @@ it_requirements:
   - "No code path may write a registration entry for a discovered leftover -- including the removal path, which CLEARS registration state (BO-4100e-2) rather than creating it, and including any repair or recovery helper added alongside."
   - "Promotion would also defeat BO-4100e-3: a registered workspace is no longer described as a remnant, so the misdiagnosis this family removes would return by a different route."
   - "Error handling follows the project error handling policy; a failure to classify an entry must not default to treating it as registered."
+  - "SCOPE (amended 2026-09-25): this record covers only leftovers NOT identifiable as the requested work. Under BO-4300 decision 1 (per-feature clones) 'registered' means the folder carries the one maker's completed record; a folder at the requested work's own landing location that carries the maker's in-progress record for that same work is that work's half-made workspace and is COMPLETED by the next request (BO-4300d-2), not refused here. Identification rests on the maker's own record, never on name similarity; anything else at that location is an occupant (BO-4300d-3)."
 delivers_to: null
 expects_from:
   ac_id: BO-4100e-1
@@ -103,7 +105,19 @@ test_rationale: |
   leaves the reporting and removal paths free to register on the way past.
 origin_agent: BrainCandy
 created: 2026-09-21
-amended_by: []
+amended_by:
+- reason: scope-narrowed-by-user-decision
+  by: it-po
+  at: 2026-09-25
+  note: >-
+    Criteria Given narrowed by one clause ('and that is not identifiable as the piece of work
+    being requested'), per the user's decision at the BO-4300 BA gate (2026-09-25, recorded in
+    BO-4300's L0 notes: 'BO-4100e-4 covers only leftovers not identifiable as the requested
+    work; a half-made copy of the same work is completed (BO-4300d-2). IT PO amends
+    BO-4100e-4's wording.'). No other criteria clause, and not title, readiness, priority,
+    test_spec or depends_on, was changed; one it_requirement was added stating the scope under
+    per-feature clones. Existing ticket tickets/00_inbox/TICKET-20260923-BO-4100e-4.md predates
+    this wording and should be re-read against it before it is built.
 superseded_by: null
 covered_by: []
 implemented_by:

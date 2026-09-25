@@ -8,8 +8,8 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
-priority: medium
+readiness: approved
+priority: critical
 roadmap_phase: phase_1
 change_target: pipeline
 risk_surface: contract_boundary
@@ -25,24 +25,78 @@ criteria: |
   And no former way makes, finds or clears a workspace by its own means.
 depends_on: [BO-4300f]
 doc_links:
-  - path: docs/analysis/2026-09-25-worktree-migration-plan.md
-    relationship: describes
-    status: exists
-  - path: docs/analysis/2026-09-25-worktree-creation-consolidation.md
-    relationship: describes
-    status: exists
-  - path: docs/analysis/2026-09-25-worktree-failure-modes.md
-    relationship: describes
-    status: exists
+- path: docs/analysis/2026-09-25-worktree-migration-plan.md
+  relationship: describes
+  status: exists
+- path: docs/analysis/2026-09-25-worktree-creation-consolidation.md
+  relationship: describes
+  status: exists
+- path: docs/analysis/2026-09-25-worktree-failure-modes.md
+  relationship: describes
+  status: exists
+- path: docs/architecture/components/worktree-manager.md
+  relationship: describes
+  status: exists
+  relevance: Component page for the one maker; rewritten for clones under BO-4300a-4.
+- path: docs/testing/test-angles.md
+  relationship: describes
+  status: exists
+  relevance: Angle taxonomy used by this record's test_spec.
 assigned_agent: python-coder
-estimated_complexity: null
+estimated_complexity: M
 delivers_to: null
-expects_from: null
+expects_from:
+  ac_id: BO-4300f-1
+  contract: Every caller migrated to the maker before the former ways are removed.
+package_surface: false
+it_requirements:
+- Delete scripts/setup_ticket_worktree.py (the tracked, drifted copy) and the drift-ENFORCING test (test_fastlane_template_deploy_parity.py's
+  template-must-not-have-the-gate assertion). templates/scripts/setup_ticket_worktree.py is deleted, or
+  for at most one release replaced by a shim that maps each sub-command to the maker (setup-ticket ->
+  ensure --kind ticket, create-only -> feature, create-ac-worktree -> ac, create-fastlane-worktree ->
+  fastlane) and relays the maker's answer unchanged; the shim's removal release is recorded in its own
+  docstring.
+- worktree_repo_facts.py's base lookup is removed or shims to the maker; git_recovery.py's worktree re-add
+  fallback is removed; scripts/worktree/check_workspace_setup_permission.py's own first-match repository
+  search is removed in favour of the maker's resolution.
+- The build deploy manifest drops entries for deleted scripts; the maker's named entry (BO-4300a-1) stays.
+- Tests and docs that exercised the deleted scripts (tests/test_setup_ticket_worktree.py's 41 mock sites)
+  are removed or re-pointed at the maker, never left skipped.
+- 'Q6 (should leafcutter-ai/.leafcutter/ exist): whichever the user decides, this AC ensures no former
+  way survives in it; if the directory is kept, the deployed copy there is the maker or a shim, never
+  an old script.'
+- 'Tests must not spawn the package''s own scripts/build.py (CLAUDE.md ''Tests must not spawn their own
+  build.py''): the deployed maker comes from the shared deployed layout, and fixture projects carry a
+  minimal stub build entry point that installs a real, rejecting hook in well under a second. A test that
+  must mutate the package and build its own copy says so and justifies it in its ticket.'
+- All temporary projects, hubs and workspaces live under the test's temp directory and run git with an
+  isolated global and system config; afterwards the developer's own repository's branches, registered
+  worktrees and local git config are unchanged (BO-4300f-4-i, F14, KI-TQ-012).
+test_required: true
+test_spec:
+- name: test_each_former_way_is_absent_or_relays_the_makers_answer_unchanged
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: deployed
+  description: In the shared deployed layout, each former script, sub-command, the facts helper's base
+    lookup and the recovery re-add is absent, or its answer equals (after normalising timestamps) the
+    maker's answer to the equivalent request.
+- name: test_no_former_way_makes_finds_or_clears_by_its_own_means
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: failure
+  description: Invoking any surviving shim against a temp project creates exactly what the maker creates
+    (a marker-bearing clone) and nothing else -- no git worktree registration in the main project.
+test_rationale: Removal is proven on the deployed install by invoking each former name, because a deleted
+  source file can survive in the install and a surviving shim can drift -- both invisible to a source-tree
+  check.
 origin_agent: business-analyst
 created: 2026-09-25
 amended_by: []
 superseded_by: null
-covered_by: [BO-4300f-2-i]
+covered_by: [BO-4300f-2-i, BO-4300f-2-ia, BO-4300f-2-ib]
 implemented_by: []
 notes: |
   Migration plan step 9. "Removed rather than left alongside" is the point: the tracked and

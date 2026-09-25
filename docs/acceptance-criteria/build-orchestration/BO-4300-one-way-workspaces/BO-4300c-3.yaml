@@ -8,8 +8,8 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
-priority: medium
+readiness: approved
+priority: critical
 roadmap_phase: phase_1
 change_target: pipeline
 risk_surface: safety
@@ -27,19 +27,93 @@ criteria: |
     was started from, or in any location it was not given in a ready answer.
 depends_on: [BO-4300c]
 doc_links:
-  - path: docs/analysis/2026-09-25-worktree-creation-consolidation.md
-    relationship: describes
-    status: exists
-  - path: docs/analysis/2026-09-25-worktree-failure-modes.md
-    relationship: describes
-    status: exists
-  - path: docs/analysis/2026-09-25-worktree-migration-plan.md
-    relationship: describes
-    status: exists
+- path: docs/analysis/2026-09-25-worktree-creation-consolidation.md
+  relationship: describes
+  status: exists
+- path: docs/analysis/2026-09-25-worktree-failure-modes.md
+  relationship: describes
+  status: exists
+- path: docs/analysis/2026-09-25-worktree-migration-plan.md
+  relationship: describes
+  status: exists
+- path: docs/architecture/components/worktree-manager.md
+  relationship: describes
+  status: exists
+  relevance: Component page for the one maker; rewritten for clones under BO-4300a-4.
+- path: docs/architecture/adrs/ADR-030-dual-engine-workflow-support.md
+  relationship: constrains
+  status: exists
+  relevance: E2 workflow bodies have no filesystem or process access; agent() schema validation.
+- path: docs/testing/test-angles.md
+  relationship: describes
+  status: exists
+  relevance: Angle taxonomy used by this record's test_spec.
 assigned_agent: python-coder
-estimated_complexity: null
+estimated_complexity: L
 delivers_to: null
-expects_from: null
+expects_from:
+  ac_id: BO-4300c-2
+  contract: 'The maker''s JSON answer per BO-4300c-2: halt unless status == ''ok'' and workspace_path
+    is a non-empty string; take the location only from workspace_path (worktree_path is its alias).'
+package_surface: false
+it_requirements:
+- 'Every workflow applies ONE acceptance predicate to the maker''s answer: it parses as a single JSON
+  object AND status == ''ok'' AND workspace_path is a non-empty string; anything else ends the run with
+  status error, quoting (bounded to 2 KB) what was received. E2 has no shared-module mechanism, so the
+  predicate is inlined per workflow; the cross-workflow behavioural matrix of BO-4300c-3 is what keeps
+  the copies identical.'
+- 'Remove every fallback that treats ''no workspace'' as a normal state (F2): plan-feature.js''s null-worktree
+  mode and every `authoringWorktreePath ? ... : ...` branch, build-epic.js''s callerWorktreePath || probe
+  || epicPath fallback, finalize-feature.js''s worktree_root ''unknown'' default, fast-lane-ship.js''s
+  `gitReportedPath || claimedWorktreePath`, build-ticket.js''s unchecked args.worktree_path. Line numbers
+  in the analysis are hints; verify against HEAD.'
+- The workflows covered are the long-running build, the single-ticket build, quick fix, requirements authoring,
+  the fast lane and finalize; the five hostile answers are a refusal, an error, a paragraph of prose,
+  a JSON object with neither ok nor refused as status, and no answer at all.
+- Entry skills that run the maker stop on a non-zero exit (BO-4300a-1-ib); this AC covers the workflow
+  bodies.
+- 'Workflow bodies run in the E2 engine with no filesystem or process access (ADR-030). They reach the
+  maker only through (a) args.workspace -- the maker''s JSON object passed verbatim by the entry command
+  or skill (BO-4300a-1-ib) -- or (b) exactly one agent() dispatch, carrying a result schema, to an agent
+  whose registry entry has permits_shell: true, instructing it to run one exact absolute command unchanged
+  and return stdout verbatim. Never status-checker (permits_shell: false), never free-form set-up steps.'
+- Workflow edits are made in templates/workflows-js/*.js and reach .claude/workflows/ only through the
+  build; the deployed copy is what the tests run.
+- Proof runs the workflow under unit_tests/_workflow_engine_harness.py -- the deployed copy the build
+  produces, so the build's workflow transform is exercised -- with label-scripted agent replies, and asserts
+  on the RECORDED dispatch list, never on workflow source text. The harness must be able to model a workspace
+  step that declines its task, answers in prose, answers exit 0 with a non-JSON path, or answers JSON
+  without status (F13); extending the harness for this is in scope of the first AC that needs it.
+test_required: true
+test_spec:
+- name: test_each_workflow_ends_in_failure_on_each_non_ready_answer
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: failure
+  description: Across 6 workflows x 5 answers, every run ends with status error.
+- name: test_failure_quotes_what_was_received
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: criterion
+  description: Each failure message contains the received answer (bounded).
+- name: test_no_authoring_phase_commit_or_delivery_step_is_dispatched_after_the_workspace_step
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: criterion
+  description: In every run the recorded dispatch list ends at the workspace step.
+- name: test_no_run_continues_in_main_copy_epic_folder_start_folder_or_any_ungiven_location
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: boundary
+  description: No recorded dispatch names a working location other than one taken from an ok answer.
+test_rationale: The 2026-09-25 incident was a perfect-enough maker with a caller that carried on, and
+  every source grep of plan-feature.js would have passed. So the assertions are made on the recorded dispatch
+  list of a real workflow run with scripted hostile answers, which is the only place 'no later step was
+  dispatched' can be observed.
 origin_agent: business-analyst
 created: 2026-09-25
 amended_by: []

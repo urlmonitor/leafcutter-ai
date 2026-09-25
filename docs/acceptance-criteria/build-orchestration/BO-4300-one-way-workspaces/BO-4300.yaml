@@ -8,8 +8,8 @@ level: L0
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
-priority: medium
+readiness: approved
+priority: critical
 roadmap_phase: phase_1
 risk_surface: safety
 criteria: |
@@ -97,6 +97,23 @@ notes: |
   - Q10 the cut-over never retires a workspace that holds unsent work (BO-4300f-3).
   - BO-4100e-4 covers only leftovers not identifiable as the requested work; a half-made
     copy of the same work is completed (BO-4300d-2). IT PO amends BO-4100e-4's wording.
+
+  DECIDED AT THE FINAL GATE (2026-09-25, user):
+  - A newly started line starts at the fetched origin/main tip; a resumed line keeps every
+    commit it has on the hub and is never reset or rebased (BO-4300c-1, BO-4300d-4).
+  - Comparison copies (kind scratch) do not need the canary; it is reported 'n/a' (BO-4300e-4).
+  - BO-4300a-1-ib's wording (split out by IT PO) is accepted.
+  - Priority: critical.
+
+  FOLLOW-UPS NOT COVERED BY THIS TREE (every L1 is at its child cap; each needs its own
+  /plan-feature or ticket):
+  - ADR-018 status Proposed -> Accepted for per-feature clones; ADR-031 sections 4/5 (create-time
+    gate in _bootstrap, three-script parity) go stale and need an update (adr-author).
+  - TICKET-20260923-BO-4100e-4.md was written against BO-4100e-4's old wording; re-check it.
+  - A Windows CI job so BO-4300b-4 (no symlink permission) and BO-4300e-2-i (long paths) run
+    somewhere other than a developer machine.
+  - The rest of the BO-4100e family still names setup_ticket_worktree.py / list_workspaces.py;
+    reconcile with the maker's list verb.
 
   WHY A NEW L0 AND NOT MORE CHILDREN OF BO-4100 / BO-1700 / BO-1800. Those goals state
   PROPERTIES a workspace must have (BO-4100: fresh at creation, own supporting material,

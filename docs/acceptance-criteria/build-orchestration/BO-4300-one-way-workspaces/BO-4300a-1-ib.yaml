@@ -1,0 +1,119 @@
+id: BO-4300a-1-ib
+title: Entry skills run the one maker and hand its answer to the workflow unchanged
+component: build-orchestration
+components:
+- worktree_manager
+- build_orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: critical
+roadmap_phase: phase_1
+change_target: prompt
+risk_surface: contract_boundary
+criteria: |
+  Given an agent or a person starts a workflow that needs a workspace through its
+    entry command or skill, or follows the workspace skill,
+  When a workspace is needed,
+  Then the workspace maker is run unchanged and its answer is passed on word for
+    word as part of the workflow's input,
+  And no step asks an agent to create, copy, set up, link or repair a workspace
+    by steps of the agent's own choosing.
+depends_on:
+- BO-4300a-1
+doc_links:
+- path: docs/analysis/2026-09-25-worktree-creation-consolidation.md
+  relationship: describes
+  status: exists
+- path: docs/analysis/2026-09-25-worktree-failure-modes.md
+  relationship: describes
+  status: exists
+- path: docs/analysis/2026-09-25-worktree-component-proposal.md
+  relationship: describes
+  status: exists
+- path: docs/architecture/components/worktree-manager.md
+  relationship: describes
+  status: exists
+  relevance: Component page for the one maker; rewritten for clones under BO-4300a-4.
+- path: docs/architecture/adrs/ADR-030-dual-engine-workflow-support.md
+  relationship: constrains
+  status: exists
+  relevance: E2 workflow bodies have no filesystem or process access; agent() schema validation.
+- path: docs/how-to/get-a-workspace.md
+  relationship: describes
+  status: planned
+  relevance: Authored under BO-4300a-3.
+assigned_agent: llm-expert
+estimated_complexity: M
+delivers_to:
+  agent: python-coder
+  contract: 'args.workspace on every workflow invocation that can know its work identity up front: the
+    maker''s ensure answer as a JSON object, unmodified (BO-4300c-2 shape). The workflow applies the BO-4300c-3
+    acceptance predicate to it.'
+expects_from:
+  ac_id: BO-4300a-1
+  contract: 'CLI of the one maker. Deployed at <install-root>/scripts/worktree.py (source templates/scripts/worktree.py;
+    the name is provisional until this AC is built, after which that path is the contract every caller
+    names). Stdlib-only Python, run as `python <absolute path> <verb> ...` from ANY cwd. Verbs: `ensure
+    --kind {ticket|feature|ac|fastlane|epic|scratch} --slug <work identity> [--repo-root P] [--allow-stale-base]
+    [--config-path P]` -- the only creating verb, idempotent, always fetch + build + canary; `locate (--kind
+    K --slug S | --path P | --branch B) [--repo-root P]` -- read-only; `list [--repo-root P]` -- read-only
+    scan of the landing place''s markers, never git worktree list; `verify --path P [--kind K --slug S]
+    [--repo-root P]` -- read-only readiness re-check; `remove --path P [<up-front discard authorisation;
+    flag or token, Q8 open>] [--delete-remote-branch] [--repo-root P]`; `where` -- prints the maker''s
+    own absolute path. There is no --reset-existing (BO-4300d-4 resumes), no --no-bootstrap (decision
+    2), and no flag that skips a readiness ingredient.'
+package_surface: false
+it_requirements:
+- 'Entry surfaces to change: templates/commands/plan-feature.md (today calls Workflow without the pre-flight,
+  so that entry always stops with ''MISSING pre-flight''), templates/skills/plan-feature/SKILL.md, templates/commands/build-feature.md,
+  templates/commands/fast-lane-build.md, templates/commands/quick-fix.md and templates/skills/quick-fix/SKILL.md,
+  templates/commands/finalize-feature.md, templates/skills/build-single-ticket/SKILL.md, and templates/skills/feature/SKILL.md.'
+- Exactly one skill is THE workspace skill. Prefer repurposing the existing `feature` skill (one maker
+  invocation, stop on a non-zero exit, relay the JSON answer) so no new package surface is registered;
+  if a new skill is created instead, it must be registered in config/skill_registry.json and the feature
+  skill reduced to a pointer.
+- Each entry runs the maker as ONE command with an absolute path (the path `worktree.py where` prints,
+  or the resolved install path) -- never a cwd-relative `python scripts/...` and never a compound shell
+  command (prompt-audit checklist). On a non-zero exit it stops and does not invoke the workflow; on exit
+  0 it passes the parsed answer verbatim as args.workspace.
+- Entries that cannot know the work identity before the workflow resolves it (e.g. build-feature's epic
+  resolution) leave the workspace to the workflow's one verbatim dispatch (BO-4300a-1-ia); the skill text
+  must not describe any other way.
+- No surface keeps its own step-by-step recipe (clone, worktree add, symlink or copy of .leafcutter /
+  .pre-commit-config.yaml, manual build); the epic recipe in the feature skill and its project-specific
+  'import settings' check are deleted.
+- Skill and command templates reach consumers only through the build; edit templates/, never .claude/
+  directly.
+test_required: true
+test_spec:
+- name: test_command_published_by_each_deployed_entry_skill_runs_the_maker
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: deployed
+  description: The single maker command each deployed entry skill/command publishes, executed as written
+    against a temporary project, yields exactly one JSON object with status ok from the deployed maker.
+- name: test_deployed_workspace_skill_publishes_no_alternative_recipe
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: unit
+  angle: criterion
+  description: The deployed workspace skill's text contains the one maker invocation and no clone, worktree,
+    symlink, copy or build steps of its own (the text is this record's subject, so reading it is the behaviour).
+test_rationale: The skill text is the deliverable, so the proof executes exactly the command it publishes
+  from the deployed copy -- a skill that names a wrong path or a cwd-relative path fails here rather than
+  in a drive.
+origin_agent: it-po
+created: 2026-09-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: 'IT PO split of BO-4300a-1-i (2026-09-25), entry-skill half. Criteria are extracted from the parent''s
+  clauses (''receives the workspace maker''s answer as part of its input'', ''run unchanged and its answer
+  relayed word for word'', ''no ... create, copy, set up, link or repair ... by steps of the agent''s
+  own choosing'') and placed at the surface that performs them: templates/commands/*.md and templates/skills/*/SKILL.md
+  (llm-expert). Decision 4 / Q7: agents run the maker from a skill; workflows get the result passed in.'

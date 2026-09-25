@@ -8,8 +8,8 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
-priority: medium
+readiness: approved
+priority: critical
 roadmap_phase: phase_1
 change_target: code
 risk_surface: safety
@@ -21,16 +21,67 @@ criteria: |
   And the presence of the protection settings alone never produces a ready answer.
 depends_on: [BO-4300c-1]
 doc_links:
-  - path: docs/analysis/2026-09-25-worktree-failure-modes.md
-    relationship: describes
-    status: exists
-  - path: docs/analysis/2026-09-25-worktree-isolation-decision-memo.md
-    relationship: constrains
-    status: exists
+- path: docs/analysis/2026-09-25-worktree-failure-modes.md
+  relationship: describes
+  status: exists
+- path: docs/analysis/2026-09-25-worktree-isolation-decision-memo.md
+  relationship: constrains
+  status: exists
+- path: docs/architecture/components/worktree-manager.md
+  relationship: describes
+  status: exists
+  relevance: Component page for the one maker; rewritten for clones under BO-4300a-4.
+- path: docs/architecture/adrs/ADR-031-worktree-quality-gate-guard.md
+  relationship: constrains
+  status: exists
+  relevance: Canary-execution probe model (section 1); its create-time gate (section 4) moves into the
+    maker.
+- path: docs/testing/test-angles.md
+  relationship: describes
+  status: exists
+  relevance: Angle taxonomy used by this record's test_spec.
 assigned_agent: python-coder
-estimated_complexity: null
+estimated_complexity: S
 delivers_to: null
-expects_from: null
+expects_from:
+  ac_id: BO-4300c-1
+  contract: hooks_canary_rejected ingredient.
+package_surface: false
+it_requirements:
+- Presence of .pre-commit-config.yaml (or any .leafcutter copy) is recorded as precommit_config_present
+  only; ok requires hooks_canary_rejected. The fail-open OR-probe (setup_ticket_worktree.py AC-5, CLAUDE.md's
+  ls ... || ls ... check, verify_precommit_active.py's check_b_config fallback) is not reproduced.
+- Hooks are installed into the clone's own .git/hooks (clones have their own hooks directory, unlike worktrees).
+- Proof runs the DEPLOYED maker -- the copy an install delivers, resolved through the shared test locator
+  delivered by BO-4300f-4 -- as a separate process against real temporary git repositories with a real
+  bare hub. No mock of git, no import of the maker module, no grep of its source (CLAUDE.md 'Gate / Workflow
+  ACs -- Verify Behaviorally, Not by Grep'); a test never falls back to the templates/ source copy.
+- 'Tests must not spawn the package''s own scripts/build.py (CLAUDE.md ''Tests must not spawn their own
+  build.py''): the deployed maker comes from the shared deployed layout, and fixture projects carry a
+  minimal stub build entry point that installs a real, rejecting hook in well under a second. A test that
+  must mutate the package and build its own copy says so and justifies it in its ticket.'
+- All temporary projects, hubs and workspaces live under the test's temp directory and run git with an
+  isolated global and system config; afterwards the developer's own repository's branches, registered
+  worktrees and local git config are unchanged (BO-4300f-4-i, F14, KI-TQ-012).
+test_required: true
+test_spec:
+- name: test_config_present_but_canary_accepted_is_refused_hooks_inactive
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: criterion
+  description: With the config file in place but a hook that accepts the known-bad file, the answer is
+    non-ok, code HOOKS_INACTIVE.
+- name: test_config_presence_alone_never_yields_ok
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: failure
+  description: checks.precommit_config_present is true while status is not ok and workspace_path is absent.
+test_rationale: Every assertion is made on what the deployed maker actually did to real repositories --
+  its one JSON answer, its exit code, and the state of the workspace, the hub and the main copy afterwards.
+  A direct-import unit test would pass while the deployed copy is stale or mis-deployed (F13), and a git
+  mock cannot show the half-made and occupied states this family exists to handle.
 origin_agent: business-analyst
 created: 2026-09-25
 amended_by: []

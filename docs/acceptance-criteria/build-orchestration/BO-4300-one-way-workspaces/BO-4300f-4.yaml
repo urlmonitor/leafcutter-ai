@@ -8,8 +8,8 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
-priority: medium
+readiness: approved
+priority: critical
 roadmap_phase: phase_1
 change_target: pipeline
 risk_surface: internal
@@ -23,16 +23,76 @@ criteria: |
     with no stand-in for version control.
 depends_on: [BO-4300f]
 doc_links:
-  - path: docs/analysis/2026-09-25-worktree-migration-plan.md
-    relationship: describes
-    status: exists
-  - path: docs/analysis/2026-09-25-worktree-failure-modes.md
-    relationship: describes
-    status: exists
+- path: docs/analysis/2026-09-25-worktree-migration-plan.md
+  relationship: describes
+  status: exists
+- path: docs/analysis/2026-09-25-worktree-failure-modes.md
+  relationship: describes
+  status: exists
+- path: docs/architecture/components/worktree-manager.md
+  relationship: describes
+  status: exists
+  relevance: Component page for the one maker; rewritten for clones under BO-4300a-4.
+- path: docs/testing/test-angles.md
+  relationship: describes
+  status: exists
+  relevance: Angle taxonomy used by this record's test_spec.
 assigned_agent: python-coder
-estimated_complexity: null
-delivers_to: null
-expects_from: null
+estimated_complexity: M
+delivers_to:
+  agent: test-writer
+  contract: 'Fixture API used by every maker proof in this family: deployed_maker_path() -> absolute path
+    (raises when absent); make_project(tmp, layout=''dev''|''consumer'', stub_build=..., hook=''reject''|''accept'')
+    -> {project, hub, landing_place}; run_maker(args, cwd, env=None, timeout=...) -> {answer: dict, exit_code:
+    int, stdout: str, stderr: str}, failing the test when stdout is not exactly one JSON object; starting_points(project)
+    -> dict of the six BO-4300b-1 cwds.'
+expects_from:
+  ac_id: BO-4300a-1
+  contract: Maker deployed by a named deploy-manifest entry to <install>/scripts/worktree.py.
+package_surface: false
+it_requirements:
+- 'Deliver the shared test support module (e.g. unit_tests/build_orchestration/_workspace_maker_fixtures.py):
+  (1) a locator that resolves the DEPLOYED maker from the shared deployed layout (the CI build step''s
+  `build.py --target-dir .`, or TQ-600a''s session-scoped layout once it lands) and FAILS -- never skips,
+  never falls back to templates/ -- when it is absent; (2) an override seam used only by the meta-test
+  to point at a faulted copy; (3) fixture builders for real temp projects with a bare hub, the dev and
+  consumer layouts, a stub build entry point installing a real rejecting hook, and helpers for every BO-4300b-1
+  starting point.'
+- 'Meta-test: copy the deployed maker, inject a fault only into the copy (source unchanged), run the relevant
+  proof subset against it via the override seam, and require that it fails naming the broken behaviour.'
+- Delete or re-point tests that exercise the tracked scripts/ copy as 'DEPLOYED_SCRIPT' (unit_tests/build_orchestration/_bo2400f13_fixtures.py
+  and its users).
+- 'Tests must not spawn the package''s own scripts/build.py (CLAUDE.md ''Tests must not spawn their own
+  build.py''): the deployed maker comes from the shared deployed layout, and fixture projects carry a
+  minimal stub build entry point that installs a real, rejecting hook in well under a second. A test that
+  must mutate the package and build its own copy says so and justifies it in its ticket.'
+- All temporary projects, hubs and workspaces live under the test's temp directory and run git with an
+  isolated global and system config; afterwards the developer's own repository's branches, registered
+  worktrees and local git config are unchanged (BO-4300f-4-i, F14, KI-TQ-012).
+test_required: true
+test_spec:
+- name: test_fault_only_in_deployed_copy_fails_the_suite_naming_the_behaviour
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: deployed
+  description: With a fault injected into a copy of the deployed maker (source untouched), the proof subset
+    fails with a message naming the broken behaviour.
+- name: test_suite_runs_deployed_maker_as_separate_process_from_every_starting_point
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: seam
+  description: The locator returns the install path (not templates/), and runs from each of the six starting
+    points spawn a separate process against real repos.
+- name: test_locator_fails_when_deployed_copy_is_absent
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: failure
+  description: Pointing the locator at a layout without the maker raises a failure, not a skip.
+test_rationale: 'This record is the guard on every other record''s proof: without it a stale deployed
+  copy passes the whole family, which is exactly F13.'
 origin_agent: business-analyst
 created: 2026-09-25
 amended_by: []

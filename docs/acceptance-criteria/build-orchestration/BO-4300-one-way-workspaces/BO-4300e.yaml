@@ -8,8 +8,8 @@ level: L1
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
-priority: medium
+readiness: approved
+priority: critical
 roadmap_phase: phase_1
 criteria: |
   Find or clear a workspace without risking work the team never got.

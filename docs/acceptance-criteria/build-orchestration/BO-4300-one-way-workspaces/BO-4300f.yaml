@@ -8,8 +8,8 @@ level: L1
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
-priority: medium
+readiness: approved
+priority: critical
 roadmap_phase: phase_1
 criteria: |
   Every workflow moves over, and no second way is left behind to drift.

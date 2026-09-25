@@ -8,8 +8,8 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
-priority: medium
+readiness: approved
+priority: critical
 roadmap_phase: phase_1
 change_target: code
 risk_surface: safety
@@ -26,19 +26,84 @@ criteria: |
     workspaces, never inside the folder the request was started from.
 depends_on: [BO-4300b]
 doc_links:
-  - path: docs/analysis/2026-09-25-worktree-failure-modes.md
-    relationship: describes
-    status: exists
-  - path: docs/analysis/2026-09-25-worktree-migration-plan.md
-    relationship: describes
-    status: exists
-  - path: docs/analysis/2026-09-25-worktree-creation-consolidation.md
-    relationship: describes
-    status: exists
+- path: docs/analysis/2026-09-25-worktree-failure-modes.md
+  relationship: describes
+  status: exists
+- path: docs/analysis/2026-09-25-worktree-migration-plan.md
+  relationship: describes
+  status: exists
+- path: docs/analysis/2026-09-25-worktree-creation-consolidation.md
+  relationship: describes
+  status: exists
+- path: docs/architecture/components/worktree-manager.md
+  relationship: describes
+  status: exists
+  relevance: Component page for the one maker; rewritten for clones under BO-4300a-4.
+- path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+  relationship: constrains
+  status: exists
+  relevance: Dev layout (package repo as a child of a non-repo workspace) and the deployed-outside-the-repo
+    copy.
+- path: docs/testing/test-angles.md
+  relationship: describes
+  status: exists
+  relevance: Angle taxonomy used by this record's test_spec.
 assigned_agent: python-coder
-estimated_complexity: null
+estimated_complexity: M
 delivers_to: null
-expects_from: null
+expects_from:
+  ac_id: BO-4300a-1
+  contract: ensure CLI; resolution is internal to the maker.
+package_surface: false
+it_requirements:
+- 'Project resolution, in this order: --repo-root; otherwise, when cwd is inside a maker-made workspace,
+  the project that workspace was made from (via the maker''s own record or the landing-place convention
+  -- never treating the workspace clone itself as the project); otherwise the parent of `git rev-parse
+  --path-format=absolute --git-common-dir` from cwd; otherwise a bounded search of cwd''s immediate children,
+  then of cwd''s siblings, requiring exactly one match (AMBIGUOUS_REPO with candidates on more than one)
+  ; otherwise NO_REPO naming searched_from. The maker''s own file location is never consulted (the deployed
+  copy lives outside every repository).'
+- The landing place is derived from the resolved project only, never from cwd; git is always invoked with
+  -C <path>, never relying on a chdir (F3).
+- Answers conform to the result contract delivered by BO-4300c-2 (one JSON object on stdout, status/code/exit
+  mapping, workspace_path absent on every non-ok answer).
+- Proof runs the DEPLOYED maker -- the copy an install delivers, resolved through the shared test locator
+  delivered by BO-4300f-4 -- as a separate process against real temporary git repositories with a real
+  bare hub. No mock of git, no import of the maker module, no grep of its source (CLAUDE.md 'Gate / Workflow
+  ACs -- Verify Behaviorally, Not by Grep'); a test never falls back to the templates/ source copy.
+- 'Tests must not spawn the package''s own scripts/build.py (CLAUDE.md ''Tests must not spawn their own
+  build.py''): the deployed maker comes from the shared deployed layout, and fixture projects carry a
+  minimal stub build entry point that installs a real, rejecting hook in well under a second. A test that
+  must mutate the package and build its own copy says so and justifies it in its ticket.'
+- All temporary projects, hubs and workspaces live under the test's temp directory and run git with an
+  isolated global and system config; afterwards the developer's own repository's branches, registered
+  worktrees and local git config are unchanged (BO-4300f-4-i, F14, KI-TQ-012).
+test_required: true
+test_spec:
+- name: test_beta_is_answered_ok_with_same_location_from_every_starting_point
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: criterion
+  description: From proj's top folder, three levels down, the parent folder, a sibling folder, inside
+    W1 and inside the 'beta' workspace, every request for beta is answered ok with the same workspace_path.
+- name: test_every_starting_point_resolves_the_same_project
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: criterion
+  description: Every answer's repo_root is proj.
+- name: test_beta_never_lands_inside_the_starting_folder
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: boundary
+  description: In every case beta's workspace_path is in proj's landing place and is not inside the folder
+    the request started from.
+test_rationale: Every assertion is made on what the deployed maker actually did to real repositories --
+  its one JSON answer, its exit code, and the state of the workspace, the hub and the main copy afterwards.
+  A direct-import unit test would pass while the deployed copy is stale or mis-deployed (F13), and a git
+  mock cannot show the half-made and occupied states this family exists to handle.
 origin_agent: business-analyst
 created: 2026-09-25
 amended_by: []

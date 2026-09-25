@@ -8,8 +8,8 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
-priority: medium
+readiness: approved
+priority: critical
 roadmap_phase: phase_1
 change_target: docs
 risk_surface: internal
@@ -25,19 +25,61 @@ criteria: |
   And it states that the answer has the same form whichever route asked.
 depends_on: [BO-4300a, BO-4300a-1, BO-4300c-2, BO-4300c-3]
 doc_links:
-  - path: docs/analysis/2026-09-25-worktree-component-proposal.md
-    relationship: describes
-    status: exists
-  - path: docs/analysis/2026-09-25-worktree-creation-consolidation.md
-    relationship: describes
-    status: exists
-  - path: docs/reference/workspace-maker-answer.md
-    relationship: describes
-    status: planned
+- path: docs/analysis/2026-09-25-worktree-component-proposal.md
+  relationship: describes
+  status: exists
+- path: docs/analysis/2026-09-25-worktree-creation-consolidation.md
+  relationship: describes
+  status: exists
+- path: docs/reference/workspace-maker-answer.md
+  relationship: describes
+  status: planned
+- path: docs/architecture/components/worktree-manager.md
+  relationship: describes
+  status: exists
+  relevance: Component page for the one maker; rewritten for clones under BO-4300a-4.
 assigned_agent: documentation-expert
-estimated_complexity: null
+estimated_complexity: S
 delivers_to: null
-expects_from: null
+expects_from:
+  ac_id: BO-4300c-2
+  contract: 'Result contract. stdout carries exactly one JSON object for every verb and outcome; all child-process
+    output (git, package installers, the build) goes to stderr. Exit 0 = status ok, 2 = refused, 1 = error,
+    64 = usage error (still one JSON object: status error, code USAGE). Common fields: schema_version
+    (int), status (''ok''|''refused''|''error''), code (OK | NOT_FOUND | INCOMPLETE | OCCUPIED | OCCUPIED_LEGACY_WORKTREE
+    | IN_PROGRESS | NO_REPO | AMBIGUOUS_REPO | NO_HUB | FETCH_FAILED | GIT_FAILED | NO_CONFIG | BOOTSTRAP_FAILED
+    | BOOTSTRAP_DIRTIED_TRACKED | WORK_AT_RISK | HOOKS_INACTIVE | VERIFY_FAILED | UNSENT_WORK | PROCESS_HOLDS_FILES
+    | ON_PROTECTED_BRANCH | USAGE | INTERNAL_ERROR), message (one sentence naming the cause), verb, repo_root
+    and repo_root_posix, layout (''dev''|''consumer''), mechanism (''clone''), hub (the main checkout''s
+    origin URL). ensure/locate/verify ok answers add: kind, slug, branch (null for scratch), workspace_path
+    (absolute, native spelling), workspace_path_posix, worktree_path (alias, always equal to workspace_path),
+    base_ref (''origin/main''), base_commit (sha read back from the workspace), origin_main_commit (sha
+    of origin/main at the fetch), base_matches_origin_main (bool), fetch (''ok''|''failed''|''skipped''),
+    workspace_action (''created''|''re-readied''|''completed''|''located''), line_of_work (''new''|''resumed''|''existing''),
+    created (bool), bootstrap {build_ok: bool, config_path: str, restored_tracked: [repo-relative path],
+    env_copied: [name], failure_excerpt: str|null}, checks {is_independent_repo, not_main_checkout, same_project,
+    branch_matches, not_protected_branch, base_is_fresh, build_ok, tree_clean, precommit_config_present,
+    hooks_canary_rejected}, each true|false|''n/a''. On EVERY non-ok answer workspace_path, workspace_path_posix
+    and worktree_path are ABSENT (not blank, not null); diagnostic paths travel under different names:
+    candidates [path] (AMBIGUOUS_REPO), searched_from (NO_REPO), occupant {path, kind: ''other-line''|''other-project''|''plain-folder''|''legacy-worktree'',
+    branch|null} (OCCUPIED*), remnant_path (INCOMPLETE), unsent {commits: [sha], files: [path]} (UNSENT_WORK,
+    WORK_AT_RISK), holders [{pid, name}] (PROCESS_HOLDS_FILES). remove ok adds removed_path and discarded
+    {commits: [sha], files: [path]}. list ok adds workspaces [{kind, slug, branch, workspace_path, workspace_path_posix,
+    state: ''ready''|''incomplete''}]. Callers treat refused and error identically: halt.'
+package_surface: false
+it_requirements:
+- 'Frontmatter per the project doc conventions (title, description, type, status, created, last_updated,
+  components: [worktree_manager, build_orchestration]); must pass the doc-related pre-commit hooks and
+  be reachable from docs/INDEX.md via the build''s doc index.'
+- 'Location: docs/reference/workspace-maker-answer.md. Lists every field, every code with its status and
+  exit code, the verb-specific fields, the rule that workspace_path/worktree_path/workspace_path_posix
+  are absent on every non-ok answer, and the schema_version policy.'
+- 'States the caller rules verbatim from the contract: halt on anything but status ok; take the location
+  only from workspace_path of an ok answer, never from prose or from the caller''s cwd; the answer has
+  the same form whichever route asked.'
+- Q8 (remove authorisation) is documented as whatever mechanism is built; if still open when authored,
+  the page names the field set and marks the argument as pending rather than guessing.
+test_required: false
 origin_agent: business-analyst
 created: 2026-09-25
 amended_by: []
