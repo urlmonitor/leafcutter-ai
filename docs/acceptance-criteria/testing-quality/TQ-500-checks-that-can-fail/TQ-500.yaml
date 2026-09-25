@@ -40,7 +40,11 @@ delivers_to: null
 expects_from: null
 origin_agent: BrainCandy
 created: 2026-08-31
-amended_by: []
+amended_by:
+  - reason: "Discrimination initiative (TQ-500f/g): criteria gain one sentence on early failures that only prove absence"
+    by: product-owner
+    at: 2026-09-25
+    note: "Sentence proposed by the product-owner stage of /plan-feature and approved by the user at the PO gate."
 superseded_by: null
 covered_by:
   - TQ-500a
