@@ -1,0 +1,101 @@
+id: BO-400c-5
+components:
+  - build_orchestration
+  - commit_guardian
+title: "Parity guard blocks a status: done ticket that still has a needed or failed phase, wherever the file lives"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: done
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a staged ticket whose YAML frontmatter reads `status: done`
+    and whose `agents:` map still lists a phase as `needed` or `failed`
+    (e.g. `pull-request: needed`),
+    and whose path contains no `done/` segment
+    (tickets are no longer moved into done/ folders — frontmatter `status:` is the lifecycle signal),
+  When the pre-commit hook check_ticket_signoff_parity.py runs without `--enforce`,
+  Then it reports a violation naming the offending agent and its status
+  And it exits with code 1, blocking the commit
+  And the bug symptom ("a status: done ticket with pull-request: needed is committed with only a warning") must not occur.
+
+  Given the same `agents:` map on a ticket whose frontmatter status is not `done`
+    (e.g. `status: todo`),
+  When the hook runs without `--enforce`,
+  Then any violation it finds is reported as a warning and the hook exits 0 (warn-only is unchanged).
+
+  Given a `status: done` ticket whose every agent is `signed_off` or `not_needed`,
+  When the hook runs,
+  Then it exits 0.
+
+  Given a `status: done` ticket outside any `done/` path whose only violations come from
+    other parity checks (e.g. a `## Sign-offs` gap or a missing cross_layer_seam_answer),
+  When the hook runs without `--enforce`,
+  Then those violations are printed as warnings and the hook exits 0
+    (only the needed/failed-phase rule blocks a done ticket).
+
+  And a ticket under a legacy `done/` path still blocks on every violation, and `--enforce` still enforces every ticket.
+  And a missing, non-string, or malformed `status:` never crashes the hook — it is treated as not done.
+depends_on: [BO-400c, BO-400c-3]
+doc_links:
+  - path: templates/scripts/commit_guardian/check_ticket_signoff_parity.py
+    relationship: modifies
+    status: exists
+  - path: docs/known-issues/commit-guardian/open-high-ki-cg-20260925-signoff-parity-enforces-only-under-done-folder.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-09-25
+amended_by: []
+superseded_by: null
+covered_by:
+  - unit_tests/commit_guardian/test_bo_400c_5_signoff_parity_done_status.py
+implemented_by:
+  - templates/scripts/commit_guardian/check_ticket_signoff_parity.py
+change_target: code
+risk_surface: internal
+notes: |
+  Quick-fix for KI-CG-20260925-signoff-parity-enforces-only-under-done-folder.
+  BO-400c-3's second scenario already names the rule "status: done implies no
+  needed or failed in agents", but the hook only applied it (and only
+  auto-enforced) when the path contained /done/. BO-400c-1 retired the done/
+  move, so the rule was unreachable for every new ticket. This L2 pins the
+  status-keyed behaviour so it cannot regress to a folder-keyed check.
+test_spec:
+  - name: test_done_status_with_needed_agent_outside_done_folder_blocks
+    target_dir: unit_tests/commit_guardian
+    framework: pytest
+    type: unit
+    description: "Running the real hook on a status: done ticket with pull-request: needed at a non-done/ path exits 1 and names the agent."
+  - name: test_todo_status_with_violation_stays_warn_only
+    target_dir: unit_tests/commit_guardian
+    framework: pytest
+    type: unit
+    description: "A status: todo ticket with the same agents map and a parity violation exits 0 and prints the warning."
+  - name: test_done_status_all_signed_off_passes
+    target_dir: unit_tests/commit_guardian
+    framework: pytest
+    type: unit
+    description: "A status: done ticket with every phase signed_off exits 0."
+  - name: test_done_status_other_violation_stays_warn_only
+    target_dir: unit_tests/commit_guardian
+    framework: pytest
+    type: unit
+    description: "A status: done ticket whose only violation is a Sign-offs parity gap (no needed/failed agent) exits 0 and still prints the warning."
+  - name: test_done_status_crlf_line_endings_blocks
+    target_dir: unit_tests/commit_guardian
+    framework: pytest
+    type: unit
+    description: "The status: done rule holds when the ticket file uses CRLF line endings."
+  - name: test_malformed_status_does_not_crash
+    target_dir: unit_tests/commit_guardian
+    framework: pytest
+    type: unit
+    description: "A non-string status value is treated as not done: the hook exits 0 without a traceback."
