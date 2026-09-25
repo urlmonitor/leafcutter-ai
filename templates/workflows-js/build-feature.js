@@ -1891,7 +1891,7 @@ async function driveTicketPhases(worktreeTicketPath, isEpicMember = false) {
         `You are the ${phaseName} phase agent for ticket: ${worktreeTicketPath}. ` +
         `Read the ticket before starting. Execute your phase. ` +
         `Files touched: ${JSON.stringify(filesTouched)}. ` +
-        `Return a JSON result with at minimum { "status": "ok" | "blocker" | "failed" }.` +
+        `Fill the reply tool's fields directly: "status" (ok | blocker | failed | handoff), "message", and "handoff_target" naming the next phase agent when status is handoff. Never return your reply as a JSON string or inside an "input" field.` +
         (phaseName === "test-writer"
           ? ` You MUST also return "tests_written": a list of the test file paths you created or ` +
             `extended, and "red_baseline_verified": true only if you ran those tests and confirmed ` +
@@ -2081,8 +2081,8 @@ async function driveTicketPhases(worktreeTicketPath, isEpicMember = false) {
           `that must act before it can proceed. Handoff message: ` +
           `${JSON.stringify(phaseResult.message || "")}. Read the ticket ` +
           `before starting. Execute your phase. Files touched: ` +
-          `${JSON.stringify(filesTouched)}. Return a JSON result with at ` +
-          `minimum { "status": "ok" | "blocker" | "failed" }.`,
+          `${JSON.stringify(filesTouched)}. Fill the reply tool's fields ` +
+          `directly: "status" (ok | blocker | failed | handoff), "message", and "handoff_target" naming the next phase agent when status is handoff. Never return your reply as a JSON string or inside an "input" field.`,
           {
             agentType: normalizedTarget,
             schema: PHASE_RESULT_SCHEMA,
