@@ -7,7 +7,7 @@ component: infrastructure
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -37,7 +37,7 @@ estimated_complexity: S
 delivers_to:
   - agent: llm-expert
     ac_id: INF-1100d-2
-    contract: 'CLI (deployed under the install''s scripts tree) printing JSON {status: ''not_configured''|''unreachable''|''reachable'',
+    contract: 'CLI (deployed under the install''s scripts tree) printing JSON {status: ''not_configured''|''invalid''|''config_error''|''unreachable''|''reachable'',
       setting: ''testing_context.db_connection_test'', host: str|null, port: int|null, database:
       str|null, message: str}. Exit 0 only when reachable. No field ever contains a password
       or user:password pair.'
