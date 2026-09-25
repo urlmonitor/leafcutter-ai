@@ -115,18 +115,16 @@ def _is_plan_feature_script(script_path: Path) -> bool:
     return _PLAN_FEATURE_CONTENT_SIGNATURE in source
 
 
-def plan_feature_default_label_responses(script_path: Path) -> dict[str, Any]:
-    """Return the plan-feature.js-specific default label_responses for
-    `script_path`, or `{}` if it is not plan-feature.js (see
-    `_is_plan_feature_script()`).
-
-    The one public entry point unit_tests/_workflow_engine_harness.py's
-    `_default_label_responses_for_script()` calls into. Caller-supplied
-    label_responses always take precedence over this default for the same
-    label -- see this module's own docstring for the merge-order guarantee.
+def worktree_setup_default_responses() -> dict[str, Any]:
+    """Return the two real, well-formed default responses (keyed by label)
+    for 'resolve-worktree-setup-script-path' / 'worktree-setup',
+    unconditionally -- for a caller that already knows it is talking to
+    plan-feature.js (e.g. unit_tests/_plan_feature_e2_runner.py's agent
+    shim) and only needs the payload shapes, not the `_is_plan_feature_script()`
+    gate `plan_feature_default_label_responses()` applies below for
+    run_workflow_under_e2()'s generic multi-script dispatch. The single
+    source of these two shapes -- never pasted per caller.
     """
-    if not _is_plan_feature_script(script_path):
-        return {}
     return {
         _WORKTREE_SETUP_SCRIPT_LABEL: {
             "output": _WORKTREE_SETUP_DEFAULT_SCRIPT_PATH,
@@ -146,3 +144,18 @@ def plan_feature_default_label_responses(script_path: Path) -> dict[str, Any]:
             "stderr": "",
         },
     }
+
+
+def plan_feature_default_label_responses(script_path: Path) -> dict[str, Any]:
+    """Return the plan-feature.js-specific default label_responses for
+    `script_path`, or `{}` if it is not plan-feature.js (see
+    `_is_plan_feature_script()`).
+
+    The one public entry point unit_tests/_workflow_engine_harness.py's
+    `_default_label_responses_for_script()` calls into. Caller-supplied
+    label_responses always take precedence over this default for the same
+    label -- see this module's own docstring for the merge-order guarantee.
+    """
+    if not _is_plan_feature_script(script_path):
+        return {}
+    return worktree_setup_default_responses()

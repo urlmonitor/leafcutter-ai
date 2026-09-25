@@ -202,12 +202,29 @@ def _run_node(script_text: str, timeout: int) -> subprocess.CompletedProcess:
 # "resolve-workspace-setup-permission" label (see module docstring) unless
 # the test's own mockAgent already returned the {output, exit_code} shape
 # that label expects — an explicit, deliberate override.
+#
+# BO-1500a-5-i: same mechanism, for 'resolve-worktree-setup-script-path' /
+# 'worktree-setup' -- plan-feature.js's Pre-Stage-0 bootstrap now fails
+# CLOSED on a generic `{status: 'ok'}` stub for those two labels (see
+# unit_tests/_plan_feature_harness_defaults.py's module docstring for the
+# full account), which every pre-existing mockAgent in this family falls
+# back to. __worktreeSetupDefaults reuses that module's own real payload
+# shapes rather than pasting them here.
+#
+# BO-2300a-1-ii repointed the six pause-store round-trip dispatches
+# (pause-persist, pause-persist-verify, peek/read/clear/clear-verify-pause-
+# record) from agentType 'status-checker' to 'worktree-agent'. This shim
+# passes that real agentType straight through -- no compat remapping -- so
+# a mockAgent() sees the dispatch target plan-feature.js actually uses.
 _AGENT_SHIM_JS_TEMPLATE = """
 const __workspacePermissionDefault = __DEFAULT_WORKSPACE_PERMISSION_RESPONSE__;
+const __worktreeSetupDefaults = __DEFAULT_WORKTREE_SETUP_RESPONSES__;
 const __agentShim = async (promptOrOpts, opts) => {
+  const __realAgentType = (opts && opts.agentType) || '';
+  const __label = (opts && opts.label) || null;
   const call = {
-    agentType: (opts && opts.agentType) || '',
-    label: (opts && opts.label) || null,
+    agentType: __realAgentType,
+    label: __label,
     input: { instructions: (typeof promptOrOpts === 'string') ? promptOrOpts : '' },
   };
   const __mockResult = await mockAgent(call);
@@ -220,6 +237,9 @@ const __agentShim = async (promptOrOpts, opts) => {
   if (call.label === 'resolve-workspace-setup-permission' && !__isDeliberateOverride) {
     return __workspacePermissionDefault;
   }
+  if (!__isDeliberateOverride && Object.prototype.hasOwnProperty.call(__worktreeSetupDefaults, call.label)) {
+    return __worktreeSetupDefaults[call.label];
+  }
   return __mockResult;
 };
 const __phase = (name, fn) => (typeof fn === 'function' ? fn() : undefined);
@@ -227,11 +247,26 @@ const __log = () => {};
 """
 
 
+def _default_worktree_setup_responses_json() -> str:
+    """Return the BO-1500a-5-i 'resolve-worktree-setup-script-path' /
+    'worktree-setup' default responses as a JS object literal, keyed by
+    label -- reuses _plan_feature_harness_defaults.py's own real payload
+    shapes, never a second copy of them.
+    """
+    from _plan_feature_harness_defaults import worktree_setup_default_responses
+
+    return json.dumps(worktree_setup_default_responses())
+
+
 def _build_agent_shim_js() -> str:
-    """Return the agent shim JS with the default workspace-permission response inlined."""
+    """Return the agent shim JS with the default workspace-permission and
+    worktree-setup responses inlined."""
     return _AGENT_SHIM_JS_TEMPLATE.replace(
         "__DEFAULT_WORKSPACE_PERMISSION_RESPONSE__",
         _default_workspace_permission_response_json(),
+    ).replace(
+        "__DEFAULT_WORKTREE_SETUP_RESPONSES__",
+        _default_worktree_setup_responses_json(),
     )
 
 _INVOCATION_JS = """

@@ -50,8 +50,26 @@ async function mockAgent(call) {
   const instructions = (call.input && call.input.instructions) || '';
   globalThis.__capturedAllCalls.push({ agentType, label, instr: instructions.slice(0, 1600) });
 
+  // BO-2300a-1-ii moved the pause-store round-trip labels from agentType
+  // 'status-checker' to 'worktree-agent'. Matched by LABEL, not agentType,
+  // and kept separate from the status-checker block below so it never
+  // shadows 'resolve-worktree-setup-script-path' / 'worktree-setup' (also
+  // dispatched under worktree-agent) -- those two fall through to this
+  // mock's generic { status: 'ok' } tail, which the harness recognises as
+  // a non-override and replaces with its own real default response.
+  if (agentType === 'worktree-agent') {
+    if (label === 'pause-persist') { return { status: 'ok' }; }
+    if (label === 'pause-persist-verify') { return { exists: true, stale: false }; }
+    if (label === 'peek-pause-record') { return { exists: true, stale: false }; }
+    if (label === 'read-pause-record') { return { exists: true, stale: false }; }
+    if (label === 'clear-pause-record') { return { ok: true }; }
+    if (label === 'clear-pause-record-verify') { return { exists: false }; }
+  }
+
   if (agentType === 'status-checker') {
-    if (instructions.includes('git branch --show-current')) {
+    // BO-1500a-5-i's real worktree-setup default now anchors the branch
+    // check to `git -C "<path>" branch --show-current`, not the bare form.
+    if (/git(?: -C "[^"]*")? branch --show-current/.test(instructions)) {
       return { output: 'ac-authoring/test', exit_code: 0 };
     }
     if (instructions.includes('setup_ticket_worktree')) {
@@ -85,17 +103,10 @@ async function mockAgent(call) {
     // replaced (matching on 'pt-gate-'/'gate-' and returning
     // {action:'approve'|'edit'|'cancel'} straight from the mock) were dead
     // code post-migration: resolveGate() never calls the liveGateFn closure
-    // that would have reached them. What remains live is the bookkeeping
-    // ADR-024's pause/resume substrate itself dispatches -- persisting,
-    // reading back, and clearing the durable pause record -- which this
-    // test file's own chaining driver (`_run`, see the Python side below)
-    // relies on to drive a scenario across the several process invocations
-    // ("hops") a multi-gate run now requires.
-    if (label === 'pause-persist') { return { status: 'ok' }; }
-    if (label === 'pause-persist-verify') { return { exists: true, stale: false }; }
-    if (label === 'read-pause-record') { return { exists: true, stale: false }; }
-    if (label === 'clear-pause-record') { return { ok: true }; }
-    if (label === 'clear-pause-record-verify') { return { exists: false }; }
+    // that would have reached them. The pause/resume bookkeeping labels
+    // (pause-persist, read-pause-record, etc.) ADR-024's substrate itself
+    // dispatches now arrive under agentType 'worktree-agent' (BO-2300a-1-ii)
+    // -- handled in the block above, not here.
     if (label === 'apply-approval') { return { status: 'ok', updated: ['ACD-BA', 'ACD-ITPO'] }; }
     return { status: 'ok' };
   }
