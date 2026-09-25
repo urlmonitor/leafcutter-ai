@@ -4,14 +4,16 @@ description: "The baseline business information every product rests on -- Mock D
 type: reference
 status: active
 created: 2026-07-10
-last_updated: 2026-09-17
+last_updated: 2026-09-25
 components:
   - ux_prototyping
 related_docs:
   - docs/how-to/authoring-product-truth-artifacts.md
   - docs/how-to/product-truth-schema-reference.md
+  - docs/how-to/reading-a-drift-report-and-reconciling-the-record.md
   - docs/architecture/components/ux-prototyping.md
   - docs/reference/product-truth-checker-outcomes.md
+  - docs/architecture/diagrams/c3-009-record-freshness-check-sequence.md
 ---
 
 # Product-Truth Store
@@ -118,7 +120,14 @@ not counted in the `compared` figure. The run always states `compared N
 journey(s) for freshness`, so a run that compared none is distinguishable from
 one that compared some and found them all current. See the
 [how-to's freshness section](../how-to/authoring-product-truth-artifacts.md#part-6--confirm-a-journey-against-what-it-describes-freshness)
-for how to author a `confirmed` record by hand.
+for how to author a `confirmed` record by hand, and
+[how to read a drift report and reconcile the record](../how-to/reading-a-drift-report-and-reconciling-the-record.md)
+for what each finding (`[pointer]`, `[pointer-unresolvable]`, `[freshness]`,
+`[freshness-never-confirmed]`) means and how to act on it once you have one. See
+[c3-009 — The Record's Freshness Check: How a Change Reaches a Drift Finding](../architecture/diagrams/c3-009-record-freshness-check-sequence.md)
+for the ordered sequence from a staged change through this checker to the reported
+verdict, drawn with the three verdict outcomes (checked-and-sound, nothing-examined,
+not-checked) as distinct terminations.
 
 Every loaded flow, mock-data, mockup, and AC record's `example_product` is
 cross-checked against the product root it actually lives under (UXP-700d-3-ii,
