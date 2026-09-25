@@ -9,7 +9,7 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
+readiness: approved
 priority: medium
 roadmap_phase: phase_1
 criteria: |
@@ -42,13 +42,135 @@ doc_links:
 - path: docs/reference/claude-code-hooks.md
   relationship: related
   status: exists
-delivers_to: null
-expects_from: null
+- path: docs/known-issues/commit-guardian/open-high-ki-cg-037.md
+  relationship: describes
+  status: exists
+  relevance: "Mechanism 1 is this record's shape exactly: the guard prints a refusal and ends in a
+    way the session treats as allow, so the message and the ending both read as a block while the
+    edit lands."
+- path: docs/known-issues/commit-guardian/open-low-ki-cg-20260917-claude-code-hooks-reference-contradicts-exit-codes.md
+  relationship: describes
+  status: exists
+  relevance: Why the decision interpreter may not take its contract from the repository's own hooks
+    reference until GE-130f-4 lands. Use Claude Code's own hooks reference as the source and date
+    the check.
+- path: config/verification_flow.schema.json
+  relationship: describes
+  status: exists
+  relevance: The four-value state this record moves between (unverified / failing / passing) and
+    the evidence block the exit status and stderr are attached to rather than decided from.
+delivers_to:
+- agent: python-coder
+  ac_id: GE-130f-2
+  contract: >-
+    The observation rule and the seam that enforces it - a single decision interpreter for the
+    PreToolUse block contract, and a record writer whose only arguments are the target path's
+    before and after digests. GE-130f-2, GE-130f-2-i and GE-130f-2-ii record their refusals
+    through the same seam; they do not define a second one.
+expects_from:
+- ac_id: GE-120f-1
+  contract: >-
+    The four-value liveness record and the rule that no part of it may be taken from a
+    declaration. This record adds the adjacent rule: no part of it may be taken from the guard's
+    own message or ending either.
 assigned_agent: python-coder
+estimated_complexity: M
+change_target:
+- code
+risk_surface: safety
+it_requirements:
+- >-
+  THE RECORD WRITER'S SIGNATURE IS THE ENFORCEMENT. The function that produces currently.state
+  takes the target path's before-digest and after-digest (and, for a create, whether the path
+  existed) as its ONLY arguments. The guard's exit status, its stderr and any JSON it emitted are
+  attached to currently.evidence afterwards and are never passed to it. A rule stated in prose
+  and enforced by review does not survive the fourth author; a signature does.
+- >-
+  ONE DECISION INTERPRETER, TESTED AGAINST THE HOST CONTRACT. Exactly one place in the harness
+  decides whether Claude Code would have allowed the call, and it is exercised by its own
+  conformance case over every ending a PreToolUse hook can produce - including the one this
+  guard uses today. Its source is Claude Code's own hooks reference with the fetch date
+  recorded; docs/reference/claude-code-hooks.md is unusable for this until GE-130f-4 lands.
+- >-
+  THE TWO RUNS DIFFER IN THE ENDING AND IN NOTHING ELSE. The second run changes only the way the
+  guard ends; its refusal message must be byte-identical to the first run's. Assert the message
+  bytes are equal across the two runs, so a repair that also reworded the message cannot be
+  mistaken for evidence that the ending was the cause.
+- >-
+  THE UNREPAIRED GUARD MUST BE NAMED, NOT JUST RECORDED FAILING. The run reports the guard as one
+  that announced a refusal the session did not act on. Distinguishing this class from "did not
+  refuse at all" is what tells a reader the repair is one line, not a rewrite.
+- >-
+  Error-handling policy applies to the harness's subprocess and filesystem calls: specific
+  exceptions, logged at WARNING or higher, never swallowed. An invocation that cannot be run to
+  a verdict records blocked, never passing and never an absent record.
+- >-
+  AC_ENFORCE_STRICT=1 on every pytest invocation.
+test_spec:
+- name: test_ge130f1i_announced_refusal_with_an_allowing_ending_records_not_observed
+  target_dir: unit_tests/portability/
+  framework: unittest
+  type: behavioral
+  angle: criterion
+  description: >-
+    A fixture guard that prints a refusal naming the file and then ends the way Claude Code treats
+    as allow. Through the real entry point: the edit IS found to have been carried out, the
+    liveness record reads failing (rejection not observed), and the run names the guard as one
+    that announced a refusal the session did not act on.
+- name: test_ge130f1i_same_message_different_ending_records_observed
+  target_dir: unit_tests/portability/
+  framework: unittest
+  type: behavioral
+  angle: criterion
+  description: >-
+    The same fixture guard changed ONLY so that it ends in the way the session treats as a refusal.
+    The edit is found not carried out and the record reads passing. Assert the refusal message
+    bytes are identical to the previous run's, so the ending is demonstrably the only variable.
+- name: test_ge130f1i_record_writer_never_sees_the_exit_status_or_the_message
+  target_dir: unit_tests/portability/
+  framework: unittest
+  type: unit
+  angle: seam
+  description: >-
+    THE NAMED MUTATION, MADE MECHANICAL. Assert the record-writing function's parameters are the
+    before/after digests and nothing else, and that passing a guard's exit status or stderr to it
+    is a type error rather than an alternative input. NAMED MUTATION (mandatory, run it): decide
+    the state from the guard's ending or from the presence of a refusal word in its message. Under
+    that injection the first descriptor flips to passing on an unrepaired guard; this descriptor
+    and the first must go red together and return to green on revert.
+- name: test_ge130f1i_decision_interpreter_conformance_over_every_hook_ending
+  target_dir: unit_tests/portability/
+  framework: unittest
+  type: unit
+  angle: boundary
+  description: >-
+    The single decision interpreter is exercised over every ending a PreToolUse hook can produce -
+    the allowing endings, the blocking ending, and the JSON permission-decision forms - and its
+    classification matches the host contract recorded with its fetch date. An interpreter that
+    guesses is the failure this whole record exists to prevent, one level up.
+test_rationale: >-
+  The documentation guard's defect is exactly the shape this record forbids, so an observation
+  built the obvious way records the unrepaired guard as working: it prints a refusal and returns
+  non-zero, and both of those read as a block. Asserting the behaviour in prose does not prevent
+  the next author from reaching for the exit status, so the rule is enforced by the record
+  writer's signature and asserted as a seam. The two-run pair holds the message byte-identical so
+  the ending is the only variable; without that, a repair that reworded the message would look
+  like evidence. The conformance descriptor exists because the interpreter is now the single
+  place the host contract lives, and an interpreter nobody falsified is the same defect class
+  moved up a level.
 declares_side_effect: false
 origin_agent: business-analyst
 created: '2026-09-17'
-amended_by: []
+amended_by:
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-09-25
+  note: >-
+    Confirmed python-coder. Added estimated_complexity M, change_target [code], risk_surface
+    safety, six it_requirements (the record-writer signature is the enforcement), four test_spec
+    descriptors including the mandatory named mutation, test_rationale, delivers_to (GE-130f-2),
+    expects_from (GE-120f-1) and three doc_links. criteria, title, depends_on, req_status and
+    readiness untouched; declares_side_effect re-derived as false and unchanged.
 superseded_by: null
 covered_by: []
 implemented_by: []
@@ -61,3 +183,21 @@ notes: |
   landed.
 
   declares_side_effect: false.
+  IT-PO ENRICHMENT (2026-09-25).
+
+  THE RULE IS ENFORCED BY A SIGNATURE, NOT BY A CONVENTION. currently.state is produced by a
+  function whose only arguments are the target path's before and after digests. Exit status and
+  stderr are attached to currently.evidence after the fact. This is the mechanical form of the
+  BA's "in neither run is the record decided from the message or from how it ended alone" - a
+  reviewer-enforced version of that clause would not survive the next author, who will reach for
+  the exit status because it is right there.
+
+  THE SECOND VARIABLE, REMOVED. The two runs must differ in the ending and in nothing else, so
+  the message bytes are asserted equal across them. Otherwise a repair that also reworded the
+  message reads as evidence that the ending mattered.
+
+  WHERE THE HOST CONTRACT LIVES. One decision interpreter in the harness, sourced from Claude
+  Code's own hooks reference with the fetch date recorded, exercised by its own conformance
+  case. docs/reference/claude-code-hooks.md cannot be that source until GE-130f-4 lands: its
+  stdout table and its escape-hatch table disagree, and two shipped guards follow the table the
+  general rule contradicts.

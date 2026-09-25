@@ -9,7 +9,7 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
+readiness: approved
 priority: medium
 roadmap_phase: phase_1
 criteria: |
@@ -35,13 +35,126 @@ doc_links:
 - path: docs/reference/claude-code-hooks.md
   relationship: related
   status: exists
-delivers_to: null
-expects_from: null
+- path: docs/known-issues/commit-guardian/open-high-ki-cg-20260917-readme-read-guard-never-checks-a-write.md
+  relationship: describes
+  status: exists
+  relevance: THE FINDING THIS RECORD CLOSES, with the probe. Identical 5,000-character body, guide
+    unread in both calls, Write exits 0 and Edit exits 2. The skip runs before any guide lookup.
+- path: docs/reference/false-green-mechanisms.md
+  relationship: describes
+  status: exists
+  relevance: "The pattern entry: a shortcut that reads absent input as benign input. The rule below
+    is the general form - an allowance may only apply to a payload it can measure."
+- path: templates/settings.json
+  relationship: related
+  status: exists
+  relevance: The guard is registered on Edit|Write, so a Write already reaches it. Nothing about
+    the registration needs to change; only the allowance does.
+delivers_to:
+- agent: documentation-expert
+  ac_id: GE-130f-4
+  contract: >-
+    The fact the hooks-reference catalogue entry must state - whole-file writes are checked - and
+    the rule behind it, so the reference states the behaviour rather than repeating the matcher.
+expects_from:
+- ac_id: GE-130f-2
+  contract: >-
+    The gated-folder matching this record's Writes are aimed at, and the refusal-observed seam it
+    records through. This record varies the TOOL; GE-130f-2 establishes the folder.
 assigned_agent: python-coder
+estimated_complexity: M
+change_target:
+- code
+risk_surface: safety
+it_requirements:
+- >-
+  AN ALLOWANCE APPLIES ONLY TO A PAYLOAD IT CAN MEASURE. The small-edit allowance is opt-in on the
+  presence of the fields its size is computed from. A payload that does not carry them is not
+  small - it is unmeasurable, and unmeasurable is checked. State this as the rule rather than as a
+  Write special case, so the next tool shape added inherits it instead of re-opening the hole.
+- >-
+  THE GUARD MUST NOT MANUFACTURE A BEFORE-IMAGE. Reading the file off disk to synthesise a diff
+  for a Write would let a whole-file rewrite with a small net delta back through the same hole,
+  and would make the allowance depend on state the request did not carry. Measure from the request
+  or do not measure.
+- >-
+  THE ORDER MATTERS AS MUCH AS THE RULE. Today the allowance is evaluated BEFORE any guide lookup,
+  so a payload it cannot measure never reaches the check at all. Whatever shape the repair takes,
+  an unmeasurable payload must reach the guide check.
+- >-
+  BOTH WRITE SHAPES, NOT ONE. A Write that creates a new file and a Write that replaces an
+  existing one are separate cases: the first has no before-state at all, the second has one the
+  request does not carry. A repair that handles only replacement leaves file creation - the
+  commonest way new work enters a gated folder - unchecked.
+- >-
+  RECORD THE REFUSAL THROUGH GE-130f-1-i's SEAM. Before and after digests decide the outcome; for
+  the creation case the assertion is that the path still does not exist afterwards.
+- >-
+  Error-handling policy: unexpected exception fail-open and logged at WARNING or higher; a
+  deliberate refusal never travels the fail-open path.
+- >-
+  AC_ENFORCE_STRICT=1 on every pytest invocation.
+test_spec:
+- name: test_ge130f2i_write_creating_a_new_file_in_a_gated_folder_is_not_carried_out
+  target_dir: unit_tests/portability/
+  framework: unittest
+  type: behavioral
+  angle: criterion
+  description: >-
+    Guide unread. A Write payload creating a new file inside a gated folder goes through the
+    registered entry point; assert the path does not exist afterwards and the refusal names the
+    file and the guide.
+- name: test_ge130f2i_write_replacing_an_existing_file_in_a_gated_folder_is_not_carried_out
+  target_dir: unit_tests/portability/
+  framework: unittest
+  type: behavioral
+  angle: criterion
+  description: >-
+    Guide unread. A Write payload replacing an existing file whole: assert the file's bytes are
+    unchanged afterwards and the refusal names the file and the guide.
+- name: test_ge130f2i_both_writes_are_carried_out_after_the_guide_is_read
+  target_dir: unit_tests/portability/
+  framework: unittest
+  type: behavioral
+  angle: seam
+  description: >-
+    THE PAIRING. The guide is read in the same session through readme_marker_recorder's registered
+    PostToolUse Read entry point, and both Writes are then carried out with no refusal. Without
+    this, a guard repaired into refusing every Write passes the first two descriptors.
+- name: test_ge130f2i_a_tiny_write_is_still_checked_while_a_tiny_edit_is_still_allowed
+  target_dir: unit_tests/portability/
+  framework: unittest
+  type: behavioral
+  angle: boundary
+  description: >-
+    THE DISCRIMINATOR FOR THE RULE RATHER THAN THE SPECIAL CASE. A one-byte Write into a gated
+    folder with the guide unread is refused, while an Edit whose measured size is inside the
+    allowance is still let through in the same run. NAMED MUTATION (mandatory, run it): restore
+    "no before/after text means trivial". This descriptor and the first two go red; GE-130f-2's
+    Edit descriptors stay green, which is why this is its own record.
+test_rationale: >-
+  The probe in the known issue is the arrival state: same 5,000-character body, Write allowed,
+  Edit refused, guide unread in both. So the descriptors vary the TOOL and hold everything else
+  fixed, and they assert on the filesystem - the guard's exit status for a Write is 0 today and
+  reads as "nothing to complain about" rather than as a bug. Creation and replacement are separate
+  descriptors because a repair that measures a Write against the file's current size handles
+  replacement and still has no before-state for a create, which is the commonest way new work
+  enters a gated folder. The last descriptor holds the Edit allowance open in the same run so the
+  repair is "measure what you can, check what you cannot" and not "refuse everything".
 declares_side_effect: false
 origin_agent: business-analyst
 created: '2026-09-17'
-amended_by: []
+amended_by:
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-09-25
+  note: >-
+    Confirmed python-coder. Added estimated_complexity M, change_target [code], risk_surface
+    safety, seven it_requirements (the allowance is opt-in on a measurable payload - stated as a
+    rule, not a Write special case), four test_spec descriptors including the named mutation,
+    test_rationale, delivers_to (GE-130f-4), expects_from (GE-130f-2) and three doc_links.
+    criteria, title, depends_on, req_status and readiness untouched; declares_side_effect
+    re-derived as false and unchanged.
 superseded_by: null
 covered_by: []
 implemented_by: []
@@ -51,3 +164,21 @@ notes: |
   restore "no before/after text means trivial". GE-130f-2 uses the Edit tool and stays green.
 
   declares_side_effect: false.
+  IT-PO ENRICHMENT (2026-09-25).
+
+  THE RULE, NOT THE SPECIAL CASE. "A Write is never trivial" closes today's hole and re-opens it
+  for the next payload shape. The rule is: an allowance may apply only to a payload it can
+  measure; a payload lacking the fields the size is computed from is unmeasurable, and
+  unmeasurable is checked. Absent input is never benign input.
+
+  DO NOT SYNTHESISE A BEFORE-IMAGE. Measuring a Write against the file's current size on disk
+  looks like the tidy fix and re-opens the hole for a whole-file rewrite with a small net delta,
+  while making the allowance depend on state the request never carried.
+
+  ORDER MATTERS AS MUCH AS THE RULE. The skip runs before any guide lookup, so an unmeasurable
+  payload never reaches the check at all. Whatever shape the repair takes, it must reach it.
+
+  CREATE AND REPLACE ARE DIFFERENT. A create has no before-state at all; a replace has one the
+  request does not carry. A repair that handles only replacement leaves file creation - the
+  commonest way new work enters a gated folder - unchecked, and nothing else in this tree would
+  notice.

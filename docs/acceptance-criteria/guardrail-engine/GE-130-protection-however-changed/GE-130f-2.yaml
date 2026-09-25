@@ -9,7 +9,7 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
+readiness: approved
 priority: medium
 roadmap_phase: phase_1
 criteria: |
@@ -31,6 +31,8 @@ criteria: |
     never counted as protection.
 depends_on:
 - GE-130f
+- GE-120f-1
+- GE-130f-1
 doc_links:
 - path: docs/acceptance-criteria/guardrail-engine/GE-130-protection-however-changed/GE-130f.yaml
   relationship: parent
@@ -54,13 +56,196 @@ doc_links:
 - path: docs/reference/claude-code-hooks.md
   relationship: related
   status: exists
-delivers_to: null
-expects_from: null
+- path: docs/known-issues/commit-guardian/open-high-ki-cg-20260917-readme-read-guard-never-checks-a-write.md
+  relationship: describes
+  status: exists
+  relevance: The third inertness mechanism, with the probe that shows the guard DOES refuse an Edit
+    in a gated folder when the folder is a real directory. That is why this record's linked-copy
+    clause and GE-130f-2-i's Write clause are separate records - each hides the other.
+- path: templates/settings.json
+  relationship: related
+  status: exists
+  relevance: The PreToolUse Edit|Write registration whose command string IS the entry point, and
+    the matcher the session_hooks_manifest entry is reconciled against. Note readme_marker_recorder
+    is registered on PostToolUse Read - the acceptable input must travel that path, not a marker
+    file written by the test.
+- path: docs/reference/false-green-mechanisms.md
+  relationship: describes
+  status: exists
+  relevance: "The pattern both this record's clauses belong to: a gated folder that matches no path
+    counted as protection, and (GE-130f-2-i) a shortcut that reads absent input as benign input."
+- path: docs/architecture/components/commit-guardian.md
+  relationship: related
+  status: exists
+delivers_to:
+- agent: python-coder
+  ac_id: GE-130f-3
+  contract: >-
+    readme_read_guard's entry in commit_guardian.json's session_hooks_manifest -
+    {matcher, entry_point, negative_control, currently} - where currently.state was written from
+    whether the edit was carried out on disk. GE-130f-3 reads currently.state for this guard and
+    refuses command coverage while it is anything but passing.
+- agent: python-coder
+  ac_id: GE-130a-1
+  contract: >-
+    A guide-read guard that refuses through the registered entry point, matches gated folders
+    through links, and names any gated folder that gates nothing in the installed project - so
+    widening it to shell commands adds a path to a guard that already refuses.
+expects_from:
+- ac_id: GE-120f-1
+  contract: >-
+    The known-bad-input declaration shape, the entry-point rule and the four-value liveness record
+    (config/verification_flow.schema.json $defs/negative_control and $defs/currently). Cited,
+    never restated. ORDERING CAVEAT: GE-120f-1's runner is the only writer of currently; see notes.
+- ac_id: GE-130f-1
+  contract: >-
+    The session_hooks_manifest section of commit_guardian.json and its schema. This record adds an
+    ENTRY inside that section; it does not create a second section and does not re-declare the
+    shape.
+- ac_id: GE-120c-1
+  contract: >-
+    unit_tests/portability/_deployed_check_harness.py - a real second working copy with the built
+    deployed layout and the source tree off the import path, plus the decision interpreter and
+    digest-based record writer GE-130f-1-i defines.
 assigned_agent: python-coder
+estimated_complexity: L
+change_target:
+- code
+- config
+risk_surface: safety
+package_surface: false
+it_requirements:
+- >-
+  CONTAINMENT IS DECIDED ON RESOLVED PATHS, AND A PATH THAT LEAVES THE PROJECT IS A NON-MATCH,
+  NEVER AN EXCEPTION. Resolve the edited path, each gated folder and the project root to their real
+  targets, then test containment on the resolved pair. Today the guard prefix-matches unresolved
+  strings, so a gated folder reached through a link resolves out from under the prefix; in the main
+  workspace the containment test RAISES and in a worktree it merely fails. Both must become an
+  ordinary non-match or an ordinary match, decided the same way in both layouts.
+- >-
+  A GATED FOLDER MUST MATCH UNDER BOTH SPELLINGS. Its in-project path and its resolved target are
+  both gated, so .claude/hooks gates an edit whether the session names the link or the file it
+  points at. Matching only the resolved target moves the blind spot rather than closing it.
+- >-
+  A GATED FOLDER THAT MATCHES NOTHING IS NAMED, NOT COUNTED. The package installs into projects
+  that may legitimately lack one, so absence is not an error - being silent about it is. The run
+  reports, per gated folder, either that it is present in the installed project or that it gates
+  nothing there. A folder that matches no path must never contribute to a passing liveness record.
+- >-
+  THE ACCEPTABLE INPUT MUST TRAVEL THE REAL READ PATH. "The guide has been read in this session"
+  is established by invoking readme_marker_recorder through its own registered PostToolUse Read
+  entry point, not by the harness writing a marker file. A test that fabricates the marker proves
+  the guard reads a file the test wrote, which is the adjacent false green.
+- >-
+  THE REFUSAL IS READ OFF THE FILESYSTEM, THROUGH GE-130f-1-i's SEAM. Before and after digests of
+  the target path decide currently.state; exit status and stderr are evidence only. Use the one
+  decision interpreter and the one record writer - do not add a second.
+- >-
+  NO WIDENING HERE. Edit|Write matcher only. Adding readme_read_guard to a Bash matcher is
+  GE-130a-1's work, refused by GE-130f-3 until this guard's record reads passing. Note the read
+  side too: GE-130a expects a guide read WITH A COMMAND to count as read, and that is GE-130a's
+  work, not this record's.
+- >-
+  Error-handling policy: an UNEXPECTED exception in the guard stays fail-open and is logged at
+  WARNING or higher; a DELIBERATE refusal never travels the fail-open path. The containment test
+  raising is today's bug, not today's error handling - it must stop raising, not be wrapped.
+- >-
+  AC_ENFORCE_STRICT=1 on every pytest invocation.
+test_spec:
+- name: test_ge130f2_edit_in_a_gated_folder_with_the_guide_unread_is_not_carried_out
+  target_dir: unit_tests/portability/
+  framework: unittest
+  type: behavioral
+  angle: criterion
+  description: >-
+    Over a real built working copy with no read marker for the nearest guide: run the guard through
+    the settings.json command string with the Edit payload on stdin and apply the edit only if the
+    decision interpreter says the call was allowed. Assert the file's bytes are unchanged.
+- name: test_ge130f2_refusal_names_the_file_and_the_guide_that_must_be_read
+  target_dir: unit_tests/portability/
+  framework: unittest
+  type: behavioral
+  angle: criterion
+  description: >-
+    The captured refusal text contains the edited file's path and the path of the nearest guide,
+    asserted only on a run that already established the edit did not happen.
+- name: test_ge130f2_edit_is_carried_out_after_the_guide_is_read_through_the_real_read_path
+  target_dir: unit_tests/portability/
+  framework: unittest
+  type: behavioral
+  angle: seam
+  description: >-
+    THE PAIRING, THROUGH THE REAL PRODUCER. In the same run, the guide is read by invoking
+    readme_marker_recorder through its registered PostToolUse Read entry point, and the same edit
+    is then carried out with no refusal. The marker is produced by the real recorder, never written
+    by the test - producer output fed into the real consumer.
+- name: test_ge130f2_every_gated_folder_is_reported_present_or_gating_nothing
+  target_dir: unit_tests/portability/
+  framework: unittest
+  type: integration
+  angle: real_artifact
+  description: >-
+    Over the repository's REAL gated set and the deployed copy, the run emits one line per gated
+    folder saying either that it is present in this project or that it gates nothing here. Assert
+    by count-and-membership over the run's own output, never against a hard-coded list of today's
+    four folders. NAMED MUTATION (mandatory, run it): treat a gated folder that matches no path as
+    satisfied. This descriptor must go red.
+- name: test_ge130f2_liveness_record_is_written_from_the_filesystem_outcome
+  target_dir: unit_tests/portability/
+  framework: unittest
+  type: integration
+  angle: real_artifact
+  description: >-
+    readme_read_guard's session_hooks_manifest entry in the DEPLOYED commit_guardian.json carries
+    currently.state passing with evidence quoting the real invocation, and its matcher equals the
+    matcher templates/settings.json registers the guard under.
+- name: test_ge130f2_registered_settings_entry_point_blocks_the_call
+  target_dir: unit_tests/portability/
+  framework: unittest
+  type: integration
+  angle: reachability
+  surface_invoked: >-
+    the templates/settings.json PreToolUse hook command for readme_read_guard on the Edit|Write
+    matcher, executed verbatim with the tool payload on stdin against the built .claude/hooks copy
+  description: >-
+    PRODUCTION ENTRY POINT. The guard is invoked the way a session invokes it and the decision
+    interpreter classifies the outcome as a block, in the main working copy where the gated folders
+    are reached through links into the installed package copy.
+test_rationale: >-
+  The probe in KI-CG-20260917 shows this guard refusing an Edit correctly in a throwaway repo
+  whose .claude/hooks is a real directory. Every in-process unit test and every fixture-directory
+  test therefore passes today while the guard is inert in the repository it ships from - the defect
+  lives entirely in how the installed layout resolves. So every descriptor runs out of process
+  against a built copy whose gated folders are reached the way the real project reaches them. The
+  acceptable input is produced by the real recorder through its own registered entry point because
+  a test-written marker proves only that the guard can read a file the test wrote. The gated-folder
+  report is asserted by count-and-membership rather than against today's four names, so the next
+  folder added cannot escape it.
 declares_side_effect: false
 origin_agent: business-analyst
 created: '2026-09-17'
-amended_by: []
+amended_by:
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-09-25
+  note: >-
+    Confirmed python-coder. Added estimated_complexity L, change_target [code, config],
+    risk_surface safety, package_surface false (deliberate denial - this record adds an entry
+    INSIDE the section GE-130f-1 creates, one level below the watched top-level keys), eight
+    it_requirements, six test_spec descriptors with one named mutation, test_rationale,
+    delivers_to (GE-130f-3, GE-130a-1), expects_from (GE-120f-1, GE-130f-1, GE-120c-1) and four
+    doc_links. criteria, title, depends_on, req_status and readiness untouched;
+    declares_side_effect re-derived as false and unchanged.
+- reason: depends-on-edges-added-for-landing-order
+  by: business-analyst
+  at: 2026-09-25
+  note: >-
+    User decision 2026-09-25. Added depends_on GE-120f-1 (its liveness runner is the only writer
+    of the currently record, built first) and GE-130f-1 (this record adds an entry to the
+    session_hooks_manifest section GE-130f-1 introduces). The IT PO recorded both as
+    expects_from without the edge; the build sequencer reads depends_on only. Cycle check:
+    GE-120f-1's transitive depends_on is GE-120f, GE-120, and GE-130f-1 depends on GE-130f and
+    GE-120f-1 - neither reaches GE-130f-2.
 superseded_by: null
 covered_by:
 - GE-130f-2-i
@@ -77,3 +262,34 @@ notes: |
   GE-130f-2-i) because a repair can fix this record and leave either inert.
 
   declares_side_effect: false.
+  IT-PO ENRICHMENT (2026-09-25).
+
+  ASSIGNMENT CONFIRMED: python-coder.
+
+  WHY THIS GUARD IS THE HARDER ONE TO PROVE. KI-CG-20260917's probe shows it refusing an Edit
+  correctly, with exit 2 and the right message, in a throwaway repo whose .claude/hooks is a
+  real directory. Everything green, guard inert where it ships. The defect is entirely in path
+  resolution under the installed layout, so no fixture-directory test and no in-process import
+  can see it. Every descriptor here runs out of process against a built copy that reaches its
+  gated folders the way the real project does.
+
+  RESOLVE BOTH SIDES, THEN COMPARE. The edited path, each gated folder and the project root are
+  all resolved to their real targets before containment is tested; a resolved path that leaves
+  the project is an ordinary non-match rather than an exception. A gated folder is matched under
+  both spellings, its in-project path and its resolved target. GE-130f-2-ii is the record that
+  proves one fix did not leave the other layout inert.
+
+  THE ACCEPTABLE INPUT GOES THROUGH readme_marker_recorder. It is registered on PostToolUse Read
+  in the same settings.json. A harness that writes the marker itself proves the guard can read a
+  file the test wrote - the adjacent false green, and one this tree would otherwise commit with
+  its own tooling.
+
+  PACKAGE SURFACE DENIED DELIBERATELY. This record adds an ENTRY inside session_hooks_manifest,
+  which GE-130f-1 creates. _package_surface_registry watches commit_guardian.json's document
+  top-level keys and hooks_manifest.hooks ids; an entry one level inside a new section is
+  neither. package_surface: false records that as a decision rather than an omission.
+
+  ORDERING CAVEAT FOR THE USER. Same as GE-130f-1's: currently is written by GE-120f-1's runner,
+  which is not built, and depends_on (BA-owned) lists only GE-130f. This record additionally
+  expects GE-130f-1's section to exist; both are siblings under GE-130f with no edge between
+  them. Flagged, not decided. [DECIDED 2026-09-25 (user): GE-120f-1 is built first; the depends_on edge enforces the order.]

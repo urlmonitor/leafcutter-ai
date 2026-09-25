@@ -8,7 +8,7 @@ level: L1
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
+readiness: approved
 priority: medium
 roadmap_phase: phase_1
 criteria: |
@@ -34,13 +34,137 @@ doc_links:
     relationship: context
     status: exists
     relevance: "Owns DETECTING a guard that has never refused, store-wide. This L1 owns REPAIRING two named guards. GE-120f had no room (five L2s at the cap) and a different subject."
-delivers_to: null
-expects_from: null
+  - path: docs/acceptance-criteria/guardrail-engine/GE-120-green-means-checked/GE-120f-1.yaml
+    relationship: context
+    status: exists
+    relevance: "The record shape and the entry-point rule this L1 consumes: the declared known-bad input, the four-value liveness record from config/verification_flow.schema.json, and the runner that writes it from observation. Cited, never restated."
+  - path: docs/acceptance-criteria/guardrail-engine/GE-120-green-means-checked/GE-120c-1.yaml
+    relationship: context
+    status: exists
+    relevance: "The out-of-process harness over a real separate working copy (unit_tests/portability/_deployed_check_harness.py, built and green). Every observation in this L1 runs through it; a second harness beside it is refused."
+  - path: docs/known-issues/commit-guardian/open-high-ki-cg-037.md
+    relationship: describes
+    status: exists
+    relevance: "The documentation guard's two independent inertness mechanisms, with evidence: the block is exit 1, and DOC_MAPPING names another project's folders (0 tracked files under every key). Owning AC is this record."
+  - path: docs/known-issues/commit-guardian/open-high-ki-cg-20260917-readme-read-guard-never-checks-a-write.md
+    relationship: describes
+    status: exists
+    relevance: "The guide-read guard's third inertness mechanism, with a probe: identical 5,000-character body, Write exits 0 and Edit exits 2, README unread in both. GE-130f-2-i's subject."
+  - path: docs/known-issues/commit-guardian/open-low-ki-cg-20260917-claude-code-hooks-reference-contradicts-exit-codes.md
+    relationship: describes
+    status: exists
+    relevance: "The stale stdin contract and the self-contradicting exit-code table in the hooks reference. GE-130f-4's subject, and the reason no requirement in this tree may cite that reference as authority until it lands."
+  - path: templates/settings.json
+    relationship: related
+    status: exists
+    relevance: "The registration surface both guards are invoked from (PreToolUse, matcher Edit|Write), the surface GE-130f-3 gates, and the surface GE-130a would widen."
+  - path: docs/components.json
+    relationship: describes
+    status: exists
+    relevance: "primary_code + detail_ref per component: the installing project's own folder-to-architecture-document mapping. This is what replaces documentation_guard's hard-coded DOC_MAPPING (GE-130f-1, second scenario)."
+delivers_to:
+  - agent: python-coder
+    ac_id: GE-130a
+    contract: >-
+      Two repaired session guards, each carrying an editing-path liveness record in
+      commit_guardian.json's session_hooks_manifest whose state was written from whether the
+      edit was carried out on disk; plus the settings check GE-130f-3 delivers, which refuses
+      command coverage for a guard whose record does not read passing. GE-130a-1 and
+      GE-130a-2 may only be switched on through that check.
+expects_from:
+  - ac_id: GE-120f-1
+    contract: >-
+      The known-bad-input declaration shape, the entry-point rule, and the four-value liveness
+      record taken verbatim from config/verification_flow.schema.json ($defs/negative_control
+      with its own $defs/currently; states passing / failing / blocked / unverified). This L1
+      declares two inputs and repairs two guards; it mints no second vocabulary and no second
+      runner.
+  - ac_id: GE-120c-1
+    contract: >-
+      unit_tests/portability/_deployed_check_harness.py - a real second working copy with the
+      built deployed layout, the source tree off the import path of the process under test,
+      and per-check status and output text reported side by side. Every observation in this
+      L1 runs through it.
 documentation_triggers:
   - reference-doc
+estimated_complexity: L
+it_requirements:
+  - >-
+    A REFUSAL IS ESTABLISHED ON THE FILESYSTEM, NEVER FROM THE GUARD'S OWN REPORT. Everywhere
+    in this L1, a guard counts as having refused only when the target file is byte-identical
+    before and after the attempt, and, for a create, still absent afterwards. The guard's exit
+    status, its stderr text and any JSON it emits are captured as evidence and are never the
+    value the liveness record is computed from. GE-130f-1-i is the discriminator for this rule
+    and its named mutation is mandatory, not advisory.
+  - >-
+    ONE ENTRY POINT AND ONE HARNESS FOR EVERY OBSERVATION. Each observation goes through the
+    exact PreToolUse command string templates/settings.json registers for that guard, with a
+    real tool payload on stdin, run out of process against a built working copy. Extend
+    unit_tests/portability/_deployed_check_harness.py (GE-120c-1, already delivered); a second
+    harness beside it is refused, and an in-process import of the hook module is not an entry
+    point and is not accepted as coverage for any record in this L1.
+  - >-
+    THE GUARD MUST REFUSE IN THE ONE FORM CLAUDE CODE HONOURS, AND THE HARNESS MUST APPLY THAT
+    CONTRACT RATHER THAN GUESS IT. Printing a refusal is not refusing. The harness carries one
+    decision interpreter implementing the PreToolUse contract Claude Code's own hooks reference
+    states, it is the only place that contract is encoded, and its fidelity is asserted by its
+    own conformance case over every ending a hook can produce. docs/reference/claude-code-hooks.md
+    is NOT usable as the source for that contract until GE-130f-4 lands - it contradicts itself
+    (KI-CG-20260917-claude-code-hooks-reference-contradicts-exit-codes).
+  - >-
+    THE LIVENESS RECORD FOR A SESSION GUARD LIVES IN A NEW session_hooks_manifest SECTION OF
+    templates/scripts/commit_guardian/commit_guardian.json, NOT IN templates/settings.json.
+    settings.json is parsed by Claude Code and its hook entries are a fixed
+    {type, command, timeout} shape; carrying verification state there risks the host's parser
+    and puts evidence in a user-editable file. The new section is keyed by hook script name and
+    each entry restates NOTHING it can derive: it names the settings.json matcher and command
+    string it corresponds to, and the run reconciles the two, so "held where the check is
+    registered" (GE-120f-1) is satisfied by derivation rather than by a second copy that can
+    drift. GE-130f-1 creates the section; GE-130f-2 adds its entry inside it.
+  - >-
+    NEITHER GUARD MAY NAME THIS REPOSITORY'S FOLDERS, PATHS OR COMPONENTS IN ITS SOURCE. Both
+    are shipped in a portable package and install into projects with other layouts. Every
+    folder a guard watches or gates is read at run time from the installing project (for
+    documentation_guard, docs/components.json primary_code plus the architecture documents'
+    own frontmatter; for readme_read_guard, its configured gated set), and a watched or gated
+    entry that matches nothing in the installed project is REPORTED as gating nothing rather
+    than silently exiting 0. A map rewritten to this repository's folder names is the same
+    defect with different literals.
+  - >-
+    NO GUARD IS WIDENED TO SHELL COMMANDS ANYWHERE IN THIS L1. Every record here changes
+    behaviour on the Edit|Write matcher only. Adding either guard to a Bash matcher is
+    GE-130a's work and is refused by GE-130f-3 until that guard's record reads passing.
+  - >-
+    Error-handling policy applies to both guards and to the harness. A guard's UNEXPECTED
+    exception must stay fail-open so an unrelated edit is never lost, and must be logged at
+    WARNING or higher rather than swallowed; a DELIBERATE refusal must never travel the
+    fail-open path. The harness's own subprocess and filesystem calls raise specific
+    exceptions, and a setup failure is a reported failure, never a skipped case (GE-120c-1-i).
+  - >-
+    AC_ENFORCE_STRICT=1 on every pytest invocation in this L1. Without it pytest_ac_enforcement
+    xfail-masks these tests, every one of which covers a not-done AC on the day it is written,
+    and a green run means nothing.
+test_required: false
+test_rationale: >-
+  Container L1. It states the repair policy; every executable claim under it is proven by a
+  descriptor on GE-130f-1, GE-130f-1-i, GE-130f-2, GE-130f-2-i, GE-130f-2-ii or GE-130f-3.
+  A descriptor here would duplicate a child's and create a second place where the refusal
+  evidence is defined.
 origin_agent: BrainCandy
 created: 2026-09-17
-amended_by: []
+amended_by:
+  - reason: technical-enrichment
+    by: it-po
+    at: 2026-09-25
+    note: >-
+      Added estimated_complexity, cross-cutting it_requirements, test_required/test_rationale,
+      delivers_to/expects_from and seven doc_links. Recorded the five technical decisions the
+      children depend on (filesystem-observed refusal; project-supplied folder map;
+      resolved-path containment and the unmeasurable-payload rule; session_hooks_manifest as
+      the record's home and what reads it; the probe harness and findings-record shape).
+      criteria, title, depends_on, req_status, readiness, change_target and risk_surface
+      untouched. No assigned_agent: this is a container L1 spanning python-coder and
+      documentation-expert children.
 superseded_by: null
 covered_by:
   - GE-130f-1
@@ -67,3 +191,82 @@ notes: |
     - docs/reference/claude-code-hooks.md says a non-zero exit never blocks, while
       its own escape-hatch table and two shipped guards block with exit 2.
   Suggested known issues for the IT PO to file: the three findings above.
+  IT-PO ENRICHMENT (2026-09-25) - THE FIVE DECISIONS THE CHILDREN DEPEND ON.
+
+  D1 HOW A REPAIRED GUARD PROVES IT REFUSES. On the filesystem, not from the guard. The
+  harness (GE-120c-1's) builds a real second working copy, writes the target file, records its
+  digest, runs the guard through the exact settings.json command with the tool payload on
+  stdin, and then APPLIES the tool call only if its single decision interpreter says Claude
+  Code would have allowed it. The verdict is the after-digest: blocked means byte-identical
+  (or still absent, for a create); allowed means changed as requested. The function that
+  writes currently.state takes the before and after digests as its ONLY arguments - the exit
+  status and stderr are attached as evidence and are not in its signature. That signature is
+  the mechanical form of GE-130f-1-i, and its named mutation (decide the record from the
+  message or the ending) must be run and shown to turn only GE-130f-1-i red.
+
+  D2 WHERE documentation_guard's FOLDER MAP COMES FROM. From the installing project:
+  docs/components.json, whose entries carry primary_code (the folders) and detail_ref (the
+  architecture document describing them), plus the architecture documents' own components
+  frontmatter for the reverse direction. Both are project-owned data the package does not
+  author. No folder name from any project may appear as a literal in the guard. The
+  second-project clause is exercised by building a second scratch project through the same
+  harness with a deliberately different layout (for example src/api/ and src/jobs/ with their
+  own architecture docs), installing the package into it with
+  python scripts/build.py --target-dir <copy>, and driving the equivalent known-bad edit
+  there. A map rewritten to THIS repository's folder names passes GE-130f-1's first scenario
+  and fails its second - which is exactly why the second scenario exists.
+
+  D3 readme_read_guard IN A WORKTREE, AND WRITE COVERAGE.
+  Gated-folder detection: resolve both sides before comparing. Resolve the edited path and
+  each gated folder to their real targets, resolve the project root the same way, and decide
+  containment on the resolved pair (Path.is_relative_to / os.path.commonpath) rather than on a
+  string prefix of the unresolved path. A resolved path that leaves the project must be a
+  non-match, never an exception - today's containment test RAISES in the main workspace and
+  merely fails the prefix test in a worktree, which is why one fix can leave every worktree
+  inert (GE-130f-2-ii). A gated folder must match under BOTH spellings, its in-project path
+  and its resolved target, so .claude/hooks gates whether it is reached directly or through
+  the link into the installed copy. Every layout is tested in ONE run and reported per layout
+  and per gated folder side by side.
+  Write coverage: the small-edit allowance is opt-in on a MEASURABLE payload. It may apply
+  only when the payload carries the fields its size is computed from; a payload that does not
+  (a Write, which is {file_path, content}) is not small, it is unmeasurable, and unmeasurable
+  is checked. Absent input must never be read as benign input - that is this defect's pattern
+  entry in docs/reference/false-green-mechanisms.md. The guard must NOT manufacture a
+  before-image by reading the file off disk to synthesise a diff: that would let a whole-file
+  rewrite with a small net delta back through the same hole.
+
+  D4 WHERE THE LIVENESS RECORD LIVES AND WHAT READS IT (GE-130f-3's gate). A new top-level
+  session_hooks_manifest section in templates/scripts/commit_guardian/commit_guardian.json,
+  keyed by hook script name. Each entry names the settings.json matcher and command string it
+  corresponds to, and carries entry_point, negative_control and currently in
+  config/verification_flow.schema.json's own shapes. Chosen over templates/settings.json (a
+  host-parsed, user-editable file with a fixed hook-entry shape) and over
+  hooks_manifest.hooks (whose members are COMMIT-time gates, counted by BP-1600a-2's census
+  and emitted onto entry lines - a PreToolUse guard does not belong there). Two readers:
+  GE-120f-1's liveness runner WRITES currently from observation, and GE-130f-3's settings
+  check READS it. Command coverage being switched on is derived from templates/settings.json -
+  the guard's script appearing under a PreToolUse matcher that includes Bash - because that is
+  the file Claude Code actually reads; a boolean in commit_guardian.json would be the inert
+  twin of the real switch. The check must be reached by something that blocks: a
+  hooks_manifest.hooks entry on the commit path is the load-bearing gate (so a commit that
+  widens templates/settings.json is refused), with a unit test under unit_tests/ as the
+  second, non-load-bearing enforcement point. The task-lock guard's exclusion is carried as a
+  field with a reason on its own manifest entry, never as a name literal in the checker.
+
+  D5 GE-129a-1's PROBE. Recorded on GE-129a-1 itself; summarised here only because it is in
+  the same build slice. Capture in the guard, drive from a runbook, reduce with a collator;
+  findings written to templates/scripts/commit_guardian/caller_identity_findings.json against
+  config/caller_identity_findings.schema.json, with an explicit unobserved state for every
+  case and mode nobody has actually run.
+
+  NEEDS THE USER (raised at this L1, decided nowhere below it):
+    1. session_hooks_manifest is a NEW TOP-LEVEL KEY in a watched registry
+       (_package_surface_registry.WATCHED_REGISTRIES watches commit_guardian.json on its
+       document top level), so GE-130f-1 declares package_surface: true. Confirm the section
+       name, and that commit_guardian.json rather than a new config file is the right home
+       for session-hook verification state.
+    2. GE-130f-1 and GE-130f-2 now carry expects_from GE-120f-1 and GE-120c-1, but their
+       depends_on lists only GE-130f (BA-owned, write-locked for this pass). GE-120f-1 is not
+       built yet, and its runner is the only writer of the record this tree reads. Either the
+       ordering edge belongs in depends_on (a BA amendment), or GE-130f-1/-2 deliver the first
+       writer for their own two entries and GE-120f-1 absorbs it later. Flagged, not decided.

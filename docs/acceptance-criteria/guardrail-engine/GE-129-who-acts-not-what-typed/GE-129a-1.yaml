@@ -8,7 +8,7 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
+readiness: approved
 priority: medium
 roadmap_phase: phase_1
 criteria: |
@@ -82,14 +82,203 @@ doc_links:
     relationship: describes
     status: exists
     relevance: "Fix direction: 'whether it can see agent provenance is the question to answer first'."
+  - path: templates/settings.json
+    relationship: related
+    status: exists
+    relevance: "How the commit guard is registered today (PreToolUse, matcher Bash, via run_hook-style command). The probe's recorder must be registered in the scratch repository the same way, or it observes a payload the real guard never sees."
+  - path: docs/acceptance-criteria/guardrail-engine/GE-120-green-means-checked/GE-120c-1.yaml
+    relationship: context
+    status: exists
+    relevance: "The real-second-working-copy machinery (unit_tests/portability/_deployed_check_harness.py, built and green). The scratch repository is stood up through it - built deployed layout, source tree off the import path, guaranteed cleanup. Reuse, do not grow a second one. This is a reuse, not an ordering dependency."
+  - path: config/verification_flow.schema.json
+    relationship: describes
+    status: exists
+    relevance: "THE POSTURE TO COPY, NOT THE SCHEMA. Its four-value state exists so that 'we never ran it' is visible in the artifact instead of silent. The findings record needs the same honest placeholder per caller case and per mode: a case nobody ran records unobserved rather than being omitted or guessed."
+  - path: docs/acceptance-criteria/guardrail-engine/GE-129-who-acts-not-what-typed/GE-129d-2.yaml
+    relationship: context
+    status: exists
+    relevance: "The consumer that makes the record machine-readable rather than prose: it refuses exactly the modes this probe finds reach no person. A findings document a person must interpret cannot drive it."
+  - path: docs/acceptance-criteria/guardrail-engine/GE-129-who-acts-not-what-typed/GE-129d-2-i.yaml
+    relationship: context
+    status: exists
+    relevance: "The consumer of the third scenario. If the record says nothing the harness supplies tells a session's dispatch from a workflow run's, GE-129d-2-i fails closed - so 'none does' must be a recorded value, not an absent field."
 assigned_agent: python-coder
-estimated_complexity: null
+estimated_complexity: L
+change_target:
+  - code
+  - config
+risk_surface: auth
+package_surface: false
+it_requirements:
+  - >-
+    THREE PIECES, CLEANLY SEPARATED: a RECORDER registered in the scratch repository the same way
+    the real commit guard is registered, which appends the whole PreToolUse stdin payload verbatim
+    for every commit attempt; a DRIVER that stands the scratch repository up and runs every caller
+    case and mode it can run unattended; and a COLLATOR that reduces the capture log to the
+    findings record. Only the collator writes the findings record. Keeping capture and
+    interpretation apart is what lets the capture be re-read when a later question is asked of it.
+  - >-
+    THE CAPTURE IS VERBATIM AND LOSSLESS, INCLUDING ABSENCE. Store the payload as received, not a
+    selection of fields the author expected. The whole question is which fields the harness
+    supplies, so a recorder that keeps agent_id and agent_type and drops the rest cannot answer the
+    third scenario, and a missing field must be distinguishable from a field present and empty.
+  - >-
+    NOT EVERY CASE CAN BE DRIVEN UNATTENDED, AND THAT IS RECORDED RATHER THAN PAPERED OVER. Whether
+    a permission prompt is shown to a PERSON in the default interactive mode cannot be established
+    by a script. Those entries are operator-observed and carry their evidence; every case and mode
+    nobody actually ran records unobserved. A guessed value is worse than a gap because the
+    consumers refuse on it.
+  - >-
+    THE FINDINGS RECORD IS MACHINE-READABLE AND SHIPS WITH THE PACKAGE:
+    templates/scripts/commit_guardian/caller_identity_findings.json, which build_commit_guardian
+    copies verbatim into the deployed layout, so the guard that must consult it at run time can
+    reach it without a deploy-map entry. Its shape is fixed by a schema at
+    config/caller_identity_findings.schema.json, read by the collator and by a commit-time
+    validator - NEVER by the deployed guard, which reads only the findings file.
+  - >-
+    THE RECORD'S SHAPE, STATED SO THE CONSUMERS CAN BE WRITTEN AGAINST IT. (a) observed_at with the
+    Claude Code version and a date on EVERY entry, because these are observations of a third-party
+    harness and they rot. (b) callers: one entry per case (1)-(6) with agent_id present yes/no/
+    unobserved, the agent_type value received or explicitly absent, stable-across-attempts
+    yes/no/unobserved, and for case (6) whether user-scope and plugin definitions are
+    distinguishable from the package's. (c) permission_modes: one entry per mode with prompt shown
+    to a person, ran unanswered, and the permission mode value received - each yes/no/unobserved.
+    (d) dispatches: one entry per (dispatcher, mode) pair carrying the values received at dispatch
+    and at the commit that follows, and a per-mode discriminator field whose value is either the
+    field name that tells a session dispatch from a workflow run or the explicit value none.
+  - >-
+    EVERY UNKNOWN IS A VALUE, NEVER AN ABSENT KEY. unobserved and none are first-class and must
+    round-trip through the schema. GE-129d-2 refuses exactly the modes recorded as reaching no
+    person and GE-129d-2-i fails closed on none, so an omitted key would be read as either a pass
+    or a crash depending on the consumer - which is the defect this whole tree exists to remove.
+  - >-
+    THE STOP RULE IS MECHANICAL, NOT A NOTE. The collator emits the stop verdict itself when case
+    (3) carries no agent_id or no agent_type, naming GE-129c as unmeetable as framed. It is a
+    value in the record and an outcome of the run, not a sentence someone is expected to read.
+    Cases (2) and (4) missing identity are reported in the same shape even though the user's stop
+    rule names case (3).
+  - >-
+    THE SCRATCH REPOSITORY IS NEVER THIS REPOSITORY. The probe makes real commit attempts. It runs
+    against a working copy stood up through GE-120c-1's machinery, cleaned up even on failure, and
+    must be incapable of committing into the repository it was launched from - that is a
+    precondition of the run, not a convention. Note GE-120c-1's shared-object-store caveat if a
+    worktree is used.
+  - >-
+    THREE ATTEMPTS PER CALLER, AND THE RECORD SAYS WHETHER THEY AGREED. A value seen once is not an
+    identity rule. Stability is a recorded field, not an assumption the reader is invited to make.
+  - >-
+    NOTHING IN THIS RECORD CHANGES THE GUARD'S BEHAVIOUR. The probe observes; it does not enforce,
+    and it does not retire the token. Identity enforcement is GE-129a-2 onward and ships under the
+    no-grace-period decision with GE-129c and GE-129e.
+  - >-
+    Error-handling policy applies to the recorder, driver and collator: specific exceptions, logged
+    at WARNING or higher, never swallowed. A capture that cannot be parsed yields unobserved with
+    the failure quoted as evidence - never a silent omission and never a default.
+  - >-
+    AC_ENFORCE_STRICT=1 on every pytest invocation.
+test_spec:
+  - name: test_ge129a1_recorder_keeps_the_whole_payload_verbatim_including_absent_fields
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: >-
+      Feed the recorder payloads with agent_id and agent_type present, with each absent, and with
+      an unexpected extra field; assert the capture reproduces each payload byte-for-byte and that
+      an absent field is distinguishable from a present empty one. A recorder that keeps only the
+      fields the author expected cannot answer the dispatch scenario.
+  - name: test_ge129a1_collator_records_unobserved_for_every_case_and_mode_nobody_ran
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: >-
+      Over a capture log covering two of the six callers and one of the four modes, the emitted
+      record carries all six callers and all four modes, with unobserved on the ones not run.
+      NAMED MUTATION (mandatory, run it): omit entries with no observation. This descriptor must go
+      red; every other descriptor stays green, which is why it exists.
+  - name: test_ge129a1_collator_never_infers_one_case_from_another
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: seam
+    description: >-
+      A capture in which case (2) carries agent_id and case (4) was never run: assert case (4)
+      reads unobserved rather than inheriting case (2)'s values. Subagent-of-a-subagent is the case
+      most likely to be assumed identical to subagent, and assuming it is how a probe becomes an
+      opinion.
+  - name: test_ge129a1_findings_record_validates_and_covers_every_case_mode_and_dispatcher_pair
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    description: >-
+      The committed templates/scripts/commit_guardian/caller_identity_findings.json validates
+      against config/caller_identity_findings.schema.json, carries a Claude Code version and a date
+      on every entry, and covers six callers, four modes and all twelve (dispatcher, mode) pairs by
+      count-and-membership over its own contents rather than against a hard-coded list.
+  - name: test_ge129a1_missing_dispatch_discriminator_is_recorded_as_none_not_omitted
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: >-
+      Over a capture in which a session's dispatch and a workflow run's dispatch carry identical
+      harness-supplied values, the per-mode discriminator field reads the explicit value none. This
+      is the value GE-129d-2-i fails closed on; an absent key would be read as a pass by one
+      consumer and crash another.
+  - name: test_ge129a1_stop_verdict_is_emitted_when_case_three_carries_no_identity
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: >-
+      Over a capture in which the workflow-dispatched agent arrives with no agent_id, the collator
+      emits the stop verdict naming GE-129c as unmeetable as framed, as a value in the record and a
+      non-zero outcome of the run. Assert the same shape is emitted for cases (2) and (4) missing
+      identity, without the stop verdict, since the user's stop rule names case (3).
+  - name: test_ge129a1_recorder_observes_a_real_commit_attempt_through_the_registered_entry_point
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: integration
+    angle: reachability
+    surface_invoked: >-
+      the PreToolUse Bash hook command registered in the scratch repository's settings, executed
+      the way a session executes it, with the commit tool payload on stdin
+    description: >-
+      PRODUCTION ENTRY POINT, IN THE SCRATCH REPOSITORY. Stand up the scratch repository through
+      GE-120c-1's machinery, register the recorder as the real commit guard is registered, attempt
+      a commit, and assert a capture entry was produced by that invocation. A recorder exercised
+      only by calling its function proves nothing about what the harness hands a hook.
+  - name: test_ge129a1_probe_cannot_commit_into_the_repository_it_was_launched_from
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: integration
+    angle: deployed
+    description: >-
+      The run's commits land in the scratch repository and nowhere else: assert the launching
+      repository's HEAD, index and working tree are unchanged across a full probe run, and that the
+      scratch repository is removed afterwards even when the run fails.
+test_rationale: >-
+  Most of this record cannot be asserted by a test, because its subject is what a third-party
+  harness hands a hook in six calling situations - the findings are the deliverable, and a test
+  that asserted what they SHOULD say would be answering the question the probe exists to ask. So
+  the descriptors cover the parts that can be made to fail: that the capture is verbatim and keeps
+  absence, that the collator never invents or infers a value, that unobserved and none survive to
+  the record, that the stop verdict is emitted mechanically, and that the recorder is reached
+  through a real registered entry point in a scratch repository rather than by calling its
+  function. The named mutation is omitting unobserved entries, because that is the tidy-looking
+  change that turns a gap into a silent claim - and GE-129d-2 refuses on exactly those values. The
+  isolation descriptor is a test rather than a note because this record's own criteria make real
+  commit attempts.
 declares_side_effect: true
 delivers_to:
   - agent: python-coder
     contract: "Findings record: per caller case (1)-(6), agent_id present yes/no, agent_type value or absent, stable across attempts yes/no, Claude Code version; per permission mode, prompt shown to a person yes/no, ran unanswered yes/no, permission mode value received; per mode and per commit-specialist dispatcher (top-level session, subagent of a top-level session, workflow run), the harness-supplied values received at dispatch and at commit, and whether any of them tells a session dispatch from a workflow dispatch. Consumed by every GE-129 sibling."
   - agent: documentation-expert
     contract: "The same findings, for the hooks reference stdin contract (GE-129e-2)."
+  - agent: python-coder
+    contract: "THE ARTIFACT, NAMED (IT PO, 2026-09-25). templates/scripts/commit_guardian/caller_identity_findings.json, deployed verbatim by build_commit_guardian so a guard can read it at run time without a deploy-map entry, shaped by config/caller_identity_findings.schema.json (read by the collator and a commit-time validator, never by the deployed guard). Sections: observed_at (Claude Code version + date on every entry), callers (cases 1-6), permission_modes (4), dispatches ((dispatcher, mode) pairs, each with a discriminator field whose value is a field name or the explicit value none), and a stop verdict. unobserved and none are first-class values that round-trip; an absent key never means anything."
 expects_from: null
 origin_agent: business-analyst
 created: 2026-09-17
@@ -140,6 +329,18 @@ amended_by:
       Then the probe reports that GE-129c cannot be met as framed,
         And the GE-129 tree stops: no other GE-129 record is started, and the finding is returned to
         the user for a decision before any further decomposition or build.
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-09-25
+  note: >-
+    Confirmed the BA's proposed python-coder. Added estimated_complexity L, change_target
+    [code, config], risk_surface auth, package_surface false, twelve it_requirements (recorder /
+    driver / collator split; verbatim capture; unobserved and none as first-class values; the
+    record's shape and its home), eight test_spec descriptors with one named mutation,
+    test_rationale, five doc_links, and a third delivers_to entry naming the artifact and schema.
+    criteria, title, depends_on, req_status and readiness untouched; declares_side_effect
+    re-derived as true from "a findings record is written" and left unchanged, with that phrase
+    still on one line.
 superseded_by: null
 covered_by: []
 implemented_by: []
@@ -177,3 +378,53 @@ notes: |
 
   ASSIGNMENT (BA proposal, IT PO to confirm): python-coder -- the probe is a scripted capture
   harness around a registered guard. Where the findings record lives is the IT PO's.
+  IT-PO ENRICHMENT (2026-09-25).
+
+  ASSIGNMENT CONFIRMED: python-coder, as the BA proposed. Three pieces, kept apart on purpose:
+  a RECORDER registered in the scratch repository exactly as the real commit guard is registered,
+  appending the whole PreToolUse stdin payload verbatim; a DRIVER that stands the scratch
+  repository up through GE-120c-1's machinery and runs every case and mode it can run unattended;
+  and a COLLATOR that reduces the capture log to the findings record. Capture and interpretation
+  stay separate so the capture can answer a question nobody had thought to ask when it was taken.
+
+  WHERE THE FINDINGS RECORD LIVES.
+  templates/scripts/commit_guardian/caller_identity_findings.json - inside the directory
+  build_commit_guardian copies verbatim, so the deployed guard can read it with no deploy-map
+  entry. Its schema is config/caller_identity_findings.schema.json, read by the collator and by a
+  commit-time validator and NEVER by the deployed guard, which reads only the findings file. That
+  split is deliberate: a runtime schema read would be a second import out of the deployed
+  directory and would raise ModuleNotFoundError-shaped failures in the field while source-tree
+  tests stayed green.
+
+  ITS SHAPE (machine-readable because GE-129d-2 refuses exactly the modes it names).
+    observed_at    - Claude Code version and date, on EVERY entry. These observe a third-party
+                     harness and they rot.
+    callers        - cases (1)-(6): agent_id present yes/no/unobserved; agent_type value or
+                     explicitly absent; stable across the three attempts yes/no/unobserved; for
+                     case (6), whether user-scope and plugin definitions are distinguishable from
+                     the package's.
+    permission_modes - the four modes: prompt shown to a person, ran unanswered, permission mode
+                     value received. Each yes/no/unobserved.
+    dispatches     - one entry per (dispatcher, mode) pair: the harness-supplied values received
+                     at dispatch and at the commit that follows, plus a per-mode discriminator
+                     field whose value is either the field name that tells a session dispatch from
+                     a workflow run, or the explicit value none.
+    stop_verdict   - emitted by the collator when case (3) carries no agent_id or no agent_type.
+  unobserved and none are first-class values that round-trip through the schema. An absent key
+  never means anything - GE-129d-2 refuses on these values and GE-129d-2-i fails closed on none,
+  so a gap that looks like a pass is the defect this tree exists to remove.
+
+  WHAT CANNOT BE DRIVEN UNATTENDED IS RECORDED, NOT GUESSED. Whether a permission prompt reaches a
+  PERSON in the default interactive mode is not establishable by a script. Those entries are
+  operator-observed with their evidence; anything nobody ran reads unobserved.
+
+  NEEDS THE USER:
+    1. Confirm caller_identity_findings.json belongs inside templates/scripts/commit_guardian/
+       (deployed with the guard) rather than under docs/ or config/. It is evidence, but it is
+       evidence a deployed guard must read at run time, which rules out a docs-only home.
+    2. Cases (1), (5) and the interactive-mode rows need a human at a terminal. Someone has to run
+       them and paste the evidence; the probe cannot complete on its own, and the tree is blocked
+       on its completion. Plan for that before the ticket is dispatched.
+    3. The record's isolation requirement (the probe must be incapable of committing into the
+       launching repository) is stated as a precondition here. Confirm that is strong enough, or
+       whether it should be its own L3.

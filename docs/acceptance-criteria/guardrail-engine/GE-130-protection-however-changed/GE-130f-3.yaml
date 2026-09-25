@@ -9,7 +9,7 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
+readiness: approved
 priority: medium
 roadmap_phase: phase_1
 criteria: |
@@ -45,17 +45,209 @@ doc_links:
 - path: docs/reference/claude-code-hooks.md
   relationship: related
   status: exists
+- path: docs/acceptance-criteria/guardrail-engine/GE-130-protection-however-changed/GE-130a.yaml
+  relationship: context
+  status: exists
+  relevance: The widening this check gates. Its ORDER note (user decision Q5) becomes executable
+    here - inline_work_guard may be widened immediately, the other two only after GE-130f shows
+    each blocking a known-bad edit.
+- path: docs/acceptance-criteria/guardrail-engine/GE-130-protection-however-changed/GE-130f-1.yaml
+  relationship: context
+  status: exists
+  relevance: Creates the session_hooks_manifest section this check reads, and documentation_guard's
+    entry in it.
+- path: templates/scripts/commit_guardian/commit_guardian.json
+  relationship: describes
+  status: exists
+  relevance: Both halves of this check's input - session_hooks_manifest (the liveness records it
+    reads) and hooks_manifest.hooks (where the check itself is registered so that a commit which
+    widens settings.json is refused).
+- path: docs/acceptance-criteria/build_pipeline/BP-1600-counted-from-reality/BP-1600a-2.yaml
+  relationship: context
+  status: exists
+  relevance: The commit-time gate census this check joins by taking a hooks_manifest entry. Naming
+    it check_*.py puts it in that census, which then requires the manifest entry - decide the name
+    deliberately.
+- path: docs/known-issues/commit-guardian/open-blocker-ki-cg-021.md
+  relationship: describes
+  status: exists
+  relevance: "The failure this check must not repeat: a main() hardened over six review rounds that
+    no runner called. A settings check reached by nothing changes no outcome."
 delivers_to:
   agent: python-coder
   contract: A settings check that refuses command coverage for documentation_guard or readme_read_guard
     until each one's editing-path liveness record says observed; GE-130a-1 and GE-130a-2 are switched
     on only through it.
-expects_from: null
+expects_from:
+- ac_id: GE-130f-1
+  contract: >-
+    The session_hooks_manifest section of commit_guardian.json, its schema, and
+    documentation_guard's entry - {matcher, entry_point, negative_control, currently}. This check
+    reads currently.state and nothing else from it.
+- ac_id: GE-130f-2
+  contract: >-
+    readme_read_guard's entry in the same section, in the same shape.
 assigned_agent: python-coder
+estimated_complexity: M
+change_target:
+- code
+- config
+risk_surface: contract_boundary
+package_surface: true
+it_requirements:
+  config_schema_fragment:
+    hooks_manifest:
+      type: object
+      description: >-
+        ONE NEW ENTRY in hooks_manifest.hooks registering this check as a commit-time gate, so a
+        commit that widens templates/settings.json is refused rather than merely reported. Shape is
+        the existing entry shape - no new fields. Adding a hooks_manifest.hooks id is a watched
+        package surface (_package_surface_registry watches that container by id), which is why this
+        record declares one.
+    session_hooks_manifest:
+      type: object
+      description: >-
+        READ-ONLY for this record except for one optional field it populates -
+        exempt_from_edit_path_gate {reason} - on the guard the user decision places outside this
+        rule. The exclusion is carried as DATA on the entry, with its reason, and the checker
+        contains no guard name. The section itself is created by GE-130f-1.
+  reference_file_path: templates/scripts/commit_guardian/commit_guardian.json
+  n_location_rule: '1'
+  required_skills:
+  - python-coder
+  post_write_commands:
+  - python scripts/build.py --target-dir .
+  constraints:
+  - >-
+    SWITCHED ON IS DERIVED FROM templates/settings.json, NEVER FROM A FLAG BESIDE IT. A guard has
+    command coverage when its script appears under a PreToolUse matcher that includes Bash in the
+    shipped settings, because that file is what Claude Code actually reads. A boolean in
+    commit_guardian.json saying the same thing would be the inert twin of the real switch, and
+    editing the real switch would then pass the check.
+  - >-
+    THE CHECK MUST BE REACHED BY SOMETHING THAT BLOCKS, AND THE TICKET MUST NAME IT. The
+    load-bearing enforcement point is a hooks_manifest.hooks entry on the commit path, so a commit
+    that widens templates/settings.json is refused at commit time. A unit test under unit_tests/
+    collected by ci.yml is a second, NON-load-bearing point. Registration in a config section that
+    no entry line executes is not reaching - that is KI-CG-021's shape exactly, and KI-TQ-007's
+    trap where configuration presence reads as registration.
+  - >-
+    THE EXEMPTION IS DATA, NEVER A NAME. The guard the user decision places outside this rule is
+    excluded by an exempt_from_edit_path_gate field carrying its reason on its own manifest entry.
+    No guard name appears in the checker. A name literal would have to be edited for the next
+    exemption and would silently exempt any guard that happened to be renamed to it.
+  - >-
+    ALL FOUR CASES IN ONE RUN OVER THE SAME SETTINGS - named, not-named-because-observed,
+    not-named-because-off, and the exempt guard. A check that names nothing passes every absence
+    clause in these criteria, so the positive and negative cases must be established together or
+    neither is evidence.
+  - >-
+    NAME THE GUARD AND QUOTE ITS RECORD'S VALUE. The failure output carries the guard and the
+    value currently.state actually holds, so a reader can tell unverified (never exercised) from
+    failing (exercised and did not refuse) from blocked. Collapsing them into "not observed" loses
+    the one distinction that says whether anyone ever tried.
+  - >-
+    READ THE DEPLOYED COPIES, NOT THE SOURCE TREE, and state which copies were read. templates/ is
+    canonical and .claude/ plus .leafcutter/ are build outputs; a check that reads a copy the
+    session does not load is the GE-126c-5 failure and would pass while the real settings widened.
+  - >-
+    Error-handling policy: a malformed or missing session_hooks_manifest entry for a guard with
+    command coverage switched on is a NAMED FAILURE, never a skip and never a pass. Absence of a
+    record is not absence of a problem - it is the unverified state by another name.
+  - >-
+    AC_ENFORCE_STRICT=1 on every pytest invocation.
+test_spec:
+- name: test_ge130f3_guard_with_command_coverage_on_and_an_unobserved_record_is_named_and_fails
+  target_dir: unit_tests/commit_guardian/
+  framework: unittest
+  type: behavioral
+  angle: criterion
+  description: >-
+    Over a fixture settings file in which a guard's script appears on a Bash-including PreToolUse
+    matcher while its session_hooks_manifest record reads unverified: the check names that guard,
+    quotes the value its record carries, and exits non-zero.
+- name: test_ge130f3_guard_with_command_coverage_on_and_an_observed_record_is_not_named
+  target_dir: unit_tests/commit_guardian/
+  framework: unittest
+  type: behavioral
+  angle: criterion
+  description: >-
+    Same run, second guard: command coverage on, record reads passing, not named.
+- name: test_ge130f3_guard_without_command_coverage_is_not_named_whatever_its_record_says
+  target_dir: unit_tests/commit_guardian/
+  framework: unittest
+  type: behavioral
+  angle: criterion
+  description: >-
+    Same run, third guard: not on any Bash matcher, record reads failing, still not named. This is
+    the clause that keeps the check about widening rather than about liveness in general.
+- name: test_ge130f3_exempt_guard_is_never_named_and_the_checker_holds_no_guard_name
+  target_dir: unit_tests/commit_guardian/
+  framework: unittest
+  type: behavioral
+  angle: criterion
+  description: >-
+    Same run, fourth guard: carries exempt_from_edit_path_gate with a reason, command coverage on,
+    record not observed - not named. Then rename that fixture guard, keeping the field, and assert
+    it is still not named, and rename a DIFFERENT guard to the exempt one's old name and assert it
+    IS named. A checker holding a name literal fails the second half.
+- name: test_ge130f3_all_four_cases_are_established_in_one_invocation
+  target_dir: unit_tests/commit_guardian/
+  framework: unittest
+  type: behavioral
+  angle: criterion
+  description: >-
+    THE PAIRING. The four cases above are asserted over ONE settings file in ONE run. NAMED
+    MUTATION (mandatory, run it): make the check name nothing at all. Every absence-asserting
+    descriptor stays green; this one and the first must go red.
+- name: test_ge130f3_widening_the_real_settings_is_refused_at_the_gate_that_invokes_the_check
+  target_dir: unit_tests/portability/
+  framework: unittest
+  type: integration
+  angle: reachability
+  surface_invoked: >-
+    the hooks_manifest entry line this AC registers, invoked as
+    python .leafcutter/scripts/commit_guardian/run_hook.py
+    .leafcutter/scripts/commit_guardian/<this check>.py <staged files>
+  description: >-
+    PRODUCTION ENTRY POINT. In a built working copy, stage a templates/settings.json that adds a
+    guard with an unobserved record to a Bash matcher, invoke the gate exactly as the commit path
+    invokes it, and assert the GATE's own outcome is non-zero; stage the same widening with an
+    observed record and assert it is zero. A check whose refusal changes no gate's verdict is
+    inert.
+- name: test_ge130f3_check_reads_the_deployed_copies_and_says_which
+  target_dir: unit_tests/portability/
+  framework: unittest
+  type: integration
+  angle: deployed
+  description: >-
+    The check reads the settings and manifest the session and the commit path actually load, and
+    its output states which copies it read. Alter the deployed copy only and assert the verdict
+    moves; alter the source tree only and assert it does not.
+test_rationale: >-
+  Every clause of these criteria is an ABSENCE clause except one, and a check that names nothing
+  satisfies all of them - so the four cases are asserted in a single invocation over a single
+  settings file, and the named mutation is making the check silent. Switched-on is read from
+  templates/settings.json rather than from a flag because the real switch is the matcher Claude
+  Code reads; a test against a parallel boolean would stay green while someone widened the
+  settings. The exemption descriptor renames the fixture guard in both directions, which is the
+  only shape a name literal cannot pass. The reachability descriptor exists because this check's
+  whole value is refusing a commit: a checker that runs nowhere is KI-CG-021 repeated, and every
+  other descriptor here would stay green through it.
 declares_side_effect: false
 origin_agent: business-analyst
 created: '2026-09-17'
-amended_by: []
+amended_by:
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-09-25
+  note: >-
+    Confirmed python-coder. Added estimated_complexity M, change_target [code, config],
+    risk_surface contract_boundary, package_surface true with the structured spec for the new
+    hooks_manifest.hooks entry, eight constraints, seven test_spec descriptors with one named
+    mutation, test_rationale, expects_from (GE-130f-1, GE-130f-2) and five doc_links. The BA's
+    delivers_to is kept verbatim. criteria, title, depends_on, req_status and readiness untouched;
+    declares_side_effect re-derived as false and unchanged.
 superseded_by: null
 covered_by: []
 implemented_by: []
@@ -69,3 +261,35 @@ notes: |
   accepts them.
 
   declares_side_effect: false.
+  IT-PO ENRICHMENT (2026-09-25).
+
+  WHERE THE RECORD LIVES AND WHAT READS IT. session_hooks_manifest, a new top-level section of
+  templates/scripts/commit_guardian/commit_guardian.json, created by GE-130f-1 and keyed by hook
+  script filename; each entry carries entry_point, negative_control and currently in
+  config/verification_flow.schema.json's own shapes, plus the settings.json matcher it is
+  reconciled against. Two readers: GE-120f-1's liveness runner writes currently from observation,
+  and this check reads it.
+
+  SWITCHED ON IS DERIVED FROM THE FILE THE HOST READS. A guard has command coverage when its
+  script appears under a PreToolUse matcher that includes Bash in templates/settings.json. A
+  boolean beside it in commit_guardian.json would be the gate that does not gate - the same shape
+  as a JSON schema that is a no-op fallback while a manual branch is authoritative.
+
+  THE LOAD-BEARING ENFORCEMENT POINT IS THE COMMIT GATE. A hooks_manifest.hooks entry, so a
+  commit widening templates/settings.json is refused. The unit tests under unit_tests/ are the
+  second point and are not load-bearing. Naming consequence, inherited from GE-120f-1's note:
+  hook_parity.hook_script_patterns is ["check_*.py", "run_hook.py", "regenerate_*.py"], so calling
+  this check check_*.py puts it into BP-1600a-2's census and it MUST then carry the manifest entry
+  it is already taking. Decide the name deliberately and record it in the ticket.
+
+  THE EXEMPTION IS DATA. The user decision places the task-lock guard outside this rule. It is
+  excluded by an exempt_from_edit_path_gate field with a reason on its own manifest entry, never
+  by a name in the checker - so a future exemption is a data edit and a renamed guard cannot
+  inherit someone else's exemption. The rename-both-ways descriptor is what makes that testable.
+
+  PACKAGE SURFACE. One new hooks_manifest.hooks id, which _package_surface_registry watches by
+  id. Declared, with the structured spec.
+
+  LOCATION DECIDED 2026-09-25. The user confirmed that session-hook verification state lives in
+  a new top-level session_hooks_manifest section of
+  templates/scripts/commit_guardian/commit_guardian.json - decided 2026-09-25.

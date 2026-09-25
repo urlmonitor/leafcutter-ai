@@ -9,7 +9,7 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
+readiness: approved
 priority: medium
 roadmap_phase: phase_1
 criteria: |
@@ -36,13 +36,137 @@ doc_links:
   status: exists
   relevance: The out-of-process harness over a real separate working copy. Extend it; do not grow a second
     one.
-delivers_to: null
-expects_from: null
+- path: templates/settings.json
+  relationship: related
+  status: exists
+  relevance: The registered entry point both layouts are exercised through. The layout differs; the
+    invocation must not.
+- path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+  relationship: describes
+  status: exists
+  relevance: Defines the deployed layout and why the canonical sources under templates/ are not the
+    copies a run loads. The gated folders here are reached through exactly that indirection, which
+    is the mechanism this record varies.
+- path: docs/known-issues/commit-guardian/open-high-ki-cg-20260917-readme-read-guard-never-checks-a-write.md
+  relationship: context
+  status: exists
+  relevance: Its probe passes because the throwaway repo's gated folder is a real directory - the
+    layout in which this record's defect does not reproduce.
+delivers_to:
+- agent: python-coder
+  ac_id: GE-130a-1
+  contract: >-
+    Per-layout, per-gated-folder outcomes from one run, so widening the guard to shell commands
+    inherits a guard proven in the layout the drives actually run in rather than only in the main
+    workspace.
+expects_from:
+- ac_id: GE-130f-2
+  contract: >-
+    The declared known-bad and acceptable inputs, the resolved-path containment rule, and the
+    refusal-observed seam. This record varies the LAYOUT and adds nothing to the inputs.
+- ac_id: GE-120c-1
+  contract: >-
+    The real-second-working-copy machinery. A linked working copy is built through it, not beside
+    it, and the shared-object-store caveat plus guaranteed cleanup carry over unchanged.
 assigned_agent: python-coder
+estimated_complexity: M
+change_target:
+- code
+risk_surface: safety
+it_requirements:
+- >-
+  THE TWO LAYOUTS ARE EXERCISED IN ONE RUN AND REPORTED SIDE BY SIDE, per layout and per gated
+  folder. A run that reports only an aggregate verdict cannot name the layout a folder failed in,
+  which is the clause that distinguishes this record from GE-130f-2.
+- >-
+  THE LINKED COPY MUST REPRODUCE THE MECHANISM, NOT MERELY BE A SECOND DIRECTORY. Its links to
+  the gated folders must stay INSIDE that working copy, which is the case in which the resolved
+  path does not leave the project and the old prefix test simply fails. If the harness cannot
+  stand that layout up faithfully, the record is blocked - it must not fall back to a second copy
+  whose folders are real directories, because that is the layout in which the defect does not
+  reproduce.
+- >-
+  BOTH FAILURE MECHANISMS MUST BE DISTINGUISHABLE IN THE REPORT. A gated folder whose resolution
+  leaves the project and one whose resolved path stays inside but fails to match are different
+  repairs. The run names which occurred, so a fix for the first is not mistaken for a fix for
+  both.
+- >-
+  A DISAGREEMENT BETWEEN LAYOUTS FAILS THE RUN, LOUDLY AND BY NAME. Per the criteria, a gated
+  folder for which the known-bad edit was carried out in one layout is named together with that
+  layout and the run fails. It is never averaged away and never reported as a partial pass.
+- >-
+  ONE HARNESS. Build each working copy ONCE per sweep, never once per gated folder; mark the
+  sweep slow rather than letting it narrow its layout or folder list to stay fast. Clean up the
+  linked copy even on failure (GE-120c-1's shared-object-store caveat).
+- >-
+  Error-handling policy applies to the harness's subprocess and filesystem calls; a setup failure
+  in either layout is a reported failure, never a skipped case (GE-120c-1-i). A skipped layout is
+  indistinguishable from a passing one and would hide exactly this defect.
+- >-
+  AC_ENFORCE_STRICT=1 on every pytest invocation.
+test_spec:
+- name: test_ge130f2ii_known_bad_edit_is_refused_in_both_layouts_in_one_run
+  target_dir: unit_tests/portability/
+  framework: unittest
+  type: behavioral
+  angle: deployed
+  description: >-
+    THE DECISIVE DESCRIPTOR. In one run, the declared known-bad edit is put through the registered
+    entry point from inside a linked working copy and from inside the main working copy; assert the
+    file's bytes are unchanged in both. NAMED MUTATION (mandatory, run it): repair only the case
+    where the resolved path leaves the project. The main-copy half stays green and the linked-copy
+    half must go red.
+- name: test_ge130f2ii_acceptable_edit_is_carried_out_in_both_layouts_in_the_same_run
+  target_dir: unit_tests/portability/
+  framework: unittest
+  type: behavioral
+  angle: deployed
+  description: >-
+    THE PAIRING, PER LAYOUT. After the guide is read through readme_marker_recorder's registered
+    entry point, the acceptable edit is carried out in both layouts. Without it, a guard repaired
+    into refusing everything in the linked copy passes the descriptor above.
+- name: test_ge130f2ii_run_reports_each_layout_and_each_gated_folder_side_by_side
+  target_dir: unit_tests/portability/
+  framework: unittest
+  type: integration
+  angle: real_artifact
+  description: >-
+    The run emits one outcome per (layout, gated folder) pair over the repository's real gated set,
+    asserted by count-and-membership over its own output rather than against today's folder names.
+    Also assert the report distinguishes the two failure mechanisms - resolution leaving the
+    project, and a resolved path that stays inside but does not match.
+- name: test_ge130f2ii_a_folder_refused_in_one_layout_only_is_named_with_that_layout_and_fails_the_run
+  target_dir: unit_tests/portability/
+  framework: unittest
+  type: behavioral
+  angle: failure
+  description: >-
+    With a fixture gated folder deliberately made to match in one layout and not the other, the run
+    names the folder together with the layout it failed in and exits non-zero. A run that averages
+    the two layouts into one verdict passes every other descriptor and fails this one.
+test_rationale: >-
+  The guard is inert by two different mechanisms in two different layouts: in the main workspace
+  resolving the path leaves the project and the containment test raises; in a worktree it does not
+  raise and the resolved path simply fails the prefix test. A fix for the first leaves every
+  worktree inert, and worktrees are where the drives run - so the two layouts must be exercised in
+  one run and their outcomes shown side by side rather than collapsed. The mutation is named
+  because a partial repair passes GE-130f-2 completely. The pairing is repeated per layout because
+  a guard that refuses everything in the linked copy would otherwise look like the fix.
 declares_side_effect: false
 origin_agent: business-analyst
 created: '2026-09-17'
-amended_by: []
+amended_by:
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-09-25
+  note: >-
+    Confirmed python-coder. Added estimated_complexity M, change_target [code], risk_surface
+    safety, seven it_requirements (one run over both layouts; the linked copy must reproduce the
+    mechanism or the record is blocked; both failure mechanisms distinguishable), four test_spec
+    descriptors including the named partial-repair mutation, test_rationale, delivers_to
+    (GE-130a-1), expects_from (GE-130f-2, GE-120c-1) and three doc_links. criteria, title,
+    depends_on, req_status and readiness untouched; declares_side_effect re-derived as false and
+    unchanged.
 superseded_by: null
 covered_by: []
 implemented_by: []
@@ -55,3 +179,21 @@ notes: |
   case.
 
   declares_side_effect: false.
+  IT-PO ENRICHMENT (2026-09-25).
+
+  THE MECHANISM, NAMED. Detection is by resolving BOTH sides and testing containment on the
+  resolved pair - the edited path, each gated folder and the project root all resolved to their
+  real targets - and a resolved path that leaves the project is an ordinary non-match rather than
+  an exception. A gated folder is gated under both its in-project spelling and its resolved
+  target, so a link is not a way out.
+
+  WHY THE LINKED COPY MUST BE FAITHFUL. The distinguishing case is the one where the links stay
+  INSIDE the working copy: the resolution does not leave the project, nothing raises, and the old
+  prefix test simply fails. If the harness stands up a copy whose gated folders are real
+  directories instead, it has built the layout in which the defect does not reproduce - the same
+  error KI-CG-20260917's probe made accidentally. Blocked is the correct outcome if that layout
+  cannot be built faithfully; a silent substitution is not.
+
+  REPORTING IS PART OF THE CRITERION. Per layout and per gated folder, side by side, with the two
+  failure mechanisms distinguishable. An aggregate verdict cannot name the layout a folder failed
+  in, which is the clause that makes this record more than a repeat of GE-130f-2.

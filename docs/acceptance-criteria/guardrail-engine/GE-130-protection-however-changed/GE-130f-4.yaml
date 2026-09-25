@@ -9,7 +9,7 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
+readiness: approved
 priority: medium
 roadmap_phase: phase_1
 criteria: |
@@ -42,13 +42,109 @@ doc_links:
 - path: templates/hooks/readme_read_guard.py
   relationship: related
   status: exists
-delivers_to: null
-expects_from: null
+- path: docs/known-issues/commit-guardian/open-low-ki-cg-20260917-claude-code-hooks-reference-contradicts-exit-codes.md
+  relationship: describes
+  status: exists
+  relevance: THE DEFECT THIS RECORD CLOSES, with line numbers for all four contradicting passages
+    (stdout table :144, note :151-153, Exit Code Semantics :173, escape-hatch table :306) and the
+    stale stdin contract at :47-68. Its fix direction is the checklist.
+- path: docs/known-issues/commit-guardian/open-high-ki-cg-037.md
+  relationship: describes
+  status: exists
+  relevance: Why the reference is not merely imprecise - it describes documentation_guard as
+    blocking at :40 and :305 while the guard blocks in a form the reference's own table calls an
+    allow.
+- path: templates/scripts/commit_guardian/commit_guardian.json
+  relationship: describes
+  status: exists
+  relevance: Where each guard's liveness record is read from (session_hooks_manifest). The
+    reference points here rather than asserting in its own words that a guard works.
+- path: docs/acceptance-criteria/guardrail-engine/GE-129-who-acts-not-what-typed/GE-129e-2.yaml
+  relationship: context
+  status: exists
+  relevance: "THE ADJACENT OWNER, AND THE BOUNDARY: GE-129e-2 rewrites the same reference's STDIN
+    contract from GE-129a-1's probe findings. This record owns the REFUSAL contract and the two
+    catalogue entries. Two records will edit this file - sequence them or the second overwrites the
+    first."
+delivers_to:
+- agent: python-coder
+  ac_id: GE-130a
+  contract: >-
+    One stated refusal form for a session-time guard, so GE-130a's widenings and any future guard
+    are written against a reference that agrees with the shipped code instead of contradicting it.
+expects_from:
+- ac_id: GE-130f-1
+  contract: >-
+    The refusal form the repaired documentation guard actually uses, that its watched folders come
+    from the installing project, and the session_hooks_manifest path its liveness record is read
+    from.
+- ac_id: GE-130f-2
+  contract: >-
+    The refusal form the repaired guide-read guard uses, that whole-file writes are checked
+    (GE-130f-2-i), that gated folders match in main and linked working copies alike
+    (GE-130f-2-ii), and its liveness record path.
 assigned_agent: documentation-expert
+estimated_complexity: M
+change_target: docs
+risk_surface: internal
+test_required: false
+test_rationale: >-
+  Prose only - no executable behaviour is created or changed by this record. The one clause that
+  could be checked mechanically (no other passage states a different refusal form) is met by
+  construction instead: the refusal contract is stated ONCE in the reference and every other
+  passage links to it rather than restating it, so a second contradicting passage cannot exist
+  without deleting the link. A grep for forbidden phrases would pass on a reworded contradiction
+  and would need editing every time the wording changed. The behaviour the reference describes is
+  proven by GE-130f-1, GE-130f-2, GE-130f-2-i and GE-130f-2-ii; duplicating those assertions here
+  would create a second place where the guards' behaviour is defined.
+it_requirements:
+- >-
+  STATE THE REFUSAL CONTRACT EXACTLY ONCE AND LINK TO IT EVERYWHERE ELSE. This is how the "no
+  other passage states a different way" clause is met by construction rather than by a reviewer
+  reading carefully. Today four passages state it and they disagree; the repair is one statement
+  plus links, not four corrected statements. Any section needing the contract - the stdout
+  contract, the exit-code semantics, the escape-hatch table, the catalogue - references that one
+  place.
+- >-
+  THE SOURCE IS CLAUDE CODE'S OWN HOOKS REFERENCE, CITED WITH THE DATE IT WAS FETCHED, and the
+  stated form must be the one the repaired guards actually use. If the two ever disagree, the
+  reference is wrong and the code is right; say which was checked and when.
+- >-
+  READ THE WHOLE REFERENCE, NOT THE EDITED PARAGRAPH. The known issue lists five locations across
+  four sections plus two catalogue rows and two timeout rows. The failure mode for this record is
+  fixing the passage that was quoted and leaving the other three, which is exactly how the
+  document reached its current state.
+- >-
+  THE CATALOGUE ENTRIES STATE BEHAVIOUR, NOT REGISTRATION. documentation_guard's row says its
+  watched folders come from the installing project; readme_read_guard's says whole-file writes are
+  checked and that gated folders match in main and linked working copies alike. Both rows today
+  describe intent the code does not deliver, which is how a reader concluded these guards work.
+- >-
+  POINT AT THE LIVENESS RECORD RATHER THAN VOUCHING FOR THE GUARD. Each catalogue entry names
+  where its record is read from (commit_guardian.json session_hooks_manifest) instead of asserting
+  in the reference's own words that the guard works. Prose cannot be falsified; a record can.
+- >-
+  KEEP THE FAIL-OPEN ADVICE, RESTATED CORRECTLY: an unexpected exception is not a refusal, and a
+  deliberate refusal is not an error. Dropping it would trade one wrong rule for another.
+- >-
+  DO NOT LAND THIS BEFORE THE GUARDS ARE REPAIRED. Every statement here is about what the repaired
+  guards do; landing first would replace a contradiction with a different false statement.
+  Sequence against GE-129e-2, which edits the STDIN contract of the same file from GE-129a-1's
+  findings.
 declares_side_effect: false
 origin_agent: business-analyst
 created: '2026-09-17'
-amended_by: []
+amended_by:
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-09-25
+  note: >-
+    Confirmed documentation-expert. Added estimated_complexity M, change_target docs, risk_surface
+    internal, test_required false with test_rationale (prose; the single-statement-plus-links
+    structure meets the no-other-passage clause by construction), seven it_requirements,
+    delivers_to (GE-130a), expects_from (GE-130f-1, GE-130f-2) and four doc_links, including the
+    GE-129e-2 collision on the same file. criteria, title, depends_on, req_status and readiness
+    untouched; declares_side_effect re-derived as false and unchanged.
 superseded_by: null
 covered_by: []
 implemented_by: []
@@ -59,3 +155,20 @@ notes: |
   can be skipped quietly -- cover it by reading the whole reference, not the edited paragraph.
 
   declares_side_effect: false.
+  IT-PO ENRICHMENT (2026-09-25).
+
+  THE ABSENCE CLAUSE IS MET BY STRUCTURE, NOT BY DILIGENCE. "No other passage states a different
+  way" is satisfied by stating the refusal contract once and linking to it from the stdout
+  contract, the exit-code semantics, the escape-hatch table and the catalogue. Four corrected
+  statements would drift apart again, which is how this document reached a state where its own
+  table is the counter-example to its own rule.
+
+  COLLISION TO SEQUENCE. GE-129e-2 rewrites the STDIN contract of the same file from GE-129a-1's
+  probe findings, and this record rewrites its refusal contract and two catalogue rows. Both are
+  in flight. Sequence them or the second overwrites the first; the ticket for whichever lands
+  second must be regenerated against the file as it then stands.
+
+  test_required: false, DELIBERATELY. change_target docs with a non-coder agent, so the store's
+  own code-AC test contract does not apply. The behaviour the reference describes is asserted by
+  GE-130f-1, GE-130f-2, GE-130f-2-i and GE-130f-2-ii; a descriptor here would be a second
+  definition of the same behaviour.

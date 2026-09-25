@@ -9,7 +9,7 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
+readiness: approved
 priority: medium
 roadmap_phase: phase_1
 criteria: |
@@ -32,6 +32,7 @@ criteria: |
     project it is installed in and not from a list naming one project's folders.
 depends_on:
 - GE-130f
+- GE-120f-1
 doc_links:
 - path: docs/acceptance-criteria/guardrail-engine/GE-130-protection-however-changed/GE-130f.yaml
   relationship: parent
@@ -57,13 +58,280 @@ doc_links:
 - path: docs/reference/claude-code-hooks.md
   relationship: related
   status: exists
-delivers_to: null
-expects_from: null
+- path: docs/known-issues/commit-guardian/open-high-ki-cg-037.md
+  relationship: describes
+  status: exists
+  relevance: The two independent inertness mechanisms this record repairs, with the evidence for
+    each. Fix direction agrees with these criteria.
+- path: docs/components.json
+  relationship: describes
+  status: exists
+  relevance: THE SOURCE OF THE FOLDER MAP. Every entry carries primary_code (the folders) and
+    detail_ref (the architecture document describing them). Project-owned data the package does
+    not author, so it travels with the installing project. This is what replaces DOC_MAPPING.
+- path: templates/settings.json
+  relationship: related
+  status: exists
+  relevance: The PreToolUse Edit|Write registration whose command string IS the entry point every
+    observation must go through, and which the session_hooks_manifest entry is reconciled against.
+- path: config/ac_store_schema.json
+  relationship: describes
+  status: exists
+  relevance: Why this record declares package_surface true - commit_guardian.json is a watched
+    registry and session_hooks_manifest is a new top-level key in it.
+- path: docs/architecture/components/commit-guardian.md
+  relationship: related
+  status: exists
+delivers_to:
+- agent: python-coder
+  ac_id: GE-130f-3
+  contract: >-
+    The session_hooks_manifest section of templates/scripts/commit_guardian/commit_guardian.json
+    and documentation_guard's entry in it: {matcher, entry_point, negative_control, currently},
+    where currently.state is one of passing / failing / blocked / unverified and was written from
+    whether the edit was carried out on disk. GE-130f-3 reads currently.state for this guard and
+    refuses command coverage while it is anything but passing.
+- agent: python-coder
+  ac_id: GE-130a-1
+  contract: >-
+    A documentation guard that refuses through the registered entry point and whose watched
+    folders come from the installing project, so widening it to shell commands adds a second
+    path to a guard that already refuses rather than a second path that refuses nothing.
+- agent: documentation-expert
+  ac_id: GE-130f-4
+  contract: >-
+    The refusal form the repaired guard actually uses, and the session_hooks_manifest path where
+    its liveness record is read - the two facts GE-130f-4's reference entry must state rather
+    than assert in its own words that the guard works.
+expects_from:
+- ac_id: GE-120f-1
+  contract: >-
+    The known-bad-input declaration shape, the entry-point rule, and the four-value liveness
+    record taken verbatim from config/verification_flow.schema.json ($defs/negative_control,
+    $defs/currently). This record declares two inputs for one guard and mints no vocabulary.
+    ORDERING CAVEAT: GE-120f-1's runner is the only writer of currently; see notes.
+- ac_id: GE-120c-1
+  contract: >-
+    unit_tests/portability/_deployed_check_harness.py - a real second working copy with the built
+    deployed layout, the source tree off the import path of the process under test, and per-check
+    status and output reported side by side.
 assigned_agent: python-coder
+estimated_complexity: L
+change_target:
+- code
+- config
+risk_surface: safety
+package_surface: true
+it_requirements:
+  config_schema_fragment:
+    session_hooks_manifest:
+      type: object
+      description: >-
+        NEW TOP-LEVEL SECTION of commit_guardian.json. Liveness records for SESSION (PreToolUse)
+        guards, which are registered in templates/settings.json and are NOT commit-time gates.
+        Deliberately not hooks_manifest.hooks, whose members are commit-time gates counted by
+        BP-1600a-2's census and emitted onto pre-commit entry lines. Deliberately not
+        templates/settings.json, which Claude Code parses and whose hook entries are a fixed
+        {type, command, timeout} shape. Keyed by hook script filename.
+      additionalProperties:
+        type: object
+        required:
+        - matcher
+        - entry_point
+        - negative_control
+        - currently
+        properties:
+          matcher:
+            type: string
+            description: >-
+              The settings.json PreToolUse matcher this entry corresponds to, verbatim. Reconciled
+              against templates/settings.json on every run; a disagreement is a named failure, never
+              a silent pass. This is what makes the record derived from the registration surface
+              rather than a second copy of it.
+          entry_point:
+            type: string
+            description: >-
+              config/verification_flow.schema.json's own definition - the real production way in
+              this check is invoked by, NOT an internal helper import. For a session guard it is
+              the settings.json command string with the tool payload on stdin.
+          negative_control:
+            description: >-
+              COPIED FROM config/verification_flow.schema.json $defs/negative_control. Either
+              {input, command (optional), expected_result, currently} or the {not_applicable,
+              reason} alternative. Never re-invented here.
+          currently:
+            description: >-
+              config/verification_flow.schema.json $defs/currently - {state in [passing, failing,
+              blocked, unverified], observed (YYYY-MM-DD), evidence[] of {command, output}}. An
+              entry that has never been exercised records unverified rather than omitting the
+              block.
+          exempt_from_edit_path_gate:
+            type: object
+            description: >-
+              OPTIONAL, populated by GE-130f-3, defined here so the section has one schema. A guard
+              excluded from the edit-path-before-command-coverage rule, carrying its reason as
+              data. Its presence is what excludes a guard; a name literal in the checker never is.
+  reference_file_path: templates/scripts/commit_guardian/commit_guardian.json
+  n_location_rule: '1'
+  required_skills:
+  - python-coder
+  post_write_commands:
+  - python scripts/build.py --target-dir .
+  constraints:
+  - >-
+    THE REFUSAL IS READ OFF THE FILESYSTEM, NOT OFF THE GUARD. The harness records the target
+    file's digest, runs the guard through the settings.json command string with a real Edit
+    payload on stdin, then applies the edit only if its decision interpreter says Claude Code
+    would have allowed the call. currently.state is computed from the before and after digests
+    alone: byte-identical (or still absent, for a create) is a refusal, changed as requested is
+    not. Exit status, stderr and any JSON are attached as evidence and are not arguments to the
+    function that writes the state. GE-130f-1-i owns this rule and its named mutation.
+  - >-
+    THE WATCHED FOLDERS COME FROM THE INSTALLING PROJECT AND NO FOLDER NAME MAY BE A LITERAL IN
+    THE GUARD. Read docs/components.json primary_code and detail_ref, plus the architecture
+    documents' own components frontmatter, at run time. Today's DOC_MAPPING is a duplicate of a
+    map another project already owned - delete it rather than rewrite it. Rewriting it to this
+    repository's folder names passes scenario one and fails scenario two, which is the whole
+    point of scenario two.
+  - >-
+    A WATCHED ENTRY THAT MATCHES NOTHING IS REPORTED, NEVER SILENT. Today main() exits 0 before
+    the exit code matters because related_docs is empty for every file. The repaired guard must
+    distinguish "this file is watched and its document is current" from "nothing in this project
+    is watched at all", and say the second one out loud. A map that matches nothing is exactly
+    what this repository has today and it reads as protection.
+  - >-
+    THE SECOND PROJECT IS A REAL BUILT COPY, NOT A FIXTURE DICT. Stand it up through GE-120c-1's
+    harness: a second working copy with a deliberately different layout and its own architecture
+    documents, installed with python scripts/build.py --target-dir <copy>, source tree off the
+    import path. Generate its folder names rather than hand-picking them, so an implementation
+    that special-cases a known name cannot pass.
+  - >-
+    ONE HARNESS, ONE DECISION INTERPRETER. Extend unit_tests/portability/_deployed_check_harness.py;
+    do not grow a second harness and do not encode the PreToolUse block contract in more than one
+    place. docs/reference/claude-code-hooks.md is NOT the source for that contract until
+    GE-130f-4 lands (it contradicts itself, KI-CG-20260917).
+  - >-
+    NO WIDENING HERE. This record changes behaviour on the Edit|Write matcher only. Adding
+    documentation_guard to a Bash matcher is GE-130a-1's work and GE-130f-3 refuses it until this
+    guard's record reads passing.
+  - >-
+    Error-handling policy: an UNEXPECTED exception in the guard stays fail-open and is logged at
+    WARNING or higher, never swallowed; a DELIBERATE refusal never travels the fail-open path. A
+    swallowed invocation error in the harness must become blocked in the record, never an absent
+    record and never a silent passing.
+  - >-
+    AC_ENFORCE_STRICT=1 on every pytest invocation, or these tests are xfail-masked and green
+    means nothing.
+test_spec:
+- name: test_ge130f1_known_bad_edit_is_not_carried_out_through_the_registered_entry_point
+  target_dir: unit_tests/portability/
+  framework: unittest
+  type: behavioral
+  angle: criterion
+  description: >-
+    Over a real built working copy, a code file in a folder an architecture document describes,
+    with no override set: run the guard through the exact settings.json command string with the
+    Edit payload on stdin, then apply the edit only if the decision interpreter says the call was
+    allowed. Assert the file's bytes are unchanged afterwards. The assertion is on the file, not
+    on the exit status or the message.
+- name: test_ge130f1_refusal_names_the_file_and_the_architecture_document
+  target_dir: unit_tests/portability/
+  framework: unittest
+  type: behavioral
+  angle: criterion
+  description: >-
+    The same run's captured refusal text contains the edited file's path and the path of the
+    architecture document that describes its folder. Asserted on the captured evidence, and only
+    for a run that already established the edit did not happen.
+- name: test_ge130f1_acceptable_edit_is_carried_out_in_the_same_run
+  target_dir: unit_tests/portability/
+  framework: unittest
+  type: behavioral
+  angle: criterion
+  description: >-
+    THE PAIRING - KEEP BOTH HALVES IN ONE INVOCATION. In the same run as the known-bad edit, an
+    edit to a code file in a folder no architecture document describes is carried out, its bytes
+    change as requested, and nothing is refused. Split apart, the first descriptor is satisfied by
+    a guard repaired into refusing every code edit (GE-120f-1-ii's shape).
+- name: test_ge130f1_liveness_record_is_written_from_the_filesystem_outcome
+  target_dir: unit_tests/portability/
+  framework: unittest
+  type: integration
+  angle: real_artifact
+  description: >-
+    After the run, documentation_guard's session_hooks_manifest entry in the DEPLOYED
+    commit_guardian.json carries currently.state passing, an observed date, and evidence quoting
+    the real invocation. Assert the entry's matcher equals the matcher templates/settings.json
+    registers the guard under, so the record is reconciled with the registration rather than
+    asserted beside it.
+- name: test_ge130f1_second_project_with_a_different_layout_refuses_the_equivalent_edit
+  target_dir: unit_tests/portability/
+  framework: unittest
+  type: behavioral
+  angle: deployed
+  description: >-
+    THE PORTABILITY DISCRIMINATOR. Build a second working copy whose code folders and architecture
+    documents are generated with names that appear nowhere in this repository, install the package
+    into it, and drive the equivalent known-bad edit through the same entry point: the edit is not
+    carried out there either. NAMED MUTATION (mandatory, run it): replace the project-read map with
+    a hard-coded list of THIS repository's folder names. Every other descriptor stays green and
+    this one must go red.
+- name: test_ge130f1_a_watched_folder_matching_nothing_is_reported_not_silently_skipped
+  target_dir: unit_tests/portability/
+  framework: unittest
+  type: behavioral
+  angle: failure
+  description: >-
+    In a project where no folder the guard would watch exists, the run reports that the guard
+    watches nothing in this project instead of exiting 0 silently. This is the state this
+    repository is in today, and today it is indistinguishable from a guard that is working.
+- name: test_ge130f1_registered_settings_entry_point_blocks_the_call
+  target_dir: unit_tests/portability/
+  framework: unittest
+  type: integration
+  angle: reachability
+  surface_invoked: >-
+    the templates/settings.json PreToolUse hook command for documentation_guard on the Edit|Write
+    matcher, executed verbatim with the tool payload on stdin against the built .claude/hooks copy
+  description: >-
+    PRODUCTION ENTRY POINT. The guard is invoked exactly the way a session invokes it - the
+    settings.json command string, not a python -m import - and the decision interpreter classifies
+    the outcome as a block. A guard whose refusal does not change the call's outcome is inert,
+    which is precisely today's defect.
+test_rationale: >-
+  Every descriptor asserts on the filesystem or on a built artifact because the defect being
+  repaired is a guard whose OWN REPORT says blocked while the edit proceeds. A descriptor that
+  reads the exit status, the stderr text, or the guard's source would record this guard as
+  working today: it prints "ARCHITECTURE DOC UPDATE REQUIRED" and returns non-zero, and the edit
+  lands anyway. The pairing descriptor is in the same invocation because the first descriptor
+  alone is satisfied by a guard repaired into refusing everything. The second-project descriptor
+  is the only one no hard-coded map can pass, and its folder names are generated rather than
+  chosen so that special-casing a known name cannot pass either. All of it runs out of process
+  against a built copy because the source tree is the layout in which the deployment defect does
+  not reproduce (GE-120c-1).
 declares_side_effect: false
 origin_agent: business-analyst
 created: '2026-09-17'
-amended_by: []
+amended_by:
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-09-25
+  note: >-
+    Confirmed python-coder. Added estimated_complexity L, change_target [code, config],
+    risk_surface safety, package_surface true with the structured session_hooks_manifest spec,
+    eight constraints, seven test_spec descriptors with two named mutations, test_rationale,
+    delivers_to (GE-130f-3, GE-130a-1, GE-130f-4), expects_from (GE-120f-1, GE-120c-1) and five
+    doc_links. criteria, title, depends_on, req_status and readiness untouched;
+    declares_side_effect re-derived as false and unchanged.
+- reason: depends-on-edges-added-for-landing-order
+  by: business-analyst
+  at: 2026-09-25
+  note: >-
+    User decision 2026-09-25. Added depends_on GE-120f-1: its liveness runner is the only writer
+    of the currently record this record reads, and GE-120f-1 (approved, unbuilt) is built first.
+    The IT PO recorded this as expects_from without the edge; the build sequencer reads
+    depends_on only. Cycle check: GE-120f-1's transitive depends_on is GE-120f, GE-120 - no
+    GE-130f-* record.
 superseded_by: null
 covered_by:
 - GE-130f-1-i
@@ -85,3 +353,35 @@ notes: |
 
   declares_side_effect: false -- the Then clauses assert that an edit is or is not carried out
   and what a refusal and a record say; no durable-effect phrase from the derivation list.
+  IT-PO ENRICHMENT (2026-09-25).
+
+  ASSIGNMENT CONFIRMED: python-coder. Both mechanisms are code - the refusal form and the map
+  source - and the second scenario needs a built second project, which is harness code.
+
+  PACKAGE SURFACE. This record creates session_hooks_manifest, a NEW TOP-LEVEL KEY in
+  templates/scripts/commit_guardian/commit_guardian.json, which _package_surface_registry
+  watches on its document top level ("" / mapping_keys). It is therefore declared, with the
+  structured spec the declaration obliges. GE-130f-2 adds an ENTRY INSIDE that section, one
+  level deeper, which is not watched - it denies the surface explicitly instead.
+
+  WHY NOT templates/settings.json AND WHY NOT hooks_manifest.hooks. settings.json is parsed by
+  the host and its hook entries are a fixed {type, command, timeout} shape; verification state
+  does not belong in a file the user edits and the host validates. hooks_manifest.hooks holds
+  COMMIT-time gates - members are counted by BP-1600a-2's census and emitted onto pre-commit
+  entry lines, and a PreToolUse session guard put there would be miscounted as a commit gate.
+  The new section keeps "held where the check is registered" honest by DERIVING from the
+  registration: each entry names the settings.json matcher and command it corresponds to, and
+  the run reconciles the two rather than trusting a second copy.
+
+  THE DUPLICATED SOURCE IS THE DEFECT, NOT ITS CONTENTS. DOC_MAPPING is a second copy of a map
+  docs/components.json already owns (primary_code plus detail_ref). The requirement is to read
+  the owned source and DELETE the duplicate, not to correct the duplicate's entries.
+
+  ORDERING CAVEAT FOR THE USER. currently is written by GE-120f-1's liveness runner, which is
+  not built. This record's expects_from names GE-120f-1, but depends_on (BA-owned) lists only
+  GE-130f. Either GE-120f-1 is sequenced first, or this record delivers the first writer for its
+  own entry and GE-120f-1 absorbs it when it lands. Not decided here. [DECIDED 2026-09-25 (user): GE-120f-1 is built first; the depends_on edge enforces the order.]
+
+  LOCATION DECIDED 2026-09-25. The user confirmed that session-hook verification state lives in
+  a new top-level session_hooks_manifest section of
+  templates/scripts/commit_guardian/commit_guardian.json - decided 2026-09-25.
