@@ -1,0 +1,95 @@
+id: INF-1100d-5
+components:
+  - infrastructure
+  - testing_quality
+title: "Reference documentation says the test database setting has no default and what happens when it is missing"
+component: infrastructure
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a user looks up how their tests find the test database,
+  When they read the settings field reference and the testing guide,
+  Then the field reference's row for testing_context.db_connection_test shows
+      no default and says that when it is unset, database tests are reported
+      as not configured and are not run,
+    And the row gives an example that is plainly a placeholder
+      (postgresql://<user>:<password>@<host>:<port>/<database>), not an
+      address that could work on someone's machine,
+    And the testing guide's example database test takes its connection from
+      that setting rather than from a literal address,
+    And neither page names a host, port or database as the place leafcutter's
+      tests run,
+    And every other documentation page that quotes
+      postgresql://trader:trader@localhost:5403/LIVE as history — in
+      leafcutter's own docs, including the analysis page on test writers
+      proving failure rather than discrimination, and any shipped page under
+      templates/docs/ — quotes a placeholder instead, while still saying that
+      the template shipped one adopter's local address, with username and
+      password, to every install.
+depends_on:
+  - INF-1100d
+  - INF-1100d-3
+doc_links:
+  - path: docs/reference/skills-config-fields.md
+    relationship: describes
+    status: exists
+    relevance: "Row for testing_context.db_connection_test currently lists the adopter address as its default."
+  - path: docs/testing/README.md
+    relationship: describes
+    status: exists
+    relevance: "The example DB test connects to the adopter address."
+  - path: docs/analysis/2026-09-25-test-writers-prove-failure-not-discrimination.md
+    relationship: describes
+    status: exists
+    relevance: "Quotes the address (and localhost:5403) as incident evidence. Replace each quote with a placeholder (user decision Q5). This page is not in the authoring worktree yet; it exists in the main checkout."
+assigned_agent: documentation-expert
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: INF-1100d-3
+  contract: "The exact wording of the not-configured report, so the reference describes it accurately."
+it_requirements:
+  - Replace every concrete database address on the two pages with the placeholder postgresql://<user>:<password>@<host>:<port>/<database>.
+    That includes docs/testing/README.md's second example (postgresql://myuser:mypass@localhost:5432/mydb,
+    line ~214).
+  - Also remove the 'port 5403' / 'local database container' prose in docs/agents/utility/test-runner.md.
+  - 'Replace the history quotes of the old address in leafcutter''s own docs/ (including the
+    analysis page) and in any templates/docs/ page with the placeholder. Keep the history itself:
+    what shipped, and why it was dangerous.'
+  - The field-reference row shows no default. It says that when the setting is unset, database
+    tests are reported as not configured and are not run, using the exact report wording INF-1100d-3-i's
+    checker emits.
+  - Update last_updated front matter.
+test_required: false
+test_rationale: Documentation AC (reference-doc trigger). Under the firewall, no behavioural
+  AC may be closed by pointing at these pages. Coverage is split by shipped scope (user decision).
+  Any templates/docs/ page is guarded mechanically by INF-1100d-4, which accepts the placeholder
+  form (INF-1100d-4-i S3). Leafcutter's own docs/ pages (the field reference, the testing
+  guide, the analysis page, docs/agents/utility/test-runner.md) are not shipped and not scanned,
+  so they are cleaned by hand and verified by pr-reviewer against each Then clause. A docs
+  text-search test would be the forbidden prose-presence proxy.
+origin_agent: business-analyst
+created: 2026-09-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: docs
+risk_surface: safety
+notes: |
+  DOCUMENTATION AC — answers INF-1100d's `reference-doc` trigger. Its
+  deliverable is the two pages only. FIREWALL: no behavioural AC in this L1 may
+  be closed by pointing at these pages. The two pages
+  and the analysis page are leafcutter's own docs/, which INF-1100d-4 does NOT
+  scan (shipped = templates/ and config/). Their clean-up is by hand, reviewed
+  by pr-reviewer. Only templates/docs/ pages are guarded mechanically.
+
+  USER DECISION AT THE BA GATE (Q5): history pages are redacted to a
+  placeholder, not excluded by path. The last Then clause keeps the history
+  itself — what shipped, and why it was dangerous — so the redaction does not
+  erase the evidence.

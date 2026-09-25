@@ -1,0 +1,117 @@
+id: ACD-2500d-5-i
+components:
+- ac_driven_dev
+- testing_quality
+readiness: reviewed
+priority: high
+title: The mechanical file facts the code-aware agent needs come from a deterministic pre-pass script
+component: ac-driven-dev
+level: L3
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  Given a batch of 3 requirements handed to the code-aware step:
+      R1 declares the existing file scripts/a.py and names the existing test directory unit_tests/ac_store/,
+      R2 declares a file marked to-be-created and a reference file of the same file type in the same area,
+      R3 declares scripts/missing.py, which neither exists nor is marked to-be-created, and a reference
+      file of a different file type,
+  When the pre-pass script runs before the code-aware agent,
+  Then its report lists, per requirement and per declared file, whether the file exists, is marked
+    to-be-created, or is neither,
+  And it reports whether each named test directory exists,
+  And it reports, for each reference file, whether it exists and whether it has the same file type
+    and area as the deliverable,
+  And for R3 it reports scripts/missing.py as neither and the reference file as a different file type,
+  And two runs on the same batch and repository state produce byte-identical reports,
+  And the code-aware agent is not dispatched for the batch when the script produces no report.
+depends_on:
+- ACD-2500d-5
+doc_links:
+- path: docs/architecture/adrs/ADR-010-ac-store-as-authoritative-backlog.md
+  relationship: describes
+  status: exists
+- path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+  relationship: describes
+  status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+- 'Read-only and deterministic: never edits a record or file; output depends only on the batch and the
+  repository tree.'
+- 'Declared files are read through the one derivation the ticket generator uses to build files_touched
+  (ADR-010 doc_links -> files_touched); no second derivation may be added. See caveat: that derivation
+  is imprecise today (KI-ACS-002) and no AC-level to-be-created marker exists.'
+- The 'same area' rule is defined once (in the ACD-2500a-5 / ACD-2500b-4 reference) and applied only here;
+  the agent does not re-derive it.
+- 'Report shape: Pre-pass report (JSON, deterministic, sorted): {batch: [ac_id], records: [{id: str, declared_files:
+  [{path: str, state: ''exists''|''to_be_created''|''neither''}], test_dirs: [{path: str, exists: bool}],
+  reference_files: [{path: str, exists: bool, same_type: bool, same_area: bool}]}]}; paths repo-root-relative
+  POSIX. Non-zero exit and no report on error.'
+- 'Fail-closed: an error yields a non-zero exit and no report; the workflow treats that as batch failure
+  (ACD-2500c-2).'
+- Must complete within 2 seconds for a batch of 50 records.
+- 'Ships to consumer projects with the plan-feature workflow: canonical source and deployed copy kept
+  in parity through the build (ADR-001, ADR-013) and verified from the deployed layout after a rebuild.'
+delivers_to:
+- agent: llm-expert
+  contract: 'Pre-pass report (JSON, deterministic, sorted): {batch: [ac_id], records: [{id: str, declared_files:
+    [{path: str, state: ''exists''|''to_be_created''|''neither''}], test_dirs: [{path: str, exists: bool}],
+    reference_files: [{path: str, exists: bool, same_type: bool, same_area: bool}]}]}; paths repo-root-relative
+    POSIX. Non-zero exit and no report on error. Read by the code-aware agent (ACD-2500d-5, ACD-2500c-1,
+    ACD-2500d-1, ACD-2500d-2).'
+- agent: python-coder
+  contract: 'Pre-pass report (JSON, deterministic, sorted): {batch: [ac_id], records: [{id: str, declared_files:
+    [{path: str, state: ''exists''|''to_be_created''|''neither''}], test_dirs: [{path: str, exists: bool}],
+    reference_files: [{path: str, exists: bool, same_type: bool, same_area: bool}]}]}; paths repo-root-relative
+    POSIX. Non-zero exit and no report on error. Run and gated by plan-feature.js (ACD-2500c-2).'
+expects_from: null
+test_spec:
+- name: test_declared_file_states_reported
+  target_dir: unit_tests/ac_store/
+  framework: pytest
+  type: unit
+  description: R1's file is 'exists', R2's is 'to_be_created', R3's scripts/missing.py is 'neither'.
+- name: test_test_directory_existence_reported
+  target_dir: unit_tests/ac_store/
+  framework: pytest
+  type: unit
+  description: Each named test directory is reported with its existence.
+- name: test_reference_file_type_and_area_reported
+  target_dir: unit_tests/ac_store/
+  framework: pytest
+  type: unit
+  description: R2's reference file is same type and area; R3's is a different file type.
+- name: test_two_runs_byte_identical
+  target_dir: unit_tests/ac_store/
+  framework: pytest
+  type: unit
+  description: Two runs on the same batch and tree produce byte-identical reports.
+  angle: boundary
+- name: test_no_report_blocks_agent_dispatch
+  target_dir: unit_tests/ac_driven_dev/
+  framework: pytest
+  type: integration
+  description: 'Workflow harness: when the script exits non-zero, the code-aware agent is not dispatched
+    for the batch.'
+  angle: failure
+origin_agent: it-po
+created: '2026-09-25'
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  BLOCKED AT FINAL GATE (user, 2026-09-25): held at readiness: reviewed until a
+  declared-files schema AC (AC-level list of files a piece of work changes, with a
+  to-be-created marker) is authored via a separate /plan-feature run and added to
+  depends_on here. Today's file list is derived from doc_links (KI-ACS-002).
+
+  AUTHORED BY IT-PO under user decision 3: the mechanical pre-pass (declared file exists or is marked
+  to-be-created, test directory exists, reference file same type and area) is a deterministic script
+  whose output feeds the code-aware agent. Placed as an L3 under ACD-2500d-5 so the ACD-2500d child
+  cap is not exceeded. BA to review the criteria at the final gate.
+  BLOCKER FOR BUILD (caveat): the AC schema has no 'declared files' field and no to-be-created marker;
+  today's declared surface is the doc_links -> files_touched derivation (ADR-010, KI-ACS-002).

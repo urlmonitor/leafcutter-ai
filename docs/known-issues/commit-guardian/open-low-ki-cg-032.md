@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: '2026-08-18'
-last_updated: '2026-08-18'
+last_updated: '2026-09-25'
 components:
   - commit_guardian
 related_docs:
@@ -32,8 +32,9 @@ related_docs:
 > that documents it.
 
 - **Severity:** medium
-- **Status:** open — **the code is not on `main`**; it lives on unmerged PR #495, branch
-  `feat/ge-122-integrity-guard`. Recorded here so it is not lost when that branch is picked up.
+- **Status:** open — **the code is on `main`**: PR #495 merged as `e429421e`
+  (`feat(commit-guardian): whole-collection uniqueness pass ... (GE-122)`). The defect shipped
+  with it and is still present (re-verified 2026-09-25, see note below).
 - **Occurrences:** 1
 - **First seen:** 2026-08-26 · **Last seen:** 2026-08-26
 - **Where:** `templates/scripts/commit_guardian/_uniqueness_scanners.py:396-487` —
@@ -80,5 +81,20 @@ happen to be three characters.
 
 **Pattern:** an optimisation whose fallback is the correctness guarantee, and which answers
 often enough that the fallback never runs.
+
+**Re-verified 2026-09-25 (still open).** The original Status said the code was "not on
+`main`" on unmerged PR #495. That is stale: #495 merged as `e429421e`, which is the only commit
+touching `templates/scripts/commit_guardian/_uniqueness_scanners.py` on `main`. The `Where` line
+refs (`_fast_scan_top_level_id` at 396-487, `_is_document_boundary_token` hardcode at 311) still
+match. A probe against `main` (`d2fe85a1`) reproduced the defect:
+
+- `id: GE-500` / `title: Fix: the parser`: `yaml.safe_load` raises `ScannerError`, but
+  `_fast_scan_top_level_id` returns `GE-500`. `scan_acceptance_criteria` returns
+  `passed=False`, with `GE-500` claimed by `[a_malformed.yaml, b_legit.yaml]`.
+- The fast path still returns an id where the full parse fails for `- foo` after a mapping
+  (`ParserError`), an unclosed flow sequence (`ParserError`), and an undefined alias
+  (`ComposerError`).
+- Tab indentation on the following line now declines (returns `None`) and agrees with the
+  full parse.
 
 ---

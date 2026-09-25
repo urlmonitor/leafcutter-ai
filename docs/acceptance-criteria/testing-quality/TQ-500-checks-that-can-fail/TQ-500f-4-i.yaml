@@ -1,0 +1,75 @@
+id: TQ-500f-4-i
+components:
+  - testing_quality
+  - build_orchestration
+title: "The database test writer, which does not run its tests, labels its answers as reasoning, not as results"
+component: testing-quality
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given the database test writer writes a regression test for a stored
+    procedure and, under its current instructions, does not run the suite,
+  When it answers the three questions for that test in its report,
+  Then each answer is marked as reasoned, not observed,
+    And the report does not state or imply that the test was seen to fail
+      under the wrong version named in Q1, or seen to pass on the fix,
+    And the report names the wrong version from Q1 as one to run later, so a
+      later run can take it up,
+    And when the ordinary test writer answers the same questions after a
+      run, its answers may cite the run's output, and only answers backed by
+      that output are marked observed.
+depends_on:
+  - TQ-500f-4
+doc_links:
+  - path: templates/agents/sql-test-writer.md
+    relationship: describes
+    status: exists
+    relevance: "Constraint 'Do not deploy SQL or run the test suite'; Step 4 is a syntax check only."
+  - path: docs/analysis/2026-09-25-test-writers-prove-failure-not-discrimination.md
+    relationship: describes
+    status: exists
+    relevance: "sql-test-writer section: no red baseline, no pre-fix run; SQL is where six of eight incidents happened."
+assigned_agent: llm-expert
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: TQ-500f-4
+  contract: "Both writers answer the three questions per guarding test."
+it_requirements:
+  - Edit templates/agents/sql-test-writer.md (source) and the matching report section of templates/agents/test-writer.md
+    only.
+  - Every Q1-Q3 answer carries an explicit, fixed label with exactly two values, reasoned or
+    observed. 'observed' is permitted only when the answer cites output from a run the writer
+    actually performed.
+  - sql-test-writer's report lists the Q1 wrong version under a 'to run later' heading so TQ-500g
+    can take it up. Wording that states or implies the test was seen to fail or pass is prohibited
+    while the template forbids running the suite.
+  - Must not relax sql-test-writer's existing 'do not run the suite' constraint. Making it run
+    is TQ-500g (request item 7).
+test_required: false
+test_rationale: 'Prompt-only: honest labelling of reasoning versus observation in an LLM''s
+  report cannot be unit-tested, and a template text search is forbidden. Substitute: a recommended
+  sql-test-writer eval row (a stored-procedure regression test) where the judge checks that
+  every answer is labelled reasoned and that no answer claims an observed run, added to the
+  follow-up eval AC recommended under TQ-500f-4. pr-reviewer checks the diff.'
+origin_agent: business-analyst
+created: 2026-09-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: prompt
+risk_surface: contract_boundary
+notes: |
+  EDGE CASE: adding the questions to a writer that never runs anything invites
+  confident answers that read like evidence. This AC keeps the report honest
+  until request item 7 (sql-test-writer runs what it writes, in TQ-500g) lands.
+  It must not be read as permission to skip running where running is allowed.
+
+  PROMPT-ONLY, for the same reason as TQ-500f-4. An eval can check that a
+  non-running writer's report marks its answers as reasoned; no unit test can.
