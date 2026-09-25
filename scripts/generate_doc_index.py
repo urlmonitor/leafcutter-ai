@@ -258,7 +258,7 @@ def _render_single_file(heading: str, path: Path, repo_root: Path) -> str:
     if not path.exists():
         return f"## {heading}\n\nNo docs found.\n\n"
 
-    rel = path.relative_to(repo_root)
+    rel = path.relative_to(repo_root).as_posix()
     desc = _extract_description(path)
     return f"## {heading}\n\n- [{rel}]({rel}) — {desc}\n\n"
 
@@ -295,7 +295,7 @@ def _render_directory(
 
     rows: list[str] = []
     for f in files:
-        rel = f.relative_to(repo_root)
+        rel = f.relative_to(repo_root).as_posix()
         name = f.stem.replace("-", " ").replace("_", " ")
         desc = _extract_description(f)
         rows.append(f"| {name} | [{rel}]({rel}) | {desc} |")
@@ -468,13 +468,13 @@ if __name__ == "__main__":
 # DECISION HISTORY
 # ====================================================================
 # - 2026-08-14 00:00 [python-coder]: Dropped the `> Generated: {timestamp}` (#TICKETLESS reason=KM-DBF-014-doc-index-fix)
-#   header line (and the `datetime.now()` call that fed it) from
-#   _HEADER_TEMPLATE / generate_index(). The header was stamped with the
-#   wall clock on every call, so regenerating docs/INDEX.md with zero
-#   documentation changes still produced a byte-different file — the doc-index
-#   pre-commit hook then created an unstaged change on essentially every
-#   commit, which is the reliable trigger behind "Stashed changes conflicted
-#   with hook auto-fixes" restore failures. This contradicted the module's
-#   own stated idempotency intent for `created`/`last_updated`. A genuine doc
-#   change is still visible via the changed table rows, so the fix does not
-#   mask real content changes.
+#   header line (and the `datetime.now()` call that fed it) from _HEADER_TEMPLATE /
+#   generate_index(). The header was stamped with the wall clock on every call, so regenerating
+#   docs/INDEX.md with zero documentation changes still produced a byte-different file — the
+#   doc-index pre-commit hook then created an unstaged change on essentially every commit, which is
+#   the reliable trigger behind "Stashed changes conflicted with hook auto-fixes" restore failures.
+#   This contradicted the module's own stated idempotency intent for `created`/`last_updated`. A
+#   genuine doc change is still visible via the changed table rows, so the fix does not mask real
+#   content changes.
+# - 2026-09-25 [python-coder]: Map links use Path.as_posix(), not str(Path) (KM-300a-1)
+#   so they keep forward slashes on Windows; backslash links broke on GitHub.

@@ -9,7 +9,7 @@ component: knowledge-management
 level: L2
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 created_by: "docs/acceptance-criteria/knowledge-management/KM-300-docs-same-everywhere/KM-300a.yaml"
 criteria: |
   Given the docs folder contains these documentation files:
@@ -66,8 +66,8 @@ origin_agent: business-analyst
 created: 2026-09-25
 amended_by: []
 superseded_by: null
-covered_by: []
-implemented_by: []
+covered_by: [unit_tests/commit_guardian/test_km_300a_1_doc_index_posix_links.py]
+implemented_by: [scripts/generate_doc_index.py]
 change_target: code
 risk_surface: internal
 test_spec:
