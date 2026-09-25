@@ -158,11 +158,12 @@ def _find_link_ending_with(
     links: list[tuple[str, str]], suffix_posix: str
 ) -> tuple[str, str] | None:
     """Find the first (text, target) pair whose forward-slash-normalized
-    target ends with *suffix_posix*, tolerating a backslash-flavoured target
-    on the buggy code path.
+    link TEXT ends with *suffix_posix*, tolerating a backslash-flavoured text
+    on the buggy code path. Matched on text because KM-300a-2 makes the
+    target relative to the map's folder while the text keeps the root path.
     """
     for text, target in links:
-        normalized = target.replace(_BACKSLASH, "/")
+        normalized = text.replace(_BACKSLASH, "/")
         if normalized.endswith(suffix_posix):
             return (text, target)
     return None
@@ -207,7 +208,7 @@ class TestDocIndexPosixLinkPaths(unittest.TestCase):
         )
         self.assertEqual(
             adr_pair[1],
-            "docs/architecture/adrs/ADR-001-self-hosting-boundary.md",
+            "architecture/adrs/ADR-001-self-hosting-boundary.md",
             f"ADR link target must be a forward-slash path. Got: {adr_pair[1]!r}",
         )
 
@@ -222,7 +223,7 @@ class TestDocIndexPosixLinkPaths(unittest.TestCase):
         )
         self.assertEqual(
             glossary_pair[1],
-            "docs/glossary.md",
+            "glossary.md",
             f"Glossary link target must be a forward-slash path. Got: {glossary_pair[1]!r}",
         )
 
@@ -282,7 +283,7 @@ class TestDocIndexPosixLinkPaths(unittest.TestCase):
         )
         self.assertEqual(
             adr_pair[1],
-            "docs/architecture/adrs/ADR-001-self-hosting-boundary.md",
+            "architecture/adrs/ADR-001-self-hosting-boundary.md",
             "ADR link target must be forward-slash even when the underlying "
             f".relative_to() call returns a PureWindowsPath. Got: {adr_pair[1]!r}",
         )
@@ -302,7 +303,7 @@ class TestDocIndexPosixLinkPaths(unittest.TestCase):
         )
         self.assertEqual(
             glossary_pair[1],
-            "docs/glossary.md",
+            "glossary.md",
             "Glossary link target must be forward-slash even when the "
             f"underlying .relative_to() call returns a PureWindowsPath. "
             f"Got: {glossary_pair[1]!r}",
