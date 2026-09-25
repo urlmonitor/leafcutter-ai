@@ -98,6 +98,7 @@ components:
       - "scripts/knowledge_query.py"
       - "scripts/visualise_knowledge_graph.py"
       - "config/paths.json"
+      - "scripts/generate_doc_index.py"
   - id: testing-quality
     prefix: TQ
     description: "ACs for test-suite trustworthiness: which tests gate main, how unbuilt/in-flight features are tolerated, accepted-failure tracking, and staged enforcement rollout"
