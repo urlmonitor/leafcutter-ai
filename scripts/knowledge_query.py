@@ -9,12 +9,24 @@ BUSINESS CONTEXT: Gives agents and humans a one-command answer to
     single pass, extracts a one-line description for every node, follows
     cross-surface edges, and dumps a flat index in both human-readable text
     and JSON format.
-ARCHITECTURE: Seven public functions (load_surfaces, load_surfaces_with_meta,
-    build_knowledge_map, validate_knowledge_map, validate_edges_integrity,
-    extract_nodes, extract_edges) and a CLI entry point.
+ARCHITECTURE: Nine public functions (load_surfaces, load_surfaces_with_meta,
+    build_knowledge_map, check_surface_set, validate_knowledge_map,
+    validate_edges_integrity, extract_nodes, extract_edges) plus the
+    SYNTHETIC_SURFACE_LABELS constant, and a CLI entry point.
     build_knowledge_map() is the primary API for callers that need both the
     graph data and surface-completeness audit metadata (declared_surfaces,
-    contributing_surfaces). validate_knowledge_map() verifies each declared
+    contributing_surfaces -- computed from PRIMARY nodes only, i.e. items
+    actually read from a surface's own declared path, never from a
+    synthetic hub/files node sharing that surface's label -- KM-KGS-100c-1-i).
+    check_surface_set() (KM-KGS-100c-1/-i/-ii) is the public completeness
+    check over a built map: a declared surface whose path exists but is
+    absent from contributing_surfaces, or a node whose surface is neither
+    declared nor in SYNTHETIC_SURFACE_LABELS (the map's one named set of
+    synthetic labels: component hubs, and 'files' nodes). Both
+    check_surface_set() and SYNTHETIC_SURFACE_LABELS are thin re-exports of
+    the sibling module knowledge_surface_check.py, kept separate so this
+    file's own already-oversized content-line count (GE-127b-1 ratchet)
+    never grows for that check. validate_knowledge_map() verifies each declared
     surface produces only the edge relationship kinds it declares in paths.json
     — the check is fully data-driven, so adding or removing a surface in
     paths.json changes the validated set without any code edit.
@@ -40,17 +52,19 @@ ARCHITECTURE: Seven public functions (load_surfaces, load_surfaces_with_meta,
     _line_indent, _strip_inline_comment, _is_mapping_item_text,
     _parse_block_children, _parse_frontmatter, _parse_yaml_file) live in the
     sibling module knowledge_frontmatter_reader.py (KM-KGS-100a-3-xi) and are
-    re-exported here as the SAME function objects via _load_reader_module(),
-    which resolves the sibling module relative to this file's own __file__
+    re-exported here as the SAME function objects via _load_sibling_module(),
+    which resolves each sibling module relative to this file's own __file__
     so the re-export holds both from source scripts/ and a deployed
     consumer's .leafcutter/scripts/. A second sibling module,
-    knowledge_file_nodes.py (KM-KGS-100d-4), is loaded the same way
-    (_load_file_nodes_module()) and owns canonicalisation, the path-keyed
-    index, present/missing marking, and decline reporting for every field a
-    surface declares in file_path_fields; ``_collect_all_ex()`` (the
-    3-tuple-returning core _collect_all() now delegates to) routes each such
-    field's candidate values to it in the same post-processing step that
-    creates synthetic component-hub nodes, before the membership filter runs.
+    knowledge_file_nodes.py (KM-KGS-100d-4), is loaded the same way and owns
+    canonicalisation, the path-keyed index, present/missing marking, and
+    decline reporting for every field a surface declares in
+    file_path_fields; ``_collect_all_ex()`` (the 4-tuple-returning core
+    _collect_all() now delegates to) routes each such field's candidate
+    values to it in the same post-processing step that creates synthetic
+    component-hub nodes, before the membership filter runs. A third sibling
+    module, knowledge_surface_check.py (KM-KGS-100c-1/-i/-ii), is loaded the
+    same way and owns check_surface_set() and SYNTHETIC_SURFACE_LABELS.
 """
 from __future__ import annotations
 
@@ -241,6 +255,7 @@ _parse_yaml_file = _reader._parse_yaml_file
 # KM-KGS-100d-4: canonicalisation, the path-keyed index, present/missing
 # marking, and decline reporting for every file_path_fields-declared field.
 _file_nodes = _load_sibling_module("knowledge_file_nodes")
+SYNTHETIC_SURFACE_LABELS = _load_sibling_module("knowledge_surface_check").SYNTHETIC_SURFACE_LABELS
 
 
 def _extract_frontmatter_end_line(text: str) -> int:
@@ -458,12 +473,11 @@ def build_knowledge_map(
         name for name in surfaces_meta if not surface_filter or name == surface_filter
     }
 
-    all_nodes, all_edges, declines = _collect_all_ex(project_root, paths_json, surface_filter)
+    all_nodes, all_edges, declines, primary_surfaces = _collect_all_ex(project_root, paths_json, surface_filter)
 
-    # A surface contributed a primary node only if it appears in the
-    # declared set (excludes synthetic hub/files nodes, whose surface names
-    # -- "components"/"files" -- are never themselves declared surfaces).
-    contributing = {node.surface for node in all_nodes if node.surface in declared}
+    # A surface contributed only when a PRIMARY node -- read from its own
+    # path before synthetic hub/files nodes were added -- carries its label.
+    contributing = {surface for surface in primary_surfaces if surface in declared}
 
     return KnowledgeMap(
         nodes=all_nodes,
@@ -473,6 +487,23 @@ def build_knowledge_map(
         declined_count=len(declines),
     )
 
+def check_surface_set(km: KnowledgeMap, project_root: Path, paths_json: Path) -> list[str]:
+    """Return every surface-set failure for *km* (KM-KGS-100c-1/-i/-ii).
+
+    Thin wrapper around ``knowledge_surface_check.check_surface_set``,
+    injecting ``load_surfaces_with_meta`` explicitly so that sibling module
+    never imports back from this one (see its own ARCHITECTURE docstring).
+
+    Args:
+        km: A :class:`KnowledgeMap` produced by ``build_knowledge_map()``.
+        project_root: Absolute path to the project root directory.
+        paths_json: Absolute path to the paths.json configuration file.
+
+    Returns:
+        Human-readable failure strings; empty when *km* is fully
+        accounted for.
+    """
+    return _load_sibling_module("knowledge_surface_check").check_surface_set(km, project_root, paths_json, load_surfaces_with_meta)
 
 # ---------------------------------------------------------------------------
 # Public API: validate_knowledge_map
@@ -1143,8 +1174,8 @@ def _filter_dangling_edges(all_edges, node_ids: set[str]) -> list[EdgeRecord]:
     return filtered_edges
 
 
-def _collect_all_ex(project_root: Path, paths_json: Path, surface_filter: str | None = None) -> tuple[list[NodeRecord], list[EdgeRecord], list]:
-    """Traverse all surfaces and collect nodes, edges, and declines.
+def _collect_all_ex(project_root: Path, paths_json: Path, surface_filter: str | None = None) -> tuple[list[NodeRecord], list[EdgeRecord], list, frozenset[str]]:
+    """Traverse all surfaces and collect nodes, edges, declines, and primary surfaces.
 
     After collecting all primary nodes and candidate edges, this function:
     1. Creates synthetic hub NodeRecords for each unique component value seen in
@@ -1167,7 +1198,11 @@ def _collect_all_ex(project_root: Path, paths_json: Path, surface_filter: str | 
         surface_filter: When non-None, restrict traversal to this surface only.
 
     Returns:
-        Tuple of (nodes_list, edges_list, declines_list).
+        Tuple of (nodes_list, edges_list, declines_list, primary_surfaces).
+        ``primary_surfaces`` is the set of surface names carried by a
+        PRIMARY node only -- captured before hub/files synthetic nodes are
+        added -- so a synthetic node sharing a declared surface's label
+        never appears in it (KM-KGS-100c-1-i).
     """
     surfaces_meta = load_surfaces_with_meta(project_root, paths_json)
     all_nodes: list[NodeRecord] = []
@@ -1212,7 +1247,7 @@ def _collect_all_ex(project_root: Path, paths_json: Path, surface_filter: str | 
     # Post-processing step 3: filter phantom edges -- see _filter_dangling_edges.
     filtered_edges = _filter_dangling_edges(all_edges, existing_ids)
 
-    return all_nodes, filtered_edges, declines
+    return all_nodes, filtered_edges, declines, frozenset(n.surface for n in primary_nodes)
 
 
 def _collect_all(project_root: Path, paths_json: Path, surface_filter: str | None = None) -> tuple[list[NodeRecord], list[EdgeRecord]]:
@@ -1230,7 +1265,7 @@ def _collect_all(project_root: Path, paths_json: Path, surface_filter: str | Non
     Returns:
         Tuple of (nodes_list, edges_list).
     """
-    nodes, edges, _declines = _collect_all_ex(project_root, paths_json, surface_filter)
+    nodes, edges, _declines, _primary_surfaces = _collect_all_ex(project_root, paths_json, surface_filter)
     return nodes, edges
 
 
@@ -1256,11 +1291,8 @@ def _files_and_missing_counts(nodes: list[NodeRecord]) -> tuple[int, int]:
 
 
 def render_text(
-    nodes: list[NodeRecord],
-    edges: list[EdgeRecord],
-    query: str | None,
-    show_edges: bool,
-    declined: int = 0,
+    nodes: list[NodeRecord], edges: list[EdgeRecord], query: str | None,
+    show_edges: bool, declined: int = 0,
 ) -> str:
     """Render the knowledge index as human-readable text.
 
@@ -1470,7 +1502,7 @@ def main(argv: list[str] | None = None) -> int:
             print(name)
         return 0
 
-    nodes, edges, declines = _collect_all_ex(project_root, paths_json, surface_filter=args.surface)
+    nodes, edges, declines, _primary_surfaces = _collect_all_ex(project_root, paths_json, surface_filter=args.surface)
     for decline in declines:
         print(_file_nodes.format_decline_line(decline), file=sys.stderr)
 
@@ -1730,5 +1762,33 @@ DECISION HISTORY
   exec_module (for a load that fails AFTER sys.modules was already
   populated) was dropped as the optional part that did not fit the file's
   check-file-size ratchet budget. (#TICKETLESS reason=km-fast-lane-mypy-fix)
+- 2026-09-25 15:16 [python-coder/KM-KGS-100c-1 + -i + -ii]: Added the public
+  check_surface_set() / SYNTHETIC_SURFACE_LABELS surface-set completeness
+  check, and made contributing_surfaces provenance-based rather than
+  label-based. (#TICKETLESS reason=km-kgs-100c-1-surface-check)
+  The actual check logic lives in a NEW sibling module,
+  scripts/knowledge_surface_check.py, loaded via the existing
+  _load_sibling_module() pattern (cached in sys.modules):
+  SYNTHETIC_SURFACE_LABELS is re-exported eagerly at import time, the same
+  way knowledge_file_nodes is loaded, while check_surface_set() looks the
+  cached module up per call. This keeps this already-oversized file's
+  own content-line count from growing past its HEAD baseline under the
+  check-file-size ratchet (GE-127b-1); check_surface_set() here is a thin
+  wrapper that injects load_surfaces_with_meta into the sibling module's
+  function to avoid a circular import. Fixed KM-KGS-100c-1-i's defect:
+  _collect_all_ex() now also returns primary_surfaces -- the set of surface labels carried by a
+  node captured BEFORE synthetic hub/files nodes are added (the same
+  primary_nodes list already computed for knowledge_file_nodes'
+  INDEX-FIRST resolution) -- and build_knowledge_map() computes
+  contributing_surfaces from that set intersected with declared, instead
+  of from the final (post-hub, post-files) node list. A component hub
+  node labelled "components" no longer makes that surface look like it
+  contributed when its own declared path produced nothing.
+  _collect_all()'s 2-tuple contract and every existing direct caller (the
+  visualiser, unit_tests/test_ac_edge_relationships.py) are unchanged.
+  Deploy wiring for knowledge_surface_check.py added to
+  scripts/build_phases_knowledge.py's _manifest_workflow_tool_scripts and
+  scripts/build_phases_workflows.py's build_workflow_tools, alongside
+  knowledge_file_nodes.py.
 ====================================================================
 """

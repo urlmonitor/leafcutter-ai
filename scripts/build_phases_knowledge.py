@@ -627,6 +627,12 @@ def _manifest_workflow_tool_scripts(package_root: Path) -> set[str]:
     #   loads it the same eager, import-time way (_load_sibling_module) --
     #   a consumer install missing it would fail to import knowledge_query.py
     #   at all. (#TICKETLESS reason=km-fast-lane-file-nodes)
+    # - 2026-09-25 15:16 [python-coder/KM-KGS-100c-1 surface-check]: Added
+    #   knowledge_query.py's third sibling module knowledge_surface_check.py
+    #   right after knowledge_file_nodes.py, since knowledge_query.py loads
+    #   it on demand via the same _load_sibling_module() pattern -- a
+    #   consumer install missing it would fail check_surface_set() calls.
+    #   (#TICKETLESS reason=km-kgs-100c-1-surface-check)
     """
     result: set[str] = set()
     scripts_src = package_root / "scripts"
@@ -635,6 +641,7 @@ def _manifest_workflow_tool_scripts(package_root: Path) -> set[str]:
         "knowledge_query.py",
         "knowledge_frontmatter_reader.py",
         "knowledge_file_nodes.py",
+        "knowledge_surface_check.py",
         "set_ticket_status.py",
         "ticket_prioritizer.py",
         "port_registry.py",
