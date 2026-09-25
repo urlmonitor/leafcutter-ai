@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: '2026-09-14'
-last_updated: '2026-09-14'
+last_updated: '2026-09-25'
 components:
   - ac_store
 related_docs:
@@ -15,12 +15,14 @@ related_docs:
 
 # KI-ACS-20260914-mark-ac-done-refuses-every-test-required-false-leaf — the sanctioned tool for marking an AC done cannot pass a single docs-only leaf, ever
 
-> One known issue. Index: [ac-store.md](../ac-store.md).
+> One known issue. Index: [ac-store.md](../../ac-store.md).
 > Filename severity is the three-level index bucket (`high`); the
 > original grading is the `**Severity:**` line below, unchanged.
 
 - **Severity:** high
-- **Status:** open
+- **Status:** **RESOLVED** (`01601fbb`, PR #861, BO-2500a-1-ii; verified 2026-09-25 by
+  re-running this entry's own repro, which now exits 0, plus a non-dry-run probe on a scratch
+  store copy and the fix's 18 regression tests)
 - **Occurrences:** 1
 - **First seen:** 2026-09-14 · **Last seen:** 2026-09-14
 - **Where:** `scripts/ac_store/mark_ac_done.py` (`mark_ac_done()`, the `test_root is not
@@ -99,10 +101,38 @@ reimplementation in `mark_ac_done.py`. This also retires the two hook-level pre-
 `test_required: false` fixture AC and asserts exit code 0.
 
 **Related.** `KI-CG-006` (the hook-side half of the same `test_required` vocabulary, now
-partially fixed there — see [`../commit-guardian/open-high-ki-cg-006.md`](../commit-guardian/open-high-ki-cg-006.md));
-[`KI-ACS-012`](open-high-ki-acs-012.md) (test-contract gaps on code ACs, the opposite shape
+partially fixed there — see [`../commit-guardian/open-high-ki-cg-006.md`](../../commit-guardian/open-high-ki-cg-006.md));
+[`KI-ACS-012`](../open-high-ki-acs-012.md) (test-contract gaps on code ACs, the opposite shape
 — code that should have a test contract and doesn't, versus docs that legitimately shouldn't
 and can't get past the gate anyway).
+
+**Resolution (verified 2026-09-25).** Fixed in the oracle, as the fix direction asked, by
+`01601fbb` — "fix(build-orchestration): an untestable AC can be marked done, and one with no
+stated reason no longer slips past CI (BO-2500a-1-ii) (#861)". One shared predicate,
+`is_covers_tag_waived()` (defined in `scripts/ac_store/_done_proof_phase_helpers.py`,
+re-exported from `done_proof.py`), now waives the covers-tag requirement inside
+`verify_done_eligible`. `check_done_proof.py` consults the same predicate, so there is no
+longer a separate reimplementation per hook. There is one deliberate tightening. The waiver
+needs `test_required: false` **and** a non-empty `test_rationale`, so a `test_required: false`
+AC with no stated reason is still refused. That is intended behaviour, not a residue of this
+defect.
+
+Evidence:
+
+- This entry's own repro, run on main at `d2fe85a1`:
+  `python scripts/ac_store/mark_ac_done.py --ac TQ-500c-1 --ac-root docs/acceptance-criteria --test-root unit_tests --dry-run`
+  → `[dry-run] would mark TQ-500c-1 work_status=done`, exit 0 (it was `REFUSED`, exit 3).
+- A non-dry-run probe on a scratch copy of `TQ-500c-1.yaml` with an empty test root →
+  `marked TQ-500c-1 work_status=done`, exit 0, and the file read `work_status: done` afterwards.
+  The same copy with `test_rationale` removed → `REFUSED ... no linked test found`, exit 3,
+  which is the intended rationale gate.
+- `python -m pytest unit_tests/commit_guardian/test_done_proof_test_required_exemption.py unit_tests/commit_guardian/test_done_proof_test_required_rationale_gate.py -q`
+  → 18 passed.
+
+Not done from the fix direction: none of those tests calls `mark_ac_done.py` directly. They
+exercise the oracle and the hooks. Do not confuse this entry with
+`KI-ACS-20260925-mark-ac-done-reports-success-without-writing-the-key`, which is a different,
+still-open `mark_ac_done` defect.
 
 **Pattern:** an exemption implemented independently at every consumer of an oracle except
 the oracle itself, so the one caller that forgets to reimplement it — here, the tool whose

@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: '2026-08-18'
-last_updated: '2026-08-18'
+last_updated: '2026-09-25'
 components:
   - commit_guardian
 related_docs:
@@ -16,12 +16,13 @@ related_docs:
 # KI-CG-024 — `check_ticket_signoff_parity.py` silently skips check #6 because its default registry path does not exist in this layout
 
 > One known issue, split out of `docs/known-issues/commit-guardian.md` on
-> 2026-09-14. Index: [commit-guardian.md](../commit-guardian.md).
+> 2026-09-14. Index: [commit-guardian.md](../../commit-guardian.md).
 > Filename severity is the three-level index bucket (`low`); the
 > original grading is the `**Severity:**` line below, unchanged.
 
 - **Severity:** medium
-- **Status:** open — code is on `main`, but see the correction below: it is **not** live
+- **Status:** **RESOLVED** (`e5965006`, PR #793; hook registered in `406375c8`, PR #660; verified
+  2026-09-25 on `main` @ `d2fe85a1` by running the deployed hook and `load_agent_registry()`)
 - **Occurrences:** 1
 - **First seen:** 2026-08-19 · **Last seen:** 2026-08-26 (re-verified against `37655862`)
 - **Where:** `templates/scripts/commit_guardian/config.py:224-226`
@@ -69,5 +70,33 @@ commits, but the cost is a check nobody knows is off.
 
 **Pattern:** `docs/reference/false-green-mechanisms.md` — a gate that reports success while
 one of its checks was never given the data it needs.
+
+## Resolution
+
+Verified 2026-09-25 against `main` @ `d2fe85a1`.
+
+- **Registry default fixed.** `templates/scripts/commit_guardian/config.py:224-226` now defaults
+  `AGENT_REGISTRY_PATH` to `config/agent_registry.json`, which exists. The deployed copy
+  `.leafcutter/scripts/commit_guardian/config.py:225` matches. Fixed in `e5965006`
+  (`fix(commit-guardian): four gates that reported success while seeing nothing`, PR #793).
+- **Registry actually loads.** Calling `load_agent_registry()` from the deployed
+  `_signoff_parity_checks.py` with the repo root returned **60** entries (the fixing commit
+  reports 0 before and 60 after).
+- **Hook is live.** The 2026-08-31 correction no longer applies. `.pre-commit-config.yaml:438-444`
+  registers `check-ticket-signoff-parity` with an `entry:` line, added in `406375c8` (PR #660).
+  Running that entry against a staged-style ticket path
+  (`run_hook.py .../check_ticket_signoff_parity.py tickets/00_inbox/TICKET-20260526-git_check_precondition.md`)
+  exited 0 **with no `skipping check #6` warning on stderr**. This follows the KI's own Detection advice
+  to read stderr as well as the exit code.
+
+**Out of scope, still present, and not tracked by any KI as of this date:** the same
+`leafcutter/`-prefix path bug exists in `_PATHS_JSON_REL = "leafcutter/config/paths.json"` at
+`templates/scripts/commit_guardian/check_paths_integrity.py:28` and
+`templates/scripts/commit_guardian/check_architecture_scaffolds.py:38`. The latter also has
+`_SCAFFOLD_DIR_REL = "leafcutter/templates/docs/architecture"`. These belong to different hooks
+and are a different defect from this entry's agent-registry default, so they need their own KI.
+The fail-open design choice this entry questions is still in place. The folder-keyed enforcement
+defect in the same hook is tracked separately as
+`KI-CG-20260925-signoff-parity-enforces-only-under-done-folder`.
 
 ---

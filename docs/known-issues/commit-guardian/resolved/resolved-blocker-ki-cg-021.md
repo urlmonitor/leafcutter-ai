@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: '2026-08-18'
-last_updated: '2026-08-18'
+last_updated: '2026-09-25'
 components:
   - commit_guardian
 related_docs:
@@ -21,10 +21,12 @@ related_docs:
 > original grading is the `**Severity:**` line below, unchanged.
 
 - **Severity:** blocker
-- **Status:** open — **the code is NOT on `main`**; `check_identifier_uniqueness.py` and its
-  four scanners live only on the unmerged PR #495 (`feat/ge-122-integrity-guard`). Filed
-  here because it is the gating precondition on landing that branch: the merge must not be
-  taken as "the gate now exists".
+- **Status:** **RESOLVED** (registered by `243b6489` / PR #635, GE-122d-6; CI stage added by
+  `8cc9fe3c` / PR #682, GE-122d-1; code itself merged via `e429421e` / PR #495; verified
+  2026-09-25 by grepping the registry, pre-commit config and CI on `origin/main`, running the
+  deployed hook entry, and a green targeted pytest run — see Resolution)
+- **Original status (2026-08-18):** open — the code was not on `main`;
+  `check_identifier_uniqueness.py` lived only on the then-unmerged PR #495.
 - **Occurrences:** 1
 - **First seen:** 2026-08-25 · **Last seen:** 2026-08-25
 - **Where:** PR #495's `templates/scripts/commit_guardian/check_identifier_uniqueness.py`;
@@ -74,5 +76,31 @@ missing namespace roots, **then** register, **then** re-run the deployed-consume
 
 **Pattern:** `docs/reference/false-green-mechanisms.md` — a gate whose reachability was
 never asked about; verification that stops at the function and never reaches the entry point.
+
+## Resolution
+
+Verified 2026-09-25 against `origin/main` (`4b05997a`); every claim in the Symptom is gone.
+
+- **Code on main.** `e429421e` (PR #495, 2026-08-26) merged
+  `templates/scripts/commit_guardian/check_identifier_uniqueness.py` with
+  `_uniqueness_scanners.py` and `_uniqueness_types.py`.
+- **Registered in the hook registry.** `243b6489` (PR #635, 2026-09-01, *"register the
+  whole-collection numbering pass so it actually runs (GE-122d-6)"*) added
+  `"id": "check-identifier-uniqueness"` to `commit_guardian.json` (line 578). Its entry runs
+  `run_hook.py .../check_identifier_uniqueness.py`. The same PR added
+  `scripts/build_architecture_scaffold.py`, which scaffolds the namespace roots. That follows
+  the order this KI's Fix direction required (see `KI-BO-030`).
+- **Present in the generated pre-commit config.** `.pre-commit-config.yaml` is gitignored and
+  built from the registry. The deployed copy carries `id: check-identifier-uniqueness` with
+  `always_run: true, pass_filenames: false`.
+- **Runs in CI.** `8cc9fe3c` (PR #682, GE-122d-1) added the `numbering-guarantee-valid` job to
+  `.github/workflows/ci.yml`. It runs `pre-commit run check-identifier-uniqueness`.
+- **It runs.** The deployed entry
+  `python .leafcutter/scripts/commit_guardian/run_hook.py .leafcutter/scripts/commit_guardian/check_identifier_uniqueness.py`
+  exits 0 and reports all four namespaces as `OK`. It inspected 4239 acceptance-criteria,
+  45 decisions, 27 diagrams and 327 work-items.
+- **Tests.** `python -m pytest unit_tests/commit_guardian/test_ge_122d_6.py
+  unit_tests/commit_guardian/test_ge_122d_1.py unit_tests/portability/test_ge_122d_6.py -q`
+  passed with 7 tests in 48s.
 
 ---

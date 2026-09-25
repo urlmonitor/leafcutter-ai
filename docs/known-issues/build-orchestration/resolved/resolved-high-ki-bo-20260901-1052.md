@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: '2026-08-18'
-last_updated: '2026-08-18'
+last_updated: '2026-09-25'
 components:
   - build_orchestration
 related_docs:
@@ -16,12 +16,14 @@ related_docs:
 # KI-BO-20260901-1052 — `python-coder` signals a test handoff exactly as its template prescribes, and the driver rejects it for omitting a field the template never mentions — so the documented delegation path dead-ends every ticket that uses it
 
 > One known issue, split out of `docs/known-issues/build-orchestration.md` on
-> 2026-09-14. Index: [build-orchestration.md](../build-orchestration.md).
+> 2026-09-14. Index: [build-orchestration.md](../../build-orchestration.md).
 > Filename severity is the three-level index bucket (`high`); the
 > original grading is the `**Severity:**` line below, unchanged.
 
 - **Severity:** high
-- **Status:** open — no AC
+- **Status:** **RESOLVED** (`6124e025`, PR #687, BO-3000a; verified 2026-09-25 by reading
+  `python-coder.md` §"Test Delegation", the `PHASE_RESULT_SCHEMA` in both drivers, and running
+  `TestHandoffTargetResolvedFromRecord` + `test_bo_3000_handoff_routing.py` — see Resolution)
 - **Occurrences:** 1 (the only ticket in the batch that produced working production code)
 - **First seen:** 2026-09-01 · **Last seen:** 2026-09-01
 - **Where:** `templates/agents/python-coder.md` §"Test Delegation" (~:454-460) ·
@@ -100,5 +102,51 @@ workflow are versioned together and deployed together, and still disagree.
 **Related.** `KI-BO-20260901-1000` (same run, same driver, also a dispatch decision that
 ignores what the ticket record already says). Both are instances of the driver's dispatch
 logic and the ticket record having drifted apart; the record is right in both cases.
+
+## Resolution (verified 2026-09-25)
+
+Fixed by `6124e025` (PR #687, BO-3000a), on main. It took the **second** countermeasure: it added
+the field to the template contract and the result schema. It did not take the preferred one
+(inferring the target from the ticket body). An early version of that commit did infer the
+target from the body. That fallback was then removed on purpose, because
+`## Implementation Tasks` often names several agents, and because a targetless handoff is also
+how python-coder's contract-shrinkage guard asks the user for authorization. The rationale
+comment sits above the handoff branch in both drivers.
+
+- **Template side:** `templates/agents/python-coder.md` §"Test Delegation" step 2 (:458) now
+  says "use `(status: handoff)` … AND return `handoff_target: "test-writer"` in your JSON result".
+  The `test_drift` classification path (:602) and the frontmatter behaviour line (:142) say the
+  same thing. `test-writer.md` (:530) returns `handoff_target: "python-coder"`/`"sql-coder"`.
+  `signoff` SKILL (:763) and `building-epics` SKILL (:662-670) make the field mandatory for every
+  phase agent on the machine-parsed path.
+- **Schema side:** `PHASE_RESULT_SCHEMA` in `build-feature.js` (:292-341) and `build-ticket.js`
+  (:104-151) declares `handoff_target`, and an `if status == "handoff" then required` clause
+  makes it required. So the field is now visible when the agent writes its result, not first
+  noticed at dispatch.
+- **Driver:** with a named, known target, the driver re-dispatches exactly that agent. It
+  still refuses when the target is absent or unknown, which is the intended fail-closed
+  behaviour (`build-feature.js` :2019-2070, `build-ticket.js` :1640-1690).
+- **Tests run (2026-09-25, main @ `d2fe85a1`):**
+  - `pytest unit_tests/workflows/test_bo_3000_handoff_routing.py`: 5 passed.
+  - `TestHandoffTargetResolvedFromRecord`: 5 passed, including
+    `test_handoff_naming_a_known_agent_redispatches_exactly_that_agent`,
+    `test_handoff_with_no_target_refuses_and_dispatches_no_agent` and
+    `test_unknown_target_is_reproduced_in_the_refusal_and_never_substituted`.
+
+**Residuals (not this defect; recorded so nobody re-files it):**
+
+- Two tests in the same class fail on their own fixture preconditions: the ticket body did not
+  keep the expected `## Implementation Tasks` sections, so they never reach their real
+  assertion. They are `test_ticket_body_agent_sections_do_not_supply_a_handoff_target` and
+  `test_deliberate_targetless_halt_does_not_respawn_a_body_named_agent`. That is a test-harness
+  gap, not a return of this defect.
+- Nine other test failures in the same run (`TestMidDrivePromotionIsDispatched` and
+  `test_bo_3701_build_ticket_dispatch.py`) concern BO-3700 mid-drive promotion, which is the
+  sibling `KI-BO-20260901-1000`.
+- Only `python-coder` and `test-writer` spell out `handoff_target` in their own template. The
+  other phase agents list `handoff` as a possible status and get the requirement only through
+  the `signoff` skill.
+- The schema comment notes that the engine's enforcement of JSON-Schema `if`/`then` is still
+  unverified.
 
 ---
