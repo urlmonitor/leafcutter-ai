@@ -17,7 +17,9 @@ ARCHITECTURE: Standalone CLI script. Two modes:
 from __future__ import annotations
 
 import argparse
+import os
 import sys
+import tempfile
 from pathlib import Path
 from typing import Optional
 
@@ -105,7 +107,9 @@ def mark_ac_done(
         ticket_path: Optional ticket path — used only for log context.
 
     Returns:
-        0 on success (including idempotent no-op), 1 on lookup/read failure,
+        0 on success (including idempotent no-op), 1 on lookup/read failure
+        or when the write cannot be made or verified (ambiguous duplicate
+        column-0 ``work_status:`` lines, or the re-parsed key is not done),
         2 when AC status is not ``active``, 3 when the coverage gate refuses
         (AC not eligible: no linked test or a linked test is not passing).
     """
@@ -161,33 +165,114 @@ def mark_ac_done(
         print(f"[dry-run] would mark {ac_id} work_status=done{ticket_context}")
         return 0
 
-    # Targeted single-field update: rewrite the work_status line to avoid
-    # full YAML round-trip (preserves comments and existing field order).
-    raw_text = ac_file.read_text(encoding="utf-8")
-    if "work_status: todo" in raw_text:
-        updated_text = raw_text.replace("work_status: todo", "work_status: done", 1)
-    elif "work_status:" in raw_text:
-        # Replace whatever the current value is
-        import re
-        updated_text = re.sub(
-            r"^(work_status:\s*).*$",
-            r"\g<1>done",
-            raw_text,
-            count=1,
-            flags=re.MULTILINE,
-        )
-    else:
-        # Field absent — append it
-        updated_text = raw_text.rstrip() + "\nwork_status: done\n"
-
+    # Targeted single-field update of the column-0 work_status key only
+    # (ACS-200f-3); every other byte, including line endings, is preserved.
     try:
-        ac_file.write_text(updated_text, encoding="utf-8")
-    except OSError as exc:
-        print(f"ERROR: Cannot write AC file {ac_file}: {exc}", file=sys.stderr)
+        _set_work_status_done(ac_file)
+    except (OSError, ValueError, yaml.YAMLError) as exc:
+        print(f"ERROR: Cannot mark AC file {ac_file} done: {exc}", file=sys.stderr)
         return 1
 
     print(f"marked {ac_id} work_status=done{ticket_context}")
     return 0
+
+
+# ---------------------------------------------------------------------------
+# Anchored, line-ending-preserving, atomic write (ACS-200f-3)
+# ---------------------------------------------------------------------------
+
+
+def _line_ending(line: str) -> str:
+    """Return the exact trailing line ending of *line* (``""`` when none).
+
+    Args:
+        line: One line as produced by ``str.splitlines(keepends=True)``.
+
+    Returns:
+        ``"\\r\\n"``, ``"\\n"``, ``"\\r"``, or ``""``.
+    """
+    for ending in ("\r\n", "\n", "\r"):
+        if line.endswith(ending):
+            return ending
+    return ""
+
+
+def _atomic_write(target: Path, text: str) -> None:
+    """Replace *target*'s content with *text* via a same-directory temp file.
+
+    The temp file is written with ``newline=""`` so no line-ending translation
+    happens, then swapped into place with :func:`os.replace`; *target* is
+    never truncated, and is unchanged whenever this raises.
+
+    Args:
+        target: File to replace.
+        text: Full new content.
+
+    Raises:
+        OSError: The temp file could not be created, written, or renamed.
+    """
+    fd, tmp_name = tempfile.mkstemp(
+        dir=str(target.parent), prefix=f".{target.name}.", suffix=".tmp"
+    )
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8", newline="") as fh:
+            fh.write(text)
+        os.replace(tmp_name, target)
+    except OSError:
+        try:
+            os.unlink(tmp_name)
+        except OSError as cleanup_exc:
+            print(
+                f"WARNING: could not remove temp file {tmp_name}: {cleanup_exc}",
+                file=sys.stderr,
+            )
+        raise
+
+
+def _set_work_status_done(ac_file: Path) -> None:
+    """Set the top-level ``work_status`` key of *ac_file* to ``done``.
+
+    Only a line starting at column 0 with ``work_status:`` is treated as the
+    key, so prose inside a block scalar that quotes ``work_status: todo`` is
+    never edited. The file is read and written with ``newline=""`` so each
+    line keeps its own ending, and the result is re-parsed to prove the key
+    really reads ``done`` before success is reported.
+
+    Args:
+        ac_file: Path to the AC YAML record.
+
+    Raises:
+        OSError: The file could not be read or written.
+        ValueError: More than one column-0 ``work_status:`` line exists, or
+            the re-parsed record does not read ``work_status: done``.
+        yaml.YAMLError: The written record no longer parses.
+    """
+    with ac_file.open(encoding="utf-8", newline="") as fh:
+        original = fh.read()
+
+    lines = original.splitlines(keepends=True)
+    matches = [i for i, line in enumerate(lines) if line.startswith("work_status:")]
+    if len(matches) > 1:
+        msg = f"expected at most one column-0 'work_status:' line, found {len(matches)}"
+        raise ValueError(msg)
+
+    if matches:
+        index = matches[0]
+        lines[index] = f"work_status: done{_line_ending(lines[index])}"
+    else:
+        # Key absent: append it, reusing the file's own line ending.
+        ending = next((_line_ending(ln) for ln in lines if _line_ending(ln)), "\n")
+        if lines and not _line_ending(lines[-1]):
+            lines[-1] += ending
+        lines.append(f"work_status: done{ending}")
+
+    _atomic_write(ac_file, "".join(lines))
+
+    with ac_file.open(encoding="utf-8", newline="") as fh:
+        written = yaml.safe_load(fh.read())
+    if not isinstance(written, dict) or written.get("work_status") != "done":
+        msg = "work_status did not read 'done' after writing"
+        raise ValueError(msg)
 
 
 # ---------------------------------------------------------------------------
@@ -275,3 +360,22 @@ def main(argv: list[str] | None = None) -> int:
 
 if __name__ == "__main__":
     sys.exit(main())
+
+
+# DECISION HISTORY
+# ================================================================================
+# - 2026-09-25 12:00 [python-coder]: ACS-200f-3 anchored done write. (#TICKETLESS reason=quick-fix-ACS-200f-3-mark-ac-done-anchored-write)
+#   The done write no longer does an unanchored str.replace of the first
+#   "work_status: todo" anywhere in the file (which edited quoted prose, left the real key todo, and still printed success) and
+#   no longer uses read_text/write_text (which rewrote every LF line as CRLF on
+#   Windows). _set_work_status_done matches only a column-0 work_status: line,
+#   refuses more than one, preserves each line's own ending via newline="",
+#   writes atomically (temp file + os.replace), and re-parses the result to
+#   prove the key reads done before success is reported. Mirrors
+#   _fl_lifecycle._update_ac_work_status rather than importing it, to keep the
+#   fix inside this package; the KI's shared ac_record.set_field is the
+#   follow-up that removes the duplication. approve_acs.py has the same
+#   unanchored pattern for readiness and is not touched here.
+#   Rejected alternative: keep the substring branch and add a re-parse check —
+#   that turns the silent success into a failure but still edits prose.
+#   [ACS-200f-3]
