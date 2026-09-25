@@ -208,18 +208,21 @@ def _load_sibling_module(module_name: str):
 
     Raises:
         FileNotFoundError: When "<module_name>.py" is not found next to
-            this file.
+            this file -- raised by the loader's own exec_module (via
+            get_data), never checked explicitly here.
+        ImportError: When importlib cannot build a loadable spec (or the
+            spec has no loader) for the sibling file.
     """
-    cached = sys.modules.get(module_name)
-    if cached is not None:
+    if (cached := sys.modules.get(module_name)) is not None:
         return cached
     module_path = Path(__file__).resolve().parent / f"{module_name}.py"
-    if not module_path.exists():
-        raise FileNotFoundError(str(module_path))
     spec = importlib.util.spec_from_file_location(module_name, module_path)
+    if spec is None or spec.loader is None:
+        raise ImportError(f"cannot load {module_path}")  # noqa: TRY003
+    loader = spec.loader
     module = importlib.util.module_from_spec(spec)
     sys.modules[module_name] = module
-    spec.loader.exec_module(module)
+    loader.exec_module(module)
     return module
 
 
@@ -1709,5 +1712,23 @@ DECISION HISTORY
   scripts/build_phases_knowledge.py's _manifest_workflow_tool_scripts and
   scripts/build_phases_workflows.py's build_workflow_tools, alongside
   knowledge_frontmatter_reader.py. (#TICKETLESS reason=km-fast-lane-file-nodes)
+- 2026-09-25 13:33 [python-coder/mypy fix]: _load_sibling_module() now
+  raises ImportError when spec_from_file_location returns None or the spec
+  has no loader, and binds the narrowed spec.loader to a local before
+  calling exec_module (mypy previously flagged spec/spec.loader as
+  possibly-None at the module_from_spec/exec_module call sites once this
+  function gained type annotations -- the old, unannotated
+  _load_reader_module() had its body skipped by mypy entirely). Dropped the
+  explicit `if not module_path.exists(): raise FileNotFoundError(...)`
+  check: exec_module's own get_data() already raises FileNotFoundError for
+  a missing sibling file (verified directly), so the explicit check was a
+  redundant, size-ratchet-costing duplicate of behaviour the loader already
+  gives for free -- same exception type, so no caller-visible change.
+  Also folded the sys.modules cache lookup into a single walrus-operator
+  check. Kept behaviour otherwise identical to before this fix; the
+  keep-if-it-fits-cleanly try/except/sys.modules.pop cleanup around
+  exec_module (for a load that fails AFTER sys.modules was already
+  populated) was dropped as the optional part that did not fit the file's
+  check-file-size ratchet budget. (#TICKETLESS reason=km-fast-lane-mypy-fix)
 ====================================================================
 """
