@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: '2026-08-18'
-last_updated: '2026-08-18'
+last_updated: '2026-09-25'
 components:
   - build_orchestration
 related_docs:
@@ -16,14 +16,14 @@ related_docs:
 # KI-BO-018 — `/plan-feature` halts on a false `worktree-agent` permission verdict, caused by a truncated agent-relayed config read rather than anything wrong with the agent's charter
 
 > One known issue, split out of `docs/known-issues/build-orchestration.md` on
-> 2026-09-14. Index: [build-orchestration.md](../build-orchestration.md).
+> 2026-09-14. Index: [build-orchestration.md](../../build-orchestration.md).
 > Filename severity is the three-level index bucket (`blocker`); the
 > original grading is the `**Severity:**` line below, unchanged.
 
 - **Severity:** blocker — this is not a workflow inconvenience: per ADR-012, `/plan-feature`
   is the canonical entry path for **all** new work, and this defect halts that workflow
   before any authoring agent is dispatched. There is no fallback path that avoids it.
-- **Status:** open — no AC
+- **Status:** **RESOLVED** (`e4ee392d` — ACD-2100b-5, "the startup check reads the registry itself instead of asking an agent", on main since 2026-09-07; verified 2026-09-25 by code read of `templates/workflows-js/plan-feature.js`, a live run of the pre-flight script, and `pytest` of the ACD-2100b / BO-1500f-1 tests)
 - **Occurrences:** 2 (reproduced twice, same day)
 - **First seen:** 2026-08-25 · **Last seen:** 2026-08-25
 - **Where:** `templates/workflows-js/plan-feature.js` (deployed at
@@ -65,5 +65,39 @@ would not hold for every layout.
 file-read primitive) rather than round-tripping it through an agent's text response; and on
 any parse failure, report "could not determine" rather than asserting the charter denies
 permission. Not implemented — this entry records the defect and the proposed direction only.
+
+## Resolution
+
+Verified 2026-09-25 against `main` (HEAD `d2fe85a1`). Fixed by `e4ee392d`
+(`refactor(ac-driven-dev): the startup check reads the registry itself instead of asking an
+agent (ACD-2100b-5)`, 2026-09-07). It was tracked in parallel as KI-ACD-009, which is now in
+`ac-driven-dev/resolved/`.
+
+- **The relayed read is gone.** `git log -S "cat .leafcutter/config/agent_registry.json" --
+  templates/workflows-js/plan-feature.js` returns only `e4ee392d`, the commit that removed it.
+  `plan-feature.js` (Pre-Stage-0, ~lines 2319-2432) now makes no `agent()` dispatch and does no
+  filesystem read for this check. It only consumes `args.workspace_setup_permission`. That
+  verdict comes from `scripts/worktree/check_workspace_setup_permission.py`, which the
+  plan-feature skill runs locally in the main loop before it invokes the workflow. No
+  agent-relayed text means no 75,000-character truncation. The registry is now 131,138 bytes.
+- **A failed read no longer turns into a charter verdict.** The pre-flight returns separate
+  outcomes: `read_failure`, `parse_failure`, `agent_not_found`, `no_entries_collection` and
+  `permission_denied`. The workflow gives each outcome its own message. Only
+  `permission_denied` points the reader at `permits_shell`. A truncated registry is reported as
+  `parse_failure` (`test_acd_2100b_2.py::test_truncated_registry_outcome_is_parse_failure`,
+  passing). A missing verdict is reported as a missing pre-flight, not as a denial.
+- **The working-directory dependence is gone (secondary observation).** The script finds the
+  registry relative to the repository. Run from the repo root, and again from the non-repo
+  parent `C:/Users/Hendrik/Code/leafcutter`, both runs printed `{"permits": true, "outcome":
+  "granted", "agent_id": "worktree-agent", "location": "...\leafcutter-ai\.leafcutter\config\agent_registry.json"}`
+  (exit 0).
+- **Tests.** `python -m pytest unit_tests/ac_driven_dev/test_acd_2100b_1.py
+  unit_tests/ac_driven_dev/test_acd_2100b_2.py unit_tests/ac_driven_dev/test_acd_2100b_3.py
+  unit_tests/ac_driven_dev/test_acd_2100b_5.py
+  unit_tests/workflows/test_bo_1500f_1_real_registry_read.py -q` gave 15 passed and 2 failed.
+  Both failures are in `test_acd_2100b_1.py::TestUnreadableRegistryClassification`
+  (permission-refused registry). They fail because `chmod(0o000)` does not block reads on
+  Windows, so the file stays readable and the verdict is `granted`. That is a limit of the test
+  platform. It is not this defect: neither test involves truncation or a relayed read.
 
 ---

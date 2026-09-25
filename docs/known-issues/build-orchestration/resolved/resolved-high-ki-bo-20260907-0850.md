@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: '2026-08-18'
-last_updated: '2026-08-18'
+last_updated: '2026-09-25'
 components:
   - build_orchestration
 related_docs:
@@ -16,12 +16,15 @@ related_docs:
 # KI-BO-20260907-0850 — `build-ticket.js` is the declared twin of the driver just fixed: one defect is unfixed there and the other handler is a generation behind, so `/build-ticket` still loses the ticket in ways `/build-feature` no longer does
 
 > One known issue, split out of `docs/known-issues/build-orchestration.md` on
-> 2026-09-14. Index: [build-orchestration.md](../build-orchestration.md).
+> 2026-09-14. Index: [build-orchestration.md](../../build-orchestration.md).
 > Filename severity is the three-level index bucket (`high`); the
 > original grading is the `**Severity:**` line below, unchanged.
 
 - **Severity:** high
-- **Status:** open — no AC
+- **Status:** **RESOLVED** (6124e025, PR #687 — squashed follow-up commit "close the twin
+  divergence — build-ticket.js gets both dispatch fixes (BO-3701, BO-3000)"; verified 2026-09-25
+  by reading `build-ticket.js` on main and running the BO-3701 / BO-3000 twin tests). See
+  Resolution below.
 - **Occurrences:** 0 observed on this path; the twin defect was observed 3× on `build-feature.js`
 - **First seen:** 2026-09-07 · **Last seen:** 2026-09-07
 - **Where:** `templates/workflows-js/build-ticket.js` — the per-ticket phase loop at `:1258`
@@ -148,5 +151,53 @@ consistent by a comment. The comment is not a mechanism.
 **Related.** `KI-BO-20260901-1000` and `KI-BO-20260901-1052` (the two defects, as observed and
 fixed on the other twin). `KI-BO-20260901-0920` (a third control ADR-006's flattening dropped —
 the same refactor is upstream of all of these).
+
+## Resolution (verified 2026-09-25)
+
+Both halves were fixed on `build-ticket.js` in the same squash-merge that fixed the other twin:
+6124e025 (PR #687). That squash includes a follow-up commit, "close the twin divergence —
+build-ticket.js gets both dispatch fixes (BO-3701, BO-3000)", which references this KI. This
+entry was filed from an earlier state of that branch and was never closed. `git log -S` confirms
+that `const pendingPhases`, `absorbPromotedPhases` and `handoff_target: {` all entered
+`build-ticket.js` in 6124e025.
+
+Checked against current `main` (d2fe85a1):
+
+- **Frozen phase list — fixed.** The loop is now `while (pendingPhases.length > 0)` over a
+  work-list (`const pendingPhases = [...neededPhases]`, ~`:1429`). After every dispatch,
+  `absorbPromotedPhases()` re-derives the work-list from the read-back and re-sorts it by
+  canonical priority. Both naive-mirror pitfalls are handled:
+  - A name outside `phaseOrder` is skipped rather than sorted last.
+  - An unreadable read-back returns `[]` and leaves the pending set as it was.
+- **Handoff — fixed.** `PHASE_RESULT_SCHEMA` (~`:98-152`) now declares `handoff_target` and has
+  the `if: {status: const 'handoff'} / then: {required: ['handoff_target']}` conditional. The
+  handoff branch has two refusals that can be told apart: (a) no target, and (b) a named target
+  that is not in `phaseOrder`, with the value quoted verbatim. The pre-fix wording
+  `named no recognizable handoff_target` occurs 0 times in the file.
+
+Test evidence:
+
+- **Blocked on Windows as the repo stands.** `python -m pytest
+  unit_tests/workflows/test_bo_3701_build_ticket_dispatch.py
+  unit_tests/workflows/test_bo_3000_handoff_routing.py
+  unit_tests/workflows/test_bo_3000a_3700_dispatch_defects.py -q` gives 11 failed / 20 passed.
+  The failures are the same at 6124e025 itself, so this is not a regression.
+- **Cause: the test harness, not the driver.** `_driver_harness.write_ticket_record` writes in
+  text mode, so on Windows the ticket files get CRLF line endings. The mjs harness's
+  `/^---\n/` frontmatter regex then fails to match, and the read-back reports no
+  `needed_phases`.
+- **Probe with the harness patched to write LF.** The probe copied main into a scratch folder
+  and changed only the harness's `open(..., newline="\n")`.
+  - `test_bo_3701_build_ticket_dispatch.py` and `test_bo_3000_handoff_routing.py`:
+    **15 passed, 7 subtests passed**. This covers promotion dispatch, unknown-name exclusion,
+    unreadable read-back, cross-twin parity over `H.TWIN_DRIVERS`, and both handoff refusal
+    cases on `build-ticket.js`.
+  - The 3 tests still failing in `test_bo_3000a_3700_dispatch_defects.py` drive
+    `build-feature.js`, not this driver. They fail on Windows path separators and CRLF in a
+    test-appended ticket body, so they are also fixture artifacts.
+
+Not done by this fix: the general twin-parity gate for `phaseOrder` and the handoff branch, which
+this entry noted "wants its own id". The Windows CRLF problem in the harness is a separate
+testing defect and is not tracked here.
 
 ---

@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: '2026-08-18'
-last_updated: '2026-08-18'
+last_updated: '2026-09-25'
 components:
   - commit_guardian
 related_docs:
@@ -16,7 +16,7 @@ related_docs:
 # KI-CG-017 — `check-build-drift` is filtered on the consumer layout path, so it has never run on this repo's own template changes
 
 > One known issue, split out of `docs/known-issues/commit-guardian.md` on
-> 2026-09-14. Index: [commit-guardian.md](../commit-guardian.md).
+> 2026-09-14. Index: [commit-guardian.md](../../commit-guardian.md).
 > Filename severity is the three-level index bucket (`high`); the
 > original grading is the `**Severity:**` line below, unchanged.
 
@@ -29,7 +29,10 @@ related_docs:
 > — the number is arbitrary, the collision is not.
 
 - **Severity:** high
-- **Status:** open — no AC
+- **Status:** **RESOLVED** (`ab9e91c4`, PR #593 — BP-100k-4; follow-up `10c711f1`, PR #730 —
+  BP-100k-4-ii; verified 2026-09-25 by reading the hook manifest, running
+  `check_hook_trigger_reachability.py` (unreachable=0) and running `pre-commit run
+  check-build-drift --files templates/agents/README.md` (Passed, not Skipped)). See Resolution.
 - **Occurrences:** 1
 - **First seen:** 2026-08-25 · **Last seen:** 2026-08-25
 - **Where:** the generated `.pre-commit-config.yaml`, `check-build-drift` entry — `files: ^leafcutter/templates/`
@@ -105,5 +108,29 @@ commit surfaces the fact that the drift gate has been inert for the life of the 
 
 **Pattern:** `docs/reference/false-green-mechanisms.md` → M2's filter form: source and deployed
 layouts differ, and the gate is configured against the layout it is not running in.
+
+## Resolution (verified 2026-09-25)
+
+The fix landed in `ab9e91c4` (PR #593, BP-100k-4, 2026-08-26), and it is on `origin/main`. The
+entry stayed `open` for a month after that. Each claim was checked against `main` at `d2fe85a1`:
+
+- **`check-build-drift`.** `templates/scripts/commit_guardian/commit_guardian.json` no longer
+  has `files: ^leafcutter/templates/`. It now has `always_run: true`, and the `_comment` cites
+  BP-100k-4. The generated `.pre-commit-config.yaml` has the same entry (line 22). Running
+  `pre-commit run check-build-drift --files templates/agents/README.md` printed
+  `Check Build Drift (leafcutter)....Passed`. The hook ran; the old output was
+  `(no files to check) Skipped`.
+- **`check-paths-integrity`.** The filter is now `^(leafcutter-ai/)?config/paths\.json$`, which
+  matches both layouts.
+- **`check-architecture-scaffolds`.** The filter is now
+  `^(leafcutter-ai/)?templates/docs/architecture/`.
+- **`check-output-drift`.** The gitignored `.claude/` filter was replaced by `always_run: true`.
+- **`check-infra-docs`.** The filter was kept on purpose. Commit `10c711f1` (PR #730,
+  BP-100k-4-ii) taught the reachability gate the difference this entry called "the real work".
+  The gate now reports this hook as `NOTHING-TO-MATCH` (a correct kind-based filter with no
+  matching file in this repo), not as `UNREACHABLE`.
+- **The detector.** `python .leafcutter/scripts/commit_guardian/check_hook_trigger_reachability.py`
+  now prints `RESULT total=67 unreachable=0 exempt=0 nothing_to_match=1 ...` and exits 0. It was
+  red with `unreachable=5` when this entry was filed.
 
 ---

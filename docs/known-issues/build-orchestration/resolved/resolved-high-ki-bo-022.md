@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: '2026-08-18'
-last_updated: '2026-08-18'
+last_updated: '2026-09-25'
 components:
   - build_orchestration
 related_docs:
@@ -16,7 +16,7 @@ related_docs:
 # KI-BO-022 — A CRLF acceptance-criterion record is rewritten LF end-to-end by a single `work_status` flip, and every value-level check still passes
 
 > One known issue, split out of `docs/known-issues/build-orchestration.md` on
-> 2026-09-14. Index: [build-orchestration.md](../build-orchestration.md).
+> 2026-09-14. Index: [build-orchestration.md](../../build-orchestration.md).
 > Filename severity is the three-level index bucket (`high`); the
 > original grading is the `**Severity:**` line below, unchanged.
 
@@ -25,10 +25,10 @@ related_docs:
 > it keeps the number and this entry moves. See KI-BO-024.
 
 - **Severity:** high
-- **Status:** open — latent, zero live instances today
+- **Status:** **RESOLVED** (`f1726aef`, PR #602; verified 2026-09-25 by `test_bo2400e_4_crlf_preservation.py` (3 passed) and a CRLF probe on the real `BO-2400a-3-i.yaml`: 1 changed line, 0 bare LF). Scope was the fast-lane writer only; the same LF rewrite in other AC-store writers is tracked separately (see Resolution).
 - **Occurrences:** 1
 - **First seen:** 2026-08-25 · **Last seen:** 2026-08-25
-- **Where:** `scripts/build_orchestration/fast_lane.py:169-171` (read) and `:205-207` (write), function `_update_ac_work_status`; reached from all three call sites (`:288`, `:346`, `:461`)
+- **Where (as filed; code has since moved to `scripts/build_orchestration/_fl_lifecycle.py`):** `scripts/build_orchestration/fast_lane.py:169-171` (read) and `:205-207` (write), function `_update_ac_work_status`; reached from all three call sites (`:288`, `:346`, `:461`)
 
 **Symptom.** Both the read and the write use text mode with default newline handling. The
 read collapses `\r\n` to `\n`; the write emits `\n`. So flipping one `work_status` value on
@@ -62,5 +62,25 @@ silently. There is no guard that would report it.
 and splice. A CRLF fixture belongs in
 `unit_tests/build_orchestration/test_ki_bo_003_ac_yaml_preservation.py` alongside the
 existing byte-level cases.
+
+**Resolution (verified 2026-09-25).**
+
+- Fixed in `f1726aef` (PR #602, 2026-08-26). The code was later moved out of `fast_lane.py`
+  by `2e770ed6` (#804). `_update_ac_work_status` now lives in
+  `scripts/build_orchestration/_fl_lifecycle.py:170`. It reads with `newline=""` (`:220`).
+  The rewritten line keeps its own ending through `_line_ending_suffix` (`:239-240`).
+  `_atomic_write_text` writes with `newline=""` (`:112`). All three call sites (`:337` claim,
+  `:395` release, `:510` done) go through this one function. No other writer exists in
+  `fast_lane.py` or `_fl_*.py`.
+- The CRLF fixture asked for by the fix sketch exists:
+  `python -m pytest unit_tests/build_orchestration/test_bo2400e_4_crlf_preservation.py -q`
+  gives **3 passed**.
+- The KI's own repro was re-run against current main (`d2fe85a1`). The real
+  `BO-2400a-3-i.yaml` was converted to CRLF and `work_status` flipped `done` -> `in_progress`.
+  Result: **1 changed line** (was 154), and **0 bare LF** bytes in the output.
+- **Out of scope here, still open:** `mark_ac_done.py`, `approve_acs.py`,
+  `_gtfa_implemented_by.py` and other AC-store writers still rewrite CRLF records as LF.
+  That is tracked in
+  [open-high-ki-acs-20260925-mark-ac-done-reports-success-without-writing-the-key.md](../../ac-store/open-high-ki-acs-20260925-mark-ac-done-reports-success-without-writing-the-key.md).
 
 ---

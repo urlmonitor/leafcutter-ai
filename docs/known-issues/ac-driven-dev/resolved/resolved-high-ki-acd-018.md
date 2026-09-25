@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: '2026-08-18'
-last_updated: '2026-08-18'
+last_updated: '2026-09-25'
 components:
   - ac_driven_dev
 related_docs:
@@ -16,12 +16,16 @@ related_docs:
 # KI-ACD-018 — Every generated `depends_on` reference is the pre-move filename, so all 27 inter-ticket edges dangle
 
 > One known issue, split out of `docs/known-issues/ac-driven-dev.md` on
-> 2026-09-14. Index: [ac-driven-dev.md](../ac-driven-dev.md).
+> 2026-09-14. Index: [ac-driven-dev.md](../../ac-driven-dev.md).
 > Filename severity is the three-level index bucket (`high`); the
 > original grading is the `**Severity:**` line below, unchanged.
 
 - **Severity:** high
-- **Status:** open (data corrected by hand 2026-08-25 and again 2026-08-31; generator unchanged)
+- **Status:** **RESOLVED** (88c6b58e, PR #765, TKT-017; carried through the module split
+  in fb07b48d, PR #844; verified 2026-09-25 by generating a real three-ticket chained epic
+  on both `--ac` and `--ids` routes and running the real `ticket_frontmatter_guard` over it).
+  See "Resolution" below. Before the fix, the data was corrected by hand on 2026-08-25 and
+  again on 2026-08-31.
 - **Occurrences:** 3
 - **First seen:** 2026-08-25 · **Last seen:** 2026-08-31
 - **2026-08-31 recurrence:** `EPIC-SuppressionNarrowsNeverDisables`, eight references across
@@ -88,5 +92,39 @@ that it catches it only because it resolves each reference against disk. A check
 asserted `depends_on` was *present and non-empty* would have passed all four tickets.
 
 **Pattern:** a producer that renames its artifacts after writing the references to them.
+
+## Resolution (verified 2026-09-25)
+
+**Fix.** Commit `88c6b58e` (PR #765, TKT-017, 2026-09-14) found the cause. The translation
+helper `_translate_ticket_depends_on()` already existed, but only `build_epic_from_ids()`
+(the `--ids` route) called it. `run()` (the default `--ac` route) did not. The commit added
+the missing call to `run()`. Commit `fb07b48d` (PR #844, 2026-09-21) split `goal_to_epic.py`
+into modules and kept the fix. In `scripts/ac_store/epic_pipeline.py`, `run()` now calls
+`_wire_epic_depends_on(epic_folder, topo_order, dep_graph, _epic_filename_map(...))` after
+assembly. `_epic_filename_map` (`scripts/ac_store/epic_phases.py`) builds the post-move
+`NN_` names using the same prefix rule as assembly. The Master_Plan comes out right as a
+side effect. `generate_master_plan` runs after the wiring step and reads each ticket's
+`depends_on` from the ticket frontmatter, so its "Depends On" column picks up the translated
+names.
+
+**Evidence, from running the code rather than reading it:**
+
+- `python -m pytest unit_tests/ac_store/test_tkt_017_epic_depends_on_resolves.py -q` gave
+  3 passed. These tests cover both routes. Each one asserts that every dependency is a file
+  that exists and that at least one dependency was checked.
+- A scratch probe seeded a goal with a three-leaf chain (`a <- b <- c`). It ran
+  `scripts/goal_to_epic.py` on `--ac` and on `--ids`, then passed every generated ticket
+  through the real `ticket_frontmatter_guard.validate()`. Both routes exited 0. Both
+  produced `01_`/`02_`/`03_` tickets, left no loose inbox tickets, and had 3 edges with
+  0 guard `depends_on` errors. For example, `03_...-900c.md` had
+  `depends_on=['01_...-900a.md', '02_...-900b.md']`. The Master_Plan "Depends On" column
+  listed the same `NN_` filenames.
+- The guard does reject the stale form. `_check_depends_on` returns
+  `'depends_on' references missing file: 'TICKET-A.md'` when only `01_TICKET-A.md` exists,
+  and returns no error for `01_TICKET-A.md`. So the clean result above is not vacuous.
+
+The Fix direction asked for a regression test that runs the real guard over the output.
+The committed test does not do that. It asserts that each referenced file exists, which is
+the same fact the guard checks. The probe above did run the real guard.
 
 ---

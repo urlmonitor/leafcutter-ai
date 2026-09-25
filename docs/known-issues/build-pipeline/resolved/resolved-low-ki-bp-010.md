@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: '2026-08-18'
-last_updated: '2026-08-18'
+last_updated: '2026-09-25'
 components:
   - build_pipeline
 related_docs:
@@ -16,16 +16,20 @@ related_docs:
 # KI-BP-010 — Clean-mode's `workflows` entry has a doubled path segment, so it has never run and a real orphan survives every `--clean`
 
 > One known issue, split out of `docs/known-issues/build-pipeline.md` on
-> 2026-09-14. Index: [build-pipeline.md](../build-pipeline.md).
+> 2026-09-14. Index: [build-pipeline.md](../../build-pipeline.md).
 > Filename severity is the three-level index bucket (`low`); the
 > original grading is the `**Severity:**` line below, unchanged.
 
 - **Severity:** medium
-- **Status:** open
+- **Status:** **RESOLVED** (`e5965006`, PR #793; verified 2026-09-25 by running
+  `unit_tests/build_guards/test_ki_bp_010_clean_workflows.py` (3 passed) and a scratch-target
+  probe of `clean_stale_artifacts` that removed an orphaned workflow, removed=1)
 - **Occurrences:** 1
 - **First seen:** 2026-08-19 · **Last seen:** 2026-08-25
-- **Where:** `scripts/build_phases.py:2820-2825` (`_MANAGED_ARTIFACT_DIRS`), `:2859-2864`
-  (the join in `clean_stale_artifacts`)
+- **Where:** originally `scripts/build_phases.py:2820-2825` (`_MANAGED_ARTIFACT_DIRS`),
+  `:2859-2864` (the join in `clean_stale_artifacts`). Both moved to
+  `scripts/build_phases_clean.py` in #806 (`_MANAGED_ARTIFACT_DIRS` at `:48-53`, the join at
+  `:124`), re-exported from `build_phases.py`.
 
 **Symptom.** `_MANAGED_ARTIFACT_DIRS` mixes two path conventions in one dict. Three entries
 are bare subdirectory names; the fourth carries a `.claude/` prefix:
@@ -107,5 +111,34 @@ lost — clean-mode deleting it is only the right outcome if the answer is "dead
 
 **Pattern:** `docs/reference/false-green-mechanisms.md` → M5 — a step that checks less than it
 claims to and reports success.
+
+## Resolution
+
+Verified 2026-09-25 against `main` at `d2fe85a1`.
+
+- **Fix:** `e5965006` — "fix(commit-guardian): four gates that reported success while seeing
+  nothing (#793)", which changed `_MANAGED_ARTIFACT_DIRS["workflows"]` from
+  `".claude/workflows"` to `"workflows"`. The constant had moved to
+  `scripts/build_phases_clean.py` in #806 (`058c4bba`), and the fix was reapplied there. Its
+  DECISION HISTORY records the reapply.
+- **Convention normalised:** the dict now reads
+  `{'agents': 'agents', 'skills': 'skills', 'hooks': 'hooks', 'workflows': 'workflows'}`, so
+  every value is bare and relative to `.claude/`.
+- **Guard tests:** `python -m pytest unit_tests/build_guards/test_ki_bp_010_clean_workflows.py -q`
+  gave **3 passed**. The tests are `test_managed_artifact_dirs_workflows_entry_is_bare_relative`,
+  `test_clean_removes_orphaned_workflow_file` and `test_clean_leaves_a_current_workflow_untouched`.
+  `python -m pytest tests/test_build_clean.py -q` gave 8 passed.
+- **Live probe:** a scratch target had `.claude/{agents,skills,hooks,workflows}` with
+  `keep.js` and `pause-resume-substrate.js`. A first `clean_stale_artifacts` run seeded the
+  provenance ledger. On the second run, the manifest held only `keep.js`, and the output was
+  `Removing stale artifact: ...\.claude\workflows\pause-resume-substrate.js`. The run
+  returned `removed: 1`. The orphan was gone and `keep.js` was kept.
+- **The named orphan:** `.leafcutter/workflows/` and `templates/workflows-js/` now each
+  hold 8 files, and the file names match. `pause-resume-substrate.js` is absent from both, so
+  the live instance of KI-BP-005 described above no longer exists.
+- **Caveat, not a residual of this KI:** since the KI-BP-009 / BP-1500g-1 work, clean-mode
+  removes a file only if the provenance ledger recorded it in an earlier `--clean`. An item
+  the ledger has never seen is kept, and clean-mode prints a WARNING for it. That is intended
+  ADR-041 behaviour. The unreachable path this KI describes is fixed.
 
 ---
