@@ -1,0 +1,102 @@
+id: ACD-2500d-3-i
+components:
+- ac_driven_dev
+- ac_store
+readiness: approved
+priority: high
+title: A file finding with no recorded planner decision holds the requirement at reviewed
+component: ac-driven-dev
+level: L3
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  Given requirement R carries a file finding from the file-aware step with no recorded decision,
+    and requirement S carries a file finding whose recorded decision is "assignment stands" with a
+    one-sentence reason,
+  When the user runs the approval step over R and S,
+  Then R stays at "reviewed" and the approval report names R with the reason "file finding undecided",
+  And S moves to "approved",
+  And the feature-planning workflow hands R's undecided finding to the technical planner's next pass
+    before the final approval gate is shown,
+  And the store's record check accepts a file finding carrying file, verdict, line range, reason and
+    decision, and rejects a finding carrying a key it does not know, naming the key.
+depends_on:
+- ACD-2500d-3
+doc_links:
+- path: docs/reference/ac-schema.md
+  relationship: describes
+  status: exists
+- path: docs/architecture/adrs/ADR-006-flatten-supervisor-chain.md
+  relationship: describes
+  status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+- Declares the file-findings field in config/ac_store_schema.json (closed shape) with its row in docs/reference/ac-schema.md,
+  in the same change.
+- The approval step (scripts/ac_store/approve_acs.py) holds a record with any finding whose decision is
+  null, using 'file finding undecided' from the ACD-2500b-2 vocabulary.
+- The workflow hand-back (templates/workflows-js/plan-feature.js) re-dispatches the technical planner
+  only for records with undecided findings, at most 2 rounds; after that the records are shown at the
+  gate as held, never silently approved.
+- Decision presence is judged from the record on disk, never from the planner's returned text.
+- 'Every write is a field-targeted edit: only the named field changes and every other byte of the record
+  is preserved (no whole-file YAML load/dump rewrite; see the fast_lane.py round-trip hazard in the ac-driven-dev
+  PROJECT_CONTEXT).'
+delivers_to:
+  agent: llm-expert
+  contract: 'File-findings record on the AC (schema-declared, closed): list of {file: str, verdict: ''consistent''|''describes,
+    does not implement''|''absent, not to-be-created''|''behaviour found elsewhere'', line_range: str|null,
+    found_in: str|null, reason: str (one sentence), decision: null|{choice: ''reassign''|''split''|''assignment
+    stands'', reason: str, by: ''it-po''}} plus the list of files opened. Written by the code-aware agent
+    (decision null); decision filled only by the technical planner''s next pass. Written by the code-aware
+    agent (ACD-2500d-1/-1-i); decision filled by the it-po next pass (ACD-2500d-3).'
+expects_from:
+  ac_id: ACD-2500b-2
+  contract: 'Closed hold-reason vocabulary, defined once (docs/reference/ac-schema.md plus one code constant):
+    ''missing file targets'', ''missing test contract'' (ACD-1600c-1, unchanged), ''test design pending''
+    (ACD-2500b-2), ''reference file pending'' (ACD-2500d-2-i), ''file finding undecided'' (ACD-2500d-3-i).
+    Approval report shape: {approved: [id], held: [{id: str, file: str, reason: <vocabulary value>}]}.'
+test_spec:
+- name: test_undecided_finding_held_with_reason
+  target_dir: unit_tests/ac_store/
+  framework: pytest
+  type: unit
+  description: R stays reviewed and the approval report names R with 'file finding undecided'.
+- name: test_decided_finding_approved
+  target_dir: unit_tests/ac_store/
+  framework: pytest
+  type: unit
+  description: S, whose finding records 'assignment stands' with a reason, moves to approved.
+- name: test_workflow_hands_undecided_finding_to_planner
+  target_dir: unit_tests/ac_driven_dev/
+  framework: pytest
+  type: integration
+  description: 'Workflow harness: R''s undecided finding is handed to the technical planner''s next pass
+    before the final gate.'
+  angle: reachability
+- name: test_finding_schema_accepts_known_rejects_unknown_key
+  target_dir: unit_tests/ac_store/
+  framework: pytest
+  type: unit
+  description: A finding with file/verdict/line range/reason/decision is accepted; one with an undeclared
+    key is rejected naming the key.
+  angle: real_artifact
+origin_agent: it-po
+created: '2026-09-25'
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+- code
+- schema
+risk_surface: contract_boundary
+notes: |
+  AUTHORED BY IT-PO. ACD-2500d-3 (llm-expert) and ACD-2500d-1-i each end with a deterministic clause
+  ("not offered for approval while a finding has no recorded decision"), and ACD-2500d-3 clause 2
+  needs a workflow hand-back. Both are python-coder surfaces (approval step, plan-feature.js, schema).
+  A letter split of ACD-2500d-3 (d-3a/d-3b) would take ACD-2500d over the 5-L2 cap, so the
+  deterministic half is this L3 instead. Its clauses restate those parents' approval-hold and
+  hand-back behaviour at the approval step; no new behaviour is added. BA to review at the final gate.

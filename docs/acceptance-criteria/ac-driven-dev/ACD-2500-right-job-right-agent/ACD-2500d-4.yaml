@@ -1,0 +1,54 @@
+id: ACD-2500d-4
+components:
+  - ac_driven_dev
+  - agent_registry
+readiness: draft
+priority: medium
+title: "Sequence diagram of the file-aware checks and the hand-back to the planner"
+component: ac-driven-dev
+level: L2
+status: superseded_by
+req_status: draft
+work_status: todo
+criteria: |
+  Given the file-aware checks of ACD-2500d-1, ACD-2500d-2 and ACD-2500d-3,
+  When their sequence diagram is authored,
+  Then it shows the planner's output entering the file-aware step, the files being opened,
+    the surface findings and reference-file choice, and the hand-back of findings to the
+    planner,
+  And it shows that the approval gate is reached only after every finding has a recorded
+    decision.
+depends_on:
+  - ACD-2500d
+  - ACD-2500d-1
+  - ACD-2500d-3
+doc_links:
+  - path: templates/agents/it-po.md
+    relationship: describes
+    status: exists
+assigned_agent: architecture-diagram-author
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+test_required: false
+origin_agent: business-analyst
+created: 2026-09-25
+amended_by:
+- reason: it-po-merge-into-ACD-2500c-4
+  date: '2026-09-25'
+  by: it-po
+superseded_by: ACD-2500c-4
+covered_by: []
+implemented_by: []
+change_target: docs
+risk_surface: internal
+notes: |
+  Answers ACD-2500d's sequence-diagram trigger. May be merged into ACD-2500c-4 by IT-PO if
+  both steps share one host.
+
+  IT-PO (2026-09-25): SUPERSEDED BY ACD-2500c-4. User decision 3 puts the ACD-2500c and
+  ACD-2500d steps in one code-aware agent, so the two sequence diagrams are one flow. Both Then
+  clauses of this record are carried into ACD-2500c-4 through its it_requirements (hand-back of
+  findings to the planner; approval gate reached only after every finding has a recorded decision).
+  This file is kept, not deleted (AC permanence). ACD-2500d's sequence-diagram trigger is answered by
+  ACD-2500c-4.

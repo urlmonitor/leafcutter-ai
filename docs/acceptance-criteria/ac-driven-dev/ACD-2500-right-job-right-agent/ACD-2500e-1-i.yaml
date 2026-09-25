@@ -1,0 +1,91 @@
+id: ACD-2500e-1-i
+components:
+  - ac_driven_dev
+  - agent_registry
+readiness: approved
+priority: high
+title: "An agent whose tools can edit files but whose profile says it changes nothing is flagged"
+component: ac-driven-dev
+level: L3
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  Given the agent registry,
+  When the profile consistency check runs,
+  Then every agent whose tools include writing or editing files and whose profile declares
+    it changes nothing is listed, naming the agent,
+  And the technical planner's profile as it stood before ACD-2500e-1 is listed,
+  And an agent with read-only tools that declares it changes nothing is not listed,
+  And the report states how many agents were examined.
+depends_on:
+  - ACD-2500e-1
+doc_links:
+- path: templates/agents/it-po.md
+  relationship: describes
+  status: exists
+- path: docs/architecture/components/agent-registry.md
+  relationship: describes
+  status: exists
+- path: docs/architecture/adrs/ADR-026-ac-driven-build-v2-phased-migration.md
+  relationship: describes
+  status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+- Extends the existing agent self-description / produces validation (the INF-600 family) rather than adding
+  a parallel checker.
+- Covers every agent in config/agent_registry.json (user decision) and ships as a warning first (ADR-026
+  warn-before-required); promotion to blocking is a separate later decision.
+- '''Can write or edit'' is derived from the declared tools and ''changes nothing'' from mutates entries
+  of none; both read from template frontmatter/registry, with no hard-coded agent list.'
+- The ticket records how many agents are flagged on the day the check ships.
+- An unreadable registry or template is reported as an error, never as zero flagged agents.
+delivers_to: null
+expects_from:
+  ac_id: ACD-2500e-1
+  contract: it-po profile corrected; used as the before/after fixture.
+test_spec:
+- name: test_write_capable_agent_declaring_no_change_listed
+  target_dir: unit_tests/agents/
+  framework: pytest
+  type: unit
+  description: An agent with Write/Edit tools whose mutates is none is listed by name.
+- name: test_pre_fix_it_po_profile_listed
+  target_dir: unit_tests/agents/
+  framework: pytest
+  type: unit
+  description: A fixture of the pre-ACD-2500e-1 it-po profile is listed.
+- name: test_read_only_agent_declaring_no_change_not_listed
+  target_dir: unit_tests/agents/
+  framework: pytest
+  type: unit
+  description: An agent with read-only tools and mutates none is not listed.
+  angle: boundary
+- name: test_report_states_agents_examined
+  target_dir: unit_tests/agents/
+  framework: pytest
+  type: unit
+  description: The report states the number of agents examined.
+- name: test_check_warns_not_blocks
+  target_dir: unit_tests/agents/
+  framework: pytest
+  type: unit
+  description: A flagged agent produces a warning and a zero exit while the check is in warning mode.
+  angle: seam
+origin_agent: business-analyst
+created: 2026-09-25
+amended_by:
+- reason: it-po-technical-enrichment
+  date: '2026-09-25'
+  by: it-po
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: internal
+notes: |
+  Makes ACD-2500e-1 durable: without it the next profile drifts the same way. Scope is
+  registry-wide, so IT-PO should measure how many agents are listed today and ship it
+  advisory first (ADR-026 warn-before-required). If the user wants the scope limited to
+  the planner, this L3 can be dropped - see open questions.
