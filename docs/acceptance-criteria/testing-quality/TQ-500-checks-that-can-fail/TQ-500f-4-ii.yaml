@@ -8,8 +8,8 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 roadmap_phase: phase_1
 criteria: |
   Given a writer drafts either of two checks —
@@ -46,6 +46,21 @@ delivers_to: null
 expects_from:
   ac_id: TQ-500f-4
   contract: "The three questions and the vacuity checklist are in both writers' instructions."
+it_requirements:
+  - 'The vacuity guidance in both writer templates must name the two patterns explicitly: a
+    one-sided or NULL-skipping check over a set that can be empty, and presence measured instead
+    of correctness. Each comes with its remedy: an exact processed-row count plus a non-NULL
+    count, and an assertion on a known seeded value.'
+  - The strengthened test's report records the vacuous version as a wrong version it now catches,
+    in the same list TQ-500f-4 defines. Do not add a second list.
+  - Edit source templates only, together with TQ-500f-4 so the wording stays identical across
+    both writers.
+test_required: false
+test_rationale: 'Prompt-only, for the same reason as TQ-500f-4. C1 (buy_volume >= 0 over an
+  all-NULL window) and C2 (presence-only parity) are ready-made gold rows for the recommended
+  test-writer/sql-test-writer eval: the judge checks that the produced test adds exact counts
+  or a seeded expected value, and that it goes red on an empty window. The deterministic backstop
+  is TQ-500g''s mutation run of ''pipeline processed zero rows''.'
 origin_agent: business-analyst
 created: 2026-09-25
 amended_by: []

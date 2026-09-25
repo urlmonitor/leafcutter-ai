@@ -8,8 +8,8 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 roadmap_phase: phase_1
 criteria: |
   Given a project whose settings do not set db_connection_test,
@@ -25,8 +25,6 @@ criteria: |
     And W1's database tests are reported as not run for want of
       configuration — never as passed, never as skipped without a reason, and
       never as "database unreachable",
-    And a database test for W1, if one exists and is run without the setting,
-      stops with a message naming the missing setting rather than passing,
     And W2 proceeds with no mention of the missing setting.
 depends_on:
   - INF-1100d
@@ -44,14 +42,38 @@ assigned_agent: llm-expert
 estimated_complexity: S
 delivers_to: null
 expects_from:
-  ac_id: INF-1100d-1
-  contract: "An unset connection is absent from resolved settings, not a placeholder."
+  - ac_id: INF-1100d-1
+    contract: An unset connection is absent from resolved settings, not a placeholder.
+  - ac_id: INF-1100d-3-ii
+    contract: A shipped resolver that returns the configured address or raises an error naming
+      testing_context.db_connection_test; the DB test pattern calls it.
+it_requirements:
+  - 'W1''s hand-off names testing_context.db_connection_test and reports W1''s database tests
+    as ''not run: not configured''. That report is distinct from passed, from skipped without
+    a reason, and from ''database unreachable''.'
+  - 'No agent may connect to, or write a test pointing at, an address it chose itself: not localhost
+    on a default port, not the formerly shipped address, not a value guessed from the environment.'
+  - W2 (no database tests) proceeds with no mention of the missing setting.
+  - test-writer's DB test pattern (Step 2b) must call INF-1100d-3-ii's shipped resolver in setUp
+    instead of a literal address. The test runner relays INF-1100d-3-i's checker report instead
+    of composing its own.
+  - Edit source templates only (templates/agents/test-writer.md, templates/agents/test-runner.md).
+test_required: false
+test_rationale: 'Post-split, this AC holds only agent conduct: the hand-off wording, not composing
+  an address, and W1/W2 reporting. That is instruction text, and a template text search is
+  forbidden. Every deterministic part now lives in a python-coder child with its own test
+  contract. INF-1100d-3-i covers the not-configured / unreachable report, without credentials.
+  INF-1100d-3-ii covers a DB test run without the setting ending in an error that names it,
+  through the one shared resolver. INF-1100d-4 proves no shipped template carries an address
+  it could point at. The remaining substitute is a recommended test-writer/test-runner eval
+  over W1/W2 (follow-up AC) plus pr-reviewer against the Then clauses.'
 origin_agent: business-analyst
 created: 2026-09-25
 amended_by: []
 superseded_by: null
 covered_by:
   - INF-1100d-3-i
+  - INF-1100d-3-ii
 implemented_by: []
 change_target: prompt
 risk_surface: safety
@@ -67,3 +89,28 @@ notes: |
   judge the hand-offs. The "stops with a message rather than passing" clause is
   deterministic if the DB test pattern reads the setting at run time — IT-PO
   may split it out as a python-coder L3 if the pattern gains a helper.
+
+  IT-PO ENRICHMENT (2026-09-25)
+  SPLIT RECOMMENDED (not performed; readiness left draft pending the decision). Criteria:
+    - INF-1100d-3a (llm-expert, prompt): the hand-off / reporting / W2 clauses.
+    - INF-1100d-3b (python-coder, code): "a database test for W1, if one exists and is run
+      without the setting, stops with a message naming the missing setting rather than
+      passing". A shipped resolver (the same module as INF-1100d-3-i's checker, so there is
+      one reader of the setting) raises naming testing_context.db_connection_test when the
+      setting is unset or blank, and the DB test pattern calls it. Testable by running a
+      generated-shape DB test with the setting unset and asserting it errors, naming the
+      setting.
+
+  SPLIT PERFORMED (user-approved at the IT-PO gate). The clause "a database test
+  run without the setting stops with a message naming the missing setting" moved
+  to INF-1100d-3-ii (python-coder, L3). This AC keeps the prompt behaviour: the
+  hand-off wording and W1/W2. The split was made as an L3 rather than a sixth
+  L2 because the moved clause is a technical constraint of this AC's behaviour,
+  not a separate user-facing behaviour. It mirrors INF-1100d-3-i (also split out
+  of this AC as a python-coder L3 over the same setting), and it leaves the PO's
+  L1 at the default cap with no override. The test_rationale above still
+  describes the pre-split recommendation; the deterministic clause now carries
+  its own test contract in INF-1100d-3-ii.
+
+  IT-PO PASS 2 (2026-09-25): test_rationale refreshed for the post-split state (the
+  pre-split wording above is superseded); readiness -> reviewed.

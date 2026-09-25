@@ -8,8 +8,8 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 roadmap_phase: phase_1
 criteria: |
   Given the test writer writes two tests for one piece of work, before any
@@ -53,8 +53,35 @@ estimated_complexity: S
 delivers_to:
   - agent: python-coder
     ac_id: TQ-500f-3-i
-    contract: "Each red baseline entry carries the kind of red (absence or assertion) as a machine-readable value, so a mechanical reader can refuse absence-only red for a test that guards existing code."
+    contract: 'Shared DEFINITIONS of ''absence'' and ''assertion'' red. The mechanical reader
+      derives the kind of red from the test run''s own output. It never reads the writer''s
+      self-reported kind as input: the writer''s label informs the writer''s own conduct and
+      its hand-off, and is not evidence the reader trusts (see TQ-500f-3-ii: ''does not take
+      the test writer''s word for it'').'
 expects_from: null
+it_requirements:
+  - Edit templates/agents/test-writer.md (source) only. The machine-extracted TAUGHT-TEST-ANGLES
+    block belongs to TQ-500f-1 and must not be reshaped here.
+  - 'Each red_baseline entry gains a kind of red with exactly two values, ''absence'' and ''assertion''.
+    The definitions must match the mechanical reader''s classification in TQ-500f-3-i: absence
+    means the import or lookup of the named thing failed before any code under test ran; assertion
+    means the code under test ran and produced the wrong result.'
+  - 'Step 2g''s list of equally valid reds (ImportError / AttributeError / AssertionError) must
+    be qualified. An absence red is valid evidence only for a test whose Test Requirements entry
+    declares no must_catch and no angle: discrimination.'
+  - 'Step 4''s zero-exit row: replace ''or a TODO comment'' with ''a stronger assertion'' for
+    the under-asserting cause only. TQ-500d-1''s reading of the same row (tests correct on arrival
+    owe substitute evidence) stays intact: one row, both readings.'
+test_required: false
+test_rationale: 'Prompt-only: the deliverable is the test writer''s instruction text. The
+  falsifiable half (absence-only red is refused for a test that declares wrong versions to
+  catch) is enforced mechanically by the red-baseline reader in TQ-500f-3-i, which classifies
+  the kind of red from the run itself, and is wired into /build-feature by TQ-500f-3-ii. Neither
+  trusts the writer''s label. The writer''s conduct (rewriting test B to reach refresh_config(),
+  preferring a stronger assertion over a comment) cannot be unit-tested without a template-text
+  search, which CLAUDE.md forbids. Substitutes: pr-reviewer against the Then clauses, plus
+  a recommended test-writer eval row (test A new summarise_window / test B regression of existing
+  refresh_config) once a test-writer eval set exists (follow-up AC).'
 origin_agent: business-analyst
 created: 2026-09-25
 amended_by: []
@@ -81,3 +108,9 @@ notes: |
   MOSTLY PROMPT. The writer's conduct is instruction text. The one observable,
   mechanically checkable part — the kind of red on each red baseline entry — is
   delivered to TQ-500f-3-i, which carries the falsifiable test contract.
+
+  IT-PO ENRICHMENT (2026-09-25)
+  CONTRACT CORRECTED. The BA's delivers_to said the reader consumes a machine-readable kind
+  written by the writer. That contradicts TQ-500f-3-i ("uses only what the test requirements
+  declare and the outcome of the run") and TQ-500f-3-ii ("does not take the test writer's word
+  for it"). The reader classifies from the run; this AC delivers only the shared definitions.

@@ -8,8 +8,8 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 roadmap_phase: phase_1
 criteria: |
   Given the technical enricher (IT-PO) enriches three requirements in one pass —
@@ -47,6 +47,30 @@ delivers_to: null
 expects_from:
   ac_id: TQ-500f-2
   contract: "The must_catch field exists on test_spec items and reaches the test writer verbatim."
+it_requirements:
+  - Edit the source template templates/agents/it-po.md only, never the deployed copies.
+  - The instruction must make 'this AC is a bug fix / a gate' the enricher's own explicit statement
+    in its enrichment note, never the output of an automatic classifier over the AC text.
+  - For a bug fix, the enricher must author 'revert the fix' plus at least one wrong version
+    that names the condition or input involved. For a gate, it must author one 'drop the <X>
+    condition' per gate condition plus 'the gate always allows'.
+  - The instruction must say that new behaviour with no earlier version needs no must_catch,
+    and that its absence is not a defect, so the enricher does not stamp must_catch everywhere.
+  - Authored must_catch values must satisfy TQ-500f-2-i's rules (non-empty list of non-blank
+    strings). The instruction must also tie must_catch to the conditional 'discrimination' angle,
+    per user decision Q2 (it fires for bug-fix or gate ACs or when must_catch is present, and
+    never takes one of the four slots by default).
+test_required: false
+test_rationale: 'Prompt-only: the deliverable is instruction text in templates/agents/it-po.md.
+  No deterministic unit test can show that an LLM names good wrong versions, and a test asserting
+  the instruction is present in the template is the grep-only proof CLAUDE.md forbids. Substitutes:
+  (1) the shape of whatever the enricher writes is enforced mechanically at commit time by
+  TQ-500f-2-i''s validator; (2) recommended eval: register it-po in scripts/evals/agent_eval_config.json
+  (artifact mode, run by scripts/evals/run_agent_eval.py) with R1/R2/R3 from this AC as gold
+  rows. R1 must carry ''revert the fix'' plus a condition-naming wrong version, R2 one per
+  condition plus ''the gate always allows'', and R3 none. No such eval set exists yet, so
+  it needs its own follow-up AC; (3) pr-reviewer checks the prompt diff against each Then
+  clause.'
 origin_agent: business-analyst
 created: 2026-09-25
 amended_by: []

@@ -8,8 +8,8 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 roadmap_phase: phase_1
 criteria: |
   Given a developer or requirement author who has to guard a bug fix or a
@@ -55,6 +55,19 @@ expects_from:
     contract: "Final rules for must_catch."
   - ac_id: TQ-500f-4
     contract: "Final wording of the three questions and the vacuity checklist as the writers carry them."
+it_requirements:
+  - Diataxis how-to under docs/how-to/. Use the final wording of the three questions and checklist
+    as the writers carry them (TQ-500f-4) and the final must_catch rules (TQ-500f-2-i). Do not
+    paraphrase them into a second version.
+  - Link to docs/testing/test-angles.md for the catalogue, and cross-link the sibling how-to
+    from TQ-500d-2. Do not duplicate either.
+  - Worked example uses the refresh_due / retry_due gate. Any database example uses a placeholder
+    address, never a concrete host:port.
+  - Register the page in docs/INDEX.md (or the how-to index) so readers can find it.
+test_required: false
+test_rationale: Documentation AC (how-to trigger). Its deliverable is prose, and under the
+  firewall no behavioural AC may be closed by pointing at it. A text-search test would be
+  the forbidden prose-presence proxy. pr-reviewer checks it against each Then clause.
 origin_agent: business-analyst
 created: 2026-09-25
 amended_by: []

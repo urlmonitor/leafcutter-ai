@@ -8,8 +8,8 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 roadmap_phase: phase_1
 criteria: |
   Given a project whose settings set db_connection_test to
@@ -46,8 +46,36 @@ assigned_agent: llm-expert
 estimated_complexity: S
 delivers_to: null
 expects_from:
-  ac_id: INF-1100d-1
-  contract: "The project's own db_connection_test value, or its absence, is what resolved settings carry."
+  - ac_id: INF-1100d-1
+    contract: The project's own db_connection_test value, or its absence, is what resolved settings
+      carry.
+  - ac_id: INF-1100d-3-i
+    contract: A shipped CLI checker the test runner invokes. It resolves testing_context.db_connection_test
+      and reports not_configured / unreachable / reachable, never showing a credential.
+it_requirements:
+  - 'ROUTE DECISION: run-time read, not install-time compile. The setting is read when the test
+    or check runs. A compiled value would bake a project''s address into built agent files,
+    and an unset value has no safe compiled form.'
+  - test-runner's pre-run reachability check must call the shipped checker from INF-1100d-3-i
+    instead of its inline psycopg2 snippet, and relay that checker's not-configured / unreachable
+    / reachable report.
+  - test-writer's DB test pattern (Step 2b) must take its connection at test run time from INF-1100d-3-ii's
+    shipped resolver, which reads testing_context.db_connection_test and fails naming it when
+    unset.
+  - Remove every host, port and database literal, including port-only prose such as 'port 5403'
+    and 'requires the local database container', from templates/agents/test-runner.md, templates/agents/test-writer.md
+    and templates/workflows/test.md. Edit sources only.
+  - Any example address uses the placeholder form postgresql://<user>:<password>@<host>:<port>/<database>.
+test_required: false
+test_rationale: 'Prompt-only surfaces: two agent templates and one workflow description. With
+  the run-time route chosen there is no compiled output to test. Deterministic proofs cover
+  each clause elsewhere: (1) INF-1100d-4''s shipped-address check fails if any of the three
+  templates, or their built copies, carries an address. That is the mechanical proof of the
+  ''names none of its own'' clause for full addresses; (2) INF-1100d-3-i''s tests prove the
+  reachability check reads the setting and reports correctly, and the prompt only has to call
+  it. Port-only prose (''port 5403'') is not an address, so the check does not match it; pr-reviewer
+  checks that fragment of the last Then clause against the diff. A test searching the templates
+  for the setting''s name would be the grep-only proof CLAUDE.md forbids.'
 origin_agent: business-analyst
 created: 2026-09-25
 amended_by: []
@@ -69,3 +97,7 @@ notes: |
   The PO's list of seven places counts full address strings. The port-only
   mentions in test-runner prose and the test workflow are the same address in
   fragments and fall under this AC's last clause.
+
+  IT-PO ENRICHMENT (2026-09-25)
+  Route chosen: RUN-TIME read (see it_requirements). The reachability-check wiring is
+  deterministic because it delegates to INF-1100d-3-i's checker.

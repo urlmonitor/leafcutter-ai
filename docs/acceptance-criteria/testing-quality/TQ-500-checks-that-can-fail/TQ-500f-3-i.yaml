@@ -8,8 +8,8 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 roadmap_phase: phase_1
 criteria: |
   Given one piece of work with three newly added tests, each tagged as covering
@@ -28,6 +28,9 @@ criteria: |
       that its only red was an absence red, and states that a test naming
       wrong versions to catch must fail by reaching the code,
     And T2 is accepted as red evidence,
+    And the red-baseline gate as a whole fails for this work because T1 was
+      refused, even though T2 and T3 are properly red — a declared test that
+      is refused as absence-only red cannot ride on its siblings,
     And T3 is accepted as red evidence — absence red stays valid for a test
       that declares no wrong version to catch,
     And an entry declaring angle: discrimination with no must_catch is treated
@@ -39,6 +42,8 @@ criteria: |
       outcomes gets the same verdict in either lane.
 depends_on:
   - TQ-500f-3
+  - TQ-500f-1
+  - TQ-500f-2
 doc_links:
   - path: docs/how-to/fast-lane-build.md
     relationship: describes
@@ -60,12 +65,105 @@ doc_links:
     status: exists
 assigned_agent: python-coder
 estimated_complexity: M
-delivers_to: null
+delivers_to:
+  - agent: python-coder
+    ac_id: TQ-500f-3-ii
+    contract: 'CLI: python scripts/build_orchestration/fast_lane.py verify_red_baseline --ac-ids
+      <comma-separated ids> --test-root <worktree> [--base-ref <ref>] [AC-store-root option
+      if added]. Prints JSON {gate_passed: bool, reason: str|null, red: [...], green_at_baseline:
+      [...], inconclusive: [...], preexisting: [...], plus an additive list of refused entries
+      each {nodeid: str, ac_id: str, kind: ''absence'', message: str}}; exit 0 iff gate_passed.'
 expects_from:
   - ac_id: TQ-500f-3
     contract: "The kind of red (absence or assertion) is distinguishable per test."
   - ac_id: TQ-500f-2
     contract: "must_catch present on the test's requirement entry is the declared signal that the test guards against a named wrong version."
+it_requirements:
+  - 'Extend the one existing reader: verify_red_baseline in scripts/build_orchestration/fast_lane.py
+    with its private helpers in _fl_red_baseline_support.py. No second reader, and no copy of
+    this rule in a workflow script or a prompt.'
+  - 'The kind of red must be derived per test from the run''s own output. Absence: the failure
+    is an import, name or attribute lookup error for the named thing, raised before any code
+    under test ran, including a collection-time import failure of the test module. Assertion:
+    any other failure after the code under test ran. The writer''s self-reported kind is never
+    an input.'
+  - 'The declared signal is read from the covering AC''s test_spec entry matched to the test
+    by name: must_catch present (non-empty) OR angle == ''discrimination''. The AC''s criteria,
+    title and notes must never be read for this decision.'
+  - 'Gate verdict (user decision, fail closed): if ANY declared test (must_catch or angle: discrimination)
+    is refused as absence-only red, gate_passed is false with a distinct, stable reason value
+    naming the refusal. This holds however many sibling tests are properly red. The refused
+    entries are listed in the report.'
+  - The reader needs the AC store to read test_spec. Tickets copy test_spec verbatim and the
+    fast lane has no ticket, so the AC record is the one source both lanes share. The AC store
+    root must be an input whose default resolves to the project's configured AC store. The verify_red_baseline
+    invocation in templates/workflows-js/fast-lane-ship.js must keep working unchanged, or be
+    updated in the same change.
+  - 'The pytest-output parsing stays shared with done_proof (reuse, not a fork). If capturing
+    the failure kind needs richer pytest output, extend the shared parser additively so that
+    done_proof''s {nodeid: outcome} contract and its verdicts are unchanged, and the gate still
+    makes a single pytest run.'
+  - 'Backward-compatible report: existing keys (gate_passed, reason, red, green_at_baseline,
+    inconclusive, preexisting) keep their meaning. A refused test is reported with its nodeid,
+    AC id, the observed kind ''absence'', and a message saying that a test naming wrong versions
+    to catch must fail by reaching the code.'
+  - 'Fail closed: a declared test whose kind of red cannot be determined is not accepted as
+    red evidence.'
+  - 'Stays idempotent and read-only (BO-2400a-3-viii): read-only git queries, no writes to the
+    AC store.'
+test_spec:
+  - name: test_red_baseline_refuses_absence_only_red_for_must_catch_test
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: T1 (must_catch declared, fails only with ImportError for refresh_config_v2)
+      is refused as red evidence, and the report names T1, the absence kind and the reach-the-code
+      message.
+  - name: test_red_baseline_accepts_assertion_red_and_undeclared_absence_red
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: boundary
+    description: T2 (declared, AssertionError) and T3 (undeclared, ImportError for summarise_window)
+      are both accepted as red evidence, the controls against a reader that refuses every import-error
+      red.
+  - name: test_discrimination_angle_without_must_catch_is_treated_as_declared
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: unit
+    angle: failure
+    description: 'An entry with angle: discrimination and no must_catch whose only red is absence
+      is refused exactly as T1 is.'
+  - name: test_verify_red_baseline_cli_refuses_absence_only_red_end_to_end
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: reachability
+    surface_invoked: python scripts/build_orchestration/fast_lane.py verify_red_baseline (the
+      CLI both lanes invoke)
+    description: In a temp git repo with real T1/T2/T3 test files and a temp AC store, the CLI
+      subprocess runs real pytest and its JSON names T1 as refused. Adding 'bug fix of existing
+      refresh' wording to T3's AC criteria does not change the verdict (the decision never reads
+      requirement wording).
+  - name: test_red_baseline_gate_fails_when_any_declared_test_is_absence_only
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: With T1+T2+T3 together, gate_passed is false with the refusal reason and T1
+      listed as refused, even though T2 and T3 are properly red (fail closed, must_block).
+  - name: test_red_baseline_gate_passes_for_assertion_and_undeclared_absence_only
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: boundary
+    description: 'Control: with only T2+T3 (no absence-only declared test), gate_passed is true
+      and nothing is refused.'
+test_rationale: 'This is a gate, so it needs known-bad input through the production CLI (must_block)
+  and controls that stop an over-broad rule. Real pytest output in a real git worktree is
+  required: the kind of red is read from what pytest actually prints, and a hand-typed outcome
+  dict would hide exactly the parsing the rule depends on.'
 origin_agent: business-analyst
 created: 2026-09-25
 amended_by: []
@@ -90,3 +188,35 @@ notes: |
   scripts/build_orchestration/_fl_red_baseline_support.py). No second reader.
   This AC owns the RULE inside that reader. Making /build-feature actually run
   that reader is a distinct behaviour, owned by TQ-500f-3-ii.
+
+  IT-PO ENRICHMENT (2026-09-25)
+  INTENDED must_catch (gate):
+    - "accept every red as before" -> T1 accepted, tests 1/4 red
+    - "refuse every import-error red" -> T3 refused, test 2 red
+    - "honour must_catch only, ignore angle: discrimination" -> test 3 red
+    - "classify from the AC's criteria wording" -> the wording variant in test 4 red
+    - "trust the writer's red_baseline kind label" -> test 4 (the label is absent from the fixture) red
+  [RESOLVED at the IT-PO gate, see USER DECISION below] OPEN QUESTION: with T1 refused and T2/T3 red, today's rule ("at least one
+  newly-added test red") still passes the gate, so a declared absence-only test rides on its
+  siblings. IT-PO recommends that any refused declared test fails the gate (fail closed);
+  the criteria state only that T1 is refused and named.
+  ORDERING CAVEAT [RESOLVED: TQ-500f-1 and TQ-500f-2 added to depends_on]: the reader reads
+  test_spec.must_catch / angle: discrimination, which those two ACs introduce. The fast lane
+  already skips the structural parent TQ-500f-3 (--exclude-structural-parent).
+  COLLECTION-ERROR CAVEAT: a module-level ImportError makes pytest report the file as a
+  collection ERROR, which today's reader buckets as inconclusive, not red. Fixtures should
+  cover both function-level and module-level absence. Whether an undeclared module-level
+  absence counts as red (T3 in that shape) is today's BO-2400a-3-vi behaviour and must
+  not change silently.
+
+  USER DECISION AT THE IT-PO GATE (fail closed): if ANY declared test
+  (must_catch or angle: discrimination) is refused as absence-only red, the
+  whole red-baseline gate fails, however many sibling tests are properly red.
+  Now a Then clause. For IT-PO's test_spec: the T1+T2+T3 fixture must assert
+  gate_passed false, and a T2+T3-only fixture must assert gate_passed true (the
+  control).
+
+  IT-PO PASS 2 (2026-09-25): fail-closed gate verdict added to it_requirements. test_spec gains
+  the T1+T2+T3 -> gate_passed false case and the T2+T3 -> gate_passed true control.
+  Added must_catch: "refuse T1 but still pass the gate because another test is red" -> the
+  T1+T2+T3 test goes red.

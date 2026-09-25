@@ -8,8 +8,8 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 roadmap_phase: phase_1
 criteria: |
   Given three places that list the permitted test kinds —
@@ -52,6 +52,53 @@ delivers_to: null
 expects_from:
   ac_id: TQ-500f-1
   contract: "The eighth permitted kind present in R, G and T."
+it_requirements:
+  - The lockstep check must read all three lists from their single sources (the two schema angle
+    enums and the TAUGHT-TEST-ANGLES anchor). The test holds no hard-coded copy of the kind
+    list.
+  - The comparison must be full set equality across R, G and T. A failure names each kind that
+    differs, the lists that lack it and the lists that carry it, by file path.
+  - The comparator must run against prepared variant lists (V1-V4 and the stray-kind case) without
+    editing the real config or template files. The live check over the real files must use the
+    same comparator, so the variant tests prove the check that actually runs.
+  - Replace today's R-vs-T comparison in unit_tests/prompt_assembly/test_bp_1100g_1.py rather
+    than adding a second check beside it, so two lockstep checks cannot disagree.
+  - Deterministic, no build.py spawn, completes in under 2 s.
+test_spec:
+  - name: test_live_lockstep_check_passes_over_real_three_sources
+    target_dir: unit_tests/prompt_assembly/
+    framework: pytest
+    type: unit
+    angle: reachability
+    surface_invoked: the lockstep test collected by pytest, reading the real config/ac_store_schema.json,
+      config/test_requirements.schema.json and templates/agents/test-writer.md
+    description: The lockstep check over the real files passes with discrimination present in
+      R, G and T (V1 on the live sources).
+  - name: test_lockstep_comparator_passes_when_all_three_lists_agree
+    target_dir: unit_tests/prompt_assembly/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: 'V1: the comparator reports no difference when R, G and T all carry the same
+      eight kinds.'
+  - name: test_lockstep_comparator_fails_naming_list_that_lacks_discrimination
+    target_dir: unit_tests/prompt_assembly/
+    framework: pytest
+    type: unit
+    angle: failure
+    description: V2, V3 and V4 each fail, and each failure names the list lacking discrimination
+      and the lists carrying it. V2 (missing from G only) fails, which today's R-vs-T check
+      cannot do.
+  - name: test_lockstep_comparator_fails_on_stray_kind_in_generated_side_only
+    target_dir: unit_tests/prompt_assembly/
+    framework: pytest
+    type: unit
+    angle: boundary
+    description: A kind present only in G (e.g. 'discriminating') fails, naming G, which shows
+      the check compares full sets rather than subsets.
+test_rationale: The deliverable is the check itself. Only variant inputs prove it can fail,
+  and V1 alone would be green on arrival and prove nothing. The live-file test is the production
+  use.
 origin_agent: business-analyst
 created: 2026-09-25
 amended_by: []
@@ -67,3 +114,8 @@ notes: |
   needs an adversarial case in the same Given). The deliberate alteration for
   the implementer to record: remove "discrimination" from G only and show the
   check objects.
+
+  IT-PO ENRICHMENT (2026-09-25)
+  INTENDED must_catch: "compare only R with T (today's check)" -> V2 passes, test goes red;
+  "subset instead of equality" -> the stray-kind test goes red; "failure message omits the
+  list name" -> the naming assertion goes red.

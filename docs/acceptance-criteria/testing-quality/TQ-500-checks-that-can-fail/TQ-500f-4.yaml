@@ -8,8 +8,8 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 roadmap_phase: phase_1
 criteria: |
   Given the ordinary test writer and the database test writer are each asked
@@ -63,6 +63,32 @@ delivers_to: null
 expects_from:
   ac_id: TQ-500f-2
   contract: "When the test requirements carry must_catch, each named wrong version is the first answer to Q1 the writer must defeat."
+it_requirements:
+  - Edit both source templates, templates/agents/test-writer.md and templates/agents/sql-test-writer.md,
+    in the same change with identical wording of the three questions and the four checklist
+    items, so the two writers cannot drift. Never edit deployed copies.
+  - The questions and checklist live in each template's own text. Neither template may send
+    the writer to an adopter's test README to find them (the README stays 'conventions only').
+  - When the Test Requirements entry carries must_catch, each listed wrong version is the first
+    Q1 answer the writer must defeat. The report lists every wrong version the strengthened
+    test now catches.
+  - A checklist item that does not apply is marked not applicable with a one-line reason. Omission
+    is not allowed.
+  - 'Must not add a second machine-checkable falsifiability record: the wrong version named
+    under Q1 feeds TQ-500a-1''s existing falsifiability answer (see the BA note).'
+  - Must stay within each template's file-size budget. If the addition pushes a template over
+    the limit, move shared text into a skill both writers load, rather than trimming the questions.
+test_required: false
+test_rationale: 'Prompt-only: the deliverable is instruction text in two agent templates.
+  No deterministic unit test can show that an LLM asked the three questions well, and a test
+  asserting the questions appear in the template is the grep-only proof CLAUDE.md forbids.
+  Substitutes: (1) the deterministic backstop is TQ-500g''s mutation runs, which apply the
+  named wrong versions to finished code and decide survival by running tests, not by the writer''s
+  opinion; (2) recommended eval: register test-writer and sql-test-writer in scripts/evals/agent_eval_config.json
+  (artifact mode) with the incident-1 refresh-gate case from this AC''s Given as a gold row.
+  The produced test must go red when retry_due is left unset, and the report must list that
+  wrong version. No such eval set exists yet (follow-up AC); (3) pr-reviewer checks both template
+  diffs against each Then clause.'
 origin_agent: business-analyst
 created: 2026-09-25
 amended_by: []

@@ -8,8 +8,8 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 roadmap_phase: phase_1
 criteria: |
   Given the database test writer writes a regression test for a stored
@@ -40,6 +40,23 @@ delivers_to: null
 expects_from:
   ac_id: TQ-500f-4
   contract: "Both writers answer the three questions per guarding test."
+it_requirements:
+  - Edit templates/agents/sql-test-writer.md (source) and the matching report section of templates/agents/test-writer.md
+    only.
+  - Every Q1-Q3 answer carries an explicit, fixed label with exactly two values, reasoned or
+    observed. 'observed' is permitted only when the answer cites output from a run the writer
+    actually performed.
+  - sql-test-writer's report lists the Q1 wrong version under a 'to run later' heading so TQ-500g
+    can take it up. Wording that states or implies the test was seen to fail or pass is prohibited
+    while the template forbids running the suite.
+  - Must not relax sql-test-writer's existing 'do not run the suite' constraint. Making it run
+    is TQ-500g (request item 7).
+test_required: false
+test_rationale: 'Prompt-only: honest labelling of reasoning versus observation in an LLM''s
+  report cannot be unit-tested, and a template text search is forbidden. Substitute: a recommended
+  sql-test-writer eval row (a stored-procedure regression test) where the judge checks that
+  every answer is labelled reasoned and that no answer claims an observed run, added to the
+  follow-up eval AC recommended under TQ-500f-4. pr-reviewer checks the diff.'
 origin_agent: business-analyst
 created: 2026-09-25
 amended_by: []

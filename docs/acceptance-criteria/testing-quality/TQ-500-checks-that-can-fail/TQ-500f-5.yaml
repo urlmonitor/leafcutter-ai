@@ -8,8 +8,8 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 roadmap_phase: phase_1
 criteria: |
   Given a reader opens the test-angle taxonomy to learn why a green test that
@@ -62,6 +62,29 @@ expects_from:
     contract: "The final spelling and meaning of the eighth kind."
   - ac_id: TQ-500f-2
     contract: "The final validation rules for must_catch."
+it_requirements:
+  - 'Update both copies of the AC-schema reference: docs/reference/ac-schema.md AND its shipped
+    source templates/docs/reference/ac-schema.md, which build.py copies into every install.
+    Keep the two in parity.'
+  - 'The must_catch row must state the final rules from TQ-500f-2/-2-i verbatim in meaning:
+    optional; a non-empty list of non-blank strings; copied verbatim onto the generated ticket''s
+    Test Requirements; expected on bug-fix and gate ACs; never inferred by the fallback route.'
+  - Every count of angles in docs/testing/test-angles.md reads eight, including the front-matter
+    description and 'five core + two conditional' phrasing. discrimination is the third conditional
+    angle and never takes one of the four slots by default.
+  - The catalogue must attribute incidents 1, 2, 3, 4 and 8 to one adopter's written record,
+    not re-verified. Incidents 5, 6 and 7 are placed explicitly (skip hygiene, process, DB-address
+    source).
+  - No real database address anywhere on either page. Quote the placeholder postgresql://<user>:<password>@<host>:<port>/<database>
+    if one is needed (INF-1100d-4 scans shipped docs).
+  - Update last_updated front matter. Follow the documentation-expert house style (Diataxis
+    reference).
+test_required: false
+test_rationale: 'Documentation AC (reference-doc trigger). Its deliverable is prose, and under
+  the BA''s firewall no behavioural AC may be closed by pointing at it. The behavioural facts
+  it describes are tested where they live: the angle vocabulary in TQ-500f-1/-1-i and the
+  must_catch rules in TQ-500f-2/-2-i. A docs text-search test would be the prose-presence
+  proxy the anti-grep rule forbids. pr-reviewer checks it against each Then clause.'
 origin_agent: business-analyst
 created: 2026-09-25
 amended_by: []
