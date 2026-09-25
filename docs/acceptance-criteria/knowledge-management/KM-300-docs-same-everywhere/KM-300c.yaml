@@ -8,8 +8,8 @@ components:
 level: L1
 status: active
 req_status: draft
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 work_status: todo
 criteria: |
   A machine-specific or broken documentation map is caught before it lands.

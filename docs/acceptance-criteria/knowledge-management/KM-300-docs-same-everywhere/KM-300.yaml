@@ -7,8 +7,8 @@ components:
 level: L0
 status: active
 req_status: draft
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 work_status: todo
 criteria: |
   One documentation map, identical and working on every machine.

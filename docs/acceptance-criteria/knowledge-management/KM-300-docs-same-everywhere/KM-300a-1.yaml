@@ -2,8 +2,8 @@ id: KM-300a-1
 components:
   - knowledge_management
   - documentation_system
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 title: "Every link in the documentation map uses forward slashes, whichever OS generated it"
 component: knowledge-management
 level: L2
@@ -44,8 +44,20 @@ doc_links:
   - path: docs/architecture/agent_knowledge_system.md
     relationship: context
     status: exists
+  - path: docs/acceptance-criteria/ac-store/ACS-400-ac-governance/ACS-400e-4.yaml
+    relationship: context
+    status: exists
+    relevance: "Same bug class (str(Path.relative_to()) yields backslashes on Windows) fixed in the governance hook; mirror its test technique"
 assigned_agent: python-coder
 estimated_complexity: S
+it_requirements:
+  - "Both link-producing sites must emit the forward-slash form: the single-file section renderer and the directory-table renderer in scripts/generate_doc_index.py. A fix to only one site does not satisfy this AC"
+  - "The forward-slash form must be derived from the path value itself (a POSIX rendering of the repo-relative path), not by a text replace of the host separator, so it is correct whatever separator the host path flavour uses"
+  - "Link text and link target must stay identical to each other in this AC; changing what the target is relative to belongs to KM-300a-2 and must not be folded into this fix"
+  - "Must not change entry order, descriptions, section headings or the front-matter header"
+  - "check-file-size ratchet: scripts/generate_doc_index.py is 480 lines against the 400-line .py limit (already over). The change must leave it no longer than at HEAD (net-zero or shrink). If new logic does not fit, extract it to a new module and add that module to every deploy list that already names generate_doc_index.py (scripts/build_deploy_manifest_helpers.py, scripts/build_phases_knowledge.py, scripts/build_phases_workflows.py) so the deployed transform-doc-index hook can still import it"
+  - "The committed docs/INDEX.md must be regenerated in the same change, so the tracked map already shows the fixed output (it currently holds backslash links generated on Windows)"
+  - "Record the change in the generator's DECISION HISTORY with the AC id, per the doc-enforcer convention"
 delivers_to:
   agent: python-coder
   contract: "A documentation map whose every link text and link target is a forward-slash path on any host OS; consumed by KM-300a-2 (target resolution), KM-300b-3 (cross-OS byte identity) and KM-300c-1 (commit-time separator guard)"
@@ -58,6 +70,23 @@ covered_by: []
 implemented_by: []
 change_target: code
 risk_surface: internal
+test_spec:
+  - name: test_doc_index_links_use_forward_slashes_in_table_and_single_file_sections
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    description: "Builds a temp repo whose docs/ holds architecture/adrs/ADR-001-self-hosting-boundary.md (a table-section entry three folders deep), architecture/components/ac-driven-dev.md, retrospectives/EPIC-ACDrivenDevelopment.md and glossary.md (the single-file Glossary section); calls generate_doc_index.generate_index(repo_root); extracts every [text](target) pair; asserts the ADR row's link text is exactly docs/architecture/adrs/ADR-001-self-hosting-boundary.md, the Glossary entry's link text is docs/glossary.md, and no link text or target contains a backslash. Fails red on the current code on a Windows host, where both sites render str(WindowsPath) with backslashes."
+  - name: test_doc_index_links_forward_slash_under_simulated_windows_path_flavour
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    description: "Same fixture, but patches the generator's repo-relative path computation so it returns a PureWindowsPath (backslash-stringifying) for every entry; asserts one table-section entry and the Glossary single-file entry both still carry forward-slash link text and target and no backslash anywhere inside [..] or (..). Makes the defect red on a POSIX CI host too; a half-fix covering only one rendering site stays red."
+  - name: test_doc_index_links_identical_across_path_flavours
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    description: "Generates the same fixture once natively and once under the simulated Windows path flavour and asserts the extracted link text/target lists are equal character for character."
+test_rationale: "The defect is a stringification at two rendering sites, so a direct-import unit test over a temp docs tree is the tightest proof. A test on a real tree alone is red only on a Windows host; the simulated PureWindowsPath case makes it red on POSIX CI as well, and asserting one table entry plus the Glossary entry stops a half-fix (one site only) from passing."
 notes: |
   The /quick-fix target for the known defect. Per the KM-300a L1 note, BOTH
   link-producing sites must be covered: the single-file sections AND the

@@ -3,8 +3,8 @@ components:
   - knowledge_management
   - documentation_system
   - precommit_hooks
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 title: "A map check that finds no links to inspect refuses instead of passing silently"
 component: knowledge-management
 level: L3
@@ -30,11 +30,18 @@ doc_links:
   - path: docs/INDEX.md
     relationship: describes
     status: exists
+  - path: templates/scripts/commit_guardian/check_doc_index_links.py
+    relationship: implements
+    status: planned
   - path: docs/acceptance-criteria/knowledge-management/PROJECT_CONTEXT.md
     relationship: context
     status: exists
 assigned_agent: python-coder
 estimated_complexity: S
+it_requirements:
+  - "Both the separator check (KM-300c-1) and the resolution check (KM-300c-2) must refuse when they recognise zero links in a map that has section headings (fail closed), and must report the inspected-link count on pass and on refusal"
+  - "The minimum-count rule must be derived from the map itself (non-empty sections), not a hard-coded number of links"
+  - "A section that states No docs found. counts as empty and does not require a link"
 delivers_to: null
 expects_from:
   ac_id: KM-300c-1
@@ -47,6 +54,28 @@ covered_by: []
 implemented_by: []
 change_target: code
 risk_surface: internal
+test_spec:
+  - name: test_zero_recognised_links_refuses_with_zero_count_message
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    description: "A map with ## Components and ## Glossary headings whose entries use an unrecognised layout is refused, and the message states 0 links were inspected and the map could not be verified."
+  - name: test_inspected_link_count_reported_on_pass
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    description: "A valid map with N entries passes and the output states N links were inspected."
+  - name: test_section_with_no_docs_found_needs_no_link
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    description: "A map where one section reads No docs found. and others have valid links passes."
+  - name: test_resolution_check_zero_links_also_refuses
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    description: "The same zero-link map is refused by the KM-300c-2 resolution check with the same 0-links statement."
+test_rationale: "A check that silently passes on zero matches looks green forever after a layout change; only a test that feeds an unrecognised layout proves the fail-closed floor exists in both checks."
 notes: |
   Standing constraint inherited in this component (see PROJECT_CONTEXT,
   KM-ADM-100d / ACS-1100): a check must assert a minimum matched count or it

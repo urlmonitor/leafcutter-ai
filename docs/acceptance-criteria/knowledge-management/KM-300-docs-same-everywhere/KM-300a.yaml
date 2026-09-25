@@ -7,8 +7,8 @@ components:
 level: L1
 status: active
 req_status: draft
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 work_status: todo
 criteria: |
   Links in the documentation map work online and locally, from any machine.

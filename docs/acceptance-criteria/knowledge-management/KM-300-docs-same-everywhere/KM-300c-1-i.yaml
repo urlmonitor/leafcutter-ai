@@ -3,8 +3,8 @@ components:
   - knowledge_management
   - documentation_system
   - precommit_hooks
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 title: "Backslashes outside link paths, such as in a page description, do not trip the separator check"
 component: knowledge-management
 level: L3
@@ -29,8 +29,14 @@ doc_links:
   - path: docs/INDEX.md
     relationship: describes
     status: exists
+  - path: templates/scripts/commit_guardian/check_doc_index_links.py
+    relationship: implements
+    status: planned
 assigned_agent: python-coder
 estimated_complexity: S
+it_requirements:
+  - "Lives in the KM-300c-1 check (templates/scripts/commit_guardian/check_doc_index_links.py); the verdict must be a function of the entry links only (link text and target of each map entry), never of backslashes elsewhere in the file"
+  - "Link recognition must not be confused by backslash-escaped pipes (\\|) inside a Description cell when splitting table cells"
 delivers_to: null
 expects_from:
   ac_id: KM-300c-1
@@ -43,6 +49,18 @@ covered_by: []
 implemented_by: []
 change_target: code
 risk_surface: internal
+test_spec:
+  - name: test_backslashes_in_description_cells_do_not_refuse
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    description: "A map with forward-slash links whose Description cells read 'Matches ticket ids with the pattern \\d{8} and escapes \\| in tables' and 'Windows paths look like C:\\Users\\name' passes the check (exit 0)."
+  - name: test_escaped_pipe_description_does_not_shift_link_cell
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    description: "Same map, but one entry's link target contains a backslash: the check refuses and names only that entry, proving the escaped pipe did not mis-split cells."
+test_rationale: "A no-backslash-anywhere implementation passes the refusal tests of KM-300c-1, so a dedicated false-positive test is the only thing that separates it from the entry-scoped rule."
 notes: |
   Descriptions are copied from page front matter and legitimately contain
   regexes and escaped pipes. A naive "no backslash anywhere in the file" check
