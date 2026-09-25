@@ -24,9 +24,15 @@ Read this before authoring or decomposing ACs in this component.
   3000, 3700, 3701, 3900 and 4000 are occupied by loose `BO-NNNN.yaml` L2/L3
   records sitting at the component root — a loose file reserves its slot exactly
   as a folder does.
-- Next free L0 hundred is **BO-4300** (correct as of 2026-09-22, when BO-4200 was
+- Next free L0 hundred is **BO-4400** (correct as of 2026-09-25, when BO-4300 was
   added; verified against folders AND loose `BO-*.yaml` files). Pick the next free
   hundred for any new L0.
+- **BO-4300** ("Every piece of separate work gets its workspace one dependable way",
+  2026-09-25) is the ONE DOOR through which BO-4100 / BO-1700 / BO-1800 workspace
+  properties are delivered: a single standalone maker, every caller halts on anything
+  but "ready". It does not re-derive those properties — see its L0 notes for the map.
+  A new workspace-shaped request asks first: is it a property (BO-4100/1700/1800) or a
+  promise about the one door and its callers (BO-4300)?
 - **This line has now gone stale four times** — it has previously claimed
   BO-1900, BO-2300, BO-3300 and BO-3900 while the store had already moved past each.
   Treat the number above as a hint, never as an answer: `ls` the component
