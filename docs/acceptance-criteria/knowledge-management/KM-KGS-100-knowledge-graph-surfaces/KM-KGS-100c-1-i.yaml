@@ -1,0 +1,108 @@
+id: KM-KGS-100c-1-i
+components:
+  - knowledge_management
+readiness: approved
+priority: high
+title: "A declared surface counts as contributing only when items were read from its own path"
+component: knowledge-management
+level: L3
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+parent: KM-KGS-100c-1
+created_by: "docs/acceptance-criteria/knowledge-management/KM-KGS-100-knowledge-graph-surfaces/KM-KGS-100c-1.yaml"
+criteria: |
+  Given a surfaces configuration that declares the tickets surface (path tickets/)
+    and the optional components surface (path docs/architecture/components/),
+  And the folder docs/architecture/components/ exists but holds no file the map
+    builder reads,
+  And ticket T-1 lists "build-pipeline" in its components field, so the map holds a
+    component hub node "build-pipeline" whose surface label is "components",
+  When the knowledge map is built,
+  Then the set of contributing surfaces contains "tickets" and does not contain
+    "components",
+  And the surface-set check fails, naming "components" as a declared surface whose
+    path exists and from whose path no item was read,
+  And the hub node "build-pipeline" is still on the map, and the
+    component_membership edge from T-1 still ends on it.
+  Given the same project with one component document added to
+    docs/architecture/components/,
+  When the knowledge map is rebuilt,
+  Then "components" is in the set of contributing surfaces and the surface-set
+    check passes.
+depends_on:
+  - KM-KGS-100c-1
+doc_links:
+  - path: docs/acceptance-criteria/knowledge-management/KM-KGS-100-knowledge-graph-surfaces/KM-KGS-100c-1.yaml
+    relationship: context
+    status: exists
+    relevance: "The parent's criteria say every declared surface whose path exists contributes its nodes. This record pins what 'contributes' means: items read from that surface's own path. A synthetic node that only shares the surface's label does not count."
+  - path: config/paths.json
+    relationship: describes
+    status: exists
+    relevance: "Declares components as an optional surface with path docs/architecture/components/. The component hub nodes carry the same label, which is how today's check can be satisfied by hubs alone."
+  - path: scripts/knowledge_query.py
+    relationship: modifies
+    status: exists
+    relevance: "build_knowledge_map computes contributing_surfaces from node surface labels. This record changes that to the provenance of the items read."
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "EVIDENCE (IT-PO reading of code and tests, recorded 2026-09-25): build_knowledge_map counts a surface as contributing when some node's surface label is in the declared set. The about 40 component hub nodes are labelled 'components', which is also a real, declared, optional surface (docs/architecture/components/). So the hubs alone can put 'components' into contributing_surfaces when that surface's own path produced no node, and the parent's completeness check cannot see the gap."
+  - "PROVENANCE, NOT LABEL: a declared surface is added to the contributing set only by items the builder read from that surface's own declared path. Synthetic nodes (component hubs; the files-surface nodes of KM-KGS-100d-4) never add their label to the contributing set, whatever that label is. Record provenance where items are read; do not infer it afterwards from node ids or labels."
+  - "Do not rename the hub label to dodge the collision in this record. Renaming it changes the visualiser's legend and colours and every consumer that filters on surface == 'components'. The provenance rule makes the collision harmless without that churn."
+  - "No surface name may appear in a conditional (KM-KGS-100c-2's no-special-casing invariant). The rule applies to every declared surface the same way."
+test_spec:
+  - name: test_component_hubs_do_not_make_an_empty_components_surface_contribute
+    target_dir: unit_tests/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "FIXTURE (the empty-components fixture): a temp project whose config/paths.json is a byte copy of the real one, with tickets/T-1.md whose frontmatter lists components ['build-pipeline'], an EMPTY directory docs/architecture/components/ (no file of any kind), and one docs/overview.md so the docs surface (path docs/, which must exist because it contains the components folder) reads an item. No other declared surface's path exists. The map is built with the public build_knowledge_map(<fixture>, <fixture>/config/paths.json). Assert 'tickets' is in contributing_surfaces and 'components' is NOT; a node with id 'build-pipeline' and surface 'components' is still in the node list; and an edge of type component_membership from 'T-1' has target_id 'build-pipeline'"
+  - name: test_surface_set_check_names_components_as_existing_path_with_nothing_read
+    target_dir: unit_tests/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "On the empty-components fixture, the public surface-set check run over the built map reports failure, and the set of surfaces it names as 'declared, path exists, no item read from it' is exactly {'components'}: tickets and docs contributed, and every other declared surface's path is absent, so the parent's 'whose path exists' clause excludes them. The failure message contains 'components'. Today's check (contributing == declared) passes on this fixture because the hubs carry the label, so this test is RED until provenance is recorded"
+  - name: test_one_component_document_makes_components_contribute_and_check_pass
+    target_dir: unit_tests/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "The empty-components fixture plus one file docs/architecture/components/build-pipeline.md (the rebuild in the criteria). After rebuilding with build_knowledge_map, 'components' is in contributing_surfaces and the surface-set check passes with no failure"
+  - name: test_real_repository_contribution_is_proven_by_an_item_read_from_the_surface_path
+    target_dir: unit_tests/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    description: "One build of the real repository through build_knowledge_map(<repo root>, <repo root>/config/paths.json), about 5 s. The surface-set check passes. For EVERY surface in contributing_surfaces, derived from the map and never from a hard-coded list, at least one node carrying that label has a path that is the surface's declared path (a single-file surface) or a file inside it (a directory surface), resolved through load_surfaces_with_meta. So each contributing surface, components included, is backed by an item read from its own path and not by a hub. contributing_surfaces is a subset of declared_surfaces. A missing repo root or paths.json FAILS naming the path; it never calls pytest.skip"
+test_required: true
+test_rationale: >-
+  The defect is that a synthetic label can stand in for a real read, so the proof must build a map
+  in which the components surface's own path yields nothing while component hubs labelled
+  'components' still exist. That setup cannot be reached with today's real repository, which has
+  component documents, so a temp project built from a byte copy of the real config/paths.json is
+  used, run through the public build_knowledge_map. A hand-built KnowledgeMap would test the check
+  and not how the builder records provenance. The fixture makes every other existing-path surface
+  contribute (tickets; docs through one overview file), so the check's failure set can be pinned to
+  exactly {'components'} rather than 'contains components', and the positive rebuild shows that one
+  real read is enough. The hub node and its membership edge are asserted to survive, so the fix
+  cannot pass by deleting hubs. The real-repository arm proves provenance independently of the
+  implementation: every contributing surface has at least one node whose path lies inside that
+  surface's declared path. RED until provenance replaces the label test. File:
+  unit_tests/test_km_kgs_100c_1_i.py (under 400 content lines), reusing the shared temp-project
+  helper named in KM-KGS-100d-4's test_rationale. No git ref, no skip.
+delivers_to: null
+expects_from:
+  ac_id: KM-KGS-100c-1
+  contract: "declared_surfaces and contributing_surfaces on the built map, and the surface-set check that compares them against the declared set"
+origin_agent: business-analyst
+created: 2026-09-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary

@@ -1,0 +1,132 @@
+id: KM-KGS-100d-4-iii
+components:
+  - knowledge_management
+readiness: approved
+priority: high
+title: "A relationship value that is not a file in this project is reported, never silently lost"
+component: knowledge-management
+level: L3
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+parent: KM-KGS-100d-4
+created_by: "docs/acceptance-criteria/knowledge-management/KM-KGS-100-knowledge-graph-surfaces/KM-KGS-100d-4.yaml"
+criteria: |
+  Given criterion KM-EX-050 names four values in implemented_by: "ac564814",
+    "PR #53 feat(build): hook integrity check",
+    "/home/someone/projects/other/tickets/T-9.md" and "scripts/foo.py",
+  When the knowledge map is built,
+  Then KM-EX-050 has exactly one implemented_by edge, ending on "scripts/foo.py",
+  And no node is created for any of the other three values,
+  And for each of the three, the build's diagnostic stream names the surface, the
+    criterion's file, the field and the value, with a reason saying the value is
+    not a file path in this project,
+  And the number of values declined this way is stated beside the edge count, zero
+    included,
+  And the build completes and the other edges of KM-EX-050 are unaffected.
+depends_on:
+  - KM-KGS-100d-4
+doc_links:
+  - path: docs/acceptance-criteria/knowledge-management/KM-KGS-100-knowledge-graph-surfaces/KM-KGS-100d-3-i.yaml
+    relationship: context
+    status: exists
+    relevance: "Owns the reporting channel this record reuses: a stderr line naming surface, document, field and entry, a declined figure beside the edge count in both renderers, zero stated, exit code zero. This record adds a second decline REASON (not a file path in this project) to the same channel and figure. It does not add a second channel."
+  - path: docs/acceptance-criteria/knowledge-management/KM-KGS-100-knowledge-graph-surfaces/KM-KGS-100d-2-i.yaml
+    relationship: context
+    status: exists
+    relevance: "Settles that an unresolvable target drops only that edge and never fails the build. This record keeps that and adds that the drop is announced."
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "EVIDENCE (measured 2026-09-25): among implemented_by values, 23 are not path-shaped: commit SHAs (e.g. ac564814), free text (repeated 'PR #53 ... feat(build): hook integrity check ...'), and AC ids that are not on the map (e.g. ACD-300f-5). 10 are absolute paths from another machine (/home/henzeh/projects/leafcutter/leafcutter-ai/tickets/...). 1 covered_by value is not path-shaped."
+  - "PATH-SHAPED, decided after canonicalisation. A value is path-shaped if it names something that exists under the project root, OR it contains no whitespace AND (it contains '/' OR it ends in a file extension). The existence arm is what keeps root-level extensionless files such as .gitignore or Makefile resolvable. A hex-only string with no '/' and no extension (a commit SHA) is not path-shaped. An AC-id-shaped value keeps id resolution per KM-KGS-100d-4. It is declined here only if that id is not on the map."
+  - "FOREIGN ABSOLUTE PATHS: an absolute path outside the project root is declined with its own reason ('absolute path outside this project'). Do NOT recover it by suffix-matching against repo paths, e.g. by stripping everything up to 'leafcutter-ai/'. That is guessing, the same class of wrong join as stem matching, and it would silently land edges on files the author did not name."
+  - "ONE CHANNEL, ONE FIGURE: reuse the decline channel KM-KGS-100d-3-i specifies. If KM-KGS-100d-3-i has landed, add a reason to it. If this record lands first, build the channel to KM-KGS-100d-3-i's specification (stderr line naming surface, repo-relative document path, field and value; a machine-readable declined figure in render_json and in render_text's summary line; emitted unconditionally, zero included; carried out of the generator as data), so KM-KGS-100d-3-i adds its shape reason instead of building a second channel. The declined total must reconcile with the per-reason lines (ACS-1100, inherited)."
+  - "THE BUILD DOES NOT FAIL ON A DECLINE: exit code stays zero. The map builder is not a gate (KM-KGS-100d-3-i's disposition, inherited). A decline is a return value, not an exception (CLAUDE.md error-handling rules 1-4)."
+  - "Deterministic: the same inputs give the same declined set and figure on every run and in both renderers within one run."
+test_spec:
+  - name: test_only_the_repo_path_value_yields_an_implemented_by_edge
+    target_dir: unit_tests/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "FIXTURE (the decline fixture): a temp project whose config/paths.json is a byte copy of the real one, a real scripts/foo.py, and AC file KM-EX-050 with the four implemented_by values the Gherkin names plus depends_on [KM-EX-049] (also present) and components [build-pipeline]. Built with build_knowledge_map: KM-EX-050 has exactly one implemented_by edge, and its target_id is 'scripts/foo.py'"
+  - name: test_no_node_is_created_for_a_declined_value
+    target_dir: unit_tests/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "On the decline fixture, no node id equals 'ac564814', the free-text PR value, the foreign absolute path, or any repo-relative form of that path"
+  - name: test_each_declined_value_is_named_on_stderr_with_reason
+    target_dir: unit_tests/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    surface_invoked: "scripts/knowledge_query.py --format json"
+    description: "The shipped CLI run as a subprocess over the decline fixture exits 0 with parseable stdout, and stderr holds exactly three decline lines. Each names the surface 'acs', the repo-relative path of KM-EX-050's file, the field 'implemented_by', the value as read, and a reason that says the value is not a file path in this project; the foreign absolute path's line carries the distinct reason 'absolute path outside this project'"
+  - name: test_declined_figure_beside_edge_count_reconciles_in_both_renderers
+    target_dir: unit_tests/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    surface_invoked: "scripts/knowledge_query.py --format json and --format text"
+    description: "The decline fixture run twice with --format json and twice with the default text format: the JSON payload's declined figure is 3, the text summary line carries 3 beside the edge count, both equal the number of stderr decline lines, and the declined value set and figures are identical across the repeated runs"
+  - name: test_zero_declines_is_stated_explicitly
+    target_dir: unit_tests/
+    framework: pytest
+    type: integration
+    angle: boundary
+    description: "A fixture where KM-EX-050 names only 'scripts/foo.py' reports a declined figure of 0 in both renderers, present as an explicit 0 and never omitted, and prints no decline line"
+  - name: test_build_exits_zero_and_other_edges_of_the_criterion_survive
+    target_dir: unit_tests/
+    framework: pytest
+    type: integration
+    angle: failure
+    description: "On the decline fixture the CLI exit code is 0, and KM-EX-050 still has its depends_on edge to KM-EX-049 and its component_membership edge to the build-pipeline hub"
+  - name: test_path_shape_rule_keeps_real_files_and_on_map_ids_and_declines_the_rest
+    target_dir: unit_tests/
+    framework: pytest
+    type: integration
+    angle: boundary
+    description: "One fixture AC names in implemented_by: 'Makefile' and '.gitignore' (both created at the temp project root, extensionless or dot-files), 'deadbeef' (hex, no slash, no extension, no such file), 'KM-EX-051' (an AC present on the map) and 'ACD-300f-5' (an AC id not on the map). Makefile and .gitignore end on files-surface nodes with those ids; KM-EX-051 ends on the acs node KM-EX-051 by id; 'deadbeef' and 'ACD-300f-5' are declined, each with a stderr line, and the declined figure is 2"
+  - name: test_foreign_absolute_path_is_not_recovered_by_suffix
+    target_dir: unit_tests/
+    framework: pytest
+    type: integration
+    angle: boundary
+    description: "A fixture AC names '/home/someone/projects/leafcutter-ai/scripts/foo.py' (its tail is an existing repo path). It is declined with reason 'absolute path outside this project', and no edge from that AC ends on node 'scripts/foo.py'"
+  - name: test_real_repository_declines_reconcile_with_diagnostic_lines
+    target_dir: unit_tests/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    description: "Real repository via the shipped CLI (--format json --project-root <repo root>, module-scoped): exit code 0; the payload's declined figure equals the number of stderr decline lines; every declined value named on stderr is either an absolute path outside the repo root or fails the path-shape rule (no whitespace-free '/'-or-extension form and no file at that path), and no node id equals any declined value. The figure is reported in the failure message (about 34 expected from the 2026-09-25 evidence) but not pinned, because authors may clean these values up. A missing repo root FAILS; it is never skipped"
+test_required: true
+test_rationale: >-
+  The distinguishing clause is 'reported, never silently lost', so the contract proves three
+  things. The one real path still yields its edge. The three non-paths create no node. Each decline
+  is visible where the builder's operator and a later reader look: a stderr line naming surface,
+  file, field, value and reason, and a figure beside the edge count in both renderers. The figure
+  reconciles with the lines (ACS-1100) and is identical across repeated runs (determinism). Zero
+  is asserted as an explicit 0 in a separate fixture, the only way to catch a figure emitted only
+  when non-zero. The path-shape boundary exercises every arm of the rule: the existence arm
+  (Makefile, .gitignore), the hex arm, AC-id resolution kept, and an AC id declined. The
+  foreign-path test fails an implementation that recovers the path by suffix. The whole-store arm
+  reconciles the real run's figure with its lines and checks every declined value against the rule
+  independently, without pinning a count that authors may legitimately drive to zero. Stdout/stderr
+  arms use the subprocess CLI because the channel is the contract. RED until the epic is built,
+  and it shares the channel specification with KM-KGS-100d-3-i. File:
+  unit_tests/test_km_kgs_100d_4_iii.py (under 400 content lines). No git ref, no skip.
+delivers_to: null
+expects_from:
+  ac_id: KM-KGS-100d-4
+  contract: "Canonicalisation and the path-resolution step that yields either a node or a 'not a repo path' outcome"
+origin_agent: business-analyst
+created: 2026-09-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary

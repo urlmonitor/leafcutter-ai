@@ -1,0 +1,207 @@
+id: KM-KGS-100d-4
+components:
+  - knowledge_management
+readiness: approved
+priority: high
+title: "Every relationship that names the same file lands on one node keyed by that file's path"
+component: knowledge-management
+level: L2
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+parent: KM-KGS-100d
+created_by: "docs/acceptance-criteria/knowledge-management/KM-KGS-100-knowledge-graph-surfaces/KM-KGS-100d.yaml"
+criteria: |
+  Given a surfaces configuration in which the acceptance-criteria surface declares
+    implemented_by and covered_by as file-path fields, and the tickets surface
+    declares files_touched as a file-path field,
+  And criterion KM-EX-010 names "./scripts/foo.py#_check_limits" in implemented_by,
+  And criterion KM-EX-011 names "unit_tests/test_foo.py::test_limits" and its child
+    criterion KM-EX-011-i in covered_by,
+  And ticket T-1 names "scripts/foo.py" and "unit_tests\test_foo.py" in files_touched,
+  And criterion KM-EX-012 names ticket T-1's own file in implemented_by,
+  And neither scripts/foo.py nor unit_tests/test_foo.py is the file any item on the
+    map was read from,
+  When the knowledge map is built,
+  Then the map holds exactly one node with id "scripts/foo.py" and exactly one node
+    with id "unit_tests/test_foo.py", both on the files surface,
+  And the implemented_by edge from KM-EX-010 and the files_touched edge from T-1 both
+    end on node "scripts/foo.py", and the edge from KM-EX-010 records "_check_limits"
+    as its anchor,
+  And the covered_by edge from KM-EX-011 and the files_touched edge from T-1 both end
+    on node "unit_tests/test_foo.py", and the edge from KM-EX-011 records
+    "test_limits" as its anchor,
+  And the implemented_by edge from KM-EX-012 ends on ticket T-1's node, and no
+    files-surface node is created for T-1's file,
+  And the covered_by edge from KM-EX-011 to KM-EX-011-i still ends on that
+    criterion's node,
+  And collecting the edges that end on node "scripts/foo.py" returns criterion
+    KM-EX-010 and ticket T-1, so "which criteria and which tickets touched this file"
+    is answered by following edges, without reading any file.
+depends_on:
+  - KM-KGS-100d
+  - KM-KGS-100d-2
+  - KM-KGS-100a-3
+doc_links:
+  - path: scripts/knowledge_query.py
+    relationship: modifies
+    status: exists
+    relevance: "_collect_all() creates the synthetic component hub nodes before the membership filter runs. File nodes are created at the same point, the same way. The exemption set derived from file_path_fields (see KM-KGS-100d-2) is what this record makes unnecessary."
+  - path: config/paths.json
+    relationship: describes
+    status: exists
+    relevance: "file_path_fields is the per-surface declaration of which edge fields carry file paths. Today acs declares [implemented_by, covered_by]. KM-KGS-100c-4 adds files_touched on tickets. This record changes what that declaration means, from 'exempt from the filter' to 'resolve to a path-keyed node'. It does not add a second declaration."
+  - path: docs/how-to/declare-a-knowledge-surface.md
+    relationship: describes
+    status: exists
+    relevance: "Already documents file_path_fields as 'the map builder resolves these to graph nodes by path lookup'. That is the behaviour this record delivers, so the how-to becomes true rather than needing a rewrite."
+  - path: docs/architecture/components/knowledge-system.md
+    relationship: describes
+    status: exists
+    relevance: "The sequence table rows 6-9 say implemented_by and covered_by targets are 'exempt from the phantom-edge filter'. That stops being true when this lands, so the table must be updated in the same change."
+  - path: docs/known-issues/knowledge-management/open-high-ki-km-001.md
+    relationship: context
+    status: exists
+    relevance: "KI-KM-001 ('nothing can answer which ACs govern this file'). Once a file is a node, its incoming implemented_by and covered_by edges answer exactly that. This record is the graph-side precondition for closing the KI. It does not decide the KI's 'trusted' rating."
+  - path: docs/acceptance-criteria/knowledge-management/KM-ADM-100b.yaml
+    relationship: context
+    status: exists
+    relevance: "'A connection the project does not have shows up as a gap you can see'. KM-KGS-100d-4-ii applies it to files: a named file that does not exist stays on the map, marked missing."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "EVIDENCE (measured 2026-09-25 on branch feature/km-file-nodes-acs with `knowledge_query.py --format json --project-root .`): 10,625 nodes and 27,009 edges. 1,608 of 1,609 implemented_by edges and 678 of 4,713 covered_by edges end on an id that is no node. They survive only because file_path_fields exempts them from the membership filter. 635 implemented_by values are ticket paths, and 477 of those are the exact source path of an existing ticket node. 4,035 covered_by values already resolve by id to AC nodes. The AC surface alone references 650 distinct file paths that are not any node's source path, and 149 of them (22.9%) do not exist on disk. The independent review's total with tickets' files_touched included is about 1,295 file nodes (about +12%)."
+  - "DECLARATION-DRIVEN AND PER SURFACE: path resolution applies to exactly the fields each surface lists in its own file_path_fields in config/paths.json, and only for edges from that surface. Today's exemption set is global per edge_type, derived from all surfaces. Do not carry that over: a covered_by field on a surface that does not declare it as a file-path field is not path-resolved. No field name and no surface name may appear in a conditional (KM-KGS-100c-2's no-special-casing invariant)."
+  - "CANONICALISATION, in this order: (1) strip one trailing anchor, either '#<symbol>' or '::<test>', and keep it as an optional edge attribute (e.g. `anchor`) that the JSON export carries, so traceability output that shows #_check_limits keeps working; (2) convert backslashes to '/'; (3) drop any leading './'; (4) drop a trailing '/'; (5) an absolute path inside the project root becomes repo-relative. Any other absolute path is not a repo path; KM-KGS-100d-4-iii owns it. Do NOT case-fold: git paths are case-sensitive, and folding would join two distinct files on Linux."
+  - "INDEX-FIRST, KEYED BY PATH: build one index from each node's source file, made repo-relative and POSIX, to that node. Build it only over nodes read from a file. Synthetic nodes (component hubs, file nodes) are never indexed. Look up by canonical PATH only. Never by node id, never by filename stem, never by path suffix. A hit lands the edge on that node only when the hit is unambiguous; KM-KGS-100d-4-i defines ambiguous."
+  - "SYNTHETIC files NODE: when the canonical path is not in the index but is path-shaped (KM-KGS-100d-4-iii defines path-shaped), create exactly one node per distinct canonical path, with id = canonical path and surface = 'files'. Create it in the same post-processing step that creates component hub nodes, BEFORE the membership filter, so the edge survives because its target is a node and not because of an exemption. Only referenced files become nodes; never walk the repository to create a node per file."
+  - "ID SAFETY: on 2026-09-25 no existing node id contains '/'. Node ids are filename stems, so a file-node id with a '/' cannot merge with a surface node in id-keyed consumers. A root-level file (e.g. CLAUDE.md, Makefile) has no '/'. If a non-file node already carries exactly that id, report the collision on the diagnostic stream and do not create a second node with the same id. The edge is then declined through the KM-KGS-100d-4-iii channel."
+  - "covered_by KEEPS BOTH ROLES: a value that is not path-shaped keeps today's id resolution (child AC ids such as KM-EX-011-i land on AC nodes). Only path-shaped values go through path resolution. build_ac_mode_detection's L0/L1 leaf-vs-goal contract reads covered_by from the store, not from the map, and must not change. This record touches map construction only."
+  - "NO STEM MATCHING: the _PATH_FIELDS stem resolution stays as it is for depends_on and must never be applied to file_path_fields values. The independent review measured 239 of 950 implemented_by file edges that stem matching would join to the wrong node, e.g. .claude/commands/it-po.md onto the skill it-po."
+  - "SEQUENCING: (a) the exemption is retired in the SAME change (KM-KGS-100d-2, amended 2026-09-25). Retiring it earlier drops about 1,600 edges. Keeping it afterwards leaves a dead carve-out that hides regressions. (b) Land after KM-KGS-100c-4 (worktree paths-json-files-touched-edges). That record declares files_touched in the tickets surface's file_path_fields under raw-path semantics, and this record changes what that same declaration means. files_touched moves with implemented_by and covered_by, with no second declaration and no tickets-specific code. If this record is built first, it depends on that declaration and must not re-author it."
+  - "OUT OF SCOPE, NAMED SO IT IS NOT REDISCOVERED — CROSS-SURFACE NODE-ID COLLISIONS. Node ids are bare filename stems and are not namespaced by surface. Measured 2026-09-25: 4,380 ids are carried by more than one node (4,220 acs+docs, because the docs surface ingests the AC YAML files a second time; 55 tickets+tickets; 44 adrs+docs; 29 components+docs; 26 agents+docs; the rest are smaller). Example: ticket TICKET-20260601-FixHooksDeploymentPipeline and doc docs/retrospectives/TICKET-20260601-FixHooksDeploymentPipeline.md produce the same id. docs is traversed after tickets, so any id-to-node lookup silently resolves to the docs node, and the visualiser's surface-priority dedup collapses them. Re-keying node ids is a map-wide change that touches every surface, the persisted index parity ACs (KM-KGS-100b-5-i) and every id-keyed consumer, so it is NOT fixed here. This record's defence is KM-KGS-100d-4-i: never land on a node whose id another node also carries. Recommended follow-up: a PO-authored AC for surface-namespaced node ids."
+  - "DOCS IN THE SAME CHANGE: update the sequence table in docs/architecture/components/knowledge-system.md (rows 6-9 describe the exemption) and re-check docs/how-to/declare-a-knowledge-surface.md's file_path_fields row. The sequence diagram delivered under KM-KGS-100b-4 describes the exempt behaviour and goes stale when this lands."
+  - "REAL CONFIG, NOT A SYNTHETIC ONE: at least one proof must build the map through the real config/paths.json declarations (as KM-KGS-100c-4's tests do), so a config that fails to declare a file-path field cannot pass on a hand-built surface map."
+test_spec:
+  - name: test_one_files_node_per_distinct_canonical_path
+    target_dir: unit_tests/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "FIXTURE (shared by every test below that says 'the criteria fixture'): a temp project whose config/paths.json is a byte-for-byte copy of the real config/paths.json, holding AC files KM-EX-010, KM-EX-011, KM-EX-011-i and KM-EX-012 under docs/acceptance-criteria/ and ticket tickets/T-1.md (id T-1) exactly as the Gherkin writes them, including the './scripts/foo.py#_check_limits', 'unit_tests/test_foo.py::test_limits' and backslash-separated 'unit_tests' + backslash + 'test_foo.py' spellings, plus real files scripts/foo.py, unit_tests/test_foo.py and an unreferenced scripts/unreferenced.py. The map is built with the public build_knowledge_map. Assert exactly one node has id 'scripts/foo.py' and exactly one has id 'unit_tests/test_foo.py', both with surface 'files'; no node id contains a backslash, a leading './', '#' or '::'; and no node exists for scripts/unreferenced.py (only referenced files become nodes)"
+  - name: test_implemented_by_and_files_touched_end_on_same_file_node_with_anchor
+    target_dir: unit_tests/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "On the criteria fixture, the implemented_by edge from KM-EX-010 and the files_touched edge from T-1 both have target_id 'scripts/foo.py', and the KM-EX-010 edge carries anchor '_check_limits' (the edge attribute named 'anchor'); the T-1 edge carries no anchor"
+  - name: test_covered_by_and_backslash_files_touched_end_on_same_test_file_node
+    target_dir: unit_tests/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "On the criteria fixture, the covered_by edge from KM-EX-011 and the files_touched edge from T-1 (declared with a backslash separator) both have target_id 'unit_tests/test_foo.py', and the KM-EX-011 edge carries anchor 'test_limits'"
+  - name: test_implemented_by_naming_a_ticket_file_ends_on_the_ticket_node
+    target_dir: unit_tests/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "On the criteria fixture, KM-EX-012's implemented_by edge (value 'tickets/T-1.md') has target_id 'T-1', the target node's surface is 'tickets', and no files-surface node has id 'tickets/T-1.md'"
+  - name: test_covered_by_child_ac_id_still_ends_on_criterion_node
+    target_dir: unit_tests/
+    framework: pytest
+    type: integration
+    angle: boundary
+    description: "On the criteria fixture, KM-EX-011 has a covered_by edge with target_id 'KM-EX-011-i', a node with that id exists on the acs surface, and no files-surface node has id 'KM-EX-011-i' (values that are not path-shaped keep id resolution)"
+  - name: test_json_export_answers_which_criteria_and_tickets_touched_a_file
+    target_dir: unit_tests/
+    framework: pytest
+    type: integration
+    angle: reachability
+    description: "The shipped CLI run as a subprocess (knowledge_query.py --format json --project-root <criteria fixture>, UTF-8 env vars set) exits 0; in the parsed payload the edges whose target is 'scripts/foo.py' have sources exactly {'KM-EX-010', 'T-1'}, 'scripts/foo.py' is the id of a node with surface 'files' in payload['nodes'], and the KM-EX-010 edge object carries 'anchor': '_check_limits'. No file on disk is read by the assertion"
+  - name: test_absolute_path_inside_project_root_resolves_to_repo_relative_node
+    target_dir: unit_tests/
+    framework: pytest
+    type: integration
+    angle: boundary
+    description: "A fixture AC names the absolute path of <temp project>/scripts/foo.py (written with the platform's separator) in implemented_by; its edge ends on node 'scripts/foo.py' and no node id is an absolute path"
+  - name: test_paths_differing_only_in_case_stay_distinct_nodes
+    target_dir: unit_tests/
+    framework: pytest
+    type: integration
+    angle: boundary
+    description: "One fixture AC names 'scripts/foo.py' and another names 'Scripts/Foo.py' in implemented_by; the map holds two distinct files-surface nodes with exactly those ids (no case-folding)"
+  - name: test_file_path_resolution_follows_each_surfaces_own_declaration
+    target_dir: unit_tests/
+    framework: pytest
+    type: integration
+    angle: boundary
+    description: "Two configs derived programmatically from the real config/paths.json: (a) a new surface 'widgets' (a name no production code can know) whose edge_fields and file_path_fields both list 'touches' has an item naming 'scripts/foo.py' in touches, and that edge ends on files-surface node 'scripts/foo.py'; (b) a surface 'gadgets' that lists 'covered_by' in edge_fields but NOT in file_path_fields names 'unit_tests/only_here.py' in covered_by, and no node 'unit_tests/only_here.py' is created and no edge from that item survives. Proves resolution is per surface and declaration-driven, with no field or surface name in a conditional"
+  - name: test_real_config_declares_every_file_path_field
+    target_dir: unit_tests/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: "The real config/paths.json declares implemented_by and covered_by in the acs surface's file_path_fields and files_touched in the tickets surface's file_path_fields. The failure names KM-KGS-100c-4 when files_touched is absent, because this record depends on that declaration and must not re-author it"
+  - name: test_real_repository_every_edge_target_is_a_node_without_losing_file_edges
+    target_dir: unit_tests/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    description: "SEPARATE FILE (unit_tests/test_km_kgs_100d_4_real.py), one module-scoped build of the real repository through build_knowledge_map(<repo root>, <repo root>/config/paths.json), about 5 s. Every edge's target_id is the id of a node in the map (zero dangling edges). The implemented_by, covered_by and files_touched edge counts are at or above pinned floors named as module constants with their measurement date (implemented_by >= 1500 and covered_by >= 4500 against 1609 and 4713 measured 2026-09-25; files_touched > 0), so the zero-dangling result cannot come from dropping edges. A missing repo root or paths.json FAILS naming the path; it never calls pytest.skip"
+  - name: test_real_repository_files_nodes_are_canonical_unique_and_counted
+    target_dir: unit_tests/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    description: "Same real build: the files-surface node count is greater than 0 and is included in the failure message; every files-surface id is unique, repo-relative (not absolute), uses '/' only, has no leading './', no trailing '/', no '#<symbol>' or '::<test>' suffix; at least one implemented_by edge ends on a tickets-surface node (477 values named an existing ticket's own path on 2026-09-25); and at least one real implemented_by value containing '#' (e.g. scripts/commit_guardian/check_ac_limits.py#_check_limits) produces an edge whose anchor is the text after '#'"
+test_required: true
+test_rationale: >-
+  This L2 fixes the mechanism, so every behavioural test goes through the real config/paths.json
+  (a byte copy in a temp project, or the repository itself) and the public build_knowledge_map or
+  the shipped CLI's JSON export. A hand-built surface map or edge dict would pass on a config that
+  never declares a file-path field. The criteria fixture is written exactly as the Gherkin states it,
+  with the three spellings (./ plus #anchor, ::test, backslash) that must converge on one node, a
+  ticket-own-path value that must land on the ticket node, and a child-AC id that must keep id
+  resolution. Boundaries pin the canonicalisation rules most easily broken: absolute-inside-root,
+  no case-folding, and per-surface declaration. A fictional 'widgets' surface proves no field or
+  surface name is special-cased without inspecting source text. The whole-store arm is where the
+  real-artifact proof earns its place: every edge target in the real graph is a node, with pinned
+  floors on file-path edge counts so zero-dangling cannot be reached by dropping edges, and the
+  files-node count is stated. Ambiguity (-i), missing files (-ii) and declines (-iii) are proven in
+  their own records and not repeated here. Everything is RED until the epic is built; the
+  real-config test is also RED until KM-KGS-100c-4 merges. Files: unit_tests/test_km_kgs_100d_4.py
+  for the fixture tests and unit_tests/test_km_kgs_100d_4_real.py for the real-repository tests,
+  each under the 400 content-line limit (count_content_lines). The temp-project builder and the CLI
+  runner should live in one shared helper module in unit_tests/ reused by -i/-ii/-iii and
+  KM-KGS-100b-2-i/-ii, so the duplicate-code check does not fire. No test reads a git ref.
+delivers_to:
+  - agent: python-coder
+    contract: "A files surface of path-keyed nodes (id = canonical repo-relative path), plus an index-first resolver over declared file_path_fields. KM-KGS-100d-4-i, -ii and -iii add ambiguity, missing-file and decline handling to this resolver. KM-KGS-100b-2-ii draws its nodes."
+expects_from:
+  - ac_id: KM-KGS-100a-3
+    contract: "implemented_by and covered_by values read from AC files as plain strings: quotes removed, column-zero block lists read, #symbol and ::test suffixes intact (KM-KGS-100a-3-i..-xi)"
+  - ac_id: KM-KGS-100c-4
+    contract: "The tickets surface declares files_touched in file_path_fields in config/paths.json (built in a separate worktree; not yet in this store at authoring time)"
+origin_agent: business-analyst
+created: 2026-09-25
+notes: |
+  2026-09-25, user-approved decision: a file-path value in implemented_by,
+  covered_by or files_touched ends on a real graph node whose id is the canonical
+  repo-relative path. It no longer ends on a raw-string leaf that the phantom
+  filter lets through. Parented under KM-KGS-100d ("every connection points
+  somewhere real") and not under KM-KGS-100a: the mechanism is cross-surface (tickets'
+  files_touched as well as AC fields) and its success condition is that every edge
+  target is a node. That is 100d's promise. 100a is about ACs joining the map and
+  is already met by KM-KGS-100a-3.
+amended_by: []
+superseded_by: null
+covered_by:
+  - KM-KGS-100d-4-i
+  - KM-KGS-100d-4-ii
+  - KM-KGS-100d-4-iii
+  - KM-KGS-100d-4-iv
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary

@@ -4,7 +4,7 @@ description: "Human-curated, one-line-per-page orientation to every file in docs
 type: reference
 status: active
 created: 2026-09-14
-last_updated: 2026-09-22
+last_updated: 2026-09-25
 components:
   - documentation_system
 related_docs:
@@ -99,6 +99,7 @@ below by hand.
 | Doc | What it's for |
 |---|---|
 | [product-truth-size-bounds.md](product-truth-size-bounds.md) | Every declared size bound on product-truth records (journey length, step count, dataset size, screen description length), its `shape_version`, and what a bound violation means. |
+| [example-content-separation.md](example-content-separation.md) | The product-root ownership rule that separates the fern-and-fig example product from the project's own record, every surface that honours it (the record, the store of work, the reading surfaces) and what each returns for example content, why it must keep existing, and how to add a new example artifact or product. |
 
 ## Known Limitations
 

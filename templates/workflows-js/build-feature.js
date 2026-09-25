@@ -1409,7 +1409,7 @@ const worktreeTarget = target_type === "epic" ? (epic_path || target) : (ticket_
 async function repoFactsCall(command, label) {
   const r = await agent(`Run the following command and return ONLY its raw stdout:\n${command}\nReturn JSON: { "output": "<raw stdout>", "exit_code": <number> }`, { agentType: "status-checker", schema: REPO_FACTS_ENVELOPE_SCHEMA, label, phase: "Resolve Target" });
   if (!r || typeof r.output !== "string" || Number(r.exit_code) !== 0) return null;
-  try { return JSON.parse(r.output); } catch (_e) { return null; }
+  try { const p = JSON.parse(r.output); if (p && typeof p.output === "string" && p.exit_code !== undefined) { try { return JSON.parse(p.output); } catch (_e2) { return null; } } return p; } catch (_e) { return null; }
 }
 /** A worktree-undetermined abort payload (BO-4000's abort shape), extended per refusal kind. */
 function undetermined(extra) { return Object.assign({ status: "error", worktree_undetermined: true, resolved_target: resolvedTarget, action_required: "establish_worktree" }, extra); }

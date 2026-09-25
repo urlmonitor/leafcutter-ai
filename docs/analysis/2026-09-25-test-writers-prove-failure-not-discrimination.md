@@ -49,7 +49,7 @@ history. The mechanism column is what those write-ups record.
 | 4 | EPIC-UnblockResurrection/03 | The coverage test for the starvation fix used a pool that emptied under any ordering, so the fixed and reverted code both passed. | Caught only because `pr-reviewer` re-derived the guarantee by hand. | No. |
 | 5 | EPIC-SqlFunctionsSuiteGreen (PR #448) | An integration test of a live procedure was `@unittest.skip`-ped as "retired". | Production coverage silently deleted. | Partly. `done_proof.py` treats `SKIPPED` as non-passing, but only for tests being proven for an AC now, not for skips added to old tests later. |
 | 6 | SQL suite rot (~395–468 stale failures) | Column drops and procedure deletions never reconciled with tests. | Suite untrustworthy until a nightly CI gate was added. | Out of scope: a process failure (see test-angles.md "What this taxonomy does NOT fix"). |
-| 7 | DB tests hardcoded to `localhost:5403` | Passed against the developer's local DB, failed only in CI. | Hard-to-trace CI-only failures. | No. The package template **propagates** this (see below). |
+| 7 | DB tests hardcoded to a developer's `localhost:<port>` | Passed against the developer's local DB, failed only in CI. | Hard-to-trace CI-only failures. | No. The package template **propagates** this (see below). |
 | 8 | Context parity check at "live = 100%" | Measured that values were present, not that they were correct. | False confidence in prod data. | No. |
 
 bybit-trader's `CLAUDE.md` names the family "green-by-vacuity" and records the
@@ -76,7 +76,7 @@ produce a discriminating test:
 | **Sibling and consumer tests** | Rule 2 enumerates consumers, but only when a contract changes shape (`:447-455`). | The constraint "Do NOT modify existing test files unless the ticket explicitly requires it" (`:949`) forbids the consumer-test sweep whose absence caused three of the six incident-2 occurrences. |
 | **Discrimination evidence** | Red baseline (`:858-884`). | Discussed below. |
 | **Where the lessons live** | Step 1.3 reads the adopter's test README "for naming conventions, directory layout, and performance rules" (`:575-576`). | In bybit-trader the green-by-vacuity lessons are in that README (lines 399–530 of 653), but the prompt frames the file as conventions. |
-| **How the test is executed** | `_MANUAL` suffix and time budget (`:664-670`). | The DB template hardcodes `postgresql://trader:trader@localhost:5403/LIVE` (`:631-633`): an adopter's local connection string inside a portable template, and the direct cause of incident 7's shape. |
+| **How the test is executed** | `_MANUAL` suffix and time budget (`:664-670`). | The DB template hardcodes `postgresql://<user>:<password>@localhost:<port>/<db>` (`:631-633`) — an adopter's real local connection string, with username, password and a database named for production, inside a portable template, and the direct cause of incident 7's shape. |
 
 ### Why the red baseline is not enough
 

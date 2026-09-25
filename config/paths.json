@@ -12,7 +12,8 @@
     },
     "tickets": {
       "path": "tickets/",
-      "edge_fields": ["depends_on", "files_touched", "components"]
+      "edge_fields": ["depends_on", "files_touched", "components"],
+      "file_path_fields": ["files_touched"]
     },
     "docs": {
       "path": "docs/",

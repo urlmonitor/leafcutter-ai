@@ -38,21 +38,21 @@ estimated_complexity: M
 it_requirements:
   - "extract_edges currently reads a hard-coded _SURFACE_EDGE_FIELDS dict that does NOT include the acs surface or the implemented_by/covered_by fields; the per-surface edge_fields must instead be sourced from the surface's declared edge_fields in paths.json so the acs surface's four fields produce edges with no surface-specific code branch (this is the declaration-driven invariant the KM-KGS-100c ACs depend on)"
   - "The components field must continue to emit the component_membership edge type (existing _COMPONENT_FIELDS behavior), while implemented_by, covered_by, and depends_on emit edges whose type equals the field name"
-  - "Target-id resolution for file-path edge fields (implemented_by source files, covered_by test files) must reduce a path value to the same node-id form used for those target nodes, consistent with the existing depends_on path-stem resolution, so the edge lands on the real target node rather than a phantom id"
-  - "implemented_by values may carry an optional #symbol anchor per the AC schema; the anchor must not corrupt the resolved target node id (resolve to the file/path node, ignoring or stripping the anchor for edge-target purposes)"
+  - "AMENDED 2026-09-25 (user-approved decision, business-analyst): target resolution for file-path edge fields (implemented_by source files, covered_by test files) is PATH-KEYED, as specified in KM-KGS-100d-4. The value is canonicalised to its repo-relative POSIX path and looked up in an index of each node's source path. If found unambiguously, the edge lands on that node. Otherwise it lands on a files-surface node whose id is the canonical path. It must NOT use the depends_on path-stem resolution (_PATH_FIELDS). Stem matching joins about 239 of 950 implemented_by file edges to the wrong node, e.g. .claude/commands/it-po.md onto the skill it-po. The criteria's 'the node for scripts/foo.py' is the files-surface node with id scripts/foo.py. Superseded wording: 'reduce a path value to the same node-id form ... consistent with the existing depends_on path-stem resolution'."
+  - "AMENDED 2026-09-25: a trailing #symbol anchor on implemented_by (and a ::test suffix on covered_by) is stripped before resolution and kept as an optional edge attribute, so the edge lands on the file node and traceability output can still show the symbol. covered_by values that are child-AC ids keep today's id resolution. Only path-shaped values are path-resolved (KM-KGS-100d-4)."
 test_spec:
   - name: test_acs_file_implemented_by_yields_implemented_by_edges
     target_dir: unit_tests/
     framework: pytest
     type: integration
     angle: seam
-    description: "For KM-EX-010 written as a real file in a temporary acs store, the candidate edges extracted for that node before edge-target validation include one edge of type implemented_by per implemented_by value read from the file, each with source KM-EX-010 and a non-empty, quote-free target string; target form and node existence are not asserted"
+    description: "A temp project whose config/paths.json is a byte copy of the real one holds KM-EX-010 written as a real file exactly as the criteria state it, plus a sibling AC KM-EX-013 whose implemented_by is ['./scripts/foo.py#_check_limits']. The map is built with the public build_knowledge_map. KM-EX-010 has exactly one implemented_by edge, and its target_id equals the canonical path 'scripts/foo.py'. That id is a node in the built node set with surface 'files'. The edge is in validate_edges_integrity(...).validated_edges and not in dropped_edges, with exempt_edge_types empty, so it survives because its target is a node. KM-EX-013's implemented_by edge ends on the same node 'scripts/foo.py' and carries anchor '_check_limits' (the edge attribute 'anchor', also present on the edge object in the CLI's --format json export); KM-EX-010's edge carries no anchor"
   - name: test_acs_file_covered_by_yields_covered_by_edges
     target_dir: unit_tests/
     framework: pytest
     type: integration
     angle: seam
-    description: "Same file: one candidate edge of type covered_by per covered_by value read, each with source KM-EX-010 and a non-empty, quote-free target string; target form and node existence are not asserted"
+    description: "Same temp project, with KM-EX-013's covered_by set to ['unit_tests/test_foo.py::test_limits']. KM-EX-010 has exactly one covered_by edge, and its target_id equals the canonical path 'unit_tests/test_foo.py' (quote-free even though the file quotes it). That id is a files-surface node in the built node set. The edge is in validate_edges_integrity(...).validated_edges and not in dropped_edges, with exempt_edge_types empty. KM-EX-013's covered_by edge ends on the same node and carries anchor 'test_limits' in the built map and in the JSON export"
   - name: test_acs_file_depends_on_yields_depends_on_edge_to_criterion
     target_dir: unit_tests/
     framework: pytest
@@ -73,14 +73,20 @@ test_spec:
     description: "The edge types produced for an acs node are exactly those derived from the acs surface's edge_fields declared in paths.json (components mapped to component_membership), so changing the declaration changes the produced types with no acs-specific code branch"
 test_required: true
 test_rationale: >-
-  This is the L2 composite over KM-KGS-100a-3-i..-viii, so its tests stay at edge-production
-  level: one per relationship field, read from a real store file rather than a pre-built dict,
-  plus the declaration-driven invariant. For implemented_by and covered_by the tests assert edge
-  type, source and a one-to-one count with the values as read, on candidate edges before
-  target validation. They deliberately do not compare the target to the raw path literal or to
-  a resolved node id, and do not check node existence, because that is the deferred decision.
-  The criteria wording 'the node for scripts/foo.py' and the shipped raw-path assertion in
-  unit_tests/test_ac_edge_relationships.py disagree on it.
+  This is the L2 composite over KM-KGS-100a-3-i..-viii: one test per relationship field, read from
+  a real store file rather than a pre-built dict, plus the declaration-driven invariant. The
+  target-form question is now decided (user-approved 2026-09-25, KM-KGS-100d-4): 'the node for
+  scripts/foo.py' is the files-surface node whose id is the canonical repo-relative path. So the
+  implemented_by and covered_by tests go through the real config/paths.json and the public
+  build_knowledge_map, not candidate edges from extract_edges. They assert four things: the target
+  equals the canonical path, that id is a files node in the node set, the edge survives
+  validation with no exempt edge type, and an #symbol or ::test anchor is kept on the edge (built
+  map and JSON export). A sibling AC carries the anchored spellings so KM-EX-010 stays exactly as
+  the criteria write it. These two tests describe the target state and are RED until the
+  KM-KGS-100d-4 epic is built. The tests in unit_tests/test_ac_edge_relationships.py that say these
+  edges survive 'because they are exempt from the phantom filter' become stale in that change and
+  should be restated in terms of file nodes. They call _collect_all with surface_filter='acs', so
+  they also depend on files-surface nodes being created under a surface restriction.
 delivers_to: null
 expects_from:
   ac_id: KM-KGS-100a-2
@@ -97,7 +103,8 @@ notes: |
   covered_by). The existing checks did not catch either, because they exercise a single
   indented-and-unquoted fixture and largely bypass the reader with a pre-built field
   dictionary. Reset done -> in_progress pending KM-KGS-100a-3-i..-viii.
-amended_by: []
+amended_by:
+  - reason: "it_requirements amended in place, criteria unchanged: file-path edge targets resolve to path-keyed file nodes (KM-KGS-100d-4), replacing the depends_on path-stem resolution wording; anchor stripped and kept as an edge attribute. User-approved decision; test_spec tightening left to IT-PO, business-analyst, 2026-09-25"
 superseded_by: null
 covered_by:
   - KM-KGS-100a-3-i
