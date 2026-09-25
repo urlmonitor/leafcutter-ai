@@ -1,0 +1,45 @@
+id: ACD-2400d
+components:
+  - ac_driven_dev
+  - agent_registry
+readiness: draft
+priority: medium
+title: "Decisions about which files work touches are made by looking at the files"
+component: ac-driven-dev
+level: L1
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  File-dependent calls are made by a step that can see the repository.
+
+  Judging whether a requirement's intent matches the files it will change, and naming
+  the reference file a piece of work should follow, are done by a step that can
+  actually open those files instead of guessing from the requirement text.
+depends_on:
+  - ACD-2400
+doc_links:
+  - path: docs/acceptance-criteria/ac-driven-dev/ACD-1700-role-scoped-context/ACD-1700b.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      ACD-1700b flags a specialist that does not match the deliverable's surface. The
+      mechanical half of that match (file type to specialist) belongs to ACD-2400a;
+      the judgment half (does the intent actually live in those files) belongs here.
+assigned_agent: null
+delivers_to: null
+expects_from: null
+origin_agent: product-owner
+created: 2026-09-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: prompt
+risk_surface: internal
+documentation_triggers:
+  - sequence-diagram
+notes: |
+  Covers the planner's intent-versus-surface check and the reference-file choice
+  introduced by BO-2000d. The code-aware step from ACD-2400c is a natural host; the
+  BA may merge the two if one step can own both without widening its brief.

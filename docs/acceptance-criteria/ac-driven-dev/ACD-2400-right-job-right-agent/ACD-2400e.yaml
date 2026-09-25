@@ -1,0 +1,46 @@
+id: ACD-2400e
+components:
+  - ac_driven_dev
+  - agent_registry
+  - llm_authoring
+readiness: draft
+priority: medium
+title: "The technical planner does only its own job, and describes itself truthfully"
+component: ac-driven-dev
+level: L1
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  A focused technical planner whose declared role matches what it really does.
+
+  The planner keeps routing and splitting work, technical requirements, and
+  contracts between pieces of work, with the relocated duties removed from its
+  instructions, and its published profile correctly states that it changes and
+  produces requirement records.
+depends_on:
+  - ACD-2400
+  - ACD-2400a
+  - ACD-2400b
+  - ACD-2400d
+doc_links: []
+assigned_agent: null
+delivers_to: null
+expects_from: null
+origin_agent: product-owner
+created: 2026-09-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - prompt
+  - config
+risk_surface: internal
+documentation_triggers:
+  - reference-doc
+notes: |
+  The profile correction (today it claims to change nothing and to produce only
+  analysis) is tactical on its own and can ship first. The remainder is the closing
+  step of this goal: once duties have moved, the planner's instructions shrink to
+  what stays. The brief does not relocate the knowledge loop; assumed to stay here.
