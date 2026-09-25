@@ -4,7 +4,7 @@ description: "Step-by-step guide for authoring product-truth artifacts by hand, 
 type: how-to
 status: active
 created: 2026-07-14
-last_updated: 2026-09-17
+last_updated: 2026-09-25
 components:
   - ux_prototyping
 related_docs:
@@ -13,6 +13,7 @@ related_docs:
   - docs/architecture/components/ux-prototyping.md
   - docs/how-to/product-truth-schema-reference.md
   - docs/product-truth/README.md
+  - docs/reference/example-content-separation.md
 ---
 
 # How to author a Flow, Mockup, or Mock Data artifact by hand
