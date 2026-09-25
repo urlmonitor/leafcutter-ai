@@ -51,8 +51,8 @@
         },
         "angle": {
           "type": "string",
-          "enum": ["criterion", "reachability", "seam", "real_artifact", "deployed", "boundary", "failure"],
-          "description": "BO-2900g-3 RECONCILED KIND ENUM: which proof-of-done question this test answers, from the test-angle taxonomy in docs/testing/test-angles.md. The single vocabulary shared with 'type' below and with config/ac_store_schema.json's test_spec[].type/.angle enums (docs/reference/required-proof-vocabulary.md). The retired ticket-facing kind 'live_dispatch' is gone with no synonym; its meaning is now 'reachability'."
+          "enum": ["criterion", "reachability", "seam", "real_artifact", "deployed", "boundary", "failure", "discrimination"],
+          "description": "BO-2900g-3 RECONCILED KIND ENUM: which proof-of-done question this test answers, from the test-angle taxonomy in docs/testing/test-angles.md. The single vocabulary shared with 'type' below and with config/ac_store_schema.json's test_spec[].type/.angle enums (docs/reference/required-proof-vocabulary.md). The retired ticket-facing kind 'live_dispatch' is gone with no synonym; its meaning is now 'reachability'. 'discrimination' (TQ-500f-1) is the eighth kind: the test goes red under at least one named plausible wrong version of the code, not only when the code is absent."
         },
         "type": {
           "type": "string",
@@ -86,6 +86,15 @@
           "type": "string",
           "minLength": 1,
           "description": "Alternate name for the reachability entry-point fact carried in 'asserts' (kept for authoring surfaces that name the field this way; see config/ac_store_schema.json's test_spec[].surface_invoked)."
+        },
+        "must_catch": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "pattern": "\\S"
+          },
+          "description": "TQ-500f-2: an ordered list of wrong versions this entry's test must go red under, copied verbatim (same strings, same order, no trimming/case-change/dedupe) from config/ac_store_schema.json's test_spec[].must_catch by generate_ticket_from_ac.py. MUST be kept identical in shape to that property: both schemas reject unknown keys, so a one-sided change produces tickets that violate their own schema. Optional; when present, must be non-empty and every item must contain at least one non-whitespace character. Absent on any entry whose AC-side test_spec item named no must_catch — the criteria-derived fallback route never emits this key."
         }
       },
       "if": {

@@ -57,14 +57,29 @@ import re
 import subprocess
 import sys
 import tempfile
-import textwrap
 import unittest
 from pathlib import Path
 
 import yaml
 
+# unit_tests/prompt_assembly has an __init__.py, so plain `pythonpath = .`
+# does not put this directory itself on sys.path for a bare sibling import
+# (see test_tq_500f_1_i_three_way_lockstep.py's identical note); inserted
+# explicitly so this works whether pytest collects this file as
+# unit_tests.prompt_assembly.test_bp_1100g_1 or a sibling bare-imports it.
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from _bp_1100g_1_angle_lockstep import (  # noqa: E402
+    _G_LABEL,
+    _R_LABEL,
+    _T_LABEL,
+    _COMPARE_SCRIPT,
+    _compare_three_way_angle_sets,
+    _load_generated_angles,
+)
+
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 _AC_SCHEMA_PATH = _REPO_ROOT / "config" / "ac_store_schema.json"
+_TEST_REQ_SCHEMA_PATH = _REPO_ROOT / "config" / "test_requirements.schema.json"
 _TEMPLATE_PATH = _REPO_ROOT / "templates" / "agents" / "test-writer.md"
 _BUILD_SCRIPT = _REPO_ROOT / "scripts" / "build.py"
 
@@ -119,81 +134,6 @@ def _load_taught_angles(template_path: Path) -> dict:
     return parsed if isinstance(parsed, dict) else {}
 
 
-def _compare_angle_sets(emittable: set, taught: dict) -> list[str]:
-    """Cross-source set-equality with per-name, per-side mismatch reporting.
-
-    Every returned string names the specific angle AND the side that lacks
-    it — "the sets differ" is explicitly disallowed by the AC.
-    """
-    mismatches: list[str] = []
-    taught_names = set(taught.keys())
-    for name in sorted(emittable - taught_names):
-        mismatches.append(
-            f"angle '{name}': emittable by the planning side (config/ac_store_schema.json "
-            f"test_spec[].angle) but undefined for the test-writing side "
-            f"(templates/agents/test-writer.md taught set)"
-        )
-    for name in sorted(taught_names - emittable):
-        mismatches.append(
-            f"angle '{name}': taught to the test-writing side "
-            f"(templates/agents/test-writer.md) but the planning side "
-            f"(config/ac_store_schema.json test_spec[].angle) can never emit it"
-        )
-    return mismatches
-
-
-# ---------------------------------------------------------------------------
-# Standalone comparator script, run as a genuinely fresh subprocess for the
-# real_artifact angle (Test 2). Inlined rather than imported so the process
-# boundary is real — a fresh `python -c` invocation, not importlib.reload().
-# Fails loudly (non-zero exit + MISSING_SOURCE marker) when either source
-# path is missing, rather than silently falling back to a literal.
-# ---------------------------------------------------------------------------
-_COMPARE_SCRIPT = textwrap.dedent(
-    r"""
-    import json, re, sys
-    from pathlib import Path
-    import yaml
-
-    schema_path = Path(sys.argv[1])
-    template_path = Path(sys.argv[2])
-
-    if not schema_path.is_file():
-        print(f"MISSING_SOURCE: {schema_path}", file=sys.stderr)
-        sys.exit(2)
-    if not template_path.is_file():
-        print(f"MISSING_SOURCE: {template_path}", file=sys.stderr)
-        sys.exit(2)
-
-    schema = json.loads(schema_path.read_text(encoding="utf-8"))
-    test_spec = schema["properties"]["test_spec"]
-    array_branches = [b for b in test_spec["oneOf"] if b.get("type") == "array"]
-    item_schema = array_branches[0]["items"]
-    emittable = set(item_schema.get("properties", {}).get("angle", {}).get("enum") or [])
-
-    text = template_path.read_text(encoding="utf-8")
-    start, end = "<!-- TAUGHT-TEST-ANGLES:START -->", "<!-- TAUGHT-TEST-ANGLES:END -->"
-    taught = {}
-    if start in text and end in text:
-        block = text.split(start, 1)[1].split(end, 1)[0]
-        m = re.search(r"```ya?ml\s*\n(.*?)```", block, re.DOTALL)
-        if m:
-            parsed = yaml.safe_load(m.group(1))
-            taught = parsed if isinstance(parsed, dict) else {}
-
-    missing_from_taught = sorted(emittable - taught.keys())
-    unemittable_taught = sorted(set(taught.keys()) - emittable)
-    print(json.dumps({
-        "emittable": sorted(emittable),
-        "taught": sorted(taught.keys()),
-        "missing_from_taught": missing_from_taught,
-        "unemittable_taught": unemittable_taught,
-    }))
-    sys.exit(0 if not missing_from_taught and not unemittable_taught else 1)
-    """
-)
-
-
 class TestTaughtSetEqualsEmittableSet(unittest.TestCase):
     """angle: criterion — the AC-literal happy path."""
 
@@ -209,6 +149,10 @@ class TestTaughtSetEqualsEmittableSet(unittest.TestCase):
             f"emittable-side source missing: {_AC_SCHEMA_PATH}",
         )
         self.assertTrue(
+            _TEST_REQ_SCHEMA_PATH.is_file(),
+            f"generated-work-side source missing: {_TEST_REQ_SCHEMA_PATH}",
+        )
+        self.assertTrue(
             _TEMPLATE_PATH.is_file(),
             f"taught-side source missing: {_TEMPLATE_PATH}",
         )
@@ -220,6 +164,13 @@ class TestTaughtSetEqualsEmittableSet(unittest.TestCase):
             "the emittable set has no well-defined left-hand side",
         )
 
+        generated = _load_generated_angles(_TEST_REQ_SCHEMA_PATH)
+        self.assertTrue(
+            generated,
+            "config/test_requirements.schema.json tests[].angle enum resolved "
+            "empty — the generated-work-side set has no well-defined member",
+        )
+
         taught = _load_taught_angles(_TEMPLATE_PATH)
         self.assertTrue(
             taught,
@@ -228,11 +179,14 @@ class TestTaughtSetEqualsEmittableSet(unittest.TestCase):
             "is the same as no taught set",
         )
 
-        mismatches = _compare_angle_sets(emittable, taught)
+        # TQ-500f-1-i: widened from R-vs-T to full three-way R/G/T set equality
+        # — replaces the original two-way comparison in place (see the
+        # _compare_three_way_angle_sets docstring above).
+        mismatches = _compare_three_way_angle_sets(emittable, generated, taught)
         self.assertEqual(
             mismatches,
             [],
-            "taught set and emittable set disagree:\n" + "\n".join(mismatches),
+            "R, G and T disagree:\n" + "\n".join(mismatches),
         )
 
         for name, rule in taught.items():
@@ -251,11 +205,18 @@ class TestBothSetsAreReadFromTheirRealSources(unittest.TestCase):
 
     def test_bp_1100g_1_both_sets_are_read_from_their_real_sources(self) -> None:
         # covers: BP-1100g-1
-        """Run the comparator in a genuinely fresh subprocess against the two
-        real on-disk files (no fixture copy of either side) and assert it
+        """Run the comparator in a genuinely fresh subprocess against the three
+        real on-disk sources (no fixture copy of any side) and assert it
         reports agreement."""
         result = subprocess.run(
-            [sys.executable, "-c", _COMPARE_SCRIPT, str(_AC_SCHEMA_PATH), str(_TEMPLATE_PATH)],
+            [
+                sys.executable,
+                "-c",
+                _COMPARE_SCRIPT,
+                str(_AC_SCHEMA_PATH),
+                str(_TEST_REQ_SCHEMA_PATH),
+                str(_TEMPLATE_PATH),
+            ],
             capture_output=True,
             text=True,
             check=False,
@@ -264,18 +225,17 @@ class TestBothSetsAreReadFromTheirRealSources(unittest.TestCase):
         self.assertEqual(
             result.returncode,
             0,
-            "fresh-subprocess comparison of the two real on-disk sources must "
+            "fresh-subprocess comparison of the three real on-disk sources must "
             f"agree.\nstdout:\n{result.stdout}\nstderr:\n{result.stderr}",
         )
         payload = json.loads(result.stdout)
-        self.assertEqual(payload["missing_from_taught"], [])
-        self.assertEqual(payload["unemittable_taught"], [])
+        self.assertEqual(payload["mismatches"], [])
 
     def test_bp_1100g_1_missing_source_path_fails_loudly_not_a_literal_fallback(
         self,
     ) -> None:
         # covers: BP-1100g-1
-        """If either real source path is missing, the comparator must fail
+        """If any real source path is missing, the comparator must fail
         (non-zero exit, MISSING_SOURCE marker) rather than silently falling
         back to a hand-typed literal set."""
         with tempfile.TemporaryDirectory() as tmp:
@@ -287,6 +247,7 @@ class TestBothSetsAreReadFromTheirRealSources(unittest.TestCase):
                     "-c",
                     _COMPARE_SCRIPT,
                     str(nonexistent_schema),
+                    str(_TEST_REQ_SCHEMA_PATH),
                     str(_TEMPLATE_PATH),
                 ],
                 capture_output=True,
@@ -297,9 +258,31 @@ class TestBothSetsAreReadFromTheirRealSources(unittest.TestCase):
             self.assertNotEqual(
                 result.returncode,
                 0,
-                "a missing emittable-side source must not be silently tolerated",
+                "a missing emittable-side (R) source must not be silently tolerated",
             )
             self.assertIn("MISSING_SOURCE", result.stderr)
+
+            nonexistent_test_req_schema = Path(tmp) / "does_not_exist_test_requirements.schema.json"
+            result_g = subprocess.run(
+                [
+                    sys.executable,
+                    "-c",
+                    _COMPARE_SCRIPT,
+                    str(_AC_SCHEMA_PATH),
+                    str(nonexistent_test_req_schema),
+                    str(_TEMPLATE_PATH),
+                ],
+                capture_output=True,
+                text=True,
+                check=False,
+                timeout=30,
+            )
+            self.assertNotEqual(
+                result_g.returncode,
+                0,
+                "a missing generated-work-side (G) source must not be silently tolerated",
+            )
+            self.assertIn("MISSING_SOURCE", result_g.stderr)
 
             nonexistent_template = Path(tmp) / "does_not_exist_test-writer.md"
             result2 = subprocess.run(
@@ -308,6 +291,7 @@ class TestBothSetsAreReadFromTheirRealSources(unittest.TestCase):
                     "-c",
                     _COMPARE_SCRIPT,
                     str(_AC_SCHEMA_PATH),
+                    str(_TEST_REQ_SCHEMA_PATH),
                     str(nonexistent_template),
                 ],
                 capture_output=True,
@@ -318,7 +302,7 @@ class TestBothSetsAreReadFromTheirRealSources(unittest.TestCase):
             self.assertNotEqual(
                 result2.returncode,
                 0,
-                "a missing taught-side source must not be silently tolerated",
+                "a missing taught-side (T) source must not be silently tolerated",
             )
             self.assertIn("MISSING_SOURCE", result2.stderr)
 
@@ -330,9 +314,9 @@ class TestOneSidedNameAdditionIsReportedByNameAndSide(unittest.TestCase):
         self,
     ) -> None:
         # covers: BP-1100g-1
-        """Add a name to a copy of the emittable (planning) side only; the
-        report must name that specific angle and say the test-writing side
-        lacks it."""
+        """Add a name to a copy of the emittable (R) side only; G and T stay
+        real. The report must name that specific angle and say both G and T
+        lack it."""
         schema = json.loads(_AC_SCHEMA_PATH.read_text(encoding="utf-8"))
         item_schema = _emittable_angle_item_schema(schema)
         item_schema["properties"]["angle"]["enum"].append("zz_probe_emittable_only")
@@ -342,8 +326,9 @@ class TestOneSidedNameAdditionIsReportedByNameAndSide(unittest.TestCase):
             tmp_schema_path.write_text(json.dumps(schema), encoding="utf-8")
 
             emittable = _load_emittable_angles(tmp_schema_path)
+            generated = _load_generated_angles(_TEST_REQ_SCHEMA_PATH)
             taught = _load_taught_angles(_TEMPLATE_PATH)
-            mismatches = _compare_angle_sets(emittable, taught)
+            mismatches = _compare_three_way_angle_sets(emittable, generated, taught)
 
         joined = "\n".join(mismatches)
         self.assertIn(
@@ -352,23 +337,29 @@ class TestOneSidedNameAdditionIsReportedByNameAndSide(unittest.TestCase):
             f"mismatch report must name the specific added angle:\n{joined}",
         )
         self.assertIn(
-            "test-writing side",
+            _G_LABEL,
             joined,
-            f"mismatch report must state which side lacks the name:\n{joined}",
+            f"mismatch report must state the generated-work side lacks the name:\n{joined}",
+        )
+        self.assertIn(
+            _T_LABEL,
+            joined,
+            f"mismatch report must state the test-writing side lacks the name:\n{joined}",
         )
 
     def test_bp_1100g_1_name_added_only_to_taught_side_is_named_and_attributed(
         self,
     ) -> None:
         # covers: BP-1100g-1
-        """Swap the sides: add a name only to a copy of the taught side; the
-        report must name that specific angle and say the planning side can
-        never emit it."""
+        """Swap the sides: add a name only to a copy of the taught (T) side;
+        R and G stay real. The report must name that specific angle and say
+        both R and G lack it."""
         emittable = _load_emittable_angles(_AC_SCHEMA_PATH)
+        generated = _load_generated_angles(_TEST_REQ_SCHEMA_PATH)
         taught = dict(_load_taught_angles(_TEMPLATE_PATH))
         taught["zz_probe_taught_only"] = "a probe rule that exists only on the taught side"
 
-        mismatches = _compare_angle_sets(emittable, taught)
+        mismatches = _compare_three_way_angle_sets(emittable, generated, taught)
 
         joined = "\n".join(mismatches)
         self.assertIn(
@@ -377,9 +368,14 @@ class TestOneSidedNameAdditionIsReportedByNameAndSide(unittest.TestCase):
             f"mismatch report must name the specific added angle:\n{joined}",
         )
         self.assertIn(
-            "planning side",
+            _R_LABEL,
             joined,
-            f"mismatch report must state which side lacks the name:\n{joined}",
+            f"mismatch report must state the emittable (planning) side lacks the name:\n{joined}",
+        )
+        self.assertIn(
+            _G_LABEL,
+            joined,
+            f"mismatch report must state the generated-work side lacks the name:\n{joined}",
         )
 
 
@@ -426,6 +422,7 @@ class TestDeployedTestWriterTemplateCarriesTheTaughtSet(unittest.TestCase):
             )
 
             emittable = _load_emittable_angles(_AC_SCHEMA_PATH)
+            generated = _load_generated_angles(_TEST_REQ_SCHEMA_PATH)
             taught = _load_taught_angles(deployed)
             self.assertTrue(
                 taught,
@@ -433,12 +430,12 @@ class TestDeployedTestWriterTemplateCarriesTheTaughtSet(unittest.TestCase):
                 f"empty) — the taught set must survive the build, not only exist "
                 f"in templates/",
             )
-            mismatches = _compare_angle_sets(emittable, taught)
+            mismatches = _compare_three_way_angle_sets(emittable, generated, taught)
             self.assertEqual(
                 mismatches,
                 [],
-                "deployed test-writer.md's taught set diverges from the schema's "
-                "emittable set:\n" + "\n".join(mismatches),
+                "deployed test-writer.md's taught set diverges from R and/or G:\n"
+                + "\n".join(mismatches),
             )
 
 

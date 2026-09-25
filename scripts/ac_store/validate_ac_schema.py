@@ -47,9 +47,8 @@ from typing import Any
 
 import yaml
 
-# _ac_components lives alongside this script; sys.path[0] is the script dir when
-# invoked as `python scripts/ac_store/validate_ac_schema.py ...`.
 from _ac_components import components_field_errors, load_registry_ids  # noqa: E402
+from _ac_schema_test_spec_validators import test_spec_entry_errors  # noqa: E402
 
 # Same schema file the commit-time hook (templates/scripts/commit_guardian/
 # check_ac_schema.py, SCHEMA_PATH) validates staged ACs against. Resolving the
@@ -266,6 +265,7 @@ def _validate_file(
                     f"ACs. AC {data['id']} has level {ac_level!r}."
                 )
 
+    errors.extend(test_spec_entry_errors(path, data, schema))  # TQ-500f-1 / TQ-500f-2-i
     # --- Validate against config/ac_store_schema.json (ACS-200e) ---
     # This is the SAME schema file the commit-time hook
     # (templates/scripts/commit_guardian/check_ac_schema.py) validates staged
