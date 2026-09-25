@@ -1,0 +1,86 @@
+id: KM-KGS-100c-4
+components:
+  - knowledge_management
+readiness: approved
+priority: high
+title: "A ticket's files_touched declarations become ticket-to-file edges in the map"
+component: knowledge-management
+level: L2
+status: active
+req_status: draft
+work_status: done
+roadmap_phase: phase_1
+created_by: "docs/acceptance-criteria/knowledge-management/KM-KGS-100-knowledge-graph-surfaces/KM-KGS-100c.yaml"
+criteria: |
+  Given the tickets surface is declared in the surfaces configuration with
+    files_touched among its edge_fields
+  And a ticket whose frontmatter declares files_touched as a list of file paths,
+    none of which is itself a node id in the map
+  When the knowledge map is built from the real surfaces configuration
+  Then an edge of type files_touched runs from that ticket's node to each declared
+    path, with the path string as read from the ticket as its target
+  And those edges survive the step that drops edges whose target is not a node,
+    exactly as the acceptance-criteria surface's implemented_by and covered_by
+    edges already do
+  And the map built from the real repository contains ticket-to-file edges, so the
+    question "which tickets touched this file" has an answer
+depends_on:
+  - KM-KGS-100c
+  - KM-KGS-100c-2
+  - KM-KGS-100d-2-i
+doc_links:
+  - path: config/paths.json
+    relationship: modifies
+    status: exists
+  - path: scripts/knowledge_query.py
+    relationship: context
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: XS
+it_requirements:
+  - "Measured evidence (2026-09-25, merged main after PR #836): 1160 tickets declare 3057 files_touched values, 2663 of which name existing files, and `knowledge_query.py --format json` emits 0 files_touched edges. The tickets surface lists files_touched in edge_fields but declares no file_path_fields, so build_knowledge_map() drops every such edge as phantom (the exemption set is derived only from file_path_fields; see KM-KGS-100c-2 and KM-KGS-100d-2-i). This leaves KM-KGS-100c-2's own 'the new surface's declared edge_fields produce edges' unmet for tickets, although it is marked done."
+  - "The fix is declarative and lives in config/paths.json only: the tickets surface declares files_touched in file_path_fields, mirroring the acs surface. No knowledge_query.py change and no surface-specific branch (KM-KGS-100c-2's no-special-casing invariant)."
+  - "SCOPE-NEUTRAL: files_touched edges receive exactly the treatment implemented_by and covered_by receive today (the target is the path string as read). Whether file-path edge targets should instead resolve to real graph nodes is a separate, deferred decision and must not be asserted here; if that decision moves file-path targets to nodes, files_touched moves with implemented_by and covered_by."
+  - "Existing KM-KQS-018 assertions (tickets edge_fields include depends_on and files_touched) must keep passing."
+test_spec:
+  - name: test_ticket_files_touched_produce_edges_to_declared_paths
+    target_dir: unit_tests/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "A temp project whose paths.json is a copy of the real config/paths.json, with a ticket declaring two files_touched paths that are not node ids. The public build_knowledge_map / JSON export yields one files_touched edge from the ticket node to each declared path string. Red before the fix: the phantom filter drops both."
+  - name: test_real_repository_graph_contains_files_touched_edges
+    target_dir: unit_tests/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    description: "Building the map from the real repository through the JSON export yields more than 0 files_touched edges, each sourced at a tickets-surface node. Red before the fix (0 edges)."
+  - name: test_files_touched_exemption_is_declared_not_special_cased
+    target_dir: unit_tests/
+    framework: pytest
+    type: unit
+    angle: boundary
+    description: "The real config/paths.json tickets surface declares files_touched in file_path_fields, and knowledge_query.py contains no files_touched- or tickets-specific branch in its phantom-filter exemption logic."
+test_required: true
+test_rationale: >-
+  The defect is a missing declaration, so the proof must run through the real
+  paths.json and the real map builder: a hand-built edge dict or a synthetic
+  config would pass with or without the fix. One test exercises the mechanism on a
+  controlled ticket built on the real config, one proves the real repository's graph
+  gains ticket-to-file edges, and one pins that the fix is declarative (no
+  special-casing), per KM-KGS-100c-2. Only the presence and path-string target of
+  the edges are asserted, never whether a target is a graph node (deferred).
+delivers_to: null
+expects_from:
+  ac_id: KM-KGS-100c-2
+  contract: "Surface ingestion and the phantom-filter exemption driven entirely by the declared surfaces in paths.json"
+origin_agent: quick-fix
+created: 2026-09-25
+amended_by: []
+superseded_by: null
+covered_by:
+  - unit_tests/test_km_kgs_100c_4.py
+implemented_by:
+  - config/paths.json
+change_target: config
+risk_surface: contract_boundary
