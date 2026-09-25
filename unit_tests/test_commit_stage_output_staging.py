@@ -159,7 +159,9 @@ def _capture_instructions(plan_feature_path: str, written: list[str]) -> str:
                 return {{ exists: false, stale: false, record: null }};
             }}
             if (agentType === 'status-checker') {{
-                if (instructions.includes('git branch --show-current')) {{
+                // With a real authoring worktree the command is anchored
+                // (`git -C "<path>" branch --show-current`), not bare.
+                if (/git(?: -C "[^"]*")? branch --show-current/.test(instructions)) {{
                     return {{ output: 'ac-authoring/test', exit_code: 0 }};
                 }}
                 return {{ action: 'approve' }};
@@ -193,8 +195,8 @@ def _extract_porcelain_command(instructions: str) -> str:
 
     Raises SourceParseError if no porcelain command can be found.
     """
-    # Look for a line matching "Run: git status ..."
-    match = re.search(r"Run:\s*(git\s+status\s+[^\n]+)", instructions)
+    # Look for "Run: git status ..." -- a real worktree anchors it with -C.
+    match = re.search(r'Run:\s*(git(?:\s+-C\s+"[^"]*")?\s+status\s+[^\n]+)', instructions)
     if not match:
         raise SourceParseError("porcelain-command-not-found-in-instructions")
     return match.group(1).strip()

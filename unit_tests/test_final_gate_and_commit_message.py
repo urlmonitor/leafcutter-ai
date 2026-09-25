@@ -408,8 +408,10 @@ class TestCommitMessageShape(unittest.TestCase):
                 if (agentType === 'status-checker') {
                     // E2 commitStageOutput() runs a fail-closed no-main branch
                     // check before every commit; confirm a non-main authoring
-                    // branch so the commit path proceeds.
-                    if (instructions.includes('git branch --show-current')) {
+                    // branch so the commit path proceeds. With a real
+                    // authoring worktree the command is anchored
+                    // (`git -C "<path>" branch --show-current`), not bare.
+                    if (/git(?: -C "[^"]*")? branch --show-current/.test(instructions)) {
                         return { output: 'ac-authoring/test', exit_code: 0 };
                     }
                     if (instructions.includes('update their YAML files')) {
