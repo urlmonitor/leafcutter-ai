@@ -1,0 +1,121 @@
+id: TQ-500f-4
+components:
+  - testing_quality
+  - build_orchestration
+title: "Both test writers ask what small wrong change would keep their test green, and fix the test before handing on"
+component: testing-quality
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given the ordinary test writer and the database test writer are each asked
+    for a test of the same gate change: a refresh that used to run
+    "if refresh_due" now runs "if refresh_due and retry_due",
+  When each writes its test and prepares its report,
+  Then each report answers, for each test that guards the change, three
+      questions:
+        Q1 what is the smallest change to the production code that keeps this
+           test green but brings the bug back,
+        Q2 what result would show this assertion can fail, and does the
+           fixture produce that result,
+        Q3 does the control row pass for a different reason than the negative
+           row fails,
+    And each report goes through the vacuity checklist for that test, item by
+      item: the assertion states an exact count rather than a one-sided bound;
+      a control row that must pass is present; every new input the change
+      reads is seeded with values distinct from the old inputs; the test
+      counts calls on the collaborator the new branch must reach,
+    And a checklist item that does not apply is marked not applicable with a
+      one-line reason, never left out,
+    And when Q1 names a change that would keep the test green — here, a
+      fixture that sets refresh_due but never retry_due, so the branch runs
+      0 times — the writer strengthens the test until that change would turn
+      it red, and lists the named change in its report as a wrong version the
+      test now catches,
+    And both writers carry the questions and the checklist in their own
+      instructions; neither sends the writer to an adopter's test README to
+      find them.
+depends_on:
+  - TQ-500f
+doc_links:
+  - path: templates/agents/test-writer.md
+    relationship: describes
+    status: exists
+    relevance: "Gains the three questions and the vacuity checklist in its own text. Step 1.3 currently frames the adopter's test README as conventions only."
+  - path: templates/agents/sql-test-writer.md
+    relationship: describes
+    status: exists
+    relevance: "Gains the same questions and checklist. Today it asks only for happy path plus 'empty input, zero rows, boundary condition' and verifies by syntax check."
+  - path: docs/analysis/2026-09-25-test-writers-prove-failure-not-discrimination.md
+    relationship: describes
+    status: exists
+    relevance: "Remedy item 5; 'The three questions no template asks'; incident 1 (branch ran 0 times) is the worked case in this Given."
+  - path: docs/testing/test-angles.md
+    relationship: relates-to
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: M
+delivers_to: null
+expects_from:
+  ac_id: TQ-500f-2
+  contract: "When the test requirements carry must_catch, each named wrong version is the first answer to Q1 the writer must defeat."
+it_requirements:
+  - Edit both source templates, templates/agents/test-writer.md and templates/agents/sql-test-writer.md,
+    in the same change with identical wording of the three questions and the four checklist
+    items, so the two writers cannot drift. Never edit deployed copies.
+  - The questions and checklist live in each template's own text. Neither template may send
+    the writer to an adopter's test README to find them (the README stays 'conventions only').
+  - When the Test Requirements entry carries must_catch, each listed wrong version is the first
+    Q1 answer the writer must defeat. The report lists every wrong version the strengthened
+    test now catches.
+  - A checklist item that does not apply is marked not applicable with a one-line reason. Omission
+    is not allowed.
+  - 'Must not add a second machine-checkable falsifiability record: the wrong version named
+    under Q1 feeds TQ-500a-1''s existing falsifiability answer (see the BA note).'
+  - Must stay within each template's file-size budget. If the addition pushes a template over
+    the limit, move shared text into a skill both writers load, rather than trimming the questions.
+test_required: false
+test_rationale: 'Prompt-only: the deliverable is instruction text in two agent templates.
+  No deterministic unit test can show that an LLM asked the three questions well, and a test
+  asserting the questions appear in the template is the grep-only proof CLAUDE.md forbids.
+  Substitutes: (1) the deterministic backstop is TQ-500g''s mutation runs, which apply the
+  named wrong versions to finished code and decide survival by running tests, not by the writer''s
+  opinion; (2) recommended eval: register test-writer and sql-test-writer in scripts/evals/agent_eval_config.json
+  (artifact mode) with the incident-1 refresh-gate case from this AC''s Given as a gold row.
+  The produced test must go red when retry_due is left unset, and the report must list that
+  wrong version. No such eval set exists yet (follow-up AC); (3) pr-reviewer checks both template
+  diffs against each Then clause.'
+origin_agent: business-analyst
+created: 2026-09-25
+amended_by: []
+superseded_by: null
+covered_by:
+  - TQ-500f-4-i
+  - TQ-500f-4-ii
+implemented_by: []
+change_target: prompt
+risk_surface: contract_boundary
+notes: |
+  PROMPT-ONLY — NO DETERMINISTIC TEST IS POSSIBLE. The deliverable is
+  instruction text in two agent templates. The reports it produces are
+  observable, and an eval over the incident-1 Given can judge them, but no unit
+  test can show an LLM asked the questions well. A unit test asserting the
+  questions appear in the template text is the forbidden text-search proof.
+  IT-PO: state this in test_rationale; if an eval harness exists for agent
+  prompts (TQ-200), route the incident-1 case there.
+
+  RELATION TO TQ-500a. The wrong version the writer names under Q1 is the
+  natural candidate for TQ-500a's deliberate alteration. This AC does not add a
+  second record: the report lists it; the falsifiability answer (TQ-500a-1)
+  remains the one machine-checkable record.
+
+  RELATION TO TQ-500g. Nothing here runs the named wrong versions against
+  finished code. The writer's answers are reasoning at writing time; the runs
+  that decide are TQ-500g's.
+
+  SINGLE AGENT, TWO TEMPLATES. Both edits are llm-expert prompt work with the
+  same content; kept as one AC so the two writers cannot drift apart.

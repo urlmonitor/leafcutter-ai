@@ -16,6 +16,7 @@ related_docs:
   - docs/acceptance-criteria/ux-prototyping/UXP-700-truthful-project-record/UXP-700b-2.yaml
   - docs/reference/product-truth-size-bounds.md
   - docs/product-truth/README.md
+  - docs/how-to/reading-a-drift-report-and-reconciling-the-record.md
 related_code:
   - docs/product-truth/scripts/validate_product_truth.py
   - docs/product-truth/scripts/product_truth_outcome.py
@@ -243,5 +244,6 @@ sections to find out.
 - [Reference: AC Traceability Store Schema](ac-schema.md) — the house style this page follows.
 - [Reference: Product-Truth Size Bounds and Shape Rollout](product-truth-size-bounds.md) — the sibling reference for the `bounds` object on the same JSON line.
 - [Product-Truth Store](../product-truth/README.md) — what the checker validates.
+- [How to read a drift report and reconcile the record](../how-to/reading-a-drift-report-and-reconciling-the-record.md) — what each individual finding behind `degraded`/`failed` means (`[pointer]`, `[pointer-unresolvable]`, `[freshness]`, `[freshness-never-confirmed]`) and how to act on one.
 - `docs/product-truth/scripts/validate_product_truth.py`, `product_truth_outcome.py`, `product_truth_checks.py` — governing code.
 - `unit_tests/product_truth/test_uxp_700b_1.py`, `test_uxp_700b_1_i.py`, `test_uxp_700b_2.py`, `test_uxp_700c_1_i.py` — the tests that pin this vocabulary.

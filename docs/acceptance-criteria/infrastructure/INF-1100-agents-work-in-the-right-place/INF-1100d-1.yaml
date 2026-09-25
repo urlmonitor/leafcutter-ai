@@ -1,0 +1,122 @@
+id: INF-1100d-1
+components:
+  - infrastructure
+  - testing_quality
+title: "A fresh install carries no test database address"
+component: infrastructure
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given leafcutter is installed into a new project whose own settings do not
+    mention a test database,
+  When the project's resolved settings are read for the test database
+    connection (testing_context.db_connection_test),
+  Then no value is returned — the connection is unset, not an address,
+    And neither the shipped settings defaults nor the settings schema offer a
+      default value for it,
+    And the settings schema still accepts a project that sets it to its own
+      address, for example postgresql://app:app@db.internal:5432/app_test.
+depends_on:
+  - INF-1100d
+doc_links:
+  - path: config/skills_config.default.json
+    relationship: describes
+    status: exists
+    relevance: "Ships testing_context.db_connection_test = postgresql://trader:trader@localhost:5403/LIVE today."
+  - path: config/skills_config.schema.json
+    relationship: describes
+    status: exists
+    relevance: "Declares the same address as the schema default for db_connection_test."
+  - path: docs/analysis/2026-09-25-test-writers-prove-failure-not-discrimination.md
+    relationship: describes
+    status: exists
+    relevance: "Incident 7 and remedy item 8."
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to:
+  - agent: llm-expert
+    ac_id: INF-1100d-3
+    contract: An unset test database connection is represented as absent (no key, or no value)
+      in resolved settings — never as a placeholder address the agents could mistake for a real
+      one.
+  - agent: python-coder
+    ac_id: INF-1100d-3-i
+    contract: 'Resolved settings (config_loader semantics: package defaults merged under the
+      project''s skills_config.json) carry testing_context.db_connection_test only when the
+      project sets it.'
+expects_from: null
+it_requirements:
+  - Remove the value of testing_context.db_connection_test from config/skills_config.default.json,
+    and remove the 'default' from that property in config/skills_config.schema.json. Keep the
+    property itself (type string) so a project can still set its own address.
+  - Unset must be represented as absent (no key, or null) in resolved settings, never as an
+    empty string or a placeholder address an agent could mistake for a real one.
+  - 'Every producer of resolved or initial settings must agree: config_loader.load_config (used
+    by build.py for template compilation) and the installer (scripts/bootstrap_install.py) must
+    not introduce a value.'
+  - No stale-default detection, fingerprint or warning for the old address (user decision NQ1).
+  - No example address in the schema's own description text. Use the placeholder form postgresql://<user>:<password>@<host>:<port>/<database>
+    if an example is needed.
+  - Tests must not spawn scripts/build.py (CLAUDE.md 'Tests must not spawn their own build.py').
+    Until TQ-600a's shared session layout lands, exercise the in-process steps and source roots
+    instead.
+test_spec:
+  - name: test_fresh_project_resolves_no_test_db_connection
+    target_dir: unit_tests/portability/
+    framework: pytest
+    type: integration
+    angle: reachability
+    surface_invoked: scripts/config_loader.py load_config (the settings resolver build.py uses)
+    description: load_config for a temp project whose settings do not mention a test database
+      returns no testing_context.db_connection_test value (absent or null, not an address and
+      not an empty string).
+  - name: test_shipped_defaults_and_schema_offer_no_db_default
+    target_dir: unit_tests/portability/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: The real config/skills_config.default.json carries no db_connection_test value,
+      and the real config/skills_config.schema.json property carries no 'default'.
+  - name: test_schema_still_accepts_project_owned_db_connection
+    target_dir: unit_tests/portability/
+    framework: pytest
+    type: unit
+    angle: boundary
+    description: A project config that sets db_connection_test to postgresql://app:app@db.internal:5432/app_test
+      validates against config/skills_config.schema.json (the control against forbidding the
+      field).
+test_rationale: Resolution through the real loader is the production path by which agents
+  and templates receive the setting. The file-level criterion test pins both shipped sources,
+  and the schema control stops the cheap fix of deleting the field.
+origin_agent: business-analyst
+created: 2026-09-25
+amended_by: []
+superseded_by: null
+covered_by:
+  - INF-1100d-1-i
+implemented_by: []
+change_target: config
+risk_surface: safety
+notes: |
+  USER DECISION Q3 (binding): no default address anywhere. DELIBERATE CONTRAST
+  WITH INF-1100a-1-i, which falls back to a documented default test folder:
+  there is no safe default for a database address, so there is no fallback
+  here. Do not copy that pattern.
+
+  The last Then clause is the control: a schema change that simply forbids the
+  field would satisfy the first two clauses and break every project that
+  configures its own test database.
+
+  IT-PO ENRICHMENT (2026-09-25)
+  INTENDED must_catch: "remove the default from the defaults file but keep the schema default" -> the
+  criterion test goes red; "set it to '' as a placeholder" -> the reachability test goes red; "delete the
+  property / forbid it" -> the boundary test goes red.
+  ARCHITECTURE NOTE: config_loader merges defaults and project config shallowly at the top
+  level, so a project that declares its own testing_context already drops every default key
+  in it. The fix must not depend on that quirk. The defaults file itself must carry no
+  address.

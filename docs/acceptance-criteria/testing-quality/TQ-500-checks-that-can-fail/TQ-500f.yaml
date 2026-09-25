@@ -1,0 +1,107 @@
+id: TQ-500f
+components:
+  - testing_quality
+  - build_orchestration
+  - ac_store
+title: "Tests are written to catch the plausible wrong version, not just the missing one"
+component: testing-quality
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Every guarding test is aimed at a named wrong answer the work could ship.
+
+  A requirement can say which believable mistakes its tests must catch — the fix
+  quietly undone, one condition of a check dropped, a new input left empty — and
+  that list reaches whoever writes the tests unchanged. The people writing
+  ordinary and database tests alike are taught to ask what small wrong change
+  would keep their test green, and a test that failed only because the code did
+  not exist yet is never accepted as proof that it guards code that already does.
+depends_on:
+  - TQ-500
+doc_links:
+  - path: docs/analysis/2026-09-25-test-writers-prove-failure-not-discrimination.md
+    relationship: describes
+    status: exists
+    relevance: "Source analysis: eight green-by-vacuity incidents from one adopter, all discrimination-shaped; request items 1, 2, 4 and 5 are the Phase A remedies decomposed here."
+  - path: docs/testing/test-angles.md
+    relationship: relates-to
+    status: exists
+    relevance: "The taught set of test angles covers wiring-shaped failures only; this L1 adds the discrimination-shaped family alongside it."
+  - path: docs/reference/ac-schema.md
+    relationship: relates-to
+    status: exists
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: product-owner
+created: 2026-09-25
+amended_by:
+  - reason: "Authored by product-owner from BrainCandy's /plan-feature request 'Tests must prove they can tell right from wrong' (Phase A: request items 1, 2, 4, 5)."
+superseded_by: null
+covered_by:
+  - TQ-500f-1
+  - TQ-500f-2
+  - TQ-500f-3
+  - TQ-500f-4
+  - TQ-500f-5
+  - TQ-500f-6
+child_limit_override: 6
+implemented_by: []
+change_target:
+  - docs
+  - prompt
+  - schema
+risk_surface: contract_boundary
+documentation_triggers:
+  - how-to
+  - reference-doc
+notes: |
+  PHASE A of the discrimination initiative — the only part decomposed to L2/L3
+  in this run. Covers request items 1, 2, 4 and 5:
+
+    1. The discrimination-shaped failure family is named in the testing guidance,
+       with the adopter incidents as its catalogue, and becomes a selectable kind
+       of test ("discrimination") wherever test kinds are declared and taught.
+       User decision (Q2): the value is added to BOTH places test kinds are
+       enumerated for requirements and for generated work, and to the taught set,
+       in lockstep. BA/IT-PO detail.
+    2. A requirement's test entries may carry an optional list of named wrong
+       versions the test must catch ("must_catch"). User decision (Q4): that list
+       is carried verbatim onto the generated work's test requirements so the
+       test writer sees exactly what the requirement author named. IT-PO is
+       expected to fill it for bug-fix and gate requirements.
+    4. Failing because a name or symbol does not exist yet is evidence of absence
+       only; it does not satisfy a regression test for code that already exists.
+       The instruction to make a passing-too-early test fail "with a TODO comment"
+       is replaced by "a stronger assertion".
+    5. The three questions (smallest change that keeps the test green but brings
+       the bug back; what result would show the assertion can fail and does the
+       fixture produce it; does the control row pass for a different reason than
+       the negative row fails) and the vacuity checklist (exact counts, a control
+       row, new inputs seeded distinct from old ones, a call count on the
+       collaborator the branch must reach) live in BOTH the ordinary and the
+       database test writers' own instructions — not as a pointer to an adopter's
+       README.
+
+  Request item 8 (removing the adopter database address from shipped defaults)
+  was also listed under Phase A but is a portability concern, not a
+  discrimination one; it is homed at INF-1100d. Decompose both in this pass.
+
+  BOUNDARIES WITHIN TQ-500:
+    - TQ-500a/TQ-500d cover work whose tests pass the moment they are written and
+      the substitute proof it owes. This L1 covers the opposite gap: tests that do
+      fail first, but only because the code is absent. A named wrong version from
+      this L1 is a natural candidate for TQ-500a's deliberate alteration; the
+      two do not duplicate each other.
+    - This L1 specifies and writes the tests. Actually running the named wrong
+      versions against the finished code, and stopping on a survivor, is TQ-500g.
+
+  PROMPT-EDIT VERIFICATION (routing hint from the request, for IT-PO): tests for
+  the instruction changes must not be text-search-only; where no behavioural test
+  is possible, say so in the test rationale rather than inventing a text search.

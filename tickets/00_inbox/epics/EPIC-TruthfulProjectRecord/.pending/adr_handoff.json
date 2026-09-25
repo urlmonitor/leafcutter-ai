@@ -1,0 +1,5 @@
+{
+  "adr_id": "ADR-049",
+  "affected_files": [],
+  "one_line_summary": "The product-truth checker runs as one blocking pre-commit hook whose trigger scope is derived from the checker's own declared resolvable-pointer roots, never hand-written."
+}

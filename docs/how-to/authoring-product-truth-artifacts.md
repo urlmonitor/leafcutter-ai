@@ -4,7 +4,7 @@ description: "Step-by-step guide for authoring product-truth artifacts by hand, 
 type: how-to
 status: active
 created: 2026-07-14
-last_updated: 2026-09-17
+last_updated: 2026-09-25
 components:
   - ux_prototyping
 related_docs:
@@ -12,7 +12,9 @@ related_docs:
   - docs/architecture/adrs/ADR-043-journey-record-carries-its-own-behind-mark.md
   - docs/architecture/components/ux-prototyping.md
   - docs/how-to/product-truth-schema-reference.md
+  - docs/how-to/reading-a-drift-report-and-reconciling-the-record.md
   - docs/product-truth/README.md
+  - docs/reference/example-content-separation.md
 ---
 
 # How to author a Flow, Mockup, or Mock Data artifact by hand
@@ -246,6 +248,11 @@ counted in the run's `compared` figure.
    To clear it, re-confirm the journey (fresh `against` + `state`) so the next run
    finds it current again.
 
+For what each kind of finding the checker can report about a journey (or a pointer)
+means, what to open first, a full walkthrough of reconciling one behind journey, and
+why a separator-only difference between platforms is never drift, see
+[reading a drift report and reconciling the record](reading-a-drift-report-and-reconciling-the-record.md).
+
 ---
 
 ## Verification
@@ -272,6 +279,7 @@ counted in the run's `compared` figure.
 ## See Also
 
 - [Product-truth schema reference](product-truth-schema-reference.md) — the four schemas, field by field.
+- [Reading a drift report and reconciling the record](reading-a-drift-report-and-reconciling-the-record.md) — what each checker finding means and how to reconcile a behind journey once you have one.
 - [UX Prototyping component](../architecture/components/ux-prototyping.md) — the store's architecture.
 - [ADR-023](../architecture/adrs/ADR-023-product-truth-flow-first-upstream-layer.md) — why the store exists and how it relates to the AC store.
 - [ADR-043](../architecture/adrs/ADR-043-journey-record-carries-its-own-behind-mark.md) — why the `behind` mark lives in the journey record itself, and the `confirmed.against` identity contract.

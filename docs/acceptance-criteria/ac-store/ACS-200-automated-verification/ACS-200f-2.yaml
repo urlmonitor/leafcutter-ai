@@ -1,0 +1,63 @@
+id: ACS-200f-2
+components:
+  - ac_store
+title: "A parametrised covering test proves an AC only when every one of its cases passes"
+component: ac-store
+level: L3
+status: active
+req_status: draft
+work_status: done
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given an active AC that is still recorded as not-yet-done,
+  And the only test declaring that it covers the AC is parametrised,
+  And one of that test's cases passes while another case fails,
+  When the done-proof oracle evaluates the AC,
+  Then the AC is judged not eligible for done,
+  And the refusal names the failing case,
+  And the order in which pytest reports the cases does not change the verdict,
+  And when every case of the parametrised test passes the AC is still judged eligible,
+  And the bug symptom ("a parametrised covering test with one failing case proves the AC done, because only its first reported case is read") must not occur.
+depends_on:
+  - ACS-200f
+doc_links:
+  - path: "docs/acceptance-criteria/ac-store/ACS-200-automated-verification/ACS-200f.yaml"
+    relationship: parent
+    status: exists
+  - path: scripts/ac_store/done_proof.py
+    relationship: modifies
+    status: exists
+  - path: "docs/known-issues/ac-store/open-blocker-ki-acs-20260925-done-proof-parametrised-first-match.md"
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Root cause: _find_nodeid_for_test returns the FIRST nodeid whose function name matches, and _classify_outcomes reads that one nodeid's outcome, so every later parametrised case is ignored"
+  - "Every matching case must be considered: same-file matches take precedence over name-only matches exactly as today, and within the chosen match set any non-PASSED case makes the function non-passing"
+  - "Keep the helper's return contract (a single nodeid present in pytest_results, or None) so the fast lane's red-baseline caller (_fl_red_baseline_support._resolve_tag_outcome) inherits the fix without edits"
+  - "Must not regress ACS-200f/ACS-200f-1: a plain or all-passing parametrised test still passes, a longer sibling name (test_foo_bar) never matches test_foo, no match stays None"
+  - "Must follow the repo error-handling policy; this is a pure function, so no try/except"
+delivers_to: null
+expects_from:
+  ac_id: ACS-200f
+  contract: "The coverage-gate verdict whose parametrised-test reading this constraint pins down."
+origin_agent: BrainCandy
+created: 2026-09-25
+amended_by: []
+superseded_by: null
+covered_by:
+  - "unit_tests/ac_store/test_find_nodeid_for_test.py"
+implemented_by:
+  - scripts/ac_store/done_proof.py
+change_target: code
+risk_surface: contract_boundary
+test_spec:
+  - name: test_parametrised_function_with_one_failing_case_is_not_passing
+    target_dir: unit_tests/ac_store
+    framework: pytest
+    type: unit
+    description: "A covering test with cases [0] PASSED and [1] FAILED is classified non-passing and the failing case's nodeid is reported, independent of result order; all-passing cases still classify as passing."
+notes: "Filed from KI-ACS-20260925-done-proof-parametrised-first-match (2026-09-25 duplication analysis). KI-ACS-008 L72-78 warned against a first-match fix and KI-BO-20260826-1900 L81-87 required that all matching node ids pass; the ACS-200f fix took the first match. Numeric L3 slot under the letter-slot L2 ACS-200f, as ACS-200f-1."
