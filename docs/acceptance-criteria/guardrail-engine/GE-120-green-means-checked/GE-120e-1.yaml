@@ -7,7 +7,7 @@ components:
 level: L2
 status: active
 req_status: draft
-work_status: done
+work_status: todo
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -98,10 +98,28 @@ delivers_to:
 expects_from: null
 origin_agent: BrainCandy
 created: 2026-08-17
-amended_by: []
+amended_by:
+  - reason: >-
+      work_status corrected done -> todo. This L2 is a composite: its covered_by
+      names GE-120e-1-i and GE-120e-1-ii, and GE-120e-1-i is work_status: todo
+      with covered_by: [] and its own open ticket
+      (29_TICKET-20260825-GE-120e-1-i.md). A composite cannot be done while a
+      child is unproven, so the done flag was false — this is the "falsely done
+      composite" phantom-done vector named in CLAUDE.md under "AC-store commits
+      — stage the parent alongside the child", which also explains why it went
+      unnoticed: the AC hooks read the commit index, not the store, so the
+      inconsistency was only ever reachable on a commit that happened to stage
+      this parent. That commit is the one adding GE-120e-1-ii, which is the
+      first time this file has been staged since -i was authored.
+      check_done_proof correctly refused it. Corrected rather than bypassed.
+      RESTORE to done when GE-120e-1-i is genuinely implemented and covered —
+      at that point both children are done and the composite is honestly done.
+    by: BrainCandy
+    at: 2026-09-22
 superseded_by: null
 covered_by:
   - GE-120e-1-i
+  - GE-120e-1-ii
 implemented_by:
 - tickets/00_inbox/epics/EPIC-TrustThatAGreenCheckActuallyChecked/28_TICKET-20260825-GE-120e-1.md
 - templates/scripts/commit_guardian/_authored_change.py
