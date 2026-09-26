@@ -59,6 +59,7 @@ from build_colors import dry_run as _dry_run
 from build_colors import info as _info
 from build_colors import success as _success
 from build_colors import warn as _warn
+from build_capability_merge import resolve_veto_or_merge
 from build_ownership import resolve_shim_ownership_veto, _create_shim, _create_file_shim
 from build_shim_probe import resolve_effective_shim_strategy
 from build_precommit_install import install_hooks  # noqa: F401 — re-exported for build.py's existing import
@@ -1470,13 +1471,10 @@ def install_shims(
             continue
 
         if canonical_path.exists() or canonical_path.is_symlink():
-            # BP-1500g-1: the ownership veto only applies when the build is
-            # about to replace the path with a symlink (see
-            # resolve_shim_ownership_veto's docstring for the "copy"
-            # strategy carve-out).
-            veto = resolve_shim_ownership_veto(canonical_path, strategy, canonical_rel, output_rel)
-            if veto is not None:
-                results.append(veto)
+            # BP-1500g-1/BP-1500g-2/BP-1500g-2-i: veto, merge, or proceed -- output_root is threaded through so a real-container merge can also fix up the antigravity mirror; see build_capability_merge.resolve_veto_or_merge's own docstring.
+            outcome = resolve_veto_or_merge(canonical_path, source_path, strategy, canonical_rel, output_rel, dry_run, output_root=output_root)
+            if outcome is not None:
+                results.append(outcome)
                 continue
             if not force:
                 results.append({
@@ -1574,6 +1572,7 @@ def install_shims(
 # DECISION HISTORY
 # ====================================================================
 # - 2026-09-14 [python-coder]: ADR-041 fixes -- see build_ownership.py. (#BP-1500g-1)
+# - 2026-09-23 [python-coder]: BP-1500g-2/BP-1500g-2-i fixes -- install_shims' directory-shim loop now routes through build_capability_merge.resolve_veto_or_merge, now also passed output_root so a real-container merge collision can fix up the antigravity mirror too (BP-1500g-2-i defect 3); see that module and build_ownership.py for the full account. (#BP-1500g-2-i)
 # - 2026-08-26 [python-coder/EPIC-BuildPipelinePhantomRemediation, adversarial
 #   review round 2, B-1(b)]: Every per-file existence gate this round added to
 #   _compute_output_mappings() (phase_mappings, skills, direct-output
