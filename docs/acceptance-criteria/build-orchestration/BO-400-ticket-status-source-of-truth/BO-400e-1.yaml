@@ -139,7 +139,8 @@ amended_by:
   agent: approve_acs
   date: '2026-09-07'
 superseded_by: null
-covered_by: []
+covered_by:
+  - BO-400e-1-i
 implemented_by:
 - tickets/00_inbox/epics/EPIC-WorkIsOnlyEverMarkedFinishedThroughThe/01_TICKET-20260914-BO-400e-1.md
 change_target: pipeline

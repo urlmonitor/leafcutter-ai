@@ -279,10 +279,45 @@ function parseRecord(path) {
     }
   }
 
+  // handoff_target (BO-400e-1-i): an OPTIONAL line in a signoff's own comment
+  // body naming the sibling that entry's handover addresses, e.g.:
+  //
+  //   ### 2026-08-18 09:00 — python-coder (status: handoff)
+  //   handoff_target: test-writer
+  //
+  // Scanned per-entry (this heading's body only, i.e. up to the NEXT signoff
+  // heading or EOF) rather than anywhere in the file, because the target
+  // belongs to the specific handover that named it — the same per-entry
+  // attribution isHandoffResolved() requires of the real driver's read-back.
+  // ADDITIVE ONLY: an entry whose body carries no such line gets no
+  // `handoff_target` key at all, so every fixture written before this existed
+  // parses byte-identically to before.
+  const HANDOFF_TARGET_RE = /^handoff_target:\s*([A-Za-z0-9_-]+)\s*$/m;
+  // A NEW RegExp instance per call, with "gm" flags — never reuse a shared
+  // global-flagged constant across calls. parseRecord() runs once per ticket
+  // and again for the final `records` output, and a `g`-flagged regex keeps
+  // its `lastIndex` on the object between calls, so a shared instance would
+  // silently start the second scan mid-file instead of at the top.
+  const signoffHeadingMatches = [];
+  const globalSignoffRe = new RegExp(SIGNOFF_RE.source, "gm");
+  let headingMatch;
+  while ((headingMatch = globalSignoffRe.exec(text)) !== null) {
+    signoffHeadingMatches.push({
+      start: headingMatch.index,
+      end: headingMatch.index + headingMatch[0].length,
+      agent: headingMatch[1],
+      status: headingMatch[2],
+    });
+  }
   const signoffs = [];
-  for (const line of text.split("\n")) {
-    const m = line.match(SIGNOFF_RE);
-    if (m) signoffs.push({ agent: m[1], status: m[2] });
+  for (let i = 0; i < signoffHeadingMatches.length; i++) {
+    const current = signoffHeadingMatches[i];
+    const next = signoffHeadingMatches[i + 1];
+    const body = text.slice(current.end, next ? next.start : text.length);
+    const entry = { agent: current.agent, status: current.status };
+    const targetMatch = body.match(HANDOFF_TARGET_RE);
+    if (targetMatch) entry.handoff_target = targetMatch[1];
+    signoffs.push(entry);
   }
 
   // implementation_task_agents (BO-3000a) — the `### <agent>` subsection
