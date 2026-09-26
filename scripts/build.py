@@ -711,28 +711,19 @@ def _guard_source_paths_workflow_tools(package_root: Path) -> set[str]:
 def _guard_source_paths_knowledge(package_root: Path) -> set[str]:
     """Return SOURCE paths for knowledge scripts (BP-100n-4 split).
 
-    Source namespace equals deploy namespace. Must stay in lockstep with
-    _manifest_knowledge_scripts (AC INF-400c-5, H-1 fix) —
-    test_guard_source_paths_match_deployable_set asserts the two sets are 1:1.
-    harvest_result.py / sink_resolution.py / capture_write.py / harvest_cli.py
-    were added alongside the GE-127b-1 file-size fix that split
-    harvest_learnings.py into these sibling modules — mirrors the same four
-    additions in _manifest_knowledge_scripts (build_phases_knowledge.py).
+    Source namespace equals deploy namespace. Delegates to
+    _manifest_knowledge_scripts (build_phases_knowledge.py), already
+    imported above, instead of re-listing the identical script-name tuple a
+    second time here -- this file is already over its GE-127b-1
+    check-file-size ratchet limit with zero growth budget (see the identical
+    reasoning on _guard_source_paths_workflow_tools just above), so a new
+    scripts/knowledge/*.py module (e.g. INF-700a-2's harvest_status.py) is
+    registered once, in _manifest_knowledge_scripts's own tuple, and read
+    from here rather than needing a second edit in this file too.
+    test_guard_source_paths_match_deployable_set still asserts the two sets
+    are 1:1 -- trivially true now that this IS that set.
     """
-    source_paths: set[str] = set()
-    knowledge_src = package_root / "scripts" / "knowledge"
-    for fname in (
-        "harvest_learnings.py",
-        "emit_knowledge.py",
-        "entry_kind_vocabulary.py",
-        "harvest_result.py",
-        "sink_resolution.py",
-        "capture_write.py",
-        "harvest_cli.py",
-    ):
-        if (knowledge_src / fname).is_file():
-            source_paths.add(f"scripts/knowledge/{fname}")
-    return source_paths
+    return _manifest_knowledge_scripts(package_root)
 
 
 def _guard_source_paths_build_orchestration(package_root: Path) -> set[str]:
@@ -2271,4 +2262,10 @@ if __name__ == "__main__":
 #   _manifest_workflow_tool_scripts instead of re-listing its script tuple,
 #   funding knowledge_frontmatter_reader.py's addition with zero net growth
 #   on this over-limit file. (#TICKETLESS reason=km-kgs-100a-3-xi-fastlane)
+# - 2026-09-23 [python-coder/INF-700a-2]: Applied the identical
+#   KM-KGS-100a-3-xi delegation pattern to _guard_source_paths_knowledge (now
+#   just `return _manifest_knowledge_scripts(package_root)`), funding
+#   harvest_status.py's registration (INF-700a-2's --status/marker sibling
+#   module) with net negative growth on this over-limit file instead of a
+#   second, duplicated tuple edit.
 # ====================================================================

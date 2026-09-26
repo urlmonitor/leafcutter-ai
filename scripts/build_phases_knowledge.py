@@ -139,6 +139,11 @@ def build_knowledge_scripts(target_root: Path, config: dict[str, Any],
     #   ``Path(__file__)``-rooted reference to the JSON file -- see build.py's
     #   own DECISION HISTORY for that half of the fix).
     #   (#TICKETLESS reason=fast-lane-pr-review-fix-INF-400c-5-H1)
+    # - 2026-09-23 [python-coder/INF-700a-2]: Added harvest_status.py (the
+    #   --status / last-run-marker sibling module) to deploy_scripts, per the
+    #   documented repeat defect of a new scripts/knowledge/*.py module being
+    #   silently absent from a deployed install when this list (and its
+    #   _manifest_knowledge_scripts() twin below) are not updated in lockstep.
     """
     import build_phases as _bp
 
@@ -151,6 +156,7 @@ def build_knowledge_scripts(target_root: Path, config: dict[str, Any],
         "sink_resolution.py",
         "capture_write.py",
         "harvest_cli.py",
+        "harvest_status.py",
     ]
     output_dir = target_root / "scripts" / "knowledge"
     written = 0
@@ -577,6 +583,7 @@ def _manifest_knowledge_scripts(package_root: Path) -> set[str]:
         "sink_resolution.py",
         "capture_write.py",
         "harvest_cli.py",
+        "harvest_status.py",
     ):
         if (knowledge_src / fname).is_file():
             result.add(f"scripts/knowledge/{fname}")
