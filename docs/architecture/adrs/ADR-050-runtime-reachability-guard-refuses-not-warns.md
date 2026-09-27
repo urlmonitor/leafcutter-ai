@@ -22,7 +22,7 @@ related_docs:
   - docs/acceptance-criteria/build-orchestration/BO-2900-runtime-reachability-guard/BO-2900e.yaml
   - docs/architecture/adrs/ADR-001-self-hosting-boundary.md
   - docs/architecture/components/build-orchestration.md
-  - docs/architecture/diagrams/c3-009-reachability-guard-data-flow.md
+  - docs/architecture/diagrams/c3-010-reachability-guard-data-flow.md
   - docs/how-to/resolve-a-reachability-guard-finding.md
 related_code:
   - templates/scripts/commit_guardian/check_reachability.py
@@ -211,7 +211,7 @@ change to the refusal semantics.
   trigger the hook. Resolution steps are in
   [How to resolve a check-reachability guard finding](../../how-to/resolve-a-reachability-guard-finding.md).
 - The data flow is drawn in
-  [c3-009](../diagrams/c3-009-reachability-guard-data-flow.md). It shows the built-parser
+  [c3-010](../diagrams/c3-010-reachability-guard-data-flow.md). It shows the built-parser
   inventory, the invocation collection, the comparison, the exemption check and the
   refusal.
 - A new module the guard depends on must be deployable from `templates/scripts/commit_guardian/`

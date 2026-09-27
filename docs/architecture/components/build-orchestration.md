@@ -104,5 +104,5 @@ JavaScript, so wiring live inputs now would false-refuse every commit touching t
 component. See the how-to below for the current rollout status and what to do with a
 finding.
 
-- [Runtime Reachability Guard — Data Flow](../diagrams/c3-009-reachability-guard-data-flow.md) — capability inventory from the built parser, invocation collection from automation scripts, the comparison, and the refuse-not-warn exit.
+- [Runtime Reachability Guard — Data Flow](../diagrams/c3-010-reachability-guard-data-flow.md) — capability inventory from the built parser, invocation collection from automation scripts, the comparison, and the refuse-not-warn exit.
 - [How to resolve a check-reachability guard finding](../../how-to/resolve-a-reachability-guard-finding.md) — the operator procedure: wire up the caller, or record an exemption.

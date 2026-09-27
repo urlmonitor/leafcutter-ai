@@ -10,7 +10,7 @@ components:
   - commit_guardian
 related_docs:
   - docs/architecture/components/commit-guardian.md
-  - docs/architecture/diagrams/c3-009-reachability-guard-data-flow.md
+  - docs/architecture/diagrams/c3-010-reachability-guard-data-flow.md
   - docs/how-to/managing-pre-commit-hooks.md
   - docs/how-to/done-proof-enforcement.md
   - docs/reference/workflow-authoring-contract.md
@@ -147,7 +147,7 @@ against a fixture surface — or once that follow-on work lands and the hook/CI 
 ## See also
 
 - [Commit Guardian — Pre-Commit Hook System](../architecture/components/commit-guardian.md)
-- [Reachability Guard — Data Flow](../architecture/diagrams/c3-009-reachability-guard-data-flow.md)
+- [Reachability Guard — Data Flow](../architecture/diagrams/c3-010-reachability-guard-data-flow.md)
 - [How to manage pre-commit hooks in leafcutter](managing-pre-commit-hooks.md)
 - [How to understand proof-of-done enforcement (pre-commit and CI)](done-proof-enforcement.md) — the two-layer precedent this guard mirrors
 - [ADR-050 — Runtime Reachability Guard Refuses, Never Warns](../architecture/adrs/ADR-050-runtime-reachability-guard-refuses-not-warns.md) — the decision record covering the same-change adoption case and the two ways forward
