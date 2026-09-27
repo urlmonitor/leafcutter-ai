@@ -1810,6 +1810,10 @@
       "ground": "Targets templates/workflows-js/*.js, this package's own workflow-source tree. Same consumer-layout finding as check-agent-spawn-consistency: never part of a consumer's own tracked repo root under the documented deploy layout, only reachable in this package's own self-hosted checkout."
     },
     {
+      "id": "check-reachability",
+      "ground": "BO-2900b-1: targets scripts/build_orchestration/*.py and templates/workflows-js/*.js, this package's own command-surface and workflow-automation source trees, the two sides the guard compares. Same consumer-layout finding as check-workflow-meta: never part of a consumer's own tracked repo root under the documented deploy layout, only reachable in this package's own self-hosted checkout. Deriving the surfaces and automation of a consumer project's own code is later work in the same AC family (BO-2900c-4), not a broken trigger. Found by test_bp_100k_4_iii's built-consumer census on PR #918."
+    },
+    {
       "id": "check-hook-parity",
       "ground": "Targets scripts/commit_guardian/, templates/scripts/commit_guardian/, and templates/commit-guardian/ — this package's own hook source/deploy trees. In a consumer install scripts/commit_guardian/ is a symlink into the gitignored .leafcutter/ deploy mirror (per the documented deploy layout), so no file under that prefix is ever directly tracked; only reachable in this package's own self-hosted checkout, where these ARE real, separately tracked directories."
     }
