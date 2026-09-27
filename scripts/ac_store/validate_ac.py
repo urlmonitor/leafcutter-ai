@@ -3,7 +3,10 @@
 validate_ac.py — Package-surface AC implementation-spec validator.
 
 Usage:
-    python3 scripts/ac_store/validate_ac.py <ac_yaml_path> [<ac_yaml_path> ...]
+    python3 scripts/ac_store/validate_ac.py <path> [<path> ...]
+
+Each <path> is an AC YAML file or a DIRECTORY, which is walked recursively
+(``index.yaml`` is skipped — it is the component registry, not an AC).
 
 Validates package-surface ACs for machine-checkable implementation specs.
 
@@ -38,7 +41,9 @@ For such ACs, it_requirements MUST be a structured object with:
   - required_skills         (non-empty list of strings)
   - post_write_commands     (list of strings, may be empty)
 
-Exits non-zero if any file fails validation; exits zero if all pass.
+Exits non-zero if any file fails validation, or if the arguments resolved to
+zero files (a run that checked nothing is not a pass — KI-ACS-001,
+ACS-100i-7-ii); exits zero if at least one file was checked and all pass.
 
 AC-3: validator rejects a thin/fictional package-surface spec (BO-2000d-2).
 """
@@ -296,6 +301,60 @@ def _validate_file(
     return []
 
 
+def _resolve_ac_yaml_paths(args: list[str]) -> tuple[list[Path], list[str]]:
+    """Expand CLI arguments into the concrete AC YAML files to validate.
+
+    Mirrors ``validate_ac_schema._resolve_ac_yaml_paths`` (the KI-ACS-001 fix)
+    so both validators treat their arguments identically (ACS-100i-7-ii).
+
+    A **directory** argument is walked recursively for ``*.yaml``/``*.yml``,
+    because AC YAML sits at more than one depth (directly under a component
+    directory, or inside a feature folder). ``index.yaml`` is excluded from
+    directory walks: it is the component registry, not an acceptance
+    criterion. Naming it explicitly still validates it.
+
+    Args:
+        args: Raw command-line arguments — file paths, directory paths, or both.
+
+    Returns:
+        ``(paths, errors)``: the AC YAML files to validate, de-duplicated in
+        order, plus one error string per argument that could not be resolved
+        (a nonexistent path, or a directory holding no AC YAML).
+    """
+    resolved: list[Path] = []
+    errors: list[str] = []
+
+    for arg in args:
+        path = Path(arg)
+        if not path.exists():
+            errors.append(f"{path}: File not found.")
+            continue
+        if path.is_dir():
+            found = sorted(
+                p
+                for p in (*path.rglob("*.yaml"), *path.rglob("*.yml"))
+                if p.is_file() and p.name != "index.yaml"
+            )
+            if not found:
+                errors.append(f"{path}: directory contains no AC YAML files.")
+            resolved.extend(found)
+            continue
+        if path.suffix not in {".yaml", ".yml"}:
+            continue  # Skip non-YAML files silently
+        resolved.append(path)
+
+    # De-duplicate while preserving order: a directory plus a file inside it
+    # must not validate (and report) the same record twice.
+    seen: set[Path] = set()
+    unique: list[Path] = []
+    for path in resolved:
+        if path in seen:
+            continue
+        seen.add(path)
+        unique.append(path)
+    return unique, errors
+
+
 # ---------------------------------------------------------------------------
 # CLI entry point
 # ---------------------------------------------------------------------------
@@ -305,13 +364,18 @@ def main(argv: list[str] | None = None) -> int:
     """Validate AC YAML files for package-surface spec completeness.
 
     Returns:
-        0 on success, 1 on validation errors, 2 on usage error.
+        0 when at least one file was checked and all passed; 1 on validation
+        errors, on an unresolvable argument, or when the arguments resolved to
+        zero files (ACS-100i-7-ii); 2 on usage error (no arguments).
     """
     args = argv if argv is not None else sys.argv[1:]
 
     if not args:
         print(
-            "Usage: validate_ac.py <ac_yaml_path> [<ac_yaml_path> ...]\n"
+            "Usage: validate_ac.py <path> [<path> ...]\n"
+            "\n"
+            "Each <path> is an AC YAML file or a DIRECTORY, which is walked\n"
+            "recursively (index.yaml is skipped).\n"
             "\n"
             "Validates package-surface AC YAML files for machine-checkable "
             "implementation specs.\n"
@@ -323,7 +387,8 @@ def main(argv: list[str] | None = None) -> int:
             f"  {', '.join(REQUIRED_IMPL_FIELDS)}\n"
             "\n"
             "Non-package-surface ACs are skipped (no impl-spec requirement).\n"
-            "Exits non-zero if any validation error is found.",
+            "Exits non-zero if any validation error is found, or if the\n"
+            "arguments resolved to zero files.",
             file=sys.stderr,
         )
         return 2
@@ -331,13 +396,10 @@ def main(argv: list[str] | None = None) -> int:
     all_errors: list[str] = []
     files_checked = 0
 
-    for arg in args:
-        path = Path(arg)
-        if not path.exists():
-            all_errors.append(f"{path}: File not found.")
-            continue
-        if path.suffix not in {".yaml", ".yml"}:
-            continue  # Skip non-YAML files silently
+    paths, resolve_errors = _resolve_ac_yaml_paths(args)
+    all_errors.extend(resolve_errors)
+
+    for path in paths:
         errors = _validate_file(path)
         all_errors.extend(errors)
         files_checked += 1
@@ -349,8 +411,16 @@ def main(argv: list[str] | None = None) -> int:
         return 1
 
     if files_checked == 0:
-        print("No YAML files to validate.")
-        return 0
+        # KI-ACS-001 / ACS-100i-7-ii: a run that checked nothing is NOT a pass.
+        # A validator consulted for reassurance must be able to distinguish
+        # "clean" from "I was given nothing".
+        print(
+            "ERROR: no AC YAML files were validated. The arguments resolved to "
+            "zero files, so nothing was checked — this is NOT a pass.\n"
+            f"  arguments: {' '.join(args)}",
+            file=sys.stderr,
+        )
+        return 1
 
     if files_checked == 1:
         print(f"OK: {args[0]} is valid.")
@@ -361,3 +431,18 @@ def main(argv: list[str] | None = None) -> int:
 
 if __name__ == "__main__":
     sys.exit(main())
+
+
+# DECISION HISTORY
+# ================================================================================
+# - 2026-09-25 [python-coder]: ACS-100i-7-ii — closed the KI-ACS-001 no-op that
+#   survived here after being fixed only in validate_ac_schema.py. A directory
+#   argument failed the .yaml/.yml suffix filter and was dropped silently, and a
+#   run that resolved zero files printed "No YAML files to validate." and exited
+#   0. Added _resolve_ac_yaml_paths(), mirroring the sibling's: directories are
+#   walked recursively (index.yaml skipped), a directory with no AC YAML is an
+#   error, and a zero-files run now exits 1 with an explicit "NOT a pass"
+#   message. File arguments behave as before. Kept as a copy rather than an
+#   import from validate_ac_schema to stay within this single-file fix; the KI
+#   records consolidating the two validators as the longer-term direction.
+#   (#TICKETLESS reason=quick-fix-ACS-100i-7-ii-validate-ac-walks-directories)

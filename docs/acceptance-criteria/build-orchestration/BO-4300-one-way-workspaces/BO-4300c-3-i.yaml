@@ -1,0 +1,110 @@
+id: BO-4300c-3-i
+title: "Success reported with output that is not a valid answer is a failure, never 'use the current checkout'"
+component: build-orchestration
+components:
+  - worktree_manager
+  - build_orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: critical
+roadmap_phase: phase_1
+change_target: pipeline
+risk_surface: safety
+criteria: |
+  Given the requirements-authoring session is started from the workspace parent
+    folder,
+  And the step meant to obtain its workspace ends reporting success, but its
+    output is the file path of a script rather than a valid answer from the
+    workspace maker,
+  When the session receives that result,
+  Then the session ends with a failure stating that no valid answer was received,
+    and quoting the output it got,
+  And that result is not treated as "no workspace needed" or as "use the current
+    checkout",
+  And the main copy's working files are identical before and after the session,
+  And the recorded dispatches contain no authoring step.
+depends_on: [BO-4300c-3]
+doc_links:
+- path: docs/analysis/2026-09-25-worktree-creation-consolidation.md
+  relationship: describes
+  status: exists
+- path: docs/analysis/2026-09-25-worktree-failure-modes.md
+  relationship: describes
+  status: exists
+- path: docs/architecture/components/worktree-manager.md
+  relationship: describes
+  status: exists
+  relevance: Component page for the one maker; rewritten for clones under BO-4300a-4.
+- path: docs/architecture/adrs/ADR-030-dual-engine-workflow-support.md
+  relationship: constrains
+  status: exists
+  relevance: E2 workflow bodies have no filesystem or process access; agent() schema validation.
+- path: docs/testing/test-angles.md
+  relationship: describes
+  status: exists
+  relevance: Angle taxonomy used by this record's test_spec.
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: BO-4300c-3
+  contract: The workflow acceptance predicate.
+package_surface: false
+it_requirements:
+- plan-feature fails when the workspace step reports success with output that is not one JSON object (the
+  incident's script path), quoting the output; the parse failure is never caught into 'no workspace'.
+- The main-copy check snapshots a real temporary project's working files and branches around the harness
+  run.
+- Proof runs the workflow under unit_tests/_workflow_engine_harness.py -- the deployed copy the build
+  produces, so the build's workflow transform is exercised -- with label-scripted agent replies, and asserts
+  on the RECORDED dispatch list, never on workflow source text. The harness must be able to model a workspace
+  step that declines its task, answers in prose, answers exit 0 with a non-JSON path, or answers JSON
+  without status (F13); extending the harness for this is in scope of the first AC that needs it.
+- Workflow edits are made in templates/workflows-js/*.js and reach .claude/workflows/ only through the
+  build; the deployed copy is what the tests run.
+test_required: true
+test_spec:
+- name: test_success_with_script_path_output_ends_plan_feature_in_failure
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: failure
+  description: Started from the workspace parent with a workspace step returning exit 0 and a file path,
+    plan-feature ends with status error naming 'no valid answer' and quoting the path.
+- name: test_invalid_answer_is_not_treated_as_no_workspace_needed
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: criterion
+  description: No recorded dispatch runs in the current checkout or omits a workspace location.
+- name: test_main_copy_working_files_unchanged_after_the_session
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: real_artifact
+  description: The temporary main copy's working files and branches are identical before and after.
+- name: test_no_authoring_dispatch_is_recorded
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: criterion
+  description: The dispatch list contains no product-owner, business-analyst or it-po dispatch.
+test_rationale: The 2026-09-25 incident was a perfect-enough maker with a caller that carried on, and
+  every source grep of plan-feature.js would have passed. So the assertions are made on the recorded dispatch
+  list of a real workflow run with scripted hostile answers, which is the only place 'no later step was
+  dispatched' can be observed.
+origin_agent: business-analyst
+created: 2026-09-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  The exact 2026-09-25 incident (consolidation analysis, section 1, steps 4-7): the
+  path-resolution command was re-sent in place of the create command, returned exit 0 with the
+  script's path, JSON.parse threw and was caught, the worktree path stayed null, and the product
+  owner wrote INF-1400* ACs untracked into the main checkout on main. The session starts from
+  the workspace parent because that is where it ran.

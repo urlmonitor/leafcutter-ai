@@ -1,0 +1,96 @@
+id: TQ-500f-2-ii
+components:
+  - testing_quality
+  - ac_store
+title: "Bug-fix and gate requirements arrive at the test writer with their wrong versions already named"
+component: testing-quality
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given the technical enricher (IT-PO) enriches three requirements in one pass —
+      R1, a bug fix: "a database outage no longer causes a retry storm; the
+        refresh runs only when a refresh is due and a retry is due",
+      R2, a gate: "a trade is blocked unless both the window is open and the
+        position limit is not reached",
+      R3, new behaviour with no earlier version: "export the report as CSV",
+  When it authors each requirement's test plan,
+  Then R1's guarding test entry carries must_catch naming "revert the fix" and
+      at least one specific wrong version that names the condition or input
+      involved (for example "drop the retry_due condition"),
+    And R2's guarding test entry carries must_catch naming one wrong version
+      per condition of the gate ("drop the window-open condition", "drop the
+      position-limit condition") and "the gate always allows",
+    And R3 is not required to carry must_catch; if it carries none, nothing
+      reports that as a defect,
+    And whether a requirement is a bug fix or a gate is the enricher's own
+      stated judgement in its enrichment note, not the output of an automatic
+      classifier over the requirement's wording.
+depends_on:
+  - TQ-500f-2
+doc_links:
+  - path: templates/agents/it-po.md
+    relationship: describes
+    status: exists
+    relevance: "The enricher that authors test_spec; its instructions gain the must_catch duty for bug-fix and gate requirements."
+  - path: docs/analysis/2026-09-25-test-writers-prove-failure-not-discrimination.md
+    relationship: describes
+    status: exists
+    relevance: "Incident 1 (compound gate, second condition never satisfied by the fixture) is the model for R1 and R2."
+assigned_agent: llm-expert
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: TQ-500f-2
+  contract: "The must_catch field exists on test_spec items and reaches the test writer verbatim."
+it_requirements:
+  - Edit the source template templates/agents/it-po.md only, never the deployed copies.
+  - The instruction must make 'this AC is a bug fix / a gate' the enricher's own explicit statement
+    in its enrichment note, never the output of an automatic classifier over the AC text.
+  - For a bug fix, the enricher must author 'revert the fix' plus at least one wrong version
+    that names the condition or input involved. For a gate, it must author one 'drop the <X>
+    condition' per gate condition plus 'the gate always allows'.
+  - The instruction must say that new behaviour with no earlier version needs no must_catch,
+    and that its absence is not a defect, so the enricher does not stamp must_catch everywhere.
+  - Authored must_catch values must satisfy TQ-500f-2-i's rules (non-empty list of non-blank
+    strings). The instruction must also tie must_catch to the conditional 'discrimination' angle,
+    per user decision Q2 (it fires for bug-fix or gate ACs or when must_catch is present, and
+    never takes one of the four slots by default).
+test_required: false
+test_rationale: 'Prompt-only: the deliverable is instruction text in templates/agents/it-po.md.
+  No deterministic unit test can show that an LLM names good wrong versions, and a test asserting
+  the instruction is present in the template is the grep-only proof CLAUDE.md forbids. Substitutes:
+  (1) the shape of whatever the enricher writes is enforced mechanically at commit time by
+  TQ-500f-2-i''s validator; (2) recommended eval: register it-po in scripts/evals/agent_eval_config.json
+  (artifact mode, run by scripts/evals/run_agent_eval.py) with R1/R2/R3 from this AC as gold
+  rows. R1 must carry ''revert the fix'' plus a condition-naming wrong version, R2 one per
+  condition plus ''the gate always allows'', and R3 none. No such eval set exists yet, so
+  it needs its own follow-up AC; (3) pr-reviewer checks the prompt diff against each Then
+  clause.'
+origin_agent: business-analyst
+created: 2026-09-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: prompt
+risk_surface: contract_boundary
+notes: |
+  PROMPT-ONLY. This is an instruction to the enricher; no deterministic unit
+  test can show that an LLM names good wrong versions. The observable output is
+  the enriched requirement records themselves (an eval over R1/R2/R3 can check
+  them), but a unit test asserting the instruction is present in the enricher's
+  template is the text-search proof CLAUDE.md forbids. IT-PO: say so in
+  test_rationale (test_required: false, or an eval-shaped test_spec) rather than
+  writing a grep test.
+
+  R3 is the control: an enricher that stamps must_catch on everything would
+  pass R1 and R2 and add noise to every new-feature requirement.
+
+  The last Then clause keeps TQ-500's non-goal intact: the judgement is
+  DECLARED by the enricher, never inferred from requirement text by a
+  classifier.

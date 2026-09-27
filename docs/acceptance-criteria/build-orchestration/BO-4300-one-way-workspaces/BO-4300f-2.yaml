@@ -1,0 +1,233 @@
+id: BO-4300f-2
+title: "The former ways of making a workspace are gone from what an install delivers"
+component: build-orchestration
+components:
+  - worktree_manager
+  - build_orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: critical
+roadmap_phase: phase_1
+change_target: pipeline
+risk_surface: contract_boundary
+criteria: |
+  Given a fresh project that has installed these tools,
+  When each former way of making, finding or clearing a workspace is invoked by
+    the name an install used to deliver it under -- the former workspace set-up
+    script and each of its sub-commands, the workspace-facts helper's base
+    lookup, and the recovery fallback that re-adds a workspace --
+  Then each is either absent from the install, or, for at most one release,
+    passes the request to the one workspace maker and returns the maker's answer
+    unchanged,
+  And no former way makes, finds or clears a workspace by its own means.
+
+  Given the project's own files -- its code, templates, skills, agents,
+    commands, workflows, how-to guides, reference and component documentation,
+    READMEs and CLAUDE.md,
+  When the census of the old way of creating or removing a workspace (adding or
+    removing a git worktree) is run over the project,
+  Then no file creates or removes a workspace the old way, in any spelling -- a
+    shell line, the form that names a folder first, an argument list, a script
+    template or a written instruction to an agent,
+  And the only exempt sites are the one-off cut-over step (BO-4300f-3) and the
+    one test helper that builds a legacy workspace for that step's tests, each
+    entered with its reason in one declared exemption list,
+  And records of the past -- analyses, known issues, retrospectives, changelogs,
+    tickets and acceptance criteria -- are out of scope, excluded by folder in
+    that same declared list and never file by file, so an old-way instruction
+    added to a how-to guide is reported while the same text quoted in an
+    analysis is not,
+  And each hit is reported by file and line.
+depends_on: [BO-4300f]
+doc_links:
+- path: docs/analysis/2026-09-25-worktree-migration-plan.md
+  relationship: describes
+  status: exists
+- path: docs/analysis/2026-09-25-worktree-creation-consolidation.md
+  relationship: describes
+  status: exists
+- path: docs/analysis/2026-09-25-worktree-failure-modes.md
+  relationship: describes
+  status: exists
+- path: docs/architecture/components/worktree-manager.md
+  relationship: describes
+  status: exists
+  relevance: Component page for the one maker; rewritten for clones under BO-4300a-4.
+- path: docs/testing/test-angles.md
+  relationship: describes
+  status: exists
+  relevance: Angle taxonomy used by this record's test_spec.
+assigned_agent: python-coder
+estimated_complexity: L
+delivers_to: null
+expects_from:
+  ac_id: BO-4300f-1
+  contract: Every caller migrated to the maker before the former ways are removed.
+package_surface: false
+it_requirements:
+- Delete scripts/setup_ticket_worktree.py (the tracked, drifted copy) and the drift-ENFORCING test (test_fastlane_template_deploy_parity.py's
+  template-must-not-have-the-gate assertion). templates/scripts/setup_ticket_worktree.py is deleted, or
+  for at most one release replaced by a shim that maps each sub-command to the maker (setup-ticket ->
+  ensure --kind ticket, create-only -> feature, create-ac-worktree -> ac, create-fastlane-worktree ->
+  fastlane) and relays the maker's answer unchanged; the shim's removal release is recorded in its own
+  docstring.
+- worktree_repo_facts.py's base lookup is removed or shims to the maker; git_recovery.py's worktree re-add
+  fallback is removed; scripts/worktree/check_workspace_setup_permission.py's own first-match repository
+  search is removed in favour of the maker's resolution.
+- The build deploy manifest drops entries for deleted scripts; the maker's named entry (BO-4300a-1) stays.
+- Tests and docs that exercised the deleted scripts (tests/test_setup_ticket_worktree.py's 41 mock sites)
+  are removed or re-pointed at the maker, never left skipped.
+- 'Q6 (should leafcutter-ai/.leafcutter/ exist): whichever the user decides, this AC ensures no former
+  way survives in it; if the directory is kept, the deployed copy there is the maker or a shim, never
+  an old script.'
+- 'Tests must not spawn the package''s own scripts/build.py (CLAUDE.md ''Tests must not spawn their own
+  build.py''): the deployed maker comes from the shared deployed layout, and fixture projects carry a
+  minimal stub build entry point that installs a real, rejecting hook in well under a second. A test that
+  must mutate the package and build its own copy says so and justifies it in its ticket.'
+- All temporary projects, hubs and workspaces live under the test's temp directory and run git with an
+  isolated global and system config; afterwards the developer's own repository's branches, registered
+  worktrees and local git config are unchanged (BO-4300f-4-i, F14, KI-TQ-012).
+- 'REPO-WIDE CENSUS (duplication audit item 10): a test fails when `git worktree add` or `git worktree
+  remove` appears anywhere in the package repository''s tracked files, INCLUDING the workspace component''s
+  own files (the maker, the resolver module, the fixture module, this family''s tests) -- the component is
+  not exempt as a whole. Every spelling counts: shell text, argv lists (["git", "worktree", "add"] and
+  the -C form), template literals and prose instructions. The ONLY exemptions are: (1) the legacy cut-over
+  verb of BO-4300f-3; (2) the single legacy_worktree test helper its tests use (delivered in the BO-4300f-4
+  fixture module) -- both exempted as those specific sites, not as the files or folders around them; and
+  (3) the record folders of decision 2 below. All three live in ONE declared exemption list in the test,
+  each entry with its reason; each failure names the file and line.'
+- 'Census exclusion of historical records (DECIDED, user 2026-09-27): records of the past are excluded
+  BY FOLDER, in the same one declared list, never file by file: docs/analysis/ (analyses), docs/known-issues/
+  (known issues), docs/retrospectives/ (retrospectives), changelogs/ (changelogs), tickets/ (tickets) and
+  docs/acceptance-criteria/ (acceptance criteria). Verified 2026-09-25: about 94 of the 157 tracked files
+  that mention the commands are in these folders. Everything that instructs or executes stays in scope --
+  templates/, scripts/, config/, unit_tests/, tests/, docs/how-to/, docs/reference/, docs/agents/, docs/architecture/components/,
+  every README.md and CLAUDE.md -- so a new record folder is in scope until it is added to the list with
+  its reason.'
+- 'Blast radius (verified 2026-09-25): besides the scripts this record already deletes, the census goes
+  red on ~33 test files under unit_tests/ and tests/ that build git worktrees as fixtures, and on templates/skills,
+  templates/agents, templates/workflows and templates/workflows-js sites. Making it green is in scope:
+  test fixtures move to the BO-4300f-4 helper or become maker-made clones; instruction sites are rewritten
+  under BO-4300a-1-ia, BO-4300a-1-ib, BO-4300f-2-ia and BO-4300f-2-ib.'
+- 'Commit spelling census (KI-CG-20260925-commit-delegation-hook-misses-git-dash-c): in the same test
+  module, a second census fails when `git -C <path> commit` (or its argv form) appears in the component''s
+  own files (maker, resolver module, fixture module, this family''s tests) or in any instruction surface
+  (templates/agents, templates/skills, templates/commands, templates/workflows, templates/workflows-js,
+  docs/how-to, CLAUDE.md). Python test fixtures elsewhere that commit through a subprocess are out of scope
+  (the delegation hook only sees agent shell commands).'
+test_required: true
+test_spec:
+- name: test_each_former_way_is_absent_or_relays_the_makers_answer_unchanged
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: deployed
+  description: In the shared deployed layout, each former script, sub-command, the facts helper's base
+    lookup and the recovery re-add is absent, or its answer equals (after normalising timestamps) the
+    maker's answer to the equivalent request.
+- name: test_no_former_way_makes_finds_or_clears_by_its_own_means
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: failure
+  description: Invoking any surviving shim against a temp project creates exactly what the maker creates
+    (a marker-bearing clone) and nothing else -- no git worktree registration in the main project.
+- name: test_no_git_worktree_add_or_remove_outside_the_declared_exemptions
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: unit
+  angle: seam
+  description: Over every tracked file of the repository, including the workspace component's own files,
+    no spelling of `git worktree add` or `git worktree remove` appears outside the one declared exemption
+    list (the BO-4300f-3 cut-over verb, the one legacy_worktree test helper, and the six record folders);
+    each hit is reported by file and line.
+- name: test_census_reports_a_how_to_hit_but_not_the_same_text_in_an_analysis
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: unit
+  angle: boundary
+  description: Fed a fixture tree holding the same `git worktree add` instruction in docs/how-to/<file>.md
+    and in docs/analysis/<file>.md, the census reports the how-to hit by file and line and does not report
+    the analysis; the same text in a component file (e.g. a second helper in the fixture module beside
+    the exempt legacy_worktree helper) is also reported.
+- name: test_census_exemption_list_is_one_declared_list_with_reasons_and_folder_entries
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: unit
+  angle: criterion
+  description: The census's exemptions come from one declared list in which every entry carries a non-empty
+    reason; the record exclusions are exactly the six folders (analyses, known issues, retrospectives,
+    changelogs, tickets, acceptance criteria) as folder entries, and there are no file-level entries other
+    than the cut-over verb and the one legacy_worktree helper.
+- name: test_census_detects_every_spelling_of_the_commands
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: unit
+  angle: failure
+  description: Fed fixture files holding the shell form, the -C form, a Python argv list and a JS template
+    literal, the census reports all four; fed the exempt cut-over verb's file it reports none.
+- name: test_no_git_dash_c_commit_in_component_files_or_instruction_surfaces
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: unit
+  angle: criterion
+  description: No `git -C <path> commit` (shell or argv form) appears in the component's own files or in
+    any instruction surface; a fixture file containing it is reported.
+test_rationale: Removal is proven on the deployed install by invoking each former name, because a deleted
+  source file can survive in the install and a surviving shim can drift -- both invisible to a source-tree
+  check.
+origin_agent: business-analyst
+created: 2026-09-25
+amended_by:
+- reason: duplication-audit-items-5-7
+  by: it-po
+  at: 2026-09-25
+  note: >-
+    Technical fields only; criteria unchanged. Added the repo-wide census that fails on `git worktree
+    add/remove` anywhere outside the component (only the BO-4300f-3 cut-over verb and its fixture
+    helper exempt), a spelling-coverage self-check, and a `git -C <path> commit` census over the
+    component and instruction surfaces. The history-folder exclusion is recorded as a proposal for the
+    user. Notes record that the ticket-path fix and the shim fix land in the same epic. Complexity
+    M -> L. readiness reset to reviewed.
+- reason: duplication-audit-scope-widening
+  by: business-analyst
+  at: 2026-09-27
+  note: >-
+    Criteria only, per the user's decision to widen the criteria to the reach of the repo-wide
+    census already in it_requirements. Added a second scenario: no code, template, skill, agent,
+    command, workflow, how-to, reference or component doc, README or CLAUDE.md creates or removes
+    a workspace the old way in any spelling; the only exemptions are the BO-4300f-3 cut-over step
+    and its one legacy-workspace test helper. The user accepted the IT PO's proposal: records of the
+    past (analyses, known issues, retrospectives, changelogs, tickets, acceptance criteria) are out
+    of scope, excluded by folder in the one declared list, never by file. The install-removal
+    scenario is unchanged. it_requirements, test_spec and contracts untouched (IT PO follows).
+    readiness stays reviewed.
+- reason: audit-decisions-finalised
+  by: it-po
+  at: 2026-09-27
+  note: >-
+    Technical fields only; criteria unchanged. The history-folder exclusion is now a requirement
+    (user decision 2026-09-27): six record folders excluded by folder in the one declared list.
+    Census scope narrowed to the BA's widened criteria: "outside the workspace component" is replaced
+    by only the declared exemptions (the BO-4300f-3 cut-over verb, the one legacy_worktree test helper,
+    and the record folders); the component's own files are no longer exempt as a whole. test_spec
+    renamed the census test and added a how-to-reported / analysis-not-reported test and a
+    declared-list shape test. readiness stays reviewed.
+superseded_by: null
+covered_by: [BO-4300f-2-i, BO-4300f-2-ia, BO-4300f-2-ib]
+implemented_by: []
+notes: |
+  Migration plan step 9. "Removed rather than left alongside" is the point: the tracked and
+  deployed copies of today's script already differ on purpose and a test enforces the drift
+  (F13). Script names and the one-release shim decision are IT PO's.
+
+  SAME EPIC (IT PO, 2026-09-25, duplication audit): the ticket-path fix (BO-4300a-1-ii with its
+  callers in BO-4300a-1-ib and BO-4300f-2-ia) and the stage-shim fix (BO-4300c-1-ii: ensure installs
+  every declared stage's shim and proves each fires) land in the SAME epic as this removal. Removing
+  the retiring set-up script before them would drop the only installer of the commit-msg and
+  post-merge shims (KI-CG-20260914-post-merge-stage-registers-but-installs-no-shim) and leave
+  ticket_path_final as the only ticket location callers have. The census tests above are why no
+  fifth recipe can grow back after the cut-over.

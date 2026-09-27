@@ -33,7 +33,16 @@ delivers_to: null
 expects_from: null
 origin_agent: BrainCandy
 created: 2026-09-21
-amended_by: []
+amended_by:
+- reason: child-scope-narrowed
+  by: it-po
+  at: 2026-09-25
+  note: >-
+    Content UNCHANGED -- criteria, title, readiness, priority, covered_by and depends_on
+    untouched. Audit entry only: child BO-4100e-4 was narrowed on 2026-09-25 (user decision
+    at the BO-4300 BA gate) to leftovers not identifiable as the requested work; a half-made
+    copy of the same work is completed by BO-4300d-2. Staged with the child per the
+    stage-the-parent rule.
 superseded_by: null
 covered_by: [BO-4100e-1, BO-4100e-2, BO-4100e-3, BO-4100e-4]
 implemented_by: []

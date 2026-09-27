@@ -534,15 +534,22 @@ def test_dispatch_order_build_epic() -> None:
 def test_dispatch_order_plan_feature() -> None:
     """plan-feature.js dispatches agents in the expected full sequence.
 
-    With default stub args (userInput='stub user input', no run_id):
+    With default stub args (userInput='stub user input', no run_id), PLUS an
+    explicit, well-formed 'resolve-worktree-setup-script-path' and
+    'worktree-setup' label response (see BO-1500a-5-i note below for why the
+    harness's generic default stub can no longer be relied on to reach past
+    Pre-Stage-0 here):
 
       Pre-Stage-0:
         1. status-checker   label='detect-current-branch'
-        2. status-checker   label='resolve-worktree-setup-script-path' (ACD-2100a-1:
+        2. worktree-agent   label='resolve-worktree-setup-script-path' (ACD-2100a-1:
            resolves .leafcutter/scripts/setup_ticket_worktree.py to an absolute,
            repository-anchored path at runtime instead of trusting the cwd-relative
            {{config.output_root}} placeholder, which resolved against the parent
-           copy when the cwd was not the repo root — KI-ACD-004)
+           copy when the cwd was not the repo root — KI-ACD-004. BO-2300a-1-ii:
+           dispatched to worktree-agent, the registry's shell-permitted executor
+           — never status-checker, permits_shell: false — reusing the same
+           workspaceSetupAgentId the worktree-setup dispatch below already used.)
         3. worktree-agent   label='worktree-setup' (BO-1500f-1: dispatched to the
            permission-gate's resolved target agent, no longer hardcoded to
            'status-checker'. ACD-2100b-5 moved the workspace-setup permission
@@ -574,7 +581,24 @@ def test_dispatch_order_plan_feature() -> None:
       args.resume_answer supplied, this default stub run is headless, so
       resolveGate() falls straight through to pauseAtGate(), which persists a
       durable pending-question record instead):
-        9. status-checker  label='pause-persist'
+        9. worktree-agent  label='pause-persist' (BO-2300a-1-ii: worktree-agent,
+           not status-checker — see step 2's note.)
+
+    BO-1500a-5-i note: this test used to rely on run_workflow_under_e2()'s
+    generic default stub response for 'worktree-setup'
+    ({"exit_code": 0, "output": "", ...}) to reach step 4 onward. That stub
+    is EXACTLY AC BO-1500a-5-i's shape (3) ("success-shaped but naming no
+    workspace directory") — an exit_code of 0 with no worktree_path anywhere
+    in it — which the fixed Pre-Stage-0 Authoring Worktree Bootstrap now
+    correctly halts on (setup_failure_kind: "no_workspace_named") instead of
+    silently falling through with authoringWorktreePath left null. This test
+    is exercising the dispatch ORDER of a genuinely successful run, not that
+    halt path (test_bo_1500a_5_i.py owns the halt-path assertions), so it now
+    supplies its own real, well-formed 'resolve-worktree-setup-script-path'
+    and 'worktree-setup' responses (mirroring test_bo_2300a_1_ii.py's
+    _ROUND_TRIP_LABEL_RESPONSES) so the run's success path is genuinely
+    reached rather than accidentally reached through a shape the fix now
+    rejects.
 
     A dropped, reordered, or mis-typed agent type FAILS this test (AC-2 / M-1).
     """
@@ -582,7 +606,22 @@ def test_dispatch_order_plan_feature() -> None:
     if not plan_feature.exists():
         pytest.skip(f"plan-feature.js not found at {plan_feature}")
 
-    result = run_workflow_under_e2(plan_feature)
+    result = run_workflow_under_e2(
+        plan_feature,
+        label_responses={
+            "resolve-worktree-setup-script-path": {
+                "output": "/tmp/fake-repo/.leafcutter/scripts/setup_ticket_worktree.py",
+                "exit_code": 0,
+            },
+            "worktree-setup": {
+                "output": (
+                    '{"worktree_path": "/tmp/fake-ac-worktree", '
+                    '"ac_store_path": "/tmp/fake-ac-worktree/docs/acceptance-criteria"}'
+                ),
+                "exit_code": 0,
+            },
+        },
+    )
 
     assert result.error == "", (
         f"plan-feature.js harness error: {result.error}\nstderr: {result.stderr[:300]}"
@@ -592,17 +631,18 @@ def test_dispatch_order_plan_feature() -> None:
         # See this test's docstring above for the rationale behind each step
         # (ACD-2100a-1 script-path resolution, ACD-2100b-5's no-dispatch
         # permission gate, BO-1500f-1's resolved worktree-setup target,
-        # the always-on self-skipping PT phase, and ACD-2100c-1's
-        # pauseAtGate()/"pause-persist" in place of a live final-gate answer).
+        # BO-2300a-1-ii's worktree-agent dispatch target, the always-on
+        # self-skipping PT phase, and ACD-2100c-1's pauseAtGate()/
+        # "pause-persist" in place of a live final-gate answer).
         ("status-checker", "detect-current-branch"),
-        ("status-checker", "resolve-worktree-setup-script-path"),
+        ("worktree-agent", "resolve-worktree-setup-script-path"),
         ("worktree-agent", "worktree-setup"),
         ("status-checker", "scan-orphans-git-status"),
         ("status-checker", "scan-committed-stages"),
         ("ac-triage", "stage-0-triage"),
         ("pt-classifier", "pt-classify"),
         ("it-po", "stage-itpo-author"),
-        ("status-checker", "pause-persist"),
+        ("worktree-agent", "pause-persist"),
     ]
 
     actual_count = result.dispatch_count
@@ -884,74 +924,14 @@ def test_build_feature_main_clone_path_dispatch_fails_guard() -> None:
 
 # ---------------------------------------------------------------------------
 # M-2: no-commit-to-main guard must be fail-CLOSED (RED baseline — ticket 10)
+#
+# MOVED to unit_tests/workflows/test_bo_1500a_5_i_dual_engine.py
+# (test_plan_feature_commit_guard_fail_closed_when_worktree_unparseable) —
+# BO-1500a-5-i's rewrite of this test grew this file past the check-file-size
+# ratchet's baseline; the new file's own docstring explains why the test was
+# rewritten and carries the full, unabridged assertions. Not deleted, only
+# relocated — see that file for the current test.
 # ---------------------------------------------------------------------------
-
-
-def test_plan_feature_commit_guard_fail_closed_when_worktree_unparseable() -> None:
-    """plan-feature.js no-commit-to-main guard must be fail-CLOSED (M-2).
-
-    When the worktree setup returns an unparseable payload (null/malformed), the
-    commit guard must REFUSE to commit rather than proceeding on an unconfirmable
-    branch. This is a safety control — fail-closed is mandatory.
-
-    RED baseline (ticket 10): the current implementation skips the branch check
-    entirely when authoringWorktreePath is null, allowing a commit on unknown branch.
-    The test asserts the script refuses; the current code violates this — test is RED.
-    After ticket 10 fixes the guard, this test should turn GREEN.
-    """
-    plan_feature = _WORKFLOWS_DIR / "plan-feature.js"
-    if not plan_feature.exists():
-        pytest.skip(f"plan-feature.js not found at {plan_feature}")
-
-    # Inject a worktree-setup response that returns unparseable output (exit_code 0
-    # but output is empty/unparseable JSON) — simulates a broken worktree payload.
-    # The branch-check agent should then refuse to commit (fail-closed).
-    # Note: we also need to inject the detect-current-branch response so the script
-    # doesn't short-circuit before reaching commitStageOutput.
-    label_responses = {
-        "worktree-setup": {
-            "exit_code": 0,
-            "output": "",  # unparseable — wtPayload will be null
-            "stderr": "",
-        },
-        # The scan-orphans step needs a git status response.
-        "scan-orphans-git-status": {"exit_code": 0, "output": ""},
-        # The scan-committed-stages step needs a git log response.
-        "scan-committed-stages": {"exit_code": 0, "output": ""},
-        # The final-gate: return 'approve' so the script reaches the commit path.
-        "final-gate": {"action": "approve", "priority": "medium"},
-        # The apply-approval step: return ok.
-        "apply-approval": {"status": "ok", "updated": []},
-        # The commit-stage-output agent (label: 'commit-stage-output'):
-        # We want to see that the branch check fires BEFORE the commit agent.
-        # If the guard is fail-closed, it should return error before calling commit.
-        # Leave as default (status: ok) — the test asserts the GUARD fires, not the commit.
-    }
-
-    result = run_workflow_under_e2(plan_feature, label_responses=label_responses)
-
-    assert result.error == "", (
-        f"Harness error: {result.error}\nstderr: {result.stderr[:300]}"
-    )
-
-    # Verify the script dispatched at least the expected early agents.
-    assert result.dispatch_count >= 1, (
-        f"plan-feature.js must dispatch at least 1 agent. Got {result.dispatch_count}."
-    )
-
-    # The commit should NOT have been dispatched when worktree is unparseable.
-    # A fail-closed guard returns error before calling the commit agent.
-    commit_calls = [
-        c for c in result.agent_calls
-        if c.label == "commit-stage-output"
-    ]
-    assert len(commit_calls) == 0, (
-        f"M-2: no-commit-to-main guard is fail-OPEN. "
-        f"plan-feature.js dispatched 'commit-stage-output' ({len(commit_calls)} time(s)) "
-        f"even though the worktree payload was unparseable (authoringWorktreePath=null). "
-        f"The guard must be fail-CLOSED: refuse to commit when branch cannot be confirmed.\n"
-        f"All calls: {[(c.agent_type, c.label) for c in result.agent_calls]}"
-    )
 
 
 # ---------------------------------------------------------------------------

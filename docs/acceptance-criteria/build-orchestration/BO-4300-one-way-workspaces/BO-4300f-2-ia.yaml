@@ -1,0 +1,125 @@
+id: BO-4300f-2-ia
+title: Agent charters, skills, workflow texts and the rules file carry no second recipe for workspaces
+component: build-orchestration
+components:
+- worktree_manager
+- build_orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: critical
+roadmap_phase: phase_1
+change_target: prompt
+risk_surface: contract_boundary
+criteria: |
+  Given the instructions an install delivers to agents and people -- agent
+    charters, skills, workflow texts and the project rules file,
+  When each passage about making, finding or clearing a workspace is read,
+  Then it directs the reader to the one workspace maker and to the how-to guide
+    for getting a workspace,
+  And none gives its own steps to copy the project, start a line of work,
+    install tools into a workspace, link or copy protection settings into one, or
+    delete one by hand.
+depends_on:
+- BO-4300f-2
+- BO-4300a-3
+doc_links:
+- path: docs/analysis/2026-09-25-worktree-migration-plan.md
+  relationship: describes
+  status: exists
+- path: docs/analysis/2026-09-25-worktree-creation-consolidation.md
+  relationship: describes
+  status: exists
+- path: docs/architecture/components/worktree-manager.md
+  relationship: describes
+  status: exists
+  relevance: Component page for the one maker; rewritten for clones under BO-4300a-4.
+- path: docs/how-to/get-a-workspace.md
+  relationship: describes
+  status: planned
+  relevance: Authored under BO-4300a-3.
+- path: docs/architecture/adrs/ADR-031-worktree-quality-gate-guard.md
+  relationship: constrains
+  status: exists
+  relevance: Canary-execution probe model (section 1); its create-time gate (section 4) moves into the
+    maker.
+assigned_agent: llm-expert
+estimated_complexity: M
+delivers_to: null
+expects_from:
+  ac_id: BO-4300a-3
+  contract: docs/how-to/get-a-workspace.md exists as the single replacement page.
+package_surface: false
+it_requirements:
+- 'Surfaces: templates/agents/*.md (worktree-agent.md''s create-only/setup-ticket recipe and its wrong
+  ticket_path_new field; any agent that probes or removes workspaces), templates/skills/*/SKILL.md (feature
+  epic recipe, building-epics'' direct `git worktree remove` fallback and non-halting pre-drive probe,
+  build-feature-ops-notes'' `git worktree add --detach /tmp/base`, ship''s `git worktree remove`, quick-fix''s
+  two-location lookup), templates/workflows/*.md (close-worktree.md, build-backlog.md, worktree.md), and
+  the project rules file CLAUDE.md.'
+- 'CLAUDE.md (item routed here): replace ''Worktree pre-commit config (MANDATORY for worktree-based drives)''
+  -- its fail-open `ls .pre-commit-config.yaml || ls .leafcutter` check and its symlink-preferred Option
+  A / copy Option B fixes -- with ''run the maker''; delete the ''.security-allowlist resolves via the
+  symlink target'' latent-hazard paragraph and the BOTH-copies dual-update instruction in ''Security Allowlist
+  -- Use Glob Patterns'' (with real install files the hook reads the workspace''s own allowlist; decision
+  memo Q2); rewrite the ''Prefer the symlink instead'' advice in the feedback_categories section. The
+  ''Land the scaffold commit on origin/main'' section stays true (base is origin/main) but points at the
+  maker instead of worktree-agent.'
+- Every rewritten passage points to the maker and to docs/how-to/get-a-workspace.md; none keeps its own
+  copy, clone, worktree, link, install or delete steps.
+- Template edits reach consumers only through the build; the repo's own CLAUDE.md is edited directly (it
+  is not a template).
+- 'TICKET LOCATION (KI-BO-20260925-build-single-ticket-treats-ticket-path-final-as-worktree-path; routed
+  from BO-4300a-1-ii, lands in the SAME change set as it): templates/agents/worktree-agent.md stops parsing
+  and reporting ticket_path_new (a field the set-up script no longer emits) and reports the ticket''s
+  working location ONLY from ticket_path_in_worktree of the maker''s ok answer; no charter, skill or workflow
+  text describes ticket_path_final or the path a caller passed in as "the ticket inside the workspace".'
+- 'Commit spelling (KI-CG-20260925-commit-delegation-hook-misses-git-dash-c): no passage this record rewrites
+  spells a commit as `git -C <path> commit`, because the commit-delegation hook matches only the literal
+  "git commit"; commits are delegated to the commit agent per CLAUDE.md, and -C appears only with non-commit
+  verbs.'
+test_required: true
+test_spec:
+- name: test_deployed_instruction_passages_about_workspaces_point_to_the_maker
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: unit
+  angle: deployed
+  description: Every workspace passage in the deployed agent charters, skills and workflow texts, and
+    in CLAUDE.md, names the maker and the get-a-workspace how-to (text is this record's subject, so reading
+    the delivered text is the behaviour).
+- name: test_no_deployed_instruction_carries_its_own_workspace_recipe
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: unit
+  angle: criterion
+  description: None of those texts contains a workspace clone, git worktree add/remove, ln -s / cp of
+    .leafcutter or .pre-commit-config.yaml, EnterWorktree, or a manual rm of a workspace.
+- name: test_deployed_texts_take_the_ticket_location_only_from_ticket_path_in_worktree
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: unit
+  angle: criterion
+  description: The deployed worktree-agent charter, and every deployed skill or workflow text that names
+    a ticket location from a workspace answer, name ticket_path_in_worktree and contain no ticket_path_new
+    or ticket_path_final (delivered text is the subject).
+test_rationale: The record's subject is delivered text (its notes say so), so the proof reads the DEPLOYED
+  text rather than the templates, catching a template fix that never reaches an install.
+origin_agent: it-po
+created: 2026-09-25
+amended_by:
+- reason: duplication-audit-items-2-5
+  by: it-po
+  at: 2026-09-25
+  note: >-
+    Technical fields only; criteria unchanged. worktree-agent's ticket_path_new parsing is replaced by
+    ticket_path_in_worktree (same change set as BO-4300a-1-ii); no rewritten passage spells `git -C
+    <path> commit`. One test spec added. readiness reset to reviewed.
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: 'IT PO split of BO-4300f-2-i (2026-09-25): the prompt surfaces (llm-expert). With BO-4300f-2-ib
+  the union of the two Givens is the parent''s. Carries the CLAUDE.md recipe rewrites (symlink-preferred
+  bootstrap, fail-open OR check, allowlist dual-update rule).'

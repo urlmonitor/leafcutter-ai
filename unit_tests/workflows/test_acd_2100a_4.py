@@ -82,7 +82,7 @@ from pathlib import Path
 _UNIT_TESTS_DIR = Path(__file__).resolve().parent.parent
 if str(_UNIT_TESTS_DIR) not in sys.path:
     sys.path.insert(0, str(_UNIT_TESTS_DIR))
-
+from _plan_feature_harness_defaults import worktree_setup_default_responses
 _WORKTREE_ROOT = Path(__file__).resolve().parent.parent.parent
 _PLAN_FEATURE_JS = _WORKTREE_ROOT / "templates" / "workflows-js" / "plan-feature.js"
 _REAL_PAUSE_STORE_PY = _WORKTREE_ROOT / "scripts" / "pause_store.py"
@@ -410,6 +410,15 @@ def _run_plan_feature_real(cwd: Path, label_responses: dict, args: dict) -> dict
     ACTUALLY EXECUTED (not mocked) via a real Node child_process with `cwd`
     set to the given directory. Returns the parsed
     {calls: [...], result: ..., error?: ...} payload.
+
+    `label_responses` is merged UNDER `worktree_setup_default_responses()`
+    (BO-1500a-5-i) so a caller that never overrides 'worktree-setup' /
+    'resolve-worktree-setup-script-path' still gets a real, confirming reply
+    for both -- the same real shape `scripts/setup_ticket_worktree.py` itself
+    emits -- and reaches the pause-store dispatches this file actually tests,
+    instead of halting fail-closed at Pre-Stage-0 against the harness's own
+    generic stub (a success-shaped reply naming no worktree). A caller-
+    supplied entry for either label still wins (dict merge order below).
     """
     source = _PLAN_FEATURE_JS.read_text(encoding="utf-8")
     body = _strip_exports(source)
@@ -417,7 +426,7 @@ def _run_plan_feature_real(cwd: Path, label_responses: dict, args: dict) -> dict
     shim = (
         _SHIM_TEMPLATE
         .replace("__RUN_CWD_JSON__", json.dumps(str(cwd)))
-        .replace("__LABEL_RESPONSES_JSON__", json.dumps(label_responses))
+        .replace("__LABEL_RESPONSES_JSON__", json.dumps({**worktree_setup_default_responses(), **label_responses}))
         .replace("__ARGS_JSON__", json.dumps(args))
         .replace("__SCRIPT_BODY__", body)
     )

@@ -1,0 +1,103 @@
+id: BO-4300d-1-ii
+title: "Two requests for the same work at the same moment never make two workspaces"
+component: build-orchestration
+components:
+  - worktree_manager
+  - build_orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: critical
+roadmap_phase: phase_1
+change_target: code
+risk_surface: safety
+criteria: |
+  Given no workspace exists for "alpha",
+  When two requests for "alpha" are started at the same moment from two different
+    routes,
+  Then exactly one workspace for "alpha" exists afterwards, and it meets every
+    part of readiness,
+  And each request is answered either ready with that one workspace's location,
+    or refused stating that the same work is already being prepared,
+  And neither request is answered ready with a location other than that one.
+depends_on: [BO-4300d-1]
+doc_links:
+- path: docs/analysis/2026-09-25-worktree-component-proposal.md
+  relationship: describes
+  status: exists
+- path: docs/architecture/components/worktree-manager.md
+  relationship: describes
+  status: exists
+  relevance: Component page for the one maker; rewritten for clones under BO-4300a-4.
+- path: docs/testing/test-angles.md
+  relationship: describes
+  status: exists
+  relevance: Angle taxonomy used by this record's test_spec.
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from:
+  ac_id: BO-4300a-1
+  contract: ensure CLI.
+package_surface: false
+it_requirements:
+- 'Mutual exclusion per (project, work identity): an exclusively created lock outside the workspace folder,
+  holding pid, host and start time; a lock whose holder is dead is detectably stale and reclaimed; a waiter
+  waits a bounded time (configurable, default no more than the expected ensure duration) and then answers
+  refused IN_PROGRESS -- never an indefinite block, never a second workspace.'
+- Proof starts two real maker processes concurrently (the stub build holds a barrier so both are genuinely
+  in flight).
+- Proof runs the DEPLOYED maker -- the copy an install delivers, resolved through the shared test locator
+  delivered by BO-4300f-4 -- as a separate process against real temporary git repositories with a real
+  bare hub. No mock of git, no import of the maker module, no grep of its source (CLAUDE.md 'Gate / Workflow
+  ACs -- Verify Behaviorally, Not by Grep'); a test never falls back to the templates/ source copy.
+- 'Tests must not spawn the package''s own scripts/build.py (CLAUDE.md ''Tests must not spawn their own
+  build.py''): the deployed maker comes from the shared deployed layout, and fixture projects carry a
+  minimal stub build entry point that installs a real, rejecting hook in well under a second. A test that
+  must mutate the package and build its own copy says so and justifies it in its ticket.'
+- All temporary projects, hubs and workspaces live under the test's temp directory and run git with an
+  isolated global and system config; afterwards the developer's own repository's branches, registered
+  worktrees and local git config are unchanged (BO-4300f-4-i, F14, KI-TQ-012).
+test_required: true
+test_spec:
+- name: test_two_concurrent_requests_leave_exactly_one_ready_workspace
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: criterion
+  description: After two simultaneous ensure alpha processes, the landing place holds one workspace and
+    it meets every readiness ingredient.
+- name: test_each_concurrent_request_is_ok_with_that_location_or_in_progress
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: failure
+  description: Each answer is ok with that one workspace_path, or refused IN_PROGRESS.
+- name: test_no_concurrent_request_is_ok_with_another_location
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: boundary
+  description: No ok answer names any other location.
+- name: test_stale_lock_from_dead_process_is_reclaimed
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: boundary
+  description: A lock left by a killed maker does not block the next request beyond the bounded wait.
+test_rationale: Every assertion is made on what the deployed maker actually did to real repositories --
+  its one JSON answer, its exit code, and the state of the workspace, the hub and the main copy afterwards.
+  A direct-import unit test would pass while the deployed copy is stale or mis-deployed (F13), and a git
+  mock cannot show the half-made and occupied states this family exists to handle.
+origin_agent: business-analyst
+created: 2026-09-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  "Never makes a twin" under concurrency: two parallel drives or a retry racing its original.
+  Not in the analysis as a measured failure; added because an idempotent single-caller design
+  passes every other record here and still races.

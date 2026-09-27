@@ -1,0 +1,84 @@
+id: BO-4300e-1-i
+title: "Looking a workspace up never creates or changes one"
+component: build-orchestration
+components:
+  - worktree_manager
+  - build_orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: critical
+roadmap_phase: phase_1
+change_target: code
+risk_surface: safety
+criteria: |
+  Given no workspace exists for "gamma", and a half-made workspace exists for
+    "delta",
+  When "gamma" and "delta" are looked up,
+  Then no workspace for "gamma" exists afterwards,
+  And "delta" is reported as incomplete, not as ready,
+  And "delta"'s files are identical before and after the lookup.
+depends_on: [BO-4300e-1]
+doc_links:
+- path: docs/analysis/2026-09-25-worktree-component-proposal.md
+  relationship: describes
+  status: exists
+- path: docs/architecture/components/worktree-manager.md
+  relationship: describes
+  status: exists
+  relevance: Component page for the one maker; rewritten for clones under BO-4300a-4.
+- path: docs/testing/test-angles.md
+  relationship: describes
+  status: exists
+  relevance: Angle taxonomy used by this record's test_spec.
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: BO-4300e-1
+  contract: locate semantics.
+package_surface: false
+it_requirements:
+- 'locate/list/verify are strictly read-only: no fetch, no lock, no folder, no marker write, no repair.'
+- Proof runs the DEPLOYED maker -- the copy an install delivers, resolved through the shared test locator
+  delivered by BO-4300f-4 -- as a separate process against real temporary git repositories with a real
+  bare hub. No mock of git, no import of the maker module, no grep of its source (CLAUDE.md 'Gate / Workflow
+  ACs -- Verify Behaviorally, Not by Grep'); a test never falls back to the templates/ source copy.
+- All temporary projects, hubs and workspaces live under the test's temp directory and run git with an
+  isolated global and system config; afterwards the developer's own repository's branches, registered
+  worktrees and local git config are unchanged (BO-4300f-4-i, F14, KI-TQ-012).
+test_required: true
+test_spec:
+- name: test_lookup_of_absent_work_creates_nothing
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: boundary
+  description: After locating gamma, no gamma folder, lock or branch exists.
+- name: test_half_made_workspace_is_reported_incomplete_not_ready
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: failure
+  description: delta is answered INCOMPLETE with remnant_path and no workspace_path.
+- name: test_lookup_leaves_half_made_workspace_byte_identical
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: criterion
+  description: delta's files (including .git) are identical before and after.
+test_rationale: Every assertion is made on what the deployed maker actually did to real repositories --
+  its one JSON answer, its exit code, and the state of the workspace, the hub and the main copy afterwards.
+  A direct-import unit test would pass while the deployed copy is stale or mis-deployed (F13), and a git
+  mock cannot show the half-made and occupied states this family exists to handle.
+origin_agent: business-analyst
+created: 2026-09-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Keeps "find" distinct from "ask for" (BO-4300d), so a lookup used as a check (BO-4300c-4-i)
+  has no side effects.

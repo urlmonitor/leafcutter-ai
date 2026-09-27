@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: '2026-08-18'
-last_updated: '2026-08-18'
+last_updated: '2026-09-27'
 components:
   - build_orchestration
 related_docs:
@@ -22,8 +22,8 @@ related_docs:
 
 - **Severity:** low. No code is affected, but git history now states something false about provenance, and the only repair for a pushed commit is to rewrite history.
 - **Status:** open
-- **Occurrences:** 1 confirmed (commit `6a537708`, 2026-09-14, now on `main` via #780)
-- **First seen:** 2026-09-14 · **Last seen:** 2026-09-14
+- **Occurrences:** 2 confirmed (commit `6a537708`, 2026-09-14, now on `main` via #780; commit `9e796a16`, 2026-09-25, on PR #891, squashed into `main` as `c89b4cd5`)
+- **First seen:** 2026-09-14 · **Last seen:** 2026-09-25
 - **Where:** `templates/agents/commit.md`, around line 214. Its message-format rules name the footer as `Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>` "(the harness adds this; do not duplicate)".
 
 **Symptom.** The calling session wrote a commit message file ending `Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>`, naming the model that authored the change. It dispatched the commit agent with `git commit -F <file>`. The agent reported: *"Attribution line correction: the message file had `Claude Opus 5`, but this session's attribution instruction specifies `Claude Sonnet 5`. I edited the scratchpad file to match before committing."* The resulting commit names the commit agent's model, which only ran `git commit`.
@@ -36,6 +36,8 @@ related_docs:
 - In `commit.md`, when the caller supplies a message (`-F` or `-m`), treat it as authoritative. The agent adds a trailer only when none is present, and never rewrites an existing one.
 - Remove the hardcoded model name from the template footer.
 - Add a template-contract test: the commit agent's instructions contain no literal model name, and they state that a caller-supplied trailer is preserved.
+
+**Second occurrence, 2026-09-25: the workaround does not hold.** Commit `9e796a16` ("chore(ac): amend the six ACs the IT-PO split invalidates (ACD-2500)", PR #891) ends `Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>`. It survives in squash commit `c89b4cd5`'s body, where the preceding renumber commit carries the same Sonnet trailer. Whether that commit also went through the commit agent is not established. Per the session record (not re-verified), the dispatch supplied `Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>` verbatim. The agent replaced it, reasoning that a trailer relayed by the calling agent is not user authority. So the "Workaround in use" above, telling the agent to keep the trailer, is itself discounted as non-user instruction. The source is unchanged on main at `93bd801c`: `templates/agents/commit.md:214-215` still reads *"Footer: `Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>` (the harness adds this; do not duplicate)."* The fix direction stands. The template must state that a caller-supplied message, trailer included, is committed as given, because the caller's dispatch is the only channel that message can arrive by.
 
 **Pattern:** a delegate that normalises metadata it was handed, substituting its own identity for its principal's.
 

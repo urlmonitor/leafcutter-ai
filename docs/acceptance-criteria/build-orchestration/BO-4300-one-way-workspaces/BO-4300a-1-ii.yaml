@@ -1,0 +1,223 @@
+id: BO-4300a-1-ii
+title: "A ready workspace made for a ticket states where that ticket is inside the workspace"
+component: build-orchestration
+components:
+  - worktree_manager
+  - build_orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: critical
+roadmap_phase: phase_1
+change_target: code
+risk_surface: safety
+criteria: |
+  Given a test project whose main copy holds the ticket
+    "tickets/TICKET-20260925-demo.md",
+  And a workspace is requested for that ticket, naming the ticket by its
+    location in the main copy,
+  When the workspace maker answers ready with workspace location L,
+  Then the answer states the ticket's location inside L,
+  And at the moment the answer is given, a file exists at that stated location
+    and holds the content of the ticket named in the request,
+  And the answer never presents the ticket's location in the main copy, or any
+    other location outside L, as the workspace's copy of the ticket,
+  And a ready answer never states a ticket location at which no file exists.
+depends_on: [BO-4300a-1]
+doc_links:
+- path: docs/analysis/2026-09-25-duplication-clusters-that-produce-known-issues.md
+  relationship: describes
+  status: planned
+  relevance: Audit item 2 (known-issues table, "worktree / C4" row); origin of this record. Present
+    on main, not yet on this branch.
+- path: docs/known-issues/build-orchestration/open-high-ki-bo-20260925-build-single-ticket-treats-ticket-path-final-as-worktree-path.md
+  relationship: describes
+  status: planned
+  relevance: Present on main, not yet on this branch. Today's set-up reports the unmoved input ticket path as if it were the workspace's copy,
+    and the single-ticket build skill treats it that way.
+- path: docs/analysis/2026-09-25-worktree-creation-consolidation.md
+  relationship: describes
+  status: exists
+  relevance: Section 5.3 proposes the explicit in-workspace ticket location.
+- path: docs/architecture/components/worktree-manager.md
+  relationship: describes
+  status: exists
+  relevance: Component page for the one maker; rewritten for clones under BO-4300a-4.
+- path: docs/testing/test-angles.md
+  relationship: describes
+  status: exists
+  relevance: Angle taxonomy for the IT PO's test_spec pass.
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to:
+- agent: llm-expert
+  contract: 'On an ok ensure answer requested with --ticket <path>: ticket_path_in_worktree (absolute,
+    native spelling) and ticket_path_in_worktree_posix, both inside workspace_path, naming a file that existed
+    when the answer was emitted. Both fields are ABSENT on every non-ok answer and on any answer to a request
+    without --ticket. Consumers: build-single-ticket''s step-1 prompt (BO-4300a-1-ib) and worktree-agent''s
+    answer parsing (BO-4300f-2-ia) take the ticket''s working location ONLY from these fields -- never
+    from the path they passed in, never from ticket_path_final or ticket_path_new.'
+expects_from:
+  ac_id: BO-4300a-1
+  contract: 'ensure --kind <kind> --slug <identity> --ticket <main-copy ticket path, absolute or project-relative>;
+    the ready answer follows the BO-4300c-2 result contract, which carries the two ticket fields.'
+package_surface: false
+it_requirements:
+- 'The in-workspace location is the ticket''s project-relative path (computed against the resolved project,
+  never against cwd) re-rooted under workspace_path. The request''s path must lie inside the resolved project;
+  one outside it is a usage error (code USAGE) naming it, and --ticket with --kind scratch is a usage
+  error.'
+- 'Existence and identity are checked on the finished workspace immediately before the answer is emitted:
+  a regular file exists at ticket_path_in_worktree, and its bytes equal the ticket named in the request
+  as it exists on the base the workspace was made from. An ok answer is never emitted with a ticket field
+  that fails either check.'
+- 'Decision 3 governs content: the workspace takes the ticket only from its own base (origin/main for
+  a new line, the resumed line for a resumed one). The maker never copies, writes or edits a ticket file
+  from the main copy into a workspace.'
+- 'UNPUSHED TICKET (DECIDED, user 2026-09-27): when the requested ticket is absent from the workspace''s
+  base (reason ''absent'') or present there with bytes that differ from the main copy''s (reason ''differs''),
+  the maker refuses with code TICKET_NOT_ON_BASE (status refused, exit 2). The message names the ticket''s
+  project-relative path and tells the caller to push it and ask again; the answer carries ticket_path
+  (the path as requested) and reason, and -- like every non-ok answer -- neither workspace_path nor either
+  ticket_path_in_worktree field. The maker never copies unpushed or uncommitted content in, and never
+  treats ''differs'' as ok with a warning.'
+- 'Order and clean-up for TICKET_NOT_ON_BASE: the check runs after the workspace''s fetch and before its
+  install build, so no build runs for a refused request. When the clone was made by THIS request it holds
+  no work by construction, and the maker clears it before emitting the answer: the refusal leaves no folder
+  at the workspace location and no INCOMPLETE remnant. A resumed line compares against the resumed line,
+  not origin/main, and a pre-existing workspace is never cleared by this check.'
+- 'The answer fields are named ticket_path_in_worktree and ticket_path_in_worktree_posix (BO-4300c-2);
+  the retiring set-up script''s ticket_path_final and the charter''s ticket_path_new are not emitted by
+  the maker, not even as aliases, because both have been read as "the ticket inside the workspace" while
+  meaning the input path.'
+- 'Caller fixes land in the SAME change set as this record (KI fix direction: "Fix the two prompt sites
+  in the same change"): build-single-ticket''s step-1 prompt via BO-4300a-1-ib and worktree-agent''s ticket_path_new
+  parsing via BO-4300f-2-ia. This record is not signed off while either caller still reads another field.'
+- Proof runs the DEPLOYED maker -- the copy an install delivers, resolved through the shared test locator
+  delivered by BO-4300f-4 -- as a separate process against real temporary git repositories with a real
+  bare hub. No mock of git, no import of the maker module, no grep of its source (CLAUDE.md 'Gate / Workflow
+  ACs -- Verify Behaviorally, Not by Grep'); a test never falls back to the templates/ source copy.
+- 'Tests must not spawn the package''s own scripts/build.py (CLAUDE.md ''Tests must not spawn their own
+  build.py''): the deployed maker comes from the shared deployed layout, and fixture projects carry a
+  minimal stub build entry point that installs a real, rejecting hook in well under a second. A test that
+  must mutate the package and build its own copy says so and justifies it in its ticket.'
+- All temporary projects, hubs and workspaces live under the test's temp directory and run git with an
+  isolated global and system config; afterwards the developer's own repository's branches, registered
+  worktrees and local git config are unchanged (BO-4300f-4-i, F14, KI-TQ-012).
+test_required: true
+test_spec:
+- name: test_ready_answer_states_ticket_location_inside_the_workspace
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: criterion
+  description: 'With tickets/TICKET-20260925-demo.md committed on the hub''s main and the request naming
+    it by its main-copy path (absolute, then project-relative, each from a different starting folder),
+    the ok answer''s ticket_path_in_worktree equals workspace_path joined with tickets/TICKET-20260925-demo.md,
+    and ticket_path_in_worktree_posix is its posix spelling.'
+- name: test_stated_ticket_location_holds_the_requested_tickets_content
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: real_artifact
+  description: At the moment the answer is read, a regular file exists at ticket_path_in_worktree and its
+    bytes equal the requested ticket's bytes.
+- name: test_answer_never_presents_a_location_outside_the_workspace_as_the_ticket
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: boundary
+  description: ticket_path_in_worktree is inside workspace_path, differs from the main-copy path passed
+    in, and the answer carries no ticket_path_final or ticket_path_new field.
+- name: test_ticket_absent_from_the_base_never_yields_an_ok_answer
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: failure
+  description: 'With the ticket present only in the main copy (never pushed to the hub), the answer is
+    status refused, code TICKET_NOT_ON_BASE, reason ''absent'', exit 2, with ticket_path equal to the requested
+    path; it carries neither ticket_path_in_worktree field nor workspace_path, no ticket file was written
+    into any workspace, the stub build never ran, and no folder or INCOMPLETE remnant is left at the workspace
+    location.'
+- name: test_ticket_that_differs_from_the_base_is_refused_not_on_base
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: failure
+  description: 'With the ticket pushed to the hub''s main and then edited (not pushed) in the main copy,
+    the answer is status refused, code TICKET_NOT_ON_BASE, reason ''differs'', exit 2, with no workspace_path
+    and no ticket_path_in_worktree field; no folder is left at the workspace location, and the hub''s copy
+    of the ticket and the main copy''s edited ticket are both byte-unchanged.'
+- name: test_ticket_fields_absent_without_ticket_request_and_on_every_refusal
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: seam
+  description: An ok ensure without --ticket, and an OCCUPIED refusal with --ticket, both lack ticket_path_in_worktree
+    and ticket_path_in_worktree_posix entirely (not null, not blank).
+test_rationale: Every assertion is made on what the deployed maker actually did to real repositories --
+  its one JSON answer and the files present in the workspace at the moment the answer is read. The defect
+  this closes (KI-BO-20260925-build-single-ticket-treats-ticket-path-final-as-worktree-path) was a field
+  whose value looked right to every reader and was the input path, so the tests compare the stated location
+  against the real file and the real workspace, not against the field name.
+origin_agent: business-analyst
+created: 2026-09-25
+amended_by:
+- reason: duplication-audit-item-2
+  by: business-analyst
+  at: 2026-09-25
+  note: >-
+    Added under BO-4300a-1 in response to audit item 2
+    (KI-BO-20260925-build-single-ticket-treats-ticket-path-final-as-worktree-path). Criteria
+    only; it_requirements, test_spec and the answer-contract field are left for the IT PO
+    pass. readiness reviewed, awaiting the user's re-approval.
+- reason: duplication-audit-item-2
+  by: it-po
+  at: 2026-09-25
+  note: >-
+    Technical enrichment: delivers_to/expects_from contracts (ticket_path_in_worktree and its posix
+    variant, ok-only, verified to exist), it_requirements, five behavioural test specs, and the
+    caller fixes routed to BO-4300a-1-ib and BO-4300f-2-ia in the same change. The unpushed-ticket
+    case is recorded in notes as a proposal for the user, not decided. Criteria unchanged; readiness
+    reviewed.
+- reason: audit-decisions-finalised
+  by: it-po
+  at: 2026-09-27
+  note: >-
+    Technical fields only; criteria unchanged. The user accepted the unpushed-ticket proposal
+    (2026-09-27): it_requirements now require the TICKET_NOT_ON_BASE refusal for 'absent' and
+    'differs', the check after the fetch and before the build, and clearing the request's own clone
+    before the answer. The absent-ticket test asserts the code; a new test covers the 'differs' case.
+    Notes changed from PROPOSAL to DECIDED. readiness stays reviewed.
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  KI-BO-20260925-build-single-ticket-treats-ticket-path-final-as-worktree-path: the retiring
+  set-up script reports the resolved INPUT ticket path (usually the main copy's) under a name
+  callers read as "the ticket inside the workspace", and the single-ticket build maps it that
+  way, so ticket edits during a drive are likely aimed at the main copy -- the "work lands on
+  main" class this tree exists to close. This record is the maker half only: the ready answer
+  states the ticket's in-workspace location and that file exists. Callers taking the location
+  only from the answer is the same rule BO-4300c-4 states for the workspace location.
+
+  DECIDED (user, 2026-09-27; proposed by IT PO 2026-09-25). Case raised by the BA: the
+  ticket exists in the main copy but not on origin/main (never pushed, or edited and not pushed).
+  Handling, consistent with decision 3 (every workspace branches from origin/main after a
+  fetch): the maker REFUSES with its own code, TICKET_NOT_ON_BASE, whose message names the ticket's
+  project-relative path and tells the caller to land the ticket on origin/main (push it) and ask
+  again; the answer carries ticket_path (the path as requested) and reason ('absent' when no file
+  exists at that path on the base, 'differs' when one exists but its bytes differ from the main
+  copy's). The maker never copies uncommitted or unpushed ticket content into a workspace, because
+  that would make the workspace's starting content something other than origin/main. The check runs
+  after the workspace's fetch and before its install build; the clone this request made holds no
+  work by construction, so the maker clears it before answering and the refusal leaves nothing
+  behind (no INCOMPLETE remnant). A resumed line reads the ticket from the resumed line, not
+  origin/main. Applied: TICKET_NOT_ON_BASE is in BO-4300c-2's code list,
+  test_ticket_absent_from_the_base_never_yields_an_ok_answer asserts the code, and
+  test_ticket_that_differs_from_the_base_is_refused_not_on_base covers 'differs'.
+  Alternatives not taken: treat 'differs' as ok with a warning field (weaker: the drive then
+  edits a ticket that is not the one the user sees), or copy the main-copy ticket in (breaks
+  decision 3).

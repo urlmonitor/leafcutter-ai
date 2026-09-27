@@ -1,0 +1,64 @@
+id: BO-4300c-5
+title: "Sequence diagram: a caller, the workspace maker, and the halt path"
+component: build-orchestration
+components:
+  - worktree_manager
+  - build_orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: critical
+roadmap_phase: phase_1
+change_target: docs
+risk_surface: internal
+criteria: |
+  Given a reader wants to understand how a workflow obtains its workspace and when
+    it stops,
+  When they open the sequence diagram,
+  Then it shows the caller, the skill or agent that runs the workspace maker, the
+    workspace maker, and the shared project,
+  And it shows the ready path, in which the caller takes the location from the
+    answer and only then dispatches its first working step,
+  And it shows the halt path for each answer that is not ready -- refusal,
+    error, prose, or no answer -- ending the run before any working step,
+  And it shows no path on which the caller continues without a ready answer.
+depends_on: [BO-4300c, BO-4300c-3]
+doc_links:
+- path: docs/analysis/2026-09-25-worktree-creation-consolidation.md
+  relationship: describes
+  status: exists
+- path: docs/analysis/2026-09-25-worktree-component-proposal.md
+  relationship: describes
+  status: exists
+- path: docs/architecture/components/worktree-manager.md
+  relationship: describes
+  status: exists
+  relevance: Component page for the one maker; rewritten for clones under BO-4300a-4.
+- path: docs/architecture/diagrams/c3-009-workspace-request-halt-sequence.md
+  relationship: describes
+  status: planned
+assigned_agent: architecture-diagram-author
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: BO-4300c-3
+  contract: Workflow acceptance predicate and halt semantics.
+package_surface: false
+it_requirements:
+- 'Location: docs/architecture/diagrams/c3-009-workspace-request-halt-sequence.md (next free c3 number;
+  verify before writing), Mermaid sequence per the write-c4-diagram skill, linked from docs/architecture/components/worktree-manager.md.'
+- 'Participants: caller workflow, entry skill or shell-permitted agent, the maker, the hub. Shows the
+  ready path (location taken from workspace_path, then the first working dispatch), one halt path per
+  non-ready answer class (refused, error, prose, none), and no continue-without-ready path.'
+test_required: false
+origin_agent: business-analyst
+created: 2026-09-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  documentation_trigger sequence-diagram on BO-4300c: more than two actors, and the halt is the
+  whole of the visible difference.

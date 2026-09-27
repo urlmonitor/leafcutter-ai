@@ -1,0 +1,101 @@
+id: BO-4300b-1-i
+title: "Starting inside another workspace never nests the new one there or roots it on that work"
+component: build-orchestration
+components:
+  - worktree_manager
+  - build_orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: critical
+roadmap_phase: phase_1
+change_target: code
+risk_surface: safety
+criteria: |
+  Given the request for "beta" is started from inside workspace W1, whose line of
+    work carries one commit not on the shared main line, and which has one
+    uncommitted change,
+  When the request is answered ready,
+  Then the "beta" workspace sits beside W1 in the landing place, not inside W1,
+  And "beta"'s line of work starts at the shared main line tip, and W1's commit
+    is not reachable from it,
+  And W1's files, its uncommitted change and its line of work are identical
+    before and after the request.
+depends_on: [BO-4300b-1]
+doc_links:
+- path: docs/analysis/2026-09-25-worktree-failure-modes.md
+  relationship: describes
+  status: exists
+- path: docs/analysis/2026-09-25-worktree-migration-plan.md
+  relationship: describes
+  status: exists
+- path: docs/analysis/2026-09-25-worktree-isolation-decision-memo.md
+  relationship: constrains
+  status: exists
+- path: docs/architecture/components/worktree-manager.md
+  relationship: describes
+  status: exists
+  relevance: Component page for the one maker; rewritten for clones under BO-4300a-4.
+- path: docs/testing/test-angles.md
+  relationship: describes
+  status: exists
+  relevance: Angle taxonomy used by this record's test_spec.
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: BO-4300b-1
+  contract: Resolution from inside a workspace reaches the main project.
+package_surface: false
+it_requirements:
+- Starting inside a workspace resolves to the project it was made from (see BO-4300b-1); the new workspace's
+  base is the hub's main tip, never the current workspace's HEAD or branch.
+- Proof runs the DEPLOYED maker -- the copy an install delivers, resolved through the shared test locator
+  delivered by BO-4300f-4 -- as a separate process against real temporary git repositories with a real
+  bare hub. No mock of git, no import of the maker module, no grep of its source (CLAUDE.md 'Gate / Workflow
+  ACs -- Verify Behaviorally, Not by Grep'); a test never falls back to the templates/ source copy.
+- 'Tests must not spawn the package''s own scripts/build.py (CLAUDE.md ''Tests must not spawn their own
+  build.py''): the deployed maker comes from the shared deployed layout, and fixture projects carry a
+  minimal stub build entry point that installs a real, rejecting hook in well under a second. A test that
+  must mutate the package and build its own copy says so and justifies it in its ticket.'
+- All temporary projects, hubs and workspaces live under the test's temp directory and run git with an
+  isolated global and system config; afterwards the developer's own repository's branches, registered
+  worktrees and local git config are unchanged (BO-4300f-4-i, F14, KI-TQ-012).
+test_required: true
+test_spec:
+- name: test_request_from_inside_w1_places_beta_beside_w1
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: criterion
+  description: beta's workspace_path is a sibling of W1 in the landing place, not a descendant of W1.
+- name: test_beta_starts_at_hub_main_and_w1_commit_is_unreachable
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: criterion
+  description: beta's base_commit equals the hub's main tip and W1's extra commit is not an ancestor of
+    beta's HEAD.
+- name: test_w1_is_byte_identical_after_the_request
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: boundary
+  description: W1's tracked files, its uncommitted change and its branch ref are identical before and
+    after.
+test_rationale: Every assertion is made on what the deployed maker actually did to real repositories --
+  its one JSON answer, its exit code, and the state of the workspace, the hub and the main copy afterwards.
+  A direct-import unit test would pass while the deployed copy is stale or mis-deployed (F13), and a git
+  mock cannot show the half-made and occupied states this family exists to handle.
+origin_agent: business-analyst
+created: 2026-09-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  The sandbox run in the consolidation analysis created a new slug from inside the first
+  worktree. Under decision 1 each workspace is an independent copy, so "inside another
+  workspace" must still resolve to the main project, not to W1 as if W1 were the project.

@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: '2026-08-18'
-last_updated: '2026-08-18'
+last_updated: '2026-09-27'
 components:
   - build_pipeline
 related_docs:
@@ -39,8 +39,8 @@ related_docs:
 
 - **Severity:** high
 - **Status:** open — no AC
-- **Occurrences:** 2
-- **First seen:** 2026-08-24 · **Last seen:** 2026-08-25
+- **Occurrences:** 3
+- **First seen:** 2026-08-24 · **Last seen:** 2026-09-25
 - **Where:** `scripts/build_phases.py` — the workflow-scripts install phase, lines ~683-720;
   and (second occurrence) the breaking-change gate in `scripts/build.py`
 
@@ -136,5 +136,42 @@ phase ran fail-open and wrote older bytes from a stale worktree, rather than by 
 skip branch. Counted separately because a skipped-phase alarm would not fire on it — but the
 source-revision stamp proposed in the fix direction above resolves both, and is the reason to
 prefer it over merely making the skip loud.
+
+**Occurrence 3 — 2026-09-25, no build at all: a `git pull` in the dev repo leaves its deployed
+workflows behind, and `Workflow(name: ...)` picks the copy nearest the cwd.** Windows 11,
+workspace-parent layout (`C:\Users\Hendrik\Code\leafcutter\` holding the repo in `leafcutter-ai/`).
+There are two deployed copies of every workflow:
+
+```text
+C:\Users\Hendrik\Code\leafcutter\.claude\workflows\plan-feature.js                workspace root
+C:\Users\Hendrik\Code\leafcutter\leafcutter-ai\.claude\workflows\plan-feature.js  inside the dev repo
+```
+
+`Workflow(name: "plan-feature")`, invoked with cwd `leafcutter-ai`, ran the dev-repo copy, which
+had been built 2026-09-09. That build predated `args.workspace_setup_permission` (ACD-2100b-5) and
+still read the agent registry through a `status-checker` dispatch, which failed with
+`read_failure`. The workspace-root copy was newer. Neither copy had PR #896's fixes (`06bfbddf`,
+merged 2026-09-25 17:11 UTC). On 2026-09-27 both deployed files were still missing
+`_shellPermittedAgentId` (0 matches) and still sent `pause-persist` to `status-checker`, while the
+template had 15 matches. (The dev-repo copy has been rebuilt since the incident and is now dated
+2026-09-25 09:31; it is still behind the template.)
+
+What this adds to the entry's general statement ("the deployed tree has no freshness signal of any kind"):
+
+- **No build ran at all, and nothing prompts for one.** The dev repo's only `post-merge` hook is
+  `check_ac_done_on_merge.py` (`.pre-commit-config.yaml:533-535`), so a `git pull` that moves
+  `templates/workflows-js/` leaves `.claude/workflows/` untouched and says nothing. The
+  `post-checkout` drift hook that `setup_ticket_worktree.py` installs
+  (`templates/scripts/setup_ticket_worktree.py:1697`) does not fire on `pull`.
+- **Which copy runs depends on the cwd.** Picking the nearest `.claude/workflows/` is harness
+  behaviour, observed and not traced to repo code. With two deployed copies of different ages,
+  the same command runs different code depending on the directory the session started in.
+- **The staleness showed up as unrelated defects.** Two bugs already fixed in the template
+  (`status-checker` refusing the pause write, and the fail-open worktree setup) were observed live
+  and first diagnosed as new. See `KI-BO-20260901-1620` Occurrence 2 and `KI-ACD-004`'s 2026-09-25 recurrence note.
+
+The source-revision stamp in this entry's fix direction would have caught all three. So would a
+check at use time: the workflow compares its own embedded template hash with
+`templates/workflows-js/<name>.js` when that file exists, and warns before its first dispatch.
 
 ---
