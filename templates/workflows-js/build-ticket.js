@@ -144,7 +144,7 @@ const PHASE_RESULT_SCHEMA = {
   //
   // TWIN: mirrors build-feature.js PHASE_RESULT_SCHEMA. Keep in sync.
   if: {
-    properties: { status: { const: 'handoff' } },
+    required: ['status'], properties: { status: { const: 'handoff' } },
   },
   then: {
     required: ['handoff_target'],
@@ -1518,7 +1518,7 @@ while (pendingPhases.length > 0) {
     //
     // TWIN: mirrors build-feature.js. Keep in sync with that file.
     phaseResult = await agent(
-      `You are the ${phaseName} phase agent for ticket: ${ticketPath}. Read the ticket before starting. Execute your phase. Files touched: ${JSON.stringify(filesTouched)}. Return a JSON result with at minimum { "status": "ok" | "blocker" | "failed" }.` +
+      `You are the ${phaseName} phase agent for ticket: ${ticketPath}. Read the ticket before starting. Execute your phase. Files touched: ${JSON.stringify(filesTouched)}. Fill the reply tool's fields directly: "status" (ok | blocker | failed | handoff), "message", and "handoff_target" naming the next phase agent when status is handoff. Never return your reply as a JSON string or inside an "input" field.` +
       (phaseName === 'test-writer'
         ? ` You MUST also return "tests_written": a list of the test file paths you created or extended, and "red_baseline_verified": true only if you ran those tests and confirmed they fail. Return "tests_written": [] if you wrote no tests (for example if you self-skipped) — an empty list is the correct, honest answer and will stop the coder phase rather than let it run untested. Do not list a file you did not actually write.`
         : '') +
@@ -1702,8 +1702,8 @@ while (pendingPhases.length > 0) {
         `that must act before it can proceed. Handoff message: ` +
         `${JSON.stringify(phaseResult.message || "")}. Read the ticket ` +
         `before starting. Execute your phase. Files touched: ` +
-        `${JSON.stringify(filesTouched)}. Return a JSON result with at ` +
-        `minimum { "status": "ok" | "blocker" | "failed" }.`,
+        `${JSON.stringify(filesTouched)}. Fill the reply tool's fields ` +
+        `directly: "status" (ok | blocker | failed | handoff), "message", and "handoff_target" naming the next phase agent when status is handoff. Never return your reply as a JSON string or inside an "input" field.`,
         {
           agentType: normalizedTarget,
           schema: PHASE_RESULT_SCHEMA,

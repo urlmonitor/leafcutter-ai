@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: '2026-08-18'
-last_updated: '2026-08-18'
+last_updated: '2026-09-25'
 components:
   - knowledge_management
 related_docs:
@@ -21,7 +21,20 @@ related_docs:
 > original grading is the `**Severity:**` line below, unchanged.
 
 - **Severity:** high
-- **Status:** open
+- **Status:** **PARTIAL** (verified 2026-09-25 against `main` @ `d2fe85a1`). **Fixed:**
+  (1) the emission contract now carries `text`. It is required of producers and optional to
+  consumers, in `signoff` §7 and in all three v3 templates (`468e0490`, #722). The
+  placeholder fallback `event.get("text", f"[{entry_kind}] Learning from {ticket}")` is gone.
+  A textless record is now classified `no_learning_text` (`d5fffdb1`, #650).
+  (2) `ticket` vs `agent`+`component` is settled: `ticket` is optional and barred from
+  identity, and the v3 templates defer to §7 (`48962ff5`, #649).
+  (3) `_event_hash` is re-keyed on `_REQUIRED_DIGEST_FIELDS` =
+  `(timestamp, agent, component, destination, entry_kind)`, and the collision test was added
+  (`931b4beb`, #662). The 9 digest/idempotency tests pass.
+  **Remains:** see the 2026-09-25 note at the end. The collision is narrowed, not closed.
+  Two distinct learnings from the **same** agent and component, with the same day-resolution
+  timestamp, still share one digest. The second learning is dropped as "previously processed".
+  No other KI tracks this.
 - **Occurrences:** 1
 - **First seen:** 2026-08-26 · **Last seen:** 2026-08-26
 - **Where:** `templates/skills/signoff/SKILL.md` §7 step 4 (the emitter contract);
@@ -78,5 +91,24 @@ loop is repaired. Fix it *with* the repair, not after.
 **Related.** `KI-KM-009` (the false premise this schema misled). `INF-400b-2-i` and
 `INF-400b-2-ii` (the owning ACs, authored 2026-08-26). `INF-700b-1` (requires the record to
 carry the learning text).
+
+**Verification note, 2026-09-25 — the residual collision.** Fix direction 3 asked for a key
+on populated fields. Its guard was that hashing the whole record would destroy idempotency.
+The re-key adds `agent` and `component`, but three things keep the original hazard alive.
+First, `text` is deliberately excluded from identity. Second, §7 now fixes `destination` and
+`entry_kind` to the sentinels `"(unrouted)"` / `"unclassified"`, so for every new emission
+only `timestamp`, `agent` and `component` discriminate. Third, `timestamp` is specified only
+as `<ISO-8601>`, so day resolution is still allowed.
+The collision test (`TestTwoSameDaySameDestinationSameKindRecordsAreBothProcessed`) uses two
+*different* agents, so it cannot see this case. A probe, run from the repo root, gave these
+results:
+- Two records with the same `agent`, `component` and `timestamp="2026-09-25"`, and different
+  `text`, gave `_event_hash(a) == _event_hash(b)` → `True`.
+- With a routable kind and two harvest runs, run 2 reported `routed 0, previously_processed 2`.
+  Only `Learning A` was captured, so `Learning B` was silently dropped.
+
+To close this, either require sub-second or monotonic timestamps from producers, or add a
+content-derived discriminator (e.g. a digest of `text`) to the identity key. Then add a
+same-agent collision test.
 
 ---

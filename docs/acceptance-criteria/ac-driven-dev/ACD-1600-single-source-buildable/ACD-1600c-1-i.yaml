@@ -33,10 +33,14 @@ it_requirements:
 delivers_to: null
 expects_from:
   ac_id: ACD-1600c-1
-  contract: "The implementation-readiness completeness gate: a classifier that flags an AC NOT implementation-ready and names which of {file targets, test contract} is missing."
+  contract: "The implementation-readiness completeness gate: a classifier that flags an AC NOT implementation-ready with reasons drawn from the single hold-reason list (ACD-2500b-2); this case exercises the owned reason 'missing file targets'."
 origin_agent: BrainCandy
 created: 2026-08-11
-amended_by: []
+amended_by:
+  - reason: "contract continuity: expects_from re-worded to match the amended ACD-1600c-1 delivers_to (single hold-reason list, ACD-2500b-2). Criteria unchanged."
+    date: '2026-09-25'
+    by: it-po
+    directed_by: user
 superseded_by: null
 covered_by: []
 implemented_by: []

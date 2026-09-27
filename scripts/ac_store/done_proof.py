@@ -1461,22 +1461,56 @@ def _nodeid_function_name(nodeid: str) -> str:
     return base.rsplit("::", 1)[-1]
 
 
-def _find_nodeid_for_test(
-    func_name: str,
-    file_basename: str,
-    pytest_results: dict[str, str],
-) -> str | None:
+def _find_nodeids_for_test(func_name: str, file_basename: str, pytest_results: dict[str, str]) -> list[str]:
+    """Return every pytest nodeid belonging to a function, same-file first.
+
+    A parametrized test (e.g. ``test_b[0]``, ``test_b[1]``, ...) produces
+    multiple nodeids that all share the same bare function name. ACS-200f-2:
+    a caller that inspects only the first match (as the single-nodeid
+    ``_find_nodeid_for_test`` used to do on its own) silently ignores every
+    later case, so a parametrised covering test with one failing case among
+    several passing ones was wrongly read as proof of done. This helper
+    collects the FULL match set so a caller can inspect every case.
+
+    Matching compares *func_name* for exact equality against the nodeid's
+    final ``::``-delimited segment with any trailing ``[params]`` suffix
+    stripped (see :func:`_nodeid_function_name`), never a substring/prefix/
+    ``endswith`` check, so a lookup for ``test_foo`` cannot match an
+    unrelated sibling such as ``test_foo_bar`` or its parametrized form
+    ``test_foo_bar[X]``.
+
+    Same-file precedence is unchanged from the original single-match
+    behaviour: nodeids whose text contains *file_basename* are preferred as
+    a group over name-only matches elsewhere. When at least one same-file
+    match exists, only those are returned; the name-only fallback is used
+    solely when the same-file set is empty.
+
+    Args:
+        func_name: Python function name (e.g. ``"test_foo"``).
+        file_basename: Basename of the test file (e.g. ``"test_foo.py"``).
+        pytest_results: Dict of ``{nodeid: outcome}`` from ``_run_pytest_and_parse``.
+
+    Returns:
+        All matching nodeid strings, same-file matches preferred as a group;
+        an empty list if nothing matches.
+    """
+    matches = [nodeid for nodeid in pytest_results if _nodeid_function_name(nodeid) == func_name]
+    return [nodeid for nodeid in matches if file_basename in nodeid] or matches
+
+
+def _find_nodeid_for_test(func_name: str, file_basename: str, pytest_results: dict[str, str]) -> str | None:
     """Find the pytest nodeid for a function, preferring a match in the expected file.
 
-    Attempts an exact file-basename + function-name match first, then falls back
-    to function-name suffix only. Matching compares *func_name* for exact
-    equality against the nodeid's final ``::``-delimited segment with any
-    trailing ``[params]`` suffix stripped (see :func:`_nodeid_function_name`),
-    so a parametrized nodeid such as ``path::test_widget[case1]`` is found
-    even though it never ends with the literal string ``::test_widget``.
-    Equality (never a substring/prefix/``endswith`` check) also guarantees a
-    lookup for ``test_foo`` cannot match an unrelated sibling such as
-    ``test_foo_bar`` or its parametrized form ``test_foo_bar[X]``.
+    Built on :func:`_find_nodeids_for_test`'s full match set. ACS-200f-2: when
+    a parametrised test has multiple matching cases, any non-``PASSED`` case
+    makes the function non-passing overall, so the first such non-passing
+    nodeid (in *pytest_results* order, independent of which case pytest
+    happened to report first) is returned instead of whichever case merely
+    matched first. Only when every matched case is ``PASSED`` is the first
+    match returned. This keeps the single-nodeid return contract
+    (:func:`_classify_outcomes` and the fast-lane caller
+    ``_fl_red_baseline_support._resolve_tag_outcome`` both read exactly one
+    nodeid's outcome) correct without either call site needing to change.
 
     Args:
         func_name: Python function name (e.g. ``"test_foo"``).
@@ -1486,13 +1520,9 @@ def _find_nodeid_for_test(
     Returns:
         A matching nodeid string, or ``None`` if no match is found.
     """
-    for nodeid in pytest_results:
-        if _nodeid_function_name(nodeid) == func_name and file_basename in nodeid:
-            return nodeid
-    for nodeid in pytest_results:
-        if _nodeid_function_name(nodeid) == func_name:
-            return nodeid
-    return None
+    matches = _find_nodeids_for_test(func_name, file_basename, pytest_results)
+    default = matches[0] if matches else None
+    return next((nodeid for nodeid in matches if pytest_results[nodeid] != "PASSED"), default)
 
 
 def _describe_non_passing(nodeid: str, pytest_results: dict[str, str]) -> str:
@@ -2321,3 +2351,5 @@ def verify_done_eligible(
 #   ADDENDUM 2026-09-22 [python-coder/BP-100n-4-ii-ii]: is_covers_tag_waived()
 #   relocated to _done_proof_phase_helpers.py, ratchet reason as above; see
 #   the module docstring's "Second relocation" paragraph. (#BO-2500a-1-ii)
+# - 2026-09-25 00:00 [python-coder]: Fixed _find_nodeid_for_test (ACS-200f-2, KI-ACS-20260925-done-proof-parametrised-first-match) -- it returned the FIRST matching nodeid, so a parametrised covering test with one failing case among several passing ones (e.g. test_b[0] PASSED, test_b[1] FAILED) was wrongly judged done-eligible whenever pytest happened to report the passing case first, exactly the first-match trap KI-ACS-008 L72-78 and KI-BO-20260826-1900 L81-87 warn against.
+#   Added _find_nodeids_for_test() to collect the FULL match set (same-file matches preferred as a group, as before); _find_nodeid_for_test is now built on top of it and returns the first non-PASSED nodeid among those matches, or the first match when all pass, preserving its single-nodeid contract so _classify_outcomes and the fast lane's _fl_red_baseline_support._resolve_tag_outcome need no call-site change. (#ACS-200f-2)

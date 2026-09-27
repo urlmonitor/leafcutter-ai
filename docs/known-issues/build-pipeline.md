@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: 2026-08-18
-last_updated: 2026-09-14
+last_updated: '2026-09-25'
 components:
   - build_pipeline
 related_docs:
@@ -118,7 +118,7 @@ Fixed issues move to [`build-pipeline/resolved/`](build-pipeline/resolved/) and 
 | `high` | KI-BP-012 — The self-hosted build validates `agent_registry.json` against a path nothing ever writes to, and the deployed workflow reads a different path entirely | [open-high-ki-bp-012.md](build-pipeline/open-high-ki-bp-012.md) |
 | `high` | KI-BP-016 — `build.py` honours `docs_root` when writing the doc index but ignores it when reading, and overwrites the real index with "No docs found." | [open-high-ki-bp-016.md](build-pipeline/open-high-ki-bp-016.md) |
 | `high` | KI-BP-017 — `scripts/feedback/` is never provisioned into a worktree, so the documented signoff feedback call crashes and every affected phase records `(submit-failed)` | [open-high-ki-bp-017.md](build-pipeline/open-high-ki-bp-017.md) |
-| `high` | KI-BP-019 — A missing `pyyaml` strips the frontmatter from every deployed agent, silently, with no output on any stream | [open-high-ki-bp-019.md](build-pipeline/open-high-ki-bp-019.md) |
+| `high` | KI-BP-019 — A missing `pyyaml` strips the frontmatter from every deployed agent, silently, with no output on any stream | [resolved-high-ki-bp-019.md](build-pipeline/resolved/resolved-high-ki-bp-019.md) |
 | `high` | KI-BP-20260826-1331 — a shared deployed `.leafcutter/` is a per-file collage of whatever each writing worktree last wrote — no single commit produces the tree the gates actually run | [open-high-ki-bp-20260826-1331.md](build-pipeline/open-high-ki-bp-20260826-1331.md) |
 | `high` | KI-BP-20260826-1331-addenda — (addenda to KI-BP-20260826-1331) | [open-high-ki-bp-20260826-1331-addenda.md](build-pipeline/open-high-ki-bp-20260826-1331-addenda.md) |
 | `high` | KI-BP-20260826-worktree-hooks-only-on-one-path — A worktree made with plain `git worktree add` has no hooks, and nothing at commit time says so | [open-high-ki-bp-20260826-worktree-hooks-only-on-one-path.md](build-pipeline/open-high-ki-bp-20260826-worktree-hooks-only-on-one-path.md) |
@@ -133,7 +133,7 @@ Fixed issues move to [`build-pipeline/resolved/`](build-pipeline/resolved/) and 
 | `high` | KI-BP-20260907-no-gitignore-for-consumers — `build.py` deploys no `.gitignore` to consumers, so a deployed module's compiled bytecode gets tracked and every import re-fails the next commit | [open-high-ki-bp-20260907-no-gitignore-for-consumers.md](build-pipeline/open-high-ki-bp-20260907-no-gitignore-for-consumers.md) |
 | `high` | KI-BP-20260921-1630 — the clean-mode provenance ledger can only ever learn about artifacts the build still produces, so every orphan that predates it is permanently unremovable | [open-high-ki-bp-20260921-1630.md](build-pipeline/open-high-ki-bp-20260921-1630.md) |
 | `low` | KI-BP-002 — Generated agent cards are tracked but never regenerated, so every build dirties six of them | [open-low-ki-bp-002.md](build-pipeline/open-low-ki-bp-002.md) |
-| `low` | KI-BP-010 — Clean-mode's `workflows` entry has a doubled path segment, so it has never run and a real orphan survives every `--clean` | [open-low-ki-bp-010.md](build-pipeline/open-low-ki-bp-010.md) |
+| `low` | KI-BP-010 — Clean-mode's `workflows` entry has a doubled path segment, so it has never run and a real orphan survives every `--clean` | [resolved-low-ki-bp-010.md](build-pipeline/resolved/resolved-low-ki-bp-010.md) |
 | `low` | KI-BP-013 — The mypy gate checks only changed files, so untouched debt is invisible until an unrelated edit drops a wall of it on whoever touched the file | [open-low-ki-bp-013.md](build-pipeline/open-low-ki-bp-013.md) |
 | `low` | KI-BP-014 — The commit agent can stall indefinitely waiting on the autofix agent it dispatched, leaving a fully-staged commit unmade and no error | [open-low-ki-bp-014.md](build-pipeline/open-low-ki-bp-014.md) |
 | `low` | KI-BP-015 — `docs/agents/cards/*.card.md` are committed build outputs with no freshness gate, so they drift from the AC store they describe | [open-low-ki-bp-015.md](build-pipeline/open-low-ki-bp-015.md) |
@@ -166,4 +166,4 @@ Fixed issues move to [`build-pipeline/resolved/`](build-pipeline/resolved/) and 
 | `high` | KI-BP-022 — A deployable script that fails to parse gets an empty closure and a clean bill of health — and 107 of the 152 scripts the guard parses are in `templates/`, which CI's ruff run excludes | [resolved-high-ki-bp-022.md](build-pipeline/resolved/resolved-high-ki-bp-022.md) |
 | `low` | KI-BP-023 — The closure guard's "every script this build will deploy" covers eight deploy families and the build has ten | [resolved-low-ki-bp-023.md](build-pipeline/resolved/resolved-low-ki-bp-023.md) |
 | `high` | KI-BP-20260907-0812 — `generate_product_truth.py` builds index paths with the platform separator, so on Windows the validator can never pass and every commit touching an AC YAML is blocked | [resolved-high-ki-bp-20260907-0812.md](build-pipeline/resolved/resolved-high-ki-bp-20260907-0812.md) |
-| `high` | KI-BP-20260910-1240 — build.py writes CRLF on Windows and then cannot see that it did, so every deployed script silently diverges from its template and a plain re-run never repairs it | [resolved-high-ki-bp-20260910-1240.md](build-pipeline/resolved/resolved-high-ki-bp-20260910-1240.md) |
+| `high` | KI-BP-20260910-1240 — build.py writes CRLF on Windows and then cannot see that it did, so every deployed script silently diverges from its template and a plain re-run never repairs it | [open-high-ki-bp-20260910-1240.md](build-pipeline/open-high-ki-bp-20260910-1240.md) |

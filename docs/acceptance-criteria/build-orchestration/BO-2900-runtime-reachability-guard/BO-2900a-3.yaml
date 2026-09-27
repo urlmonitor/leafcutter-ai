@@ -93,7 +93,8 @@ created: 2026-08-13
 amended_by: []
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-AProofThatReachedTheCodeByDirectImport/02_TICKET-20260925-BO-2900a-3.md
 change_target: pipeline
 risk_surface: internal
 notes: |
