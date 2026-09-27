@@ -94,8 +94,10 @@ created: 2026-09-25
 amended_by: []
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260927-BO-4300b-1-i.md
 notes: |
   The sandbox run in the consolidation analysis created a new slug from inside the first
   worktree. Under decision 1 each workspace is an independent copy, so "inside another
   workspace" must still resolve to the main project, not to W1 as if W1 were the project.
+target_epic: EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace

@@ -102,9 +102,11 @@ created: 2026-09-25
 amended_by: []
 superseded_by: null
 covered_by: [BO-4300e-2-i, BO-4300e-2-ii]
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260927-BO-4300e-2.md
 notes: |
   finalize's teardown deadlocks today on worktree-agent's interactive "yes" it cannot give. The
   verdict "does it hold undelivered work" is BO-4100c-1 and the refusal content is BO-4100c-2 --
   cited, not re-derived; this record adds that clearing goes through the one maker and never
   blocks on a question.
+target_epic: EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace

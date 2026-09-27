@@ -119,7 +119,9 @@ amended_by:
     <path> commit`. One test spec added. readiness reset to reviewed.
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260927-BO-4300f-2-ia.md
 notes: 'IT PO split of BO-4300f-2-i (2026-09-25): the prompt surfaces (llm-expert). With BO-4300f-2-ib
   the union of the two Givens is the parent''s. Carries the CLAUDE.md recipe rewrites (symlink-preferred
   bootstrap, fail-open OR check, allowlist dual-update rule).'
+target_epic: EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace

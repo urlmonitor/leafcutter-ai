@@ -56,6 +56,8 @@ created: 2026-09-25
 amended_by: []
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260927-BO-4300d-5.md
 notes: |
   documentation_trigger state-diagram on BO-4300d.
+target_epic: EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace

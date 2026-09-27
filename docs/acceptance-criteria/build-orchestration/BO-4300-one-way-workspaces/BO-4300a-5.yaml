@@ -73,9 +73,11 @@ amended_by:
     as the one authoritative copy. Criteria unchanged. readiness reset to reviewed.
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260927-BO-4300a-5.md
 notes: |
   documentation_trigger reference-doc on BO-4300a. It documents the contract that
   BO-4300c-2 (one readable answer) and BO-4300c-3/c-4 (callers stop; location only from the
   answer) specify behaviourally. Field names are IT PO's to fix; this page names them once
   they exist.
+target_epic: EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace

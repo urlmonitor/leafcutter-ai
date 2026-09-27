@@ -76,8 +76,10 @@ created: 2026-09-25
 amended_by: []
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260927-BO-4300a-3.md
 notes: |
   documentation_trigger how-to on BO-4300a. This is the single page every retired recipe
   points to under BO-4300f-2-i. Clearing a workspace by hand is BO-4300e-5's how-to, which
   this page links to rather than repeats.
+target_epic: EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace

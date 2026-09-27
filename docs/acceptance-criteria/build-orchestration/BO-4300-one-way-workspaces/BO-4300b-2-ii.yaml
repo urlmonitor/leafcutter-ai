@@ -92,10 +92,12 @@ created: 2026-09-25
 amended_by: []
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260927-BO-4300b-2-ii.md
 notes: |
   Section 1 of the consolidation analysis: the resolver always preferred the stale gitignored
   leafcutter-ai/.leafcutter copy (2026-09-09) over the current deployment (2026-09-24). OPEN
   (Q6, not decided here): whether that inner copy should exist at all. This record holds
   either way -- if the copy is removed it is trivially true; if it stays it must not steer the
   outcome.
+target_epic: EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace

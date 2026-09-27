@@ -98,9 +98,11 @@ created: 2026-09-25
 amended_by: []
 superseded_by: null
 covered_by: [BO-4300e-1-i]
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260927-BO-4300e-1.md
 notes: |
   Under decision 1 no version-control command lists the workspaces (clones), so "find" cannot
   lean on one -- the empty linked-workspace list in the Given makes a lookup that still does
   fail. Listing completeness is BO-4100e; this record is the single-item lookup through the
   same maker (decision 4).
+target_epic: EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace
