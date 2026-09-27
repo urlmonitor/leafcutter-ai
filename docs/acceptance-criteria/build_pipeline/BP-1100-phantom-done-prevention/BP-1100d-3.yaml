@@ -56,6 +56,7 @@ created: 2026-09-25
 amended_by: []
 superseded_by: null
 covered_by:
+  - BP-1100d-3-i
   - unit_tests/commit_guardian/test_enforce_commit_delegation_parses_git_argv.py
 implemented_by:
   - templates/hooks/enforce_commit_delegation.py

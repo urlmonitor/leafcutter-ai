@@ -17,3 +17,9 @@ breaking: false
 The commit-delegation hook now blocks `git -C <path> commit` and other spellings that use
 git's global options. Commands that only mention "git commit" inside a quoted argument,
 like a PR body or a grep pattern, are no longer blocked.
+
+The five shipped recipes that committed with the `-C` spelling were migrated in the same change,
+so nothing breaks when the hook is deployed. The skill recipes (build-single-ticket, plan-feature,
+quick-fix) now go through the commit agent. Finalize's closure commit carries the commit-agent
+exemption, as fast-lane-ship already does. A census test (AC BP-1100d-3-i) runs the hook's own
+detector over every recipe in `templates/` and fails if any is newly blocked.
