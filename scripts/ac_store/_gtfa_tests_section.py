@@ -162,6 +162,15 @@ def _spec_entry(
         entry["angle"] = item["angle"]
     if item.get("requires_db"):
         entry["requires_db"] = True
+    if item.get("must_catch"):
+        # TQ-500f-2: copied VERBATIM — same strings, same order, no trimming,
+        # case change, dedupe, merge or reformatting. A new list (not the
+        # same object) so nothing downstream can mutate the AC's own record
+        # through this reference. Omitted entirely (never an empty list)
+        # when the authored item has none — the criteria-derived fallback
+        # route never reaches this function at all, so it never fabricates
+        # one either.
+        entry["must_catch"] = list(item["must_catch"])
     return entry
 
 

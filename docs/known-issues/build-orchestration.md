@@ -68,7 +68,7 @@ Severity in the **filename** is a three-level index bucket (`blocker` / `high` /
 
 Fixed issues move to [`build-orchestration/resolved/`](build-orchestration/resolved/) and are no longer listed as open. They are kept, not deleted.
 
-**Open: 51** (7 blocker, 27 high, 17 low) · **Resolved: 9**
+**Open: 51** (8 blocker, 25 high, 18 low) · **Resolved: 15**
 
 ## Open
 
@@ -81,6 +81,7 @@ Fixed issues move to [`build-orchestration/resolved/`](build-orchestration/resol
 | `blocker` | KI-BO-20260901-1045 — Every handoff halts the drive: the driver routes on a `handoff_target` field that no agent template tells any agent to emit | [open-blocker-ki-bo-20260901-1045.md](build-orchestration/open-blocker-ki-bo-20260901-1045.md) |
 | `blocker` | KI-BO-20260921-build-feature-abandons-the-epic-worktree-branch — a re-run switches the worktree onto a fresh branch off main, drives the epic from the MAIN checkout, and re-runs tickets that are already committed | [open-blocker-ki-bo-20260921-build-feature-abandons-the-epic-worktree-branch.md](build-orchestration/open-blocker-ki-bo-20260921-build-feature-abandons-the-epic-worktree-branch.md) |
 | `blocker` | KI-BO-20260921-fastlane-worktree-agent-acts-on-leaked-conversation — the fast lane's worktree phase executed destructive git operations from the parent session's conversation, then asked for the authorization afterwards | [open-blocker-ki-bo-20260921-fastlane-worktree-agent-acts-on-leaked-conversation.md](build-orchestration/open-blocker-ki-bo-20260921-fastlane-worktree-agent-acts-on-leaked-conversation.md) |
+| `blocker` | KI-BO-20260925-1309 — A phase agent wraps its whole reply in one `input` string, and the schema's misleading error sends every retry after the wrong field, so the drive halts with the work already done | [open-blocker-ki-bo-20260925-1309.md](build-orchestration/open-blocker-ki-bo-20260925-1309.md) |
 | `high` | KI-BO-007 — `build-feature` counts a phase as completed when the agent halted without doing it, yielding `status: ok` with no PR | [open-high-ki-bo-007.md](build-orchestration/open-high-ki-bo-007.md) |
 | `high` | KI-BO-20260921-worktree-base-resolver-defaults-to-cwd — build-feature calls the worktree-base resolver with no start path, so in the self-hosting layout it resolves against a directory outside the repository and every epic drive aborts | [open-high-ki-bo-20260921-worktree-base-resolver-defaults-to-cwd.md](build-orchestration/open-high-ki-bo-20260921-worktree-base-resolver-defaults-to-cwd.md) |
 | `high` | KI-BO-010 — `/quick-fix`'s divergence gate is a first-token substring match, and its own remedy loops | [open-high-ki-bo-010.md](build-orchestration/open-high-ki-bo-010.md) |

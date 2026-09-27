@@ -29,7 +29,7 @@ doc_links:
   - path: scripts/ac_store/done_proof.py
     relationship: modifies
     status: exists
-  - path: "docs/known-issues/ac-store/open-blocker-ki-acs-20260925-done-proof-parametrised-first-match.md"
+  - path: "docs/known-issues/ac-store/resolved/resolved-blocker-ki-acs-20260925-done-proof-parametrised-first-match.md"
     relationship: describes
     status: exists
 assigned_agent: python-coder

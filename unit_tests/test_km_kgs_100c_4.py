@@ -11,10 +11,21 @@ BUSINESS CONTEXT: config/paths.json's tickets surface declares files_touched
     the real public build_knowledge_map()/render_json() so they fail with or
     without a hand-built edges dict, and pass only once the declaration is
     fixed.
+
+IT-PO FOLLOW-UP (2026-09-25): these three tests are superseded by
+    KM-KGS-100d-4, which changes what the tickets file_path_fields
+    declaration MEANS: a files_touched value no longer just survives the
+    phantom filter as a raw-string leaf -- it resolves to a real
+    files-surface node, exactly like implemented_by/covered_by. The two
+    "produce edges" tests are strengthened to assert the target is a
+    files-surface node (and, for the controlled ticket whose declared
+    paths do not exist on disk, that the node is marked missing per
+    KM-KGS-100d-4-ii). The exemption test's regex half (which asserted a
+    _PHANTOM_FILTER_EXEMPT-style code region existed) is replaced with a
+    behavioural check, because KM-KGS-100d-4 deletes that region entirely.
 """
 
 import json
-import re
 import subprocess
 import sys
 from pathlib import Path
@@ -93,6 +104,20 @@ def test_ticket_files_touched_produce_edges_to_declared_paths(tmp_path):
         f"both because tickets has no file_path_fields entry)"
     )
 
+    # KM-KGS-100d-4 follow-up: the targets must be real files-surface nodes,
+    # not raw-string leaves surviving only the exemption, and KM-KGS-100d-4-ii
+    # marks them missing since neither declared path exists on disk here.
+    files_nodes = {n.id: n for n in km.nodes if n.surface == "files"}
+    for target in targets:
+        assert target in files_nodes, (
+            f"{target!r} must be a files-surface node, not a raw-string leaf; "
+            f"files nodes present: {sorted(files_nodes)}"
+        )
+        assert getattr(files_nodes[target], "missing", None) is True, (
+            f"{target!r} does not exist on disk in this fixture and must be "
+            f"marked missing: True (KM-KGS-100d-4-ii)"
+        )
+
 
 def test_real_repository_graph_contains_files_touched_edges():
     # covers: KM-KGS-100c-4
@@ -132,6 +157,7 @@ def test_real_repository_graph_contains_files_touched_edges():
     assert result.returncode == 0, f"knowledge_query.py must exit 0; stderr: {result.stderr}"
     payload = json.loads(result.stdout)
     ticket_ids = {n["id"] for n in payload["nodes"] if n["surface"] == "tickets"}
+    node_by_id = {n["id"]: n for n in payload["nodes"]}
 
     files_touched_edges = [e for e in payload["edges"] if e["type"] == "files_touched"]
     assert len(files_touched_edges) > 0, (
@@ -148,23 +174,34 @@ def test_real_repository_graph_contains_files_touched_edges():
         assert isinstance(edge["target"], str) and edge["target"], (
             f"files_touched edge target must be the path string as read: {edge}"
         )
+        # KM-KGS-100d-4 follow-up: the phantom filter no longer merely
+        # exempts this edge type -- its target must be a real node.
+        assert edge["target"] in node_by_id, (
+            f"files_touched edge {edge} must end on a real node, not a "
+            f"raw-string leaf; target {edge['target']!r} is no node's id"
+        )
+    assert any(node_by_id[e["target"]]["surface"] == "files" for e in files_touched_edges), (
+        "expected at least one files_touched edge to end on a files-surface node"
+    )
 
 
-def test_files_touched_exemption_is_declared_not_special_cased():
+def test_files_touched_exemption_is_declared_not_special_cased(tmp_path):
     # covers: KM-KGS-100c-4
     # angle: boundary
     """The fix is declarative (paths.json only); no files_touched/tickets code branch.
 
     Asserts the real config/paths.json tickets surface declares files_touched
     in file_path_fields, mirroring the acs surface's implemented_by /
-    covered_by. Then asserts the dynamic-exemption region of
-    knowledge_query.py's _collect_all (where dynamic_exempt/effective_exempt
-    are built) contains no hardcoded 'files_touched' or 'tickets' literal, so
-    a comment or docstring elsewhere in the file mentioning those words can't
-    false-positive this check.
-
-    Red before the fix for the first assertion: the real paths.json tickets
-    entry has no file_path_fields key at all.
+    covered_by. KM-KGS-100d-4 REPLACEMENT (IT-PO, 2026-09-25): the second
+    half used to regex-inspect knowledge_query.py's dynamic_exempt/
+    effective_exempt code region for a hardcoded 'files_touched'/'tickets'
+    literal -- that region is DELETED by KM-KGS-100d-4's per-surface
+    resolution, so a regex match on it can no longer prove anything.
+    Replaced with a BEHAVIOURAL check: an AC's implemented_by value and a
+    ticket's files_touched value naming the SAME missing path must resolve
+    through the identical declaration-driven mechanism onto the SAME single
+    files node -- proving files_touched is not special-cased relative to
+    implemented_by, without reading source text.
     """
     data = json.loads(_REAL_PATHS_JSON.read_text(encoding="utf-8"))
     tickets_cfg = data["surfaces"]["tickets"]
@@ -175,24 +212,33 @@ def test_files_touched_exemption_is_declared_not_special_cased():
         f"covered_by; got file_path_fields={file_path_fields!r}"
     )
 
-    source = _KNOWLEDGE_QUERY_SCRIPT.read_text(encoding="utf-8")
-    match = re.search(
-        r"dynamic_exempt: set\[str\] = set\(\).*?effective_exempt: frozenset\[str\] = [^\n]*\n",
-        source,
-        re.DOTALL,
+    config_dir = tmp_path / "config"
+    config_dir.mkdir(parents=True)
+    (config_dir / "paths.json").write_bytes(_REAL_PATHS_JSON.read_bytes())
+
+    tickets_dir = tmp_path / "tickets"
+    tickets_dir.mkdir(parents=True)
+    (tickets_dir / "shared.md").write_text(
+        "---\nid: TICKET-SHARED\ntitle: Shared\nfiles_touched:\n"
+        "  - scripts/shared_missing.py\n---\n\nBody.\n",
+        encoding="utf-8",
     )
-    assert match, (
-        "could not locate the dynamic_exempt/effective_exempt exemption-"
-        "building region in knowledge_query.py's _collect_all — the "
-        "assertion below depends on finding that exact region"
+    acs_dir = tmp_path / "docs" / "acceptance-criteria" / "example-component"
+    acs_dir.mkdir(parents=True)
+    (acs_dir / "KM-EX-090.yaml").write_text(
+        "id: KM-EX-090\ntitle: Shared\nimplemented_by:\n"
+        "  - scripts/shared_missing.py\ncovered_by: []\ndepends_on: []\ncomponents: []\n",
+        encoding="utf-8",
     )
-    exemption_region = match.group(0)
-    assert "files_touched" not in exemption_region, (
-        "the phantom-filter exemption-building region must not hardcode "
-        "'files_touched' — the exemption must come purely from paths.json's "
-        f"file_path_fields declarations; region:\n{exemption_region}"
+
+    km = build_knowledge_map(tmp_path, config_dir / "paths.json")
+    shared_nodes = [n for n in km.nodes if n.id == "scripts/shared_missing.py"]
+    assert len(shared_nodes) == 1 and shared_nodes[0].surface == "files", (
+        f"implemented_by and files_touched must resolve the same path onto "
+        f"exactly ONE files node, not two mechanisms; got {shared_nodes}"
     )
-    assert "tickets" not in exemption_region, (
-        "the phantom-filter exemption-building region must not hardcode a "
-        f"'tickets'-specific branch; region:\n{exemption_region}"
+    edges_to_shared = {e.source_id for e in km.edges if e.target_id == "scripts/shared_missing.py"}
+    assert edges_to_shared == {"KM-EX-090", "TICKET-SHARED"}, (
+        f"both the acs implemented_by edge and the tickets files_touched edge "
+        f"must land on the same node; sources found: {edges_to_shared}"
     )

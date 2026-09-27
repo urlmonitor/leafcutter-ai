@@ -157,9 +157,9 @@ AC_STORE_DEPLOY_MAP: tuple[tuple[str, str], ...] = (
     # BP-900g-8's derived closure guard, not by manual audit -- so consumer
     # installs shipped validate_ac_schema.py without a sibling it imports at
     # module load time, which crashes with ModuleNotFoundError (an import
-    # statement fails loudly, unlike the importlib.util try/except pattern
-    # used elsewhere in this file).
+    # statement fails loudly, unlike the importlib.util try/except elsewhere).
     ("scripts/ac_store/_ac_components.py",            "_ac_components.py"),
+    ("scripts/ac_store/_ac_schema_test_spec_validators.py", "_ac_schema_test_spec_validators.py"),  # TQ-500f-1/-2-i: same import hazard as _ac_components.py
     ("scripts/ac_store/ac_triage.py",                 "ac_triage.py"),
     ("scripts/ac_store/create_ac_workflow.py",        "create_ac_workflow.py"),
     ("scripts/ac_store/cross_reference_audit.py",     "cross_reference_audit.py"),

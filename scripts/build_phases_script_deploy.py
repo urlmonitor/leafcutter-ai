@@ -79,6 +79,14 @@ AGENT_SUPPORT_SCRIPT_DIRS: tuple[str, ...] = (
     # retrospective-agent.md — generate_health_report.py sits next to
     # agent_telemetry.py, so the directory deploys as a unit.
     "agent-health",
+    # INF-1100d-3-i / INF-1100d-3-ii: templates/agents/test-runner.md's
+    # pre-run reachability check (INF-1100d-2 wires the prompt to it) and
+    # the Step 2b DB-test pattern's setUp() (INF-1100d-3) both invoke this
+    # module's CLI / resolve_test_db_address() by its deployed path. No
+    # deploy phase shipped scripts/db_check/ before this AC pair, so the
+    # deployed test-runner and DB-test pattern would die at their first
+    # invocation in every consumer install.
+    "db_check",
 )
 
 AGENT_SUPPORT_SCRIPT_FILES: tuple[str, ...] = (
@@ -524,4 +532,21 @@ def build_template_standalone_scripts(target_root: Path, config: dict[str, Any],
 #   scripts/config_loader.py, which no phase deploys, so pulling in the whole
 #   scripts/worktree/ directory would trip the intra-package closure guard
 #   (AC BP-900g-8) over an unrelated, pre-existing gap. (#ACD-2100b-5)
+# - 2026-09-25 [python-coder]: Added "db_check" to AGENT_SUPPORT_SCRIPT_DIRS
+#   for INF-1100d-3-i / INF-1100d-3-ii's shipped test-database checker/
+#   resolver module (scripts/db_check/checker.py) -- the pre-run
+#   reachability CLI and the Step 2b DB-test pattern's setUp() both need it
+#   at its deployed path. checker.py deliberately does NOT import
+#   config_loader.py: a first attempt added config_loader.py to
+#   AGENT_SUPPORT_SCRIPT_FILES too, but that tripped the intra-package
+#   closure guard (AC BP-900g-8) -- once deployed as a Set-B script,
+#   config_loader.py's own reads of config/skills_config.default.json and
+#   config/skills_config.schema.json become undeployed dependencies (proven
+#   by test_consumer_simulation_build_succeeds_in_empty_project going red).
+#   Reverted that addition; checker.py instead reads the project's own
+#   skills_config.json directly (same platform-dir auto-detection order
+#   config_loader.load_config() uses), which needs no package-defaults file
+#   at all since this setting ships no default address (user decisions
+#   Q3/NQ1) -- see checker.py's own module docstring.
+#   (#TICKETLESS reason=fast-lane-inf-1100d-3-ac-pair)
 # ===========================================================================
