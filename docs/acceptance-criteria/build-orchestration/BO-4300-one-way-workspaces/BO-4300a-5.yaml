@@ -43,29 +43,10 @@ estimated_complexity: S
 delivers_to: null
 expects_from:
   ac_id: BO-4300c-2
-  contract: 'Result contract. stdout carries exactly one JSON object for every verb and outcome; all child-process
-    output (git, package installers, the build) goes to stderr. Exit 0 = status ok, 2 = refused, 1 = error,
-    64 = usage error (still one JSON object: status error, code USAGE). Common fields: schema_version
-    (int), status (''ok''|''refused''|''error''), code (OK | NOT_FOUND | INCOMPLETE | OCCUPIED | OCCUPIED_LEGACY_WORKTREE
-    | IN_PROGRESS | NO_REPO | AMBIGUOUS_REPO | NO_HUB | FETCH_FAILED | GIT_FAILED | NO_CONFIG | BOOTSTRAP_FAILED
-    | BOOTSTRAP_DIRTIED_TRACKED | WORK_AT_RISK | HOOKS_INACTIVE | VERIFY_FAILED | UNSENT_WORK | PROCESS_HOLDS_FILES
-    | ON_PROTECTED_BRANCH | USAGE | INTERNAL_ERROR), message (one sentence naming the cause), verb, repo_root
-    and repo_root_posix, layout (''dev''|''consumer''), mechanism (''clone''), hub (the main checkout''s
-    origin URL). ensure/locate/verify ok answers add: kind, slug, branch (null for scratch), workspace_path
-    (absolute, native spelling), workspace_path_posix, worktree_path (alias, always equal to workspace_path),
-    base_ref (''origin/main''), base_commit (sha read back from the workspace), origin_main_commit (sha
-    of origin/main at the fetch), base_matches_origin_main (bool), fetch (''ok''|''failed''|''skipped''),
-    workspace_action (''created''|''re-readied''|''completed''|''located''), line_of_work (''new''|''resumed''|''existing''),
-    created (bool), bootstrap {build_ok: bool, config_path: str, restored_tracked: [repo-relative path],
-    env_copied: [name], failure_excerpt: str|null}, checks {is_independent_repo, not_main_checkout, same_project,
-    branch_matches, not_protected_branch, base_is_fresh, build_ok, tree_clean, precommit_config_present,
-    hooks_canary_rejected}, each true|false|''n/a''. On EVERY non-ok answer workspace_path, workspace_path_posix
-    and worktree_path are ABSENT (not blank, not null); diagnostic paths travel under different names:
-    candidates [path] (AMBIGUOUS_REPO), searched_from (NO_REPO), occupant {path, kind: ''other-line''|''other-project''|''plain-folder''|''legacy-worktree'',
-    branch|null} (OCCUPIED*), remnant_path (INCOMPLETE), unsent {commits: [sha], files: [path]} (UNSENT_WORK,
-    WORK_AT_RISK), holders [{pid, name}] (PROCESS_HOLDS_FILES). remove ok adds removed_path and discarded
-    {commits: [sha], files: [path]}. list ok adds workspaces [{kind, slug, branch, workspace_path, workspace_path_posix,
-    state: ''ready''|''incomplete''}]. Callers treat refused and error identically: halt.'
+  contract: 'The result contract exactly as recorded in BO-4300c-2 delivers_to (the one authoritative
+    copy -- not restated here, so a field added there cannot be missed in a copy). The reference must
+    cover every code and field listed there at the time it is written, including the per-stage hook
+    checks, inactive_stages and the ticket_path_in_worktree fields added by the 2026-09-25 duplication audit.'
 package_surface: false
 it_requirements:
 - 'Frontmatter per the project doc conventions (title, description, type, status, created, last_updated,
@@ -82,7 +63,14 @@ it_requirements:
 test_required: false
 origin_agent: business-analyst
 created: 2026-09-25
-amended_by: []
+amended_by:
+- reason: duplication-audit-items-2-5
+  by: it-po
+  at: 2026-09-25
+  note: >-
+    expects_from no longer carries a verbatim copy of BO-4300c-2's result contract (which had just
+    changed: per-stage hook checks, inactive_stages, ticket_path_in_worktree); it points to BO-4300c-2
+    as the one authoritative copy. Criteria unchanged. readiness reset to reviewed.
 superseded_by: null
 covered_by: []
 implemented_by: []

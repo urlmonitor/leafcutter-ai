@@ -70,12 +70,19 @@ it_requirements:
   in checks.*: independent clone and not the main copy (is_independent_repo, not_main_checkout -- own
   .git directory, not a gitfile); own line of work that is not main/master (branch_matches, not_protected_branch);
   rooted at origin/main read after the fetch (base_is_fresh, base_commit read back from the workspace);
-  install build exited 0 and its expected artefacts exist (build_ok); protections shown to fire by a canary
-  commit a real hook rejects (hooks_canary_rejected).'
-- Any false ingredient gives a non-ok answer whose code names that ingredient, and no workspace_path.
-- The canary is a change the installed hook set is declared to reject, taken from the install's own declaration
-  rather than hard-coded to one hook; it is attempted without ever landing in the branch, the index or
-  the working tree.
+  install build exited 0 and its expected artefacts exist (build_ok); protections shown to fire, PER
+  DECLARED STAGE (BO-4300c-1-ii): hooks_pre_commit_fired (a commit of a known-bad file is rejected), hooks_commit_msg_fired
+  (a commit with a known-bad message is rejected), hooks_post_merge_fired (a merge bringing in a known-bad
+  change is reported as failing), with hooks_canary_rejected kept as their conjunction for existing readers.'
+- Any false ingredient gives a non-ok answer whose code names that ingredient, and no workspace_path. For
+  the protections ingredient the code is HOOKS_INACTIVE and inactive_stages names every declared stage
+  that did not fire.
+- Each stage's canary is an input the installed hook set is declared to reject for that stage, taken from
+  the install's own declaration rather than hard-coded to one hook; the set of stages comes from the workspace's
+  own hook declaration, and a shim is installed for each. Canaries never land in the branch, the index
+  or the working tree (BO-4300c-1-ii).
+- 'Git spelling (KI-CG-20260925-commit-delegation-hook-misses-git-dash-c): canary commits run with git''s
+  working directory set to the workspace, never as `git -C <path> commit`, in the maker and in the tests.'
 - The deployed maker has no flag or environment switch that skips an ingredient; tests falsify ingredients
   through the FIXTURE (a failing stub build, a hook that accepts, a hub whose main moves), never through
   the maker.
@@ -83,7 +90,9 @@ it_requirements:
   to NEWLY started lines only. For a resumed line (BO-4300d-4, line_of_work ''resumed'') the ingredient
   is instead "the workspace holds every commit of origin/<branch>"; the maker never resets or rebases a
   resumed line, reports base_commit and origin_main_commit separately, and never claims base_matches_origin_main
-  when false. For kind scratch the canary is ''n/a'' (see BO-4300e-4).'
+  when false. For kind scratch ALL three stage checks and hooks_canary_rejected are ''n/a'' (BO-4300e-4);
+  for any other kind the pre-commit check is never ''n/a'', and the commit-msg and post-merge checks
+  are ''n/a'' only when the project does not declare that stage.'
 - Answers conform to the result contract delivered by BO-4300c-2 (one JSON object on stdout, status/code/exit
   mapping, workspace_path absent on every non-ok answer).
 - 'Must handle errors per the project error handling policy: a condition the maker cannot classify is
@@ -139,7 +148,10 @@ test_spec:
   framework: unittest
   type: behavioral
   angle: failure
-  description: A hook that accepts the canary gives HOOKS_INACTIVE, no workspace_path.
+  description: 'With a fixture declaring pre-commit, commit-msg and post-merge, making each stage in turn
+    accept its canary (the other two still firing) gives HOOKS_INACTIVE with inactive_stages naming exactly
+    that stage, the matching checks.hooks_<stage>_fired false, hooks_canary_rejected false, and no workspace_path.
+    The per-stage cases themselves are BO-4300c-1-ii''s; this arm proves the conjunction drops none.'
 test_rationale: Every assertion is made on what the deployed maker actually did to real repositories --
   its one JSON answer, its exit code, and the state of the workspace, the hub and the main copy afterwards.
   A direct-import unit test would pass while the deployed copy is stale or mis-deployed (F13), and a git
@@ -148,7 +160,16 @@ test_rationale: Every assertion is made on what the deployed maker actually did 
   exactly one test.
 origin_agent: business-analyst
 created: 2026-09-25
-amended_by: []
+amended_by:
+- reason: duplication-audit-item-5
+  by: it-po
+  at: 2026-09-25
+  note: >-
+    Technical fields only; criteria unchanged. Aligned with the widened BO-4300c-1-ii: the protections
+    ingredient is reported per declared stage (hooks_pre_commit_fired, hooks_commit_msg_fired,
+    hooks_post_merge_fired), hooks_canary_rejected kept as their conjunction; HOOKS_INACTIVE names the
+    stage(s) in inactive_stages; 'n/a' rule written down for scratch and undeclared stages; git spelling
+    rule. HOOKS_INACTIVE test updated to cover each stage. readiness reset to reviewed.
 superseded_by: null
 covered_by: [BO-4300c-1-i, BO-4300c-1-ii, BO-4300c-1-iii]
 implemented_by: []

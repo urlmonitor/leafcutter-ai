@@ -65,8 +65,11 @@ delivers_to:
   contract: 'CLI of the one maker. Deployed at <install-root>/scripts/worktree.py (source templates/scripts/worktree.py;
     the name is provisional until this AC is built, after which that path is the contract every caller
     names). Stdlib-only Python, run as `python <absolute path> <verb> ...` from ANY cwd. Verbs: `ensure
-    --kind {ticket|feature|ac|fastlane|epic|scratch} --slug <work identity> [--repo-root P] [--allow-stale-base]
-    [--config-path P]` -- the only creating verb, idempotent, always fetch + build + canary; `locate (--kind
+    --kind {ticket|feature|ac|fastlane|epic|scratch} --slug <work identity> [--ticket <path of the ticket
+    in the main copy, absolute or project-relative; not accepted with --kind scratch>] [--repo-root P] [--allow-stale-base]
+    [--config-path P]` -- the only creating verb, idempotent, always fetch + build + stage shims + per-stage
+    canaries; with --ticket its ok answer carries ticket_path_in_worktree and ticket_path_in_worktree_posix
+    (BO-4300a-1-ii, BO-4300c-2); `locate (--kind
     K --slug S | --path P | --branch B) [--repo-root P]` -- read-only; `list [--repo-root P]` -- read-only
     scan of the landing place''s markers, never git worktree list; `verify --path P [--kind K --slug S]
     [--repo-root P]` -- read-only readiness re-check; `remove --path P [<up-front discard authorisation;
@@ -75,26 +78,54 @@ delivers_to:
     2), and no flag that skips a readiness ingredient.'
 - agent: llm-expert
   contract: 'The exact single-command invocation the workspace skill and every entry skill run: `python
-    <absolute path printed by `worktree.py where`> ensure --kind <kind> --slug <identity>`, with the answer
-    relayed verbatim as the workflow''s args.workspace.'
+    <absolute path printed by `worktree.py where`> ensure --kind <kind> --slug <identity> [--ticket <main-copy
+    ticket path>]`, with the answer relayed verbatim as the workflow''s args.workspace. A caller that passed
+    --ticket takes the ticket''s working location ONLY from ticket_path_in_worktree of the ok answer.'
+- agent: python-coder
+  contract: 'Project-root resolver module (C4 shared resolver; consumed by the maker now and by the ~30
+    hand-written hook resolvers of duplication-audit cluster C4 next). Source templates/scripts/<resolver
+    module>.py (name provisional, e.g. workspace_root.py), deployed by its OWN named deploy-manifest entry
+    to <install-root>/scripts/<resolver module>.py, stdlib-only, importable as a top-level module with no
+    import-time side effects. One public function taking (cwd: absolute path, repo_root: absolute path
+    | None) and returning a result with status ''ok''|''NO_REPO''|''AMBIGUOUS_REPO'', project_root (absolute,
+    present only on ok), how (''argument''|''workspace-marker''|''git-common-dir''|''child-search''|''sibling-search''),
+    candidates [absolute path] (AMBIGUOUS_REPO only) and searched_from (absolute cwd, NO_REPO only). Order
+    and exclusions are fixed by BO-4300b-1''s it_requirements. Every call recomputes; nothing is cached.'
 expects_from:
   ac_id: BO-4300c-2
   contract: Every answer the maker emits follows the BO-4300c-2 result contract; this AC supplies the
     ensure path that produces it.
 package_surface: false
 it_requirements:
-- Deliver the one maker as a single stdlib-only Python file at templates/scripts/worktree.py (name provisional;
+- Deliver the one maker as a stdlib-only Python file at templates/scripts/worktree.py (name provisional;
   once built, that path is the contract every caller names), exposing the verbs ensure, locate, list,
-  verify, remove and where. After BO-4300f-2 no other code path in the package creates, clones, locates
-  or removes a workspace.
+  verify, remove and where, plus the separate project-root resolver module described below. After BO-4300f-2
+  no other code path in the package creates, clones, locates or removes a workspace.
+- 'ROOT RESOLUTION LIVES IN ITS OWN MODULE (duplication audit C4, KI-CG-20260925-shared-root-resolver-accepts-non-repo-workspace-parent):
+  project resolution is delivered as a separate importable module (see delivers_to), separate from the
+  maker''s CLI file, stdlib-only, with its own named deploy-manifest entry. The maker imports it; it
+  never re-implements resolution inline. It must not reuse, import, wrap or copy templates/scripts/commit_guardian/_resolve_root.py
+  (that module walks up from __file__ looking for .git or CLAUDE.md and caches its answer in a module
+  global -- both forbidden here). The resolution order and exclusions are BO-4300b-1''s.'
+- 'NO SECOND TRACKED COPY (KI-TQ-20260831-mutation-probe-lands-in-the-wrong-copy, KI-TQ-004): the only
+  tracked source of the maker and of the resolver module is templates/scripts/. No tracked copy exists
+  under scripts/ or anywhere else in the package repository (today scripts/setup_ticket_worktree.py and
+  templates/scripts/setup_ticket_worktree.py are both tracked and differ -- that shape must not recur).
+  Tests run the DEPLOYED copy only.'
 - 'ensure follows the decision memo''s order (''Consequences for the standalone script''s contract'',
   step 1): resolve the main checkout; read the hub from its origin (NO_HUB when absent); compute the landing
   place; if the location exists, verify then repair or refuse; otherwise a hardlinked local-path clone
   with --no-checkout (no --shared, no --reference); re-point origin at the hub; fetch origin main (FETCH_FAILED
   unless --allow-stale-base); check out the line of work from origin/main, or resume origin/<branch> (BO-4300d-4);
-  set gc.auto 0 and maintenance.auto false in the workspace; copy .env and .mcp.json; run the install
-  build inside the workspace with an explicit config path; clean-tree check; canary commit; write the
-  marker; emit the answer.'
+  when --ticket was given, locate the ticket inside the workspace (BO-4300a-1-ii); set gc.auto 0 and maintenance.auto
+  false in the workspace; copy .env and .mcp.json; run the install build inside the workspace with an
+  explicit config path; install the shim for every hook stage the workspace''s own hook declaration names
+  (BO-4300c-1-ii); clean-tree check; one canary per declared stage; write the marker; emit the answer.'
+- 'GIT INVOCATION SPELLING (KI-CG-20260925-commit-delegation-hook-misses-git-dash-c): the maker runs git
+  as a subprocess with its working directory set to the target, or with -C <path> for verbs other than
+  commit only. Any commit the maker makes (the canaries) runs with the working directory set, never as
+  `git -C <path> commit`. The same holds for every recipe, skill text and test in this family, because
+  the commit-delegation hook matches only the literal "git commit" and the -C spelling slips past it.'
 - No os.symlink, ln -s, mklink or junction anywhere in the maker or in the install path it drives (decision
   2).
 - The build entry point and its config are derived from the main checkout's own install config (the memo's
@@ -105,7 +136,9 @@ it_requirements:
   landing location and the same line of work. The table must accommodate whichever scheme the user picks,
   including an alias for legacy spellings (BO-4300a-2).'
 - The marker record is the maker's registry under clones (no git command lists clones). It holds schema_version,
-  kind, slug, branch, hub, base_commit, maker_version, state ('creating'|'ready') and created_at; it is
+  kind, slug, branch, hub, project_root (absolute path of the main checkout the workspace was made from
+  -- the ONLY way a workspace identifies its project, BO-4300b-1), base_commit, maker_version, state ('creating'|'ready')
+  and created_at; it is
   written atomically (temp file plus replace), state 'creating' immediately after the clone exists and
   'ready' as the last step; it lives outside version control and outside anything the install build rewrites
   or cleans. The memo's .leafcutter/workspace.json is acceptable only if a test shows the build leaves
@@ -113,14 +146,15 @@ it_requirements:
 - 'BUILD DEPLOY MANIFEST (CLAUDE.md ''New Hook / Gate Dependencies Must Be in the Build Deploy-Manifest''):
   the maker is added as a NAMED entry to the standalone-scripts deploy (build_template_standalone_scripts
   in scripts/build_phases_script_deploy.py -- its docstring list -- and the matching manifest helper in
-  scripts/build_deploy_manifest_helpers.py), not left to the shallow glob alone. That phase is non-recursive,
-  so any helper module the maker imports must be deployed by a named entry too, or the maker stays a single
-  file. Verified by running the DEPLOYED copy''s `where` verb after the build, not by the unit suite importing
-  the source.'
+  scripts/build_deploy_manifest_helpers.py), not left to the shallow glob alone. The resolver module gets
+  its OWN named entry in both places, deployed beside the maker in <install-root>/scripts/; that phase
+  is non-recursive, so any further helper module the maker imports needs a named entry too. Verified
+  by running the DEPLOYED copy''s `where` verb after the build and importing the DEPLOYED resolver module
+  in a separate process, not by the unit suite importing the source.'
 - 'docs/components.json -> worktree_manager: its description (''Git worktree lifecycle management for
   isolated epic and ticket branch environments.'') and primary_code ([''scripts/worktree/'']) become wrong
   under decision 1. Update the description to per-feature clone workspaces made, found, listed and cleared
-  through one maker, and add templates/scripts/worktree.py to primary_code; drop setup_ticket_worktree
+  through one maker, and add templates/scripts/worktree.py and the resolver module to primary_code; drop setup_ticket_worktree
   references when BO-4300f-2 deletes that script. (IT PO recorded this here and did NOT edit components.json.)'
 - Excluding the install build, an ensure on a project of the leafcutter-ai size (about 8,500 tracked files)
   completes within 30 s on the reference Windows host (the decision memo measures about 11 s clone plus
@@ -195,15 +229,49 @@ test_spec:
   angle: deployed
   description: In the shared deployed layout, <install>/scripts/worktree.py exists as a regular file and
     `where` emits one JSON object naming its own absolute path.
+- name: test_deployed_resolver_module_is_its_own_importable_file_beside_the_maker
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: deployed
+  description: In the shared deployed layout the resolver module exists as a regular file in <install>/scripts/
+    separate from worktree.py, and a separate Python process with only that directory on its path imports
+    it and gets an ok answer naming a temp project from inside that project -- proving it is importable
+    by a hook without the maker's CLI.
+- name: test_maker_and_resolver_have_no_tracked_copy_outside_templates_scripts
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: unit
+  angle: seam
+  description: '`git ls-files` of the package repository lists the maker''s and the resolver module''s
+    file names only under templates/scripts/; any tracked copy under scripts/ or elsewhere fails the test,
+    naming the path (the repository''s tracked-file set is this test''s subject).'
 test_rationale: Every assertion is made on what the deployed maker actually did to real repositories --
   its one JSON answer, its exit code, and the state of the workspace, the hub and the main copy afterwards.
   A direct-import unit test would pass while the deployed copy is stale or mis-deployed (F13), and a git
   mock cannot show the half-made and occupied states this family exists to handle.
 origin_agent: business-analyst
 created: 2026-09-25
-amended_by: []
+amended_by:
+- reason: duplication-audit-item-2
+  by: business-analyst
+  at: 2026-09-25
+  note: >-
+    Child BO-4300a-1-ii added (a ready workspace made for a ticket states where that ticket
+    is inside the workspace); covered_by updated. This record's criteria are unchanged.
+    readiness reset to reviewed for re-approval.
+- reason: duplication-audit-items-1-2-5-6
+  by: it-po
+  at: 2026-09-25
+  note: >-
+    Technical fields only; criteria unchanged. Item 1 (C4): resolver split into its own importable,
+    stdlib-only module with a named deploy-manifest entry and a delivers_to contract for the hooks;
+    _resolve_root.py reuse forbidden; marker gains project_root. Item 2: ensure gains --ticket and
+    the ticket_path_in_worktree answer fields. Item 5: ensure installs every declared stage shim and
+    runs one canary per stage; git spelling rule (no `git -C <path> commit`). Item 6: no tracked copy
+    outside templates/scripts/, with a test. readiness stays reviewed for re-approval.
 superseded_by: null
-covered_by: [BO-4300a-1-i, BO-4300a-1-ia, BO-4300a-1-ib]
+covered_by: [BO-4300a-1-i, BO-4300a-1-ia, BO-4300a-1-ib, BO-4300a-1-ii]
 implemented_by: []
 notes: |
   The load-bearing "one maker, one shape" behaviour (decision 4; decisions 1-3 define the

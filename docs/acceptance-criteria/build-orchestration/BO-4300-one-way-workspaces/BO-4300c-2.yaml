@@ -60,7 +60,7 @@ delivers_to:
     (int), status (''ok''|''refused''|''error''), code (OK | NOT_FOUND | INCOMPLETE | OCCUPIED | OCCUPIED_LEGACY_WORKTREE
     | IN_PROGRESS | NO_REPO | AMBIGUOUS_REPO | NO_HUB | FETCH_FAILED | GIT_FAILED | NO_CONFIG | BOOTSTRAP_FAILED
     | BOOTSTRAP_DIRTIED_TRACKED | WORK_AT_RISK | HOOKS_INACTIVE | VERIFY_FAILED | UNSENT_WORK | PROCESS_HOLDS_FILES
-    | ON_PROTECTED_BRANCH | USAGE | INTERNAL_ERROR), message (one sentence naming the cause), verb, repo_root
+    | ON_PROTECTED_BRANCH | TICKET_NOT_ON_BASE | USAGE | INTERNAL_ERROR), message (one sentence naming the cause), verb, repo_root
     and repo_root_posix, layout (''dev''|''consumer''), mechanism (''clone''), hub (the main checkout''s
     origin URL). ensure/locate/verify ok answers add: kind, slug, branch (null for scratch), workspace_path
     (absolute, native spelling), workspace_path_posix, worktree_path (alias, always equal to workspace_path),
@@ -68,11 +68,19 @@ delivers_to:
     of origin/main at the fetch), base_matches_origin_main (bool), fetch (''ok''|''failed''|''skipped''),
     workspace_action (''created''|''re-readied''|''completed''|''located''), line_of_work (''new''|''resumed''|''existing''),
     created (bool), bootstrap {build_ok: bool, config_path: str, restored_tracked: [repo-relative path],
-    env_copied: [name], failure_excerpt: str|null}, checks {is_independent_repo, not_main_checkout, same_project,
-    branch_matches, not_protected_branch, base_is_fresh, build_ok, tree_clean, precommit_config_present,
-    hooks_canary_rejected}, each true|false|''n/a''. On EVERY non-ok answer workspace_path, workspace_path_posix
+    env_copied: [name], failure_excerpt: str|null}, hooks_stages_declared [stage], checks {is_independent_repo,
+    not_main_checkout, same_project, branch_matches, not_protected_branch, base_is_fresh, build_ok, tree_clean,
+    precommit_config_present, hooks_pre_commit_fired, hooks_commit_msg_fired, hooks_post_merge_fired, hooks_canary_rejected
+    (the conjunction of the three stage checks)}, each true|false|''n/a''. ''n/a'' rule for the stage checks:
+    kind scratch -> all three and the conjunction are ''n/a''; any other kind -> hooks_pre_commit_fired is
+    never ''n/a'', and the commit-msg / post-merge checks are ''n/a'' only when the project does not declare
+    that stage. An ensure/locate/verify ok answer to a request that named a ticket (--ticket) adds ticket_path_in_worktree
+    (absolute, native spelling, inside workspace_path, verified to exist when the answer is emitted) and
+    ticket_path_in_worktree_posix; both are ABSENT on every other answer. ticket_path_final and ticket_path_new
+    are never emitted. On EVERY non-ok answer workspace_path, workspace_path_posix
     and worktree_path are ABSENT (not blank, not null); diagnostic paths travel under different names:
-    candidates [path] (AMBIGUOUS_REPO), searched_from (NO_REPO), occupant {path, kind: ''other-line''|''other-project''|''plain-folder''|''legacy-worktree'',
+    inactive_stages [stage] (HOOKS_INACTIVE), ticket_path (the path as requested) and reason ''absent''|''differs''
+    (TICKET_NOT_ON_BASE, status refused, exit 2), candidates [path] (AMBIGUOUS_REPO), searched_from (NO_REPO), occupant {path, kind: ''other-line''|''other-project''|''plain-folder''|''legacy-worktree'',
     branch|null} (OCCUPIED*), remnant_path (INCOMPLETE), unsent {commits: [sha], files: [path]} (UNSENT_WORK,
     WORK_AT_RISK), holders [{pid, name}] (PROCESS_HOLDS_FILES). remove ok adds removed_path and discarded
     {commits: [sha], files: [path]}. list ok adds workspaces [{kind, slug, branch, workspace_path, workspace_path_posix,
@@ -94,6 +102,13 @@ it_requirements:
   exception still produce one JSON object.
 - The contract is versioned by schema_version; adding a field is compatible, renaming or removing one
   bumps it. workspace_path is the canonical key; worktree_path is kept as an alias for existing callers.
+  The per-stage hook checks, hooks_stages_declared, inactive_stages and the two ticket fields are additions
+  (compatible); hooks_canary_rejected keeps its name and now means "every declared stage fired".
+- 'The ticket fields follow the same presence rule as workspace_path: present only on an ok answer, and
+  only when the request named a ticket; their value is never the path the caller passed in (BO-4300a-1-ii).'
+- This record is the single authoritative statement of the result contract. Other records that need it
+  (BO-4300a-5, callers' expects_from) point to it rather than restating it, so a field added here cannot
+  be missed in a copy.
 - The maker never reads stdin and never prompts; every decision it needs arrives as an argument of the
   request, so an unattended caller can never stall on it.
 - Proof runs the DEPLOYED maker -- the copy an install delivers, resolved through the shared test locator
@@ -148,7 +163,25 @@ test_rationale: Every assertion is made on what the deployed maker actually did 
   no test asserted stdout was exactly one object; this record's tests assert that and nothing weaker.
 origin_agent: business-analyst
 created: 2026-09-25
-amended_by: []
+amended_by:
+- reason: duplication-audit-items-2-5
+  by: it-po
+  at: 2026-09-25
+  note: >-
+    Technical fields only; criteria unchanged. Result contract gains ticket_path_in_worktree and
+    ticket_path_in_worktree_posix (ok-only, verified to exist), per-stage hook checks with
+    hooks_canary_rejected as their conjunction, hooks_stages_declared, inactive_stages on
+    HOOKS_INACTIVE, the written-down 'n/a' rule, and TICKET_NOT_ON_BASE marked as proposed pending the
+    user's decision. Recorded that this is the one authoritative copy of the contract. readiness reset
+    to reviewed.
+- reason: audit-decisions-finalised
+  by: it-po
+  at: 2026-09-27
+  note: >-
+    Technical fields only; criteria unchanged. The user accepted the unpushed-ticket handling
+    (2026-09-27): TICKET_NOT_ON_BASE is now a decided refusal code in the contract's code list (the
+    "PROPOSED" marker is removed), carrying ticket_path and reason 'absent'|'differs'. readiness
+    stays reviewed.
 superseded_by: null
 covered_by: []
 implemented_by: []

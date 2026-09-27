@@ -87,6 +87,15 @@ it_requirements:
   'import settings' check are deleted.
 - Skill and command templates reach consumers only through the build; edit templates/, never .claude/
   directly.
+- 'TICKET LOCATION (KI-BO-20260925-build-single-ticket-treats-ticket-path-final-as-worktree-path; routed
+  from BO-4300a-1-ii, lands in the SAME change set as it): templates/skills/build-single-ticket/SKILL.md''s
+  step 1 runs the maker with --ticket <the ticket''s main-copy path> and maps TICKET_PATH ONLY from ticket_path_in_worktree
+  of the ok answer. The ''ticket_path_final -> TICKET_PATH (the ticket''s path inside the worktree)''
+  mapping is deleted, and no step of the skill reads, edits or moves the ticket at the path it was given.'
+- 'Commit spelling (KI-CG-20260925-commit-delegation-hook-misses-git-dash-c): no entry surface this record
+  rewrites spells a commit as `git -C <path> commit` (build-single-ticket, quick-fix and plan-feature
+  skills carry that spelling today); commits are delegated to the commit agent per CLAUDE.md Commit Delegation.
+  -C is acceptable only for non-commit git verbs.'
 test_required: true
 test_spec:
 - name: test_command_published_by_each_deployed_entry_skill_runs_the_maker
@@ -103,12 +112,35 @@ test_spec:
   angle: criterion
   description: The deployed workspace skill's text contains the one maker invocation and no clone, worktree,
     symlink, copy or build steps of its own (the text is this record's subject, so reading it is the behaviour).
+- name: test_build_single_ticket_step1_command_yields_ticket_inside_the_workspace
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: deployed
+  description: The step-1 maker command the deployed build-single-ticket skill publishes, executed as written
+    against a temp project whose hub holds a ticket, returns an ok answer whose ticket_path_in_worktree
+    is inside workspace_path and names an existing file; the skill's text maps TICKET_PATH from that field
+    and from no other.
+- name: test_no_deployed_entry_surface_spells_a_commit_with_dash_c
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: unit
+  angle: criterion
+  description: No deployed entry skill or command this record lists contains `git -C <path> commit` (the
+    text is the subject; the commit-delegation hook matches only the literal 'git commit').
 test_rationale: The skill text is the deliverable, so the proof executes exactly the command it publishes
   from the deployed copy -- a skill that names a wrong path or a cwd-relative path fails here rather than
   in a drive.
 origin_agent: it-po
 created: 2026-09-25
-amended_by: []
+amended_by:
+- reason: duplication-audit-items-2-5
+  by: it-po
+  at: 2026-09-25
+  note: >-
+    Technical fields only; criteria unchanged. Item 2: build-single-ticket's step 1 passes --ticket
+    and takes TICKET_PATH only from ticket_path_in_worktree (same change set as BO-4300a-1-ii). Item 5:
+    no `git -C <path> commit` in rewritten entry surfaces. Two test specs added. readiness reset to reviewed.
 superseded_by: null
 covered_by: []
 implemented_by: []

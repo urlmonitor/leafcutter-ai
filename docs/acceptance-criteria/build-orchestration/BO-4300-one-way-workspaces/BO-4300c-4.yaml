@@ -57,9 +57,9 @@ it_requirements:
   is treated as a failure.
 - 'Every workflow applies ONE acceptance predicate to the maker''s answer: it parses as a single JSON
   object AND status == ''ok'' AND workspace_path is a non-empty string; anything else ends the run with
-  status error, quoting (bounded to 2 KB) what was received. E2 has no shared-module mechanism, so the
-  predicate is inlined per workflow; the cross-workflow behavioural matrix of BO-4300c-3 is what keeps
-  the copies identical.'
+  status error, quoting (bounded to 2 KB) what was received. The predicate is the one in the build-inlined
+  WORKSPACE-ANSWER block delivered by BO-4300c-3 (byte-identical in every consuming workflow, parity-tested);
+  no workflow hand-copies or re-implements it.'
 - Proof runs the workflow under unit_tests/_workflow_engine_harness.py -- the deployed copy the build
   produces, so the build's workflow transform is exercised -- with label-scripted agent replies, and asserts
   on the RECORDED dispatch list, never on workflow source text. The harness must be able to model a workspace
@@ -94,7 +94,14 @@ test_rationale: The 2026-09-25 incident was a perfect-enough maker with a caller
   dispatched' can be observed.
 origin_agent: business-analyst
 created: 2026-09-25
-amended_by: []
+amended_by:
+- reason: duplication-audit-item-4
+  by: it-po
+  at: 2026-09-25
+  note: >-
+    Technical fields only; criteria unchanged. The acceptance-predicate it_requirement no longer says
+    the predicate is inlined per workflow by hand; it names the build-inlined WORKSPACE-ANSWER block
+    from BO-4300c-3. readiness reset to reviewed.
 superseded_by: null
 covered_by: [BO-4300c-4-i, BO-4300c-4-ii]
 implemented_by: []

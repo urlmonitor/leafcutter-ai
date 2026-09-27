@@ -59,10 +59,14 @@ it_requirements:
   the failure path; the clearing result is part of finalize's own result. Nothing is ever registered in
   the real project (F14); /tmp baselines and `git worktree add --detach` are retired.
 - 'SCRATCH READINESS (decided by the user at the final gate, 2026-09-25): a detached clone has no line of
-  work and nothing is ever committed in it, so the branch ingredients AND the canary (hooks_canary_rejected)
-  are reported ''n/a'' for kind scratch -- the canary is not required for a comparison copy. The fresh-base,
-  independent-copy and build ingredients still apply. ''n/a'' is reported explicitly; no ingredient is silently
-  skipped, and no other kind may report the canary as ''n/a''.'
+  work and nothing is ever committed or merged in it, so the branch ingredients AND every protection-stage
+  canary are reported ''n/a'' for kind scratch: hooks_pre_commit_fired, hooks_commit_msg_fired, hooks_post_merge_fired
+  and their conjunction hooks_canary_rejected (confirmed 2026-09-25: the rule covers all three stages
+  of BO-4300c-1-ii, because each stage''s canary is a commit or a merge and a comparison copy has neither).
+  The fresh-base, independent-copy and build ingredients still apply. ''n/a'' is reported explicitly;
+  no ingredient is silently skipped. No other kind may report hooks_pre_commit_fired or hooks_canary_rejected
+  as ''n/a''; for other kinds the commit-msg and post-merge checks may be ''n/a'' only when the project
+  does not declare that stage (BO-4300c-2).'
 - 'Workflow bodies run in the E2 engine with no filesystem or process access (ADR-030). They reach the
   maker only through (a) args.workspace -- the maker''s JSON object passed verbatim by the entry command
   or skill (BO-4300a-1-ib) -- or (b) exactly one agent() dispatch, carrying a result schema, to an agent
@@ -104,6 +108,14 @@ test_spec:
   type: behavioral
   angle: criterion
   description: finalize's own result carries the remove outcome in both runs.
+- name: test_scratch_answer_reports_every_protection_stage_as_na
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: boundary
+  description: 'With a fixture project declaring pre-commit, commit-msg and post-merge, the deployed maker''s
+    ensure --kind scratch answer is ok with hooks_pre_commit_fired, hooks_commit_msg_fired, hooks_post_merge_fired
+    and hooks_canary_rejected all ''n/a'', while base_is_fresh, is_independent_repo and build_ok are true.'
 test_rationale: The 2026-09-25 incident was a perfect-enough maker with a caller that carried on, and
   every source grep of plan-feature.js would have passed. So the assertions are made on the recorded dispatch
   list of a real workflow run with scripted hostile answers, which is the only place 'no later step was
@@ -111,7 +123,15 @@ test_rationale: The 2026-09-25 incident was a perfect-enough maker with a caller
   tests, so 'nothing registered' is checked on a real repository.
 origin_agent: business-analyst
 created: 2026-09-25
-amended_by: []
+amended_by:
+- reason: duplication-audit-item-5
+  by: it-po
+  at: 2026-09-25
+  note: >-
+    Technical fields only; criteria unchanged. Confirmed and wrote down that the scratch 'n/a' rule
+    covers all three protection stages (commit-time, commit-message, after-merge) and their
+    conjunction, and how other kinds may use 'n/a' only for undeclared commit-msg/post-merge stages.
+    One test spec added. readiness reset to reviewed.
 superseded_by: null
 covered_by: []
 implemented_by: []

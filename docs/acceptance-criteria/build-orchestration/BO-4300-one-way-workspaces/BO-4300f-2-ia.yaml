@@ -71,6 +71,15 @@ it_requirements:
   copy, clone, worktree, link, install or delete steps.
 - Template edits reach consumers only through the build; the repo's own CLAUDE.md is edited directly (it
   is not a template).
+- 'TICKET LOCATION (KI-BO-20260925-build-single-ticket-treats-ticket-path-final-as-worktree-path; routed
+  from BO-4300a-1-ii, lands in the SAME change set as it): templates/agents/worktree-agent.md stops parsing
+  and reporting ticket_path_new (a field the set-up script no longer emits) and reports the ticket''s
+  working location ONLY from ticket_path_in_worktree of the maker''s ok answer; no charter, skill or workflow
+  text describes ticket_path_final or the path a caller passed in as "the ticket inside the workspace".'
+- 'Commit spelling (KI-CG-20260925-commit-delegation-hook-misses-git-dash-c): no passage this record rewrites
+  spells a commit as `git -C <path> commit`, because the commit-delegation hook matches only the literal
+  "git commit"; commits are delegated to the commit agent per CLAUDE.md, and -C appears only with non-commit
+  verbs.'
 test_required: true
 test_spec:
 - name: test_deployed_instruction_passages_about_workspaces_point_to_the_maker
@@ -88,11 +97,26 @@ test_spec:
   angle: criterion
   description: None of those texts contains a workspace clone, git worktree add/remove, ln -s / cp of
     .leafcutter or .pre-commit-config.yaml, EnterWorktree, or a manual rm of a workspace.
+- name: test_deployed_texts_take_the_ticket_location_only_from_ticket_path_in_worktree
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: unit
+  angle: criterion
+  description: The deployed worktree-agent charter, and every deployed skill or workflow text that names
+    a ticket location from a workspace answer, name ticket_path_in_worktree and contain no ticket_path_new
+    or ticket_path_final (delivered text is the subject).
 test_rationale: The record's subject is delivered text (its notes say so), so the proof reads the DEPLOYED
   text rather than the templates, catching a template fix that never reaches an install.
 origin_agent: it-po
 created: 2026-09-25
-amended_by: []
+amended_by:
+- reason: duplication-audit-items-2-5
+  by: it-po
+  at: 2026-09-25
+  note: >-
+    Technical fields only; criteria unchanged. worktree-agent's ticket_path_new parsing is replaced by
+    ticket_path_in_worktree (same change set as BO-4300a-1-ii); no rewritten passage spells `git -C
+    <path> commit`. One test spec added. readiness reset to reviewed.
 superseded_by: null
 covered_by: []
 implemented_by: []

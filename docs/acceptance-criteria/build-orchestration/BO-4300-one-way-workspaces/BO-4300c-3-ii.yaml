@@ -4,6 +4,7 @@ component: build-orchestration
 components:
   - worktree_manager
   - build_orchestration
+  - testing_quality
 level: L3
 status: active
 req_status: draft
@@ -44,7 +45,7 @@ doc_links:
   status: exists
   relevance: Angle taxonomy used by this record's test_spec.
 assigned_agent: python-coder
-estimated_complexity: S
+estimated_complexity: M
 delivers_to: null
 expects_from:
   ac_id: BO-4300c-3
@@ -61,6 +62,20 @@ it_requirements:
   without status (F13); extending the harness for this is in scope of the first AC that needs it.
 - Workflow edits are made in templates/workflows-js/*.js and reach .claude/workflows/ only through the
   build; the deployed copy is what the tests run.
+- 'HARNESS DEFAULT (duplication audit C2 item 11, KI-BO-009): unit_tests/_workflow_engine_harness.py''s
+  agent() stub today answers any unscripted dispatch with {status: ''ok'', exit_code: 0, passed: true,
+  ...}, so a workflow that mishandles a refusal is never exercised. The default must stop being a success:
+  a dispatch with no scripted reply either returns an error-shaped reply (status ''error'', naming the
+  unscripted label) or fails the test loudly; in both cases the harness result records the unscripted
+  dispatch so a test can assert on it. A success reply is only ever returned because a test scripted
+  it.'
+- 'The harness must be able to script, per label, a refusal (the agent declines as outside its role),
+  a prose paragraph, a non-JSON reply (including exit 0 with a bare file path), and JSON without status
+  -- delivered to the workflow in the shape the real engine delivers them, not pre-parsed into an ok object.'
+- 'Blast radius: every existing harness-driven test that relied on the ok default must script its replies
+  explicitly (the existing script-specific defaults in _default_label_responses_for_script / _default_args_for_script
+  are scripted replies and may stay). The ticket for this record lists the tests that changed; no test
+  is skipped or xfailed to absorb the change.'
 test_required: true
 test_spec:
 - name: test_declining_workspace_agent_ends_the_run_naming_the_decline
@@ -82,13 +97,37 @@ test_spec:
   type: behavioral
   angle: criterion
   description: The recorded dispatch list ends at the declined step.
+- name: test_harness_unscripted_dispatch_is_never_a_success
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: failure
+  description: A minimal workflow run under the harness with one unscripted dispatch receives an error-shaped
+    reply (or the test run fails loudly) and the harness result names the unscripted label; no reply with
+    status 'ok' or exit_code 0 is produced for it.
+- name: test_harness_scripts_refusal_prose_and_non_json_replies
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: seam
+  description: A workflow under the harness receives, per scripted label, a decline, a prose paragraph,
+    a bare file path with exit 0, and JSON lacking status, each exactly as scripted and not coerced into
+    an ok object.
 test_rationale: The 2026-09-25 incident was a perfect-enough maker with a caller that carried on, and
   every source grep of plan-feature.js would have passed. So the assertions are made on the recorded dispatch
   list of a real workflow run with scripted hostile answers, which is the only place 'no later step was
   dispatched' can be observed.
 origin_agent: business-analyst
 created: 2026-09-25
-amended_by: []
+amended_by:
+- reason: duplication-audit-item-8
+  by: it-po
+  at: 2026-09-25
+  note: >-
+    Technical fields only; criteria unchanged. The harness's unscripted-dispatch default must stop
+    returning {status: 'ok', exit_code: 0} -- it returns an error-shaped reply or fails loudly -- and
+    the harness must script refusals, prose and non-JSON replies (KI-BO-009). Two harness test specs
+    added; blast radius on existing tests recorded. Complexity S -> M. readiness reset to reviewed.
 superseded_by: null
 covered_by: []
 implemented_by: []

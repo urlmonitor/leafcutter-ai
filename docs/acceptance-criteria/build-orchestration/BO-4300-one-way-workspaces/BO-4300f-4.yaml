@@ -45,7 +45,9 @@ delivers_to:
     (raises when absent); make_project(tmp, layout=''dev''|''consumer'', stub_build=..., hook=''reject''|''accept'')
     -> {project, hub, landing_place}; run_maker(args, cwd, env=None, timeout=...) -> {answer: dict, exit_code:
     int, stdout: str, stderr: str}, failing the test when stdout is not exactly one JSON object; starting_points(project)
-    -> dict of the six BO-4300b-1 cwds.'
+    -> dict of the six BO-4300b-1 cwds; legacy_worktree(project, name, unsent=False) -> absolute path of
+    a real legacy git worktree registered in the temp project (the only test-side creator of one, exempt
+    in BO-4300f-2''s census).'
 expects_from:
   ac_id: BO-4300a-1
   contract: Maker deployed by a named deploy-manifest entry to <install>/scripts/worktree.py.
@@ -62,6 +64,19 @@ it_requirements:
   proof subset against it via the override seam, and require that it fails naming the broken behaviour.'
 - Delete or re-point tests that exercise the tracked scripts/ copy as 'DEPLOYED_SCRIPT' (unit_tests/build_orchestration/_bo2400f13_fixtures.py
   and its users).
+- 'NO SECOND COPY (KI-TQ-20260831-mutation-probe-lands-in-the-wrong-copy, KI-TQ-004): the locator resolves
+  only the DEPLOYED maker and resolver module; it never accepts a path under the package repository''s
+  scripts/ or templates/ as the maker, so a tracked stray copy can never become the thing under test (the
+  mutation probe of KI-TQ-20260831 landed in the wrong copy for exactly this reason). The tracked-file
+  test that forbids a copy outside templates/scripts/ is BO-4300a-1''s; this record keeps the locator
+  from ever reaching one.'
+- 'The fixture module also owns the ONE legacy-worktree fixture helper (a real `git worktree` registration
+  in a temp project, for BO-4300f-3''s cut-over tests and for tests that migrate off hand-built worktrees
+  under BO-4300f-2''s census). It is the census''s only test-side exemption; no other test spells the
+  worktree add/remove commands.'
+- 'Git spelling in fixtures (KI-CG-20260925-commit-delegation-hook-misses-git-dash-c): fixture commits
+  run git with its working directory set to the repository, never as `git -C <path> commit`; -C is used
+  only with non-commit verbs.'
 - 'Tests must not spawn the package''s own scripts/build.py (CLAUDE.md ''Tests must not spawn their own
   build.py''): the deployed maker comes from the shared deployed layout, and fixture projects carry a
   minimal stub build entry point that installs a real, rejecting hook in well under a second. A test that
@@ -91,11 +106,27 @@ test_spec:
   type: behavioral
   angle: failure
   description: Pointing the locator at a layout without the maker raises a failure, not a skip.
+- name: test_locator_never_resolves_a_tracked_source_copy
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: boundary
+  description: Pointing the locator's override seam, or its search, at the package repository's scripts/
+    or templates/scripts/ copy of the maker raises a failure naming that path; only an install-layout path
+    is accepted.
 test_rationale: 'This record is the guard on every other record''s proof: without it a stale deployed
   copy passes the whole family, which is exactly F13.'
 origin_agent: business-analyst
 created: 2026-09-25
-amended_by: []
+amended_by:
+- reason: duplication-audit-items-5-6-7
+  by: it-po
+  at: 2026-09-25
+  note: >-
+    Technical fields only; criteria unchanged. Item 6: the locator never resolves a tracked source
+    copy (scripts/ or templates/), one test added; running the DEPLOYED copy is kept. Item 7: the
+    fixture module owns the single legacy-worktree helper that BO-4300f-2's census exempts. Item 5:
+    fixture commits never use `git -C <path> commit`. readiness reset to reviewed.
 superseded_by: null
 covered_by: [BO-4300f-4-i]
 implemented_by: []

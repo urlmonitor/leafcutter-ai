@@ -114,6 +114,23 @@ notes: |
     somewhere other than a developer machine.
   - The rest of the BO-4100e family still names setup_ticket_worktree.py / list_workspaces.py;
     reconcile with the maker's list verb.
+  - commit_guardian declares a known-bad canary input only for the pre-commit stage. Known-bad
+    inputs for the commit-msg and post-merge stages (needed by BO-4300c-1-ii) are a
+    commit_guardian change and need their own AC in that namespace.
+  - The BO-3900-PATH-HELPERS block is a marker convention with no build inliner and no parity
+    test, and its copies have already drifted. Move it onto the inliner BO-4300c-3 delivers.
+  - Wire the ~30 hand-written hook root resolvers (duplication audit cluster C4) to the
+    resolver module BO-4300a-1 delivers.
+
+  DUPLICATION-AUDIT AMENDMENT (2026-09-25..27): the eleven items of
+  docs/analysis/2026-09-25-duplication-clusters-that-produce-known-issues.md (clusters C2, C3,
+  C4, C6) were applied: shared resolver module, ticket_path_in_worktree (BO-4300a-1-ii), repo-wide
+  shell-dispatch lint (BO-4300a-1-ia), build-inlined workflow block (BO-4300c-3), every declared
+  protection stage proven (BO-4300c-1-ii), no git -C commit, no second tracked copy, repo-wide
+  census (BO-4300f-2), harness default never a success (BO-4300c-3-ii). User decisions,
+  2026-09-27: a ticket not on origin/main is refused with TICKET_NOT_ON_BASE (push first); the
+  census excludes record folders by one declared list; the lint and census criteria were widened
+  to match their repo-wide tests.
 
   WHY A NEW L0 AND NOT MORE CHILDREN OF BO-4100 / BO-1700 / BO-1800. Those goals state
   PROPERTIES a workspace must have (BO-4100: fresh at creation, own supporting material,
