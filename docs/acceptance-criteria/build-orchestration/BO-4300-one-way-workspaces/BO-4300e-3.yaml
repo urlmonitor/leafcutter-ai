@@ -95,8 +95,10 @@ created: 2026-09-25
 amended_by: []
 superseded_by: null
 covered_by: [BO-4300e-3-i]
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260927-BO-4300e-3.md
 notes: |
   OPEN (Q8, not decided here): whether authorisation is a caller-supplied confirmation token or
   an explicit flag. The customer intent this record fixes is only that authorisation is given up
   front, in the request, never asked interactively.
+target_epic: EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace

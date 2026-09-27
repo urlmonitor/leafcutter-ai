@@ -107,10 +107,12 @@ created: 2026-09-25
 amended_by: []
 superseded_by: null
 covered_by: [BO-4300b-2-i, BO-4300b-2-ii]
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260927-BO-4300b-2.md
 notes: |
   F11: the installed copy of today's script cannot find the repository when it lives outside
   it (KI-ACD-004). OPEN (Q5, not decided here): whether shop's workspaces live inside shop
   (ignored by version control) or beside it in the parent folder. This record requires only
   that the place is predictable per project; BO-4300b-2-i adds the constraint that any
   shared-parent choice must still keep projects apart.
+target_epic: EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace

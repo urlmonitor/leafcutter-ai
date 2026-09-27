@@ -85,8 +85,10 @@ created: 2026-09-25
 amended_by: []
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260927-BO-4300c-1-i.md
 notes: |
   F6 and KI-BP-20260907-bootstrap-swallows-build-failure: the build failing inside set-up only
   warned, a fast-lane workspace was missing build_orchestration/, and the run died four steps
   later.
+target_epic: EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace

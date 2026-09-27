@@ -86,7 +86,9 @@ created: 2026-09-25
 amended_by: []
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260927-BO-4300f-3-ii.md
 notes: |
   ADR-018 migration step 2 (gc.auto=0) was never applied; .git/lost-found already holds 81
   objects including 18 commits from an fsck recovery on this host (decision memo).
+target_epic: EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace

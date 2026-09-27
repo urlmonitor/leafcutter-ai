@@ -122,10 +122,12 @@ created: 2026-09-25
 amended_by: []
 superseded_by: null
 covered_by: [BO-4300f-3-i, BO-4300f-3-ii]
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260927-BO-4300f-3.md
 notes: |
   Cut-over chore from the decision memo and section 8 of the consolidation analysis (19
   registered worktrees plus the WSL background-worktrees entries stuck "initializing"). The
   holds-work verdict is BO-4100c-1. DECIDED by the user at the BA gate, 2026-09-25 (Q10): a
   workspace that still holds unsent work is never retired by the cut-over -- it is brought over,
   or left untouched and listed for a human decision, as the criteria say.
+target_epic: EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace

@@ -110,8 +110,10 @@ created: 2026-09-25
 amended_by: []
 superseded_by: null
 covered_by: [BO-4300d-3-i]
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260927-BO-4300d-3.md
 notes: |
   BO-1500f ("never take over another's space") is the AC-authoring instance of this -- cite, do
   not duplicate. "Not made at any other location instead" closes the substitute-location
   fallback that BO-4300c-3 closes on the caller side.
+target_epic: EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace

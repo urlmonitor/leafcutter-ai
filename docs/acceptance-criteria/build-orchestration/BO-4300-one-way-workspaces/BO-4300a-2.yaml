@@ -112,7 +112,8 @@ created: 2026-09-25
 amended_by: []
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260927-BO-4300a-2.md
 notes: |
   F10 and KI-BO-20260921 "abandons the epic worktree branch": a re-run moved the epic from
   EPIC-FilesStayWorkable to a fresh epic/files-stay-workable cut from the shared main line
@@ -120,3 +121,4 @@ notes: |
   achieves this. This record fixes only the observable -- one piece of work, one workspace,
   whichever route asked -- so it holds under any scheme the user picks, including an alias
   for the old EPIC-<Name> spelling.
+target_epic: EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace

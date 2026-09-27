@@ -87,8 +87,10 @@ created: 2026-09-25
 amended_by: []
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260927-BO-4300d-2-iii.md
 notes: |
   The decision memo's "delete and redo" remedy for a half-made clone is safe only while the
   folder holds nothing but what the interrupted request put there. BO-4100c's holds-work
   verdict is the test for "something is in it".
+target_epic: EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace

@@ -172,10 +172,12 @@ amended_by:
     rule. HOOKS_INACTIVE test updated to cover each stage. readiness reset to reviewed.
 superseded_by: null
 covered_by: [BO-4300c-1-i, BO-4300c-1-ii, BO-4300c-1-iii]
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260927-BO-4300c-1.md
 notes: |
   The MAKER half of BO-4300c ("ready means all of it"). Each ingredient already has an owner
   and is cited, not re-derived: the rooted commit read back after creation is BO-4100a-2; proof
   that protections fire is BO-1700a / BO-1700d-1. What is new is that the answer is the
   conjunction, read off the finished workspace, so a caller can trust "ready" without checking
   anything itself. One test per ingredient, each made untrue alone, plus the all-true arm.
+target_epic: EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace

@@ -143,9 +143,11 @@ amended_by:
     no `git -C <path> commit` in rewritten entry surfaces. Two test specs added. readiness reset to reviewed.
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260927-BO-4300a-1-ib.md
 notes: 'IT PO split of BO-4300a-1-i (2026-09-25), entry-skill half. Criteria are extracted from the parent''s
   clauses (''receives the workspace maker''s answer as part of its input'', ''run unchanged and its answer
   relayed word for word'', ''no ... create, copy, set up, link or repair ... by steps of the agent''s
   own choosing'') and placed at the surface that performs them: templates/commands/*.md and templates/skills/*/SKILL.md
   (llm-expert). Decision 4 / Q7: agents run the maker from a skill; workflows get the result passed in.'
+target_epic: EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace

@@ -78,7 +78,9 @@ created: 2026-09-25
 amended_by: []
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260927-BO-4300e-1-i.md
 notes: |
   Keeps "find" distinct from "ask for" (BO-4300d), so a lookup used as a check (BO-4300c-4-i)
   has no side effects.
+target_epic: EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace

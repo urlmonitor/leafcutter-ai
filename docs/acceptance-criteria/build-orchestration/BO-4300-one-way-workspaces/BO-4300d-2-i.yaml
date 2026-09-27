@@ -83,6 +83,8 @@ created: 2026-09-25
 amended_by: []
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260927-BO-4300d-2-i.md
 notes: |
   The literal F5 re-run: "ok, reused" on a workspace containing almost nothing.
+target_epic: EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace

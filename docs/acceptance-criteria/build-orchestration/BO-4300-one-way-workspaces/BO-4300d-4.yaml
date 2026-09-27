@@ -107,10 +107,12 @@ created: 2026-09-25
 amended_by: []
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260927-BO-4300d-4.md
 notes: |
   KI-BO-20260921 "abandons the epic worktree branch" and F9 (ac-authoring reused a branch at its
   old tip; fast lane force-resets). DECIDED by the user at the BA gate, 2026-09-25 (Q9): an
   existing line with unmerged commits is RESUMED, not refused and never reset -- so the fast
   lane's force-reset behaviour is retired. Fresh lines still start at the shared main line tip
   (decision 3, BO-4100a).
+target_epic: EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace
