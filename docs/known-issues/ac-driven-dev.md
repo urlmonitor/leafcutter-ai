@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: 2026-08-18
-last_updated: '2026-09-25'
+last_updated: '2026-09-27'
 components:
   - ac_driven_dev
 related_docs:
@@ -69,7 +69,7 @@ Severity in the **filename** is a three-level index bucket (`blocker` / `high` /
 
 Fixed issues move to [`ac-driven-dev/resolved/`](ac-driven-dev/resolved/) and are no longer listed as open. They are kept, not deleted.
 
-**Open: 27** (0 blocker, 23 high, 4 low) · **Resolved: 4**
+**Open: 28** (0 blocker, 23 high, 5 low) · **Resolved: 6**
 
 ## Open
 
@@ -98,10 +98,13 @@ Fixed issues move to [`ac-driven-dev/resolved/`](ac-driven-dev/resolved/) and ar
 | `high` | KI-ACD-20260921-1600 — An AC with no `risk_surface` generates a ticket with no `ac-validator` and no `ac-fulfillment-gate`, and the store validator passes it | [open-high-ki-acd-20260921-1600.md](ac-driven-dev/open-high-ki-acd-20260921-1600.md) |
 | `high` | KI-ACD-20260921-1615 — `expects_from` is never a source for a generated ticket's `depends_on`, so a contract edge survives only if its author also duplicated it into `depends_on` by hand | [open-high-ki-acd-20260921-1615.md](ac-driven-dev/open-high-ki-acd-20260921-1615.md) |
 | `high` | KI-ACD-20260923-provenance-producer-unverified — a provenance-discriminator gate's entire safety property rests on prose, because nothing mechanically verifies a real producer sets the field it discriminates on | [open-high-ki-acd-20260923-provenance-producer-unverified.md](ac-driven-dev/open-high-ki-acd-20260923-provenance-producer-unverified.md) |
+| `high` | KI-ACD-20260927-tq-500f-2-ii-contradicts-acd-2500 — an approved, unbuilt AC makes the IT PO write must_catch, which the approved ACD-2500 tree assigns to a code-aware test-designer | [open-high-ki-acd-20260927-tq-500f-2-ii-contradicts-acd-2500.md](ac-driven-dev/open-high-ki-acd-20260927-tq-500f-2-ii-contradicts-acd-2500.md) |
+| `high` | KI-ACD-20260927-repo-anchor-picks-the-in-repo-install-copy — in the self-hosting layout, repository-anchored resolution runs the gitignored in-repo .leafcutter/ copy, not the install the session runs | [open-high-ki-acd-20260927-repo-anchor-picks-the-in-repo-install-copy.md](ac-driven-dev/open-high-ki-acd-20260927-repo-anchor-picks-the-in-repo-install-copy.md) |
 | `low` | KI-ACD-011 — Epic-name truncation has no phrase awareness, so names end on a dangling preposition or article | [open-low-ki-acd-011.md](ac-driven-dev/open-low-ki-acd-011.md) |
 | `low` | KI-ACD-014 — `goal_to_epic.py` writes absolute filesystem paths into `implemented_by` | [open-low-ki-acd-014.md](ac-driven-dev/open-low-ki-acd-014.md) |
 | `low` | KI-ACD-015 — Epic ordering reads `depends_on` only, so `expects_from` contract edges are invisible to the build sequencer | [open-low-ki-acd-015.md](ac-driven-dev/open-low-ki-acd-015.md) |
 | `low` | KI-ACD-016 — Generated tickets carry AC checklist items truncated mid-clause | [open-low-ki-acd-016.md](ac-driven-dev/open-low-ki-acd-016.md) |
+| `low` | KI-ACD-20260927-po-origin-agent-defeats-partial-run-recovery — the PO template writes the user's name into origin_agent, and §PRR only recognises agent ids, so a crashed run's PO drafts are never offered back | [open-low-ki-acd-20260927-po-origin-agent-defeats-partial-run-recovery.md](ac-driven-dev/open-low-ki-acd-20260927-po-origin-agent-defeats-partial-run-recovery.md) |
 
 ## Resolved
 
