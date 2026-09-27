@@ -1,24 +1,24 @@
 ---
 title: "How to understand proof-of-done enforcement (pre-commit and CI)"
-description: "Explains the two-layer proof-of-done enforcement system: the fast local pre-commit check and the authoritative CI gate that blocks merge on unproven work, including the third eligibility axis (BO-2900a-1) that refuses a proof reaching the code by direct import when the unit has a real way in."
+description: "Explains the two-layer proof-of-done enforcement system: the fast local pre-commit check and the authoritative CI gate that blocks merge on unproven work. The two mechanical reachability axes evaluated after the CI gate's incumbent pass/fail rule — BO-2900a-1 (proof reached the code by direct import) and BO-2900a-3 (no way of running the product reaches the code at all) — are documented in the child guide, done-proof-reachability-gates.md."
 type: how-to
 category: how-to
 status: active
 created: 2026-07-21
-last_updated: 2026-09-25
+last_updated: 2026-09-27
 components:
   - build_orchestration
   - commit_guardian
   - ac_store
 related_docs:
+  - docs/how-to/done-proof-reachability-gates.md
   - docs/how-to/prove-ac-done.md
   - docs/how-to/fast-lane-build.md
   - docs/architecture/diagrams/c3-done-proof-evaluation-sequence.md
   - docs/architecture/components/build-orchestration.md
+  - docs/architecture/components/phantom-done-prevention.md
   - docs/pre-commit-hooks.md
   - docs/acceptance-criteria/build-orchestration/BO-2500-mechanical-done-proof/BO-2500a-3.yaml
-  - docs/acceptance-criteria/build-orchestration/BO-2900-runtime-reachability-guard/BO-2900a-1.yaml
-  - docs/architecture/adrs/ADR-003-test-source-of-truth-discipline.md
 ---
 
 # How to understand proof-of-done enforcement (pre-commit and CI)
@@ -147,8 +147,9 @@ In `--mode ci`, the script performs a **full, authoritative check**:
 - An AC is ineligible (a violation) if its linked test is FAILED, XFAIL, SKIPPED,
   ERROR, or missing entirely.
 - Even when the linked test PASSES, `verify_done_eligible` also asks *what the
-  test reached* while it ran — see [section 3](#3-the-third-eligibility-axis-did-the-proof-go-in-through-the-real-way-in-bo-2900a-1)
-  below.
+  test reached* while it ran — see
+  [done-proof-reachability-gates.md, section 3](done-proof-reachability-gates.md#3-the-third-eligibility-axis-did-the-proof-go-in-through-the-real-way-in-bo-2900a-1)
+  for the two mechanical reachability axes evaluated after this pass/fail rule.
 
 The CI mode evaluates the **entire AC store** — not just the files you staged in
 your last commit. This means it finds done ACs that became ineligible due to
@@ -181,104 +182,15 @@ unproven done AC without the CI gate observing it.
 
 ---
 
-## 3. The third eligibility axis: did the proof go in through the real way in? (BO-2900a-1)
+## 3. The reachability axes (BO-2900a-1 and BO-2900a-3)
 
-Section 2 describes the incumbent rule ([BO-2500a-3](../acceptance-criteria/build-orchestration/BO-2500-mechanical-done-proof/BO-2500a-3.yaml)):
-a covers-tagged test exists, and it passes. That rule asks nothing about *what the
-test actually reached* while it ran. A test that imports the implementing function
-directly and calls it satisfies BO-2500a-3 just as well as a test that drives the
-same behaviour through the product's real command surface — even though only the
-second kind of test proves an operator can actually reach the fix.
-
-`verify_done_eligible` (`scripts/ac_store/done_proof.py`) closes that gap with a
-**third, mechanical condition**, evaluated only after both of the BO-2500a-3
-conditions already passed — it never changes the existing "no linked test" or
-"linked test failed" messages:
-
-1. **Does the unit expose a runtime way in?** For each of the AC's linked Python
-   tests, `_detect_module_entry_point(test_file, project_root, test_root)`
-   (`scripts/ac_store/_done_proof_entry_point_gate.py`) looks by AST alone for a
-   module-level `def main` (or `async def main`) — the same surface
-   `python <module> <action> ...` would reach — checked in two places, in order:
-   (1) the covers-tagged test's *own* module (this AC family's single-file fixture
-   convention), then (2) each bare module that test's file imports, resolved the
-   SAME way the sibling no-entry-point-anywhere rule resolves candidate units
-   (`_local_import_module_names` / `_resolve_candidate_unit`, both in
-   `scripts/ac_store/done_proof.py`) — the codebase's normal separate
-   test/implementation layout (e.g. `fast_lane.main`,
-   `scripts/build_orchestration/fast_lane.py:925`), which a same-file-only check
-   would never catch. This is a structural check only: a filename that looks like a
-   CLI, a docstring that mentions one, or an `if __name__ == "__main__":` block with
-   no real `main` function are all ignored. No `main` found in the test's own module
-   or in any module it imports means this rule does not apply at all — see the scope
-   fence below.
-
-2. **Did the test's own run enter it?** When a `main` is found (in the test's own
-   module, or in the first of its imports that has one — the *resolved module*),
-   `_observe_reachability` re-executes the covers-tagged test in a fresh subprocess
-   under a call-stack profiler and records whether `main` was ever entered during
-   that run, and whether that isolated re-run itself passed. This is an
-   **execution-derived observation, never a read of the test's source text** —
-   a test can `import module; module.main` in its own body without ever calling
-   it, and a text-based check would miss that.
-
-3. **Verdict.**
-   - `main` entered during the test's own run → the existing `eligible: True`
-     verdict is returned unchanged.
-   - `main` exists but was never entered (and the isolated re-run did pass) →
-     `eligible: False`, `refusal_cause: "proof_not_through_entry_point"`, and the
-     verdict names the `unit` (the *resolved module* — the implementing module's
-     own name when the cross-file branch fired, not always the test file), the
-     `entry_point` (`"<resolved module>:main"`) that was never entered, and the
-     `offending_test` (`"<file>::<function>"`) that reached the code by direct
-     import instead.
-   - The observation subprocess itself could not be run, produced no parseable
-     result, **or its isolated re-run did not pass** → `eligible: False`,
-     `refusal_cause: "observation_unavailable"`. The `passed` check exists because
-     the bare re-execution bypasses the pytest fixtures/conftest/parametrize
-     machinery the original, already-passing pytest run used — an isolated-run
-     failure for an unrelated reason (e.g. a fixture-arg `TypeError`) must not be
-     misreported as "direct import". This fails closed rather than being read as
-     "did not enter" — an infrastructure failure must never look identical to a
-     genuine refusal, and must never silently grant eligibility either.
-
-### The scope fence is mechanical, not a judgment call
-
-A unit that exposes **no** runtime way in at all — no linked test's own module, nor
-any module it imports, defines `main` — is **not** judged by this rule.
-`refusal_cause: "proof_not_through_entry_point"` never fires in that case; the
-criterion falls through to the sibling no-entry-point-anywhere rule
-(`refusal_cause: "no_entry_point_reaches_code"`, `_apply_reachability_gate`, part of
-the BO-2900 runtime-reachability-guard family). `verify_done_eligible` composes the
-two gates unconditionally — `_apply_reachability_gate(_apply_entry_point_reachability_gate(...), ...)`
-— so the no-entry-point-anywhere gate always runs immediately after this one, on
-this one's *output*. It opens with `if not verdict.get("eligible"): return verdict`,
-so an already-refused verdict from this rule is returned unchanged rather than
-silently overwritten with the sibling gate's own, independently-computed
-`no_entry_point_reaches_code` verdict for the same unit — that guard, not the two
-gates never running together, is what keeps the two `refusal_cause` values disjoint
-in practice. Each still names a different fact and clears a different way: rewrite
-the proof to call the entry point it skipped, versus give the unit an entry point
-(or a recorded exemption) in the first place.
-
-### Fixing a refusal
-
-With no change to the implementing code and no additional assertion, a refused
-criterion becomes eligible again once its proof is rewritten to invoke the
-detected entry point with the action and arguments an operator would actually
-use — for example, calling `main(["<action>", ...])` instead of importing and
-calling the implementing function directly. See the
-[Done-Proof Evaluation sequence diagram](../architecture/diagrams/c3-done-proof-evaluation-sequence.md#3-the-mechanical-entry-point-reachability-gate-bo-2900a-1)
-for the full message-level flow, and
-[ADR-003](../architecture/adrs/ADR-003-test-source-of-truth-discipline.md) for the
-standing discipline this axis extends: the test is the source of truth for done,
-and this rule adds a condition on *what that test reached*, not on what it asserts.
-
-> **Where this fits relative to BP-1100b-5.** This axis is adjacent to, but does not
-> overlap with, `BP-1100b-5` (which rejects a newly *added* assertion whose shape is
-> presence-only over a fixed workflow/commit-guardian glob set). This rule instead
-> rejects a genuinely-executing proof by what it **reached**, at done time, for any
-> unit with a way in — it is not restating BP-1100b-5 and is not restated by it.
+> See [done-proof-reachability-gates.md](done-proof-reachability-gates.md) for the
+> two mechanical reachability axes `verify_done_eligible` evaluates after the
+> incumbent pass/fail rule above already returned `eligible: True`: the
+> entry-point reachability gate (`BO-2900a-1`, refuses a proof that reached the
+> code by direct import when the unit has a real way in) and the sibling
+> no-entry-point-anywhere gate (`BO-2900a-3`, refuses a unit no way of running
+> the product can reach at all, however many tests pass).
 
 ---
 
@@ -303,4 +215,6 @@ characteristics:
 
 Together, the two layers mean you get a developer-friendly fast loop locally and
 a guarantee that no unproven work can reach the protected branch through any
-bypass path.
+bypass path. The two additional mechanical reachability axes that run after the
+CI gate's own pass/fail rule are documented in
+[done-proof-reachability-gates.md](done-proof-reachability-gates.md).

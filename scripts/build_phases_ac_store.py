@@ -138,6 +138,9 @@ AC_STORE_DEPLOY_MAP: tuple[tuple[str, str], ...] = (
     # and done_proof.py imports it at MODULE scope too. Same fast-lane gate,
     # same failure mode, same second-copy note above.
     ("scripts/ac_store/_done_proof_entry_point_gate.py", "_done_proof_entry_point_gate.py"),
+    # _done_proof_automation_gate.py (BO-2900a-3 rework): FOURTH sibling out
+    # of done_proof.py, same MODULE-scope import, same deploy requirement.
+    ("scripts/ac_store/_done_proof_automation_gate.py", "_done_proof_automation_gate.py"),
     # ac_parent_id.py provides derive_parent_id, imported at module scope by
     # scripts/build_orchestration/fast_lane.py. Without it the deployed
     # fast_lane.py exists but dies at import with ModuleNotFoundError, so

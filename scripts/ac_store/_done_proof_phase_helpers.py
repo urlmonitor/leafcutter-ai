@@ -55,6 +55,7 @@ ARCHITECTURE: Two independent helper groups, moved verbatim from
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -160,6 +161,44 @@ def is_covers_tag_waived(ac_info: dict | None) -> bool:
         return False
     rationale = ac_info.get("test_rationale")
     return isinstance(rationale, str) and bool(rationale.strip())
+
+
+def _resolve_pytest_run_cwd(test_files: list[Path]) -> str | None:
+    """Return the ``cwd=`` for :func:`done_proof._run_pytest_and_parse`'s subprocess.
+
+    Defined here rather than in done_proof.py itself (BO-2900a-3) purely to
+    stay under that file's own file-size ratchet -- a plain, standalone move
+    like the ``_build_ac_status_map``/``is_covers_tag_waived`` pair above,
+    needing no symbol back from done_proof.py.
+
+    Anchors the child to *test_files*' own common ancestor directory instead
+    of leaving ``cwd`` unset. Left unset, the child inherits the CALLING
+    process's cwd, and pytest's rootdir/config discovery in the child then
+    walks upward from the common ancestor of THAT cwd and *test_files* --
+    when the two share only a distant ancestor (e.g. a fixture rooted under
+    the OS temp directory while the caller runs from a project checkout,
+    sharing only a user's home directory), that walk crosses directories
+    wholly unrelated to *test_files* and can fail collection outright with a
+    spurious ``FileNotFoundError`` sourced from unrelated, transiently
+    changing directory content -- never a fault in *test_files* themselves.
+
+    Args:
+        test_files: Absolute paths to Python test files about to be handed
+            to the pytest subprocess.
+
+    Returns:
+        The string form of the common ancestor directory of every
+        *test_files* entry's parent, or ``None`` when *test_files* is empty
+        or the entries share no common filesystem ancestor (e.g. different
+        Windows drives) -- ``None`` restores ``subprocess.run``'s default of
+        inheriting the caller's own cwd.
+    """
+    if not test_files:
+        return None
+    try:
+        return os.path.commonpath([str(f.resolve().parent) for f in test_files])
+    except ValueError:
+        return None
 
 
 # ---------------------------------------------------------------------------
@@ -626,4 +665,8 @@ def _build_failure_reason(
 #   module) does not crash with ModuleNotFoundError -- the same class of gap
 #   done_proof.py's own module docstring already documents for itself.
 #   (#BP-100n-4)
+# - 2026-09-25 [python-coder]: Added _resolve_pytest_run_cwd() here (not in
+#   done_proof.py) purely to stay under THAT file's own ratchet -- see its
+#   DECISION HISTORY addendum for the bug this fixes.
+#   (#EPIC-AProofThatReachedTheCodeByDirectImport/02, BO-2900a-3)
 # ================================================================================

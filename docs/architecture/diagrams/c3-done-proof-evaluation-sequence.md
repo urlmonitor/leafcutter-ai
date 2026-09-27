@@ -1,25 +1,27 @@
 ---
 title: "Done-Proof Evaluation — Sequence Diagram"
-description: "L3 sequence diagram of verify_done_eligible — from collecting # covers tags and resolving them against the AC YAML store, through running pytest as a subprocess and classifying outcomes, through the mechanical entry-point reachability gate (BO-2900a-1) that refuses a proof reaching the code by direct import when the unit has a real way in, to the final per-AC eligible/blocked verdict emitted by the mechanical gate."
+description: "L3 sequence diagram of verify_done_eligible — from collecting # covers tags and resolving them against the AC YAML store, through running pytest as a subprocess and classifying outcomes, to the incumbent per-AC eligible/blocked pass-fail verdict (BO-2500a-3). The two mechanical reachability gates evaluated after this pass/fail rule already returned eligible: True — the entry-point reachability gate (BO-2900a-1) and the sibling no-entry-point-anywhere gate (BO-2900a-3) — are diagrammed in the continuation, c3-done-proof-reachability-gates-sequence.md."
 type: architecture
 diagram_type: sequence
 flight_level: L3-Component
 status: active
 created: 2026-07-21
-last_updated: 2026-09-25
+last_updated: 2026-09-27
 components:
   - build_orchestration
   - testing_quality
   - ac_store
 related_docs:
+  - docs/architecture/diagrams/c3-done-proof-reachability-gates-sequence.md
   - docs/architecture/components/build-orchestration.md
+  - docs/architecture/components/phantom-done-prevention.md
   - docs/how-to/prove-ac-done.md
   - docs/how-to/done-proof-enforcement.md
   - docs/architecture/diagrams/c2-fast-vs-heavy-lane-phases.md
-  - docs/acceptance-criteria/build-orchestration/BO-2900-runtime-reachability-guard/BO-2900a-1.yaml
+  - docs/acceptance-criteria/build-orchestration/BO-2500-mechanical-done-proof/BO-2500a-3.yaml
 related_code:
   - scripts/ac_store/done_proof.py
-  - scripts/ac_store/_done_proof_entry_point_gate.py
+  - scripts/ac_store/_done_proof_phase_helpers.py
   - templates/scripts/commit_guardian/check_done_proof.py
 ---
 
@@ -27,10 +29,12 @@ related_code:
 
 This diagram documents the message-level interaction of `verify_done_eligible()` in
 `scripts/ac_store/done_proof.py` — the authoritative eligibility oracle for the BO-2500
-done-proof gate. It covers the full evaluation path from the gate invoking the oracle,
-through AC-store resolution, test-tree scanning, pytest execution, outcome classification,
-the mechanical entry-point reachability gate, and finally the per-AC eligible or blocked
-verdict returned to the caller.
+done-proof gate. It covers the evaluation path from the gate invoking the oracle,
+through AC-store resolution, test-tree scanning, pytest execution, and outcome
+classification, to the incumbent per-AC pass/fail verdict (`BO-2500a-3`). The two
+mechanical reachability gates that run after this pass/fail rule already returned
+`eligible: True` are diagrammed in the continuation,
+[c3-done-proof-reachability-gates-sequence.md](c3-done-proof-reachability-gates-sequence.md).
 
 > **The gate, not the caller, emits the verdict.** `verify_done_eligible()` is the
 > mechanical gate: it owns the evaluation logic and always returns a structured
@@ -38,14 +42,14 @@ verdict returned to the caller.
 > entry_point, offending_test}` dict. The caller (`check_done_proof.py` or `fast_lane.py`)
 > decides what to do with that verdict — block the commit, emit a warning, or proceed.
 
-> **Scope of this diagram (BO-2900a-1).** The mechanical entry-point reachability gate
-> below is evaluated only after the incumbent pass/fail gate (Phases 1-5) already
-> returned `eligible: True`. It never changes the "no linked test" or "linked test
-> failed" verdicts documented in Phases 1-5. A separate, disjoint rule — the
-> no-entry-point-anywhere gate (`_apply_reachability_gate`, `refusal_cause:
-> "no_entry_point_reaches_code"`) — runs after this one for the case where NO linked
-> test's module exposes a way in at all; that rule is out of this diagram's scope and
-> is decided separately (see the scope-fence note in step 9 below).
+> **Scope of this diagram (Phases 1-5).** This diagram covers the incumbent pass/fail
+> rule only — collecting `# covers` tags, resolving them against the AC YAML store,
+> running pytest, and classifying outcomes. When every linked test PASSES, evaluation
+> continues into two further mechanical reachability gates — the entry-point
+> reachability gate (`BO-2900a-1`) and the sibling no-entry-point-anywhere gate
+> (`BO-2900a-3`) — diagrammed in full in
+> [c3-done-proof-reachability-gates-sequence.md](c3-done-proof-reachability-gates-sequence.md),
+> which begins from this diagram's own `eligible: True` output.
 
 ---
 
@@ -57,7 +61,6 @@ sequenceDiagram
     participant ACS as AC YAML Store<br/>(docs/acceptance-criteria/**/*.yaml)
     participant TFS as Test File System<br/>(unit_tests/**/*.py)
     participant Pytest as pytest subprocess<br/>(python -m pytest -v)
-    participant Runner as Reachability observer<br/>(fresh subprocess, sys.setprofile)
 
     Note over Gate,Pytest: Eligibility evaluation — invoked at commit-gate or pre-merge
     Gate->>VDE: verify_done_eligible(ac_id, ac_root=..., test_root=...)
@@ -92,32 +95,7 @@ sequenceDiagram
             Note over VDE,Gate: BLOCKED — at least one covers-linked test did not PASS
             VDE-->>Gate: {eligible: False,<br/>reason: "linked test &lt;outcome&gt;: &lt;nodeid&gt;...",<br/>passing_tests: [...],<br/>failing_tests: [...],<br/>dangling_tags: [...]}
         else All covers-linked tests PASSED
-            Note over VDE: Phase 6 — Mechanical entry-point reachability gate (BO-2900a-1)<br/>Evaluated only now that the pass/fail gate is satisfied.<br/>No new keyword argument — every real caller gets this unconditionally.
-            loop For each linked Python test
-                VDE->>VDE: _detect_module_entry_point(test_file, project_root, test_root)<br/>AST-only, checked in order: (1) test_file itself, then<br/>(2) each module test_file imports, resolved via the SAME<br/>_local_import_module_names / _resolve_candidate_unit pair<br/>the sibling no-entry-point-anywhere gate (below) already uses.<br/>Never filename, folder, docstring, or `if __name__` text match.
-                alt No module-level main found in test_file OR any module it imports
-                    Note over VDE: Scope fence — this rule does not fire for this test.<br/>Falls through to the no-entry-point-anywhere gate that always runs next (see below).
-                else main found — resolved_module exposes a runtime way in<br/>(test_file itself, OR the first imported module found to define main)
-                    VDE->>Runner: _observe_reachability(test_file, function, target_spec="", entry_spec="<resolved_module>:main")<br/>Re-executes the test under a call-stack profiler.
-                    Note over Runner: Fresh subprocess, 30 s timeout.<br/>Records whether `main` was a live ancestor frame during this SAME<br/>execution (never read from source text), AND whether that isolated<br/>re-run itself passed — {entered_entry_point, observation_ok, passed}.
-                    Runner-->>VDE: {entered_entry_point, observation_ok, passed}
-
-                    alt observation_ok is False OR passed is False
-                        Note over VDE,Gate: BLOCKED — observation subprocess failed, produced no parseable result,<br/>or its isolated re-run did not pass (bypasses pytest fixtures/conftest the<br/>original passing run used, so a failure here is not comparable to "did not enter")
-                        VDE-->>Gate: {eligible: False,<br/>refusal_cause: "observation_unavailable",<br/>unit: resolved_module.stem,<br/>entry_point: "&lt;resolved_module&gt;:main",<br/>offending_test: "&lt;file&gt;::&lt;function&gt;"}
-                    else entered_entry_point is False
-                        Note over VDE,Gate: BLOCKED — proof reached the code by direct import, never through main
-                        VDE-->>Gate: {eligible: False,<br/>reason: "...reached the code by direct import instead of through &lt;entry_point&gt;",<br/>refusal_cause: "proof_not_through_entry_point",<br/>unit: resolved_module.stem,<br/>entry_point: "&lt;resolved_module&gt;:main",<br/>offending_test: "&lt;file&gt;::&lt;function&gt;"}
-                    else entered_entry_point is True
-                        Note over VDE: Verdict unchanged — this test's proof drove the real way in.
-                    end
-                end
-            end
-
-            Note over VDE: Phase 6.5 — No-entry-point-anywhere gate (BO-2900a-3, sibling, always runs next)<br/>_apply_reachability_gate() now GUARDS on verdict["eligible"] first: an already-refused<br/>Phase-6 verdict returns unchanged — it is never overwritten with this gate's own,<br/>independently-computed "no_entry_point_reaches_code" verdict for the same unit.<br/>Full mechanism (exemption seam, etc.) is out of THIS diagram's scope — see the table below.
-
-            Note over VDE,Gate: ELIGIBLE — every covers-linked test PASSED, every one whose resolved<br/>module exposes a way in had its own run enter it, and the no-entry-point-anywhere<br/>gate found no unit with no way in at all (or granted a recorded exemption)
-            VDE-->>Gate: {eligible: True,<br/>reason: "",<br/>passing_tests: [...],<br/>failing_tests: [],<br/>dangling_tags: [...]}
+            Note over VDE,Gate: All covers-linked tests PASSED. Evaluation continues into the<br/>two mechanical reachability gates (Phase 6 and Phase 6.5) — see the<br/>continuation diagram: c3-done-proof-reachability-gates-sequence.md
         end
     end
 ```
@@ -166,78 +144,11 @@ sequenceDiagram
 
 8. **Pass/fail verdict computed.** If any `failing_tests` exist, `eligible: False` is
    returned immediately with a reason naming each non-passing nodeid and its outcome —
-   Phase 6 below never runs in that case. If all linked tests passed, evaluation
-   continues into Phase 6 rather than returning yet. In both branches `dangling_tags`
-   is included so the gate can surface stale cross-references to the developer.
-
-## 3. The mechanical entry-point reachability gate (BO-2900a-1)
-
-9. **Entry-point detected per linked Python test — AST only, checked in two places.**
-   For each linked Python test, `_detect_module_entry_point(test_file, project_root,
-   test_root)` (`scripts/ac_store/_done_proof_entry_point_gate.py`) looks for a
-   module-level `def main` or `async def main`, checked in order: (1) *test_file*
-   itself — this AC family's single-file fixture convention, where the implementing
-   function, `main`, and the covers-tagged proof test all live in one module — then
-   (2) each bare module *test_file* imports, resolved the SAME way the sibling
-   no-entry-point-anywhere gate resolves candidate units
-   (`_local_import_module_names` / `_resolve_candidate_unit`, both in
-   `scripts/ac_store/done_proof.py`) — the codebase's normal separate
-   test/implementation layout (e.g. `fast_lane.main`,
-   `scripts/build_orchestration/fast_lane.py:925`), which a same-file-only check would
-   never catch. This is a structural AST check only — a filename, folder name,
-   docstring, or `if __name__ == "__main__":` text match is never treated as evidence
-   of a way in. No `main` found in *test_file* or any module it imports means Phase 6
-   does not fire for that test at all: this is the **scope fence** — see the
-   composition note after step 11 for what happens to that verdict next.
-
-10. **Reachability observed by execution, never by source text.** When a `main` is
-    found (in *test_file* itself, or in the first of its imports that has one —
-    call this the *resolved module*), `_observe_reachability`
-    (`scripts/ac_store/done_proof.py`) re-runs the covers-tagged test itself in a
-    fresh subprocess with a call-stack profiler (`sys.setprofile`) installed, and
-    records whether `main` was a live ancestor frame at any point during that single
-    execution — plus whether that isolated re-run itself passed. The subprocess has
-    a 30 s timeout; an `OSError` or unparseable result fails closed to
-    `observation_ok: False` rather than being read as "did not enter".
-
-11. **Verdict revised — only ever tightened, never loosened.** For each linked test
-    with a detected entry point:
-    - `observation_ok` is `False`, **or** the isolated re-run's own `passed` is
-      `False` → `eligible: False`, `refusal_cause: "observation_unavailable"`. The
-      `passed` check exists because the bare re-execution `_observe_reachability`
-      performs bypasses the pytest fixtures/conftest/parametrize machinery the
-      original, already-passing pytest run used — an isolated-run failure for an
-      unrelated reason (e.g. a fixture-arg `TypeError`) must not be misreported as
-      "direct import".
-    - `observation_ok` is `True`, `passed` is `True`, and `entered_entry_point` is
-      `False` → `eligible: False`, `refusal_cause: "proof_not_through_entry_point"`,
-      with `reason` naming "direct import" and the verdict carrying `unit` (the
-      *resolved module's* stem — the implementing module's own name when the
-      cross-file branch fired, not always `test_file`'s), `entry_point`
-      (`"<resolved module>:main"`), and `offending_test` (`"<file>::<function>"`).
-    - `entered_entry_point` is `True` → the verdict from step 8 is returned
-      unchanged for that test.
-    The first linked test to fail this check short-circuits the loop; a Phase 6
-    refusal can only ever turn an `eligible: True` verdict into `eligible: False` —
-    it never grants eligibility on its own.
-
-### Composition: Phase 6's output always feeds the no-entry-point-anywhere gate next
-
-`verify_done_eligible` composes the two reachability gates unconditionally —
-`_apply_reachability_gate(_apply_entry_point_reachability_gate(success_verdict, ...),
-...)` — so the sibling no-entry-point-anywhere gate (BO-2900a-3,
-`_apply_reachability_gate`, `scripts/ac_store/done_proof.py`) always runs
-immediately after Phase 6, on Phase 6's *output*, never independently. That sibling
-gate computes its own, different notion of "has a way in"
-(`_has_entry_point_of_its_own` / `_is_imported_elsewhere`, both regex/import-graph
-based rather than the AST `_module_defines_main` check Phase 6 uses) and, for a unit
-its own check judges to have no way in, would otherwise build a *fresh* verdict dict
-— discarding whatever Phase 6 already decided. `_apply_reachability_gate` therefore
-opens with `if not verdict.get("eligible"): return verdict`: an already-refused
-Phase-6 verdict is returned unchanged, never silently overwritten with the sibling
-gate's own `refusal_cause: "no_entry_point_reaches_code"` for the same unit. This is
-what keeps the two `refusal_cause` values disjoint in practice, not merely by the two
-functions never being called together — see the invariant table below.
+   the reachability gates never run in that case. If all linked tests passed, evaluation
+   continues into the two reachability gates diagrammed in
+   [c3-done-proof-reachability-gates-sequence.md](c3-done-proof-reachability-gates-sequence.md)
+   rather than returning yet. In both branches `dangling_tags` is included so the gate
+   can surface stale cross-references to the developer.
 
 ## Key invariant: fail-closed on every ambiguity
 
@@ -251,34 +162,23 @@ functions never being called together — see the invariant table below.
 | `ERROR` | No | Collection/setup error — test did not run |
 | Not in results | No | Unlocated nodeid — treated as non-passing |
 
-## Key invariant: the scope fence between the two reachability refusal causes
-
-`refusal_cause: "proof_not_through_entry_point"` (Phase 6, this diagram) and
-`refusal_cause: "no_entry_point_reaches_code"` (the sibling no-entry-point-anywhere
-gate, full mechanism out of this diagram's scope) are deliberately two disjoint
-values rather than one merged "unreachable" verdict — each names a different fact
-and clears a different way. As the composition note above spells out, both gates
-always run, in this fixed order, on every eligible verdict; disjointness is enforced
-by the no-entry-point-anywhere gate's own eligibility guard, not by the two gates
-being mutually exclusive in when they run:
-
-| `refusal_cause` | Fires when | Clearing action |
-|---|---|---|
-| `proof_not_through_entry_point` | A linked test's own module, or a module it imports, defines `main`, but that test's own run never entered it | Rewrite the proof to invoke the detected entry point |
-| `observation_unavailable` | A `main` was detected but the execution-derived observation itself could not be made, or its isolated re-run did not pass | Investigate the observation subprocess failure — fails closed, not read as a refusal |
-| `no_entry_point_reaches_code` (not diagrammed here) | Phase 6 did not refuse (its verdict was still `eligible: True`), AND no linked test's module — by the sibling gate's own, independently-computed check — has a way in anywhere | Give the unit an entry point, or record a reasoned exemption |
-
 ## Cross-References
 
+- [Done-Proof Reachability Gates — Sequence Diagram](c3-done-proof-reachability-gates-sequence.md) —
+  the continuation of this diagram: the entry-point reachability gate (`BO-2900a-1`) and
+  the no-entry-point-anywhere gate (`BO-2900a-3`), both evaluated after this diagram's own
+  `eligible: True` output.
 - [Build Orchestration — Component Overview](../components/build-orchestration.md) — the
   component that owns `done_proof.py` and the pre-commit gate that invokes it.
 - [Fast vs Heavy Lane Phases](c2-fast-vs-heavy-lane-phases.md) — the C2 container diagram
   showing where the done-proof gate sits in the overall build pipeline.
 - [AC-Driven Pipeline](c2-001-ac-driven-pipeline.md) — the broader context in which
   the done-proof verdict feeds the `mark_ac_done.py` and status-promotion flows.
-- [How to understand proof-of-done enforcement — section 3](../../how-to/done-proof-enforcement.md#3-the-third-eligibility-axis-did-the-proof-go-in-through-the-real-way-in-bo-2900a-1) —
-  the task-oriented explanation of this same gate, including how to fix a refusal.
-- [BO-2900a-1 acceptance criterion](../../acceptance-criteria/build-orchestration/BO-2900-runtime-reachability-guard/BO-2900a-1.yaml) —
-  the AC this Phase 6 addition implements.
+- [How to understand proof-of-done enforcement](../../how-to/done-proof-enforcement.md) —
+  the task-oriented explanation of the two-layer (pre-commit / CI) enforcement strategy
+  this diagram's Phases 1-5 implement.
 - [BO-2500a-3 acceptance criterion](../../acceptance-criteria/build-orchestration/BO-2500-mechanical-done-proof/BO-2500a-3.yaml) —
-  the incumbent pass/fail rule (Phases 1-5) that BO-2900a-1 narrows, not restates.
+  the incumbent pass/fail rule (Phases 1-5) that BO-2900a-1 and BO-2900a-3 both narrow,
+  not restate.
+- [Phantom-Done Prevention — Component Overview](../components/phantom-done-prevention.md) —
+  the L2 container page grouping this diagram alongside the related BP-1100f gates.

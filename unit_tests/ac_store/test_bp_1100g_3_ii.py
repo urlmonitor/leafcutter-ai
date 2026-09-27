@@ -86,6 +86,7 @@ _MODULE_FILES = (
     "test_enforcement.py",
     "_done_proof_phase_helpers.py",
     "_done_proof_entry_point_gate.py",
+    "_done_proof_automation_gate.py",
 )
 
 

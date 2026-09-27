@@ -195,12 +195,17 @@ from _done_proof_phase_helpers import (
     _execute_vitest,
     _handle_no_direct_tests, _maybe_reachability_verdict,
     _parse_vitest_stdout,
+    _resolve_pytest_run_cwd,  # BO-2900a-3
     _run_python_test_phase,
     _run_ts_test_phase,
     _split_linked_tests_by_language,
     is_covers_tag_waived,  # noqa: F401  # BP-100n-4-ii-ii: re-exported, see module docstring
 )
 from _done_proof_entry_point_gate import _apply_entry_point_reachability_gate  # BO-2900a-1
+from _done_proof_automation_gate import (  # BO-2900a-3 rework
+    build_no_entry_point_refusal,
+    unit_is_invoked_by_automation,
+)
 
 # ---------------------------------------------------------------------------
 # BO-2900d-1: shared reachability-exemption seam import.
@@ -1281,6 +1286,18 @@ def _run_pytest_and_parse(test_files: list[Path]) -> dict[str, str]:
     larger allowance, and can be overridden verbatim via the
     ``LEAFCUTTER_DONE_PROOF_PYTEST_TIMEOUT_SECONDS`` environment variable.
 
+    The child's ``cwd=`` is anchored to *test_files*' own common ancestor
+    directory via :func:`_resolve_pytest_run_cwd` (BO-2900a-3) rather than
+    left unset. Left unset, the child inherits this process's own cwd, and
+    pytest's own rootdir/config discovery walks upward from the common
+    ancestor of that inherited cwd and *test_files* — on a deeply nested
+    fixture path (e.g. under the OS temp directory) sharing only a distant
+    ancestor (a user's home directory) with this process's cwd, that walk
+    can cross unrelated, transiently-changing directories and fail
+    collection outright with a spurious ``FileNotFoundError`` unrelated to
+    *test_files* themselves. Anchoring the child to *test_files*' own
+    directory keeps the walk inside the fixture tree.
+
     A genuine timeout still fails closed exactly as before — no test can be
     reported as passing — but the returned dict now carries
     :data:`_PYTEST_RUN_INCOMPLETE_SENTINEL` instead of being silently empty,
@@ -1321,6 +1338,7 @@ def _run_pytest_and_parse(test_files: list[Path]) -> dict[str, str]:
             text=True,
             timeout=timeout_seconds,
             env=child_env,
+            cwd=_resolve_pytest_run_cwd(test_files),
         )
     except subprocess.TimeoutExpired as exc:
         message = (
@@ -1906,13 +1924,19 @@ def _has_entry_point_of_its_own(module_path: Path) -> bool:
 def _is_imported_elsewhere(
     module_name: str, module_path: Path, project_root: Path, test_root: Path
 ) -> bool:
-    """True when some OTHER project file (outside test_root) imports *module_name*.
+    """True when some OTHER project file (outside test_root) genuinely imports
+    *module_name*.
 
-    A textual search for ``import <name>`` / ``from <name> import`` across
-    every other ``.py`` file under *project_root*, excluding *module_path*
-    itself and anything under *test_root* (a test importing the unit does
-    not give the unit a runtime way in — that is exactly the case this gate
-    exists to catch).
+    Per the BO-2900a-3 constraint, this is established from the import graph
+    built by AST-parsing each candidate file — via the same
+    :func:`_local_import_module_names` seam used to inspect a linked test's
+    own imports — never from a text scan of import statements. A regex
+    search for the literal words ``import <name>`` would also match a
+    docstring, comment, or log string that merely mentions the import
+    spelling without containing a real ``ast.Import``/``ast.ImportFrom``
+    node; parsing the syntax tree cannot be fooled that way. A test
+    importing the unit does not count (excluded via *test_root*) — that is
+    exactly the case this gate exists to catch.
 
     Args:
         module_name: The bare module name to search for.
@@ -1921,12 +1945,9 @@ def _is_imported_elsewhere(
         test_root: Excluded from the search.
 
     Returns:
-        ``True`` iff some other project file imports the module by name.
+        ``True`` iff some other project file's parsed AST contains a real
+        import of the module by name.
     """
-    import_re = re.compile(
-        rf"(?:^|\s)(?:import\s+{re.escape(module_name)}\b"
-        rf"|from\s+{re.escape(module_name)}\s+import\b)"
-    )
     try:
         candidates = project_root.rglob("*.py")
     except OSError:
@@ -1936,11 +1957,7 @@ def _is_imported_elsewhere(
             continue
         if candidate == module_path or _is_within(candidate, test_root):
             continue
-        try:
-            text = candidate.read_text(encoding="utf-8")
-        except OSError:
-            continue
-        if import_re.search(text):
+        if module_name in _local_import_module_names(candidate):
             return True
     return False
 
@@ -2019,13 +2036,23 @@ def _apply_reachability_gate(
     values, never one merged verdict), so an already-ineligible *verdict*
     is returned unchanged, restoring this function's documented
     precondition mechanically rather than by convention alone. When
-    *verdict* is eligible, finds the first linked unit with no runtime way
-    in of its own (see :func:`_find_no_entry_point_unit`); when none
-    exists, returns *verdict* unchanged. When one exists, checks the shared
-    reachability-exemption seam (BO-2900d-1): a recorded, reasoned exemption
-    for that exact unit releases the refusal and is announced on the
-    returned verdict (never silently absorbed); the absence of one refuses
-    the criterion with ``refusal_cause: "no_entry_point_reaches_code"``.
+    *verdict* is eligible, finds the first linked unit whose module defines
+    no ``main()`` of its own AND is not genuinely imported elsewhere (see
+    :func:`_find_no_entry_point_unit` -- conditions (1) and (2)); when none
+    exists, returns *verdict* unchanged. When one exists, condition (3) is
+    checked next: :func:`_done_proof_automation_gate.unit_is_invoked_by_automation`
+    answers "does some real automation script run this unit as a program?"
+    against the shared BO-2900b-1/BO-2900b-3 ``collected_invocations()``
+    seam; a unit that IS run as a program by automation does not satisfy
+    this condition, so the refusal does not fire at all and *verdict* is
+    returned unchanged. Only when all three conditions hold does this
+    function check the shared reachability-exemption seam (BO-2900d-1): a
+    recorded, reasoned exemption for that exact unit releases the refusal
+    and is announced on the returned verdict (never silently absorbed); the
+    absence of one refuses the criterion with ``refusal_cause:
+    "no_entry_point_reaches_code"`` and ``clearing_actions`` naming the two
+    ways the verdict flips (see
+    :func:`_done_proof_automation_gate.build_no_entry_point_refusal`).
 
     Args:
         verdict: The eligibility verdict computed so far. May already be
@@ -2038,9 +2065,11 @@ def _apply_reachability_gate(
 
     Returns:
         *verdict* unchanged when it arrived already ineligible, when no
-        no-way-in unit is found, or when the unit is exempted (with
-        exemption details attached); an ``eligible: False`` verdict
-        carrying ``refusal_cause`` and ``unit`` otherwise.
+        no-way-in unit is found, when the unit IS run as a program by real
+        automation (condition (3) fails), or when the unit is exempted
+        (with exemption details attached); an ``eligible: False`` verdict
+        carrying ``refusal_cause``, ``unit``, and ``clearing_actions``
+        otherwise.
     """
     if not verdict.get("eligible"):
         return verdict
@@ -2051,11 +2080,13 @@ def _apply_reachability_gate(
 
     exemptions: list[dict] = []
     exempt_verdict = False
+    collected_invocations = None
     if str(_COMMIT_GUARDIAN_DIR) not in sys.path:
         sys.path.insert(0, str(_COMMIT_GUARDIAN_DIR))
     try:
         from _reachability_inventory import (
             ReachabilityRegistryError,
+            collected_invocations,
             is_exempt,
             load_exemptions,
         )
@@ -2074,6 +2105,11 @@ def _apply_reachability_gate(
             )
         exempt_verdict = is_exempt(unit, exemptions)
 
+    # BO-2900a-3 condition (3): a unit run as a program by real automation
+    # does not satisfy "no automation runs it" -- verdict unchanged.
+    if unit_is_invoked_by_automation(unit, project_root, test_root, collected_invocations):
+        return verdict
+
     if exempt_verdict:
         matched_reason = next(
             (e.get("reason") for e in exemptions if e.get("item") == unit), ""
@@ -2082,18 +2118,7 @@ def _apply_reachability_gate(
         exempted["exemption"] = {"item": unit, "reason": matched_reason}
         return exempted
 
-    return {
-        "eligible": False,
-        "reason": (
-            f"no way of running the product reaches {unit} (refusal_cause: "
-            f"no_entry_point_reaches_code) for {ac_id}"
-        ),
-        "refusal_cause": "no_entry_point_reaches_code",
-        "unit": unit,
-        "passing_tests": verdict.get("passing_tests", []),
-        "failing_tests": verdict.get("failing_tests", []),
-        "dangling_tags": verdict.get("dangling_tags", []),
-    }
+    return build_no_entry_point_refusal(verdict, ac_id=ac_id, unit=unit)
 
 
 # ---------------------------------------------------------------------------
@@ -2441,3 +2466,9 @@ def verify_done_eligible(
 #   the module docstring's "Second relocation" paragraph. (#BO-2500a-1-ii)
 # - 2026-09-25 00:00 [python-coder]: Fixed _find_nodeid_for_test (ACS-200f-2, KI-ACS-20260925-done-proof-parametrised-first-match) -- it returned the FIRST matching nodeid, so a parametrised covering test with one failing case among several passing ones (e.g. test_b[0] PASSED, test_b[1] FAILED) was wrongly judged done-eligible whenever pytest happened to report the passing case first, exactly the first-match trap KI-ACS-008 L72-78 and KI-BO-20260826-1900 L81-87 warn against.
 #   Added _find_nodeids_for_test() to collect the FULL match set (same-file matches preferred as a group, as before); _find_nodeid_for_test is now built on top of it and returns the first non-PASSED nodeid among those matches, or the first match when all pass, preserving its single-nodeid contract so _classify_outcomes and the fast lane's _fl_red_baseline_support._resolve_tag_outcome need no call-site change. (#ACS-200f-2)
+# - 2026-09-25 17:30 [python-coder]: _is_imported_elsewhere was a text-scan
+#   a docstring mention could fool; now reuses _local_import_module_names().
+#   Gave _run_pytest_and_parse an explicit cwd= via the sibling module's new
+#   _resolve_pytest_run_cwd() (ratchet: added there, see its own entry),
+#   fixing a spurious collection FileNotFoundError from the prior unset cwd.
+#   (#EPIC-AProofThatReachedTheCodeByDirectImport/02, BO-2900a-3)
