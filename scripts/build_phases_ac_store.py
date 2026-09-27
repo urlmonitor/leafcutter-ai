@@ -133,6 +133,14 @@ AC_STORE_DEPLOY_MAP: tuple[tuple[str, str], ...] = (
     # name — unit_tests/ac_store/test_bp_1100g_3_ii.py::_MODULE_FILES builds its
     # own simulated deployed tree and does not read this map.
     ("scripts/ac_store/_done_proof_phase_helpers.py", "_done_proof_phase_helpers.py"),
+    # _done_proof_kind_support.py (TQ-500f-3-i) -- absence-vs-assertion kind
+    # classification for the red-baseline gate's refusal rule, imported by
+    # _fl_red_baseline_support.py when ac_root is given. Must deploy.
+    ("scripts/ac_store/_done_proof_kind_support.py", "_done_proof_kind_support.py"),
+    # _kind_plugin.py (TQ-500f-3-i H-1) -- the pytest plugin (-p _kind_plugin)
+    # _done_proof_kind_support.py loads to read each test's real exception
+    # type from pytest's own hook data. Must deploy alongside it.
+    ("scripts/ac_store/_kind_plugin.py",              "_kind_plugin.py"),
     # ac_parent_id.py provides derive_parent_id, imported at module scope by
     # scripts/build_orchestration/fast_lane.py. Without it the deployed
     # fast_lane.py exists but dies at import with ModuleNotFoundError, so
