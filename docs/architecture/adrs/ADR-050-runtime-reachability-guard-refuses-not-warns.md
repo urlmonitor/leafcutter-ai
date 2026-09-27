@@ -4,7 +4,7 @@ description: "A registered command-surface capability that no automation invokes
 type: "adr"
 status: "active"
 created: "2026-09-25"
-last_updated: "2026-09-25"
+last_updated: "2026-09-27"
 deciders:
   - BrainCandy
 components:
@@ -17,7 +17,9 @@ related_docs:
   - docs/acceptance-criteria/build-orchestration/BO-2900-runtime-reachability-guard/BO-2900b-3.yaml
   - docs/acceptance-criteria/build-orchestration/BO-2900-runtime-reachability-guard/BO-2900c-1.yaml
   - docs/acceptance-criteria/build-orchestration/BO-2900-runtime-reachability-guard/BO-2900c-4.yaml
+  - docs/acceptance-criteria/build-orchestration/BO-2900-runtime-reachability-guard/BO-2900d.yaml
   - docs/acceptance-criteria/build-orchestration/BO-2900-runtime-reachability-guard/BO-2900d-1.yaml
+  - docs/acceptance-criteria/build-orchestration/BO-2900-runtime-reachability-guard/BO-2900e.yaml
   - docs/architecture/adrs/ADR-001-self-hosting-boundary.md
   - docs/architecture/components/build-orchestration.md
   - docs/architecture/diagrams/c3-009-reachability-guard-data-flow.md
@@ -129,19 +131,30 @@ presented as enforcing the gate while being configured never to block.
 ### 5. The only sanctioned relief is a recorded exemption
 
 The only way to pass with an uncalled capability is an entry in
-`config/reachability_exemptions.yaml` that states a reason, following BO-2900d-1.
-The guard MUST drop any capability for which `is_exempt()` returns true for
+`config/reachability_exemptions.yaml` that states a reason, following BO-2900d-1
+([`BO-2900d`](../../acceptance-criteria/build-orchestration/BO-2900-runtime-reachability-guard/BO-2900d.yaml)
+is the parent AC: legitimate no-way-in work is recorded honestly, never waved through
+silently). The guard MUST drop any capability for which `is_exempt()` returns true for
 `exemptions_in_force(load_exemptions(...))`, and it MUST do so before emitting
-findings. Wiring this into `check_reachability.py` is owned by
-[`BO-2900b-1-i`](../../acceptance-criteria/build-orchestration/BO-2900-runtime-reachability-guard/BO-2900b-1-i.yaml).
-Until that lands, the how-to and the c3-009 diagram describe a step the code does not
-yet perform.
+findings.
+[`BO-2900b-1-i`](../../acceptance-criteria/build-orchestration/BO-2900-runtime-reachability-guard/BO-2900b-1-i.yaml)
+constrains this pass/refuse behavior further: it pins that a capability introduced
+together with its caller in the *same* change passes (both `registered_capabilities()`
+and `collected_invocations()` are read from the current working tree, never a prior
+commit), and that a refusal's `ways_forward` names exactly these two options — adding
+the invocation, or recording an exemption with a stated reason — and no third option
+or bypass mention. This AC added no new code path; it added a pinned regression test
+suite confirming the behavior above already conforms to this ADR.
 
 ### 6. The refusal never names its own bypass
 
 The guard's output on a refusing run MUST NOT contain `SKIP=` or `--no-verify`.
 Its two ways forward are to add the automation invocation in this change or to record
 an exemption with a stated reason. The guard MUST NOT suggest any other route.
+[`BO-2900e`](../../acceptance-criteria/build-orchestration/BO-2900-runtime-reachability-guard/BO-2900e.yaml)
+governs refusal-message quality generally across all four of this guard family's
+refusal causes; this section, and `BO-2900b-1-i`, constrain only which two options
+*this* guard's message offers, not its prose.
 
 ### 7. Two layers, following the `check_done_proof.py` precedent
 
@@ -241,6 +254,6 @@ change to the refusal semantics.
 ## References
 
 - Originating ticket: `tickets/00_inbox/epics/EPIC-ARegisteredCapabilityThatNoAutomation/01_TICKET-20260925-BO-2900b-1.md`
-- Follow-up ticket: `tickets/00_inbox/epics/EPIC-ARegisteredCapabilityThatNoAutomation/02_TICKET-20260925-BO-2900b-1-i.md` (same-change adoption and exemption wiring)
+- Follow-up ticket: `tickets/00_inbox/epics/EPIC-ARegisteredCapabilityThatNoAutomation/02_TICKET-20260925-BO-2900b-1-i.md` (pins the same-change adoption pass and the exact `ways_forward` content as a regression contract; landed, no functional code change was needed — the behavior above already conformed)
 - [ADR-001: Self-Hosting Boundary](ADR-001-self-hosting-boundary.md): governs `scripts/` and `templates/scripts/` parity for the hook registration
 - [Build Orchestration component](../components/build-orchestration.md): the component that owns the surface and automation

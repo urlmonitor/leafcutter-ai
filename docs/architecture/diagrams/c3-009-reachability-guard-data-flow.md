@@ -6,7 +6,7 @@ diagram_type: data_flow
 flight_level: L3-Component
 status: active
 created: 2026-09-25
-last_updated: 2026-09-25
+last_updated: 2026-09-27
 root: true
 source_ticket: tickets/00_inbox/epics/EPIC-ARegisteredCapabilityThatNoAutomation/01_TICKET-20260925-BO-2900b-1.md
 components:
@@ -24,6 +24,9 @@ related_docs:
   - docs/how-to/resolve-a-reachability-guard-finding.md
   - docs/architecture/adrs/ADR-038-commit-guardian-shared-change-set-derivation.md
   - docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+  - docs/architecture/adrs/ADR-050-runtime-reachability-guard-refuses-not-warns.md
+  - docs/acceptance-criteria/build-orchestration/BO-2900-runtime-reachability-guard/BO-2900d.yaml
+  - docs/acceptance-criteria/build-orchestration/BO-2900-runtime-reachability-guard/BO-2900e.yaml
 tags:
   - commit-guardian
   - reachability-guard
@@ -96,6 +99,18 @@ docstring or log message is correctly absent from `INVSET` (only genuine AST `Ca
 nodes count, never text mentions — the rule BO-2900b-3 states explicitly and this
 module's own `collected_invocations()` already follows).
 
+## Both reads are of the current working tree, so same-change adoption passes
+
+`REG` and `COLLECT` are both evaluated against the state of the tree **at check time**,
+not against a prior commit. Neither side is diffed against the last commit's parser or
+the last commit's invocations before the comparison — `CAPSET` and `INVSET` are each a
+fresh read of what exists right now. Consequently a change that registers a capability
+on `SURFACE` and adds its first automation invocation to `AUTOMATION` in that same
+change produces an empty `DIFF` for that capability and reaches `PASS`, never `FINDING`
+(`BO-2900b-1-i`). An implementation that instead compared the new capability against a
+previous commit's collected invocations would refuse this ordinary case and make the
+guard unusable for exactly the workflow it exists to allow.
+
 ## The comparison degrades safely in both directions
 
 - **No exempt survivors reach `FINDING`.** `EXEMPT` consults
@@ -123,6 +138,7 @@ decoy text, and rename-invariance is separate follow-on scope.
 | AC | What it contributes to this diagram |
 |---|---|
 | `BO-2900b-1` | the whole forward flow: built-parser inventory, invocation collection, the comparison, and the refuse-not-warn exit |
+| `BO-2900b-1-i` | pins the `PASS` outcome for same-change adoption (registering a capability and wiring its caller in one change) and pins `FINDING`'s `ways_forward` as exactly the two entries shown — no third entry, no skip/bypass mention |
 | `BO-2900d-1` | the `EXEMPT` node — exact-match, non-empty-reason exemption relief |
 
 ## Cross-References
@@ -137,3 +153,11 @@ decoy text, and rename-invariance is separate follow-on scope.
 - [ADR-001 — Self-Hosting Boundary](../adrs/ADR-001-self-hosting-boundary.md) — governs
   the `templates/scripts/` \<-\> `scripts/` deploy parity this hook's registration respects
   on both sides.
+- [ADR-050 — Runtime Reachability Guard Refuses, Never Warns](../adrs/ADR-050-runtime-reachability-guard-refuses-not-warns.md)
+  — the decision record covering both the same-change adoption case and the exact
+  ways-forward content.
+- [BO-2900d — legitimate exceptions are recorded honestly](../../acceptance-criteria/build-orchestration/BO-2900-runtime-reachability-guard/BO-2900d.yaml)
+  — the exemption route named as the second way forward.
+- [BO-2900e — the guard names exactly what is unreachable](../../acceptance-criteria/build-orchestration/BO-2900-runtime-reachability-guard/BO-2900e.yaml)
+  — governs refusal-message quality generally; this AC family only constrains which two
+  options the message offers.

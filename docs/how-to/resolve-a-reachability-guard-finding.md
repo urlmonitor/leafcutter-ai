@@ -4,7 +4,7 @@ description: "Task-oriented guide for what to do when the check-reachability pre
 type: how_to
 status: active
 created: 2026-09-25
-last_updated: 2026-09-25
+last_updated: 2026-09-27
 components:
   - build_orchestration
   - commit_guardian
@@ -14,6 +14,8 @@ related_docs:
   - docs/how-to/managing-pre-commit-hooks.md
   - docs/how-to/done-proof-enforcement.md
   - docs/reference/workflow-authoring-contract.md
+  - docs/acceptance-criteria/build-orchestration/BO-2900-runtime-reachability-guard/BO-2900d.yaml
+  - docs/acceptance-criteria/build-orchestration/BO-2900-runtime-reachability-guard/BO-2900e.yaml
 related_code:
   - templates/scripts/commit_guardian/check_reachability.py
   - templates/scripts/commit_guardian/_reachability_inventory.py
@@ -44,10 +46,27 @@ e.g. one of `fast_lane.py`'s `claim`, `release`, `mark_done`, `select_batch`, an
 whenever at least one finding exists, both at the pre-commit layer (`--mode precommit`)
 and the CI layer (`--mode ci`).
 
+## Adding the capability and its caller in the same change passes
+
+Both sides of the check are read from the **current working-tree state**, not from
+what was already committed: `registered_capabilities()` reads the just-built parser
+and `collected_invocations()` reads the automation scripts as they sit right now. This
+means a change that registers a new capability and wires its automation invocation in
+that same change produces **no finding** for that capability — the guard never compares
+a new registration against the previous commit's callers, which would refuse the
+ordinary case of introducing a capability together with the code that calls it
+(`BO-2900b-1-i`). Only a capability that is registered with no caller anywhere in the
+current working tree is reported.
+
 ## Two ways forward — nothing else is sanctioned
 
-The finding always names exactly these two options. There is no global advisory or
-downgrade flag, and the check's own output never names a skip mechanism.
+The finding always names exactly these two options — never a third, and never a skip
+or bypass flag (`BO-2900b-1-i` pins this exact content as a permanent regression
+contract). There is no global advisory or downgrade flag, and the check's own output
+never names a skip mechanism. [`BO-2900d`](../acceptance-criteria/build-orchestration/BO-2900-runtime-reachability-guard/BO-2900d.yaml)
+governs the exemption route named as the second option below; [`BO-2900e`](../acceptance-criteria/build-orchestration/BO-2900-runtime-reachability-guard/BO-2900e.yaml)
+governs refusal-message quality generally — this guard's own AC family only
+constrains *which two* options the message offers, not prose style.
 
 ### Option A — add the automation invocation
 
@@ -131,3 +150,6 @@ against a fixture surface — or once that follow-on work lands and the hook/CI 
 - [Reachability Guard — Data Flow](../architecture/diagrams/c3-009-reachability-guard-data-flow.md)
 - [How to manage pre-commit hooks in leafcutter](managing-pre-commit-hooks.md)
 - [How to understand proof-of-done enforcement (pre-commit and CI)](done-proof-enforcement.md) — the two-layer precedent this guard mirrors
+- [ADR-050 — Runtime Reachability Guard Refuses, Never Warns](../architecture/adrs/ADR-050-runtime-reachability-guard-refuses-not-warns.md) — the decision record covering the same-change adoption case and the two ways forward
+- [BO-2900d — legitimate exceptions are recorded honestly](../acceptance-criteria/build-orchestration/BO-2900-runtime-reachability-guard/BO-2900d.yaml) — the exemption route
+- [BO-2900e — the guard names exactly what is unreachable](../acceptance-criteria/build-orchestration/BO-2900-runtime-reachability-guard/BO-2900e.yaml) — governs refusal-message quality generally
