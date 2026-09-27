@@ -154,6 +154,7 @@ Fixed issues move to [`build-pipeline/resolved/`](build-pipeline/resolved/) and 
 | `low` | KI-BP-20260909-standards-declare-no-applicability — only one of four configured guardrails says which kinds of file it governs; for the rest it lives in the script's filename | [open-low-ki-bp-20260909-standards-declare-no-applicability.md](build-pipeline/open-low-ki-bp-20260909-standards-declare-no-applicability.md) |
 | `low` | KI-BP-20260914-build-crashes-on-a-cp1252-stdout — build.py dies with UnicodeEncodeError when its output is piped on Windows, so every test that runs the build as a subprocess fails locally | [open-low-ki-bp-20260914-build-crashes-on-a-cp1252-stdout.md](build-pipeline/open-low-ki-bp-20260914-build-crashes-on-a-cp1252-stdout.md) |
 | `low` | KI-BP-20260914-1415 — a test asserts a literal string appears exactly twice in `build.py`'s source text, so relocating either function fails a fixture premise far from the cause | [open-low-ki-bp-20260914-1415.md](build-pipeline/open-low-ki-bp-20260914-1415.md) |
+| `low` | KI-BP-20260927 — the closure walk's second-hop symlink fix has no regression test, so a reintroduced `.resolve()` would only be caught by an unrelated CI failure | [open-low-ki-bp-20260927-closure-walk-symlink-hop-untested.md](build-pipeline/open-low-ki-bp-20260927-closure-walk-symlink-hop-untested.md) |
 
 ## Resolved
 
