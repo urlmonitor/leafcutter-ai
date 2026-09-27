@@ -1,0 +1,56 @@
+id: BO-4300e
+title: "Finding and clearing a workspace never loses unsent work"
+component: build-orchestration
+components:
+  - worktree_manager
+  - build_orchestration
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: critical
+roadmap_phase: phase_1
+criteria: |
+  Find or clear a workspace without risking work the team never got.
+
+  Any workflow or person can ask where the workspace for a piece of work is and get a
+  definite answer from the same one door that made it. Clearing one away is refused while
+  it still holds changes that have not reached the shared project, unless that loss was
+  explicitly authorised beforehand -- so unattended runs can tidy up without stalling on
+  a question nobody is there to answer, and nothing is ever deleted by accident.
+depends_on: [BO-4300]
+doc_links: []
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-09-25
+amended_by: []
+superseded_by: null
+covered_by: [BO-4300e-1, BO-4300e-2, BO-4300e-3, BO-4300e-4, BO-4300e-5]
+implemented_by: []
+documentation_triggers:
+  - how-to
+change_target: code
+risk_surface: safety
+notes: |
+  Reuse, do not re-derive: the VERDICT "does this workspace still hold undelivered work"
+  is BO-4100c, and "the listing is complete and every leftover clearable" is BO-4100e.
+  This record is that finding and clearing are served by the same one door as making
+  (decision 4), and that clearing is safe for unattended callers.
+
+  OPEN, NOT DECIDED HERE: Q8 whether removal requires a caller-supplied confirmation
+  token. The customer intent is only that authorisation is given up front rather than
+  asked interactively (finalize's teardown step deadlocks today on an interactive "yes"
+  it cannot give) and that without it, work that never reached the shared project is
+  never destroyed.
+
+  Under decision 1 no version-control command lists the workspaces, so "find" cannot lean
+  on one; how they are found is for BA/IT PO. Temporary workspaces used for comparison
+  runs (finalize's baselines) are workspaces too: they must be made and cleared through
+  this door and leave nothing registered in the real project (F14).
+
+  documentation_triggers: how-to -- clearing a workspace by hand, including how to
+  authorise the loss of unsent work, is a user-facing action.

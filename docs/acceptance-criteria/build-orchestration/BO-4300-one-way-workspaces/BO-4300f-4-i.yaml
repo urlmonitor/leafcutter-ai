@@ -1,0 +1,80 @@
+id: BO-4300f-4-i
+title: "Running the proof leaves the developer's own project unchanged"
+component: build-orchestration
+components:
+  - worktree_manager
+  - build_orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: critical
+roadmap_phase: phase_1
+change_target: pipeline
+risk_surface: internal
+criteria: |
+  Given the developer's own project, with its registered workspaces, branches and
+    version-control settings recorded,
+  When the whole workspace proof suite runs from inside that project,
+  Then its registered workspaces, branches and version-control settings are
+    identical afterwards,
+  And no temporary project or workspace made by the suite is registered in, or
+    linked from, the developer's project.
+depends_on: [BO-4300f-4]
+doc_links:
+- path: docs/analysis/2026-09-25-worktree-failure-modes.md
+  relationship: describes
+  status: exists
+- path: docs/analysis/2026-09-25-worktree-migration-plan.md
+  relationship: describes
+  status: exists
+- path: docs/architecture/components/worktree-manager.md
+  relationship: describes
+  status: exists
+  relevance: Component page for the one maker; rewritten for clones under BO-4300a-4.
+- path: docs/testing/test-angles.md
+  relationship: describes
+  status: exists
+  relevance: Angle taxonomy used by this record's test_spec.
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: BO-4300f-4
+  contract: Fixture API.
+package_surface: false
+it_requirements:
+- A session-level guard snapshots the developer repository (`git worktree list --porcelain`, `git for-each-ref`,
+  `git config --local --list`) before the workspace proof suite and compares after; any difference fails
+  the session. Fixture git runs with isolated HOME / GIT_CONFIG_GLOBAL / GIT_CONFIG_NOSYSTEM so no fixture
+  identity reaches the real config.
+- All temporary projects, hubs and workspaces live under the test's temp directory and run git with an
+  isolated global and system config; afterwards the developer's own repository's branches, registered
+  worktrees and local git config are unchanged (BO-4300f-4-i, F14, KI-TQ-012).
+test_required: true
+test_spec:
+- name: test_developer_repo_registrations_branches_and_config_unchanged_by_suite
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: boundary
+  description: The before/after snapshots of the developer repository are identical.
+- name: test_no_temporary_project_is_registered_in_or_linked_from_developer_repo
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: criterion
+  description: No worktree entry, remote, alternates file or config value in the developer repository
+    points into the suite's temp directory.
+test_rationale: F14 was a test leaking a worktree into the real repository; the assertion is therefore
+  made on the real repository's own records.
+origin_agent: business-analyst
+created: 2026-09-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  F14: git worktree list in leafcutter-ai includes a worktree under the pytest temp directory;
+  KI-TQ-012 wrote fixture identity into the real repository's config.

@@ -1,0 +1,99 @@
+id: BO-4300c-4-ii
+title: "After a whole run, the main copy is exactly as it was"
+component: build-orchestration
+components:
+  - worktree_manager
+  - build_orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: critical
+roadmap_phase: phase_1
+change_target: pipeline
+risk_surface: safety
+criteria: |
+  Given the requirements-authoring session, including its product-truth phase, and
+    the long-running build each run to completion with a ready workspace,
+  When the main copy's working files and its branches are compared before and
+    after each run,
+  Then they are identical,
+  And every file each run produced is inside its workspace.
+depends_on: [BO-4300c-4]
+doc_links:
+- path: docs/analysis/2026-09-25-worktree-creation-consolidation.md
+  relationship: describes
+  status: exists
+- path: docs/analysis/2026-09-25-worktree-failure-modes.md
+  relationship: describes
+  status: exists
+- path: docs/architecture/components/worktree-manager.md
+  relationship: describes
+  status: exists
+  relevance: Component page for the one maker; rewritten for clones under BO-4300a-4.
+- path: docs/architecture/adrs/ADR-030-dual-engine-workflow-support.md
+  relationship: constrains
+  status: exists
+  relevance: E2 workflow bodies have no filesystem or process access; agent() schema validation.
+- path: docs/testing/test-angles.md
+  relationship: describes
+  status: exists
+  relevance: Angle taxonomy used by this record's test_spec.
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from:
+  ac_id: BO-4300c-4
+  contract: Location taken only from the ok answer.
+package_surface: false
+it_requirements:
+- Every write-capable dispatch of plan-feature (including its product-truth phase, KI-ACD-007) and of
+  build-feature names the workspace as its working location and target root; no path is built from the
+  session cwd.
+- 'Proof: a real temporary main copy is snapshotted (working files and refs) around a complete harness
+  run in which each stubbed writer performs its write at the location its dispatch names; the unit layer
+  cannot run real authoring agents, so the proof is that the location reaching every writer comes from
+  the ok answer (CLAUDE.md: results ''consumed in control flow'').'
+- Proof runs the workflow under unit_tests/_workflow_engine_harness.py -- the deployed copy the build
+  produces, so the build's workflow transform is exercised -- with label-scripted agent replies, and asserts
+  on the RECORDED dispatch list, never on workflow source text. The harness must be able to model a workspace
+  step that declines its task, answers in prose, answers exit 0 with a non-JSON path, or answers JSON
+  without status (F13); extending the harness for this is in scope of the first AC that needs it.
+- Workflow edits are made in templates/workflows-js/*.js and reach .claude/workflows/ only through the
+  build; the deployed copy is what the tests run.
+test_required: true
+test_spec:
+- name: test_main_copy_identical_after_full_plan_feature_run_including_product_truth
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: real_artifact
+  description: Working files and branches of the temporary main copy are identical before and after a
+    complete plan-feature run with a ready workspace.
+- name: test_main_copy_identical_after_full_build_feature_run
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: real_artifact
+  description: Same for a complete build-feature run.
+- name: test_every_file_produced_lies_inside_the_workspace
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: boundary
+  description: Every file the stubbed writers created is under the workspace_path.
+test_rationale: The 2026-09-25 incident was a perfect-enough maker with a caller that carried on, and
+  every source grep of plan-feature.js would have passed. So the assertions are made on the recorded dispatch
+  list of a real workflow run with scripted hostile answers, which is the only place 'no later step was
+  dispatched' can be observed.
+origin_agent: business-analyst
+created: 2026-09-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  The end-to-end observable of the incident, and KI-ACD-007: the product-truth phase wrote into
+  the main checkout even when a worktree was created. BO-1800e covers the end state on the
+  shared main line; this record covers the main copy on the machine during the run.

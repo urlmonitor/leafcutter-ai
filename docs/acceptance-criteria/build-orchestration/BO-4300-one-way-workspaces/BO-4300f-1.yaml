@@ -1,0 +1,121 @@
+id: BO-4300f-1
+title: "Every existing route now gets its workspace from the one maker"
+component: build-orchestration
+components:
+  - worktree_manager
+  - build_orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: critical
+roadmap_phase: phase_1
+change_target: pipeline
+risk_surface: contract_boundary
+criteria: |
+  Given each existing route that works in a workspace -- the long-running build
+    for an epic and for a single ticket, the single-ticket build skill, the quick
+    fix, requirements authoring, the fast lane, finalize's comparison copies, the
+    backlog build, and a person following the project's written instructions --
+    is run against a real test project with a real shared project,
+  When each route obtains its workspace,
+  Then the workspace it works in carries the one workspace maker's record of
+    having made it, and that record agrees with the answer the maker gave,
+  And no route works in a workspace the maker did not make.
+depends_on: [BO-4300f]
+doc_links:
+- path: docs/analysis/2026-09-25-worktree-migration-plan.md
+  relationship: describes
+  status: exists
+- path: docs/analysis/2026-09-25-worktree-creation-consolidation.md
+  relationship: describes
+  status: exists
+- path: docs/architecture/components/worktree-manager.md
+  relationship: describes
+  status: exists
+  relevance: Component page for the one maker; rewritten for clones under BO-4300a-4.
+- path: docs/architecture/adrs/ADR-030-dual-engine-workflow-support.md
+  relationship: constrains
+  status: exists
+  relevance: E2 workflow bodies have no filesystem or process access; agent() schema validation.
+- path: docs/testing/test-angles.md
+  relationship: describes
+  status: exists
+  relevance: Angle taxonomy used by this record's test_spec.
+assigned_agent: python-coder
+estimated_complexity: L
+delivers_to: null
+expects_from:
+- ac_id: BO-4300a-1-ia
+  contract: Workflow bodies consume args.workspace or issue one verbatim dispatch.
+- ac_id: BO-4300a-1-ib
+  contract: Entry skills and the workspace skill run the maker and pass args.workspace.
+package_surface: false
+it_requirements:
+- 'Migrate the workflow bodies to the one maker in the migration plan''s recommended order (incident path
+  first): plan-feature.js (ensure --kind ac), fast-lane-ship.js (ensure --kind fastlane; drop its second
+  git verification and the claimed-path fallback), build-feature.js and build-ticket.js (locate then ensure
+  --kind epic|ticket), build-epic.js, quick-fix.js (ensure --kind feature; delete the two-location script
+  lookup), finalize-feature.js (scratch via BO-4300e-4; teardown via remove with up-front authorisation).'
+- 'COMPANION WORK (not this agent''s surface): the skill, command, agent-charter and workflow-text routes
+  -- build-single-ticket skill, feature skill, quick-fix skill, worktree-agent.md, templates/workflows/build-backlog.md
+  and close-worktree.md -- are llm-expert work under BO-4300a-1-ib and BO-4300f-2-ia. This AC''s proof
+  covers them by executing the command each publishes. BO-4300f-1 cannot be split: BO-4300f is at its
+  5-child cap.'
+- 'Proof: every route is run against a real temporary project with a real hub; for workflow routes the
+  harness''s shell-agent stand-in executes the verbatim maker command for real, so the workspace later
+  dispatches name is a real one; for the written-instruction route (how-to / CLAUDE.md) the published
+  command is executed. Each workspace must carry the maker''s marker agreeing with the answer.'
+- The neighbours' promises (BO-1500f, ACD-2100a, FIN-100g, BP-600f, BO-2400e) are unchanged; their existing
+  tests must stay green or be re-pointed at the maker, never deleted to pass.
+- 'Workflow bodies run in the E2 engine with no filesystem or process access (ADR-030). They reach the
+  maker only through (a) args.workspace -- the maker''s JSON object passed verbatim by the entry command
+  or skill (BO-4300a-1-ib) -- or (b) exactly one agent() dispatch, carrying a result schema, to an agent
+  whose registry entry has permits_shell: true, instructing it to run one exact absolute command unchanged
+  and return stdout verbatim. Never status-checker (permits_shell: false), never free-form set-up steps.'
+- Workflow edits are made in templates/workflows-js/*.js and reach .claude/workflows/ only through the
+  build; the deployed copy is what the tests run.
+- Proof runs the workflow under unit_tests/_workflow_engine_harness.py -- the deployed copy the build
+  produces, so the build's workflow transform is exercised -- with label-scripted agent replies, and asserts
+  on the RECORDED dispatch list, never on workflow source text. The harness must be able to model a workspace
+  step that declines its task, answers in prose, answers exit 0 with a non-JSON path, or answers JSON
+  without status (F13); extending the harness for this is in scope of the first AC that needs it.
+- 'Tests must not spawn the package''s own scripts/build.py (CLAUDE.md ''Tests must not spawn their own
+  build.py''): the deployed maker comes from the shared deployed layout, and fixture projects carry a
+  minimal stub build entry point that installs a real, rejecting hook in well under a second. A test that
+  must mutate the package and build its own copy says so and justifies it in its ticket.'
+- All temporary projects, hubs and workspaces live under the test's temp directory and run git with an
+  isolated global and system config; afterwards the developer's own repository's branches, registered
+  worktrees and local git config are unchanged (BO-4300f-4-i, F14, KI-TQ-012).
+test_required: true
+test_spec:
+- name: test_every_route_works_in_a_workspace_carrying_the_makers_marker
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: reachability
+  description: For each route (epic and single-ticket build, build-single-ticket skill, quick fix, requirements
+    authoring, fast lane, finalize comparison copy, backlog build, written instructions), the workspace
+    the route's later steps name holds a ready marker whose fields equal the maker's answer.
+- name: test_no_route_works_in_a_workspace_the_maker_did_not_make
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: failure
+  description: No route's later dispatches name a location lacking the maker's marker.
+test_rationale: The 2026-09-25 incident was a perfect-enough maker with a caller that carried on, and
+  every source grep of plan-feature.js would have passed. So the assertions are made on the recorded dispatch
+  list of a real workflow run with scripted hostile answers, which is the only place 'no later step was
+  dispatched' can be observed.
+origin_agent: business-analyst
+created: 2026-09-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Migration plan steps 2-7. The neighbours named in BO-4300's notes (BO-1500f, ACD-2100a,
+  FIN-100g, BP-600f, BO-2400e) each become a caller through this record; their own promises are
+  unchanged. The migration order (component first, incident path next, deletions last) is a
+  recommendation, not a criterion.

@@ -1,0 +1,87 @@
+id: BO-4300e-2-ii
+title: "A workspace with a program still running inside it is never left half-cleared"
+component: build-orchestration
+components:
+  - worktree_manager
+  - build_orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: critical
+roadmap_phase: phase_1
+change_target: code
+risk_surface: safety
+criteria: |
+  Given a workspace holding nothing unsent, in which a program started from the
+    workspace is still running and holding files open,
+  When the workspace is cleared,
+  Then either the program is stopped and no part of the workspace remains, or
+    the request is refused naming the program and the workspace is identical
+    before and after,
+  And the answer never states the workspace was cleared while any part of it
+    remains.
+depends_on: [BO-4300e-2]
+doc_links:
+- path: docs/analysis/2026-09-25-worktree-creation-consolidation.md
+  relationship: describes
+  status: exists
+- path: docs/analysis/2026-09-25-worktree-component-proposal.md
+  relationship: describes
+  status: exists
+- path: docs/architecture/components/worktree-manager.md
+  relationship: describes
+  status: exists
+  relevance: Component page for the one maker; rewritten for clones under BO-4300a-4.
+- path: docs/testing/test-angles.md
+  relationship: describes
+  status: exists
+  relevance: Angle taxonomy used by this record's test_spec.
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from:
+  ac_id: BO-4300e-2
+  contract: remove semantics.
+package_surface: false
+it_requirements:
+- Before deleting anything, find processes started from the workspace or holding files in it (reuse scripts/worktree/sweep_processes.py's
+  sweep, fixing its deploy path which matches neither layout); either stop them and then remove everything,
+  or refuse PROCESS_HOLDS_FILES naming them with the workspace untouched. No partial deletion is ever
+  reported as removed.
+- Proof runs the DEPLOYED maker -- the copy an install delivers, resolved through the shared test locator
+  delivered by BO-4300f-4 -- as a separate process against real temporary git repositories with a real
+  bare hub. No mock of git, no import of the maker module, no grep of its source (CLAUDE.md 'Gate / Workflow
+  ACs -- Verify Behaviorally, Not by Grep'); a test never falls back to the templates/ source copy.
+- All temporary projects, hubs and workspaces live under the test's temp directory and run git with an
+  isolated global and system config; afterwards the developer's own repository's branches, registered
+  worktrees and local git config are unchanged (BO-4300f-4-i, F14, KI-TQ-012).
+test_required: true
+test_spec:
+- name: test_workspace_with_running_program_is_removed_fully_or_refused_untouched
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: failure
+  description: With a child process holding a file open in the workspace, the result is either ok with
+    nothing left, or PROCESS_HOLDS_FILES naming the process with the workspace identical.
+- name: test_removed_is_never_claimed_while_any_part_remains
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: boundary
+  description: Whenever the answer is ok, the location does not exist.
+test_rationale: Every assertion is made on what the deployed maker actually did to real repositories --
+  its one JSON answer, its exit code, and the state of the workspace, the hub and the main copy afterwards.
+  A direct-import unit test would pass while the deployed copy is stale or mis-deployed (F13), and a git
+  mock cannot show the half-made and occupied states this family exists to handle.
+origin_agent: business-analyst
+created: 2026-09-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  The close-worktree sweep of leftover processes (a prefix that today matches neither layout).
+  The failure this prevents is a partial deletion reported as success.

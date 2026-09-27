@@ -1,0 +1,92 @@
+id: BO-4300c-1-i
+title: "A failed install inside the workspace is a refusal, never a warning"
+component: build-orchestration
+components:
+  - worktree_manager
+  - build_orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: critical
+roadmap_phase: phase_1
+change_target: code
+risk_surface: safety
+criteria: |
+  Given the build that installs the tools inside a new workspace fails after
+    producing part of its output,
+  When the workspace maker answers,
+  Then the answer is a refusal naming the failed install and quoting the build's
+    own failure message,
+  And the answer is not ready, even though the copy and its line of work exist.
+depends_on: [BO-4300c-1]
+doc_links:
+- path: docs/analysis/2026-09-25-worktree-failure-modes.md
+  relationship: describes
+  status: exists
+- path: docs/architecture/components/worktree-manager.md
+  relationship: describes
+  status: exists
+  relevance: Component page for the one maker; rewritten for clones under BO-4300a-4.
+- path: docs/testing/test-angles.md
+  relationship: describes
+  status: exists
+  relevance: Angle taxonomy used by this record's test_spec.
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: BO-4300c-1
+  contract: build_ok ingredient.
+package_surface: false
+it_requirements:
+- A non-zero build exit is an error answer BOOTSTRAP_FAILED (never a warning, F6) whose bootstrap.failure_excerpt
+  quotes the tail of the build's own stderr (bounded to 4 KB); the build's output goes to stderr, never
+  stdout.
+- Proof runs the DEPLOYED maker -- the copy an install delivers, resolved through the shared test locator
+  delivered by BO-4300f-4 -- as a separate process against real temporary git repositories with a real
+  bare hub. No mock of git, no import of the maker module, no grep of its source (CLAUDE.md 'Gate / Workflow
+  ACs -- Verify Behaviorally, Not by Grep'); a test never falls back to the templates/ source copy.
+- 'Tests must not spawn the package''s own scripts/build.py (CLAUDE.md ''Tests must not spawn their own
+  build.py''): the deployed maker comes from the shared deployed layout, and fixture projects carry a
+  minimal stub build entry point that installs a real, rejecting hook in well under a second. A test that
+  must mutate the package and build its own copy says so and justifies it in its ticket.'
+- All temporary projects, hubs and workspaces live under the test's temp directory and run git with an
+  isolated global and system config; afterwards the developer's own repository's branches, registered
+  worktrees and local git config are unchanged (BO-4300f-4-i, F14, KI-TQ-012).
+test_required: true
+test_spec:
+- name: test_partial_build_failure_is_an_error_naming_the_install
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: criterion
+  description: A stub build that writes part of its output then exits 1 gives status error, code BOOTSTRAP_FAILED,
+    exit 1.
+- name: test_failure_answer_quotes_the_builds_own_message
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: criterion
+  description: failure_excerpt contains the stub build's distinctive failure line.
+- name: test_answer_is_not_ok_although_clone_and_branch_exist
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: failure
+  description: The clone and its branch exist on disk, yet the answer has no workspace_path.
+test_rationale: Every assertion is made on what the deployed maker actually did to real repositories --
+  its one JSON answer, its exit code, and the state of the workspace, the hub and the main copy afterwards.
+  A direct-import unit test would pass while the deployed copy is stale or mis-deployed (F13), and a git
+  mock cannot show the half-made and occupied states this family exists to handle.
+origin_agent: business-analyst
+created: 2026-09-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  F6 and KI-BP-20260907-bootstrap-swallows-build-failure: the build failing inside set-up only
+  warned, a fast-lane workspace was missing build_orchestration/, and the run died four steps
+  later.

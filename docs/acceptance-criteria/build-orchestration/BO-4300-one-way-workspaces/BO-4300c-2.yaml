@@ -1,0 +1,192 @@
+id: BO-4300c-2
+title: "The maker's answer is one readable answer and nothing else"
+component: build-orchestration
+components:
+  - worktree_manager
+  - build_orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: critical
+roadmap_phase: phase_1
+change_target: code
+risk_surface: contract_boundary
+criteria: |
+  Given each of these outcomes -- ready; refused because the location is
+    occupied; refused because the shared project cannot be reached; refused
+    because the install failed -- and underlying tools that print their own
+    progress messages during the request, such as "HEAD is now at bc5d638 init",
+  When the channel that carries the workspace maker's answer is read,
+  Then it holds exactly one answer and nothing else, in every one of the four
+    outcomes,
+  And the answer always states whether the result is ready or refused,
+  And the underlying tools' own messages are available separately and never
+    appear in the answer,
+  And the way the maker's run ends signals the same outcome that the answer
+    states.
+depends_on: [BO-4300c]
+doc_links:
+- path: docs/analysis/2026-09-25-worktree-failure-modes.md
+  relationship: describes
+  status: exists
+- path: docs/analysis/2026-09-25-worktree-component-proposal.md
+  relationship: describes
+  status: exists
+- path: docs/architecture/components/worktree-manager.md
+  relationship: describes
+  status: exists
+  relevance: Component page for the one maker; rewritten for clones under BO-4300a-4.
+- path: docs/reference/workspace-maker-answer.md
+  relationship: describes
+  status: planned
+  relevance: Reference for the answer contract (authored under BO-4300a-5).
+- path: docs/architecture/adrs/ADR-030-dual-engine-workflow-support.md
+  relationship: constrains
+  status: exists
+  relevance: E2 workflow bodies have no filesystem or process access; agent() schema validation.
+- path: docs/testing/test-angles.md
+  relationship: describes
+  status: exists
+  relevance: Angle taxonomy used by this record's test_spec.
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to:
+- agent: python-coder
+  contract: 'Result contract. stdout carries exactly one JSON object for every verb and outcome; all child-process
+    output (git, package installers, the build) goes to stderr. Exit 0 = status ok, 2 = refused, 1 = error,
+    64 = usage error (still one JSON object: status error, code USAGE). Common fields: schema_version
+    (int), status (''ok''|''refused''|''error''), code (OK | NOT_FOUND | INCOMPLETE | OCCUPIED | OCCUPIED_LEGACY_WORKTREE
+    | IN_PROGRESS | NO_REPO | AMBIGUOUS_REPO | NO_HUB | FETCH_FAILED | GIT_FAILED | NO_CONFIG | BOOTSTRAP_FAILED
+    | BOOTSTRAP_DIRTIED_TRACKED | WORK_AT_RISK | HOOKS_INACTIVE | VERIFY_FAILED | UNSENT_WORK | PROCESS_HOLDS_FILES
+    | ON_PROTECTED_BRANCH | TICKET_NOT_ON_BASE | USAGE | INTERNAL_ERROR), message (one sentence naming the cause), verb, repo_root
+    and repo_root_posix, layout (''dev''|''consumer''), mechanism (''clone''), hub (the main checkout''s
+    origin URL). ensure/locate/verify ok answers add: kind, slug, branch (null for scratch), workspace_path
+    (absolute, native spelling), workspace_path_posix, worktree_path (alias, always equal to workspace_path),
+    base_ref (''origin/main''), base_commit (sha read back from the workspace), origin_main_commit (sha
+    of origin/main at the fetch), base_matches_origin_main (bool), fetch (''ok''|''failed''|''skipped''),
+    workspace_action (''created''|''re-readied''|''completed''|''located''), line_of_work (''new''|''resumed''|''existing''),
+    created (bool), bootstrap {build_ok: bool, config_path: str, restored_tracked: [repo-relative path],
+    env_copied: [name], failure_excerpt: str|null}, hooks_stages_declared [stage], checks {is_independent_repo,
+    not_main_checkout, same_project, branch_matches, not_protected_branch, base_is_fresh, build_ok, tree_clean,
+    precommit_config_present, hooks_pre_commit_fired, hooks_commit_msg_fired, hooks_post_merge_fired, hooks_canary_rejected
+    (the conjunction of the three stage checks)}, each true|false|''n/a''. ''n/a'' rule for the stage checks:
+    kind scratch -> all three and the conjunction are ''n/a''; any other kind -> hooks_pre_commit_fired is
+    never ''n/a'', and the commit-msg / post-merge checks are ''n/a'' only when the project does not declare
+    that stage. An ensure/locate/verify ok answer to a request that named a ticket (--ticket) adds ticket_path_in_worktree
+    (absolute, native spelling, inside workspace_path, verified to exist when the answer is emitted) and
+    ticket_path_in_worktree_posix; both are ABSENT on every other answer. ticket_path_final and ticket_path_new
+    are never emitted. On EVERY non-ok answer workspace_path, workspace_path_posix
+    and worktree_path are ABSENT (not blank, not null); diagnostic paths travel under different names:
+    inactive_stages [stage] (HOOKS_INACTIVE), ticket_path (the path as requested) and reason ''absent''|''differs''
+    (TICKET_NOT_ON_BASE, status refused, exit 2), candidates [path] (AMBIGUOUS_REPO), searched_from (NO_REPO), occupant {path, kind: ''other-line''|''other-project''|''plain-folder''|''legacy-worktree'',
+    branch|null} (OCCUPIED*), remnant_path (INCOMPLETE), unsent {commits: [sha], files: [path]} (UNSENT_WORK,
+    WORK_AT_RISK), holders [{pid, name}] (PROCESS_HOLDS_FILES). remove ok adds removed_path and discarded
+    {commits: [sha], files: [path]}. list ok adds workspaces [{kind, slug, branch, workspace_path, workspace_path_posix,
+    state: ''ready''|''incomplete''}]. Callers treat refused and error identically: halt.'
+- agent: llm-expert
+  contract: Skills relay the maker's stdout verbatim and stop on a non-zero exit; they never summarise
+    or re-derive fields.
+- agent: documentation-expert
+  contract: Field and code list for docs/reference/workspace-maker-answer.md (BO-4300a-5).
+expects_from:
+  ac_id: BO-4300a-1
+  contract: The maker's verbs (CLI) whose answers this contract governs.
+package_surface: false
+it_requirements:
+- 'stdout is reserved for the one answer: every child process (git, submodule, package installers, the
+  build) runs with its stdout and stderr captured and forwarded to the maker''s stderr; the answer is
+  a single JSON object (UTF-8, no BOM, one trailing newline allowed).'
+- Exit code always matches status (0 ok, 2 refused, 1 error, 64 usage); a usage error and an internal
+  exception still produce one JSON object.
+- The contract is versioned by schema_version; adding a field is compatible, renaming or removing one
+  bumps it. workspace_path is the canonical key; worktree_path is kept as an alias for existing callers.
+  The per-stage hook checks, hooks_stages_declared, inactive_stages and the two ticket fields are additions
+  (compatible); hooks_canary_rejected keeps its name and now means "every declared stage fired".
+- 'The ticket fields follow the same presence rule as workspace_path: present only on an ok answer, and
+  only when the request named a ticket; their value is never the path the caller passed in (BO-4300a-1-ii).'
+- This record is the single authoritative statement of the result contract. Other records that need it
+  (BO-4300a-5, callers' expects_from) point to it rather than restating it, so a field added here cannot
+  be missed in a copy.
+- The maker never reads stdin and never prompts; every decision it needs arrives as an argument of the
+  request, so an unattended caller can never stall on it.
+- Proof runs the DEPLOYED maker -- the copy an install delivers, resolved through the shared test locator
+  delivered by BO-4300f-4 -- as a separate process against real temporary git repositories with a real
+  bare hub. No mock of git, no import of the maker module, no grep of its source (CLAUDE.md 'Gate / Workflow
+  ACs -- Verify Behaviorally, Not by Grep'); a test never falls back to the templates/ source copy.
+- 'Tests must not spawn the package''s own scripts/build.py (CLAUDE.md ''Tests must not spawn their own
+  build.py''): the deployed maker comes from the shared deployed layout, and fixture projects carry a
+  minimal stub build entry point that installs a real, rejecting hook in well under a second. A test that
+  must mutate the package and build its own copy says so and justifies it in its ticket.'
+- All temporary projects, hubs and workspaces live under the test's temp directory and run git with an
+  isolated global and system config; afterwards the developer's own repository's branches, registered
+  worktrees and local git config are unchanged (BO-4300f-4-i, F14, KI-TQ-012).
+test_required: true
+test_spec:
+- name: test_stdout_holds_exactly_one_json_object_in_each_outcome
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: criterion
+  description: For ok, OCCUPIED, FETCH_FAILED (unreachable hub) and BOOTSTRAP_FAILED, stdout parses as
+    exactly one JSON object with nothing before or after.
+- name: test_every_answer_states_its_status
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: criterion
+  description: Each of the four answers has status in {ok, refused, error} and a code.
+- name: test_git_progress_messages_appear_on_stderr_not_stdout
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: seam
+  description: Git's own lines (e.g. 'HEAD is now at ...', 'set up to track') appear on stderr and never
+    in stdout.
+- name: test_exit_code_matches_stated_status
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: criterion
+  description: Exit code is 0/2/1 for ok/refused/error respectively in each outcome.
+- name: test_usage_error_still_emits_one_json_object
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: boundary
+  description: An unknown verb exits 64 with one JSON object (status error, code USAGE).
+test_rationale: Every assertion is made on what the deployed maker actually did to real repositories --
+  its one JSON answer, its exit code, and the state of the workspace, the hub and the main copy afterwards.
+  A direct-import unit test would pass while the deployed copy is stale or mis-deployed (F13), and a git
+  mock cannot show the half-made and occupied states this family exists to handle. F4 was invisible because
+  no test asserted stdout was exactly one object; this record's tests assert that and nothing weaker.
+origin_agent: business-analyst
+created: 2026-09-25
+amended_by:
+- reason: duplication-audit-items-2-5
+  by: it-po
+  at: 2026-09-25
+  note: >-
+    Technical fields only; criteria unchanged. Result contract gains ticket_path_in_worktree and
+    ticket_path_in_worktree_posix (ok-only, verified to exist), per-stage hook checks with
+    hooks_canary_rejected as their conjunction, hooks_stages_declared, inactive_stages on
+    HOOKS_INACTIVE, the written-down 'n/a' rule, and TICKET_NOT_ON_BASE marked as proposed pending the
+    user's decision. Recorded that this is the one authoritative copy of the contract. readiness reset
+    to reviewed.
+- reason: audit-decisions-finalised
+  by: it-po
+  at: 2026-09-27
+  note: >-
+    Technical fields only; criteria unchanged. The user accepted the unpushed-ticket handling
+    (2026-09-27): TICKET_NOT_ON_BASE is now a decided refusal code in the contract's code list (the
+    "PROPOSED" marker is removed), carrying ticket_path and reason 'absent'|'differs'. readiness
+    stays reviewed.
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  F4: a sandbox run of create-ac-worktree printed git's own tracking and HEAD messages before
+  the JSON, and set-up let package installers and the build write to the same channel. Whether
+  a caller could parse the result then depended on an assistant picking the right line. Field
+  names and exit codes are IT PO's to fix (the proposal's section 5.3 is a starting point).

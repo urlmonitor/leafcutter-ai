@@ -1,0 +1,92 @@
+id: BO-4300f-3-ii
+title: "Until the cut-over completes, automatic housekeeping cannot prune the shared history"
+component: build-orchestration
+components:
+  - worktree_manager
+  - build_orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: critical
+roadmap_phase: phase_1
+change_target: pipeline
+risk_surface: safety
+criteria: |
+  Given old-style workspaces still share the main copy's version history,
+  When enough commits are made in the main copy that version control's automatic
+    housekeeping would otherwise start,
+  Then that housekeeping does not run until the cut-over has retired or brought
+    over the last old-style workspace,
+  And every commit each old-style workspace refers to is still readable afterwards.
+depends_on: [BO-4300f-3]
+doc_links:
+- path: docs/analysis/2026-09-25-worktree-isolation-decision-memo.md
+  relationship: constrains
+  status: exists
+- path: docs/architecture/adrs/ADR-018-agent-isolation-topology.md
+  relationship: describes
+  status: exists
+- path: docs/architecture/components/worktree-manager.md
+  relationship: describes
+  status: exists
+  relevance: Component page for the one maker; rewritten for clones under BO-4300a-4.
+- path: docs/testing/test-angles.md
+  relationship: describes
+  status: exists
+  relevance: Angle taxonomy used by this record's test_spec.
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from:
+  ac_id: BO-4300f-3
+  contract: Cut-over lifecycle (legacy workspaces remaining vs none).
+package_surface: false
+it_requirements:
+- The cut-over sets gc.auto 0 and maintenance.auto false on the main checkout while any legacy workspace
+  remains (ADR-018 migration step 2, never applied), records the previous values, and restores them only
+  after the last legacy workspace is retired or brought over.
+- Proof triggers git's automatic housekeeping for real (enough loose objects past a lowered threshold)
+  and checks every commit each legacy workspace refers to with `git cat-file -e`.
+- Proof runs the DEPLOYED maker -- the copy an install delivers, resolved through the shared test locator
+  delivered by BO-4300f-4 -- as a separate process against real temporary git repositories with a real
+  bare hub. No mock of git, no import of the maker module, no grep of its source (CLAUDE.md 'Gate / Workflow
+  ACs -- Verify Behaviorally, Not by Grep'); a test never falls back to the templates/ source copy.
+- All temporary projects, hubs and workspaces live under the test's temp directory and run git with an
+  isolated global and system config; afterwards the developer's own repository's branches, registered
+  worktrees and local git config are unchanged (BO-4300f-4-i, F14, KI-TQ-012).
+test_required: true
+test_spec:
+- name: test_automatic_housekeeping_does_not_run_while_legacy_workspaces_remain
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: failure
+  description: After commits that would trigger gc --auto, the loose-object count and pack set are unchanged.
+- name: test_every_commit_referenced_by_legacy_workspaces_stays_readable
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: criterion
+  description: cat-file -e succeeds for every such commit afterwards.
+- name: test_previous_housekeeping_settings_restored_after_last_legacy_retired
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: boundary
+  description: Once no legacy workspace remains, gc.auto and maintenance.auto have their recorded previous
+    values.
+test_rationale: Every assertion is made on what the deployed maker actually did to real repositories --
+  its one JSON answer, its exit code, and the state of the workspace, the hub and the main copy afterwards.
+  A direct-import unit test would pass while the deployed copy is stale or mis-deployed (F13), and a git
+  mock cannot show the half-made and occupied states this family exists to handle.
+origin_agent: business-analyst
+created: 2026-09-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  ADR-018 migration step 2 (gc.auto=0) was never applied; .git/lost-found already holds 81
+  objects including 18 commits from an fsck recovery on this host (decision memo).
