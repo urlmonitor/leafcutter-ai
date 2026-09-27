@@ -343,9 +343,9 @@ cannot be told from theirs when you pop it back (BP-600c-3-ii).
   git -C "<WORKTREE_ROOT>" stash list
   git -C "<WORKTREE_ROOT>" stash pop "stash@{<index-of-your-labelled-entry>}"
 
-Option B — commit in two steps:
-  git -C "<WORKTREE_ROOT>" add <target_file>
-  git -C "<WORKTREE_ROOT>" commit -m "wip: save work before quick-fix"
+Option B — commit it through the commit agent (a raw commit is blocked by the
+enforce_commit_delegation hook, whichever git spelling is used):
+  /commit <target_file> in <WORKTREE_ROOT> with message "wip: save work before quick-fix"
 
 Then re-run /quick-fix with the same diagnosis.
 ```
@@ -1125,9 +1125,10 @@ Preserved artefacts (in <WORKTREE_ROOT>):
   Branch:       <ACTIVE_BRANCH>
 
 Next steps:
-  1. Stage and commit the AC YAML(s) and test file if not already committed:
-       git -C "<WORKTREE_ROOT>" add <parent AC YAML path> <child AC YAML path> <TEST_FILE>
-       git -C "<WORKTREE_ROOT>" commit -m "chore: stage quick-fix artefacts for escalated fix (<AC-ID>)"
+  1. Commit the AC YAML(s) and test file if not already committed, through the
+     commit agent (a raw commit is blocked by the enforce_commit_delegation hook):
+       /commit <parent AC YAML path> <child AC YAML path> <TEST_FILE> in <WORKTREE_ROOT>
+       with message "chore: stage quick-fix artefacts for escalated fix (<AC-ID>)"
 
   2. Create a ticket referencing the AC:
        /create-ticket
