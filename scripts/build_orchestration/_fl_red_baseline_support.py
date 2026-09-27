@@ -30,7 +30,7 @@ ARCHITECTURE: verify_red_baseline itself (and the ``_run_pytest_and_parse``
     refused as red evidence when its only red is an absence red (an
     import/name/attribute lookup error raised before any code under test
     ran, classified from the SAME single pytest run's own output via
-    ``_done_proof_kind_support._run_pytest_and_parse_with_kind`` — never
+    ``done_proof_kind_support._run_pytest_and_parse_with_kind`` — never
     from a self-reported label). This is opt-in: ``verify_red_baseline``
     only calls these helpers when its caller supplies ``ac_root``, so a
     caller that omits it gets byte-identical behaviour to before this AC.
@@ -577,7 +577,7 @@ def _refuse_absence_only_declared_reds(
         red: Newly-added tests already classified red by
             :func:`_classify_newly_added`.
         kind_by_nodeid: ``{nodeid: "absence" | "assertion"}`` from
-            ``_done_proof_kind_support._run_pytest_and_parse_with_kind``.
+            ``done_proof_kind_support._run_pytest_and_parse_with_kind``.
         declared_names: Test function names declaring a discrimination guard,
             from :func:`_load_declared_test_names`.
 

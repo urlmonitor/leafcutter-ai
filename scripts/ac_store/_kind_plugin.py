@@ -28,7 +28,7 @@ BUSINESS CONTEXT: The classifier used to scrape ``E   <ExceptionType>:``
     collection-time error (e.g. a module-level ``ImportError``) -- for the
     latter, *node* is the Module collector, so its recorded key names the
     MODULE (every test in that file failed to even collect); the reader
-    (``_done_proof_kind_support._load_kind_map``) falls back to this
+    (``done_proof_kind_support._load_kind_map``) falls back to this
     module-level entry for any individual test nodeid it has no direct entry
     for.
 
@@ -47,10 +47,10 @@ BUSINESS CONTEXT: The classifier used to scrape ``E   <ExceptionType>:``
 ARCHITECTURE: Standalone -- imports nothing from this package's other
     modules, so it stays importable via ``-p _kind_plugin`` in a fresh pytest
     subprocess whose PYTHONPATH is set to just this directory (see
-    ``_done_proof_kind_support._run_pytest_and_parse_with_kind``), without
+    ``done_proof_kind_support._run_pytest_and_parse_with_kind``), without
     dragging in done_proof.py's own heavier import chain. The output-path
     env var name is a small literal duplicated (not imported) from
-    ``_done_proof_kind_support.py`` for exactly this reason.
+    ``done_proof_kind_support.py`` for exactly this reason.
 
     Deployment: scripts/ac_store/ is deployed via a HARDCODED list
     (AC_STORE_DEPLOY_MAP in scripts/build_phases_ac_store.py). This module is
@@ -66,7 +66,7 @@ import os
 from pathlib import Path
 from typing import Any
 
-# Duplicated literal (not imported) from _done_proof_kind_support.py -- see
+# Duplicated literal (not imported) from done_proof_kind_support.py -- see
 # this module's own ARCHITECTURE note for why.
 _KIND_OUTPUT_ENV_VAR = "LEAFCUTTER_KIND_PLUGIN_OUTPUT"
 
@@ -74,7 +74,7 @@ _KIND_OUTPUT_ENV_VAR = "LEAFCUTTER_KIND_PLUGIN_OUTPUT"
 def _full_identity(node: Any) -> str:
     """Build node's full identity: absolute POSIX file path [+ ``::`` chain].
 
-    Duplicated (not imported) from ``_done_proof_kind_support.py``'s own
+    Duplicated (not imported) from ``done_proof_kind_support.py``'s own
     ``_strip_params_suffix`` shape -- see this module's ARCHITECTURE note.
 
     Args:
@@ -151,7 +151,7 @@ def pytest_sessionfinish(session: Any, exitstatus: int) -> None:  # noqa: ARG001
 # ====================================================================
 # - 2026-09-27 [python-coder/TQ-500f-3-i H-1]: New standalone pytest plugin.
 #   Replaces the positional "E   <Type>:" text-scraping approach
-#   (_pair_failure_kinds_with_nodeids, removed from _done_proof_kind_support.py)
+#   (_pair_failure_kinds_with_nodeids, removed from done_proof_kind_support.py)
 #   with a direct read of pytest's own exception-info object via the
 #   pytest_exception_interact hook -- immune to bare asserts (no colon line)
 #   and chained exceptions (multiple colon lines) corrupting a positional zip.

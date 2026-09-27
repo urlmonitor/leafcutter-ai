@@ -94,12 +94,19 @@ from scan_ac_store import (  # noqa: E402
 )
 from ac_parent_id import derive_parent_id  # noqa: E402
 
-# TQ-500f-3-i: _done_proof_kind_support.py is a sibling of done_proof.py
+# TQ-500f-3-i: done_proof_kind_support.py is a sibling of done_proof.py
 # under scripts/ac_store/ (already on sys.path via _AC_STORE_DIR above), not
 # a member of scripts/build_orchestration/ itself -- it stayed OUT of
 # done_proof.py because that file already sits over the file-size ratchet's
 # limit (see that module's own ARCHITECTURE note for the full rationale).
-from _done_proof_kind_support import _run_pytest_and_parse_with_kind  # noqa: E402
+# BP-900h-4: imported WITHOUT a leading underscore, like done_proof and
+# scan_ac_store above -- a leading-underscore bare import reads to
+# scripts/ci/check_declaring_files.py's inspector as "a same-directory
+# sibling this file cannot run without" (correct for every _fl_* sibling
+# import elsewhere in this file), which is wrong for a module that lives in
+# a DIFFERENT deployed directory reached via this same sys.path wiring; see
+# done_proof_kind_support.py's own NAMING note.
+from done_proof_kind_support import _run_pytest_and_parse_with_kind  # noqa: E402
 
 _LOG = logging.getLogger("fast_lane")
 
