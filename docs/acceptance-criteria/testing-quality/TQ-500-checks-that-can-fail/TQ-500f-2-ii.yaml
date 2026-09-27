@@ -12,13 +12,15 @@ readiness: approved
 priority: high
 roadmap_phase: phase_1
 criteria: |
-  Given the technical enricher (IT-PO) enriches three requirements in one pass —
+  Given the code-aware test-design step (the test designer that reads the code
+      and existing tests before the build) designs the tests for three
+      requirements in one pass —
       R1, a bug fix: "a database outage no longer causes a retry storm; the
         refresh runs only when a refresh is due and a retry is due",
       R2, a gate: "a trade is blocked unless both the window is open and the
         position limit is not reached",
       R3, new behaviour with no earlier version: "export the report as CSV",
-  When it authors each requirement's test plan,
+  When it writes each requirement's test design,
   Then R1's guarding test entry carries must_catch naming "revert the fix" and
       at least one specific wrong version that names the condition or input
       involved (for example "drop the retry_due condition"),
@@ -27,11 +29,13 @@ criteria: |
       position-limit condition") and "the gate always allows",
     And R3 is not required to carry must_catch; if it carries none, nothing
       reports that as a defect,
-    And whether a requirement is a bug fix or a gate is the enricher's own
-      stated judgement in its enrichment note, not the output of an automatic
-      classifier over the requirement's wording.
+    And whether a requirement is a bug fix or a gate is the test designer's
+      own stated judgement, recorded with the test design it writes, not the
+      output of an automatic classifier over the requirement's wording.
 depends_on:
   - TQ-500f-2
+  - ACD-2500c
+  - ACD-2500d-5
 doc_links:
   - path: templates/agents/it-po.md
     relationship: describes
@@ -73,13 +77,61 @@ test_rationale: 'Prompt-only: the deliverable is instruction text in templates/a
   clause.'
 origin_agent: business-analyst
 created: 2026-09-25
-amended_by: []
+amended_by:
+  - reason: "Retarget must_catch authoring from the technical planner (IT-PO) to the code-aware test designer (ACD-2500c / ACD-2500d-5); add ACD-2500c and ACD-2500d-5 to depends_on"
+    by: business-analyst
+    at: 2026-09-27
+    note: >-
+      User-approved fix for KI-ACD-20260927-tq-500f-2-ii-contradicts-acd-2500. The
+      Given/When clauses now name the code-aware test-design step instead of "the
+      technical enricher (IT-PO)", which declares no source access (ADR-009) and so
+      cannot name the condition or input a wrong version changes. R1/R2/R3 behaviour
+      and the declared-judgement-not-a-classifier clause are unchanged in substance,
+      now applied to the test designer. assigned_agent, doc_links, it_requirements
+      and test_rationale are IT-PO fields and still point at templates/agents/it-po.md;
+      they are left for the IT-PO stage (see notes).
 superseded_by: null
 covered_by: []
 implemented_by: []
 change_target: prompt
 risk_surface: contract_boundary
 notes: |
+  AMENDED 2026-09-27 (business-analyst) — OWNER MOVED TO THE TEST DESIGNER.
+  See docs/known-issues/ac-driven-dev/open-high-ki-acd-20260927-tq-500f-2-ii-contradicts-acd-2500.md.
+  must_catch names wrong versions by the condition or input they change; only a
+  step that has read the code can do that. The approved ACD-2500 tree moves test
+  design out of the technical planner (ACD-2500b) into a code-aware step
+  (ACD-2500c), carried by one new agent, working id test-designer (ACD-2500d-5).
+  This AC now targets that step.
+
+  FOR THE IT-PO STAGE (fields left untouched by this amendment, all stale):
+    - doc_links, it_requirements and test_rationale must move from
+      templates/agents/it-po.md to templates/agents/test-designer.md (created by
+      ACD-2500d-5; the test-design procedure is written into it by ACD-2500c-1).
+      it-po.md must gain NO must_catch text.
+    - it_requirements' wording "the enricher ... in its enrichment note" must be
+      restated for the test designer. Where the designer records its bug-fix /
+      gate declaration is open: ACD-2500c-3 keeps test_spec items closed
+      (unknown keys rejected), so either an existing field carries it or a schema
+      AC must add one first.
+    - ACD-2500c-1 and ACD-2500d-5 both say "the optional Opus sub-call for
+      must_catch is deferred until must_catch exists". must_catch now exists
+      (TQ-500f-2, PR #911); decide whether this AC takes that route (ADR-033 §2.3).
+    - expects_from should also name ACD-2500d-5 (the template this AC edits).
+
+  ORDERING — WHY THE DEPENDENCY SITS HERE AND NOT ON TQ-500. ACD-2500's notes
+  ask that "any L0 authored for that analysis should list ACD-2500 in
+  depends_on". Deliberately NOT done: the fast lane pulls every unmet
+  dependency into the build set, so an L0-level edge on TQ-500 would drag the
+  whole ACD-2500 tree into every unrelated TQ-500 build. The ordering is carried
+  at the one AC that actually needs the test designer: this one, via ACD-2500c
+  and ACD-2500d-5. Building this AC therefore pulls ACD-2500c's subtree and
+  ACD-2500d-5 into its build set; that is intended. ACD-2500c-1-i and
+  ACD-2500d-5-i are still readiness: reviewed (held on a declared-files schema
+  AC), so this AC is effectively blocked until they clear.
+
+  ORIGINAL NOTES (2026-09-25; "enricher" below now reads "test designer"):
+
   PROMPT-ONLY. This is an instruction to the enricher; no deterministic unit
   test can show that an LLM names good wrong versions. The observable output is
   the enriched requirement records themselves (an eval over R1/R2/R3 can check

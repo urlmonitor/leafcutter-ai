@@ -1,0 +1,120 @@
+id: TQ-500f-3-iii
+components:
+  - testing_quality
+  - ac_store
+  - build_orchestration
+title: "A covering tag is matched to the one test it sits on, so two tests sharing a name never lend each other their result"
+component: testing-quality
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given one test run whose results include four covering tests that share a
+    name with another covering test —
+      T1: unit_tests/ac_store/test_refresh.py, class TestRetryGate,
+          test_blocks_when_not_due, tagged as covering TQ-9001, fails,
+      T2: unit_tests/ac_store/test_refresh.py, class TestExportGate,
+          test_blocks_when_not_due, tagged as covering TQ-9002, passes,
+      T3: unit_tests/ac_store/test_config.py, test_loads_defaults, tagged as
+          covering TQ-9003, passes,
+      T4: unit_tests/build_orchestration/test_config.py, test_loads_defaults,
+          tagged as covering TQ-9004, fails,
+  When the proof-of-done check evaluates TQ-9001, TQ-9002, TQ-9003 and TQ-9004,
+    And the red-baseline check reads the same tags against the same run,
+  Then each tag is matched to the test at its full identity — its file path
+      within the test root, its class (when it has one) and its function name —
+      never by file name and function name alone,
+    And TQ-9001 is judged not eligible for done because T1 failed, and TQ-9002
+      is judged eligible because T2 passed, although T1 and T2 share a file and
+      a function name,
+    And TQ-9003 is judged eligible because T3 passed, and TQ-9004 is judged not
+      eligible because T4 failed, although T3 and T4 share a file name and a
+      function name,
+    And the red-baseline check attributes each of the four outcomes to the
+      same test the proof-of-done check did, and reports none of the four as
+      ambiguous,
+    And reversing the order in which the run reports the four tests changes
+      none of these verdicts,
+    And a parametrised covering test is still judged across all of its cases,
+      as ACS-200f-2 requires,
+    And a tag that still cannot be tied to exactly one test in the run's
+      results is never attributed to a guessed test: the red-baseline check
+      refuses it with the reason "ambiguous_test_identity" and the
+      proof-of-done check refuses the requirement it covers, naming the tag
+      and every candidate test.
+depends_on:
+  - TQ-500f-3
+  - TQ-500f-3-i
+  - ACS-200f-2
+doc_links:
+  - path: docs/acceptance-criteria/testing-quality/TQ-500-checks-that-can-fail/TQ-500f-3-i.yaml
+    relationship: relates-to
+    status: exists
+    relevance: "The red-baseline reader whose fail-closed 'ambiguous_test_identity' refusal (added by the TQ-500f-3 build) this AC keeps as the safety net while removing its common cause."
+  - path: docs/acceptance-criteria/ac-store/ACS-200-automated-verification/ACS-200f-2.yaml
+    relationship: relates-to
+    status: exists
+    relevance: "Prior fix to the same tag-to-test matching (parametrised cases). Its all-cases rule and its 'same-file matches beat name-only matches' ordering must survive this change."
+  - path: docs/architecture/diagrams/c3-done-proof-evaluation-sequence.md
+    relationship: describes
+    status: exists
+    relevance: "Shows the tag-to-test matching step (exact file+function match, then function-suffix fallback) that this AC replaces with full-identity matching."
+  - path: docs/how-to/fast-lane-build.md
+    relationship: describes
+    status: exists
+    relevance: "Step 3 — verify_red_baseline, the second consumer of the same matching."
+  - path: scripts/ac_store/done_proof.py
+    relationship: describes
+    status: exists
+    relevance: "Home of today's tag-to-test matching. Over the file-size ratchet: the fix must move code out, not add to it (see notes)."
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from:
+  - ac_id: TQ-500f-3-i
+    contract: "The red-baseline reader refuses, with the stable reason 'ambiguous_test_identity', a covering tag it cannot tie to exactly one test; this AC relies on that refusal remaining as the safety net."
+  - ac_id: ACS-200f-2
+    contract: "Tag-to-test matching considers every case of a parametrised test; any non-passing case makes the test non-passing."
+origin_agent: business-analyst
+created: 2026-09-27
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  THE REAL FIX BEHIND THE TQ-500f-3 SAFETY NET (user decision 2026-09-27: defer
+  to its own AC). The proof-of-done check matches a covering tag to a test run
+  result by (file name, bare function name). Two tests with the same function
+  name in two classes of one file, or in same-named files under different
+  package directories, collapse onto one result, so one test's outcome is used
+  as the other's — for proof-of-done and for the red-baseline reader, which
+  shares the matching. The TQ-500f-3 build only makes the reader FAIL CLOSED
+  ("ambiguous_test_identity") when that happens. This AC removes the cause.
+
+  THE SAFETY NET STAYS. After this AC, the "ambiguous_test_identity" refusal
+  should become rare, but it is kept: any tag that still cannot be tied to
+  exactly one test (last Then clause) is refused, never guessed. A fix that
+  removes the refusal because "full identity makes collisions impossible" has
+  broken this AC. If the TQ-500f-3 build lands without that refusal, this AC's
+  last clause owns it.
+
+  The TQ-9001..TQ-9004 ids and the test paths in the Given are fixture values,
+  not real records.
+
+  SIZE CONSTRAINT FOR THE IMPLEMENTER (user direction): scripts/ac_store/done_proof.py
+  is over the file-size ratchet (2,355 lines on origin/main at 86bd630f). This fix
+  must not make it grow; the matching has to move out into its own module (the one
+  the red-baseline reader then also uses), so the net line count of done_proof.py
+  goes down. IT-PO: carry this into it_requirements.
+
+  PLACEMENT. L3 under TQ-500f-3 (the absence/assertion red-baseline behaviour, whose
+  build surfaced the defect). TQ-500f is at its 6-L2 override and TQ-500 at its
+  7-L1 cap, so a new L2/L1 was not possible without raising a cap; L3s have no
+  child cap. ACS-200f (the proof-of-done gate, work_status done) was the other
+  candidate home; it was not reopened.
