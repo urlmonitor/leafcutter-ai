@@ -1,0 +1,75 @@
+id: ACD-1600c-4-ii
+components:
+  - ac_driven_dev
+  - ac_store
+readiness: draft
+priority: medium
+title: "A requirement without a declared-files list is in the named state 'no declared files', and its documentation links never stand in for one"
+component: ac-driven-dev
+level: L3
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_acbuild_1_foundation
+criteria: |
+  Given requirement L carries no declared-files list,
+    and L's documentation links name scripts/build.py as a file the work modifies
+    and docs/reference/ac-schema.md as describing the work,
+  And requirement E carries a declared-files list with no entries,
+  When the store is asked which files each one's work changes,
+  Then the answer for L is the state "no declared files", naming L, and contains no path,
+  And neither scripts/build.py nor docs/reference/ac-schema.md is reported as a file L's work
+    changes,
+  And a check that needs declared files lists L as "not evaluated: no declared files" and does
+    not count L as passed,
+  And L is accepted into the repository: having no list is a reported state, not a refusal,
+  And E is refused with a message naming E and stating that a requirement with no files to
+    declare leaves the list out rather than declaring it empty,
+  And the store-wide report of records in the "no declared files" state names every such record
+    and states their total.
+depends_on:
+  - ACD-1600c-4
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+  - path: docs/known-issues/ac-store/open-high-ki-acs-002.md
+    relationship: related
+    status: exists
+    relevance: >-
+      Why doc_links must not be promoted to declared files during the transition: the
+      derivation they would come from is the one this known issue shows to be wrong in both
+      directions.
+  - path: docs/architecture/adrs/ADR-026-ac-driven-build-v2-phased-migration.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: ACD-1600c-4
+  contract: "The declared-files answer, including the named state 'no declared files'."
+origin_agent: business-analyst
+created: 2026-09-27
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: schema
+risk_surface: contract_boundary
+notes: |
+  TRANSITION RULE. Every record written before this AC has no list. Treating its doc_links
+  as the list would carry KI-ACS-002's imprecision into the new field under a new name, so
+  the answer is a named, countable state instead. The phrase "not evaluated: no declared
+  files" is the one ACD-2500a-3 already uses for its record S; this AC makes it the store's
+  vocabulary rather than one check's. A record leaves the state only when someone declares
+  its files -- nothing back-fills them automatically.
+
+  HOW THE HELD ACD-2500 ACs ARE SATISFIED. ACD-2500a-3, ACD-2500c-1-i, ACD-2500d-1 and
+  ACD-2500d-5-i depend on ACD-1600c-4 (and ACD-2500a-3 also on this AC, for its record-S
+  clause). They can then read declared files and markers from the one answer, and report a
+  record in this state as not evaluated, never as passed.
+
+  EMPTY LIST IS REFUSED (BA decision, flagged to the user): work that changes no file is not
+  a buildable requirement, so an empty list carries no meaning distinct from an absent one
+  and would only create a second spelling of the same state.

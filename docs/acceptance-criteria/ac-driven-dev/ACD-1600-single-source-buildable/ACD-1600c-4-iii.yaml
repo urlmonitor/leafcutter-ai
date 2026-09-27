@@ -1,0 +1,66 @@
+id: ACD-1600c-4-iii
+components:
+  - ac_driven_dev
+  - ac_store
+readiness: draft
+priority: medium
+title: "A declared path outside the repository, or inside a copy the build regenerates, is refused"
+component: ac-driven-dev
+level: L3
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_acbuild_1_foundation
+criteria: |
+  Given requirement R declares five files:
+      /home/dev/repo/scripts/a.py,
+      ../other-repo/scripts/b.py,
+      scripts\ac_store\c.py,
+      .claude/agents/test-writer.md, a copy the build regenerates from templates/agents/test-writer.md,
+      templates/agents/test-writer.md,
+  When R is checked before it enters the repository,
+  Then R is refused with one message for each of the first four entries, each naming R and the
+    path as written,
+  And the message for /home/dev/repo/scripts/a.py and ../other-repo/scripts/b.py states that a
+    declared path must be relative to the repository root and stay inside it,
+  And the message for scripts\ac_store\c.py states that declared paths use forward slashes,
+  And the message for .claude/agents/test-writer.md states that it is a regenerated copy and
+    names templates/agents/test-writer.md as the file to declare instead,
+  And templates/agents/test-writer.md produces no message.
+depends_on:
+  - ACD-1600c-4
+doc_links:
+  - path: docs/known-issues/ac-store/open-high-ki-acs-002.md
+    relationship: related
+    status: exists
+    relevance: >-
+      The BP-1100g-1 occurrence: the deployed .claude/agents/test-writer.md was named as the
+      file to edit; the reachability test passed, the source under templates/ was untouched,
+      and the next build erased the work. A declared list must not be able to repeat that.
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: describes
+    status: exists
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: ACD-1600c-4
+  contract: "The record's declared-files list with paths exactly as declared."
+origin_agent: business-analyst
+created: 2026-09-27
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: schema
+risk_surface: contract_boundary
+notes: |
+  WHY. KI-ACS-002's sharpened fix direction: a path inside a build output is either an
+  assertion target or a mistake, and in neither case a file the work changes. Declaring
+  files by hand removes the doc_links guesswork but not this mistake, so the refusal moves
+  with the list. The regenerated-copy roots and their source mapping are whatever the build
+  defines; this AC does not enumerate them. Where a regenerated copy has no source the check
+  can name, the message still refuses and says so -- it does not guess a source.

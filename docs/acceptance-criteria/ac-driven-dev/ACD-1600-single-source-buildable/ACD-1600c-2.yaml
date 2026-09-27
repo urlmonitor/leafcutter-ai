@@ -11,12 +11,13 @@ req_status: draft
 work_status: todo
 roadmap_phase: phase_acbuild_1_foundation
 criteria: |
-  Given an AC that carries concrete file targets (it_requirements) and a test contract (a test_spec),
+  Given an AC whose declared-files list (ACD-1600c-4) names at least one file, and that carries a
+    test contract (a test_spec),
   When the implementation-readiness gate evaluates it,
   Then it is classified implementation-ready,
   And it is eligible for dispatch to its assigned builder,
   And no not-ready flag is raised against it.
-depends_on: [ACD-1600c, ACD-1600c-1]
+depends_on: [ACD-1600c, ACD-1600c-1, ACD-1600c-4]
 doc_links:
   - path: docs/reference/ac-schema.md
     relationship: describes
@@ -36,7 +37,11 @@ expects_from:
   contract: "The implementation-readiness completeness gate: a classifier over (file targets present, test contract present)."
 origin_agent: BrainCandy
 created: 2026-08-11
-amended_by: []
+amended_by:
+  - reason: "amend: 'concrete file targets' in the Given clause now means a declared-files list naming at least one file (ACD-1600c-4), matching ACD-1600c-1's re-keyed 'missing file targets'. depends_on gains ACD-1600c-4. The outcome is unchanged. it_requirements / test_spec still say 'it_requirements' and are left for the IT PO."
+    date: '2026-09-27'
+    by: business-analyst
+    directed_by: user
 superseded_by: null
 covered_by: []
 implemented_by: []

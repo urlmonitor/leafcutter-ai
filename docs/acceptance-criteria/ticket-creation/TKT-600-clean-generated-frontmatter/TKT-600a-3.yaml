@@ -1,0 +1,88 @@
+id: TKT-600a-3
+components:
+  - ticket_creation_pipeline
+  - ac_store
+title: "A ticket generated from a requirement that declares its files touches exactly those files, and reads the same list the checks read"
+component: ticket-creation
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given requirement R declares the files its work changes as:
+      scripts/ac_store/scan_ac_store.py, marked existing,
+      unit_tests/ac_store/test_hold_reasons.py, marked to be created,
+    and R's documentation links name templates/agents/it-po.md as a file the work modifies
+      and docs/reference/ac-schema.md as describing the work,
+    and one of R's technical-requirement bullets reads "Modify scripts/goal_to_epic.py to ...",
+  When a ticket is generated from R,
+  Then the ticket's files-touched list is exactly scripts/ac_store/scan_ac_store.py and
+    unit_tests/ac_store/test_hold_reasons.py, in the order R declares them,
+  And templates/agents/it-po.md, docs/reference/ac-schema.md and scripts/goal_to_epic.py are
+    not on it,
+  And the ticket states that unit_tests/ac_store/test_hold_reasons.py is a file the work
+    creates,
+  And the list is identical to the answer the store gives for R's declared files, which is the
+    answer the requirement rule check and the file-aware pre-pass read,
+  And the ticket readiness report names R's declared-files list as the source of each path.
+depends_on:
+  - TKT-600a
+  - ACD-1600c-4
+doc_links:
+  - path: docs/known-issues/ac-store/open-high-ki-acs-002.md
+    relationship: related
+    status: exists
+    relevance: >-
+      Closed by this AC for every record that declares its files: the generated surface stops
+      being a guess from doc_links and prose, and the readiness report stops passing a path
+      count. Records in the 'no declared files' state keep the old derivation, visibly marked
+      (TKT-600a-3-i), so the known issue stays open for them until their files are declared.
+  - path: docs/acceptance-criteria/ac-driven-dev/ACD-1600-single-source-buildable/ACD-1600c-4.yaml
+    relationship: related
+    status: exists
+  - path: docs/architecture/adrs/ADR-010-ac-store-as-authoritative-backlog.md
+    relationship: describes
+    status: exists
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from:
+  ac_id: ACD-1600c-4
+  contract: >-
+    Declared-files answer for one record: either the named state 'no declared files'
+    (ACD-1600c-4-ii) or the record's declared list, in declared order, each entry
+    {path: repo-root-relative POSIX string, state: 'exists' | 'to_be_created'} exactly as
+    declared. Never derived from doc_links.
+origin_agent: business-analyst
+created: 2026-09-27
+amended_by: []
+superseded_by: null
+covered_by:
+  - TKT-600a-3-i
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  ORIGIN (2026-09-27, user-directed, BA stage, answer to open question Q1 of the
+  declared-files run). Without this AC the checks (ACD-2500a-3, ACD-2500d-5-i) read the
+  declared list while the generated ticket reads the ADR-010 doc_links derivation -- two
+  answers to one question.
+
+  PLACEMENT. TKT-600a ("generate_ticket_from_ac emits accurate files_touched") owns the
+  generated surface and had 2 L2s. ACD-1600c is at its 5-L2 cap, and this is not a
+  constraint on ACD-1600c-4's own behaviour but a consumer of it, so it is not an L3 there.
+
+  RELATION TO TKT-600a-1 / TKT-600a-2 / TKT-500f-8-i. Their prose-harvest and doc_links rules
+  (including "a real source path named in a prose bullet is kept") now apply only to records
+  in the 'no declared files' state. For a record that declares its files, nothing is
+  harvested -- the declared list is the whole surface. This deliberately narrows where those
+  rules apply; it does not change them.
+
+  ADR-010 names doc_links -> files_touched as the derivation. This AC makes that the legacy
+  path; an ADR amendment may be warranted (flagged to the user).

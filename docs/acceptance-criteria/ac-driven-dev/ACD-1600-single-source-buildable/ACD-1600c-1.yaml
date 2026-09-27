@@ -13,7 +13,11 @@ roadmap_phase: phase_acbuild_1_foundation
 criteria: |
   Given an AC is a candidate to be released to a builder,
   When the implementation-readiness gate evaluates it,
-  Then an AC that lacks concrete file targets (it_requirements) is flagged NOT implementation-ready,
+  Then an AC in the "no declared files" state (ACD-1600c-4-ii) is flagged NOT
+    implementation-ready with the reason "missing file targets", even when its technical
+    requirements or documentation links name file paths,
+  And an AC whose declared-files list names at least one file is never flagged
+    "missing file targets", whatever its technical requirements say,
   And an AC that lacks a test contract (a test_spec) is flagged NOT implementation-ready,
   And a flagged AC is held back for enrichment instead of being dispatched to a coder,
   And the flag names which of the two is missing, as "missing file targets" and/or
@@ -22,7 +26,7 @@ criteria: |
     "test design pending", "reference file pending" and "file finding undecided"
     (owned by ACD-2500b-2), so a record held for one of those other reasons is reported
     under that reason's own name and is never folded into one of these two.
-depends_on: [ACD-1600c]
+depends_on: [ACD-1600c, ACD-1600c-4-ii]
 doc_links:
   - path: docs/reference/ac-schema.md
     relationship: describes
@@ -78,6 +82,10 @@ amended_by:
     date: '2026-09-25'
     by: it-po
     directed_by: user
+  - reason: "amend: 'missing file targets' is now keyed on the declared-files list -- raised for a record in the 'no declared files' state (ACD-1600c-4-ii), never raised for a record that declares at least one file -- instead of on it_requirements naming paths. Reason names and the single hold-reason list are unchanged. depends_on gains ACD-1600c-4-ii. Criteria edited in place; it_requirements and test_spec still describe the old keying and are left for the IT PO (see notes)."
+    date: '2026-09-27'
+    by: business-analyst
+    directed_by: user
 superseded_by: null
 covered_by:
   - ACD-1600c-1-i
@@ -96,3 +104,13 @@ notes: |
   owned by ACD-2500b-2. Build order: this AC may build first (it owns the two original
   reasons and creates the one list if absent); ACD-2500b-2 already depends_on this AC and
   extends the list. work_status stays todo (unchanged by the amendment).
+
+  AMENDMENT (2026-09-27, BA, user-directed): "missing file targets" now means the record is
+  in the "no declared files" state (ACD-1600c-4-ii). Paths named in it_requirements or
+  doc_links no longer satisfy it. work_status stays todo (nothing was built against the old
+  keying). PENDING IT PO: the it_requirements bullets "(it_requirements naming file paths)"
+  and "data-driven on field presence" and the test_spec descriptions of
+  test_ac_missing_file_targets_flagged_not_ready still describe the old keying. MIGRATION
+  CONSEQUENCE: no record written before ACD-1600c-4 has a declared list, so all of them carry
+  this reason until their files are declared. The existing advisory-first and grandfathering
+  requirement (ADR-026 rules 3-4) is what keeps that from stopping the store.

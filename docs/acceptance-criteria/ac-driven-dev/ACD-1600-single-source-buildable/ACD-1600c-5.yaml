@@ -1,0 +1,60 @@
+id: ACD-1600c-5
+components:
+  - ac_driven_dev
+  - ac_store
+readiness: draft
+priority: medium
+title: "Reference doc describes the declared-files list, its two markers, and the 'no declared files' state"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_acbuild_1_foundation
+criteria: |
+  Given a requirement can declare the files its work changes, each marked existing or to be
+    created,
+  When an author consults the reference documentation for the requirement record,
+  Then the documentation describes the declared-files list, the form of a declared path
+    (relative to the repository root, forward slashes, never a regenerated copy) and the two
+    markers,
+  And it states that this list is the only answer to which files a piece of work changes, and
+    that documentation links -- whatever relationship they carry -- are not part of that answer,
+  And it states which declared entries refuse a requirement (neither present nor marked to be
+    created; outside the repository; a regenerated copy; an empty list) and which are only
+    reported (marked to be created but already present, on unfinished work),
+  And it states that a requirement without a list is in the state "no declared files", that
+    checks report it as not evaluated rather than passed, and that nothing fills the list in
+    automatically,
+  And an author who has read only this documentation can declare the files for a requirement
+    that edits one existing file and creates one new file, and predict which of the two the
+    requirement rule check would report if the new file already existed.
+depends_on:
+  - ACD-1600c
+  - ACD-1600c-4
+  - ACD-1600c-4-i
+  - ACD-1600c-4-ii
+  - ACD-1600c-4-iii
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+assigned_agent: documentation-expert
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: ACD-1600c-4
+  contract: "The declared-files list, its markers, and the 'no declared files' state as built by ACD-1600c-4 and its three L3s."
+origin_agent: business-analyst
+created: 2026-09-27
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: docs
+risk_surface: internal
+notes: |
+  Produced for ACD-1600c's documentation_triggers: [reference-doc]. The existing reference-doc
+  AC ACD-1600c-3 covers the completeness gate and its hold reasons, not this field, and a prior
+  run's AC is not edited here. This L2 is ACD-1600c's fifth, which is the default cap: the
+  next child of ACD-1600c needs a split or an explicit override.

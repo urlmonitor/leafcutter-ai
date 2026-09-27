@@ -1,0 +1,72 @@
+id: TKT-600a-3-i
+components:
+  - ticket_creation_pipeline
+  - ac_store
+title: "A ticket generated from a requirement with no declared files says its files were derived, not declared, and generation leaves the hold to the readiness gate"
+component: ticket-creation
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given requirement L is in the "no declared files" state,
+    and L's documentation links name scripts/build.py as a file the work modifies
+    and docs/reference/ac-schema.md as describing the work,
+  When a ticket is generated from L,
+  Then the ticket's files-touched list is the one the existing derivation gives for L,
+    containing scripts/build.py and not docs/reference/ac-schema.md,
+  And the ticket states, next to that list, that its files were derived from documentation
+    links and technical requirements rather than declared, naming L,
+  And the ticket readiness report shows the surface as "derived, not declared" for L and does
+    not report it as passed,
+  And no derived path is described anywhere in the ticket or the report as a declared file,
+  And generation is not refused on this account; whether L is held back from builders is the
+    implementation-readiness gate's decision, which reports L with the reason
+    "missing file targets".
+depends_on:
+  - TKT-600a-3
+  - ACD-1600c-4-ii
+  - ACD-1600c-1
+doc_links:
+  - path: docs/known-issues/ac-store/open-high-ki-acs-002.md
+    relationship: related
+    status: exists
+    relevance: >-
+      The fix direction asks that a check which cannot judge correctness report INFO, not PASS,
+      and that provenance be reported per path honestly. That is what this AC requires for the
+      legacy path.
+  - path: docs/acceptance-criteria/ac-driven-dev/ACD-1600-single-source-buildable/ACD-1600c-4-ii.yaml
+    relationship: related
+    status: exists
+  - path: docs/architecture/adrs/ADR-026-ac-driven-build-v2-phased-migration.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: TKT-600a-3
+  contract: "Generator path that reads the declared-files answer; this AC covers the 'no declared files' branch of the same answer."
+origin_agent: business-analyst
+created: 2026-09-27
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  WHY THE FALLBACK STAYS, VISIBLY. Every record written before ACD-1600c-4 is in the
+  'no declared files' state. Refusing to generate for them would stop all existing work at
+  once; silently using the derivation would re-create KI-ACS-002 under a name that looks
+  fixed. So the old derivation keeps running for these records only, and is labelled as
+  derived everywhere it appears.
+
+  WHO HOLDS. The generator does not hold records -- one gate holds, and it is the
+  implementation-readiness gate (ACD-1600c-1, amended 2026-09-27 to key 'missing file
+  targets' on the 'no declared files' state). ACD-1600c-1 ships advisory first and
+  grandfathers older records (ADR-026 rules 3-4), so during the migration a legacy record
+  can still be built -- with the derived surface marked as such.

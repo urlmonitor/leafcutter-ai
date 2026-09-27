@@ -1,0 +1,93 @@
+id: ACD-1600c-4
+components:
+  - ac_driven_dev
+  - ac_store
+readiness: draft
+priority: medium
+title: "A requirement lists the files its work changes, each marked existing or to be created, and that list is the only answer to which files the work changes"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_acbuild_1_foundation
+criteria: |
+  Given requirement R declares the files its work changes as:
+      scripts/ac_store/scan_ac_store.py, marked existing,
+      unit_tests/ac_store/test_hold_reasons.py, marked to be created,
+    and R's documentation links name docs/reference/ac-schema.md as describing the work
+      and templates/agents/it-po.md as a file the work modifies,
+  When the store is asked which files R's work changes,
+  Then the answer is exactly scripts/ac_store/scan_ac_store.py (existing) and
+    unit_tests/ac_store/test_hold_reasons.py (to be created), in the order R declares them,
+  And neither documentation link is part of the answer, including the one whose link says
+    the work modifies templates/agents/it-po.md,
+  And adding a documentation link to R, or removing one, leaves the answer unchanged,
+  And this is the one answer the store gives to every step that asks which files a piece of
+    work changes -- the requirement rule check and the file-aware pre-pass included -- with no
+    second answer derived from documentation links.
+depends_on:
+  - ACD-1600c
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+  - path: docs/known-issues/ac-store/open-high-ki-acs-002.md
+    relationship: related
+    status: exists
+    relevance: >-
+      The defect this AC removes at its source: the file list is derived from doc_links, so a
+      link that only describes the work is counted as a file it changes, and the file the work
+      does change can be missing because its link is tagged 'describes'.
+  - path: docs/architecture/adrs/ADR-010-ac-store-as-authoritative-backlog.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-026-ac-driven-build-v2-phased-migration.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to:
+  agent: python-coder
+  contract: >-
+    Declared-files answer for one record: either the named state 'no declared files'
+    (ACD-1600c-4-ii) or the record's declared list, in declared order, each entry
+    {path: repo-root-relative POSIX string, state: 'exists' | 'to_be_created'} exactly as
+    declared. Never derived from doc_links. Read by the requirement rule check (ACD-2500a-3,
+    ACD-2500c-1-i) and the file-aware pre-pass (ACD-2500d-5-i, feeding ACD-2500d-1).
+expects_from: null
+origin_agent: business-analyst
+created: 2026-09-27
+amended_by: []
+superseded_by: null
+covered_by:
+  - ACD-1600c-4-i
+  - ACD-1600c-4-ii
+  - ACD-1600c-4-iii
+implemented_by: []
+change_target: schema
+risk_surface: contract_boundary
+notes: |
+  ORIGIN (2026-09-27, user-directed /plan-feature run, BA stage). Four ACD-2500 ACs
+  (ACD-2500a-3, ACD-2500c-1-i, ACD-2500d-1, ACD-2500d-5-i) were held at readiness: reviewed
+  at the final gate pending "a declared-files schema AC (AC-level list of files a piece of
+  work changes, with a to-be-created marker)". This is that AC; they now list it in depends_on.
+
+  PLACEMENT. Under ACD-1600c ("buildable means complete -- concrete files to change and a
+  test to satisfy") because this is the concrete-files half of that promise, made explicit
+  and declarable. No ac-store L1 is about the files a piece of work changes: ACS-100a and
+  ACS-100i are both at their overridden caps, and ACS-1500 is about the covered_by relation,
+  not files. ACD-1600g (the "what to leave alone" boundary) is the negative-space twin and
+  is at its 5-L2 cap; its notes call ACD-1600c the half that names the files to change.
+
+  CONSUMERS (same run, user-approved follow-ups): the ticket generator reads this list for
+  files_touched (TKT-600a-3; its fallback for the 'no declared files' state is TKT-600a-3-i),
+  and the readiness gate's "missing file targets" reason is keyed on it (ACD-1600c-1, -2 and
+  -3 amended 2026-09-27; hold-reason list note in ACD-2500b-2).
+
+  MIGRATION POSTURE (ADR-026): the list is optional; a record without one is in the named
+  state 'no declared files' (ACD-1600c-4-ii), never silently back-filled from doc_links.
+  Contract is expressed in behavioural terms here; the field name and schema shape are the
+  IT PO's to fix. The existing doc_links `status: planned` value is not a substitute for
+  the to-be-created marker: it describes documentation that is planned, not a file the work
+  creates.

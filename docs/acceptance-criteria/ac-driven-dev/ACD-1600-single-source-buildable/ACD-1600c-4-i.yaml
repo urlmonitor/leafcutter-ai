@@ -1,0 +1,62 @@
+id: ACD-1600c-4-i
+components:
+  - ac_driven_dev
+  - ac_store
+readiness: draft
+priority: medium
+title: "A declared file that neither exists nor is marked to be created is refused; one marked to be created that already exists is reported"
+component: ac-driven-dev
+level: L3
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_acbuild_1_foundation
+criteria: |
+  Given requirement R, whose work is not finished, declares four files:
+      scripts/ac_store/scan_ac_store.py, marked existing, and present in the repository,
+      scripts/ac_store/declared_files.py, marked to be created, and absent,
+      scripts/ac_store/nowhere.py, marked existing, and absent,
+      scripts/ac_store/done_proof.py, marked to be created, and present,
+  When R is checked before it enters the repository,
+  Then R is refused with exactly one refusal message, naming R and scripts/ac_store/nowhere.py
+    as neither present nor marked to be created,
+  And scripts/ac_store/done_proof.py is reported as "marked to be created but already exists",
+    naming R, without being a reason to refuse R,
+  And scripts/ac_store/scan_ac_store.py and scripts/ac_store/declared_files.py produce no message,
+  And once scripts/ac_store/nowhere.py is re-marked to be created, R is accepted and only the
+    scripts/ac_store/done_proof.py report remains,
+  And for a requirement whose work is finished, a file it marked to be created that now exists
+    is neither refused nor reported, because the finished work is what created it.
+depends_on:
+  - ACD-1600c-4
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-026-ac-driven-build-v2-phased-migration.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: ACD-1600c-4
+  contract: "The record's declared-files list with a per-entry existing / to-be-created marker."
+origin_agent: business-analyst
+created: 2026-09-27
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: schema
+risk_surface: contract_boundary
+notes: |
+  WHY THE ASYMMETRY. "Neither present nor marked" is a claim that cannot be true of any
+  repository state, so it refuses. "Marked to be created but present" is often a stale
+  marker or a name collision, but it can also be legitimate mid-build (the file was created
+  by the work in progress), so it is reported, not refused. Finished work is exempt from the
+  report entirely: the marker records intent at authoring time, and the work fulfilling it
+  must not turn every later commit touching the record into noise.
+
+  OPEN (for the user, see BA sign-off): a FINISHED requirement that declares an existing file
+  which has since been deleted by other work -- refuse, report, or ignore. Not specified here.
