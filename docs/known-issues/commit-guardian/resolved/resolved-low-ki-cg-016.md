@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: '2026-08-18'
-last_updated: '2026-08-18'
+last_updated: '2026-09-27'
 components:
   - commit_guardian
 related_docs:
@@ -16,12 +16,12 @@ related_docs:
 # KI-CG-016 — `enforce_commit_delegation` matches the phrase anywhere in the command string, so read-only commands that merely mention committing are blocked
 
 > One known issue, split out of `docs/known-issues/commit-guardian.md` on
-> 2026-09-14. Index: [commit-guardian.md](../commit-guardian.md).
+> 2026-09-14. Index: [commit-guardian.md](../../commit-guardian.md).
 > Filename severity is the three-level index bucket (`low`); the
 > original grading is the `**Severity:**` line below, unchanged.
 
 - **Severity:** low
-- **Status:** open — no AC
+- **Status:** **RESOLVED** (PR #915, merged as 6d7abd81; AC BP-1100d-3; verified 2026-09-27 by running the merged detector on both evidence commands above, which are no longer treated as commits).
 - **Occurrences:** 1
 - **First seen:** 2026-08-25 · **Last seen:** 2026-08-25
 - **Where:** the `enforce_commit_delegation` PreToolUse hook, matching against the whole Bash command string rather than the resolved program and its subcommand
@@ -68,3 +68,7 @@ that entry's own note. This is `KI-BO-024`'s id-collision shape again, resolved 
 rather than by any check.
 
 ---
+
+## Resolution (2026-09-27)
+
+The hook no longer matches the phrase in the raw command string; it parses the command and checks the git subcommand that actually runs, so a grep, echo or PR body that only quotes the phrase passes. Note: the change reaches a checkout's live hook only after `build.py` redeploys `.claude/hooks/`; until then the old matcher keeps blocking these reads (observed 2026-09-27).
