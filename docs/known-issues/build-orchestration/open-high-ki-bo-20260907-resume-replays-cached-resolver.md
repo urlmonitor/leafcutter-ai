@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: '2026-08-18'
-last_updated: '2026-08-18'
+last_updated: '2026-09-27'
 components:
   - build_orchestration
 related_docs:
@@ -22,8 +22,8 @@ related_docs:
 
 - **Severity:** high
 - **Status:** open — no AC
-- **Occurrences:** 1
-- **First seen:** 2026-09-07 · **Last seen:** 2026-09-07
+- **Occurrences:** 2 (fast-lane-ship 2026-09-07; finalize-feature 2026-09-25)
+- **First seen:** 2026-09-07 · **Last seen:** 2026-09-25
 - **Where:** this is a runtime/harness-behaviour defect (the Workflow tool's
   `resumeFromRunId` semantics), not a repo-file defect — evidenced by run ids
   (`wf_65c0de2c-f42`) rather than file:line, the way the register's existing fast-lane
@@ -81,5 +81,33 @@ leftovers; (b) alone still leaves resume silently useless for any environmental 
 **Pattern:** a documented recovery path (resume) that is structurally incapable of re-running
 the step whose result changed, paired with a fallback recovery path (fresh run) that a
 different piece of leftover state blocks — so neither path recovers alone.
+
+**Occurrence 2 — 2026-09-25, `finalize-feature.js` Step 2: a git-state step replayed after the state
+was fixed.** `/finalize-feature` of `feature/doc-index-posix-link-paths` (PR #892) halted at Step 2,
+because `git merge origin/main` conflicted. The conflict was resolved by hand, committed as
+`dbcc7014` ("Merge remote-tracking branch 'origin/main' into feature/doc-index-posix-link-paths"),
+and pushed. Resuming with `resumeFromRunId` halted again **in 559 ms with 0 tokens**, replaying the
+cached `{"status": "conflict"}`.
+
+The cause is the same as in the first occurrence, on a step whose result is even more obviously
+time-dependent. The Step 2 prompt (`templates/workflows-js/finalize-feature.js:993-1020`, label
+`step-2-merge-main`) is static text built from `WORKTREE_ROOT` alone, so the cache key is the same
+before and after the fix. That contradicts the file's own header, which says
+*"Resumability: each step probes observable state before dispatching. Re-running /finalize-feature
+after a mid-run crash resumes from the first incomplete step"* (`:24-25`). That is true for a fresh
+run, but false under `resumeFromRunId`, because the probe itself is the cached `agent()` call.
+Step 0's baseline (`:782`) is cached the same way, so a resumed run also keeps comparing against
+the original baseline SHA. See `KI-BO-20260927-finalize-triage-baseline-predates-merged-main`.
+
+**Workaround used:** a scratch copy of the script with one changed line in the Step 2 prompt,
+which busts the cache key for that step only while keeping the earlier cached steps.
+
+**Fix direction, addendum.** Any `agent()` step whose answer depends on git or filesystem state
+should put something that changes between attempts in its prompt. Every probe in the E2 engine
+is itself a cached `agent()` call, so the value has to come in from outside, for example an
+`args.attempt` counter or the expected HEAD SHA passed in by the caller. A new attempt then means
+a new cache key for the state-dependent steps.
+Alternatively, the halt message for a git-state halt should say plainly that resume will replay
+it, and name the fresh-run escape, as `KI-BO-20260914-a-cached-bad-path-makes-a-workflow-run-permanently-unresumable` proposes.
 
 ---

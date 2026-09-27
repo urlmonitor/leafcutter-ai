@@ -219,7 +219,7 @@ def test_bp_1500d_1_record_entries_name_artifacts_actually_present_in_the_receiv
     # deployed tree must actually be NAMED in the record.
     agents_dir = harness.target_root / ".claude" / "agents"
     deployed_agent_files = sorted(
-        str(p.relative_to(harness.target_root)) for p in agents_dir.glob("*.md")
+        p.relative_to(harness.target_root).as_posix() for p in agents_dir.glob("*.md")
     )
     assert deployed_agent_files, (
         f"expected at least one deployed agent file under {agents_dir} to "

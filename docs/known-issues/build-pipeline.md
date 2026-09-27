@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: 2026-08-18
-last_updated: '2026-09-25'
+last_updated: '2026-09-27'
 components:
   - build_pipeline
 related_docs:

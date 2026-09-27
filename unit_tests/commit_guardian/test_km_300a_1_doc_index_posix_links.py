@@ -156,7 +156,7 @@ def _extract_links(content: str) -> list[tuple[str, str]]:
 
 def _find_link_ending_with(
     links: list[tuple[str, str]], suffix_posix: str
-) -> tuple[str, str] | None:
+) -> tuple[str, str]:
     """Find the first (text, target) pair whose forward-slash-normalized
     link TEXT ends with *suffix_posix*, tolerating a backslash-flavoured text
     on the buggy code path. Matched on text because KM-300a-2 makes the
@@ -166,7 +166,7 @@ def _find_link_ending_with(
         normalized = text.replace(_BACKSLASH, "/")
         if normalized.endswith(suffix_posix):
             return (text, target)
-    return None
+    raise AssertionError(f"No link whose text ends with {suffix_posix!r}: {links}")
 
 
 class TestDocIndexPosixLinkPaths(unittest.TestCase):

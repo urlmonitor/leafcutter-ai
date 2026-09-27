@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: 2026-08-18
-last_updated: '2026-09-25'
+last_updated: '2026-09-27'
 components:
   - commit_guardian
 related_docs:
@@ -73,7 +73,7 @@ Severity in the **filename** is a three-level index bucket (`blocker` / `high` /
 
 Fixed issues move to [`commit-guardian/resolved/`](commit-guardian/resolved/) and are no longer listed as open. They are kept, not deleted.
 
-**Open: 70** (6 blocker, 26 high, 38 low) · **Resolved: 7**
+**Open: 73** (5 blocker, 29 high, 39 low) · **Resolved: 10**
 
 ## Open
 
@@ -149,6 +149,7 @@ Fixed issues move to [`commit-guardian/resolved/`](commit-guardian/resolved/) an
 | `low` | KI-CG-20260914-post-merge-stage-registers-but-installs-no-shim — a hook on the post-merge stage is registered, renders into the config, and still never fires in any checkout that did not create a ticket worktree | [open-low-ki-cg-20260914-post-merge-stage-registers-but-installs-no-shim.md](commit-guardian/open-low-ki-cg-20260914-post-merge-stage-registers-but-installs-no-shim.md) |
 | `low` | KI-CG-20260923-contract-shrinking-guard-rename-blind — `check-contract-shrinking` correlates deleted test names against added test names, so a renamed test reads as a deleted one | [open-low-ki-cg-20260923-contract-shrinking-guard-rename-blind.md](commit-guardian/open-low-ki-cg-20260923-contract-shrinking-guard-rename-blind.md) |
 | `low` | KI-CG-20260923-no-gate-validates-doc-to-doc-markdown-links — no hook resolves a markdown link between two docs; `check-doc-links` covers code-to-doc only, by design, so a doc split that leaves two dead links and an orphaned anchor passes every gate | [open-low-ki-cg-20260923-no-gate-validates-doc-to-doc-markdown-links.md](commit-guardian/open-low-ki-cg-20260923-no-gate-validates-doc-to-doc-markdown-links.md) |
+| `low` | KI-CG-20260927-subprocess-text-decode-uses-locale-codec-repo-wide — 212 subprocess calls under scripts/ and templates/scripts/ decode child output with text=True and no encoding, so on Windows UTF-8 git content is read as cp1252: mostly silent mojibake, sometimes a crash | [open-low-ki-cg-20260927-subprocess-text-decode-uses-locale-codec-repo-wide.md](commit-guardian/open-low-ki-cg-20260927-subprocess-text-decode-uses-locale-codec-repo-wide.md) |
 
 ## Resolved
 
