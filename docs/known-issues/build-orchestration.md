@@ -68,7 +68,7 @@ Severity in the **filename** is a three-level index bucket (`blocker` / `high` /
 
 Fixed issues move to [`build-orchestration/resolved/`](build-orchestration/resolved/) and are no longer listed as open. They are kept, not deleted.
 
-**Open: 54** (8 blocker, 26 high, 20 low) · **Resolved: 15**
+**Open: 55** (8 blocker, 27 high, 20 low) · **Resolved: 15**
 
 ## Open
 
@@ -110,6 +110,7 @@ Fixed issues move to [`build-orchestration/resolved/`](build-orchestration/resol
 | `high` | KI-BO-20260914-autofix-re-dispatch-is-specified-at-a-depth-that-cannot-execute — the commit agent is told to spawn the originating coder, and ADR-019 says that call is silently dropped | [open-high-ki-bo-20260914-autofix-re-dispatch-is-specified-at-a-depth-that-cannot-execute.md](build-orchestration/open-high-ki-bo-20260914-autofix-re-dispatch-is-specified-at-a-depth-that-cannot-execute.md) |
 | `high` | KI-BO-20260907-0804 — The epic planner omits only `done`, so a parked ticket is re-scheduled every run and halts the drive again | [open-high-ki-bo-20260907-0804.md](build-orchestration/open-high-ki-bo-20260907-0804.md) |
 | `high` | KI-BO-20260927-finalize-triage-baseline-predates-merged-main — finalize-feature compares post-merge failures against a baseline taken at an older main, never reruns to confirm, and ignores collection errors, so failures that are not the branch's block the merge as regressions | [open-high-ki-bo-20260927-finalize-triage-baseline-predates-merged-main.md](build-orchestration/open-high-ki-bo-20260927-finalize-triage-baseline-predates-merged-main.md) |
+| `high` | KI-BO-20260927-status-checker-runs-workflow-shell-commands — six workflows still send shell, git and script commands to status-checker, the agent registered as not permitted to run them | [open-high-ki-bo-20260927-status-checker-runs-workflow-shell-commands.md](build-orchestration/open-high-ki-bo-20260927-status-checker-runs-workflow-shell-commands.md) |
 | `low` | KI-BO-008 — A structural test makes code comments load-bearing | [open-low-ki-bo-008.md](build-orchestration/open-low-ki-bo-008.md) |
 | `low` | KI-BO-009 — The harness default stub is generically positive, so a new gate silently breaks older fixtures | [open-low-ki-bo-009.md](build-orchestration/open-low-ki-bo-009.md) |
 | `low` | KI-BO-021 — TODO: `BO-2400e-4` is closed on two of its four specified tests, and the two missing ones are the pair that would survive a writer swap | [open-low-ki-bo-021.md](build-orchestration/open-low-ki-bo-021.md) |

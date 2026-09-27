@@ -55,7 +55,7 @@ Severity in the **filename** is a three-level index bucket (`blocker` / `high` /
 
 Fixed issues move to [`testing-quality/resolved/`](testing-quality/resolved/) and are no longer listed as open. They are kept, not deleted.
 
-**Open: 22** (1 blocker, 12 high, 9 low) · **Resolved: 3**
+**Open: 23** (1 blocker, 13 high, 9 low) · **Resolved: 3**
 
 ## Open
 
@@ -74,6 +74,7 @@ Fixed issues move to [`testing-quality/resolved/`](testing-quality/resolved/) an
 | `high` | KI-TQ-20260907-agent-eval-gate-has-never-evaluated-an-agent — it fast-passes when nothing is affected and dies on a missing API key when something is | [open-high-ki-tq-20260907-agent-eval-gate-has-never-evaluated-an-agent.md](testing-quality/open-high-ki-tq-20260907-agent-eval-gate-has-never-evaluated-an-agent.md) |
 | `high` | KI-TQ-20260908-0900 — The agent-eval harness reports "the CLI could not be launched" as a 22% quality score, and the pre-commit gate built on it cannot be satisfied in any fresh worktree | [open-high-ki-tq-20260908-0900.md](testing-quality/open-high-ki-tq-20260908-0900.md) |
 | `high` | KI-TQ-20260914-1050 — the fast lane's green gate reports a pytest timeout as a list of failing test nodeids, so a budget overrun is indistinguishable from broken code — and the distinguishing machinery that exists for exactly this is discarded one layer below | [open-high-ki-tq-20260914-1050.md](testing-quality/open-high-ki-tq-20260914-1050.md) |
+| `high` | KI-TQ-20260927-windows-local-runs-disagree-with-linux-ci — a fixed set of tests fails on an unmodified Windows checkout and passes on Linux CI, so a local red run cannot tell a regression from the baseline | [open-high-ki-tq-20260927-windows-local-runs-disagree-with-linux-ci.md](testing-quality/open-high-ki-tq-20260927-windows-local-runs-disagree-with-linux-ci.md) |
 | `low` | KI-TQ-003 — The eval staleness gate asks you to stage a file that is gitignored | [open-low-ki-tq-003.md](testing-quality/open-low-ki-tq-003.md) |
 | `low` | KI-TQ-008 — A repository-global tree-purity guard false-positives under concurrent agents | [open-low-ki-tq-008.md](testing-quality/open-low-ki-tq-008.md) |
 | `low` | KI-TQ-009 — A test-local oracle that duplicated the production bug it was written to detect | [open-low-ki-tq-009.md](testing-quality/open-low-ki-tq-009.md) |
