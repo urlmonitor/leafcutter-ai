@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: '2026-08-18'
-last_updated: '2026-09-14'
+last_updated: '2026-09-27'
 components:
   - ac_driven_dev
 related_docs:
@@ -25,8 +25,8 @@ related_docs:
   sibling sites tracked separately since the 2026-08-31 partial fix, have themselves landed
   on repository-anchored resolution; see "Fix landed" below for both dates). All five records
   in this family (`ACD-2100a-1` through `-5`) are `work_status: done`.
-- **Occurrences:** 1
-- **First seen:** 2026-08-18 · **Last seen:** 2026-08-18
+- **Occurrences:** 2 (the 2026-09-25 recurrence ran a stale deployed build and is not a regression of the fix; see the end of this entry)
+- **First seen:** 2026-08-18 · **Last seen:** 2026-09-25
 - **Where:** `templates/workflows-js/plan-feature.js:1740` → `scripts/setup_ticket_worktree.py`
   `_git_toplevel()` / `_resolve_repository_with_search_fallback()`
 
@@ -210,5 +210,39 @@ Stage 0 before ever reaching the behaviour under test. `d4146f162` added each fi
 `_real_preflight_verdict()` helper, which runs the real on-disk pre-flight script and
 uses its actual output. The fix this entry describes finally has passing evidence
 behind it, rather than a green-looking gate that never exercised the code.
+
+**Recurrence 2026-09-25, on stale deployed builds, and this time the run kept going and wrote into
+the main checkout.** Windows 11, workspace-parent layout, session cwd
+`C:\Users\Hendrik\Code\leafcutter` (not a git repository). `/plan-feature`'s `worktree-setup`
+failed with exit 128, the symptom this entry describes. The run **did not halt**. The PO agent then
+wrote AC drafts (KM-300 L0 and L1, plus an `index.yaml` edit) into `leafcutter-ai` on branch
+`main`, the user's main checkout. That breaks the plan-feature skill's guarantee
+"No AC files are written to the user's main checkout" (`templates/skills/plan-feature/SKILL.md:567`).
+
+**Not a regression of the fixes above.** The workflow that ran was a deployed copy that predated
+PR #896 (see KI-BP-008 Occurrence 3 for how a stale copy got selected). Which stale code path
+produced the 128 was not traced. Both halves are handled in the current template:
+
+- **Fail-open.** Before #896 the bootstrap halted only on an explicit non-zero `exit_code`, and a
+  reply it could not parse, or one that named no `worktree_path`, fell through with
+  `authoringWorktreePath` null, so authoring ran in the caller's checkout. PR #896 (`06bfbddf`,
+  BO-1500a-5-i) halts on all four such reply shapes before any authoring agent runs
+  (`templates/workflows-js/plan-feature.js:2524-2579`, `buildSetupFailureResult`).
+- **Wrong-copy resolution.** The ACD-2100a-1 repo-anchored path (`:2478-2492`) is dispatched to
+  `worktree-agent` since #896, not to `status-checker`.
+
+**Correction to the "Known related gap" note above.** That note says the anchor-only sites "are
+not on `/plan-feature`'s startup path". `cmd_create_ac_worktree()` is: it is the
+`create-ac-worktree` subcommand that plan-feature's `worktree-setup` step runs, and it still calls
+bare `_git_toplevel()` (`templates/scripts/setup_ticket_worktree.py:1907`), while `create-only`
+uses the search fallback (`:1830`). With the current template this does not bite, because the
+script path handed to it is repo-anchored, so the copy that runs sits inside the repository. It
+does bite for any caller that runs the workspace-parent copy
+(`<workspace>/.leafcutter/scripts/setup_ticket_worktree.py`, present on this machine), which is
+exactly what a stale deployed workflow does. The gap is on the startup path, and it is not
+hardened. It still does not reopen this entry, because the startup symptom is fixed at the caller.
+
+Related: `KI-ACD-007` (product-truth artifacts written to the main checkout: the same consequence,
+from a different mechanism).
 
 ---

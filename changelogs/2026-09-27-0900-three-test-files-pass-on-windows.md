@@ -29,3 +29,22 @@ regressions that were not real.
 
 No product code changed. Each fix was checked by reverting it: the affected tests
 fail again without it.
+
+### Known issues filed from the same session
+
+Five new KIs are filed, and six existing ones gain a dated occurrence:
+
+- finalize-feature's triage baseline predates the merged `main`
+  (KI-BO-20260927-finalize-triage-baseline-predates-merged-main).
+- quick-fix accepts a gitignored build copy as its target, and cannot target an
+  existing leaf AC (two KI-BO-20260927 entries).
+- `subprocess.run(text=True)` decodes with the locale codec across the repo:
+  212 calls (KI-CG-20260927 sweep).
+- A bare full `pytest` run has 114 collection errors (KI-TQ-20260927).
+- New occurrences:
+  - KI-BO-20260901-1620 (status-checker handed shell work)
+  - KI-BO-20260907 (resume replays cached git-state steps)
+  - KI-BP-008 (deployed workflows have no freshness signal)
+  - KI-BP-20260910-1240 (Windows CRLF writers dirty every fresh worktree)
+  - KI-BO-20260826-1332 (concurrent duplicate work goes undetected)
+  - resolved KI-ACD-004 (a recurrence on a stale build)
