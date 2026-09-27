@@ -39,16 +39,16 @@ from __future__ import annotations
 
 import json
 import sys
-import tempfile
 import unittest
 from pathlib import Path
+from typing import ClassVar
 
 _THIS_DIR = Path(__file__).resolve().parent
 _REPO_ROOT = _THIS_DIR.parent.parent  # unit_tests/portability/ -> worktree root
 
 sys.path.insert(0, str(_THIS_DIR))
 
-import _deployed_check_harness as dch  # type: ignore[import]  # noqa: E402
+import _ge_120f_1_base as base  # type: ignore[import]  # noqa: E402
 import _ge_120f_1_fixtures as fx  # type: ignore[import]  # noqa: E402
 import _ge_120f_1_i_fixtures as fxi  # type: ignore[import]  # noqa: E402
 import _ge_120f_1_ii_fixtures as fxii  # type: ignore[import]  # noqa: E402
@@ -98,25 +98,21 @@ def _schema_violations(currently: dict, schema: dict) -> list[str]:
     return violations
 
 
-class TestGE120f1iiFailedInvocationAndSchemaShape(unittest.TestCase):
+class TestGE120f1iiFailedInvocationAndSchemaShape(base.GE120f1DeployedCopyTestCase):
     """Shared, expensive fixture: one real deployed-only working copy via the
     real scripts/build.py -- mirrors test_ge_120f_1_ii.py's own RUNTIME
-    BUDGET convention."""
+    BUDGET convention. setUpClass/tearDownClass live on the shared
+    `_ge_120f_1_base.GE120f1DeployedCopyTestCase`; this class overrides
+    setUpClass only to add its own extra `currently_schema` attribute (no
+    sibling class in this family needs it) after the shared base setup."""
+
+    fixtures_subdir = "_ge120f1iib_fixtures"
+    currently_schema: ClassVar[dict]
 
     @classmethod
     def setUpClass(cls) -> None:
-        cls._tmp = tempfile.TemporaryDirectory()
-        tmp_root = Path(cls._tmp.name)
-        cls.copy_dir = tmp_root / "copy"
-        cls.harness = dch.DeployedCheckHarness(repo_root=_REPO_ROOT)
-        cls.harness.create_second_copy(cls.copy_dir)
-        cls.deployed_cg_dir = cls.copy_dir / ".leafcutter" / "scripts" / "commit_guardian"
-        cls.fixtures_dir = cls.copy_dir / "_ge120f1iib_fixtures"
+        super().setUpClass()
         cls.currently_schema = _load_currently_schema()
-
-    @classmethod
-    def tearDownClass(cls) -> None:
-        cls._tmp.cleanup()
 
     # covers: GE-120f-1-ii
     def test_ge120f1ii_a_failed_acceptable_invocation_is_blocked_not_the_single_sided_verdict(

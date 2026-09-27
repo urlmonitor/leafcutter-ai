@@ -162,7 +162,6 @@ from __future__ import annotations
 import json
 import os
 import sys
-import tempfile
 import unittest
 from pathlib import Path
 
@@ -172,28 +171,19 @@ _REPO_ROOT = _THIS_DIR.parent.parent  # unit_tests/portability/ -> worktree root
 sys.path.insert(0, str(_THIS_DIR))
 
 import _deployed_check_harness as dch  # type: ignore[import]  # noqa: E402
+import _ge_120f_1_base as base  # type: ignore[import]  # noqa: E402
 import _ge_120f_1_fixtures as fx  # type: ignore[import]  # noqa: E402
 
 
-class TestGE120f1NegativeControlLiveness(unittest.TestCase):
+class TestGE120f1NegativeControlLiveness(base.GE120f1DeployedCopyTestCase):
     """Shared, expensive fixture: build ONE real deployed-only working copy
     via the real scripts/build.py ONCE for the whole class, per this AC's
     own RUNTIME BUDGET requirement ("Build the copy ONCE per sweep, never
-    once per check")."""
+    once per check"). setUpClass/tearDownClass live on the shared
+    `_ge_120f_1_base.GE120f1DeployedCopyTestCase` -- only the fixtures
+    subdirectory varies here."""
 
-    @classmethod
-    def setUpClass(cls) -> None:
-        cls._tmp = tempfile.TemporaryDirectory()
-        tmp_root = Path(cls._tmp.name)
-        cls.copy_dir = tmp_root / "copy"
-        cls.harness = dch.DeployedCheckHarness(repo_root=_REPO_ROOT)
-        cls.harness.create_second_copy(cls.copy_dir)
-        cls.deployed_cg_dir = cls.copy_dir / ".leafcutter" / "scripts" / "commit_guardian"
-        cls.fixtures_dir = cls.copy_dir / "_ge120f1_fixtures"
-
-    @classmethod
-    def tearDownClass(cls) -> None:
-        cls._tmp.cleanup()
+    fixtures_subdir = "_ge120f1_fixtures"
 
     # covers: GE-120f-1
     def test_ge120f1_record_moves_under_alter_and_revert_while_the_declaration_stays_byte_identical(
