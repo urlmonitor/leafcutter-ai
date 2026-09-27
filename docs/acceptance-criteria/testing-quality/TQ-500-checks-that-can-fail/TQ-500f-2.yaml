@@ -1,0 +1,164 @@
+id: TQ-500f-2
+components:
+  - testing_quality
+  - ac_store
+  - build_orchestration
+title: "A requirement names the wrong versions its test must catch, and the test writer receives them word for word"
+component: testing-quality
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a requirement whose test plan has two entries —
+      entry 1: name: test_retry_gate_runs_when_both_conditions_due
+               must_catch:
+                 - "revert the fix"
+                 - "drop the second gate condition (retry_due)"
+                 - "new column cvd_delta_30 left NULL"
+      entry 2: name: test_retry_gate_idle_when_nothing_due
+               (no must_catch)
+  When the requirement store's validator checks the requirement,
+    And work is generated from it,
+  Then the validator accepts the requirement,
+    And the generated work's test requirements entry for
+      test_retry_gate_runs_when_both_conditions_due carries must_catch with
+      exactly those three strings, in that order, character for character —
+      not reworded, not merged, not reordered, not trimmed,
+    And the generated work's test requirements entry for
+      test_retry_gate_idle_when_nothing_due carries no must_catch at all —
+      nothing is invented for an entry whose requirement named none,
+    And the generated test requirements, including the must_catch list,
+      conform to the schema that governs generated test requirements,
+    And the test writer, reading the generated work, sees the three named
+      wrong versions against the test they belong to.
+depends_on:
+  - TQ-500f
+doc_links:
+  - path: config/ac_store_schema.json
+    relationship: describes
+    status: exists
+    relevance: "test_spec[] item properties (additionalProperties: false) — gains the optional must_catch list."
+  - path: config/test_requirements.schema.json
+    relationship: describes
+    status: exists
+    relevance: "tests[] descriptor (additionalProperties: false) — must be widened to accept must_catch (user decision Q4), or the carried list makes generated work violate its own schema."
+  - path: docs/reference/ac-schema.md
+    relationship: relates-to
+    status: exists
+    relevance: "test_spec item field table and the copy-through coupling note on framework/type — the same coupling now applies to must_catch."
+  - path: templates/agents/test-writer.md
+    relationship: relates-to
+    status: exists
+    relevance: "The reader of the generated test requirements; the Bug-Fix Test Mandate is where named wrong versions become checkable."
+  - path: docs/analysis/2026-09-25-test-writers-prove-failure-not-discrimination.md
+    relationship: describes
+    status: exists
+    relevance: "Remedy item 2; the example strings come from incident 1 (PR #612) and incident 2 (cvd_delta_30)."
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to:
+  - agent: llm-expert
+    ac_id: TQ-500f-4
+    contract: 'Each generated test requirements entry may carry must_catch: a non-empty ordered
+      list of non-blank strings, copied verbatim from the AC''s test_spec item. The test writer
+      treats each string as a wrong version its test must go red under.'
+  - agent: python-coder
+    ac_id: TQ-500f-3-i
+    contract: test_spec[].must_catch in the AC record (list[str], minItems 1) is the declared
+      signal the red-baseline reader reads, matched to a test by test_spec[].name.
+expects_from:
+  ac_id: TQ-500f-1
+  contract: "The 'discrimination' kind is permitted on both sides, so an entry carrying must_catch can also declare angle: discrimination."
+it_requirements:
+  - 'must_catch must be added to BOTH config/ac_store_schema.json test_spec[] items and config/test_requirements.schema.json
+    tests[] entries with identical constraints: optional; an array with at least one item; each
+    item a string containing at least one non-whitespace character. Both schemas reject unknown
+    keys today, so a one-sided change produces tickets that violate their own schema (the same
+    copy-through coupling ac-schema.md documents for framework and type).'
+  - 'The generator''s authored-test_spec route must copy must_catch verbatim: same strings,
+    same order, no trimming, case change, dedupe, merge or reformatting. It must emit no must_catch
+    key on an entry whose test_spec item has none.'
+  - 'must_catch strings must survive a YAML round-trip in the ticket''s Test Requirements block:
+    strings containing '':'' or ''('' or quotes read back identical under yaml.safe_load.'
+  - The AC record is the single source of must_catch for both lanes. Tickets copy it; the fast-lane
+    test writer reads the AC directly. Nothing may derive must_catch from criteria text.
+  - 'Enforce on the gate that actually runs: the constraints must fire in validate_ac_schema.py
+    (the check-ac-schema commit gate) as well as in the JSON schema. Name both in the change.'
+  - 'Additive change: ACs and tickets without must_catch validate and generate byte-identically
+    to before.'
+test_spec:
+  - name: test_validator_cli_accepts_test_spec_with_must_catch
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: integration
+    angle: reachability
+    surface_invoked: scripts/ac_store/validate_ac_schema.py CLI (the check-ac-schema commit
+      gate)
+    description: The validator CLI accepts an on-disk AC with the two-entry test plan from the
+      Given (entry 1 with three must_catch strings, entry 2 without).
+  - name: test_generated_ticket_copies_must_catch_verbatim_in_order
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: A ticket generated by generate_ticket_from_ac.py from that AC carries must_catch
+      on test_retry_gate_runs_when_both_conditions_due equal to the three strings, in order,
+      character for character, when its Test Requirements block is read back with yaml.safe_load.
+  - name: test_entry_without_must_catch_gets_no_must_catch_key
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: unit
+    angle: boundary
+    description: The generated entry for test_retry_gate_idle_when_nothing_due has no must_catch
+      key at all (not an empty list).
+  - name: test_generated_test_requirements_with_must_catch_conform_to_schema
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: integration
+    angle: seam
+    description: The real generator's emitted Test Requirements block, including must_catch,
+      validates against config/test_requirements.schema.json.
+test_rationale: The contract is a producer (AC + generator) to consumer (ticket schema, test
+  writer) seam. Only the real generator's output, read back and validated against the consumer's
+  schema, proves the list arrives verbatim. The example strings were chosen so that sorting
+  ('drop' < 'new' < 'revert') or case-folding ('NULL') would change them.
+origin_agent: business-analyst
+created: 2026-09-25
+amended_by: []
+superseded_by: null
+covered_by:
+  - TQ-500f-2-i
+  - TQ-500f-2-ii
+implemented_by: []
+change_target:
+  - schema
+  - code
+risk_surface: contract_boundary
+notes: |
+  USER DECISION Q4 (binding): must_catch is copied VERBATIM onto the generated
+  work's test requirements, and the generated-work schema is widened. Both
+  schemas reject unknown keys today, so this is a coupled change on both sides —
+  the same copy-through coupling ac-schema.md already documents for framework
+  and type.
+
+  WHY ORDER AND EXACT TEXT ARE IN THE THEN CLAUSE. The value of the list is that
+  the test writer sees exactly what the requirement author named. A generator
+  that "normalises" wording (lower-cases, trims, dedupes, joins) silently turns
+  a named wrong version into a different one; the verbatim clause is what makes
+  that failure visible.
+
+  NOT IN SCOPE HERE: running the named wrong versions against the finished code
+  (TQ-500g), and who fills the list (TQ-500f-2-ii).
+
+  IT-PO ENRICHMENT (2026-09-25)
+  INTENDED must_catch: "generator drops must_catch" / "generator sorts or lower-cases the list"
+  -> the verbatim test goes red; "generator emits must_catch: [] on every entry" -> the no-key test
+  goes red; "only the AC-side schema is widened" -> the schema-conformance test goes red.
+  LANE NOTE: pointing the fast lane at TQ-500f-2 pulls in TQ-500f-2-ii (llm-expert), and
+  the producibility check refuses that set. Build TQ-500f-2 + TQ-500f-2-i in the fast lane
+  by targeting TQ-500f-2-i only after TQ-500f-2 is built through /build-feature, or build the
+  whole subtree through /build-feature.

@@ -32,10 +32,10 @@ _DEFAULT_TICKETS_ROOT = "tickets/00_inbox"
 
 #: The two angles this module EMITS on derived test descriptors. The wider
 #: vocabulary is 5 core (criterion, reachability, seam, real_artifact, deployed)
-#: plus 2 conditional (boundary, failure) — see ``_TEST_ANGLES`` below — with
-#: must_block a modifier on reachability that this module neither emits nor
-#: reads. The trigger table for the remaining angles is separate work; do NOT
-#: infer it from these two constants.
+#: plus 3 conditional (boundary, failure, discrimination) — see ``_TEST_ANGLES``
+#: below — with must_block a modifier on reachability that this module neither
+#: emits nor reads. The trigger table for the remaining angles is separate
+#: work; do NOT infer it from these two constants.
 TEST_ANGLE_CRITERION = "criterion"
 TEST_ANGLE_REACHABILITY = "reachability"
 
@@ -46,6 +46,10 @@ TEST_ANGLE_REACHABILITY = "reachability"
 #: consumer layout; the two copies are pinned together by a set-equality test in
 #: unit_tests/ac_store/test_derived_test_reachability_floor.py. Used ONLY to warn
 #: on an unrecognised authored value — this module does not reject one.
+#: 'discrimination' (TQ-500f-1) is the eighth member, added alongside the same
+#: name in config/ac_store_schema.json and config/test_requirements.schema.json
+#: in one change (the three lists are held in lockstep by
+#: unit_tests/prompt_assembly/test_bp_1100g_1.py's three-way comparator).
 _TEST_ANGLES = frozenset({
     TEST_ANGLE_CRITERION,
     TEST_ANGLE_REACHABILITY,
@@ -54,6 +58,7 @@ _TEST_ANGLES = frozenset({
     "deployed",
     "boundary",
     "failure",
+    "discrimination",
 })
 
 #: Assertion text carried by every derived reachability-floor descriptor. It is

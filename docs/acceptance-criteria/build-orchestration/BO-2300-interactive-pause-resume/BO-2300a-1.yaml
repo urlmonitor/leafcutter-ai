@@ -98,7 +98,7 @@ created: 2026-07-20
 amended_by:
   - reason: "it-po correction (2026-07-20): retargeted technical enrichment from a standalone Python module to the E2 workflow ENGINE (templates/workflows-js/*.js). assigned_agent python-coder -> llm-expert; added E2-body feasibility (agent-mediated persistence, no fs I/O in the workflow body); test_spec now drives the real JS via _workflow_engine_harness.run_workflow_under_e2. Criteria unchanged."
 superseded_by: ACD-2100c-1
-covered_by: [BO-2300a-1-i]
+covered_by: [BO-2300a-1-i, BO-2300a-1-ii]
 implemented_by:
 - tickets/00_inbox/TICKET-20260720-BO-2300a-1.md
 - templates/workflows-js/plan-feature.js
