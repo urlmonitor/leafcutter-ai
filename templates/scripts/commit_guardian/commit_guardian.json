@@ -1414,6 +1414,25 @@
         "script": "check_ac_done_on_merge.py",
         "description": "After a merge, marks each source AC work_status: done for every ticket the merge moved to status: done.",
         "_comment": "GE-120h-3: never registered in either manifest, so no AC has ever been auto-closed on merge. Unlike the four gates above it consults NEITHER argv NOR the staged set — it reads `git diff HEAD~1 HEAD` on the post-merge stage. Cannot block: main() returns 0 unconditionally (:213) and the __main__ guard swallows OSError/ValueError into sys.exit(0) (:219-224). Note the call direction: this script INVOKES scripts/ac_store/mark_ac_done.py by subprocess (:148-162); mark_ac_done.py:6 naming this hook is a back-reference, not an invocation, and has been misread as one. FIRST post-merge entry in this manifest — build_precommit.py renders the stage verbatim, but the git shim is installed by install_pre_commit_shims.collect_stages, which only setup_ticket_worktree.py calls, so an existing checkout that never ran it has no post-merge shim and this gate stays silent there. Verified present in this repository's .git/hooks/post-merge (a genuine pre-commit shim, --hook-type=post-merge)."
+      },
+      {
+        "id": "check-negative-control-liveness",
+        "tier": "judgment",
+        "name": "Check Negative Control Liveness (GE-120f-1)",
+        "entry": "python {{config.output_root}}/scripts/commit_guardian/run_hook.py {{config.output_root}}/scripts/commit_guardian/check_negative_control_liveness.py --manifest {{config.output_root}}/scripts/commit_guardian/commit_guardian.json",
+        "entry_point": "python .leafcutter/scripts/commit_guardian/run_hook.py .leafcutter/scripts/commit_guardian/check_negative_control_liveness.py -- the run_hook.py-wrapped hooks_manifest entry `check-negative-control-liveness`, invoked at pre-commit against this same manifest.",
+        "language": "system",
+        "stages": [
+          "pre-commit"
+        ],
+        "pass_filenames": false,
+        "change_set_source": "handed_by_commit_path",
+        "always_run": true,
+        "negative_control": {
+          "not_applicable": true,
+          "reason": "This is the census/liveness runner itself: it examines OTHER hooks' declared negative_control.command, it has no known-bad staged-file input of its own to reject the way a judging gate does. Its own falsifiability is covered by unit_tests/portability/test_ge_120f_1.py's alter-and-revert, pairing, seam, deployed, and reachability descriptors (GE-120f-1), not by a self-referential negative_control entry. Declaring negative_control on the other hooks_manifest entries is deliberately deferred to GE-120f-1-i/-ii (out of scope here) per this AC's own 'day-one blast radius is the correct outcome' guidance: most checks read never-attempted until a declaration is added for them."
+        },
+        "_comment": "GE-120f-1/EPIC-AGuardThatHasNeverSaidNoIsNotCountedAs/01: registers the negative-control liveness sweep so it actually gates a commit (KI-CG-021 — a runner nothing calls is inert). Reads hooks_manifest.hooks from THIS SAME manifest at run time, actually runs each EXAMINED hook's declared negative_control.command as a real subprocess, and writes the observed `currently` block back into this file in place — see check_negative_control_liveness.py's own module docstring. always_run: true because this hook reads the whole manifest's declared population, never the staged-file list (pass_filenames: false), mirroring check-build-drift's own rationale above in this manifest."
       }
     ]
   },
