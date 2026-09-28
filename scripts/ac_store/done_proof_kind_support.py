@@ -1,5 +1,5 @@
 """
-MODULE: scripts/ac_store/_done_proof_kind_support.py
+MODULE: scripts/ac_store/done_proof_kind_support.py
 GOAL: Additive failure-KIND (absence vs assertion) classification layered on
     top of done_proof.py's own pytest-output contract, for TQ-500f-3-i's
     red-baseline absence-only-refusal rule.
@@ -78,6 +78,25 @@ ARCHITECTURE: This module REUSES done_proof.py's own timeout-budget
     done_proof.py and _done_proof_phase_helpers.py -- omitting either entry
     would leave the deployed fast-lane gate crashing the first time a caller
     passes ``ac_root``.
+
+    NAMING (BP-900h-4 fix): this module deliberately carries NO leading
+    underscore, unlike its own sibling helpers under scripts/ac_store/ (e.g.
+    ``_done_proof_phase_helpers.py``, ``_kind_plugin.py``). scripts/ci's
+    declaring-files inspector (BP-900h-4) treats a bare leading-underscore
+    import as "a same-directory sibling the importing file cannot run
+    without" and expects it deployed ALONGSIDE the file that imports it
+    (``_declaring_files_scan.py``'s ``_helper_module_declaring_files`` /
+    ``_sibling_relative_path``) -- correct for every other module in this
+    directory, all imported only from OTHER files also under
+    scripts/ac_store/, but wrong for this one: it is imported by
+    scripts/build_orchestration/_fl_common.py, a DIFFERENT deployed
+    directory, via the same cross-directory sys.path wiring
+    ``_fl_common.py`` already uses to reach ``done_proof`` and
+    ``scan_ac_store`` (both of which are ALSO not leading-underscore-named,
+    for exactly this reason -- see that module's own comment). Naming this
+    module without the underscore removes the false "same-directory
+    sibling" signal instead of asking the inspector to special-case it (the
+    inspector's own derivation stays untouched, per its own scope).
 """
 
 from __future__ import annotations
