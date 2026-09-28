@@ -11,6 +11,20 @@
 #                docs/components.json. BLOCKING. Diff-scoped on PRs, full tree
 #                on push to main.
 #
+#   shipped-address-check — nothing under templates/ (including templates/docs/)
+#                or config/ carries a real-looking database connection address
+#                (INF-1100d-4 / INF-1100d-4-i). BLOCKING, full tree every run —
+#                a build ships the whole of both roots regardless of what any
+#                one PR touched, so this is not diff-scoped. Runs
+#                scripts/portability/check_shipped_addresses.py with no flags,
+#                the same normal-suite entry point the check's own unit tests
+#                (unit_tests/portability/test_inf_1100d_4*.py, part of the
+#                `test` job below) already exercise; this step is the
+#                comparable-package-check wiring (mirrors
+#                scripts/ci/check_declaring_files.py's direct-invocation shape)
+#                that makes a reintroduced address fail CI even on a
+#                contributor whose local pre-commit hooks are not installed.
+#
 #   test       — full pytest suite over tests/ and unit_tests/. BLOCKING: there
 #                is no continue-on-error on this job, so a PR carrying a failing
 #                test cannot merge. The build step
@@ -153,6 +167,25 @@ jobs:
       - name: Check component vocabulary (push — full tree)
         if: github.event_name != 'pull_request'
         run: python scripts/check_component_vocab.py
+
+  shipped-address-check:
+    name: Shipped address check (INF-1100d-4)
+    runs-on: ubuntu-latest
+    # BLOCKING. No pip install step: check_shipped_addresses.py is
+    # stdlib-only. Full tree every run (not diff-scoped): a build ships the
+    # whole of templates/ and config/ regardless of what one PR touched, so
+    # an address reintroduced by an earlier, already-merged PR must still
+    # fail every subsequent run, not just the run that added it.
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Check shipped sources for database connection addresses
+        run: python scripts/portability/check_shipped_addresses.py
 
   test:
     name: Test suite (pytest)
