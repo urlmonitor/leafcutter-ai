@@ -47,7 +47,7 @@ it_requirements:
   - "'Finished' is read from the record's work_status (done) -- data-driven, never keyed on ids."
   - "A refusal blocks the commit; the 'marked to be created but already exists' report is a non-blocking warning emitted by the same run and never changes the exit status."
   - "Exactly one message per offending entry; no second message for the same entry from the JSON-schema layer."
-  - "Scope is the population the criteria specify: the refusal applies to unfinished records. A finished record whose 'existing' entry is now absent is NOT refused here (open question Q4, see caveat); it must not block unrelated commits that touch the record."
+  - "Scope is the population the criteria specify: the refusal applies to unfinished records. A finished record whose 'existing' entry is now absent is NOT refused here and must not block unrelated commits that touch the record; it is reported in the store-wide declared-files report instead (Q4, answered by ACD-1600c-4-iv)."
   - "Tests run against a temporary repository tree, never the live one: the criteria's example paths include scripts/ac_store/declared_files.py, a file this feature itself creates, so a live-tree test would change verdict when the feature ships."
   - "Existence checks must not spawn a subprocess per declared path; the check stays within the check-ac-schema hook's existing time budget for a commit touching 100 records."
 test_spec:
@@ -95,6 +95,10 @@ amended_by:
     date: '2026-09-27'
     by: it-po
     directed_by: user
+  - reason: "it-po: open question Q4 closed -- the scope it_requirement and the OPEN note now point at ACD-1600c-4-iv (finished record with an absent 'existing' entry: reported in the store-wide declared-files report, never refused). Criteria, test_spec and readiness unchanged."
+    date: '2026-09-28'
+    by: it-po
+    directed_by: user
 superseded_by: null
 covered_by: []
 implemented_by: []
@@ -108,5 +112,8 @@ notes: |
   report entirely: the marker records intent at authoring time, and the work fulfilling it
   must not turn every later commit touching the record into noise.
 
-  OPEN (for the user, see BA sign-off): a FINISHED requirement that declares an existing file
-  which has since been deleted by other work -- refuse, report, or ignore. Not specified here.
+  Q4 ANSWERED (user decision 2026-09-28, specified in ACD-1600c-4-iv): a FINISHED requirement
+  that declares an existing file which has since been deleted by other work is never refused
+  at commit time; it is listed as "declared existing, now absent (work finished)" in a section
+  of the store-wide declared-files report (ACD-1600c-4-ii), and its declared list is left
+  unchanged. This record's own criteria are unchanged.

@@ -122,6 +122,7 @@ covered_by:
   - ACD-1600c-4-i
   - ACD-1600c-4-ii
   - ACD-1600c-4-iii
+  - ACD-1600c-4-iv
 implemented_by: []
 change_target: schema
 risk_surface: contract_boundary
