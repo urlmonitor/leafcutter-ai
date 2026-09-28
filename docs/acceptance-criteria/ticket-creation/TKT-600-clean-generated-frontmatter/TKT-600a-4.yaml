@@ -1,0 +1,134 @@
+id: TKT-600a-4
+components:
+  - ticket_creation_pipeline
+  - ac_store
+  - documentation_system
+title: "ADR-010 says a generated ticket's files come from the requirement's declared-files list, and names the documentation-link derivation as the labelled legacy path"
+component: ticket-creation
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given ADR-010 as it stands today states that a requirement's documentation links map to
+    the generated ticket's files-touched list, in its Context section and again in its
+    Consequences section,
+    and requirement R declares its files (scripts/ac_store/scan_ac_store.py, marked existing;
+    unit_tests/ac_store/test_hold_reasons.py, marked to be created),
+    and requirement L is in the "no declared files" state,
+  When ADR-010 is amended and then read by someone asking where a generated ticket's
+    files-touched list comes from,
+  Then ADR-010 states that for a requirement that declares its files, such as R, the
+    files-touched list is that declared-files list, in declared order, and nothing else --
+    no documentation link, no technical-requirement prose and no reference file path is added,
+  And ADR-010 names the documentation-link derivation as the legacy path, used only for a
+    requirement in the "no declared files" state, such as L, and states that a ticket built
+    that way is labelled "derived, not declared",
+  And no sentence left in ADR-010 states that documentation links map to the files-touched
+    list without that "no declared files only" qualification -- the Context and Consequences
+    statements both carry it or point to the amendment that does,
+  And ADR-010 names KI-ACS-002 as the known issue the legacy derivation still carries, and
+    states that the issue stays open for records in the "no declared files" state,
+  And ADR-010 names the requirement records that decide this (ACD-1600c-4 for the
+    declared-files list, TKT-600a-3 for the ticket reading it, TKT-600a-3-i for the labelled
+    legacy path), each as a link that resolves to an existing file,
+  And the amendment is a dated, separately headed section of ADR-010: the original decision
+    text is still present and readable, so a reader arriving at ADR-010 alone can see both
+    what was decided in 2026-06 and what the amendment changed.
+depends_on:
+  - TKT-600a
+  - TKT-600a-3
+  - TKT-600a-3-i
+  - ACD-1600c-4
+doc_links:
+  - path: docs/architecture/adrs/ADR-010-ac-store-as-authoritative-backlog.md
+    relationship: modifies
+    status: exists
+    relevance: >-
+      The record amended. Its Context ("doc_links (maps to files_touched)") and its
+      Consequences / Positive bullet ("doc_links -> files_touched") are the two statements
+      that must be qualified.
+  - path: docs/known-issues/ac-store/open-high-ki-acs-002.md
+    relationship: related
+    status: exists
+    relevance: >-
+      The known issue the ADR must link: the doc_links derivation counts a describing link as
+      a file the work changes and can miss the file it does change. It stays open for records
+      in the 'no declared files' state.
+  - path: docs/acceptance-criteria/ac-driven-dev/ACD-1600-single-source-buildable/ACD-1600c-4.yaml
+    relationship: related
+    status: exists
+    relevance: "The declared-files list (field declared_files) and its single read seam; the source the amended ADR names."
+  - path: docs/acceptance-criteria/ticket-creation/TKT-600-clean-generated-frontmatter/TKT-600a-3.yaml
+    relationship: related
+    status: exists
+    relevance: "The generator behaviour the amendment records: files_touched is exactly the declared list."
+  - path: docs/acceptance-criteria/ticket-creation/TKT-600-clean-generated-frontmatter/TKT-600a-3-i.yaml
+    relationship: related
+    status: exists
+    relevance: "The legacy branch: 'no declared files' records keep the old derivation, labelled 'derived, not declared'."
+  - path: docs/architecture/adrs/README.md
+    relationship: describes
+    status: exists
+    relevance: "The ADR index; an amendment must leave ADR-010's index entry consistent."
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+    relevance: "The AC field reference; the amendment's wording of declared_files and the 'no declared files' state must match it."
+assigned_agent: adr-author
+estimated_complexity: S
+it_requirements:
+  - "Edit surface: docs/architecture/adrs/ADR-010-ac-store-as-authoritative-backlog.md only. It is an amendment of ADR-010, not a new ADR: no new ADR number is allocated and no superseding record is written. The ADR index (docs/architecture/adrs/README.md) row for ADR-010 is edited only if the amendment changes a value that row shows (status, title); otherwise it is left untouched."
+  - "The store's vocabulary is used verbatim so the ADR reads the same as the records it cites: the field name `declared_files`, the entry markers `existing` / `to_be_created`, the state phrase 'no declared files', the ticket label 'derived, not declared', and the single read seam scripts/ac_store/declared_files.py."
+  - "Every link the amendment adds (ACD-1600c-4, TKT-600a-3, TKT-600a-3-i, KI-ACS-002) is a relative Markdown link that resolves from the ADR's own directory to an existing file; the paths are also added to the ADR's frontmatter related_docs list."
+  - "Frontmatter stays valid for the project's documentation frontmatter checks: last_updated is set to the amendment date and the existing title, type, status and created values are unchanged."
+  - "The original decision text is preserved: outside the amendment section, the only edits are the qualifications (or pointers to the amendment) on the two doc_links -> files_touched statements in Context and Consequences / Positive. No other existing sentence is deleted or reworded."
+  - "The amendment states the rule's delivery status truthfully at the time it is written: if TKT-600a-3 / ACD-1600c-4 have not shipped, the rule is stated as decided and pending implementation. In no wording does the ADR say the legacy derivation has been removed."
+delivers_to: null
+expects_from:
+  ac_id: TKT-600a-3
+  contract: >-
+    The shipped rule the amendment records: for a record that declares its files, the
+    generated ticket's files_touched is exactly the declared-files seam's paths in declared
+    order; for a record in the 'no declared files' state, the pre-existing derivation runs
+    unchanged and is labelled 'derived, not declared' (TKT-600a-3-i).
+origin_agent: business-analyst
+created: 2026-09-28
+amended_by:
+  - reason: "it-po technical enrichment: it_requirements (ADR-010 amendment only, no new ADR; store vocabulary verbatim; resolving relative links plus related_docs; frontmatter last_updated; original text preserved; truthful delivery status), doc_link to ac-schema.md, test_required false (docs-only). Criteria, assigned_agent and expects_from unchanged."
+    date: '2026-09-28'
+    by: it-po
+    directed_by: user
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: docs
+risk_surface: internal
+# test_required false: change_target docs -- the deliverable is ADR prose with no executable
+# behaviour for test-writer to exercise. Link resolution and frontmatter validity are enforced
+# by the project's documentation checks at commit time, not by a unit test.
+test_required: false
+notes: |
+  ORIGIN (2026-09-28, user-directed follow-up C1 of the declared-files run). TKT-600a-3's
+  notes flagged that ADR-010 names doc_links -> files_touched as THE derivation, while
+  TKT-600a-3 makes it the legacy path. Left unamended, the ADR would keep teaching the
+  derivation KI-ACS-002 shows to be wrong in both directions, and a reader following the
+  ADR would re-introduce it for records that declare their files.
+
+  PLACEMENT. TKT-600a owns the generated files_touched surface (3 of 5 L2s before this one).
+  Documentation AC for the decision record, assigned to adr-author (the leaf author of
+  decision records). This AC does not edit the ADR itself; the ADR text is the delivering
+  work.
+
+  ORDERING. The amendment records a rule; it must not be written as shipped before
+  TKT-600a-3 / ACD-1600c-4 ship, hence depends_on. The ADR may state the rule as decided
+  and pending implementation if it lands first -- whichever wording it uses, it must not
+  claim the legacy derivation is gone.
+
+  AMEND, DO NOT SUPERSEDE. The core decision of ADR-010 (the AC store is the authoritative
+  backlog; tickets are derived artefacts) is unchanged; only one field mapping moves. A
+  dated amendment section is the ADR convention for that (see ADR amendments elsewhere under
+  docs/architecture/adrs/), not a new superseding ADR.
