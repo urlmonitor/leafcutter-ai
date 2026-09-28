@@ -73,7 +73,7 @@ Severity in the **filename** is a three-level index bucket (`blocker` / `high` /
 
 Fixed issues move to [`commit-guardian/resolved/`](commit-guardian/resolved/) and are no longer listed as open. They are kept, not deleted.
 
-**Open: 70** (3 blocker, 29 high, 38 low) · **Resolved: 17**
+**Open: 71** (3 blocker, 30 high, 38 low) · **Resolved: 16**
 
 ## Open
 
@@ -81,7 +81,7 @@ Fixed issues move to [`commit-guardian/resolved/`](commit-guardian/resolved/) an
 |---|---|---|
 | `blocker` | KI-CG-008 — `check-doc-frontmatter` crashes with a `TypeError` on any non-string entry in `related_docs`, making the labelled-list form uncommittable | [open-blocker-ki-cg-008.md](commit-guardian/open-blocker-ki-cg-008.md) |
 | `blocker` | KI-CG-20260909-gate-complexity — `check-complexity` judges every function absolutely, so registering it refuses 49 existing files including the two most-edited in the repo | [open-blocker-ki-cg-20260909-gate-complexity.md](commit-guardian/open-blocker-ki-cg-20260909-gate-complexity.md) |
-| `blocker` | KI-CG-20260909-gate-root-files — `check-root-files` refuses 5 legitimate root files and matches `M`, so registering it makes `ruff.toml` and `LEAFCUTTER_VERSION` permanently uneditable — **PARTIALLY RESOLVED 2026-09-28**: the `M` half is fixed (GE-120e-1-ii, PR #857) so those files are editable again; the allowlist half is still open | [open-blocker-ki-cg-20260909-gate-root-files.md](commit-guardian/open-blocker-ki-cg-20260909-gate-root-files.md) |
+| `blocker` | KI-CG-20260909-gate-root-files — `check-root-files` refuses 5 legitimate root files and matches `M`, so registering it makes `ruff.toml` and `LEAFCUTTER_VERSION` permanently uneditable | [open-blocker-ki-cg-20260909-gate-root-files.md](commit-guardian/open-blocker-ki-cg-20260909-gate-root-files.md) |
 | `high` | KI-CG-001 — AC hooks are scoped to the git index, so parent-level drift is unreachable | [open-high-ki-cg-001.md](commit-guardian/open-high-ki-cg-001.md) |
 | `high` | KI-CG-006 — The pre-commit proof-of-done gate and the CI backstop disagree on what a valid tag is, in both directions | [open-high-ki-cg-006.md](commit-guardian/open-high-ki-cg-006.md) |
 | `high` | KI-CG-007 — The sanctioned way to add a component produces an entry the required gate rejects, and the gate's stated rule is weaker than the one it enforces | [open-high-ki-cg-007.md](commit-guardian/open-high-ki-cg-007.md) |
@@ -111,7 +111,7 @@ Fixed issues move to [`commit-guardian/resolved/`](commit-guardian/resolved/) an
 | `high` | KI-CG-20260925-check-ac-schema-path-argument-is-ignored — prompts run 'check_ac_schema.py <path>' to validate a record, but the hook ignores argv and checks only the staged set, so those checks are vacuous passes | [open-high-ki-cg-20260925-check-ac-schema-path-argument-is-ignored.md](commit-guardian/open-high-ki-cg-20260925-check-ac-schema-path-argument-is-ignored.md) |
 | `high` | KI-CG-20260925-shared-root-resolver-accepts-non-repo-workspace-parent — _resolve_root.find_project_root() has no 'no repository' outcome and returns the workspace parent, so the fix direction of five open KIs would not fix them | [open-high-ki-cg-20260925-shared-root-resolver-accepts-non-repo-workspace-parent.md](commit-guardian/open-high-ki-cg-20260925-shared-root-resolver-accepts-non-repo-workspace-parent.md) |
 | `high` | KI-CG-20260927-file-size-hook-read-another-worktrees-index — check-file-size once measured the staged files of a different worktree, while every other hook in the same run saw the right ones | [open-high-ki-cg-20260927-file-size-hook-read-another-worktrees-index.md](commit-guardian/open-high-ki-cg-20260927-file-size-hook-read-another-worktrees-index.md) |
-| `high` | KI-CG-20260928-first-commit-leaves-the-deployed-config-drifted — a worktree's first commit rewrites the deployed `commit_guardian.json`, so `check-output-drift` passes once and refuses every commit after it | [open-high-ki-cg-20260928-first-commit-leaves-the-deployed-config-drifted.md](commit-guardian/open-high-ki-cg-20260928-first-commit-leaves-the-deployed-config-drifted.md) |
+| `high` | KI-CG-20260928-ac-schema-not-deployed-at-consumer-root — the schema is deployed only under .leafcutter/config/, so check-ac-schema degrades to manual field validation in every consumer install | [open-high-ki-cg-20260928-ac-schema-not-deployed-at-consumer-root.md](commit-guardian/open-high-ki-cg-20260928-ac-schema-not-deployed-at-consumer-root.md) |
 | `low` | KI-CG-002 — The diagram-type guard silently swaps its enum source when its declaring file is unreachable | [open-low-ki-cg-002.md](commit-guardian/open-low-ki-cg-002.md) |
 | `low` | KI-CG-011 — The roadmap mirror strips its own `description` frontmatter and backdates `created` to today | [open-low-ki-cg-011.md](commit-guardian/open-low-ki-cg-011.md) |
 | `low` | KI-CG-013 — The schema hook and the done-proof oracle disagree about what a leaf is, so one AC can be required to satisfy both branches | [open-low-ki-cg-013.md](commit-guardian/open-low-ki-cg-013.md) |

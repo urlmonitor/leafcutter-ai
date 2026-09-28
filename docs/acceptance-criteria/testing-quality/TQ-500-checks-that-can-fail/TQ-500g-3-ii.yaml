@@ -1,0 +1,132 @@
+id: TQ-500g-3-ii
+components:
+  - testing_quality
+  - build_orchestration
+title: "An existing test that ran before the work and is now skipped, expected to fail, or gone stops the work"
+component: testing-quality
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given five tests that existed and passed before the work began, and after
+    the work —
+      A: test_refresh_skips_when_not_due is marked to be skipped,
+      B: test_retry_caps_at_five is marked as expected to fail,
+      C: test_export_header no longer exists,
+      D: test_refresh_runs_when_due still runs and passes, with one assertion
+         added,
+      E: test_legacy_cron_refresh no longer exists, because the requirement
+         removes the legacy cron refresh it tested, and the sweep list names
+         it with that reason,
+  When the work's tests are checked before commit,
+  Then the work stops, naming A, B and C as existing tests weakened by the
+      work, each with what happened to it: skipped, expected to fail, removed,
+    And D is not reported,
+    And E is not counted as weakened, and appears in the hand-off as removed
+      with the reason the sweep list gives,
+    And the decision is taken from running the tests before and after the work,
+      never from reading the writer's list alone.
+depends_on:
+  - TQ-500g-3
+doc_links:
+  - path: docs/analysis/2026-09-25-test-writers-prove-failure-not-discrimination.md
+    relationship: describes
+    status: exists
+    relevance: "Incident 5: an integration test of a live procedure was skip-marked as 'retired', silently deleting production coverage."
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from:
+  - ac_id: TQ-500g-3
+    contract: "The sweep list, carrying a reason for each existing test removed with the code it tested."
+it_requirements:
+- Reach it through the same single before-commit CLI entry that the routes call for the wrong-version
+  runs (TQ-500g-1-v, -vi, -vii). One implementation serves every route, and routes need no second dispatch.
+  Until that entry is wired, the check is not reachable and this AC is not done.
+- 'Scope of the runs: test files that existed at the base ref and were changed or deleted by the work,
+  plus every test file when a pytest config or conftest changed. Run them at the base ref and in the working
+  tree. Compare collected node ids and outcomes, read through TQ-500g-4''s shared reading.'
+- The base-ref run happens in an isolated export of the base ref, in a temp dir outside the repo that
+  is removed afterwards. Never stash or check out in the working tree.
+- Weakened means PASSED at the base and SKIPPED, XFAIL, or absent in the working tree. The only exit is
+  a sweep-list entry with status 'removed' and a reason. Such a test is reported as removed, not weakened.
+- An inconclusive run on either side (returncode 2, or a contradictory run per TQ-500g-4-i) stops the
+  work as inconclusive, never as a pass.
+- Every new or changed Python file stays at or under 400 counted lines (scripts/commit_guardian/_file_size_ratchet.py).
+  Files already over the limit must not grow.
+test_spec:
+- name: test_skip_xfail_and_removed_tests_reported_weakened
+  target_dir: unit_tests/build_orchestration/
+  framework: pytest
+  type: integration
+  angle: criterion
+  description: In a temp git repo with real pytest, A (skip-marked), B (xfail-marked) and C (deleted)
+    are reported weakened, each with what happened to it, and the work stops.
+  must_catch:
+  - skip mark added to an existing test not detected
+  - deleted test missed because only surviving node ids are compared
+- name: test_strengthened_test_not_reported
+  target_dir: unit_tests/build_orchestration/
+  framework: pytest
+  type: integration
+  angle: discrimination
+  description: D, with an assertion added and still passing, is not reported.
+  must_catch:
+  - any change to an existing test reported as weakened
+- name: test_removed_with_listed_reason_is_not_weakened
+  target_dir: unit_tests/build_orchestration/
+  framework: pytest
+  type: integration
+  angle: boundary
+  description: E, deleted and listed as removed with a reason, is reported as removed in the hand-off.
+    The same deletion without a list entry is weakened.
+  must_catch:
+  - removal exit granted without a sweep-list reason
+- name: test_decision_from_runs_not_from_list
+  target_dir: unit_tests/build_orchestration/
+  framework: pytest
+  type: integration
+  angle: reachability
+  surface_invoked: the shared before-commit CLI (TQ-500g-1-i entry)
+  description: 'Through the before-commit CLI: the list says A is unaffected, but the runs show A skipped,
+    and the work stops.'
+  must_catch:
+  - check reads the sweep list only
+test_rationale: Weakening is a before-and-after runtime fact, so every test runs real pytest on a real
+  base commit and a real working tree. D is the control, and E is the narrow exit.
+origin_agent: business-analyst
+created: 2026-09-28
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  THE FALSIFIABLE HALF OF "NONE MAY BE WEAKENED" (TQ-500g criteria), for the
+  forms of weakening a run can see. A widened expected value or a removed
+  assertion inside a test that still passes is not visible here; that is left to
+  review and to the wrong-version runs (see TQ-500g-3 notes).
+
+  E IS THE NECESSARY EXIT. Without it, any requirement that removes a feature
+  would be blocked from removing its tests. The exit is narrow: the sweep list
+  must name the test and give the reason, and it is reported, not silent. BA
+  ASSUMPTION: the reason is stated by the writer and checked by review; no
+  mechanical check that the tested code is really gone is required here.
+
+  D IS THE CONTROL: strengthening is always allowed.
+
+  RELATION TO INCIDENT 5 AND done_proof: done_proof treats SKIPPED as
+  non-passing only for tests being proven for an AC now; this closes the gap
+  for skips added to old tests.
+
+  TECHNICAL DETAIL FOR IT-PO: "before the work began" is the merge base; the
+  comparison is over collected node ids and outcomes (so a deleted file and a
+  deselected test both show as gone).
+
+  IT-PO ENRICHMENT (2026-09-28)
+  Lane: python-coder, in one PR with TQ-500g-3 (prompt) and -3-i.

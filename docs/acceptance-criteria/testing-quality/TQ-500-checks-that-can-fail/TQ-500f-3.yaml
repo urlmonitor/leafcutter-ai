@@ -97,6 +97,7 @@ covered_by:
   - TQ-500f-3-i
   - TQ-500f-3-ii
   - TQ-500f-3-iii
+  - TQ-500f-3-iv
 implemented_by: []
 change_target: prompt
 risk_surface: contract_boundary

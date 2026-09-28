@@ -230,7 +230,7 @@ class TestClaimCLISubcommand(unittest.TestCase):
         self._tmp.cleanup()
 
     def test_ac7_claim_flips_todo_to_in_progress_on_disk(self) -> None:
-        # covers: BO-2400f-7
+        # No covers tag: subprocess-driven, invisible to the in-process BO-2900 reachability guard — see BO-2400f-7.yaml notes.
         """CLI `claim` flips todo ACs to in_progress on disk and reports claimed ids.
 
         Real-artifact behavioral test: after invoking `python fast_lane.py claim ...`
