@@ -8,7 +8,7 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
+readiness: approved
 priority: high
 roadmap_phase: phase_1
 criteria: |
@@ -40,9 +40,87 @@ doc_links:
     status: exists
     relevance: "Step 4.2 — two temp files outside the repo (the fixed copy and the head copy), never redirect git show over the target, byte-compare restore with diff -q, halt naming the backup file. BP-600c-3-ii explains why git stash is banned."
 assigned_agent: python-coder
-estimated_complexity: null
+estimated_complexity: M
 delivers_to: null
 expects_from: null
+it_requirements:
+- 'Where the copy lives (the BA left this to IT-PO): Per-work gate files (copies, journals, manifests,
+  lists, records) live under the worktree''s own git directory (git rev-parse --git-dir, subfolder leafcutter/).
+  That keeps them outside the working tree, so git status is unchanged. It also keeps them private to
+  the worktree, unlike the shared stash, lets them survive a crash, and lets a resumed drive find them.
+  They are never committed. The per-run subfolder is leafcutter/wrong-version-runs/<run-id>/, holding
+  the as-written copies and an apply/put-back journal.'
+- The journal entry is written durably (atomic replace) BEFORE the working file is altered. It is cleared
+  only after the byte comparison succeeds.
+- Recovery comes first. Every runner invocation begins by restoring any file with an open journal entry
+  that differs from its copy, then byte-compares it. Recovery is also exposed as its own CLI step, which
+  routes call first on a resumed drive (wiring in -1-v and -1-vi; /build-epic in -1-viii).
+- Timeout (done_proof's budget), a crash (a returncode other than 0/1, or OSError) and interruption all
+  put the code back before anything else. The run is reported not_run, never caught and never survived.
+- 'If the byte comparison still fails after the put-back, stop: gate_passed false and a non-zero exit.
+  The report says the code may still be altered and gives the absolute path of the copy. The copy is never
+  deleted in that case.'
+- 'Never use git stash, and never run git checkout or git restore over working files. No file other than
+  the altered ones changes: git status --porcelain is equal before and after.'
+- 'Correct on Windows. Correctness never depends on POSIX signals: a hard kill is covered by recovery
+  on the next invocation.'
+- Every new or changed Python file stays at or under 400 counted lines (scripts/commit_guardian/_file_size_ratchet.py).
+  Files already over the limit must not grow.
+test_spec:
+- name: test_timeout_puts_code_back_and_reports_not_run
+  target_dir: unit_tests/build_orchestration/
+  framework: pytest
+  type: integration
+  angle: failure
+  description: 'X1: a pytest double that exceeds the budget. refresh_config.py is put back and byte-compared
+    before the verdict, and the run is reported not_run.'
+  must_catch:
+  - timeout path returns without restoring
+  - cut-short run reported as survived
+- name: test_crash_puts_code_back_before_anything_else
+  target_dir: unit_tests/build_orchestration/
+  framework: pytest
+  type: integration
+  angle: failure
+  description: 'X2: a pytest double that crashes (returncode 3, or OSError). The file is put back, and
+    the run is not_run, never caught.'
+  must_catch:
+  - crash path reports the wrong version as caught
+- name: test_resumed_drive_restores_altered_file_first
+  target_dir: unit_tests/build_orchestration/
+  framework: pytest
+  type: integration
+  angle: reachability
+  surface_invoked: the shared runner CLI (recovery step)
+  description: 'X3: a worktree left with the altered file and an open journal. The runner''s recovery
+    CLI step, run as a subprocess, restores the file before doing anything else, and the byte comparison
+    passes.'
+  must_catch:
+  - resume trusts the working tree without comparing it with the copy
+- name: test_failed_put_back_stops_naming_the_copy
+  target_dir: unit_tests/build_orchestration/
+  framework: pytest
+  type: integration
+  angle: failure
+  description: When the put-back cannot make the file match (the target is locked or read-only), the drive
+    stops, says the code may still be altered, and names the copy's absolute path. The copy remains.
+  must_catch:
+  - failed put-back reported as success
+  - copy deleted after a failed put-back
+- name: test_no_stash_and_no_other_file_changes
+  target_dir: unit_tests/build_orchestration/
+  framework: pytest
+  type: integration
+  angle: criterion
+  description: Over a whole cycle, git stash list and git status --porcelain are unchanged, and the copy
+    lives under the git directory, not the working tree.
+  must_catch:
+  - git stash used
+  - copy kept inside the working tree
+test_rationale: Being cut short is simulated with a pytest double at the runner's subprocess seam, because
+  a real timeout or crash is slow and flaky. Each test drives the runner's production entry point and
+  ends with a byte comparison on disk, never a mock assertion. The X3 case runs the recovery step on a
+  genuinely altered worktree.
 origin_agent: business-analyst
 created: 2026-09-28
 amended_by: []
@@ -71,3 +149,9 @@ notes: |
   raises, driven through the runner's production entry point, then a byte
   comparison of the file; for X3, run the resume path against a worktree left
   with the altered file.
+
+  IT-PO ENRICHMENT (2026-09-28)
+  COPY LOCATION DECIDED: under the worktree's git directory. See
+  it_requirements. The quick-fix skill keeps its copies in /tmp, which is
+  lost on reboot and shared across sessions. The git directory is per
+  worktree, and a resume can find it.

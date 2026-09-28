@@ -8,7 +8,7 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
+readiness: approved
 priority: high
 roadmap_phase: phase_1
 criteria: |
@@ -55,11 +55,34 @@ doc_links:
     status: exists
     relevance: "Step 3 — verify_red_baseline's inputs and halt reasons, reused unchanged."
 assigned_agent: llm-expert
-estimated_complexity: null
+estimated_complexity: S
 delivers_to: null
 expects_from:
   - ac_id: TQ-500f-3-i
     contract: "The one red-baseline reader (fast_lane.py verify_red_baseline), carrying the absence-only rule, callable with requirement ids and a test root, returning a JSON verdict."
+it_requirements:
+- Edit the ticket-level phase algorithm in templates/skills/building-epics/SKILL.md, and templates/agents/ticket-supervisor.md
+  only where it restates it. Make this one llm-expert change with TQ-500g-1-vii.
+- 'Instruction: between the test-writer phase and the first coder dispatch, including on resume when test-writer
+  is already signed_off, run the same CLI /build-feature uses: fast_lane.py heavy_lane_gate with --source-ac,
+  the worktree as --test-root, and --ac-root. On gate_passed false, report the ticket as blocked with
+  the reader''s JSON verbatim, and dispatch no coder. The test writer''s red_baseline_verified or sign-off
+  is never a substitute.'
+- Call the gate CLI with the record option TQ-500g-1-viii adds, naming this ticket. The CLI ITSELF then
+  writes its verdict to the ticket's record under the worktree's git directory. The supervisor never writes,
+  edits, paraphrases or summarises that record, and never substitutes its own account of the verdict.
+- 'K3 (no source_ac): still call heavy_lane_gate with no ids. It returns and records ''red-baseline reader
+  not applicable: no source requirement''. Then continue to the coder.'
+- Tickets WITH source_ac get every existing halt reason of the shared reader (for example no_new_covering_tests).
+  That is the carried-over TQ-500f-3-ii user decision.
+- Ship in ONE change together with TQ-500f-3-iv / TQ-500g-1-vii (the paired prompt) and TQ-500g-1-viii
+  (the backstop). Without -1-viii the instruction names a record option that does not exist. Without the
+  instruction, -1-viii blocks every /build-epic commit.
+test_required: false
+test_rationale: 'Prompt-only, for the same reasons as TQ-500g-1-vii. The reader is deterministic and already
+  tested (TQ-500f-3-i, TQ-500f-3-ii). Mechanical backstop: TQ-500g-1-viii blocks the commit of a /build-epic
+  ticket whose red-baseline record is missing or unreadable. Substitutes: pr-reviewer against the Then
+  clauses, and a live /build-epic drive of a fixture epic with K1 to K3.'
 origin_agent: business-analyst
 created: 2026-09-28
 amended_by: []
@@ -94,3 +117,9 @@ notes: |
   WITH a source requirement get the full shared reader, including every
   existing halt reason (for example no newly added test tagged as covering the
   requirement); tickets WITHOUT one record the not-applicable outcome and go on.
+
+  IT-PO ENRICHMENT (2026-09-28)
+  Composite effect: TQ-500f-3 already has prompt-only children. This
+  test_required: false child joins them, so TQ-500f-3 cannot be marked done by
+  the pre-commit done-proof path until
+  KI-CG-20260914-done-proof-precommit-ignores-test-required is fixed.

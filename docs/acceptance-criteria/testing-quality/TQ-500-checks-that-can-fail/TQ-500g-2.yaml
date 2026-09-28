@@ -8,7 +8,7 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
+readiness: approved
 priority: high
 roadmap_phase: phase_1
 criteria: |
@@ -51,12 +51,37 @@ doc_links:
     status: exists
     relevance: "Request item 7 and the sql-test-writer section, including the setUpClass re-deploy trap."
 assigned_agent: llm-expert
-estimated_complexity: null
+estimated_complexity: M
 delivers_to:
-  - agent: python-coder
-    ac_id: TQ-500g-2-ii
-    contract: "The wrong versions the database test writer names to run later, in a form the shared runner takes up alongside must_catch."
+- agent: python-coder
+  ac_id: TQ-500g-2-ii
+  contract: 'JSON at <git-dir>/leafcutter/work/<work-key>/to_run_later.json: {to_run_later: [{test: str
+    (''<repo-relative test file>::<test name>''), wrong_version: str, reason: str}]}. It is absent or
+    empty when the writer names none.'
 expects_from: null
+it_requirements:
+- Edit templates/agents/sql-test-writer.md only, after TQ-500f-4-i has landed on the same template (depends_on).
+  Replace 'do not run the test suite' with running the writer's own tests. Keep the ban on deploying SQL
+  anywhere except the configured test database.
+- Runs use only the address from testing_context.db_connection_test, through scripts/db_check/checker.py
+  (the one reader). Before running, use the check_test_db outcome. Never use an address the agent chose.
+- '''Before the fix'' is the object''s definition at the base ref, installed into the test database for
+  that run and then replaced by the fixed one. The prompt warns about the setUpClass re-deploy trap: alter
+  the file the suite installs from, never only the database.'
+- 'An answer is labelled ''observed'' only when a quoted run''s output backs it, and ''reasoned'' otherwise.
+  With no test database configured: name testing_context.db_connection_test, report both runs as not run,
+  label every answer reasoned, and claim no catch.'
+- The to-run-later wrong versions are written in machine form (the delivers_to shape), and also rendered
+  in the hand-off prose.
+- Any database address in a template, fixture or doc is the placeholder postgresql://<user>:<password>@<host>:<port>/<database>.
+  INF-1100d-4 scans shipped files.
+- 'Composite done-proof: this L2 is test_required: false and has children. Until KI-CG-20260914-done-proof-precommit-ignores-test-required
+  is fixed, the pre-commit done-proof path refuses to mark it done.'
+test_required: false
+test_rationale: 'Prompt-only: the writer''s conduct is instruction text. Behavioural substitute: the TQ-200d-2
+  sql-test-writer eval rows (''observed'' only with a quoted run; no run claimed without a test database).
+  Deterministic backstop: TQ-500g-2-ii runs the database tests against the wrong versions, whatever the
+  writer reported.'
 origin_agent: business-analyst
 created: 2026-09-28
 amended_by: []
@@ -93,3 +118,6 @@ notes: |
   replaced by the fixed one. Watch the re-deploy trap (TQ-500g-2-i) here too: a
   suite that re-installs from source files will silently install the fixed
   version.
+
+  IT-PO ENRICHMENT (2026-09-28)
+  llm-expert lane. Build after TQ-500f-4-i (same template).

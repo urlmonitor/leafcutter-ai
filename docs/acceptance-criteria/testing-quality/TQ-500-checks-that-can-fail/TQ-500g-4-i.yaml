@@ -8,7 +8,7 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
+readiness: approved
 priority: high
 roadmap_phase: phase_1
 criteria: |
@@ -43,9 +43,60 @@ doc_links:
     status: exists
     relevance: "Step 3 — the red-baseline gate's existing inconclusive bucket, which R1 joins."
 assigned_agent: python-coder
-estimated_complexity: null
+estimated_complexity: S
 delivers_to: null
 expects_from: null
+it_requirements:
+- The cross-check lives in the same shared reading as TQ-500g-4. It receives the run's exit status from
+  the caller. No caller works out the contradiction itself.
+- 'Exit status 1 with no parsed FAILED or ERROR outcome is inconclusive. That includes a run with no parsed
+  outcomes at all. The reason names the contradiction: the run reported failure, but no failing test could
+  be identified. At done proof this reuses the existing incomplete-run path (_PYTEST_RUN_INCOMPLETE_SENTINEL,
+  so not eligible). At red baseline it reuses the existing inconclusive bucket (neither red nor green).'
+- Exit status 0, and exit status 1 with a parsed failure, keep today's reading. Other exit statuses keep
+  today's 'run unfinished' handling. In particular, returncode 2 from the Windows collection flake (KI-TQ-20260928-windows-pytest-collection-flake)
+  stays inconclusive and never becomes a pass.
+- scripts/ac_store/done_proof.py is over the 400-line file-size ratchet (1264 counted lines) and must
+  not grow. New parsing logic goes in a sibling module under scripts/ac_store/; any line added to done_proof.py
+  is offset by moving existing parser code out, so its counted length stays the same or drops.
+test_spec:
+- name: test_exit_one_with_all_parsed_passes_is_inconclusive_at_both_checks
+  target_dir: unit_tests/ac_store/
+  framework: pytest
+  type: integration
+  angle: failure
+  description: R1 is a real pytest run in which a conftest sets the session exit status to 1 while every
+    test line reads PASSED. Both readers report it as inconclusive with the contradiction reason. No requirement
+    is eligible, and no test counts as red or as green at baseline.
+  must_catch:
+  - returncode checked only for membership in (0, 1)
+  - contradictory run read as all passed
+- name: test_ordinary_failing_run_is_not_inconclusive
+  target_dir: unit_tests/ac_store/
+  framework: pytest
+  type: integration
+  angle: discrimination
+  description: 'R3: exit 1 with test_refresh_gate FAILED is read from its per-test outcomes. It is not
+    reported as inconclusive.'
+  must_catch:
+  - every exit-status-1 run reported inconclusive
+- name: test_clean_passing_run_read_as_passed
+  target_dir: unit_tests/ac_store/
+  framework: pytest
+  type: integration
+  angle: criterion
+  description: 'R2: exit 0 with every test PASSED reads as passed, as today.'
+- name: test_contradictory_run_inconclusive_through_production_clis
+  target_dir: unit_tests/build_orchestration/
+  framework: pytest
+  type: integration
+  angle: reachability
+  surface_invoked: python scripts/build_orchestration/fast_lane.py verify_red_baseline; done_proof CLI
+  description: The R1 fixture, run through the verify_red_baseline CLI and the done-proof entry point
+    as subprocesses, yields the inconclusive outcome at both.
+test_rationale: R1 has to come from a real pytest process that exits 1 while printing only PASSED lines.
+  A conftest that sets the exit status gives exactly that, with no hand-typed output. R2 and R3 are the
+  controls the BA named, and R3 carries the must_catch.
 origin_agent: business-analyst
 created: 2026-09-28
 amended_by: []
@@ -72,3 +123,8 @@ notes: |
   FAIL CLOSED AT BOTH GATES. Inconclusive at done proof means not eligible; at
   red baseline it means neither red nor green, which the gate already treats as
   not passing (TQ-500f-3-i's fail-closed rule).
+
+  IT-PO ENRICHMENT (2026-09-28)
+  Build it with TQ-500g-4, in the same fast-lane target. It needs the
+  returncode passed into the shared reading. Today both call sites discard it
+  once (0, 1) is checked.

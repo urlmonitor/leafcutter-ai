@@ -8,7 +8,7 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
+readiness: approved
 priority: high
 roadmap_phase: phase_1
 criteria: |
@@ -52,13 +52,72 @@ doc_links:
     status: exists
     relevance: "Source of the 'to run later' list the runs take up."
 assigned_agent: python-coder
-estimated_complexity: null
+estimated_complexity: M
 delivers_to: null
 expects_from:
   - ac_id: TQ-500g-2
     contract: "The database test writer's 'to run later' wrong versions, in a form the runner takes up."
   - ac_id: INF-1100d-3-i
     contract: "The test database check's not-configured and unreachable outcomes, naming the setting and never the credentials."
+it_requirements:
+- 'A test counts as a database test when its AC test_spec entry says requires_db: true. That is declared,
+  never inferred from the code.'
+- 'Before any database run, call check_test_db in scripts/db_check/checker.py (the one reader). not_configured:
+  every database run is not_run, naming testing_context.db_connection_test. unreachable: not_run, ''the
+  configured database could not be reached''. Both leave the work unfinished. Neither ever says caught
+  or passed. Credentials never appear.'
+- 'Extra wrong versions from to_run_later.json (the TQ-500g-2 shape) go through the preparer and the runs
+  like named ones. They are reported per test with blocking: false. Their survivors are named but never
+  set gate_passed false on their own. Survivors of named wrong versions still stop the work.'
+- The runner never constructs or defaults an address. Test processes get the resolved address through
+  the same mechanism as the INF-1100d-3-ii database-test pattern.
+- Every new or changed Python file stays at or under 400 counted lines (scripts/commit_guardian/_file_size_ratchet.py).
+  Files already over the limit must not grow.
+- Any database address in a template, fixture or doc is the placeholder postgresql://<user>:<password>@<host>:<port>/<database>.
+  INF-1100d-4 scans shipped files.
+test_spec:
+- name: test_p1_named_and_extra_wrong_versions_run_on_configured_database
+  target_dir: unit_tests/build_orchestration/
+  framework: pytest
+  type: integration
+  angle: criterion
+  description: 'P1: DB1 and DB2 are run against the named version, the fix undone and the extra version,
+    with the database address taken only from the setting. The extra version has its own per-test outcomes.'
+  requires_db: false
+- name: test_extra_survivor_reported_but_not_blocking
+  target_dir: unit_tests/build_orchestration/
+  framework: pytest
+  type: integration
+  angle: discrimination
+  description: An extra-version survivor is named, with blocking false, and gate_passed stays true. A
+    named-version survivor in the same run makes gate_passed false.
+  must_catch:
+  - writer's extra wrong versions block the work
+  - extra wrong versions silently dropped
+  - named-version survivor made non-blocking
+- name: test_p2_not_configured_reports_not_run_and_unfinished
+  target_dir: unit_tests/build_orchestration/
+  framework: pytest
+  type: integration
+  angle: reachability
+  surface_invoked: the shared runner CLI
+  description: The runner CLI, run as a subprocess on a temp project with no setting, reports the database
+    runs as not_run naming testing_context.db_connection_test, with gate_passed false and no caught result.
+  must_catch:
+  - not-configured database runs reported as passed
+  - runner falls back to a default address
+- name: test_p3_unreachable_reports_not_run
+  target_dir: unit_tests/build_orchestration/
+  framework: pytest
+  type: integration
+  angle: failure
+  description: 'P3: the setting names an unreachable placeholder host. The runs are not_run, ''could not
+    be reached'', and the work is unfinished. No connection is made to any other address.'
+  must_catch:
+  - unreachable database read as caught
+test_rationale: P2 and P3 run through the real CLI with real project config and the real db_check reader,
+  and need no database. P1 uses a runner-level test double for the database execution, so it runs in CI.
+  The extra-versus-named survivor pair pins the Q2 decision in both directions.
 origin_agent: business-analyst
 created: 2026-09-28
 amended_by: []
@@ -88,3 +147,6 @@ notes: |
 
   PLACEHOLDER ADDRESSES ONLY in fixtures and docs:
   postgresql://<user>:<password>@<host>:<port>/<database> (INF-1100d-4).
+
+  IT-PO ENRICHMENT (2026-09-28)
+  Lane: python-coder after TQ-500g-2 (prompt) and TQ-500g-1-i.

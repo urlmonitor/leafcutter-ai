@@ -8,7 +8,7 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
+readiness: approved
 priority: high
 roadmap_phase: phase_1
 criteria: |
@@ -43,12 +43,33 @@ doc_links:
     status: exists
     relevance: "Request item 6, and incident 2 (a gate input moved to a new column; one consumer suite was missed in the sweep; fixtures seeded only the old input)."
 assigned_agent: llm-expert
-estimated_complexity: null
+estimated_complexity: M
 delivers_to:
-  - agent: python-coder
-    ac_id: TQ-500g-3-i
-    contract: "A sweep list in the hand-off: each existing test touched or considered, by name and file, marked strengthened (what was added) or unaffected (reason)."
+- agent: python-coder
+  ac_id: TQ-500g-3-i
+  contract: 'JSON at <git-dir>/leafcutter/work/<work-key>/consumer_sweep.json: {entries: [{file: str (repo-relative
+    POSIX), test: str (function name, or Class::method), status: ''strengthened''|''unaffected''|''removed'',
+    note: str (one line: what was added, or why)}]}.'
+- agent: python-coder
+  ac_id: TQ-500g-3-ii
+  contract: Same file. 'removed' entries carry the reason.
 expects_from: null
+it_requirements:
+- 'Edit templates/agents/test-writer.md. Replace the blanket ban (''Do NOT modify existing test files
+  unless the ticket explicitly requires it.'') with the sweep procedure: find every existing test that
+  exercises the changed check or helper, list each one, and only strengthen. Leave the TAUGHT-TEST-ANGLES
+  anchor block untouched: it is held in lockstep by unit_tests/prompt_assembly/test_bp_1100g_1.py.'
+- The sweep list is written in machine form (the delivers_to shape) and rendered in the hand-off. A test
+  removed together with the code it tested is listed as 'removed', with the reason.
+- 'Guardrail: do not merge this without TQ-500g-3-i and -3-ii. A sweep that only asks the writer to behave
+  reopens what the ban closed.'
+- 'Composite done-proof: this L2 is test_required: false and has children. Until KI-CG-20260914-done-proof-precommit-ignores-test-required
+  is fixed, the pre-commit done-proof path refuses to mark it done.'
+test_required: false
+test_rationale: 'Prompt-only. Finding consumer tests and choosing how to strengthen them is agent conduct,
+  and a template text search is forbidden. Deterministic backstops: TQ-500g-3-i (an unlisted edit stops
+  the work) and TQ-500g-3-ii (a weakened test stops the work). Substitute: a test-writer eval row of the
+  incident-2 shape (TQ-200d-1''s trap row), plus pr-reviewer.'
 origin_agent: business-analyst
 created: 2026-09-28
 amended_by: []
@@ -80,3 +101,6 @@ notes: |
 
   RELATED, NOT DUPLICATED: TQ-100c (protection cannot be quietly removed through
   links or the allowlist).
+
+  IT-PO ENRICHMENT (2026-09-28)
+  llm-expert lane. Ship in the same PR as -3-i and -3-ii (the guardrail).

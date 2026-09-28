@@ -8,7 +8,7 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
+readiness: approved
 priority: high
 roadmap_phase: phase_1
 criteria: |
@@ -47,11 +47,65 @@ doc_links:
     relationship: describes
     status: exists
 assigned_agent: python-coder
-estimated_complexity: null
+estimated_complexity: M
 delivers_to: null
 expects_from:
   - ac_id: TQ-500f-3-i
     contract: "Per-test kind of red (absence or assertion), derived from the run's own output."
+it_requirements:
+- 'Whether a failure reached the code is judged by TQ-500f-3-i''s kind rule (done_proof_kind_support /
+  _kind_plugin), read from the same single pytest run per wrong version. There is no second classification
+  rule and no second pytest run. A collection-time import or syntax error of the altered module counts
+  as absence: the COLLECTION-ERROR caveat in TQ-500f-3-i.'
+- 'A (test, wrong version) failure counts as caught only when its kind is assertion. An absence failure
+  makes that pair did_not_load, reported as ''wrong version did not load: not a valid run''.'
+- 'A prepared alteration that is byte-identical to the as-written file is not_applied, reported as ''wrong
+  version not applied: it changes nothing''. It is never run, so no pytest time is spent on it.'
+- did_not_load and not_applied are never caught and never survived. They leave the verdict unfinished
+  (gate_passed false) until a re-prepared version has a valid run.
+- Every new or changed Python file stays at or under 400 counted lines (scripts/commit_guardian/_file_size_ratchet.py).
+  Files already over the limit must not grow.
+test_spec:
+- name: test_v1_assertion_failure_counts_as_caught
+  target_dir: unit_tests/build_orchestration/
+  framework: pytest
+  type: integration
+  angle: discrimination
+  description: V1 (a one-line change that still loads) makes T1 fail with an assertion, and that is reported
+    as caught. This is the control against refusing every failing run.
+  must_catch:
+  - every failing run under a wrong version refused as did-not-load
+- name: test_v2_unloadable_wrong_version_is_not_a_valid_run
+  target_dir: unit_tests/build_orchestration/
+  framework: pytest
+  type: integration
+  angle: failure
+  description: V2 (a syntax error in the altered refresh_config.py) is reported as did_not_load, is neither
+    caught nor survived, and leaves gate_passed false with reason unfinished.
+  must_catch:
+  - any failure under a wrong version counted as caught
+  - collection error read as assertion red
+- name: test_v3_noop_wrong_version_never_run
+  target_dir: unit_tests/build_orchestration/
+  framework: pytest
+  type: integration
+  angle: boundary
+  description: V3 (byte-identical to the code as written) is reported not_applied, and no pytest run is
+    made for it.
+  must_catch:
+  - no-op alteration run and reported as a survivor
+- name: test_runner_and_red_baseline_classify_kind_identically
+  target_dir: unit_tests/build_orchestration/
+  framework: pytest
+  type: integration
+  angle: seam
+  description: The same fixture failure (an ImportError at collection, and an AssertionError) is classified
+    identically by verify_red_baseline and by the runner.
+  must_catch:
+  - runner carries its own absence/assertion classification
+test_rationale: V1 is the control that makes the V2 refusal meaningful. The seam test proves 'the same
+  rule, not a second rule' by running both production readers over one fixture, rather than asserting
+  that an import exists.
 origin_agent: business-analyst
 created: 2026-09-28
 amended_by: []
@@ -78,3 +132,6 @@ notes: |
   notes). "Changes nothing" is a byte comparison of the prepared file with the
   code as written. Reuse done_proof_kind_support / _kind_plugin; do not copy the
   classification.
+
+  IT-PO ENRICHMENT (2026-09-28)
+  Fast lane with TQ-500g-1-i, or right after it.

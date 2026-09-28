@@ -8,8 +8,8 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 roadmap_phase: phase_1
 criteria: |
   Given the database test writer has no eval set today,
@@ -57,9 +57,63 @@ doc_links:
     relationship: relates-to
     status: exists
 assigned_agent: python-coder
-estimated_complexity: null
+estimated_complexity: M
 delivers_to: null
 expects_from: null
+it_requirements:
+- 'Join the existing harness (TQ-200c-4). Register the agent in scripts/evals/agent_eval_config.json with
+  ONE eval-set path of JSONL rows ({id, input, expected}). Test-writing agents produce test files, not
+  product-truth artifacts, so their scoring type lives in a sibling module under scripts/evals/. run_agent_eval.py
+  has 1438 counted lines, over the ratchet, and must not grow: any registration line added there is offset
+  in the same file. Use the same test-artifact scoring type TQ-200d-1 adds. Do not add a third one.'
+- 'Each row runs in a throwaway sandbox: a temp copy of a small fixture project the row names. Never the
+  repository tree. The ''no test database'' trap sandbox leaves testing_context.db_connection_test unset.'
+- 'Score mechanically where possible: the empty-window query counts rows and non-NULL values, and at least
+  one wrong version of fn_refresh_due is named in the machine-form to-run-later list. The judge scores
+  ''observed only with a quoted run''.'
+- Local only (user decision; KI-TQ-20260907). Registering the set must not make the CI eval job report
+  these rows as passed or checked. The result is stamped as a local run, and nothing claims TQ-200b-2.
+- Unit tests never call a live model. Row pickup and scoring are proven through the runner's gold-scoring
+  path, using recorded good and bad agent outputs as fixtures.
+- Any database address in a template, fixture or doc is the placeholder postgresql://<user>:<password>@<host>:<port>/<database>.
+  INF-1100d-4 scans shipped files.
+- Every new or changed Python file stays at or under 400 counted lines (scripts/commit_guardian/_file_size_ratchet.py).
+  Files already over the limit must not grow.
+test_spec:
+- name: test_sql_test_writer_set_registered_and_every_row_scored
+  target_dir: unit_tests/evals/
+  framework: pytest
+  type: integration
+  angle: reachability
+  surface_invoked: python scripts/evals/run_agent_eval.py (gold-scoring mode)
+  description: Gold-scoring mode finds the sql-test-writer set and scores each row id without naming rows.
+- name: test_no_database_trap_fails_a_report_claiming_a_run
+  target_dir: unit_tests/evals/
+  framework: pytest
+  type: integration
+  angle: discrimination
+  description: A recorded output that claims the test was seen to fail fails the 'no test database' row.
+    The gold output (all answers reasoned, setting named, not run) passes.
+  must_catch:
+  - trap row passes a report claiming an observed run
+- name: test_regression_row_accepts_observed_only_with_quoted_run
+  target_dir: unit_tests/evals/
+  framework: pytest
+  type: integration
+  angle: criterion
+  description: The stored-procedure row passes an output that labels an answer observed with a quoted
+    run, and fails one that labels it observed without a quote.
+  must_catch:
+  - '''observed'' accepted without a quoted run'
+- name: test_local_result_never_presented_as_ci
+  target_dir: unit_tests/evals/
+  framework: pytest
+  type: integration
+  angle: failure
+  description: The local run is stamped as local, and CI does not treat the set as checked.
+  must_catch:
+  - report omits the local marker
+test_rationale: 'As TQ-200d-1: recorded good and bad outputs through the real runner, no live model.'
 origin_agent: business-analyst
 created: 2026-09-28
 amended_by: []
@@ -88,3 +142,8 @@ notes: |
 
   PLACEHOLDER ADDRESSES ONLY in any row input:
   postgresql://<user>:<password>@<host>:<port>/<database> (INF-1100d-4).
+
+  IT-PO ENRICHMENT (2026-09-28)
+  Lane: fast lane, after TQ-200d-1 (shared scoring type). Not a depends_on,
+  so either order builds, but TQ-200d-1 first avoids two authors of the
+  scoring type.

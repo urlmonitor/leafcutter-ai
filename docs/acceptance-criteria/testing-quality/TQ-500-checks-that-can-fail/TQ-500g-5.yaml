@@ -8,7 +8,7 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
+readiness: approved
 priority: high
 roadmap_phase: phase_1
 criteria: |
@@ -56,9 +56,29 @@ doc_links:
     status: exists
     relevance: "Gains a pointer to the new step between verify_green_and_coverage and commit."
 assigned_agent: documentation-expert
-estimated_complexity: null
+estimated_complexity: M
 delivers_to: null
 expects_from: null
+it_requirements:
+- 'Create the reference page docs/reference/wrong-version-runs.md, at 300 lines or fewer after frontmatter.
+  Write it from what shipped: the verdict vocabulary exactly as the runner prints it, the fix-undone alias
+  list, the new-file rule, where copies and records live under the git directory, and the known limit
+  of the kind rule.'
+- docs/**.md is under the blocking doc-length ratchet (300 lines after frontmatter). docs/how-to/fast-lane-build.md
+  (461) and docs/testing/test-angles.md (325) are over the limit and must not grow, so any pointer added
+  there is offset in the same file.
+- Link it from docs/testing/test-angles.md (discrimination angle) and docs/how-to/fast-lane-build.md,
+  within those files' current length.
+- 'Firewall (as in TQ-500f-5): no behavioural AC is closed by pointing at these documents.'
+- Any database address in a template, fixture or doc is the placeholder postgresql://<user>:<password>@<host>:<port>/<database>.
+  INF-1100d-4 scans shipped files.
+- If the page ships through templates/docs/, update both copies.
+- 'Composite done-proof: this L2 is test_required: false and has children. Until KI-CG-20260914-done-proof-precommit-ignores-test-required
+  is fixed, the pre-commit done-proof path refuses to mark it done.'
+test_required: false
+test_rationale: Documentation only. Its truth depends on the behaviour it describes, which the behavioural
+  ACs prove. A test that searches the page for words would be the prose-presence proxy the firewall forbids.
+  documentation-verifier and pr-reviewer check it.
 origin_agent: business-analyst
 created: 2026-09-28
 amended_by: []
@@ -86,3 +106,6 @@ notes: |
   PLACEHOLDER ADDRESSES ONLY: postgresql://<user>:<password>@<host>:<port>/<database>
   (INF-1100d-4 scans shipped docs). Update both the docs/ copy and any shipped
   templates/docs/ copy if the page ships.
+
+  IT-PO ENRICHMENT (2026-09-28)
+  documentation-expert lane, last in the build order (after -1, -2, -3, -4).

@@ -8,7 +8,7 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
+readiness: approved
 priority: high
 roadmap_phase: phase_1
 criteria: |
@@ -67,16 +67,126 @@ doc_links:
     status: exists
     relevance: "test_spec item fields: must_catch and the discrimination angle, the declared scope of the runs."
 assigned_agent: python-coder
-estimated_complexity: null
+estimated_complexity: L
 delivers_to:
-  - agent: python-coder
-    ac_id: TQ-500g-1-v
-    contract: "One runner, callable with the requirement ids, the test root and the base ref (the same inputs as verify_red_baseline), returning a machine-readable verdict: stop or continue, with each (test, wrong version) outcome and each survivor named."
+- agent: python-coder
+  ac_id: TQ-500g-1-v
+  contract: 'Shared runner CLI (inputs: --ac-ids, --test-root, --ac-root, --base-ref, --alterations <manifest
+    path>). It prints one JSON object: {gate_passed: bool, applicable: bool, verified: bool, outcome:
+    str, reason: ''survivor''|''unfinished''|''failing on the code as written''|str|null, results: [{test:
+    str (pytest nodeid), wrong_version: str, result: ''caught''|''survived''|''did_not_load''|''not_applied''|''invalid''|''not_run''|''not_in_scope''|''not_applicable'',
+    blocking: bool, detail: str}], survivors: [{test: str, wrong_version: str}], unfinished: [{wrong_version:
+    str, result: str, detail: str}]}. It exits 0 when gate_passed is true, else 1. An empty --ac-ids gives
+    gate_passed true, applicable false, outcome ''wrong-version runs not applicable: no source requirement''.'
+- agent: python-coder
+  ac_id: TQ-500g-1-vi
+  contract: Same CLI and JSON as for TQ-500g-1-v.
+- agent: llm-expert
+  ac_id: TQ-500g-1-vii
+  contract: Same CLI and JSON as for TQ-500g-1-v.
+- agent: python-coder
+  ac_id: TQ-200d-1-i
+  contract: The same module's public entry, callable in-process or as a CLI on a sandbox repo.
 expects_from:
   - ac_id: TQ-500g-4
     contract: "The shared reading of a run (sub-case failures are failures; contradictory runs are inconclusive)."
   - ac_id: TQ-500g-1-iv
     contract: "Each named wrong version other than 'the fix undone' arrives as one concrete alteration of the code as written, labelled with its name."
+it_requirements:
+- 'New public module under scripts/build_orchestration/ with no leading underscore, because scripts/evals
+  imports it for TQ-200d-1-i. It has its own CLI entry, which is the one entry every route calls. Split
+  into siblings as needed. Every new or changed Python file stays at or under 400 counted lines (scripts/commit_guardian/_file_size_ratchet.py).
+  Files already over the limit must not grow. fast_lane.py (387 counted lines) must not cross 400: do
+  not put the runner there.'
+- 'Inputs: the requirement ids, the test root, the AC store root and the base ref (the same inputs as
+  verify_red_baseline), plus the path of the alterations manifest from TQ-500g-1-iv. Output: exactly one
+  JSON object on stdout, with the shape in delivers_to. Exit 0 when gate_passed is true, 1 otherwise.
+  An internal error still prints that shape, with gate_passed false. Progress logging goes to stderr only.'
+- 'Scope is declared, never inferred. The tests in scope are the covers-tagged tests of the given ids
+  whose AC test_spec entry carries must_catch or angle: discrimination. They are matched with the same
+  declared-name matching verify_red_baseline uses (_fl_red_baseline_support._load_declared_test_names,
+  done_proof._nodeid_function_name). criteria, title and notes prose are never read.'
+- 'Reuse, never fork: TQ-500g-4''s shared reading for every run, done_proof''s timeout budget (_resolve_pytest_timeout_seconds),
+  and TQ-500f-3-i''s kind rule (through TQ-500g-1-ii).'
+- '''The fix undone'' is the non-test files changed relative to the base ref, restored to their base content.
+  It is prepared from git, never by an agent. The base defaults to HEAD, and routes pass it explicitly.
+  No wrong version ever alters a test file.'
+- New-file rule (IT-PO decision on the BA's open point). A file the work created is left in place under
+  'the fix undone', because deleting it would be an absence red. If every changed non-test file is new,
+  'the fix undone' is reported not_applicable. That is non-blocking and never counts as caught or as unfinished.
+- Alias rule (IT-PO decision on the BA's assumption). A must_catch string equal to 'revert the fix' or
+  'the fix undone', after trimming and case-folding, denotes the fix undone. It is prepared once and never
+  sent to the preparer. The aliases are one constant, documented on the TQ-500g-5 reference page.
+- 'Before any wrong version, the in-scope tests run once on the code as written. A test that is not PASSED
+  there catches nothing: the verdict is stop, with the reason ''failing on the code as written''.'
+- Only the in-scope tests run, selected by node id. Never the full suite. One pytest run per wrong version.
+- The verdict comes from the runs alone. Any claim field in the manifest (for example 'caught') is ignored.
+- Unfinished results (did_not_load, not_applied, could_not_prepare, invalid, not_run) set gate_passed
+  false, with reason 'unfinished'. That is distinct from reason 'survivor'.
+- After each run the altered files are byte-identical to the code as written, and git status --porcelain
+  is unchanged. The copies are kept as described in TQ-500g-1-iii. Per-work gate files (copies, journals,
+  manifests, lists, records) live under the worktree's own git directory (git rev-parse --git-dir, subfolder
+  leafcutter/). That keeps them outside the working tree, so git status is unchanged. It also keeps them
+  private to the worktree, unlike the shared stash, lets them survive a crash, and lets a resumed drive
+  find them. They are never committed.
+test_spec:
+- name: test_t2_survivor_stops_although_t1_caught_it
+  target_dir: unit_tests/build_orchestration/
+  framework: pytest
+  type: integration
+  angle: discrimination
+  description: Real pytest over the T1 to T4 refresh fixture. 'drop the retry_due condition' is reported
+    as surviving T2, naming T2 and the wrong version, and the verdict is stop. A manifest field claiming
+    T2 catches it changes nothing.
+  must_catch:
+  - 'group verdict: one catching test covers every sibling'
+  - survivor reported without naming the test
+  - manifest claim field read as an outcome
+- name: test_runner_cli_end_to_end_on_refresh_fixture
+  target_dir: unit_tests/build_orchestration/
+  framework: pytest
+  type: integration
+  angle: reachability
+  surface_invoked: python scripts/build_orchestration/<runner module>.py (the shared runner CLI)
+  description: Runs the runner's CLI as a subprocess against a temp git repo, a temp AC store carrying
+    the must_catch entries, and a real pytest run. Asserts the JSON verdict shape, the exit code, and
+    the byte identity of refresh_config.py afterwards.
+- name: test_scope_is_declared_t3_out_t4_fix_undone_only
+  target_dir: unit_tests/build_orchestration/
+  framework: pytest
+  type: integration
+  angle: boundary
+  description: T3 (no must_catch, no discrimination angle) is run against no wrong version and is reported
+    not_in_scope, never passed. T4 (discrimination angle only) is held to the fix undone only.
+  must_catch:
+  - scope inferred from the covers tag alone, ignoring test_spec
+  - T3 reported as passed
+- name: test_fix_undone_group_rule_and_alias
+  target_dir: unit_tests/build_orchestration/
+  framework: pytest
+  type: integration
+  angle: failure
+  description: The fix undone stops the work when no in-scope test fails under it, and when T1, whose
+    entry names 'revert the fix', passes under it. 'revert the fix' is not prepared a second time. A new-file-only
+    change reports the fix undone as not_applicable.
+  must_catch:
+  - the fix undone skipped when no entry names it
+  - '''revert the fix'' sent to the preparer as a separate wrong version'
+  - created file deleted as the fix undone
+- name: test_code_as_written_restored_and_nothing_else_changed
+  target_dir: unit_tests/build_orchestration/
+  framework: pytest
+  type: integration
+  angle: criterion
+  description: After every run the altered file is byte-identical to the as-written copy, git status --porcelain
+    and git stash list are unchanged, and no test file was altered.
+  must_catch:
+  - restore taken from git HEAD instead of the as-written copy
+  - git stash used for apply or put-back
+test_rationale: The rule is only real when it is proven on real runs. So every test uses a temp git repo
+  with a real refresh module, real test files, a temp AC store and real pytest, which is the BA's testability
+  note. The discrimination test carries the non-obvious per-test rule (T2 survives although T1 caught).
+  The reachability test goes through the CLI every route calls.
 origin_agent: business-analyst
 created: 2026-09-28
 amended_by: []
@@ -116,3 +226,12 @@ notes: |
   T1 to T4 test files, a temp AC store carrying the must_catch entries, and a
   real pytest run through the runner's production CLI. Assert on the verdict
   and on the byte-identity of the file afterwards.
+
+  IT-PO ENRICHMENT (2026-09-28)
+  BA OPEN POINTS DECIDED: the alias rule and the new-file rule (see
+  it_requirements). Both must be written into the TQ-500g-5 reference page.
+  KNOWN LIMIT carried over from TQ-500f-3-i: the kind rule classifies by
+  exception type. So a wrong version that makes a TEST raise AttributeError
+  (for example on a None result) reads as did-not-load. That errs safe: the
+  work stays unfinished, and nothing is counted as caught.
+  Fast lane, python-coder, after TQ-500g-4 is done.

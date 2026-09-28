@@ -8,7 +8,7 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
+readiness: approved
 priority: high
 roadmap_phase: phase_1
 criteria: |
@@ -44,11 +44,73 @@ doc_links:
     relationship: relates-to
     status: exists
 assigned_agent: python-coder
-estimated_complexity: null
+estimated_complexity: M
 delivers_to: null
 expects_from:
   - ac_id: TQ-500g-1-i
     contract: "The shared runner's apply / run / put-back cycle, extended here with a check of what the database actually held."
+it_requirements:
+- 'Detection is part of the shared runner''s cycle, not a database-specific fork. After each database
+  run and before the put-back, read from the configured test database''s catalogue the installed definition
+  of every database object the wrong version altered. Compare it, normalised, with the wrong version and
+  with the code as written. Equal to the code as written: invalid, ''the suite put the correct code back
+  before the tests ran''. Equal to the wrong version: a valid run. Neither, or unreadable: not_run, never
+  valid.'
+- The put-back restores the source file AND re-installs the as-written definition into the test database,
+  then reads the catalogue again to confirm. If they still differ, stop and name the object (the TQ-500g-1-iii
+  rule, applied to the database).
+- Connect only to the address resolve_test_db_address in scripts/db_check/checker.py resolves. There is
+  no second reader of the setting. Credentials are never logged or reported.
+- 'Leafcutter must not gain a mandatory database-driver dependency: requirements*.txt has none today.
+  Catalogue access uses a driver or client present in the adopter environment. If none is present, the
+  result is not_run, with the reason named.'
+- invalid and not_run keep the work unfinished (gate_passed false, reason unfinished).
+- Every new or changed Python file stays at or under 400 counted lines (scripts/commit_guardian/_file_size_ratchet.py).
+  Files already over the limit must not grow.
+- Any database address in a template, fixture or doc is the placeholder postgresql://<user>:<password>@<host>:<port>/<database>.
+  INF-1100d-4 scans shipped files.
+test_spec:
+- name: test_d1_suite_redeployed_correct_code_reported_invalid
+  target_dir: unit_tests/build_orchestration/
+  framework: pytest
+  type: integration
+  angle: criterion
+  description: A catalogue-reader double reports the as-written definition after D1's run. The run is
+    reported invalid with the re-deploy reason, is neither caught nor survived, and the verdict is unfinished.
+  must_catch:
+  - runner trusts the source-file alteration without reading the catalogue
+  - invalid run counted as caught
+- name: test_d2_database_held_wrong_version_is_valid
+  target_dir: unit_tests/build_orchestration/
+  framework: pytest
+  type: integration
+  angle: discrimination
+  description: 'D2: the catalogue reports the wrong version, so the run is valid and its per-test outcomes
+    count.'
+  must_catch:
+  - every database run marked invalid
+- name: test_put_back_restores_source_file_and_database
+  target_dir: unit_tests/build_orchestration/
+  framework: pytest
+  type: integration
+  angle: failure
+  description: After each run, both the source file and the catalogue hold the code as written. A catalogue
+    that still holds the wrong version after the re-install stops the drive, naming the object.
+  must_catch:
+  - put-back restores the file but leaves the database holding the wrong version
+- name: test_live_redeploy_trap_detected_on_configured_database
+  target_dir: unit_tests/build_orchestration/
+  framework: pytest
+  type: integration
+  angle: reachability
+  surface_invoked: the shared runner CLI
+  description: Against the configured test database (skipped with a stated reason when none is configured),
+    the runner CLI is run on a fixture suite that re-installs from a different source in setUpClass, and
+    it reports invalid.
+  requires_db: true
+test_rationale: D1 and D2 are proven deterministically with an injected catalogue reader, because CI has
+  no database. The one requires_db test shows that the real catalogue read works where a test database
+  is configured. The D2 control carries the must_catch that stops a detector which invalidates everything.
 origin_agent: business-analyst
 created: 2026-09-28
 amended_by: []
@@ -78,3 +140,9 @@ notes: |
 
   NEEDS THE CONFIGURED TEST DATABASE (INF-1100d). Without one, the run is not
   run (TQ-500g-2-ii), so this check never starts.
+
+  IT-PO ENRICHMENT (2026-09-28)
+  OPEN: how the catalogue is read without a leafcutter driver dependency. See
+  the report's open questions. Lane: python-coder after TQ-500g-2 (prompt) is
+  done. Otherwise the fast lane pulls the prompt L2 into a python-coder build
+  set.

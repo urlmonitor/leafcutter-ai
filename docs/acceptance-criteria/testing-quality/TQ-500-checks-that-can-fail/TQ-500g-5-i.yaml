@@ -8,7 +8,7 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
+readiness: approved
 priority: high
 roadmap_phase: phase_1
 criteria: |
@@ -38,9 +38,21 @@ doc_links:
     relationship: relates-to
     status: exists
 assigned_agent: architecture-diagram-author
-estimated_complexity: null
+estimated_complexity: S
 delivers_to: null
 expects_from: null
+it_requirements:
+- Follow the write-c4-diagram skill's conventions and the existing component diagrams (docs/architecture/diagrams/c2-*).
+  Draw from what -1-v, -1-vi and -1-vii actually wired; a missing route call is drawn as missing.
+- Show the /build-epic record backstop (hook plus marker, TQ-500g-1-viii) as the mechanical guard beside
+  the supervisor's instruction-driven call.
+- docs/**.md is under the blocking doc-length ratchet (300 lines after frontmatter). docs/how-to/fast-lane-build.md
+  (461) and docs/testing/test-angles.md (325) are over the limit and must not grow, so any pointer added
+  there is offset in the same file.
+- 'Firewall (as in TQ-500f-5): no behavioural AC is closed by pointing at these documents.'
+test_required: false
+test_rationale: 'Documentation only: a component diagram. Firewall as in TQ-500g-5. It is reviewed, not
+  tested.'
 origin_agent: business-analyst
 created: 2026-09-28
 amended_by: []
@@ -54,3 +66,6 @@ notes: |
   firewall in TQ-500g-5's notes. Draw from what TQ-500g-1-v, -vi and -vii
   actually wired; if a route's call is missing at drawing time, the diagram
   shows it as missing rather than as intended.
+
+  IT-PO ENRICHMENT (2026-09-28)
+  architecture-diagram-author lane, with TQ-500g-5.

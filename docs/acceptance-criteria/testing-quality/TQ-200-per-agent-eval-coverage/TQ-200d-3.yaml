@@ -8,8 +8,8 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 roadmap_phase: phase_1
 criteria: |
   Given the test designer exists and has no eval set,
@@ -58,11 +58,63 @@ doc_links:
     relationship: describes
     status: exists
 assigned_agent: python-coder
-estimated_complexity: null
+estimated_complexity: M
 delivers_to: null
 expects_from:
   - ac_id: ACD-2500d-5
     contract: "A registered test-designer agent the shared runner can invoke."
+it_requirements:
+- BLOCKED until ACD-2500d-5 registers test-designer. The rows may exist before TQ-500f-2-ii lands; they
+  fail until it does, which is the eval's red baseline.
+- 'Join the existing harness (TQ-200c-4). Register the agent in scripts/evals/agent_eval_config.json with
+  ONE eval-set path of JSONL rows ({id, input, expected}). Test-writing agents produce test files, not
+  product-truth artifacts, so their scoring type lives in a sibling module under scripts/evals/. run_agent_eval.py
+  has 1438 counted lines, over the ratchet, and must not grow: any registration line added there is offset
+  in the same file.'
+- Compare must_catch lists structurally (which condition names appear, the presence of 'revert the fix').
+  The judge scores only the design's stated classification (bug fix, gate or neither).
+- Local only (user decision; KI-TQ-20260907). Registering the set must not make the CI eval job report
+  these rows as passed or checked. The result is stamped as a local run, and nothing claims TQ-200b-2.
+- Unit tests never call a live model. Row pickup and scoring are proven through the runner's gold-scoring
+  path, using recorded good and bad agent outputs as fixtures.
+- Every new or changed Python file stays at or under 400 counted lines (scripts/commit_guardian/_file_size_ratchet.py).
+  Files already over the limit must not grow.
+test_spec:
+- name: test_test_designer_set_registered_and_every_row_scored
+  target_dir: unit_tests/evals/
+  framework: pytest
+  type: integration
+  angle: reachability
+  surface_invoked: python scripts/evals/run_agent_eval.py (gold-scoring mode)
+  description: Gold-scoring mode finds the test-designer set and scores the bug fix, gate and new behaviour
+    rows.
+- name: test_new_behaviour_trap_fails_invented_wrong_versions
+  target_dir: unit_tests/evals/
+  framework: pytest
+  type: integration
+  angle: discrimination
+  description: A recorded design naming 'revert the fix' for 'export the report as CSV' fails the trap
+    row, and a design naming none passes.
+  must_catch:
+  - new-behaviour trap passes a design that names 'revert the fix'
+- name: test_gate_row_requires_one_wrong_version_per_condition
+  target_dir: unit_tests/evals/
+  framework: pytest
+  type: integration
+  angle: criterion
+  description: A gate design missing 'drop the position-limit condition' fails, and the gold design passes.
+  must_catch:
+  - gate row passes with one condition's wrong version missing
+- name: test_local_result_never_presented_as_ci
+  target_dir: unit_tests/evals/
+  framework: pytest
+  type: integration
+  angle: failure
+  description: The local run is stamped as local.
+  must_catch:
+  - report omits the local marker
+test_rationale: As TQ-200d-1. Structural comparison of must_catch lists wherever possible, and a judge
+  only for the stated classification.
 origin_agent: business-analyst
 created: 2026-09-28
 amended_by: []
@@ -94,3 +146,6 @@ notes: |
   structurally where possible.
 
   LOCAL ONLY (user decision at the PO gate): see TQ-200d-1 notes.
+
+  IT-PO ENRICHMENT (2026-09-28)
+  Not buildable until ACD-2500d-5 (llm-expert, todo) is done.

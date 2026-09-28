@@ -8,7 +8,7 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
+readiness: approved
 priority: high
 roadmap_phase: phase_1
 criteria: |
@@ -57,14 +57,56 @@ doc_links:
     relationship: relates-to
     status: exists
     relevance: "The discrimination angle; records gates that run after commit as a known process failure."
+  - path: docs/architecture/adrs/ADR-006-flatten-supervisor-chain.md
+    relationship: describes
+    status: exists
+    relevance: Depth-1 dispatch rule every route's wiring must respect.
+  - path: docs/reference/wrong-version-runs.md
+    relationship: describes
+    status: planned
+    relevance: Reference page produced by TQ-500g-5.
 assigned_agent: python-coder
-estimated_complexity: null
+estimated_complexity: L
 delivers_to: null
 expects_from:
   - ac_id: TQ-500g-4
     contract: "One shared reading of a test run in which a test with any failed sub-case is failed and a contradictory run is inconclusive."
   - ac_id: TQ-500f-2-i
     contract: "must_catch on a requirement's test entry: a validated, non-empty list of named wrong versions, carried verbatim onto the generated work."
+it_requirements:
+- 'Build order. TQ-500g-4 and -4-i are done first. Then -1-i. Then -1-ii and -1-iii. Then -1-iv (the preparer).
+  Then the route wiring: -1-v, -1-vi, and the pair -1-vii + TQ-500f-3-iv, which ships in ONE change with
+  -1-viii.'
+- One runner with one CLI entry, called by every route and by the TQ-200d-1-i eval. No route and no eval
+  carries a copy of the rule.
+- 'Placement on every route: immediately before the commit dispatch. In the fast lane that is after verify_green_and_coverage
+  and the Review phase. In /build-feature, /build-ticket and /build-epic it is after the last pre-commit
+  phase. So no later step can change the code the runs judged. Never after commit.'
+- Decision logic stays in Python CLIs, as with the heavy_lane_gate precedent. Each workflow JS file adds
+  only a thin dispatch and a fail-closed parse. The workflow engine has no module loader, so shared JS
+  helpers are not available.
+- 'Composite done-proof: -1-iv and -1-vii are test_required: false. Until KI-CG-20260914-done-proof-precommit-ignores-test-required
+  is fixed, the pre-commit done-proof path refuses to mark this L2 done even when every child is done.'
+test_spec:
+- name: test_every_route_invocation_yields_identical_runner_verdict
+  target_dir: unit_tests/workflows/
+  framework: pytest
+  type: integration
+  angle: seam
+  description: The runner commands recorded from fast-lane-ship.js, build-feature.js and build-ticket.js
+    (under the workflow-engine harness), plus the command the /build-epic record check (TQ-500g-1-viii)
+    accepts, are executed for real against one fixture repo with K1 and K2. All produce the same verdict
+    JSON.
+  must_catch:
+  - a route passes a different base ref
+  - a route omits the AC store root
+  covers:
+  - TQ-500g-1
+  - TQ-500g-1-v
+  - TQ-500g-1-vi
+test_rationale: The children carry the rule and the per-route wiring. What only this L2 promises is that
+  every route reaches the same verdict. That is proven by running every route's recorded command for real
+  against one fixture, never by comparing command strings.
 origin_agent: business-analyst
 created: 2026-09-28
 amended_by: []
@@ -127,3 +169,15 @@ notes: |
 
   PHASE C (agent-proposed wrong versions beyond the named ones) stays deferred
   in TQ-500g's notes.
+
+  IT-PO ENRICHMENT (2026-09-28)
+  PLACEMENT DECIDED: immediately before the commit dispatch on every route
+  (see it_requirements). The BA left the position relative to review to
+  IT-PO. Placing the runs last means no reviewer-driven fix can follow them,
+  and it is what makes TQ-500g-1-viii's staleness rule (B6) meaningful.
+  "THE FIX UNDONE" BASE DECIDED: the base ref the route passes. The default
+  is HEAD, the state before this piece of work began. On the per-ticket routes
+  (one commit per ticket in a shared epic worktree) the merge base with
+  origin/main would also undo earlier tickets' work. HEAD does not. The fast
+  lane commits once at the end, so HEAD is its merge base too. Details in
+  TQ-500g-1-i.

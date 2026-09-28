@@ -9,8 +9,8 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 roadmap_phase: phase_1
 criteria: |
   Given the test writer's eval set from TQ-200d-1, and the test runner, which
@@ -59,11 +59,69 @@ doc_links:
     relationship: describes
     status: exists
 assigned_agent: python-coder
-estimated_complexity: null
+estimated_complexity: M
 delivers_to: null
 expects_from:
   - ac_id: TQ-200d-1
     contract: "The test writer's registered eval set, which this AC adds rows to."
+it_requirements:
+- 'Join the existing harness (TQ-200c-4). Register the agent in scripts/evals/agent_eval_config.json with
+  ONE eval-set path of JSONL rows ({id, input, expected}). Test-writing agents produce test files, not
+  product-truth artifacts, so their scoring type lives in a sibling module under scripts/evals/. run_agent_eval.py
+  has 1438 counted lines, over the ratchet, and must not grow: any registration line added there is offset
+  in the same file. test-runner gets its own set. test-writer''s rows join the TQ-200d-1 set.'
+- 'Each row runs in a throwaway sandbox: a temp copy of a small fixture project the row names. Never the
+  repository tree. The row sandbox sets testing_context.db_connection_test to the placeholder address
+  (allowed by INF-1100d-4-i), or leaves it unset for W1 and W2.'
+- '''Names no address of its own'' is checked structurally on the produced files: the connection comes
+  from the setting, and there is no literal host, port or database. A judge is used only where the structure
+  cannot decide.'
+- Local only (user decision; KI-TQ-20260907). Registering the set must not make the CI eval job report
+  these rows as passed or checked. The result is stamped as a local run, and nothing claims TQ-200b-2.
+- Unit tests never call a live model. Row pickup and scoring are proven through the runner's gold-scoring
+  path, using recorded good and bad agent outputs as fixtures.
+- Any database address in a template, fixture or doc is the placeholder postgresql://<user>:<password>@<host>:<port>/<database>.
+  INF-1100d-4 scans shipped files.
+- Every new or changed Python file stays at or under 400 counted lines (scripts/commit_guardian/_file_size_ratchet.py).
+  Files already over the limit must not grow.
+test_spec:
+- name: test_test_runner_set_registered_and_every_row_scored
+  target_dir: unit_tests/evals/
+  framework: pytest
+  type: integration
+  angle: reachability
+  surface_invoked: python scripts/evals/run_agent_eval.py (gold-scoring mode)
+  description: Gold-scoring mode finds the new test-runner set and the extended test-writer set, and scores
+    every row.
+- name: test_w2_trap_fails_a_hand_off_warning_about_the_setting
+  target_dir: unit_tests/evals/
+  framework: pytest
+  type: integration
+  angle: discrimination
+  description: In both sets, a recorded W2 hand-off that warns about the missing setting fails, and a
+    silent one passes.
+  must_catch:
+  - W2 passes a hand-off that warns about the missing setting
+- name: test_configured_row_fails_a_literal_address
+  target_dir: unit_tests/evals/
+  framework: pytest
+  type: integration
+  angle: criterion
+  description: A produced database test with a literal host fails the 'configured database' row, and one
+    reading the setting passes.
+  must_catch:
+  - configured-database row passes a hard-coded address
+- name: test_w1_row_requires_the_setting_named_and_not_run
+  target_dir: unit_tests/evals/
+  framework: pytest
+  type: integration
+  angle: failure
+  description: A W1 hand-off that does not name testing_context.db_connection_test, or reports the database
+    tests as run, fails.
+  must_catch:
+  - W1 passes without naming the setting
+test_rationale: As TQ-200d-1. W2 is the trap in both sets, and the structural address check avoids a judge
+  where it can.
 origin_agent: business-analyst
 created: 2026-09-28
 amended_by: []
@@ -93,3 +151,6 @@ notes: |
   otherwise.
 
   LOCAL ONLY (user decision at the PO gate): see TQ-200d-1 notes.
+
+  IT-PO ENRICHMENT (2026-09-28)
+  Lane: fast lane, after TQ-200d-1 (depends_on).

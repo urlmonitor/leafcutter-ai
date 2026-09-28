@@ -8,8 +8,8 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 roadmap_phase: phase_1
 criteria: |
   Given the test writer's output for the "refresh gate" row is a test and a
@@ -41,11 +41,58 @@ doc_links:
     relationship: describes
     status: exists
 assigned_agent: python-coder
-estimated_complexity: null
+estimated_complexity: M
 delivers_to: null
 expects_from:
   - ac_id: TQ-500g-1-i
     contract: "The shared runner, callable on a produced test and a named wrong version, returning caught or survived."
+it_requirements:
+- The test half runs the produced test through TQ-500g-1-i's public runner (module or CLI) inside the
+  row sandbox. The sandbox holds the gate as written, and the wrong version is supplied as a prepared
+  alteration in the manifest shape. No second mutation mechanism.
+- The test half and the report half are scored and reported separately. The row passes only when both
+  pass. The test half never reads the judge or the report.
+- Unit tests never call a live model. Row pickup and scoring are proven through the runner's gold-scoring
+  path, using recorded good and bad agent outputs as fixtures.
+- Every new or changed Python file stays at or under 400 counted lines (scripts/commit_guardian/_file_size_ratchet.py).
+  Files already over the limit must not grow.
+test_spec:
+- name: test_o1_passes_both_halves
+  target_dir: unit_tests/evals/
+  framework: pytest
+  type: integration
+  angle: criterion
+  description: 'O1: the produced test passes on the gate as written and fails with the retry_due condition
+    dropped (a real pytest run through the runner), and its report names the wrong version. Both halves
+    pass.'
+- name: test_o2_fails_test_half_whatever_the_report_says
+  target_dir: unit_tests/evals/
+  framework: pytest
+  type: integration
+  angle: discrimination
+  description: 'O2: the fixture sets only refresh_due, so the test survives the wrong version. The test
+    half fails even though the report and a stubbed judge say it catches it.'
+  must_catch:
+  - test half taken from the judge verdict
+  - test half taken from the report's claim
+- name: test_o3_halves_scored_apart
+  target_dir: unit_tests/evals/
+  framework: pytest
+  type: integration
+  angle: boundary
+  description: 'O3: test half passes, report half fails, and the result shows both separately.'
+  must_catch:
+  - halves merged into one score
+- name: test_refresh_row_scored_through_eval_runner_cli
+  target_dir: unit_tests/evals/
+  framework: pytest
+  type: integration
+  angle: reachability
+  surface_invoked: python scripts/evals/run_agent_eval.py (gold-scoring mode)
+  description: run_agent_eval.py in gold-scoring mode scores the refresh-gate row with O1 to O3, and the
+    runner is invoked in the sandbox.
+test_rationale: O2 is incident 1 itself. Only a real wrong-version run can fail it, so the test uses the
+  shared runner on a real sandbox repo rather than a judge double.
 origin_agent: business-analyst
 created: 2026-09-28
 amended_by: []
@@ -68,3 +115,6 @@ notes: |
   judge-scored row first; this L3 swaps the test half to a run once the runner
   exists, without holding the whole set back. The fixture refresh module and
   its wrong version live in the row's sandbox, not in the project's code.
+
+  IT-PO ENRICHMENT (2026-09-28)
+  Lane: fast lane, after TQ-500g-1-i is done.

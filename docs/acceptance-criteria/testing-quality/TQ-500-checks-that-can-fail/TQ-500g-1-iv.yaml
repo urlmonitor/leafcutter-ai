@@ -8,7 +8,7 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
+readiness: approved
 priority: high
 roadmap_phase: phase_1
 criteria: |
@@ -45,12 +45,40 @@ doc_links:
     status: exists
     relevance: "Where must_catch names come from (the code-aware test designer); their wording is what this step must turn into code."
 assigned_agent: llm-expert
-estimated_complexity: null
+estimated_complexity: M
 delivers_to:
-  - agent: python-coder
-    ac_id: TQ-500g-1-i
-    contract: "For each named wrong version: either one concrete alteration of the code as written, labelled with its name, or a 'could not be prepared' entry naming it with a reason. Never a silent omission."
+- agent: python-coder
+  ac_id: TQ-500g-1-i
+  contract: 'Alterations manifest (JSON), written to <git-dir>/leafcutter/work/<work-key>/alterations.json:
+    {work_key: str, entries: [{name: str (the must_catch string verbatim), status: ''prepared''|''could_not_prepare'',
+    reason: str|null (one line; required when could_not_prepare), files: [{path: str (repo-relative POSIX),
+    altered_copy: str (absolute path of the full altered file, outside the working tree)}], diff: str
+    (unified diff against the code as written, shown next to the name)}]}. There is one entry per named
+    wrong version other than the fix-undone aliases. Nothing is ever omitted silently, and there are no
+    outcome claims.'
 expects_from: null
+it_requirements:
+- The preparer is an agent that wrote neither the code nor the tests (user decision Q1). So it is not
+  test-writer and not the coder. It may be a new agent (working name test-breaker) or an existing independent
+  one, chosen at build time. A new agent is registered through the add-agent-to-package procedure (config/agent_registry.json,
+  docs/agents/README.md). Its tool allowlist lets it read the code and write the manifest, but not run
+  tests.
+- It writes the manifest described in delivers_to and nothing else. It never edits the working tree (the
+  runner applies each alteration), never runs tests, and never says whether a test would catch a wrong
+  version.
+- Each named wrong version gets exactly one entry, under its name verbatim. A name it cannot prepare gets
+  'could_not_prepare' with a one-line reason, never a silent omission. The fix-undone aliases ('revert
+  the fix', 'the fix undone') are not prepared (TQ-500g-1-i).
+- Each alteration changes only what its name says. The diff shown next to the name is the evidence a reviewer
+  checks.
+- 'The template passes prompt-audit: signoff protocol, spawn_allowlist, no compound bash, and a tool allowlist
+  that matches the body.'
+test_required: false
+test_rationale: 'Prompt-only. How faithfully an LLM turns a prose name into code cannot be unit-tested,
+  and a template text search is forbidden (CLAUDE.md). Deterministic backstops bound the damage: TQ-500g-1-ii
+  refuses an alteration that does not load or changes nothing; the runner treats a missing or could_not_prepare
+  entry as unfinished; and TQ-500g-1-i ignores any outcome claim. Substitutes: pr-reviewer against the
+  Then clauses, and an eval row for the preparer under TQ-200 once the agent exists.'
 origin_agent: business-analyst
 created: 2026-09-28
 amended_by: []
@@ -80,3 +108,8 @@ notes: |
   A NAME THAT CANNOT BE PREPARED IS A FINDING, NOT A NUISANCE. It means either
   the requirement names a wrong version of code that was never written (the work
   may be incomplete) or the name is too vague to act on. Both need a human.
+
+  IT-PO ENRICHMENT (2026-09-28)
+  llm-expert lane. The runner (-1-i) can be built and tested before this
+  AC, using hand-written manifests as fixtures. The routes (-1-v, -1-vi,
+  -1-vii) need both.
