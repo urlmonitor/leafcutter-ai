@@ -421,6 +421,15 @@ def build_workflow_tools(target_root: Path, config: dict[str, Any],
     - ``scripts/knowledge_frontmatter_reader.py`` — knowledge_query.py's
       sibling frontmatter/YAML reader module (KM-KGS-100a-3-xi); must ship
       alongside it or knowledge_query.py fails to import in consumers.
+    - ``scripts/frontmatter_path_resolver.py`` — GE-118d's shared
+      path-bearing-frontmatter-entry resolver, imported by
+      templates/scripts/commit_guardian/frontmatter_validators.py via the
+      sibling locator module _frontmatter_path_resolver_locator.py; must
+      ship as a sibling of scripts/commit_guardian/ under this phase's
+      real deploy root (never under templates/scripts/commit_guardian/
+      itself — see the resolver's own docstring for why) or the deployed
+      check-doc-frontmatter guard fails to import it on any document using
+      the labelled entry shape.
     - ``scripts/knowledge_file_nodes.py`` — knowledge_query.py's second
       sibling module (KM-KGS-100d-4), resolving file-path relationship
       values to path-keyed graph nodes; must also ship alongside it for the
@@ -476,6 +485,14 @@ def build_workflow_tools(target_root: Path, config: dict[str, Any],
     #   knowledge_query.py's third sibling module, loaded on demand via
     #   _load_sibling_module() by check_surface_set(), so a consumer install
     #   missing it fails that call. (#TICKETLESS reason=km-kgs-100c-1-surface-check)
+    # - 2026-09-28 [python-coder/GE-118d]: Added frontmatter_path_resolver.py
+    #   right after knowledge_frontmatter_reader.py. Placement in this list
+    #   has no import-order dependency on any other entry; it is the second
+    #   of two required deploy-manifest locations for this ticket (see
+    #   _manifest_workflow_tool_scripts() in build_phases_knowledge.py for
+    #   the first, and this ticket's Implementation Notes for the
+    #   architect-review correction of which file that second location
+    #   actually lives in).
     """
     import shutil
 
@@ -486,6 +503,7 @@ def build_workflow_tools(target_root: Path, config: dict[str, Any],
         "add_component.py",
         "knowledge_query.py",
         "knowledge_frontmatter_reader.py",
+        "frontmatter_path_resolver.py",
         "knowledge_file_nodes.py",
         "knowledge_surface_check.py",
         "set_ticket_status.py",

@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: '2026-08-18'
-last_updated: '2026-08-18'
+last_updated: '2026-09-28'
 components:
   - commit_guardian
 related_docs:
@@ -16,12 +16,13 @@ related_docs:
 # KI-CG-008 — `check-doc-frontmatter` crashes with a `TypeError` on any non-string entry in `related_docs`, making the labelled-list form uncommittable
 
 > One known issue, split out of `docs/known-issues/commit-guardian.md` on
-> 2026-09-14. Index: [commit-guardian.md](../commit-guardian.md).
+> 2026-09-14. Index: [commit-guardian.md](../../commit-guardian.md).
 > Filename severity is the three-level index bucket (`blocker`); the
 > original grading is the `**Severity:**` line below, unchanged.
 
 - **Severity:** blocker
-- **Status:** open
+- **Status:** **RESOLVED** (fixed by ticket GE-118d via the new
+  `scripts/frontmatter_path_resolver.py` resolver; verified 2026-09-28 — see Resolution)
 - **Occurrences:** 1
 - **First seen:** 2026-08-19 · **Last seen:** 2026-08-19
 - **Where:** `templates/scripts/commit_guardian/frontmatter_validators.py:226-250`
@@ -123,5 +124,35 @@ A `related_docs` entry in the labelled-mapping form (`- explanation: docs/...md`
 `TypeError: unsupported operand type(s) for /: 'PosixPath' and 'dict'` the entry's Symptom
 quotes. No normalisation, no rejection-with-message, and no canonical-shape declaration have
 been added. Mechanism confirmed present; kept open.
+
+## Resolution
+
+Fixed by ticket **GE-118d**. `validate_paths()` in
+`templates/scripts/commit_guardian/frontmatter_validators.py` no longer indexes into a
+`related_docs` / `related_code` / `architecture_diagrams` element directly. It now delegates
+entry-shape classification, once per element inside its existing `path_fields` loop, to the
+new top-level `resolve_frontmatter_path_entry(entry, field) -> str | PathEntryRefusal` in
+`scripts/frontmatter_path_resolver.py` — a total, never-raising classifier that accepts
+either a bare string or a single-key mapping (`{field_name: path_string}`).
+
+This deliberately does **not** take this entry's own "sketch fix" above (accepting a
+multi-key mapping by taking all of its values). GE-118d refuses a multi-key mapping by name
+instead — the resolver reports it as a `PathEntryRefusal` naming the field and the accepted
+shapes (`ACCEPTED_SHAPES`), never the parsed element's Python `repr()` — accepting only a
+bare string or a single-key mapping, on the view that a mapping with more than one key is an
+ambiguous, undeclared shape rather than a convention to silently flatten.
+
+Verification: `unit_tests/commit_guardian/test_ge_118d.py` and
+`unit_tests/commit_guardian/test_ge_118d_deployed.py` (5 tests in total, all green —
+one file, split in two to stay inside the `check-file-size` limit), including a
+real deployed-hook subprocess test
+(`scripts/commit_guardian/run_hook.py scripts/commit_guardian/check_doc_frontmatter.py`) and
+a `yaml.safe_dump`-produced real-artifact fixture for the labelled form. The bare-string
+verdict was also regression-tested against a real tracked document — this very entry, filed
+at `docs/known-issues/commit-guardian/open-blocker-ki-cg-008.md` at the time the test was
+written, which uses the bare form for its own `related_docs`.
+
+This fix is signed off in-worktree as of 2026-09-28 but has not yet been committed or merged
+— no commit SHA is cited here because none exists yet.
 
 ---
