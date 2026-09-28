@@ -334,3 +334,32 @@ ENTROPY_HIGH:scripts/ac_store/_gtfa_files_touched.py:*
 # credential. Glob, not per-line: matches the treatment of every other changelog entry
 # in this file.
 ENTROPY_HIGH:changelogs/2026-09-23-1030-an-ambiguous-reference-pattern-is-now-refused-instead-of-silently-resolving-to-an-arbitrary-file.md:*
+
+# GE-120b-2-i's provoking fixture and the verdict baseline it produces.
+#
+# The fixture's PURPOSE is to make every registered check report a real violation, so
+# it necessarily contains one deliberate trigger per check — including a planted AWS
+# key for check-secrets. The planted value is the example access-key identifier AWS
+# publishes in its own public documentation, chosen precisely because it is not a
+# credential and never has been. It is deliberately NOT reproduced in this comment:
+# writing the literal here makes this allowlist itself trip the scanner, which is
+# exactly what happened on the first attempt to add these entries.
+# Suppressing the scanner here does not weaken it anywhere else:
+# the whole point of the fixture is that check-secrets FIRES on this file, and the
+# baseline records that firing as the expected verdict.
+#
+# The baseline JSON then carries a second-order case. It stores each check's stdout,
+# so it contains check_secrets' own "SECRETS DETECTED" report quoting the planted key
+# back — the recorded evidence of a security check working correctly is itself read as
+# a secret. Its ENTROPY_HIGH hits are captured hook output (regenerated-file notices,
+# identifier-uniqueness counts, a missing-schema warning naming a tmp path), all of it
+# machine-written diagnostic text containing no credential.
+#
+# Glob, not per-line, for both: the fixture grows a new provocation every time a check
+# joins the manifest (54 -> 62 -> 75 entries so far), and the baseline is regenerated
+# wholesale by `capture`, so every line number in it moves on every run. Per-line
+# entries would silently stop matching — the failure mode the header of this file warns
+# about.
+AWS_KEY:unit_tests/portability/_ge120_provoking_fixture_content.py:*
+AWS_KEY:unit_tests/portability/fixtures/ge_120b_2_i/main_checkout_verdict_baseline.json:*
+ENTROPY_HIGH:unit_tests/portability/fixtures/ge_120b_2_i/main_checkout_verdict_baseline.json:*
