@@ -363,3 +363,14 @@ ENTROPY_HIGH:changelogs/2026-09-23-1030-an-ambiguous-reference-pattern-is-now-re
 AWS_KEY:unit_tests/portability/_ge120_provoking_fixture_content.py:*
 AWS_KEY:unit_tests/portability/fixtures/ge_120b_2_i/main_checkout_verdict_baseline.json:*
 ENTROPY_HIGH:unit_tests/portability/fixtures/ge_120b_2_i/main_checkout_verdict_baseline.json:*
+
+# Three known-issue entries filed 2026-09-28. Their ids are long date-and-slug strings
+# (the convention this register adopted after sequential ids collided), and each entry
+# quotes sibling ids in its title, frontmatter and Related section. A line carrying two
+# of them reads as high entropy to the scanner. This is prose documentation about check
+# behaviour and contains no credential. Glob, not per-line: the ids appear at several
+# points in each file and move whenever the prose is edited — the same treatment every
+# changelog entry in this file already gets.
+ENTROPY_HIGH:docs/known-issues/commit-guardian/open-high-ki-cg-20260928-ticket-test-requirements-gate-reads-stdin-nothing-writes.md:*
+ENTROPY_HIGH:docs/known-issues/commit-guardian/open-high-ki-cg-20260928-folder-density-blocking-branch-unreachable.md:*
+ENTROPY_HIGH:docs/known-issues/commit-guardian/open-high-ki-cg-20260928-mermaid-parent-link-dead-in-deployed-layout.md:*

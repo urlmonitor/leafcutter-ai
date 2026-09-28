@@ -73,7 +73,7 @@ Severity in the **filename** is a three-level index bucket (`blocker` / `high` /
 
 Fixed issues move to [`commit-guardian/resolved/`](commit-guardian/resolved/) and are no longer listed as open. They are kept, not deleted.
 
-**Open: 71** (3 blocker, 30 high, 38 low) · **Resolved: 16**
+**Open: 74** (3 blocker, 33 high, 38 low) · **Resolved: 16**
 
 ## Open
 
@@ -112,6 +112,9 @@ Fixed issues move to [`commit-guardian/resolved/`](commit-guardian/resolved/) an
 | `high` | KI-CG-20260925-shared-root-resolver-accepts-non-repo-workspace-parent — _resolve_root.find_project_root() has no 'no repository' outcome and returns the workspace parent, so the fix direction of five open KIs would not fix them | [open-high-ki-cg-20260925-shared-root-resolver-accepts-non-repo-workspace-parent.md](commit-guardian/open-high-ki-cg-20260925-shared-root-resolver-accepts-non-repo-workspace-parent.md) |
 | `high` | KI-CG-20260927-file-size-hook-read-another-worktrees-index — check-file-size once measured the staged files of a different worktree, while every other hook in the same run saw the right ones | [open-high-ki-cg-20260927-file-size-hook-read-another-worktrees-index.md](commit-guardian/open-high-ki-cg-20260927-file-size-hook-read-another-worktrees-index.md) |
 | `high` | KI-CG-20260928-ac-schema-not-deployed-at-consumer-root — the schema is deployed only under .leafcutter/config/, so check-ac-schema degrades to manual field validation in every consumer install | [open-high-ki-cg-20260928-ac-schema-not-deployed-at-consumer-root.md](commit-guardian/open-high-ki-cg-20260928-ac-schema-not-deployed-at-consumer-root.md) |
+| `high` | KI-CG-20260928-folder-density-blocking-branch-unreachable — check-folder-density takes its before-commit snapshot with `git ls-files`, which reads the post-`git add` index, so a newly-crossing folder measures as already-over and the sole `return 1` is dead code | [open-high-ki-cg-20260928-folder-density-blocking-branch-unreachable.md](commit-guardian/open-high-ki-cg-20260928-folder-density-blocking-branch-unreachable.md) |
+| `high` | KI-CG-20260928-mermaid-parent-link-dead-in-deployed-layout — check-mermaid-parent-link derives REPO_ROOT from `parents[2]` of its own file, which lands inside `.leafcutter/` in the layout the manifest invokes, so every architecture doc lookup misses and it returns clean | [open-high-ki-cg-20260928-mermaid-parent-link-dead-in-deployed-layout.md](commit-guardian/open-high-ki-cg-20260928-mermaid-parent-link-dead-in-deployed-layout.md) |
+| `high` | KI-CG-20260928-ticket-test-requirements-gate-reads-stdin-nothing-writes — the gate takes its file list from stdin, the manifest sets `pass_filenames:false`, and run_hook pipes no stdin, so it inspects an empty list and exits 0 on every commit | [open-high-ki-cg-20260928-ticket-test-requirements-gate-reads-stdin-nothing-writes.md](commit-guardian/open-high-ki-cg-20260928-ticket-test-requirements-gate-reads-stdin-nothing-writes.md) |
 | `low` | KI-CG-002 — The diagram-type guard silently swaps its enum source when its declaring file is unreachable | [open-low-ki-cg-002.md](commit-guardian/open-low-ki-cg-002.md) |
 | `low` | KI-CG-011 — The roadmap mirror strips its own `description` frontmatter and backdates `created` to today | [open-low-ki-cg-011.md](commit-guardian/open-low-ki-cg-011.md) |
 | `low` | KI-CG-013 — The schema hook and the done-proof oracle disagree about what a leaf is, so one AC can be required to satisfy both branches | [open-low-ki-cg-013.md](commit-guardian/open-low-ki-cg-013.md) |
