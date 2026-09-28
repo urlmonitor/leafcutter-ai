@@ -12,35 +12,61 @@ BUSINESS CONTEXT: The agent registry is the single source of truth for spawn
     asymmetric spawn relationships and card<->registry mirror mismatches at
     commit time so engineers receive immediate named-pair error messages before
     bad registry or card state reaches main.
-ARCHITECTURE: Standalone script (no leafcutter-internal imports). Reads the
-    staged registry JSON via _read_registry_json() (patchable for unit tests).
-    Checks both directions of the spawn relationship in two passes:
-    (1) spawn_allowlist → spawned_by, (2) spawned_by → spawn_allowlist.
+ARCHITECTURE: Standalone script (no leafcutter-internal package imports).
+    Reads the staged registry JSON via _read_registry_json() (patchable for
+    unit tests). Checks both directions of the spawn relationship in two
+    passes: (1) spawn_allowlist → spawned_by, (2) spawned_by → spawn_allowlist.
     Also checks card<->registry mirror: parses the mermaid spawn diagram in
     each docs/agents/cards/<id>.card.md and compares against the registry
     spawn_allowlist and spawned_by for that agent (both directions).
-    Skips __ticket_phase_agents__ special token and "user"/"finalize-feature.js"
-    external callers. Emits structured errors to stderr naming both agents
-    involved in any asymmetry or mismatch per AC INF-600g-1 and INF-600l-1.
-    Triggers when config/agent_registry.json OR any docs/agents/cards/*.card.md
-    is staged.
+    Skips __ticket_phase_agents__ special token and every recognized external
+    caller (AC INF-600k-1): the literal "user" trigger, or the filename of a
+    workflow that really exists under the package's templates/workflows-js/
+    (falling back to .claude/workflows/ only when that source directory is
+    entirely absent). That classification is defined ONCE in
+    agent_spawn_external_callers.py, a sibling file in this same
+    commit_guardian/ directory that build_commit_guardian() always deploys
+    alongside this hook -- imported via an adjacent sys.path entry rather
+    than a leafcutter-internal package import, so the import still resolves
+    when this file runs as the deployed
+    .leafcutter/scripts/commit_guardian/hooks/check_agent_spawn_consistency.py
+    in a consumer project with no scripts/ package on its Python path.
+    Emits structured errors to stderr naming both agents involved in any
+    asymmetry or mismatch per AC INF-600g-1 and INF-600l-1. Triggers when
+    config/agent_registry.json OR any docs/agents/cards/*.card.md is staged.
+
+    PACKAGE-ROOT RESOLUTION (GE-113c-1-vi, AC INF-600k-1): the package root
+    used for is_recognized_external_caller() is found the same way
+    check_agent_registry.py finds it -- via the shared
+    _resolve_root.resolve_package_root(), never a hand-rolled git rev-parse.
+    Unlike that hook, a missing manifest here WARNS and falls back to
+    _resolve_root.find_project_root() rather than blocking the commit: this
+    hook validates spawn consistency, and AC INF-600k-1 does not require
+    blocking on a missing manifest, so it mirrors check_build_drift.py's /
+    check_output_drift.py's warn-and-continue policy instead (see
+    _resolve_package_root()). That resolved package_root is a DIFFERENT root
+    from the one used to find docs/agents/cards/ (still
+    _resolve_root.find_project_root() directly) -- see main()'s own comment
+    for why those two must not be conflated.
 """
 
 from __future__ import annotations
 
 import json
-import re
 import subprocess
 import sys
 from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from agent_spawn_external_callers import is_recognized_external_caller  # noqa: E402
+from card_mermaid_parser import parse_card_spawn_edges  # noqa: E402
+from _resolve_root import find_project_root, resolve_package_root  # noqa: E402
+
+_HOOK_FILE = Path(__file__).resolve()
+_parse_card_spawn_edges = parse_card_spawn_edges  # back-compat alias (moved to card_mermaid_parser.py)
 
 _REGISTRY_PATH = "config/agent_registry.json"
 _CARDS_DIR_PATH = "docs/agents/cards"
 _SPECIAL_TOKEN = "__ticket_phase_agents__"
-_EXTERNAL_CALLERS = {"user", "finalize-feature.js"}
-
-_MERMAID_SPAWNS_PATTERN = re.compile(r"^\s*(\w+)\s*-->\|spawns\|\s*(\w+)")
-_MERMAID_DISPATCHES_PATTERN = re.compile(r"^\s*(\w+)\s*-->\|dispatches\|\s*(\w+)")
 
 
 def _get_staged_files() -> list[str]:
@@ -99,17 +125,23 @@ def _read_registry_json() -> str:
     return result.stdout
 
 
-def _check_asymmetric_spawns(agents: list[dict]) -> list[str]:
+def _check_asymmetric_spawns(agents: list[dict], package_root: Path) -> list[str]:
     """Check for asymmetric spawn relationships in the agent list.
 
     Performs two passes:
     1. For each agent A with spawn_allowlist entry B: verify B.spawned_by includes A.
     2. For each agent A with spawned_by entry B: verify B.spawn_allowlist includes A.
 
-    Skips __ticket_phase_agents__ token and external callers (user, finalize-feature.js).
+    Skips __ticket_phase_agents__ token and every recognized external caller
+    (AC INF-600k-1's is_recognized_external_caller: the literal "user"
+    trigger, or a real workflow filename).
 
     Args:
         agents: List of agent dicts from the registry.
+        package_root: Absolute path to the package root (for resolving real
+            workflow filenames as recognized external callers). main()
+            resolves this via _resolve_package_root(), the GE-113c-1-vi
+            manifest-based lookup (it_requirement #3).
 
     Returns:
         List of "asymmetric spawn:" error strings, one per asymmetric pair found.
@@ -129,7 +161,7 @@ def _check_asymmetric_spawns(agents: list[dict]) -> list[str]:
             if child_id not in registry_ids:
                 continue  # Unknown agents are caught by other validators
             child_spawned_by = spawned_by_map.get(child_id, [])
-            if agent_id not in child_spawned_by and agent_id not in _EXTERNAL_CALLERS:
+            if agent_id not in child_spawned_by and not is_recognized_external_caller(agent_id, package_root):
                 errors.append(
                     f"asymmetric spawn: {agent_id}.spawn_allowlist includes {child_id}, "
                     f"but {child_id}.spawned_by does not include {agent_id}"
@@ -138,7 +170,7 @@ def _check_asymmetric_spawns(agents: list[dict]) -> list[str]:
     # Pass 2: spawned_by → spawn_allowlist
     for agent_id, spawners in spawned_by_map.items():
         for parent_id in spawners:
-            if parent_id in _EXTERNAL_CALLERS:
+            if is_recognized_external_caller(parent_id, package_root):
                 continue
             if parent_id not in registry_ids:
                 continue  # Unknown agents are caught by other validators
@@ -154,6 +186,12 @@ def _check_asymmetric_spawns(agents: list[dict]) -> list[str]:
 
 def _get_repo_root() -> Path:
     """Get the repository root path via git rev-parse.
+
+    Used for docs/agents/cards/ resolution (_resolve_cards_dir) only -- a
+    DIFFERENT need from _resolve_package_root() below: cards-dir and
+    skills_config.json are workspace-level and not necessarily inside the
+    manifest-derived package_root in a consumer layout that vendors the
+    package as a subdirectory.
 
     Returns:
         Absolute path to the git repository root.
@@ -173,6 +211,38 @@ def _get_repo_root() -> Path:
     if result.returncode != 0 or not result.stdout.strip():
         raise OSError("git rev-parse --show-toplevel returned no output")  # noqa: TRY003
     return Path(result.stdout.strip())
+
+
+def _resolve_package_root() -> Path:
+    """Resolve the package root the GE-113c-1-vi way (AC INF-600k-1).
+
+    Delegates to ``_resolve_root.resolve_package_root()`` — the SAME lookup
+    check_agent_registry.py uses — rather than a hand-rolled ``git
+    rev-parse`` (the prior placeholder). Unlike check_agent_registry.py, this
+    hook's own policy on a miss is WARN, not block: it validates spawn
+    consistency, and AC INF-600k-1 does not require blocking the commit when
+    no manifest can be found. This mirrors check_build_drift.py's /
+    check_output_drift.py's warn-and-continue policy on the identical
+    missing-manifest condition (a fresh clone with no manifest yet must not
+    self-block) rather than check_agent_registry.py's block policy (a
+    different gate's different criterion — see ``_resolve_root.py``'s own
+    "POLICY IS NOT SHARED" docstring note).
+
+    Returns:
+        The resolved package root, or ``_resolve_root.find_project_root()``
+        (the repo root) with a WARNING to stderr when no manifest could be
+        located. Never raises, never returns ``None``.
+    """
+    package_root, tried = resolve_package_root(_HOOK_FILE)
+    if package_root is not None:
+        return package_root
+    tried_str = "\n  ".join(tried)
+    print(
+        "[check-agent-spawn-consistency] WARNING: no .build_manifest.json "
+        f"resolved a package root; falling back to the repo root. Tried:\n  {tried_str}",
+        file=sys.stderr,
+    )
+    return find_project_root()
 
 
 def _resolve_cards_dir(repo_root: Path) -> Path:
@@ -218,76 +288,10 @@ def _resolve_cards_dir(repo_root: Path) -> Path:
     return repo_root / _DEFAULT_CARDS_SUBDIR
 
 
-def _node_id_to_agent_id(node_id: str) -> str:
-    """Convert a mermaid node ID back to an agent ID.
-
-    Inverts the agent_id.replace("-", "_") encoding used by generate_agent_cards.
-    Special case: __ticket_phase_agents__ has underscores as actual separators
-    (not hyphens), so it is returned unchanged.
-
-    Args:
-        node_id: Mermaid diagram node identifier (e.g. ``"python_coder"``).
-
-    Returns:
-        Agent identifier string (e.g. ``"python-coder"``).
-    """
-    if node_id == _SPECIAL_TOKEN:
-        return _SPECIAL_TOKEN
-    return node_id.replace("_", "-")
-
-
-def _parse_card_spawn_edges(
-    card_text: str,
-    agent_id: str,
-) -> tuple[set[str], set[str]]:
-    """Parse mermaid spawn edges from a generated agent card.
-
-    Scans the first mermaid block in *card_text* for:
-    - ``{self_id} -->|spawns| {child_id}`` — child belongs in spawn_allowlist
-    - ``{parent_id} -->|dispatches| {self_id}`` — parent belongs in spawned_by
-
-    Node IDs are converted back to agent IDs via _node_id_to_agent_id().
-
-    Args:
-        card_text: Full text content of the .card.md file.
-        agent_id: Canonical agent identifier for this card (e.g. ``"python-coder"``).
-
-    Returns:
-        Tuple ``(spawn_allowlist_set, spawned_by_set)`` where each element is a
-        set of agent IDs derived from the mermaid diagram.
-    """
-    self_node_id = agent_id.replace("-", "_")
-    spawn_allowlist: set[str] = set()
-    spawned_by: set[str] = set()
-
-    in_mermaid = False
-    for line in card_text.splitlines():
-        stripped = line.strip()
-        if stripped == "```mermaid":
-            in_mermaid = True
-            continue
-        if in_mermaid and stripped == "```":
-            in_mermaid = False
-            continue
-        if not in_mermaid:
-            continue
-
-        # Check for spawns edge: self_id -->|spawns| child_id
-        m = _MERMAID_SPAWNS_PATTERN.match(line)
-        if m and m.group(1) == self_node_id:
-            spawn_allowlist.add(_node_id_to_agent_id(m.group(2)))
-
-        # Check for dispatches edge: parent_id -->|dispatches| self_id
-        m = _MERMAID_DISPATCHES_PATTERN.match(line)
-        if m and m.group(2) == self_node_id:
-            spawned_by.add(_node_id_to_agent_id(m.group(1)))
-
-    return spawn_allowlist, spawned_by
-
-
 def _check_card_registry_mirror(
     agents: list[dict],
     cards_dir: Path,
+    package_root: Path | None = None,
 ) -> list[str]:
     """Check for mismatches between agent cards and the registry spawn relationships.
 
@@ -304,17 +308,26 @@ def _check_card_registry_mirror(
 
     Emits an advisory note to stderr for agents whose card file does not exist
     (naming the agent and path) then skips them — the absence of a card file
-    is not treated as a mismatch. Skips __ticket_phase_agents__ and external
-    callers in the same way as _check_asymmetric_spawns().
+    is not treated as a mismatch. Skips __ticket_phase_agents__ and every
+    recognized external caller in the same way as _check_asymmetric_spawns()
+    (this is the load-bearing check for rejecting an unrecognized spawned_by
+    entry as an unknown agent, Direction 2b below).
 
     Args:
         agents: List of agent dicts from the registry.
         cards_dir: Absolute path to the directory containing .card.md files.
+        package_root: Absolute path to the package root (for resolving real
+            workflow filenames as recognized external callers). Defaults to
+            the current working directory when omitted -- callers that only
+            exercise agent-id / literal-"user" / special-token classification
+            (unaffected by the workflow directory's contents) may omit it.
+            main() always passes it explicitly, via _resolve_package_root().
 
     Returns:
         List of human-readable mismatch error strings. Empty list when all
         cards agree with the registry.
     """
+    resolved_root = package_root if package_root is not None else Path.cwd()
     errors: list[str] = []
 
     # Expand __ticket_phase_agents__ macro to the concrete set of ticket-phase agent IDs.
@@ -349,7 +362,7 @@ def _check_card_registry_mirror(
             )
             continue
 
-        card_spawn, card_spawned_by = _parse_card_spawn_edges(card_text, agent_id)
+        card_spawn, card_spawned_by = parse_card_spawn_edges(card_text, agent_id)
         reg_spawn: set[str] = set(entry.get("spawn_allowlist", []))
         reg_spawned_by: set[str] = set(entry.get("spawned_by", []))
 
@@ -380,7 +393,7 @@ def _check_card_registry_mirror(
 
         # Direction 2a: card shows dispatches edge not in registry spawned_by
         for parent in sorted(card_spawned_by):
-            if parent in _EXTERNAL_CALLERS:
+            if is_recognized_external_caller(parent, resolved_root):
                 continue
             if parent not in reg_spawned_by:
                 errors.append(
@@ -390,7 +403,7 @@ def _check_card_registry_mirror(
 
         # Direction 2b: registry spawned_by has edge the card does not show
         for parent in sorted(reg_spawned_by):
-            if parent in _EXTERNAL_CALLERS:
+            if is_recognized_external_caller(parent, resolved_root):
                 continue
             if parent not in card_spawned_by:
                 errors.append(
@@ -452,11 +465,15 @@ def main() -> int:
     if not agents:
         return 0
 
+    # Resolved ONCE, threaded into both checks below (a DIFFERENT root from
+    # repo_root below -- see _resolve_package_root()'s docstring).
+    package_root = _resolve_package_root()
+
     errors: list[str] = []
 
     # Asymmetric registry-only check (only when registry itself is staged)
     if registry_staged:
-        errors.extend(_check_asymmetric_spawns(agents))
+        errors.extend(_check_asymmetric_spawns(agents, package_root))
 
     # Card<->registry mirror check (runs whenever registry OR cards are staged)
     try:
@@ -478,7 +495,7 @@ def main() -> int:
                 file=sys.stderr,
             )
         else:
-            errors.extend(_check_card_registry_mirror(agents, cards_dir))
+            errors.extend(_check_card_registry_mirror(agents, cards_dir, package_root))
 
     if not errors:
         return 0
@@ -574,4 +591,22 @@ if __name__ == "__main__":
 #   directions use the same expansion logic. ticket_phase_ids is pre-computed once
 #   before the agent loop.
 #   (#EPIC-RegistryCardMirror/remediation)
+# - 2026-09-28 14:00 [python-coder]: AC INF-600k-1: is_recognized_external_caller()
+#   replaces _EXTERNAL_CALLERS. (#TICKETLESS reason=inf-600k-1-workflow-callers)
+# - 2026-09-28 15:30 [python-coder]: pr-reviewer fixes on AC INF-600k-1:
+#   package_root is now threaded explicitly through _check_asymmetric_spawns()
+#   and _check_card_registry_mirror() (main() resolves it once via
+#   _get_repo_root(), a placeholder for the GE-113c-1-vi resolver landing
+#   with PR #943) instead of each call site reaching for Path.cwd(). Restored
+#   the 2026-07-06 EPIC-RegistryCardMirror/04 entry above to its original
+#   text. Moved _node_id_to_agent_id() and _parse_card_spawn_edges() to the
+#   new sibling card_mermaid_parser.py to make room without growing this
+#   file past its HEAD line count. (#TICKETLESS reason=inf-600k-1-workflow-callers)
+# - 2026-09-28 16:00 [python-coder/AC INF-600k-1, pr-reviewer HIGH-3]: PR #943
+#   landed the shared resolver. Added _resolve_package_root(), calling the
+#   SAME _resolve_root.resolve_package_root() check_agent_registry.py uses,
+#   warning and falling back to find_project_root() on a miss instead of
+#   blocking. package_root (is_recognized_external_caller) is now resolved
+#   separately from repo_root (_get_repo_root(), for docs/agents/cards/).
+#   (#TICKETLESS reason=inf-600k-1-workflow-callers)
 # ====================================================================

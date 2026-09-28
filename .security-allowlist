@@ -58,6 +58,12 @@ ENTROPY_HIGH:docs/build-dataflow.json:*
 # "use globs not line numbers for drifting targets" rule in CLAUDE.md.
 GENERIC_SECRET:scripts/registry_validator.py:*
 ENTROPY_HIGH:scripts/registry_validator.py:*
+# INF-600k-1 (2026-09-28): the same _SPECIAL_TOKEN sentinel, moved with the code it
+# belongs to (spawn-bidirectionality checks, card mermaid parser) and present in the
+# canonical templates/ copy of the spawn-consistency hook. Sentinel, not a credential.
+GENERIC_SECRET:scripts/spawn_bidirectionality_validator.py:*
+GENERIC_SECRET:templates/scripts/commit_guardian/card_mermaid_parser.py:*
+GENERIC_SECRET:templates/scripts/commit_guardian/hooks/check_agent_spawn_consistency.py:*
 
 # Doc-path / identifier strings in source and prompt text
 ENTROPY_HIGH:scripts/ac_store/generate_ticket_from_ac.py:*
