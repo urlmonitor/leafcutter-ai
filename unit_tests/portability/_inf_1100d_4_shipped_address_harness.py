@@ -64,8 +64,85 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 
 # The pinned pre-work commit named by INF-1100d-4's own it_requirements:
 # "The pre-fix proof must use the real bytes of the five shipped source
-# files ... as they stood at the pinned pre-work commit e919a24f."
-PRE_FIX_COMMIT = "e919a24f"
+# files ... as they stood at the pinned pre-work commit e919a24f." Hardcoded
+# as the FULL 40-character SHA (resolved locally via `git rev-parse
+# e919a24f`) rather than the short form: a full SHA is what makes the
+# one-shot `git fetch --depth=1 origin <sha>` remediation in
+# `_ensure_pre_fix_commit_available()` below possible against a shallow CI
+# clone -- GitHub's server accepts fetching a single reachable commit by its
+# full SHA even when it is not a branch tip, but does not resolve an
+# abbreviated SHA the same way over a shallow fetch.
+PRE_FIX_COMMIT = "e919a24feb56896fa640b93d96c2df04aaadfdf6"
+
+# Commits already confirmed present in the local object database this
+# process run -- avoids repeating the cat-file/fetch/cat-file dance for
+# every one of the five files `materialize_pre_fix_tree()` reads.
+_pre_fix_commit_checked: set[str] = set()
+
+
+def _ensure_pre_fix_commit_available(commit: str) -> None:
+    """Make sure ``commit`` is present in the local object database before
+    any ``git show <commit>:<path>`` call relies on it.
+
+    On a normal (non-shallow) clone/worktree this is already true and the
+    single ``git cat-file -e`` probe below is the only subprocess this
+    function runs. On CI's shallow ``actions/checkout``, the pinned pre-fix
+    commit -- which sits behind HEAD in history -- is NOT fetched by
+    default, so a plain ``git show <sha>:<path>`` fails with "fatal: invalid
+    object name '<sha>'" even though the SHA itself is correct.
+
+    Remediation (tried exactly once): ``git fetch --depth=1 origin
+    <full-sha>`` -- GitHub's server allows fetching a single reachable
+    commit by its full SHA even when it is not a branch tip -- then
+    re-probe with ``git cat-file -e``. If the commit is STILL unavailable
+    after that one fetch attempt, this raises the same fail-closed
+    ``RuntimeError`` this AC's own it_requirements demands ('If that
+    history is unavailable ... fail closed; never skip silently'): it never
+    silently returns as if the commit were available when it is not, and it
+    never falls back to a reconstructed/hand-typed substitute for the real
+    bytes.
+    """
+    if commit in _pre_fix_commit_checked:
+        return
+
+    probe = subprocess.run(
+        ["git", "cat-file", "-e", f"{commit}^{{commit}}"],
+        cwd=str(REPO_ROOT),
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+    if probe.returncode == 0:
+        _pre_fix_commit_checked.add(commit)
+        return
+
+    fetch = subprocess.run(
+        ["git", "fetch", "--depth=1", "origin", commit],
+        cwd=str(REPO_ROOT),
+        capture_output=True,
+        text=True,
+        timeout=60,
+    )
+
+    retry = subprocess.run(
+        ["git", "cat-file", "-e", f"{commit}^{{commit}}"],
+        cwd=str(REPO_ROOT),
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+    if retry.returncode == 0:
+        _pre_fix_commit_checked.add(commit)
+        return
+
+    raise RuntimeError(
+        f"pinned pre-fix history unavailable for {commit} even after "
+        f"attempting 'git fetch --depth=1 origin {commit}' (fail closed, "
+        f"never skip silently) -- initial cat-file stderr={probe.stderr!r}; "
+        f"fetch returncode={fetch.returncode!r} stderr={fetch.stderr!r}; "
+        f"retry cat-file stderr={retry.stderr!r}"
+    )
+
 
 # The five shipped source files INF-1100d-4's criteria names as carrying
 # the address at the pinned pre-work commit. (See test_inf_1100d_4.py's own
@@ -177,10 +254,19 @@ def old_shipped_address() -> str:
 
 def git_show(rel_path: str, commit: str = PRE_FIX_COMMIT) -> str:
     """Read a file's REAL bytes at ``commit`` via ``git show`` -- never a
-    hand-typed reconstruction of history. Raises when the pinned history is
-    unavailable, per this AC's own it_requirements: 'If that history is
-    unavailable (e.g. a shallow CI clone), fail closed; never skip
-    silently.'"""
+    hand-typed reconstruction of history.
+
+    Ensures ``commit`` is actually present first (``
+    _ensure_pre_fix_commit_available`` -- probes, and on a shallow clone
+    attempts exactly one ``git fetch --depth=1 origin <sha>`` before
+    re-probing). This call itself keeps its own fail-closed check too: if
+    ``git show`` STILL fails after that (a corrupt object, the specific
+    path never existed at this commit, etc.), this raises rather than
+    silently returning empty/partial content, per this AC's own
+    it_requirements: 'If that history is unavailable (e.g. a shallow CI
+    clone), fail closed; never skip silently.'"""
+    _ensure_pre_fix_commit_available(commit)
+
     result = subprocess.run(
         ["git", "show", f"{commit}:{rel_path}"],
         cwd=str(REPO_ROOT),
