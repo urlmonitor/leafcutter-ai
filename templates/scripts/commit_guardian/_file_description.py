@@ -54,6 +54,18 @@ ARCHITECTURE: Sibling module to check_file_size.py, inside
     extraction rule, both share the private _classify_description() below.
 
 DECISION HISTORY
+- 2026-09-28 [GE-127e-4/python-coder]: format_description_lines() now appends
+  one framing sentence -- "This division is a starting point taken from the
+  file as it currently stands." -- immediately after the existing
+  Division/Side A/Side B lines, gated on the IDENTICAL condition
+  (``side_a is not None and side_b is not None``) so it never prints for the
+  single-part or partial-coverage cases, where no division was ever named to
+  frame. Wording is deliberately below GE-127e-4's ceiling: it claims only
+  that the division is a starting point taken from current content, never
+  that it is safe, preserves behavior, was checked against dependents, or is
+  the only or best option -- those are INF-800's claims, not this gate's.
+  No new artifact, no persisted state: the sentence is produced by the same
+  in-process, stateless call this module already made every run.
 - 2026-09-28 [GE-127e-3-i/python-coder]: Added the private
   _classify_description() core (shared by describe_file() and the new
   describe_file_failure_reason()) so a could-not-be-described state names
@@ -402,7 +414,11 @@ def format_description_lines(description: FileDescription) -> list[str]:
     """Render *description* into the printed-block lines the refusal appends.
 
     See this component's ``_ge_127e_1_fixture.py`` module docstring for the
-    printed-block contract this formatting fixes exactly.
+    printed-block contract this formatting fixes exactly. When a division is
+    named (GE-127e-4), one framing sentence follows the Division/Side A/Side
+    B lines, gated on the same condition that gates the Division block
+    itself -- never printed for the single-part or partial-coverage cases,
+    since no division exists there to frame.
 
     Args:
         description: A non-None result from ``describe_file``.
@@ -424,6 +440,9 @@ def format_description_lines(description: FileDescription) -> list[str]:
         lines.append("   Division:")
         lines.append(f"     Side A: {', '.join(names_a)} ({length_a} lines)")
         lines.append(f"     Side B: {', '.join(names_b)} ({length_b} lines)")
+        lines.append(
+            "   This division is a starting point taken from the file as it currently stands."
+        )
 
     return lines
 
