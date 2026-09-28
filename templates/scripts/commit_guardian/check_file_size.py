@@ -353,10 +353,6 @@ def _print_too_large_file(filepath: str, lines: int, limit: int) -> None:
     print("   Please refactor and split this file before committing.")
     _print_asymmetry_advice()
     print("   You MUST split the file to make it easier and less token consuming for agents.")
-    if filepath.endswith(".py"):
-        print("   Use the `/code-refactoring-specialist` slash command to intelligently split this Python file.")
-    else:
-        print("   Use the `/code-refactoring-specialist` slash command or relevant skill to intelligently split the file.")
     print("   (We enforce this check to force refactoring of older files over time).\n")
 
 
