@@ -68,7 +68,7 @@ Severity in the **filename** is a three-level index bucket (`blocker` / `high` /
 
 Fixed issues move to [`build-orchestration/resolved/`](build-orchestration/resolved/) and are no longer listed as open. They are kept, not deleted.
 
-**Open: 54** (3 blocker, 32 high, 19 low) · **Resolved: 24**
+**Open: 55** (3 blocker, 33 high, 19 low) · **Resolved: 24**
 
 ## Open
 
@@ -78,6 +78,7 @@ Fixed issues move to [`build-orchestration/resolved/`](build-orchestration/resol
 | `blocker` | KI-BO-20260925-1309 — A phase agent wraps its whole reply in one `input` string, and the schema's misleading error sends every retry after the wrong field, so the drive halts with the work already done | [open-blocker-ki-bo-20260925-1309.md](build-orchestration/open-blocker-ki-bo-20260925-1309.md) |
 | `high` | KI-BO-007 — `build-feature` counts a phase as completed when the agent halted without doing it, yielding `status: ok` with no PR | [open-high-ki-bo-007.md](build-orchestration/open-high-ki-bo-007.md) |
 | `high` | KI-BO-20260921-worktree-base-resolver-defaults-to-cwd — build-feature calls the worktree-base resolver with no start path, so in the self-hosting layout it resolves against a directory outside the repository and every epic drive aborts | [open-high-ki-bo-20260921-worktree-base-resolver-defaults-to-cwd.md](build-orchestration/open-high-ki-bo-20260921-worktree-base-resolver-defaults-to-cwd.md) |
+| `high` | KI-BO-20260922-0500 — the fast lane renders a crashed resolver as an empty build set, returning `status: ok` and `nothing_to_build` with a confident prose diagnosis for an AC that had two not-done leaves to build | [open-high-ki-bo-20260922-0500.md](build-orchestration/open-high-ki-bo-20260922-0500.md) |
 | `high` | KI-BO-011 — A grep-only test aimed at an orphaned file kept a superseded criterion looking satisfied, hiding a direct contradiction between two `done` ACs | [open-high-ki-bo-011.md](build-orchestration/open-high-ki-bo-011.md) |
 | `high` | KI-BO-012 — The fast lane emits no telemetry, so the lane-comparison report can never contain fast-lane data | [open-high-ki-bo-012.md](build-orchestration/open-high-ki-bo-012.md) |
 | `high` | KI-BO-013 — A documentation-only AC anywhere in a resolved build set jams the fast lane at commit, because `test_required: false` is honoured by nothing | [open-high-ki-bo-013.md](build-orchestration/open-high-ki-bo-013.md) |
