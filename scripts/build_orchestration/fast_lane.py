@@ -112,6 +112,7 @@ from _fl_common import (
     _is_leaf,
     _load_ac,
     _run_pytest_and_parse,
+    _run_pytest_and_parse_with_kind,
     _scan_test_root_for_covers_tags,
     _walk_ac_yamls,
     derive_parent_id,
@@ -130,12 +131,16 @@ from _fl_lifecycle import (
 from _fl_producibility import compute_producibility_verdict
 from _fl_red_baseline_support import (
     _RedBaselineGitError,
+    _classify_declared_reds,
     _classify_newly_added,
+    _declared_names_preflight,
+    _detect_ambiguous_tag_identities,
     _partition_newly_added,
     _red_baseline_verdict,
     _report_preexisting,
     _resolve_git_baseline_context,
 )
+from _fl_heavy_lane_gate import heavy_lane_gate  # noqa: F401 — re-exported, used by main()
 from _fl_selection import _topo_order_build_set, select_batch
 
 # ---------------------------------------------------------------------------
@@ -256,7 +261,11 @@ def resolve_connected_build_set(
 
 
 def verify_red_baseline(
-    *, ac_ids: list[str], test_root: Path, base_ref: str | None = None
+    *,
+    ac_ids: list[str],
+    test_root: Path,
+    base_ref: str | None = None,
+    ac_root: Path | None = None,
 ) -> dict:
     """Check that at least one newly-added test covering *ac_ids* is red.
 
@@ -272,6 +281,19 @@ def verify_red_baseline(
     (BO-2400a-3-vii).  Idempotent (BO-2400a-3-viii): resolving the partition
     performs read-only git queries only, never a fetch or ref update.
 
+    TQ-500f-3-i (opt-in via *ac_root*): when *ac_root* is supplied, a
+    newly-added covering test whose AC ``test_spec`` entry declares
+    ``must_catch`` (non-empty) or ``angle: discrimination`` is REFUSED as red
+    evidence when its only red is an absence red (an import/name/attribute
+    lookup error raised before any code under test ran, classified from this
+    same pytest run's own output — never a self-reported label). A refused
+    test moves from ``red`` into the additive ``refused`` list, and the gate
+    fails closed as a whole — ``gate_passed`` False with reason
+    ``"declared_test_refused_absence_only_red"`` — even when other
+    newly-added tests in the same batch are properly red. Without *ac_root*
+    (the default), this function's behaviour is byte-identical to before
+    this AC: no refusal logic runs, and ``refused`` is always ``[]``.
+
     Args:
         ac_ids: Batch of AC ids whose covering tests establish the baseline.
         test_root: Root directory to scan for ``*.py`` test files; must be
@@ -279,26 +301,38 @@ def verify_red_baseline(
         base_ref: Optional explicit git ref to diff newly-added tests
             against.  Defaults to ``None``, which derives
             ``git merge-base HEAD origin/main`` from *test_root*.
+        ac_root: Optional root directory of the AC YAML store. Supplying it
+            opts into TQ-500f-3-i's declared-absence-only-red refusal rule
+            (see above); omitting it (the default) preserves this function's
+            pre-TQ-500f-3-i behaviour exactly.
 
     Returns:
         Dict with keys:
 
         ``gate_passed`` (bool)
-            True iff at least one newly-added covering test is red.
+            True iff at least one newly-added covering test is red and no
+            declared test was refused.
 
         ``reason`` (str | None)
-            ``None`` when ``gate_passed`` is True; otherwise exactly one of
+            ``None`` when ``gate_passed`` is True; otherwise one of
             ``"no_new_covering_tests"``, ``"all_new_tests_green_at_baseline"``,
-            ``"no_red_outcome_among_new_tests"``, or
-            ``"baseline_partition_unavailable"`` (BO-2400a-3-i, -vii).
+            ``"no_red_outcome_among_new_tests"``,
+            ``"baseline_partition_unavailable"`` (BO-2400a-3-i, -vii), or
+            ``"declared_test_refused_absence_only_red"`` (TQ-500f-3-i).
 
         ``red``, ``green_at_baseline``, ``inconclusive`` (list[dict])
             Newly-added tests classified per BO-2400a-3-vi, each entry
-            ``{"nodeid": str, "ac_id": str, "outcome": str}``.
+            ``{"nodeid": str, "ac_id": str, "outcome": str}``. A refused
+            entry (see ``refused`` below) is never also present in ``red``.
 
         ``preexisting`` (list[dict])
             Pre-existing tests in the same entry shape — reported but
             excluded from the verdict (BO-2400a-3-iv).
+
+        ``refused`` (list[dict])
+            TQ-500f-3-i — additive. Declared covering tests refused as
+            absence-only red, each ``{"nodeid", "ac_id", "kind": "absence",
+            "message"}``. Always ``[]`` when *ac_root* is omitted.
     """
     batch_set = set(ac_ids)
     all_tags = _scan_test_root_for_covers_tags(test_root)
@@ -315,13 +349,41 @@ def verify_red_baseline(
             gate_passed=False, reason="baseline_partition_unavailable"
         )
 
+    # H-2/H-4: pre-pytest fail-closed checks (never depend on a run outcome).
+    declared_names: set[str] = set()
+    if ac_root is not None:
+        if _detect_ambiguous_tag_identities(newly_added_tags):
+            return _red_baseline_verdict(gate_passed=False, reason="ambiguous_test_identity")
+        declared_names, preflight_reason = _declared_names_preflight(
+            ac_ids, ac_root, newly_added_tags
+        )
+        if preflight_reason is not None:
+            return _red_baseline_verdict(gate_passed=False, reason=preflight_reason)
+
     test_files = list({t["file"] for t in newly_added_tags + preexisting_tags})
-    pytest_results = _run_pytest_and_parse(test_files)
+
+    if ac_root is not None:
+        pytest_results, kind_by_nodeid = _run_pytest_and_parse_with_kind(test_files)
+    else:
+        pytest_results = _run_pytest_and_parse(test_files)
+        kind_by_nodeid = {}
 
     red, green_at_baseline, inconclusive = _classify_newly_added(
         newly_added_tags, pytest_results
     )
     preexisting = _report_preexisting(preexisting_tags, pytest_results)
+
+    if ac_root is not None:
+        red, _refused, early_verdict = _classify_declared_reds(
+            red,
+            kind_by_nodeid,
+            declared_names,
+            green_at_baseline=green_at_baseline,
+            inconclusive=inconclusive,
+            preexisting=preexisting,
+        )
+        if early_verdict is not None:
+            return early_verdict
 
     if not newly_added_tags:
         return _red_baseline_verdict(
@@ -415,9 +477,20 @@ def main(argv: list[str] | None = None) -> int:
             ac_ids=ac_ids,
             test_root=Path(args.test_root),
             base_ref=args.base_ref,
+            ac_root=Path(args.ac_root) if args.ac_root else None,
         )
         print(json.dumps(red_verdict))
         return 0 if red_verdict["gate_passed"] else 1
+
+    if args.subcommand == "heavy_lane_gate":
+        source_ac_ids = [i.strip() for i in (args.source_ac or "").split(",") if i.strip()]
+        gate_verdict = heavy_lane_gate(
+            source_ac_ids=source_ac_ids,
+            test_root=Path(args.test_root),
+            ac_root=Path(args.ac_root),
+        )
+        print(json.dumps(gate_verdict))
+        return 0 if gate_verdict["gate_passed"] else 1
 
     if args.subcommand == "verify_green_and_coverage":
         ac_ids = [i.strip() for i in args.ac_ids.split(",") if i.strip()]

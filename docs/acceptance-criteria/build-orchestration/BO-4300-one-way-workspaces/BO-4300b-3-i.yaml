@@ -1,0 +1,83 @@
+id: BO-4300b-3-i
+title: "Started where no project can be found, the request is refused and says where it looked"
+component: build-orchestration
+components:
+  - worktree_manager
+  - build_orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: critical
+roadmap_phase: phase_1
+change_target: code
+risk_surface: safety
+criteria: |
+  Given an empty folder with no project in it, beneath it or beside it,
+  When a workspace is requested from that folder,
+  Then the request is refused,
+  And the refusal states that no project was found and names the folder the
+    request was started from,
+  And the folder and its neighbours contain exactly what they contained before.
+depends_on: [BO-4300b-3]
+doc_links:
+- path: docs/analysis/2026-09-25-worktree-migration-plan.md
+  relationship: describes
+  status: exists
+- path: docs/analysis/2026-09-25-worktree-component-proposal.md
+  relationship: describes
+  status: exists
+- path: docs/architecture/components/worktree-manager.md
+  relationship: describes
+  status: exists
+  relevance: Component page for the one maker; rewritten for clones under BO-4300a-4.
+- path: docs/testing/test-angles.md
+  relationship: describes
+  status: exists
+  relevance: Angle taxonomy used by this record's test_spec.
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: BO-4300b-1
+  contract: Resolution ending in NO_REPO.
+package_surface: false
+it_requirements:
+- NO_REPO refusal names searched_from; the maker creates no folder, lock or file anywhere before resolution
+  succeeds.
+- Proof runs the DEPLOYED maker -- the copy an install delivers, resolved through the shared test locator
+  delivered by BO-4300f-4 -- as a separate process against real temporary git repositories with a real
+  bare hub. No mock of git, no import of the maker module, no grep of its source (CLAUDE.md 'Gate / Workflow
+  ACs -- Verify Behaviorally, Not by Grep'); a test never falls back to the templates/ source copy.
+- All temporary projects, hubs and workspaces live under the test's temp directory and run git with an
+  isolated global and system config; afterwards the developer's own repository's branches, registered
+  worktrees and local git config are unchanged (BO-4300f-4-i, F14, KI-TQ-012).
+test_required: true
+test_spec:
+- name: test_request_from_empty_folder_is_refused_no_repo_naming_the_folder
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: criterion
+  description: The answer is refused, code NO_REPO, searched_from equals the start folder, exit 2.
+- name: test_no_repo_refusal_leaves_folder_and_neighbours_unchanged
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: failure
+  description: A recursive listing of the folder and its parent is identical before and after.
+test_rationale: Every assertion is made on what the deployed maker actually did to real repositories --
+  its one JSON answer, its exit code, and the state of the workspace, the hub and the main copy afterwards.
+  A direct-import unit test would pass while the deployed copy is stale or mis-deployed (F13), and a git
+  mock cannot show the half-made and occupied states this family exists to handle.
+origin_agent: business-analyst
+created: 2026-09-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260927-BO-4300b-3-i.md
+notes: |
+  The "unrelated directory" cell of the migration plan's test matrix.
+target_epic: EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace

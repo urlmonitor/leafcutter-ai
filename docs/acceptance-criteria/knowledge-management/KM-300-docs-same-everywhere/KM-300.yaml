@@ -1,0 +1,59 @@
+id: KM-300
+title: "Your project's documentation map works and reads the same, whoever built it"
+component: knowledge-management
+components:
+  - knowledge_management
+  - documentation_system
+level: L0
+status: active
+req_status: draft
+readiness: approved
+priority: high
+work_status: todo
+criteria: |
+  One documentation map, identical and working on every machine.
+
+  The project keeps an automatically maintained map of all its written
+  material. That map should be something anyone can rely on: every entry opens
+  the page it names, whether you browse the project online or on your own
+  machine, and it looks exactly the same no matter which contributor's computer
+  last refreshed it. Teams that mix operating systems never see the map quietly
+  break for one half of them, and never see their change history cluttered by
+  the map flipping back and forth between two versions of itself.
+depends_on: []
+doc_links: []
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-09-25
+amended_by: []
+superseded_by: null
+covered_by:
+  - KM-300a
+  - KM-300b
+  - KM-300c
+implemented_by: []
+change_target: code
+risk_surface: internal
+notes: |
+  ROADMAP: advances phase_1 ("portable ... reliable enough to use across
+  multiple repos") and its exit criterion "Consecutive builds produce zero git
+  diff (idempotent)" — an auto-regenerated file whose bytes depend on the host
+  OS violates that criterion for any mixed Windows/Linux team.
+
+  NAMESPACE: knowledge-management, because the legacy flat records KM-DBF-012
+  (descriptions in the doc index) and KM-DBF-014 (same-machine byte-identical
+  regeneration, done) already target the same generator. Plain KM-NNN id, not a
+  compound sub-prefix, per this component's PROJECT_CONTEXT (derive_parent_id
+  mis-derives compound ids). KM-300 is the next free hundred after KM-200.
+
+  OVERLAP / ADOPTION NOTE FOR THE BA: KM-DBF-014 is the same-machine half of
+  KM-300b and currently has no parent. It is a natural child of KM-300b; the PO
+  does not modify L2 records, so re-parenting (parent/depends_on on KM-DBF-014,
+  covered_by on KM-300b) is left to the BA. KM-DBF-012 is about description
+  content, not portability, and stays where it is.
+
+  SCOPE: the motivating defect (backslash-separated links when the map is
+  generated on Windows) is to be fixed via /quick-fix as an L2 under KM-300a.
+  KM-300c was added by the PO — the request described the fix but not how a
+  regression is prevented from reaching other contributors.

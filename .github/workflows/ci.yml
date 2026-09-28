@@ -1,6 +1,6 @@
 # Continuous-integration gate for leafcutter-ai.
 #
-# Runs on every push to main and every PR targeting main. Eight jobs — six
+# Runs on every push to main and every PR targeting main. Nine jobs — seven
 # BLOCKING (the required status checks named in the branch-protection ruleset)
 # and two informational:
 #
@@ -27,6 +27,20 @@
 #                by the required-status-checks list (BP-1200c) — do NOT rename it.
 #
 #   done-proof — proof-of-done coverage (BO-2500b). BLOCKING, diff-scoped.
+#
+#   reachability-guard — forward runtime-reachability guard (BO-2900b-1):
+#                every capability a command surface's built parser registers
+#                must have an automation caller. BLOCKING — REFUSES, NOT
+#                WARNS (ADR-050 SS4): no continue-on-error on this job. When
+#                no --surface/--automation overrides are supplied (this job's
+#                current invocation), check_reachability.py's own
+#                no-automation-supplied default applies and it exits 0
+#                honestly ("nothing to check yet", ADR-050 SS8) rather than
+#                the job downgrading via continue-on-error — see the job's
+#                own comment for why (collected_invocations() does not yet
+#                parse this repo's real JavaScript automation) and the single
+#                line that adds real --surface/--automation arguments once
+#                BO-2900b-3/BO-2900c-4 land.
 #
 #   ac-store-valid — the AC store passes its schema and governance hooks.
 #                BLOCKING. Diff-scoped to the pull request (ACS-200g).
@@ -226,6 +240,55 @@ jobs:
         # JS-covered AC would be reported as having no proof. node_modules/,
         # .next/ and dist/ are excluded by the scanner.
         run: python scripts/commit_guardian/check_done_proof.py --mode ci-changed --base origin/${{ github.base_ref }} --test-root .
+
+  reachability-guard:
+    name: Reachability guard (BO-2900b-1, forward direction)
+    runs-on: ubuntu-latest
+    # BLOCKING — REFUSES, NOT WARNS (ADR-050 SS4): no continue-on-error on
+    # this job; dropping it is the whole point (mirrors the `test` job's own
+    # "NO continue-on-error" comment above). Registers the `--mode ci` half
+    # of the check_done_proof.py two-layer precedent this AC's own
+    # constraints name, but collected_invocations() (scripts/commit_guardian/
+    # _reachability_inventory.py, re-exported from the sibling
+    # _reachability_invocation_collector.py) recognises only Python
+    # automation scripts today — see that module's own ROLLOUT NOTE. This
+    # repository's real automation (templates/workflows-js/fast-lane-ship.js)
+    # is JavaScript, and deriving the real surface/automation-script set is
+    # BO-2900c-4's scope, not yet implemented. This step therefore passes no
+    # --surface/--automation overrides, so check_reachability.py's own
+    # no-automation-supplied default applies: it honestly reports "nothing to
+    # check yet" and exits 0 every run (ADR-050 SS8), rather than
+    # false-refusing every PR that touches scripts/build_orchestration/ or
+    # templates/workflows-js/ against an invocation collector that cannot yet
+    # read its only real caller, and rather than papering over a future real
+    # finding with a downgrade flag.
+    #
+    # Add --surface/--automation arguments deriving the real sets once
+    # BO-2900b-3 (JS invocation collection) and BO-2900c-4 (derived
+    # surface/automation-script sets) land. Until then this job is a
+    # structural placeholder that can never produce a false pass on a real
+    # finding, because it has no real inputs — the honest exit-0 default
+    # above is the sanctioned inert state (ADR-050 SS8), not a downgrade
+    # flag on the job itself.
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install dev dependencies
+        run: pip install -r requirements-dev.txt
+
+      - name: Build — run install_shims to create scripts/ symlinks
+        # Required before invoking check_reachability.py: install_shims()
+        # creates the symlinks at scripts/commit_guardian/ etc. so the
+        # hook's imports resolve correctly on a fresh checkout (ADR-016).
+        run: python scripts/build.py --target-dir .
+
+      - name: Run reachability guard (CI mode)
+        run: python scripts/commit_guardian/check_reachability.py --mode ci
 
   ac-store-valid:
     name: AC store valid

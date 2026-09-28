@@ -7,9 +7,9 @@ BUSINESS CONTEXT: The sync invariant (spec §4.4) requires that the frontmatter
     ``agents`` map and the ``## Sign-offs`` checklist contain the same agent set
     with the same status at all times. Agents update both surfaces in one atomic
     edit (signoff skill §2), but a hard guard at commit time is the last defence
-    against partial writes or manual edits that only touch one surface. Tickets
-    in ``done/`` have an additional invariant: no ``needed`` or ``failed`` entries
-    are permitted, because done means every phase passed.
+    against partial writes or manual edits that only touch one surface. Done
+    tickets (frontmatter ``status: done``, or a legacy ``done/`` path) have an
+    additional invariant: no ``needed`` or ``failed`` entries are permitted.
 ARCHITECTURE: Pre-commit passes changed ticket paths as positional argv. The
     script iterates over each path, parses the YAML frontmatter and the
     ``## Sign-offs`` markdown section, and runs five parity checks. Violations
@@ -21,9 +21,9 @@ ARCHITECTURE: Pre-commit passes changed ticket paths as positional argv. The
 
 Exit Codes:
     0 - All files pass, or violations found in warn-only mode (default)
-    1 - Violations found and --enforce flag is active, OR violations found
-        in a file whose path contains a ``/done/`` segment (auto-enforced
-        regardless of --enforce flag)
+    1 - Violations found and --enforce is active, OR any violation in a
+        ``/done/`` path, OR a ``status: done`` ticket with a needed/failed
+        agent (other violations on such a ticket stay warn-only)
 
 Usage:
     python scripts/commit_guardian/check_ticket_signoff_parity.py [--enforce] [file ...]
@@ -103,6 +103,35 @@ __all__ = [
 # ---------------------------------------------------------------------------
 
 
+def _is_done_status(fm: dict | None) -> bool:
+    """Return True when frontmatter ``status`` is the string ``done`` (BO-400c-5).
+
+    A missing, non-string, or malformed status is treated as not done.
+    """
+    status = fm.get("status") if isinstance(fm, dict) else None
+    return isinstance(status, str) and status.strip().lower() == "done"
+
+
+# Prefix of the only violation main() blocks on outside --enforce / done/ paths.
+_DONE_STATUS_PREFIX = "ticket has status: done but agent"
+
+
+def _check_done_status(fm: dict, agents: dict, ticket_path: str) -> list[str]:
+    """Report ``needed``/``failed`` agents on a ``status: done`` ticket (BO-400c-5).
+
+    Legacy ``done/`` paths are skipped: ``_check_done_folder`` already reports them.
+    main() treats these messages (and only these) as blocking on such tickets.
+    """
+    if not _is_done_status(fm) or "/done/" in ticket_path.replace("\\", "/").lower():
+        return []
+    return [
+        f"{_DONE_STATUS_PREFIX} '{name}' still has status '{status}' "
+        "(must be 'signed_off' or 'not_needed')"
+        for name, raw in agents.items()
+        if (status := _extract_agent_status(raw)) in ("needed", "failed")
+    ]
+
+
 def _validate_ticket_content(
     content: str,
     ticket_path: str,
@@ -163,6 +192,7 @@ def _validate_ticket_content(
     violations.extend(_check_parity(agents, signoffs))
     violations.extend(_check_orphans(agents, signoffs))
     violations.extend(_check_done_folder(ticket_path, agents))
+    violations.extend(_check_done_status(fm, agents, ticket_path))
     violations.extend(_check_done_folder_prohibition(ticket_path, old_path=old_path))
 
     # Check #6: signed-off agents with requires_ticket_section: true must have no unchecked tasks.
@@ -292,22 +322,18 @@ def main() -> int:
 
     Returns:
         0 when all files pass, or violations found in warn-only mode.
-        1 when ``--enforce`` is active and violations exist, OR when a
-        violation is found in a ``/done/`` path (auto-enforced).
+        1 when ``--enforce`` is active and violations exist, when a
+        violation is found in a legacy ``/done/`` path, OR when a
+        ``status: done`` ticket still has a needed/failed agent (BO-400c-5).
     """
-    parser = _build_arg_parser()
-    args = parser.parse_args()
-
-    enforce = args.enforce
-    all_violations: list[tuple[str, str, bool]] = []  # (path, message, file_enforce)
-
-    project_root = find_project_root()
-    valid_components = load_components_registry(project_root)
+    args = _build_arg_parser().parse_args()
+    all_violations: list[tuple[str, str, bool]] = []  # (path, message, blocking)
+    valid_components = load_components_registry(find_project_root())
     rename_map = _build_rename_map()
 
     for ticket_path in args.filenames:
-        # /done/ paths always enforce (done-folder invariant is non-negotiable).
-        file_enforce = enforce or ("/done/" in ticket_path.replace("\\", "/").lower())
+        # --enforce and legacy done/ paths block on every violation.
+        file_enforce = args.enforce or ("/done/" in ticket_path.replace("\\", "/").lower())
         old_path = rename_map.get(ticket_path)
 
         try:
@@ -322,7 +348,9 @@ def main() -> int:
             continue
 
         for msg in violations:
-            all_violations.append((ticket_path, msg, file_enforce))
+            # BO-400c-5: on a status: done ticket only the needed/failed rule blocks.
+            blocking = file_enforce or msg.startswith(_DONE_STATUS_PREFIX)
+            all_violations.append((ticket_path, msg, blocking))
 
     if all_violations:
         for path, msg, fe in all_violations:
@@ -341,54 +369,22 @@ if __name__ == "__main__":
 ====================================================================
 DECISION HISTORY
 ====================================================================
+- 2026-09-25 [python-coder/BO-400c-5]: status: done + needed/failed agent now
+  blocks at any path (KI-CG-20260925: done/ moves retired by BO-400c-1, hook
+  registered without --enforce). Only that rule blocks; other violations on done
+  tickets stay warn-only (blocking all would hit 638/725 done tickets). Added
+  _is_done_status, _check_done_status. Older entries condensed (line budget).
 - 2026-08-31 [python-coder/BP-1100g-5-i]: Wired check_cross_layer_seam_answer()
-  (new in _cross_layer_seam_checks.py, re-exported via _signoff_parity_checks.py)
-  into _validate_ticket_content(). Runs
-  unconditionally (before the `agents:` presence check) since it is a
-  record-shape observation over ## Comments, independent of the ## Sign-offs
-  parity checks. Also registered the pre-existing but never-wired
-  check-ticket-signoff-parity hook id in commit_guardian.json's
-  hooks_manifest.hooks (reachability requirement — an unregistered hook
-  never runs).
-- 2026-07-14 [python-coder/BO-400c-3-callsite]: Threaded old_path through the
-  production call chain to fix the in-place edit false positive (BO-400c-3-i)
-  in production (not just in unit tests). Added import subprocess; added
-  _build_rename_map() which queries `git diff --cached --name-status --diff-filter=R`
-  (fail-open: returns empty dict on OSError); updated _validate_ticket_content and
-  _validate_ticket signatures to accept `old_path: str | None = None`; updated
-  _validate_ticket_content to pass old_path=old_path to _check_done_folder_prohibition;
-  updated main() to build rename_map and pass old_path=rename_map.get(ticket_path) to
-  _validate_ticket. All changes are backward-compatible (old_path defaults to None).
-- 2026-05-15 15:10 [python-coder/file-size-fix]: Extracted parsing and parity-check
-  helpers into _signoff_parity_checks.py to stay under the 400-line budget.
-  All names re-exported from this module via explicit imports so the existing
-  importlib-based test shim (_signoff_parity_helpers.py) continues to work
-  without modification. No logic changes.
-- 2026-05-15 12:00 [python-coder/T06]: Added check #6 — unchecked-tasks parity guard. New helpers:
-  load_agent_registry() (fail-open registry reader, mirrors load_components_registry()),
-  _parse_impl_tasks_section() (counts - [ ] items per ### <agent> subheading in
-  ## Implementation Tasks), _check_unchecked_tasks() (emits warn-only for absent sections,
-  hard violation for present sections with unchecked items). AGENT_REGISTRY_PATH constant
-  added to config.py. Integrates via _validate_ticket_content() violations.extend() —
-  no changes to main() required.
-- 2026-05-12 12:48 [Hendrik/Claude]: Auto-enforce for done-folder paths added
-  (TICKET-20260512-Signoff_Write_Loss_Halt). The done-folder invariant is
-  non-negotiable — warn-only mode on done/ paths was precisely the gap that
-  hid the silent sign-off loss bug. Changed main() to compute a per-file
-  file_enforce flag (True when path contains /done/ or --enforce is set),
-  and to use file_enforce when deciding whether to exit 1. Unit tests added
-  in unit_tests/commit_guardian/test_signoff_parity_auto_enforce.py.
-- 2026-05-12 00:00 [Hendrik/Claude]: Extended for TICKET-20260511 Deliverable 2 (Option A).
-  Added _extract_agent_status() helper that accepts both the scalar form (``signed_off``)
-  and the nested-map form (``{status: signed_off, grandfathered: true}``). Updated
-  _check_enum_membership, _check_parity, and _check_done_folder to route through the
-  helper so grandfathered entries are valid without breaking existing scalar-format tickets.
-- 2026-05-08 17:30 [Hendrik/Claude]: Created for EPIC-AgentSupervisor ticket 04.
-  Warn-only by default; flip to --enforce after ticket 11's grandfathering
-  migration runs. Five parity checks: enum membership, frontmatter↔Sign-offs
-  representation agreement, orphan Sign-offs entries, done-folder invariant,
-  and not_needed entries absent from Sign-offs. Parse failures on individual
-  tickets are contained so the pre-commit run is never aborted by a single
-  malformed file.
+  into _validate_ticket_content() (runs before the `agents:` check) and
+  registered the hook id in commit_guardian.json hooks_manifest.
+- 2026-07-14 [python-coder/BO-400c-3-callsite]: _build_rename_map() (fail-open)
+  threads old_path to _check_done_folder_prohibition (BO-400c-3-i).
+- 2026-05-15 [python-coder/file-size-fix, T06]: Helpers extracted to
+  _signoff_parity_checks.py and re-exported; check #6 unchecked-tasks guard.
+- 2026-05-12 [Hendrik/Claude]: Auto-enforce for done/ paths
+  (TICKET-20260512-Signoff_Write_Loss_Halt); _extract_agent_status() accepts
+  scalar and nested-map (grandfathered) statuses (TICKET-20260511).
+- 2026-05-08 [Hendrik/Claude]: Created for EPIC-AgentSupervisor ticket 04:
+  warn-only by default, five parity checks, per-ticket parse failures contained.
 ====================================================================
 """

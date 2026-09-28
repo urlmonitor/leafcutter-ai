@@ -1,20 +1,24 @@
 ---
 title: "How to understand proof-of-done enforcement (pre-commit and CI)"
-description: "Explains the two-layer proof-of-done enforcement system: the fast local pre-commit check and the authoritative CI gate that blocks merge on unproven work."
+description: "Explains the two-layer proof-of-done enforcement system: the fast local pre-commit check and the authoritative CI gate that blocks merge on unproven work. The two mechanical reachability axes evaluated after the CI gate's incumbent pass/fail rule — BO-2900a-1 (proof reached the code by direct import) and BO-2900a-3 (no way of running the product reaches the code at all) — are documented in the child guide, done-proof-reachability-gates.md."
 type: how-to
 category: how-to
 status: active
 created: 2026-07-21
-last_updated: 2026-07-21
+last_updated: 2026-09-27
 components:
   - build_orchestration
   - commit_guardian
+  - ac_store
 related_docs:
+  - docs/how-to/done-proof-reachability-gates.md
   - docs/how-to/prove-ac-done.md
   - docs/how-to/fast-lane-build.md
   - docs/architecture/diagrams/c3-done-proof-evaluation-sequence.md
   - docs/architecture/components/build-orchestration.md
+  - docs/architecture/components/phantom-done-prevention.md
   - docs/pre-commit-hooks.md
+  - docs/acceptance-criteria/build-orchestration/BO-2500-mechanical-done-proof/BO-2500a-3.yaml
 ---
 
 # How to understand proof-of-done enforcement (pre-commit and CI)
@@ -142,6 +146,10 @@ In `--mode ci`, the script performs a **full, authoritative check**:
   covers tags to confirm the tests actually pass.
 - An AC is ineligible (a violation) if its linked test is FAILED, XFAIL, SKIPPED,
   ERROR, or missing entirely.
+- Even when the linked test PASSES, `verify_done_eligible` also asks *what the
+  test reached* while it ran — see
+  [done-proof-reachability-gates.md, section 3](done-proof-reachability-gates.md#3-the-third-eligibility-axis-did-the-proof-go-in-through-the-real-way-in-bo-2900a-1)
+  for the two mechanical reachability axes evaluated after this pass/fail rule.
 
 The CI mode evaluates the **entire AC store** — not just the files you staged in
 your last commit. This means it finds done ACs that became ineligible due to
@@ -174,6 +182,18 @@ unproven done AC without the CI gate observing it.
 
 ---
 
+## 3. The reachability axes (BO-2900a-1 and BO-2900a-3)
+
+> See [done-proof-reachability-gates.md](done-proof-reachability-gates.md) for the
+> two mechanical reachability axes `verify_done_eligible` evaluates after the
+> incumbent pass/fail rule above already returned `eligible: True`: the
+> entry-point reachability gate (`BO-2900a-1`, refuses a proof that reached the
+> code by direct import when the unit has a real way in) and the sibling
+> no-entry-point-anywhere gate (`BO-2900a-3`, refuses a unit no way of running
+> the product can reach at all, however many tests pass).
+
+---
+
 ## Summary: two-layer strategy
 
 The pre-commit hook and the CI gate are deliberately designed to have different
@@ -195,4 +215,6 @@ characteristics:
 
 Together, the two layers mean you get a developer-friendly fast loop locally and
 a guarantee that no unproven work can reach the protected branch through any
-bypass path.
+bypass path. The two additional mechanical reachability axes that run after the
+CI gate's own pass/fail rule are documented in
+[done-proof-reachability-gates.md](done-proof-reachability-gates.md).

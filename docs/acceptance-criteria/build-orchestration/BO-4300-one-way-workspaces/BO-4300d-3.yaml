@@ -1,0 +1,119 @@
+id: BO-4300d-3
+title: "A location already holding different work is left untouched and reported"
+component: build-orchestration
+components:
+  - worktree_manager
+  - build_orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: critical
+roadmap_phase: phase_1
+change_target: code
+risk_surface: safety
+criteria: |
+  Given the location the workspace maker would use for "alpha" is already
+    occupied, in turn, by: a copy of the project on a different line of work; a
+    copy of a different project; and an ordinary folder of files that is not a
+    workspace,
+  When "alpha" is requested in each case,
+  Then the answer is a refusal stating that the location is occupied and what
+    occupies it,
+  And the occupant's files and, where it has one, its line of work are identical
+    before and after,
+  And no workspace for "alpha" is made at any other location instead.
+depends_on: [BO-4300d]
+doc_links:
+- path: docs/analysis/2026-09-25-worktree-component-proposal.md
+  relationship: describes
+  status: exists
+- path: docs/analysis/2026-09-25-worktree-failure-modes.md
+  relationship: describes
+  status: exists
+- path: docs/architecture/components/worktree-manager.md
+  relationship: describes
+  status: exists
+  relevance: Component page for the one maker; rewritten for clones under BO-4300a-4.
+- path: docs/architecture/adrs/ADR-039-fast-lane-occupied-workspace-refusal.md
+  relationship: describes
+  status: exists
+  relevance: Nearest existing discriminated refusal shape for an occupied location.
+- path: docs/testing/test-angles.md
+  relationship: describes
+  status: exists
+  relevance: Angle taxonomy used by this record's test_spec.
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from:
+  ac_id: BO-4300a-1
+  contract: ensure CLI and landing-place rule.
+package_surface: false
+it_requirements:
+- An occupied location is refused OCCUPIED with occupant {path, kind, branch}; the occupant is never modified,
+  adopted, converted or reset, and the maker never picks another location (no suffixing) -- the substitute-location
+  fallback is closed on the maker side.
+- Answers conform to the result contract delivered by BO-4300c-2 (one JSON object on stdout, status/code/exit
+  mapping, workspace_path absent on every non-ok answer).
+- Proof runs the DEPLOYED maker -- the copy an install delivers, resolved through the shared test locator
+  delivered by BO-4300f-4 -- as a separate process against real temporary git repositories with a real
+  bare hub. No mock of git, no import of the maker module, no grep of its source (CLAUDE.md 'Gate / Workflow
+  ACs -- Verify Behaviorally, Not by Grep'); a test never falls back to the templates/ source copy.
+- 'Tests must not spawn the package''s own scripts/build.py (CLAUDE.md ''Tests must not spawn their own
+  build.py''): the deployed maker comes from the shared deployed layout, and fixture projects carry a
+  minimal stub build entry point that installs a real, rejecting hook in well under a second. A test that
+  must mutate the package and build its own copy says so and justifies it in its ticket.'
+- All temporary projects, hubs and workspaces live under the test's temp directory and run git with an
+  isolated global and system config; afterwards the developer's own repository's branches, registered
+  worktrees and local git config are unchanged (BO-4300f-4-i, F14, KI-TQ-012).
+test_required: true
+test_spec:
+- name: test_occupant_on_another_line_is_refused_and_described
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: failure
+  description: A clone of the project on another branch at alpha's location gives OCCUPIED with occupant.kind
+    'other-line'.
+- name: test_occupant_from_another_project_is_refused_and_described
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: failure
+  description: A clone of a different project gives OCCUPIED, occupant.kind 'other-project'.
+- name: test_plain_folder_occupant_is_refused_and_described
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: failure
+  description: An ordinary folder gives OCCUPIED, occupant.kind 'plain-folder'.
+- name: test_occupant_files_and_line_of_work_unchanged
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: boundary
+  description: Each occupant's files and HEAD are identical before and after.
+- name: test_no_workspace_is_made_elsewhere_instead
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: criterion
+  description: The landing place gains no new entry in any of the three cases.
+test_rationale: Every assertion is made on what the deployed maker actually did to real repositories --
+  its one JSON answer, its exit code, and the state of the workspace, the hub and the main copy afterwards.
+  A direct-import unit test would pass while the deployed copy is stale or mis-deployed (F13), and a git
+  mock cannot show the half-made and occupied states this family exists to handle.
+origin_agent: business-analyst
+created: 2026-09-25
+amended_by: []
+superseded_by: null
+covered_by: [BO-4300d-3-i]
+implemented_by:
+- tickets/00_inbox/TICKET-20260927-BO-4300d-3.md
+notes: |
+  BO-1500f ("never take over another's space") is the AC-authoring instance of this -- cite, do
+  not duplicate. "Not made at any other location instead" closes the substitute-location
+  fallback that BO-4300c-3 closes on the caller side.
+target_epic: EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace

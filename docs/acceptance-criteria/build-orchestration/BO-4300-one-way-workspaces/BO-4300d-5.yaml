@@ -1,0 +1,63 @@
+id: BO-4300d-5
+title: "State diagram: a workspace's states and what each request does to it"
+component: build-orchestration
+components:
+  - worktree_manager
+  - build_orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: critical
+roadmap_phase: phase_1
+change_target: docs
+risk_surface: internal
+criteria: |
+  Given a reader wants to know what asking for a workspace does in each situation,
+  When they open the state diagram,
+  Then it shows the states absent, half-made, ready, and occupied by other work,
+  And it shows, for each state, the outcome of a request for the same work:
+    absent to ready or refused; half-made to ready or refused; ready to ready
+    again; occupied by other work left as it is and refused,
+  And it shows that no request moves a workspace from occupied by other work to
+    any other state.
+depends_on: [BO-4300d, BO-4300d-1, BO-4300d-2, BO-4300d-3]
+doc_links:
+- path: docs/analysis/2026-09-25-worktree-component-proposal.md
+  relationship: describes
+  status: exists
+- path: docs/analysis/2026-09-25-worktree-isolation-decision-memo.md
+  relationship: constrains
+  status: exists
+- path: docs/architecture/components/worktree-manager.md
+  relationship: describes
+  status: exists
+  relevance: Component page for the one maker; rewritten for clones under BO-4300a-4.
+- path: docs/architecture/diagrams/c3-010-workspace-request-states.md
+  relationship: describes
+  status: planned
+assigned_agent: architecture-diagram-author
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: BO-4300d-2
+  contract: Half-made identification (maker 'creating' record) and completion semantics.
+package_surface: false
+it_requirements:
+- 'Location: docs/architecture/diagrams/c3-010-workspace-request-states.md (next free c3 number; verify
+  before writing), Mermaid state diagram per the write-c4-diagram skill, linked from docs/architecture/components/worktree-manager.md.'
+- States absent, half-made, ready, occupied-by-other-work (the legacy-worktree occupant may be shown as
+  a sub-state); transitions exactly as the criteria list, with the refusal code on each refused edge;
+  no edge leaves occupied.
+test_required: false
+origin_agent: business-analyst
+created: 2026-09-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260927-BO-4300d-5.md
+notes: |
+  documentation_trigger state-diagram on BO-4300d.
+target_epic: EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace

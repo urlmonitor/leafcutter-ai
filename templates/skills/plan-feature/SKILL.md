@@ -340,10 +340,11 @@ accept `y`, `n`, `d` as shorthand).
    git -C AUTHORING_WORKTREE_PATH add <file1> <file2> ...
    ```
 
-2. Commit them with a fixed message (same `-C` anchor):
-   ```bash
-   git -C AUTHORING_WORKTREE_PATH commit -m "chore: commit orphaned AC files from prior session"
-   ```
+2. Commit them with a fixed message by dispatching the `commit` agent, not a
+   raw commit (the `enforce_commit_delegation` hook blocks a raw commit,
+   including the `git -C <path> commit` spelling). Pass it
+   `AUTHORING_WORKTREE_PATH`, the same file list, and the message
+   `chore: commit orphaned AC files from prior session`.
 
    **Error handling:** If `git add` or `git commit` exits non-zero, emit:
    `"Error: could not commit orphaned AC files: <stderr>. Resolve the git

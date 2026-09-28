@@ -1,0 +1,143 @@
+id: BO-4300e-4
+title: "Temporary comparison workspaces come and go through the same maker and leave nothing behind"
+component: build-orchestration
+components:
+  - worktree_manager
+  - build_orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: critical
+roadmap_phase: phase_1
+change_target: pipeline
+risk_surface: safety
+criteria: |
+  Given finalizing a feature needs a temporary copy of the shared main line to
+    run a before-and-after comparison,
+  When it obtains that copy and later clears it, once with the comparison
+    succeeding and once with the comparison failing part-way,
+  Then in both cases the copy was started from the shared main line tip as read
+    after fetching,
+  And in both cases, afterwards, no folder of the copy remains and the project's
+    branches, registered workspaces and settings are identical to before,
+  And in both cases the clearing is reported in finalize's own result.
+depends_on: [BO-4300e]
+doc_links:
+- path: docs/analysis/2026-09-25-worktree-creation-consolidation.md
+  relationship: describes
+  status: exists
+- path: docs/analysis/2026-09-25-worktree-failure-modes.md
+  relationship: describes
+  status: exists
+- path: docs/analysis/2026-09-25-worktree-isolation-decision-memo.md
+  relationship: constrains
+  status: exists
+- path: docs/architecture/components/worktree-manager.md
+  relationship: describes
+  status: exists
+  relevance: Component page for the one maker; rewritten for clones under BO-4300a-4.
+- path: docs/architecture/adrs/ADR-030-dual-engine-workflow-support.md
+  relationship: constrains
+  status: exists
+  relevance: E2 workflow bodies have no filesystem or process access; agent() schema validation.
+- path: docs/testing/test-angles.md
+  relationship: describes
+  status: exists
+  relevance: Angle taxonomy used by this record's test_spec.
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from:
+  ac_id: BO-4300e-2
+  contract: remove answers (ok with removed_path, or a refusal) consumed by finalize.
+package_surface: false
+it_requirements:
+- finalize obtains its comparison copy with `ensure --kind scratch` (a detached clone at origin/main after
+  a fetch, landing in the one landing place) and always clears it with `remove` on both the success and
+  the failure path; the clearing result is part of finalize's own result. Nothing is ever registered in
+  the real project (F14); /tmp baselines and `git worktree add --detach` are retired.
+- 'SCRATCH READINESS (decided by the user at the final gate, 2026-09-25): a detached clone has no line of
+  work and nothing is ever committed or merged in it, so the branch ingredients AND every protection-stage
+  canary are reported ''n/a'' for kind scratch: hooks_pre_commit_fired, hooks_commit_msg_fired, hooks_post_merge_fired
+  and their conjunction hooks_canary_rejected (confirmed 2026-09-25: the rule covers all three stages
+  of BO-4300c-1-ii, because each stage''s canary is a commit or a merge and a comparison copy has neither).
+  The fresh-base, independent-copy and build ingredients still apply. ''n/a'' is reported explicitly;
+  no ingredient is silently skipped. No other kind may report hooks_pre_commit_fired or hooks_canary_rejected
+  as ''n/a''; for other kinds the commit-msg and post-merge checks may be ''n/a'' only when the project
+  does not declare that stage (BO-4300c-2).'
+- 'Workflow bodies run in the E2 engine with no filesystem or process access (ADR-030). They reach the
+  maker only through (a) args.workspace -- the maker''s JSON object passed verbatim by the entry command
+  or skill (BO-4300a-1-ib) -- or (b) exactly one agent() dispatch, carrying a result schema, to an agent
+  whose registry entry has permits_shell: true, instructing it to run one exact absolute command unchanged
+  and return stdout verbatim. Never status-checker (permits_shell: false), never free-form set-up steps.'
+- Proof runs the workflow under unit_tests/_workflow_engine_harness.py -- the deployed copy the build
+  produces, so the build's workflow transform is exercised -- with label-scripted agent replies, and asserts
+  on the RECORDED dispatch list, never on workflow source text. The harness must be able to model a workspace
+  step that declines its task, answers in prose, answers exit 0 with a non-JSON path, or answers JSON
+  without status (F13); extending the harness for this is in scope of the first AC that needs it.
+- Workflow edits are made in templates/workflows-js/*.js and reach .claude/workflows/ only through the
+  build; the deployed copy is what the tests run.
+test_required: true
+test_spec:
+- name: test_scratch_copy_starts_at_hub_main_after_fetch_on_success_and_failure
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: criterion
+  description: In both runs the scratch answer's base_commit equals the hub's main tip after a new commit
+    was pushed to the hub before the run.
+- name: test_no_scratch_folder_or_registration_remains_after_either_run
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: boundary
+  description: After both runs the landing place has no scratch entry and the main project's branches,
+    registered worktrees and config are identical.
+- name: test_failure_part_way_still_clears_the_scratch_copy
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: failure
+  description: With the comparison scripted to fail part-way, the recorded dispatches still include the
+    remove request and it succeeded.
+- name: test_finalize_result_reports_the_clearing
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: criterion
+  description: finalize's own result carries the remove outcome in both runs.
+- name: test_scratch_answer_reports_every_protection_stage_as_na
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: boundary
+  description: 'With a fixture project declaring pre-commit, commit-msg and post-merge, the deployed maker''s
+    ensure --kind scratch answer is ok with hooks_pre_commit_fired, hooks_commit_msg_fired, hooks_post_merge_fired
+    and hooks_canary_rejected all ''n/a'', while base_is_fresh, is_independent_repo and build_ok are true.'
+test_rationale: The 2026-09-25 incident was a perfect-enough maker with a caller that carried on, and
+  every source grep of plan-feature.js would have passed. So the assertions are made on the recorded dispatch
+  list of a real workflow run with scripted hostile answers, which is the only place 'no later step was
+  dispatched' can be observed. The scratch copy itself is made by the deployed maker for real in these
+  tests, so 'nothing registered' is checked on a real repository.
+origin_agent: business-analyst
+created: 2026-09-25
+amended_by:
+- reason: duplication-audit-item-5
+  by: it-po
+  at: 2026-09-25
+  note: >-
+    Technical fields only; criteria unchanged. Confirmed and wrote down that the scratch 'n/a' rule
+    covers all three protection stages (commit-time, commit-message, after-merge) and their
+    conjunction, and how other kinds may use 'n/a' only for undeclared commit-msg/post-merge stages.
+    One test spec added. readiness reset to reviewed.
+superseded_by: null
+covered_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260927-BO-4300e-4.md
+notes: |
+  F14 and the finalize inventory rows: baselines were added from origin/main without a fetch,
+  registered in the real repository, and "degrade and continue" on failure. Under decision 1 a
+  temporary clone registers nothing in the real project.
+target_epic: EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace

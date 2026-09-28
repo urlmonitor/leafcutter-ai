@@ -1,0 +1,83 @@
+id: BO-4300a-5
+title: "Reference: the answer every caller receives, and what a caller must do with it"
+component: build-orchestration
+components:
+  - worktree_manager
+  - build_orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: critical
+roadmap_phase: phase_1
+change_target: docs
+risk_surface: internal
+criteria: |
+  Given a workflow author, skill author or person needs to act on the workspace
+    maker's answer,
+  When they open the reference document for that answer,
+  Then it lists every outcome the maker can give -- ready, and each cause of a
+    refusal -- with the meaning of each,
+  And it states that anything other than a ready answer means the caller stops,
+  And it states that the workspace's location is taken only from a ready answer,
+    never from an agent's own words or from the folder the caller happens to be in,
+  And it states that the answer has the same form whichever route asked.
+depends_on: [BO-4300a, BO-4300a-1, BO-4300c-2, BO-4300c-3]
+doc_links:
+- path: docs/analysis/2026-09-25-worktree-component-proposal.md
+  relationship: describes
+  status: exists
+- path: docs/analysis/2026-09-25-worktree-creation-consolidation.md
+  relationship: describes
+  status: exists
+- path: docs/reference/workspace-maker-answer.md
+  relationship: describes
+  status: planned
+- path: docs/architecture/components/worktree-manager.md
+  relationship: describes
+  status: exists
+  relevance: Component page for the one maker; rewritten for clones under BO-4300a-4.
+assigned_agent: documentation-expert
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: BO-4300c-2
+  contract: 'The result contract exactly as recorded in BO-4300c-2 delivers_to (the one authoritative
+    copy -- not restated here, so a field added there cannot be missed in a copy). The reference must
+    cover every code and field listed there at the time it is written, including the per-stage hook
+    checks, inactive_stages and the ticket_path_in_worktree fields added by the 2026-09-25 duplication audit.'
+package_surface: false
+it_requirements:
+- 'Frontmatter per the project doc conventions (title, description, type, status, created, last_updated,
+  components: [worktree_manager, build_orchestration]); must pass the doc-related pre-commit hooks and
+  be reachable from docs/INDEX.md via the build''s doc index.'
+- 'Location: docs/reference/workspace-maker-answer.md. Lists every field, every code with its status and
+  exit code, the verb-specific fields, the rule that workspace_path/worktree_path/workspace_path_posix
+  are absent on every non-ok answer, and the schema_version policy.'
+- 'States the caller rules verbatim from the contract: halt on anything but status ok; take the location
+  only from workspace_path of an ok answer, never from prose or from the caller''s cwd; the answer has
+  the same form whichever route asked.'
+- Q8 (remove authorisation) is documented as whatever mechanism is built; if still open when authored,
+  the page names the field set and marks the argument as pending rather than guessing.
+test_required: false
+origin_agent: business-analyst
+created: 2026-09-25
+amended_by:
+- reason: duplication-audit-items-2-5
+  by: it-po
+  at: 2026-09-25
+  note: >-
+    expects_from no longer carries a verbatim copy of BO-4300c-2's result contract (which had just
+    changed: per-stage hook checks, inactive_stages, ticket_path_in_worktree); it points to BO-4300c-2
+    as the one authoritative copy. Criteria unchanged. readiness reset to reviewed.
+superseded_by: null
+covered_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260927-BO-4300a-5.md
+notes: |
+  documentation_trigger reference-doc on BO-4300a. It documents the contract that
+  BO-4300c-2 (one readable answer) and BO-4300c-3/c-4 (callers stop; location only from the
+  answer) specify behaviourally. Field names are IT PO's to fix; this page names them once
+  they exist.
+target_epic: EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace
