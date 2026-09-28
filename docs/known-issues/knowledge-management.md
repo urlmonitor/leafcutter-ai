@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: 2026-08-18
-last_updated: 2026-09-07
+last_updated: '2026-09-28'
 components:
   - knowledge_management
 related_docs:
@@ -56,7 +56,7 @@ Severity in the **filename** is a three-level index bucket (`blocker` / `high` /
 
 Fixed issues move to [`knowledge-management/resolved/`](knowledge-management/resolved/) and are no longer listed as open. They are kept, not deleted.
 
-**Open: 10** (0 blocker, 6 high, 4 low) · **Resolved: 2**
+**Open: 11** (0 blocker, 6 high, 5 low) · **Resolved: 2**
 
 ## Open
 
@@ -72,6 +72,7 @@ Fixed issues move to [`knowledge-management/resolved/`](knowledge-management/res
 | `low` | KI-KM-004 — `check_ac_coverage.py` exists on disk but is registered nowhere, so `covered_by` test entries are never read | [open-low-ki-km-004.md](knowledge-management/open-low-ki-km-004.md) |
 | `low` | KI-KM-006 — The artifact graph is a hand-authored type-level schema; no AC covers making it dynamic | [open-low-ki-km-006.md](knowledge-management/open-low-ki-km-006.md) |
 | `low` | KI-KM-20260826-id-convention-diverged-across-registers — two registers adopted different replacement id forms, eleven still teach the one known not to work | [open-low-ki-km-20260826-id-convention-diverged-across-registers.md](knowledge-management/open-low-ki-km-20260826-id-convention-diverged-across-registers.md) |
+| `low` | KI-KM-20260928-doc-index-order-depends-on-host-os — generate_doc_index.py sorts Path objects, which compare case-insensitively on Windows and case-sensitively on Linux, so every Windows docs commit re-sorts docs/INDEX.md | [open-low-ki-km-20260928-doc-index-order-depends-on-host-os.md](knowledge-management/open-low-ki-km-20260928-doc-index-order-depends-on-host-os.md) |
 
 ## Resolved
 
