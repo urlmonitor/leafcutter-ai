@@ -18,14 +18,15 @@ criteria: |
   Given a copy of the workspace-creation tool that has been deployed to a
     location outside the repository it manages,
   When a workspace is created with that copy,
-  Then the workspace is created in the repository the tool belongs to, not in
-    whatever repository happens to contain the copy,
-  And when the tool cannot determine that repository, it refuses and names the
-    location it tried to resolve from,
-  And it never reports success for a workspace created in a different
-    repository from the one the caller asked about,
-  And the symptom ("the deployed copy aborts with a bare git exit status 128,
-    or silently resolves the adopter's repository") does not occur.
+  Then the tool never silently answers with a repository nobody named -- in
+    particular it never adopts whichever repository the caller happens to be
+    standing in,
+  And the answer it gives does not change when only the caller's working
+    directory changes,
+  And when it cannot determine a repository, it refuses and names the location
+    it tried to resolve from, rather than surfacing a bare git exit status 128,
+  And a caller that names a subject explicitly is answered about that subject
+    or refused -- never quietly redirected to a different repository.
 depends_on: [BO-4100d]
 doc_links:
   - path: docs/architecture/components/worktree-manager.md
@@ -95,7 +96,11 @@ test_rationale: |
   error message.
 origin_agent: BrainCandy
 created: 2026-09-22
-amended_by: []
+amended_by:
+  - action: criteria_correction
+    agent: BrainCandy
+    date: '2026-09-28'
+    reason: "The original criteria required the workspace to be created in 'the repository the tool belongs to'. That is not deliverable by this record and the first implementation of it was WORSE than the defect it replaced. Resolving from the process working directory made the tool silently return an UNRELATED repository whenever it ran from inside one -- measurably worse than the original bug, which at least landed inside the adopter's own project -- and it voided the isolation in unit_tests/build_orchestration/_bo2400f13_fixtures.py, so the suite created real worktrees and branches in the live development tree (14 tests red). Worse, the test written for the original criteria named the process working directory as ground truth, so implementation and test agreed with each other and both disagreed with the layout: a mutually-consistent wrong pair that passes every gate. The criteria are now restated as what this record can actually guarantee -- no silent answer from ambient state, invariance under the caller's working directory, and a refusal that names what it tried. Resolving the deployed copy's true repository is NOT delivered here and needs deploy-time provenance rather than a better guess; see docs/analysis/2026-09-28-git-toplevel-resolution-contract.md, which prototypes install-root anchoring at 7/7 layouts, and KI-BP-011 for why the build's own provenance is currently unreadable from a deployed copy. A successor record under BO-4100d should carry that."
 superseded_by: null
 covered_by:
   - unit_tests/build_orchestration/test_bo_4100d_4.py

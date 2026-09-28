@@ -173,21 +173,26 @@ class TestGitToplevelAnchorDefect(unittest.TestCase):
     ) -> None:
         # covers: BO-4100d-4
         # angle: criterion
-        """AC criteria: a copy deployed outside the repo it manages must still
-        resolve the repository the tool belongs to.
+        """A copy deployed outside any repository REFUSES, naming what it
+        tried — it does not quietly adopt whatever repository the caller
+        happens to be standing in.
 
-        Simulates the dev/self-hosting symptom: the copy is placed in a plain
-        temp directory that is NOT inside any git repository (mirrors
-        ``.leafcutter/scripts/`` sitting in the untracked workspace parent).
-        The calling context (process CWD) IS inside a real repository — the
-        subject of the operation. A correct fix resolves the anchor from that
-        subject, not from the copy's own (repo-less) directory, so the call
-        must succeed and return the calling context's repository.
+        AMENDED 2026-09-28. This entry previously asserted that such a copy
+        must RESOLVE, using the process CWD as ground truth. That contract was
+        wrong and the implementation written to satisfy it was worse than the
+        defect it replaced: with CWD as a candidate, running from inside any
+        unrelated repository silently returned THAT repository. It also voided
+        the isolation in ``_bo2400f13_fixtures.py`` and caused the suite to
+        create real worktrees and branches in the live development tree.
 
-        DEFECT (unmodified code): ``anchor = Path(__file__).resolve().parent``
-        is the copy's directory, which is outside any repo, so
-        ``git -C <that dir> rev-parse --show-toplevel`` exits 128 and the
-        call raises instead of succeeding. RED via unhandled exception.
+        Note the CWD here is deliberately a VALID repository. Under the
+        reverted implementation this call succeeded and returned it; the
+        refusal asserted below is exactly what distinguishes the two.
+
+        What this AC now delivers is honesty, not resolution: the dev-layout
+        deployed copy still cannot create a worktree. Fixing that needs
+        deploy-time provenance, not a better guess — see
+        ``docs/analysis/2026-09-28-git-toplevel-resolution-contract.md``.
         """
         for label, real_source in _SCRIPT_COPIES.items():
             with self.subTest(copy=label):
@@ -197,25 +202,22 @@ class TestGitToplevelAnchorDefect(unittest.TestCase):
                 module = _load_relocated_copy(real_source, copy_dir)
 
                 os.chdir(tool_repo)
-                try:
-                    resolved = module._git_toplevel()  # noqa: SLF001
-                except (subprocess.SubprocessError, OSError) as exc:
-                    self.fail(
-                        f"[{label}] _git_toplevel() raised {exc!r} when invoked "
-                        f"from a copy outside any repo while CWD was a real "
-                        f"repository ({tool_repo}). A copy placed outside the "
-                        "repository it manages must still resolve the "
-                        "repository the tool belongs to (BO-4100d-4 criteria)."
-                    )
-                    continue
+                with self.assertRaises(subprocess.SubprocessError) as caught:
+                    module._git_toplevel()  # noqa: SLF001
 
-                self.assertEqual(
-                    Path(resolved).resolve(),
-                    tool_repo.resolve(),
-                    f"[{label}] _git_toplevel() must resolve the repository "
-                    f"the tool belongs to ({tool_repo}), not fail or resolve "
-                    "some other location, when the running copy sits outside "
-                    "any repository.",
+                message = str(caught.exception)
+                self.assertIn(
+                    str(copy_dir),
+                    message,
+                    f"[{label}] the refusal must name the location it actually "
+                    "tried to resolve from.",
+                )
+                self.assertNotIn(
+                    str(tool_repo),
+                    message,
+                    f"[{label}] the refusal must not name {tool_repo} — the "
+                    "process working directory is not a candidate, and "
+                    "mentioning it would imply it was consulted.",
                 )
 
     def test_a_copy_deployed_inside_a_different_repository_does_not_resolve_that_repository(
@@ -223,54 +225,58 @@ class TestGitToplevelAnchorDefect(unittest.TestCase):
     ) -> None:
         # covers: BO-4100d-4
         # angle: failure
-        """AC it_requirement #3 (the silent, load-bearing half): a copy
-        deployed INSIDE an unrelated adopter repository must not resolve
-        that adopter repository.
+        """THE REGRESSION FENCE: the answer does not depend on where the
+        caller is standing. The same copy, invoked from two different working
+        directories, returns the same repository.
 
-        Simulates the consumer-layout symptom exactly: the copy sits inside
-        a real, unrelated git repository (the "adopter"), so
-        ``git -C <copy dir> rev-parse --show-toplevel`` SUCCEEDS today and
-        returns the adopter's repo — no exception anywhere. The calling
-        context (process CWD) is a second, distinct repository representing
-        the one the tool actually belongs to.
+        AMENDED 2026-09-28, and this is now the load-bearing entry in the
+        file. It previously asserted that a copy inside an unrelated adopter
+        repository must resolve the CWD's repository instead — i.e. it named
+        the process working directory as ground truth. That is the assumption
+        that produced the regression, and because the implementation was
+        written to the same assumption, the pair agreed with each other and
+        disagreed with reality. A mutually-consistent wrong pair passes every
+        gate, which is precisely how it shipped green.
 
-        The assertion is on the RESOLVED PATH, never merely "did not raise" —
-        per the AC's own rationale, an assertion that only checks for the
-        absence of an exception passes against this exact defect.
-
-        DEFECT (unmodified code): resolves to the adopter's repo (silently
-        wrong) instead of the calling context's repo. RED via AssertionError.
+        Invariance is the property that cannot be satisfied by a wrong answer
+        that happens to match the test's own premise: whatever the resolver
+        returns, it must return the SAME thing from a neutral directory and
+        from inside an unrelated repository. Any future re-introduction of a
+        CWD candidate fails here, whichever direction it resolves.
         """
         for label, real_source in _SCRIPT_COPIES.items():
             with self.subTest(copy=label):
                 adopter_repo = _init_repo(self._tmp_root / f"adopter_repo_{label}")
                 copy_dir = adopter_repo / ".leafcutter" / "scripts"
-                tool_repo = _init_repo(self._tmp_root / f"tool_repo2_{label}")
+                unrelated_repo = _init_repo(self._tmp_root / f"unrelated_repo_{label}")
+                neutral_dir = self._tmp_root / f"neutral_{label}"
+                neutral_dir.mkdir(parents=True, exist_ok=True)
 
                 module = _load_relocated_copy(real_source, copy_dir)
 
-                os.chdir(tool_repo)
-                resolved = Path(module._git_toplevel()).resolve()  # noqa: SLF001
+                os.chdir(neutral_dir)
+                from_neutral = Path(module._git_toplevel()).resolve()  # noqa: SLF001
 
-                self.assertNotEqual(
-                    resolved,
-                    adopter_repo.resolve(),
-                    f"[{label}] _git_toplevel() must NOT silently resolve the "
-                    f"unrelated adopter repository ({adopter_repo}) just "
-                    "because the deployed copy happens to sit inside it — "
-                    "this is the silent consumer-layout half of BO-4100d-4 "
-                    "and it raises no exception, so only comparing the "
-                    "resolved path (not merely checking for 'no exception') "
-                    "can catch it.",
-                )
+                os.chdir(unrelated_repo)
+                from_unrelated = Path(module._git_toplevel()).resolve()  # noqa: SLF001
+
                 self.assertEqual(
-                    resolved,
-                    tool_repo.resolve(),
-                    f"[{label}] _git_toplevel() must resolve the repository "
-                    f"the tool actually belongs to ({tool_repo}) — the "
-                    "subject of the operation — regardless of which "
-                    "unrelated repository physically contains the deployed "
-                    "copy.",
+                    from_neutral,
+                    from_unrelated,
+                    f"[{label}] _git_toplevel() gave two different answers for "
+                    f"the same deployed copy purely because the process "
+                    f"working directory changed ({neutral_dir} -> "
+                    f"{unrelated_repo}). Resolution must not depend on where "
+                    "the caller happens to be standing.",
+                )
+                self.assertNotEqual(
+                    from_unrelated,
+                    unrelated_repo.resolve(),
+                    f"[{label}] _git_toplevel() returned the unrelated "
+                    f"repository the caller was standing in ({unrelated_repo}). "
+                    "That is the CWD-candidate regression reverted on "
+                    "2026-09-28 — it is silent, so only comparing the resolved "
+                    "path can catch it.",
                 )
 
     def test_an_unresolvable_location_is_refused_with_the_path_it_tried(self) -> None:

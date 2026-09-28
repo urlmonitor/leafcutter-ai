@@ -139,26 +139,45 @@ class BootstrapError(RuntimeError):
 def _git_toplevel(anchor: Path | None = None) -> Path:
     """Return the absolute path to the main repository root.
 
-    Resolves via ``git -C <candidate> rev-parse --show-toplevel`` against an
-    ORDERED list of candidate anchors, returning the first that resolves to a
-    git repository:
+    Resolves via ``git -C <candidate> rev-parse --show-toplevel``, returning
+    the repository the candidate anchor sits in:
 
-      1. the explicit *anchor* argument, when supplied — AUTHORITATIVE,
-         never falls through to another candidate (BO-4100d-4);
-      2. the process's current working directory;
-      3. the script's own directory, kept only as a last resort.
+      1. the explicit *anchor* argument, when supplied — AUTHORITATIVE, never
+         falls through to another candidate (BO-4100d-4). A caller that names
+         a subject and gets silently given a different repository is the
+         defect class this whole function is being hardened against;
+      2. otherwise the script's own directory.
 
-    This script is not always physically inside the repository it manages:
-    every copy ``build.py`` deploys (e.g. a consumer's
-    ``.leafcutter/scripts/``) sits outside it. Defaulting to the script's own
-    directory alone made a deployed copy either fail outright or silently
-    resolve the wrong repository; resolving from the calling context first
-    fixes both.
+    DO NOT ADD ``Path.cwd()`` AS A CANDIDATE HERE. It was added under
+    BO-4100d-4 on 2026-09-22 and reverted on 2026-09-28, because it makes the
+    answer depend on where the caller happens to be standing:
+
+      * it silently returns an UNRELATED repository whenever the process is
+        run from inside one — measurably worse than the defect it was meant
+        to fix, which at least landed inside the adopter's own project;
+      * it voids the isolation that ``unit_tests/build_orchestration/
+        _bo2400f13_fixtures.py`` relies on (that module's own header block,
+        "The _git_toplevel() anchoring trap", predicted this and named the
+        consequence: real worktrees and branches created in the live
+        development tree). 14 tests failed and the suite mutated the real
+        repository.
+
+    ``KI-BO-20260921-worktree-base-resolver-defaults-to-cwd`` records the same
+    hazard in a sibling resolver: a cwd default is correct in one layout and
+    silently wrong in another.
+
+    KNOWN, UNFIXED: a copy deployed outside the repository it manages still
+    cannot resolve (dev layout) or resolves the adopter's repository
+    (consumer layout). This function cannot tell WHICH repository is
+    leafcutter's, only that some directory is inside one. Fixing that needs
+    deploy-time provenance rather than a better guess — see the analysis at
+    ``docs/analysis/2026-09-28-git-toplevel-resolution-contract.md``. What
+    this function now guarantees is that it never answers CONFIDENTLY AND
+    WRONGLY from ambient state.
 
     Args:
         anchor: A path inside the target repository to resolve from. When
-            omitted, the process working directory is tried first, then the
-            directory containing this script.
+            omitted, the directory containing this script is used.
 
     Returns:
         Absolute Path to the git toplevel directory.
@@ -168,7 +187,7 @@ def _git_toplevel(anchor: Path | None = None) -> Path:
             repository. The message names every candidate tried.
     """
     candidates: list[tuple[str, Path]] = [("explicit anchor argument", anchor)] if anchor is not None else [
-        ("process working directory", Path.cwd()), ("script's own directory", Path(__file__).resolve().parent)]
+        ("script's own directory", Path(__file__).resolve().parent)]
     tried: list[str] = []
     for label, candidate in candidates:
         try:
