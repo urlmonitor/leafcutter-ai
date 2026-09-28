@@ -1,18 +1,35 @@
 """
 MODULE: scripts/commit_guardian/_reachability_inventory.py
-GOAL: Single shared seam for reading and classifying recorded reachability
-    exemptions from config/reachability_exemptions.yaml.
-BUSINESS CONTEXT: BO-2900d-1 requires that code with no runtime way in of its
-    own can only pass the reachability guard on a recorded, reasoned
-    exemption -- never by naming convention. BO-2900d-2 requires every
-    exemption currently in force to be listed with its reason (and a stated
-    total) on every guard run. Both features must read the SAME registry the
-    SAME way, or the guard's refusal and its own reviewable inventory could
-    silently disagree about what "exempt" means (BO-2900d-1's own
-    constraint: "the registry loader lives in the shared seam ... so there
-    is exactly one reader; a second parser will drift").
-ARCHITECTURE: Three public functions, no other module may re-parse the
-    registry file:
+GOAL: Single shared seam for the whole runtime-reachability guard family
+    (BO-2900): reading/classifying recorded exemptions (BO-2900d-1), reading
+    what a command surface actually registers (BO-2900b-1), and collecting
+    what automation actually invokes (BO-2900b-1 forwards, BO-2900c backwards,
+    BO-2900b-3 hardens the collector itself).
+BUSINESS CONTEXT: Every direction of this guard family is only as good as
+    three primitives, and each must be defined exactly once or two directions
+    can silently disagree about the same fact:
+      - "is this exempt?" -- BO-2900d-1 requires code/capabilities with no
+        runtime way in of their own to pass only on a recorded, reasoned
+        exemption, never by naming convention; BO-2900d-2 requires every
+        exemption in force to be listed with its reason on every guard run.
+      - "what does this surface register?" -- BO-2900b-1 requires the answer
+        to come from the BUILT command surface (its own argparse parser),
+        never a source-text scan, so conditional/table-driven registration is
+        read correctly in both directions a naive scan gets wrong.
+      - "what does this automation actually invoke?" -- BO-2900b-1 (forwards)
+        and BO-2900c (backwards) both need "an automation script really runs
+        the surface with this capability" to mean the same thing, or a
+        registered-but-uncalled false negative in one direction becomes an
+        uncalled-but-registered false alarm in the other. BO-2900b-3 owns
+        hardening this same function against JS command construction, decoy
+        text (comments/messages/variable names) and the rename-invariance
+        property -- see that AC; this module defines the ONE function it
+        extends, never a second collector.
+ARCHITECTURE: Six public symbols, no other module may re-implement any of them
+    (:class:`Invocation` and :func:`collected_invocations` are implemented in
+    the sibling module _reachability_invocation_collector.py and re-exported
+    here verbatim -- a file-size split, not a second collector; see that
+    module's own docstring):
         load_exemptions(registry_path) -> list[dict]
             Reads config/reachability_exemptions.yaml. A missing file is
             zero exemptions (fail-open: absence is the ordinary "nothing
@@ -32,16 +49,62 @@ ARCHITECTURE: Three public functions, no other module may re-parse the
             exemption only -- no globs, prefixes, or convention-based
             matching (name, extension, and containing folder confer
             nothing; see BO-2900d-1's third Gherkin scenario).
+        Invocation
+            NamedTuple(script: str, line: int, surface: str, capability: str)
+            -- one real, executed invocation of a capability against a
+            surface, per the config_schema_fragment both BO-2900b-1 and
+            BO-2900b-3 declare for it.
+        registered_capabilities(parser) -> set[str]
+            Reads argparse's own ``_SubParsersAction.choices`` off an already
+            BUILT ``argparse.ArgumentParser`` -- never source text. A
+            capability registered inside a branch that is false at build time
+            is invisible; one registered through a loop over a table is still
+            found, because both are resolved by actually building the parser,
+            not by scanning for ``add_parser(`` calls.
+        collected_invocations(script_paths) -> list[Invocation]
+            AST-based (never substring/regex-over-raw-text) scan of Python
+            automation scripts for real ``subprocess.run``/``call``/
+            ``check_call``/``check_output``/``Popen`` calls whose argv names a
+            surface script, taking the very next positional token as the
+            capability. ROLLOUT NOTE (BO-2900b-1): only ``.py`` automation
+            scripts are recognised; a ``.js``/``.yaml``/other script
+            contributes no invocations here (not an error -- see
+            debugging/test_judge/callers.py's own documented limit, "one hop,
+            Python direct calls only; JS/YAML/CI invocations need their own
+            handling"). This repository's real automation
+            (templates/workflows-js/fast-lane-ship.js) is JavaScript;
+            BO-2900b-3 is the follow-on AC that extends THIS function (not a
+            second collector) to recognise its template-literal command
+            strings, resist comment/message/variable-name decoys, and satisfy
+            the rename-invariance property. Until BO-2900b-3 lands,
+            check_reachability.py's own caller-side default (see that
+            module's docstring) treats "no automation scripts were supplied"
+            as "nothing to check yet", never as "nothing is called" -- so this
+            gap does not, on its own, turn every real capability into a false
+            refusal.
 
-    All I/O (the registry file read) is wrapped per the Error Handling
-    Policy (Rule 1); the classification helpers below it are pure and carry
-    no try/except (Rule 4).
+    All I/O (file reads) is wrapped per the Error Handling Policy (Rule 1);
+    unreadable/unparseable individual files are logged and skipped rather
+    than aborting the whole scan, since one bad automation script must not
+    hide a genuine finding about every other one.
 """
 from __future__ import annotations
 
+import argparse
 from pathlib import Path
 
 import yaml
+
+# BO-2900b-1/BO-2900b-3/BO-2900c seam: Invocation and collected_invocations()
+# are implemented in the sibling module (file-size split, NOT a second
+# collector -- see that module's docstring and this module's ARCHITECTURE
+# note above) and re-exported here so ``from _reachability_inventory import
+# collected_invocations`` (the seam's declared public import path in every
+# consuming AC) keeps working unchanged.
+from _reachability_invocation_collector import (  # noqa: F401 -- re-export
+    Invocation,
+    collected_invocations,
+)
 
 # Registry file path, relative to the project root, per BO-2900d-1's
 # it_requirements config_schema_fragment.
@@ -82,25 +145,25 @@ def load_exemptions(registry_path: Path) -> list[dict]:
     try:
         raw = registry_path.read_text(encoding="utf-8")
     except OSError as exc:
-        raise ReachabilityRegistryError(
+        raise ReachabilityRegistryError(  # noqa: TRY003
             f"cannot read reachability exemption registry {registry_path}: {exc}"
         ) from exc
     try:
         data = yaml.safe_load(raw)
     except yaml.YAMLError as exc:
-        raise ReachabilityRegistryError(
+        raise ReachabilityRegistryError(  # noqa: TRY003
             f"cannot parse reachability exemption registry {registry_path}: {exc}"
         ) from exc
     if data is None:
         return []
     if not isinstance(data, dict):
-        raise ReachabilityRegistryError(
+        raise ReachabilityRegistryError(  # noqa: TRY003
             f"reachability exemption registry {registry_path} must be a YAML "
             f"mapping with a top-level 'exemptions' list"
         )
     entries = data.get("exemptions", [])
     if not isinstance(entries, list):
-        raise ReachabilityRegistryError(
+        raise ReachabilityRegistryError(  # noqa: TRY003
             f"reachability exemption registry {registry_path}: 'exemptions' "
             f"must be a list"
         )
@@ -147,3 +210,36 @@ def is_exempt(item: str, exemptions: list[dict]) -> bool:
         ``True`` iff an in-force entry's ``item`` equals *item* exactly.
     """
     return any(entry.get("item") == item for entry in exemptions_in_force(exemptions))
+
+
+# ---------------------------------------------------------------------------
+# BO-2900b-1 / BO-2900b-3 / BO-2900c: registered-capability and
+# real-invocation inventory (see module docstring for the full contract).
+# ---------------------------------------------------------------------------
+
+
+def registered_capabilities(parser: argparse.ArgumentParser) -> set[str]:
+    """Return the capability names a BUILT argparse parser actually registers.
+
+    Reads ``argparse._SubParsersAction.choices`` directly off *parser* --
+    argparse exposes no public API for this, and it is the only reading that
+    cannot be fooled by source text: a capability registered inside a branch
+    that is false when the parser is built is never added to ``choices`` in
+    the first place, and one registered through a loop over a table is
+    resolved identically to a literal ``add_parser(...)`` call, because both
+    go through the same ``add_parser`` machinery at build time.
+
+    Args:
+        parser: An already-built ``argparse.ArgumentParser`` (the caller is
+            responsible for calling the surface's own parser-builder function
+            -- this function never imports or builds anything itself).
+
+    Returns:
+        The set of subcommand names registered on *parser*, across every
+        ``add_subparsers()`` group it defines (ordinarily exactly one).
+    """
+    names: set[str] = set()
+    for action in parser._actions:  # noqa: SLF001 -- no public API; see docstring.
+        if isinstance(action, argparse._SubParsersAction):  # noqa: SLF001
+            names |= set(action.choices.keys())
+    return names

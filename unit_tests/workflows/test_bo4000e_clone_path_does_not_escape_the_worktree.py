@@ -46,7 +46,7 @@ TICKET = _EPIC_TAIL + "/01_TICKET-x.md"
 # Dispatches that legitimately name the main checkout, and why. `resolve-target`
 # runs before any worktree exists and is handed the raw target. The repository-facts
 # probes ASK git about the repository and must anchor on a path known to be inside it
-# (BO-4000d); anchoring them on the worktree would be circular, since establishing
+# (BO-4000f); anchoring them on the worktree would be circular, since establishing
 # whether that worktree is real is the very question they answer. None of these
 # performs work on a ticket. Every label NOT listed here does, and must be
 # worktree-resident — keeping this set as small as it is, is what stops the record

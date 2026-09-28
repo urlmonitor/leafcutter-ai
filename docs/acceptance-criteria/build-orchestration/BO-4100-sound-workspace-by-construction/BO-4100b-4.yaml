@@ -118,7 +118,8 @@ created: 2026-09-21
 amended_by: []
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260923-BO-4100b-4.md
 notes: >-
   The cross-session-damage arm of BO-4100b. Observed 2026-09-14: the refusing check's own
   suggested remedy was to rebuild, which is KI-BP-016 and deploys an unmerged branch's

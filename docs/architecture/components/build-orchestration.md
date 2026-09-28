@@ -5,16 +5,17 @@ flight_level: L3-Component
 status: active
 type: reference
 created: 2026-07-10
-last_updated: 2026-09-23
+last_updated: 2026-09-28
 components:
   - build_orchestration
 related_docs:
   - docs/architecture/adrs/ADR-046-completion-demanded-set-is-record-only.md
   - docs/architecture/adrs/ADR-047-single-writer-ticket-close-path.md
   - docs/architecture/adrs/ADR-048-order-independent-per-ticket-completion.md
+  - docs/architecture/adrs/ADR-050-runtime-reachability-guard-refuses-not-warns.md
 children:
   - docs/architecture/diagrams/c3-fast-lane-build-loop-sequence.md
-  - docs/architecture/diagrams/c3-009-ticket-close-paths-sequence.md
+  - docs/architecture/diagrams/c3-012-ticket-close-paths-sequence.md
 ---
 
 # Build Orchestration
@@ -109,7 +110,7 @@ A refusal is reported as *not closed*; it is never retried through another route
 retried with `--force`, which disables the parity check and the transition allow-list
 together.
 
-- [Ticket Close — Every Route to the Finished State](../diagrams/c3-009-ticket-close-paths-sequence.md) —
+- [Ticket Close — Every Route to the Finished State](../diagrams/c3-012-ticket-close-paths-sequence.md) —
   the close-path sequence: both drivers reaching the same mechanism, the mechanism deciding
   from the record it read rather than from what the caller passed it, the refusal and the
   blanket override drawn as their own paths, and the single path that ends in the finished
@@ -203,3 +204,24 @@ of a re-read record, a batch-level close dispatch, a sub-agent session reused ac
 — is breaking something deliberate, not performing a harmless refactor. Both drivers
 (`build-feature.js` and `build-ticket.js`) are bound by this, in the same commit, even
 though the single-ticket driver cannot exhibit the disagreement.
+
+## Runtime Reachability Guard — Registered Capability Must Have a Caller
+
+`fast_lane.py`'s command surface (`select_batch`, `claim`, `release`, `mark_done`, and the
+rest of its argparse subcommands) is the concrete example surface the forward
+runtime-reachability guard (`check-reachability`, BO-2900b-1) is calibrated against: every
+capability the surface's **built** parser registers must have at least one real automation
+invocation naming it, or the change is refused — never downgraded to an advisory note. The
+guard itself lives in `commit_guardian` (see that component's entry points), but the surface
+it inventories, and the automation expected to drive it
+(`templates/workflows-js/fast-lane-ship.js`), both belong to this component's picture.
+
+As of this guard's initial landing, the registered hook and CI job pass no
+`--surface`/`--automation` override against this repository's real capabilities — the
+invocation collector recognises Python automation scripts only, and `fast-lane-ship.js` is
+JavaScript, so wiring live inputs now would false-refuse every commit touching this
+component. See the how-to below for the current rollout status and what to do with a
+finding.
+
+- [Runtime Reachability Guard — Data Flow](../diagrams/c3-010-reachability-guard-data-flow.md) — capability inventory from the built parser, invocation collection from automation scripts, the comparison, and the refuse-not-warn exit.
+- [How to resolve a check-reachability guard finding](../../how-to/resolve-a-reachability-guard-finding.md) — the operator procedure: wire up the caller, or record an exemption.

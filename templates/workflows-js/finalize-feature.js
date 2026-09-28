@@ -1643,7 +1643,7 @@ if (closureAlreadyCommitted) {
       "\n" +
       "  If all staged paths pass the scope guard:\n" +
       "    If staged files exist:\n" +
-      `      Run: git -C ${WORKTREE_ROOT} commit -m 'chore(tickets): close tickets and source ACs'\n` +
+      `      Run: COMMIT_AGENT_MODE=1 git -C ${WORKTREE_ROOT} commit -m 'chore(tickets): close tickets and source ACs'\n` +
       "      Log: 'Closure commit created on feature branch.'\n" +
       "    Else:\n" +
       "      Log: 'Nothing staged after edits — all tickets were already done.'\n" +

@@ -55,7 +55,7 @@ Severity in the **filename** is a three-level index bucket (`blocker` / `high` /
 
 Fixed issues move to [`supervisor-system/resolved/`](supervisor-system/resolved/) and are no longer listed as open. They are kept, not deleted.
 
-**Open: 6** (1 blocker, 2 high, 3 low) · **Resolved: 0**
+**Open: 7** (1 blocker, 2 high, 4 low) · **Resolved: 0**
 
 ## Open
 
@@ -67,6 +67,7 @@ Fixed issues move to [`supervisor-system/resolved/`](supervisor-system/resolved/
 | `low` | KI-SS-003 — The adjudication ladder escalates to `brainstorm-lead` without a per-ticket cap and can burn a drive without converging | [open-low-ki-ss-003.md](supervisor-system/open-low-ki-ss-003.md) |
 | `low` | KI-SS-004 — A workflow invoked by name can run a stale session-cached script | [open-low-ki-ss-004.md](supervisor-system/open-low-ki-ss-004.md) |
 | `low` | KI-SS-005 — Concurrent agents in one worktree each report their siblings' files as another session's stray work | [open-low-ki-ss-005.md](supervisor-system/open-low-ki-ss-005.md) |
+| `low` | KI-SS-20260927-commit-signoff-precedes-the-commit — the signoff skill makes the commit agent record the commit phase as ok before git commit runs, so the ticket asserts a commit that does not exist yet | [open-low-ki-ss-20260927-commit-signoff-precedes-the-commit.md](supervisor-system/open-low-ki-ss-20260927-commit-signoff-precedes-the-commit.md) |
 
 ## Resolved
 

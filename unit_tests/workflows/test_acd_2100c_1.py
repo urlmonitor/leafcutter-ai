@@ -155,7 +155,7 @@ _ORPHAN_FILE_CONTENT = {
 # decisive-looking reply, used by test 3 to prove that answering the
 # soon-to-be-removed dispatch must NOT count as an answer having "arrived
 # on the channel".
-SCENARIOS = [
+SCENARIOS: list[dict] = [
     {
         "key": "orphan_resolution",
         "description": "deciding what to do with stranded drafts from an earlier run",

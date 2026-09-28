@@ -97,6 +97,19 @@ def _build_cli_parser() -> argparse.ArgumentParser:
             "'git merge-base HEAD origin/main' resolved from --test-root."
         ),
     )
+    vrb.add_argument(
+        "--ac-root",
+        required=False,
+        default=None,
+        metavar="DIR",
+        help=(
+            "Root of AC YAML store (TQ-500f-3-i). When supplied, opts into "
+            "refusing a declared (must_catch / angle:discrimination) newly-"
+            "added covering test as red evidence when its only red is an "
+            "absence red. Omitting this flag preserves pre-TQ-500f-3-i "
+            "behaviour exactly."
+        ),
+    )
 
     # --- verify_green_and_coverage ---
     vgc = subparsers.add_parser(
@@ -111,6 +124,26 @@ def _build_cli_parser() -> argparse.ArgumentParser:
     )
     vgc.add_argument("--test-root", required=True, metavar="DIR", help="Root of test tree.")
     vgc.add_argument("--ac-root", required=True, metavar="DIR", help="Root of AC YAML store.")
+
+    # --- heavy_lane_gate (TQ-500f-3-ii) ---
+    hlg = subparsers.add_parser(
+        "heavy_lane_gate",
+        help=(
+            "Heavy-lane wrapper around verify_red_baseline (no second reader): "
+            "prints {gate_passed, applicable, verified, ...verify_red_baseline "
+            "fields}. Empty/absent --source-ac means not applicable (always "
+            "gate_passed=true). Exits 0 iff gate_passed."
+        ),
+    )
+    hlg.add_argument(
+        "--source-ac",
+        required=False,
+        default="",
+        metavar="IDS",
+        help="Comma-separated ticket source_ac id(s); empty means not applicable.",
+    )
+    hlg.add_argument("--test-root", required=True, metavar="DIR", help="Root of test tree.")
+    hlg.add_argument("--ac-root", required=True, metavar="DIR", help="Root of AC YAML store.")
 
     # --- check_producibility ---
     cp2 = subparsers.add_parser(

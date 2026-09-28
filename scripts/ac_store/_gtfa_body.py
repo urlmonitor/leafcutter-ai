@@ -77,9 +77,10 @@ def _build_implementation_notes_section(ac: AcRecord, ac_id: str = "") -> str:
 
     Before serialising, any ``reference_pattern`` glob in ``it_requirements``
     is resolved to the single concrete path it matches (BO-2000c-3).  When the
-    pattern resolves to zero files a ``ValueError`` is raised so the authoring
-    error surfaces immediately rather than silently emitting a broken wildcard
-    into the ticket body (BO-2000c-3-i).
+    pattern resolves to zero files, or to more than one, a ``ValueError`` is
+    raised so the authoring error surfaces immediately rather than silently
+    emitting a broken wildcard — or an arbitrarily chosen one of several
+    matches — into the ticket body (BO-2000c-3-i).
 
     The section is placed consistently in the ticket body just before the
     ``## Sign-offs`` block so that phase agents can locate it with a simple
@@ -96,7 +97,8 @@ def _build_implementation_notes_section(ac: AcRecord, ac_id: str = "") -> str:
 
     Raises:
         ValueError: When a ``reference_pattern`` glob in ``it_requirements``
-                    resolves to zero files (authoring error).
+                    resolves to zero files, or to more than one file
+                    (authoring error).
     """
     it_req = ac.get("it_requirements")
     if not it_req:

@@ -16,7 +16,7 @@ related_docs:
 # KI-ACD-013 — `goal_to_epic.py` writes a `target_epic` field the AC schema rejects, so every epic it generates fails the required store gate
 
 > One known issue, split out of `docs/known-issues/ac-driven-dev.md` on
-> 2026-09-14. Index: [ac-driven-dev.md](../ac-driven-dev.md).
+> 2026-09-14. Index: [ac-driven-dev.md](../../ac-driven-dev.md).
 > Filename severity is the three-level index bucket (`high`); the
 > original grading is the `**Severity:**` line below, unchanged.
 

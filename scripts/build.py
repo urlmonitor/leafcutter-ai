@@ -1350,7 +1350,7 @@ def build_doc_index(target_root: Path, config: dict, dry_run: bool, force: bool)
 
     docs_dir = config.get("docs_root", "docs/").rstrip("/")
     output_path = target_root / docs_dir / "INDEX.md"
-    content = generate_index(target_root)
+    content = generate_index(target_root, output_path.parent)
 
     if dry_run:
         _dry_run_msg(f"would write {output_path}")

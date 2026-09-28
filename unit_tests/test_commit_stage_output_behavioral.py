@@ -140,6 +140,12 @@ class TestCommitStageOutputFailClosed(unittest.TestCase):
       - Well-formed {status:"ok"} → status "ok" (currently PASSES)
     """
 
+    # Assigned dynamically in setUpClass; declared here so mypy (which cannot
+    # see attributes set only inside a classmethod body) recognises them as
+    # real class attributes rather than reporting attr-defined.
+    source: str
+    coercion_block: str
+
     @classmethod
     def setUpClass(cls):
         cls.source = _read_source(_PLAN_FEATURE_JS)
@@ -434,8 +440,10 @@ class TestCommitStageOutputHookSafePath(unittest.TestCase):
             }
             if (agentType === 'status-checker') {
                 // Confirm a non-main authoring branch so the fail-closed commit
-                // guard proceeds to dispatch the commit agent.
-                if (instructions.includes('git branch --show-current')) {
+                // guard proceeds to dispatch the commit agent. With a real
+                // authoring worktree the command is anchored
+                // (`git -C "<path>" branch --show-current`), not bare.
+                if (/git(?: -C "[^"]*")? branch --show-current/.test(instructions)) {
                     return { output: 'ac-authoring/test', exit_code: 0 };
                 }
                 // Approve every gate (mid-pipeline and final).

@@ -19,7 +19,9 @@ criteria: |
   test is correct and passing from the moment it is written — and nothing else
   ever asks whether it is capable of failing at all. So a test with no possible
   failure mode sails through every stage and every gate, stays green forever,
-  and is later quoted as proof that the rule it names is holding. After this
+  and is later quoted as proof that the rule it names is holding. And where that
+  early failure does exist, failing because the code was missing says nothing
+  about whether the test would notice a wrong version of it. After this
   goal, a pass is accepted as evidence only when something has demonstrated the
   test would object if the thing it guards were broken; where that demonstration
   is missing, the work reads as unfinished rather than approved.
@@ -38,7 +40,11 @@ delivers_to: null
 expects_from: null
 origin_agent: BrainCandy
 created: 2026-08-31
-amended_by: []
+amended_by:
+  - reason: "Discrimination initiative (TQ-500f/g): criteria gain one sentence on early failures that only prove absence"
+    by: product-owner
+    at: 2026-09-25
+    note: "Sentence proposed by the product-owner stage of /plan-feature and approved by the user at the PO gate."
 superseded_by: null
 covered_by:
   - TQ-500a
@@ -46,6 +52,8 @@ covered_by:
   - TQ-500c
   - TQ-500d
   - TQ-500e
+  - TQ-500f
+  - TQ-500g
 implemented_by: []
 change_target:
   - pipeline
