@@ -8,8 +8,8 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 roadmap_phase: phase_1
 criteria: |
   Given requirement R declares the files its work changes as:
@@ -49,19 +49,70 @@ doc_links:
   - path: docs/reference/ac-schema.md
     relationship: describes
     status: exists
+  - path: docs/architecture/components/ticket-lifecycle.md
+    relationship: describes
+    status: exists
 assigned_agent: python-coder
 estimated_complexity: M
+it_requirements:
+  - "Edit surface: scripts/ac_store/_gtfa_files_touched.py (surface selection), scripts/ac_store/_gtfa_frontmatter.py (frontmatter emission) and scripts/ac_store/generate_ticket_from_ac.py (ticket body and the --verify readiness report)."
+  - "The generator obtains a record's declared files only through the declared-files seam (ACD-1600c-4); it does not parse `declared_files` itself. For a record that declares files, files_touched is exactly the seam's paths in declared order: no prose harvesting, no doc_links, no reference_file_path added, and no sort or de-duplication that reorders the list."
+  - "The on-disk existence filter and bare-directory rejection of TKT-600a-1 apply to the derived path only (records in 'no declared files'); a declared to_be_created path is emitted although absent. TKT-600a-1's existing tests must stay green unchanged."
+  - "GUARD COMPATIBILITY: files_touched stays a flat list of repo-relative path strings in frontmatter, so ticket_frontmatter_guard, the epic-supervisor file-overlap gate and change-scope-reviewer read it unchanged. No new frontmatter key and no per-entry objects in frontmatter. The to-be-created marker and the provenance are written in the ticket BODY, in one section adjacent to the surface, one line per path."
+  - "The generated ticket must pass ticket_frontmatter_guard with no manual fixup, verified by running the guard on the generated file, not by inspecting the emitter."
+  - "Readiness report (--verify): one line per path naming its provenance -- the declared-files list of the named record -- and its marker. The count-only surface line ('files_touched has N path(s) from doc_links') is not emitted for a declaring record."
+  - "Deterministic: regenerating from the same record yields a byte-identical files_touched list and marker section."
+  - "Canonical source only (ADR-001); if these modules are in the build deploy map, the change is verified from the deployed layout after a rebuild."
+test_spec:
+  - name: test_declared_record_files_touched_is_declared_list_in_order
+    target_dir: tests/ac_store/
+    framework: pytest
+    type: unit
+    description: "Ticket files_touched is exactly scan_ac_store.py then test_hold_reasons.py, in declared order."
+  - name: test_doc_links_and_prose_paths_excluded_for_declared_record
+    target_dir: tests/ac_store/
+    framework: pytest
+    type: unit
+    description: "templates/agents/it-po.md (modifies link), docs/reference/ac-schema.md and the prose-named scripts/goal_to_epic.py (which exists on disk) are not on files_touched."
+    angle: failure
+  - name: test_ticket_marks_to_be_created_file
+    target_dir: tests/ac_store/
+    framework: pytest
+    type: unit
+    description: "The ticket body states that unit_tests/ac_store/test_hold_reasons.py is a file the work creates, and does not so mark scan_ac_store.py."
+  - name: test_files_touched_equals_store_declared_answer
+    target_dir: tests/ac_store/
+    framework: pytest
+    type: unit
+    description: "The ticket's files_touched equals the path sequence the declared-files seam returns for R."
+    angle: seam
+  - name: test_readiness_report_names_declared_list_as_source_per_path
+    target_dir: tests/ac_store/
+    framework: pytest
+    type: unit
+    description: "--verify prints one provenance line per path naming R's declared-files list; no count-only doc_links PASS line."
+  - name: test_generated_declared_ticket_passes_frontmatter_guard
+    target_dir: tests/ac_store/
+    framework: pytest
+    type: integration
+    description: "Running ticket_frontmatter_guard on the ticket generated from R reports no violation."
+    angle: boundary
 delivers_to: null
 expects_from:
   ac_id: ACD-1600c-4
   contract: >-
-    Declared-files answer for one record: either the named state 'no declared files'
-    (ACD-1600c-4-ii) or the record's declared list, in declared order, each entry
-    {path: repo-root-relative POSIX string, state: 'exists' | 'to_be_created'} exactly as
-    declared. Never derived from doc_links.
+    Declared-files answer for one record from scripts/ac_store/declared_files.py over the AC
+    field `declared_files`: either the named state 'no declared files' (ACD-1600c-4-ii) or
+    the record's declared list, in declared order, each entry {path: repo-root-relative POSIX
+    string, state: 'existing' | 'to_be_created'} exactly as declared. Never derived from
+    doc_links.
 origin_agent: business-analyst
 created: 2026-09-27
-amended_by: []
+amended_by:
+  - reason: "it-po technical enrichment: it_requirements (edit surface, read only through the seam, TKT-600a-1 filters scoped to the derived path, frontmatter stays a flat string list with marker/provenance in the ticket body, guard verified by running it, per-path provenance in --verify), test_spec, expects_from re-worded to declared_files / 'existing'. Criteria unchanged."
+    date: '2026-09-27'
+    by: it-po
+    directed_by: user
 superseded_by: null
 covered_by:
   - TKT-600a-3-i

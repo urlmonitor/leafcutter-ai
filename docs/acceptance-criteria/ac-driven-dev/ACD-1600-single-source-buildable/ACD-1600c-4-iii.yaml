@@ -2,8 +2,8 @@ id: ACD-1600c-4-iii
 components:
   - ac_driven_dev
   - ac_store
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 title: "A declared path outside the repository, or inside a copy the build regenerates, is refused"
 component: ac-driven-dev
 level: L3
@@ -43,15 +43,62 @@ doc_links:
   - path: docs/reference/ac-schema.md
     relationship: describes
     status: exists
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
 assigned_agent: python-coder
 estimated_complexity: S
+it_requirements:
+  - "Path-form rules live once in the declared-files seam (ACD-1600c-4) and are invoked by the load-bearing check-ac-schema hook (both branches) and the agent-side validator: refuse absolute paths (POSIX or drive-letter), any path that leaves the repository root, and any backslash -- each message naming the record and the path exactly as written."
+  - "Regenerated-copy detection must read the build's own definition of which roots it regenerates and from which source (the build deploy definition, including the .claude/ to .leafcutter/ link) -- never a second, hard-coded root list in the check. Adding a regenerated root to the build must extend the rule with no change to the check."
+  - "When a regenerated copy has no source the build definition can name, the entry is still refused and the message states that no source could be determined -- never a guessed source."
+  - "Exactly one message per offending entry, even when an entry breaks more than one rule; no duplicate from the JSON-schema layer."
+  - "The check is lexical plus the build mapping: it must not require the declared path to exist, and must not resolve symlinks in a way that makes the verdict depend on the checkout's filesystem."
+test_spec:
+  - name: test_absolute_and_escaping_paths_refused_as_not_repo_relative
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    description: "/home/dev/repo/scripts/a.py and ../other-repo/scripts/b.py each get one message naming R and the path, stating declared paths are repo-root-relative and stay inside it."
+    angle: failure
+  - name: test_backslash_path_refused_with_forward_slash_message
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    description: "scripts\\ac_store\\c.py gets one message naming R and the path, stating declared paths use forward slashes."
+  - name: test_regenerated_copy_refused_naming_template_source
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    description: ".claude/agents/test-writer.md is refused as a regenerated copy, and the message names templates/agents/test-writer.md as the file to declare."
+  - name: test_template_source_path_produces_no_message
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    description: "templates/agents/test-writer.md produces no message; the five-entry record yields exactly four messages."
+  - name: test_regenerated_copy_without_known_source_refused_without_guess
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    description: "A path under a regenerated root with no mappable source is refused and the message says no source could be determined, naming no source."
+    angle: boundary
+  - name: test_regenerated_roots_read_from_build_definition
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    description: "A fixture build definition with an extra regenerated root makes a path under it refused, with no change to the check."
+    angle: seam
 delivers_to: null
 expects_from:
   ac_id: ACD-1600c-4
-  contract: "The record's declared-files list with paths exactly as declared."
+  contract: "The declared-files answer from scripts/ac_store/declared_files.py with each path exactly as declared (no normalisation)."
 origin_agent: business-analyst
 created: 2026-09-27
-amended_by: []
+amended_by:
+  - reason: "it-po technical enrichment: it_requirements (one rule in the seam, hook load-bearing, regenerated roots read from the build definition, no-source refusal without guessing, one message per entry), test_spec, expects_from re-worded. Criteria unchanged."
+    date: '2026-09-27'
+    by: it-po
+    directed_by: user
 superseded_by: null
 covered_by: []
 implemented_by: []

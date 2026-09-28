@@ -2,8 +2,8 @@ id: ACD-1600c-4
 components:
   - ac_driven_dev
   - ac_store
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 title: "A requirement lists the files its work changes, each marked existing or to be created, and that list is the only answer to which files the work changes"
 component: ac-driven-dev
 level: L2
@@ -45,20 +45,78 @@ doc_links:
   - path: docs/architecture/adrs/ADR-026-ac-driven-build-v2-phased-migration.md
     relationship: describes
     status: exists
+  - path: docs/architecture/components/ac-driven-dev.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      The check-ac-schema commit hook is the load-bearing enforcement point for the field's
+      shape and for the refusals in ACD-1600c-4-i/-ii/-iii.
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: describes
+    status: exists
 assigned_agent: python-coder
-estimated_complexity: M
+estimated_complexity: L
+it_requirements:
+  - "FIELD DECISION: the list is a NEW OPTIONAL top-level AC field named `declared_files`. Shape: a list of objects {path: string, state: 'existing' | 'to_be_created'} with no other keys; list order is the declared order and every reader preserves it verbatim. Absent key = the named state 'no declared files' (ACD-1600c-4-ii). The field is NOT added to `required`, and top-level `additionalProperties` is NOT tightened (ADR-026 safety rule 1)."
+  - "Edit surface (canonical source only, ADR-001): config/ac_store_schema.json declares the property; scripts/commit_guardian/check_ac_schema.py and scripts/commit_guardian/_ac_schema_validators.py enforce it at commit time; scripts/ac_store/validate_ac_schema.py enforces it agent-side; a new single read seam scripts/ac_store/declared_files.py; and scripts/build_phases.py for the deploy-map entry."
+  - "ONE READ SEAM. Every consumer -- the implementation-readiness gate (ACD-1600c-1/-2), the ticket generator (TKT-600a-3/-3-i), the requirement rule check (ACD-2500a-3, ACD-2500c-1-i) and the file-aware pre-pass (ACD-2500d-5-i) -- obtains a record's declared files only through this seam. No consumer parses the field itself, and no consumer falls back to doc_links, it_requirements prose or reference_file_path for a record that declares files."
+  - "The seam returns two distinguishable results and nothing else: the named state 'no declared files' (key absent), or the declared entries in declared order. It never returns an empty list, never back-fills from doc_links, and never reads a malformed field as absent -- a malformed field is a validation violation reported by the validators."
+  - "ENFORCEMENT POINTS -- every one must carry the rule, because a rule only in the JSON schema blocks nothing when jsonschema is unavailable (ACD-1600g-1 finding): (a) config/ac_store_schema.json carries the structural shape only (type, required keys path/state, state enum, no extra keys); (b) the check-ac-schema commit hook, in BOTH its jsonschema branch and its manual _ac_schema_validators fallback, is the LOAD-BEARING gate -- 'checked before it enters the repository' in the L3 criteria means commit time; (c) the agent-side validator validate_ac_schema.py must reach the same verdict as the hook on every fixture. The semantic rules the JSON schema cannot express (empty list, path form, regenerated copy, existence vs marker -- ACD-1600c-4-i/-ii/-iii) are implemented once, in the seam, and invoked by (b) and (c); neither re-implements them."
+  - "Each defect yields exactly one message: the JSON-schema layer must not also carry a minItems or path pattern that would duplicate the seam's worded refusal for the same entry."
+  - "Deploy-manifest first (ADR-026 safety rule 2): the commit hook imports the seam, so the new module is added to the build deploy map in the same change and the hook is verified from the deployed layout after a rebuild."
+  - "Additive and backward compatible: validating the entire existing store after the change must produce zero new violations (no record carries the field today)."
+  - "Deterministic and side-effect free: the same record yields the same answer on every read; the seam never writes to a record."
+  - "Paths are returned exactly as declared (repo-root-relative POSIX); the seam performs no normalisation that would make two spellings of one path compare equal -- non-canonical forms are refused by ACD-1600c-4-iii instead."
+test_spec:
+  - name: test_declared_answer_is_declared_entries_in_declared_order
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    description: "A real on-disk record declaring scan_ac_store.py (existing) and test_hold_reasons.py (to_be_created) validates (exit 0) and the seam returns exactly those two entries, with markers, in declared order."
+  - name: test_doc_links_never_part_of_declared_answer
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    description: "Neither doc_link is in the answer, including the one whose relationship is 'modifies'."
+  - name: test_adding_or_removing_doc_link_leaves_answer_unchanged
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    description: "Answer is byte-identical before and after adding one doc_link and after removing one."
+  - name: test_malformed_declared_files_rejected_by_hook_fallback_and_validator
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "A record whose declared_files entry has an unknown state value or lacks path is rejected by validate_ac_schema AND by check_ac_schema with jsonschema forced unavailable (manual fallback branch); non-zero exit on both paths."
+    angle: seam
+  - name: test_existing_store_validates_unchanged_after_field_added
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    description: "Records without declared_files validate with zero new violations (ADR-026 rule 4)."
+    angle: boundary
 delivers_to:
   agent: python-coder
   contract: >-
-    Declared-files answer for one record: either the named state 'no declared files'
-    (ACD-1600c-4-ii) or the record's declared list, in declared order, each entry
-    {path: repo-root-relative POSIX string, state: 'exists' | 'to_be_created'} exactly as
-    declared. Never derived from doc_links. Read by the requirement rule check (ACD-2500a-3,
-    ACD-2500c-1-i) and the file-aware pre-pass (ACD-2500d-5-i, feeding ACD-2500d-1).
+    Declared-files answer for one record, from the single seam scripts/ac_store/declared_files.py
+    over the AC field `declared_files`: either the named state 'no declared files'
+    (ACD-1600c-4-ii; key absent) or the record's declared list, in declared order, each entry
+    {path: repo-root-relative POSIX string, state: 'existing' | 'to_be_created'} exactly as
+    declared. Never an empty list; never derived from doc_links. Read by the
+    implementation-readiness gate (ACD-1600c-1, ACD-1600c-2), the ticket generator
+    (TKT-600a-3, TKT-600a-3-i), the requirement rule check (ACD-2500a-3, ACD-2500c-1-i) and
+    the file-aware pre-pass (ACD-2500d-5-i, feeding ACD-2500d-1).
 expects_from: null
 origin_agent: business-analyst
 created: 2026-09-27
-amended_by: []
+amended_by:
+  - reason: "it-po technical enrichment: field name and shape fixed (declared_files: [{path, state: existing|to_be_created}]), enforcement points named with the check-ac-schema hook as load-bearing, one read seam, deploy-manifest rule, test_spec. Marker value renamed from the BA contract's 'exists' to 'existing' so the authored claim cannot be confused with the observed state the pre-pass reports. Criteria unchanged."
+    date: '2026-09-27'
+    by: it-po
+    directed_by: user
 superseded_by: null
 covered_by:
   - ACD-1600c-4-i
@@ -91,3 +149,17 @@ notes: |
   IT PO's to fix. The existing doc_links `status: planned` value is not a substitute for
   the to-be-created marker: it describes documentation that is planned, not a file the work
   creates.
+
+  IT-PO ENRICHMENT (2026-09-27). Field name `declared_files`, not a reuse of `files_touched`:
+  the ticket key of that name is today the OUTPUT of the doc_links/prose derivation this AC
+  retires, it is a flat list of strings with no marker, and reusing it would let a reader
+  mistake a derived ticket surface for a declared one. `declared_files` is also the key the
+  file-aware pre-pass report (ACD-2500d-5-i) already uses. Marker key `state`, values
+  `existing` / `to_be_created` (the criteria's own words "marked existing" / "marked to be
+  created"); the pre-pass report's observed values ('exists' / 'to_be_created' / 'neither')
+  are a separate vocabulary on purpose. The load-bearing enforcement point is the
+  check-ac-schema commit hook (including its manual fallback); the JSON schema alone would
+  block nothing when jsonschema is unavailable. No dependency on ACD-1900a is needed for the
+  field itself -- this AC lands its own optional property -- but ACD-1600c-1's
+  grandfathering reads schema_version, which ACD-1900a has not landed; until it does, every
+  record reads as schema_version 1.

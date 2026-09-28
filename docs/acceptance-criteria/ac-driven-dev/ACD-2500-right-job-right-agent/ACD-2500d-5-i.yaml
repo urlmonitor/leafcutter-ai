@@ -40,9 +40,15 @@ estimated_complexity: M
 it_requirements:
 - 'Read-only and deterministic: never edits a record or file; output depends only on the batch and the
   repository tree.'
-- 'Declared files are read through the one derivation the ticket generator uses to build files_touched
-  (ADR-010 doc_links -> files_touched); no second derivation may be added. See caveat: that derivation
-  is imprecise today (KI-ACS-002) and no AC-level to-be-created marker exists.'
+- 'Declared files and their existing / to-be-created markers are read only through the declared-files
+  seam of ACD-1600c-4 (AC field declared_files; scripts/ac_store/declared_files.py) -- the store''s single
+  answer, the same one the ticket generator reads (TKT-600a-3). No doc_links -> files_touched derivation
+  (ADR-010) and no second derivation. A record in the ''no declared files'' state is reported ''not evaluated:
+  no declared files'' and is never counted as passed.'
+- 'Within the unchanged report shape, a record in the ''no declared files'' state appears with declared_files:
+  [] -- unambiguous only because the store refuses an empty declared list (ACD-1600c-4-ii). The script must
+  never emit [] for any other reason, and consumers must read [] as ''not evaluated: no declared files'',
+  never as ''nothing to check''.'
 - The 'same area' rule is defined once (in the ACD-2500a-5 / ACD-2500b-4 reference) and applied only here;
   the agent does not re-derive it.
 - 'Report shape: Pre-pass report (JSON, deterministic, sorted): {batch: [ac_id], records: [{id: str, declared_files:
@@ -66,7 +72,11 @@ delivers_to:
     [{path: str, state: ''exists''|''to_be_created''|''neither''}], test_dirs: [{path: str, exists: bool}],
     reference_files: [{path: str, exists: bool, same_type: bool, same_area: bool}]}]}; paths repo-root-relative
     POSIX. Non-zero exit and no report on error. Run and gated by plan-feature.js (ACD-2500c-2).'
-expects_from: null
+expects_from:
+  ac_id: ACD-1600c-4
+  contract: 'Declared-files answer from scripts/ac_store/declared_files.py over the AC field declared_files:
+    the named state ''no declared files'' or the declared entries in order, each {path: repo-root-relative
+    POSIX string, state: ''existing''|''to_be_created''}. Never derived from doc_links.'
 test_spec:
 - name: test_declared_file_states_reported
   target_dir: unit_tests/ac_store/
@@ -102,6 +112,10 @@ amended_by:
 - reason: "depends_on gains the declared-files schema AC ACD-1600c-4 (and ACD-1600c-4-ii where the record's criteria use the 'no declared files' state); BLOCKED AT FINAL GATE note updated to name it. Criteria, it_requirements and readiness unchanged."
   date: '2026-09-27'
   by: business-analyst
+  directed_by: user
+- reason: "it-po: it_requirement re-aligned to ACD-1600c-4 -- declared files and markers come from the declared-files seam (field declared_files) instead of the ADR-010 doc_links derivation; records without a list are 'not evaluated: no declared files'. expects_from set to ACD-1600c-4. Report shape (delivers_to) unchanged -- see the IT-PO caveat on how a 'no declared files' record appears in it. Criteria and readiness unchanged."
+  date: '2026-09-27'
+  by: it-po
   directed_by: user
 superseded_by: null
 covered_by: []

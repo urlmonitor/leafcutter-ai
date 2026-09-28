@@ -2,8 +2,8 @@ id: ACD-1600c-5
 components:
   - ac_driven_dev
   - ac_store
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 title: "Reference doc describes the declared-files list, its two markers, and the 'no declared files' state"
 component: ac-driven-dev
 level: L2
@@ -39,15 +39,31 @@ doc_links:
   - path: docs/reference/ac-schema.md
     relationship: describes
     status: exists
+  - path: docs/architecture/adrs/ADR-026-ac-driven-build-v2-phased-migration.md
+    relationship: describes
+    status: exists
 assigned_agent: documentation-expert
 estimated_complexity: S
+it_requirements:
+  - "Deliverable is a section of docs/reference/ac-schema.md, the reference that documents every other AC field; no second page defines the field."
+  - "Names the field and its values exactly as implemented: `declared_files`, entries {path, state}, state `existing` | `to_be_created`; optional; absence = 'no declared files'."
+  - "States where the rules are enforced -- the check-ac-schema commit hook (load-bearing) and the agent-side validator -- and that each refusal is a commit-time refusal while the 'already exists' case is a warning."
+  - "States the migration posture: records written before the field have no list; the implementation-readiness gate reports them 'missing file targets' but, while advisory and while they read as schema_version < 2, does not hold them (ADR-026 rules 3-4); their generated tickets carry a surface labelled 'derived, not declared' (TKT-600a-3-i)."
+  - "Includes a worked example declaring one existing and one to-be-created file, and states which of the two the requirement rule check would report if the new file already existed."
+  - "Links to ACD-1600c-3's hold-reason documentation rather than restating the hold-reason list."
+  - "Frontmatter last_updated is bumped per the project doc conventions."
+test_required: false
 delivers_to: null
 expects_from:
   ac_id: ACD-1600c-4
-  contract: "The declared-files list, its markers, and the 'no declared files' state as built by ACD-1600c-4 and its three L3s."
+  contract: "The declared-files list (`declared_files`: [{path, state: existing|to_be_created}]), its markers, and the 'no declared files' state as built by ACD-1600c-4 and its three L3s."
 origin_agent: business-analyst
 created: 2026-09-27
-amended_by: []
+amended_by:
+  - reason: "it-po technical enrichment: it_requirements (surface, exact field vocabulary, enforcement points, migration posture, worked example), test_required: false (docs-only), expects_from re-worded. Criteria unchanged."
+    date: '2026-09-27'
+    by: it-po
+    directed_by: user
 superseded_by: null
 covered_by: []
 implemented_by: []

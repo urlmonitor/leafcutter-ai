@@ -47,9 +47,11 @@ it_requirements:
 - 'Reads config/surface_craft_map.yaml (the path-aware, first-match-wins map pinned by ACD-1700b-1) as
   the only surface-to-specialist source; no file-type table inside the check. Build prerequisite: ACD-1700b-1
   has delivered the map (the file does not exist in the repo today).'
-- 'Declared files are read through the one derivation the ticket generator uses to build files_touched
-  (ADR-010 doc_links -> files_touched); no second derivation may be added. See caveat: that derivation
-  is imprecise today (KI-ACS-002) and no AC-level to-be-created marker exists.'
+- 'Declared files and their existing / to-be-created markers are read only through the declared-files
+  seam of ACD-1600c-4 (AC field declared_files; scripts/ac_store/declared_files.py) -- the store''s single
+  answer, the same one the ticket generator reads (TKT-600a-3). No doc_links -> files_touched derivation
+  (ADR-010) and no second derivation. A record in the ''no declared files'' state is reported ''not evaluated:
+  no declared files'' and is never counted as passed.'
 - 'A declared file matching no map entry is reported ''not evaluated: unresolved surface'', never passed
   and never a mismatch.'
 - Only the unmatched part of a mixed surface is named (BP-1100f-3-i partial-flag behaviour).
@@ -71,6 +73,10 @@ expects_from:
 - ac_id: ACD-1700b-1
   contract: 'config/surface_craft_map.yaml: ordered list of {glob, craft}; first match wins; templates/workflows-js/**/*.{js,mjs}
     -> python-coder.'
+- ac_id: ACD-1600c-4
+  contract: 'Declared-files answer from scripts/ac_store/declared_files.py over the AC field declared_files:
+    the named state ''no declared files'' or the declared entries in order, each {path: repo-root-relative
+    POSIX string, state: ''existing''|''to_be_created''}. Never derived from doc_links.'
 test_spec:
 - name: test_mismatched_file_named_with_resolved_specialist_and_agent
   target_dir: unit_tests/ac_store/
@@ -110,6 +116,10 @@ amended_by:
 - reason: "depends_on gains the declared-files schema AC ACD-1600c-4 (and ACD-1600c-4-ii where the record's criteria use the 'no declared files' state); BLOCKED AT FINAL GATE note updated to name it. Criteria, it_requirements and readiness unchanged."
   date: '2026-09-27'
   by: business-analyst
+  directed_by: user
+- reason: "it-po: it_requirement re-aligned to ACD-1600c-4 -- declared files and markers come from the declared-files seam (field declared_files), the store's single answer shared with the ticket generator (TKT-600a-3), replacing the ADR-010 doc_links -> files_touched derivation; records without a list are 'not evaluated: no declared files'. expects_from gains ACD-1600c-4. Criteria and readiness unchanged."
+  date: '2026-09-27'
+  by: it-po
   directed_by: user
 superseded_by: null
 covered_by:

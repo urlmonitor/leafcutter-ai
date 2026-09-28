@@ -2,8 +2,8 @@ id: ACD-1600c-4-i
 components:
   - ac_driven_dev
   - ac_store
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 title: "A declared file that neither exists nor is marked to be created is refused; one marked to be created that already exists is reported"
 component: ac-driven-dev
 level: L3
@@ -36,15 +36,65 @@ doc_links:
   - path: docs/architecture/adrs/ADR-026-ac-driven-build-v2-phased-migration.md
     relationship: describes
     status: exists
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
 assigned_agent: python-coder
 estimated_complexity: S
+it_requirements:
+  - "The existence-vs-marker rule is implemented once, in the declared-files seam (ACD-1600c-4), and invoked by the check-ac-schema commit hook (load-bearing, both its jsonschema and manual-fallback branches) and by the agent-side validator; both must return the same refusals and reports for the same record and tree."
+  - "Existence is judged against the repository tree at check time; the hook and the agent-side validator use the same judgement."
+  - "'Finished' is read from the record's work_status (done) -- data-driven, never keyed on ids."
+  - "A refusal blocks the commit; the 'marked to be created but already exists' report is a non-blocking warning emitted by the same run and never changes the exit status."
+  - "Exactly one message per offending entry; no second message for the same entry from the JSON-schema layer."
+  - "Scope is the population the criteria specify: the refusal applies to unfinished records. A finished record whose 'existing' entry is now absent is NOT refused here (open question Q4, see caveat); it must not block unrelated commits that touch the record."
+  - "Tests run against a temporary repository tree, never the live one: the criteria's example paths include scripts/ac_store/declared_files.py, a file this feature itself creates, so a live-tree test would change verdict when the feature ships."
+  - "Existence checks must not spawn a subprocess per declared path; the check stays within the check-ac-schema hook's existing time budget for a commit touching 100 records."
+test_spec:
+  - name: test_neither_present_nor_marked_refused_with_one_message
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    description: "R is refused with exactly one refusal message naming R and scripts/ac_store/nowhere.py as neither present nor marked to be created."
+    angle: failure
+  - name: test_marked_to_be_created_but_present_reported_not_refused
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    description: "done_proof.py is reported 'marked to be created but already exists', naming R, and is not a refusal reason."
+  - name: test_consistent_entries_produce_no_message
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    description: "scan_ac_store.py (existing, present) and declared_files.py (to_be_created, absent) produce no message."
+  - name: test_remarking_to_be_created_accepts_and_leaves_only_report
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    description: "After nowhere.py is re-marked to_be_created, R is accepted and only the done_proof.py report remains."
+  - name: test_finished_record_exempt_from_already_exists_report
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    description: "A work_status: done record whose to_be_created file now exists is neither refused nor reported."
+    angle: boundary
+  - name: test_refusal_blocks_commit_in_hook_manual_fallback
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "check_ac_schema with jsonschema forced unavailable refuses R (non-zero exit) on the nowhere.py entry and exits 0 once it is re-marked, with the done_proof.py report still printed."
+    angle: seam
 delivers_to: null
 expects_from:
   ac_id: ACD-1600c-4
-  contract: "The record's declared-files list with a per-entry existing / to-be-created marker."
+  contract: "The declared-files answer from scripts/ac_store/declared_files.py: entries in declared order, each {path: repo-root-relative POSIX string, state: 'existing' | 'to_be_created'}, or the state 'no declared files'."
 origin_agent: business-analyst
 created: 2026-09-27
-amended_by: []
+amended_by:
+  - reason: "it-po technical enrichment: it_requirements (one rule in the seam, hook load-bearing, finished = work_status done, warning vs refusal, Q4 scope, temp-tree fixtures), test_spec, expects_from re-worded to the declared_files field and 'existing' marker. Criteria unchanged."
+    date: '2026-09-27'
+    by: it-po
+    directed_by: user
 superseded_by: null
 covered_by: []
 implemented_by: []
