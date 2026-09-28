@@ -84,11 +84,19 @@ test_rationale: 'Prompt-only: the deliverable is the test writer''s instruction 
   refresh_config) once a test-writer eval set exists (follow-up AC).'
 origin_agent: business-analyst
 created: 2026-09-25
-amended_by: []
+amended_by:
+  - reason: "covered_by gains TQ-500f-3-iii (full-identity tag-to-test matching)"
+    by: business-analyst
+    at: 2026-09-27
+    note: >-
+      Parent link for the new L3 that fixes the done_proof test-identity collision
+      behind the TQ-500f-3 build's "ambiguous_test_identity" fail-closed path.
+      criteria, depends_on and title unchanged.
 superseded_by: null
 covered_by:
   - TQ-500f-3-i
   - TQ-500f-3-ii
+  - TQ-500f-3-iii
 implemented_by: []
 change_target: prompt
 risk_surface: contract_boundary

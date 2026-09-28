@@ -59,6 +59,33 @@ amended_by:
     more than one match — get their own descriptor, because an implementation that only
     guards the empty case passes a single-test contract and still emits a wrong path when
     a pattern is ambiguous. criteria untouched.'
+- reason: test-spec-correspondence
+  by: it-po
+  at: '2026-09-23'
+  note: 'test_spec corrected to name the tests that actually exist and pass, for the same
+    two staleness reasons as parent BO-2000c-3: (1) every descriptor targeted
+    unit_tests/ac_store/, while the covering tests live in unit_tests/prompt_assembly/ —
+    the wrong directory exists, so it read as plausible; (2) none of the four descriptor
+    names matched a real test, with one exception noted below — a grep across unit_tests/
+    found them nowhere. The harm was concrete: an agent reading this literally would
+    duplicate four already-passing tests into a second directory. Corrected to the four
+    tests carrying "# covers: BO-2000c-3-i", which match covered_by exactly:
+    test_implementation_notes_emission.py::TestReferencePatternResolution::test_ac3i_unresolvable_pattern_errors,
+    and in test_reference_pattern_resolution.py
+    ::TestAmbiguousReferencePatternIsAnAuthoringError::test_pattern_matching_more_than_one_file_raises_an_authoring_error
+    (the one descriptor already named correctly — directory fixed only),
+    ::TestNoImplementationNotesEmittedOnFailure::test_no_implementation_notes_emitted_on_zero_match
+    and ::test_no_implementation_notes_emitted_on_multi_match. Two structural changes
+    beyond renaming. test_authoring_error_names_both_the_ac_id_and_the_pattern was REMOVED:
+    it is real behaviour and it IS tested, but never as its own def — both failure tests
+    assert the AC id and the pattern inline, and the multi-match one additionally asserts
+    every match is listed, so it is covered under a differently-shaped test. And the single
+    test_no_implementation_notes_path_line_is_emitted_on_failure descriptor was SPLIT in
+    two, because the non-emission clause is proven by two separate real tests, one per
+    failure mode; their type is integration, not unit, since both drive the generator CLI
+    as a subprocess. No name was invented for any behaviour lacking a test. All four named
+    tests were run and pass. criteria untouched; work_status, readiness, priority,
+    implemented_by and covered_by untouched.'
 superseded_by: null
 covered_by:
 - unit_tests/prompt_assembly/test_implementation_notes_emission.py::TestReferencePatternResolution::test_ac3i_unresolvable_pattern_errors
@@ -69,27 +96,27 @@ implemented_by:
 - scripts/ac_store/_gtfa_files_touched.py
 - scripts/ac_store/_gtfa_body.py
 test_spec:
-  - name: test_pattern_matching_no_file_raises_an_authoring_error
-    target_dir: unit_tests/ac_store/
+  - name: test_ac3i_unresolvable_pattern_errors
+    target_dir: unit_tests/prompt_assembly/
     framework: unittest
     type: unit
     angle: failure
-    description: "First half of the Given: a reference_pattern matching zero files surfaces an authoring error rather than resolving to nothing silently."
+    description: "In test_implementation_notes_emission.py::TestReferencePatternResolution. Zero-match half of the Given: a reference_pattern matching no file raises ValueError rather than resolving to nothing silently, and the same test asserts the message names BOTH the AC id and the unresolvable pattern."
   - name: test_pattern_matching_more_than_one_file_raises_an_authoring_error
-    target_dir: unit_tests/ac_store/
+    target_dir: unit_tests/prompt_assembly/
     framework: unittest
     type: unit
     angle: failure
-    description: "Second half of the Given, and separately discriminating: an implementation that guards only the empty case passes the zero-match test and still picks an arbitrary path when a pattern is ambiguous."
-  - name: test_authoring_error_names_both_the_ac_id_and_the_pattern
-    target_dir: unit_tests/ac_store/
+    description: "In test_reference_pattern_resolution.py::TestAmbiguousReferencePatternIsAnAuthoringError. Multi-match half of the Given, separately discriminating: an implementation guarding only the empty case passes the zero-match test and still picks an arbitrary glob-order match. Asserts the error names the AC id, the pattern, and every match."
+  - name: test_no_implementation_notes_emitted_on_zero_match
+    target_dir: unit_tests/prompt_assembly/
     framework: unittest
-    type: unit
-    angle: criterion
-    description: "The error message names the AC id AND the unresolvable pattern — two separate assertions. A bare 'could not resolve reference pattern' satisfies neither half of the diagnostic purpose, since the author cannot tell which record or which pattern to fix."
-  - name: test_no_implementation_notes_path_line_is_emitted_on_failure
-    target_dir: unit_tests/ac_store/
-    framework: unittest
-    type: unit
+    type: integration
     angle: boundary
-    description: "The 'And it does not silently emit' clause: on the failure path no raw pattern and no broken path reaches the ticket body. This is the boundary that stops the error being raised and then swallowed by a caller that emits the unresolved value anyway."
+    description: "In test_reference_pattern_resolution.py::TestNoImplementationNotesEmittedOnFailure. The 'does not silently emit' clause on the zero-match path, run through the generator CLI: non-zero exit, no '## Implementation Notes' section, and no raw pattern in stdout. This is the boundary that stops the error being raised and then swallowed by a caller that emits the unresolved value anyway."
+  - name: test_no_implementation_notes_emitted_on_multi_match
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: "In test_reference_pattern_resolution.py::TestNoImplementationNotesEmittedOnFailure. The same clause on the multi-match path, and additionally asserts that no arbitrarily-chosen match reaches the body as though it were the resolved answer — a broken path that looks correct is worse than a surviving raw pattern."

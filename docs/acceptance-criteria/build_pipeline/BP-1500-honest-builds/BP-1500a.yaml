@@ -106,7 +106,8 @@ amended_by:
       than left reachable through the doc-index phase, for the same reason and
       because it is the subject of the ordering hazard.
 superseded_by: null
-covered_by: []
+covered_by:
+  - BP-1500a-1
 implemented_by: []
 documentation_triggers:
   - how-to

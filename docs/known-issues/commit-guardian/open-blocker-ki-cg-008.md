@@ -106,4 +106,22 @@ bypassed.
 **Pattern:** the inverse of the usual false-green — a gate so brittle that the only
 available response is to turn it off, taking every sibling hook with it.
 
+**Re-verified 2026-09-23: STILL TRUE — unchanged, kept open.** The named code is unchanged
+from the entry's own quoted excerpt:
+
+```
+$ grep -n "for p in paths\|full_path = project_root_path" templates/scripts/commit_guardian/frontmatter_validators.py
+245:        for p in paths:
+246:            full_path = project_root_path / p
+```
+
+`validate_paths` (`frontmatter_validators.py:236-249`) still guards only that the *field* is a
+list (`if not paths or not isinstance(paths, list): continue`) and never that its *elements*
+are strings — there is no `isinstance(p, dict)` or equivalent branch anywhere in the function.
+A `related_docs` entry in the labelled-mapping form (`- explanation: docs/...md`) still hands
+`p` as a `dict` to `project_root_path / p` at line 246, which still raises the same
+`TypeError: unsupported operand type(s) for /: 'PosixPath' and 'dict'` the entry's Symptom
+quotes. No normalisation, no rejection-with-message, and no canonical-shape declaration have
+been added. Mechanism confirmed present; kept open.
+
 ---

@@ -24,6 +24,7 @@ criteria: |
 depends_on:
   - ACD-2500c-1
   - ACD-2500a-1
+  - ACD-1600c-4
 doc_links:
   - path: docs/reference/ac-schema.md
     relationship: describes
@@ -33,8 +34,11 @@ estimated_complexity: S
 it_requirements:
 - Reports under rule family 'test design grounding' through the ACD-2500a-1 contract.
 - Path existence is judged against the authoring worktree's tree at check time.
-- '''To-be-created'' is accepted only when the path is also among the record''s declared files (same derivation
-  as ACD-2500a-3).'
+- '''To-be-created'' is accepted only when the path is among the record''s declared files with state ''to_be_created'',
+  read through the declared-files seam of ACD-1600c-4 (field declared_files) -- the store''s single answer,
+  the same one ACD-2500a-3 reads; no doc_links derivation. For a record in the ''no declared files'' state
+  a to-be-created entry cannot be confirmed, so it is reported ''not evaluated: no declared files'' --
+  never passed and never rejected; entries naming existing files are still judged on existence.'
 - Applies only to designs carrying the code-aware authorship mark; legacy designs are exempt (ACD-2500b-3).
 delivers_to: null
 expects_from:
@@ -52,7 +56,11 @@ expects_from:
     clause it proves, verbatim test_intent.clause text; the code file it exercises; a to-be-created flag;
     the neighbouring test file cited as convention), and record-level provenance: authorship mark {step:
     <code-aware agent id>, date: YYYY-MM-DD} and the list of repository files the step opened (repo-root-relative
-    POSIX). No must_catch key.'
+    POSIX). Optional must_catch (TQ-500f-2: non-empty list of non-blank strings, copied verbatim onto the ticket) and angle ''discrimination'' are written only by the code-aware step; their presence on an entry is that step''s bug-fix/gate declaration (no separate declaration key). No other undeclared key.'
+- ac_id: ACD-1600c-4
+  contract: 'Declared-files answer from scripts/ac_store/declared_files.py over the AC field declared_files:
+    the named state ''no declared files'' or the declared entries in order, each {path: repo-root-relative
+    POSIX string, state: ''existing''|''to_be_created''}. Never derived from doc_links.'
 test_spec:
 - name: test_entry_naming_undeclared_missing_file_rejected
   target_dir: unit_tests/ac_store/
@@ -77,12 +85,27 @@ test_spec:
   framework: pytest
   type: unit
   description: A test_spec without the authorship mark is not evaluated by this family.
+- name: test_to_be_created_entry_without_declared_files_not_evaluated
+  target_dir: unit_tests/ac_store/
+  framework: pytest
+  type: unit
+  description: 'On a record in the ''no declared files'' state, an entry naming a to-be-created file is reported
+    ''not evaluated: no declared files'' -- neither a finding nor counted as passed.'
+  angle: boundary
 origin_agent: business-analyst
 created: 2026-09-25
 amended_by:
 - reason: it-po-technical-enrichment
   date: '2026-09-25'
   by: it-po
+- reason: "depends_on gains the declared-files schema AC ACD-1600c-4 (and ACD-1600c-4-ii where the record's criteria use the 'no declared files' state); BLOCKED AT FINAL GATE note updated to name it. Criteria, it_requirements and readiness unchanged."
+  date: '2026-09-27'
+  by: business-analyst
+  directed_by: user
+- reason: "it-po: 'to-be-created' acceptance re-keyed to the declared-files seam of ACD-1600c-4 (state to_be_created) instead of the doc_links derivation; a to-be-created entry on a 'no declared files' record is reported 'not evaluated: no declared files'; one boundary test added; expects_from gains ACD-1600c-4. Also: 'No must_catch key' in the ACD-2500c-3 expects_from replaced in lockstep (PR #911). Criteria and readiness unchanged."
+  date: '2026-09-27'
+  by: it-po
+  directed_by: user
 superseded_by: null
 covered_by: []
 implemented_by: []
@@ -93,3 +116,10 @@ notes: |
   declared-files schema AC (AC-level list of files a piece of work changes, with a
   to-be-created marker) is authored via a separate /plan-feature run and added to
   depends_on here. Today's file list is derived from doc_links (KI-ACS-002).
+  UPDATE 2026-09-27 (business-analyst, user-directed): that AC is ACD-1600c-4 ("a
+  requirement lists the files its work changes, each marked existing or to be created"),
+  with edge cases ACD-1600c-4-i (existence vs marker), ACD-1600c-4-ii ("no declared files"
+  state; doc_links never stand in) and ACD-1600c-4-iii (path form). It is now in depends_on.
+  Readiness is unchanged -- lifting the hold is the user's call. Any it_requirement here
+  that still reads declared files through the doc_links derivation is superseded in intent
+  by ACD-1600c-4 and awaits the IT PO's amendment.

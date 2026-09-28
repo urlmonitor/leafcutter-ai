@@ -12,13 +12,15 @@ readiness: approved
 priority: high
 roadmap_phase: phase_1
 criteria: |
-  Given the technical enricher (IT-PO) enriches three requirements in one pass —
+  Given the code-aware test-design step (the test designer that reads the code
+      and existing tests before the build) designs the tests for three
+      requirements in one pass —
       R1, a bug fix: "a database outage no longer causes a retry storm; the
         refresh runs only when a refresh is due and a retry is due",
       R2, a gate: "a trade is blocked unless both the window is open and the
         position limit is not reached",
       R3, new behaviour with no earlier version: "export the report as CSV",
-  When it authors each requirement's test plan,
+  When it writes each requirement's test design,
   Then R1's guarding test entry carries must_catch naming "revert the fix" and
       at least one specific wrong version that names the condition or input
       involved (for example "drop the retry_due condition"),
@@ -27,59 +29,136 @@ criteria: |
       position-limit condition") and "the gate always allows",
     And R3 is not required to carry must_catch; if it carries none, nothing
       reports that as a defect,
-    And whether a requirement is a bug fix or a gate is the enricher's own
-      stated judgement in its enrichment note, not the output of an automatic
-      classifier over the requirement's wording.
+    And whether a requirement is a bug fix or a gate is the test designer's
+      own stated judgement, recorded with the test design it writes, not the
+      output of an automatic classifier over the requirement's wording.
 depends_on:
   - TQ-500f-2
+  - ACD-2500c
+  - ACD-2500d-5
 doc_links:
-  - path: templates/agents/it-po.md
+  - path: templates/agents/test-designer.md
     relationship: describes
+    status: planned
+    relevance: "The code-aware test designer (created by ACD-2500d-5; its test-design procedure is written by ACD-2500c-1). This AC adds the must_catch duty for bug-fix and gate requirements to that procedure."
+  - path: docs/acceptance-criteria/ac-driven-dev/ACD-2500-right-job-right-agent/ACD-2500d-5.yaml
+    relationship: relates-to
     status: exists
-    relevance: "The enricher that authors test_spec; its instructions gain the must_catch duty for bug-fix and gate requirements."
+    relevance: "Registers the test-designer agent (Sonnet tier, reads code) whose template this AC edits."
   - path: docs/analysis/2026-09-25-test-writers-prove-failure-not-discrimination.md
     relationship: describes
     status: exists
     relevance: "Incident 1 (compound gate, second condition never satisfied by the fixture) is the model for R1 and R2."
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+    relevance: "The angle taxonomy; must_catch ties to the conditional 'discrimination' angle, which never takes one of the four slots by default."
+  - path: docs/architecture/adrs/ADR-033-agent-model-tiers.md
+    relationship: describes
+    status: exists
+    relevance: "Model-tier rules. The optional Opus sub-call (section 2.3 route) is NOT taken by this AC; must_catch authoring stays Sonnet-only (user decision 2026-09-27)."
+  - path: docs/architecture/adrs/ADR-009-itpo-no-source-code-access.md
+    relationship: describes
+    status: exists
+    relevance: "Why the IT-PO cannot own must_catch: it declares no source access, so it cannot name the condition or input a wrong version changes."
 assigned_agent: llm-expert
 estimated_complexity: S
 delivers_to: null
 expects_from:
-  ac_id: TQ-500f-2
-  contract: "The must_catch field exists on test_spec items and reaches the test writer verbatim."
+  - ac_id: TQ-500f-2
+    contract: "The must_catch field exists on test_spec items (non-empty list of non-blank strings) and reaches the test writer verbatim on the generated ticket."
+  - ac_id: ACD-2500d-5
+    contract: "templates/agents/test-designer.md exists as the registered code-aware test designer (Sonnet tier, reads code and existing tests), and its test-design procedure (ACD-2500c-1) writes test_spec items to the requirement record. This AC extends that procedure; it creates no agent and edits no other template."
 it_requirements:
-  - Edit the source template templates/agents/it-po.md only, never the deployed copies.
-  - The instruction must make 'this AC is a bug fix / a gate' the enricher's own explicit statement
-    in its enrichment note, never the output of an automatic classifier over the AC text.
-  - For a bug fix, the enricher must author 'revert the fix' plus at least one wrong version
-    that names the condition or input involved. For a gate, it must author one 'drop the <X>
-    condition' per gate condition plus 'the gate always allows'.
-  - The instruction must say that new behaviour with no earlier version needs no must_catch,
-    and that its absence is not a defect, so the enricher does not stamp must_catch everywhere.
-  - Authored must_catch values must satisfy TQ-500f-2-i's rules (non-empty list of non-blank
-    strings). The instruction must also tie must_catch to the conditional 'discrimination' angle,
-    per user decision Q2 (it fires for bug-fix or gate ACs or when must_catch is present, and
-    never takes one of the four slots by default).
+  - Edit the source template templates/agents/test-designer.md only, never the deployed copies.
+    templates/agents/it-po.md gains NO must_catch text and is not touched by this change. Builds
+    that edit test-designer.md (ACD-2500c-1, ACD-2500d-1/-2/-3, this AC) must be serialised.
+  - 'The bug-fix / gate declaration is carried by EXISTING test_spec fields, with no new schema
+    key (user decision 2026-09-27): a test_spec entry carrying must_catch, or angle: discrimination,
+    IS the test designer''s stated judgement that the requirement is a bug fix or a gate. The
+    instruction must present it as the designer''s own judgement, made after reading the code,
+    and never as the output of an automatic classifier over the requirement''s wording.'
+  - For a bug fix, the designer must author 'revert the fix' plus at least one wrong version that
+    names the condition or input involved, taken from the code it opened. For a gate, it must
+    author one 'drop the <X> condition' per gate condition plus 'the gate always allows'.
+  - The instruction must say that new behaviour with no earlier version needs no must_catch and
+    that its absence is not a defect, so the designer does not stamp must_catch on every entry.
+  - Authored must_catch values must satisfy TQ-500f-2-i's rules (non-empty list of non-blank strings)
+    and the test_spec item key set that ACD-2500c-3 allows. The instruction must tie must_catch to
+    the conditional 'discrimination' angle per user decision Q2 (it fires for bug-fix or gate requirements
+    or when must_catch is present, and never takes one of the four slots by default).
+  - 'Model tier: must_catch is authored by the Sonnet-tier test designer itself. No Opus sub-call
+    is added for must_catch by this AC (user decision 2026-09-27). The ADR-033 section 2.3 question
+    belongs to the ACD-2500 owner.'
 test_required: false
-test_rationale: 'Prompt-only: the deliverable is instruction text in templates/agents/it-po.md.
+test_rationale: 'Prompt-only: the deliverable is instruction text in templates/agents/test-designer.md.
   No deterministic unit test can show that an LLM names good wrong versions, and a test asserting
   the instruction is present in the template is the grep-only proof CLAUDE.md forbids. Substitutes:
-  (1) the shape of whatever the enricher writes is enforced mechanically at commit time by
-  TQ-500f-2-i''s validator; (2) recommended eval: register it-po in scripts/evals/agent_eval_config.json
+  (1) the shape of whatever the designer writes is enforced mechanically at commit time by TQ-500f-2-i''s
+  validator; (2) the behavioural substitute is an eval over incidents 1 and 2 of docs/analysis/2026-09-25-test-writers-prove-failure-not-discrimination.md,
+  run against the test designer once ACD-2500d-5 has built it: register test-designer in scripts/evals/agent_eval_config.json
   (artifact mode, run by scripts/evals/run_agent_eval.py) with R1/R2/R3 from this AC as gold
-  rows. R1 must carry ''revert the fix'' plus a condition-naming wrong version, R2 one per
-  condition plus ''the gate always allows'', and R3 none. No such eval set exists yet, so
-  it needs its own follow-up AC; (3) pr-reviewer checks the prompt diff against each Then
+  rows. R1 must carry ''revert the fix'' plus a condition-naming wrong version, R2 one per condition
+  plus ''the gate always allows'', and R3 none. That eval cannot exist before the agent does,
+  so it needs its own follow-up AC; (3) pr-reviewer checks the prompt diff against each Then
   clause.'
 origin_agent: business-analyst
 created: 2026-09-25
-amended_by: []
+amended_by:
+  - reason: "Retarget must_catch authoring from the technical planner (IT-PO) to the code-aware test designer (ACD-2500c / ACD-2500d-5); add ACD-2500c and ACD-2500d-5 to depends_on"
+    by: business-analyst
+    at: 2026-09-27
+    note: >-
+      User-approved fix for KI-ACD-20260927-tq-500f-2-ii-contradicts-acd-2500. The
+      Given/When clauses now name the code-aware test-design step instead of "the
+      technical enricher (IT-PO)", which declares no source access (ADR-009) and so
+      cannot name the condition or input a wrong version changes. R1/R2/R3 behaviour
+      and the declared-judgement-not-a-classifier clause are unchanged in substance,
+      now applied to the test designer. assigned_agent, doc_links, it_requirements
+      and test_rationale are IT-PO fields and still point at templates/agents/it-po.md;
+      they are left for the IT-PO stage (see notes).
 superseded_by: null
 covered_by: []
 implemented_by: []
 change_target: prompt
 risk_surface: contract_boundary
 notes: |
+  AMENDED 2026-09-27 (business-analyst) — OWNER MOVED TO THE TEST DESIGNER.
+  See docs/known-issues/ac-driven-dev/open-high-ki-acd-20260927-tq-500f-2-ii-contradicts-acd-2500.md.
+  must_catch names wrong versions by the condition or input they change; only a
+  step that has read the code can do that. The approved ACD-2500 tree moves test
+  design out of the technical planner (ACD-2500b) into a code-aware step
+  (ACD-2500c), carried by one new agent, working id test-designer (ACD-2500d-5).
+  This AC now targets that step.
+
+  FOR THE IT-PO STAGE (fields left untouched by this amendment, all stale):
+    - doc_links, it_requirements and test_rationale must move from
+      templates/agents/it-po.md to templates/agents/test-designer.md (created by
+      ACD-2500d-5; the test-design procedure is written into it by ACD-2500c-1).
+      it-po.md must gain NO must_catch text.
+    - it_requirements' wording "the enricher ... in its enrichment note" must be
+      restated for the test designer. Where the designer records its bug-fix /
+      gate declaration is open: ACD-2500c-3 keeps test_spec items closed
+      (unknown keys rejected), so either an existing field carries it or a schema
+      AC must add one first.
+    - ACD-2500c-1 and ACD-2500d-5 both say "the optional Opus sub-call for
+      must_catch is deferred until must_catch exists". must_catch now exists
+      (TQ-500f-2, PR #911); decide whether this AC takes that route (ADR-033 §2.3).
+    - expects_from should also name ACD-2500d-5 (the template this AC edits).
+
+  ORDERING — WHY THE DEPENDENCY SITS HERE AND NOT ON TQ-500. ACD-2500's notes
+  ask that "any L0 authored for that analysis should list ACD-2500 in
+  depends_on". Deliberately NOT done: the fast lane pulls every unmet
+  dependency into the build set, so an L0-level edge on TQ-500 would drag the
+  whole ACD-2500 tree into every unrelated TQ-500 build. The ordering is carried
+  at the one AC that actually needs the test designer: this one, via ACD-2500c
+  and ACD-2500d-5. Building this AC therefore pulls ACD-2500c's subtree and
+  ACD-2500d-5 into its build set; that is intended. ACD-2500c-1-i and
+  ACD-2500d-5-i are still readiness: reviewed (held on a declared-files schema
+  AC), so this AC is effectively blocked until they clear.
+
+  ORIGINAL NOTES (2026-09-25; "enricher" below now reads "test designer"):
+
   PROMPT-ONLY. This is an instruction to the enricher; no deterministic unit
   test can show that an LLM names good wrong versions. The observable output is
   the enriched requirement records themselves (an eval over R1/R2/R3 can check
@@ -94,3 +173,27 @@ notes: |
   The last Then clause keeps TQ-500's non-goal intact: the judgement is
   DECLARED by the enricher, never inferred from requirement text by a
   classifier.
+
+  IT-PO ENRICHMENT (2026-09-27), after the BA amendment
+  TARGET MOVED. doc_links, it_requirements and test_rationale now point at
+  templates/agents/test-designer.md (ACD-2500d-5), not it-po.md. it-po.md gains
+  no must_catch text. expects_from also names ACD-2500d-5. assigned_agent stays
+  llm-expert.
+
+  USER DECISIONS AT THE BA GATE (2026-09-27, binding):
+    1. Where the bug-fix / gate declaration lives: in the EXISTING fields. A
+       test_spec entry carrying must_catch or angle: discrimination IS the test
+       designer's stated judgement. No new schema key.
+    2. Opus sub-call for must_catch: not now. must_catch authoring is
+       Sonnet-only. The ACD-2500 owner session takes the ADR-033 section 2.3
+       question to its own user.
+
+  KNOWN CONFLICT, OWNED ELSEWHERE. ACD-2500c-3 still keeps must_catch out of the
+  test designer's allowed test_spec keys. It is being amended by the ACD-2500
+  owner session on branch ac-authoring/itpo-followups; this AC does not edit the
+  ACD-2500 tree. Until that amendment lands, this AC stays blocked behind
+  ACD-2500c (already in depends_on).
+
+  TEST CONTRACT. test_required stays false; no behavioural unit test exists for
+  prompt text. The real behavioural check is an eval over incidents 1 and 2
+  (R1/R2/R3 as gold rows) once test-designer exists. That needs a follow-up AC.

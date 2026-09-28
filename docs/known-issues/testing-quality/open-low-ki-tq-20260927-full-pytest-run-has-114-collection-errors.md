@@ -17,7 +17,7 @@ related_docs:
 
 - **Severity:** medium. 756 tests go uncollected in any bare `pytest` run. The errors are printed, but `--continue-on-collection-errors` (`pytest.ini`) lets the run finish, and finalize-feature's baseline parser does not read `ERROR` lines.
 - **Status:** open — no AC. The package collision is reproduced and traced. The two POSIX imports are confirmed in code.
-- **Occurrences:** 1 (a local full run on Windows, 2026-09-25, reported 112 errors; reproduced with `--collect-only` on 2026-09-27: `5912 tests collected, 114 errors`)
+- **Occurrences:** 2 (a local full run on Windows, 2026-09-25, reported 112 errors; reproduced with `--collect-only` on 2026-09-27: `5912 tests collected, 114 errors`; finalize-feature for `build/ge-120f-1`, 2026-09-27, see Occurrence 2)
 - **First seen:** 2026-09-25 · **Last seen:** 2026-09-27
 - **Where:** `pytest.ini` (no `testpaths`, default import mode); `scripts/ac_store/test_enforcement.py` (a library module whose name matches `test_*.py`); `unit_tests/ac_store/__init__.py`; `scripts/port_registry.py:12`; `unit_tests/build_orchestration/test_bo2400e_3_durable_write.py:58`.
 
@@ -73,3 +73,13 @@ never collects `scripts/`, and CI runs on Linux. Bare `pytest` is affected, and 
   import conditional, with `pytest.importorskip` or a platform skip.
 
 **Pattern:** a production module named like a test, so what the suite contains depends on which directory pytest happens to walk first.
+
+## Occurrence 2 — 2026-09-27, finalize-feature for `build/ge-120f-1`
+
+Both finalize test runs were bare `pytest` runs and both hit this. Step 0's baseline on `main`
+reported 318 failed and 128 errors; the post-merge run reported 311 failed and 116 errors. The
+Step 0 agent noticed that 114 of the errors were whole `unit_tests/ac_store/` files that never ran
+and reported them in a separate field. On `main` at `8ed47463` a bare `pytest --collect-only`
+gives `6005 tests collected, 121 errors` (119 `unit_tests/ac_store` modules, `tests/test_port_registry.py`,
+`test_bo2400e_3_durable_write.py`), while `pytest --collect-only unit_tests/ac_store` alone collects
+781. CI's `tests/ unit_tests/` run on PR #916 collected 6696 tests with no collection errors.
