@@ -62,8 +62,10 @@ created: 2026-09-25
 amended_by: []
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260927-BO-4300a-4.md
 notes: |
   documentation_trigger component-diagram on BO-4300a. The existing worktree-manager
   component page describes git worktree lifecycle management, which decision 1 makes
   inaccurate; the diagram is drawn for per-feature copies (clones).
+target_epic: EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace

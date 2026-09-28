@@ -76,6 +76,8 @@ created: 2026-09-25
 amended_by: []
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260927-BO-4300f-2-ib.md
 notes: 'IT PO split of BO-4300f-2-i (2026-09-25): the how-to guides (documentation-expert). With BO-4300f-2-ia
   the union of the two Givens is the parent''s.'
+target_epic: EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace

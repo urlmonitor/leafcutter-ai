@@ -272,7 +272,8 @@ amended_by:
     outside templates/scripts/, with a test. readiness stays reviewed for re-approval.
 superseded_by: null
 covered_by: [BO-4300a-1-i, BO-4300a-1-ia, BO-4300a-1-ib, BO-4300a-1-ii]
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260927-BO-4300a-1.md
 notes: |
   The load-bearing "one maker, one shape" behaviour (decision 4; decisions 1-3 define the
   shape). Freshness itself stays BO-4100a, protections firing stays BO-1700a/d -- this
@@ -280,3 +281,4 @@ notes: |
   The five routes are the entry points in the consolidation inventory (section 2). Proof is
   behavioural: real test projects with a real shared project, the installed maker run as a
   separate process (BO-4300f-4).
+target_epic: EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace

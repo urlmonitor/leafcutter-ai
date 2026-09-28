@@ -92,8 +92,10 @@ created: 2026-09-25
 amended_by: []
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260927-BO-4300c-4-ii.md
 notes: |
   The end-to-end observable of the incident, and KI-ACD-007: the product-truth phase wrote into
   the main checkout even when a worktree was created. BO-1800e covers the end state on the
   shared main line; this record covers the main copy on the machine during the run.
+target_epic: EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace

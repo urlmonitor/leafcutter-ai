@@ -130,9 +130,11 @@ amended_by:
     added; blast radius on existing tests recorded. Complexity S -> M. readiness reset to reviewed.
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260927-BO-4300c-3-ii.md
 notes: |
   F1 and the incident's steps 3-4: status-checker refused the resolver on charter grounds, and
   the workflow then re-sent the resolution command to worktree-agent instead of halting. F13:
   today's harness executes every dispatched command, so a refusing agent is never modelled --
   the proof for this record must model one.
+target_epic: EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace

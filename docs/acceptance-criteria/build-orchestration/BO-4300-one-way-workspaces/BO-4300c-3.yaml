@@ -184,10 +184,12 @@ amended_by:
     components gains build_pipeline. readiness reset to reviewed.
 superseded_by: null
 covered_by: [BO-4300c-3-i, BO-4300c-3-ii]
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260927-BO-4300c-3.md
 notes: |
   The CALLER half of BO-4300c -- the half the incident violated. F2: plan-feature's
   no-workspace mode, build-epic's fallback to the epic folder, finalize's "unknown", the fast
   lane trusting a path the agent claimed. Asserted on the recorded dispatch list (migration
   plan 6.1, last paragraph), not on source text. Never-straight-to-main as an end state is
   BO-1800e; this record is the halt at the start.
+target_epic: EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace

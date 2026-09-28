@@ -184,9 +184,11 @@ amended_by:
     stays reviewed.
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260927-BO-4300c-2.md
 notes: |
   F4: a sandbox run of create-ac-worktree printed git's own tracking and HEAD messages before
   the JSON, and set-up let package installers and the build write to the same channel. Whether
   a caller could parse the result then depended on an assistant picking the right line. Field
   names and exit codes are IT PO's to fix (the proposal's section 5.3 is a starting point).
+target_epic: EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace

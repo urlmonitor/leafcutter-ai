@@ -23,6 +23,7 @@ The Agent Registry (`config/agent_registry.json`) is the authoritative catalog o
 - `produces` — trait that determines TDD guardrail applicability
 - `model` — haiku, sonnet, or opus tier assignment
 - `permits_shell` — optional boolean; `true` only if the agent's registered charter permits running repository-mutating shell commands. Used by dispatch-permission gates (e.g. the `plan-feature.js` isolated-workspace setup step, see [Agent Code Delivery Workflows §6](../agent_delivery_workflows.md#6-detail-view-isolated-authoring-worktree-lifecycle-bo-1500a-3)) to refuse dispatching a read-only agent to a step that must run shell commands
+- `step_kinds` — optional array of unique strings, each one of `reads_store`, `changes_store`, `changes_repository`, or `publishes`. Absent and `[]` both mean the agent declares no step kind at all, mirroring `permits_shell`'s undeclared-means-none reading. `config/agent_registry.schema.json` is the single source of the four allowed values — `scripts/step_kinds_validator.py` (wired into `registry_validator.py`'s `validate_agent_registry`, the check both the commit-time gate and `build.py --validate-only` run) reads them from the schema at run time rather than holding its own copy, and rejects an unknown or duplicated kind by naming both the kind and the agent id
 
 ## Usage
 

@@ -96,8 +96,10 @@ created: 2026-09-25
 amended_by: []
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260927-BO-4300c-4-i.md
 notes: |
   build-ticket.js trusts args.worktree_path unchecked (consolidation inventory 2.2). Decision 4
   has workflows receive the maker's result passed in -- this record keeps a hand-supplied
   location from bypassing it. Uses the lookup of BO-4300e-1.
+target_epic: EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace

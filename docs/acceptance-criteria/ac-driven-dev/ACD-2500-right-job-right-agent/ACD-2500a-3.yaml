@@ -29,6 +29,8 @@ depends_on:
   - ACD-2500a
   - ACD-2500a-1
   - ACD-1700b-1
+  - ACD-1600c-4
+  - ACD-1600c-4-ii
 doc_links:
 - path: docs/acceptance-criteria/ac-driven-dev/ACD-1700-role-scoped-context/ACD-1700b-1.yaml
   relationship: related
@@ -45,9 +47,11 @@ it_requirements:
 - 'Reads config/surface_craft_map.yaml (the path-aware, first-match-wins map pinned by ACD-1700b-1) as
   the only surface-to-specialist source; no file-type table inside the check. Build prerequisite: ACD-1700b-1
   has delivered the map (the file does not exist in the repo today).'
-- 'Declared files are read through the one derivation the ticket generator uses to build files_touched
-  (ADR-010 doc_links -> files_touched); no second derivation may be added. See caveat: that derivation
-  is imprecise today (KI-ACS-002) and no AC-level to-be-created marker exists.'
+- 'Declared files and their existing / to-be-created markers are read only through the declared-files
+  seam of ACD-1600c-4 (AC field declared_files; scripts/ac_store/declared_files.py) -- the store''s single
+  answer, the same one the ticket generator reads (TKT-600a-3). No doc_links -> files_touched derivation
+  (ADR-010) and no second derivation. A record in the ''no declared files'' state is reported ''not evaluated:
+  no declared files'' and is never counted as passed.'
 - 'A declared file matching no map entry is reported ''not evaluated: unresolved surface'', never passed
   and never a mismatch.'
 - Only the unmatched part of a mixed surface is named (BP-1100f-3-i partial-flag behaviour).
@@ -69,6 +73,10 @@ expects_from:
 - ac_id: ACD-1700b-1
   contract: 'config/surface_craft_map.yaml: ordered list of {glob, craft}; first match wins; templates/workflows-js/**/*.{js,mjs}
     -> python-coder.'
+- ac_id: ACD-1600c-4
+  contract: 'Declared-files answer from scripts/ac_store/declared_files.py over the AC field declared_files:
+    the named state ''no declared files'' or the declared entries in order, each {path: repo-root-relative
+    POSIX string, state: ''existing''|''to_be_created''}. Never derived from doc_links.'
 test_spec:
 - name: test_mismatched_file_named_with_resolved_specialist_and_agent
   target_dir: unit_tests/ac_store/
@@ -105,9 +113,18 @@ amended_by:
 - reason: it-po-technical-enrichment
   date: '2026-09-25'
   by: it-po
+- reason: "depends_on gains the declared-files schema AC ACD-1600c-4 (and ACD-1600c-4-ii where the record's criteria use the 'no declared files' state); BLOCKED AT FINAL GATE note updated to name it. Criteria, it_requirements and readiness unchanged."
+  date: '2026-09-27'
+  by: business-analyst
+  directed_by: user
+- reason: "it-po: it_requirement re-aligned to ACD-1600c-4 -- declared files and markers come from the declared-files seam (field declared_files), the store's single answer shared with the ticket generator (TKT-600a-3), replacing the ADR-010 doc_links -> files_touched derivation; records without a list are 'not evaluated: no declared files'. expects_from gains ACD-1600c-4. Criteria and readiness unchanged."
+  date: '2026-09-27'
+  by: it-po
+  directed_by: user
 superseded_by: null
 covered_by:
   - ACD-2500a-3-i
+  - ACD-2500a-3-ii
 implemented_by: []
 change_target: code
 risk_surface: contract_boundary
@@ -116,6 +133,13 @@ notes: |
   declared-files schema AC (AC-level list of files a piece of work changes, with a
   to-be-created marker) is authored via a separate /plan-feature run and added to
   depends_on here. Today's file list is derived from doc_links (KI-ACS-002).
+  UPDATE 2026-09-27 (business-analyst, user-directed): that AC is ACD-1600c-4 ("a
+  requirement lists the files its work changes, each marked existing or to be created"),
+  with edge cases ACD-1600c-4-i (existence vs marker), ACD-1600c-4-ii ("no declared files"
+  state; doc_links never stand in) and ACD-1600c-4-iii (path form). It is now in depends_on.
+  Readiness is unchanged -- lifting the hold is the user's call. Any it_requirement here
+  that still reads declared files through the doc_links derivation is superseded in intent
+  by ACD-1600c-4 and awaits the IT PO's amendment.
 
   CONFLICT RESOLVED BY THIS AC: the technical planner's S2.8 table says python-coder
   "cannot act on .js", while ACD-1700b-1 (user decision 2026-08-11) pins a path-aware,

@@ -9,7 +9,7 @@ req_status: draft
 readiness: approved
 priority: medium
 roadmap_phase: phase_1
-work_status: todo
+work_status: done
 declares_side_effect: false
 criteria: |
   Given an adopter has added a capability of their own under the same name as one
@@ -123,7 +123,11 @@ amended_by:
     reason: "Added assigned_agent (python-coder), estimated_complexity (S), it_requirements, test_spec, test_rationale and expects_from. Criteria, title, depends_on, priority (medium, as the BA set it) and doc_links UNCHANGED; readiness remains draft. WHAT THE ENRICHMENT ADDS. (1) A STATED-WINNER VERIFICATION entry: the AC deliberately does not pick a winner, which makes the run's declaration the only thing carrying the information -- so the contract now requires resolving the contested name in the finished project and comparing it to what was printed. Three of the six entries are satisfiable by printing the right words; this is the only one that can tell a true statement from a plausible one, and it is invisible to any transcript-grep test. (2) An OVER-REPORT control, because a rare-condition detector that fires on every adopter file passes every survival and reporting entry while making the message worthless through volume. (3) The presence assertion is specified in all FOUR parts the criteria enumerate -- not overwritten, not emptied, not MOVED, not removed -- since relocating the loser is the most likely well-intentioned implementation and passes a bare existence check. (4) A CORRECTION CARRIED INTO THE it_requirements: KI-BP-009's paragraph `the concept already exists in the code` points at the `in_project` / `project_skills_dir` predicate in `scripts/build_phases.py`, but that resolution leg was REMOVED on 2026-08-18 under BP-1300a-1 -- six days BEFORE that paragraph was written on 2026-08-25 and confirmed absent from origin/main 1cce5b48a on 2026-09-08. An implementer told the predicate exists and only needs repairing will go looking for deleted code. The distinction has to be built, not repaired. Raised as a caveat on this run; KI-BP-009 is not this agent's file to edit."
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+  - scripts/build_phases_agents_skills.py
+  - scripts/build_phases_local_change.py
+  - scripts/build_ownership.py
+  - scripts/build_capability_merge.py
 change_target: pipeline
 risk_surface: safety
 notes: |

@@ -60,7 +60,9 @@ created: 2026-09-25
 amended_by: []
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260927-BO-4300e-5.md
 notes: |
   documentation_trigger how-to on BO-4300e. The authorisation mechanism is OPEN (Q8); the page
   documents whatever IT PO and the user settle.
+target_epic: EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace

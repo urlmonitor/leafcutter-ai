@@ -80,8 +80,10 @@ created: 2026-09-25
 amended_by: []
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260927-BO-4300d-1-i.md
 notes: |
   Interaction between BO-4300c-1-iii (put back files the build altered) and d-1 (re-ready on
   every request): restoring the 61 build-touched files to their committed content must not
   revert the work's own edits to one of them.
+target_epic: EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace

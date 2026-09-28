@@ -105,8 +105,10 @@ created: 2026-09-25
 amended_by: []
 superseded_by: null
 covered_by: [BO-4300d-1-i, BO-4300d-1-ii]
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260927-BO-4300d-1.md
 notes: |
   Decision 2: the install is rebuilt on every request, reused or not, so "handed back" always
   means "re-readied", never "trusted as last seen" (BO-4300d notes). BO-1700c repairs only
   missing check set-up; this record is readiness as a whole.
+target_epic: EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace

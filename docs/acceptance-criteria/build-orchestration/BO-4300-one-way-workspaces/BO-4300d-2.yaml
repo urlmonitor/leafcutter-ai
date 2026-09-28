@@ -110,7 +110,8 @@ created: 2026-09-25
 amended_by: []
 superseded_by: null
 covered_by: [BO-4300d-2-i, BO-4300d-2-ii, BO-4300d-2-iii]
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260927-BO-4300d-2.md
 notes: |
   F5 in the sandbox: bootstrap failed, the re-run exited 0 with "created: false" on a workspace
   holding three files, because reuse skipped set-up. KI-BO-20260831-1331: a half-made fast-lane
@@ -119,3 +120,4 @@ notes: |
   over". That covers remnants that are NOT identifiable as the requested work. A half-made copy
   at the location of THE SAME work is completed by the next request, as this record says. IT PO
   to amend BO-4100e-4's wording to state that scope explicitly.
+target_epic: EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace

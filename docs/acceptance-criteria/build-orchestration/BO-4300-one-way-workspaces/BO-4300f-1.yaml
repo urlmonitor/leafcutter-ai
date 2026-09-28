@@ -113,9 +113,11 @@ created: 2026-09-25
 amended_by: []
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260927-BO-4300f-1.md
 notes: |
   Migration plan steps 2-7. The neighbours named in BO-4300's notes (BO-1500f, ACD-2100a,
   FIN-100g, BP-600f, BO-2400e) each become a caller through this record; their own promises are
   unchanged. The migration order (component first, incident path next, deletions last) is a
   recommendation, not a criterion.
+target_epic: EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace

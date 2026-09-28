@@ -1,0 +1,91 @@
+id: BO-2400a-7-i
+components:
+  - build_orchestration
+title: "Sequence diagram update: command steps go to the command-step-runner, and a declined step has its own halt path"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the fast-lane sequence diagram after BO-2400f-5-i and BO-2400f-5-iii are built,
+  When a reader follows it,
+  Then every command step — resolve, producibility, claim, context bundle, release, and
+    any changelog, commit, push or pull-request step an agent is asked to do — is shown
+    as a message from the workflow to the command-step-runner, carrying the target
+    workspace's location, branch and criterion id, and returning either a result with
+    an exit status or a decline,
+  And test-writer, coder and pr-reviewer are shown as their own participants, not as the
+    command-step-runner,
+  And a declined step is shown as its own halt path, distinct from the claim-contention
+    and gate-failure halt paths, naming the step, the agent and the reason,
+  And the diagram shows that a decline before the claim ends the run with no release,
+    and a decline after the claim is followed by a release sent to the
+    command-step-runner before the run ends.
+
+  Given the same diagram,
+  When it is compared with the lane,
+  Then no command step is shown going to status-checker, python-coder or worktree-agent.
+depends_on: [BO-2400a-7, BO-2400f-5-i, BO-2400f-5-iii]
+doc_links:
+  - path: docs/architecture/diagrams/c3-fast-lane-build-loop-sequence.md
+    relationship: modifies
+    status: exists
+  - path: docs/acceptance-criteria/build-orchestration/BO-2400-fast-lane-build/BO-2400f-5-i.yaml
+    relationship: describes
+    status: exists
+    relevance: "Which steps go to the command-step-runner."
+  - path: docs/acceptance-criteria/build-orchestration/BO-2400-fast-lane-build/BO-2400f-5-iii.yaml
+    relationship: describes
+    status: exists
+    relevance: "The declined-step halt path."
+  - path: docs/acceptance-criteria/build-orchestration/BO-2400-fast-lane-build/BO-2400f-10-iii.yaml
+    relationship: describes
+    status: exists
+    relevance: "Release after a post-claim decline."
+assigned_agent: architecture-diagram-author
+estimated_complexity: S
+it_requirements:
+  - >-
+    Document only what is built. Write it after the depends_on records are done, and
+    take agent ids, halt-kind names and field names (command-step-runner, declined_step,
+    step_kinds) verbatim from the built lane and registry, never from these ACs' drafts.
+  - >-
+    The doc's frontmatter last_updated is refreshed and the doc stays within the
+    doc-length and doc-compliance hooks. An over-long doc is split by section, not
+    trimmed of required content.
+  - >-
+    Author through the write-c4-diagram skill, keeping the diagram's existing type,
+    level and file. Participants and collaborators use the ids the built lane and
+    registry use.
+  - >-
+    The pre-claim and post-claim decline paths are shown as separate branches. Only the
+    post-claim branch carries a release message to the command-step-runner.
+test_required: false
+test_rationale: |
+  Architecture diagram. The store's convention for this tree is test_required: false, as
+  on the parent BO-2400a-7. Agreement with the lane (no command step drawn going to
+  status-checker, python-coder or worktree-agent) is checked by the author against the
+  built lane at sign-off and by review.
+delivers_to: null
+expects_from:
+  ac_id: BO-2400f-5-i
+  contract: "The lane's command-step routing as built."
+origin_agent: business-analyst
+created: 2026-09-27
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-09-27'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: docs
+risk_surface: internal
+notes: |
+  Requested by the user 2026-09-27 (round 3). Placed as an L3 under BO-2400a-7, the existing
+  (done) sequence-diagram AC for the same diagram. BO-2400a is at its child override and L2s
+  carry no child cap.

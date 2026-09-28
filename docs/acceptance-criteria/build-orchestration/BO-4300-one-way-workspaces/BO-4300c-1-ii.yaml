@@ -207,8 +207,10 @@ amended_by:
     Criteria unchanged; readiness reviewed.
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260927-BO-4300c-1-ii.md
 notes: |
   F7 and KI-BP-20260826-worktree-hooks-only-on-one-path: the "hooks are active" check accepted
   a .leafcutter link alone and 51 AC records were nearly committed unchecked. The firing proof
   itself is BO-1700a; this record is that the maker's answer honours it.
+target_epic: EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace

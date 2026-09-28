@@ -101,10 +101,12 @@ created: 2026-09-25
 amended_by: []
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260927-BO-4300c-3-i.md
 notes: |
   The exact 2026-09-25 incident (consolidation analysis, section 1, steps 4-7): the
   path-resolution command was re-sent in place of the create command, returned exit 0 with the
   script's path, JSON.parse threw and was caught, the worktree path stayed null, and the product
   owner wrote INF-1400* ACs untracked into the main checkout on main. The session starts from
   the workspace parent because that is where it ran.
+target_epic: EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace

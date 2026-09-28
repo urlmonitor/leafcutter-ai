@@ -113,9 +113,11 @@ created: 2026-09-25
 amended_by: []
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260927-BO-4300b-4.md
 notes: |
   F5's sandbox run: without Developer Mode, WinError 1314 on both links, bootstrap failed and
   left a half-made worktree. Decision 2 (real install files, never a symlink) is the answer;
   this record is its observable. The migration plan asks for this to run for real on a Windows
   runner without Developer Mode, not only with a simulated failure.
+target_epic: EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace

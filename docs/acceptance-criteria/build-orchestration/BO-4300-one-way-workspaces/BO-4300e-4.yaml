@@ -134,8 +134,10 @@ amended_by:
     One test spec added. readiness reset to reviewed.
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260927-BO-4300e-4.md
 notes: |
   F14 and the finalize inventory rows: baselines were added from origin/main without a fetch,
   registered in the real repository, and "degrade and continue" on failure. Under decision 1 a
   temporary clone registers nothing in the real project.
+target_epic: EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace

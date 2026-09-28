@@ -135,6 +135,10 @@ const REPO_FACTS_ENVELOPE_SCHEMA = {
   required: ["output", "exit_code"],
   properties: { output: { type: "string" }, exit_code: { type: "number" } },
 };
+
+// TQ-500f-3-ii: AC store root relative to a worktree (mirrors fast-lane-ship.js's acStoreRel).
+const AC_STORE_REL_PATH = "docs/acceptance-criteria";
+
 /**
  * Completion-time re-read of the epic's set of work (BO-300a-5).
  *
@@ -238,6 +242,8 @@ const TICKET_PLANNER_SCHEMA = {
     // signed_off would re-block the coder forever, because test-writer is no
     // longer in the needed set and cannot re-supply its evidence.
     existing_test_files: { type: "array", items: { type: "string" } },
+    // source_ac (TQ-500f-3-ii): ticket's source_ac frontmatter, omitted (never []) when absent.
+    source_ac: { type: "array", items: { type: "string" } },
     ordered_phases: {
       type: "array",
       items: {
@@ -1649,7 +1655,8 @@ async function driveTicketPhases(worktreeTicketPath, isEpicMember = false) {
     `Read the ticket at "${worktreeTicketPath}". Extract the agents: map from the frontmatter and the files_touched list. ` +
     `Also check whether the ticket's ## Test Requirements section is populated: it is populated when there is a fenced code block after "## Test Requirements" that contains at least one "- name:" entry in the tests: array. ` +
     `Also report "existing_test_files": test files a previous drive already wrote for this ticket. Find them by reading any test-writer sign-off in the ticket's ## Comments section and collecting the test file paths it names, then verifying with the shell that each path actually EXISTS on disk. List only paths you confirmed exist; return [] if there is no test-writer sign-off, it names no files, or the named files are gone. Do not guess a path from the ticket title or a naming convention. ` +
-    `Return a JSON object with exactly these keys: { "ticket_path": "<path>", "title": "<ticket title>", "files_touched": [...], "has_test_requirements": true|false, "existing_test_files": [...], "ordered_phases": [{"agent": "<name>", "status": "<status>"}, ...] }. ` +
+    `Also report "source_ac": the ticket's source_ac frontmatter field (the requirement id(s) this ticket implements), normalised to an array of strings. Omit the key entirely (do not return an empty array) when the ticket's frontmatter carries no source_ac field at all. ` +
+    `Return a JSON object with exactly these keys: { "ticket_path": "<path>", "title": "<ticket title>", "files_touched": [...], "has_test_requirements": true|false, "existing_test_files": [...], "source_ac": [...] (omit if none), "ordered_phases": [{"agent": "<name>", "status": "<status>"}, ...] }. ` +
     `The ordered_phases array must list ALL agents from the agents: map in canonical phase priority order. ` +
     `Each entry must include the agent name and its current status (needed | signed_off | not_needed | failed). ` +
     `Return ONLY the JSON object, no prose.`,
@@ -1697,6 +1704,15 @@ async function driveTicketPhases(worktreeTicketPath, isEpicMember = false) {
     : [];
   let hasTestRequirements =
     plan.has_test_requirements === true || existingTestFiles.length > 0;
+
+  // TQ-500f-3-ii: source_ac id(s); empty skips the red-baseline gate (see phase loop below).
+  const sourceAcIds = Array.isArray(plan.source_ac)
+    ? plan.source_ac.filter((x) => typeof x === "string" && x.trim())
+    : typeof plan.source_ac === "string" && plan.source_ac.trim()
+      ? [plan.source_ac.trim()]
+      : [];
+  let redBaselineGateOutcome = null; // carried into the final payload below
+  let redBaselineGateChecked = false; // TQ-500f-3-ii H-3: runs once, before the FIRST coder dispatch on every path
 
   // -------------------------------------------------------------------------
   // Step 2 — Filter and sort the phases to dispatch
@@ -1859,6 +1875,50 @@ async function driveTicketPhases(worktreeTicketPath, isEpicMember = false) {
             "'- name: ...' entry, or mark test-writer as needed so it can derive " +
             "tests from the ticket's source_ac, then re-run /build-feature.",
       };
+    }
+
+    // TQ-500f-3-ii (H-3 resume fix): red-baseline gate runs ONCE, right before the
+    // FIRST coder dispatch on EVERY path -- including a resumed ticket whose
+    // test-writer phase is already signed_off and therefore never re-enters this
+    // loop. Thin dispatch + fail-closed parse only -- decision logic lives in
+    // fast_lane.py's heavy_lane_gate subcommand (wraps verify_red_baseline, no
+    // second reader).
+    if (CODER_PHASES.has(phaseName) && !redBaselineGateChecked) {
+      redBaselineGateChecked = true;
+      if (sourceAcIds.length === 0) {
+        redBaselineGateOutcome = "red-baseline reader not applicable: no source requirement";
+      } else {
+        const gateScript = `${resolvedTarget.worktree_path}/{{config.output_root}}/scripts/build_orchestration/fast_lane.py`;
+        const gateAcStoreRoot = `${resolvedTarget.worktree_path}/${AC_STORE_REL_PATH}`;
+        const gateCommand =
+          `python3 ${gateScript} heavy_lane_gate --source-ac ${sourceAcIds.join(",")} ` +
+          `--test-root ${resolvedTarget.worktree_path} --ac-root ${gateAcStoreRoot}`;
+        const gateReply = await agent(
+          `Run the following command and return ONLY its raw stdout:\n${gateCommand}\n` +
+          `Return JSON: { "output": "<raw stdout>", "exit_code": <number> }`,
+          { agentType: "status-checker", schema: REPO_FACTS_ENVELOPE_SCHEMA, label: "red-baseline-gate", phase: "Phase Dispatch" }
+        );
+        let gateVerdict = null;
+        if (gateReply && typeof gateReply.output === "string" && typeof gateReply.exit_code === "number") {
+          try { gateVerdict = JSON.parse(gateReply.output); } catch (_e) { gateVerdict = null; }
+        }
+        // FAIL CLOSED: unparseable/refused reply is never treated as a pass.
+        if (!gateVerdict || typeof gateVerdict.gate_passed !== "boolean") {
+          return {
+            status: "blocked",
+            message: `The red-baseline gate reply could not be verified for ticket ${worktreeTicketPath}: not a parseable {output, exit_code} envelope carrying a real heavy_lane_gate verdict (raw reply: ${JSON.stringify(gateReply)}). Fail closed — the coder is never dispatched on an unverified red-baseline gate reply.`,
+            ticket_path: worktreeTicketPath, failing_phase: phaseName, gate: "verify_red_baseline", classification: "halt",
+          };
+        }
+        redBaselineGateOutcome = gateVerdict.outcome || (gateVerdict.gate_passed ? "verify_red_baseline gate passed" : `verify_red_baseline gate failed: ${gateVerdict.reason || "unknown"}`);
+        if (!gateVerdict.gate_passed) {
+          return {
+            status: "blocked",
+            message: `verify_red_baseline gate failed for ticket ${worktreeTicketPath}: gate_passed=false. Reason: ${gateVerdict.reason || "unknown"}. Refused: ${JSON.stringify(gateVerdict.refused || [])}. The coder is not dispatched — test-writer's own red_baseline_verified claim is never a substitute (TQ-500f-3-ii).`,
+            ticket_path: worktreeTicketPath, failing_phase: phaseName, gate: "verify_red_baseline", gate_verdict: gateVerdict, classification: "halt",
+          };
+        }
+      }
     }
 
     let phaseResult;
@@ -2234,7 +2294,7 @@ async function driveTicketPhases(worktreeTicketPath, isEpicMember = false) {
   // committed; the record claimed nothing happened, which blocks the epic
   // archive check. The missing half is this write — and its boundary: the write
   // happens only when the ticket's OWN record proves every needed phase passed.
-  return await concludeTicket({
+  const ticketOutcome = await concludeTicket({
     recordPath: worktreeTicketPath,
     title,
     record: lastRecord,
@@ -2251,6 +2311,8 @@ async function driveTicketPhases(worktreeTicketPath, isEpicMember = false) {
     dispatchedAgents,
     noPhasesToRun: false,
   });
+  // TQ-500f-3-ii: additive; surfaces the gate's recorded outcome, never a completion signal.
+  return { ...ticketOutcome, red_baseline_gate: redBaselineGateOutcome };
 }
 
 // ---------------------------------------------------------------------------

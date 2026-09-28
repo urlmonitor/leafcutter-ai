@@ -1,0 +1,91 @@
+id: BO-2400a-8-i
+components:
+  - build_orchestration
+title: "Component diagram update: the command-step-runner, the registry fields it is checked against, and the structural check"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the fast-lane component diagram after BO-2400f-5-i and BO-2400f-5-iii are built,
+  When a reader looks at the lane's collaborators,
+  Then the command-step-runner appears as the collaborator that runs every command step,
+    shown separately from the test-writer, coder and pr-reviewer,
+  And the agent registry appears as the source of each agent's shell permission and
+    declared step kinds (reads_store, changes_store, changes_repository, publishes),
+  And the structural check from BO-2400f-5-ii appears as reading both the lane and the
+    registry,
+  And status-checker no longer appears as a collaborator of the fast lane.
+
+  Given the same diagram,
+  When it is compared with the lane,
+  Then every agent it shows the lane dispatching is one the lane actually dispatches.
+depends_on: [BO-2400a-8, BO-2400f-5-i, BO-2400f-5-iii]
+doc_links:
+  - path: docs/architecture/diagrams/c2-fast-lane-build-path-components.md
+    relationship: modifies
+    status: exists
+  - path: docs/acceptance-criteria/build-orchestration/BO-2400-fast-lane-build/BO-2400a-1-i.yaml
+    relationship: describes
+    status: exists
+    relevance: "The command-step-runner and the step-kinds registry field."
+  - path: docs/architecture/components/agent-registry.md
+    relationship: describes
+    status: exists
+    relevance: "Registry fields the diagram labels (permits_shell, step_kinds)."
+  - path: docs/acceptance-criteria/build-orchestration/BO-2400-fast-lane-build/BO-2400f-5-ii.yaml
+    relationship: describes
+    status: exists
+    relevance: "The structural check."
+assigned_agent: architecture-diagram-author
+estimated_complexity: S
+it_requirements:
+  - >-
+    Document only what is built. Write it after the depends_on records are done, and
+    take agent ids, halt-kind names and field names (command-step-runner, declined_step,
+    step_kinds) verbatim from the built lane and registry, never from these ACs' drafts.
+  - >-
+    The doc's frontmatter last_updated is refreshed and the doc stays within the
+    doc-length and doc-compliance hooks. An over-long doc is split by section, not
+    trimmed of required content.
+  - >-
+    Author through the write-c4-diagram skill, keeping the diagram's existing type,
+    level and file. Participants and collaborators use the ids the built lane and
+    registry use.
+  - >-
+    The registry is labelled as the source of permits_shell and step_kinds. The
+    structural check (BO-2400f-5-ii) is drawn reading both the lane and the registry.
+  - >-
+    Before drawing status-checker out of the lane, confirm that BO-2400f-5-i removed
+    every status-checker dispatch. If a non-command dispatch still uses it, keep it and
+    record that in the sign-off, as the record's own note allows.
+test_required: false
+test_rationale: |
+  Architecture diagram. The store's convention for this tree is test_required: false, as
+  on the parent BO-2400a-8. Agreement with the lane is checked by the author against the
+  built lane at sign-off and by review.
+delivers_to: null
+expects_from:
+  ac_id: BO-2400f-5-i
+  contract: "The lane's command-step routing as built."
+origin_agent: business-analyst
+created: 2026-09-27
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-09-27'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: docs
+risk_surface: internal
+notes: |
+  Requested by the user 2026-09-27 (round 3). Placed as an L3 under BO-2400a-8, the existing
+  (done) component-diagram AC for the same diagram. BO-2400a is at its child override and L2s
+  carry no child cap. The status-checker clause assumes BO-2400f-5-i removes every
+  status-checker dispatch from the lane; if some non-command dispatch keeps it, drop that
+  clause.

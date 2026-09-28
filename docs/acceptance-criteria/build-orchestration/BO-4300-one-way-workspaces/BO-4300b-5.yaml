@@ -102,9 +102,11 @@ created: 2026-09-25
 amended_by: []
 superseded_by: null
 covered_by: [BO-4300b-5-i]
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260927-BO-4300b-5.md
 notes: |
   BO-4300b's notes: "any platform" includes a Windows/WSL mix. Today two worktree entries made
   from WSL are stuck "locked initializing" and unusable from Windows because the gitdir file
   embeds one platform's path spelling; decision 1 (clones embed no absolute path) makes this
   achievable.
+target_epic: EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace
