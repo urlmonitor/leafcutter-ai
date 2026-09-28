@@ -16,19 +16,22 @@ related_docs:
 # KI-BO-20260901-1045 — Every handoff halts the drive: the driver routes on a `handoff_target` field that no agent template tells any agent to emit
 
 > One known issue, split out of `docs/known-issues/build-orchestration.md` on
-> 2026-09-14. Index: [build-orchestration.md](../build-orchestration.md).
+> 2026-09-14. Index: [build-orchestration.md](../../build-orchestration.md).
 > Filename severity is the three-level index bucket (`blocker`); the
 > original grading is the `**Severity:**` line below, unchanged.
 
 - **Severity:** blocker
-- **Status:** **PARTIAL** (verified 2026-09-25). *Fixed:* the driver side and the two
-  templates on the Test Delegation route. `6124e025` (#687, BO-3000a) declares `handoff_target` in
-  the phase-result schema of both drivers. It is required when `status` is `handoff`
-  (`templates/workflows-js/build-feature.js:303,331-341`, `build-ticket.js:115,139-151`).
-  It also removed the ticket-body inference, and the refusal now names the missing field
+- **Status:** **PARTIAL — placed in `resolved/` because the specific defect that opened this
+  entry is fixed; a broader charter gap it exposed is not (verified 2026-09-25). The two
+  audits reach different headline verdicts on the same evidence base — see "Contradiction"
+  below before treating this as fully closed.** *Fixed:* the driver side and the two templates
+  on the Test Delegation route. `6124e025` (#687, BO-3000a) declares `handoff_target` in the
+  phase-result schema of both drivers. It is required when `status` is `handoff`
+  (`templates/workflows-js/build-feature.js:303,331-341`, `build-ticket.js:115,139-151`). It
+  also removed the ticket-body inference, and the refusal now names the missing field
   (`build-feature.js:2020-2064`, `build-ticket.js:1641-1685`). `python-coder.md`
   (`:142,:458,:602`) and `test-writer.md` (`:530-532`) now tell the agent to return
-  `handoff_target`. *Remains:* 19 other templates declare a
+  `handoff_target`. *Remains, per schema-conformance reading:* 19 other templates declare a
   `'Sign-off comment with status: ok | blocker | handoff'` output and never mention
   `handoff_target`: ac-fulfillment-gate, ac-validator, adr-author, architect-review,
   architecture-diagram-author, change-scope-reviewer, commit, documentation-expert,
@@ -37,8 +40,12 @@ related_docs:
   For those agents the only cue is the schema field description. The schema's own comment
   says it is unverified whether the engine enforces the `if`/`then` rule, so a handoff from
   any of these agents can still halt as "named no handoff target". No other KI tracks this
-  remainder. KI-BO-20260907-0851 covers only the deliberate targetless halts in
-  python-coder and test-writer.
+  remainder. KI-BO-20260907-0851 covers only the deliberate targetless halts in python-coder
+  and test-writer. *Remains, per actual-current-template reading (see "Also verified
+  2026-09-23" below):* of those 19, none currently emit `status: handoff` at all — only
+  python-coder, test-writer, and retrospective-agent (which only parses the tag, never emits
+  it for the driver to route on) do — so the 19-template gap is a live schema-conformance risk
+  for future templates, not a demonstrated present-day one.
 - **Occurrences:** 2 observed (ACD-2100a-1 on 2026-08-26, ACD-2100a-4 on 2026-09-01),
   but the mechanism guarantees it for every handoff from every agent
 - **First seen:** 2026-08-26 · **Last seen:** 2026-09-01
@@ -118,7 +125,6 @@ and never reconciled, failing closed in a way that reads as a ticket defect.
 **Pattern:** `docs/reference/false-green-mechanisms.md` — the inverse face: a gate that fails
 closed correctly, on a field the other side of its own contract was never told to provide.
 
-
 **Verification note (2026-09-25).** Commands run against `main` @ `d2fe85a1`:
 
 - `grep -rln handoff_target templates/agents/` finds only `python-coder.md` and `test-writer.md`.
@@ -134,5 +140,55 @@ closed correctly, on a field the other side of its own contract was never told t
 - Fix commits: `ae5852a2` (#492, BO-3000: a handoff is no longer read as a pass) and
   `6124e025` (#687, BO-3000a: the schema field, the removed body inference, and the
   python-coder/test-writer template text).
+
+**Also verified 2026-09-23 (independent pass, before the above) — narrower and more
+confident than "PARTIAL" alone suggests.** Re-verified against the current code, not this
+entry's narrative:
+
+- **The emitter side was fixed, not the driver side** — matching this entry's own second fix
+  option ("every agent template that can emit `handoff` must be told to set
+  `handoff_target`"). `grep -c handoff_target templates/agents/python-coder.md` returned **3**
+  and `test-writer.md` returned **2** (both were 0 at the time this entry was filed).
+  `python-coder.md`'s "Test Delegation" behavior line (142) reads: "...uses `(status:
+  handoff)` instead of `(status: ok)`, and returns `handoff_target: \"test-writer\"` in the
+  JSON result" — the exact two-part instruction (ticket prose AND the return-value field) this
+  entry says was missing. `test-writer.md:530-534` carries the mirror instruction for handing
+  back to `python-coder`/`sql-coder`.
+- **No other template emits `(status: handoff)` for the driver to route on — this is the
+  finding that narrows the 19-template gap above.** `grep -rl "status: handoff"
+  templates/agents/*.md` returns exactly three files: `python-coder.md`, `test-writer.md`, and
+  `retrospective-agent.md`. The third's only match is itself PARSING a historical
+  `## Comments` status tag from ticket files during a retrospective — it does not itself emit
+  a handoff for the driver to route on. So of the 19 templates the 2026-09-25 grep names as
+  lacking `handoff_target`, none currently produce a `status: handoff` the driver would ever
+  need to route — the gap is real against the schema's own contract, but not (yet)
+  demonstrated in any live template.
+- **The driver side is unchanged, correctly** — `build-feature.js:2020` still reads
+  `phaseResult.handoff_target` and still refuses diagnosably when absent (lines 2020-2058).
+  That refusal is the fail-closed behavior this entry explicitly says to keep; only the
+  emitter's silence needed fixing.
+- **Verified by name and by test.** `BO-3000a.yaml` — "A handoff is routed by the target the
+  handing-off agent named in its own result, and is refused diagnosably... never inferred from
+  the ticket body" — is `work_status: done`, with its own amendment note recording that an
+  earlier "infer from ticket body" design was rejected by code review in favor of the
+  emitter-side fix, and that its coverage was rewritten and verified 1:1 against
+  `unit_tests/workflows/test_bo_3000a_3700_dispatch_defects.py` by an AC-fulfillment gate.
+- **Not verified end-to-end.** No live handoff dispatch was executed as part of this pass; the
+  verdict rests on the current templates, the current driver code, and the AC store's own
+  recorded test-mapping verification.
+
+**Contradiction between the two audits, flagged rather than resolved.** The 2026-09-25 pass
+calls this entry's overall status **PARTIAL** and lists 19 templates as a live gap, reading
+the schema's own field description ("this output CAN include `handoff_target`") as the
+relevant bar. The 2026-09-23 pass calls the mechanism this entry actually reproduced **fixed**
+and treats the 19-template count as theoretical, because none of those 19 templates currently
+emit `status: handoff` at all — reading "does this defect still reproduce today" as the bar.
+Both readings are internally consistent; they disagree on which question this entry is
+answering. This merge keeps both rather than picking one. A future reader deciding whether to
+reopen this entry should re-run `grep -rl "status: handoff" templates/agents/*.md` first — if
+it still returns only `python-coder.md`, `test-writer.md`, and the non-routing
+`retrospective-agent.md` match, the 2026-09-23 reading still holds; if any of the other 19
+templates now emit `status: handoff`, the 2026-09-25 reading's gap has gone live and this
+should reopen.
 
 ---

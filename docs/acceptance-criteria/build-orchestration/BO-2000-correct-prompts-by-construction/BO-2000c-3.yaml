@@ -67,6 +67,35 @@ amended_by:
     real-artifact check through the production CLI. The second clause needs its own test
     because an implementation that emits the resolved path ALONGSIDE the raw pattern
     satisfies clause 1 and fails the AC. criteria untouched.'
+- reason: test-spec-correspondence
+  by: it-po
+  at: '2026-09-23'
+  note: 'test_spec corrected to name the tests that actually exist and pass. It was stale
+    in two ways, both dating from its authoring on 2026-09-22, before the covering tests
+    were reconciled: (1) every descriptor targeted unit_tests/ac_store/, but the covering
+    tests live in unit_tests/prompt_assembly/ — that directory does exist, so the wrong
+    target read as plausible; (2) none of the four descriptor names matched a real test —
+    a grep for all four across unit_tests/ returned nothing. Left alone, the next agent
+    reading this literally would have authored four new tests in a second directory,
+    duplicating three that already pass. Corrected to the three tests carrying
+    "# covers: BO-2000c-3", which match covered_by exactly:
+    test_implementation_notes_emission.py::TestReferencePatternResolution::test_ac3_reference_pattern_resolves_to_paths,
+    and test_reference_pattern_resolution.py::TestAmbiguousReferencePatternIsAnAuthoringError::test_single_match_pattern_still_resolves
+    plus ::TestResolvedPathReachesTicketViaCli::test_resolved_path_reaches_the_ticket_via_the_generator_cli.
+    The last was already named correctly and needed only the directory fix. Two descriptors
+    were REMOVED rather than renamed, because their behaviour is covered under a
+    differently-shaped test rather than a separately-named one:
+    test_unresolved_glob_is_absent_from_implementation_notes (the second Then) is asserted
+    as an assertNotIn inside all three surviving tests, so the absence it demanded is
+    proven three times over, just never as its own def; and
+    test_resolution_happens_before_it_requirements_are_serialised (seam) named a call-order
+    fact with no test of its own, but its stated risk — resolving after serialisation
+    leaves the pattern in the emitted text — is exactly what those same assertNotIn
+    assertions catch, since all three read the emitted body or the CLI stdout rather than
+    the resolver return value. No descriptor was invented for an untested behaviour: naming
+    a test that does not exist is the defect being fixed here. All three named tests were
+    run and pass. criteria untouched; work_status, readiness, priority, implemented_by and
+    covered_by untouched.'
 superseded_by: null
 covered_by:
   - BO-2000c-3-i
@@ -76,27 +105,21 @@ covered_by:
 implemented_by:
   - tickets/99_done/EPIC-BOPhantomDoneRemediation/05_bo2000_reference_pattern_resolution.md
 test_spec:
-  - name: test_reference_pattern_is_emitted_as_a_resolved_concrete_path
-    target_dir: unit_tests/ac_store/
+  - name: test_ac3_reference_pattern_resolves_to_paths
+    target_dir: unit_tests/prompt_assembly/
     framework: unittest
     type: unit
     angle: criterion
-    description: "First Then: an AC whose it_requirements names a reference file via a reference_pattern matching exactly one existing file produces an Implementation Notes section carrying that one concrete file path."
-  - name: test_unresolved_glob_is_absent_from_implementation_notes
-    target_dir: unit_tests/ac_store/
+    description: "In test_implementation_notes_emission.py::TestReferencePatternResolution. Carries BOTH Then clauses in one test: a reference_pattern matching exactly one existing file yields the concrete resolved filename in the Implementation Notes body (assertIn), and the raw glob does not appear (assertNotIn)."
+  - name: test_single_match_pattern_still_resolves
+    target_dir: unit_tests/prompt_assembly/
     framework: unittest
     type: unit
-    angle: criterion
-    description: "Second Then, and the discriminating one: the raw glob/pattern string does not appear in place of the path. An implementation that emits the resolved path ALONGSIDE the unresolved pattern passes the first test and still fails the AC, so absence must be asserted separately."
-  - name: test_resolution_happens_before_it_requirements_are_serialised
-    target_dir: unit_tests/ac_store/
-    framework: unittest
-    type: unit
-    angle: seam
-    description: "The seam between the two modules this AC edits: _gtfa_body._build_implementation_notes_section must call _gtfa_files_touched._resolve_reference_patterns BEFORE serialising it_requirements. Resolving after serialisation would leave the pattern in the emitted text while a direct unit test of the resolver stayed green."
+    angle: boundary
+    description: "In test_reference_pattern_resolution.py::TestAmbiguousReferencePatternIsAnAuthoringError. Over-correction guard at the one-match boundary: exactly one match must still resolve rather than be rejected by the ambiguity check BO-2000c-3-i adds. Also asserts the raw glob is absent from the body."
   - name: test_resolved_path_reaches_the_ticket_via_the_generator_cli
-    target_dir: unit_tests/ac_store/
+    target_dir: unit_tests/prompt_assembly/
     framework: unittest
     type: integration
     angle: real_artifact
-    description: "PRODUCTION ENTRY POINT: run generate_ticket_from_ac.py against a real on-disk AC YAML authoring a reference_pattern, then read the Implementation Notes out of the ticket the CLI actually wrote and assert the concrete path is there. Guards against a fix that is correct in the helper but never reaches the emitted artifact."
+    description: "In test_reference_pattern_resolution.py::TestResolvedPathReachesTicketViaCli. PRODUCTION ENTRY POINT: runs generate_ticket_from_ac.py as a subprocess against a real on-disk AC YAML (yaml.safe_dump-serialised) and reads the Implementation Notes out of what the CLI actually emitted — asserting the concrete path is present and the raw glob is not. Guards against a fix correct in the helper that never reaches the artifact."

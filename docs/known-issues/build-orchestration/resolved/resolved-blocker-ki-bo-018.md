@@ -23,7 +23,7 @@ related_docs:
 - **Severity:** blocker — this is not a workflow inconvenience: per ADR-012, `/plan-feature`
   is the canonical entry path for **all** new work, and this defect halts that workflow
   before any authoring agent is dispatched. There is no fallback path that avoids it.
-- **Status:** **RESOLVED** (`e4ee392d` — ACD-2100b-5, "the startup check reads the registry itself instead of asking an agent", on main since 2026-09-07; verified 2026-09-25 by code read of `templates/workflows-js/plan-feature.js`, a live run of the pre-flight script, and `pytest` of the ACD-2100b / BO-1500f-1 tests)
+- **Status:** **RESOLVED** (`e4ee392d` — ACD-2100b-5, "the startup check reads the registry itself instead of asking an agent", on main since 2026-09-07; verified 2026-09-25 by code read of `templates/workflows-js/plan-feature.js`, a live run of the pre-flight script, and `pytest` of the ACD-2100b / BO-1500f-1 tests; independently re-verified 2026-09-23, see "Also verified 2026-09-23" below)
 - **Occurrences:** 2 (reproduced twice, same day)
 - **First seen:** 2026-08-25 · **Last seen:** 2026-08-25
 - **Where:** `templates/workflows-js/plan-feature.js` (deployed at
@@ -99,5 +99,30 @@ agent (ACD-2100b-5)`, 2026-09-07). It was tracked in parallel as KI-ACD-009, whi
   (permission-refused registry). They fail because `chmod(0o000)` does not block reads on
   Windows, so the file stays readable and the verdict is `granted`. That is a limit of the test
   platform. It is not this defect: neither test involves truncation or a relayed read.
+
+**Also verified 2026-09-23 (independent pass, before the above).** Re-verified against the
+current code, not this entry's narrative:
+
+- **Primary mechanism confirmed gone.** No `resolve-workspace-setup-permission` dispatch, and
+  no read of `config/agent_registry.json` via an agent round-trip, remained anywhere in
+  `templates/workflows-js/plan-feature.js` at that time. Lines 2140-2148 documented the removal
+  directly: "ACD-2100b-5 removed that dispatch (the registry read now happens locally, in
+  `scripts/worktree/check_workspace_setup_permission.py`...) and these four helpers had no
+  other caller, so they were removed with it." Lines 2320-2432 showed the workflow only
+  consuming a pre-computed verdict via `args.workspace_setup_permission`, failing closed when
+  it is absent, and rendering six distinguishable `outcome` values (`granted`, `read_failure`,
+  `parse_failure`, `agent_not_found`, `no_entries_collection`, `permission_denied`) as six
+  different messages — the same fix the 2026-09-25 pass above confirms independently, on a
+  Linux run rather than Windows.
+- **Behavioral evidence on that platform.**
+  `AC_ENFORCE_STRICT=1 python -m pytest unit_tests/workflows/test_bo_1500f_1.py unit_tests/workflows/test_bo_1500f_1_real_registry_read.py -q`
+  → 8 passed, mask off — a clean run with none of the two Windows-only `chmod` failures noted
+  above, consistent with those being a test-platform limit rather than a real gap.
+- **Duplicate, confirmed and cross-linked.** This is the same mechanism and the same cwd
+  defect as `KI-ACD-009`
+  ([`docs/known-issues/ac-driven-dev/resolved/resolved-blocker-ki-acd-009.md`](../../ac-driven-dev/resolved/resolved-blocker-ki-acd-009.md)),
+  which records the identical 2026-09-07 `ACD-2100b-5` fix and was itself closed 2026-09-23
+  once its own closure condition (the `BO-1500f-1` store transition) landed via PR #864. This
+  entry closes as a duplicate resolution, not an independent one.
 
 ---

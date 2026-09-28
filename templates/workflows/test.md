@@ -24,7 +24,7 @@ from `git diff`).
 |---|---|---|
 | `auto` | Inferred from diff | Default |
 | `live-trader` | `poetry run python -m unittest discover -s unit_tests/live_trader -t . -p "test_*.py"` | Fast; runs on pre-commit |
-| `sql-functions` | `poetry run python -m pytest unit_tests/sql_functions -v` | Requires running DB on port 5403 |
+| `sql-functions` | `poetry run python -m pytest unit_tests/sql_functions -v` | Requires the configured test database (testing_context.db_connection_test) to be reachable — checked via the `db_check` checker CLI first |
 | `manual` | `python -m pytest unit_tests/ -k "_MANUAL"` | Very slow; compression + long-running |
 | `all` | live-trader then sql-functions | Warns about DB requirement first |
 | `single <path>` | `poetry run python -m pytest <path> -v` | Tight loop for one file |

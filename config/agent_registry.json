@@ -3542,6 +3542,47 @@
             "components": [
                 "ux_prototyping"
             ]
+        },
+        {
+            "id": "command-step-runner",
+            "name": "Command Step Runner",
+            "tier": "utility",
+            "role": "orchestration",
+            "permits_shell": true,
+            "portable": true,
+            "domain": null,
+            "spawn_allowlist": [],
+            "spawned_by": [
+                "user"
+            ],
+            "is_ticket_phase": false,
+            "selection_criteria": null,
+            "template_path": "templates/agents/command-step-runner.md",
+            "model": "haiku",
+            "skills_used": [],
+            "description": "Runs exactly one given command, once, in one named workspace, and hands back that command's exit status, stdout and stderr untouched. Holds no allow-list of lane commands or step names and no judgement about whether a command is wise — the fast lane's dedicated executor for command steps (BO-2400a-1-i). Declines only requests outside its role: no workspace named, a request to edit files by hand, write code or tests, act as another agent's role, or run a command aimed somewhere other than the named workspace. Not yet listed under fast-lane-ship.js in spawned_by — see adopter_notes in templates/agents/command-step-runner.md.",
+            "category": "supervisor",
+            "skills_invoked": [],
+            "knowledge_channels": [
+                {
+                    "channel": 1,
+                    "source": "template description field"
+                },
+                {
+                    "channel": 7,
+                    "source": "bash command output (the one dispatched command, verbatim)"
+                }
+            ],
+            "produces": "orchestration",
+            "components": [
+                "build_orchestration"
+            ],
+            "step_kinds": [
+                "reads_store",
+                "changes_store",
+                "changes_repository",
+                "publishes"
+            ]
         }
     ]
 }

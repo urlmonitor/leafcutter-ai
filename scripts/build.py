@@ -112,6 +112,7 @@ from build_referential_integrity import (
 from build_config_scaffolds import build_config_scaffolds
 from build_ac_store_scaffold import build_ac_store_scaffold
 from build_architecture_scaffold import build_architecture_namespace_scaffolds
+from build_phases_doc_index import build_doc_index  # noqa: F401 -- phase table entry (BP-1500a-1)
 from build_colors import (
     BOLD,
     RESET,
@@ -1328,53 +1329,6 @@ def _compute_version_str(package_root: Path) -> str:
     return _bump_version(baseline, bump)
 
 
-def build_doc_index(target_root: Path, config: dict, dry_run: bool, force: bool) -> int:  # noqa: ARG001
-    """Generate docs/INDEX.md by walking the docs tree.
-
-    The index is regenerated on every build run (not write-if-absent) because
-    it is fully derived from the existing docs tree and must stay current.
-    Idempotent: if the content is byte-identical to what is already on disk,
-    no write is performed and 0 is returned.
-
-    Args:
-        target_root: Absolute path to the target project root directory.
-        config: Merged config dictionary (unused — index generation is
-            self-contained; kept for API parity with other phase functions).
-        dry_run: When True, logs intent but writes nothing.
-        force: Ignored — index is always regenerated (content-addressed write).
-
-    Returns:
-        1 if the file was written; 0 if the content was already up-to-date.
-    """
-    from generate_doc_index import generate_index
-
-    docs_dir = config.get("docs_root", "docs/").rstrip("/")
-    output_path = target_root / docs_dir / "INDEX.md"
-    content = generate_index(target_root, output_path.parent)
-
-    if dry_run:
-        _dry_run_msg(f"would write {output_path}")
-        return 1
-
-    if output_path.exists():
-        try:
-            existing = output_path.read_text(encoding="utf-8")
-            if existing == content:
-                return 0
-        except OSError:
-            pass
-
-    try:
-        output_path.parent.mkdir(parents=True, exist_ok=True)
-        output_path.write_text(content, encoding="utf-8")
-    except OSError as exc:
-        _warn(f"Failed to write {output_path}: {exc}")
-        return 0
-    else:
-        _success(f"wrote {output_path.relative_to(target_root)}")
-        return 1
-
-
 def _check_deploy_collision_guard(output_root: Path, config: dict) -> int:
     """Preflight guard: abort the build when deploy-path collisions are detected (BP-100m).
 
@@ -2271,4 +2225,8 @@ if __name__ == "__main__":
 #   _manifest_workflow_tool_scripts instead of re-listing its script tuple,
 #   funding knowledge_frontmatter_reader.py's addition with zero net growth
 #   on this over-limit file. (#TICKETLESS reason=km-kgs-100a-3-xi-fastlane)
+# - 2026-09-28 12:00 [python-coder/quick-fix]: build_doc_index scans the repo holding docs_root
+#   (was target_root: self-host builds wrote a "No docs found." stub) and refuses to
+#   replace a populated map with an empty one (KI-BP-016). Zero net growth.
+#   (#TICKETLESS reason=quick-fix-BP-1500a-1)
 # ====================================================================
