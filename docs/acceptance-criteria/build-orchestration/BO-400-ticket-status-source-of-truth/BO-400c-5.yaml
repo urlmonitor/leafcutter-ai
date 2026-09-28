@@ -44,7 +44,7 @@ doc_links:
   - path: templates/scripts/commit_guardian/check_ticket_signoff_parity.py
     relationship: modifies
     status: exists
-  - path: docs/known-issues/commit-guardian/open-high-ki-cg-20260925-signoff-parity-enforces-only-under-done-folder.md
+  - path: docs/known-issues/commit-guardian/resolved/resolved-high-ki-cg-20260925-signoff-parity-enforces-only-under-done-folder.md
     relationship: describes
     status: exists
 assigned_agent: python-coder

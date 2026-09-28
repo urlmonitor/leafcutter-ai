@@ -82,8 +82,10 @@ created: 2026-09-25
 amended_by: []
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260927-BO-4300c-1-iii.md
 notes: |
   Decision memo, Q2 side effects: the build dirtied 61 tracked files (docs/INDEX.md link
   spelling, 59 agent cards, LEAFCUTTER_VERSION), and a later add-all in the commit phase would
   sweep them into a ticket commit. Both mitigations the memo offers satisfy this record.
+target_epic: EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace

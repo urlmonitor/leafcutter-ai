@@ -243,8 +243,10 @@ amended_by:
     permitted. readiness stays reviewed.
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260927-BO-4300a-1-ia.md
 notes: 'IT PO split of BO-4300a-1-i (2026-09-25), workflow-body half: carries the parent''s criteria verbatim.
   The surface is templates/workflows-js/*.js (python-coder). The entry-skill half (skills and commands
   that run the maker and pass its answer in) is BO-4300a-1-ib (llm-expert). F1 and F12; verified on the
   recorded dispatch list of a workflow run, not on source text.'
+target_epic: EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace

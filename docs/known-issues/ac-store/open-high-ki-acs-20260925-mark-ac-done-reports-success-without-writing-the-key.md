@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: '2026-09-25'
-last_updated: '2026-09-25'
+last_updated: '2026-09-27'
 components:
   - ac_store
 related_docs:
@@ -18,7 +18,7 @@ related_docs:
 # KI-ACS-20260925-mark-ac-done-reports-success-without-writing-the-key — mark_ac_done.py replaces the first 'work_status: todo' anywhere in the file, so prose is edited, the real key stays todo, and the tool prints success
 
 - **Severity:** high. The tool CLAUDE.md and `build-ac` name for marking an AC done reports success on a write that did not happen, and silently rewrites prose.
-- **Status:** open — no AC. Reproduced 2026-09-25 on scratch copies (including a copy of the real `BO-202.yaml`).
+- **Status:** open — **partially fixed**. `mark_ac_done.py` is fixed by PR #912 (merged as 884ee83e, AC ACS-200f-3): column-0 anchored write, line endings preserved, atomic, re-parse verified, confirmed 2026-09-25 by a red/green/mutation-proof run. Still open: `approve_acs.py:221-222` has the same unanchored first-match replace for `readiness: reviewed`, and the LF-to-CRLF rewrite remains in `approve_acs._promote_leaf`, `_gtfa_implemented_by` and the other writers listed below.
 - **Where:** `scripts/ac_store/mark_ac_done.py:164-184`; same pattern in `scripts/ac_store/approve_acs.py:221-222` (`readiness: reviewed`, inferred).
 
 ## Symptom

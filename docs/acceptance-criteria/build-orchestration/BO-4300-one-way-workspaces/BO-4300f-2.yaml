@@ -218,7 +218,8 @@ amended_by:
     declared-list shape test. readiness stays reviewed.
 superseded_by: null
 covered_by: [BO-4300f-2-i, BO-4300f-2-ia, BO-4300f-2-ib]
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260927-BO-4300f-2.md
 notes: |
   Migration plan step 9. "Removed rather than left alongside" is the point: the tracked and
   deployed copies of today's script already differ on purpose and a test enforces the drift
@@ -231,3 +232,4 @@ notes: |
   post-merge shims (KI-CG-20260914-post-merge-stage-registers-but-installs-no-shim) and leave
   ticket_path_final as the only ticket location callers have. The census tests above are why no
   fifth recipe can grow back after the cut-over.
+target_epic: EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace

@@ -74,7 +74,9 @@ created: 2026-09-25
 amended_by: []
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260927-BO-4300f-4-i.md
 notes: |
   F14: git worktree list in leafcutter-ai includes a worktree under the pytest temp directory;
   KI-TQ-012 wrote fixture identity into the real repository's config.
+target_epic: EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace

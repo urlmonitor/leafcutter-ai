@@ -71,7 +71,9 @@ created: 2026-09-25
 amended_by: []
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260927-BO-4300e-2-i.md
 notes: |
   close-worktree.md carries a \\?\ escape for MAX_PATH on remove; the decision memo keeps it
   for the clone rmtree. Without it, removal half-succeeds on Windows.
+target_epic: EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace

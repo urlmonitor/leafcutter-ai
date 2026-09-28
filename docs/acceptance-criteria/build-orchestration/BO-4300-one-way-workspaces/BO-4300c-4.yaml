@@ -104,8 +104,10 @@ amended_by:
     from BO-4300c-3. readiness reset to reviewed.
 superseded_by: null
 covered_by: [BO-4300c-4-i, BO-4300c-4-ii]
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260927-BO-4300c-4.md
 notes: |
   F2 / F4: the fast lane has twice seen worktree-agent echo a made-up path, and falls back to
   the path the model claimed when its verify reply is empty. Taking the location from prose is
   the same class as falling back to the current checkout.
+target_epic: EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace

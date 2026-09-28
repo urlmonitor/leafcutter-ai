@@ -88,7 +88,9 @@ created: 2026-09-25
 amended_by: []
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260927-BO-4300d-2-ii.md
 notes: |
   The "prior state" axis of the migration plan's test matrix. Decision memo: a half-made clone
   is a directory without the maker's record and can be deleted and redone.
+target_epic: EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace

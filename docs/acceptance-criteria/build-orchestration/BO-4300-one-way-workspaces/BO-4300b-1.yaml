@@ -168,9 +168,11 @@ amended_by:
     readiness reset to reviewed for re-approval.
 superseded_by: null
 covered_by: [BO-4300b-1-i]
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260927-BO-4300b-1.md
 notes: |
   F3 (results depend on the working directory): the 2026-09-25 run started from the workspace
   parent, where bare version-control commands fail; the base resolver returns nulls from the
   parent and the right answer from inside the project. Starting points are the "invocation
   cwd" axis of the migration plan's test matrix (section 6.1).
+target_epic: EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace

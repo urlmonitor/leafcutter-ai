@@ -129,8 +129,10 @@ amended_by:
     fixture commits never use `git -C <path> commit`. readiness reset to reviewed.
 superseded_by: null
 covered_by: [BO-4300f-4-i]
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260927-BO-4300f-4.md
 notes: |
   F13: most behavioural fast-lane tests exercise the tracked scripts/ copy rather than the
   deployed template, no test runs the template's ac or fast-lane create against a real
   repository, and tests/test_setup_ticket_worktree.py has 41 mock sites. Migration plan 6.1.
+target_epic: EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace

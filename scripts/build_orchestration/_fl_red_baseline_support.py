@@ -20,6 +20,56 @@ ARCHITECTURE: verify_red_baseline itself (and the ``_run_pytest_and_parse``
     module dict. None of the names in THIS module are patched via
     "fast_lane.<name>", so they can live here and be imported normally by
     fast_lane.py without disturbing any test.
+
+    TQ-500f-3-i (absence-only-red refusal): the private helpers below
+    (``_load_declared_test_names``, ``_refuse_absence_only_declared_reds``)
+    extend this SAME reader with the rule that a newly-added covering test
+    whose AC ``test_spec`` entry declares ``must_catch`` (non-empty) or
+    ``angle: discrimination`` — read from the AC record's own ``test_spec``
+    field only, NEVER from its ``criteria``/``title``/``notes`` prose — is
+    refused as red evidence when its only red is an absence red (an
+    import/name/attribute lookup error raised before any code under test
+    ran, classified from the SAME single pytest run's own output via
+    ``done_proof_kind_support._run_pytest_and_parse_with_kind`` — never
+    from a self-reported label). This is opt-in: ``verify_red_baseline``
+    only calls these helpers when its caller supplies ``ac_root``, so a
+    caller that omits it gets byte-identical behaviour to before this AC.
+
+    H-2 FIX (pr-reviewer finding): declared-name matching now normalises a
+    nodeid via ``done_proof._nodeid_function_name`` (strip any ``[params]``
+    suffix, then take the last ``::``-delimited segment) instead of a bare
+    ``nodeid.rsplit("::", 1)[-1]`` — a parametrized declared test's nodeid
+    (``test_x[case0]``) never equalled its bare declared name before this
+    fix, so it was silently accepted as ordinary red evidence rather than
+    refused. Two further fail-closed gaps closed alongside it: a declared
+    ``test_spec`` name with NO matching newly-added test at all (checked
+    against ALL declared names together — the gate stays permissive when at
+    least one OTHER declared name in the same batch IS matched and properly
+    red, matching today's accepted control shape), and an ``--ac-root``
+    whose named AC record cannot be loaded at all — both now fail the gate
+    closed with their own distinct reason rather than silently degrading to
+    "nothing was declared".
+
+    H-4 FIX (pr-reviewer finding; user decision, option A — scope note):
+    ``done_proof._find_nodeid_for_test`` (the covers-tag-to-nodeid resolver
+    every newly-added tag's outcome/kind lookup goes through) matches by
+    ``(file_basename, bare_func_name)`` only, so two genuinely DISTINCT
+    covers tags that share both — two classes in one file with the same
+    method name, or two files sharing a basename in different package
+    directories — collapse onto the SAME resolved nodeid. That collapse
+    itself is PRE-EXISTING in done_proof.py, which already sits over the
+    file-size ratchet; fixing the resolver's own precision is deferred to a
+    separate AC. THIS module's fix is the coarser, batch-wide safety net
+    ``_detect_ambiguous_tag_identities`` provides: whenever two newly-added
+    tags in the batch share ``(function, file_basename)`` — the exact
+    condition that makes ``_find_nodeid_for_test`` unable to tell them apart
+    — the gate fails closed with ``"ambiguous_test_identity"`` before even
+    running pytest, rather than silently reporting a wrong kind, a wrong
+    acceptance, or a wrong refusal for either colliding test. Checked over
+    the WHOLE batch, not scoped to a single AC id or to declared tags only —
+    an unrelated, undeclared collision elsewhere in the same batch still
+    trips it (the ambiguity poisons trust in every resolved nodeid in the
+    batch, not just the colliding pair's own).
 """
 
 from __future__ import annotations
@@ -27,7 +77,12 @@ from __future__ import annotations
 import subprocess
 from pathlib import Path
 
-from _fl_common import _TEST_DEF_RE, _find_nodeid_for_test
+from _fl_common import (
+    _TEST_DEF_RE,
+    _find_nodeid_for_test,
+    _load_ac_by_id,
+    _nodeid_function_name,
+)
 
 
 class _RedBaselineGitError(Exception):
@@ -317,6 +372,7 @@ def _red_baseline_verdict(
     green_at_baseline: list[dict] | None = None,
     inconclusive: list[dict] | None = None,
     preexisting: list[dict] | None = None,
+    refused: list[dict] | None = None,
 ) -> dict:
     """Assemble the pinned verify_red_baseline return shape.
 
@@ -330,10 +386,15 @@ def _red_baseline_verdict(
             ``[]``.
         preexisting: Pre-existing tests, excluded from the verdict.  Defaults
             to ``[]``.
+        refused: TQ-500f-3-i — declared (must_catch / angle:discrimination)
+            newly-added covering tests whose only red was an absence red,
+            each ``{"nodeid", "ac_id", "kind": "absence", "message"}``.
+            Additive key; always present (``[]`` when unused or when no
+            caller-supplied ``ac_root`` is given). Defaults to ``[]``.
 
     Returns:
         Dict with exactly the keys ``gate_passed``, ``reason``, ``red``,
-        ``green_at_baseline``, ``inconclusive``, ``preexisting``.
+        ``green_at_baseline``, ``inconclusive``, ``preexisting``, ``refused``.
     """
     return {
         "gate_passed": gate_passed,
@@ -342,7 +403,272 @@ def _red_baseline_verdict(
         "green_at_baseline": green_at_baseline or [],
         "inconclusive": inconclusive or [],
         "preexisting": preexisting or [],
+        "refused": refused or [],
     }
+
+
+# ---------------------------------------------------------------------------
+# TQ-500f-3-i — absence-only-red refusal for a DECLARED covering test.
+# ---------------------------------------------------------------------------
+
+# The DECLARED signal's decided text (TQ-500f-3-i criteria): a refused
+# entry's message states that a test naming wrong versions to catch must
+# fail by reaching the code — never a generic "this test failed" message.
+_REACH_THE_CODE_MESSAGE = (
+    "A test naming wrong versions to catch must fail by reaching the code, "
+    "not by failing to import or find the thing it names."
+)
+
+
+def _is_declared_test_spec_entry(entry: dict) -> bool:
+    """Return whether one AC ``test_spec`` entry declares a discrimination guard.
+
+    Declared per TQ-500f-3-i's it_requirements: ``must_catch`` is present and
+    non-empty, OR ``angle`` equals ``"discrimination"`` — read from the entry
+    itself, never inferred from any other field.
+
+    Args:
+        entry: One ``test_spec`` list entry (a dict) from an AC record.
+
+    Returns:
+        True when the entry declares a discrimination guard.
+    """
+    return bool(entry.get("must_catch")) or entry.get("angle") == "discrimination"
+
+
+def _load_declared_test_names(
+    ac_ids: list[str], ac_root: Path
+) -> tuple[set[str], list[str]]:
+    """Collect every declared test_spec entry name across *ac_ids*' AC records.
+
+    Reads ONLY each covering AC's own ``test_spec`` field (TQ-500f-3-i: "the
+    decision uses only what the test requirements declare and the outcome of
+    the run — never the wording of the requirement") — ``criteria``,
+    ``title``, and ``notes`` are never consulted.
+
+    Args:
+        ac_ids: Batch of AC ids to load ``test_spec`` from.
+        ac_root: Root directory of the AC YAML store.
+
+    Returns:
+        ``(declared_names, unavailable_ac_ids)`` — the set of test function
+        names declared by ``must_catch`` or ``angle: discrimination`` on any
+        of *ac_ids*' ``test_spec`` entries, and the list of *ac_ids* whose
+        record could not be loaded at all (H-2 fix: an unloadable record is
+        reported distinctly, never silently folded into "nothing declared").
+    """
+    declared: set[str] = set()
+    unavailable: list[str] = []
+    for ac_id in ac_ids:
+        record = _load_ac_by_id(ac_root, ac_id)
+        if record is None:
+            unavailable.append(ac_id)
+            continue
+        for entry in record.get("test_spec") or []:
+            name = entry.get("name") if isinstance(entry, dict) else None
+            if name and _is_declared_test_spec_entry(entry):
+                declared.add(name)
+    return declared, unavailable
+
+
+def _any_declared_name_matched(
+    newly_added_tags: list[dict], declared_names: set[str]
+) -> bool:
+    """Return whether at least one newly-added tag matches a declared name.
+
+    H-2 fix: a declared ``test_spec`` entry with NO corresponding
+    newly-added test at all must not let the batch pass unchallenged on an
+    unrelated red test, as if nothing had been declared. Checked over ALL
+    declared names together (not per-name) so a batch where at least one
+    OTHER declared name IS matched and properly red keeps today's accepted
+    shape — only a batch where NONE of the declared names were ever
+    attempted fails closed (see :func:`_refuse_absence_only_declared_reds`'s
+    caller in ``verify_red_baseline`` for where this is consulted).
+
+    Args:
+        newly_added_tags: Covers-tag dicts classified newly-added by
+            :func:`_partition_newly_added` (each carries a ``"function"``
+            key — the bare, source-scanned def name, never bracket-suffixed).
+        declared_names: Test function names from :func:`_load_declared_test_names`.
+
+    Returns:
+        True iff at least one newly-added tag's function name is declared.
+    """
+    return any(tag["function"] in declared_names for tag in newly_added_tags)
+
+
+def _detect_ambiguous_tag_identities(newly_added_tags: list[dict]) -> bool:
+    """Return whether two newly-added tags share ``(function, file_basename)``.
+
+    That pair is exactly the key ``done_proof._find_nodeid_for_test`` matches
+    on — two tags sharing it cannot be told apart by the resolver every
+    outcome/kind lookup in this module goes through, so resolving either
+    tag's nodeid is unsafe (see this module's H-4 ARCHITECTURE note).
+
+    Args:
+        newly_added_tags: Covers-tag dicts classified newly-added by
+            :func:`_partition_newly_added`.
+
+    Returns:
+        True iff at least one ``(function, file_basename)`` pair is shared
+        by two or more tags in *newly_added_tags*.
+    """
+    counts: dict[tuple[str, str], int] = {}
+    for tag in newly_added_tags:
+        key = (tag["function"], Path(tag["file"]).name)
+        counts[key] = counts.get(key, 0) + 1
+    return any(count > 1 for count in counts.values())
+
+
+def _declared_names_preflight(
+    ac_ids: list[str], ac_root: Path, newly_added_tags: list[dict]
+) -> tuple[set[str], str | None]:
+    """Load declared names and check the two H-2 fail-closed preconditions.
+
+    Combines :func:`_load_declared_test_names` and
+    :func:`_any_declared_name_matched` into the one pre-pytest check
+    ``verify_red_baseline`` needs, so its own body only branches on the
+    result rather than repeating this composition inline.
+
+    Args:
+        ac_ids: Batch of AC ids whose ``test_spec`` establishes declared names.
+        ac_root: Root directory of the AC YAML store.
+        newly_added_tags: Covers-tag dicts classified newly-added by
+            :func:`_partition_newly_added`.
+
+    Returns:
+        ``(declared_names, reason)`` — *reason* is ``None`` when neither
+        precondition failed, else ``"declared_ac_record_unavailable"`` or
+        ``"declared_test_missing_no_matching_test"``.
+    """
+    declared_names, unavailable_ac_ids = _load_declared_test_names(ac_ids, ac_root)
+    if unavailable_ac_ids:
+        return declared_names, "declared_ac_record_unavailable"
+    if declared_names and not _any_declared_name_matched(newly_added_tags, declared_names):
+        return declared_names, "declared_test_missing_no_matching_test"
+    return declared_names, None
+
+
+def _refuse_absence_only_declared_reds(
+    red: list[dict],
+    kind_by_nodeid: dict[str, str],
+    declared_names: set[str],
+) -> tuple[list[dict], list[dict], list[dict]]:
+    """Partition *red* into (kept_red, refused, undetermined) per TQ-500f-3-i's rule.
+
+    A red entry is refused when its function name is in *declared_names* AND
+    its kind (from *kind_by_nodeid*) is ``"absence"``. A declared entry whose
+    kind could not be determined from the run's own output is fail-closed
+    (TQ-500f-3-i: "a declared test whose kind of red cannot be determined is
+    not accepted as red evidence"): moved into ``undetermined`` rather than
+    ``kept_red`` (H-1 fix: the caller reports this with its OWN distinct
+    reason — ``declared_test_kind_undetermined`` — never silently as
+    ``all_new_tests_green_at_baseline``, which would be a lie about a test
+    that actually FAILED). An undeclared entry, and a declared entry whose
+    kind is ``"assertion"``, both stay in ``red`` unchanged.
+
+    H-2 fix: the function name is read via ``done_proof._nodeid_function_name``
+    (strips any ``[params]`` parametrize suffix before taking the last
+    ``::`` segment) rather than a bare ``rsplit``, so a parametrized declared
+    test (``test_x[case0]``) matches its bare declared name (``test_x``)
+    exactly like an unparametrized one does.
+
+    Args:
+        red: Newly-added tests already classified red by
+            :func:`_classify_newly_added`.
+        kind_by_nodeid: ``{nodeid: "absence" | "assertion"}`` from
+            ``done_proof_kind_support._run_pytest_and_parse_with_kind``.
+        declared_names: Test function names declaring a discrimination guard,
+            from :func:`_load_declared_test_names`.
+
+    Returns:
+        ``(kept_red, refused, undetermined)`` — ``kept_red`` is *red* minus
+        refused and undetermined entries, in original order; ``refused``
+        carries one ``{"nodeid", "ac_id", "kind": "absence", "message"}``
+        entry per refusal; ``undetermined`` carries the original red entries
+        whose kind could not be resolved.
+    """
+    kept: list[dict] = []
+    refused: list[dict] = []
+    undetermined: list[dict] = []
+    for entry in red:
+        nodeid = entry["nodeid"]
+        func_name = _nodeid_function_name(nodeid)
+        if func_name not in declared_names:
+            kept.append(entry)
+            continue
+        kind = kind_by_nodeid.get(nodeid)
+        if kind == "absence":
+            refused.append(
+                {
+                    "nodeid": nodeid,
+                    "ac_id": entry["ac_id"],
+                    "kind": "absence",
+                    "message": _REACH_THE_CODE_MESSAGE,
+                }
+            )
+        elif kind == "assertion":
+            kept.append(entry)
+        else:
+            # kind is None (undetermined from this run's own output): fail
+            # closed — never kept as red, never silently dropped either.
+            undetermined.append(entry)
+    return kept, refused, undetermined
+
+
+def _classify_declared_reds(
+    red: list[dict],
+    kind_by_nodeid: dict[str, str],
+    declared_names: set[str],
+    green_at_baseline: list[dict],
+    inconclusive: list[dict],
+    preexisting: list[dict],
+) -> tuple[list[dict], list[dict], dict | None]:
+    """Run the H-1/H-2 refusal partition and build an early verdict when needed.
+
+    Composes :func:`_refuse_absence_only_declared_reds` with the two verdicts
+    a refused or undetermined declared red produces, so ``verify_red_baseline``
+    itself only branches on whether an early verdict was built.
+
+    Args:
+        red: Newly-added tests already classified red.
+        kind_by_nodeid: ``{nodeid: "absence" | "assertion"}``.
+        declared_names: Declared test_spec names from :func:`_load_declared_test_names`.
+        green_at_baseline: Newly-added tests classified green (report passthrough).
+        inconclusive: Newly-added tests classified inconclusive (report passthrough).
+        preexisting: Pre-existing tests (report passthrough).
+
+    Returns:
+        ``(red, refused, early_verdict)`` — *red* and *refused* are the
+        partition's own output; *early_verdict* is a fully-built
+        ``_red_baseline_verdict`` dict the caller must return immediately
+        when not ``None`` (a refusal or an undetermined kind fired), else
+        ``None`` to signal the caller should continue its own flow.
+    """
+    kept_red, refused, undetermined = _refuse_absence_only_declared_reds(
+        red, kind_by_nodeid, declared_names
+    )
+    if refused:
+        return kept_red, refused, _red_baseline_verdict(
+            gate_passed=False,
+            reason="declared_test_refused_absence_only_red",
+            red=kept_red,
+            green_at_baseline=green_at_baseline,
+            inconclusive=inconclusive,
+            preexisting=preexisting,
+            refused=refused,
+        )
+    if undetermined:
+        return kept_red, refused, _red_baseline_verdict(
+            gate_passed=False,
+            reason="declared_test_kind_undetermined",
+            red=kept_red,
+            green_at_baseline=green_at_baseline,
+            inconclusive=inconclusive + undetermined,
+            preexisting=preexisting,
+            refused=refused,
+        )
+    return kept_red, refused, None
 
 
 # ====================================================================

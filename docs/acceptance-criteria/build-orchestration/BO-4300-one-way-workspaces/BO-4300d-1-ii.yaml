@@ -96,8 +96,10 @@ created: 2026-09-25
 amended_by: []
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260927-BO-4300d-1-ii.md
 notes: |
   "Never makes a twin" under concurrency: two parallel drives or a retry racing its original.
   Not in the analysis as a measured failure; added because an idempotent single-caller design
   passes every other record here and still races.
+target_epic: EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace
