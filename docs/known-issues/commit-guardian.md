@@ -73,13 +73,12 @@ Severity in the **filename** is a three-level index bucket (`blocker` / `high` /
 
 Fixed issues move to [`commit-guardian/resolved/`](commit-guardian/resolved/) and are no longer listed as open. They are kept, not deleted.
 
-**Open: 71** (3 blocker, 30 high, 38 low) · **Resolved: 16**
+**Open: 70** (2 blocker, 30 high, 38 low) · **Resolved: 17**
 
 ## Open
 
 | Severity | Issue | File |
 |---|---|---|
-| `blocker` | KI-CG-008 — `check-doc-frontmatter` crashes with a `TypeError` on any non-string entry in `related_docs`, making the labelled-list form uncommittable | [open-blocker-ki-cg-008.md](commit-guardian/open-blocker-ki-cg-008.md) |
 | `blocker` | KI-CG-20260909-gate-complexity — `check-complexity` judges every function absolutely, so registering it refuses 49 existing files including the two most-edited in the repo | [open-blocker-ki-cg-20260909-gate-complexity.md](commit-guardian/open-blocker-ki-cg-20260909-gate-complexity.md) |
 | `blocker` | KI-CG-20260909-gate-root-files — `check-root-files` refuses 5 legitimate root files and matches `M`, so registering it makes `ruff.toml` and `LEAFCUTTER_VERSION` permanently uneditable | [open-blocker-ki-cg-20260909-gate-root-files.md](commit-guardian/open-blocker-ki-cg-20260909-gate-root-files.md) |
 | `high` | KI-CG-001 — AC hooks are scoped to the git index, so parent-level drift is unreachable | [open-high-ki-cg-001.md](commit-guardian/open-high-ki-cg-001.md) |
@@ -155,6 +154,7 @@ Fixed issues move to [`commit-guardian/resolved/`](commit-guardian/resolved/) an
 
 | Severity | Issue | File |
 |---|---|---|
+| `blocker` | KI-CG-008 — `check-doc-frontmatter` crashes with a `TypeError` on any non-string entry in `related_docs`, making the labelled-list form uncommittable — RESOLVED: GE-118d added `scripts/frontmatter_path_resolver.py` as the shared entry-shape resolver and wired `validate_paths()` to it; a multi-key mapping is refused by name rather than taking all its values | [resolved-blocker-ki-cg-008.md](commit-guardian/resolved/resolved-blocker-ki-cg-008.md) |
 | `blocker` | KI-CG-005 — `check-product-truth-validate` / `check-product-truth-generate` hard-fail on an absent, explicitly optional product-truth store, gating every AC YAML commit — RESOLVED: EPIC-TruthfulProjectRecord's write-if-absent empty-record scaffold + fail-open "nothing-examined" outcome mean the described scenario now exits 0 | [resolved-blocker-ki-cg-005.md](commit-guardian/resolved/resolved-blocker-ki-cg-005.md) |
 | `blocker` | KI-CG-20260831-0713 — a fresh consumer install could not make its first commit because check-hook-trigger-reachability failed it (resolved by BP-100k-4-ii and BP-100k-4-iii; unreachable=0 on 2026-09-28) | [resolved-blocker-ki-cg-20260831-0713.md](commit-guardian/resolved/resolved-blocker-ki-cg-20260831-0713.md) |
 | `high` | KI-CG-017 — `check-build-drift` is filtered on the consumer layout path, so it has never run on this repo's own template changes | [resolved-high-ki-cg-017.md](commit-guardian/resolved/resolved-high-ki-cg-017.md) |

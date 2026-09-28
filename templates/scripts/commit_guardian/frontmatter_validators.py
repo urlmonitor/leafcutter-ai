@@ -35,6 +35,25 @@ from doc_type_validators import (
     validate_requires_documentation,
 )
 
+# GE-118d: validate_paths() resolves each path-bearing frontmatter entry via
+# the shared top-level resolver scripts/frontmatter_path_resolver.py (ONE
+# ROUTINE, ONE DECLARED ACCEPTED-SHAPE SET, IN EXACTLY ONE PLACE -- see that
+# module's own docstring and this ticket's Implementation Notes). The
+# sibling locator module bridges the import across every layout this file
+# runs from, including the symlinked-deploy realpath hazard -- see its own
+# docstring for why a naive Path(__file__).resolve().parent.parent is not
+# sufficient here.
+from _frontmatter_path_resolver_locator import (  # noqa: E402
+    ensure_frontmatter_path_resolver_on_syspath,
+)
+
+ensure_frontmatter_path_resolver_on_syspath()
+
+from frontmatter_path_resolver import (  # noqa: E402
+    PathEntryRefusal,
+    resolve_frontmatter_path_entry,
+)
+
 
 def extract_frontmatter(content: str) -> tuple[dict[str, Any] | None, str]:
     """Extract YAML frontmatter and body from markdown content.
@@ -227,25 +246,42 @@ def validate_paths(fm: dict[str, Any], project_root_path: Path) -> list[str]:
     """Check that paths in optional path fields actually exist on disk.
 
     Broken paths block the commit — if you reference a file, it must exist.
+    Each list element is classified by the shared
+    ``resolve_frontmatter_path_entry`` resolver (GE-118d) rather than by an
+    inline type check here — a bare string and a single-key mapping
+    (``{field_name: path_string}``) are both accepted shapes; an
+    unsupported shape (e.g. a multi-key mapping) is refused by the resolver
+    rather than raising, and is reported here as its own error naming the
+    accepted-shape set instead of the parsed element's repr.
 
     Args:
         fm: Parsed frontmatter dictionary.
         project_root_path: Absolute path to the project root.
 
     Returns:
-        list[str]: Error messages for paths that do not exist.
+        list[str]: Error messages for paths that do not exist, plus one
+            error per entry whose shape the resolver refuses.
     """
     errors = []
     path_fields = ["related_docs", "related_code", "architecture_diagrams"]
 
     for field in path_fields:
-        paths = fm.get(field)
-        if not paths or not isinstance(paths, list):
+        entries = fm.get(field)
+        if not entries or not isinstance(entries, list):
             continue
-        for p in paths:
-            full_path = project_root_path / p
+        for entry in entries:
+            resolved = resolve_frontmatter_path_entry(entry, field)
+            if isinstance(resolved, PathEntryRefusal):
+                errors.append(
+                    f"Unsupported entry in '{field}': accepted shapes are "
+                    f"{', '.join(resolved.accepted_shapes)}"
+                )
+                continue
+            full_path = project_root_path / resolved
             if not full_path.exists():
-                errors.append(f"Broken path in '{field}': '{p}' does not exist")
+                errors.append(
+                    f"Broken path in '{field}': '{resolved}' does not exist"
+                )
 
     return errors
 
@@ -586,6 +622,30 @@ def validate_ticket_file(filepath: str, valid_components: set[str],
 ====================================================================
 DECISION HISTORY
 ====================================================================
+- 2026-09-28 [python-coder/GE-118d]: validate_paths() now resolves each
+  related_docs / related_code / architecture_diagrams element via the new
+  shared resolver scripts/frontmatter_path_resolver.py's
+  resolve_frontmatter_path_entry(), instead of assuming every element is a
+  bare string and doing project_root_path / p directly. A labelled entry
+  (single-key mapping, e.g. {"explanation": "docs/foo.md"}) previously
+  raised TypeError: unsupported operand type(s) for /: 'PosixPath' and
+  'dict' (docs/known-issues/commit-guardian/open-blocker-ki-cg-008.md). The
+  resolver is imported via the new sibling module
+  _frontmatter_path_resolver_locator.py, which tries an immediate-sibling
+  candidate first (this file's own resolved __file__.parent.parent) --
+  correct for a real build.py deploy, where build_workflow_tools() is
+  actually invoked with output_root (not target_root, despite its
+  docstring) as its deploy root, so frontmatter_path_resolver.py lands as a
+  TRUE sibling of the (possibly symlinked) commit_guardian/ directory under
+  <output_root>/scripts/ -- then falls back to a project-root walk (.git /
+  CLAUDE.md marker on its own __file__, never cwd) for the raw templates/
+  source tree, where the resolver instead lives at the true project root's
+  scripts/ directory. A resolver refusal (unsupported shape, e.g. a
+  multi-key mapping) is reported as its own error naming the field and the
+  accepted-shape set, never the parsed element's repr -- deliberately NOT
+  the multi-key "take all values" fix the known-issue's own sketch
+  suggested. Bare-string verdicts are unchanged (regression-tested against
+  a real tracked document).
 - 2026-09-08 [python-coder/EPIC-StartingNewWorkTheProperWayAlways]:
   validate_depends_on() now accepts a second spelling for a depends_on entry,
   via the new _prefixed_depends_candidates() helper: a repo-relative prefixed
