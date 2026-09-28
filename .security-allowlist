@@ -295,6 +295,30 @@ ENTROPY_HIGH:unit_tests/build_guards/test_inf_700a_1_i_reachability.py:*
 ENTROPY_HIGH:docs/known-issues/commit-guardian.md:*
 ENTROPY_HIGH:docs/known-issues/testing-quality/open-high-ki-tq-20260831-mutation-probe-lands-in-the-wrong-copy.md:*
 
+# GE-127d-1 (2026-09-21). Two false-positive shapes, both with precedent above.
+#
+# GENERIC_SECRET on a module-level sentinel constant whose assigned value repeats
+# its own name — the token the parity gate prints on a mismatch and the fixture
+# greps for, so both must name the same literal. NOT reproduced here: quoting it
+# is what trips the scanner, which is the same reason the test-class-name entries
+# above describe rather than quote. Same shape as the `_SPECIAL_TOKEN` entries for
+# registry_validator.py and check_agent_spawn_consistency.py: a constant whose
+# value IS its meaning, not a credential.
+#
+# ENTROPY_HIGH on a long CamelCase TestCase name spelling out the behaviour being
+# reached — same shape as the test-class-name entries above, and not reproduced
+# here for the same reason: quoting it would trip the scanner this entry exists
+# to suppress.
+#
+# Globs, not line numbers: the gate is under active hardening (two known guard
+# asymmetries outstanding) and the test files gain descriptors, so a pinned line
+# would rot silently. Only the three files that actually trip the scanner are
+# listed — the two sibling test files scan clean today and are deliberately not
+# pre-emptively suppressed.
+GENERIC_SECRET:templates/scripts/commit_guardian/check_file_size_rule_parity.py:*
+GENERIC_SECRET:unit_tests/commit_guardian/_ge_127d_1_fixture.py:*
+ENTROPY_HIGH:unit_tests/commit_guardian/test_ge_127d_1.py:*
+
 # A keyword argument passing a module-level constant of edit-surface relationship
 # names into a helper call -- ordinary code, no credential (not reproduced here for
 # the same reason as the entries above: quoting it would trip the scanner this entry
