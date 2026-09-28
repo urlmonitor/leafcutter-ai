@@ -1,0 +1,59 @@
+id: TQ-500g-3-i
+components:
+  - testing_quality
+  - build_orchestration
+title: "An edit to an existing test that the sweep list does not name stops the work"
+component: testing-quality
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given two pieces of work, each changing three test files that existed before
+    the work began — test_refresh.py, test_retry.py and test_export.py —
+    and each adding a new file test_refresh_gate.py,
+      W1: its sweep list names the edits in test_refresh.py and test_retry.py
+          only,
+      W2: its sweep list names the edits in all three existing files,
+  When each piece of work reaches the step before commit,
+  Then W1 stops, naming test_export.py and the tests changed in it as edits to
+      existing tests that the sweep list does not name,
+    And W2 goes on,
+    And test_refresh_gate.py, added by the work, is not treated as an existing
+      test in either piece of work,
+    And the decision comes from comparing the work with the code as it was
+      before the work began, and from the sweep list — never from the
+      writer's statement that its list is complete.
+depends_on:
+  - TQ-500g-3
+doc_links:
+  - path: templates/agents/test-writer.md
+    relationship: relates-to
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: null
+delivers_to: null
+expects_from:
+  - ac_id: TQ-500g-3
+    contract: "The sweep list in the hand-off: each existing test touched, by name and file."
+origin_agent: business-analyst
+created: 2026-09-28
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  THE FALSIFIABLE HALF OF "EVERY CHANGE TO ONE IS LISTED" (TQ-500g criteria).
+  W2 is the control: a check that stops every piece of work that touches an
+  existing test would pass W1 and bring back the blanket ban.
+
+  TECHNICAL DETAIL FOR IT-PO: "existed before the work began" is the file at
+  the merge base the routes already use. Granularity (file or test function) is
+  IT-PO's call; the criteria name tests, so a function-level comparison is the
+  intent. Which route runs it: all of them, through one shared check (the
+  both-lanes rule); wiring can ride the same step as the wrong-version runs.

@@ -1,0 +1,82 @@
+id: TQ-500g-1-v
+components:
+  - testing_quality
+  - build_orchestration
+title: "The fast lane makes the wrong-version runs before it commits, as a guard added beside its two existing checks"
+component: testing-quality
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given three pieces of work built through the fast lane —
+      F1: a fix whose guarding test names must_catch
+          ["drop the retry_due condition"], and fails under it,
+      F2: a fix whose guarding test names the same wrong version, and still
+          passes under it,
+      F3: work whose tests name no wrong version and declare no
+          discrimination angle,
+    each of which has passed the check that its tests were red before the code
+    and the check that its tests are green and cover the requirement,
+  When each reaches the step before commit,
+  Then the fast lane makes the wrong-version runs through the one shared
+      runner, with the same requirement ids, test root and base the other
+      routes pass,
+    And F1 goes on to commit and open its pull request,
+    And F2 stops before commit, no pull request is opened, and the stop
+      carries the runner's report naming the test and the surviving wrong
+      version,
+    And F3 goes on with "wrong-version runs not applicable: no test names a
+      wrong version" in its outcome, never "verified",
+    And the red-before-the-code check and the green-and-covering check still
+      run and still stop the work as they do today; the runs are added beside
+      them, never in place of either,
+    And for the same tests and outcomes the fast lane's verdict is identical
+      to /build-feature's.
+depends_on:
+  - TQ-500g-1
+  - TQ-500g-1-i
+doc_links:
+  - path: docs/how-to/fast-lane-build.md
+    relationship: describes
+    status: exists
+    relevance: "The fast lane's step sequence: verify_red_baseline, the coder, verify_green_and_coverage, commit, PR. The runs go after verify_green_and_coverage and before commit."
+  - path: templates/workflows-js/fast-lane-ship.js
+    relationship: describes
+    status: exists
+    relevance: "The fast-lane workflow; runs its gates through a depth-1 executor agent."
+assigned_agent: python-coder
+estimated_complexity: null
+delivers_to: null
+expects_from:
+  - ac_id: TQ-500g-1-i
+    contract: "The shared runner's CLI and its machine-readable stop/continue verdict."
+origin_agent: business-analyst
+created: 2026-09-28
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - pipeline
+  - code
+risk_surface: contract_boundary
+notes: |
+  BOTH LANES, SHARED SCRIPTS (user direction at the Phase A BA gate,
+  2026-09-25): an ADDITIONAL guard beside verify_red_baseline and
+  verify_green_and_coverage, never a replacement and never a lane-specific
+  copy. Build one shared command constructor with TQ-500g-1-vi so the routes
+  cannot drift (the TQ-500f-3-ii precedent).
+
+  F3 IS THE CONTROL. Most fast-lane work names no wrong version; it must not be
+  slowed or stopped, and it must never be reported as verified by runs that
+  never happened.
+
+  TESTABILITY: drive fast-lane-ship.js under the workflow-engine harness and
+  assert on the recorded dispatches (runner invoked after the green check and
+  before commit; the verdict consumed in control flow). A grep of the workflow
+  source for the runner's name is not acceptable (CLAUDE.md, Verify
+  Behaviorally, Not by Grep).

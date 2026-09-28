@@ -1,0 +1,70 @@
+id: TQ-200d-1-i
+components:
+  - testing_quality
+  - llm_authoring
+title: "The refresh-gate row is scored by running the produced test against the wrong version, not by a judge's opinion of it"
+component: testing-quality
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the test writer's output for the "refresh gate" row is a test and a
+    report, and three such outputs are scored —
+      O1: a test that passes on the gate as written and fails when the
+          retry_due condition is dropped, with a report naming that wrong
+          version,
+      O2: a test whose fixture sets refresh_due but never retry_due, so it
+          passes on the gate as written and also when the retry_due condition
+          is dropped, with a report that says it catches that wrong version,
+      O3: the same test as O1, with a report that names no wrong version,
+  When the row is scored,
+  Then the test half of the score comes from running each produced test on
+      the gate as written and on the gate with the retry_due condition
+      dropped, through the same wrong-version runner the build routes use,
+    And O1 passes both halves,
+    And O2 fails the test half, whatever its report or a judge says about it,
+    And O3 passes the test half and fails the report half,
+    And the row's result shows the test half and the report half separately.
+depends_on:
+  - TQ-200d-1
+  - TQ-500g-1-i
+doc_links:
+  - path: docs/acceptance-criteria/testing-quality/TQ-500-checks-that-can-fail/TQ-500g-1-i.yaml
+    relationship: relates-to
+    status: exists
+    relevance: "The shared wrong-version runner reused to score the test half."
+  - path: scripts/evals/run_agent_eval.py
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: null
+delivers_to: null
+expects_from:
+  - ac_id: TQ-500g-1-i
+    contract: "The shared runner, callable on a produced test and a named wrong version, returning caught or survived."
+origin_agent: business-analyst
+created: 2026-09-28
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  WHERE A JUDGE IS NOT NEEDED (TQ-200d notes): "the produced test goes red under
+  the wrong version" is a wrong-version run. A judge reading the test would be
+  the opinion TQ-500g exists to replace. The judge is kept for the report half
+  (does it name the wrong version).
+
+  O2 IS INCIDENT 1 ITSELF — a test that says it catches the regression and does
+  not. A judge persuaded by the report would pass it; the run does not.
+  O3 is the control that the two halves are scored apart.
+
+  SEPARATE L3 BECAUSE IT DEPENDS ON TQ-500g-1-i. TQ-200d-1 can ship with a
+  judge-scored row first; this L3 swaps the test half to a run once the runner
+  exists, without holding the whole set back. The fixture refresh module and
+  its wrong version live in the row's sandbox, not in the project's code.

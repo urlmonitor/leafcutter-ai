@@ -1,0 +1,114 @@
+id: TQ-500g-1-viii
+components:
+  - testing_quality
+  - build_orchestration
+title: "On /build-epic, a ticket cannot be committed until both gate verdicts are on record for it, and a missing or unreadable one stops the commit"
+component: testing-quality
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given an epic driven through /build-epic with six tickets, each about to
+    start its commit phase —
+      B1: the red-baseline reader's verdict (passed) and the wrong-version
+          runner's verdict (continue) are both on record for it,
+      B2: the red-baseline verdict is on record, and no wrong-version verdict
+          is,
+      B3: the wrong-version verdict is on record, and the red-baseline record
+          is present but cannot be read (it is cut off part way),
+      B4: both verdicts are on record, and the wrong-version verdict is stop,
+          because "drop the retry_due condition" survived its test,
+      B5: it has no source requirement, and both verdicts on record read "not
+          applicable: no source requirement",
+      B6: both verdicts are on record, but its code changed after the
+          wrong-version verdict was reached,
+  When each ticket's commit phase is about to start,
+  Then B1 goes on to its commit,
+    And B2 does not reach its commit: the drive stops the ticket, naming the
+      missing wrong-version verdict,
+    And B3 does not reach its commit: the drive stops the ticket, naming the
+      red-baseline verdict as unreadable,
+    And B4 does not reach its commit, naming the surviving wrong version, even
+      if the supervisor's own summary says the ticket is ready,
+    And B5 goes on to its commit, and is not recorded as verified,
+    And B6 does not reach its commit, naming the wrong-version verdict as out
+      of date for the code as it now stands,
+    And the check reads the verdicts as the red-baseline reader and the
+      wrong-version runner left them, never the supervisor's account of them.
+depends_on:
+  - TQ-500g-1
+  - TQ-500g-1-vii
+  - TQ-500f-3-iv
+doc_links:
+  - path: docs/acceptance-criteria/testing-quality/TQ-500-checks-that-can-fail/TQ-500f-3-iv.yaml
+    relationship: relates-to
+    status: exists
+    relevance: "The prompt-only /build-epic wiring of the red-baseline reader. This AC is its mechanical backstop."
+  - path: docs/acceptance-criteria/testing-quality/TQ-500-checks-that-can-fail/TQ-500g-1-vii.yaml
+    relationship: relates-to
+    status: exists
+    relevance: "The prompt-only /build-epic wiring of the wrong-version runner. This AC is its mechanical backstop."
+  - path: docs/architecture/components/build-epic-workflow-dispatch.md
+    relationship: describes
+    status: exists
+    relevance: "build-epic.js hands each ticket to ticket-supervisor, which drives the phases up to and including commit."
+  - path: templates/skills/building-epics/SKILL.md
+    relationship: relates-to
+    status: exists
+    relevance: "The supervisor's commit-phase sequence, which the backstop sits in front of."
+assigned_agent: python-coder
+estimated_complexity: null
+delivers_to: null
+expects_from:
+  - ac_id: TQ-500f-3-iv
+    contract: "On /build-epic, the red-baseline reader's own verdict (or its not-applicable outcome) is left on record for each ticket, in a form a check can read."
+  - ac_id: TQ-500g-1-vii
+    contract: "On /build-epic, the wrong-version runner's own verdict (or its not-applicable outcome) is left on record for each ticket, together with what code it was reached against."
+origin_agent: business-analyst
+created: 2026-09-28
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - pipeline
+  - code
+risk_surface: contract_boundary
+notes: |
+  USER DECISION AT THE BA GATE (Q3, 2026-09-28): YES, add a mechanical backstop.
+  TQ-500f-3-iv and TQ-500g-1-vii are prompt-only, so each is only as strong as
+  the supervisor's instruction-following. This AC makes skipping either gate
+  observable and blocking. It fails closed: a missing, unreadable, stop or
+  out-of-date verdict stops the commit.
+
+  PLACEMENT: an L3 under TQ-500g-1 (L3s have no cap), because the commit phase
+  is where TQ-500g-1's runs sit. It also guards TQ-500f-3-iv; that relation is
+  recorded through depends_on and doc_links, not by a second parent.
+
+  WHY B6. The runner's verdict is about the code it ran against. On /build-epic
+  a coder retry after the runs would otherwise commit code nobody ran wrong
+  versions against. The red-baseline verdict has no such rule: it is taken
+  before the coder, and a later code change is expected.
+
+  B5 IS THE CONTROL. Tickets with no source requirement must still reach
+  commit, and a not-applicable record never turns into "verified" (the
+  TQ-500f-3-ii K3 rule).
+
+  FOR IT-PO — WHERE THE CHECK RUNS AND WHERE VERDICTS LIVE. The check must run
+  in code on the path to every /build-epic commit and must not depend on the
+  supervisor choosing to call it. Candidates: build-epic.js before or after
+  dispatching the commit phase, the commit agent's precondition, or a
+  commit-time hook that reads the ticket's recorded verdicts. Where the two
+  prompt ACs leave their verdicts (ticket comments, frontmatter, a per-ticket
+  record file) is set by TQ-500f-3-iv / TQ-500g-1-vii's IT-PO pass and must be
+  readable by this check. The BA did not read source to pick one.
+
+  TESTABILITY: behavioural. Drive the chosen surface with fixture tickets B1 to
+  B6 (for example build-epic.js under the workflow-engine harness, or the hook
+  against staged fixture records) and assert which tickets reach commit. A text
+  search of the building-epics skill is not a proof (CLAUDE.md, Verify
+  Behaviorally, Not by Grep).

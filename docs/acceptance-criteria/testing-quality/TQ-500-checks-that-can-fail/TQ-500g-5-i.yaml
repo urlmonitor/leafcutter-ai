@@ -1,0 +1,56 @@
+id: TQ-500g-5-i
+components:
+  - testing_quality
+  - build_orchestration
+title: "A component diagram shows the one wrong-version runner, the four routes that call it, and what it reuses"
+component: testing-quality
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a reader who wants to know whether a route can go around the
+    wrong-version runs,
+  When they open the component diagram for the runs,
+  Then it shows one runner, called from the fast lane, /build-feature, the
+      single-ticket route and /build-epic, with no route holding a copy of it,
+    And it shows the runner reading the requirement store's test entries
+      (must_catch and the discrimination angle) to decide which tests are in
+      scope,
+    And it shows the one shared reading of test runs used by the runner, the
+      proof-of-done check and the red-baseline check,
+    And it shows the step that prepares named wrong versions as separate from
+      the runner, and the configured test database as the only database the
+      runs use,
+    And it marks /build-epic's call as made through the ticket supervisor's
+      instructions rather than through workflow code.
+depends_on:
+  - TQ-500g-5
+  - TQ-500g-1
+doc_links:
+  - path: docs/architecture/components/build-epic-workflow-dispatch.md
+    relationship: relates-to
+    status: exists
+  - path: docs/architecture/components/phantom-done-prevention.md
+    relationship: relates-to
+    status: exists
+assigned_agent: architecture-diagram-author
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-09-28
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: docs
+risk_surface: internal
+notes: |
+  Answers TQ-500g's component-diagram trigger. Documentation only — see the
+  firewall in TQ-500g-5's notes. Draw from what TQ-500g-1-v, -vi and -vii
+  actually wired; if a route's call is missing at drawing time, the diagram
+  shows it as missing rather than as intended.

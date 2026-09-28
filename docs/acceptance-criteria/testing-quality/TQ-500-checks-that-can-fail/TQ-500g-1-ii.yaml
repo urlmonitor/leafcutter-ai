@@ -1,0 +1,80 @@
+id: TQ-500g-1-ii
+components:
+  - testing_quality
+  - build_orchestration
+title: "A wrong version counts as caught only when the test reached the code, so a version that will not load or changes nothing never passes as caught"
+component: testing-quality
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given the wrong-version runs for requirement TQ-9101, whose test T1 names
+    three wrong versions of refresh_config.py, prepared as —
+      V1 "drop the retry_due condition": a one-line change after which the
+         file still loads,
+      V2 "the gate always allows": through a slip in preparing it, the file
+         no longer loads (it has a syntax error),
+      V3 "retry only once": the prepared file is byte-for-byte identical to
+         the code as written,
+  When the shared runner handles V1, V2 and V3,
+  Then under V1, T1's failure counts as catching V1, because T1 reached
+      refresh_config() and saw a wrong result,
+    And under V2, T1's failure does not count as catching V2: the runner
+      reports V2 as "wrong version did not load — not a valid run", and V2 is
+      neither caught nor survived,
+    And V3 is never run: the runner reports it as "wrong version not applied —
+      it changes nothing", and V3 is neither caught nor survived,
+    And a wrong version reported as not a valid run or not applied leaves the
+      work unfinished, as a wrong version that was owed and never run does
+      (TQ-500b), until it is prepared again and has a valid run,
+    And whether a failure reached the code is judged by the same rule the
+      red-baseline check uses to tell a failure because something could not
+      be found from a failure of an assertion, not by a second rule.
+depends_on:
+  - TQ-500g-1
+  - TQ-500g-1-i
+  - TQ-500f-3-i
+doc_links:
+  - path: docs/acceptance-criteria/testing-quality/TQ-500-checks-that-can-fail/TQ-500f-3-i.yaml
+    relationship: relates-to
+    status: exists
+    relevance: "The absence-versus-assertion rule inside the one red-baseline reader, reused here to judge whether a failure under a wrong version reached the code."
+  - path: docs/how-to/fast-lane-build.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: null
+delivers_to: null
+expects_from:
+  - ac_id: TQ-500f-3-i
+    contract: "Per-test kind of red (absence or assertion), derived from the run's own output."
+origin_agent: business-analyst
+created: 2026-09-28
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  WHY THIS IS THE MOST DANGEROUS EDGE OF THE RUNS. A wrong version that breaks
+  loading makes EVERY test fail — it looks like a perfect catch. That is the red
+  baseline's own defect (absence red passed off as discrimination, TQ-500f-3)
+  reproduced one step later, and the natural preparation slip (an agent's edit
+  with a syntax or import error) produces it. A no-op wrong version is the
+  opposite trap: every test "survives" and the work is stopped for the wrong
+  reason, which trains people to switch the check off.
+
+  V1 IS THE CONTROL. A rule that refuses every failing run would pass V2 and
+  break V1.
+
+  TECHNICAL DETAIL FOR IT-PO: "did not load" covers a collection-time import or
+  syntax error of the altered module as well as a function-level
+  ImportError/AttributeError (the COLLECTION-ERROR CAVEAT in TQ-500f-3-i's
+  notes). "Changes nothing" is a byte comparison of the prepared file with the
+  code as written. Reuse done_proof_kind_support / _kind_plugin; do not copy the
+  classification.

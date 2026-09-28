@@ -62,8 +62,20 @@ amended_by:
       answers KI-TQ-20260928-subtest-failures-read-as-passed. The put-back clause
       was already in notes (item 3: restore exactly). Proposed by the product-owner
       stage of a manually driven /plan-feature; not yet confirmed at a PO gate.
+  - reason: "covered_by gains TQ-500g-1..-5 (Phase B BA decomposition); notes gain the user's Q2 decision in the Phase C paragraph"
+    by: business-analyst
+    at: 2026-09-28
+    note: >-
+      Title, criteria and depends_on unchanged. Q2 (BA gate, 2026-09-28): the
+      database test writer's extra wrong versions are run and reported, not
+      blocking; blocking is left to Phase C.
 superseded_by: null
-covered_by: []
+covered_by:
+  - TQ-500g-1
+  - TQ-500g-2
+  - TQ-500g-3
+  - TQ-500g-4
+  - TQ-500g-5
 implemented_by: []
 change_target:
   - pipeline
@@ -123,6 +135,11 @@ notes: |
   speculative child would force a cap override. When Phase B runs produce that
   evidence, promote it via /plan-feature: either as an extension of this L1 or
   as a new L1 (which will require splitting TQ-500 or an explicit override).
+  User decision at the Phase B BA gate (Q2, 2026-09-28): the database test
+  writer's own extra wrong versions ("to run later") are run and reported by
+  TQ-500g-2-ii but do not block; whether an agent-proposed wrong version that
+  survives should block is Phase C's decision, and those reports are its first
+  evidence.
 
   BOTH LANES, SHARED SCRIPTS (user direction at the Phase A BA gate,
   2026-09-25). The wrong-version guard this L1 describes must run in BOTH

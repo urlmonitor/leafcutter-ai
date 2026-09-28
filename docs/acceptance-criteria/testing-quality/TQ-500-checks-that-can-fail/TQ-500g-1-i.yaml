@@ -1,0 +1,118 @@
+id: TQ-500g-1-i
+components:
+  - testing_quality
+  - build_orchestration
+title: "The shared runner holds each guarding test to the wrong versions its own entry names, and a sibling's catch never covers for it"
+component: testing-quality
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a bug-fix requirement TQ-9101 whose fix changed refresh_config() from
+    "if refresh_due" to "if refresh_due and retry_due", with three tests
+    tagged as covering it, all of which pass on the code as written —
+      T1: its entry names must_catch ["revert the fix",
+          "drop the retry_due condition"],
+      T2: its entry names must_catch ["drop the retry_due condition"],
+      T3: its entry names no must_catch and does not declare the
+          discrimination angle,
+    and, under "drop the retry_due condition", T1 fails and T2 still passes,
+    and a fourth test T4, covering TQ-9101, whose entry declares the
+    discrimination angle and names no must_catch,
+  When the shared runner makes the wrong-version runs for TQ-9101,
+  Then it applies "drop the retry_due condition" and "the fix undone" (the
+      changed code as it stood before the work began), one at a time, and runs
+      T1, T2 and T4 against each,
+    And T3 is run against no wrong version and is reported as not in scope for
+      the runs, never as passed,
+    And "drop the retry_due condition" is reported as surviving T2, naming T2
+      and that wrong version, and the runner's verdict is a stop, although T1
+      caught it — each test answers for every wrong version its own entry
+      names,
+    And T4 is held to "the fix undone" only,
+    And "the fix undone" stops the work when no test in scope fails under it,
+      or when a test whose own entry names it passes under it,
+    And a wrong version counts as caught by a test only when that test failed
+      under it and passed on the code as written,
+    And each run is read the way TQ-500g-4 requires, so a test that failed in
+      only one of its sub-cases has failed,
+    And after each run the altered files are byte-for-byte identical to the
+      code as written, and no other file has changed,
+    And a statement from any agent that T2 catches "drop the retry_due
+      condition" does not change this verdict: T2's survival is decided by
+      running T2.
+depends_on:
+  - TQ-500g-1
+  - TQ-500g-4
+  - TQ-500f-2-i
+doc_links:
+  - path: templates/skills/quick-fix/SKILL.md
+    relationship: relates-to
+    status: exists
+    relevance: "Step 4.2 — temp-file revert, byte-compare restore, never git stash. The apply-and-restore mechanics to generalise into the shared runner (quick-fix itself only reverts the whole fix and reads the exit code; the runner reads per-test outcomes)."
+  - path: docs/how-to/fast-lane-build.md
+    relationship: describes
+    status: exists
+    relevance: "verify_red_baseline — its inputs (AC ids, test root, base ref) and its reading of the covering-test tags, which the runner reuses to find the tests in scope."
+  - path: docs/architecture/components/phantom-done-prevention.md
+    relationship: describes
+    status: exists
+    relevance: "done_proof's fail-closed outcome classifier and covers-tag scanner, to be reused rather than copied."
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+    relevance: "test_spec item fields: must_catch and the discrimination angle, the declared scope of the runs."
+assigned_agent: python-coder
+estimated_complexity: null
+delivers_to:
+  - agent: python-coder
+    ac_id: TQ-500g-1-v
+    contract: "One runner, callable with the requirement ids, the test root and the base ref (the same inputs as verify_red_baseline), returning a machine-readable verdict: stop or continue, with each (test, wrong version) outcome and each survivor named."
+expects_from:
+  - ac_id: TQ-500g-4
+    contract: "The shared reading of a run (sub-case failures are failures; contradictory runs are inconclusive)."
+  - ac_id: TQ-500g-1-iv
+    contract: "Each named wrong version other than 'the fix undone' arrives as one concrete alteration of the code as written, labelled with its name."
+origin_agent: business-analyst
+created: 2026-09-28
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  THE RUNNER'S RULE — ONE RUNNER FOR EVERY ROUTE. The routes (TQ-500g-1-v, -vi,
+  -vii) only call it. No route may carry a copy of this rule.
+
+  WHY T2 SURVIVES ALTHOUGH T1 CAUGHT IT (the non-obvious clause). must_catch is
+  declared on a test's own entry, as "wrong versions THIS test must catch". A
+  group verdict ("some test noticed") is exactly the collapse TQ-500c exists to
+  prevent: KI-TQ-010's inert fourth sibling would pass it. The per-test,
+  per-wrong-version outcome record itself is TQ-500c's rule and is not
+  re-specified here.
+
+  "THE FIX UNDONE" IS HELD TO A GROUP RULE, NAMED WRONG VERSIONS TO A PER-TEST
+  RULE. It is added by the L1 whether or not any entry names it, so no single
+  test is answerable for it unless its own entry names it (T1 here, as
+  "revert the fix"). BA ASSUMPTION: "revert the fix" in must_catch means "the
+  fix undone" and is not prepared a second time; IT-PO to confirm the
+  spelling-equivalence rule (exact string, or a fixed list of aliases).
+
+  "PASSED ON THE CODE AS WRITTEN" is the control: a test that fails on the
+  finished code catches nothing, and the route's green check should already
+  have stopped the work before the runs.
+
+  NEW FILE CASE (for IT-PO): when the work created the file, "the fix undone"
+  is the file absent, which is an absence red (TQ-500f-3-i) and would be
+  handled by TQ-500g-1-ii as "did not load". Decide whether "the fix undone"
+  is then not applicable for that file; the BA did not decide this.
+
+  TESTABILITY: behavioural. A temp git repo with a real refresh module, real
+  T1 to T4 test files, a temp AC store carrying the must_catch entries, and a
+  real pytest run through the runner's production CLI. Assert on the verdict
+  and on the byte-identity of the file afterwards.

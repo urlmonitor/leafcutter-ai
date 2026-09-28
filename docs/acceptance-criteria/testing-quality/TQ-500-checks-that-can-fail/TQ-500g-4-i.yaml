@@ -1,0 +1,74 @@
+id: TQ-500g-4-i
+components:
+  - testing_quality
+  - build_orchestration
+title: "A run that reports failure overall but shows no failing test is inconclusive, never a clean pass"
+component: testing-quality
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given three test runs over the tests covering one requirement —
+      R1: the run as a whole reports failure, yet every test outcome that can
+          be read from its output is a pass (for example because the failure
+          was reported in a form the reading does not recognise),
+      R2: the run as a whole reports success and every readable outcome is a
+          pass,
+      R3: the run as a whole reports failure and test_refresh_gate is read
+          as failed,
+  When the proof-of-done check and the red-baseline check read each run,
+  Then R1 is reported as inconclusive, with the reason that the run reported
+      failure but no failing test could be identified,
+    And from R1 no requirement is judged eligible for done, and no test is
+      counted as green at baseline or as red at baseline,
+    And R2 is read as today: its tests passed,
+    And R3 is read from its per-test outcomes as today — test_refresh_gate
+      failed — and is not reported as inconclusive.
+depends_on:
+  - TQ-500g-4
+doc_links:
+  - path: docs/known-issues/testing-quality/open-low-ki-tq-20260928-subtest-failures-read-as-passed.md
+    relationship: describes
+    status: planned
+    relevance: "Suggested fix item 2: when pytest exits 1 but no parsed outcome is red, report the run as inconclusive. The exit status is today only checked for being in (0, 1), never compared with the parsed outcomes."
+  - path: docs/architecture/components/phantom-done-prevention.md
+    relationship: describes
+    status: exists
+  - path: docs/how-to/fast-lane-build.md
+    relationship: describes
+    status: exists
+    relevance: "Step 3 — the red-baseline gate's existing inconclusive bucket, which R1 joins."
+assigned_agent: python-coder
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-09-28
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  THE CROSS-CHECK HALF OF TQ-500g-4. TQ-500g-4 fixes the one line format known
+  to be dropped (sub-case failures). This L3 is the safety net for the next
+  format nobody has seen yet: the run's own overall verdict is compared with
+  what was parsed, and a contradiction is never resolved in favour of "passed".
+
+  IN TECHNICAL TERMS (for IT-PO): "reports failure overall" is pytest exit
+  status 1; "reports success" is exit status 0. The cross-check compares the
+  exit status with the parsed {nodeid: outcome} map. Other exit statuses keep
+  the handling they have today.
+
+  R2 AND R3 ARE CONTROLS. A rule that marks every failing run inconclusive
+  passes R1 and breaks R3 (and with it every ordinary failing test); a rule
+  that ignores the overall verdict passes R2 and R3 and misses R1.
+
+  FAIL CLOSED AT BOTH GATES. Inconclusive at done proof means not eligible; at
+  red baseline it means neither red nor green, which the gate already treats as
+  not passing (TQ-500f-3-i's fail-closed rule).

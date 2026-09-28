@@ -1,0 +1,87 @@
+id: TQ-500g-1-vi
+components:
+  - testing_quality
+  - build_orchestration
+title: "/build-feature and the single-ticket route make the same wrong-version runs before commit, and a resumed ticket makes them again"
+component: testing-quality
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given three tickets, each driven once through /build-feature and once as a
+    single ticket —
+      K1: its guarding test names must_catch ["drop the retry_due condition"]
+          and fails under it,
+      K2: its guarding test names the same wrong version and still passes
+          under it,
+      K3: it has no source requirement,
+    and a fourth ticket K4, like K1, whose drive is resumed after its coder
+    and review have already signed off,
+  When each ticket's code is green and it reaches the step before commit,
+  Then the route makes the wrong-version runs through the one shared runner,
+      with the same inputs the fast lane passes,
+    And K1 goes on to commit,
+    And K2 does not reach commit: the drive stops that ticket with the
+      runner's report naming the test and the surviving wrong version,
+    And K3 records "wrong-version runs not applicable: no source requirement"
+      and goes on, never recorded as verified,
+    And K4's resumed drive makes the runs again before commit rather than
+      relying on any earlier sign-off,
+    And /build-feature and the single-ticket route reach the same verdict for
+      each ticket, and it matches the fast lane's for the same tests and
+      outcomes.
+depends_on:
+  - TQ-500g-1
+  - TQ-500g-1-i
+doc_links:
+  - path: templates/workflows-js/build-feature.js
+    relationship: describes
+    status: exists
+    relevance: "Per-ticket phase driver (driveTicketPhases). Its header declares build-ticket.js as a TWIN that must change with it."
+  - path: templates/workflows-js/build-ticket.js
+    relationship: describes
+    status: exists
+    relevance: "The single-ticket twin."
+  - path: docs/acceptance-criteria/testing-quality/TQ-500-checks-that-can-fail/TQ-500f-3-ii.yaml
+    relationship: relates-to
+    status: exists
+    relevance: "Precedent wiring of a shared gate (verify_red_baseline) into both twins: shared command constructor, depth-1 executor agent, resume safety, K3 not-applicable outcome."
+assigned_agent: python-coder
+estimated_complexity: null
+delivers_to: null
+expects_from:
+  - ac_id: TQ-500g-1-i
+    contract: "The shared runner's CLI and its machine-readable stop/continue verdict."
+origin_agent: business-analyst
+created: 2026-09-28
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - pipeline
+  - code
+risk_surface: contract_boundary
+notes: |
+  WIRING ONLY — the rule lives in TQ-500g-1-i. Mirrors TQ-500f-3-ii for the
+  later gate: /build-feature does not dispatch ticket-supervisor; its per-ticket
+  driver is inlined JS and twinned in build-ticket.js, so this is a workflow-JS
+  change. Respect the E2 leaf invariant and ADR-006 (no workflow() call from
+  inside the workflow; run the runner through a depth-1 executor agent, as
+  fast-lane-ship.js does).
+
+  K4 (RESUME) IS THE NON-OBVIOUS CASE. A resumed ticket whose later phases are
+  already signed off would otherwise skip straight to commit. The runs guard the
+  code on disk now, not the code as it was when someone last signed off.
+
+  PLACEMENT: after the coder's code is green and before commit. The exact phase
+  position relative to review is IT-PO's call; never after commit.
+
+  TESTABILITY: drive both twins under the workflow-engine harness with the K1
+  to K4 responses and assert on the recorded dispatches; one seam test executes
+  the recorded runner commands from this route and from the fast lane against
+  the same fixture repo and asserts identical verdicts.

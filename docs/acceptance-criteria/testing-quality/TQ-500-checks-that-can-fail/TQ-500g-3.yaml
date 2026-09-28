@@ -1,0 +1,82 @@
+id: TQ-500g-3
+components:
+  - testing_quality
+  - build_orchestration
+title: "When a shared check changes, every existing test that leans on it is listed, and may be strengthened but never weakened"
+component: testing-quality
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a change to the shared helper is_refresh_due() so that it also reads
+    retry_due, and four existing tests that call it —
+      E1 test_refresh_runs_when_due and E2 test_refresh_skips_when_not_due,
+         whose fixtures set refresh_due but never retry_due,
+      E3 test_retry_backoff_caps_at_five,
+      E4 test_status_page_shows_next_refresh,
+  When the test writer hands on its work for that change,
+  Then its report lists E1, E2, E3 and E4 by name, each marked either
+      strengthened, saying what was added, or unaffected, with a one-line
+      reason,
+    And E1 and E2 are strengthened so their fixtures set retry_due with values
+      distinct from refresh_due, instead of being left to pass for the wrong
+      reason,
+    And no edit to an existing test removes an assertion, widens an expected
+      value, adds a skip or an expected-failure mark, or deletes the test,
+    And every edit to an existing test appears in the report, including edits
+      to tests outside E1 to E4,
+    And an existing test that could be made to pass only by weakening it is
+      reported by name and handed back, not weakened.
+depends_on:
+  - TQ-500g
+doc_links:
+  - path: templates/agents/test-writer.md
+    relationship: describes
+    status: exists
+    relevance: "Holds today's blanket ban on editing existing tests (analysis: ':949'), which this sweep replaces."
+  - path: docs/analysis/2026-09-25-test-writers-prove-failure-not-discrimination.md
+    relationship: describes
+    status: exists
+    relevance: "Request item 6, and incident 2 (a gate input moved to a new column; one consumer suite was missed in the sweep; fixtures seeded only the old input)."
+assigned_agent: llm-expert
+estimated_complexity: null
+delivers_to:
+  - agent: python-coder
+    ac_id: TQ-500g-3-i
+    contract: "A sweep list in the hand-off: each existing test touched or considered, by name and file, marked strengthened (what was added) or unaffected (reason)."
+expects_from: null
+origin_agent: business-analyst
+created: 2026-09-28
+amended_by: []
+superseded_by: null
+covered_by:
+  - TQ-500g-3-i
+  - TQ-500g-3-ii
+implemented_by: []
+change_target: prompt
+risk_surface: contract_boundary
+notes: |
+  PHASE B PLAN ITEM g-3 (request item 6).
+    this L2  the writer's sweep (find, list, strengthen)        llm-expert, PROMPT-ONLY
+    -i       an edit to an existing test missing from the list stops the work
+                                                                python-coder
+    -ii      an existing test that ran before and is now skipped, expected to
+             fail, or gone stops the work                       python-coder
+
+  GUARDRAIL. The blanket ban exists to stop tests being weakened to go green.
+  This sweep replaces the ban only because -i and -ii make weakening visible
+  and blocking. Do not ship this L2 without -i and -ii: a sweep that only asks
+  the writer to behave well reopens what the ban closed.
+
+  PROMPT-ONLY. Finding the consumer tests and choosing how to strengthen them is
+  agent conduct. Substitutes: -i and -ii (deterministic), pr-reviewer against the
+  Then clauses, and a test-writer eval row (incident 2 shape) in TQ-200d-1.
+  Loosened assertions that neither -i nor -ii can see (for example a widened
+  tolerance) are left to review and to the wrong-version runs.
+
+  RELATED, NOT DUPLICATED: TQ-100c (protection cannot be quietly removed through
+  links or the allowlist).

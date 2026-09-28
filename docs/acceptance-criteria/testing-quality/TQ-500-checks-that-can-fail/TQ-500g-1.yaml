@@ -1,0 +1,129 @@
+id: TQ-500g-1
+components:
+  - testing_quality
+  - build_orchestration
+title: "Once the code passes, each wrong version its guarding tests name is applied, run and undone, and one that survives stops the work"
+component: testing-quality
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a bug fix that changed the refresh gate from "if refresh_due" to
+    "if refresh_due and retry_due", whose guarding test's entry names the wrong
+    version "drop the retry_due condition", and whose tests pass on the code as
+    written,
+  When the work reaches the point after its tests pass and before anything is
+    committed, on any build route — the fast lane, /build-feature, a single
+    ticket, or /build-epic,
+  Then "drop the retry_due condition" and "the fix undone" are each applied to
+      the code in turn, the guarding tests are run against each, and the code
+      is put back exactly as it was after each,
+    And a wrong version that the guarding tests fail to notice stops the work,
+      with a report naming the wrong version and the test that let it through,
+    And when the guarding tests notice every wrong version, the work goes on
+      to be committed,
+    And the verdict comes from those runs alone; an agent's statement that its
+      tests would catch a wrong version neither passes nor fails the work,
+    And tests whose entry names no wrong version and does not declare the
+      discrimination angle are not run against wrong versions,
+    And every route reaches the same verdict for the same tests and the same
+      outcomes, because every route uses the one shared runner.
+depends_on:
+  - TQ-500g
+  - TQ-500g-4
+  - TQ-500f-2-i
+doc_links:
+  - path: templates/skills/quick-fix/SKILL.md
+    relationship: relates-to
+    status: exists
+    relevance: "Step 4.2 — the existing apply-the-wrong-version-and-restore proof (temp-file revert, byte-compare restore, never git stash). The named starting point for the shared runner."
+  - path: docs/how-to/fast-lane-build.md
+    relationship: describes
+    status: exists
+    relevance: "The fast lane's verify_red_baseline and verify_green_and_coverage gates, beside which the runs are added (never in place of either)."
+  - path: docs/architecture/components/build-epic-workflow-dispatch.md
+    relationship: relates-to
+    status: exists
+    relevance: "/build-epic hands each ticket to ticket-supervisor (building-epics skill), so that route's wiring is prompt, not workflow JS."
+  - path: docs/analysis/2026-09-25-test-writers-prove-failure-not-discrimination.md
+    relationship: describes
+    status: exists
+    relevance: "Remedy item 3 (the mutation phase after the coder, working name test-breaker) and incident 1 (the refresh gate)."
+  - path: docs/testing/test-angles.md
+    relationship: relates-to
+    status: exists
+    relevance: "The discrimination angle; records gates that run after commit as a known process failure."
+assigned_agent: python-coder
+estimated_complexity: null
+delivers_to: null
+expects_from:
+  - ac_id: TQ-500g-4
+    contract: "One shared reading of a test run in which a test with any failed sub-case is failed and a contradictory run is inconclusive."
+  - ac_id: TQ-500f-2-i
+    contract: "must_catch on a requirement's test entry: a validated, non-empty list of named wrong versions, carried verbatim onto the generated work."
+origin_agent: business-analyst
+created: 2026-09-28
+amended_by: []
+superseded_by: null
+covered_by:
+  - TQ-500g-1-i
+  - TQ-500g-1-ii
+  - TQ-500g-1-iii
+  - TQ-500g-1-iv
+  - TQ-500g-1-v
+  - TQ-500g-1-vi
+  - TQ-500g-1-vii
+  - TQ-500g-1-viii
+implemented_by: []
+change_target:
+  - pipeline
+  - code
+risk_surface: contract_boundary
+notes: |
+  PHASE B PLAN ITEM g-1 (request item 3). Structured on the Phase A precedent
+  (TQ-500f-3-i rule / TQ-500f-3-ii wiring): the runner's rule and its two
+  failure modes are their own L3s, and each route's wiring is its own L3, so a
+  route can ship or fail on its own.
+
+    -i    the runner's rule (which tests, which wrong versions, per-test
+          answerability, put-back, verdict)                      python-coder
+    -ii   a wrong version is caught only by a test that reached the code
+          (an unloadable or no-op wrong version never counts)    python-coder
+    -iii  the code is put back exactly even when a run is cut short
+                                                                 python-coder
+    -iv   named wrong versions are turned into concrete alterations
+          (agent conduct, PROMPT-ONLY)                           llm-expert
+    -v    fast-lane wiring                                       python-coder
+    -vi   /build-feature and its build-ticket.js twin wiring     python-coder
+    -vii  /build-epic wiring (ticket-supervisor / building-epics, PROMPT-ONLY)
+          — may be built together with TQ-500f-3-iv          llm-expert
+    -viii /build-epic mechanical backstop: no commit without both gate
+          verdicts on record (user decision Q3)              python-coder
+
+  BUILD ORDER: TQ-500g-4 first (depends_on). The runner reuses, never forks:
+  the shared pytest outcome reading (TQ-500g-4), the kind-of-red rule of the
+  red-baseline reader (TQ-500f-3-i: fast_lane.py verify_red_baseline,
+  done_proof_kind_support, _kind_plugin), and done_proof's fail-closed outcome
+  classifier.
+
+  SCOPE, DECLARED NOT INFERRED (TQ-500 non-goal): only tests whose AC test_spec
+  entry carries must_catch or angle: discrimination. Wrong-version runs are slow
+  on database-backed suites, so every test is never in scope.
+
+  NOT RE-SPECIFIED HERE: per-test, per-wrong-version outcomes (TQ-500c); a run
+  that was owed and never taken reads as incomplete (TQ-500b); what was broken
+  and what each test did is kept with the work (TQ-500e).
+
+  "THE FIX UNDONE" is the changed files as they stood before the work began
+  (the merge base the route already uses for its red baseline). It is prepared
+  mechanically, never by an agent.
+
+  PLACEMENT: after the green-and-coverage check, before commit. Never after
+  commit (test-angles.md records post-commit gates as a known process failure).
+
+  PHASE C (agent-proposed wrong versions beyond the named ones) stays deferred
+  in TQ-500g's notes.

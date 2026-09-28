@@ -1,0 +1,90 @@
+id: TQ-500g-2-ii
+components:
+  - testing_quality
+  - build_orchestration
+title: "Database tests are in the wrong-version runs, on your configured test database only, and a missing database never reads as a catch"
+component: testing-quality
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a gate fix whose guarding tests are two database tests, DB1 and DB2,
+    whose entries name must_catch ["drop the retry_due condition"],
+    and the database test writer's hand-off names "treat a NULL retry_due as
+    true" as a wrong version to run later,
+  When the wrong-version runs are made for that fix in three projects —
+      P1: the test database setting names a reachable database,
+      P2: the test database setting is not set,
+      P3: the test database setting names a database that cannot be reached,
+  Then in P1, DB1 and DB2 are run against "drop the retry_due condition",
+      against "the fix undone" and against "treat a NULL retry_due as true",
+      on the database the setting names and on no other,
+    And in P1 "treat a NULL retry_due as true" is reported with its own
+      outcome for DB1 and DB2, like the wrong versions the requirement named,
+    And when "treat a NULL retry_due as true" survives DB1 or DB2, that is
+      reported by name and does not by itself stop the work, while a survivor
+      of "drop the retry_due condition" does,
+    And in P2 the database runs are reported as not run for want of
+      configuration, naming testing_context.db_connection_test — never as
+      caught, never as passed — and the work stays unfinished,
+    And in P3 the database runs are reported as not run because the
+      configured database could not be reached, and the work stays unfinished,
+    And in no project does any run connect to an address the runner chose
+      itself.
+depends_on:
+  - TQ-500g-2
+  - TQ-500g-1-i
+  - INF-1100d-3-i
+doc_links:
+  - path: docs/acceptance-criteria/infrastructure/INF-1100-agents-work-in-the-right-place/INF-1100d-3-i.yaml
+    relationship: relates-to
+    status: exists
+    relevance: "The existing not-configured / unreachable report of the test database check, reused for P2 and P3."
+  - path: docs/acceptance-criteria/infrastructure/INF-1100-agents-work-in-the-right-place/INF-1100d-3.yaml
+    relationship: relates-to
+    status: exists
+  - path: docs/acceptance-criteria/testing-quality/TQ-500-checks-that-can-fail/TQ-500f-4-i.yaml
+    relationship: relates-to
+    status: exists
+    relevance: "Source of the 'to run later' list the runs take up."
+assigned_agent: python-coder
+estimated_complexity: null
+delivers_to: null
+expects_from:
+  - ac_id: TQ-500g-2
+    contract: "The database test writer's 'to run later' wrong versions, in a form the runner takes up."
+  - ac_id: INF-1100d-3-i
+    contract: "The test database check's not-configured and unreachable outcomes, naming the setting and never the credentials."
+origin_agent: business-analyst
+created: 2026-09-28
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  "DATABASE TESTS INCLUDED" (TQ-500g's criteria) and the "to run later" pick-up
+  from the PO's plan item g-2.
+
+  USER DECISION AT THE BA GATE (Q2, 2026-09-28): the database test writer's
+  own extra wrong versions ("to run later") are RUN and each outcome is
+  REPORTED, but a survivor among them does NOT stop the work. Whether it should
+  is the deferred Phase C question ("wrong versions proposed by the agent
+  itself"), recorded in TQ-500g's notes. They are run because the writer's
+  report (TQ-500f-4, -4-i) says the test catches them, and running them checks
+  that. The survivor reports are the evidence Phase C is waiting for. The
+  Then clause on survivors pins this: a control named by the requirement still
+  stops the work, so a rule that stops on nothing, or on everything, fails.
+
+  P2 AND P3 KEEP THE RUNS HONEST WITHOUT A DATABASE. Both leave the work
+  unfinished, following TQ-500b (a run owed and not taken is incomplete). If the
+  user wants database-free projects to proceed, that is a change to this AC, not
+  a silent skip.
+
+  PLACEHOLDER ADDRESSES ONLY in fixtures and docs:
+  postgresql://<user>:<password>@<host>:<port>/<database> (INF-1100d-4).

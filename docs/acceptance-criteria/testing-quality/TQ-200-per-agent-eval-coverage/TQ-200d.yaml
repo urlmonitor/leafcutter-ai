@@ -58,7 +58,11 @@ amended_by:
       Proposed by the product-owner stage of a manually driven /plan-feature; not
       yet confirmed at a PO gate.
 superseded_by: null
-covered_by: []
+covered_by:
+  - TQ-200d-1
+  - TQ-200d-2
+  - TQ-200d-3
+  - TQ-200d-4
 implemented_by: []
 change_target:
   - config

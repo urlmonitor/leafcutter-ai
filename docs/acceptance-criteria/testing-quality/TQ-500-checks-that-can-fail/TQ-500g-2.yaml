@@ -1,0 +1,95 @@
+id: TQ-500g-2
+components:
+  - testing_quality
+  - build_orchestration
+title: "The database test writer runs what it writes, including against the code before the fix, and says so only when it did"
+component: testing-quality
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a project whose configured test database is reachable, and a bug fix
+    to the stored procedure fn_refresh_due that makes it return false when
+    retry_due is not set,
+  When the database test writer writes the regression test for that fix and
+    hands on,
+  Then it has run the test against fn_refresh_due as it was before the fix,
+      and its report shows the test failing there, quoting the run's output,
+    And it has run the test against the fixed fn_refresh_due, and its report
+      shows the test passing there, quoting the run's output,
+    And each of its answers to the three questions is marked observed only
+      when a quoted run backs it, and reasoned otherwise,
+    And the wrong versions it names to run later are handed on in the form
+      the wrong-version runs take up, not left only in its prose,
+    And when the project has no test database configured, it reports both runs
+      as not run for want of configuration, names the setting
+      testing_context.db_connection_test, marks every answer reasoned, and
+      never reports the test as having caught anything.
+depends_on:
+  - TQ-500g
+  - TQ-500f-4-i
+  - INF-1100d-1
+doc_links:
+  - path: templates/agents/sql-test-writer.md
+    relationship: describes
+    status: exists
+    relevance: "The database test writer. Today it verifies with py_compile only and is told not to run the suite; this AC reverses that (analysis request item 7)."
+  - path: docs/acceptance-criteria/testing-quality/TQ-500-checks-that-can-fail/TQ-500f-4-i.yaml
+    relationship: relates-to
+    status: exists
+    relevance: "Makes the writer label its answers reasoned while it does not run, and keep a 'to run later' list. This AC lets its answers become observed once it runs, and hands the list on."
+  - path: docs/acceptance-criteria/infrastructure/INF-1100-agents-work-in-the-right-place/INF-1100d-3.yaml
+    relationship: relates-to
+    status: exists
+    relevance: "A missing test database setting is reported by name, never guessed; the not-configured clause here follows it."
+  - path: docs/analysis/2026-09-25-test-writers-prove-failure-not-discrimination.md
+    relationship: describes
+    status: exists
+    relevance: "Request item 7 and the sql-test-writer section, including the setUpClass re-deploy trap."
+assigned_agent: llm-expert
+estimated_complexity: null
+delivers_to:
+  - agent: python-coder
+    ac_id: TQ-500g-2-ii
+    contract: "The wrong versions the database test writer names to run later, in a form the shared runner takes up alongside must_catch."
+expects_from: null
+origin_agent: business-analyst
+created: 2026-09-28
+amended_by: []
+superseded_by: null
+covered_by:
+  - TQ-500g-2-i
+  - TQ-500g-2-ii
+implemented_by: []
+change_target: prompt
+risk_surface: contract_boundary
+notes: |
+  PHASE B PLAN ITEM g-2 (request item 7).
+    this L2  the writer's own conduct (runs, quotes, labels)  llm-expert, PROMPT-ONLY
+    -i       the setUpClass re-deploy trap is detected and never counts
+                                                              python-coder
+    -ii      database tests are in the wrong-version runs, on the configured
+             test database only; the "to run later" list is run too
+                                                              python-coder
+
+  PROMPT-ONLY. The writer's conduct is instruction text in sql-test-writer.md.
+  Behavioural substitute: the sql-test-writer eval set in TQ-200d-2, whose rows
+  check that "observed" is claimed only with a quoted run, and that no run is
+  claimed when no test database is configured. Deterministic backstop: the
+  wrong-version runs (TQ-500g-2-ii) run the tests whatever the writer said.
+
+  RELATION TO TQ-500f-4-i. That AC's Given is "under its current instructions,
+  does not run the suite". Once this AC lands the writer runs, so its answers
+  may be observed when backed by a run; TQ-500f-4-i's last clause already allows
+  exactly that for the ordinary writer. No contradiction, but build TQ-500f-4-i
+  first (same template; depends_on).
+
+  "BEFORE THE FIX" FOR A STORED PROCEDURE means the procedure's definition as it
+  was before the work began, installed into the test database for that run, then
+  replaced by the fixed one. Watch the re-deploy trap (TQ-500g-2-i) here too: a
+  suite that re-installs from source files will silently install the fixed
+  version.

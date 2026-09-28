@@ -1,0 +1,94 @@
+id: TQ-500g-4
+components:
+  - testing_quality
+  - build_orchestration
+title: "A test that failed in any of its cases is read as failed by every check that reads a test run"
+component: testing-quality
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given one test run over three tests —
+      S1: test_refresh_gate, written with two sub-cases, whose sub-case
+          "retry_due unset" fails and whose other sub-case passes,
+      S2: test_export_gate, written with two sub-cases, both of which pass,
+      S3: test_window_gate, which has no sub-cases and fails,
+  When the proof-of-done check and the red-baseline check each read that
+    run's outcome for S1, S2 and S3,
+  Then both read S1 as failed, and name its failed sub-case "retry_due unset",
+    And both read S2 as passed,
+    And both read S3 as failed, as they do today,
+    And the proof-of-done check judges a requirement covered only by S1 not
+      eligible for done,
+    And the red-baseline check counts S1 as red at baseline, not as green at
+      baseline,
+    And the two checks give S1, S2 and S3 the same outcome as each other,
+      because they read the run through one shared reading, not two.
+depends_on:
+  - TQ-500g
+doc_links:
+  - path: docs/known-issues/testing-quality/open-low-ki-tq-20260928-subtest-failures-read-as-passed.md
+    relationship: describes
+    status: planned
+    relevance: "The defect this AC closes: the pytest outcome reader shared by done_proof and verify_red_baseline reads a unittest test whose only failures are inside self.subTest() as PASSED (SUBFAILED lines are not recognised). Contains the five-line reproduction. On branch feature/kis-from-test-discrimination (PR #928) at the time of writing."
+  - path: docs/architecture/components/phantom-done-prevention.md
+    relationship: describes
+    status: exists
+    relevance: "The proof-of-done gates whose outcome classification this AC corrects."
+  - path: docs/architecture/diagrams/c3-done-proof-evaluation-sequence.md
+    relationship: describes
+    status: exists
+    relevance: "Where the run is parsed into per-test outcomes in the done-proof evaluation."
+  - path: docs/how-to/fast-lane-build.md
+    relationship: describes
+    status: exists
+    relevance: "Step 3 — verify_red_baseline, the second reader of the same parsed outcomes."
+assigned_agent: python-coder
+estimated_complexity: null
+delivers_to:
+  - agent: python-coder
+    ac_id: TQ-500g-1-i
+    contract: "One shared reading of a test run in which a test whose any sub-case failed is failed, and a run that reports overall failure with no identifiable failed test is inconclusive (TQ-500g-4-i). The wrong-version runs read their runs through it, never through a copy."
+expects_from: null
+origin_agent: business-analyst
+created: 2026-09-28
+amended_by: []
+superseded_by: null
+covered_by:
+  - TQ-500g-4-i
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  PHASE B PLAN ITEM g-4. BUILD ORDER: this AC is built BEFORE TQ-500g-1 (the
+  wrong-version runs read their runs through the reading fixed here; without it
+  a wrong version caught only inside a sub-case would be reported as surviving).
+  TQ-500g-1 and TQ-500g-1-i carry depends_on TQ-500g-4 to enforce the order.
+
+  WHY BOTH DIRECTIONS MATTER. At red baseline the defect errs safe (a red test
+  is read green, so the gate refuses). At done proof it errs dangerous (a
+  failing test is read passed and can support a done verdict). This AC closes
+  both with one change, which is why it belongs to no single route.
+
+  S2 IS THE CONTROL. A fix that reads every test that has sub-cases as failed
+  passes S1 and breaks S2. S3 pins today's behaviour for tests without
+  sub-cases.
+
+  TECHNICAL DETAIL FOR IT-PO (from the KI, not verified against source by the
+  BA): pytest 9 prints "<nodeid> PASSED" for the parent and reports sub-case
+  failures on separate "SUBFAILED(<params>) <nodeid> - <error>" lines, which the
+  shared outcome regex does not recognise. The KI's suggested fix is to downgrade
+  the node id to FAILED on any SUBFAILED line and keep SUBPASSED as
+  informational. Reuse, do not fork: the parser is shared by done_proof and the
+  red-baseline reader (TQ-500f-3-i's single-reader rule); TQ-500f-3-iii (on main
+  via PR #926) is moving tag-to-test matching into its own shared module — the
+  implementer should rebase onto that and keep the {nodeid: outcome} contract.
+
+  TESTABILITY: behavioural. Real pytest output from a fixture test module with
+  self.subTest() cases, fed through the production CLI of each check, is the
+  natural proof; a hand-typed stdout string alone would hide exactly the line
+  format that regressed.

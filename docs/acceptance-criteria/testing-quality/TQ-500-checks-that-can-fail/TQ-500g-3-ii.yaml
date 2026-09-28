@@ -1,0 +1,74 @@
+id: TQ-500g-3-ii
+components:
+  - testing_quality
+  - build_orchestration
+title: "An existing test that ran before the work and is now skipped, expected to fail, or gone stops the work"
+component: testing-quality
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given five tests that existed and passed before the work began, and after
+    the work —
+      A: test_refresh_skips_when_not_due is marked to be skipped,
+      B: test_retry_caps_at_five is marked as expected to fail,
+      C: test_export_header no longer exists,
+      D: test_refresh_runs_when_due still runs and passes, with one assertion
+         added,
+      E: test_legacy_cron_refresh no longer exists, because the requirement
+         removes the legacy cron refresh it tested, and the sweep list names
+         it with that reason,
+  When the work's tests are checked before commit,
+  Then the work stops, naming A, B and C as existing tests weakened by the
+      work, each with what happened to it: skipped, expected to fail, removed,
+    And D is not reported,
+    And E is not counted as weakened, and appears in the hand-off as removed
+      with the reason the sweep list gives,
+    And the decision is taken from running the tests before and after the work,
+      never from reading the writer's list alone.
+depends_on:
+  - TQ-500g-3
+doc_links:
+  - path: docs/analysis/2026-09-25-test-writers-prove-failure-not-discrimination.md
+    relationship: describes
+    status: exists
+    relevance: "Incident 5: an integration test of a live procedure was skip-marked as 'retired', silently deleting production coverage."
+assigned_agent: python-coder
+estimated_complexity: null
+delivers_to: null
+expects_from:
+  - ac_id: TQ-500g-3
+    contract: "The sweep list, carrying a reason for each existing test removed with the code it tested."
+origin_agent: business-analyst
+created: 2026-09-28
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  THE FALSIFIABLE HALF OF "NONE MAY BE WEAKENED" (TQ-500g criteria), for the
+  forms of weakening a run can see. A widened expected value or a removed
+  assertion inside a test that still passes is not visible here; that is left to
+  review and to the wrong-version runs (see TQ-500g-3 notes).
+
+  E IS THE NECESSARY EXIT. Without it, any requirement that removes a feature
+  would be blocked from removing its tests. The exit is narrow: the sweep list
+  must name the test and give the reason, and it is reported, not silent. BA
+  ASSUMPTION: the reason is stated by the writer and checked by review; no
+  mechanical check that the tested code is really gone is required here.
+
+  D IS THE CONTROL: strengthening is always allowed.
+
+  RELATION TO INCIDENT 5 AND done_proof: done_proof treats SKIPPED as
+  non-passing only for tests being proven for an AC now; this closes the gap
+  for skips added to old tests.
+
+  TECHNICAL DETAIL FOR IT-PO: "before the work began" is the merge base; the
+  comparison is over collected node ids and outcomes (so a deleted file and a
+  deselected test both show as gone).

@@ -1,0 +1,95 @@
+id: TQ-200d-4
+components:
+  - testing_quality
+  - llm_authoring
+  - infrastructure
+title: "The test writer and the test runner are scored on using your project's database setting and on saying when it is missing"
+component: testing-quality
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the test writer's eval set from TQ-200d-1, and the test runner, which
+    has no eval set today,
+  When rows for the database setting are added to both sets,
+  Then the test writer's set gains the row "configured database": in a
+      project whose testing_context.db_connection_test is set, the database
+      test it produces takes its connection from that setting and names no
+      host, port or database of its own,
+    And the test runner gets its own set, holding the row "configured
+      database": in the same project, its check that the test database is
+      reachable uses that setting and no other address,
+    And both sets hold the row "missing setting, database work" (W1): in a
+      project with no test database setting, and work that needs a database
+      test for a stored procedure, the hand-off says no test database
+      connection is configured, names testing_context.db_connection_test,
+      reports the database tests as not run for want of configuration, and
+      points at no address the agent chose itself,
+    And both sets hold the trap "missing setting, no database work" (W2): in
+      the same project, work that needs only tests that touch no database
+      proceeds with no mention of the missing setting; a hand-off that warns
+      about the setting fails the row,
+    And a local run of the shared eval runner for either agent picks up every
+      row without anyone naming them, and reports a score for each row,
+    And a result from such a local run is reported as a local result; nothing
+      presents it as checked by CI.
+depends_on:
+  - TQ-200d
+  - TQ-200d-1
+doc_links:
+  - path: docs/acceptance-criteria/infrastructure/INF-1100-agents-work-in-the-right-place/INF-1100d-2.yaml
+    relationship: relates-to
+    status: exists
+    relevance: "Prompt-only: database tests and the reachability check use the configured connection, no other. Its test_rationale names a test-writer / test-runner eval as the remaining substitute."
+  - path: docs/acceptance-criteria/infrastructure/INF-1100-agents-work-in-the-right-place/INF-1100d-3.yaml
+    relationship: relates-to
+    status: exists
+    relevance: "Prompt-only: W1 / W2."
+  - path: templates/agents/test-runner.md
+    relationship: relates-to
+    status: exists
+  - path: scripts/evals/agent_eval_config.json
+    relationship: describes
+    status: exists
+  - path: scripts/evals/run_agent_eval.py
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: null
+delivers_to: null
+expects_from:
+  - ac_id: TQ-200d-1
+    contract: "The test writer's registered eval set, which this AC adds rows to."
+origin_agent: business-analyst
+created: 2026-09-28
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - config
+  - code
+risk_surface: contract_boundary
+notes: |
+  TQ-200d SUGGESTED SPLIT, ITEM 4 (test-writer and test-runner, the database
+  setting). The test writer's rows join TQ-200d-1's set (one set per agent,
+  TQ-200a-1); the test runner gets a set of its own. depends_on TQ-200d-1 is a
+  real ordering edge: the rows have a set to join.
+
+  NEGATIVE CASE (TQ-200a-4) FOR BOTH SETS: W2. The likely failure is an
+  over-eager warning on every piece of work once the agent has been taught to
+  report the missing setting.
+
+  ADDRESSES IN ROWS. Rows must never carry a real-looking address (INF-1100d-4
+  scans shipped files). Configure the setting in the row's sandbox to the
+  placeholder postgresql://<user>:<password>@<host>:<port>/<database> (which
+  INF-1100d-4-i allows) and score whether the produced test reads the setting,
+  rather than whether it repeats a literal. Scoring "names no address of its
+  own" is a structural check on the produced files where possible, a judge
+  otherwise.
+
+  LOCAL ONLY (user decision at the PO gate): see TQ-200d-1 notes.

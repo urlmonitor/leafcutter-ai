@@ -1,0 +1,96 @@
+id: TQ-500f-3-iv
+components:
+  - testing_quality
+  - build_orchestration
+title: "The /build-epic route runs the same red-baseline reader before the coder, and does not take the test writer's word for it"
+component: testing-quality
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given an epic driven through /build-epic holding three tickets, two of them
+    with a newly added test covering the same requirement whose test entry
+    names must_catch ["revert the fix"] —
+      K1: the test writer's sign-off says red, and the test's only failure is
+          "ImportError: cannot import name 'refresh_config_v2'",
+      K2: the test writer's sign-off says red, and the test fails with
+          "AssertionError: expected 1 refresh call, got 3",
+      K3: the ticket has no source requirement,
+  When each ticket reaches the step between the test writer and the coder,
+  Then the /build-epic route runs the same red-baseline reader the fast lane
+      and /build-feature run, over the same inputs, before any coder is
+      dispatched for that ticket,
+    And K1 does not reach the coder: its drive stops with the reader's report
+      naming the test and the absence-only red, although the test writer's
+      sign-off said red,
+    And K2 reaches the coder as it does today,
+    And K3 records "red-baseline reader not applicable: no source requirement"
+      and goes on to the coder, never recorded as verified,
+    And for the same tests and run outcomes the /build-epic verdict is
+      identical to the fast lane's and /build-feature's,
+    And the verdict is the reader's own; the supervisor's summary of it, or
+      the test writer's sign-off, never stands in for it.
+depends_on:
+  - TQ-500f-3
+  - TQ-500f-3-i
+doc_links:
+  - path: templates/skills/building-epics/SKILL.md
+    relationship: describes
+    status: exists
+    relevance: "ticket-supervisor's runbook: the per-ticket phase sequence where the reader call goes, between the test-writer phase and the first coder dispatch."
+  - path: docs/architecture/components/build-epic-workflow-dispatch.md
+    relationship: describes
+    status: exists
+    relevance: "build-epic.js hands each ticket to ticket-supervisor, so TQ-500f-3-ii's wiring (build-feature.js / build-ticket.js) never reaches this route."
+  - path: docs/acceptance-criteria/testing-quality/TQ-500-checks-that-can-fail/TQ-500f-3-ii.yaml
+    relationship: relates-to
+    status: exists
+    relevance: "The /build-feature wiring of the same reader; its it_requirements record this route as an uncovered gap needing its own llm-expert AC. This is that AC."
+  - path: docs/how-to/fast-lane-build.md
+    relationship: describes
+    status: exists
+    relevance: "Step 3 — verify_red_baseline's inputs and halt reasons, reused unchanged."
+assigned_agent: llm-expert
+estimated_complexity: null
+delivers_to: null
+expects_from:
+  - ac_id: TQ-500f-3-i
+    contract: "The one red-baseline reader (fast_lane.py verify_red_baseline), carrying the absence-only rule, callable with requirement ids and a test root, returning a JSON verdict."
+origin_agent: business-analyst
+created: 2026-09-28
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: prompt
+risk_surface: contract_boundary
+notes: |
+  WHY HERE AND NOT UNDER TQ-500g (PO decision, Phase B planning 2026-09-28).
+  TQ-500f promises that an absence-only red never proves a test guards existing
+  code. TQ-500f-3-i/-ii keep that promise on the fast lane and /build-feature;
+  on /build-epic it is unmet. So it belongs under TQ-500f-3, beside -3-ii.
+  L3s have no cap. Id -iv because -iii is taken (TQ-500f-3-iii, on main via
+  PR #926).
+
+  PROMPT-ONLY. /build-epic dispatches ticket-supervisor, which follows the
+  building-epics skill; the wiring is instruction text and cannot be
+  unit-tested without a template text search (forbidden). The rule is
+  deterministic and already tested in TQ-500f-3-i. Substitutes: pr-reviewer
+  against the Then clauses, and a live /build-epic drive of a fixture epic with
+  K1 to K3. MECHANICAL BACKSTOP (user decision Q3 at the BA gate):
+  TQ-500g-1-viii stops the commit of any /build-epic ticket for which this
+  reader's verdict is missing or unreadable, so this AC must leave the reader's
+  own verdict on record in a form that check can read.
+
+  PAIR WITH TQ-500g-1-vii. Both add a shared gate call to the same
+  ticket-supervisor phase sequence. They may be built together as one
+  llm-expert change, but each keeps its own AC and can pass or fail on its own.
+
+  CARRIED OVER FROM TQ-500f-3-ii (user decisions at its IT-PO gate): tickets
+  WITH a source requirement get the full shared reader, including every
+  existing halt reason (for example no newly added test tagged as covering the
+  requirement); tickets WITHOUT one record the not-applicable outcome and go on.

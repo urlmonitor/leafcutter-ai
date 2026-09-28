@@ -1,0 +1,73 @@
+id: TQ-500g-1-iii
+components:
+  - testing_quality
+  - build_orchestration
+title: "The code is put back exactly after a wrong-version run, even when the run is cut short"
+component: testing-quality
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a wrong-version run for requirement TQ-9101 has altered
+    refresh_config.py to "drop the retry_due condition", and a copy of the
+    code as written was taken before the alteration,
+  When the run is cut short in one of three ways —
+      X1: the tests exceed the run's time limit,
+      X2: the test process crashes,
+      X3: the drive is stopped between the alteration and the put-back, and
+          is later resumed,
+  Then for X1 and X2 refresh_config.py is put back from the copy and compared
+      with it byte for byte before anything else happens,
+    And for X3 the resumed drive first compares refresh_config.py with the
+      copy, and puts it back when they differ, before any other step,
+    And the cut-short run's result is reported as not run, never as caught
+      and never as survived,
+    And when the file still differs from the copy after the put-back, the
+      drive stops, says that the code may still be altered, and names where
+      the copy of the code as written is kept,
+    And no step of the alter-and-put-back cycle uses the repository's shared
+      stash, and no file other than refresh_config.py changes.
+depends_on:
+  - TQ-500g-1
+  - TQ-500g-1-i
+doc_links:
+  - path: templates/skills/quick-fix/SKILL.md
+    relationship: relates-to
+    status: exists
+    relevance: "Step 4.2 — two temp files outside the repo (the fixed copy and the head copy), never redirect git show over the target, byte-compare restore with diff -q, halt naming the backup file. BP-600c-3-ii explains why git stash is banned."
+assigned_agent: python-coder
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-09-28
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  THE PUT-BACK CLAUSE OF TQ-500g's CRITERIA, UNDER FAILURE. TQ-500g-1-i covers
+  the put-back on the happy path. The failure that matters is a run that dies
+  with the wrong version on disk: the next step would commit the wrong version
+  as the fix. Quick-fix Step 4.2 already handles a failed restore by halting and
+  naming the backup; this AC extends that to the three ways a run is cut short.
+
+  X3 NEEDS THE COPY TO OUTLIVE THE PROCESS. The copy must be kept somewhere a
+  resumed drive can find (quick-fix keeps it outside the repository), and a
+  resume must check before it trusts the working tree. Where it is kept is
+  IT-PO's call.
+
+  "NO OTHER FILE CHANGES" is observable: compare the worktree status before and
+  after the cycle. It also forbids git stash (shared across every worktree and
+  session — see the environment rules and BP-600c-3-ii).
+
+  TESTABILITY: behavioural. A test double for the test run that times out or
+  raises, driven through the runner's production entry point, then a byte
+  comparison of the file; for X3, run the resume path against a worktree left
+  with the altered file.

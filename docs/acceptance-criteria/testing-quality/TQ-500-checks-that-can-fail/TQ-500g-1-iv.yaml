@@ -1,0 +1,82 @@
+id: TQ-500g-1-iv
+components:
+  - testing_quality
+  - llm_authoring
+title: "Each named wrong version becomes one alteration of the finished code that does what its name says and nothing else"
+component: testing-quality
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given the guarding test entries of requirement TQ-9101 name the wrong
+    versions "drop the retry_due condition" and "the gate always allows", and
+    also "retry on a timeout", while the code as written in refresh_config.py
+    contains "if refresh_due and retry_due" and has no timeout handling,
+  When the wrong versions are prepared for the runs,
+  Then "drop the retry_due condition" becomes one alteration of the code as
+      written, changing "if refresh_due and retry_due" to "if refresh_due" and
+      nothing else,
+    And "the gate always allows" becomes one alteration after which the
+      refresh runs whatever refresh_due and retry_due hold, and nothing else
+      changes,
+    And each alteration is shown next to the name it was prepared for, so a
+      reader can check the one against the other,
+    And "retry on a timeout", which names behaviour the code does not have, is
+      reported by name as "could not be prepared" with a one-line reason, and
+      the work stays unfinished until it is resolved; it is never dropped
+      without a word,
+    And the preparer neither runs the tests nor says whether a test would
+      catch a wrong version; that is decided by the runs,
+    And "the fix undone" is not prepared by the preparer at all; it is the
+      code as it stood before the work began.
+depends_on:
+  - TQ-500g-1
+doc_links:
+  - path: docs/analysis/2026-09-25-test-writers-prove-failure-not-discrimination.md
+    relationship: describes
+    status: exists
+    relevance: "Remedy item 3: a phase agent (working name test-breaker) applies each named mutant to the file on disk. Incident 1 is the refresh gate used here."
+  - path: docs/acceptance-criteria/testing-quality/TQ-500-checks-that-can-fail/TQ-500f-2-ii.yaml
+    relationship: relates-to
+    status: exists
+    relevance: "Where must_catch names come from (the code-aware test designer); their wording is what this step must turn into code."
+assigned_agent: llm-expert
+estimated_complexity: null
+delivers_to:
+  - agent: python-coder
+    ac_id: TQ-500g-1-i
+    contract: "For each named wrong version: either one concrete alteration of the code as written, labelled with its name, or a 'could not be prepared' entry naming it with a reason. Never a silent omission."
+expects_from: null
+origin_agent: business-analyst
+created: 2026-09-28
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: prompt
+risk_surface: contract_boundary
+notes: |
+  PROMPT-ONLY. must_catch entries are prose ("drop the retry_due condition"), so
+  something must turn each into code, and only an agent can. The fidelity of
+  that translation cannot be unit-tested without a template text search, which
+  CLAUDE.md forbids. Deterministic backstops that bound the damage of a bad
+  translation: TQ-500g-1-ii refuses an alteration that does not load or changes
+  nothing; "could not be prepared" leaves the work unfinished (TQ-500b).
+  Remaining substitute: pr-reviewer against the Then clauses, and an eval row
+  for the preparing agent once one exists (TQ-200 charter).
+
+  WHICH AGENT PREPARES — USER DECISION AT THE BA GATE (Q1, 2026-09-28): an
+  agent that wrote neither the code nor the tests. The concrete agent is chosen
+  at build time. The criteria stay agent-neutral ("the preparer") on purpose.
+  Considered and set aside: the test writer (it wrote the tests, so it would
+  be judging its own work) and the coder (it wrote the code, the weakest
+  independence). The analysis's working name for a new agent is "test-breaker";
+  a new agent is allowed but not required.
+
+  A NAME THAT CANNOT BE PREPARED IS A FINDING, NOT A NUISANCE. It means either
+  the requirement names a wrong version of code that was never written (the work
+  may be incomplete) or the name is too vague to act on. Both need a human.
