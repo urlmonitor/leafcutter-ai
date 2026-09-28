@@ -1,0 +1,186 @@
+id: TQ-500g-4
+components:
+  - testing_quality
+  - build_orchestration
+title: "A test that failed in any of its cases is read as failed by every check that reads a test run"
+component: testing-quality
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given one test run over three tests —
+      S1: test_refresh_gate, written with two sub-cases, whose sub-case
+          "retry_due unset" fails and whose other sub-case passes,
+      S2: test_export_gate, written with two sub-cases, both of which pass,
+      S3: test_window_gate, which has no sub-cases and fails,
+  When the proof-of-done check and the red-baseline check each read that
+    run's outcome for S1, S2 and S3,
+  Then both read S1 as failed, and name its failed sub-case "retry_due unset",
+    And both read S2 as passed,
+    And both read S3 as failed, as they do today,
+    And the proof-of-done check judges a requirement covered only by S1 not
+      eligible for done,
+    And the red-baseline check counts S1 as red at baseline, not as green at
+      baseline,
+    And the two checks give S1, S2 and S3 the same outcome as each other,
+      because they read the run through one shared reading, not two.
+depends_on:
+  - TQ-500g
+doc_links:
+  - path: docs/known-issues/testing-quality/open-low-ki-tq-20260928-subtest-failures-read-as-passed.md
+    relationship: describes
+    status: planned
+    relevance: "The defect this AC closes: the pytest outcome reader shared by done_proof and verify_red_baseline reads a unittest test whose only failures are inside self.subTest() as PASSED (SUBFAILED lines are not recognised). Contains the five-line reproduction. On branch feature/kis-from-test-discrimination (PR #928) at the time of writing."
+  - path: docs/architecture/components/phantom-done-prevention.md
+    relationship: describes
+    status: exists
+    relevance: "The proof-of-done gates whose outcome classification this AC corrects."
+  - path: docs/architecture/diagrams/c3-done-proof-evaluation-sequence.md
+    relationship: describes
+    status: exists
+    relevance: "Where the run is parsed into per-test outcomes in the done-proof evaluation."
+  - path: docs/how-to/fast-lane-build.md
+    relationship: describes
+    status: exists
+    relevance: "Step 3 — verify_red_baseline, the second reader of the same parsed outcomes."
+  - path: docs/architecture/diagrams/c2-fast-vs-heavy-lane-phases.md
+    relationship: describes
+    status: exists
+    relevance: Where the two readers of the shared outcome parse sit in each lane.
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to:
+  - agent: python-coder
+    ac_id: TQ-500g-1-i
+    contract: "One shared reading of a test run in which a test whose any sub-case failed is failed, and a run that reports overall failure with no identifiable failed test is inconclusive (TQ-500g-4-i). The wrong-version runs read their runs through it, never through a copy."
+expects_from: null
+it_requirements:
+- 'One shared reading. Every reader goes through the same function: done_proof._run_pytest_and_parse,
+  done_proof_kind_support._run_pytest_with_kind_plugin, and through them fast_lane.verify_red_baseline,
+  heavy_lane_gate and later the wrong-version runner. No caller keeps a private regex or outcome table.'
+- scripts/ac_store/done_proof.py is over the 400-line file-size ratchet (1264 counted lines) and must
+  not grow. New parsing logic goes in a sibling module under scripts/ac_store/; any line added to done_proof.py
+  is offset by moving existing parser code out, so its counted length stays the same or drops.
+- The new sibling module has no leading underscore, because it is imported from scripts/build_orchestration/
+  (see the naming note in done_proof_kind_support). Register it in AC_STORE_DEPLOY_MAP (scripts/build_phases_ac_store.py),
+  or the deployed gates crash on import.
+- 'Keep the {nodeid: outcome} return contract and its outcome words unchanged for every existing caller:
+  PASSED, FAILED, XFAIL, XPASS, SKIPPED, ERROR. Failed sub-case names go through an additive side channel,
+  never as new outcome strings.'
+- A node id with at least one SUBFAILED line reads FAILED, whatever its own result line says. SUBPASSED
+  lines are informational only and never turn a FAILED or ERROR test into a pass.
+- Must read pytest 8 output (no SUBFAILED lines; requirements-dev.txt allows pytest>=8.0) and pytest 9
+  output, with no regression on either. Tests use the installed pytest and must not assume one major version.
+- The done-proof reason and the red-baseline verdict entry both name each failed sub-case by the parameters
+  pytest prints for it.
+- The red-baseline gate still makes exactly one pytest run per call.
+- 'Rebase onto TQ-500f-3-iii''s shared tag-matching module (on main via PR #926) before building. Keep
+  the {nodeid: outcome} contract that module consumes.'
+test_spec:
+- name: test_subfailed_test_read_identically_by_done_proof_and_red_baseline
+  target_dir: unit_tests/ac_store/
+  framework: pytest
+  type: integration
+  angle: seam
+  description: A real pytest run of a fixture module with S1 (one failing subTest 'retry_due unset'),
+    S2 (two passing subTests) and S3 (plain failing test) is read through both production readers. Both
+    give S1 FAILED naming 'retry_due unset', S2 PASSED and S3 FAILED, as identical maps.
+  must_catch:
+  - parser ignores SUBFAILED lines
+  - only the done-proof path reads SUBFAILED lines; the red-baseline path keeps a private parser
+- name: test_done_proof_refuses_requirement_covered_only_by_subfailed_test
+  target_dir: unit_tests/ac_store/
+  framework: pytest
+  type: integration
+  angle: reachability
+  surface_invoked: scripts/ac_store/done_proof.py (verify_done_eligible CLI path)
+  description: Through done_proof's production entry point, with a real pytest run, a requirement covered
+    only by S1 is judged not eligible for done, and the reason names the failed sub-case.
+  must_catch:
+  - SUBFAILED downgrade applied in the red-baseline path only
+- name: test_red_baseline_counts_subfailed_test_red
+  target_dir: unit_tests/build_orchestration/
+  framework: pytest
+  type: integration
+  angle: reachability
+  surface_invoked: python scripts/build_orchestration/fast_lane.py verify_red_baseline
+  description: fast_lane.py verify_red_baseline, run as a subprocess over the same fixture, lists S1 as
+    red at baseline and not as green at baseline.
+- name: test_test_with_only_passing_subcases_stays_passed
+  target_dir: unit_tests/ac_store/
+  framework: pytest
+  type: integration
+  angle: discrimination
+  description: S2, whose sub-cases all pass, still reads PASSED at both checks. This is the control against
+    a fix that fails every test that has sub-cases.
+  must_catch:
+  - any test with sub-cases read as FAILED
+  - SUBPASSED lines read as failures
+- name: test_deployed_gate_reads_subfailed_as_failed
+  target_dir: unit_tests/build_orchestration/
+  framework: pytest
+  type: integration
+  angle: deployed
+  description: After build.py deploys into a temp target, the deployed verify_red_baseline, run in a fresh
+    subprocess, imports the new sibling reader and reads S1 as red.
+  must_catch:
+  - new sibling module missing from AC_STORE_DEPLOY_MAP
+test_rationale: The defect sits in one line format of real pytest output, so each test feeds a REAL pytest
+  run (a fixture module with self.subTest cases), never a hand-typed stdout string. The seam test holds
+  both production readers to one verdict. That is the 'one shared reading' clause. The deployed test covers
+  the ratchet-driven move into a new sibling module, which ships through a hard-coded deploy map.
+origin_agent: business-analyst
+created: 2026-09-28
+amended_by: []
+superseded_by: null
+covered_by:
+  - TQ-500g-4-i
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  PHASE B PLAN ITEM g-4. BUILD ORDER: this AC is built BEFORE TQ-500g-1 (the
+  wrong-version runs read their runs through the reading fixed here; without it
+  a wrong version caught only inside a sub-case would be reported as surviving).
+  TQ-500g-1 and TQ-500g-1-i carry depends_on TQ-500g-4 to enforce the order.
+
+  WHY BOTH DIRECTIONS MATTER. At red baseline the defect errs safe (a red test
+  is read green, so the gate refuses). At done proof it errs dangerous (a
+  failing test is read passed and can support a done verdict). This AC closes
+  both with one change, which is why it belongs to no single route.
+
+  S2 IS THE CONTROL. A fix that reads every test that has sub-cases as failed
+  passes S1 and breaks S2. S3 pins today's behaviour for tests without
+  sub-cases.
+
+  TECHNICAL DETAIL FOR IT-PO (from the KI, not verified against source by the
+  BA): pytest 9 prints "<nodeid> PASSED" for the parent and reports sub-case
+  failures on separate "SUBFAILED(<params>) <nodeid> - <error>" lines, which the
+  shared outcome regex does not recognise. The KI's suggested fix is to downgrade
+  the node id to FAILED on any SUBFAILED line and keep SUBPASSED as
+  informational. Reuse, do not fork: the parser is shared by done_proof and the
+  red-baseline reader (TQ-500f-3-i's single-reader rule); TQ-500f-3-iii (on main
+  via PR #926) is moving tag-to-test matching into its own shared module — the
+  implementer should rebase onto that and keep the {nodeid: outcome} contract.
+
+  TESTABILITY: behavioural. Real pytest output from a fixture test module with
+  self.subTest() cases, fed through the production CLI of each check, is the
+  natural proof; a hand-typed stdout string alone would hide exactly the line
+  format that regressed.
+
+  IT-PO ENRICHMENT (2026-09-28)
+  SOURCE CHECK. done_proof._parse_pytest_verbose_output is a one-line regex
+  map (_PYTEST_RESULT_RE). It is called from done_proof._run_pytest_and_parse
+  and done_proof_kind_support._run_pytest_with_kind_plugin. Both check the
+  returncode only for membership in (0, 1). fast_lane.verify_red_baseline and
+  heavy_lane_gate read through those two. So one module-level fix reaches
+  every gate.
+  RATCHET. done_proof.py has 1264 counted lines. The fix moves the parser into
+  a sibling module and does not add lines to done_proof.py. That is the
+  done_proof_kind_support precedent.
+  BUILD FIRST. Fast lane, python-coder. Target TQ-500g-4, whose subtree
+  includes TQ-500g-4-i.

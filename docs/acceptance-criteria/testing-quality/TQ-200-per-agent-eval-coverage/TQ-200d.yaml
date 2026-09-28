@@ -1,0 +1,155 @@
+id: TQ-200d
+components:
+  - testing_quality
+  - llm_authoring
+title: "The agents that write tests are scored on catching the mistakes that once slipped through"
+component: testing-quality
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Test-writing agents are measured on the mistakes that once got past them.
+
+  The agents that design, write and run tests, database tests included, each
+  have scored eval cases taken from recorded incidents where a green test let a
+  wrong version through, and from the rule that tests use your project's own
+  database setting. Every agent's set includes at least one trap it must not
+  fall into. When a change to one of these agents makes it stop catching what it
+  used to, the score shows that before the change is trusted. These cases are
+  the proof for instruction changes that no ordinary test can check.
+depends_on:
+  - TQ-200
+doc_links:
+  - path: docs/analysis/2026-09-25-test-writers-prove-failure-not-discrimination.md
+    relationship: describes
+    status: exists
+    relevance: "Source of the gold cases: incident 1 (compound refresh gate, branch ran 0 times), incident 2 (gate input moved to a new column; the NULL-skipping buy_volume >= 0 probe), incident 8 (presence measured instead of correctness), and incident 7 (a hard-coded developer database address)."
+  - path: docs/acceptance-criteria/testing-quality/TQ-500-checks-that-can-fail/TQ-500f.yaml
+    relationship: relates-to
+    status: exists
+    relevance: "Phase A of the discrimination initiative. Its prompt-only children (TQ-500f-2-ii, TQ-500f-3, TQ-500f-4, -4-i, -4-ii) set test_required: false and name an eval as their behavioural substitute, deferred to a follow-up AC. This L1 is that follow-up."
+  - path: docs/acceptance-criteria/infrastructure/INF-1100-agents-work-in-the-right-place/INF-1100d.yaml
+    relationship: relates-to
+    status: exists
+    relevance: "INF-1100d-2 and INF-1100d-3 (prompt-only) name a test-writer / test-runner eval over the configured-address and W1/W2 cases as their remaining substitute."
+  - path: docs/acceptance-criteria/testing-quality/TQ-200-per-agent-eval-coverage/TQ-200c.yaml
+    relationship: relates-to
+    status: exists
+    relevance: "TQ-200c-4 is the general rule (a judged proof that was asked for becomes a real, runnable row in the existing harness). This L1 is a concrete instance of it for the test-writing agents."
+  - path: docs/known-issues/testing-quality/open-high-ki-tq-20260907-agent-eval-gate-has-never-evaluated-an-agent.md
+    relationship: relates-to
+    status: exists
+    relevance: "The CI eval gate has never evaluated an agent (fast-pass, or no API key). Rows added here run locally through the shared runner, but CI enforcement waits on TQ-200b-2 and this issue."
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: product-owner
+created: 2026-09-28
+amended_by:
+  - reason: "Authored by product-owner in the Phase B planning pass of the discrimination initiative (scope item 2: evals that stand in for unit tests on the prompt-only ACs)."
+    by: product-owner
+    at: 2026-09-28
+    note: >-
+      Proposed by the product-owner stage of a manually driven /plan-feature; not
+      yet confirmed at a PO gate.
+superseded_by: null
+covered_by:
+  - TQ-200d-1
+  - TQ-200d-2
+  - TQ-200d-3
+  - TQ-200d-4
+implemented_by: []
+change_target:
+  - config
+  - prompt
+risk_surface: contract_boundary
+documentation_triggers: []
+documentation_rationale: >-
+  Adds eval cases for existing agents to the existing harness; no new command,
+  workflow, agent or component, and TQ-200b's documentation already covers how
+  eval sets are run.
+notes: |
+  ORIGIN. Phase B planning of the discrimination initiative (2026-09-28), scope
+  item 2. Seven prompt-only ACs set test_required: false and each names an eval
+  as the behavioural proof it cannot have as a unit test, "in a follow-up AC":
+    - TQ-500f-2-ii  the test designer names wrong versions (must_catch) for a
+                    bug fix (R1) and a gate (R2), and none for new behaviour (R3)
+    - TQ-500f-3     absence red vs assertion red (test A for a new function,
+                    test B a regression of existing code)
+    - TQ-500f-4     the three questions and the vacuity checklist, incident-1
+                    refresh gate (refresh_due and retry_due)
+    - TQ-500f-4-i   the database test writer labels its answers reasoned, not
+                    observed, and lists wrong versions "to run later"
+    - TQ-500f-4-ii  C1 (buy_volume >= 0 over an all-NULL window) and C2
+                    (presence is not correctness)
+    - INF-1100d-2   database tests use the configured connection, no other
+    - INF-1100d-3   W1 (setting missing, database work) / W2 (no database work)
+  This L1 gives those evals one home and one promise.
+
+  PLACEMENT — WHY HERE AND NOT UNDER TQ-500.
+    - TQ-500 holds 7 L1s (its cap). TQ-500f is at a 6-L2 override. TQ-500g is
+      planned at exactly 5 L2s (see its notes). Each would need a cap raised.
+    - The subject is the quality of AI agents, measured by scored cases, which
+      is TQ-200's charter ("every AI agent that writes or judges is guarded by an
+      eval set"). TQ-200 holds 3 L1s, so a fourth needs no override.
+    - TQ-200c-4 already states the general rule; this L1 is its first concrete
+      instance, for the agents whose prompt ACs asked for it.
+    - An L1 rather than an L2 under TQ-200a: TQ-200a is the generic "every
+      in-scope agent has an eval set" and is at 4 L2s; the incident-derived
+      cases for four agents are a feature in their own right and will need
+      three to four L2s.
+
+  SCOPE WIDENING TO FLAG FOR THE BA. TQ-200a-1-i names seven in-scope agents
+  (pt-classifier, mock-data-author, mockup-author, flow-author, product-owner,
+  business-analyst, it-po). test-writer, sql-test-writer, test-designer and
+  test-runner are not on that list. This L1 adds them. The BA should check
+  TQ-200a-1-i is not read as a closed list, and amend it if it is.
+
+  SUGGESTED L2 SPLIT (BA's call), one per agent so each can ship on its own:
+    1. test-writer: incident 1 refresh gate (produced test must go red when
+       retry_due is left unset, and the report lists that wrong version);
+       TQ-500f-3 test A / test B (absence red accepted only for the new
+       function); C1 and C2 from TQ-500f-4-ii. Trap: a request whose natural
+       fixture seeds only the old input (incident 2, cvd vs cvd_delta_30).
+    2. sql-test-writer: a stored-procedure regression test; every answer
+       labelled reasoned, none claiming an observed run; the wrong version listed
+       "to run later"; C1 in its SQL shape.
+    3. test-designer: R1 / R2 / R3 from TQ-500f-2-ii. BLOCKED until the agent
+       exists (ACD-2500d-5) and TQ-500f-2-ii is built; carry that dependency on
+       this L2, never on this L1 (the fast lane pulls every unmet dependency
+       into the build set).
+    4. test-writer and test-runner, database setting: INF-1100d-2 (configured
+       address used, nothing else named) and INF-1100d-3 W1 / W2 (W2 is the
+       trap: no mention of the missing setting when no database work exists).
+  Each set carries at least one negative case (TQ-200a-4).
+
+  WHERE A JUDGE IS NOT NEEDED. Several expected outcomes are mechanically
+  checkable once the agent has produced a test: "the produced test goes red
+  when retry_due is left unset" is a wrong-version run, which TQ-500g-1's
+  shared runner performs. The BA/IT-PO should prefer that deterministic check
+  over an LLM-judge rubric wherever the row allows it, and keep the judge for
+  report wording (reasoned vs observed, the three answers).
+
+  CONSTRAINTS FOR DOWNSTREAM AUTHORS.
+    - Rows join the existing harness (scripts/evals/agent_eval_config.json,
+      scripts/evals/run_agent_eval.py, artifact scoring), per TQ-200c-4. No
+      second harness.
+    - Rows are the evidence for their prompt ACs, but the prompt ACs are not
+      edited in this pass (TQ-500f-2-ii and TQ-500f-3 have pending amendments on
+      branch ac-authoring/tq-500f-2-ii-amend). When this L1's L2s are written,
+      each prompt AC's test_rationale should point at its row; do that after
+      that branch merges.
+    - The cases come from one adopter's written record, not re-verified against
+      its history (same caveat as TQ-500f-5).
+    - Any database address in a row is the placeholder
+      postgresql://<user>:<password>@<host>:<port>/<database>, never a real one
+      (INF-1100d-4 scans shipped files).
+
+  KNOWN LIMIT. The CI eval gate has never evaluated an agent
+  (KI-TQ-20260907). Until TQ-200b-2 and that issue are fixed, these rows are run
+  locally and their results reported by hand; CI will not block on them.

@@ -110,7 +110,8 @@ created: 2026-09-21
 amended_by: []
 superseded_by: null
 covered_by: [BO-4100e-1-i]
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260923-BO-4100e-1.md
 notes: >-
   The completeness half of BO-4100e, and the one every other child depends on -- nothing
   can be removed, classified or correctly described while it remains invisible. The last

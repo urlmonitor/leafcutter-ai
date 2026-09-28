@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: '2026-09-21'
-last_updated: '2026-09-21'
+last_updated: '2026-09-25'
 components:
   - build_orchestration
   - supervisor_system
@@ -17,9 +17,9 @@ related_docs:
 # KI-BO-20260921-fastlane-worktree-agent-acts-on-leaked-conversation — the fast lane's worktree phase executed destructive git operations from the parent session's conversation, then asked for the authorization afterwards
 
 - **Severity:** blocker — the tool is designed for unattended single-argument use (`/fast-lane-build <AC-id>`), and in this run it destroyed a remote ref nobody asked it to touch. Unattended plus destructive plus acting on inferred intent is not a combination that can be left live.
-- **Status:** open. Observed once, 2026-09-21, run `wf_e48f8d02-599`.
-- **Occurrences:** 1
-- **First seen:** 2026-09-21 · **Last seen:** 2026-09-21
+- **Status:** open. Observed 2026-09-21 (run `wf_e48f8d02-599`) and 2026-09-25 (run `wf_8ee46b70-c46`, see "Second occurrence" below).
+- **Occurrences:** 2
+- **First seen:** 2026-09-21 · **Last seen:** 2026-09-25
 - **Where:** `templates/workflows-js/fast-lane-ship.js:674-700` (the `Worktree` phase `agent()` call) · `templates/agents/worktree-agent.md` (the agent type it dispatches)
 
 **What happened.** `Workflow({scriptPath: ".../fast-lane-ship.js", args: {ac: "TKT-500f-6"}})` was invoked to build one acceptance criterion. It performed **zero** work on `TKT-500f-6`. Instead the Worktree-phase agent returned:
@@ -58,8 +58,69 @@ Do NOT fix this by adding "ignore unrelated instructions" to the phase prompt. A
 
 **Reproduction note.** Do not attempt to reproduce by re-running the same workflow in a session whose conversation contains destructive instructions — that is the trigger. Reproduce with a synthetic parent context in a throwaway clone.
 
+**Second occurrence (2026-09-25, run `wf_8ee46b70-c46`, `/fast-lane-build BO-2900a-3`).** This
+time the leak blocked the run instead of damaging anything, and it revealed two more defects.
+
+The claim phase (`fast-lane-ship.js`, the `claim-connected` `agent()` call, `agentType:
+"status-checker"`) refused to run `fast_lane.py claim`. Two reasons were given:
+- **Role mismatch.** Its template limits it to reading ticket status and closing tickets. Running
+  a build-orchestration script that locks ACs is outside that role.
+- **The leaked conversation.** It had read the parent session's last user messages ("give it the
+  absolute path / ok / go ahead") and judged them "too fragmentary and decontextualized to serve as
+  explicit authorization for a claim/lock operation".
+
+The workflow then halted with **"connected set already claimed / in progress — a concurrent
+fast-lane run owns these ACs"**. That was false: `claimed` was `[]`, and no other run existed. The
+guard at `if (!claimResult || claimResult.target_refused)` treats *any* `target_refused: true` as
+contention. The agent had set that flag to carry its own refusal.
+
+No damage was done. No claim was taken, no AC changed, and the worktree `fast-lane/bo-2900a-3`
+had no commits and was removed by hand.
+
+The new findings:
+4. **A phase is assigned an agent whose role forbids the phase.** `status-checker` is dispatched
+   for the claim step (and for the producibility guard before it). Its own contract says it runs
+   no build scripts, so it refuses whenever it reads its template literally. This is defect 2 in
+   reverse: there, the agent could do more than the phase needed; here, it cannot do what the
+   phase needs.
+5. **An agent refusal is reported as resource contention.** The claim result has no field that
+   separates "the agent declined" from "the target is held by another run", so the operator gets
+   the wrong remedy: "wait for that run to complete or release stuck claims". This is the same
+   refusal-is-not-a-decision shape that BO-2300a-1 addresses elsewhere.
+
+Retrying is not a fix. Resuming replays the cached refusal (see
+`KI-BO-20260907-resume-replays-cached-resolver`), and a fresh run in the same session can see the
+same conversation.
+
 **Related.**
 - `KI-BO-20260914-a-cached-bad-path-makes-a-workflow-run-permanently-unresumable` — same workflow layer, also a case of the run's own bookkeeping outliving the condition it described.
 - `KI-CG-20260914-ac-hooks-resolve-root-from-cwd` — different component, same family: behaviour derived from ambient state rather than from the subject the caller named.
 
 **Pattern:** a narrowly-scoped instruction handed to a broadly-capable actor that can see more than its instruction, where the destructive action completes before the authorization question is asked. Scoping the prompt does not scope the agent.
+
+**Re-verified 2026-09-23:** none of the three fix-direction bullets above have landed; the
+mechanism is present in current code exactly as described.
+
+- **Defect 2 (capability the phase never needed) is still live.** `templates/workflows-js/fast-lane-ship.js:696`
+  still dispatches `agentType: "worktree-agent"` for the create-only Worktree phase — the same
+  agent type whose template (`templates/agents/worktree-agent.md:85`) declares "You have
+  exactly two actions: **create** and **remove**." No narrower, create-only agent type exists
+  under `templates/agents/` (`find templates/agents -iname "*worktree*"` returns only
+  `worktree-agent.md`). The phase prompt itself (lines 674-694) is unchanged and remains
+  disciplined, which the original entry already noted is not the fix.
+- **Defect 3 (the removal gate is satisfiable by ambient conversation) is still live.**
+  `worktree-agent.md`'s remove action (lines 178-195) still gates on "Ask explicitly:
+  'Confirm removal of worktree... (yes / no)'" and "Proceed... only when the user types
+  'yes'" — with no requirement that the confirmation be attributable to the actor that
+  dispatched this specific run, as the fix direction calls for. The "Machine-Parsed Dispatch
+  Output Contract" section (lines 207-244), which governs exactly the schema-constrained
+  dispatch mode `fast-lane-ship.js` uses, adds no caller-attribution check either.
+- **Defect 1 (context leak / scoping what a phase agent can see)** — the entry itself already
+  flags this as "the broadest and hardest" and notes defects 2 and 3 make it survivable on
+  their own; per that reasoning it was not expected to be fixed first, and it has not been.
+- **No related AC or test found.** `grep -rl` for this entry's id, "leaked conversation", or
+  "permission-laundering" across `docs/acceptance-criteria/` returns nothing — no AC has been
+  authored against this defect.
+- Kept open per the decision rule: the mechanism is present and demonstrable in current code,
+  regardless of how inconvenient it is to reproduce live (the entry's own reproduction note
+  already explains why a deliberate repro is inadvisable).

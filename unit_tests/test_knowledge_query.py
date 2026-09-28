@@ -854,7 +854,16 @@ class TestPhantomEdgeFiltering:
 
 
 class TestEdgeCountIntegration:
-    """KM-KQS-025: combined improvements must produce >= 600 edges from real repo."""
+    """KM-KQS-025: combined improvements must produce >= 600 edges from real repo.
+
+    The phantom-filter exemption set is derived from the real config/paths.json
+    at test time (the union of every surface's declared file_path_fields), not
+    hardcoded here. Any surface that declares an edge_field as a file-path field
+    (its edges legitimately target a path string, not a node id — e.g. tickets'
+    files_touched, acs' implemented_by/covered_by) is automatically exempt from
+    the phantom-node check below, so this test cannot drift out of sync with
+    paths.json the way a hardcoded set could.
+    """
 
     def test_edge_count_integration(self):
         # covers: KM-KQS-025
@@ -878,11 +887,11 @@ class TestEdgeCountIntegration:
         assert len(edges) >= 600, (
             f"Expected >= 600 edges after all improvements; got {len(edges)} (KM-KQS-025)"
         )
-        # All edge targets must be known node IDs (no phantoms), EXCEPT for
-        # edge types that are intentionally exempt from phantom filtering
-        # (implemented_by and covered_by — these target file paths, not nodes).
+        # All edge targets must be known node IDs (no phantoms) except for edge types
+        # exempt via config/paths.json's file_path_fields (these target paths, not nodes).
         node_ids = {n["id"] for n in data.get("nodes", [])}
-        _PHANTOM_EXEMPT = {"implemented_by", "covered_by"}
+        _surfaces = json.loads(_REAL_PATHS_JSON.read_text(encoding="utf-8"))["surfaces"]
+        _PHANTOM_EXEMPT = {f for s in _surfaces.values() for f in s.get("file_path_fields", [])}
         for edge in edges:
             if edge["type"] in _PHANTOM_EXEMPT:
                 continue

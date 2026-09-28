@@ -1125,10 +1125,10 @@ function derivePtRunSet(classifier) {
  * @returns {Promise<boolean>}
  */
 async function checkProductTruthStorePresent(ptStorePath, authoringWorktreePath) {
-  const root = authoringWorktreePath ? authoringWorktreePath.replace(/\/$/, "") + "/" : "";
-  const storeDir = root + ptStorePath;
-  const genScript = root + ptStorePath + "/scripts/generate_product_truth.py";
-  const reconcileScript = root + ptStorePath + "/scripts/apply_flow_backlinks.py";
+  const _r = authoringWorktreePath ? resolvePathOntoRoot(authoringWorktreePath, ptStorePath) : null; // KI-ACD-007 (see ptStoreDir): avoid double-anchoring an already-anchored path
+  const storeDir = (_r && _r.ok) ? _r.path : ptStorePath;
+  const genScript = storeDir + "/scripts/generate_product_truth.py";
+  const reconcileScript = storeDir + "/scripts/apply_flow_backlinks.py";
   const checkCmd =
     `test -d "${storeDir}" && test -f "${genScript}" && test -f "${reconcileScript}" ` +
     `&& echo present || echo absent`;
@@ -1439,17 +1439,12 @@ async function runFlowReconciliation(flowRef, flowBacklinks, component, runId, p
     return { status: "skipped", message: "no flow_backlinks reported by the business-analyst — reconciliation skipped" };
   }
 
-  /*
-   * BO-3900 — normalise the worktree root's own separator spelling before
-   * it is prefixed onto ptStorePath/flowRef (always forward-slash store
-   * identifiers): a Windows-backslash authoringWorktreePath concatenated
-   * as-is here previously produced a MIXED-separator path.
-   */
-  const root = authoringWorktreePath ? normalizePathForm(authoringWorktreePath).replace(/\/$/, "") + "/" : "";
-  const scriptPath = root + ptStorePath + "/scripts/apply_flow_backlinks.py";
+  const _r = authoringWorktreePath ? resolvePathOntoRoot(authoringWorktreePath, ptStorePath) : null; // BO-3900 / KI-ACD-007 (see ptStoreDir): avoid double-anchoring
+  const resolvedPtStorePath = (_r && _r.ok) ? _r.path : ptStorePath;
+  const scriptPath = resolvedPtStorePath + "/scripts/apply_flow_backlinks.py";
   // flowRef is store-relative (e.g. flows/foo/bar.flow.json); resolve it for the CLI.
   // NOT-A-PATH: idempotent de-duplication of an already-prefixed product-truth store identifier (forward-slash by convention, UXP-700c-3-i) — not a Windows/POSIX absoluteness decision.
-  const flowArg = root + ptStorePath + "/" + flowRef.replace(/^\/+/, "").replace(new RegExp("^" + ptStorePath + "/"), "");
+  const flowArg = resolvedPtStorePath + "/" + flowRef.replace(/^\/+/, "").replace(new RegExp("^" + ptStorePath + "/"), "");
   const backlinksJson = JSON.stringify(JSON.stringify(flowBacklinks));
 
   // Step 1 — run the reconciliation script (writes step.implements + regenerates derived data).
@@ -1599,16 +1594,19 @@ function applyAnswerByType(answer, type) {
  *   at right now, or null when there is nothing (valid) to resume.
  */
 async function peekPausedGateId(runId) {
+  // BO-2300a-1-ii: LOCAL, not module-level `workspaceSetupAgentId` -- see
+  // this file's DECISION HISTORY for why (test_acd_2100c_1.py extraction).
+  const _shellPermittedAgentId = "worktree-agent";
   const _peekPrompt =
     "Read the durable pause record for this run (READ-ONLY — do not act on " +
     "it or clear it). Run exactly:\n" +
     "  " + buildPauseStoreCommand("read --run-id " + runId) + "\n" +
     "Return EXACTLY its stdout JSON of the form {\"exists\":<bool>,\"stale\":<bool>,\"record\":<obj|null>}.";
-  const _rawPeek = await agent(_peekPrompt, { agentType: "status-checker", label: "peek-pause-record" });
+  const _rawPeek = await agent(_peekPrompt, { agentType: _shellPermittedAgentId, label: "peek-pause-record" });
   let _peekParsed;
   try {
     _peekParsed = (typeof _rawPeek === "string")
-      ? parseAgentJson(_rawPeek, { stage: "peek-pause-record", agent: "status-checker" })
+      ? parseAgentJson(_rawPeek, { stage: "peek-pause-record", agent: _shellPermittedAgentId })
       : _rawPeek;
   } catch (_peekErr) {
     _peekParsed = null;
@@ -1645,6 +1643,8 @@ async function resolveGate(gateId, liveGateFn, args, context, descriptor, runId)
   runId = runId || (args && args.run_id) || "default-run";
   const answerType = (descriptor && descriptor.type) || "single_choice";
   const validOptions = (descriptor && Array.isArray(descriptor.options)) ? descriptor.options : null;
+  // BO-2300a-1-ii: LOCAL constant -- see peekPausedGateId()'s comment above.
+  const _shellPermittedAgentId = "worktree-agent";
 
   // ADR-024 Rule 4: check resume_answer BEFORE liveGateFn.
   if (args && args.resume_answer && args.resume_answer.gate_id === gateId) {
@@ -1687,11 +1687,11 @@ async function resolveGate(gateId, liveGateFn, args, context, descriptor, runId)
       "Read the durable pause record for this run. Run exactly:\n" +
       "  " + buildPauseStoreCommand("read --run-id " + runId) + "\n" +
       "Return EXACTLY its stdout JSON of the form {\"exists\":<bool>,\"stale\":<bool>,\"record\":<obj|null>}.";
-    const _rawRec = await agent(_readPrompt, { agentType: "status-checker", label: "read-pause-record" });
+    const _rawRec = await agent(_readPrompt, { agentType: _shellPermittedAgentId, label: "read-pause-record" });
     let recCheck;
     try {
       recCheck = (typeof _rawRec === "string")
-        ? parseAgentJson(_rawRec, { stage: "read-pause-record", agent: "status-checker" })
+        ? parseAgentJson(_rawRec, { stage: "read-pause-record", agent: _shellPermittedAgentId })
         : _rawRec;
     } catch (_e) { recCheck = null; }
     // FAIL CLOSED: apply ONLY when exists===true AND stale is not true.
@@ -1731,7 +1731,7 @@ async function resolveGate(gateId, liveGateFn, args, context, descriptor, runId)
         "as waiting. Run exactly:\n" +
         "  " + buildPauseStoreCommand("clear --run-id " + runId) + "\n" +
         "Return EXACTLY the command's JSON stdout.";
-      const _clearRaw = await agent(_clearPrompt, { agentType: "status-checker", label: "clear-pause-record" });
+      const _clearRaw = await agent(_clearPrompt, { agentType: _shellPermittedAgentId, label: "clear-pause-record" });
 
       // VERIFY THE CLEAR — do not take the dispatch result on trust. Mirrors
       // pauseAtGate()'s "VERIFY THE PERSIST" block above: a prior version of
@@ -1744,7 +1744,7 @@ async function resolveGate(gateId, liveGateFn, args, context, descriptor, runId)
       let _clearParsed = null;
       try {
         _clearParsed = (typeof _clearRaw === "string")
-          ? parseAgentJson(_clearRaw, { stage: "clear-pause-record", agent: "status-checker" })
+          ? parseAgentJson(_clearRaw, { stage: "clear-pause-record", agent: _shellPermittedAgentId })
           : _clearRaw;
       } catch (_clearParseErr) {
         _clearParsed = null;
@@ -1760,10 +1760,10 @@ async function resolveGate(gateId, liveGateFn, args, context, descriptor, runId)
             "Confirm the pause record was cleared. Run exactly:\n" +
             "  " + buildPauseStoreCommand("read --run-id " + runId) + "\n" +
             "Return EXACTLY its stdout JSON of the form {\"exists\":<bool>,\"stale\":<bool>,\"record\":<obj|null>}.",
-            { agentType: "status-checker", label: "clear-pause-record-verify" }
+            { agentType: _shellPermittedAgentId, label: "clear-pause-record-verify" }
           );
           const _clearVerifyParsed = (typeof _clearVerifyRaw === "string")
-            ? parseAgentJson(_clearVerifyRaw, { stage: "clear-pause-record-verify", agent: "status-checker" })
+            ? parseAgentJson(_clearVerifyRaw, { stage: "clear-pause-record-verify", agent: _shellPermittedAgentId })
             : _clearVerifyRaw;
           _clearVerified = !!(_clearVerifyParsed && _clearVerifyParsed.exists === false);
         } catch (_clearVerifyErr) {
@@ -1827,6 +1827,8 @@ async function resolveGate(gateId, liveGateFn, args, context, descriptor, runId)
  * @returns {Promise<{status: "paused_awaiting_input", run_id: string, gate_id: string}>}
  */
 async function pauseAtGate(gateId, runId, ctxSnapshot, descriptor) {
+  // BO-2300a-1-ii: LOCAL constant -- see peekPausedGateId()'s comment above.
+  const _shellPermittedAgentId = "worktree-agent";
   const questionType = (descriptor && descriptor.type) || "single_choice";
   const questionOptions = (descriptor && Array.isArray(descriptor.options))
     ? descriptor.options : ["approve", "edit", "cancel", "defer"];
@@ -1855,7 +1857,7 @@ async function pauseAtGate(gateId, runId, ctxSnapshot, descriptor) {
     "Persist this pending-question record so the run can be resumed later. Run exactly:\n" +
     "  " + buildPauseStoreCommand("write --run-id " + runId + " --record '" + JSON.stringify(rec) + "'") + "\n" +
     "That writes to the repository's own paused_runs store. Return the command's JSON stdout.";
-  await agent(_persistPrompt, { agentType: "status-checker", label: "pause-persist" });
+  await agent(_persistPrompt, { agentType: _shellPermittedAgentId, label: "pause-persist" });
 
   // VERIFY THE PERSIST — do not take the write on trust.
   // Previously this function discarded the dispatch result and unconditionally
@@ -1876,10 +1878,10 @@ async function pauseAtGate(gateId, runId, ctxSnapshot, descriptor) {
       "Confirm a pause record was persisted. Run exactly:\n" +
       "  " + buildPauseStoreCommand("read --run-id " + runId) + "\n" +
       "Return EXACTLY its stdout JSON of the form {\"exists\":<bool>,\"stale\":<bool>,\"record\":<obj|null>}.",
-      { agentType: "status-checker", label: "pause-persist-verify" }
+      { agentType: _shellPermittedAgentId, label: "pause-persist-verify" }
     );
     const _verified = (typeof _verifyRaw === "string")
-      ? parseAgentJson(_verifyRaw, { stage: "pause-persist-verify", agent: "status-checker" })
+      ? parseAgentJson(_verifyRaw, { stage: "pause-persist-verify", agent: _shellPermittedAgentId })
       : _verifyRaw;
     _persistVerified = !!(_verified && _verified.exists === true);
   } catch (_verifyErr) {
@@ -1985,114 +1987,24 @@ function isAgentRefusal(answer) {
 }
 
 /**
- * Classify the workspace-setup permission lookup into exactly ONE outcome
- * (AC BO-1500f-1 / KI-ACD-009).
- *
- * `permits_shell` ends up not-true for four distinct reasons and only the LAST is
- * a permissions problem with the target agent. Failing closed is correct for all
- * four; asserting a specific false cause is not. Previously every one of them
- * produced the identical halt text — "<agent>'s registered charter does not permit
- * running repository/shell commands" — which sends an operator to edit a registry
- * entry that is frequently correct (and, on a read failure, was never even read).
- *
- * Outcomes:
- *   granted           — the registry was read, parsed, the agent found, permits_shell true.
- *   read_failure      — the registry was never obtained (no reply, non-zero exit, empty stdout).
- *   parse_failure     — stdout was obtained but is not a registry document.
- *   agent_not_found   — the registry parsed but contains no entry for this agent id.
- *   permission_denied — the entry exists and genuinely denies shell access.
- *
- * @param {*}      permissionResult - Raw reply from the registry-read dispatch.
- * @param {string} agentId          - Target agent id for the workspace-setup step.
- * @param {string} registryPath     - Path the read was attempted at, for the message.
- * @returns {{ outcome: string, permits: boolean, cause: string, remedy: string }}
+ * BO-1500a-5-i: build the `{status: "error", setup_failure_kind, message}`
+ * halt payload shared by all four non-confirming worktree-setup reply
+ * shapes (refused / uninterpretable / no_workspace_named / silent_success),
+ * so the common suffix text and JSON.stringify(rawReply) logic is written
+ * once, never duplicated per shape.
+ * @param {string} kind - One of the four setup_failure_kind values.
+ * @param {string} reason - Shape-specific sentence naming which it was.
+ * @param {*} rawReply - The raw worktree-setup reply (string or parsed object).
+ * @returns {{status: "error", setup_failure_kind: string, message: string}}
  */
-function classifyWorkspaceSetupPermission(permissionResult, agentId, registryPath) {
-  let parsed = null;
-  try {
-    parsed = parseAgentJson(
-      permissionResult,
-      { stage: "resolve-workspace-setup-permission", agent: "status-checker" }
-    );
-  } catch (_registryParseErr) {
-    parsed = null;
-  }
-
-  // (1) READ FAILURE — the file never resolved, so nothing about ANY agent's
-  // charter was consulted. Reporting this as a permissions verdict is a lie.
-  const exitCode = (parsed && typeof parsed === "object") ? parsed.exit_code : undefined;
-  const rawOutput = (parsed && typeof parsed.output === "string") ? parsed.output : null;
-  const exitedNonZero = (exitCode !== undefined && exitCode !== null && Number(exitCode) !== 0);
-  if (!parsed || typeof parsed !== "object" || exitedNonZero || rawOutput === null || rawOutput.trim() === "") {
-    return {
-      outcome: "read_failure",
-      permits: false,
-      cause:
-        "the agent registry could not be READ at " + registryPath +
-        " (exit code " + String(exitCode === undefined ? "unknown" : exitCode) +
-        ", " + (rawOutput === null || rawOutput.trim() === "" ? "no stdout" : "stdout present") + "). " +
-        "The registry was never obtained, so NOTHING about the charter registered for '" +
-        agentId + "' was consulted. This is a lookup failure, not a permissions verdict.",
-      remedy:
-        "Check that " + registryPath + " exists and resolves from the directory this workflow " +
-        "runs in, then re-run /plan-feature. Do NOT edit the registry entry for '" + agentId +
-        "' — it was never read, and it may well be correct.",
-    };
-  }
-
-  // (2) PARSE FAILURE — bytes came back, but they are not a registry document.
-  let registryJson = null;
-  try {
-    registryJson = JSON.parse(rawOutput);
-  } catch (_registryJsonErr) {
-    registryJson = null;
-  }
-  if (!registryJson || typeof registryJson !== "object" || !Array.isArray(registryJson.agents)) {
-    return {
-      outcome: "parse_failure",
-      permits: false,
-      cause:
-        "the agent registry read from " + registryPath + " could not be PARSED as a registry " +
-        "document (expected JSON with an `agents` array). No agent's charter could be looked " +
-        "up, so this says nothing about '" + agentId + "'.",
-      remedy:
-        "Repair " + registryPath + " so it is valid JSON containing an `agents` array, then " +
-        "re-run /plan-feature.",
-    };
-  }
-
-  // (3) NOT FOUND — a real registry that simply has no entry for this id.
-  const match = registryJson.agents.find((e) => e && e.id === agentId);
-  if (!match) {
-    return {
-      outcome: "agent_not_found",
-      permits: false,
-      cause:
-        "agent '" + agentId + "' was NOT FOUND in the agent registry at " + registryPath +
-        ". The registry was read and parsed successfully; it simply registers no charter " +
-        "under that id (a rename or a typo in workspace_setup_agent both look like this).",
-      remedy:
-        "Point workspace_setup_agent at an id that exists in " + registryPath + ", or register " +
-        "'" + agentId + "' there with an explicit permits_shell value.",
-    };
-  }
-
-  // (4) A genuine permissions verdict from a registry that WAS read.
-  if (match.permits_shell === true) {
-    return { outcome: "granted", permits: true, cause: "", remedy: "" };
-  }
+function buildSetupFailureResult(kind, reason, rawReply) {
   return {
-    outcome: "permission_denied",
-    permits: false,
-    cause:
-      "agent '" + agentId + "' IS registered in " + registryPath + ", and its entry has " +
-      "permits_shell: " + JSON.stringify(match.permits_shell === undefined ? null : match.permits_shell) +
-      ". This is a genuine permissions verdict: that agent's registered charter does not permit " +
-      "running repository/shell commands.",
-    remedy:
-      "Dispatch the workspace-setup step to an agent whose charter permits shell commands, or — " +
-      "if '" + agentId + "' is genuinely meant to run them — set permits_shell: true on its entry " +
-      "in " + registryPath + ".",
+    status: "error",
+    setup_failure_kind: kind,
+    message:
+      reason + " Halting before any authoring agent is dispatched.\n" +
+      "Raw reply: " + JSON.stringify(rawReply) + "\n" +
+      "Resolve the issue and re-run /plan-feature.",
   };
 }
 
@@ -2556,8 +2468,10 @@ let acStoreDir = "docs/acceptance-criteria"; // default: overridden below
 // dispatch's own static command text carry the literal absolute path,
 // satisfying "the run's own record of the command it issued names an
 // absolute location" rather than an unexpanded shell variable.
+// BO-2300a-1-ii: workspaceSetupAgentId (worktree-agent), same as
+// worktree-setup below -- never status-checker.
 const worktreeScriptResolution = await resolveRepoAnchoredScriptPath(
-  "scripts/setup_ticket_worktree.py", "status-checker", "resolve-worktree-setup-script-path"
+  "scripts/setup_ticket_worktree.py", workspaceSetupAgentId, "resolve-worktree-setup-script-path"
 );
 
 // The worktree-setup step is dispatched EXACTLY ONCE either way. On success
@@ -2597,8 +2511,27 @@ try {
   wtParsed = null;
 }
 
+// BO-1500a-5-i: a refusal, an out-of-scope reply, or an uninterpretable
+// reply is a failed setup, halting BEFORE exit_code/wtPayload checks and
+// before Stage 0 dispatches any authoring agent. wtParsed is null only for
+// a STRING reply with no parseable JSON (free text, not a structured
+// outcome) -- the OLD code fell through to `if (wtPayload) {...}` instead.
+if (wtParsed === null) {
+  const _rawText = (typeof worktreeSetupResult === "string") ? worktreeSetupResult : "";
+  // Reuses isAgentRefusal()'s AGENT_REFUSAL_MARKERS scan, never a second
+  // copy of that word list, by wrapping the free text as its `message` field.
+  const _isRefusal = isAgentRefusal({ message: _rawText });
+  return buildSetupFailureResult(
+    _isRefusal ? "refused" : "uninterpretable",
+    _isRefusal
+      ? "The isolated-workspace setup step declined the work as outside its own scope (a refusal)."
+      : "The isolated-workspace setup step's reply could not be interpreted as any recognised setup outcome.",
+    _rawText
+  );
+}
+
 // Only fail-hard when exit_code is explicitly non-zero.
-if (wtParsed && wtParsed.exit_code != null && wtParsed.exit_code !== 0) {
+if (wtParsed.exit_code != null && wtParsed.exit_code !== 0) {
   const wtStderr = wtParsed.stderr ? wtParsed.stderr : "(no stderr captured)";
   return {
     status: "error",
@@ -2612,18 +2545,34 @@ if (wtParsed && wtParsed.exit_code != null && wtParsed.exit_code !== 0) {
 
 let wtPayload = null;
 try {
-  if (wtParsed && typeof wtParsed.output === "string" && wtParsed.output.trim()) {
+  if (typeof wtParsed.output === "string" && wtParsed.output.trim()) {
     wtPayload = JSON.parse(wtParsed.output.trim());
   }
 } catch (_parseErr) {
-  // Unparseable payload — fall back to default acStoreDir.
+  // Unparseable payload — handled by the no-worktree-path check below.
   wtPayload = null;
 }
 
-if (wtPayload) {
-  authoringWorktreePath = wtPayload.worktree_path || null;
-  acStoreDir = wtPayload.ac_store_path || acStoreDir;
+const _hasWorktreePath = !!(
+  wtPayload && typeof wtPayload.worktree_path === "string" && wtPayload.worktree_path.trim()
+);
+
+if (!_hasWorktreePath) {
+  // BO-1500a-5-i shapes (3)/(4): success-shaped but no directory, vs.
+  // no-failure-reported and no directory/branch. Either way this must
+  // halt -- authoringWorktreePath must NEVER stay null past this point.
+  const _hasExplicitExitCode = wtParsed.exit_code !== undefined && wtParsed.exit_code !== null;
+  return buildSetupFailureResult(
+    _hasExplicitExitCode ? "no_workspace_named" : "silent_success",
+    _hasExplicitExitCode
+      ? "The isolated-workspace setup step reported success but named no workspace directory."
+      : "The isolated-workspace setup step's reply reported no failure but named neither a directory nor a branch.",
+    wtParsed
+  );
 }
+
+authoringWorktreePath = wtPayload.worktree_path;
+acStoreDir = wtPayload.ac_store_path || acStoreDir;
 
 // -------------------------------------------------------------------------
 // Pre-Stage-0 — Partial-Run Recovery: detect and resolve orphaned AC drafts
@@ -2802,7 +2751,8 @@ if (route === "covered" && !force) {
 // -------------------------------------------------------------------------
 phase('Product-Truth Phase')
 
-const ptStoreDir = "docs/product-truth";
+// KI-ACD-007 / BO-1500a-5-i: authoringWorktreePath is guaranteed non-null past the worktree-setup gate above (ACD-2400.yaml amended_by); always anchor via resolvePathOntoRoot(), mirroring acStoreDir's own unconditional treatment above.
+const ptStoreDir = resolvePathOntoRoot(authoringWorktreePath, "docs/product-truth").path;
 
 // State the PT phase hands forward to the AC pipeline.
 let ptFlowProduced = false;
@@ -2871,7 +2821,8 @@ if (ptRunSet.skip) {
       while (!ptApproved) {
         ptResult = await agent(
           `You are running as part of the /plan-feature product-truth phase (outcome: ${ptRunSet.outcome}). ` +
-          `Draft or extend the ${ptStep.stage} artifact for this request in the product-truth store at ${ptStoreDir}. ` +
+          `Draft or extend the ${ptStep.stage} artifact for this request. Write it ONLY to ${ptStoreDir} — ` +
+          "do NOT write to docs/product-truth/ relative to the current checkout. " +
           (ptFeedback
             ? `The user reviewed your previous attempt and requested changes — address this feedback: ${ptFeedback}. `
             : "") +
@@ -3621,3 +3572,29 @@ return {
   acs_written: allAcsWritten,
   route: effectiveRoute,
 };
+
+// DECISION HISTORY
+// ================================================================================
+// - 2026-09-25 [python-coder]: /quick-fix, live incident wf_734389cf-248 (run
+//   itpo-split-20260925 ended pause_persist_failed because status-checker
+//   refused pause_store.py write as outside its scope; see docs/known-issues/
+//   build-orchestration/open-high-ki-bo-20260901-1620.md). (1) BO-2300a-1-ii:
+//   repointed the pause-store round trip and resolve-worktree-setup-script-
+//   path from "status-checker" to "worktree-agent" (permits_shell: true).
+//   Main-body dispatches use the module-level `workspaceSetupAgentId`
+//   (~l.2342); peekPausedGateId()/resolveGate()/pauseAtGate() each use their
+//   OWN local `_shellPermittedAgentId` instead, because those three are
+//   extracted VERBATIM into a standalone Node driver (no top-level body) by
+//   test_acd_2100c_1.py's TestSixthDecisionPointInheritsTheRule -- confirmed
+//   by direct execution to ReferenceError otherwise. Does not narrow
+//   args.workspace_setup_agent's override contract (that only ever covered
+//   the worktree-BOOTSTRAP dispatch, ACD-2100b/BO-1500f-1; confirmed by grep
+//   no test asserts these six honor it). (2) BO-1500a-5-i: the Pre-Stage-0
+//   bootstrap previously fail-hard ONLY on an explicit non-zero exit_code; a
+//   refusal, an uninterpretable reply, a success-shaped reply naming no
+//   worktree_path, or a no-failure reply naming neither a directory nor a
+//   branch all fell through silently. All four now halt via the shared
+//   buildSetupFailureResult() helper with a distinguishing
+//   setup_failure_kind before any authoring agent is dispatched. See
+//   unit_tests/_plan_feature_harness_defaults.py's DECISION HISTORY for the
+//   companion harness-side default this required. (quick-fix; no ticket)

@@ -15,7 +15,7 @@ related_docs:
 
 # KI-CG-20260914-doc-length-blocks-registers — RETRACTED: "check-doc-length tests absolute size and refuses any register edit" — tested and disproved; it ratchets
 
-> One known issue. Index: [commit-guardian.md](../commit-guardian.md).
+> One known issue. Index: [commit-guardian.md](../../commit-guardian.md).
 > Filename severity is the three-level index bucket (`low` — retracted before
 > it was ever acted on); the original grading was `high` and is preserved below.
 

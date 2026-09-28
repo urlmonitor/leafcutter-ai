@@ -1,0 +1,64 @@
+id: BO-4300a
+title: "Whoever asks for a workspace gets it through the same one door"
+component: build-orchestration
+components:
+  - worktree_manager
+  - build_orchestration
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: critical
+roadmap_phase: phase_1
+criteria: |
+  Every workflow, skill and agent gets its workspace the same way.
+
+  Whether the request comes from a long-running build, a quick fix, a requirements
+  session, a skill or a person at the keyboard, the workspace is made by the same single,
+  standalone means and comes out the same shape: the same starting point, the same
+  set-up, and the same piece of work always recognised as the same workspace. Making a
+  workspace is never left to an assistant's judgement or improvised step by step.
+depends_on: [BO-4300]
+doc_links:
+  - path: docs/analysis/2026-09-25-worktree-component-proposal.md
+    relationship: related
+    status: exists
+    relevance: Proposed shape, result contract and caller rules for the one door.
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-09-25
+amended_by: []
+superseded_by: null
+covered_by: [BO-4300a-1, BO-4300a-2, BO-4300a-3, BO-4300a-4, BO-4300a-5]
+implemented_by: []
+documentation_triggers:
+  - how-to
+  - component-diagram
+  - reference-doc
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  The load-bearing record of the goal. Decision 4 is its subject: one standalone means,
+  identical behaviour, agents run it from a skill, workflows receive its result, and no
+  workflow step ever sends workspace creation to an agent as free-form shell work
+  (failure modes F1 and F12 -- an agent refusing a shell step outside its charter; an
+  agent acting on leaked conversation instead of creating the workspace). Decisions 1-3
+  define what "the same shape" means: a per-feature clone landing in worktrees/<slug>,
+  real install files built inside it, branched from origin/main after a fetch.
+
+  OPEN, NOT DECIDED HERE: Q4 one naming scheme. The customer intent is only that the same
+  piece of work is recognised as the same workspace whoever started it, so a re-run never
+  abandons one workspace for a freshly named twin (F10, KI-BO-20260921 "abandons the epic
+  worktree branch"). Which scheme achieves that is for BA/IT PO with the user.
+
+  Distinct from BO-4100d (the account of what was made is truthful): 4100d is honesty
+  about one workspace; this record is that there is only one maker.
+
+  documentation_triggers: how-to (how any agent or person gets a workspace -- the single
+  replacement for every retired recipe under BO-4300f), component-diagram (a new
+  standalone component and who calls it), reference-doc (the result every caller
+  receives and must act on).

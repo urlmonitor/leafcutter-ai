@@ -1,0 +1,151 @@
+id: TQ-200d-3
+components:
+  - testing_quality
+  - llm_authoring
+title: "The test designer has an eval set that checks it names wrong versions for fixes and gates, and does not force them on new behaviour"
+component: testing-quality
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given the test designer exists and has no eval set,
+  When its eval set is added to the existing eval harness,
+  Then the set holds at least these rows, each an input paired with the
+      outcome expected of the test designer —
+        "bug fix": for the requirement "a database outage no longer causes a
+          retry storm; the refresh runs only when a refresh is due and a retry
+          is due", the guarding test entry names "revert the fix" and at least
+          one wrong version naming the condition involved, such as "drop the
+          retry_due condition",
+        "gate": for the requirement "a trade is blocked unless both the window
+          is open and the position limit is not reached", the guarding test
+          entry names one wrong version per condition ("drop the window-open
+          condition", "drop the position-limit condition") and "the gate
+          always allows",
+    And the set holds at least one trap — "new behaviour": for the requirement
+      "export the report as CSV", a test design that invents wrong versions
+      such as "revert the fix" for behaviour that had no earlier version fails
+      the row, and a design that names none passes it,
+    And in every row the design states, in its own words, whether the
+      requirement is a bug fix, a gate or neither,
+    And a local run of the shared eval runner for the test designer picks up
+      every row without anyone naming them, and reports a score for each row,
+    And a result from such a local run is reported as a local result; nothing
+      presents it as checked by CI.
+depends_on:
+  - TQ-200d
+  - ACD-2500d-5
+doc_links:
+  - path: docs/acceptance-criteria/testing-quality/TQ-500-checks-that-can-fail/TQ-500f-2-ii.yaml
+    relationship: relates-to
+    status: exists
+    relevance: "R1 (bug fix), R2 (gate), R3 (new behaviour) — the rows here. Amended on main by PR #926; read it from origin/main."
+  - path: docs/acceptance-criteria/ac-driven-dev/ACD-2500-right-job-right-agent/ACD-2500d-5.yaml
+    relationship: relates-to
+    status: exists
+    relevance: "Registers the test-designer agent. This set cannot run until it exists."
+  - path: templates/agents/test-designer.md
+    relationship: relates-to
+    status: planned
+  - path: scripts/evals/agent_eval_config.json
+    relationship: describes
+    status: exists
+  - path: scripts/evals/run_agent_eval.py
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from:
+  - ac_id: ACD-2500d-5
+    contract: "A registered test-designer agent the shared runner can invoke."
+it_requirements:
+- BLOCKED until ACD-2500d-5 registers test-designer. The rows may exist before TQ-500f-2-ii lands; they
+  fail until it does, which is the eval's red baseline.
+- 'Join the existing harness (TQ-200c-4). Register the agent in scripts/evals/agent_eval_config.json with
+  ONE eval-set path of JSONL rows ({id, input, expected}). Test-writing agents produce test files, not
+  product-truth artifacts, so their scoring type lives in a sibling module under scripts/evals/. run_agent_eval.py
+  has 1438 counted lines, over the ratchet, and must not grow: any registration line added there is offset
+  in the same file.'
+- Compare must_catch lists structurally (which condition names appear, the presence of 'revert the fix').
+  The judge scores only the design's stated classification (bug fix, gate or neither).
+- Local only (user decision; KI-TQ-20260907). Registering the set must not make the CI eval job report
+  these rows as passed or checked. The result is stamped as a local run, and nothing claims TQ-200b-2.
+- Unit tests never call a live model. Row pickup and scoring are proven through the runner's gold-scoring
+  path, using recorded good and bad agent outputs as fixtures.
+- Every new or changed Python file stays at or under 400 counted lines (scripts/commit_guardian/_file_size_ratchet.py).
+  Files already over the limit must not grow.
+test_spec:
+- name: test_test_designer_set_registered_and_every_row_scored
+  target_dir: unit_tests/evals/
+  framework: pytest
+  type: integration
+  angle: reachability
+  surface_invoked: python scripts/evals/run_agent_eval.py (gold-scoring mode)
+  description: Gold-scoring mode finds the test-designer set and scores the bug fix, gate and new behaviour
+    rows.
+- name: test_new_behaviour_trap_fails_invented_wrong_versions
+  target_dir: unit_tests/evals/
+  framework: pytest
+  type: integration
+  angle: discrimination
+  description: A recorded design naming 'revert the fix' for 'export the report as CSV' fails the trap
+    row, and a design naming none passes.
+  must_catch:
+  - new-behaviour trap passes a design that names 'revert the fix'
+- name: test_gate_row_requires_one_wrong_version_per_condition
+  target_dir: unit_tests/evals/
+  framework: pytest
+  type: integration
+  angle: criterion
+  description: A gate design missing 'drop the position-limit condition' fails, and the gold design passes.
+  must_catch:
+  - gate row passes with one condition's wrong version missing
+- name: test_local_result_never_presented_as_ci
+  target_dir: unit_tests/evals/
+  framework: pytest
+  type: integration
+  angle: failure
+  description: The local run is stamped as local.
+  must_catch:
+  - report omits the local marker
+test_rationale: As TQ-200d-1. Structural comparison of must_catch lists wherever possible, and a judge
+  only for the stated classification.
+origin_agent: business-analyst
+created: 2026-09-28
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - config
+  - code
+risk_surface: contract_boundary
+notes: |
+  TQ-200d SUGGESTED SPLIT, ITEM 3 (test-designer). BLOCKED until the agent
+  exists: depends_on ACD-2500d-5 is carried on THIS L2, never on TQ-200d (the
+  fast lane pulls every unmet dependency into the build set, so an L1-level
+  edge would drag ACD-2500d-5 into every TQ-200d build). TQ-500f-2-ii (the
+  must_catch duty in the designer's procedure) is not a build dependency: the
+  rows may exist before it and will fail until it lands, which is the eval's
+  red baseline.
+
+  THE TRAP IS THE DIRECTION TQ-500f-2-ii's R3 LEAVES OPEN. R3 says new behaviour
+  is not REQUIRED to carry must_catch. The failure a designer is likely to show
+  is the opposite over-reach: "revert the fix" on work with nothing to revert,
+  which would send the wrong-version runs an absence (TQ-500g-1-ii) and stop the
+  work for nothing.
+
+  "IN ITS OWN WORDS" keeps TQ-500f-2-ii's rule that bug-fix / gate is the
+  designer's stated judgement, not an automatic classifier's output (TQ-500
+  non-goal). A judge scores that statement; the must_catch lists are compared
+  structurally where possible.
+
+  LOCAL ONLY (user decision at the PO gate): see TQ-200d-1 notes.
+
+  IT-PO ENRICHMENT (2026-09-28)
+  Not buildable until ACD-2500d-5 (llm-expert, todo) is done.

@@ -1,0 +1,216 @@
+id: BO-4300c-1-ii
+title: "Every protection the project declares must fire; one that is present but does not fire produces a refusal"
+component: build-orchestration
+components:
+  - worktree_manager
+  - build_orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: critical
+roadmap_phase: phase_1
+change_target: code
+risk_surface: safety
+criteria: |
+  Given a test project that declares three kinds of protection -- checks that
+    run when a commit is made, a check on the commit message, and a check that
+    runs after a merge -- and a test fixture that can leave exactly one of those
+    kinds declared and in place in a new workspace but not firing,
+  When the workspace maker answers,
+  Then it answers ready only when every kind of protection the project declares
+    was shown to fire inside the workspace, each by a real operation that it
+    rejects: a commit of a known-bad file for the commit-time checks, a commit
+    with a known-bad message for the commit-message check, and a merge that
+    brings in a known-bad change for the after-merge check, which reports that
+    merge as failing,
+  And when any one declared kind does not fire, the answer is a refusal naming
+    that kind,
+  And the presence of the protection settings, or of the files meant to run a
+    kind of protection, never on its own produces a ready answer.
+depends_on: [BO-4300c-1]
+doc_links:
+- path: docs/analysis/2026-09-25-worktree-failure-modes.md
+  relationship: describes
+  status: exists
+- path: docs/analysis/2026-09-25-worktree-isolation-decision-memo.md
+  relationship: constrains
+  status: exists
+- path: docs/architecture/components/worktree-manager.md
+  relationship: describes
+  status: exists
+  relevance: Component page for the one maker; rewritten for clones under BO-4300a-4.
+- path: docs/architecture/adrs/ADR-031-worktree-quality-gate-guard.md
+  relationship: constrains
+  status: exists
+  relevance: Canary-execution probe model (section 1); its create-time gate (section 4) moves into the
+    maker.
+- path: docs/testing/test-angles.md
+  relationship: describes
+  status: exists
+  relevance: Angle taxonomy used by this record's test_spec.
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from:
+  ac_id: BO-4300c-1
+  contract: 'Protections ingredient, per stage: checks.hooks_pre_commit_fired, checks.hooks_commit_msg_fired,
+    checks.hooks_post_merge_fired (each true|false|''n/a''), their conjunction checks.hooks_canary_rejected,
+    hooks_stages_declared [stage], and inactive_stages [stage] on HOOKS_INACTIVE (BO-4300c-2).'
+package_surface: false
+it_requirements:
+- 'STAGE SET FROM THE PROJECT''S OWN DECLARATION (KI-CG-20260914-post-merge-stage-registers-but-installs-no-shim):
+  ensure installs a shim into the clone''s own .git/hooks for EVERY stage the workspace''s own hook declaration
+  names -- in practice the union of `stages:` in the workspace''s generated .pre-commit-config.yaml, the
+  same source commit_guardian''s install_pre_commit_shims.collect_stages reads (today pre-commit, commit-msg
+  and post-merge). The stage list is never hard-coded in the maker, and no new copy of the stage-derivation
+  logic is written: the maker uses the install''s own shim installer (run as a separate process from the
+  workspace''s install, so the maker stays stdlib-only) or an equivalent single shared source. Clones have
+  their own hooks directory, unlike worktrees.'
+- 'ONE CANARY PER DECLARED STAGE, each a real operation the stage rejects: pre-commit -- a commit of a
+  known-bad file is rejected; commit-msg -- a commit with a known-bad message is rejected; post-merge
+  -- a merge that brings in a known-bad change is reported as failing by the post-merge hook (non-zero
+  exit; a post-merge hook cannot undo the merge). Each canary''s known-bad input is taken from the install''s
+  own declaration, never hard-coded to one hook; a declared stage with no declared canary input cannot
+  be shown to fire and counts as not firing.'
+- 'Canaries leave nothing behind: commit canaries never land in the branch, the index or the working
+  tree; the after-merge canary runs against a disposable ref, and afterwards the line of work''s branch
+  tip, index and working tree are exactly as before and the disposable ref is gone -- confirmed by the
+  tree_clean ingredient (BO-4300c-1-iii) evaluated after the canaries.'
+- 'ANSWER FIELDS (aligned with BO-4300c-1 and BO-4300c-2): checks.hooks_pre_commit_fired, checks.hooks_commit_msg_fired,
+  checks.hooks_post_merge_fired, each true|false|''n/a''; checks.hooks_canary_rejected is their conjunction
+  (true only when every declared stage fired); hooks_stages_declared lists the stages the declaration
+  names. When any declared stage does not fire, the answer is refused with code HOOKS_INACTIVE, its message
+  names the stage(s), and inactive_stages lists them; no workspace_path.'
+- '''n/a'' RULE: for kind scratch ALL three stage checks and the conjunction are ''n/a'' (BO-4300e-4 --
+  nothing is committed or merged in a comparison copy). For every other kind the pre-commit check is never
+  ''n/a'' (a project that declares no commit-time stage gives HOOKS_INACTIVE naming pre-commit), and the
+  commit-msg and post-merge checks are ''n/a'' only when the project''s declaration does not name that
+  stage -- never because a declared stage was skipped.'
+- Presence of .pre-commit-config.yaml (or any .leafcutter copy), or of a shim file for a stage, is recorded
+  (precommit_config_present) but never on its own produces ok. The fail-open OR-probe (setup_ticket_worktree.py
+  AC-5, CLAUDE.md's ls ... || ls ... check, verify_precommit_active.py's check_b_config fallback) is not
+  reproduced.
+- 'Git spelling (KI-CG-20260925-commit-delegation-hook-misses-git-dash-c): canary commits and the canary
+  merge run with git''s working directory set to the workspace, never as `git -C <path> commit`; the
+  same holds in the tests and fixtures.'
+- 'The real install must declare a canary input for each stage it declares; commit_guardian''s declaration
+  carries only a manual-stage precommit-canary today (verified 2026-09-25), so adding per-stage canary
+  declarations to the install is in scope of this record''s ticket (flagged to the user as a cross-component
+  touch on commit_guardian).'
+- Proof runs the DEPLOYED maker -- the copy an install delivers, resolved through the shared test locator
+  delivered by BO-4300f-4 -- as a separate process against real temporary git repositories with a real
+  bare hub. No mock of git, no import of the maker module, no grep of its source (CLAUDE.md 'Gate / Workflow
+  ACs -- Verify Behaviorally, Not by Grep'); a test never falls back to the templates/ source copy.
+- 'Tests must not spawn the package''s own scripts/build.py (CLAUDE.md ''Tests must not spawn their own
+  build.py''): the deployed maker comes from the shared deployed layout, and fixture projects carry a
+  minimal stub build entry point that installs a real, rejecting hook in well under a second. A test that
+  must mutate the package and build its own copy says so and justifies it in its ticket.'
+- All temporary projects, hubs and workspaces live under the test's temp directory and run git with an
+  isolated global and system config; afterwards the developer's own repository's branches, registered
+  worktrees and local git config are unchanged (BO-4300f-4-i, F14, KI-TQ-012).
+test_required: true
+test_spec:
+- name: test_all_three_declared_stages_fire_gives_ok
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: criterion
+  description: 'With a fixture project declaring pre-commit, commit-msg and post-merge stages, each with
+    a stub hook that rejects its known-bad input, ensure answers ok; hooks_stages_declared lists all three;
+    checks.hooks_pre_commit_fired, hooks_commit_msg_fired, hooks_post_merge_fired and hooks_canary_rejected
+    are all true; and .git/hooks in the workspace holds a shim for each stage.'
+- name: test_commit_time_stage_not_firing_is_refused_naming_it
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: failure
+  description: With only the pre-commit hook made to accept the known-bad file (other two still fire),
+    the answer is HOOKS_INACTIVE, inactive_stages == ['pre-commit'], the message names it, no workspace_path.
+- name: test_commit_message_stage_not_firing_is_refused_naming_it
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: failure
+  description: With only the commit-msg hook made to accept the known-bad message, the answer is HOOKS_INACTIVE,
+    inactive_stages == ['commit-msg'], no workspace_path.
+- name: test_after_merge_stage_not_firing_is_refused_naming_it
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: failure
+  description: With only the post-merge hook made to exit 0 on the merge bringing in the known-bad change,
+    the answer is HOOKS_INACTIVE, inactive_stages == ['post-merge'], no workspace_path.
+- name: test_declared_stage_whose_shim_is_missing_is_refused_naming_it
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: seam
+  description: 'With the fixture''s shim installer made to skip the post-merge shim while the stage stays
+    declared (the KI-CG-20260914 shape), the answer is HOOKS_INACTIVE naming post-merge -- a declaration
+    alone never counts.'
+- name: test_config_or_shim_presence_alone_never_yields_ok
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: failure
+  description: checks.precommit_config_present is true and all three shim files exist while one stage
+    does not fire; status is not ok and workspace_path is absent.
+- name: test_canaries_leave_branch_index_and_tree_unchanged
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: real_artifact
+  description: After an ok ensure, the workspace's branch tip equals base_commit, `git status --porcelain`
+    is empty, and no disposable canary ref remains.
+- name: test_undeclared_stage_is_reported_na_and_does_not_block
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: boundary
+  description: A fixture declaring only pre-commit answers ok with hooks_commit_msg_fired and hooks_post_merge_fired
+    == 'n/a' and hooks_pre_commit_fired true; a fixture declaring no pre-commit stage answers HOOKS_INACTIVE
+    naming pre-commit.
+test_rationale: Every assertion is made on what the deployed maker actually did to real repositories --
+  its one JSON answer, its exit code, and the state of the workspace, the hub and the main copy afterwards.
+  A direct-import unit test would pass while the deployed copy is stale or mis-deployed (F13), and a git
+  mock cannot show the half-made and occupied states this family exists to handle. One refusal test per
+  stage, each with only that stage made not to fire, so a maker that drops one stage fails exactly one
+  test; the missing-shim test reproduces KI-CG-20260914 directly.
+origin_agent: business-analyst
+created: 2026-09-25
+amended_by:
+- reason: duplication-audit-item-6
+  by: business-analyst
+  at: 2026-09-25
+  note: >-
+    Criteria widened from the commit-time check alone to every protection stage the
+    project declares (commit-time checks, commit-message check, after-merge check),
+    each shown to fire by a real operation it rejects; a declared stage that does not
+    fire gives a refusal naming that stage. Source: duplication audit
+    (docs/analysis/2026-09-25-duplication-clusters-that-produce-known-issues.md, C8) and
+    KI-CG-20260914-post-merge-stage-registers-but-installs-no-shim -- today only the
+    retiring set-up script installs the commit-message and after-merge stages, so a
+    new maker could drop them silently. readiness reset to reviewed for re-approval;
+    it_requirements and test_spec still describe only the commit-time canary and are
+    left for the IT PO pass.
+- reason: duplication-audit-item-5
+  by: it-po
+  at: 2026-09-25
+  note: >-
+    Technical enrichment for the widened criteria: stage shims installed for every stage the
+    workspace's own hook declaration names; one canary per stage (known-bad file, known-bad message,
+    merge bringing in a known-bad change); per-stage checks plus inactive_stages; 'n/a' rule for
+    scratch and for undeclared stages; no `git -C <path> commit`. test_spec rewritten: one refusal
+    test per stage, a missing-shim test, an ok arm and a leaves-nothing test. Complexity S -> M.
+    Criteria unchanged; readiness reviewed.
+superseded_by: null
+covered_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260927-BO-4300c-1-ii.md
+notes: |
+  F7 and KI-BP-20260826-worktree-hooks-only-on-one-path: the "hooks are active" check accepted
+  a .leafcutter link alone and 51 AC records were nearly committed unchecked. The firing proof
+  itself is BO-1700a; this record is that the maker's answer honours it.
+target_epic: EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace

@@ -1,0 +1,104 @@
+id: GE-120e-1-ii
+title: "A path is only an addition when the change actually introduced it, so editing an existing root file is not read as adding one"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - git_vcs_operations
+level: L3
+status: active
+req_status: draft
+work_status: done
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a repository whose root already tracks a file that is not named in the root-file
+    allowlist — requirements-dev.txt, this project's dependency file,
+  And an author whose staged change edits the contents of that file and introduces no new
+    path at the root,
+  When the root-file placement check runs on that commit,
+  Then the check decides what the change did from the recorded kind of each staged entry and
+    not from the entry's mere presence in the change set, so an edit to a path the root
+    already held counts as no addition, the check raises no objection, and the commit
+    proceeds,
+  And a genuinely new, non-allowlisted path introduced at the root in the same commit shape
+    is still objected to and the commit is still stopped, so the objection cannot be cleared
+    by relaxing what the check refuses,
+  And the bug symptom ("A commit that MODIFIES an already-tracked root file is refused as though it were adding a new root file. Concretely, staging a one-line addition to requirements-dev.txt (adding pytest-xdist>=3.5) is blocked by check-root-files. requirements-dev.txt is already tracked at the repo root and is this project's actual dependency file (the repo does not use poetry), and it is absent from root_files.allowed_files in commit_guardian.json, so the file is currently un-editable by anyone. Generalised: any pre-existing, non-allowlisted root file can never be modified again.") must not occur.
+
+  Coverage note: cover this by running the check as a process against a real repository
+  standing in each state and asserting the exit status and the text it wrote for the reader.
+  Reading the source for the absence of a status letter does not cover it (CLAUDE.md, "Gate /
+  Workflow ACs — Verify Behaviorally, Not by Grep"), and the control case is load-bearing: a
+  check that refuses nothing at all satisfies the first clause and defeats the guard.
+depends_on:
+  - GE-120e-1
+doc_links:
+  - path: templates/scripts/commit_guardian/check_root_files.py
+    relationship: modifies
+    status: exists
+    relevance: "The defect site — get_staged_new_files() admits A, M and R alike under the comment 'Only check formally added (A), or modified (M) files just in case', while the module docstring states the purpose as add-only three times."
+  - path: templates/scripts/commit_guardian/_authored_change.py
+    relationship: related
+    status: exists
+    relevance: "GE-120e-1's shared authored-change source, which serves the name-status shape this check derives privately today; the kind of each entry is the value this criterion turns on."
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: related
+    status: exists
+  - path: docs/how-to/managing-pre-commit-hooks.md
+    relationship: related
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "THE DISCRIMINATOR IS THE STATUS LETTER, NOT MEMBERSHIP. git diff --cached --name-status reports the kind of each entry. Admit A. Do not admit M: a modification cannot introduce a path the root did not already hold, which is the entire defect. The existing inline comment ('just in case') is evidence the letter was added defensively rather than deliberately — remove it with the condition, do not leave a comment claiming behaviour the code no longer has."
+  - "R IS A SEPARATE JUDGEMENT AND MUST NOT BE DROPPED REFLEXIVELY. A rename whose DESTINATION is a root path the root did not previously hold genuinely is an addition and should still be objected to; a rename whose destination is not at the root is not. Note that for R the name-status line carries TWO paths (R100<TAB>old<TAB>new) and the current code takes parts[-1], which happens to be the destination — preserve that, and decide R on the destination path only."
+  - "TEMPLATE/DEPLOYED PARITY (ADR-001). The change lands in templates/scripts/commit_guardian/check_root_files.py and reaches scripts/commit_guardian/ only through build.py, which rglob-copies the whole directory. Never edit the deployed copy: the next build overwrites it and the fix disappears silently."
+  - "THE CONTROL CASE IS PART OF THE FIX, NOT OF THE TESTS ONLY. Deleting the gate, widening the allowlist, or returning early all make the first clause pass. The implementation must keep a genuinely new non-allowlisted root path refused with a non-zero exit."
+  - "OUT OF SCOPE — DO NOT BUNDLE. Adding requirements-dev.txt to root_files.allowed_files in commit_guardian.json is a separate change (three deployed copies of the manifest would need mirroring) and is made unnecessary by this fix, because the change in question is an M. Record it as a follow-up rather than shipping it here."
+  - "ERROR-HANDLING POLICY APPLIES TO THE GIT CALL. The subprocess call keeps its specific-exception handling; a git failure must not degrade into admitting every staged path, which would reinstate the defect on exactly the commits where git is under stress."
+test_spec:
+  - name: test_ge120e1ii_editing_an_existing_non_allowlisted_root_file_is_not_blocked
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "In a real git repository whose root already tracks a non-allowlisted file, a staged one-line content change to that file makes the check exit 0 and name the file nowhere in its output."
+  - name: test_ge120e1ii_adding_a_new_non_allowlisted_root_file_is_still_blocked
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "The control: a brand-new non-allowlisted path staged at the root in the same repository makes the check exit non-zero and name that path, so the fix cannot pass by disabling the gate."
+  - name: test_ge120e1ii_rename_into_the_root_is_judged_on_its_destination
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "A staged rename whose destination is a new non-allowlisted root path is still objected to, while a rename whose destination is inside a subdirectory is not."
+  - name: test_ge120e1ii_allowlisted_root_file_passes_whether_added_or_edited
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "A path named in the allowlist exits 0 in both the added and the modified shape, confirming the narrowing did not move the allowlist's own verdict."
+test_rationale: "The defect is a single status letter, so a source-reading test would assert the absence of a substring and would pass against any rewrite that reintroduces the behaviour by another route — the grep trap CLAUDE.md names. All four tests therefore execute the check as a process against a real repository standing in the relevant state and assert only on exit status and reader-facing output. The second test is the red-baseline control: without it, deleting the gate turns the suite green, which is the failure mode this AC's L1 parent exists to prevent. They live in unit_tests/commit_guardian/ alongside the other per-hook behavioural suites rather than in unit_tests/portability/, because the subject is what this one check refuses, not whether the deployed layout resolves."
+delivers_to: null
+expects_from:
+  ac_id: GE-120e-1
+  contract: "The authored change set and the recorded kind of each entry in it; this AC pins down that a consumer reads the kind rather than treating membership as an addition."
+origin_agent: BrainCandy
+created: 2026-09-22
+amended_by: []
+superseded_by: null
+covered_by:
+  - unit_tests/commit_guardian/test_ge_120e_1_ii.py
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  Authored by /quick-fix. Root cause: The function is named get_staged_new_files, its docstring reads 'Get all staged new files', and the module docstring states the purpose three times as add-only ('block commits that add new files to the root directory'; 'Block commits that add unauthorized new files to the root directory'; 'files ... permitted to reside in the root directory'). But line 51 matches three git name-status codes rather than one: `if status.startswith("A") or status.startswith("M") or status.startswith("R"):`, under the inline comment '# Only check formally added (A), or modified (M) files just in case' — showing M was added defensively, not deliberately. Matching M means an ordinary edit to a file already tracked at the root is treated as an addition. Expected behaviour: flag a root file only when the change actually introduces it to the root, i.e. status A (and R only where the rename destination is a root path not previously present); a modification to an existing root file must not be blocked. Note R is arguably defensible and should be considered on its own merits rather than removed reflexively; M is the straightforwardly wrong one. The red baseline must be behavioural, not a grep: stage a modification to an existing tracked root file absent from allowed_files and assert the hook exits 0, AND keep a control asserting it still exits non-zero when a genuinely NEW unauthorised root file is added, so the fix cannot pass by disabling the gate. Out of scope, do not bundle: adding requirements-dev.txt to root_files.allowed_files (three config copies would need mirroring, and the A-only fix makes it unnecessary since the change in question is an M) — record it as a follow-up..
+
+  PLACEMENT. Filed as an L3 constraint on GE-120e-1 rather than a new L2 because GE-120e is
+  at the five-child cap and this is an edge case of the same rule: GE-120e-1 says a check
+  reaches its verdict from what the author actually changed, and this pins the boundary
+  where the path is in the author's change set but the property the check objects to — the
+  file living at the root — is not something the change introduced. GE-120e's own note
+  calls itself the FALSE-POSITIVE axis, which is exactly what this is: a red that is not
+  about anything the author did.

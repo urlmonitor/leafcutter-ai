@@ -1,0 +1,107 @@
+id: KM-300b-3
+components:
+  - knowledge_management
+  - documentation_system
+readiness: approved
+priority: high
+title: "A map committed from one operating system is left untouched when refreshed on another"
+component: knowledge-management
+level: L2
+status: active
+req_status: draft
+work_status: todo
+created_by: "docs/acceptance-criteria/knowledge-management/KM-300-docs-same-everywhere/KM-300b.yaml"
+criteria: |
+  Given the documentation map was generated and committed from a Linux host
+  And a contributor on a Windows host checks out that commit into a fresh
+    clone, so every file's modification time is the time of the checkout
+  And no documentation page has changed since the map was generated
+  When the map is refreshed on the Windows host — either by running the
+    generator directly or by the automatic refresh that runs when work is saved
+    with a commit
+  Then the refreshed map is byte-identical to the committed map
+  And the version-control status reports no modification to the map
+  And no date, time, user name, host name or absolute path that differs between
+    the two hosts or between the two checkouts appears anywhere in the map,
+    including its front-matter header
+  And the same holds in the reverse direction (committed from Windows, refreshed
+    on Linux or macOS)
+  And when a documentation page HAS changed, the refreshed map reflects that
+    change on either host
+depends_on:
+  - KM-300b
+  - KM-300b-1
+  - KM-300b-2
+  - KM-300a-1
+  - KM-DBF-014
+doc_links:
+  - path: docs/INDEX.md
+    relationship: describes
+    status: exists
+  - path: scripts/generate_doc_index.py
+    relationship: implements
+    status: exists
+  - path: templates/scripts/commit_guardian/transform_doc_index.py
+    relationship: implements
+    status: exists
+  - path: docs/architecture/agent_knowledge_system.md
+    relationship: context
+    status: exists
+  - path: docs/acceptance-criteria/knowledge-management/KM-DBF-014.yaml
+    relationship: context
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "No value in the map, including front matter, may come from the wall clock, file modification or creation time, the user name, the host name, or an absolute path; created/last_updated keep coming from the existing committed map (KM-DBF-014)"
+  - "Covers both refresh paths: the generator CLI and the transform-doc-index pre-commit hook (tracked source templates/scripts/commit_guardian/transform_doc_index.py)"
+  - "This AC asserts the sum of KM-300a-1, KM-300b-1 and KM-300b-2; if it is still red once those are green, the remaining host-dependent input must be fixed here and named in the DECISION HISTORY"
+  - "The proof must not need two operating systems: it must compare against a host-neutral golden map stored as test data (LF, forward slashes, fixed order), so every CI host checks the same bytes"
+  - "check-file-size ratchet: scripts/generate_doc_index.py is 480 lines against the 400-line .py limit (already over). The change must leave it no longer than at HEAD (net-zero or shrink). If new logic does not fit, extract it to a new module and add that module to every deploy list that already names generate_doc_index.py (scripts/build_deploy_manifest_helpers.py, scripts/build_phases_knowledge.py, scripts/build_phases_workflows.py) so the deployed transform-doc-index hook can still import it"
+delivers_to: null
+expects_from:
+  ac_id: KM-300b-1
+  contract: "Host-independent ordering (plus KM-300b-2 line endings/encoding and KM-300a-1 forward-slash links) — the host-dependent inputs this AC asserts the sum of"
+origin_agent: business-analyst
+created: 2026-09-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: internal
+test_spec:
+  - name: test_generated_map_matches_host_neutral_golden
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    description: "Generates the map for a fixed fixture docs tree (with a table entry, a single-file entry, mixed-case names and non-ASCII text) and asserts the bytes equal a checked-in golden map under unit_tests/fixtures/ that uses LF, UTF-8 and forward slashes. The same golden is used on every CI host, which is the cross-OS byte-identity proof."
+  - name: test_fresh_checkout_mtimes_do_not_change_map
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    description: "Commits the golden map in a temp git repo, clones it, sets every file mtime in the clone to now, runs the generator CLI and then the transform-doc-index hook, and asserts the map is byte-identical and git status --porcelain reports no change to docs/INDEX.md."
+  - name: test_map_contains_no_host_specific_values
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    description: "Asserts the generated map contains neither the temp repo's absolute path, nor getpass.getuser(), nor socket.gethostname(), nor today's date unless it came from the existing front matter."
+  - name: test_changed_doc_is_reflected_after_refresh
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    description: "Changes one page's description in the clone, refreshes, and asserts the map differs from the golden only in that row."
+test_rationale: "CI cannot run one test on two operating systems, so a host-neutral golden map is the shared reference: every host must reproduce it byte for byte, which is exactly the cross-OS round trip. The fresh-clone mtime step is what separates this AC from KM-DBF-014 (same machine)."
+notes: |
+  Cross-OS extension of KM-DBF-014, which proves byte identity on ONE machine
+  (done). This AC is the round-trip across hosts and checkouts. The fresh-clone
+  condition is deliberate: KM-DBF-014's notes say per-doc dates must never come
+  from the wall clock — a date taken from file modification time would pass
+  KM-DBF-014 on one machine yet differ on every fresh clone.
+
+  KM-DBF-014 adoption: the KM-300 L0 note suggests re-parenting KM-DBF-014
+  under KM-300b. Not done by this BA run: KM-DBF-014 lives outside this feature
+  folder (out of this run's write scope), and its compound KM-DBF prefix
+  derives to parent "KM-DBF", so it would need an explicit `parent: KM-300b`
+  field plus depends_on/covered_by. KM-DBF-014 is referenced here via
+  depends_on instead.

@@ -1032,19 +1032,30 @@ if (producibilityResult.producible !== true) {
   };
 }
 
-// ---------------------------------------------------------------------------
-// Lifecycle: claim the connected set (flip todo → in_progress)
-// ---------------------------------------------------------------------------
+/**
+ * Lifecycle: claim the connected set (flip todo → in_progress).
+ *
+ * Performer (BO-2400f-7-iii): the claim command MUTATES the store, so per
+ * config/agent_registry.schema.json the dispatched agent needs
+ * `permits_shell: true` — not merely "does not explicitly forbid it", the
+ * wrong reading KI-BO-20260901-1620 documents for python-coder above.
+ * `worktree-agent` is the ONLY registry entry declaring `permits_shell:
+ * true`; that is the sole (real) reason it is picked here. Honest
+ * weakness: its charter is worktree lifecycle, not AC-store claims, so it
+ * may still decline on role grounds exactly as status-checker did — a
+ * dedicated chartered executor for this dispatch class remains out of
+ * scope (KI-BO-20260901-1620, item 4). A decline is handled below as
+ * "not attempted", never as contention.
+ */
+const CLAIM_EXECUTOR_AGENT_TYPE = "worktree-agent";
 const claimResult = await agent(
   `You are the claim-phase agent for a fast-lane build.\n\n` +
   `Run this single Bash command and parse its JSON stdout:\n` +
   `   python3 ${gateScript} claim --ac-ids ${batchIdsCsv} --ac-root ${acStoreRoot}\n\n` +
-  `Returns {"claimed":[...],"excluded_claimed":[...],"target_refused":<bool>}.\n` +
-  `If the command exits non-zero or target_refused is true, the connected set is\n` +
-  `already in_progress (owned by a concurrent run) — return the JSON plus "message".\n` +
-  `Otherwise return the parsed JSON with message "claimed <N> ACs".`,
+  `Returns {"claimed":[...],"excluded_claimed":[...],"target_refused":<bool>}. Return that JSON verbatim. If you cannot run this command at all, do NOT report contention — return ` +
+  `{"claimed":[],"excluded_claimed":[],"target_refused":true,"message":"<why>"}, leaving excluded_claimed EMPTY. If it DOES run and finds members already in_progress, put those ids in "excluded_claimed" — that is genuine contention.`,
   {
-    agentType: "status-checker",
+    agentType: CLAIM_EXECUTOR_AGENT_TYPE,
     schema: {
       type: "object",
       required: ["claimed", "target_refused"],
@@ -1059,24 +1070,60 @@ const claimResult = await agent(
     phase: "Resolve",
   }
 );
-
-if (!claimResult || claimResult.target_refused) {
+/**
+ * Three different facts have to be told apart here, and each has a different
+ * remedy. A DECLINE means nothing was ever checked against the store — fixed by
+ * changing who attempts the claim. CONTENTION means it was checked and found
+ * held — fixed by waiting or releasing a stale hold. A SUCCESSFUL CLAIM means
+ * the store now holds this run's ids and the lane should proceed. Conflating
+ * any two of them sends an operator after a cause that does not exist
+ * (BO-2400f-7-iii, BO-2400f-7-iv).
+ *
+ * `claimUsable` must mirror the dispatch's own `required` list a few lines
+ * above — `claimed` and `target_refused` — and must NOT demand more.
+ * `excluded_claimed` is OPTIONAL in that contract, and a performer that claims
+ * everything and excludes nothing has no reason to send an empty array. On
+ * 2026-09-23 one did not, this gate demanded it anyway, and a fully successful
+ * 25-AC claim was reported as never attempted. If you change the schema above,
+ * change this line with it; requiring a field the contract leaves optional
+ * turns a valid reply into a halt.
+ *
+ * An absent optional collection means empty, so `excludedClaimed` normalises it
+ * once and every read below goes through that rather than the raw reply. A
+ * `target_refused` carrying nothing excluded is therefore a decline, not a
+ * report of a hold.
+ */
+const claimUsable = !!claimResult && Array.isArray(claimResult.claimed);
+const excludedClaimed = (claimUsable && Array.isArray(claimResult.excluded_claimed)) ? claimResult.excluded_claimed : [];
+const claimHaltFields = { worktree_path: worktreePath, branch, ac_ids: acIds };
+if (!claimUsable || (claimResult.target_refused && excludedClaimed.length === 0)) {
   return {
-    status: "halt",
-    classification: "halt",
-    message:
-      "connected set already claimed / in progress — a concurrent fast-lane run " +
-      "owns these ACs. Wait for that run to complete or release stuck claims. " +
-      `Detail: ${JSON.stringify(claimResult)}`,
-    worktree_path: worktreePath,
-    branch,
-    ac_ids: acIds,
+    status: "halt", classification: "halt",
+    message: `The claim was never attempted: the dispatched performer either declined to run the repository-mutating claim command or returned no usable result, so no AC was flipped to in_progress — this is not a report of another run's ownership. Detail: ${JSON.stringify(claimResult)}`,
+    ...claimHaltFields,
+  };
+}
+if (claimResult.target_refused) {
+  return {
+    status: "halt", classification: "halt",
+    message: `connected set already claimed / in progress — a concurrent fast-lane run owns these ACs: ${excludedClaimed.join(", ")}. Wait for that run to complete or release stuck claims. Detail: ${JSON.stringify(claimResult)}`,
+    ...claimHaltFields,
   };
 }
 
-// Only the ACs THIS run actually flipped to in_progress may be released on a
-// later failure. Releasing the full resolved set would reset a concurrent run's
-// claims (its ACs land in excluded_claimed here, NOT in claimResult.claimed).
+/**
+ * Only the ACs THIS run actually flipped to in_progress may be released on a
+ * later failure. Releasing the full resolved set would reset a concurrent run's
+ * claims (its ACs land in excludedClaimed above, NOT in claimResult.claimed).
+ *
+ * The split of the two branches above rests on a producer invariant, cited here
+ * because nothing in this file enforces it: `_fl_lifecycle.py` sets
+ * `target_refused = len(to_build) == 0 and len(excluded_claimed) > 0`. So the
+ * gate can only ever raise the flag alongside a non-empty excluded set, which
+ * is what makes "refused with nothing excluded" mean a performer decline rather
+ * than a gate refusal. If that line changes, the decline/contention split here
+ * silently starts misclassifying — change them together.
+ */
 const claimedIdsCsv = (claimResult.claimed || []).join(",");
 const releaseInvocation =
   `python3 ${gateScript} release --ac-ids ${claimedIdsCsv} --ac-root ${acStoreRoot}`;
@@ -1175,8 +1222,14 @@ if (!contextBundleUsable) {
 // Gate invocations (inlined lean loop — scoped to the resolved ids)
 // ---------------------------------------------------------------------------
 
+// TQ-500f-3-i: --ac-root opts the ONE shared verify_red_baseline reader into
+// its declared-absence-only-red refusal rule. The AC store root is threaded
+// through unchanged (acStoreRoot, the same value every other gate/lifecycle
+// invocation in this file already passes) — never a second, independently
+// resolved path.
 const redBaselineInvocation =
-  `python3 ${gateScript} verify_red_baseline --ac-ids ${batchIds} --test-root ${worktreePath}`;
+  `python3 ${gateScript} verify_red_baseline --ac-ids ${batchIds} --test-root ${worktreePath}` +
+  ` --ac-root ${acStoreRoot}`;
 
 const greenCoverageInvocation =
   `python3 ${gateScript} verify_green_and_coverage` +

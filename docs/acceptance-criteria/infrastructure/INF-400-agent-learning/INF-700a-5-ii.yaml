@@ -9,7 +9,7 @@ component: infrastructure
 level: L3
 status: active
 req_status: active
-work_status: todo
+work_status: done
 priority: medium
 readiness: reviewed
 created_by: "docs/acceptance-criteria/infrastructure/INF-400-agent-learning/INF-700a-5.yaml"
@@ -89,8 +89,10 @@ amended_by:
     by: business-analyst
     at: 2026-09-07
 superseded_by: null
-covered_by: []
-implemented_by: []
+covered_by:
+- unit_tests/workflows/test_inf_700a_5_ii.py
+implemented_by:
+- scripts/knowledge/completion_routing.py
 test_spec:
   - name: test_a_record_emitted_after_the_routing_step_is_named_in_the_difference
     target_dir: unit_tests/workflows/

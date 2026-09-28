@@ -1,0 +1,63 @@
+id: BO-4300c
+title: "You get a fully ready workspace or a clear no, never a quiet substitute"
+component: build-orchestration
+components:
+  - worktree_manager
+  - build_orchestration
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: critical
+roadmap_phase: phase_1
+criteria: |
+  Ready in full, or refused with a reason -- and nothing carries on without it.
+
+  A workspace is only handed over when it is complete: its own line of work, started from
+  the latest shared work, its tools installed inside it and its protections shown to be
+  active. Anything short of that is a plain refusal naming the cause, and the work that
+  asked for it stops there -- it never falls back to working in the main copy, in some
+  other folder, or wherever an assistant says it put things.
+depends_on: [BO-4300]
+doc_links:
+  - path: docs/analysis/2026-09-25-worktree-creation-consolidation.md
+    relationship: describes
+    status: exists
+    relevance: Section 1 -- the incident, where "exit 0 with unparseable output" was read as "no worktree, use the current checkout".
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-09-25
+amended_by: []
+superseded_by: null
+covered_by: [BO-4300c-1, BO-4300c-2, BO-4300c-3, BO-4300c-4, BO-4300c-5]
+implemented_by: []
+documentation_triggers:
+  - sequence-diagram
+change_target: pipeline
+risk_surface: safety
+notes: |
+  The record the incident violated. Two halves, both required, and they fail separately:
+  (1) the MAKER only answers "ready" when every part of readiness holds (F4 unparseable
+  answers, F5 a half-made workspace reported healthy, F6 a failed install swallowed,
+  F7 a "protections active" check that passes when they are not); (2) EVERY CALLER stops
+  on anything but "ready" and takes the workspace's location only from the maker's own
+  answer (F2 -- plan-feature's no-workspace mode, build-epic's fallback to the epic
+  folder, finalize's "unknown", the fast lane trusting a path an agent claimed). A
+  perfect maker with a caller that carries on is the 2026-09-25 incident exactly.
+
+  Reuse, do not re-derive: proof that protections genuinely fire is BO-1700a/d; failing
+  closed on unrunnable checks is BO-1700b; set-up naming what it could not establish is
+  GE-120d; never writing straight into shared main as the END STATE is BO-1800e.
+  This record adds the cross-caller halt and "ready means all of it".
+
+  Proof must be behavioural at the workflow level: a maker that refuses, answers in
+  prose, or answers without a status must end the calling workflow before any authoring,
+  phase or delivery step is dispatched (migration plan 6.1, last paragraph). The current
+  harness cannot express an agent refusing its task (F13).
+
+  documentation_triggers: sequence-diagram -- caller, maker and the halt path involve
+  more than two actors, and the halt is the whole of the visible difference.

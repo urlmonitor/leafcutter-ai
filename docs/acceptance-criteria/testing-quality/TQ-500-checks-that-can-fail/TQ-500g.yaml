@@ -1,0 +1,230 @@
+id: TQ-500g
+components:
+  - testing_quality
+  - build_orchestration
+title: "Once the fix exists, its tests are run against the wrong versions, and the runs decide"
+component: testing-quality
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  A fix or gate isn't done while a named wrong version still passes its tests.
+
+  After the code is written, each named wrong version, plus the fix simply
+  undone, is actually applied, the guarding tests are run against it, database
+  tests included, and the code is then put back exactly as it was. Any wrong
+  version the tests fail to notice stops the work, and the verdict comes from
+  those runs, read for what they actually showed — a test that failed in any of
+  its cases never counts as passing — not from anyone's opinion of the tests.
+  The same check guards every way work gets built, one piece or a whole batch,
+  quick or full, so no route goes around it. Existing tests that lean on a
+  changed check are part of that set; they may be strengthened, and every
+  change to one is listed, but none may be weakened to get a green result.
+depends_on:
+  - TQ-500
+  - TQ-500f
+doc_links:
+  - path: docs/analysis/2026-09-25-test-writers-prove-failure-not-discrimination.md
+    relationship: describes
+    status: exists
+    relevance: "Request items 3, 6 and 7 (Phase B). 'Nothing runs after the coder': no step perturbs the finished implementation and checks the tests notice."
+  - path: docs/known-issues/testing-quality.md
+    relationship: relates-to
+    status: exists
+  - path: docs/known-issues/testing-quality/open-low-ki-tq-20260928-subtest-failures-read-as-passed.md
+    relationship: describes
+    status: planned
+    relevance: "Failures only inside unittest subTest blocks are read as PASSED by the outcome parser the gates share. Answered by the read-truthfully clause. On branch feature/kis-from-test-discrimination (PR #928) at the time of writing."
+  - path: templates/skills/quick-fix/SKILL.md
+    relationship: relates-to
+    status: exists
+    relevance: "Phase 4.2 — the existing apply-the-wrong-version-and-restore proof (temp-file revert, byte-compare restore, no git stash); the named starting point for the wrong-version runs."
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: product-owner
+created: 2026-09-25
+amended_by:
+  - reason: "Authored by product-owner from BrainCandy's /plan-feature request 'Tests must prove they can tell right from wrong' (Phase B: request items 3, 6, 7; Phase C recorded as a deferred note)."
+  - reason: "Phase B planning: criteria gain three clauses already decided in notes or surfaced by Phase A — the code is put back exactly afterwards; runs are read for what they actually showed (a test failing only inside a sub-case never counts as passing); the same check guards every build route. Notes gain the Phase B planning block (L2 plan, homing of the eval, build-epic and sub-case items)."
+    by: product-owner
+    at: 2026-09-28
+    note: >-
+      Tagline, title, depends_on and the consumer-test-sweep sentence are unchanged.
+      The every-route clause lifts the 'both lanes, shared scripts' user direction
+      (Phase A BA gate, 2026-09-25) from notes into criteria, widened to the batch
+      route (/build-epic) that PR #923 did not cover. The read-truthfully clause
+      answers KI-TQ-20260928-subtest-failures-read-as-passed. The put-back clause
+      was already in notes (item 3: restore exactly). Proposed by the product-owner
+      stage of a manually driven /plan-feature; not yet confirmed at a PO gate.
+  - reason: "covered_by gains TQ-500g-1..-5 (Phase B BA decomposition); notes gain the user's Q2 decision in the Phase C paragraph"
+    by: business-analyst
+    at: 2026-09-28
+    note: >-
+      Title, criteria and depends_on unchanged. Q2 (BA gate, 2026-09-28): the
+      database test writer's extra wrong versions are run and reported, not
+      blocking; blocking is left to Phase C.
+superseded_by: null
+covered_by:
+  - TQ-500g-1
+  - TQ-500g-2
+  - TQ-500g-3
+  - TQ-500g-4
+  - TQ-500g-5
+implemented_by: []
+change_target:
+  - pipeline
+  - prompt
+risk_surface: contract_boundary
+documentation_triggers:
+  - component-diagram
+  - sequence-diagram
+  - reference-doc
+notes: |
+  PHASE B — L1 ONLY IN THIS RUN. Do not decompose until Phase A (TQ-500f,
+  INF-1100d) has shipped; a later /plan-feature pass will plan it informed by
+  what Phase A teaches.
+
+  WHAT THIS L1 HOLDS (request items):
+    3. A step after the code is written (working name "test-breaker"), scoped to
+       regression and gate tests only — never every test, because wrong-version
+       runs are slow on database-backed suites. It applies each wrong version the
+       requirement named (TQ-500f) plus "the fix undone", runs the tagged tests,
+       restores the code exactly, and blocks sign-off if any wrong version
+       survives. Starting point named by the request: the quick-fix workflow's
+       existing revert-the-fix proof (no stash; temp-file revert; byte-compare
+       restore). The request asks that the existing fail-closed outcome
+       classifier used for done proofs is reused rather than a second one built.
+    6. Consumer-test sweep: when a check or shared helper changes, every existing
+       test that exercises it is listed and either strengthened or stated to be
+       unaffected. GUARDRAIL: this replaces a blanket ban on touching existing
+       tests, and that ban exists to stop tests being weakened to go green —
+       so the sweep may only strengthen, and every edit to an existing test is
+       listed in the sign-off. Related, not duplicated: TQ-100c (protection
+       cannot be quietly removed via links/allowlist).
+    7. The database test writer runs what it writes, including a run against the
+       unfixed code for regression tests. A run in which the suite silently
+       re-installs the database code and so undoes the deliberate break (the
+       "setUpClass re-deploy trap") is not a valid run and must not count as
+       the test noticing — it must be documented and detected.
+
+  COVERED BY EXISTING SIBLINGS — DO NOT RE-SPECIFY HERE:
+    - Per-test, per-wrong-version outcomes and naming the test that slept
+      through a break: TQ-500c. Its criteria ("when the guarded behaviour is
+      deliberately broken, the outcome is reported for each test on its own")
+      already applies to these runs unchanged.
+    - A wrong-version run that was owed and never taken reads as incomplete, not
+      as passed: TQ-500b.
+    - What was broken and what each test did is recorded with the work for a
+      later reader: TQ-500e.
+    - Work whose tests pass the moment they are written, and the substitute proof
+      its writer declares: TQ-500a. This L1 is not that: it applies to regression
+      and gate tests that DO have an ordinary before-and-after, and it runs after
+      the code exists rather than relying on the writer's own alteration.
+
+  PHASE C — DEFERRED, RECORDED HERE RATHER THAN AS ITS OWN L1. Wrong versions
+  proposed by the agent itself, beyond the ones the requirement named. Only
+  worth building if Phase B shows, in practice, wrong versions surviving that
+  nobody named. Not given its own L1 because (a) it is conditional on evidence
+  that does not exist yet, and (b) TQ-500 now holds 7 L1s, its cap — a
+  speculative child would force a cap override. When Phase B runs produce that
+  evidence, promote it via /plan-feature: either as an extension of this L1 or
+  as a new L1 (which will require splitting TQ-500 or an explicit override).
+  User decision at the Phase B BA gate (Q2, 2026-09-28): the database test
+  writer's own extra wrong versions ("to run later") are run and reported by
+  TQ-500g-2-ii but do not block; whether an agent-proposed wrong version that
+  survives should block is Phase C's decision, and those reports are its first
+  evidence.
+
+  BOTH LANES, SHARED SCRIPTS (user direction at the Phase A BA gate,
+  2026-09-25). The wrong-version guard this L1 describes must run in BOTH
+  /build-feature and the fast lane, through the same shared scripts — never a
+  lane-specific reimplementation. In the fast lane it is an ADDITIONAL guard
+  alongside verify_red_baseline and verify_green_and_coverage, not a
+  replacement for either. Precedent set in Phase A: TQ-500f-3-i / TQ-500f-3-ii
+  make both lanes use the one existing red-baseline reader. Decompose with this
+  constraint when Phase B is planned.
+
+  PHASE B PLANNING (product-owner, 2026-09-28). SUPERSEDES the first paragraph of
+  these notes ("do not decompose until Phase A has shipped"): the user chose to
+  plan Phase B now. Phase A state at this date: TQ-500f-1, -2-i, -3-i, -3-ii done
+  (PR #911, #923); TQ-500f-2-ii blocked on ACD-2500 (amendment pending on branch
+  ac-authoring/tq-500f-2-ii-amend, which also adds TQ-500f-3-iii); TQ-500f-3,
+  -4 family, -5, -6 (prompt and docs) todo; INF-1100d-1, -3-i, -3-ii done, the
+  rest todo. None of the unfinished Phase A items blocks the mutation run: it
+  reads must_catch from the AC record, which exists.
+
+  PLANNED L2s (PO recommendation for the BA; five, so the default cap holds and
+  no child_limit_override is needed):
+    g-1 Wrong-version runs after the code exists. Each must_catch entry plus
+        "the fix undone" is applied to the file on disk, the tests guarding that
+        requirement run, the file is restored and byte-compared, and any survivor
+        blocks. ONE shared runner, reached from every route: fast lane (an extra
+        guard beside verify_red_baseline and verify_green_and_coverage),
+        /build-feature and its build-ticket.js twin, and /build-epic
+        (ticket-supervisor / building-epics). Mirror the Phase A split: the
+        runner's rule as one L3, each route's wiring as an L3, so a route can
+        ship or fail on its own. Starting point for apply-and-restore:
+        /quick-fix Phase 4.2 (templates/skills/quick-fix/SKILL.md — temp-file
+        revert, byte-compare restore, no git stash). Reuse, do not fork: the
+        red-baseline reader from #923 (fast_lane.py verify_red_baseline,
+        heavy_lane_gate, done_proof_kind_support, _kind_plugin) and done_proof's
+        fail-closed outcome classifier. Scope: regression and gate tests only,
+        i.e. tests whose AC test_spec entry carries must_catch or
+        angle: discrimination (declared, never inferred — TQ-500 non-goal).
+        Per-test, per-wrong-version outcomes are TQ-500c's rule, not re-specified.
+    g-2 Database tests in the runs, and the database test writer runs what it
+        writes (request item 7), including a run against the unfixed code for
+        regression tests. A run in which the suite re-installs the database code
+        and so silently undoes the applied wrong version (the setUpClass
+        re-deploy trap) is detected and never counts as the test noticing.
+        Picks up the "to run later" list TQ-500f-4-i makes the database writer
+        keep. Needs the configured test database (INF-1100d); with none
+        configured the run reads as not run, never as caught (INF-1100d-3).
+    g-3 Consumer-test sweep with the guardrail (request item 6): every existing
+        test that exercises a changed check or shared helper is listed and
+        either strengthened or stated to be unaffected; edits may only
+        strengthen; every edit to an existing test is listed. Replaces the
+        blanket ban in test-writer.md. Related, not duplicated: TQ-100c.
+    g-4 Runs are read for what they actually showed. Answers
+        KI-TQ-20260928-subtest-failures-read-as-passed: the pytest outcome
+        parser shared by done_proof, the red-baseline reader and (after g-1)
+        the wrong-version runs reads a test whose only failures are inside
+        unittest subTest blocks as PASSED, and never compares the run's exit
+        code with the parsed outcomes. Homed here, as its own L2 rather than
+        an L3 of g-1, because (a) it is a precondition of "the runs decide" —
+        without it a wrong version caught only inside a sub-case is reported as
+        a survivor; (b) it is buildable first and on its own, and it also
+        closes the more dangerous direction today, a failing test read as
+        passed by the done proof; (c) it is one fix to one shared parser, so it
+        belongs to no single route. Build order: g-4 before g-1.
+    g-5 Documentation for the three triggers (reference-doc, component-diagram,
+        sequence-diagram) as one documentation AC. Firewall as in TQ-500f-5:
+        no behavioural AC may be closed by pointing at it.
+
+  HOMED OUTSIDE THIS L1 (decided in this planning pass):
+    - Red-baseline reader on the /build-epic route (gap recorded in
+      TQ-500f-3-ii's it_requirements): TQ-500f's promise ("an absence-only red
+      never proves a test guards existing code") is unmet on that route, so it
+      belongs under TQ-500f-3 as an L3 beside -3-ii, not here. TQ-500f is at its
+      6-L2 override; L3s have no cap. Id: TQ-500f-3-iv, because TQ-500f-3-iii
+      is already taken on the unmerged branch ac-authoring/tq-500f-2-ii-amend.
+      The same prompt surface gains g-1's /build-epic wiring, so the BA may
+      pair the two L3s for one llm-expert change, but each keeps its own AC.
+    - Evals that stand in for unit tests on the prompt-only ACs (TQ-500f-2-ii,
+      TQ-500f-3, TQ-500f-4 family, INF-1100d-2/-3): new L1 TQ-200d under
+      TQ-200 (per-agent eval coverage). Not here: this L1 would exceed its cap,
+      and the subject is agent quality, which is TQ-200's charter.
+
+  SHIPPED-ADDRESS CHECK GAPS — NOT THIS L1, NOT THIS RUN. Env-var credentials
+  with a concrete host, and dialect schemes such as postgresql+psycopg2://, are
+  gaps in INF-1100d-4's check (portability), deliberately out of scope in
+  INF-1100d-4-i. Home: new L3s under INF-1100d-4 via a separate /plan-feature
+  pass (INF-1100d is at its 5-L2 cap). Making the shipped-address-check CI job
+  a required status check is a repository branch-protection setting, done by a
+  maintainer; if an AC is wanted, TQ-100 (which checks gate main) is its home.

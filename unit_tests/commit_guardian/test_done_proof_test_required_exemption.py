@@ -373,9 +373,26 @@ class TestCheckStagedDoneProofsExemption(unittest.TestCase):
         pre-commit with "no covers tag found" — exactly the asymmetry this test
         guards against. Confirmed RED against the unmodified guard (before this fix,
         the AC appeared in violations because no covers-tag exemption existed).
+
+        AMENDED 2026-09-23 for BO-2500a-1-ii. The property under test is
+        unchanged — a documentation AC is exempt at pre-commit exactly as it is
+        in CI — but the waiver is now a CONJUNCTION, so the fixture carries the
+        ``test_rationale`` that BO-2500a-1-ii requires alongside
+        ``test_required: false``. The rationale-less case this fixture used to
+        assert passes is now REFUSED by design, and that refusal has its own
+        coverage in test_done_proof_test_required_rationale_gate.py
+        (TestPrecommitCliReachability). Adding the rationale here therefore
+        narrows nothing: it moves this test onto the amended contract and
+        leaves the case it vacated asserted, in the opposite direction, next
+        door.
         """
         ac_id = "BO-DOCS-EXEMPT-STAGED-001"
-        ac_path = _write_done_ac(self.ac_root, ac_id, test_required=False)
+        ac_path = _write_done_ac(
+            self.ac_root,
+            ac_id,
+            test_required=False,
+            test_rationale="Documentation AC — a covers-tagged test is structurally impossible.",
+        )
         # test_root is intentionally empty — no covers tag exists anywhere
 
         violations = check_staged_done_proofs(
