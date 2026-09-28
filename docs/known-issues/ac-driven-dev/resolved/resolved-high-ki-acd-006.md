@@ -1,6 +1,6 @@
 ---
 title: "KI-ACD-006 — A run that authors zero ACs reports `status: \"ok\"`"
-description: "KI-ACD-006 — A run that authors zero ACs reports `status: \"ok\"`"
+description: "KI-ACD-006 — RESOLVED: a run that authors zero ACs reported status: \"ok\"; all three cancellation exit points in plan-feature.js now return status: \"cancelled\" (verified 2026-09-25 against PR #602 / BO-2300a-2, with cancelled_by: \"person\" attribution added on top)."
 type: reference
 category: reference
 status: active
@@ -21,9 +21,10 @@ related_docs:
 > original grading is the `**Severity:**` line below, unchanged.
 
 - **Severity:** high
-- **Status:** **RESOLVED** (`f1726aef`, PR #602, under AC `BO-2300a-2`; verified 2026-09-25 by
-  reading all three cancel returns on main `d2fe85a1` and running
-  `unit_tests/workflows/test_bo_2300a_2_cancel_status_distinct.py` — 2 passed)
+- **Status:** **RESOLVED** (`f1726aef`, PR #602, under AC `BO-2300a-2` — predates and is
+  unrelated to the ACD-2100 epic; verified 2026-09-25 by reading all three cancel returns on
+  main `d2fe85a1` and running `unit_tests/workflows/test_bo_2300a_2_cancel_status_distinct.py`
+  — 2 passed; also independently re-verified 2026-09-23, see "Also verified 2026-09-23" below)
 - **Occurrences:** 1
 - **First seen:** 2026-08-18 · **Last seen:** 2026-08-18
 - **Where:** `templates/workflows-js/plan-feature.js` — cancellation return path
@@ -81,5 +82,37 @@ still returns `status: "ok"` when the user picks `cancel` there. That choice mea
 existing ACs already cover this request", so `ok` is arguably the correct outcome rather
 than a false success. The uncommitted draft left after a PT cancel is the intended
 NO-PR guarantee (prior committed stages kept, current draft left on disk), not a strand.
+
+**Also verified 2026-09-23 (independent pass, before the above).** Re-verified directly
+against the current `templates/workflows-js/plan-feature.js` at that time, not taken on the
+epic's own say-so. All three cancellation exit points returned `status: "cancelled"`, never
+`status: "ok"`, at their then-current line numbers (`:2843-2850` PT gate,
+`:3228-3235` mid-pipeline gate, `:3397-3404` final gate — the file grew and these shifted
+to `:2844`/`:3229`/`:3398` by the 2026-09-25 pass above). `python -m pytest
+unit_tests/workflows/test_bo_2300a_2_cancel_status_distinct.py -q` gave the same `2 passed`
+result independently.
+
+- **The `status` fix predates the ACD-2100 epic and is unrelated to it.** `git log -L` on all
+  three call sites traces the `"ok"` → `"cancelled"` change to `f1726aef`, landed the day
+  after this entry was filed, and confirmed by `KI-ACD-019`'s own `BO-2300a-2` notes as
+  already reopened (`work_status: todo`) by 2026-08-25 against exactly this code. This
+  register was simply never updated to close the entry once the fix shipped.
+
+- **Contradiction between the two audits on the `cancelled_by` follow-up commit — flagged,
+  not resolved.** This pass attributed the `cancelled_by: "person"` addition to `e5eae49a`
+  ("fix(ac-driven-dev): attribute cancel to the person and fail closed on a missing
+  final-gate result", part of PR #864). The 2026-09-25 pass above attributes the identical
+  behavior to `e3aa88c2` / `dfead426` under AC `ACD-2100c-5`. Both audits agree the
+  `cancelled_by` field exists and works; they disagree on which commit(s) added it. Neither
+  claim was re-verified against the other before this merge — a future reader should check
+  `git log -p` on the three call sites for `cancelled_by` before citing either commit.
+
+- **Store note for a future reader (not this register's scope to fix).** The AC records
+  covering this exact behavior, `BO-2300a-1` and `BO-2300a-2`, were still `work_status: todo`
+  as of this pass. `BO-2300a-2`'s own notes call the PT-gate fix "observed... incidentally"
+  and explicitly "unverified against the mid-gate cancel site." This re-verification checked
+  all three sites directly and confirms the code satisfies them; reconciling the AC store's
+  `work_status` against that evidence is a separate step this known-issues register does not
+  perform.
 
 ---

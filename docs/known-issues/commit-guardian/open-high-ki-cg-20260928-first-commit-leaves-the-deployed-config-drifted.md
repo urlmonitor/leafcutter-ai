@@ -76,10 +76,16 @@ previous commit did this".
    template**, despite the message naming the template. Making the deployed file
    byte-identical to its template does **not** clear the gate and moves the file
    further from the recorded hash. This was tried first and made things worse.
-2. The advertised fix — re-run `build.py` — is the command that stubs the tracked
-   `docs/INDEX.md` (KI-BP-016, live). On this workspace it is additionally denied
-   by the permission layer as irreversible local destruction, so the documented
-   remedy is not reliably available.
+2. The advertised fix — re-run `build.py` — was, while this entry was being
+   written, the command that stubbed the tracked `docs/INDEX.md`. That was
+   KI-BP-016, and it is **now resolved** on main (BP-1500a-1, `c1bccb7e`,
+   verified 2026-09-28: the self-host replay leaves `docs/INDEX.md`
+   byte-identical at 252 lines with zero `No docs found.`). Both occurrences
+   behind this entry predate that fix. What survives the fix is narrower but
+   still real: on this workspace `build.py --force` is refused by the
+   permission layer as irreversible local destruction, so an operator may be
+   unable to run the remedy the gate prints, whatever the doc index now does.
+   The per-file restore below does not depend on either.
 
 **Workaround that does not require `build.py`.** `build.py` deploys this config to
 two locations. Only the `scripts/` copy is rewritten; the `config/` copy retains
@@ -110,8 +116,10 @@ content the manifest describes again.
 
 **Related.** KI-CG-20260831-manifest-shadowing (a different `check-build-drift`
 defect: the wrong manifest is selected; here the right manifest is selected and
-the artifact moved underneath it). KI-BP-016 (the `build.py` doc-index stub that
-makes the advertised remedy unsafe).
+the artifact moved underneath it). KI-BP-016 (the `build.py` doc-index stub —
+**resolved** by BP-1500a-1 on 2026-09-28, after the occurrences recorded here;
+it no longer makes the advertised remedy unsafe, though the permission-layer
+refusal noted above can still make it unavailable).
 
 **Pattern:** a gate whose own enforcement run mutates the artifact it is
 enforcing, so the guarantee holds exactly once per worktree.
