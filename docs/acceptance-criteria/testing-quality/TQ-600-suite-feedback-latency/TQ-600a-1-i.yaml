@@ -239,9 +239,12 @@ amended_by:
   by: it-po
   at: 2026-09-28
 superseded_by: null
-covered_by: []
+covered_by:
+- unit_tests/suite_performance/test_tq_600a_1_i.py
 implemented_by:
 - tickets/00_inbox/TICKET-20260928-TQ-600a-1-i.md
+- scripts/suite_performance/_shared_layout_producer.py
+- scripts/suite_performance/pytest_shared_reference_layout.py
 change_target: pipeline
 risk_surface: internal
 notes: |
