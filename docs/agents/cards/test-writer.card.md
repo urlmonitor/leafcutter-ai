@@ -195,4 +195,5 @@ flowchart TD
 - INF-500b-2-i: Priority scoring ranks high-severity categories above equal-count low-severity
 - INF-500b-2-ii: JSON format output contains required keys
 - INF-500b-3-i: Trend detection uses >20% threshold for rising/falling classification
+- KM-KGS-100a-3-viii: Relationship reading is proven against real store records, not a hand-built dictionary
 - KM-KGS-100b-5-ii: Cache correctness is proven against a real store in a deployed layout

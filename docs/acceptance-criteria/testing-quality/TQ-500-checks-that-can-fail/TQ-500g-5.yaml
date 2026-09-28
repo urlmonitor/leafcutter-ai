@@ -1,0 +1,111 @@
+id: TQ-500g-5
+components:
+  - testing_quality
+  - build_orchestration
+title: "A reference page explains the wrong-version runs: what runs, what each verdict means, and what stops the work"
+component: testing-quality
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a reader whose work was stopped with the report "drop the retry_due
+    condition survived test_refresh_gate",
+  When they open the reference page for the wrong-version runs,
+  Then they find which tests are in scope (only those whose entry names
+      must_catch or declares the discrimination angle) and which wrong
+      versions are run (each named one, plus the fix undone),
+    And they find every verdict a run can give — caught, survived, did not
+      load, not applied, invalid because the suite put the correct code back,
+      not run, not applicable — with what each means and whether it stops the
+      work,
+    And they find that each test answers for the wrong versions its own entry
+      names, so a sibling's catch does not cover it,
+    And they find that the code is put back byte for byte after every run, and
+      what to do when the drive reports that it could not be,
+    And they find that every build route — the fast lane, /build-feature, a
+      single ticket and /build-epic — uses the same runner, and where in each
+      it runs,
+    And they find the consumer-test sweep: what must be listed, what counts as
+      weakening, and the one exit for tests removed with the code they tested,
+    And they find that a test which failed in any of its sub-cases is read as
+      failed, and that a run which reports failure with no identifiable failed
+      test is inconclusive,
+    And they find how to strengthen the test that let the wrong version
+      through, rather than how to silence the runs.
+depends_on:
+  - TQ-500g
+  - TQ-500g-1
+  - TQ-500g-2
+  - TQ-500g-3
+  - TQ-500g-4
+doc_links:
+  - path: docs/reference/wrong-version-runs.md
+    relationship: describes
+    status: planned
+    relevance: "The reference page this AC produces (name is IT-PO's call)."
+  - path: docs/testing/test-angles.md
+    relationship: relates-to
+    status: exists
+    relevance: "The discrimination angle; the new page is linked from it rather than folded into it."
+  - path: docs/how-to/fast-lane-build.md
+    relationship: relates-to
+    status: exists
+    relevance: "Gains a pointer to the new step between verify_green_and_coverage and commit."
+assigned_agent: documentation-expert
+estimated_complexity: M
+delivers_to: null
+expects_from: null
+it_requirements:
+- 'Create the reference page docs/reference/wrong-version-runs.md, at 300 lines or fewer after frontmatter.
+  Write it from what shipped: the verdict vocabulary exactly as the runner prints it, the fix-undone alias
+  list, the new-file rule, where copies and records live under the git directory, and the known limit
+  of the kind rule.'
+- docs/**.md is under the blocking doc-length ratchet (300 lines after frontmatter). docs/how-to/fast-lane-build.md
+  (461) and docs/testing/test-angles.md (325) are over the limit and must not grow, so any pointer added
+  there is offset in the same file.
+- Link it from docs/testing/test-angles.md (discrimination angle) and docs/how-to/fast-lane-build.md,
+  within those files' current length.
+- 'Firewall (as in TQ-500f-5): no behavioural AC is closed by pointing at these documents.'
+- Any database address in a template, fixture or doc is the placeholder postgresql://<user>:<password>@<host>:<port>/<database>.
+  INF-1100d-4 scans shipped files.
+- If the page ships through templates/docs/, update both copies.
+- 'Composite done-proof: this L2 is test_required: false and has children. Until KI-CG-20260914-done-proof-precommit-ignores-test-required
+  is fixed, the pre-commit done-proof path refuses to mark it done.'
+test_required: false
+test_rationale: Documentation only. Its truth depends on the behaviour it describes, which the behavioural
+  ACs prove. A test that searches the page for words would be the prose-presence proxy the firewall forbids.
+  documentation-verifier and pr-reviewer check it.
+origin_agent: business-analyst
+created: 2026-09-28
+amended_by: []
+superseded_by: null
+covered_by:
+  - TQ-500g-5-i
+  - TQ-500g-5-ii
+implemented_by: []
+change_target: docs
+risk_surface: internal
+notes: |
+  PHASE B PLAN ITEM g-5 — DOCUMENTATION for TQ-500g's three triggers, kept as
+  ONE L2 so TQ-500g stays at the default cap of five:
+    this L2  reference-doc        documentation-expert
+    -i       component-diagram    architecture-diagram-author
+    -ii      sequence-diagram     architecture-diagram-author
+
+  FIREWALL (as in TQ-500f-5): the deliverables are documents only. No
+  behavioural AC in this tree may be closed by pointing at them; that would make
+  the documents the prose-presence proxy the anti-grep rule forbids.
+
+  The setUpClass re-deploy trap (request item 7: "documented and detected") is
+  documented here, under the "invalid" verdict, and detected by TQ-500g-2-i.
+
+  PLACEHOLDER ADDRESSES ONLY: postgresql://<user>:<password>@<host>:<port>/<database>
+  (INF-1100d-4 scans shipped docs). Update both the docs/ copy and any shipped
+  templates/docs/ copy if the page ships.
+
+  IT-PO ENRICHMENT (2026-09-28)
+  documentation-expert lane, last in the build order (after -1, -2, -3, -4).

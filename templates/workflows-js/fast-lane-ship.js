@@ -1071,19 +1071,32 @@ const claimResult = await agent(
   }
 );
 /**
- * A decline and genuine contention are different facts (BO-2400f-7-iii): the
- * first means nothing was checked against the store, the second means it was
- * checked and found held. `claimUsable` gates on the two arrays the engine's
- * schema does not actually enforce — a real refusal-shaped reply (or the
- * harness) can hand back an object missing them, or null. `claimUsable`
- * short-circuits before `.excluded_claimed` is ever read on an unusable
- * reply. A `target_refused` with nothing in `excluded_claimed` is a decline,
- * not a report of a hold — contention wording there would send an operator
- * looking for a concurrent run that does not exist.
+ * Three different facts have to be told apart here, and each has a different
+ * remedy. A DECLINE means nothing was ever checked against the store — fixed by
+ * changing who attempts the claim. CONTENTION means it was checked and found
+ * held — fixed by waiting or releasing a stale hold. A SUCCESSFUL CLAIM means
+ * the store now holds this run's ids and the lane should proceed. Conflating
+ * any two of them sends an operator after a cause that does not exist
+ * (BO-2400f-7-iii, BO-2400f-7-iv).
+ *
+ * `claimUsable` must mirror the dispatch's own `required` list a few lines
+ * above — `claimed` and `target_refused` — and must NOT demand more.
+ * `excluded_claimed` is OPTIONAL in that contract, and a performer that claims
+ * everything and excludes nothing has no reason to send an empty array. On
+ * 2026-09-23 one did not, this gate demanded it anyway, and a fully successful
+ * 25-AC claim was reported as never attempted. If you change the schema above,
+ * change this line with it; requiring a field the contract leaves optional
+ * turns a valid reply into a halt.
+ *
+ * An absent optional collection means empty, so `excludedClaimed` normalises it
+ * once and every read below goes through that rather than the raw reply. A
+ * `target_refused` carrying nothing excluded is therefore a decline, not a
+ * report of a hold.
  */
-const claimUsable = !!claimResult && Array.isArray(claimResult.claimed) && Array.isArray(claimResult.excluded_claimed);
+const claimUsable = !!claimResult && Array.isArray(claimResult.claimed);
+const excludedClaimed = (claimUsable && Array.isArray(claimResult.excluded_claimed)) ? claimResult.excluded_claimed : [];
 const claimHaltFields = { worktree_path: worktreePath, branch, ac_ids: acIds };
-if (!claimUsable || (claimResult.target_refused && claimResult.excluded_claimed.length === 0)) {
+if (!claimUsable || (claimResult.target_refused && excludedClaimed.length === 0)) {
   return {
     status: "halt", classification: "halt",
     message: `The claim was never attempted: the dispatched performer either declined to run the repository-mutating claim command or returned no usable result, so no AC was flipped to in_progress — this is not a report of another run's ownership. Detail: ${JSON.stringify(claimResult)}`,
@@ -1093,14 +1106,24 @@ if (!claimUsable || (claimResult.target_refused && claimResult.excluded_claimed.
 if (claimResult.target_refused) {
   return {
     status: "halt", classification: "halt",
-    message: `connected set already claimed / in progress — a concurrent fast-lane run owns these ACs: ${claimResult.excluded_claimed.join(", ")}. Wait for that run to complete or release stuck claims. Detail: ${JSON.stringify(claimResult)}`,
+    message: `connected set already claimed / in progress — a concurrent fast-lane run owns these ACs: ${excludedClaimed.join(", ")}. Wait for that run to complete or release stuck claims. Detail: ${JSON.stringify(claimResult)}`,
     ...claimHaltFields,
   };
 }
 
-// Only the ACs THIS run actually flipped to in_progress may be released on a
-// later failure. Releasing the full resolved set would reset a concurrent run's
-// claims (its ACs land in excluded_claimed here, NOT in claimResult.claimed).
+/**
+ * Only the ACs THIS run actually flipped to in_progress may be released on a
+ * later failure. Releasing the full resolved set would reset a concurrent run's
+ * claims (its ACs land in excludedClaimed above, NOT in claimResult.claimed).
+ *
+ * The split of the two branches above rests on a producer invariant, cited here
+ * because nothing in this file enforces it: `_fl_lifecycle.py` sets
+ * `target_refused = len(to_build) == 0 and len(excluded_claimed) > 0`. So the
+ * gate can only ever raise the flag alongside a non-empty excluded set, which
+ * is what makes "refused with nothing excluded" mean a performer decline rather
+ * than a gate refusal. If that line changes, the decline/contention split here
+ * silently starts misclassifying — change them together.
+ */
 const claimedIdsCsv = (claimResult.claimed || []).join(",");
 const releaseInvocation =
   `python3 ${gateScript} release --ac-ids ${claimedIdsCsv} --ac-root ${acStoreRoot}`;

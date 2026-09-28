@@ -139,35 +139,67 @@ class BootstrapError(RuntimeError):
 def _git_toplevel(anchor: Path | None = None) -> Path:
     """Return the absolute path to the main repository root.
 
-    The repository root is resolved with ``git -C <anchor> rev-parse
-    --show-toplevel`` rather than relying on the process working directory.
-    This keeps the script correct when it is invoked from a parent workspace
-    that is not itself a git repository (e.g. the leafcutter dev layout where
-    ``leafcutter-ai/`` is the git root but the script may be launched from its
-    parent). When *anchor* is omitted, the script's own directory is used —
-    the script always lives physically inside the repository it operates on.
+    Resolves via ``git -C <candidate> rev-parse --show-toplevel``, returning
+    the repository the candidate anchor sits in:
+
+      1. the explicit *anchor* argument, when supplied — AUTHORITATIVE, never
+         falls through to another candidate (BO-4100d-4). A caller that names
+         a subject and gets silently given a different repository is the
+         defect class this whole function is being hardened against;
+      2. otherwise the script's own directory.
+
+    DO NOT ADD ``Path.cwd()`` AS A CANDIDATE HERE. It was added under
+    BO-4100d-4 on 2026-09-22 and reverted on 2026-09-28, because it makes the
+    answer depend on where the caller happens to be standing:
+
+      * it silently returns an UNRELATED repository whenever the process is
+        run from inside one — measurably worse than the defect it was meant
+        to fix, which at least landed inside the adopter's own project;
+      * it voids the isolation that ``unit_tests/build_orchestration/
+        _bo2400f13_fixtures.py`` relies on (that module's own header block,
+        "The _git_toplevel() anchoring trap", predicted this and named the
+        consequence: real worktrees and branches created in the live
+        development tree). 14 tests failed and the suite mutated the real
+        repository.
+
+    ``KI-BO-20260921-worktree-base-resolver-defaults-to-cwd`` records the same
+    hazard in a sibling resolver: a cwd default is correct in one layout and
+    silently wrong in another.
+
+    KNOWN, UNFIXED: a copy deployed outside the repository it manages still
+    cannot resolve (dev layout) or resolves the adopter's repository
+    (consumer layout). This function cannot tell WHICH repository is
+    leafcutter's, only that some directory is inside one. Fixing that needs
+    deploy-time provenance rather than a better guess — see the analysis at
+    ``docs/analysis/2026-09-28-git-toplevel-resolution-contract.md``. What
+    this function now guarantees is that it never answers CONFIDENTLY AND
+    WRONGLY from ambient state.
 
     Args:
-        anchor: A path inside the target repository to resolve from. Defaults
-            to the directory containing this script.
+        anchor: A path inside the target repository to resolve from. When
+            omitted, the directory containing this script is used.
 
     Returns:
         Absolute Path to the git toplevel directory.
+
+    Raises:
+        subprocess.SubprocessError: If no candidate anchor resolves to a git
+            repository. The message names every candidate tried.
     """
-    if anchor is None:
-        anchor = Path(__file__).resolve().parent
-    try:
-        result = subprocess.run(
-            ["git", "-C", str(anchor), "rev-parse", "--show-toplevel"],
-            capture_output=True,
-            text=True,
-            check=True,
-        )
-    except (subprocess.SubprocessError, OSError) as exc:
-        raise subprocess.SubprocessError(  # noqa: TRY003
-            f"Failed to resolve git toplevel from {anchor}: {exc}"
-        ) from exc
-    return Path(result.stdout.strip())
+    candidates: list[tuple[str, Path]] = [("explicit anchor argument", anchor)] if anchor is not None else [
+        ("script's own directory", Path(__file__).resolve().parent)]
+    tried: list[str] = []
+    for label, candidate in candidates:
+        try:
+            result = subprocess.run(
+                ["git", "-C", str(candidate), "rev-parse", "--show-toplevel"], capture_output=True, text=True, check=True
+            )
+        except (subprocess.SubprocessError, OSError) as exc:
+            tried.append(f"{label} ({candidate}): {exc}")
+            continue
+        return Path(result.stdout.strip())
+    raise subprocess.SubprocessError(  # noqa: TRY003
+        "Could not resolve a git repository from any candidate anchor. This copy of setup_ticket_worktree.py appears to be deployed outside the repository it manages. Candidates tried:\n  - " + "\n  - ".join(tried))
 
 
 def _resolve_installed_layout(leafcutter_repo: Path) -> tuple[Path, Path]:
@@ -2128,6 +2160,18 @@ if __name__ == "__main__":
 ====================================================================
 DECISION HISTORY
 ====================================================================
+- 2026-09-22 [Agent/python-coder] (AC BO-4100d-4): Fixed ``_git_toplevel()``
+  defaulting to the script's own directory, true only of the checked-out
+  source copy — every deployed copy sits outside the repository it manages
+  (dev layout: bare git exit 128; consumer layout: silently resolves the
+  adopter's repo). Replaced the single default with an ORDERED candidate
+  list — explicit anchor (AUTHORITATIVE, unchanged for existing callers) →
+  cwd → script's own directory (last resort) — returning the first that
+  resolves. The raised ``subprocess.SubprocessError`` now names every
+  candidate tried instead of a bare exit-128 message. Docstring updated to
+  drop the false "always lives inside the repository" claim. Mirrored in
+  templates/scripts/setup_ticket_worktree.py (resolution logic only, per
+  ADR-001).
 - 2026-06-30 00:00 [Agent/python-coder]: Three focused fixes (TICKET-20260617-Worktree_Precommit_Bootstrap,
   closes AC-5 script-level gap per pr-reviewer H-1):
   FIX 1 (HIGH): Moved the .pre-commit-config.yaml existence probe outside the

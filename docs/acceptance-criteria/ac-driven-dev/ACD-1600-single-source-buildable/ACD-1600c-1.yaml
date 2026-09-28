@@ -1,7 +1,7 @@
 id: ACD-1600c-1
 components:
   - ac_driven_dev
-readiness: reviewed
+readiness: approved
 priority: medium
 title: "An AC missing file targets or a test contract is flagged not implementation-ready"
 component: ac-driven-dev

@@ -176,6 +176,21 @@ AC_STORE_DEPLOY_MAP: tuple[tuple[str, str], ...] = (
     # scripts the AC requires (deploy_map completeness gap, not a
     # missing-source gap).
     ("scripts/ac_store/validate_ac_schema.py",        "validate_ac_schema.py"),
+    # declared_files.py (ACD-1600c-4): the single declared_files read seam.
+    # Imported by validate_ac_schema.py (`from declared_files import
+    # declared_files_commit_messages`) AND by the check-ac-schema commit hook
+    # (templates/scripts/commit_guardian/check_ac_schema.py, via
+    # _ac_store_locator.ensure_ac_store_on_syspath()) -- deploy-manifest-first
+    # per ADR-026 safety rule 2, so neither importer crashes with
+    # ModuleNotFoundError on a fresh install.
+    ("scripts/ac_store/declared_files.py",            "declared_files.py"),
+    # _declared_files_path_form.py: path_form_errors/load_build_definition,
+    # extracted out of declared_files.py to stay under the check-file-size
+    # ratchet (H-1 fix). declared_files.py imports it at module scope
+    # (`from _declared_files_path_form import ...`); MUST deploy alongside
+    # its only importer or the deployed declared_files.py crashes with
+    # ModuleNotFoundError.
+    ("scripts/ac_store/_declared_files_path_form.py", "_declared_files_path_form.py"),
     # _ac_components.py is imported by validate_ac_schema.py
     # (`from _ac_components import components_field_errors, load_registry_ids`).
     # It was present in source but absent from this map -- discovered by AC
@@ -526,3 +541,14 @@ def build_ac_store(target_root: Path, config: dict[str, Any],
 #   layout, so the deployed gate's CLI invocation would crash with
 #   ModuleNotFoundError even though unit tests importing from source stay
 #   green. (#ACD-1900b-5-i)
+# - 2026-09-28 [python-coder/ACD-1600c-4]: Added declared_files.py to
+#   build_ac_store's deploy_map (ADR-026 safety rule 2, deploy-manifest-
+#   first). Both validate_ac_schema.py (module-scope import) and the
+#   check-ac-schema commit hook (via _ac_store_locator's sibling lookup)
+#   import this new single declared_files read seam; without a deploy_map
+#   entry it would exist in source but not the deployed layout, crashing both
+#   importers with ModuleNotFoundError on a fresh install.
+# - 2026-09-28 [python-coder/ACD-1600c-4 H-1 fix]: Added
+#   _declared_files_path_form.py, split out of declared_files.py to stay
+#   under check-file-size. Same reasoning as the entry above: declared_files.py
+#   imports it at module scope, so it must deploy alongside it.
