@@ -21,7 +21,6 @@ criteria: |
       layout, the reported deploy count is one.
 depends_on:
   - TQ-600a-1
-  - TQ-600a-6
 doc_links:
   - path: docs/testing/test-angles.md
     relationship: describes
@@ -133,6 +132,46 @@ amended_by:
 - action: approved
   agent: approve_acs
   date: '2026-09-21'
+- reason: >-
+    depends_on EDGE REMOVED — TQ-600a-6. criteria, work_status, expects_from and every
+    it-po-owned field DELIBERATELY UNTOUCHED. The edge was added on 2026-09-21 by the
+    entry two above this one, whose stated reason was that this record's two count
+    clauses "assert over the reported figure, which TQ-600a-6 now owns". That is a
+    CONTRACT relationship, and it is already carried — in this record's expects_from
+    entry for TQ-600a-6 and in TQ-600a-6's matching delivers_to entry — so removing the
+    build-order edge takes nothing away. What it removes is a cycle that made the whole
+    TQ-600a branch unbuildable: TQ-600a-6 depends_on TQ-600a-1, TQ-600a-1 is a composite
+    that cannot reach work_status: done until this record and TQ-600a-1-ii are done, and
+    this record waited on TQ-600a-6. Nothing in the branch had an entry point.
+    THE CUT WAS MADE HERE RATHER THAN ON TQ-600a-6's EDGE TO TQ-600a-1, and the two were
+    weighed. TQ-600a-6 -> TQ-600a-1 is a MECHANISM edge: TQ-600a-6 declares
+    scripts/suite_performance/pytest_shared_reference_layout.py at relationship:
+    modifies — it edits the module TQ-600a-1 delivers — and its it_requirement 5 says
+    the figure "increments only on the signal TQ-600a-1 emits". You cannot instrument a
+    producer that does not exist, so that edge is real build order and must stay. This
+    record's edge is the other kind, and the tree already settles how that kind is
+    expressed: TQ-600a-6 asserts over figures owned by TQ-600a-2, TQ-600a-5 and
+    TQ-600c-1 and carries all three in expects_from with NO depends_on edge. The edges
+    removed here were the only place in the branch where an assert-over-a-figure
+    relationship was also given a depends_on edge — written in the same 2026-09-21 pass
+    that used expects_from correctly for the identical relationship elsewhere.
+    WHAT THIS RECORD ACTUALLY NEEDS IN ORDER is only TQ-600a-1's producer, which is
+    implemented and merged (scripts/suite_performance/, PR #941): get_or_produce_shared_
+    layout() is lazy on first call, and emit_execution_signal() fires at the one point a
+    build.py subprocess really runs. Both descriptors that observe deploy SUBPROCESSES
+    rather than the reported figure — the no-subprocess one and the idle-worker one, and
+    the it-po's note says those are the pair that can disagree with the report — are
+    therefore buildable now.
+    GAP LEFT FOR THE it-po, NOT PAPERED OVER HERE. This record is now sequenced BEFORE
+    TQ-600a-6, yet its criteria state the reported count and two descriptors read it:
+    test_tq600a_1_i_a_selection_with_no_consumer_reports_zero_deploys and
+    test_tq600a_1_i_widening_by_one_consumer_takes_the_count_from_zero_to_one. Until
+    TQ-600a-6's emitter exists there is no surface for them to read. test_spec and
+    expects_from are it-po-owned, so the decision — build the emitter alongside this
+    record, or defer those two descriptors to TQ-600a-6's own build — is left to that
+    pass rather than taken here.
+  by: business-analyst
+  at: 2026-09-28
 superseded_by: null
 covered_by: []
 implemented_by: []

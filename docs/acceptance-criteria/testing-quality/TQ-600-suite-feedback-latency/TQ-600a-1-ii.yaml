@@ -22,7 +22,6 @@ criteria: |
       attempt count stays at one for the whole run.
 depends_on:
   - TQ-600a-1
-  - TQ-600a-6
 doc_links:
   - path: docs/testing/test-angles.md
     relationship: describes
@@ -161,6 +160,40 @@ amended_by:
 - action: approved
   agent: approve_acs
   date: '2026-09-21'
+- reason: >-
+    depends_on EDGE REMOVED — TQ-600a-6. criteria, work_status, expects_from and every
+    it-po-owned field DELIBERATELY UNTOUCHED. The edge was added on 2026-09-21 by the
+    entry two above this one, whose stated reason was that this record's third clause —
+    the reported attempt count stays at one — "asserts over the figure TQ-600a-6 now
+    owns". That is a CONTRACT relationship and it is already carried, in this record's
+    expects_from entry for TQ-600a-6 and in TQ-600a-6's matching delivers_to entry, so
+    removing the build-order edge takes nothing away. What it removes is a cycle that
+    left the whole TQ-600a branch without an entry point: TQ-600a-6 depends_on
+    TQ-600a-1, TQ-600a-1 is a composite that cannot reach work_status: done until this
+    record and TQ-600a-1-i are done, and this record waited on TQ-600a-6.
+    THE ALTERNATIVE CUT — TQ-600a-6's edge to TQ-600a-1 — WAS WEIGHED AND REJECTED.
+    That one is a mechanism edge: TQ-600a-6 declares TQ-600a-1's
+    scripts/suite_performance/pytest_shared_reference_layout.py at relationship:
+    modifies and counts the signal TQ-600a-1 emits, so it cannot precede its producer.
+    The edge removed here is an assert-over-a-reported-figure edge, and TQ-600a-6
+    itself already expresses three relationships of exactly that kind — to TQ-600a-2,
+    TQ-600a-5 and TQ-600c-1 — in expects_from with no depends_on edge at all.
+    WHAT THIS RECORD NEEDS IN ORDER is TQ-600a-1's cached outcome, which is implemented
+    and merged (scripts/suite_performance/, PR #941): write_failure_record /
+    read_failure_record persist the deploy's diagnostic durably and every waiter raises
+    from that same cached failure rather than retrying. Four of this record's five
+    descriptors — including the vacuous-pass control its own test_rationale calls the
+    load-bearing one, and the attempt-count one that deliberately observes executed
+    subprocesses instead of the report — are buildable against that today.
+    GAP LEFT FOR THE it-po, NOT PAPERED OVER HERE. This record is now sequenced BEFORE
+    TQ-600a-6, and its fifth descriptor,
+    test_tq600a_1_ii_the_reported_attempt_count_is_one_not_zero_or_absent, reads a
+    figure TQ-600a-6's emitter has not produced yet — as does the third criteria clause
+    it covers. test_spec and expects_from are it-po-owned, so whether that descriptor is
+    built alongside TQ-600a-6 or deferred into its build is that pass's call, not this
+    one's.
+  by: business-analyst
+  at: 2026-09-28
 superseded_by: null
 covered_by: []
 implemented_by: []
