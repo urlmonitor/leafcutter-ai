@@ -111,7 +111,7 @@ amended_by: []
 superseded_by: null
 covered_by: [BO-4300d-2-i, BO-4300d-2-ii, BO-4300d-2-iii]
 implemented_by:
-- tickets/00_inbox/TICKET-20260927-BO-4300d-2.md
+- tickets/00_inbox/epics/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/07_TICKET-20260928-BO-4300-safe-re-request.md
 notes: |
   F5 in the sandbox: bootstrap failed, the re-run exited 0 with "created: false" on a workspace
   holding three files, because reuse skipped set-up. KI-BO-20260831-1331: a half-made fast-lane
@@ -121,3 +121,12 @@ notes: |
   at the location of THE SAME work is completed by the next request, as this record says. IT PO
   to amend BO-4100e-4's wording to state that scope explicitly.
 target_epic: EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace
+
+# ====================================================================
+# DECISION HISTORY
+# ====================================================================
+# - 2026-09-28 14:00 [coordinator/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/re-cut]: (#EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/07)
+#   Epic re-cut by deliverable: implemented_by re-pointed from the deleted generated
+#   ticket to 07_TICKET-20260928-BO-4300-safe-re-request.md.
+#   criteria, test_spec, contracts and work_status unchanged.
+# ====================================================================

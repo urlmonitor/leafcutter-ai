@@ -59,7 +59,16 @@ delivers_to: null
 expects_from: null
 origin_agent: BrainCandy
 created: 2026-09-25
-amended_by: []
+amended_by:
+- reason: user-decisions-q4-q5-q6-q8
+  by: it-po
+  at: 2026-09-28
+  note: >-
+    Notes only; criteria unchanged. The four open questions Q4 (naming), Q5 (landing place),
+    Q6 (the package repository's own install copy) and Q8 (removal authorisation) are recorded
+    as DECIDED (user, 2026-09-28); decision 1's landing folder name is marked superseded by Q5.
+    The coordinator's two settlements (ADR folder excluded from the f-2 census; doc ACs close
+    through ticket 13's covers-tagged test) are recorded. readiness stays approved.
 superseded_by: null
 covered_by: [BO-4300a, BO-4300b, BO-4300c, BO-4300d, BO-4300e, BO-4300f]
 implemented_by: []
@@ -75,22 +84,44 @@ notes: |
   FIXED DECISIONS (2026-09-25, user) -- BA and IT PO must not reopen them:
   1. Isolation is per-feature CLONES (hardlinked local-path clone of the main checkout,
      origin re-pointed at the hub), not git worktrees. The landing folder keeps the name
-     worktrees/<slug>.
+     worktrees/<slug>. [Landing folder superseded by Q5, decided 2026-09-28 below:
+     <parent-of-project>/<project-dir-name>-worktrees/.]
   2. Each workspace gets REAL install files (the build run inside it), never a
      symlinked install.
   3. Every kind of workspace branches from origin/main after a fetch.
   4. One standalone script, always the same behaviour, run by agents from a skill;
      workflows receive its result. Creation is never delegated as free-form shell work.
 
-  STILL OPEN -- framed as intent in the L1s where the customer feels them, NOT decided:
-  - Q4 one naming scheme (BO-4300a states the intent: the same piece of work is always
-    recognised as the same workspace; the scheme itself is open).
-  - Q5 where adopter-project workspaces live (BO-4300b: a predictable place per project;
-    which place is open).
-  - Q6 whether the package repository should carry its own stale install copy at all
-    (implementation detail; relevant to BO-4300b's "the right project is found").
-  - Q8 a confirmation token for removal (BO-4300e: authorisation is given up front, not
-    asked interactively; the mechanism is open).
+  FORMERLY OPEN, NOW DECIDED (user, 2026-09-28) -- BA and IT PO must not reopen them:
+  - Q4 one naming scheme -- DECIDED (user, 2026-09-28): one scheme for every kind,
+    <kind>/<slug>, for the kinds ticket, feature, ac, fastlane, epic and scratch. The legacy
+    spellings (EPIC-<Name>, ac-authoring/..., fast-lane/..., feature/...) are recognised as
+    ALIASES that resolve to the same workspace; old work is never orphaned and never twinned.
+    Recorded on BO-4300a, BO-4300a-1, BO-4300a-2, BO-4300d-3-i and BO-4300f-3 (tickets 06, 12).
+  - Q5 where workspaces live -- DECIDED (user, 2026-09-28): in a SIBLING folder per project,
+    <parent-of-project>/<project-dir-name>-worktrees/<slug>, outside the project so tools
+    and tests never scan the clones and two projects in one parent folder never collide. It
+    applies to the package's own dev layout too, unless an explicit --landing-root override
+    is given, which the maker still validates. This REPLACES the "worktrees/<slug>" landing
+    folder name in fixed decision 1 (the clone mechanism of decision 1 is unchanged).
+    Recorded on BO-4300b, BO-4300b-2, BO-4300b-2-i and BO-4300a-1 (ticket 04).
+  - Q6 the package repository's own install copy -- DECIDED (user, 2026-09-28):
+    leafcutter-ai/.leafcutter/ must NOT exist. It is deleted, and build.py refuses to build
+    into the package repository itself unless an explicit --target-dir is given. The resolver
+    never reads any install copy (BO-4300b-2-ii). Recorded on BO-4300b, BO-4300b-2-ii and
+    BO-4300f-2 (ticket 14).
+  - Q8 removal authorisation -- DECIDED (user, 2026-09-28): a refusal to remove a workspace
+    holding unpushed or uncommitted work returns a ONE-TIME TOKEN bound to exactly what would
+    be lost (the workspace, its unsent commits and files). Only a remove request carrying that
+    exact token may discard it; the token is invalid for any other workspace and invalid once
+    the unsent set changes. Never an environment variable or config setting, never remembered.
+    Recorded on BO-4300e, BO-4300e-3, BO-4300e-3-i, BO-4300e-5, BO-4300a-5 and BO-4300c-2
+    (tickets 03, 08, 13).
+
+  SETTLED BY THE COORDINATOR (2026-09-28): docs/architecture/adrs/ counts as a record folder
+  for the BO-4300f-2 census, excluded alongside the other six; and the six doc ACs (BO-4300a-3,
+  a-4, a-5, c-5, d-5, e-5) close through ticket 13's real doc test with `# covers:` tags, not
+  through a test_required waiver.
 
   DECIDED AT THE BA GATE (2026-09-25, user):
   - Q9 an existing line of work with unmerged commits is RESUMED (BO-4300d-4).
@@ -162,3 +193,12 @@ notes: |
 
   FRAMING NOTE (same as BO-4100): enforcement by construction, not guidance. No child may
   be decomposed into "a document explains how to make a workspace".
+
+# ====================================================================
+# DECISION HISTORY
+# ====================================================================
+# - 2026-09-28 16:30 [it-po/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/user-decisions-2026-09-28]: (#EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/04)
+#   Open questions Q4, Q5, Q6 and Q8 recorded as DECIDED (user, 2026-09-28) in notes; decision
+#   1's landing folder name marked superseded by Q5; the coordinator's ADR-folder and doc-AC
+#   settlements recorded. criteria unchanged; readiness stays approved.
+# ====================================================================

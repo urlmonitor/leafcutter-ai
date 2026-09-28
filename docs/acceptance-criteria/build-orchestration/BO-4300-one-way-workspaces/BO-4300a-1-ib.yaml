@@ -61,9 +61,13 @@ expects_from:
     [--config-path P]` -- the only creating verb, idempotent, always fetch + build + canary; `locate (--kind
     K --slug S | --path P | --branch B) [--repo-root P]` -- read-only; `list [--repo-root P]` -- read-only
     scan of the landing place''s markers, never git worktree list; `verify --path P [--kind K --slug S]
-    [--repo-root P]` -- read-only readiness re-check; `remove --path P [<up-front discard authorisation;
-    flag or token, Q8 open>] [--delete-remote-branch] [--repo-root P]`; `where` -- prints the maker''s
-    own absolute path. There is no --reset-existing (BO-4300d-4 resumes), no --no-bootstrap (decision
+    [--repo-root P]` -- read-only readiness re-check; `remove --path P [--discard-token T] [--delete-remote-branch] [--repo-root P]`
+    -- T is the one-time token from this same workspace''s own UNSENT_WORK refusal (Q8, decided 2026-09-28,
+    BO-4300e-3); `where` -- prints the maker''s
+    own absolute path. ensure, locate, list, verify and remove also accept [--landing-root P], the explicit
+    landing-place override the maker validates (Q5, decided 2026-09-28, BO-4300b-2); --kind K --slug S is
+    normalised to the one identity <kind>/<slug>, legacy spellings accepted as aliases (Q4, decided
+    2026-09-28, BO-4300a-2). There is no --reset-existing (BO-4300d-4 resumes), no --no-bootstrap (decision
     2), and no flag that skips a readiness ingredient.'
 package_surface: false
 it_requirements:
@@ -141,13 +145,34 @@ amended_by:
     Technical fields only; criteria unchanged. Item 2: build-single-ticket's step 1 passes --ticket
     and takes TICKET_PATH only from ticket_path_in_worktree (same change set as BO-4300a-1-ii). Item 5:
     no `git -C <path> commit` in rewritten entry surfaces. Two test specs added. readiness reset to reviewed.
+- reason: user-decisions-q4-q5-q8
+  by: it-po
+  at: 2026-09-28
+  note: >-
+    Technical fields only; criteria unchanged. The copy of the maker's CLI contract in expects_from is
+    brought in line with BO-4300a-1 after the user's 2026-09-28 decisions: remove takes --discard-token
+    T from the workspace's own UNSENT_WORK refusal (Q8), every landing-place verb accepts the validated
+    --landing-root override (Q5), and --kind/--slug normalise to <kind>/<slug> with legacy aliases (Q4).
+    Entry skills still pass kind plus the raw identity they hold. readiness stays approved.
 superseded_by: null
 covered_by: []
 implemented_by:
-- tickets/00_inbox/TICKET-20260927-BO-4300a-1-ib.md
+- tickets/00_inbox/epics/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/09_TICKET-20260928-BO-4300-entry-skills.md
 notes: 'IT PO split of BO-4300a-1-i (2026-09-25), entry-skill half. Criteria are extracted from the parent''s
   clauses (''receives the workspace maker''s answer as part of its input'', ''run unchanged and its answer
   relayed word for word'', ''no ... create, copy, set up, link or repair ... by steps of the agent''s
   own choosing'') and placed at the surface that performs them: templates/commands/*.md and templates/skills/*/SKILL.md
   (llm-expert). Decision 4 / Q7: agents run the maker from a skill; workflows get the result passed in.'
 target_epic: EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace
+
+# ====================================================================
+# DECISION HISTORY
+# ====================================================================
+# - 2026-09-28 14:00 [coordinator/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/re-cut]: (#EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/09)
+#   Epic re-cut by deliverable: implemented_by re-pointed from the deleted generated
+#   ticket to 09_TICKET-20260928-BO-4300-entry-skills.md.
+#   criteria, test_spec, contracts and work_status unchanged.
+# - 2026-09-28 16:30 [it-po/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/user-decisions-2026-09-28]: (#EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/09)
+#   expects_from CLI copy aligned with BO-4300a-1 after Q4/Q5/Q8 (user, 2026-09-28). criteria
+#   unchanged.
+# ====================================================================

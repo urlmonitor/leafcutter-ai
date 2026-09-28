@@ -54,9 +54,27 @@ expects_from:
   contract: ensure/locate CLI with --kind epic --slug <raw identity>; the maker performs normalisation.
 package_surface: false
 it_requirements:
-- Identity normalisation is owned by the maker's single naming table (Q4 open). Whatever scheme is chosen,
-  spellings of the same work used by today's routes -- EPIC-<Name> (feature skill), epic/<kebab> (build-feature),
-  the epic's display title -- normalise to one identity, and distinct works never collide.
+- 'ONE SCHEME (Q4, DECIDED user 2026-09-28): the maker''s single naming table normalises every request to
+  the identity <kind>/<slug> for every kind (ticket, feature, ac, fastlane, epic, scratch); the slug is a
+  deterministic lower-case kebab form of the raw identity, so EPIC-FilesStayWorkable, epic/files-stay-workable
+  and the display title Files Stay Workable all give epic/files-stay-workable. A new line of work is named
+  by the identity; the workspace lands at <landing-root>/<kind>/<slug> (landing root per BO-4300b-2); the
+  answer''s kind and slug are always the canonical ones. Distinct works never collide.'
+- 'LEGACY ALIASES (Q4): the legacy spellings are declared in that same table, keyed by kind, each entry
+  with its reason -- epic <- EPIC-<Name> (feature skill); ac <- ac-authoring/<slug> (create-ac-worktree);
+  fastlane <- fast-lane/<slug> (create-fastlane-worktree); ticket <- feature/<slug> (the retiring setup-ticket
+  sub-command named ticket lines feature/<slug>; for kind feature that spelling is already canonical). A
+  request in a legacy spelling resolves to the canonical identity and the same workspace; there is no second
+  table or per-caller mapping.'
+- 'NEVER ORPHANED: when the hub carries a line of work for the identity only under a legacy spelling, ensure
+  resumes THAT line (BO-4300d-4 semantics: line_of_work ''resumed'', every commit kept, never reset, never
+  pushed) and never starts a line under the canonical name beside it; the hub branch is never renamed. The
+  answer''s branch and the marker''s branch name the actual branch; kind and slug stay canonical.'
+- 'NEVER TWINNED: when more than one spelling of the same identity already carries a line of work on the
+  hub, the maker refuses with code AMBIGUOUS_LINE (status refused, exit 2; field lines [branch], added to
+  the BO-4300c-2 contract) naming every such branch, and creates, moves, merges or renames nothing. A legacy
+  git worktree registered in the main checkout for any spelling of the identity is refused OCCUPIED_LEGACY_WORKTREE
+  wherever its folder is (BO-4300d-3-i), so a new clone is never made beside it.'
 - Matching is on the exact normalised identity, never a prefix or substring (the '_worktree_exists' prefix
   table and finalize's branch-substring match are retired).
 - A re-request never abandons an existing line of work for a freshly named twin and never moves or resets
@@ -103,22 +121,78 @@ test_spec:
   type: behavioral
   angle: boundary
   description: '''Files Stay Portable'' is answered ok with a different workspace_path.'
+- name: test_legacy_epic_spelling_lands_on_the_canonical_epic_workspace
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: criterion
+  description: With no workspace yet, ensure --kind epic --slug EPIC-FilesStayPortable is answered ok with
+    kind epic, slug files-stay-portable, branch epic/files-stay-portable and workspace_path at <landing-root>/epic/files-stay-portable;
+    a second request spelled epic/files-stay-portable returns the same workspace_path.
+- name: test_every_declared_legacy_alias_resolves_to_its_canonical_identity
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: boundary
+  description: Table-driven over the declared aliases -- EPIC-X (epic), ac-authoring/x (ac), fast-lane/x
+    (fastlane), feature/x (ticket) -- each request is answered ok with the canonical <kind>/<slug> and the
+    same workspace_path as the canonical spelling of the same work.
+- name: test_legacy_line_on_the_hub_is_resumed_never_twinned
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: failure
+  description: With the hub carrying EPIC-FilesStayPortable (two commits) and no epic/files-stay-portable,
+    a request for the epic is answered ok with line_of_work resumed and branch EPIC-FilesStayPortable, both
+    commits are in the workspace, and afterwards the hub has no epic/files-stay-portable ref and the legacy
+    ref is unchanged.
+- name: test_two_spellings_with_lines_on_the_hub_are_refused_ambiguous_line
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: failure
+  description: With the hub carrying both EPIC-FilesStayPortable and epic/files-stay-portable, each with
+    commits, the request is refused AMBIGUOUS_LINE (exit 2) whose lines name both branches, no workspace_path
+    is emitted, no folder is created and both hub refs are unchanged.
 test_rationale: Every assertion is made on what the deployed maker actually did to real repositories --
   its one JSON answer, its exit code, and the state of the workspace, the hub and the main copy afterwards.
   A direct-import unit test would pass while the deployed copy is stale or mis-deployed (F13), and a git
   mock cannot show the half-made and occupied states this family exists to handle.
 origin_agent: business-analyst
 created: 2026-09-25
-amended_by: []
+amended_by:
+- reason: user-decision-q4
+  by: it-po
+  at: 2026-09-28
+  note: >-
+    Technical fields only; criteria unchanged (already scheme-neutral). Q4 DECIDED (user, 2026-09-28):
+    one <kind>/<slug> identity for every kind; legacy spellings declared as per-kind aliases in the one
+    naming table; a hub line held only under a legacy spelling is resumed, never twinned; two spellings
+    both holding lines are refused AMBIGUOUS_LINE (new code, added to BO-4300c-2). Four tests added.
+    readiness stays approved.
 superseded_by: null
 covered_by: []
 implemented_by:
-- tickets/00_inbox/TICKET-20260927-BO-4300a-2.md
+- tickets/00_inbox/epics/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/06_TICKET-20260928-BO-4300-work-identity-and-ticket-location.md
 notes: |
   F10 and KI-BO-20260921 "abandons the epic worktree branch": a re-run moved the epic from
   EPIC-FilesStayWorkable to a fresh epic/files-stay-workable cut from the shared main line
-  and drove the epic from the main checkout. OPEN (Q4, not decided here): which naming scheme
-  achieves this. This record fixes only the observable -- one piece of work, one workspace,
-  whichever route asked -- so it holds under any scheme the user picks, including an alias
-  for the old EPIC-<Name> spelling.
+  and drove the epic from the main checkout. Q4 -- DECIDED (user, 2026-09-28): one scheme for
+  every kind, <kind>/<slug>; the legacy spellings (EPIC-<Name>, ac-authoring/..., fast-lane/...,
+  feature/...) are aliases resolving to the same workspace; old work is never orphaned and never
+  twinned. The criteria were already scheme-neutral and are unchanged; the decided scheme, the
+  alias table, the resume-a-legacy-line rule and the AMBIGUOUS_LINE refusal are recorded in
+  it_requirements and test_spec.
 target_epic: EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace
+
+# ====================================================================
+# DECISION HISTORY
+# ====================================================================
+# - 2026-09-28 14:00 [coordinator/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/re-cut]: (#EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/06)
+#   Epic re-cut by deliverable: implemented_by re-pointed from the deleted generated
+#   ticket to 06_TICKET-20260928-BO-4300-work-identity-and-ticket-location.md.
+#   criteria, test_spec, contracts and work_status unchanged.
+# - 2026-09-28 16:30 [it-po/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/user-decisions-2026-09-28]: (#EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/06)
+#   Q4 DECIDED (user, 2026-09-28): <kind>/<slug> identity, per-kind legacy aliases, legacy hub
+#   line resumed never twinned, AMBIGUOUS_LINE refusal; four tests added. criteria unchanged.
+# ====================================================================

@@ -194,7 +194,7 @@ amended_by:
 superseded_by: null
 covered_by: []
 implemented_by:
-- tickets/00_inbox/TICKET-20260927-BO-4300a-1-ii.md
+- tickets/00_inbox/epics/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/06_TICKET-20260928-BO-4300-work-identity-and-ticket-location.md
 notes: |
   KI-BO-20260925-build-single-ticket-treats-ticket-path-final-as-worktree-path: the retiring
   set-up script reports the resolved INPUT ticket path (usually the main copy's) under a name
@@ -223,3 +223,12 @@ notes: |
   edits a ticket that is not the one the user sees), or copy the main-copy ticket in (breaks
   decision 3).
 target_epic: EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace
+
+# ====================================================================
+# DECISION HISTORY
+# ====================================================================
+# - 2026-09-28 14:00 [coordinator/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/re-cut]: (#EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/06)
+#   Epic re-cut by deliverable: implemented_by re-pointed from the deleted generated
+#   ticket to 06_TICKET-20260928-BO-4300-work-identity-and-ticket-location.md.
+#   criteria, test_spec, contracts and work_status unchanged.
+# ====================================================================

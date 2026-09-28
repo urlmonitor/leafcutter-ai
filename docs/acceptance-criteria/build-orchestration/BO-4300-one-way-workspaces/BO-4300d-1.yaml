@@ -106,9 +106,18 @@ amended_by: []
 superseded_by: null
 covered_by: [BO-4300d-1-i, BO-4300d-1-ii]
 implemented_by:
-- tickets/00_inbox/TICKET-20260927-BO-4300d-1.md
+- tickets/00_inbox/epics/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/07_TICKET-20260928-BO-4300-safe-re-request.md
 notes: |
   Decision 2: the install is rebuilt on every request, reused or not, so "handed back" always
   means "re-readied", never "trusted as last seen" (BO-4300d notes). BO-1700c repairs only
   missing check set-up; this record is readiness as a whole.
 target_epic: EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace
+
+# ====================================================================
+# DECISION HISTORY
+# ====================================================================
+# - 2026-09-28 14:00 [coordinator/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/re-cut]: (#EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/07)
+#   Epic re-cut by deliverable: implemented_by re-pointed from the deleted generated
+#   ticket to 07_TICKET-20260928-BO-4300-safe-re-request.md.
+#   criteria, test_spec, contracts and work_status unchanged.
+# ====================================================================

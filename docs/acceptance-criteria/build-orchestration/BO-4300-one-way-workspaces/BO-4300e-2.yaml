@@ -103,10 +103,19 @@ amended_by: []
 superseded_by: null
 covered_by: [BO-4300e-2-i, BO-4300e-2-ii]
 implemented_by:
-- tickets/00_inbox/TICKET-20260927-BO-4300e-2.md
+- tickets/00_inbox/epics/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/08_TICKET-20260928-BO-4300-locate-and-clear.md
 notes: |
   finalize's teardown deadlocks today on worktree-agent's interactive "yes" it cannot give. The
   verdict "does it hold undelivered work" is BO-4100c-1 and the refusal content is BO-4100c-2 --
   cited, not re-derived; this record adds that clearing goes through the one maker and never
   blocks on a question.
 target_epic: EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace
+
+# ====================================================================
+# DECISION HISTORY
+# ====================================================================
+# - 2026-09-28 14:00 [coordinator/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/re-cut]: (#EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/08)
+#   Epic re-cut by deliverable: implemented_by re-pointed from the deleted generated
+#   ticket to 08_TICKET-20260928-BO-4300-locate-and-clear.md.
+#   criteria, test_spec, contracts and work_status unchanged.
+# ====================================================================

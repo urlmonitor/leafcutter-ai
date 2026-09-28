@@ -244,9 +244,18 @@ amended_by:
 superseded_by: null
 covered_by: []
 implemented_by:
-- tickets/00_inbox/TICKET-20260927-BO-4300a-1-ia.md
+- tickets/00_inbox/epics/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/10_TICKET-20260928-BO-4300-workflow-runtime-and-shell-runner.md
 notes: 'IT PO split of BO-4300a-1-i (2026-09-25), workflow-body half: carries the parent''s criteria verbatim.
   The surface is templates/workflows-js/*.js (python-coder). The entry-skill half (skills and commands
   that run the maker and pass its answer in) is BO-4300a-1-ib (llm-expert). F1 and F12; verified on the
   recorded dispatch list of a workflow run, not on source text.'
 target_epic: EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace
+
+# ====================================================================
+# DECISION HISTORY
+# ====================================================================
+# - 2026-09-28 14:00 [coordinator/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/re-cut]: (#EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/10)
+#   Epic re-cut by deliverable: implemented_by re-pointed from the deleted generated
+#   ticket to 10_TICKET-20260928-BO-4300-workflow-runtime-and-shell-runner.md.
+#   criteria, test_spec, contracts and work_status unchanged.
+# ====================================================================

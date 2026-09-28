@@ -97,9 +97,18 @@ amended_by: []
 superseded_by: null
 covered_by: []
 implemented_by:
-- tickets/00_inbox/TICKET-20260927-BO-4300c-4-i.md
+- tickets/00_inbox/epics/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/11_TICKET-20260928-BO-4300-workflow-routes.md
 notes: |
   build-ticket.js trusts args.worktree_path unchecked (consolidation inventory 2.2). Decision 4
   has workflows receive the maker's result passed in -- this record keeps a hand-supplied
   location from bypassing it. Uses the lookup of BO-4300e-1.
 target_epic: EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace
+
+# ====================================================================
+# DECISION HISTORY
+# ====================================================================
+# - 2026-09-28 14:00 [coordinator/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/re-cut]: (#EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/11)
+#   Epic re-cut by deliverable: implemented_by re-pointed from the deleted generated
+#   ticket to 11_TICKET-20260928-BO-4300-workflow-routes.md.
+#   criteria, test_spec, contracts and work_status unchanged.
+# ====================================================================

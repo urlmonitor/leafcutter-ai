@@ -135,9 +135,18 @@ amended_by:
 superseded_by: null
 covered_by: []
 implemented_by:
-- tickets/00_inbox/TICKET-20260927-BO-4300e-4.md
+- tickets/00_inbox/epics/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/11_TICKET-20260928-BO-4300-workflow-routes.md
 notes: |
   F14 and the finalize inventory rows: baselines were added from origin/main without a fetch,
   registered in the real repository, and "degrade and continue" on failure. Under decision 1 a
   temporary clone registers nothing in the real project.
 target_epic: EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace
+
+# ====================================================================
+# DECISION HISTORY
+# ====================================================================
+# - 2026-09-28 14:00 [coordinator/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/re-cut]: (#EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/11)
+#   Epic re-cut by deliverable: implemented_by re-pointed from the deleted generated
+#   ticket to 11_TICKET-20260928-BO-4300-workflow-routes.md.
+#   criteria, test_spec, contracts and work_status unchanged.
+# ====================================================================

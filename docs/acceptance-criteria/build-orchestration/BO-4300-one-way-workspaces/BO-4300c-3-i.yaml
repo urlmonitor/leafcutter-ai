@@ -102,7 +102,7 @@ amended_by: []
 superseded_by: null
 covered_by: []
 implemented_by:
-- tickets/00_inbox/TICKET-20260927-BO-4300c-3-i.md
+- tickets/00_inbox/epics/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/10_TICKET-20260928-BO-4300-workflow-runtime-and-shell-runner.md
 notes: |
   The exact 2026-09-25 incident (consolidation analysis, section 1, steps 4-7): the
   path-resolution command was re-sent in place of the create command, returned exit 0 with the
@@ -110,3 +110,12 @@ notes: |
   owner wrote INF-1400* ACs untracked into the main checkout on main. The session starts from
   the workspace parent because that is where it ran.
 target_epic: EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace
+
+# ====================================================================
+# DECISION HISTORY
+# ====================================================================
+# - 2026-09-28 14:00 [coordinator/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/re-cut]: (#EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/10)
+#   Epic re-cut by deliverable: implemented_by re-pointed from the deleted generated
+#   ticket to 10_TICKET-20260928-BO-4300-workflow-runtime-and-shell-runner.md.
+#   criteria, test_spec, contracts and work_status unchanged.
+# ====================================================================

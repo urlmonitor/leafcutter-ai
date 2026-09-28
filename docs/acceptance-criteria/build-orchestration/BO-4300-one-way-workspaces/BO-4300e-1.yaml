@@ -99,10 +99,19 @@ amended_by: []
 superseded_by: null
 covered_by: [BO-4300e-1-i]
 implemented_by:
-- tickets/00_inbox/TICKET-20260927-BO-4300e-1.md
+- tickets/00_inbox/epics/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/08_TICKET-20260928-BO-4300-locate-and-clear.md
 notes: |
   Under decision 1 no version-control command lists the workspaces (clones), so "find" cannot
   lean on one -- the empty linked-workspace list in the Given makes a lookup that still does
   fail. Listing completeness is BO-4100e; this record is the single-item lookup through the
   same maker (decision 4).
 target_epic: EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace
+
+# ====================================================================
+# DECISION HISTORY
+# ====================================================================
+# - 2026-09-28 14:00 [coordinator/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/re-cut]: (#EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/08)
+#   Epic re-cut by deliverable: implemented_by re-pointed from the deleted generated
+#   ticket to 08_TICKET-20260928-BO-4300-locate-and-clear.md.
+#   criteria, test_spec, contracts and work_status unchanged.
+# ====================================================================

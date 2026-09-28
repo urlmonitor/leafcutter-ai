@@ -114,10 +114,19 @@ amended_by: []
 superseded_by: null
 covered_by: []
 implemented_by:
-- tickets/00_inbox/TICKET-20260927-BO-4300b-4.md
+- tickets/00_inbox/epics/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/05_TICKET-20260928-BO-4300-readiness.md
 notes: |
   F5's sandbox run: without Developer Mode, WinError 1314 on both links, bootstrap failed and
   left a half-made worktree. Decision 2 (real install files, never a symlink) is the answer;
   this record is its observable. The migration plan asks for this to run for real on a Windows
   runner without Developer Mode, not only with a simulated failure.
 target_epic: EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace
+
+# ====================================================================
+# DECISION HISTORY
+# ====================================================================
+# - 2026-09-28 14:00 [coordinator/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/re-cut]: (#EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/05)
+#   Epic re-cut by deliverable: implemented_by re-pointed from the deleted generated
+#   ticket to 05_TICKET-20260928-BO-4300-readiness.md.
+#   criteria, test_spec, contracts and work_status unchanged.
+# ====================================================================

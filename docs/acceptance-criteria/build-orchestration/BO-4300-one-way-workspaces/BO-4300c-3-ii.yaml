@@ -131,10 +131,19 @@ amended_by:
 superseded_by: null
 covered_by: []
 implemented_by:
-- tickets/00_inbox/TICKET-20260927-BO-4300c-3-ii.md
+- tickets/00_inbox/epics/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/10_TICKET-20260928-BO-4300-workflow-runtime-and-shell-runner.md
 notes: |
   F1 and the incident's steps 3-4: status-checker refused the resolver on charter grounds, and
   the workflow then re-sent the resolution command to worktree-agent instead of halting. F13:
   today's harness executes every dispatched command, so a refusing agent is never modelled --
   the proof for this record must model one.
 target_epic: EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace
+
+# ====================================================================
+# DECISION HISTORY
+# ====================================================================
+# - 2026-09-28 14:00 [coordinator/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/re-cut]: (#EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/10)
+#   Epic re-cut by deliverable: implemented_by re-pointed from the deleted generated
+#   ticket to 10_TICKET-20260928-BO-4300-workflow-runtime-and-shell-runner.md.
+#   criteria, test_spec, contracts and work_status unchanged.
+# ====================================================================

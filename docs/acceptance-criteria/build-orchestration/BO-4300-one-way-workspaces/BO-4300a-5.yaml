@@ -58,9 +58,27 @@ it_requirements:
 - 'States the caller rules verbatim from the contract: halt on anything but status ok; take the location
   only from workspace_path of an ok answer, never from prose or from the caller''s cwd; the answer has
   the same form whichever route asked.'
-- Q8 (remove authorisation) is documented as whatever mechanism is built; if still open when authored,
-  the page names the field set and marks the argument as pending rather than guessing.
-test_required: false
+- 'Q8 is DECIDED (user, 2026-09-28): the page documents discard_token on remove''s UNSENT_WORK answer and
+  the --discard-token argument -- a one-time token bound to that workspace and exactly the unsent set
+  listed with it, valid only on the remove request for that workspace while the set is unchanged, never
+  an environment variable or config setting, never remembered -- and the AMBIGUOUS_LINE code with its
+  lines field (Q4), both as recorded in BO-4300c-2.'
+test_required: true
+test_spec:
+- name: test_answer_reference_points_at_the_contract_record
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: real_artifact
+  description: docs/reference/workspace-maker-answer.md exists with reference frontmatter, names BO-4300c-2
+    as the authoritative contract, lists every code of the deployed maker's answer table (including
+    AMBIGUOUS_LINE) and the discard_token field, and is reachable from docs/INDEX.md.
+test_rationale: 'The deliverable is a published document, so a waiver would let it close unproven. The
+  proof is ticket 13''s real doc test (unit_tests/build_orchestration/test_bo_4300_docs.py), whose test for
+  this record carries `# covers: BO-4300a-5` and asserts on the delivered artifact itself -- the file exists with
+  valid frontmatter, is reachable from docs/INDEX.md, and it lists every code and field of the deployed maker''s answer table. A grep of the template or a waiver
+  (test_required: false) would pass with the page missing or its commands broken. Settled by the coordinator
+  2026-09-28: the six BO-4300 doc records close through this test, not through a waiver.'
 origin_agent: business-analyst
 created: 2026-09-25
 amended_by:
@@ -71,13 +89,35 @@ amended_by:
     expects_from no longer carries a verbatim copy of BO-4300c-2's result contract (which had just
     changed: per-stage hook checks, inactive_stages, ticket_path_in_worktree); it points to BO-4300c-2
     as the one authoritative copy. Criteria unchanged. readiness reset to reviewed.
+- reason: doc-ac-test-contract-and-user-decisions-q4-q8
+  by: it-po
+  at: 2026-09-28
+  note: >-
+    Technical fields only; criteria unchanged. The Q8 'if still open' requirement is replaced by the
+    decided discard token (user, 2026-09-28), and the Q4 AMBIGUOUS_LINE code is named. test_required:
+    false (a waiver with no test_rationale, which check-done-proof does not honour) replaced by
+    test_required: true, a test_spec naming ticket 13's real doc test with its `# covers:` tag, and a
+    test_rationale -- the option settled by the coordinator 2026-09-28 for all six BO-4300 doc records.
+    readiness stays approved.
 superseded_by: null
 covered_by: []
 implemented_by:
-- tickets/00_inbox/TICKET-20260927-BO-4300a-5.md
+- tickets/00_inbox/epics/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/13_TICKET-20260928-BO-4300-docs-and-diagrams.md
 notes: |
   documentation_trigger reference-doc on BO-4300a. It documents the contract that
   BO-4300c-2 (one readable answer) and BO-4300c-3/c-4 (callers stop; location only from the
   answer) specify behaviourally. Field names are IT PO's to fix; this page names them once
   they exist.
 target_epic: EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace
+
+# ====================================================================
+# DECISION HISTORY
+# ====================================================================
+# - 2026-09-28 14:00 [coordinator/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/re-cut]: (#EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/13)
+#   Epic re-cut by deliverable: implemented_by re-pointed from the deleted generated
+#   ticket to 13_TICKET-20260928-BO-4300-docs-and-diagrams.md.
+#   criteria, test_spec, contracts and work_status unchanged.
+# - 2026-09-28 16:30 [it-po/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/user-decisions-2026-09-28]: (#EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/13)
+#   Doc test contract: test_required true + test_spec naming ticket 13's covers-tagged doc test
+#   + test_rationale; Q8 discard token and Q4 AMBIGUOUS_LINE documented as decided.
+# ====================================================================

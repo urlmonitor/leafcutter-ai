@@ -93,9 +93,18 @@ amended_by: []
 superseded_by: null
 covered_by: []
 implemented_by:
-- tickets/00_inbox/TICKET-20260927-BO-4300c-4-ii.md
+- tickets/00_inbox/epics/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/11_TICKET-20260928-BO-4300-workflow-routes.md
 notes: |
   The end-to-end observable of the incident, and KI-ACD-007: the product-truth phase wrote into
   the main checkout even when a worktree was created. BO-1800e covers the end state on the
   shared main line; this record covers the main copy on the machine during the run.
 target_epic: EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace
+
+# ====================================================================
+# DECISION HISTORY
+# ====================================================================
+# - 2026-09-28 14:00 [coordinator/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/re-cut]: (#EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/11)
+#   Epic re-cut by deliverable: implemented_by re-pointed from the deleted generated
+#   ticket to 11_TICKET-20260928-BO-4300-workflow-routes.md.
+#   criteria, test_spec, contracts and work_status unchanged.
+# ====================================================================

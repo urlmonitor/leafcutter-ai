@@ -60,7 +60,7 @@ delivers_to:
     (int), status (''ok''|''refused''|''error''), code (OK | NOT_FOUND | INCOMPLETE | OCCUPIED | OCCUPIED_LEGACY_WORKTREE
     | IN_PROGRESS | NO_REPO | AMBIGUOUS_REPO | NO_HUB | FETCH_FAILED | GIT_FAILED | NO_CONFIG | BOOTSTRAP_FAILED
     | BOOTSTRAP_DIRTIED_TRACKED | WORK_AT_RISK | HOOKS_INACTIVE | VERIFY_FAILED | UNSENT_WORK | PROCESS_HOLDS_FILES
-    | ON_PROTECTED_BRANCH | TICKET_NOT_ON_BASE | USAGE | INTERNAL_ERROR), message (one sentence naming the cause), verb, repo_root
+    | ON_PROTECTED_BRANCH | TICKET_NOT_ON_BASE | AMBIGUOUS_LINE | USAGE | INTERNAL_ERROR), message (one sentence naming the cause), verb, repo_root
     and repo_root_posix, layout (''dev''|''consumer''), mechanism (''clone''), hub (the main checkout''s
     origin URL). ensure/locate/verify ok answers add: kind, slug, branch (null for scratch), workspace_path
     (absolute, native spelling), workspace_path_posix, worktree_path (alias, always equal to workspace_path),
@@ -82,8 +82,12 @@ delivers_to:
     inactive_stages [stage] (HOOKS_INACTIVE), ticket_path (the path as requested) and reason ''absent''|''differs''
     (TICKET_NOT_ON_BASE, status refused, exit 2), candidates [path] (AMBIGUOUS_REPO), searched_from (NO_REPO), occupant {path, kind: ''other-line''|''other-project''|''plain-folder''|''legacy-worktree'',
     branch|null} (OCCUPIED*), remnant_path (INCOMPLETE), unsent {commits: [sha], files: [path]} (UNSENT_WORK,
-    WORK_AT_RISK), holders [{pid, name}] (PROCESS_HOLDS_FILES). remove ok adds removed_path and discarded
-    {commits: [sha], files: [path]}. list ok adds workspaces [{kind, slug, branch, workspace_path, workspace_path_posix,
+    WORK_AT_RISK), holders [{pid, name}] (PROCESS_HOLDS_FILES), lines [branch] (AMBIGUOUS_LINE, status
+    refused, exit 2: more than one spelling of the same identity holds a line of work on the hub, Q4 decided
+    2026-09-28, BO-4300a-2). A remove answer UNSENT_WORK also carries discard_token (string): the one-time
+    token bound to that workspace and exactly the unsent set listed in the same answer (Q8 decided 2026-09-28,
+    BO-4300e-3); the only way to discard it is `remove --path <same> --discard-token <that token>`. remove
+    ok adds removed_path and discarded {commits: [sha], files: [path]}. list ok adds workspaces [{kind, slug, branch, workspace_path, workspace_path_posix,
     state: ''ready''|''incomplete''}]. Callers treat refused and error identically: halt.'
 - agent: llm-expert
   contract: Skills relay the maker's stdout verbatim and stop on a non-zero exit; they never summarise
@@ -104,6 +108,12 @@ it_requirements:
   bumps it. workspace_path is the canonical key; worktree_path is kept as an alias for existing callers.
   The per-stage hook checks, hooks_stages_declared, inactive_stages and the two ticket fields are additions
   (compatible); hooks_canary_rejected keeps its name and now means "every declared stage fired".
+  The AMBIGUOUS_LINE code with its lines field (Q4) and the discard_token field on remove's UNSENT_WORK
+  answer (Q8) are additions too (compatible; user decisions 2026-09-28).
+- 'discard_token is emitted ONLY on a remove answer with code UNSENT_WORK, never on ensure''s WORK_AT_RISK
+  or any other answer, and never written to stderr, the marker, a log or any file; the token alone is not
+  an authorisation -- it is valid only on the remove request for the same workspace while its unsent set
+  is unchanged (BO-4300e-3, BO-4300e-3-i).'
 - 'The ticket fields follow the same presence rule as workspace_path: present only on an ok answer, and
   only when the request named a ticket; their value is never the path the caller passed in (BO-4300a-1-ii).'
 - This record is the single authoritative statement of the result contract. Other records that need it
@@ -182,13 +192,34 @@ amended_by:
     (2026-09-27): TICKET_NOT_ON_BASE is now a decided refusal code in the contract's code list (the
     "PROPOSED" marker is removed), carrying ticket_path and reason 'absent'|'differs'. readiness
     stays reviewed.
+- reason: user-decisions-q4-q8
+  by: it-po
+  at: 2026-09-28
+  note: >-
+    Technical fields only; criteria unchanged. Contract additions for the user's 2026-09-28 decisions:
+    code AMBIGUOUS_LINE with field lines [branch] (Q4: two spellings of one identity both holding a
+    hub line are refused, never twinned -- BO-4300a-2), and discard_token on remove's UNSENT_WORK answer
+    (Q8: one-time token bound to that workspace and its unsent set -- BO-4300e-3). Both compatible
+    additions under the schema_version policy. readiness stays approved.
 superseded_by: null
 covered_by: []
 implemented_by:
-- tickets/00_inbox/TICKET-20260927-BO-4300c-2.md
+- tickets/00_inbox/epics/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/03_TICKET-20260928-BO-4300-answer-contract.md
 notes: |
   F4: a sandbox run of create-ac-worktree printed git's own tracking and HEAD messages before
   the JSON, and set-up let package installers and the build write to the same channel. Whether
   a caller could parse the result then depended on an assistant picking the right line. Field
   names and exit codes are IT PO's to fix (the proposal's section 5.3 is a starting point).
 target_epic: EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace
+
+# ====================================================================
+# DECISION HISTORY
+# ====================================================================
+# - 2026-09-28 14:00 [coordinator/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/re-cut]: (#EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/03)
+#   Epic re-cut by deliverable: implemented_by re-pointed from the deleted generated
+#   ticket to 03_TICKET-20260928-BO-4300-answer-contract.md.
+#   criteria, test_spec, contracts and work_status unchanged.
+# - 2026-09-28 16:30 [it-po/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/user-decisions-2026-09-28]: (#EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/03)
+#   Contract additions for Q4 (AMBIGUOUS_LINE, lines) and Q8 (discard_token on remove's
+#   UNSENT_WORK), user decisions 2026-09-28. criteria unchanged.
+# ====================================================================

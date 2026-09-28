@@ -89,8 +89,17 @@ amended_by: []
 superseded_by: null
 covered_by: []
 implemented_by:
-- tickets/00_inbox/TICKET-20260927-BO-4300d-2-ii.md
+- tickets/00_inbox/epics/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/07_TICKET-20260928-BO-4300-safe-re-request.md
 notes: |
   The "prior state" axis of the migration plan's test matrix. Decision memo: a half-made clone
   is a directory without the maker's record and can be deleted and redone.
 target_epic: EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace
+
+# ====================================================================
+# DECISION HISTORY
+# ====================================================================
+# - 2026-09-28 14:00 [coordinator/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/re-cut]: (#EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/07)
+#   Epic re-cut by deliverable: implemented_by re-pointed from the deleted generated
+#   ticket to 07_TICKET-20260928-BO-4300-safe-re-request.md.
+#   criteria, test_spec, contracts and work_status unchanged.
+# ====================================================================

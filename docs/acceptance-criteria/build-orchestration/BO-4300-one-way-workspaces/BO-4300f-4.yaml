@@ -43,11 +43,13 @@ delivers_to:
   agent: test-writer
   contract: 'Fixture API used by every maker proof in this family: deployed_maker_path() -> absolute path
     (raises when absent); make_project(tmp, layout=''dev''|''consumer'', stub_build=..., hook=''reject''|''accept'')
-    -> {project, hub, landing_place}; run_maker(args, cwd, env=None, timeout=...) -> {answer: dict, exit_code:
+    -> {project, hub, landing_place} where landing_place is the Q5 landing root <parent of project>/<project
+    dir name>-worktrees/ (decided 2026-09-28); run_maker(args, cwd, env=None, timeout=...) -> {answer: dict, exit_code:
     int, stdout: str, stderr: str}, failing the test when stdout is not exactly one JSON object; starting_points(project)
-    -> dict of the six BO-4300b-1 cwds; legacy_worktree(project, name, unsent=False) -> absolute path of
-    a real legacy git worktree registered in the temp project (the only test-side creator of one, exempt
-    in BO-4300f-2''s census).'
+    -> dict of the six BO-4300b-1 cwds; legacy_worktree(project, name, unsent=False, at=None) -> absolute path of
+    a real legacy git worktree registered in the temp project, on branch name, placed by default where the
+    old way put it (<parent of project>/worktrees/<name>, outside the Q5 landing root) or at the given path
+    (the only test-side creator of one, exempt in BO-4300f-2''s census).'
 expects_from:
   ac_id: BO-4300a-1
   contract: Maker deployed by a named deploy-manifest entry to <install>/scripts/worktree.py.
@@ -127,12 +129,33 @@ amended_by:
     copy (scripts/ or templates/), one test added; running the DEPLOYED copy is kept. Item 7: the
     fixture module owns the single legacy-worktree helper that BO-4300f-2's census exempts. Item 5:
     fixture commits never use `git -C <path> commit`. readiness reset to reviewed.
+- reason: user-decisions-q4-q5
+  by: it-po
+  at: 2026-09-28
+  note: >-
+    Technical fields only; criteria unchanged. Fixture contract aligned with the user's 2026-09-28
+    decisions: make_project's landing_place is the Q5 sibling landing root, and legacy_worktree takes the
+    branch name as given (legacy spellings, Q4) and defaults to the old way's folder, with an optional
+    placement, so BO-4300d-3-i and BO-4300f-3 can prove "never twinned" across the move. readiness stays
+    approved.
 superseded_by: null
 covered_by: [BO-4300f-4-i]
 implemented_by:
-- tickets/00_inbox/TICKET-20260927-BO-4300f-4.md
+- tickets/00_inbox/epics/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/02_TICKET-20260928-BO-4300-deployed-maker-test-support.md
 notes: |
   F13: most behavioural fast-lane tests exercise the tracked scripts/ copy rather than the
   deployed template, no test runs the template's ac or fast-lane create against a real
   repository, and tests/test_setup_ticket_worktree.py has 41 mock sites. Migration plan 6.1.
 target_epic: EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace
+
+# ====================================================================
+# DECISION HISTORY
+# ====================================================================
+# - 2026-09-28 14:00 [coordinator/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/re-cut]: (#EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/02)
+#   Epic re-cut by deliverable: implemented_by re-pointed from the deleted generated
+#   ticket to 02_TICKET-20260928-BO-4300-deployed-maker-test-support.md.
+#   criteria, test_spec, contracts and work_status unchanged.
+# - 2026-09-28 16:30 [it-po/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/user-decisions-2026-09-28]: (#EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/02)
+#   Fixture contract aligned with Q4/Q5 (user, 2026-09-28): landing_place is the sibling landing root;
+#   legacy_worktree takes legacy branch names and defaults to the old folder. criteria unchanged.
+# ====================================================================

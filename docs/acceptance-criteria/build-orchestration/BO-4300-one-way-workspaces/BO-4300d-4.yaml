@@ -108,7 +108,7 @@ amended_by: []
 superseded_by: null
 covered_by: []
 implemented_by:
-- tickets/00_inbox/TICKET-20260927-BO-4300d-4.md
+- tickets/00_inbox/epics/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/06_TICKET-20260928-BO-4300-work-identity-and-ticket-location.md
 notes: |
   KI-BO-20260921 "abandons the epic worktree branch" and F9 (ac-authoring reused a branch at its
   old tip; fast lane force-resets). DECIDED by the user at the BA gate, 2026-09-25 (Q9): an
@@ -116,3 +116,12 @@ notes: |
   lane's force-reset behaviour is retired. Fresh lines still start at the shared main line tip
   (decision 3, BO-4100a).
 target_epic: EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace
+
+# ====================================================================
+# DECISION HISTORY
+# ====================================================================
+# - 2026-09-28 14:00 [coordinator/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/re-cut]: (#EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/06)
+#   Epic re-cut by deliverable: implemented_by re-pointed from the deleted generated
+#   ticket to 06_TICKET-20260928-BO-4300-work-identity-and-ticket-location.md.
+#   criteria, test_spec, contracts and work_status unchanged.
+# ====================================================================

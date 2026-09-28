@@ -56,16 +56,54 @@ it_requirements:
   tools; no second make/find/clear path.
 - Stay consistent with the components.json worktree_manager update recorded on BO-4300a-1 (description
   and primary_code).
-test_required: false
+- The landing place shown is the decided one (Q5, user 2026-09-28) -- the project's sibling folder <project-dir-name>-worktrees/
+  holding each workspace at <kind>/<slug> -- outside the main copy.
+test_required: true
+test_spec:
+- name: test_component_diagram_names_the_one_maker_and_every_caller
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: real_artifact
+  description: docs/architecture/components/worktree-manager.md carries a mermaid component diagram (diagram_type
+    valid per diagram_types.json) naming the maker, its resolver, every caller route and the landing place,
+    and no retired script.
+test_rationale: 'The deliverable is a published document, so a waiver would let it close unproven. The
+  proof is ticket 13''s real doc test (unit_tests/build_orchestration/test_bo_4300_docs.py), whose test for
+  this record carries `# covers: BO-4300a-4` and asserts on the delivered artifact itself -- the file exists with
+  valid frontmatter, is reachable from docs/INDEX.md, and its mermaid component diagram names the maker, every caller and no retired script. A grep of the template or a waiver
+  (test_required: false) would pass with the page missing or its commands broken. Settled by the coordinator
+  2026-09-28: the six BO-4300 doc records close through this test, not through a waiver.'
 origin_agent: business-analyst
 created: 2026-09-25
-amended_by: []
+amended_by:
+- reason: doc-ac-test-contract
+  by: it-po
+  at: 2026-09-28
+  note: >-
+    Technical fields only; criteria unchanged. test_required: false (a waiver with no test_rationale,
+    which check-done-proof does not honour) replaced by test_required: true and a test_spec naming
+    ticket 13's real doc test with its `# covers:` tag, plus a test_rationale -- the consistent option
+    settled by the coordinator 2026-09-28 for all six BO-4300 doc records. Landing place shown as decided by Q5 (user, 2026-09-28). readiness stays
+    approved.
 superseded_by: null
 covered_by: []
 implemented_by:
-- tickets/00_inbox/TICKET-20260927-BO-4300a-4.md
+- tickets/00_inbox/epics/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/13_TICKET-20260928-BO-4300-docs-and-diagrams.md
 notes: |
   documentation_trigger component-diagram on BO-4300a. The existing worktree-manager
   component page describes git worktree lifecycle management, which decision 1 makes
   inaccurate; the diagram is drawn for per-feature copies (clones).
 target_epic: EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace
+
+# ====================================================================
+# DECISION HISTORY
+# ====================================================================
+# - 2026-09-28 14:00 [coordinator/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/re-cut]: (#EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/13)
+#   Epic re-cut by deliverable: implemented_by re-pointed from the deleted generated
+#   ticket to 13_TICKET-20260928-BO-4300-docs-and-diagrams.md.
+#   criteria, test_spec, contracts and work_status unchanged.
+# - 2026-09-28 16:30 [it-po/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/user-decisions-2026-09-28]: (#EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/13)
+#   Doc test contract: test_required true + test_spec naming ticket 13's covers-tagged doc test
+#   + test_rationale; landing place shown as decided by Q5.
+# ====================================================================

@@ -77,7 +77,16 @@ amended_by: []
 superseded_by: null
 covered_by: []
 implemented_by:
-- tickets/00_inbox/TICKET-20260927-BO-4300f-2-ib.md
+- tickets/00_inbox/epics/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/14_TICKET-20260928-BO-4300-retire-former-ways.md
 notes: 'IT PO split of BO-4300f-2-i (2026-09-25): the how-to guides (documentation-expert). With BO-4300f-2-ia
   the union of the two Givens is the parent''s.'
 target_epic: EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace
+
+# ====================================================================
+# DECISION HISTORY
+# ====================================================================
+# - 2026-09-28 14:00 [coordinator/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/re-cut]: (#EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/14)
+#   Epic re-cut by deliverable: implemented_by re-pointed from the deleted generated
+#   ticket to 14_TICKET-20260928-BO-4300-retire-former-ways.md.
+#   criteria, test_spec, contracts and work_status unchanged.
+# ====================================================================
