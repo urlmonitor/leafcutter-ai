@@ -5,7 +5,7 @@ type: architecture
 status: active
 flight_level: L2-Container
 created: 2026-07-21
-last_updated: 2026-09-27
+last_updated: 2026-09-28
 source_ticket: tickets/00_inbox/TICKET-20260721-BP-1100f-6.md
 components:
   - build_pipeline
@@ -22,7 +22,7 @@ related_docs:
   - docs/how-to/done-proof-enforcement.md
   - docs/how-to/done-proof-reachability-gates.md
   - docs/architecture/diagrams/c3-done-proof-evaluation-sequence.md
-  - docs/architecture/diagrams/c3-done-proof-reachability-gates-sequence.md
+  - docs/architecture/diagrams/c3-011-done-proof-reachability-gates-sequence.md
 related_adrs:
   - ADR-001
   - ADR-020
@@ -66,7 +66,7 @@ runtime way in (a module-level `main(argv)`), no longer counts as proof that an 
 reach the fix — the criterion is refused with `refusal_cause: "proof_not_through_entry_point"`
 until the proof is rewritten to drive the same behaviour through that entry point. See
 [How to understand the done-proof reachability axes — section 3](../../how-to/done-proof-reachability-gates.md#3-the-third-eligibility-axis-did-the-proof-go-in-through-the-real-way-in-bo-2900a-1)
-and the [Done-Proof Reachability Gates sequence diagram, Phase 6](../diagrams/c3-done-proof-reachability-gates-sequence.md#3-the-mechanical-entry-point-reachability-gate-bo-2900a-1)
+and the [Done-Proof Reachability Gates sequence diagram, Phase 6](../diagrams/c3-011-done-proof-reachability-gates-sequence.md#3-the-mechanical-entry-point-reachability-gate-bo-2900a-1)
 for the full mechanism. This axis is disjoint from the five gates above: it does not gate
 dispatch or implementation, and it is not one of the `BP-1100f-*` ACs.
 
@@ -100,7 +100,7 @@ reasoned exemption for that exact unit in
 registry — `BO-2900a-3` hands off to that AC rather than deciding the helper-module
 case itself. See
 [How to understand the done-proof reachability axes — section 4](../../how-to/done-proof-reachability-gates.md#4-the-sibling-axis-no-way-of-running-the-product-reaches-the-code-at-all-bo-2900a-3)
-and the [Done-Proof Reachability Gates sequence diagram, Section 4](../diagrams/c3-done-proof-reachability-gates-sequence.md#4-the-no-entry-point-anywhere-gate-bo-2900a-3)
+and the [Done-Proof Reachability Gates sequence diagram, Section 4](../diagrams/c3-011-done-proof-reachability-gates-sequence.md#4-the-no-entry-point-anywhere-gate-bo-2900a-3)
 for the full mechanism.
 
 ## The five gates
@@ -128,7 +128,7 @@ for the full mechanism.
 - [ADR-001 — Self-Hosting Boundary](adrs/ADR-001-self-hosting-boundary.md) — why each gate is packaged and portable.
 - [ADR-020 — Live Surface Tester](adrs/ADR-020-live-surface-tester.md) — the observable-side-effect smoke surface Gate 5 routes to.
 - [How to understand the done-proof reachability axes — section 3](../../how-to/done-proof-reachability-gates.md#3-the-third-eligibility-axis-did-the-proof-go-in-through-the-real-way-in-bo-2900a-1) — the sixth, adjacent honesty axis (`BO-2900a-1`) at done-eligibility time, described above.
-- [Done-Proof Reachability Gates — Sequence Diagram, Phase 6](../diagrams/c3-done-proof-reachability-gates-sequence.md#3-the-mechanical-entry-point-reachability-gate-bo-2900a-1) — the message-level flow for `BO-2900a-1`.
+- [Done-Proof Reachability Gates — Sequence Diagram, Phase 6](../diagrams/c3-011-done-proof-reachability-gates-sequence.md#3-the-mechanical-entry-point-reachability-gate-bo-2900a-1) — the message-level flow for `BO-2900a-1`.
 - [How to understand the done-proof reachability axes — section 4](../../how-to/done-proof-reachability-gates.md#4-the-sibling-axis-no-way-of-running-the-product-reaches-the-code-at-all-bo-2900a-3) — the sibling, disjoint honesty axis (`BO-2900a-3`) for a unit with no way in at all, described above.
-- [Done-Proof Reachability Gates — Sequence Diagram, Section 4](../diagrams/c3-done-proof-reachability-gates-sequence.md#4-the-no-entry-point-anywhere-gate-bo-2900a-3) — the message-level flow for `BO-2900a-3`, including the AST-import-graph fix and the exemption hand-off.
+- [Done-Proof Reachability Gates — Sequence Diagram, Section 4](../diagrams/c3-011-done-proof-reachability-gates-sequence.md#4-the-no-entry-point-anywhere-gate-bo-2900a-3) — the message-level flow for `BO-2900a-3`, including the AST-import-graph fix and the exemption hand-off.
 - [BO-2900d — Legitimate exceptions are recorded, not falsely blamed](../../acceptance-criteria/build-orchestration/BO-2900-runtime-reachability-guard/BO-2900d.yaml) — the exemption registry `BO-2900a-3` hands off to rather than deciding the helper-module case itself.

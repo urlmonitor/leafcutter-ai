@@ -186,8 +186,7 @@ from test_enforcement import COVERS_TAG_RE
 # docstring), so loading it here never re-enters this module while it is
 # still mid-definition.
 from _done_proof_phase_helpers import (
-    _build_abs_path_map,
-    _build_ac_status_map,
+    _build_abs_path_map, _build_ac_status_map,
     _build_failure_reason,
     _build_raw_results_from_json,
     _build_vitest_command,
@@ -1286,17 +1285,29 @@ def _run_pytest_and_parse(test_files: list[Path]) -> dict[str, str]:
     larger allowance, and can be overridden verbatim via the
     ``LEAFCUTTER_DONE_PROOF_PYTEST_TIMEOUT_SECONDS`` environment variable.
 
-    The child's ``cwd=`` is anchored to *test_files*' own common ancestor
-    directory via :func:`_resolve_pytest_run_cwd` (BO-2900a-3) rather than
-    left unset. Left unset, the child inherits this process's own cwd, and
-    pytest's own rootdir/config discovery walks upward from the common
-    ancestor of that inherited cwd and *test_files* — on a deeply nested
-    fixture path (e.g. under the OS temp directory) sharing only a distant
-    ancestor (a user's home directory) with this process's cwd, that walk
-    can cross unrelated, transiently-changing directories and fail
-    collection outright with a spurious ``FileNotFoundError`` unrelated to
-    *test_files* themselves. Anchoring the child to *test_files*' own
-    directory keeps the walk inside the fixture tree.
+    The child's ``cwd=`` is resolved via :func:`_resolve_pytest_run_cwd`
+    (BO-2900a-3) rather than left unset. Left unset, the child inherits this
+    process's own cwd, and pytest's own rootdir/config discovery walks
+    upward from the common ancestor of that inherited cwd and *test_files*
+    — on a deeply nested fixture path (e.g. under the OS temp directory)
+    sharing only a distant ancestor (a user's home directory) with this
+    process's cwd, that walk can cross unrelated, transiently-changing
+    directories and fail collection outright with a spurious
+    ``FileNotFoundError`` unrelated to *test_files* themselves.
+    :func:`_resolve_pytest_run_cwd` starts from *test_files*' own common
+    ancestor directory, which keeps that walk inside the fixture tree, but
+    (BO-2900a-3 rework, CI regression PR #925) does not stop there: it then
+    walks upward from that common ancestor looking for the nearest directory
+    pytest itself would treat as a rootdir (a ``pytest.ini``, or a
+    ``pyproject.toml``/``tox.ini``/``setup.cfg`` carrying the section pytest
+    reads from that file kind), and anchors the child there instead when one
+    is found. Without that walk, a repo whose ``pytest.ini`` lives several
+    directories above the linked test files — as this repo's own does, with
+    an ``addopts -p <plugin>`` naming a plugin beside the ini file — would
+    anchor the child below that plugin, making it unimportable and silently
+    losing every test result. The common ancestor remains the fallback when
+    no such rootdir ancestor exists at all, so the original OS-temp-dir
+    fixture motivation above is unchanged.
 
     A genuine timeout still fails closed exactly as before — no test can be
     reported as passing — but the returned dict now carries
@@ -2472,3 +2483,4 @@ def verify_done_eligible(
 #   _resolve_pytest_run_cwd() (ratchet: added there, see its own entry),
 #   fixing a spurious collection FileNotFoundError from the prior unset cwd.
 #   (#EPIC-AProofThatReachedTheCodeByDirectImport/02, BO-2900a-3)
+# - 2026-09-28 00:31 [python-coder/BO-2900a-3 rework]: CI regression on PR #925 (Linux): "pytest run unfinished: 2 file(s), returncode 4" for BO-2900a-1 and BO-2900a-3. The 2026-09-25 cwd= fix above anchored the child unconditionally to *test_files*' own common ancestor, but this repo's own pytest.ini (addopts -p scripts.ac_store.pytest_ac_enforcement) lives several directories ABOVE unit_tests/ac_store, so that addopts plugin became unimportable from the anchored cwd -- python -m pytest only puts the subprocess's OWN cwd on sys.path, not the ini's directory. Fixed entirely inside the sibling module's _resolve_pytest_run_cwd() (ratchet: fixed there, see its own DECISION HISTORY entry for the full mechanism); this file's only change is this docstring paragraph. No call site or return contract changed. (#EPIC-AProofThatReachedTheCodeByDirectImport/02, BO-2900a-3)

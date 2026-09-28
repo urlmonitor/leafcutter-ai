@@ -5,14 +5,14 @@ type: how-to
 category: how-to
 status: active
 created: 2026-09-27
-last_updated: 2026-09-27
+last_updated: 2026-09-28
 components:
   - build_orchestration
   - commit_guardian
   - ac_store
 related_docs:
   - docs/how-to/done-proof-enforcement.md
-  - docs/architecture/diagrams/c3-done-proof-reachability-gates-sequence.md
+  - docs/architecture/diagrams/c3-011-done-proof-reachability-gates-sequence.md
   - docs/architecture/diagrams/c3-done-proof-evaluation-sequence.md
   - docs/architecture/components/build-orchestration.md
   - docs/architecture/components/phantom-done-prevention.md
@@ -124,7 +124,7 @@ criterion becomes eligible again once its proof is rewritten to invoke the
 detected entry point with the action and arguments an operator would actually
 use — for example, calling `main(["<action>", ...])` instead of importing and
 calling the implementing function directly. See the
-[Done-Proof Evaluation sequence diagram](../architecture/diagrams/c3-done-proof-reachability-gates-sequence.md#3-the-mechanical-entry-point-reachability-gate-bo-2900a-1)
+[Done-Proof Evaluation sequence diagram](../architecture/diagrams/c3-011-done-proof-reachability-gates-sequence.md#3-the-mechanical-entry-point-reachability-gate-bo-2900a-1)
 for the full message-level flow, and
 [ADR-003](../architecture/adrs/ADR-003-test-source-of-truth-discipline.md) for the
 standing discipline this axis extends: the test is the source of truth for done,
@@ -152,7 +152,7 @@ and `_apply_reachability_gate` opens with `if not verdict.get("eligible"): retur
 verdict`, so an already-refused Section 3 verdict is returned unchanged — the
 two `refusal_cause` values are disjoint by construction, never by the two
 gates happening not to run together. See the
-[Done-Proof Evaluation sequence diagram — Section 4](../architecture/diagrams/c3-done-proof-reachability-gates-sequence.md#4-the-no-entry-point-anywhere-gate-bo-2900a-3)
+[Done-Proof Evaluation sequence diagram — Section 4](../architecture/diagrams/c3-011-done-proof-reachability-gates-sequence.md#4-the-no-entry-point-anywhere-gate-bo-2900a-3)
 for the full message-level flow.
 
 ### The three conditions, evaluated mechanically
@@ -193,7 +193,7 @@ unit, refuses only when **all three** of these hold:
    the refusal does not fire at all for it and the verdict passes through
    unchanged — exactly like the "no no-way-in unit found" and "unit is
    exempted" outcomes below. This check runs **before** the exemption check
-   (step 14 in the [sequence diagram](../architecture/diagrams/c3-done-proof-reachability-gates-sequence.md#4-the-no-entry-point-anywhere-gate-bo-2900a-3)):
+   (step 14 in the [sequence diagram](../architecture/diagrams/c3-011-done-proof-reachability-gates-sequence.md#4-the-no-entry-point-anywhere-gate-bo-2900a-3)):
    a unit that is invoked by automation is spared regardless of whether an
    exemption is also recorded for it, since automation invocation already
    answers "is this reachable" on its own.
@@ -275,7 +275,7 @@ whose **docstring** (never a real `import` statement) mentioned the target
 module's import spelling was enough to make the gate believe the module was
 imported elsewhere and grant `eligible: True`. The fix — routing condition 2
 through the AST-derived import graph instead of a text scan — closes that
-gap; see the [sequence diagram's Section 4](../architecture/diagrams/c3-done-proof-reachability-gates-sequence.md#4-the-no-entry-point-anywhere-gate-bo-2900a-3)
+gap; see the [sequence diagram's Section 4](../architecture/diagrams/c3-011-done-proof-reachability-gates-sequence.md#4-the-no-entry-point-anywhere-gate-bo-2900a-3)
 for the exact before/after.
 
 ---
