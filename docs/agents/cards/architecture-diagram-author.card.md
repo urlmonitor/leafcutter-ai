@@ -150,6 +150,9 @@ flowchart TD
 - ACD-2000a-5: State diagram shows a requirement's attempt lifecycle from first try to escalation
 - ACD-2000b-3-i: State diagram shows a requirement's claim lifecycle including the reclaim path
 - ACD-2100e-1: A sequence diagram shows every point where the route stops to ask and what follows from each answer
+- ACD-2500a-4: Component diagram of the requirement rule check and what it reads
+- ACD-2500c-4: Sequence diagram from technical planning through test design to the test writer
+- ACD-2500c-5: Component diagram of who writes which part of a requirement
 - ACS-1300b-4: A sequence diagram shows where the link gets recorded and which delivery paths miss that point
 - ACS-900e-2: Component diagram shows the boundary between the new hook and the audit script
 - BO-1000a-4: Sequence diagram of the start-of-step narration emission path
@@ -172,6 +175,7 @@ flowchart TD
 - BO-1800a-4: Component diagram of the per-drive isolated-clone topology
 - BO-1800a-5: Sequence diagram of the drive create-run-remove lifecycle in an isolated clone
 - BO-1800b-4: Sequence diagram of the gated PR-to-merge-queue landing flow
+- BO-1800f-3: The delivery boundary is drawn as one sequence diagram whose branches match the criteria they depict
 - BO-1900a-3: Sequence diagram documents the read -> preflight -> spawn flow
 - BO-1900b-3: Sequence diagram documents the dispatch-time premise re-check
 - BO-2100a-5: Sequence diagram of the live-surface-tester dispatch path
@@ -181,7 +185,9 @@ flowchart TD
 - BO-2300a-3: State diagram: run pause/resume lifecycle (running / paused-awaiting-input / resumed / cancelled)
 - BO-2300d-2: Sequence diagram: pause -> ask -> answer -> resume interaction
 - BO-2400a-7: Sequence diagram: fast-lane loop from selection to commit staging
+- BO-2400a-7-i: Sequence diagram update: command steps go to the command-step-runner, and a declined step has its own halt path
 - BO-2400a-8: Component diagram: fast-lane build path and its collaborators
+- BO-2400a-8-i: Component diagram update: the command-step-runner, the registry fields it is checked against, and the structural check
 - BO-2500a-5: Sequence diagram: done-proof evaluation from covers tag to done verdict
 - BO-2500d-4: Component diagram: fast-lane vs heavy-pipeline phase order after review retirement
 - BO-2900a-5: Sequence diagram: from a done claim to a verdict, including the run observation and the exemption branch
@@ -195,6 +201,9 @@ flowchart TD
 - BO-3200c-5: A sequence diagram shows the question reaching the person and the pause when it cannot
 - BO-3200d-3: A sequence diagram shows the result travelling out of band and the reply carrying no content
 - BO-400e-5: A sequence diagram shows every route to the finished state, and that exactly one of them passes the guard
+- BO-4300a-4: Component diagram: the one workspace maker and everyone who calls it
+- BO-4300c-5: Sequence diagram: a caller, the workspace maker, and the halt path
+- BO-4300d-5: State diagram: a workspace's states and what each request does to it
 - BP-1000a-4: Component diagram of the source-to-shipped parity relationship at the merge gate
 - BP-1000b-4: Sequence diagram of the parity gate firing within the finalize-feature merge flow
 - BP-1100e-3: A sequence diagram shows where the declared-vs-actual reconciliation sits before done
