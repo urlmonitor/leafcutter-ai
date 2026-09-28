@@ -9,7 +9,7 @@ component: ac-driven-dev
 level: L2
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 roadmap_phase: phase_1
 criteria: |
   Given a copy of the worktree setup step placed in a directory that is not inside
@@ -27,7 +27,7 @@ depends_on: [ACD-2100a]
 doc_links:
   - path: docs/reference/plan-feature-layout-and-startup-checks.md
     relationship: describes
-    status: planned
+    status: exists
     relevance: "The reference page authored by ACD-2100d-4. The resolution order this behaviour establishes is one of the facts that page must state."
   - path: docs/known-issues/ac-driven-dev.md
     relationship: describes
@@ -123,6 +123,7 @@ covered_by:
   - ACD-2100a-2-i
 implemented_by:
 - tickets/00_inbox/epics/EPIC-StartingNewWorkTheProperWayAlways/02_TICKET-20260826-ACD-2100a-2.md
+- templates/scripts/setup_ticket_worktree.py
 change_target: pipeline
 risk_surface: internal
 notes: |

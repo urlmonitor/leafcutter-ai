@@ -7,7 +7,7 @@ component: build-orchestration
 level: L2
 status: active
 req_status: draft
-work_status: done
+work_status: in_progress
 readiness: draft
 priority: medium
 roadmap_phase: phase_1
@@ -54,7 +54,14 @@ origin_agent: BrainCandy
 created: 2026-07-21
 amended_by: []
 superseded_by: null
-covered_by: []
+covered_by: [BO-2400a-1-i, BO-2400a-1-ii, BO-2400a-1-iii]
 implemented_by:
   - "templates/workflows-js/fast-lane-ship.js"
   - "scripts/build_orchestration/fast_lane.py"
+notes: |
+  2026-09-27: reset from done to in_progress (user-approved). The fast lane gains a
+  dedicated command-step-runner agent for its command steps (BO-2400a-1-i), a new
+  child that is not yet built. Its calls do not count toward the test-writer plus
+  coder total of 2. Return this criterion to done once BO-2400a-1-i is built and
+  covered, and BO-2400a-1-ii (large-output hand-off by file, deferred follow-up)
+  is built or moved.

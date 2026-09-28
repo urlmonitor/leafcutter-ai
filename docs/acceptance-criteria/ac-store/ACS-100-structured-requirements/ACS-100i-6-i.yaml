@@ -34,7 +34,17 @@ criteria: |
   Then it is still refused for the missing field — the object form is held to
     its full shape whatever the declaration says, so narrowing the trigger
     cannot become a way to file a half-populated structured spec.
-depends_on: [ACS-100i-6]
+
+  And given a record carrying `package_surface: true` whose structured object supplies the
+    config-schema fragment, the N-location rule, the required-skills list and the
+    post-write commands, omits the reference-file path, and carries the explicit,
+    schema-declared "reference file pending" marker (ACD-2500d-2-i),
+  When it is validated,
+  Then it is accepted,
+  And the same record without the marker is refused, naming the reference-file path,
+  And a record carrying the marker that also omits the N-location rule is refused, naming
+    the N-location rule — the marker excuses the reference-file path and nothing else.
+depends_on: [ACS-100i-6, ACD-2500d-2-i]
 doc_links:
   - path: docs/reference/ac-schema.md
     relationship: specifies
@@ -42,15 +52,28 @@ doc_links:
   - path: config/ac_store_schema.json
     relationship: modifies
     status: exists
+  - path: docs/acceptance-criteria/ac-driven-dev/ACD-2500-right-job-right-agent/ACD-2500d-2-i.yaml
+    relationship: related
+    status: exists
 assigned_agent: python-coder
 estimated_complexity: S
+it_requirements:
+  - "The pending marker must be a field declared in config/ac_store_schema.json (its name is fixed by ACD-2500d-2-i), never inferred from the absence of reference_file_path — a four-field object without it stays refused."
+  - "The marker relaxes the object branch's required list for reference_file_path only; the other four fields stay required whether or not the marker is present, and the refusal message still names each missing field."
+  - "The same acceptance must hold at every enforcement point that reads the object branch (check_ac_schema.py canonical + deployed copy, validate_ac_schema.py, validate_ac.py) — one change, built with ACD-2500d-2-i (ADR-001 parity)."
 delivers_to: null
 expects_from:
-  ac_id: ACS-100i-6
-  contract: "The declaration-keyed trigger whose 'then' branch this criterion asserts still bites."
+  - ac_id: ACS-100i-6
+    contract: "The declaration-keyed trigger whose 'then' branch this criterion asserts still bites."
+  - ac_id: ACD-2500d-2-i
+    contract: "The explicit, schema-declared 'reference file pending' marker on a package_surface: true record (name and location fixed there); excuses reference_file_path only."
 origin_agent: BrainCandy
 created: 2026-08-19
-amended_by: []
+amended_by:
+  - reason: "amend: the object-form refusal must accept an explicit, schema-declared 'reference file pending' marker (ACD-2500d-2-i) that excuses reference_file_path only; a four-field object without the marker is still refused. Existing three scenarios unchanged; fourth scenario added. depends_on gains ACD-2500d-2-i. Criteria edited in place by it-po under explicit user direction."
+    date: '2026-09-25'
+    by: it-po
+    directed_by: user
 superseded_by: null
 covered_by: []
 implemented_by: []
@@ -58,6 +81,32 @@ change_target:
   - schema
   - code
 risk_surface: contract_boundary
+test_spec:
+  - name: test_package_surface_object_missing_two_fields_refused_naming_them
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: unit
+    description: "package_surface: true object missing n_location_rule and post_write_commands is refused naming exactly those two."
+  - name: test_package_surface_object_with_all_five_accepted
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: unit
+    description: "The same record with all five fields is accepted."
+  - name: test_undeclared_object_missing_field_still_refused
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: unit
+    description: "A record without package_surface: true whose object misses n_location_rule is refused."
+  - name: test_pending_marker_excuses_reference_file_path
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: unit
+    description: "Four fields plus the pending marker is accepted; the same four fields without the marker is refused naming reference_file_path."
+  - name: test_pending_marker_does_not_excuse_other_fields
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: unit
+    description: "Marker present but n_location_rule missing is refused naming n_location_rule."
 notes: |
   This is the criterion that distinguishes "narrowed" from "switched off". The
   third scenario is the load-bearing one: at 9b16d013 the object branch of
@@ -66,3 +115,8 @@ notes: |
   if/then. That behaviour must survive the change untouched. If the
   implementation reaches the narrowing by loosening the object branch instead of
   by narrowing the `if`, this scenario fails.
+
+  AMENDMENT (2026-09-25, ACD-2500): a fourth scenario admits the explicit "reference file
+  pending" marker from ACD-2500d-2-i. It keeps the intent above — the marker is explicit and
+  schema-declared, so it is not a silent half-populated spec. depends_on ACD-2500d-2-i.
+  readiness stays draft and work_status stays todo (unchanged by the amendment).

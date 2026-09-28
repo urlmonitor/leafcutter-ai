@@ -9,7 +9,7 @@ status: active
 req_status: draft
 work_status: todo
 readiness: draft
-priority: medium
+priority: critical
 roadmap_phase: phase_1
 criteria: |
   Given an author about to add related_docs, related_code or architecture_diagrams

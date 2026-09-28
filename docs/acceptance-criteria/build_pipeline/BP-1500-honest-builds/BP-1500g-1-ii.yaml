@@ -9,7 +9,7 @@ req_status: draft
 readiness: approved
 priority: high
 roadmap_phase: phase_1
-work_status: todo
+work_status: done
 declares_side_effect: false
 criteria: |
   Given a build has reached a step it cannot complete without removing, emptying
@@ -136,7 +136,9 @@ amended_by:
     reason: "Added assigned_agent (python-coder), estimated_complexity (M), it_requirements, test_spec, test_rationale and expects_from. Criteria, title, depends_on and doc_links UNCHANGED; readiness remains draft. WHAT THE ENRICHMENT ADDS BEYOND THE OBVIOUS. (1) The test contract is deliberately ordered and separated so the SURVIVAL entry can fail while every reporting entry passes -- the AC's notes warn that an implementer will reach for a warning message first, and a bundled entry would let that partial fix go green. (2) An honest-but-destructive DIFFERENTIAL was added: the rejected reading (content removed, removal reported accurately, non-zero exit) is run against this AC's assertions and required to be RED, in the shape BP-1500b-4 uses for its rejected-rule test, so the counter-example lives in the suite rather than only in prose. (3) An OVER-TRIGGER control was added because five of six entries describe the cannot-proceed path and a build that refuses everything would satisfy all five; the it_requirements additionally state that a high hit rate on this path is a signal BP-1500g-1 was not implemented, not that the feature works. (4) The exit status and the success marker are specified as TWO assertions, because the reproduced defect got both wrong independently -- it printed a green check AND exited 0 -- and a marker-only fix is invisible to every automated caller, which a dedicated reachability entry now covers."
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+  - scripts/build.py
+  - scripts/build_ownership.py
 change_target: pipeline
 risk_surface: safety
 notes: |

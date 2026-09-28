@@ -55,7 +55,7 @@ _REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 _SCRIPTS_DIR = _REPO_ROOT / "scripts" / "ac_store"
 sys.path.insert(0, str(_SCRIPTS_DIR))
 
-from done_proof import _find_nodeid_for_test  # noqa: E402
+from done_proof import _classify_outcomes, _find_nodeid_for_test  # noqa: E402
 
 
 class TestFindNodeidForTest(unittest.TestCase):
@@ -200,6 +200,117 @@ class TestFindNodeidForTest(unittest.TestCase):
         found = _find_nodeid_for_test("test_widget", "test_bar.py", results)
 
         self.assertIsNone(found)
+
+
+class TestClassifyOutcomesParametrisedAllCases(unittest.TestCase):
+    """Direct coverage for ACS-200f-2: a parametrised covering test proves an
+    AC only when EVERY one of its cases passes.
+
+    ``_find_nodeid_for_test`` returns the FIRST nodeid in ``pytest_results``
+    whose function name matches -- for a parametrised test that has multiple
+    matching nodeids (``test_b[0]``, ``test_b[1]``, ...), only whichever case
+    pytest happened to report (and this dict was therefore built) first is
+    ever inspected by ``_classify_outcomes``. When that first-reported case
+    passed and a later case failed, the AC is wrongly judged done-eligible.
+    These tests exercise ``_classify_outcomes`` directly with a real
+    ``{nodeid: outcome}`` shape (matching ``_PYTEST_RESULT_RE``'s own
+    grammar) and no mocks of the function under test.
+    """
+
+    def test_parametrised_case_failing_after_passing_case_is_not_passing(self) -> None:
+        # covers: ACS-200f-2
+        # angle: boundary
+        """[0] PASSED is reported first, [1] FAILED second (the exact bug
+        symptom shape). The function must be classified non-passing overall,
+        and the [1] case's nodeid -- not the [0] case that merely happened to
+        be reported first -- must be the one named in ``failing``.
+        """
+        results = {
+            "unit_tests/foo/test_bar.py::test_b[0]": "PASSED",
+            "unit_tests/foo/test_bar.py::test_b[1]": "FAILED",
+        }
+        linked_tests = [{"file": "unit_tests/foo/test_bar.py", "function": "test_b"}]
+
+        passing, failing = _classify_outcomes(linked_tests, results)
+
+        self.assertEqual(
+            passing,
+            [],
+            "A parametrised test with any failing case must never be "
+            "classified as passing, regardless of which case pytest "
+            f"reported first. Got passing={passing!r}, failing={failing!r}",
+        )
+        self.assertTrue(
+            any(nodeid.endswith("test_b[1]") for nodeid in failing),
+            f"Expected the failing [1] case's nodeid to be reported in "
+            f"failing; got {failing!r}",
+        )
+
+    def test_parametrised_case_failing_before_passing_case_is_not_passing(self) -> None:
+        # covers: ACS-200f-2
+        # angle: boundary
+        """Reverse report order: [1] FAILED is reported before [0] PASSED.
+
+        Regression guard -- the verdict (and which nodeid is named) must not
+        depend on the order pytest reports parametrised cases in.
+        """
+        results = {
+            "unit_tests/foo/test_bar.py::test_b[1]": "FAILED",
+            "unit_tests/foo/test_bar.py::test_b[0]": "PASSED",
+        }
+        linked_tests = [{"file": "unit_tests/foo/test_bar.py", "function": "test_b"}]
+
+        passing, failing = _classify_outcomes(linked_tests, results)
+
+        self.assertEqual(passing, [])
+        self.assertTrue(
+            any(nodeid.endswith("test_b[1]") for nodeid in failing),
+            f"Expected the failing [1] case's nodeid to be reported in "
+            f"failing; got {failing!r}",
+        )
+
+    def test_parametrised_all_cases_passing_is_still_passing(self) -> None:
+        # covers: ACS-200f-2
+        # angle: criterion
+        """Regression guard: when every parametrised case passes, the
+        function must still be classified passing (empty ``failing``)."""
+        results = {
+            "unit_tests/foo/test_bar.py::test_b[0]": "PASSED",
+            "unit_tests/foo/test_bar.py::test_b[1]": "PASSED",
+        }
+        linked_tests = [{"file": "unit_tests/foo/test_bar.py", "function": "test_b"}]
+
+        passing, failing = _classify_outcomes(linked_tests, results)
+
+        self.assertEqual(
+            failing,
+            [],
+            "All parametrised cases passing must still classify as passing "
+            f"overall; got failing={failing!r}",
+        )
+        self.assertTrue(
+            passing, "Expected at least one passing nodeid to be reported."
+        )
+
+    def test_same_file_match_takes_precedence_over_name_only_match_elsewhere(
+        self,
+    ) -> None:
+        # covers: ACS-200f-2
+        # angle: boundary
+        """Regression guard: a same-file match must still win over a
+        name-only match in a different file. The ACS-200f precedence rule
+        must survive the ACS-200f-2 fix for all-cases-considered matching.
+        """
+        results = {
+            "unit_tests/other/test_other.py::test_widget": "FAILED",
+            "unit_tests/foo/test_bar.py::test_widget": "PASSED",
+        }
+        linked_tests = [{"file": "unit_tests/foo/test_bar.py", "function": "test_widget"}]
+
+        passing, failing = _classify_outcomes(linked_tests, results)
+
+        self.assertEqual(passing, ["unit_tests/foo/test_bar.py::test_widget"])
+        self.assertEqual(failing, [])
 
 
 if __name__ == "__main__":

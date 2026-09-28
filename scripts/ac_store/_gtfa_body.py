@@ -9,10 +9,11 @@ BUSINESS CONTEXT: Two of these are parsed by other tooling and are contracts,
     not prose. The ``- [ ] AC-N: <text>`` checkboxes must match ac-validator's
     ``^- \\[ \\] AC-\\d+:\\s*\\S`` pattern (TKT-500f-11), and ``## Sign-offs``
     lists exactly the agents the drive will dispatch. The Test Requirements
-    block is gated on two INDEPENDENT grounds — a production-code producer in
-    the computed map, or an it-po-authored ``test_spec`` — because treating
-    "the assigned agent doesn't produce code" as "no tests are required"
-    silently discarded 308 authored descriptors across 85 records.
+    block is gated on two INDEPENDENT grounds — an implementation file in the
+    AC's edit surface (classified by ``_gtfa_impl_py``), or an it-po-authored
+    ``test_spec`` — because treating "the assigned agent doesn't produce code"
+    as "no tests are required" silently discarded 308 authored descriptors
+    across 85 records.
 ARCHITECTURE: ``reject_phantom_signoff`` lives here because it guards the same
     artifact from the other end: a phase recorded ``signed_off`` with nothing
     in the comment log behind it clears the completion halt exactly as
@@ -26,6 +27,7 @@ import importlib
 import logging
 import re
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import yaml
 
@@ -46,11 +48,23 @@ _gtfa_config = _sib("_gtfa_config")
 _gtfa_contracts = _sib("_gtfa_contracts")
 _gtfa_files_touched = _sib("_gtfa_files_touched")
 _gtfa_frontmatter = _sib("_gtfa_frontmatter")
+_gtfa_impl_py = _sib("_gtfa_impl_py")
 _gtfa_tests_section = _sib("_gtfa_tests_section")
 
 logger = logging.getLogger(_gtfa_seams.logger_name())
 
-AcRecord = _gtfa_constants.AcRecord
+# ``AcRecord`` is bound at RUNTIME by the ``else`` branch, off the sibling
+# module object resolved above through importlib under a prefix COMPUTED from
+# ``__name__`` -- see the "Sibling wiring" note in generate_ticket_from_ac.py
+# for why a literal relative import there would break one of the two supported
+# layouts. A computed name is opaque to a type checker, so that rebind reads as
+# a VARIABLE and mypy rejects every annotation using it ("Variable ... is not
+# valid as a type"). The TYPE_CHECKING branch declares the alias statically and
+# is never executed, so the runtime binding is unchanged.
+if TYPE_CHECKING:  # pragma: no cover - a static declaration, never executed
+    from ._gtfa_constants import AcRecord
+else:
+    AcRecord = _gtfa_constants.AcRecord
 
 
 def _build_implementation_notes_section(ac: AcRecord, ac_id: str = "") -> str:
@@ -63,9 +77,10 @@ def _build_implementation_notes_section(ac: AcRecord, ac_id: str = "") -> str:
 
     Before serialising, any ``reference_pattern`` glob in ``it_requirements``
     is resolved to the single concrete path it matches (BO-2000c-3).  When the
-    pattern resolves to zero files a ``ValueError`` is raised so the authoring
-    error surfaces immediately rather than silently emitting a broken wildcard
-    into the ticket body (BO-2000c-3-i).
+    pattern resolves to zero files, or to more than one, a ``ValueError`` is
+    raised so the authoring error surfaces immediately rather than silently
+    emitting a broken wildcard — or an arbitrarily chosen one of several
+    matches — into the ticket body (BO-2000c-3-i).
 
     The section is placed consistently in the ticket body just before the
     ``## Sign-offs`` block so that phase agents can locate it with a simple
@@ -82,7 +97,8 @@ def _build_implementation_notes_section(ac: AcRecord, ac_id: str = "") -> str:
 
     Raises:
         ValueError: When a ``reference_pattern`` glob in ``it_requirements``
-                    resolves to zero files (authoring error).
+                    resolves to zero files, or to more than one file
+                    (authoring error).
     """
     it_req = ac.get("it_requirements")
     if not it_req:
@@ -317,7 +333,7 @@ def _build_ticket_body(
     complexity = _gtfa_frontmatter._infer_complexity(ac)
 
     # Gate the Test Requirements block on EITHER of two independent grounds:
-    #   (a) some needed agent in the computed map produces production_code, or
+    #   (a) the AC's files_touched puts an implementation .py in scope, or
     #   (b) the it-po authored a test_spec on this AC.
     #
     # (b) is not a widening of (a) — it is the correction of a category error.
@@ -327,23 +343,35 @@ def _build_ticket_body(
     # declare production_code, so every prompt, doc, diagram and analysis AC
     # lost its test contract, INCLUDING the 13 assigned to test-writer itself.
     #
-    # The derive-from-criteria fallback stays on (a) alone: a doc ticket that
-    # never asked for tests must not start receiving invented stubs. See the
-    # negative controls in
+    # (a) used to be that same agent-registry question, and it was the wrong
+    # one for the derive-from-criteria fallback: it answered "is a coder
+    # involved?" where TKT-500f-6 asks "is an implementation file in scope?".
+    # Those diverge in both directions — a records-only ticket got invented
+    # stubs, and no stub ever named the production surface it constrained. The
+    # question is now asked of files_touched, through the one shared helper in
+    # _gtfa_impl_py; the computed map survives only as the no-evidence fallback
+    # for an AC that declared no edit surface at all (see that helper's
+    # requires_test_requirements_section for why an empty list is not a No).
+    # The negative controls remain in
     # unit_tests/ac_store/test_authored_test_spec_survives_generation.py.
     has_code_producer = _gtfa_config._computed_map_has_production_code_producer(agents)
+    files_touched = _gtfa_files_touched._build_files_touched(ac)
+    implementation_files = _gtfa_impl_py.qualifying_implementation_paths(files_touched)
+    implementation_in_scope = _gtfa_impl_py.requires_test_requirements_section(
+        files_touched, fallback=has_code_producer
+    )
     authored_spec = _gtfa_tests_section._has_authored_test_spec(ac)
 
     lines: list[str] = _body_header_lines(
         ac, ac_id, assigned_agent, complexity, criteria
     )
 
-    if has_code_producer or authored_spec:
+    if implementation_in_scope or authored_spec:
         # Derive the Test Requirements from the AC (test_spec first, else the
         # Gherkin criteria) — never a hardcoded empty stub. The AC is the source
         # of truth for what test-writer must test.
         test_requirements = _gtfa_tests_section._build_test_requirements_section(
-            ac, ac_id
+            ac, ac_id, implementation_files=implementation_files
         )
         if test_requirements:
             lines.append(test_requirements)

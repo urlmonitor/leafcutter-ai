@@ -73,7 +73,19 @@ ARCHITECTURE: Subprocess-invoking utility.  Scans the test tree for covers tags
             │       └── _classify_ts_outcomes(ts_linked, vitest_results)
             └── [failing] _build_failure_reason(ac_id, py_failing, ts_failing, ...)
             │       └── _describe_non_passing(nodeid, pytest_results)
-            └── [success] _apply_reachability_gate(...)
+            └── [success] _apply_reachability_gate(
+                    _apply_entry_point_reachability_gate(success_verdict, ...), ...)
+                    (BO-2900a-1: mechanical auto-detected-main gate, evaluated
+                    BEFORE the a-3 no-entry-point-anywhere gate it wraps)
+                    └── _detect_module_entry_point(test_file, project_root,
+                    │       test_root) -- AST-only, checks test_file itself
+                    │       THEN each module it imports (resolved via
+                    │       _local_import_module_names/_resolve_candidate_unit,
+                    │       the same resolution the a-3 gate uses) -- never
+                    │       filename/docstring/if-__main__-text
+                    └── _observe_reachability(...) -- execution-derived,
+                            never source-text (consumes the same observer
+                            _check_reachability_for_linked_tests already uses)
 
     run_vitest_and_parse's body is likewise orchestration-only (BP-100n-4):
         run_vitest_and_parse(test_files, *, project_dir) -> dict[str, str]
@@ -114,6 +126,41 @@ ARCHITECTURE: Subprocess-invoking utility.  Scans the test tree for covers tags
     module's own docstring for the full rationale, including why that
     module's OWN dependency back on this one is a local (function-body)
     import rather than a top-level one.
+
+    Second relocation (BP-100n-4-ii-ii, BO-2500a-1-ii): ``is_covers_tag_waived``
+    -- the ONE shared predicate deciding whether an AC's ``test_required``/
+    ``test_rationale`` pair waives the covers-tag mandate -- and
+    ``_build_ac_status_map`` (the AC-store walk that feeds it) are now DEFINED
+    in _done_proof_phase_helpers.py (neither needs a symbol back from this
+    module, so the move needed no new circular-import seam) and re-exported
+    here via the same top-level import block, unchanged for every existing
+    consumer -- ``from done_proof import is_covers_tag_waived``
+    (check_done_proof.py chief among them) and every in-module call to
+    ``_build_ac_status_map`` alike. This second relocation was needed for the
+    same reason as the first: an in-place addition of the BO-2500a-1-ii
+    conjunction logic pushed this file back over the file-size ratchet a
+    second time.
+
+    Third addition (BO-2900a-1): ``_module_defines_main``,
+    ``_detect_module_entry_point``, and ``_apply_entry_point_reachability_gate``
+    -- the MECHANICAL, auto-detected entry-point gate the 2026-09-07
+    ``reachability_spec`` addendum below explicitly scoped out -- are
+    DEFINED in a DEDICATED third sibling module, _done_proof_entry_point_gate.py
+    (imported at this module's top level, same seam as the block above),
+    rather than in _done_proof_phase_helpers.py: placing them there first
+    pushed that file's own content length over its 400-line absolute cap
+    (its length was under the cap at HEAD, so the growth-while-oversized
+    ratchet did not shield it). This file's own length is unchanged (the
+    new import line replaces one line removed from the block above).
+    ``_detect_module_entry_point`` checks *test_file* itself for a
+    module-level ``main`` AND each module *test_file* imports (resolved via
+    ``_local_import_module_names``/``_resolve_candidate_unit``, the same
+    resolution the sibling BO-2900a-3 gate uses below) -- so a linked test
+    that direct-imports a SEPARATE implementation module (e.g.
+    ``fast_lane.main``) is covered, not only the single-file fixture case.
+    Consumes the same execution-derived observer (``_observe_reachability``,
+    defined in THIS file) the a-1-i opt-in gate already uses -- never a new,
+    second reachability mechanism, and never a source-text signal.
 """
 
 from __future__ import annotations
@@ -127,8 +174,6 @@ import sys
 import tempfile
 from pathlib import Path
 
-import yaml
-
 # Import the single shared covers-tag seam (BO-2500e-1).
 # test_enforcement lazily imports done_proof inside a function body,
 # so this top-level import does NOT create a circular dependency.
@@ -141,18 +186,24 @@ from test_enforcement import COVERS_TAG_RE
 # docstring), so loading it here never re-enters this module while it is
 # still mid-definition.
 from _done_proof_phase_helpers import (
-    _build_abs_path_map,
+    _build_abs_path_map, _build_ac_status_map,
     _build_failure_reason,
     _build_raw_results_from_json,
     _build_vitest_command,
     _ensure_vitest_binary,
     _execute_vitest,
-    _handle_no_direct_tests,
-    _maybe_reachability_verdict,
+    _handle_no_direct_tests, _maybe_reachability_verdict,
     _parse_vitest_stdout,
+    _resolve_pytest_run_cwd,  # BO-2900a-3
     _run_python_test_phase,
     _run_ts_test_phase,
     _split_linked_tests_by_language,
+    is_covers_tag_waived,  # noqa: F401  # BP-100n-4-ii-ii: re-exported, see module docstring
+)
+from _done_proof_entry_point_gate import _apply_entry_point_reachability_gate  # BO-2900a-1
+from _done_proof_automation_gate import (  # BO-2900a-3 rework
+    build_no_entry_point_refusal,
+    unit_is_invoked_by_automation,
 )
 
 # ---------------------------------------------------------------------------
@@ -729,53 +780,12 @@ def run_vitest_and_parse(
 
 # ---------------------------------------------------------------------------
 # Internal helpers — I/O layer
+#
+# BP-100n-4-ii-ii: _build_ac_status_map itself now lives in
+# _done_proof_phase_helpers.py (re-exported below, same pattern as
+# is_covers_tag_waived) — see this module's own docstring "Second relocation"
+# paragraph for why.
 # ---------------------------------------------------------------------------
-
-
-def _build_ac_status_map(ac_root: Path) -> dict[str, dict]:
-    """Walk *ac_root* and return ``{ac_id: {"status": ..., "covered_by": [...]}}``.
-
-    Only YAML files that can be parsed and contain both ``id`` and ``status``
-    fields are included.  Unreadable files are logged to stderr and skipped.
-    ``covered_by`` is retained (in addition to ``status``) so callers can
-    classify an AC as composite (non-empty ``covered_by``) vs leaf (empty or
-    absent) without a second store walk — see BO-2500a-6.  A ``covered_by``
-    value that is absent, ``null``, or not a list is normalised to ``[]``.
-
-    Args:
-        ac_root: Root directory of the AC YAML store.
-
-    Returns:
-        Dict mapping AC id strings to a dict with keys ``"status"`` (str) and
-        ``"covered_by"`` (list[str]).  An empty dict is returned when
-        *ac_root* does not exist or contains no parseable YAML files.
-    """
-    status_map: dict[str, dict] = {}
-    if not ac_root.exists():
-        return status_map
-    for yaml_path in sorted(ac_root.rglob("*.yaml")):
-        try:
-            with open(yaml_path, encoding="utf-8") as fh:
-                data = yaml.safe_load(fh)
-        except (yaml.YAMLError, OSError) as exc:
-            print(
-                f"WARNING: done_proof: cannot read {yaml_path}: {exc}",
-                file=sys.stderr,
-            )
-            continue
-        if not isinstance(data, dict):
-            continue
-        ac_id = data.get("id")
-        status = data.get("status")
-        if ac_id and status is not None:
-            covered_by = data.get("covered_by")
-            if not isinstance(covered_by, list):
-                covered_by = []
-            status_map[str(ac_id)] = {
-                "status": str(status),
-                "covered_by": [str(child_id) for child_id in covered_by],
-            }
-    return status_map
 
 
 def _is_excluded_path(path: Path) -> bool:
@@ -1275,6 +1285,30 @@ def _run_pytest_and_parse(test_files: list[Path]) -> dict[str, str]:
     larger allowance, and can be overridden verbatim via the
     ``LEAFCUTTER_DONE_PROOF_PYTEST_TIMEOUT_SECONDS`` environment variable.
 
+    The child's ``cwd=`` is resolved via :func:`_resolve_pytest_run_cwd`
+    (BO-2900a-3) rather than left unset. Left unset, the child inherits this
+    process's own cwd, and pytest's own rootdir/config discovery walks
+    upward from the common ancestor of that inherited cwd and *test_files*
+    — on a deeply nested fixture path (e.g. under the OS temp directory)
+    sharing only a distant ancestor (a user's home directory) with this
+    process's cwd, that walk can cross unrelated, transiently-changing
+    directories and fail collection outright with a spurious
+    ``FileNotFoundError`` unrelated to *test_files* themselves.
+    :func:`_resolve_pytest_run_cwd` starts from *test_files*' own common
+    ancestor directory, which keeps that walk inside the fixture tree, but
+    (BO-2900a-3 rework, CI regression PR #925) does not stop there: it then
+    walks upward from that common ancestor looking for the nearest directory
+    pytest itself would treat as a rootdir (a ``pytest.ini``, or a
+    ``pyproject.toml``/``tox.ini``/``setup.cfg`` carrying the section pytest
+    reads from that file kind), and anchors the child there instead when one
+    is found. Without that walk, a repo whose ``pytest.ini`` lives several
+    directories above the linked test files — as this repo's own does, with
+    an ``addopts -p <plugin>`` naming a plugin beside the ini file — would
+    anchor the child below that plugin, making it unimportable and silently
+    losing every test result. The common ancestor remains the fallback when
+    no such rootdir ancestor exists at all, so the original OS-temp-dir
+    fixture motivation above is unchanged.
+
     A genuine timeout still fails closed exactly as before — no test can be
     reported as passing — but the returned dict now carries
     :data:`_PYTEST_RUN_INCOMPLETE_SENTINEL` instead of being silently empty,
@@ -1315,6 +1349,7 @@ def _run_pytest_and_parse(test_files: list[Path]) -> dict[str, str]:
             text=True,
             timeout=timeout_seconds,
             env=child_env,
+            cwd=_resolve_pytest_run_cwd(test_files),
         )
     except subprocess.TimeoutExpired as exc:
         message = (
@@ -1488,22 +1523,56 @@ def _nodeid_function_name(nodeid: str) -> str:
     return base.rsplit("::", 1)[-1]
 
 
-def _find_nodeid_for_test(
-    func_name: str,
-    file_basename: str,
-    pytest_results: dict[str, str],
-) -> str | None:
+def _find_nodeids_for_test(func_name: str, file_basename: str, pytest_results: dict[str, str]) -> list[str]:
+    """Return every pytest nodeid belonging to a function, same-file first.
+
+    A parametrized test (e.g. ``test_b[0]``, ``test_b[1]``, ...) produces
+    multiple nodeids that all share the same bare function name. ACS-200f-2:
+    a caller that inspects only the first match (as the single-nodeid
+    ``_find_nodeid_for_test`` used to do on its own) silently ignores every
+    later case, so a parametrised covering test with one failing case among
+    several passing ones was wrongly read as proof of done. This helper
+    collects the FULL match set so a caller can inspect every case.
+
+    Matching compares *func_name* for exact equality against the nodeid's
+    final ``::``-delimited segment with any trailing ``[params]`` suffix
+    stripped (see :func:`_nodeid_function_name`), never a substring/prefix/
+    ``endswith`` check, so a lookup for ``test_foo`` cannot match an
+    unrelated sibling such as ``test_foo_bar`` or its parametrized form
+    ``test_foo_bar[X]``.
+
+    Same-file precedence is unchanged from the original single-match
+    behaviour: nodeids whose text contains *file_basename* are preferred as
+    a group over name-only matches elsewhere. When at least one same-file
+    match exists, only those are returned; the name-only fallback is used
+    solely when the same-file set is empty.
+
+    Args:
+        func_name: Python function name (e.g. ``"test_foo"``).
+        file_basename: Basename of the test file (e.g. ``"test_foo.py"``).
+        pytest_results: Dict of ``{nodeid: outcome}`` from ``_run_pytest_and_parse``.
+
+    Returns:
+        All matching nodeid strings, same-file matches preferred as a group;
+        an empty list if nothing matches.
+    """
+    matches = [nodeid for nodeid in pytest_results if _nodeid_function_name(nodeid) == func_name]
+    return [nodeid for nodeid in matches if file_basename in nodeid] or matches
+
+
+def _find_nodeid_for_test(func_name: str, file_basename: str, pytest_results: dict[str, str]) -> str | None:
     """Find the pytest nodeid for a function, preferring a match in the expected file.
 
-    Attempts an exact file-basename + function-name match first, then falls back
-    to function-name suffix only. Matching compares *func_name* for exact
-    equality against the nodeid's final ``::``-delimited segment with any
-    trailing ``[params]`` suffix stripped (see :func:`_nodeid_function_name`),
-    so a parametrized nodeid such as ``path::test_widget[case1]`` is found
-    even though it never ends with the literal string ``::test_widget``.
-    Equality (never a substring/prefix/``endswith`` check) also guarantees a
-    lookup for ``test_foo`` cannot match an unrelated sibling such as
-    ``test_foo_bar`` or its parametrized form ``test_foo_bar[X]``.
+    Built on :func:`_find_nodeids_for_test`'s full match set. ACS-200f-2: when
+    a parametrised test has multiple matching cases, any non-``PASSED`` case
+    makes the function non-passing overall, so the first such non-passing
+    nodeid (in *pytest_results* order, independent of which case pytest
+    happened to report first) is returned instead of whichever case merely
+    matched first. Only when every matched case is ``PASSED`` is the first
+    match returned. This keeps the single-nodeid return contract
+    (:func:`_classify_outcomes` and the fast-lane caller
+    ``_fl_red_baseline_support._resolve_tag_outcome`` both read exactly one
+    nodeid's outcome) correct without either call site needing to change.
 
     Args:
         func_name: Python function name (e.g. ``"test_foo"``).
@@ -1513,13 +1582,9 @@ def _find_nodeid_for_test(
     Returns:
         A matching nodeid string, or ``None`` if no match is found.
     """
-    for nodeid in pytest_results:
-        if _nodeid_function_name(nodeid) == func_name and file_basename in nodeid:
-            return nodeid
-    for nodeid in pytest_results:
-        if _nodeid_function_name(nodeid) == func_name:
-            return nodeid
-    return None
+    matches = _find_nodeids_for_test(func_name, file_basename, pytest_results)
+    default = matches[0] if matches else None
+    return next((nodeid for nodeid in matches if pytest_results[nodeid] != "PASSED"), default)
 
 
 def _describe_non_passing(nodeid: str, pytest_results: dict[str, str]) -> str:
@@ -1870,13 +1935,19 @@ def _has_entry_point_of_its_own(module_path: Path) -> bool:
 def _is_imported_elsewhere(
     module_name: str, module_path: Path, project_root: Path, test_root: Path
 ) -> bool:
-    """True when some OTHER project file (outside test_root) imports *module_name*.
+    """True when some OTHER project file (outside test_root) genuinely imports
+    *module_name*.
 
-    A textual search for ``import <name>`` / ``from <name> import`` across
-    every other ``.py`` file under *project_root*, excluding *module_path*
-    itself and anything under *test_root* (a test importing the unit does
-    not give the unit a runtime way in — that is exactly the case this gate
-    exists to catch).
+    Per the BO-2900a-3 constraint, this is established from the import graph
+    built by AST-parsing each candidate file — via the same
+    :func:`_local_import_module_names` seam used to inspect a linked test's
+    own imports — never from a text scan of import statements. A regex
+    search for the literal words ``import <name>`` would also match a
+    docstring, comment, or log string that merely mentions the import
+    spelling without containing a real ``ast.Import``/``ast.ImportFrom``
+    node; parsing the syntax tree cannot be fooled that way. A test
+    importing the unit does not count (excluded via *test_root*) — that is
+    exactly the case this gate exists to catch.
 
     Args:
         module_name: The bare module name to search for.
@@ -1885,12 +1956,9 @@ def _is_imported_elsewhere(
         test_root: Excluded from the search.
 
     Returns:
-        ``True`` iff some other project file imports the module by name.
+        ``True`` iff some other project file's parsed AST contains a real
+        import of the module by name.
     """
-    import_re = re.compile(
-        rf"(?:^|\s)(?:import\s+{re.escape(module_name)}\b"
-        rf"|from\s+{re.escape(module_name)}\s+import\b)"
-    )
     try:
         candidates = project_root.rglob("*.py")
     except OSError:
@@ -1900,11 +1968,7 @@ def _is_imported_elsewhere(
             continue
         if candidate == module_path or _is_within(candidate, test_root):
             continue
-        try:
-            text = candidate.read_text(encoding="utf-8")
-        except OSError:
-            continue
-        if import_re.search(text):
+        if module_name in _local_import_module_names(candidate):
             return True
     return False
 
@@ -1973,27 +2037,53 @@ def _apply_reachability_gate(
 ) -> dict:
     """Apply the BO-2900d-1 reachability gate to an otherwise-eligible verdict.
 
-    Only called when *verdict* is already ``eligible: True`` (leaf path, all
-    linked tests passing). Finds the first linked unit with no runtime way
-    in of its own (see :func:`_find_no_entry_point_unit`); when none exists,
-    returns *verdict* unchanged. When one exists, checks the shared
-    reachability-exemption seam (BO-2900d-1): a recorded, reasoned exemption
-    for that exact unit releases the refusal and is announced on the
-    returned verdict (never silently absorbed); the absence of one refuses
-    the criterion with ``refusal_cause: "no_entry_point_reaches_code"``.
+    Intended to run only when *verdict* is already ``eligible: True`` (leaf
+    path, all linked tests passing) — an EARLIER gate in the same
+    composition (BO-2900a-1's ``_apply_entry_point_reachability_gate``) may
+    already have refused the verdict for its OWN, distinct
+    ``refusal_cause`` before this function ever runs. This function must
+    not overwrite that refusal with its own, different "no way in" verdict
+    for the same unit (BO-2900e-1 requires two disjoint refusal_cause
+    values, never one merged verdict), so an already-ineligible *verdict*
+    is returned unchanged, restoring this function's documented
+    precondition mechanically rather than by convention alone. When
+    *verdict* is eligible, finds the first linked unit whose module defines
+    no ``main()`` of its own AND is not genuinely imported elsewhere (see
+    :func:`_find_no_entry_point_unit` -- conditions (1) and (2)); when none
+    exists, returns *verdict* unchanged. When one exists, condition (3) is
+    checked next: :func:`_done_proof_automation_gate.unit_is_invoked_by_automation`
+    answers "does some real automation script run this unit as a program?"
+    against the shared BO-2900b-1/BO-2900b-3 ``collected_invocations()``
+    seam; a unit that IS run as a program by automation does not satisfy
+    this condition, so the refusal does not fire at all and *verdict* is
+    returned unchanged. Only when all three conditions hold does this
+    function check the shared reachability-exemption seam (BO-2900d-1): a
+    recorded, reasoned exemption for that exact unit releases the refusal
+    and is announced on the returned verdict (never silently absorbed); the
+    absence of one refuses the criterion with ``refusal_cause:
+    "no_entry_point_reaches_code"`` and ``clearing_actions`` naming the two
+    ways the verdict flips (see
+    :func:`_done_proof_automation_gate.build_no_entry_point_refusal`).
 
     Args:
-        verdict: The eligibility verdict computed so far (``eligible: True``).
+        verdict: The eligibility verdict computed so far. May already be
+            ``eligible: False`` (an earlier gate's refusal, passed through
+            unchanged) or ``eligible: True`` (the case this gate evaluates).
         ac_id: The AC identifier being evaluated (for the refusal message).
         linked_tests: The AC's Python covers-tagged linked tests.
         ac_root: Root directory of the AC YAML store.
         test_root: Root directory of the test tree.
 
     Returns:
-        *verdict* unchanged when no no-way-in unit is found or the unit is
-        exempted (with exemption details attached); an ``eligible: False``
-        verdict carrying ``refusal_cause`` and ``unit`` otherwise.
+        *verdict* unchanged when it arrived already ineligible, when no
+        no-way-in unit is found, when the unit IS run as a program by real
+        automation (condition (3) fails), or when the unit is exempted
+        (with exemption details attached); an ``eligible: False`` verdict
+        carrying ``refusal_cause``, ``unit``, and ``clearing_actions``
+        otherwise.
     """
+    if not verdict.get("eligible"):
+        return verdict
     project_root = _infer_project_root(ac_root, test_root)
     unit = _find_no_entry_point_unit(linked_tests, project_root, test_root)
     if unit is None:
@@ -2001,19 +2091,20 @@ def _apply_reachability_gate(
 
     exemptions: list[dict] = []
     exempt_verdict = False
+    collected_invocations = None
     if str(_COMMIT_GUARDIAN_DIR) not in sys.path:
         sys.path.insert(0, str(_COMMIT_GUARDIAN_DIR))
     try:
         from _reachability_inventory import (
             ReachabilityRegistryError,
+            collected_invocations,
             is_exempt,
             load_exemptions,
         )
     except ImportError as exc:
         print(
             f"WARNING: done_proof: reachability-exemption seam unavailable, "
-            f"treating {unit} as unexempted: {exc}",
-            file=sys.stderr,
+            f"treating {unit} as unexempted: {exc}", file=sys.stderr,
         )
     else:
         registry_path = project_root / "config" / "reachability_exemptions.yaml"
@@ -2021,10 +2112,14 @@ def _apply_reachability_gate(
             exemptions = load_exemptions(registry_path)
         except ReachabilityRegistryError as exc:
             print(
-                f"WARNING: done_proof: cannot load {registry_path}: {exc}",
-                file=sys.stderr,
+                f"WARNING: done_proof: cannot load {registry_path}: {exc}", file=sys.stderr,
             )
         exempt_verdict = is_exempt(unit, exemptions)
+
+    # BO-2900a-3 condition (3): a unit run as a program by real automation
+    # does not satisfy "no automation runs it" -- verdict unchanged.
+    if unit_is_invoked_by_automation(unit, project_root, test_root, collected_invocations):
+        return verdict
 
     if exempt_verdict:
         matched_reason = next(
@@ -2034,18 +2129,7 @@ def _apply_reachability_gate(
         exempted["exemption"] = {"item": unit, "reason": matched_reason}
         return exempted
 
-    return {
-        "eligible": False,
-        "reason": (
-            f"no way of running the product reaches {unit} (refusal_cause: "
-            f"no_entry_point_reaches_code) for {ac_id}"
-        ),
-        "refusal_cause": "no_entry_point_reaches_code",
-        "unit": unit,
-        "passing_tests": verdict.get("passing_tests", []),
-        "failing_tests": verdict.get("failing_tests", []),
-        "dangling_tags": verdict.get("dangling_tags", []),
-    }
+    return build_no_entry_point_refusal(verdict, ac_id=ac_id, unit=unit)
 
 
 # ---------------------------------------------------------------------------
@@ -2126,6 +2210,31 @@ def verify_done_eligible(
     ``None`` (the default), this paragraph does not apply and behaviour is
     unchanged from before this ticket.
 
+    Reachability (BO-2900a-1, MECHANICAL — no keyword argument required):
+    on top of the opt-in paragraph above, every real caller (this function's
+    own default signature, unchanged) also gets this unconditional check
+    after the pass/fail gate succeeds. For each linked Python test, its unit
+    — the covers-tagged test's own module (this AC family's single-file
+    fixture convention), OR a module that test imports (resolved the same
+    way the sibling BO-2900a-3 gate resolves candidate units, so a
+    ``fast_lane.main``-style implementation living in a SEPARATE file from
+    its test is covered too) — is inspected purely by AST for a module-level
+    ``main`` function (never by filename, folder, docstring, or an
+    ``if __name__`` text match; see :func:`_detect_module_entry_point`). A
+    linked test whose unit defines no ``main`` anywhere is not judged by
+    this rule at all — the scope fence to BO-2900a-3, which decides the
+    no-way-in-anywhere case separately. A linked test whose unit DOES
+    define ``main`` must have entered it during its own run — consumed from
+    the same execution-derived observation :func:`_observe_reachability`
+    already provides, never re-derived from source text — or the criterion
+    is refused with ``refusal_cause: "proof_not_through_entry_point"`` and a
+    ``reason`` naming "direct import", plus ``unit``, ``entry_point``, and
+    ``offending_test`` populated. An observation that could not be made at
+    all (subprocess failure, unparseable output), or whose isolated
+    re-execution did not pass, fails closed with
+    ``refusal_cause: "observation_unavailable"`` rather than being read as
+    "did not enter".
+
     Args:
         ac_id: The AC identifier string to evaluate.
         ac_root: Root directory of the AC YAML store, used for active-status
@@ -2162,8 +2271,26 @@ def verify_done_eligible(
         ``refusal_cause`` (str | None)
             ``"proof_not_through_entry_point"`` when *reachability_spec* was
             supplied and at least one linked test entered the way in without
-            reaching the target through it; ``None`` otherwise (including
-            every pre-existing refusal reason, unaffected by this ticket).
+            reaching the target through it, OR (BO-2900a-1, no keyword
+            required) when a linked test's own module defines ``main`` and
+            that test's own run never entered it; ``"observation_unavailable"``
+            when that observation itself could not be made; ``None``
+            otherwise (including every pre-existing refusal reason,
+            unaffected by this ticket).
+
+        ``unit`` (str | None)
+            BO-2900a-1: the module (stem) that defines the ``main`` never
+            entered by its own proof — the linked test's own module, or a
+            module it imports; ``None`` unless that refusal fires.
+
+        ``entry_point`` (str | None)
+            BO-2900a-1: ``"<module-stem>:main"`` for the un-entered way in;
+            ``None`` unless that refusal fires.
+
+        ``offending_test`` (str | None)
+            BO-2900a-1: ``"<file>::<function>"`` of the covers-tagged proof
+            that reached the code by direct import instead; ``None`` unless
+            that refusal fires.
     """
     # BP-100n-4: this body is orchestration only — each phase (splitting by
     # language, the reachability pre-gate, the pytest phase, the vitest
@@ -2254,11 +2381,11 @@ def verify_done_eligible(
     # nothing reaches when the product runs. Only reached once every linked
     # test already passes — this gate never overrides a genuine test failure.
     return _apply_reachability_gate(
-        success_verdict,
-        ac_id=ac_id,
-        linked_tests=py_linked,
-        ac_root=ac_root,
-        test_root=test_root,
+        _apply_entry_point_reachability_gate(
+            success_verdict, py_linked=py_linked,
+            project_root=_infer_project_root(ac_root, test_root), test_root=test_root,
+        ),
+        ac_id=ac_id, linked_tests=py_linked, ac_root=ac_root, test_root=test_root,
     )
 
 
@@ -2345,3 +2472,15 @@ def verify_done_eligible(
 #   two real AC ids after the move, plus check_file_size.py, check_complexity.py,
 #   and a build.py --force-breaking deploy confirming the new module lands in
 #   the deployed layout. (#BP-100n-4)
+#   ADDENDUM 2026-09-22 [python-coder/BP-100n-4-ii-ii]: is_covers_tag_waived()
+#   relocated to _done_proof_phase_helpers.py, ratchet reason as above; see
+#   the module docstring's "Second relocation" paragraph. (#BO-2500a-1-ii)
+# - 2026-09-25 00:00 [python-coder]: Fixed _find_nodeid_for_test (ACS-200f-2, KI-ACS-20260925-done-proof-parametrised-first-match) -- it returned the FIRST matching nodeid, so a parametrised covering test with one failing case among several passing ones (e.g. test_b[0] PASSED, test_b[1] FAILED) was wrongly judged done-eligible whenever pytest happened to report the passing case first, exactly the first-match trap KI-ACS-008 L72-78 and KI-BO-20260826-1900 L81-87 warn against.
+#   Added _find_nodeids_for_test() to collect the FULL match set (same-file matches preferred as a group, as before); _find_nodeid_for_test is now built on top of it and returns the first non-PASSED nodeid among those matches, or the first match when all pass, preserving its single-nodeid contract so _classify_outcomes and the fast lane's _fl_red_baseline_support._resolve_tag_outcome need no call-site change. (#ACS-200f-2)
+# - 2026-09-25 17:30 [python-coder]: _is_imported_elsewhere was a text-scan
+#   a docstring mention could fool; now reuses _local_import_module_names().
+#   Gave _run_pytest_and_parse an explicit cwd= via the sibling module's new
+#   _resolve_pytest_run_cwd() (ratchet: added there, see its own entry),
+#   fixing a spurious collection FileNotFoundError from the prior unset cwd.
+#   (#EPIC-AProofThatReachedTheCodeByDirectImport/02, BO-2900a-3)
+# - 2026-09-28 00:31 [python-coder/BO-2900a-3 rework]: CI regression on PR #925 (Linux): "pytest run unfinished: 2 file(s), returncode 4" for BO-2900a-1 and BO-2900a-3. The 2026-09-25 cwd= fix above anchored the child unconditionally to *test_files*' own common ancestor, but this repo's own pytest.ini (addopts -p scripts.ac_store.pytest_ac_enforcement) lives several directories ABOVE unit_tests/ac_store, so that addopts plugin became unimportable from the anchored cwd -- python -m pytest only puts the subprocess's OWN cwd on sys.path, not the ini's directory. Fixed entirely inside the sibling module's _resolve_pytest_run_cwd() (ratchet: fixed there, see its own DECISION HISTORY entry for the full mechanism); this file's only change is this docstring paragraph. No call site or return contract changed. (#EPIC-AProofThatReachedTheCodeByDirectImport/02, BO-2900a-3)

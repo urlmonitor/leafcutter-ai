@@ -16,7 +16,7 @@ related_docs:
 # KI-ACS-018 — withdrawn as a duplicate; see `ac-driven-dev.md`
 
 > One known issue, split out of `docs/known-issues/ac-store.md` on
-> 2026-09-14. Index: [ac-store.md](../ac-store.md).
+> 2026-09-14. Index: [ac-store.md](../../ac-store.md).
 > Filename severity is the three-level index bucket (`low`); the
 > original grading is the `**Severity:**` line below, unchanged.
 

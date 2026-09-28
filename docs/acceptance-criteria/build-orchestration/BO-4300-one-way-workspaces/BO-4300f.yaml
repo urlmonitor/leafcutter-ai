@@ -1,0 +1,68 @@
+id: BO-4300f
+title: "Every existing route switches to the one way, and the old ways disappear"
+component: build-orchestration
+components:
+  - worktree_manager
+  - build_orchestration
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: critical
+roadmap_phase: phase_1
+criteria: |
+  Every workflow moves over, and no second way is left behind to drift.
+
+  Every workflow, skill, agent and written instruction that makes, finds or clears
+  workspaces today uses the one way instead, and the old recipes are removed rather than
+  left alongside it. Workspaces made the old way are brought over or retired, so you
+  never meet two different kinds of workspace side by side.
+depends_on: [BO-4300]
+doc_links:
+  - path: docs/analysis/2026-09-25-worktree-migration-plan.md
+    relationship: describes
+    status: exists
+    relevance: Migration order (incident path first, deletions last), deletions list, KIs closed, behavioural test matrix.
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-09-25
+amended_by: []
+superseded_by: null
+covered_by: [BO-4300f-1, BO-4300f-2, BO-4300f-3, BO-4300f-4]
+implemented_by: []
+documentation_triggers: []
+documentation_rationale: >-
+  Migration rewrites and removes existing guidance rather than introducing new behaviour;
+  the how-to authored under BO-4300a is the single replacement every retired recipe
+  points to.
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  Scope, from the consolidation verdict: seven recipes today -- the ticket-workspace
+  script's four disagreeing sub-commands, a facts helper plus an assistant creating the
+  workspace itself, the feature skill's hand-written epic recipe, finalize's temporary
+  baselines, the manual-drive how-to's harness workspace, the CLAUDE.md manual bootstrap
+  recipe, and the git-recovery fallback. Every consumer named in BO-4300's notes
+  (BO-1500f, ACD-2100a, FIN-100g, BP-600f, BO-2400e) becomes a caller of the one way.
+
+  "Removed rather than left alongside" is the point: a second way that still works is a
+  second way that drifts (the tracked and deployed copies of today's script already
+  differ on purpose, and a test enforces that drift -- F13). The migration plan's order
+  (build the component and its proof first, the incident path next, deletions last) is a
+  recommendation for BA, not a criterion.
+
+  Proof must exercise the INSTALLED copy as a real process against real repositories from
+  the starting points in BO-4300b, and assert the real project's own workspace registry is
+  unchanged afterwards (migration plan 6.1; F13, F14). Tests that grep sources or mock
+  version control do not satisfy this family.
+
+  Cut-over chore in scope: retire the workspaces registered the old way (19 at the time
+  of the analysis, plus cross-platform entries stuck "initializing"), and protect the main
+  checkout's shared history in the meantime. Closes or retires, per the migration plan:
+  KI-ACD-007, KI-BO-017, KI-BO-027, KI-BO-20260831-1331, both KI-BO-20260921 entries,
+  KI-BP-20260826-worktree-hooks-only-on-one-path, KI-BP-20260907-bootstrap-swallows-
+  build-failure, and parts of KI-CG-009 / KI-BP-017.

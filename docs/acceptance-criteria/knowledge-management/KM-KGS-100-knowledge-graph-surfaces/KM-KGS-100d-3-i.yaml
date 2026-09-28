@@ -2,7 +2,7 @@ id: KM-KGS-100d-3-i
 components:
   - knowledge_management
 readiness: draft
-priority: medium
+priority: critical
 title: "An entry the builder cannot turn into an edge is reported, never passed over in silence"
 component: knowledge-management
 level: L3

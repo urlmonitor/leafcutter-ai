@@ -56,15 +56,35 @@ class TestCleanRemovesOrphanedWorkflow(unittest.TestCase):
 
     def test_clean_removes_orphaned_workflow_file(self):
         """
-        Given a target dir containing a workflow file with no matching source
-        template, when clean_stale_artifacts() is called with an empty
-        'workflows' manifest, then the orphaned workflow file is actually
-        removed from disk and the removal is reported in the return count.
+        Given a target dir containing a workflow file the package produced in
+        an earlier run and no longer ships, when clean_stale_artifacts() is
+        called with an empty 'workflows' manifest, then the orphaned workflow
+        file is actually removed from disk and the removal is reported in the
+        return count.
 
         Before KI-BP-010's fix this assertion is false: the sweep silently
         examines '.claude/.claude/workflows' (which .exists() is False for),
         `continue`s past the real '.claude/workflows' directory, and returns
         0 with the orphan left in place.
+
+        AMENDED 2026-09-21 (BP-1500g-1-i). This test used to call the sweep
+        once against a bare tmpdir and expect immediate removal. That premise
+        predates the provenance ledger: the sweep now removes an item only
+        when it is absent from the CURRENT manifest AND the ledger records an
+        earlier run having produced it. Non-attribution means keep, because a
+        file the build cannot attribute to itself may be the adopter's — the
+        defect KI-BP-009 was reported for.
+
+        So the orphan is now established the way a real one comes about:
+        a first run WITH the file in its manifest (the version that shipped
+        it), then a second run WITHOUT (the version that retired it). The
+        ledger is seeded by a real run rather than hand-written, matching
+        the fixture doctrine in test_bp_1500g_1_i.py.
+
+        KI-BP-010's own subject is untouched by this change — the path-join
+        fix is still what makes the sweep look at '.claude/workflows' at all,
+        and the bare-relative assertion and negative control in this file
+        still prove it directly.
         """
         with tempfile.TemporaryDirectory() as tmp:
             target = Path(tmp)
@@ -73,6 +93,26 @@ class TestCleanRemovesOrphanedWorkflow(unittest.TestCase):
             orphan = workflows_dir / "fast-lane-build.js"
             orphan.write_text("// orphaned workflow, no source template")
 
+            # The run that still shipped it: records provenance, removes nothing.
+            shipped_manifests = {
+                "agents": set(),
+                "skills": set(),
+                "hooks": set(),
+                "workflows": {"fast-lane-build.js"},
+            }
+            self.assertEqual(
+                clean_stale_artifacts(target, shipped_manifests), 0,
+                "A file the current manifest still declares must never be "
+                "removed -- this first call exists only to record that the "
+                "build produced it.",
+            )
+            self.assertTrue(
+                orphan.exists(),
+                "Fixture premise broken: the seeding run removed the file it "
+                "was supposed to be recording.",
+            )
+
+            # The run that retired it: now attributable, and genuinely stale.
             source_manifests = {
                 "agents": set(),
                 "skills": set(),

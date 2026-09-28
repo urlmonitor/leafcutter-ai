@@ -4,7 +4,7 @@ description: "Human-curated, one-line-per-page orientation to every file in docs
 type: reference
 status: active
 created: 2026-09-14
-last_updated: 2026-09-14
+last_updated: 2026-09-25
 components:
   - documentation_system
 related_docs:
@@ -41,7 +41,8 @@ below by hand.
 
 | Doc | What it's for |
 |---|---|
-| [ac-schema.md](ac-schema.md) | Field-by-field schema for AC YAML records: required/optional fields, the ID format and parent-derivation algorithm, the status lifecycle, and the pre-commit hooks that enforce them. |
+| [ac-schema.md](ac-schema.md) | Field-by-field schema for AC YAML records: required/optional fields, the status lifecycle, the composition depth rules, and the pre-commit hooks that enforce them. |
+| [ac-id-hierarchy.md](ac-id-hierarchy.md) | AC identifier format and full regex, the id-derived `derive_parent_id()` parent algorithm with its L0–L3 level table, and the direct-children scope rule governing every `covered_by` list. |
 | [artifact-knowledge-graph-data-map.md](artifact-knowledge-graph-data-map.md) | Node and edge type map for the cross-artifact knowledge graph (ACs, tickets, tests, flows, mockups, changelog entries, components), with a per-edge enforcement and shape trust rating. |
 | [artifact-knowledge-graph.graph.json](artifact-knowledge-graph.graph.json) | Machine-readable JSON mirror of the data map above; drives the Atlas Flows view. It carries no Markdown frontmatter, so `docs/INDEX.md` does not list it — this index does. |
 
@@ -98,6 +99,7 @@ below by hand.
 | Doc | What it's for |
 |---|---|
 | [product-truth-size-bounds.md](product-truth-size-bounds.md) | Every declared size bound on product-truth records (journey length, step count, dataset size, screen description length), its `shape_version`, and what a bound violation means. |
+| [example-content-separation.md](example-content-separation.md) | The product-root ownership rule that separates the fern-and-fig example product from the project's own record, every surface that honours it (the record, the store of work, the reading surfaces) and what each returns for example content, why it must keep existing, and how to add a new example artifact or product. |
 
 ## Known Limitations
 

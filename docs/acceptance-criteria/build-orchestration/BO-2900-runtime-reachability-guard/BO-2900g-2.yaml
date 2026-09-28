@@ -166,11 +166,28 @@ notes: |
   causes — that is BP-1100f-5, which is done — and it produces no gate, block or
   done-state consequence.
 
-  IT-PO ENRICHMENT NOTE (2026-08-17). Verified at HEAD: declares_side_effect is
-  a legal top-level property in config/ac_store_schema.json (root is
-  additionalProperties: false, so this had to land first) and the only code that
-  reads it is generate_ticket_from_ac.py. This AC's own record is among the first
-  in the store to carry declares_side_effect: true. it_requirements uses the
-  package-surface OBJECT form mandated by the schema's root if/then;
-  reference_file_path names the shared validators module so one implementation
-  can serve both the pre-commit gate and the bulk/CI path.
+  IT-PO ENRICHMENT NOTE (2026-08-17, two stale claims corrected 2026-09-22).
+  Verified at HEAD: declares_side_effect is a legal top-level property in
+  config/ac_store_schema.json (root is additionalProperties: false, so this had
+  to land first). it_requirements uses the package-surface OBJECT form mandated
+  by the schema's root if/then; reference_file_path names the shared validators
+  module so one implementation can serve both the pre-commit gate and the
+  bulk/CI path.
+
+  CORRECTION 1 — THIS RECORD CARRIES false, NOT true. The note originally read
+  "This AC's own record is among the first in the store to carry
+  declares_side_effect: true." That stopped being true in 9699d501, which
+  flipped this record to false because its Then clause states what a record
+  CARRIES — the content of a structure, satisfiable by a process that writes
+  nothing. The sentence survived the flip and became a stale untruth sitting in
+  the very record that invented the rule. Corrected per
+  docs/analysis/2026-09-21-declares-side-effect-five-record-audit.md item 3.
+
+  CORRECTION 2 — THE READER MOVED. The note claimed "the only code that reads it
+  is generate_ticket_from_ac.py". After the 2026-09-14 decomposition that file is
+  a re-export shell; the live read is
+  scripts/ac_store/_gtfa_cli.py (bool(ac.get("declares_side_effect", False))),
+  which routes user-surface-smoker into the generated ticket's agents map. Note
+  that gate is currently empty in practice: user-surface-smoker expects a
+  "## Smoke Fixture" block and a user_facing_surface field, and the generator
+  emits neither (KI-ACD-022, open).

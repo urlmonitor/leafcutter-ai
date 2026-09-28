@@ -56,6 +56,7 @@ covered_by:
   - TKT-600b-2
   - TKT-600b-3
   - TKT-600b-4
+  - TKT-600b-5
 implemented_by: []
 change_target: code
 risk_surface: contract_boundary

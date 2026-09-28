@@ -260,6 +260,15 @@ ENTROPY_HIGH:unit_tests/commit_guardian/test_ge_127c_1_dividing_advice.py:*
 # still shift.
 ENTROPY_HIGH:unit_tests/product_truth/test_uxp_700e_3_i.py:*
 
+# unit_tests/test_plan_feature_pt_phase.py's flagged line is a Python keyword
+# argument passing a module constant into the shared HopDriver -- the same
+# long-identifier false-positive pattern as the entries above, and not reproduced
+# here for the same reason: quoting it would trip the scanner this entry
+# suppresses. Glob, not per-line: the construction sits mid-file and its line
+# number moves whenever a helper is added above it, which is exactly what the
+# 2026-09-21 shared-harness extraction did.
+ENTROPY_HIGH:unit_tests/test_plan_feature_pt_phase.py:*
+
 # INF-700a-1-i's reachability suite. Its TestCase class names spell out the whole
 # behaviour being reached through the real entry point, so they are long CamelCase
 # identifiers -- the same false-positive pattern as the test-class-name entries
@@ -318,3 +327,10 @@ ENTROPY_HIGH:unit_tests/commit_guardian/test_ge_127d_1.py:*
 # added above it. This module was carved out of generate_ticket_from_ac.py when the
 # 4035-line original was split to clear the 400-line size gate.
 ENTROPY_HIGH:scripts/ac_store/_gtfa_files_touched.py:*
+
+# Changelog prose for the ambiguous-reference_pattern fix. The description line is a
+# single long paragraph naming module paths, a code expression and an error string, so
+# it reads as high entropy to the scanner. It is narrative documentation containing no
+# credential. Glob, not per-line: matches the treatment of every other changelog entry
+# in this file.
+ENTROPY_HIGH:changelogs/2026-09-23-1030-an-ambiguous-reference-pattern-is-now-refused-instead-of-silently-resolving-to-an-arbitrary-file.md:*

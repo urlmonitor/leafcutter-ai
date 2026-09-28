@@ -8,7 +8,7 @@ status: active
 req_status: draft
 work_status: todo
 readiness: draft
-priority: medium
+priority: critical
 roadmap_phase: phase_1
 criteria: |
   Given a document whose related_docs list holds one entry that is a mapping with

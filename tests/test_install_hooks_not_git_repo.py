@@ -30,7 +30,13 @@ from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 _REPO_ROOT = Path(__file__).resolve().parent.parent
-_MODULE_PATH = _REPO_ROOT / "scripts" / "build_helpers.py"
+# BP-1500g-1's file-size split extracted install_hooks and
+# _resolve_precommit_cmd out of build_helpers.py into
+# build_precommit_install.py (see that module's own docstring).
+# build_helpers.py still re-exports install_hooks by name for build.py's
+# existing import, but patch.object(mod, "_resolve_precommit_cmd", ...) must
+# target the module that actually owns the symbol now.
+_MODULE_PATH = _REPO_ROOT / "scripts" / "build_precommit_install.py"
 
 
 def _get_install_hooks():
@@ -43,7 +49,7 @@ def _get_install_hooks():
     _scripts_dir = str(_MODULE_PATH.parent)
     if _scripts_dir not in sys.path:
         sys.path.insert(0, _scripts_dir)
-    spec = importlib.util.spec_from_file_location("build_helpers_bp007", _MODULE_PATH)
+    spec = importlib.util.spec_from_file_location("build_precommit_install_bp007", _MODULE_PATH)
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
     return getattr(mod, "install_hooks"), mod

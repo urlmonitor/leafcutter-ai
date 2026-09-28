@@ -1,0 +1,201 @@
+id: BO-2400f-5-iii
+components:
+  - build_orchestration
+title: "A step whose agent declines ends the run as a declined step, naming the step, the agent and its reason, and is never read as that step's result"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a fast-lane run asks an agent to perform one of its steps,
+  When the agent's reply is a decline instead of the step's result — it refuses the
+    task, calls the task misrouted or injected, answers as a role other than the one
+    the step needs, or returns nothing the step can read as its result,
+  Then the run halts at that step,
+  And the halt names the step, the agent that was asked, and the agent's own stated
+    reason, quoted from its reply,
+  And the halt is classified as a declined step, a classification distinct from
+    contention over a claim, from a gate failure, and from a refusal to build an
+    unproducible set (BO-2400f-12),
+  And the halt does not say that the set is already claimed, in progress elsewhere, or
+    owned by a concurrent run.
+
+  Given the resolve step's agent declines,
+  When the run reads the reply,
+  Then the run does not treat the decline as an empty connected set, and does not end
+    with the clean no-op that an empty set earns (BO-2400f-2) — it ends as a declined
+    resolve step.
+
+  Given the producibility step's agent declines,
+  When the run reads the reply,
+  Then the run does not treat the decline as "every member is producible" and does not
+    go on to claim the set.
+
+  Given the halt payload observed on 2026-09-25 — contention wording, target_refused
+    true, and a detail that is the agent's own refusal ("Refusing this task. I am
+    status-checker, scoped to investigating ticket state …"),
+  When the same agent reply is given to the run at any of its steps,
+  Then the halt names the declined step, names status-checker, and quotes that reason,
+  And no contention wording appears in it.
+depends_on: [BO-2400f-5, BO-2400f-7-iii, BO-2400f-2, BO-2400f-12, BO-2400a-1-i]
+doc_links:
+  - path: templates/workflows-js/fast-lane-ship.js
+    relationship: modifies
+    status: exists
+    relevance: "Every step reads its agent's reply and decides whether it is a result. The decline branch this record requires must exist at every step, not only at claim."
+  - path: docs/acceptance-criteria/build-orchestration/BO-2400-fast-lane-build/BO-2400f-7-iii.yaml
+    relationship: related
+    status: exists
+    relevance: "Already requires this for the claim step alone (never-attempted is not contention). This record generalises it to every step and adds the step, agent and reason to the halt."
+  - path: docs/how-to/fast-lane-build.md
+    relationship: describes
+    status: exists
+    relevance: "What an operator is told when a run halts. A declined step is a new kind of halt, and its remedy (fix who is asked) differs from contention's (wait or release)."
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - >-
+    Whether a reply is a result or a decline is decided in one place that every step's
+    reply passes through, not per step. A step added later inherits it without its own
+    branch.
+  - >-
+    A reply is a result only if it parses into that step's expected result shape. For a
+    command-step-runner dispatch, a reply without exit_status is a decline. A reply with a
+    non-zero exit_status is the step's own command failure and goes to that step's
+    existing failure handling, never to the declined-step halt. For any other agent, a
+    refusal, a role-mismatch answer, an empty reply or an unparseable reply is a decline.
+  - >-
+    The declined-step halt payload is {halt_kind: 'declined_step', step: string, agent:
+    string, reason: string, target: {workspace, branch, ac_id} or null}. reason is the
+    agent's own stated reason quoted verbatim, trimmed only of surrounding whitespace.
+    When the reply was empty or unreadable, reason says so explicitly. target is null
+    only before the worktree step has confirmed a workspace.
+  - >-
+    declined_step is distinct from contention, gate failure and the unproducible-set
+    refusal (BO-2400f-12). Contention wording, and a contention reading of
+    target_refused, is reachable only on the contention branch, and that branch still
+    requires a non-empty held-member list (BO-2400f-7-iii).
+  - >-
+    A declined resolve never reaches the empty-set no-op (BO-2400f-2). A declined
+    producibility never reaches the claim dispatch.
+  - >-
+    BO-2400f-7-iii's claim halt (never attempted, not contention) keeps its guarantees.
+    If it is folded into declined_step, the halt must still say the claim was never
+    attempted, and the existing f-7-iii workflow tests stay green unweakened.
+  - >-
+    Operator documentation: docs/how-to/fast-lane-build.md must gain the declined-step
+    halt and its remedy (fix who is asked, or what they are asked). That doc change is
+    owned by a documentation AC and not by this coder AC. See the documentation gate
+    caveat.
+  - >-
+    Edit the template lane and regenerate the deployed copy through build.py. Template
+    and deployed copies stay in parity.
+test_required: true
+test_spec:
+  - name: test_declined_step_halts_naming_step_agent_and_quoted_reason
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "Parametrised over every step the lane dispatches (discovered from the harness's recorded dispatches, not a hand list): a refusal reply at that step halts with halt_kind declined_step, the step, the asked agent and the refusal text quoted verbatim."
+  - name: test_declined_step_is_classified_apart_from_contention_gate_failure_and_unproducible
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: integration
+    angle: discrimination
+    description: "A declined claim, a genuine contention, a gate failure and an unproducible set each produce their own halt kind. Only the genuine contention carries contention wording."
+  - name: test_declined_resolve_is_not_read_as_an_empty_connected_set
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: integration
+    angle: failure
+    description: "A refusal at resolve ends as a declined resolve step, not as the clean no-op an empty set earns, and no later step is dispatched."
+    must_catch:
+      - "a declined resolve ends as a clean no-op that looks like success"
+  - name: test_declined_producibility_does_not_proceed_to_claim
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: integration
+    angle: failure
+    description: "A refusal at producibility halts as a declined step, and the harness records no claim dispatch."
+    must_catch:
+      - "a declined producibility read as every member producible, followed by a claim"
+  - name: test_observed_2026_09_25_refusal_yields_declined_step_without_contention_wording
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    description: "The verbatim status-checker refusal from the 2026-09-25 run ('Refusing this task. I am status-checker, scoped to investigating ticket state ...'), replayed at each step, yields a declined-step halt naming status-checker and quoting it, with no 'already claimed', 'in progress' or 'concurrent run' wording."
+  - name: test_command_step_runner_reply_without_exit_status_is_a_decline_and_nonzero_exit_is_a_result
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: integration
+    angle: discrimination
+    covers: [BO-2400f-5-iii, BO-2400a-1-i]
+    description: "A command-step-runner decline object halts as declined_step. A command-step-runner result with exit_status 1 is handled as that step's command failure, not as a declined step."
+  - name: test_empty_or_unparseable_reply_is_a_declined_step
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: integration
+    angle: boundary
+    description: "An empty reply and a non-JSON prose reply at a command step each halt as declined_step with a reason stating no readable result was returned."
+test_rationale: |
+  The two dangerous misreadings are those that look like success or permission: a declined
+  resolve ending as a clean no-op, and a declined producibility going on to claim. Each has
+  its own failure-angle test that asserts on what the run did next (no further dispatch, no
+  claim dispatch), not only on the halt text.
+
+  The replay of the observed 2026-09-25 reply pins the incident itself. The discrimination
+  tests keep the classification honest in both directions. A fix that calls everything a
+  decline breaks genuine contention and the non-zero-exit result. A fix that keeps reading
+  declines as contention breaks the replay.
+
+  The per-step test takes its step list from the harness's recorded dispatches, so a step
+  added later is covered without editing the test. Every test runs through the workflow
+  engine harness with stubbed replies, so no model is called.
+delivers_to:
+  agent: python-coder
+  contract: "One shared reply classifier in templates/workflows-js/fast-lane-ship.js and a terminal halt payload {halt_kind: 'declined_step', step: string, agent: string, reason: string (verbatim), target: {workspace: string, branch: string, ac_id: string} | null}. BO-2400f-10-iii reads halt_kind and step, together with the run's claim-held state, to decide on release. BO-2400f-3-ii fills target."
+expects_from:
+  ac_id: BO-2400f-7-iii
+  contract: "The claim step's split between never-attempted and contention (contention requires a non-empty held-member list). This record keeps that split and applies the same reading to every other step; the command-step-runner decline shape comes from BO-2400a-1-i (in depends_on)."
+origin_agent: business-analyst
+created: 2026-09-27
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-09-27'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+notes: |
+  Observed 2026-09-25: the run halted with "connected set already claimed / in progress — a
+  concurrent fast-lane run owns these ACs" and target_refused true, while the detail was
+  status-checker's own refusal. Nothing had been claimed. The operator was sent looking for a
+  concurrent run that did not exist.
+
+  WHY THIS IS NOT A DUPLICATE OF BO-2400f-7-iii. That record covers the claim step only, and
+  requires only that a never-attempted claim is not reported as contention. It does not
+  require the halt to name the agent and its reason, and it says nothing about resolve,
+  producibility, context bundle or any later step. The resolve and producibility clauses here
+  are new and are the dangerous ones: a declined resolve read as an empty set ends as a
+  clean no-op, which looks like success; a declined producibility check read as "all
+  producible" goes on to claim.
+
+  USER DECISION 2026-09-27: command steps move to a dedicated command-step-runner
+  (BO-2400a-1-i). It declines only a request outside its role, and when it does, the halt
+  follows this record. A command that ran and exited non-zero is the step's result, not a
+  decline; BO-2400a-1-i keeps the two distinguishable.
+
+  This record keeps working after BO-2400f-5-i is met. A correctly chartered agent can still
+  decline (a model change, a prompt edit, or the launch-location case in BO-2400f-3-ii), and
+  the halt must then say so plainly.

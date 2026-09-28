@@ -299,7 +299,7 @@ def build_out_of_package_harness(
     # than collapsing to the containing directory's name -- see DECISION
     # HISTORY 2026-09-07.
     pre_build_target_files = sorted(
-        str(p.relative_to(target_root)) for p in target_root.rglob("*") if p.is_file()
+        p.relative_to(target_root).as_posix() for p in target_root.rglob("*") if p.is_file()
     )
 
     # Capture the REAL producing package's own record hash BEFORE the build,

@@ -111,7 +111,7 @@ def _run_check(cwd: Path) -> subprocess.CompletedProcess:
         [_PYTHON, str(_CHECK_DOC_LENGTH)],
         cwd=str(cwd),
         capture_output=True,
-        text=True,
+        text=True, encoding="utf-8",
         timeout=_TIMEOUT,
     )
 

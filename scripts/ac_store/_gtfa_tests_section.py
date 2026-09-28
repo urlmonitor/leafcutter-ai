@@ -17,13 +17,18 @@ ARCHITECTURE: Source-of-truth order is spec first, criteria second, and the
     stay the first key of each entry or
     ``check_ticket_test_requirements._TESTS_ENTRY_RE`` stops matching and the
     guard silently sees a block with no tests in it.
+
+    Whichever route produced the descriptors, the finalised plan is annotated
+    with the implementation files in scope (TKT-500f-6) via the shared helper
+    in ``_gtfa_impl_py`` — the single owner of that classification. The helper
+    is called, never re-implemented here.
 """
 
 from __future__ import annotations
 
 import importlib
 import logging
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import yaml
 
@@ -37,10 +42,28 @@ _gtfa_constants = importlib.import_module(
 _gtfa_test_descriptors = importlib.import_module(
     f"{_PKG}._gtfa_test_descriptors" if _PKG else "_gtfa_test_descriptors"
 )
+_gtfa_files_touched = importlib.import_module(
+    f"{_PKG}._gtfa_files_touched" if _PKG else "_gtfa_files_touched"
+)
+_gtfa_impl_py = importlib.import_module(
+    f"{_PKG}._gtfa_impl_py" if _PKG else "_gtfa_impl_py"
+)
 
 logger = logging.getLogger(_gtfa_seams.logger_name())
 
-AcRecord = _gtfa_constants.AcRecord
+# ``AcRecord`` is bound at RUNTIME by the ``else`` branch, off the sibling
+# module object resolved above through importlib under a prefix COMPUTED from
+# ``__name__`` -- see the "Sibling wiring" note in generate_ticket_from_ac.py
+# for why a literal relative import there would break one of the two supported
+# layouts. A computed name is opaque to a type checker, so that rebind reads as
+# a VARIABLE and mypy rejects every annotation using it ("Variable ... is not
+# valid as a type"). The TYPE_CHECKING branch declares the alias statically and
+# is never executed, so the runtime binding is unchanged.
+if TYPE_CHECKING:  # pragma: no cover - a static declaration, never executed
+    from ._gtfa_constants import AcRecord
+else:
+    AcRecord = _gtfa_constants.AcRecord
+
 _TEST_ANGLES = _gtfa_constants._TEST_ANGLES
 _slugify_for_test = _gtfa_test_descriptors._slugify_for_test
 _derive_tests_from_criteria = _gtfa_test_descriptors._derive_tests_from_criteria
@@ -139,6 +162,15 @@ def _spec_entry(
         entry["angle"] = item["angle"]
     if item.get("requires_db"):
         entry["requires_db"] = True
+    if item.get("must_catch"):
+        # TQ-500f-2: copied VERBATIM — same strings, same order, no trimming,
+        # case change, dedupe, merge or reformatting. A new list (not the
+        # same object) so nothing downstream can mutate the AC's own record
+        # through this reference. Omitted entirely (never an empty list)
+        # when the authored item has none — the criteria-derived fallback
+        # route never reaches this function at all, so it never fabricates
+        # one either.
+        entry["must_catch"] = list(item["must_catch"])
     return entry
 
 
@@ -161,7 +193,34 @@ def _has_authored_test_spec(ac: AcRecord) -> bool:
     return isinstance(spec, list) and len(spec) > 0
 
 
-def _build_test_requirements_section(ac: AcRecord, ac_id: str) -> str:
+def _implementation_files_in_scope(
+    ac: AcRecord, implementation_files: "list[str] | None"
+) -> list[str]:
+    """Resolve the qualifying implementation files for *ac*.
+
+    Derives them from the AC's own ``files_touched`` when the caller did not
+    already compute them, so the two-argument call sites that predate
+    TKT-500f-6 keep working and cannot disagree with the caller that did.
+
+    Args:
+        ac: Parsed AC record.
+        implementation_files: Pre-computed qualifying paths, or ``None``.
+
+    Returns:
+        list[str]: The qualifying implementation paths, possibly empty.
+    """
+    if implementation_files is not None:
+        return implementation_files
+    return _gtfa_impl_py.qualifying_implementation_paths(
+        _gtfa_files_touched._build_files_touched(ac)
+    )
+
+
+def _build_test_requirements_section(
+    ac: AcRecord,
+    ac_id: str,
+    implementation_files: "list[str] | None" = None,
+) -> str:
     """Build the ## Test Requirements section, derived from the AC.
 
     Source-of-truth order:
@@ -174,9 +233,18 @@ def _build_test_requirements_section(ac: AcRecord, ac_id: str) -> str:
     only when the AC explicitly sets ``test_required: false`` (genuinely
     test-free), in which case the caller omits the section.
 
+    Every emitted stub is then annotated with the implementation files in scope
+    (TKT-500f-6), so a downstream reader can map each requirement to the
+    production surface it constrains rather than only to a derived unit-test
+    path. The annotation is a no-op when no implementation file qualifies.
+
     Args:
         ac: Parsed AC record.
         ac_id: The AC id.
+        implementation_files: Qualifying implementation paths, when the caller
+            has already classified ``files_touched``. ``None`` (the default)
+            re-derives them from *ac*, which is what the pre-TKT-500f-6
+            two-argument call sites do.
 
     Returns:
         Formatted ``## Test Requirements`` markdown block, or ``""`` when the AC
@@ -196,6 +264,13 @@ def _build_test_requirements_section(ac: AcRecord, ac_id: str) -> str:
     # appends exactly one sentinel entry otherwise (the authored-test_spec
     # route, which previously received no generator-added entries at all).
     descriptors = _ensure_reachability_floor(ac_id, descriptors)
+
+    # TKT-500f-6: name the production surface each stub applies to. Applied
+    # after the floor so every entry in the finalised plan carries it, and
+    # through the shared helper so this module never re-states the rule.
+    descriptors = _gtfa_impl_py.annotate_descriptors(
+        descriptors, _implementation_files_in_scope(ac, implementation_files)
+    )
 
     try:
         # sort_keys=False is REQUIRED: 'name' must stay the first key in each test

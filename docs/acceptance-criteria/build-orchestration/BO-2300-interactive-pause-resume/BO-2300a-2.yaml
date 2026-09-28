@@ -79,7 +79,7 @@ origin_agent: BrainCandy
 created: 2026-07-20
 amended_by:
   - reason: "it-po correction (2026-07-20): retargeted to the E2 workflow ENGINE. assigned_agent python-coder -> llm-expert; clarified the distinct-status change is a JS return-status change and record read is agent-mediated; test_spec now drives the real JS via _workflow_engine_harness.run_workflow_under_e2. Criteria unchanged."
-superseded_by: null
+superseded_by: ACD-2100c-1
 covered_by: []
 implemented_by:
 - tickets/00_inbox/TICKET-20260720-BO-2300a-1.md
@@ -120,3 +120,32 @@ notes: |
   FIX WITH BO-2300a-1, NOT SEPARATELY -- same 40-line block, same root decision, both marked
   done in the same ticket. See KI-ACD-019 and
   tickets/00_inbox/TICKET-20260825-BuildOrchestrationPhantomTriage.md.
+
+  SUPERSEDED_BY ACD-2100c-1 (2026-09-08, test-writer, ticket
+  tickets/00_inbox/epics/EPIC-StartingNewWorkTheProperWayAlways/
+  13_TICKET-20260826-ACD-2100c-1.md). This AC's own criteria are UNCHANGED and
+  still stand -- paused and cancelled must be distinct, inspectable states,
+  and only paused is resume-eligible. What is superseded is narrower than the
+  whole AC: TWO of this record's covering tests contained a scenario that
+  answered a gate DIRECTLY at its live-dispatch label (never via
+  args.resume_answer) and treated that as a genuine "cancelled" decision --
+  unit_tests/workflows/test_bo_2300a_2_cancel_status_distinct.py::
+  test_ac2_pt_gate_cancel_status_is_distinct_from_ok (direct answer to
+  "pt-gate-mockdata") and unit_tests/workflows/test_bo_2300_pause_resume.py::
+  test_paused_state_distinct_from_cancelled (direct answers via the module's
+  now-removed _EXPLICIT_CANCEL_RESPONSES fixture). ACD-2100c-1 forbids that
+  mechanism -- no live-gate answer may ever resolve a gate again; only
+  args.resume_answer can (see ACD-2100c-1's own criteria and
+  unit_tests/workflows/test_acd_2100c_1.py). Both were rewritten in place
+  (same test names, same protective intent -- a genuinely cancelled run must
+  report status "cancelled", distinct from a paused run's
+  paused_awaiting_input, and must never dispatch pause-persist -- now proven
+  via args.resume_answer) rather than deleted; see each test's own docstring
+  for the full mechanical account. This does NOT resolve the REOPENED defect
+  described above (the "status: ok" cancel-path bug and the
+  KI-ACD-006/KI-ACD-019 fix-together requirement with BO-2300a-1 are
+  untouched by this ticket, though the product-truth-gate cancel site's
+  return value was observed, incidentally, to already read
+  status: "cancelled" on disk at the time of this note -- unverified against
+  the mid-gate cancel site and not this ticket's claim to make) --
+  work_status remains todo pending that separate fix.

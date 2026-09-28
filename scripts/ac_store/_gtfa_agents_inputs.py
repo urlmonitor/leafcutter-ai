@@ -51,6 +51,65 @@ _KNOWN_CODERS = _gtfa_constants._KNOWN_CODERS
 _SOURCE_CODE_EXTENSIONS = _gtfa_constants._SOURCE_CODE_EXTENSIONS
 
 
+class UnassignedWorkAgentError(ValueError):
+    """Raised when the AC names no work agent — ``assigned_agent`` is null.
+
+    TKT-600b-5. Callers are expected to catch this and report a refusal that
+    also names the offending AC id, which this layer never sees.
+    """
+
+
+def _require_work_agent(assigned_agent: "str | None") -> None:
+    """Refuse to resolve inputs for an AC that names no agent to do the work.
+
+    Called from ``_build_agents_map``'s single entry point rather than from the
+    orderer, so the LEGACY path (which never reaches ``_order_agents_map``) is
+    covered by the same check.
+
+    Why a refusal and not a default. A null ``assigned_agent`` reaches here
+    because the AC author left the field unauthored — ``_ac_inputs`` defaults
+    only an ABSENT key, never an explicit null. Both quieter alternatives are
+    worse than stopping:
+
+    * Letting it through renders the work agent as a literal ``null`` phase in
+      the frontmatter and a ``None`` row in the Sign-offs checklist — a phase
+      name no drive can dispatch. That is what happens whenever the AC
+      contributes exactly one non-canonical agent, because ``sorted()`` on a
+      one-element iterable never compares and so never raises; with a second
+      one it raises an undiagnosed TypeError instead.
+    * Dropping it silently emits a structurally valid ticket carrying every
+      gate phase with nobody assigned to build it — the phantom-done shape one
+      level up, where the gates run over an implementation nobody wrote.
+
+    Why ``_build_agents_map`` still annotates the parameter ``str``. This
+    guard returns ``None``, so it narrows nothing for a type checker, and
+    ``_gtfa_agents_map`` reaches it through the ``_sib()`` importlib seam,
+    whose result is ``Any`` — so mypy cannot see the call at all. Widening
+    that caller to ``str | None`` therefore makes its own post-guard handoff
+    to ``_legacy_agents_map`` (a ``dict[str, str]`` builder that genuinely
+    cannot take None) unprovable, and mypy reports an arg-type error on a
+    line the guard above has already made safe. Expressing the guarantee
+    needs this function to RETURN the narrowed value and the caller to bind
+    it to a new name — a signature change, not an annotation change.
+
+    Args:
+        assigned_agent: The agent name from the AC's ``assigned_agent`` field.
+
+    Raises:
+        UnassignedWorkAgentError: when *assigned_agent* is None.
+    """
+    if assigned_agent is None:
+        raise UnassignedWorkAgentError(
+            "the acceptance criterion's assigned_agent field is null, so no "
+            "agent is named to do the work. Generation is refused: emitting "
+            "the ticket anyway would write a literal null phase into the "
+            "agents map and the Sign-offs checklist, and dropping the work "
+            "agent silently would produce a ticket with every gate phase and "
+            "nobody assigned to build it. Author assigned_agent on the "
+            "acceptance criterion and re-run."
+        )
+
+
 def _resolve_effective_deferral(
     deferred_phases: "list[str] | None",
     resolved_destination: "str | None",
@@ -207,6 +266,9 @@ def _collect_needed_agents(
     Args:
         guardrail_set: Agents unioned from the guardrail config.
         assigned_agent: The agent name from the AC's assigned_agent field.
+            Never None: ``_build_agents_map`` calls ``_require_work_agent``
+            before reaching here, and ``all_needed`` below is a ``set[str]``
+            that a None would poison with a literal null phase.
         prod_code_agents: Agent ids whose ``produces`` is ``production_code``.
         files_touched: The computed files_touched list.
         declares_side_effect: Whether the AC declared a durable side-effect.

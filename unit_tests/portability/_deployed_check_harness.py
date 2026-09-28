@@ -70,6 +70,18 @@ DECISION HISTORY
   success=False `HarnessResult` naming the specific bad artifact, and
   validation happens before any subprocess is spawned, so refusing costs no
   wasted work.
+- 2026-09-25 [test-writer/EPIC-AGuardThatHasNeverSaidNoIsNotCountedAs/01,
+  GE-120f-1]: Extended (not duplicated) with `deployed_manifest_path()`,
+  `read_deployed_manifest()`, and `write_deployed_manifest()`. GE-120f-1's
+  own tests need to stage a declared `negative_control` into the REAL
+  deployed commit_guardian.json (the copy a liveness run loads) and later
+  alter/revert a fixture check's behaviour while asserting the declaration
+  bytes never move -- both need read/write access to the exact deployed
+  manifest path this class already resolves internally via the private
+  `_DEPLOYED_MANIFEST_REL` constant. Per this ticket's own constraint
+  ("Extend GE-120c-1's harness rather than growing a second one"), these
+  are thin wrappers around that same private path logic, not a second
+  harness.
 ====================================================================
 """
 
@@ -225,6 +237,45 @@ class DeployedCheckHarness:
         raw = manifest_path.read_text(encoding="utf-8")
         data = json.loads(raw)
         return data.get("hooks_manifest", {}).get("hooks", [])
+
+    # ---- GE-120f-1 extension: read/write the deployed manifest in place ---
+    def deployed_manifest_path(self, working_copy_dir: Path) -> Path:
+        """Return the REAL deployed commit_guardian.json path inside
+        `working_copy_dir` — the exact file a negative-control liveness run
+        must load and, per GE-120f-1's own constraint ("THE ALTERATION MUST
+        LAND IN THE COPY THE RUN LOADS"), the exact file it must mutate in
+        place when it records an observation. Exposed publicly (unlike
+        `_manifest_hooks`'s private path constant) so GE-120f-1's tests can
+        both read AND WRITE this file without duplicating the relative-path
+        logic that already lives here."""
+        return Path(working_copy_dir) / _DEPLOYED_MANIFEST_REL
+
+    def read_deployed_manifest(self, working_copy_dir: Path) -> dict:
+        """Read and parse the REAL deployed commit_guardian.json from
+        `working_copy_dir` as a dict — the exact artifact a liveness run
+        would load. Never a hand-built dict standing in for it."""
+        manifest_path = self.deployed_manifest_path(working_copy_dir)
+        try:
+            raw = manifest_path.read_text(encoding="utf-8")
+        except OSError as exc:
+            logger.warning("Could not read deployed manifest at %s: %s", manifest_path, exc)
+            raise
+        return json.loads(raw)
+
+    def write_deployed_manifest(self, working_copy_dir: Path, data: dict) -> None:
+        """Write `data` back to the REAL deployed commit_guardian.json path
+        in `working_copy_dir` — a TEST-ONLY fixture-authoring helper used to
+        stage a declared negative_control (or to alter/revert a fixture
+        check's behaviour) at the exact path a liveness run loads. Never
+        used by production code; production's own write-back is the
+        behaviour GE-120f-1's tests exist to prove, not something this
+        harness performs on its behalf."""
+        manifest_path = self.deployed_manifest_path(working_copy_dir)
+        try:
+            manifest_path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+        except OSError as exc:
+            logger.warning("Could not write deployed manifest at %s: %s", manifest_path, exc)
+            raise
 
     def _template_manifest_check_count(self) -> int:
         """Read the expected check count from the real TEMPLATE manifest

@@ -30,6 +30,7 @@ import importlib
 import logging
 import sys
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import yaml
 
@@ -52,6 +53,7 @@ _gtfa_files_touched = _sib("_gtfa_files_touched")
 _gtfa_frontmatter = _sib("_gtfa_frontmatter")
 _gtfa_implemented_by = _sib("_gtfa_implemented_by")
 _gtfa_paths = _sib("_gtfa_paths")
+_gtfa_phase_agent = _sib("_gtfa_phase_agent")
 _gtfa_phases = _sib("_gtfa_phases")
 _gtfa_report = _sib("_gtfa_report")
 _gtfa_store = _sib("_gtfa_store")
@@ -59,14 +61,33 @@ _gtfa_tests_section = _sib("_gtfa_tests_section")
 
 logger = logging.getLogger(_gtfa_seams.logger_name())
 
-AcRecord = _gtfa_constants.AcRecord
+# ``AcRecord`` is bound at RUNTIME by the ``else`` branch, off the sibling
+# module object resolved above through importlib under a prefix COMPUTED from
+# ``__name__`` -- see the "Sibling wiring" note in generate_ticket_from_ac.py
+# for why a literal relative import there would break one of the two supported
+# layouts. A computed name is opaque to a type checker, so that rebind reads as
+# a VARIABLE and mypy rejects every annotation using it ("Variable ... is not
+# valid as a type"). The TYPE_CHECKING branch declares the alias statically and
+# is never executed, so the runtime binding is unchanged.
+if TYPE_CHECKING:  # pragma: no cover - a static declaration, never executed
+    from ._gtfa_constants import AcRecord
+else:
+    AcRecord = _gtfa_constants.AcRecord
+
 _DEFAULT_AC_ROOT = _gtfa_constants._DEFAULT_AC_ROOT
 _DEFAULT_PHASE_DEFERRAL = _gtfa_constants._DEFAULT_PHASE_DEFERRAL
 _DEFAULT_TICKETS_ROOT = _gtfa_constants._DEFAULT_TICKETS_ROOT
 
 
+#: TKT-600b-5 refusal for an AC whose assigned_agent is null. The builder
+#: raises without the AC id — it never sees one — so naming the offending
+#: record is this layer's job. Both generation paths render this same string,
+#: so the preview and the write path refuse on identical terms.
+_UNASSIGNED_WORK_AGENT_REFUSAL = "ERROR: generation refused — AC '{ac_id}': {exc}"
+
+
 def _build_agents_map_for_write_path(
-    assigned_agent: str,
+    assigned_agent: str | None,
     *,
     change_targets: list[str] | None,
     risk_surface: str | None,
@@ -87,7 +108,9 @@ def _build_agents_map_for_write_path(
     resolves to the real default declaration rather than skipping the check.
 
     Args:
-        assigned_agent: The agent name from the AC's assigned_agent field.
+        assigned_agent: The agent name from the AC's assigned_agent field, or
+            None when the AC left the field unauthored — ``_build_agents_map``
+            then raises ``UnassignedWorkAgentError`` through this function.
         change_targets: Normalised change_target list from the AC.
         risk_surface: risk_surface field from the AC.
         files_touched: Computed files_touched list.
@@ -127,19 +150,45 @@ def _build_agents_map_for_write_path(
     return agents, None
 
 
-def _ac_inputs(ac: AcRecord) -> tuple[list[str], str, "list[str] | None", "str | None", bool]:
+def _ac_inputs(
+    ac: AcRecord, ac_id: str
+) -> tuple[list[str], "str | None", "list[str] | None", "str | None", bool]:
     """Extract the five AC-derived inputs both generation paths need.
+
+    ``assigned_agent`` is ``str | None``, not ``str``: the ``"python-coder"``
+    default below applies only to an ABSENT key. An AC that carries the key
+    with an explicit null yields None, which both generation paths forward to
+    ``_build_agents_map`` so it can refuse (TKT-600b-5).
+
+    Otherwise the ``assigned_agent`` returned here is the agent the ticket may
+    actually DISPATCH, not the raw field: a non-null value has been through
+    ``_gtfa_phase_agent.resolve_phase_agent``, which substitutes a real
+    ticket-phase agent (and WARNs) when the AC names one the registry marks
+    ``is_ticket_phase: false`` or does not know at all (TKT-500f-5,
+    TKT-500f-5-i). ``resolve_phase_agent`` returns None unchanged, so the
+    TKT-600b-5 refusal above still fires rather than being silently satisfied
+    by a substitute. This is the cluster's single substitution point on purpose
+    — the preview path and the write path both come through here, and the goal
+    path shells out to this same script, so the two generators cannot drift.
+
+    The AC's own ``assigned_agent`` field is left untouched, so the body's
+    Context prose still records what the AC said; only the dispatch plan (the
+    ``agents:`` map and the ``## Sign-offs`` list derived from it) is corrected.
 
     Args:
         ac: Parsed AC record.
+        ac_id: The AC id, named in any substitution warning.
 
     Returns:
         ``(files_touched, assigned_agent, change_targets, risk_surface,
         declares_side_effect)``.
     """
+    files_touched = _gtfa_files_touched._build_files_touched(ac)
     return (
-        _gtfa_files_touched._build_files_touched(ac),
-        ac.get("assigned_agent", "python-coder"),
+        files_touched,
+        _gtfa_phase_agent.resolve_phase_agent(
+            ac.get("assigned_agent", "python-coder"), ac_id, files_touched
+        ),
         _gtfa_frontmatter._normalize_change_target(ac),
         ac.get("risk_surface") or None,
         bool(ac.get("declares_side_effect", False)),
@@ -181,19 +230,24 @@ def _run_preview(
         change_targets,
         risk_surface,
         declares_side_effect,
-    ) = _ac_inputs(ac)
+    ) = _ac_inputs(ac, ac_id)
 
-    agents = _gtfa_agents_map._build_agents_map(
-        assigned_agent,
-        change_targets=change_targets,
-        risk_surface=risk_surface,
-        files_touched=files_touched,
-        declares_side_effect=declares_side_effect,
-        has_authored_test_spec=_gtfa_tests_section._has_authored_test_spec(ac),
-        resolved_destination=args.resolved_destination,
-        phase_deferral_path=args.phase_deferral_path,
-        location_kind=args.location_kind,
-    )
+    try:
+        agents = _gtfa_agents_map._build_agents_map(
+            assigned_agent,
+            change_targets=change_targets,
+            risk_surface=risk_surface,
+            files_touched=files_touched,
+            declares_side_effect=declares_side_effect,
+            has_authored_test_spec=_gtfa_tests_section._has_authored_test_spec(ac),
+            resolved_destination=args.resolved_destination,
+            phase_deferral_path=args.phase_deferral_path,
+            location_kind=args.location_kind,
+        )
+    except _gtfa_agents_map.UnassignedWorkAgentError as exc:
+        # The preview refuses on exactly the terms the write path refuses on.
+        print(_UNASSIGNED_WORK_AGENT_REFUSAL.format(ac_id=ac_id, exc=exc), file=sys.stderr)
+        return 1
     frontmatter = _gtfa_frontmatter._build_frontmatter(
         ac, ac_id, files_touched, agents, ac_store_path, tickets_root=tickets_root
     )
@@ -242,20 +296,26 @@ def _write_ticket(
         change_targets,
         risk_surface,
         declares_side_effect,
-    ) = _ac_inputs(ac)
+    ) = _ac_inputs(ac, ac_id)
 
-    built_agents, refusal = _build_agents_map_for_write_path(
-        assigned_agent,
-        change_targets=change_targets,
-        risk_surface=risk_surface,
-        files_touched=files_touched,
-        declares_side_effect=declares_side_effect,
-        has_authored_test_spec=_gtfa_tests_section._has_authored_test_spec(ac),
-        resolved_destination=args.resolved_destination,
-        phase_deferral_path=args.phase_deferral_path,
-        location_kind=args.location_kind,
-        worktree=worktree,
-    )
+    try:
+        built_agents, refusal = _build_agents_map_for_write_path(
+            assigned_agent,
+            change_targets=change_targets,
+            risk_surface=risk_surface,
+            files_touched=files_touched,
+            declares_side_effect=declares_side_effect,
+            has_authored_test_spec=_gtfa_tests_section._has_authored_test_spec(ac),
+            resolved_destination=args.resolved_destination,
+            phase_deferral_path=args.phase_deferral_path,
+            location_kind=args.location_kind,
+            worktree=worktree,
+        )
+    except _gtfa_agents_map.UnassignedWorkAgentError as exc:
+        # Refuse BEFORE any file is written: no ticket, and no implemented_by
+        # back-reference into the AC that provoked the refusal.
+        print(_UNASSIGNED_WORK_AGENT_REFUSAL.format(ac_id=ac_id, exc=exc), file=sys.stderr)
+        return 1
     if refusal is not None:
         print(refusal, file=sys.stderr)
         return 1

@@ -40,6 +40,7 @@ SURFACE_COLORS: dict[str, str] = {
     "roadmap": "#fb923c",
     "glossary": "#94a3b8",
     "acs": "#f472b6",
+    "files": "#38bdf8",
 }
 
 # ---------------------------------------------------------------------------
@@ -87,6 +88,8 @@ HTML_TEMPLATE = """<!DOCTYPE html>
   #legend h4 { margin: 0 0 8px 0; font-size: 12px; color: #94a3b8; text-transform: uppercase; }
   .legend-row { display: flex; align-items: center; gap: 8px; margin: 4px 0; font-size: 12px; }
   .legend-dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
+  .legend-dot.missing-file-dot { background: transparent !important; border: 2px dashed #e2e8f0; box-sizing: border-box; }
+  .node circle.missing-file { stroke-dasharray: 4,3; fill-opacity: 0.35; }
   #tooltip { position: fixed; background: rgba(30,41,59,0.95); border: 1px solid #475569;
              border-radius: 4px; padding: 6px 10px; font-size: 12px; pointer-events: none;
              display: none; max-width: 260px; word-break: break-word; }
@@ -102,6 +105,18 @@ const DATA = __DATA_JSON__;
 
 const SURFACE_COLORS = __SURFACE_COLORS_JSON__;
 
+// ── Defence in depth: an edge whose source or target id is not a DATA.nodes
+// id (bad/legacy data) must never reach the adjacency build or forceLink --
+// both would throw ("node not found" / KeyError-shaped Set access). The
+// server-side assembler already guarantees this, but the page guards itself
+// too, in case bad data ever reaches it.
+const nodeIdSet = new Set(DATA.nodes.map(n => n.id));
+const safeEdges = DATA.edges.filter(e => {
+  const s = typeof e.source === 'object' ? e.source.id : e.source;
+  const t = typeof e.target === 'object' ? e.target.id : e.target;
+  return nodeIdSet.has(s) && nodeIdSet.has(t);
+});
+
 // ── Build legend ────────────────────────────────────────────────────────────
 const legendEl = document.getElementById('legend');
 const legendTitle = document.createElement('h4');
@@ -116,11 +131,18 @@ Object.entries(SURFACE_COLORS).forEach(([surface, color]) => {
                 + '<span>' + surface + '</span>';
   legendEl.appendChild(row);
 });
+if (DATA.nodes.some(d => d.missing)) {
+  const missingRow = document.createElement('div');
+  missingRow.className = 'legend-row';
+  missingRow.innerHTML = '<div class="legend-dot missing-file-dot"></div>'
+                        + '<span>missing file</span>';
+  legendEl.appendChild(missingRow);
+}
 
 // ── Compute degree for node sizing ──────────────────────────────────────────
 const degreeMap = {};
 DATA.nodes.forEach(n => { degreeMap[n.id] = 0; });
-DATA.edges.forEach(e => {
+safeEdges.forEach(e => {
   if (degreeMap[e.source] !== undefined) degreeMap[e.source]++;
   if (degreeMap[e.target] !== undefined) degreeMap[e.target]++;
 });
@@ -139,7 +161,7 @@ const width = window.innerWidth;
 const height = window.innerHeight;
 
 const simulation = d3.forceSimulation(DATA.nodes)
-  .force('link', d3.forceLink(DATA.edges)
+  .force('link', d3.forceLink(safeEdges)
     .id(d => d.id)
     .distance(80))
   .force('charge', d3.forceManyBody().strength(-180))
@@ -155,7 +177,7 @@ svg.call(d3.zoom().scaleExtent([0.1, 8]).on('zoom', event => {
 
 // ── Edges ────────────────────────────────────────────────────────────────────
 const link = g.append('g').selectAll('line')
-  .data(DATA.edges)
+  .data(safeEdges)
   .join('line')
     .attr('class', 'link')
     .attr('stroke', d => {
@@ -185,14 +207,16 @@ const node = g.append('g').selectAll('g')
 
 node.append('circle')
   .attr('r', d => rScale(d))
-  .attr('fill', d => d.color || '#94a3b8');
+  .attr('fill', d => d.color || '#94a3b8')
+  .classed('missing-file', d => d.missing);
 
 // ── Hover: dim non-neighbors ─────────────────────────────────────────────────
 const adjacency = {};
 DATA.nodes.forEach(n => { adjacency[n.id] = new Set([n.id]); });
-DATA.edges.forEach(e => {
+safeEdges.forEach(e => {
   const s = typeof e.source === 'object' ? e.source.id : e.source;
   const t = typeof e.target === 'object' ? e.target.id : e.target;
+  if (!adjacency[s] || !adjacency[t]) return;
   adjacency[s].add(t);
   adjacency[t].add(s);
 });
@@ -200,7 +224,7 @@ DATA.edges.forEach(e => {
 node
   .on('mouseover', (event, d) => {
     tooltip.style.display = 'block';
-    tooltip.textContent = d.title || d.id;
+    tooltip.textContent = (d.title || d.id) + (d.missing ? ' (missing)' : '');
     node.selectAll('circle').attr('opacity', n =>
       adjacency[d.id].has(n.id) ? 1 : 0.15);
     link.attr('stroke-opacity', e => {
@@ -264,6 +288,58 @@ _SURFACE_PRIORITY: dict[str, int] = {
 # ---------------------------------------------------------------------------
 
 
+def _dedup_nodes(node_records: list) -> dict:
+    """Deduplicate node records by ID, preferring the most-specific surface.
+
+    When the same node ID appears under multiple surfaces (e.g. an AC YAML
+    file under ``docs/acceptance-criteria/`` is walked by both the ``docs``
+    and ``acs`` surface traversals), the record with the highest
+    ``_SURFACE_PRIORITY`` wins so that the node is rendered in its correct
+    surface colour and legend slot.
+
+    Args:
+        node_records: Node records to deduplicate, in traversal order.
+
+    Returns:
+        Mapping of node id to the winning node record.
+    """
+    best: dict[str, object] = {}
+    for nr in node_records:
+        existing = best.get(nr.id)
+        existing_surface: str = getattr(existing, "surface", "")
+        if existing is None or _SURFACE_PRIORITY.get(nr.surface, 0) > _SURFACE_PRIORITY.get(
+            existing_surface, 0
+        ):
+            best[nr.id] = nr
+    return best
+
+
+def _node_dict(nr) -> dict:
+    """Build the JSON-serialisable dict for a single node record.
+
+    A ``files``-surface node also carries an explicit ``missing`` boolean
+    (KM-KGS-100b-2-ii), read via ``getattr`` so a node record produced before
+    ``NodeRecord.missing`` existed (no attribute at all, not even a False
+    default) degrades to present rather than raising.
+
+    Args:
+        nr: The winning node record for this id.
+
+    Returns:
+        The node's JSON-serialisable dict.
+    """
+    node = {
+        "id": nr.id,
+        "surface": nr.surface,
+        "title": nr.title,
+        "description": nr.description,
+        "color": SURFACE_COLORS.get(nr.surface, "#94a3b8"),
+    }
+    if nr.surface == "files":
+        node["missing"] = bool(getattr(nr, "missing", False))
+    return node
+
+
 def _assemble_graph(
     kq,
     project_root: Path | None = None,
@@ -271,11 +347,12 @@ def _assemble_graph(
 ) -> dict:
     """Assemble nodes and edges by delegating to knowledge_query._collect_all.
 
-    When the same node ID appears under multiple surfaces (e.g. an AC YAML
-    file under ``docs/acceptance-criteria/`` is walked by both the ``docs``
-    and ``acs`` surface traversals), the record with the highest
-    ``_SURFACE_PRIORITY`` wins so that the node is rendered in its correct
-    surface colour and legend slot.
+    The edge list is filtered against the final, POST-DEDUP node id set in
+    every branch (no restriction, one surface, several surfaces) so a
+    relationship whose far end is not on the page (KM-KGS-100b-2-i) is left
+    out instead of reaching the page unfiltered. The count left out and the
+    raw count handed in by ``_collect_all`` are always printed to stderr,
+    zero included.
 
     Returns:
         Dict with 'nodes' and 'edges' lists suitable for JSON serialisation.
@@ -286,38 +363,21 @@ def _assemble_graph(
 
     sf = surface_filter[0] if surface_filter and len(surface_filter) == 1 else None
     node_records, edge_records = kq._collect_all(project_root, paths_json, surface_filter=sf)
+    raw_edge_count = len(edge_records)
 
     if surface_filter and len(surface_filter) > 1:
         allowed = set(surface_filter)
         node_records = [n for n in node_records if n.surface in allowed]
-        kept_ids = {n.id for n in node_records}
-        edge_records = [e for e in edge_records if e.source_id in kept_ids and e.target_id in kept_ids]
 
-    # Deduplicate by node ID, preferring the most-specific surface label.
-    best: dict[str, object] = {}
-    for nr in node_records:
-        existing = best.get(nr.id)
-        if existing is None:
-            best[nr.id] = nr
-        else:
-            if _SURFACE_PRIORITY.get(nr.surface, 0) > _SURFACE_PRIORITY.get(existing.surface, 0):
-                best[nr.id] = nr
+    best = _dedup_nodes(node_records)
+    node_ids = set(best.keys())
+    kept_edges = [e for e in edge_records if e.source_id in node_ids and e.target_id in node_ids]
 
-    nodes = [
-        {
-            "id": nr.id,
-            "surface": nr.surface,
-            "title": nr.title,
-            "description": nr.description,
-            "color": SURFACE_COLORS.get(nr.surface, "#94a3b8"),
-        }
-        for nr in best.values()
-    ]
+    left_out = raw_edge_count - len(kept_edges)
+    print(f"Left out {left_out} of {raw_edge_count} relationships", file=sys.stderr)
 
-    edges = [
-        {"source": e.source_id, "target": e.target_id, "type": e.edge_type}
-        for e in edge_records
-    ]
+    nodes = [_node_dict(nr) for nr in best.values()]
+    edges = [{"source": e.source_id, "target": e.target_id, "type": e.edge_type} for e in kept_edges]
 
     return {"nodes": nodes, "edges": edges}
 
@@ -448,5 +508,20 @@ DECISION HISTORY
   surface legend (AC KM-KGS-100b-2). The acs surface was already emitted by
   knowledge_query._collect_all; only the colour mapping was absent.
   (#EPIC-ACCodeTraceabilityGraph/07)
+- 2026-09-25 09:10 [python-coder]: _assemble_graph() now filters DATA.edges against the
+  final, post-dedup node id set in all three branches (no restriction, one surface,
+  several surfaces), not only the multi-surface branch, and always prints
+  "Left out N of M relationships" to stderr, zero included. Added a JS-side defence
+  -in-depth guard (safeEdges filter, adjacency add guard) so a stray unknown edge id
+  can never reach d3.forceLink().id() or adjacency[t].add(s) even if bad data ever
+  reaches the page. (#TICKETLESS reason=ac-yaml-is-spec-no-ticket-file-KM-KGS-100b-2-i)
+- 2026-09-25 09:15 [python-coder]: Added a distinct "files" colour (#38bdf8) to
+  SURFACE_COLORS without changing any existing entry, and carried NodeRecord.missing
+  into DATA as an explicit true/false for every files-surface node (read via getattr
+  so a pre-KM-KGS-100d-4-ii node with no missing attribute at all degrades to
+  present). The D3 script now draws a missing file with a dashed, translucent stroke
+  (.classed('missing-file', d => d.missing)) that hover dimming and pin styling never
+  touch, adds a "missing file" legend row, and appends "(missing)" to the tooltip of a
+  missing node. (#TICKETLESS reason=ac-yaml-is-spec-no-ticket-file-KM-KGS-100b-2-ii)
 ====================================================================
 """

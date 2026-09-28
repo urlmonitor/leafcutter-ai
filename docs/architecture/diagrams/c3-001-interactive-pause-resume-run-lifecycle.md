@@ -6,7 +6,7 @@ diagram_type: state
 status: active
 flight_level: L3-Component
 created: 2026-07-21
-last_updated: 2026-07-21
+last_updated: 2026-09-14
 parent: docs/architecture/components/interactive-pause-resume-substrate.md
 source_ticket: tickets/00_inbox/TICKET-20260720-BO-2300a-3.md
 components:
@@ -136,3 +136,4 @@ See also: [Interactive Pause/Resume — Pause, Ask, Answer, Resume Sequence](c3-
 - [Interactive Pause/Resume — Pause, Ask, Answer, Resume Sequence](c3-002-interactive-pause-resume-sequence.md) — the companion sequence diagram.
 - [Interactive Pause/Resume Substrate — Container Overview](../components/interactive-pause-resume-substrate.md) — the parent L2 container.
 - [ADR-024 — Interactive Gates Pause and Persist Instead of Cancelling When Headless](../adrs/ADR-024-interactive-pause-resume.md) — the design of record.
+- [Plan-Feature Decision Gates — Where the Route Stops to Ask, and What Each Answer Costs](c3-008-plan-feature-decision-gate-sequence.md) — the different subject at the same substrate: which decisions `/plan-feature` stops at and what each of the three exits costs, rather than this diagram's `paused_awaiting_input` run-state machine.
