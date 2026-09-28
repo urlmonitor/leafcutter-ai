@@ -254,8 +254,7 @@
         },
         "db_connection_test": {
           "type": "string",
-          "description": "Connection string for the test database environment. Used in test setUp for DB-requiring tests.",
-          "default": "postgresql://trader:trader@localhost:5403/LIVE"
+          "description": "Connection string for the test database environment. Used in test setUp for DB-requiring tests. No default is shipped: a project must set its own address, e.g. postgresql://<user>:<password>@<host>:<port>/<database>."
         },
         "naming_pattern": {
           "type": "string",

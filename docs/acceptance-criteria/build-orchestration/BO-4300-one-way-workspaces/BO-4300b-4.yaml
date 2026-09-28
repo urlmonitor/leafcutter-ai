@@ -1,0 +1,123 @@
+id: BO-4300b-4
+title: "On Windows without permission to create links, the workspace is still fully ready"
+component: build-orchestration
+components:
+  - worktree_manager
+  - build_orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: critical
+roadmap_phase: phase_1
+change_target: code
+risk_surface: safety
+criteria: |
+  Given a Windows machine on which the user is not permitted to create symbolic
+    links,
+  When a workspace is requested,
+  Then it is answered ready,
+  And every installed tool and every protection setting in the workspace is an
+    ordinary file or folder, not a link,
+  And a commit of a known-bad file inside the workspace is rejected by its
+    protections,
+  And the answer and the workspace are the same as those produced for the same
+    request on a machine where links are permitted.
+depends_on: [BO-4300b]
+doc_links:
+- path: docs/analysis/2026-09-25-worktree-failure-modes.md
+  relationship: describes
+  status: exists
+- path: docs/analysis/2026-09-25-worktree-isolation-decision-memo.md
+  relationship: constrains
+  status: exists
+- path: docs/analysis/2026-09-25-worktree-migration-plan.md
+  relationship: describes
+  status: exists
+- path: docs/architecture/components/worktree-manager.md
+  relationship: describes
+  status: exists
+  relevance: Component page for the one maker; rewritten for clones under BO-4300a-4.
+- path: docs/architecture/adrs/ADR-031-worktree-quality-gate-guard.md
+  relationship: constrains
+  status: exists
+  relevance: Canary-execution probe model (section 1); its create-time gate (section 4) moves into the
+    maker.
+- path: docs/testing/test-angles.md
+  relationship: describes
+  status: exists
+  relevance: Angle taxonomy used by this record's test_spec.
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from:
+  ac_id: BO-4300a-1
+  contract: ensure with real install files, no links.
+package_surface: false
+it_requirements:
+- No link creation anywhere on the ensure path (decision 2); the build's shim installer must take its
+  copy path (scripts/build_helpers.py install_shims) and the readiness check asserts every install and
+  protection path is a regular file or folder, never a symlink or junction.
+- 'Proof on two arms: (1) a real Windows CI job without Developer Mode (a windows runner added to .github/workflows/ci.yml
+  running this test module) -- the migration plan asks for this for real; (2) on every platform, a run
+  in which symlink creation is denied to the maker process (e.g. an injected sitecustomize that makes
+  os.symlink raise), so the arm runs in the normal suite. A runner lacking arm (1) reports it as not run,
+  never as passed.'
+- Answers from the link-permitted and link-denied runs are compared after normalising paths, timestamps
+  and shas; they must be otherwise identical.
+- Proof runs the DEPLOYED maker -- the copy an install delivers, resolved through the shared test locator
+  delivered by BO-4300f-4 -- as a separate process against real temporary git repositories with a real
+  bare hub. No mock of git, no import of the maker module, no grep of its source (CLAUDE.md 'Gate / Workflow
+  ACs -- Verify Behaviorally, Not by Grep'); a test never falls back to the templates/ source copy.
+- 'Tests must not spawn the package''s own scripts/build.py (CLAUDE.md ''Tests must not spawn their own
+  build.py''): the deployed maker comes from the shared deployed layout, and fixture projects carry a
+  minimal stub build entry point that installs a real, rejecting hook in well under a second. A test that
+  must mutate the package and build its own copy says so and justifies it in its ticket.'
+- All temporary projects, hubs and workspaces live under the test's temp directory and run git with an
+  isolated global and system config; afterwards the developer's own repository's branches, registered
+  worktrees and local git config are unchanged (BO-4300f-4-i, F14, KI-TQ-012).
+test_required: true
+test_spec:
+- name: test_ensure_is_ready_when_symlinks_are_denied
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: criterion
+  description: With symlink creation denied, ensure answers ok, exit 0.
+- name: test_install_and_protection_paths_are_regular_files
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: real_artifact
+  description: Every path under the workspace's install and its .pre-commit-config.yaml is a regular file/folder
+    (no symlink, no junction).
+- name: test_known_bad_commit_is_rejected_when_symlinks_are_denied
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: criterion
+  description: A commit of the known-bad file inside that workspace is rejected by the installed hook.
+- name: test_answers_with_and_without_link_permission_are_equivalent
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: boundary
+  description: After normalising paths, timestamps and shas, the two answers are equal.
+test_rationale: Every assertion is made on what the deployed maker actually did to real repositories --
+  its one JSON answer, its exit code, and the state of the workspace, the hub and the main copy afterwards.
+  A direct-import unit test would pass while the deployed copy is stale or mis-deployed (F13), and a git
+  mock cannot show the half-made and occupied states this family exists to handle.
+origin_agent: business-analyst
+created: 2026-09-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260927-BO-4300b-4.md
+notes: |
+  F5's sandbox run: without Developer Mode, WinError 1314 on both links, bootstrap failed and
+  left a half-made worktree. Decision 2 (real install files, never a symlink) is the answer;
+  this record is its observable. The migration plan asks for this to run for real on a Windows
+  runner without Developer Mode, not only with a simulated failure.
+target_epic: EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace

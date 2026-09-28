@@ -173,6 +173,7 @@ import tempfile
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
+from _plan_feature_harness_defaults import plan_feature_default_label_responses
 
 logger = logging.getLogger(__name__)
 
@@ -888,7 +889,6 @@ _CONTEXT_BUNDLE_DEFAULT_TEXT = (
     "\n\n<!-- CACHE_BREAKPOINT -->\n\nBATCH ACS (stub)\n\nPRIOR TESTS (stub)"
 )
 
-
 def _find_ancestor_containing(start: Path, relative_path: Path) -> Path | None:
     """Walk upward from `start` looking for an ancestor containing `relative_path`.
 
@@ -906,20 +906,18 @@ def _find_ancestor_containing(start: Path, relative_path: Path) -> Path | None:
 def _default_label_responses_for_script(script_path: Path) -> dict[str, Any]:
     """Return baseline label_responses every caller of `script_path` implicitly needs.
 
-    Currently only fast-lane-ship.js has unconditional gates (BO-2400f-12's
-    "check-producibility" and the pre-existing "fastlane-context-bundle"
-    assembly) that this supplies real, schema-conforming defaults for so
-    every existing and future caller is unaffected without knowing about
-    them.
+    fast-lane-ship.js has unconditional gates (BO-2400f-12's
+    "check-producibility" and "fastlane-context-bundle") this supplies real
+    defaults for. plan-feature.js's own two ('worktree-setup' /
+    'resolve-worktree-setup-script-path', BO-1500a-5-i) are delegated to
+    _plan_feature_harness_defaults.py (imported above; see its docstring),
+    which returns `{}` for any other script.
 
-    A test that wants to exercise a refusal path still can: caller-supplied
-    label_responses always take precedence over this default (see
-    run_workflow_under_e2()'s merge order), so an explicit override for the
-    same label replaces it entirely.
-
-    Returns an empty dict for any other script. plan-feature.js's own
-    workspace-setup permission gate is handled separately, via `args` rather
-    than a label — see _default_args_for_script() (ACD-2100b-5).
+    Caller-supplied label_responses always take precedence over any default
+    here (see run_workflow_under_e2()'s merge order), so a test can still
+    exercise a refusal path by overriding the same label. plan-feature.js's
+    workspace-setup PERMISSION gate (distinct, earlier) is handled via
+    `args`, not a label — see _default_args_for_script() (ACD-2100b-5).
     """
     if script_path.name == _FAST_LANE_SHIP_SCRIPT_NAME:
         return {
@@ -935,7 +933,7 @@ def _default_label_responses_for_script(script_path: Path) -> dict[str, Any]:
             },
         }
 
-    return {}
+    return plan_feature_default_label_responses(script_path)
 
 
 def _default_args_for_script(script_path: Path) -> dict[str, Any]:

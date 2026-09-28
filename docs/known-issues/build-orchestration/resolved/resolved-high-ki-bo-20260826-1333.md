@@ -16,7 +16,7 @@ related_docs:
 # KI-BO-20260826-1333 — Nine of a file's ten tests asserted only that strings were present in the source they covered — so the AC looked comprehensively covered because coverage was measured by count
 
 > One known issue, split out of `docs/known-issues/build-orchestration.md` on
-> 2026-09-14. Index: [build-orchestration.md](../build-orchestration.md).
+> 2026-09-14. Index: [build-orchestration.md](../../build-orchestration.md).
 > Filename severity is the three-level index bucket (`high`); the
 > original grading is the `**Severity:**` line below, unchanged.
 

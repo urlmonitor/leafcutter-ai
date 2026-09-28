@@ -1,0 +1,56 @@
+id: ACD-2500c
+components:
+  - ac_driven_dev
+  - testing_quality
+  - build_orchestration
+readiness: approved
+priority: high
+title: "Test designs are written by someone who has read the code"
+component: ac-driven-dev
+level: L1
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  Test designs come from a step that can see the code under test.
+
+  A step with access to the code and existing tests turns the planner's test intent
+  into a concrete test design, so the tests written from it are grounded in what the
+  code actually does. This is where future guidance on which wrong implementations a
+  test must catch will be recorded.
+depends_on:
+  - ACD-2500
+  - ACD-2500b
+doc_links:
+  - path: docs/analysis/2026-09-25-test-writers-prove-failure-not-discrimination.md
+    relationship: related
+    status: exists
+    relevance: >-
+      The planned must_catch field lands in the test design this L1 produces. Keep
+      the design shape open to that addition.
+assigned_agent: null
+delivers_to: null
+expects_from: null
+origin_agent: product-owner
+created: 2026-09-25
+amended_by: []
+superseded_by: null
+covered_by:
+  - ACD-2500c-1
+  - ACD-2500c-2
+  - ACD-2500c-3
+  - ACD-2500c-4
+  - ACD-2500c-5
+implemented_by: []
+change_target:
+  - prompt
+  - pipeline
+risk_surface: contract_boundary
+documentation_triggers:
+  - sequence-diagram
+  - component-diagram
+notes: |
+  DECIDED (user, PO gate 2026-09-25): a code-aware planning step BEFORE the build
+  (test-planner with source access) fills the test design. The test writer at build
+  time consumes it; it does not author it. See ACD-2500 notes for the ACD-1600c /
+  check-ac-schema readiness conflict this must resolve.

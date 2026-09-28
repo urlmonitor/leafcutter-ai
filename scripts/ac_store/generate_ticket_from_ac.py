@@ -135,6 +135,7 @@ if TYPE_CHECKING:  # pragma: no cover - a static declaration, never executed
     from . import _gtfa_impl_py  # noqa: F401
     from . import _gtfa_implemented_by  # noqa: F401
     from . import _gtfa_paths  # noqa: F401
+    from . import _gtfa_phase_agent  # noqa: F401
     from . import _gtfa_phases  # noqa: F401
     from . import _gtfa_report  # noqa: F401
     from . import _gtfa_seams  # noqa: F401

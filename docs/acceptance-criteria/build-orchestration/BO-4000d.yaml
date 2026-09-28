@@ -1,0 +1,147 @@
+id: BO-4000d
+title: "Repository facts that come back wrapped in a second reply envelope are still read, so a fact the helper reported correctly never counts as unavailable"
+component: build-orchestration
+components:
+  - build_orchestration
+  - worktree_manager
+level: L3
+status: active
+req_status: draft
+work_status: done
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+change_target:
+  - code
+  - pipeline
+risk_surface: contract_boundary
+package_surface: false
+criteria: |
+  Given /build-feature is started for EPIC-TruthfulProjectRecord and reaches the
+    worktree step of Phase 0
+  And `scripts/worktree_repo_facts.py` returns correct JSON for both the
+    `worktree-facts-resolved` and the `worktree-base` reads
+  And the reporting agent that relays those reads answers one level too deep — the
+    value it puts in the envelope's `output` field is itself a complete envelope
+    `{"output": "<raw stdout>", "exit_code": 0}` rather than the raw stdout
+  When the workflow reads those repository facts
+  Then it obtains the same facts object it would have obtained from the raw stdout —
+    `worktree_base` is present for the base read, and `exists`, `is_linked_worktree`,
+    `is_main_checkout` and `same_repository` are present for a facts read
+  And the run proceeds past the worktree step on those facts
+  And the bug symptom ("Every /build-feature epic run aborts in Phase 0 with
+    abort_reason 'worktree-base-unavailable' and builds nothing, although
+    scripts/worktree_repo_facts.py returns correct JSON. Reproduced twice on
+    2026-09-25 (runs wf_6d6f8dda-97e and wf_f898fd1a-412) against
+    EPIC-TruthfulProjectRecord: both the worktree-facts-resolved and worktree-base
+    steps succeeded, but the workflow read no fields from them.") must not occur.
+
+  Given the same worktree step
+  And the reporting agent answers at the expected depth, so the envelope's `output`
+    field holds the helper's raw stdout
+  When the workflow reads those repository facts
+  Then the facts object is returned unchanged, with no second parse applied to it
+  And a facts object that legitimately carries its own `output` or `exit_code`-named
+    field is not mistaken for an envelope and stripped.
+
+  Given the same worktree step
+  And the value relayed for a read is not parseable as JSON at all, or the relayed
+    reply reports a non-zero exit code, or no reply comes back
+  When the workflow reads those repository facts
+  Then no facts object is produced
+  And the run refuses with the existing worktree-undetermined abort rather than
+    guessing a worktree base or a worktree location
+  And no phase agent is dispatched.
+depends_on:
+  - BO-4000
+doc_links:
+  - path: templates/workflows-js/build-feature.js
+    relationship: implements
+    status: exists
+    relevance: "repoFactsCall — the single seam through which every repository fact reaches the worktree step, and the site of the single-parse defect."
+  - path: templates/scripts/worktree_repo_facts.py
+    relationship: describes
+    status: exists
+    relevance: "The deterministic helper whose correct JSON was discarded by the caller; it is unchanged by this record."
+  - path: unit_tests/_workflow_engine_harness.py
+    relationship: specifies
+    status: exists
+    relevance: "The harness the reachability proof must run through, so the fix is proven at the workflow's own top-level body rather than on an extracted helper."
+  - path: docs/architecture/adrs/ADR-030-dual-engine-workflow-support.md
+    relationship: describes
+    status: exists
+    relevance: "Why repository facts reach the workflow body only as schema-validated agent results, which is what makes the envelope depth a real variable."
+  - path: docs/known-issues/build-orchestration/open-high-ki-bo-20260921-worktree-base-resolver-defaults-to-cwd.md
+    relationship: describes
+    status: exists
+    relevance: "The adjacent worktree-base-unavailable entry; this record covers the envelope-depth cause, not the resolver's own output."
+assigned_agent: python-coder
+estimated_complexity: XS
+it_requirements:
+  - "The unwrapping happens inside repoFactsCall, after the single existing JSON.parse of the envelope's `output`. When the parsed value is itself an envelope — an object carrying a string `output` field alongside an `exit_code` field — parse that inner `output` once more and return the result. One extra level only; no unbounded unwrap loop."
+  - "A parsed value that is not an envelope of that shape is returned exactly as parsed. The detection is structural (a string `output` AND an `exit_code` present), never a guess from the value's size or from which read produced it."
+  - "The existing guard is preserved end to end: a missing reply, a non-string `output`, a non-zero `exit_code`, or an inner value that does not parse still yields null, and every caller still refuses with its worktree-undetermined abort rather than substituting a default."
+  - "templates/workflows-js/build-feature.js is already over the .js size limit (see the BO-3900 ratchet skip). The change must not increase the file's line count — fold it into the existing try/return line rather than adding a new block."
+  - "Canonical source is templates/workflows-js/build-feature.js. The deployed copies under .claude/workflows/ and .leafcutter/workflows/ are regenerated by 'python scripts/build.py' and are never hand-edited (ADR-001)."
+delivers_to: null
+expects_from:
+  ac_id: BO-4000
+  contract: "The schema-validated repository-facts result shape BO-4000 defines — { path, exists, is_git_toplevel, is_linked_worktree, is_main_checkout, same_repository, branch } for a facts read, and { worktree_base } for the base read — as the value repoFactsCall must return to its callers."
+test_required: true
+test_spec:
+  - name: test_double_wrapped_facts_envelope_still_yields_the_facts_object
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "Incident replay: with the status-checker stub returning an envelope whose output field is itself an envelope, the worktree step reads worktree_base and the resolved-worktree facts and does not abort with worktree-base-unavailable."
+  - name: test_plain_facts_envelope_is_parsed_once_and_returned_unchanged
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: "Paired acceptable input: with the stub answering at the expected depth the same facts object is obtained, and a facts payload carrying its own output-named field is not stripped by a second parse."
+  - name: test_unparseable_or_failed_facts_read_still_refuses_without_guessing
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: "Non-JSON output, a non-zero exit_code, and no reply at all each leave the run refusing with the worktree-undetermined abort and no phase agent dispatched."
+  - name: test_facts_envelope_unwrapping_is_reachable_from_the_workflow_top_level_body
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: reachability
+    surface_invoked: templates/workflows-js/build-feature.js
+    description: "All cases are driven through _workflow_engine_harness.py running build-feature.js's own top-level body, not against an extracted copy of repoFactsCall."
+test_rationale: |
+  The helper was already correct and its own tests were already green — that is exactly
+  why the incident was invisible. The defect lives only in the caller's reading of the
+  reply, so a test of worktree_repo_facts.py proves nothing here, and a test of an
+  extracted parse helper proves only that the copy under test unwraps. What has to be
+  shown is that build-feature's own body, given the observed double-wrapped reply,
+  reaches the worktree decision instead of aborting. That is a dispatch fact, visible
+  only through _workflow_engine_harness.py. The failure entry is paired with the
+  criterion entry deliberately: the cheapest wrong fix is to unwrap whatever it can and
+  fall back to a default base, which would turn this refusal into a silent guess.
+origin_agent: BrainCandy
+created: 2026-09-25
+amended_by: []
+superseded_by: null
+covered_by:
+  - unit_tests/workflows/test_bo4000d_facts_envelope_depth.py
+implemented_by: []
+notes: |
+  Authored by /quick-fix. Root cause: The status-checker agent sometimes returns its reply nested one level too deep: the JSON it puts in the envelope's `output` field is itself a complete {"output": "<raw stdout>", "exit_code": 0} envelope rather than the raw stdout. repoFactsCall parses r.output once, gets {output, exit_code} instead of the facts object, so base.worktree_base and rf.exists are undefined and every caller treats the facts as unavailable. Fix: after parsing, when the parsed value is itself an envelope (a string `output` field alongside an `exit_code`), parse that inner `output` once more and return the result; a genuine facts object is returned unchanged, and unparseable input still returns null so the guard still refuses rather than guessing. Keep the change within the existing line count: templates/workflows-js/build-feature.js is already over the .js size limit, so it must not grow..
+
+  NAMED MUTATIONS (each turns only this record's tests red):
+    M1 — parse the envelope's output exactly once (the incident behaviour). Caught by
+         test_double_wrapped_facts_envelope_still_yields_the_facts_object.
+    M2 — always parse twice. Caught by
+         test_plain_facts_envelope_is_parsed_once_and_returned_unchanged.
+    M3 — on an unparseable or failed read, fall back to a default worktree base instead
+         of returning null. Caught by
+         test_unparseable_or_failed_facts_read_still_refuses_without_guessing.
+
+  This record does not change worktree_repo_facts.py, and it does not change which facts
+  the worktree step demands. Only the caller's reading of the relayed reply changes.

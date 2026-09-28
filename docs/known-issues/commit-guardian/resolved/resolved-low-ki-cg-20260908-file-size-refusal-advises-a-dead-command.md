@@ -16,7 +16,7 @@ related_docs:
 # KI-CG-20260908-file-size-refusal-advises-a-dead-command — the only remediation the live file-size gate offers points at a slash command whose own first step runs a script that does not exist
 
 > One known issue, split out of `docs/known-issues/commit-guardian.md` on
-> 2026-09-14. Index: [commit-guardian.md](../commit-guardian.md).
+> 2026-09-14. Index: [commit-guardian.md](../../commit-guardian.md).
 > Filename severity is the three-level index bucket (`low`); the
 > original grading is the `**Severity:**` line below, unchanged.
 

@@ -1,0 +1,88 @@
+id: ACS-100i-7-ii
+components:
+  - ac_store
+title: "The package-surface spec validator walks a directory it is given and never reports success for a run that examined no records"
+component: ac-store
+level: L3
+status: active
+req_status: draft
+work_status: done
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a directory holding, inside a nested feature folder, one record that
+    declares a package surface with a complete implementation spec and one that
+    declares a package surface with implementation requirements written as a
+    list of strings,
+  When that directory is passed to the package-surface spec validator
+    (scripts/ac_store/validate_ac.py),
+  Then the directory is walked recursively, the second record is refused by
+    file path, and the run exits non-zero.
+
+  And given an empty directory, or a directory whose only YAML file is
+    `index.yaml` (the component registry, not an acceptance criterion),
+  When it is passed to the same validator,
+  Then the run exits non-zero and says that no records were examined.
+
+  And given a single valid record passed by file path,
+  When it is validated,
+  Then the run exits 0, exactly as before.
+
+  And the bug symptom ("No YAML files to validate." printed with exit 0 after
+    checking nothing) must not occur.
+depends_on: [ACS-100i-7]
+doc_links:
+  - path: scripts/ac_store/validate_ac.py
+    relationship: modifies
+    status: exists
+  - path: docs/known-issues/ac-store/open-high-ki-acs-20260925-validate-ac-bare-directory-exits-0.md
+    relationship: describes
+    status: exists
+    relevance: "The KI-ACS-001 no-op, fixed only in validate_ac_schema.py, survived in its sibling validate_ac.py. ACS-100i-7-i's third scenario states the rule; this record holds the sibling validator to it."
+  - path: scripts/ac_store/validate_ac_schema.py
+    relationship: related
+    status: exists
+    relevance: "The fixed pattern mirrored here: recursive directory walk skipping index.yaml, and a zero-files run exits non-zero."
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: ACS-100i-7
+  contract: "The whole-store pass of the package-surface rule, which must be a real pass and not an empty one in every validator that enforces it."
+origin_agent: BrainCandy
+created: 2026-09-25
+amended_by: []
+superseded_by: null
+covered_by:
+  - "unit_tests/ac_store/test_validate_ac_walks_directories.py"
+implemented_by:
+  - scripts/ac_store/validate_ac.py
+change_target: code
+risk_surface: internal
+test_spec:
+  - name: test_directory_with_nested_invalid_record_is_refused
+    target_dir: unit_tests/ac_store
+    framework: pytest
+    type: unit
+    description: "A directory holding one valid and one invalid package-surface record in a nested feature folder is walked; the invalid record is reported by path and the exit is non-zero."
+  - name: test_empty_directory_exits_non_zero
+    target_dir: unit_tests/ac_store
+    framework: pytest
+    type: unit
+    description: "An empty directory resolves to zero records and the run exits non-zero."
+  - name: test_directory_with_only_index_yaml_exits_non_zero
+    target_dir: unit_tests/ac_store
+    framework: pytest
+    type: unit
+    description: "A directory whose only YAML is index.yaml resolves to zero records (index.yaml is skipped) and exits non-zero."
+  - name: test_single_valid_file_exits_zero
+    target_dir: unit_tests/ac_store
+    framework: pytest
+    type: unit
+    description: "A single valid record passed by file path still exits 0."
+notes: |
+  L3 technical constraint rather than a new L2: ACS-100i sits at its overridden
+  cap of 8 L2 children, and the behaviour is a boundary condition on the
+  whole-store pass ACS-100i-7 already specifies (ACS-100i-7-i scenario 3), applied
+  to the second validator that enforces the package-surface rule.

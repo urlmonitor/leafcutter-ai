@@ -101,7 +101,8 @@ created: 2026-09-21
 amended_by: []
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260923-BO-4100e-3.md
 notes: >-
   KI-BO-20260831-1331 records that the symptom READS AS store-wide corruption, and the
   misdiagnosis is a distinct harm: it sends the operator to repair the shared record, which

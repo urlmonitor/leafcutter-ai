@@ -1,0 +1,68 @@
+id: BO-4300e-5
+title: "How-to: clearing a workspace by hand, and authorising the loss of unsent work"
+component: build-orchestration
+components:
+  - worktree_manager
+  - build_orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: critical
+roadmap_phase: phase_1
+change_target: docs
+risk_surface: internal
+criteria: |
+  Given a person wants to clear away a workspace,
+  When they open the how-to guide for clearing one,
+  Then it shows how to find the workspace for a piece of work and how to ask for
+    it to be cleared,
+  And it shows what a refusal lists -- unpushed commits and uncommitted files --
+    and how to deliver that work first,
+  And it shows how to authorise, up front in the request, the loss of work that
+    will not be delivered,
+  And it gives no manual deletion steps that bypass the workspace maker.
+depends_on: [BO-4300e, BO-4300e-3]
+doc_links:
+- path: docs/analysis/2026-09-25-worktree-component-proposal.md
+  relationship: describes
+  status: exists
+- path: docs/analysis/2026-09-25-worktree-creation-consolidation.md
+  relationship: describes
+  status: exists
+- path: docs/how-to/clear-a-workspace.md
+  relationship: describes
+  status: planned
+- path: docs/architecture/components/worktree-manager.md
+  relationship: describes
+  status: exists
+  relevance: Component page for the one maker; rewritten for clones under BO-4300a-4.
+assigned_agent: documentation-expert
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: BO-4300e-3
+  contract: remove CLI including the up-front discard authorisation argument.
+package_surface: false
+it_requirements:
+- 'Frontmatter per the project doc conventions (title, description, type, status, created, last_updated,
+  components: [worktree_manager, build_orchestration]); must pass the doc-related pre-commit hooks and
+  be reachable from docs/INDEX.md via the build''s doc index.'
+- Commands shown are exactly the deployed maker's CLI as built (BO-4300a-1 / BO-4300c-2); no hand-written
+  alternative recipe, no symlink or copy steps.
+- 'Location: docs/how-to/clear-a-workspace.md; linked from get-a-workspace.md. Documents locate, remove,
+  the UNSENT_WORK refusal lists, delivering work first, and the up-front discard authorisation exactly
+  as built (Q8 open until then -- do not guess the mechanism).'
+test_required: false
+origin_agent: business-analyst
+created: 2026-09-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260927-BO-4300e-5.md
+notes: |
+  documentation_trigger how-to on BO-4300e. The authorisation mechanism is OPEN (Q8); the page
+  documents whatever IT PO and the user settle.
+target_epic: EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace

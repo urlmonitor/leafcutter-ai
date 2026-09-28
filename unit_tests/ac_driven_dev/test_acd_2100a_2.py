@@ -144,6 +144,12 @@ def _worktree_registered(repo_dir: Path, worktree_path: Path) -> bool:
 class _IsolatedNonRepoScenarioTestCase(unittest.TestCase):
     """Shared setUp: a real, non-repository base directory under system tmp."""
 
+    # Assigned dynamically in each subclass's own setUp() (never here in the
+    # base class), but referenced by `_run_script` below -- declared here so
+    # mypy recognises it as a real attribute of the base class rather than
+    # reporting attr-defined.
+    _script_copy: Path
+
     def setUp(self) -> None:
         self._base_dir = Path(tempfile.mkdtemp(prefix="acd2100a2-"))
         self.addCleanup(shutil.rmtree, self._base_dir, ignore_errors=True)

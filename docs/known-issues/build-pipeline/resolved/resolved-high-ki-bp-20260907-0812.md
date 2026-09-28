@@ -16,7 +16,7 @@ related_docs:
 # KI-BP-20260907-0812 — `generate_product_truth.py` builds index paths with the platform separator, so on Windows the validator can never pass and every commit touching an AC YAML is blocked
 
 > One known issue, split out of `docs/known-issues/build-pipeline.md` on
-> 2026-09-14. Index: [build-pipeline.md](../build-pipeline.md).
+> 2026-09-14. Index: [build-pipeline.md](../../build-pipeline.md).
 > Filename severity is the three-level index bucket (`high`); the
 > original grading is the `**Severity:**` line below, unchanged.
 

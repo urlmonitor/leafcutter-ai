@@ -1,0 +1,85 @@
+id: BO-4300a-3
+title: "How-to: getting a workspace, for agents and people alike"
+component: build-orchestration
+components:
+  - worktree_manager
+  - build_orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: critical
+roadmap_phase: phase_1
+change_target: docs
+risk_surface: internal
+criteria: |
+  Given an agent or a person needs a workspace to work in,
+  When they open the how-to guide for getting one,
+  Then it shows the single way to request a workspace, and that the same request
+    works from the project's top folder, the folder above it and inside another
+    workspace,
+  And it shows how to read a ready answer and where the workspace's location is
+    given in it,
+  And it shows what to do on a refusal: stop, remedy the cause the refusal
+    names, and ask again,
+  And it states that asking again for the same work is always safe,
+  And it gives no alternative step-by-step recipe for making, linking or setting
+    up a workspace by hand.
+depends_on: [BO-4300a, BO-4300a-1]
+doc_links:
+- path: docs/analysis/2026-09-25-worktree-creation-consolidation.md
+  relationship: describes
+  status: exists
+- path: docs/analysis/2026-09-25-worktree-component-proposal.md
+  relationship: describes
+  status: exists
+- path: docs/how-to/get-a-workspace.md
+  relationship: describes
+  status: planned
+- path: docs/architecture/components/worktree-manager.md
+  relationship: describes
+  status: exists
+  relevance: Component page for the one maker; rewritten for clones under BO-4300a-4.
+assigned_agent: documentation-expert
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: BO-4300a-1
+  contract: 'CLI of the one maker. Deployed at <install-root>/scripts/worktree.py (source templates/scripts/worktree.py;
+    the name is provisional until this AC is built, after which that path is the contract every caller
+    names). Stdlib-only Python, run as `python <absolute path> <verb> ...` from ANY cwd. Verbs: `ensure
+    --kind {ticket|feature|ac|fastlane|epic|scratch} --slug <work identity> [--repo-root P] [--allow-stale-base]
+    [--config-path P]` -- the only creating verb, idempotent, always fetch + build + canary; `locate (--kind
+    K --slug S | --path P | --branch B) [--repo-root P]` -- read-only; `list [--repo-root P]` -- read-only
+    scan of the landing place''s markers, never git worktree list; `verify --path P [--kind K --slug S]
+    [--repo-root P]` -- read-only readiness re-check; `remove --path P [<up-front discard authorisation;
+    flag or token, Q8 open>] [--delete-remote-branch] [--repo-root P]`; `where` -- prints the maker''s
+    own absolute path. There is no --reset-existing (BO-4300d-4 resumes), no --no-bootstrap (decision
+    2), and no flag that skips a readiness ingredient.'
+package_surface: false
+it_requirements:
+- 'Frontmatter per the project doc conventions (title, description, type, status, created, last_updated,
+  components: [worktree_manager, build_orchestration]); must pass the doc-related pre-commit hooks and
+  be reachable from docs/INDEX.md via the build''s doc index.'
+- Commands shown are exactly the deployed maker's CLI as built (BO-4300a-1 / BO-4300c-2); no hand-written
+  alternative recipe, no symlink or copy steps.
+- 'Location: docs/how-to/get-a-workspace.md. It is the single page every retired recipe points to (BO-4300f-2-ia/-ib),
+  and it links to docs/how-to/clear-a-workspace.md (BO-4300e-5) and to the answer reference (BO-4300a-5)
+  rather than repeating them.'
+- 'Q4 (naming) and Q5 (adopter landing place) may still be open when this is written: describe the location
+  as ''the workspace_path in the ready answer'', never as a hard-coded pattern, so the page stays true
+  under either decision.'
+test_required: false
+origin_agent: business-analyst
+created: 2026-09-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260927-BO-4300a-3.md
+notes: |
+  documentation_trigger how-to on BO-4300a. This is the single page every retired recipe
+  points to under BO-4300f-2-i. Clearing a workspace by hand is BO-4300e-5's how-to, which
+  this page links to rather than repeats.
+target_epic: EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace

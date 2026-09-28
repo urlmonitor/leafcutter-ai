@@ -99,7 +99,8 @@ created: 2026-09-21
 amended_by: []
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260923-BO-4100c-2.md
 notes: >-
   Naming the items is part of the refusal and not a nicety: a bare refusal is
   indistinguishable from a false positive, so the operator's only route forward is to

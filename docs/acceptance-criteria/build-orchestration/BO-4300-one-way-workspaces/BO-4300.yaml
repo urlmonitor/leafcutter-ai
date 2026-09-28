@@ -1,0 +1,164 @@
+id: BO-4300
+title: "Every piece of separate work gets its workspace one dependable way"
+component: build-orchestration
+components:
+  - worktree_manager
+  - build_orchestration
+level: L0
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: critical
+roadmap_phase: phase_1
+risk_surface: safety
+criteria: |
+  One way to get a workspace -- the same result, from anywhere, every time.
+
+  Whenever automation, or you, needs a separate place to work, there is exactly one
+  way to get it, and it behaves the same whichever workflow, skill or agent asks,
+  from whichever folder, on whichever machine. You either receive a workspace that is
+  completely ready -- its own line of work, started from the latest shared work, with
+  its protections switched on -- or you are told plainly why not, and nothing carries
+  on without one: work never quietly lands on the shared main line instead. Asking
+  again is always safe, finding and clearing workspaces goes through the same door,
+  and the scattered older ways of doing this are gone, so nothing is left to drift
+  out of step.
+depends_on: []
+doc_links:
+  - path: docs/analysis/2026-09-25-worktree-creation-consolidation.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      Origin. Inventory of the seven recipes, the 2026-09-25 /plan-feature incident that
+      wrote ACs onto main, and section 8 "Decisions (2026-09-25)".
+  - path: docs/analysis/2026-09-25-worktree-isolation-decision-memo.md
+    relationship: constrains
+    status: exists
+    relevance: >-
+      Accepted decisions 1 and 2 (per-feature clones; real install files, never a symlink)
+      and the consequences for the one script's contract.
+  - path: docs/analysis/2026-09-25-worktree-component-proposal.md
+    relationship: related
+    status: exists
+  - path: docs/analysis/2026-09-25-worktree-failure-modes.md
+    relationship: related
+    status: exists
+  - path: docs/analysis/2026-09-25-worktree-migration-plan.md
+    relationship: related
+    status: exists
+  - path: docs/architecture/adrs/ADR-018-agent-isolation-topology.md
+    relationship: related
+    status: exists
+  - path: docs/architecture/components/worktree-manager.md
+    relationship: modifies
+    status: exists
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-09-25
+amended_by: []
+superseded_by: null
+covered_by: [BO-4300a, BO-4300b, BO-4300c, BO-4300d, BO-4300e, BO-4300f]
+implemented_by: []
+notes: |
+  ORIGIN. The user, 2026-09-25: "I only want to have ONE script that creates worktrees
+  and works 100% of times - no matter in which workflow or skill we use it. It should
+  really be a standalone component we can use." and "we need a proper script that
+  always creates it the same way. That way we can also tell agents to run it in a
+  skill." Prompted by a /plan-feature run that wrote acceptance criteria straight onto
+  main because the create step was never run and the workflow read "no workspace" as a
+  normal outcome (consolidation analysis, section 1).
+
+  FIXED DECISIONS (2026-09-25, user) -- BA and IT PO must not reopen them:
+  1. Isolation is per-feature CLONES (hardlinked local-path clone of the main checkout,
+     origin re-pointed at the hub), not git worktrees. The landing folder keeps the name
+     worktrees/<slug>.
+  2. Each workspace gets REAL install files (the build run inside it), never a
+     symlinked install.
+  3. Every kind of workspace branches from origin/main after a fetch.
+  4. One standalone script, always the same behaviour, run by agents from a skill;
+     workflows receive its result. Creation is never delegated as free-form shell work.
+
+  STILL OPEN -- framed as intent in the L1s where the customer feels them, NOT decided:
+  - Q4 one naming scheme (BO-4300a states the intent: the same piece of work is always
+    recognised as the same workspace; the scheme itself is open).
+  - Q5 where adopter-project workspaces live (BO-4300b: a predictable place per project;
+    which place is open).
+  - Q6 whether the package repository should carry its own stale install copy at all
+    (implementation detail; relevant to BO-4300b's "the right project is found").
+  - Q8 a confirmation token for removal (BO-4300e: authorisation is given up front, not
+    asked interactively; the mechanism is open).
+
+  DECIDED AT THE BA GATE (2026-09-25, user):
+  - Q9 an existing line of work with unmerged commits is RESUMED (BO-4300d-4).
+  - Q10 the cut-over never retires a workspace that holds unsent work (BO-4300f-3).
+  - BO-4100e-4 covers only leftovers not identifiable as the requested work; a half-made
+    copy of the same work is completed (BO-4300d-2). IT PO amends BO-4100e-4's wording.
+
+  DECIDED AT THE FINAL GATE (2026-09-25, user):
+  - A newly started line starts at the fetched origin/main tip; a resumed line keeps every
+    commit it has on the hub and is never reset or rebased (BO-4300c-1, BO-4300d-4).
+  - Comparison copies (kind scratch) do not need the canary; it is reported 'n/a' (BO-4300e-4).
+  - BO-4300a-1-ib's wording (split out by IT PO) is accepted.
+  - Priority: critical.
+
+  FOLLOW-UPS NOT COVERED BY THIS TREE (every L1 is at its child cap; each needs its own
+  /plan-feature or ticket):
+  - ADR-018 status Proposed -> Accepted for per-feature clones; ADR-031 sections 4/5 (create-time
+    gate in _bootstrap, three-script parity) go stale and need an update (adr-author).
+  - TICKET-20260923-BO-4100e-4.md was written against BO-4100e-4's old wording; re-check it.
+  - A Windows CI job so BO-4300b-4 (no symlink permission) and BO-4300e-2-i (long paths) run
+    somewhere other than a developer machine.
+  - The rest of the BO-4100e family still names setup_ticket_worktree.py / list_workspaces.py;
+    reconcile with the maker's list verb.
+  - commit_guardian declares a known-bad canary input only for the pre-commit stage. Known-bad
+    inputs for the commit-msg and post-merge stages (needed by BO-4300c-1-ii) are a
+    commit_guardian change and need their own AC in that namespace.
+  - The BO-3900-PATH-HELPERS block is a marker convention with no build inliner and no parity
+    test, and its copies have already drifted. Move it onto the inliner BO-4300c-3 delivers.
+  - Wire the ~30 hand-written hook root resolvers (duplication audit cluster C4) to the
+    resolver module BO-4300a-1 delivers.
+
+  DUPLICATION-AUDIT AMENDMENT (2026-09-25..27): the eleven items of
+  docs/analysis/2026-09-25-duplication-clusters-that-produce-known-issues.md (clusters C2, C3,
+  C4, C6) were applied: shared resolver module, ticket_path_in_worktree (BO-4300a-1-ii), repo-wide
+  shell-dispatch lint (BO-4300a-1-ia), build-inlined workflow block (BO-4300c-3), every declared
+  protection stage proven (BO-4300c-1-ii), no git -C commit, no second tracked copy, repo-wide
+  census (BO-4300f-2), harness default never a success (BO-4300c-3-ii). User decisions,
+  2026-09-27: a ticket not on origin/main is refused with TICKET_NOT_ON_BASE (push first); the
+  census excludes record folders by one declared list; the lint and census criteria were widened
+  to match their repo-wide tests.
+
+  WHY A NEW L0 AND NOT MORE CHILDREN OF BO-4100 / BO-1700 / BO-1800. Those goals state
+  PROPERTIES a workspace must have (BO-4100: fresh at creation, own supporting material,
+  disposability knowable, truthful account, complete listing; BO-1700: quality gates
+  cannot be switched off; BO-1800: every drive in its own copy, main changeable only via
+  review). None of them promises that there is ONE source of workspaces, that every
+  caller gets the same result through it, or that a caller stops when it says no -- and
+  the incident happened with all of those properties already written down. BO-4300 is
+  the single door through which those properties are delivered. It does NOT re-derive
+  them: freshness at creation stays BO-4100a (decision 3 is its answer), independence of
+  install material stays BO-4100b (decision 2 is its answer), the "does it still hold
+  undelivered work" verdict stays BO-4100c, listing completeness stays BO-4100e, proof
+  that checks fire stays BO-1700a/d, never-straight-to-main as an end state stays
+  BO-1800e. BO-1700 is at its 8-child cap under a waiver that must not be widened.
+
+  NEIGHBOURS TO CITE, NOT DUPLICATE: BO-1500f (AC-authoring gets a space of its own, never
+  takes over another's), ACD-2100a (the entry route finds its own files from any folder),
+  FIN-100g (finalize resolves its workspace from explicit input), BP-600f (quick-fix
+  self-isolates), GE-120d (set-up names what it could not establish), BO-2400e (fast lane
+  keeps isolation). Each of those becomes a consumer of this one way under BO-4300f.
+
+  COMPONENT. Namespace build-orchestration, following the PROJECT_CONTEXT rule that drive
+  isolation and workspace concerns live here (BO-1700, BO-1800, BO-4100). Graph component
+  worktree_manager already exists in docs/components.json; its description ("Git worktree
+  lifecycle management") becomes inaccurate under decision 1 -- IT PO to update it and
+  its primary_code when the component is built. A dedicated AC namespace for the
+  workspace component was considered and not proposed: every sibling promise already
+  lives in BO, and splitting them would scatter the family.
+
+  FRAMING NOTE (same as BO-4100): enforcement by construction, not guidance. No child may
+  be decomposed into "a document explains how to make a workspace".
