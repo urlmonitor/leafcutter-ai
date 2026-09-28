@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: 2026-08-18
-last_updated: '2026-09-27'
+last_updated: '2026-09-28'
 components:
   - commit_guardian
 related_docs:
@@ -73,7 +73,7 @@ Severity in the **filename** is a three-level index bucket (`blocker` / `high` /
 
 Fixed issues move to [`commit-guardian/resolved/`](commit-guardian/resolved/) and are no longer listed as open. They are kept, not deleted.
 
-**Open: 70** (4 blocker, 27 high, 39 low) · **Resolved: 9**
+**Open: 71** (4 blocker, 28 high, 39 low) · **Resolved: 9**
 
 ## Open
 
@@ -110,6 +110,7 @@ Fixed issues move to [`commit-guardian/resolved/`](commit-guardian/resolved/) an
 | `high` | KI-CG-20260914-contract-guard-crashes-on-diff-bytes — the contract-shrinking guard decodes the staged diff in the console code page, crashes on the first non-cp1252 byte, and blocks the commit instead of failing open | [open-high-ki-cg-20260914-contract-guard-crashes-on-diff-bytes.md](commit-guardian/open-high-ki-cg-20260914-contract-guard-crashes-on-diff-bytes.md) |
 | `high` | KI-CG-20260914-ratchet-freezes-central-registries — a per-file ratchet makes any manifest or registry unmaintainable once it crosses its limit, because complying with the rule on one file forces violating it on another | [open-high-ki-cg-20260914-ratchet-freezes-central-registries.md](commit-guardian/open-high-ki-cg-20260914-ratchet-freezes-central-registries.md) |
 | `high` | KI-CG-20260914-ratchet-max-baseline-refuses-union-merges — `check-file-size`'s merge baseline is the MAXIMUM across parents, but a clean merge holds BOTH parents' additions, so a union that authored no new content still exceeds the permitted length and the gate refuses it | [open-high-ki-cg-20260914-ratchet-max-baseline-refuses-union-merges.md](commit-guardian/open-high-ki-cg-20260914-ratchet-max-baseline-refuses-union-merges.md) |
+| `high` | KI-CG-20260928-check-agent-registry-never-runs-in-this-repo — the commit-time agent-registry check looks for a `leafcutter/` folder this repository does not have and passes having checked nothing; fix specified by GE-113c-1-vi | [open-high-ki-cg-20260928-check-agent-registry-never-runs-in-this-repo.md](commit-guardian/open-high-ki-cg-20260928-check-agent-registry-never-runs-in-this-repo.md) |
 | `low` | KI-CG-002 — The diagram-type guard silently swaps its enum source when its declaring file is unreachable | [open-low-ki-cg-002.md](commit-guardian/open-low-ki-cg-002.md) |
 | `low` | KI-CG-011 — The roadmap mirror strips its own `description` frontmatter and backdates `created` to today | [open-low-ki-cg-011.md](commit-guardian/open-low-ki-cg-011.md) |
 | `low` | KI-CG-013 — The schema hook and the done-proof oracle disagree about what a leaf is, so one AC can be required to satisfy both branches | [open-low-ki-cg-013.md](commit-guardian/open-low-ki-cg-013.md) |

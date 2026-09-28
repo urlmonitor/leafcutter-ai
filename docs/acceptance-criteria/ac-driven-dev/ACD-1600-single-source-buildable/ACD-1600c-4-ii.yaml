@@ -1,0 +1,122 @@
+id: ACD-1600c-4-ii
+components:
+  - ac_driven_dev
+  - ac_store
+readiness: approved
+priority: high
+title: "A requirement without a declared-files list is in the named state 'no declared files', and its documentation links never stand in for one"
+component: ac-driven-dev
+level: L3
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_acbuild_1_foundation
+criteria: |
+  Given requirement L carries no declared-files list,
+    and L's documentation links name scripts/build.py as a file the work modifies
+    and docs/reference/ac-schema.md as describing the work,
+  And requirement E carries a declared-files list with no entries,
+  When the store is asked which files each one's work changes,
+  Then the answer for L is the state "no declared files", naming L, and contains no path,
+  And neither scripts/build.py nor docs/reference/ac-schema.md is reported as a file L's work
+    changes,
+  And a check that needs declared files lists L as "not evaluated: no declared files" and does
+    not count L as passed,
+  And L is accepted into the repository: having no list is a reported state, not a refusal,
+  And E is refused with a message naming E and stating that a requirement with no files to
+    declare leaves the list out rather than declaring it empty,
+  And the store-wide report of records in the "no declared files" state names every such record
+    and states their total.
+depends_on:
+  - ACD-1600c-4
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+  - path: docs/known-issues/ac-store/open-high-ki-acs-002.md
+    relationship: related
+    status: exists
+    relevance: >-
+      Why doc_links must not be promoted to declared files during the transition: the
+      derivation they would come from is the one this known issue shows to be wrong in both
+      directions.
+  - path: docs/architecture/adrs/ADR-026-ac-driven-build-v2-phased-migration.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "The state is produced by the declared-files seam (ACD-1600c-4) and carries the exact phrase 'no declared files'. Checks that need declared files report such a record as 'not evaluated: no declared files' verbatim and exclude it from any passed count."
+  - "Absence of `declared_files` is never a validation violation at any enforcement point -- JSON schema, check-ac-schema hook (both branches), agent-side validator (ADR-026 safety rule 4)."
+  - "An empty `declared_files` list is refused at the load-bearing check-ac-schema hook (both branches) and by the agent-side validator, with one message naming the record and saying a requirement with no files to declare leaves the list out."
+  - "Nothing back-fills the field: no reader, report, hook or generator writes `declared_files`, and doc_links are never promoted into it."
+  - "Store-wide report: a read-only, deterministic listing of every record in the 'no declared files' state, sorted by id, stating the total and the number of records scanned; two runs on the same store are byte-identical. Exposed through the declared-files seam's command-line entry point, not a second parser."
+  - "The store-wide report completes within 10 seconds on a store of 5,000 records."
+test_spec:
+  - name: test_absent_list_answer_is_no_declared_files_state
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    description: "For L the seam answers 'no declared files', naming L, with no path."
+  - name: test_doc_links_not_reported_as_declared_for_absent_list
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    description: "Neither scripts/build.py (modifies link) nor docs/reference/ac-schema.md is reported as a file L's work changes."
+  - name: test_check_lists_no_declared_files_record_not_evaluated_not_passed
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    description: "A check consuming the seam lists L as 'not evaluated: no declared files' and the passed count excludes L."
+    angle: boundary
+  - name: test_record_without_list_accepted_by_hook_and_validator
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "L is accepted (exit 0) by check_ac_schema in both branches and by validate_ac_schema."
+  - name: test_empty_list_refused_with_leave_it_out_message
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "E is refused (non-zero exit) by the hook's manual fallback and by validate_ac_schema with a message naming E and stating the list is left out rather than declared empty."
+    angle: failure
+  - name: test_store_wide_report_names_every_record_and_total
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    description: "The store-wide report on a fixture store names every record in the state, states their total and the records scanned, and is byte-identical across two runs."
+delivers_to: null
+expects_from:
+  ac_id: ACD-1600c-4
+  contract: "The declared-files answer from scripts/ac_store/declared_files.py, including the named state 'no declared files' (key absent); never an empty list."
+origin_agent: business-analyst
+created: 2026-09-27
+amended_by:
+  - reason: "it-po technical enrichment: it_requirements (verbatim state phrase, absence never a violation, empty list refused at the hook, no back-fill, store-wide report via the seam), test_spec, expects_from re-worded. Criteria unchanged."
+    date: '2026-09-27'
+    by: it-po
+    directed_by: user
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: schema
+risk_surface: contract_boundary
+notes: |
+  TRANSITION RULE. Every record written before this AC has no list. Treating its doc_links
+  as the list would carry KI-ACS-002's imprecision into the new field under a new name, so
+  the answer is a named, countable state instead. The phrase "not evaluated: no declared
+  files" is the one ACD-2500a-3 already uses for its record S; this AC makes it the store's
+  vocabulary rather than one check's. A record leaves the state only when someone declares
+  its files -- nothing back-fills them automatically.
+
+  HOW THE HELD ACD-2500 ACs ARE SATISFIED. ACD-2500a-3, ACD-2500c-1-i, ACD-2500d-1 and
+  ACD-2500d-5-i depend on ACD-1600c-4 (and ACD-2500a-3 also on this AC, for its record-S
+  clause). They can then read declared files and markers from the one answer, and report a
+  record in this state as not evaluated, never as passed.
+
+  EMPTY LIST IS REFUSED (BA decision, flagged to the user): work that changes no file is not
+  a buildable requirement, so an empty list carries no meaning distinct from an absent one
+  and would only create a second spelling of the same state.

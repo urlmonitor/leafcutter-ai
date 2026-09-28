@@ -3,31 +3,43 @@ components:
   - ac_driven_dev
 readiness: reviewed
 priority: medium
-title: "IT PO v3 validates documentation AC presence before promoting to reviewed"
+title: "A feature's missing documentation AC is filled in before its batch is promoted to reviewed"
 component: ac-driven-dev
 level: L1
 status: active
 req_status: active
 work_status: todo
 criteria: |
-  Given it-po-v3 is enriching ACs with technical fields,
-  When the feature being enriched introduces new commands, flows, or state machines,
-  Then IT PO v3 checks whether documentation ACs exist in the same AC batch,
-  And if documentation ACs are missing, IT PO v3 either:
-    (a) creates the missing documentation ACs itself (with readiness: reviewed), or
-    (b) flags the gap and refuses to set readiness: reviewed until resolved,
-  And IT PO v3 never promotes a batch to readiness: reviewed if it contains
-    flow/state triggers but no corresponding documentation ACs.
-depends_on: [ACD-200]
+  Given the IT PO is enriching a batch of ACs with technical fields,
+    and a feature in the batch declares documentation triggers because it introduces new
+    commands, flows, state machines or architectural components,
+  When the requirement rule check (ACD-2500a-2-v) reports a trigger that has no matching
+    documentation AC, naming the trigger and the specialist it expects,
+  Then the IT PO adds the missing documentation AC, assigned to that specialist, before any
+    AC in the batch is set to readiness: reviewed,
+  And whether documentation coverage is complete is decided only by the requirement rule
+    check -- the IT PO carries no coverage check or trigger-to-specialist table of its own,
+  And no batch is promoted to readiness: reviewed while the rule check still reports a
+    trigger without its documentation AC.
+depends_on: [ACD-200, ACD-2500a-2-v]
 doc_links:
-  - templates/agents/it-po-v3.md
+  - path: templates/agents/it-po.md
+    relationship: describes
+    status: exists
+  - path: docs/acceptance-criteria/ac-driven-dev/ACD-2500-right-job-right-agent/ACD-2500a-2-v.yaml
+    relationship: related
+    status: exists
 assigned_agent: llm-expert
 estimated_complexity: M
 delivers_to: null
 expects_from: null
 origin_agent: BrainCandy
 created: 2026-06-05
-amended_by: []
+amended_by:
+  - reason: "amend: the documentation-coverage CHECK now belongs to the requirement rule check ACD-2500a-2-v; the IT PO keeps the authoring duty (adds the missing documentation AC for the specialist the check names) and the reviewed-barrier. Option (b) 'flag and refuse' is dropped as a separate IT PO path -- the refusal is now the barrier on the rule check's finding. The '(with readiness: reviewed)' detail on the added AC is dropped. Title reworded to the outcome. Template reference corrected it-po-v3.md -> it-po.md (the v3 file no longer exists); depends_on gains ACD-2500a-2-v. Aligns the L1 with its already-amended child ACD-200b-1 (2026-09-25). work_status unchanged (todo)."
+    date: '2026-09-27'
+    by: business-analyst
+    directed_by: user
 superseded_by: null
 covered_by: [ACD-200b-1]
 implemented_by: []

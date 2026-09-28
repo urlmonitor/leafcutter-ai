@@ -38,7 +38,10 @@ it_requirements:
 - 'Home is docs/reference/ac-schema.md (field rows for test_intent, the added test_spec keys and the hold-reason
   vocabulary): the normative spec that the checks and the planner prose both mirror. Links docs/testing/test-angles.md
   rather than restating it.'
-- Must not describe must_catch as an existing field.
+- 'Describes must_catch as the EXISTING optional test_spec field (TQ-500f-2) and angle ''discrimination'' (TQ-500f-1),
+  linking their definition rather than restating it; states that only the code-aware test-design step writes
+  must_catch (never the technical planner) and that its presence, or angle ''discrimination'', is that step''s
+  bug-fix/gate declaration.'
 delivers_to: null
 expects_from:
   ac_id: ACD-2500b-2
@@ -53,6 +56,10 @@ amended_by:
 - reason: it-po-technical-enrichment
   date: '2026-09-25'
   by: it-po
+- reason: "reconcile with main: 'Must not describe must_catch as an existing field' is false since PR 911 (TQ-500f-2). it_requirement now asks the doc to describe must_catch / angle 'discrimination' as existing, written only by the code-aware step, their presence being its bug-fix/gate declaration. Criteria unchanged."
+  date: '2026-09-27'
+  by: it-po
+  directed_by: user
 superseded_by: null
 covered_by: []
 implemented_by: []
