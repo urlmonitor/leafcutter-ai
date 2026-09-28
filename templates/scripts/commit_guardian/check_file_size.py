@@ -38,6 +38,19 @@ ARCHITECTURE: Delegates previous-length resolution and the shared line
     filename, so it can never be mistaken for a file that was measured and
     found within its limit.
 
+    DESCRIPTION UNAVAILABLE (GE-127e-3-i): a file already judged too_large
+    /grew for which no per-file description could be produced (content that
+    would not parse, no extractor registered for its kind, an extractor
+    that located no part, or a part set under-accounting for at least half
+    its quoted length) has its refusal block carry a
+    ``DESCRIPTION UNAVAILABLE: reason=<text>`` line naming the SPECIFIC
+    cause -- reusing _file_size_ratchet.py's INDETERMINATE / EMPTY HISTORY
+    ``TOKEN: reason=<text>`` line shape, but a THIRD, distinctly-named
+    token, and never their exit status. A failure to DESCRIBE leaves the
+    verdict already known (length measured, found over), so it stays inside
+    the SAME exit-1 refusal, on stdout -- never exit 2, and never printed at
+    all for a file that is not already refused.
+
 Pre-commit hook to block files exceeding line limits.
 
 Line Limits (see commit_guardian.json's file_size section for the
@@ -69,7 +82,12 @@ from _resolve_root import find_project_root
 
 project_root = find_project_root()
 
-from _file_description import describe_file, format_description_lines
+from _file_description import (
+    describe_file,
+    describe_file_failure_reason,
+    format_could_not_describe_line,
+    format_description_lines,
+)
 from _file_size_ratchet import (
     EMPTY_HISTORY_REASON,
     CurrentLengthUnmeasurableError,
@@ -249,11 +267,19 @@ def _read_content_for_description(filepath: str) -> str | None:
 
 
 def _print_file_description(filepath: str, quoted_length: int) -> None:
-    """Append the per-file description to the block just printed for *filepath*.
+    """Append the per-file description -- or a could-not-describe line
+    naming why -- to the block just printed for *filepath*.
 
-    Prints nothing when the content cannot be read, cannot be parsed, or
-    the located parts do not account for at least half of *quoted_length*
-    -- see ``_file_description.describe_file``.
+    Prints nothing at all when the content itself cannot be read (a read
+    /decode failure is logged by ``_read_content_for_description`` and
+    withheld here, per this repo's error-handling policy). Otherwise prints
+    exactly one of: the Parts/Division description (``describe_file``
+    succeeded), or a ``DESCRIPTION UNAVAILABLE: reason=<text>`` line naming
+    the SPECIFIC cause (GE-127e-3-i) -- never both, never neither, and
+    never a substitute sentence standing in for either. This function is
+    reached only from the two refusal printers, both of which run only for
+    a file `main()`'s classification loop has ALREADY judged too_large/grew
+    from length alone -- so nothing printed here can move that verdict.
 
     Args:
         filepath: The refused file's path.
@@ -264,11 +290,15 @@ def _print_file_description(filepath: str, quoted_length: int) -> None:
     if content is None:
         return
     description = describe_file(filepath, content, quoted_length)
-    if description is None:
+    if description is not None:
+        for line in format_description_lines(description):
+            print(line)
+        print()
         return
-    for line in format_description_lines(description):
-        print(line)
-    print()
+    reason = describe_file_failure_reason(filepath, content, quoted_length)
+    if reason is not None:
+        print(format_could_not_describe_line(reason))
+        print()
 
 
 def _print_measures_line() -> None:
@@ -570,6 +600,21 @@ if __name__ == "__main__":
 ====================================================================
 DECISION HISTORY
 ====================================================================
+- 2026-09-28 [python-coder/GE-127e-3-i]: `_print_file_description` now
+  prints a `DESCRIPTION UNAVAILABLE: reason=<text>` line -- a NEW, third
+  token in `_file_size_ratchet.py`'s `TOKEN: reason=<text>` line shape,
+  never `INDETERMINATE`, never exit 2 -- naming the specific cause when
+  `describe_file` returns None, via the new sibling
+  `_file_description.describe_file_failure_reason`. `describe_file`'s own
+  signature and None-on-failure return contract are UNCHANGED (see
+  `_file_description.py`'s own module docstring for why: every existing
+  caller across GE-127e-1/e-2/e-3's test suites, and this AC's own
+  verdict-independence mutation proofs, matches on `describe_file(...) is
+  None` directly). The verdict is computed by `_classify_file` from length
+  alone, before this function ever runs, so nothing here can move it --
+  descriptors 1/3/4/5 (verdict independence, no substitute advice, never
+  refused for having guidance, never reported for an under-limit file) were
+  already true of the unmodified tree and remain true unchanged.
 - 2026-09-23 [python-coder/GE-127d-2 rework, H-1]: pr-reviewer found
   `_print_grown_file` (the GE-127b-1 ratchet-growth "grew" refusal) was left
   entirely outside the prior round's fix -- no permitted length, no

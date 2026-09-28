@@ -34,14 +34,37 @@ ARCHITECTURE: Sibling module to check_file_size.py, inside
 
     UNDER-HALF AND UNPARSEABLE CONTENT: when the located parts cannot account
     for at least half of the quoted length, or the content cannot be parsed
-    at all, describe_file() returns None -- a could-not-be-described state
-    that GE-127e-3-i owns, not this module. Returning None here changes
-    nothing about the refusal's verdict; it only withholds this module's
-    OWN additional content, which is what the "swallow a parse error into an
-    empty description" hazard this repo's error-handling policy warns against
-    would otherwise produce.
+    at all, describe_file() returns None -- a could-not-be-described state.
+    Returning None here changes nothing about the refusal's verdict; it only
+    withholds this module's OWN additional content, which is what the
+    "swallow a parse error into an empty description" hazard this repo's
+    error-handling policy warns against would otherwise produce.
+
+    GE-127e-3-i (WHY describe_file() STILL RETURNS BARE None, RATHER THAN A
+    REASON-CARRYING VALUE): describe_file()'s own return contract is left
+    UNCHANGED -- every existing caller across GE-127e-1/e-2/e-3's own test
+    suites (and this AC's own verdict-independence mutation proofs) matches
+    on `describe_file(...) is None` / `is not None` directly, so changing
+    what a failure returns would silently defeat those already-signed-off
+    mutation controls rather than serving this AC. The SPECIFIC reason a
+    description could not be produced is exposed instead via the sibling
+    function describe_file_failure_reason(), called by check_file_size.py's
+    _print_file_description() only after describe_file() has already
+    returned None for the same inputs -- never a second counting or
+    extraction rule, both share the private _classify_description() below.
 
 DECISION HISTORY
+- 2026-09-28 [GE-127e-3-i/python-coder]: Added the private
+  _classify_description() core (shared by describe_file() and the new
+  describe_file_failure_reason()) so a could-not-be-described state names
+  ONE of four distinguishable causes -- no extractor registered for the
+  kind, content that would not parse, an extractor that located no part,
+  or a part set under-accounting for at least half the quoted length --
+  never one shared sentence. describe_file()'s own signature and None-on
+  -failure contract are unchanged; see the module docstring's GE-127e-3-i
+  paragraph above for why. Added format_could_not_describe_line() beside
+  format_description_lines() per architect-review's ruling that formatting
+  stays in this module while the print call stays in check_file_size.py.
 - 2026-09-14 [GE-127e-1/python-coder]: Initial authoring.
 """
 
@@ -50,6 +73,7 @@ from __future__ import annotations
 import ast
 import logging
 import re
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -194,6 +218,18 @@ _EXTRACTORS_BY_EXTENSION = {
 }
 
 
+def _extractor_for(filepath: str) -> Callable[[str], list[DescribedPart]] | None:
+    """Return the extraction rule registered for *filepath*'s own extension,
+    or None when no extractor is registered for that kind.
+
+    The ONE lookup both ``extract_parts`` (which collapses that absence
+    into an empty result) and ``_classify_description`` (which names the
+    absence as its own distinguishable cause, GE-127e-3-i) share -- never
+    two copies of the same extension-to-extractor rule.
+    """
+    return _EXTRACTORS_BY_EXTENSION.get(Path(filepath).suffix.lower())
+
+
 def extract_parts(filepath: str, content: str) -> list[DescribedPart]:
     """Dispatch to the extraction rule for *filepath*'s own extension.
 
@@ -215,7 +251,7 @@ def extract_parts(filepath: str, content: str) -> list[DescribedPart]:
         SyntaxError: *content* is not parseable per its extension's
             extractor. The caller is responsible for catching this.
     """
-    extractor = _EXTRACTORS_BY_EXTENSION.get(Path(filepath).suffix.lower())
+    extractor = _extractor_for(filepath)
     if extractor is None:
         return []
     return extractor(content)
@@ -252,6 +288,70 @@ def _select_division(
     return parts[:best_index], parts[best_index:]
 
 
+def _classify_description(
+    filepath: str, content: str, quoted_length: int
+) -> tuple[FileDescription | None, str | None]:
+    """Attempt to describe *content*, the ONE shared core both describe_file()
+    and describe_file_failure_reason() delegate to -- never a second
+    extraction or counting rule.
+
+    Names FOUR distinguishable could-not-be-described causes
+    (GE-127e-3-i, architect-review's design ruling 1 -- "we never had a
+    rule for this kind" and "we tried and came up short" are different
+    facts and must never collapse into one shared sentence):
+        - no extractor is registered for *filepath*'s kind at all;
+        - the registered extractor's content could not be parsed;
+        - the registered extractor ran and located no part at all;
+        - the located parts' portions do not account for at least half of
+          *quoted_length*.
+
+    Args:
+        filepath: The refused file's path (selects the per-kind extractor).
+        content: The refused file's full current content.
+        quoted_length: The measured length already quoted for this file in
+            the refusal (via ``_file_size_ratchet.count_content_lines``).
+
+    Returns:
+        (description, failure_reason) -- EXACTLY one of the pair is None:
+        a FileDescription with failure_reason None on success, or None
+        paired with the specific cause otherwise.
+    """
+    extractor = _extractor_for(filepath)
+    if extractor is None:
+        ext = Path(filepath).suffix or "(no extension)"
+        return None, f"no extractor is registered for the {ext} kind"
+
+    try:
+        parts = extractor(content)
+    except SyntaxError as exc:
+        logger.warning("could not parse %s for a per-file description: %s", filepath, exc)
+        return None, f"content could not be parsed: {exc}"
+
+    if not parts:
+        return None, "no named part could be located in this file's content"
+
+    portion_sum = sum(part.portion for part in parts)
+    if 2 * portion_sum < quoted_length:
+        return None, (
+            f"the located parts account for only {portion_sum} of "
+            f"{quoted_length} quoted lines, under half"
+        )
+
+    if len(parts) == 1:
+        return FileDescription(parts=parts, single_part_name=parts[0].name), None
+
+    if portion_sum != quoted_length:
+        # Partial coverage: a division cannot be reconciled against the
+        # WHOLE file's quoted length without inventing content for the
+        # uncovered remainder, so only the located parts are offered.
+        return FileDescription(parts=parts), None
+
+    left, right = _select_division(parts)
+    side_a = ([part.name for part in left], sum(part.portion for part in left))
+    side_b = ([part.name for part in right], sum(part.portion for part in right))
+    return FileDescription(parts=parts, side_a=side_a, side_b=side_b), None
+
+
 def describe_file(filepath: str, content: str, quoted_length: int) -> FileDescription | None:
     """Build the per-file description for a file ALREADY judged over its limit.
 
@@ -268,35 +368,34 @@ def describe_file(filepath: str, content: str, quoted_length: int) -> FileDescri
         A FileDescription when at least one part is located and the located
         parts' portions sum to at least half of *quoted_length*. None
         otherwise -- an under-accounted or unparseable file is a
-        could-not-be-described state (GE-127e-3-i's subject), so nothing is
-        printed rather than an invented or padded description.
+        could-not-be-described state; call describe_file_failure_reason()
+        with the SAME arguments for the specific cause (GE-127e-3-i).
     """
-    try:
-        parts = extract_parts(filepath, content)
-    except SyntaxError as exc:
-        logger.warning("could not parse %s for a per-file description: %s", filepath, exc)
-        return None
+    description, _reason = _classify_description(filepath, content, quoted_length)
+    return description
 
-    if not parts:
-        return None
 
-    portion_sum = sum(part.portion for part in parts)
-    if 2 * portion_sum < quoted_length:
-        return None
+def describe_file_failure_reason(filepath: str, content: str, quoted_length: int) -> str | None:
+    """Return the SPECIFIC reason describe_file() could not describe this
+    file, or None when it would in fact succeed.
 
-    if len(parts) == 1:
-        return FileDescription(parts=parts, single_part_name=parts[0].name)
+    Shares describe_file()'s own _classify_description() core -- the reason
+    and the (absent) description can never disagree about WHY, since both
+    come from the exact same classification. Intended to be called only
+    once describe_file(...) has already returned None for the same inputs;
+    calling it when describe_file() would succeed is harmless (returns
+    None) but re-does the extraction work for nothing.
 
-    if portion_sum != quoted_length:
-        # Partial coverage: a division cannot be reconciled against the
-        # WHOLE file's quoted length without inventing content for the
-        # uncovered remainder, so only the located parts are offered.
-        return FileDescription(parts=parts)
+    Args:
+        filepath: The refused file's path (selects the per-kind extractor).
+        content: The refused file's full current content.
+        quoted_length: The measured length already quoted for this file.
 
-    left, right = _select_division(parts)
-    side_a = ([part.name for part in left], sum(part.portion for part in left))
-    side_b = ([part.name for part in right], sum(part.portion for part in right))
-    return FileDescription(parts=parts, side_a=side_a, side_b=side_b)
+    Returns:
+        The specific cause text, or None.
+    """
+    _description, reason = _classify_description(filepath, content, quoted_length)
+    return reason
 
 
 def format_description_lines(description: FileDescription) -> list[str]:
@@ -327,6 +426,31 @@ def format_description_lines(description: FileDescription) -> list[str]:
         lines.append(f"     Side B: {', '.join(names_b)} ({length_b} lines)")
 
     return lines
+
+
+# GE-127e-3-i: reuses _file_size_ratchet.py's "TOKEN: reason=<text>" line
+# shape (see INDETERMINATE / EMPTY HISTORY there) but mints a THIRD,
+# distinctly-named token -- never INDETERMINATE, never a bare sentence, and
+# documented alongside the other two in check_file_size.py's own module
+# docstring. This token never changes the exit status it is printed
+# under: a failure to DESCRIBE leaves the verdict already known (length
+# was measured and found over), so the line stays inside the SAME exit-1
+# refusal, on stdout -- never exit 2.
+DESCRIPTION_UNAVAILABLE_TOKEN = "DESCRIPTION UNAVAILABLE"
+
+
+def format_could_not_describe_line(reason: str) -> str:
+    """Render *reason* into the printed line a refusal block attaches when
+    no per-file description could be produced for it.
+
+    Args:
+        reason: The specific cause, from ``describe_file_failure_reason``.
+
+    Returns:
+        One line, indented to match the other lines in the refusal block
+        (see ``format_description_lines``'s own leading-space convention).
+    """
+    return f"   {DESCRIPTION_UNAVAILABLE_TOKEN}: reason={reason}"
 
 
 """
