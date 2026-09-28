@@ -1,0 +1,56 @@
+id: ACD-2500a
+components:
+  - ac_driven_dev
+  - ac_store
+readiness: approved
+priority: high
+title: "Rules that never need judgment are checked the same way every time"
+component: ac-driven-dev
+level: L1
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  Mechanical requirement rules are checked automatically after every write.
+
+  Consistency rules that have one right answer are enforced by an automatic check
+  that runs after requirements are written, fixes what is safe to fix, and reports
+  the rest, instead of relying on a planner remembering them.
+depends_on:
+  - ACD-2500
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: related
+    status: exists
+    relevance: >-
+      Defines the fields and link rules the automatic check enforces. The check must
+      read its rules from here or from the same source, not restate them.
+assigned_agent: null
+delivers_to: null
+expects_from: null
+origin_agent: product-owner
+created: 2026-09-25
+amended_by: []
+superseded_by: null
+covered_by:
+  - ACD-2500a-1
+  - ACD-2500a-2
+  - ACD-2500a-3
+  - ACD-2500a-4
+  - ACD-2500a-5
+implemented_by: []
+change_target:
+  - code
+  - prompt
+risk_surface: contract_boundary
+documentation_triggers:
+  - component-diagram
+  - reference-doc
+notes: |
+  Rules the brief named as deterministic: the file-extension-to-surface table, two-way
+  symmetry of producer/consumer contracts, the graph-component list fix-up, readiness
+  defaulting, parent back-links, documentation-trigger mapping, and most of the final
+  self-check list. Each rule moved here must also be REMOVED from the planner's
+  instructions, otherwise the outcome (a shorter, judgment-only planner) is not
+  delivered. The BA must first inventory existing store checks (a schema checker is
+  already installed by the build) and extend rather than duplicate them.

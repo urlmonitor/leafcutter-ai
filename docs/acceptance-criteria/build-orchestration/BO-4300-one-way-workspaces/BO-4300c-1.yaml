@@ -1,0 +1,183 @@
+id: BO-4300c-1
+title: "Ready is only answered when every part of readiness holds on the workspace as it exists"
+component: build-orchestration
+components:
+  - worktree_manager
+  - build_orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: critical
+roadmap_phase: phase_1
+change_target: code
+risk_surface: safety
+criteria: |
+  Given a request for a workspace, and a test fixture that can make exactly one
+    of the following untrue at a time,
+  When the workspace maker is about to answer,
+  Then it answers ready only when all five are true of the workspace as it now
+    exists: it is an independent copy of the project and not the main copy; it
+    is on its own line of work, which is not the shared main line; a newly
+    started line starts at the shared main line tip read after fetching, and
+    a resumed line holds every commit it has on the shared project; its tools were
+    installed inside it by a build that finished successfully; and its
+    protections were shown to fire,
+  And when any one of the five is untrue, it answers with a refusal naming that
+    one,
+  And a refusal never carries a workspace location.
+depends_on: [BO-4300c]
+doc_links:
+- path: docs/analysis/2026-09-25-worktree-creation-consolidation.md
+  relationship: describes
+  status: exists
+- path: docs/analysis/2026-09-25-worktree-component-proposal.md
+  relationship: describes
+  status: exists
+- path: docs/analysis/2026-09-25-worktree-isolation-decision-memo.md
+  relationship: constrains
+  status: exists
+- path: docs/analysis/2026-09-25-worktree-failure-modes.md
+  relationship: describes
+  status: exists
+- path: docs/architecture/components/worktree-manager.md
+  relationship: describes
+  status: exists
+  relevance: Component page for the one maker; rewritten for clones under BO-4300a-4.
+- path: docs/architecture/adrs/ADR-031-worktree-quality-gate-guard.md
+  relationship: constrains
+  status: exists
+  relevance: Canary-execution probe model (section 1); its create-time gate (section 4) moves into the
+    maker.
+- path: docs/testing/test-angles.md
+  relationship: describes
+  status: exists
+  relevance: Angle taxonomy used by this record's test_spec.
+- path: docs/acceptance-criteria/build-orchestration/BO-4100-sound-workspace-by-construction/BO-4100a.yaml
+  relationship: related
+  status: exists
+  relevance: Freshness at creation; base_commit read-back (BO-4100a-2).
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from:
+  ac_id: BO-4300a-1
+  contract: ensure sequence (clone, fetch, checkout, build, canary, marker).
+package_surface: false
+it_requirements:
+- 'ok is the conjunction of five ingredients read off the finished workspace as it now exists, each reported
+  in checks.*: independent clone and not the main copy (is_independent_repo, not_main_checkout -- own
+  .git directory, not a gitfile); own line of work that is not main/master (branch_matches, not_protected_branch);
+  rooted at origin/main read after the fetch (base_is_fresh, base_commit read back from the workspace);
+  install build exited 0 and its expected artefacts exist (build_ok); protections shown to fire, PER
+  DECLARED STAGE (BO-4300c-1-ii): hooks_pre_commit_fired (a commit of a known-bad file is rejected), hooks_commit_msg_fired
+  (a commit with a known-bad message is rejected), hooks_post_merge_fired (a merge bringing in a known-bad
+  change is reported as failing), with hooks_canary_rejected kept as their conjunction for existing readers.'
+- Any false ingredient gives a non-ok answer whose code names that ingredient, and no workspace_path. For
+  the protections ingredient the code is HOOKS_INACTIVE and inactive_stages names every declared stage
+  that did not fire.
+- Each stage's canary is an input the installed hook set is declared to reject for that stage, taken from
+  the install's own declaration rather than hard-coded to one hook; the set of stages comes from the workspace's
+  own hook declaration, and a shim is installed for each. Canaries never land in the branch, the index
+  or the working tree (BO-4300c-1-ii).
+- 'Git spelling (KI-CG-20260925-commit-delegation-hook-misses-git-dash-c): canary commits run with git''s
+  working directory set to the workspace, never as `git -C <path> commit`, in the maker and in the tests.'
+- The deployed maker has no flag or environment switch that skips an ingredient; tests falsify ingredients
+  through the FIXTURE (a failing stub build, a hook that accepts, a hub whose main moves), never through
+  the maker.
+- 'RESUMED LINES (decided by the user at the final gate, 2026-09-25): the fresh-base ingredient applies
+  to NEWLY started lines only. For a resumed line (BO-4300d-4, line_of_work ''resumed'') the ingredient
+  is instead "the workspace holds every commit of origin/<branch>"; the maker never resets or rebases a
+  resumed line, reports base_commit and origin_main_commit separately, and never claims base_matches_origin_main
+  when false. For kind scratch ALL three stage checks and hooks_canary_rejected are ''n/a'' (BO-4300e-4);
+  for any other kind the pre-commit check is never ''n/a'', and the commit-msg and post-merge checks
+  are ''n/a'' only when the project does not declare that stage.'
+- Answers conform to the result contract delivered by BO-4300c-2 (one JSON object on stdout, status/code/exit
+  mapping, workspace_path absent on every non-ok answer).
+- 'Must handle errors per the project error handling policy: a condition the maker cannot classify is
+  an error answer (code INTERNAL_ERROR) whose message names it -- never an ok answer, and never a traceback
+  on stdout.'
+- Proof runs the DEPLOYED maker -- the copy an install delivers, resolved through the shared test locator
+  delivered by BO-4300f-4 -- as a separate process against real temporary git repositories with a real
+  bare hub. No mock of git, no import of the maker module, no grep of its source (CLAUDE.md 'Gate / Workflow
+  ACs -- Verify Behaviorally, Not by Grep'); a test never falls back to the templates/ source copy.
+- 'Tests must not spawn the package''s own scripts/build.py (CLAUDE.md ''Tests must not spawn their own
+  build.py''): the deployed maker comes from the shared deployed layout, and fixture projects carry a
+  minimal stub build entry point that installs a real, rejecting hook in well under a second. A test that
+  must mutate the package and build its own copy says so and justifies it in its ticket.'
+- All temporary projects, hubs and workspaces live under the test's temp directory and run git with an
+  isolated global and system config; afterwards the developer's own repository's branches, registered
+  worktrees and local git config are unchanged (BO-4300f-4-i, F14, KI-TQ-012).
+test_required: true
+test_spec:
+- name: test_all_five_ingredients_true_gives_ok
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: criterion
+  description: With a sound fixture, ensure answers ok and every checks.* ingredient is true.
+- name: test_main_copy_instead_of_clone_is_refused_naming_it
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: failure
+  description: When the target resolves to the main checkout, the answer is non-ok naming the independent-copy
+    ingredient, with no workspace_path.
+- name: test_line_of_work_equal_to_main_is_refused_naming_it
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: failure
+  description: A workspace whose branch is main is refused (ON_PROTECTED_BRANCH), no workspace_path.
+- name: test_stale_base_is_refused_naming_it
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: failure
+  description: When the workspace's base is not origin/main as read after the fetch, the answer is non-ok
+    naming freshness.
+- name: test_failed_install_build_is_refused_naming_it
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: failure
+  description: A stub build exiting non-zero gives BOOTSTRAP_FAILED, no workspace_path.
+- name: test_protections_that_do_not_fire_are_refused_naming_them
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: failure
+  description: 'With a fixture declaring pre-commit, commit-msg and post-merge, making each stage in turn
+    accept its canary (the other two still firing) gives HOOKS_INACTIVE with inactive_stages naming exactly
+    that stage, the matching checks.hooks_<stage>_fired false, hooks_canary_rejected false, and no workspace_path.
+    The per-stage cases themselves are BO-4300c-1-ii''s; this arm proves the conjunction drops none.'
+test_rationale: Every assertion is made on what the deployed maker actually did to real repositories --
+  its one JSON answer, its exit code, and the state of the workspace, the hub and the main copy afterwards.
+  A direct-import unit test would pass while the deployed copy is stale or mis-deployed (F13), and a git
+  mock cannot show the half-made and occupied states this family exists to handle. One test per ingredient,
+  each made untrue alone, plus the all-true arm, so a conjunction that silently drops one ingredient fails
+  exactly one test.
+origin_agent: business-analyst
+created: 2026-09-25
+amended_by:
+- reason: duplication-audit-item-5
+  by: it-po
+  at: 2026-09-25
+  note: >-
+    Technical fields only; criteria unchanged. Aligned with the widened BO-4300c-1-ii: the protections
+    ingredient is reported per declared stage (hooks_pre_commit_fired, hooks_commit_msg_fired,
+    hooks_post_merge_fired), hooks_canary_rejected kept as their conjunction; HOOKS_INACTIVE names the
+    stage(s) in inactive_stages; 'n/a' rule written down for scratch and undeclared stages; git spelling
+    rule. HOOKS_INACTIVE test updated to cover each stage. readiness reset to reviewed.
+superseded_by: null
+covered_by: [BO-4300c-1-i, BO-4300c-1-ii, BO-4300c-1-iii]
+implemented_by:
+- tickets/00_inbox/TICKET-20260927-BO-4300c-1.md
+notes: |
+  The MAKER half of BO-4300c ("ready means all of it"). Each ingredient already has an owner
+  and is cited, not re-derived: the rooted commit read back after creation is BO-4100a-2; proof
+  that protections fire is BO-1700a / BO-1700d-1. What is new is that the answer is the
+  conjunction, read off the finished workspace, so a caller can trust "ready" without checking
+  anything itself. One test per ingredient, each made untrue alone, plus the all-true arm.
+target_epic: EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace

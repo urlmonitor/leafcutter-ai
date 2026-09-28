@@ -1,0 +1,80 @@
+id: ACS-200f-3
+components:
+  - ac_store
+title: "When the done-marking tool reports an AC marked done, the record's own work_status key really is done and nothing else in the file changed"
+component: ac-store
+level: L3
+status: active
+req_status: draft
+work_status: done
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given an active AC that is still recorded as not-yet-done,
+  And the record's prose (for example a criteria or notes block) contains the
+    literal text "work_status: todo" above the record's real work_status key,
+  When an operator runs the done-marking tool for that AC,
+  Then the record's top-level work_status key reads done when the file is
+    parsed afterwards,
+  And the prose that quoted "work_status: todo" is unchanged,
+  And every line other than the work_status line is byte-identical to before,
+    including its line ending (a CRLF file stays CRLF, an LF file stays LF),
+  And if the key could not be verified as done after writing, the tool exits
+    non-zero with an error instead of reporting success,
+  And the bug symptom ("the tool prints 'marked <ID> work_status=done' and
+    exits 0 having edited the prose, left the real key todo, and rewritten
+    every line from LF to CRLF") must not occur.
+depends_on:
+  - ACS-200f
+doc_links:
+  - path: "docs/acceptance-criteria/ac-store/ACS-200-automated-verification/ACS-200f.yaml"
+    relationship: parent
+    status: exists
+  - path: scripts/ac_store/mark_ac_done.py
+    relationship: modifies
+    status: exists
+  - path: "docs/known-issues/ac-store/open-high-ki-acs-20260925-mark-ac-done-reports-success-without-writing-the-key.md"
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Root cause: mark_ac_done.py does an unanchored raw_text.replace('work_status: todo', 'work_status: done', 1), so the first occurrence anywhere in the file (prose included) is edited; the column-0 anchored re.sub exists only as a fallback branch"
+  - "read_text/write_text use default newline translation, so on Windows every LF line is rewritten as CRLF; read with newline='' and write with newline='' so each line keeps its own ending"
+  - "Match only a top-level work_status: key at column 0, mirroring _fl_lifecycle._update_ac_work_status; more than one column-0 match is ambiguous and must be refused, not guessed"
+  - "Write atomically (temp file in the same directory, then os.replace) so a failed write never truncates the record"
+  - "Re-parse the written file with yaml.safe_load and verify work_status == 'done'; otherwise print an error and exit non-zero"
+  - "Fix stays inside scripts/ac_store/mark_ac_done.py; do not import across packages. approve_acs.py has the same unanchored pattern for readiness and is out of scope"
+  - "Must follow the repo error-handling policy: specific-exception try/except around file and YAML I/O, report to stderr and return non-zero; no bare or silent excepts"
+delivers_to: null
+expects_from:
+  ac_id: ACS-200f
+  contract: "The done-marking write whose correctness this constraint pins down."
+origin_agent: BrainCandy
+created: 2026-09-25
+amended_by: []
+superseded_by: null
+covered_by:
+  - "unit_tests/ac_store/test_acs200f_3_mark_ac_done_anchored_write.py"
+implemented_by:
+  - scripts/ac_store/mark_ac_done.py
+change_target: code
+risk_surface: contract_boundary
+test_spec:
+  - name: test_prose_literal_above_key_is_untouched_and_key_flips
+    target_dir: unit_tests/ac_store
+    framework: pytest
+    type: unit
+    description: "A record whose notes block quotes 'work_status: todo' above the real key is marked done by the real CLI: the parsed key is done, the prose still reads todo, and only one line differs."
+  - name: test_crlf_record_stays_crlf_and_only_one_line_changes
+    target_dir: unit_tests/ac_store
+    framework: pytest
+    type: unit
+    description: "A CRLF-encoded record keeps CRLF on every line after marking done, and exactly one line (work_status) differs byte-wise."
+  - name: test_lf_record_stays_lf_and_only_one_line_changes
+    target_dir: unit_tests/ac_store
+    framework: pytest
+    type: unit
+    description: "An LF-encoded record gains no CR bytes after marking done, and exactly one line (work_status) differs byte-wise."
+notes: "Filed from KI-ACS-20260925-mark-ac-done-reports-success-without-writing-the-key (2026-09-25 duplication analysis, cluster 1). Numeric L3 slot under the letter-slot L2 ACS-200f, as ACS-200f-1 and ACS-200f-2. The KI's fix direction (one shared ac_record.set_field used by every writer) is a larger refactor and is not attempted here."

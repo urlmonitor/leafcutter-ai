@@ -18,9 +18,9 @@ BUSINESS CONTEXT: See check_hook_trigger_reachability.py's own DECISION
     epistemic state as the lookup failing outright — no evidence either
     way — and must never be treated as proof that every files-triggered
     gate is unreachable.
-ARCHITECTURE: ``get_tracked_paths`` runs ``git ls-files`` with the given
-    working directory and returns None (never an empty list standing in for
-    a failure) on any I/O error or non-zero exit.
+ARCHITECTURE: ``get_tracked_paths`` enumerates tracked files and existing,
+    unignored files Git could stage next. It returns None on I/O error or a
+    non-zero Git exit, never an empty list standing in for failure.
     ``resolve_tracked_paths_or_reason`` layers the BP-100k-4 round-2
     hardening (M) zero-tracked-path floor on top: a git call that succeeds
     but returns nothing (fresh clone/submodule/shallow checkout before the
@@ -42,19 +42,18 @@ _SUBPROCESS_TIMEOUT_SECONDS = 20
 
 
 def get_tracked_paths(cwd: Path) -> list[str] | None:
-    """Return the repository-tracked paths via ``git ls-files``.
+    """Return existing paths Git tracks or can stage next.
 
     Args:
         cwd: Working directory to run ``git ls-files`` in.
 
     Returns:
-        The tracked, forward-slash, repo-root-relative paths exactly as
-        ``git ls-files`` emits them, or None if the command could not be
-        run at all or exited non-zero (e.g. not a git repository).
+        Tracked and unignored untracked repo-root-relative paths, or None
+        if Git could not enumerate them.
     """
     try:
         result = subprocess.run(
-            ["git", "ls-files"],
+            ["git", "ls-files", "--cached", "--others", "--exclude-standard"],
             cwd=str(cwd),
             capture_output=True,
             text=True,
@@ -62,12 +61,12 @@ def get_tracked_paths(cwd: Path) -> list[str] | None:
             check=False,
         )
     except (OSError, subprocess.SubprocessError) as exc:
-        print(f"{_GATE_NAME}: WARNING - could not run 'git ls-files': {exc}", file=sys.stderr)
+        print(f"{_GATE_NAME}: WARNING - could not enumerate stageable paths: {exc}", file=sys.stderr)
         return None
 
     if result.returncode != 0:
         print(
-            f"{_GATE_NAME}: WARNING - 'git ls-files' exited "
+            f"{_GATE_NAME}: WARNING - stageable-path enumeration exited "
             f"{result.returncode}: {result.stderr.strip()}",
             file=sys.stderr,
         )
@@ -77,11 +76,10 @@ def get_tracked_paths(cwd: Path) -> list[str] | None:
 
 
 def resolve_tracked_paths_or_reason(cwd: Path) -> tuple[list[str] | None, str | None]:
-    """Obtain the tracked-path set and floor-check it against emptiness.
+    """Obtain the stageable-path set and floor-check it against emptiness.
 
-    BP-100k-4 round-2 hardening (M / zero-tracked-path finding): a
-    SUCCESSFUL empty result (``git ls-files`` exited 0 with no output — a
-    fresh clone/submodule/shallow checkout before the first ``git add``) is
+    BP-100k-4 round-2 hardening (M / zero-path finding): a
+    SUCCESSFUL empty result (Git exited 0 with no paths) is
     the same epistemic state as the lookup failing outright: no evidence
     either way. It must never be treated as proof that every
     files-triggered gate is unreachable.
@@ -96,10 +94,10 @@ def resolve_tracked_paths_or_reason(cwd: Path) -> tuple[list[str] | None, str | 
     """
     tracked_paths = get_tracked_paths(cwd)
     if tracked_paths is None:
-        return None, "could not obtain the repository's tracked-path set via 'git ls-files'"
+        return None, "could not obtain the repository's stageable-path set via 'git ls-files'"
     if not tracked_paths:
         return None, (
-            "the repository tracks zero paths ('git ls-files' succeeded "
+            "the repository has zero stageable paths ('git ls-files' succeeded "
             "but returned no paths) — reachability cannot be established "
             "from no evidence"
         )

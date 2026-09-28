@@ -74,7 +74,8 @@ created: 2026-09-21
 amended_by: []
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260923-BO-4100c-4-i.md
 notes: >-
   Bounds the blast radius of BO-4100c-4. Routine disposal at the scale this AC family
   exists for is run repeatedly and largely unwatched, so a disposal that takes one extra

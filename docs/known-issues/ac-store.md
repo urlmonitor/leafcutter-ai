@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: 2026-08-18
-last_updated: 2026-09-23
+last_updated: '2026-09-25'
 components:
   - ac_store
 related_docs:
@@ -72,11 +72,11 @@ Fixed issues move to [`ac-store/resolved/`](ac-store/resolved/) and are no longe
 | `high` | KI-ACS-013 — `delivers_to` and `expects_from` are the two ends of one edge keyed on different things, so the forward half is not traversable and nothing validates either | [open-high-ki-acs-013.md](ac-store/open-high-ki-acs-013.md) |
 | `high` | KI-ACS-014 — `reference_file_path` can name a symlinked build output that git does not track, and nothing checks it resolves to a source file | [open-high-ki-acs-014.md](ac-store/open-high-ki-acs-014.md) |
 | `high` | KI-ACS-20260901-1520 — The ticket generator hard-codes `.py` on every test filename, so a browser test is declared as a Python file and the done-proof oracle routes on that extension | [open-high-ki-acs-20260901-1520.md](ac-store/open-high-ki-acs-20260901-1520.md) |
-| `high` | KI-ACS-20260901-1730 — The done-proof oracle gives pytest 60 seconds and reports the timeout as "linked test not run", so a slow-but-passing test makes an AC nondeterministically ineligible for done | [open-high-ki-acs-20260901-1730.md](ac-store/open-high-ki-acs-20260901-1730.md) |
+| `high` | KI-ACS-20260901-1730 — The done-proof oracle gives pytest 60 seconds and reports the timeout as "linked test not run", so a slow-but-passing test makes an AC nondeterministically ineligible for done | [resolved-high-ki-acs-20260901-1730.md](ac-store/resolved/resolved-high-ki-acs-20260901-1730.md) |
 | `high` | KI-ACS-20260907-0920 — Nothing compares an AC's fields against each other, so a record can carry two clauses that contradict — and in one case the contradicted clause predicted verbatim the defect that shipped | [open-high-ki-acs-20260907-0920.md](ac-store/open-high-ki-acs-20260907-0920.md) |
 | `high` | KI-ACS-20260907-the-validator-everyone-runs-is-weaker-than-the-gate-that-blocks — KI-ACS-20260907-the-validator-everyone-runs-is-weaker-than-the-gate-that-blocks | [open-high-ki-acs-20260907-the-validator-everyone-runs-is-weaker-than-the-gate-that-blocks.md](ac-store/open-high-ki-acs-20260907-the-validator-everyone-runs-is-weaker-than-the-gate-that-blocks.md) |
 | `high` | KI-ACS-20260914-composite-proof-drops-path-leaves — the CI done-proof gate expands a leaf that lists its test file in `covered_by` as if it were a composite, finds no children, and refuses every parent goal above such leaves | [open-high-ki-acs-20260914-composite-proof-drops-path-leaves.md](ac-store/open-high-ki-acs-20260914-composite-proof-drops-path-leaves.md) |
-| `high` | KI-ACS-20260914-mark-ac-done-refuses-every-test-required-false-leaf — the sanctioned tool for marking an AC done cannot pass a single docs-only leaf, ever | [open-high-ki-acs-20260914-mark-ac-done-refuses-every-test-required-false-leaf.md](ac-store/open-high-ki-acs-20260914-mark-ac-done-refuses-every-test-required-false-leaf.md) |
+| `high` | KI-ACS-20260914-mark-ac-done-refuses-every-test-required-false-leaf — the sanctioned tool for marking an AC done cannot pass a single docs-only leaf, ever | [resolved-high-ki-acs-20260914-mark-ac-done-refuses-every-test-required-false-leaf.md](ac-store/resolved/resolved-high-ki-acs-20260914-mark-ac-done-refuses-every-test-required-false-leaf.md) |
 | `low` | KI-ACS-009 — The documented AC-store pre-flight runs a weaker validator than the required CI gate, so a clean local check does not predict CI | [open-low-ki-acs-009.md](ac-store/open-low-ki-acs-009.md) |
 | `low` | KI-ACS-011 — `documentation_triggers: []` is refused on an L2 while `null` is accepted, so declaring "no documentation needed" is uncommittable | [open-low-ki-acs-011.md](ac-store/open-low-ki-acs-011.md) |
 | `low` | KI-ACS-015 — A `test_spec` descriptor has no link to the criterion it was promised for, so "which behaviour is this proof for" is unrepresentable | [open-low-ki-acs-015.md](ac-store/open-low-ki-acs-015.md) |

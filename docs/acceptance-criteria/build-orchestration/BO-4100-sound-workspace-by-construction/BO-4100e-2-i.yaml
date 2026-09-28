@@ -95,7 +95,8 @@ created: 2026-09-21
 amended_by: []
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260923-BO-4100e-2-i.md
 notes: >-
   The obvious way to satisfy BO-4100e-2 is a forced delete that skips every check, which
   swaps one harm for the worse one: the leftover stops being unremovable and starts being
