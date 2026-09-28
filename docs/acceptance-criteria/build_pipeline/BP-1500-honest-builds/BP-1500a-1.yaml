@@ -1,0 +1,95 @@
+id: BP-1500a-1
+components:
+  - build_pipeline
+title: "The build writes the documentation map from the same docs folder it writes the map into, and never replaces a populated map with an empty one"
+component: build-pipeline
+level: L2
+status: active
+req_status: draft
+work_status: done
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a self-hosting layout: the build target is a workspace folder that has
+    no docs/ folder of its own, and the configured docs_root points at a
+    package's docs folder inside it (e.g. "leafcutter-ai/docs/")
+  And that docs folder contains how-to/x.md with a description in its frontmatter
+  When the build's doc-index step runs
+  Then the map written to <docs_root>/INDEX.md lists how-to/x.md
+  And no section of it reads "No docs found." for a category that has docs
+  And the bug symptom ("every build overwrites the tracked
+    leafcutter-ai/docs/INDEX.md with a stub where every section reads
+    'No docs found.'") must not occur
+
+  Given a consumer layout: the build target has its own docs/ folder and
+    docs_root is the default "docs/"
+  When the doc-index step runs
+  Then docs/INDEX.md is exactly what it was before this change for the same tree
+
+  Given an existing map that lists at least one entry
+  And a scan that finds no docs in any category
+  When the doc-index step runs
+  Then the existing map is left byte-identical
+  And the step reports, as a warning, which folder it scanned
+  And the step reports that it wrote nothing
+depends_on:
+  - BP-1500a
+doc_links:
+  - path: scripts/build.py
+    relationship: modifies
+    status: exists
+  - path: scripts/generate_doc_index.py
+    relationship: context
+    status: exists
+  - path: docs/known-issues/build-pipeline/resolved/resolved-high-ki-bp-016.md
+    relationship: describes
+    status: exists
+  - path: docs/known-issues/build-pipeline/resolved/resolved-high-ki-bp-001.md
+    relationship: describes
+    status: exists
+  - path: docs/known-issues/build-pipeline/resolved/resolved-high-ki-bp-20260907-1620.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Keep generate_doc_index.py's contract (its categories carry the docs/ prefix; it takes the root that CONTAINS docs/). The build step passes the parent of the resolved docs_root folder, per KI-BP-016's review note option 1."
+  - "When docs_root does not end in a folder named docs, keep the old scan root (the build target) and emit a warning naming the folder."
+  - "The fail-safe is a skip with a warning and return 0, not a crash, so one bad scan does not abort the whole build."
+  - "check-file-size ratchet: scripts/build.py is already over its limit, so the change must not grow its counted lines."
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-09-28
+amended_by: []
+superseded_by: null
+covered_by: [unit_tests/build_guards/test_bp_1500a_1_doc_index_scan_root.py]
+implemented_by: [scripts/build.py]
+change_target: code
+risk_surface: internal
+test_spec:
+  - name: test_self_host_layout_indexes_the_docs_root_tree
+    target_dir: unit_tests/build_guards/
+    framework: pytest
+    type: unit
+    description: "Workspace with no docs/, docs_root 'pkg/docs/' holding how-to/x.md; build_doc_index writes pkg/docs/INDEX.md and it lists docs/how-to/x.md with its description."
+  - name: test_consumer_layout_index_is_unchanged
+    target_dir: unit_tests/build_guards/
+    framework: pytest
+    type: unit
+    description: "Project with docs/how-to/x.md and docs_root 'docs/'; the written docs/INDEX.md lists x.md and equals generate_index(project, project/docs) byte for byte."
+  - name: test_empty_scan_never_overwrites_a_populated_index
+    target_dir: unit_tests/build_guards/
+    framework: pytest
+    type: unit
+    description: "A populated INDEX.md under a docs_root whose scan finds nothing; build_doc_index returns 0 and the file is byte-identical afterwards."
+notes: |
+  Created by /quick-fix on 2026-09-28. Covers the scan-root half of BP-1500a
+  (a step's read location and write location resolve from the same base) for
+  the doc-index phase only. The agent-card half (KI-BP-002) and the
+  whole-population drift verdict stay open under BP-1500a.
+
+  BP-1500a's notes say a reviewed draft at /tmp/selfhost_leaf_build_clean.yaml
+  should become its first L2. That file is not on this machine, so this record
+  takes BP-1500a-1. If the draft turns up, give it the next free id.
