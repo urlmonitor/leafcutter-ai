@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: '2026-09-27'
-last_updated: '2026-09-27'
+last_updated: '2026-09-28'
 components:
   - build_orchestration
 related_docs:
@@ -19,8 +19,8 @@ related_docs:
 
 - **Severity:** high. The failure is silent and intermittent. `status-checker` complies most of the time. When it declines, the caller gets a failed or unparseable reply, and most sites treat that as a real answer: "no orphans", "branch unknown", "store absent".
 - **Status:** open. No AC. Widens `KI-BO-20260901-1620`, which covers only fast-lane-ship.js.
-- **Occurrences:** 1 observed refusal (`/plan-feature` run `wf_734389cf-248`, 2026-09-25, `pause_store.py write` → `pause_persist_failed`; session observation, not re-verified). Earlier refusals: `KI-BO-020` (fast-lane release, twice).
-- **First seen:** 2026-09-25 · **Last seen:** 2026-09-25
+- **Occurrences:** 2 observed refusals ending a run: `/plan-feature` run `wf_734389cf-248` (2026-09-25, `pause_store.py write` → `pause_persist_failed`) and run `wf_d49dfa3f-704` (2026-09-27/28, `pause_persist_failed` at `gate-ba`; see Occurrence 2). Both session observations, not re-verified. Earlier refusals: `KI-BO-020` (fast-lane release, twice).
+- **First seen:** 2026-09-25 · **Last seen:** 2026-09-28
 - **Where:** the `agentType: "status-checker"` sites below, `templates/workflows-js/*.js` on main at `93bd801c`.
 
 ## The charter mismatch
@@ -79,3 +79,13 @@ None in the product. Re-run the workflow. Refusals are not deterministic.
 3. The E2 engine gives workflow bodies no subprocess access (1620 item 3), so "call the CLI directly" is not available.
 
 **Pattern:** a fix applied at the site that failed, while the same dispatch shape stays live at about 40 other sites that simply have not failed yet.
+
+## Occurrence 2 — 2026-09-27/28, `/plan-feature` cannot pause at its gates, and the fast lane's python-coder steps were refused too
+
+Windows 11, workspace-parent layout, leafcutter-ai. Session observation unless marked verified.
+
+- **`/plan-feature` run `wf_d49dfa3f-704`** ended `pause_persist_failed` at `gate-ba`. The session attributed the refusal to `status-checker` ("not my role", "computed task text carries no user authority"). **Verified 2026-09-28 on main `8ed47463`:** `pause-persist` and `pause-persist-verify` already dispatch `worktree-agent` (`templates/workflows-js/plan-feature.js:1836`, `:1865`, `:1886`), and both deployed copies in the main checkout (`.claude/workflows/` and `.leafcutter/workflows/plan-feature.js`, dated 2026-09-27 20:40) carry the same. So either the run used an older build, or `worktree-agent` refused as well. That is residual 2 above (its charter is create/remove only). The run journal was not found on disk, so which agent refused is unconfirmed. Either way the gate could not persist, and the run could not pause for the user at all.
+- **All 21 `status-checker` dispatches in `plan-feature.js` are unchanged** (count re-taken 2026-09-28 at `8ed47463`, same line numbers as the table above).
+- **fast-lane-ship**, two runs for INF-1100d-3-ii: the context-bundle and release steps, both dispatched to `python-coder`, were refused. Recorded under `KI-BO-20260901-1620` Occurrence 3, because that entry owns the python-coder choice.
+
+**Effect.** For the whole session neither `/plan-feature` nor `/fast-lane-ship` could run end to end, and every stage was driven by hand. This occurrence does not change the fix direction. It confirms residual 2: moving a site to `worktree-agent` does not end the refusals, and a chartered shell executor is still needed.
