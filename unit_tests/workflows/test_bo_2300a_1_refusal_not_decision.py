@@ -88,12 +88,15 @@ _STATUS_CHECKER_REFUSAL = {
     ),
 }
 
-# A genuine, non-refusal decision — the control case. Nothing in its shape
-# distinguishes it structurally from the refusal above (both are objects with
-# a string `action` in the gate's valid-option set); the only difference is
-# that this one is not refusal-shaped. Any correct fix must keep accepting
-# this while rejecting/pausing on the refusal above.
-_GENUINE_APPROVE_ANSWER = {"action": "approve", "priority": "high"}
+# A genuine, non-refusal decision. Originally used as a DIRECT live-gate
+# reply (nothing in its shape structurally distinguished it from the refusal
+# above; the only difference was that it was not refusal-shaped). Under
+# ACD-2100c-1 that distinction is moot: resolveGate() no longer ever invokes
+# the live-gate dispatch, so no reply delivered that way — refusal-shaped or
+# not — is ever consulted. The value is retained and now delivered via
+# args.resume_answer (the one channel ACD-2100c-1 leaves in place), by the
+# rewritten control below.
+_GENUINE_APPROVE_ANSWER = {"action": "approve", "priority": "high", "channel": "person"}
 
 
 def _pause_calls(result: HarnessResult) -> list:
@@ -159,41 +162,53 @@ def test_ac1_status_checker_refusal_is_not_treated_as_user_decision():
 def test_ac1_genuine_approve_answer_still_accepted():
     # covers: BO-2300a-1
     """
-    Control case for AC-1. Without this test, a fix for the refusal defect
-    above could over-correct into rejecting (or always pausing on) EVERY
-    live-gate answer — which would silently break the interactive path for
-    real users. A genuine, non-refusal "approve" decision must still advance
-    the workflow past the gate (apply-approval dispatched), exactly as it does
-    today.
+    Control case for AC-1 — SUPERSEDED MECHANISM, SAME PROTECTION
+    (ACD-2100c-1, docs/acceptance-criteria/ac-driven-dev/
+    ACD-2100-entry-point-unblocked/ACD-2100c-1.yaml). This test originally
+    delivered `_GENUINE_APPROVE_ANSWER` as a DIRECT reply to the "final-gate"
+    live dispatch, to prove a refusal-detection fix could not over-correct
+    into rejecting every live-gate answer. ACD-2100c-1 closes that live
+    channel entirely: `resolveGate()` (templates/workflows-js/plan-feature.js)
+    no longer ever calls `liveGateFn`, for any gate, genuine reply or not —
+    only `args.resume_answer` can resolve a gate now (see
+    unit_tests/workflows/test_acd_2100c_1.py's own
+    `test_run_does_not_advance_past_a_decision_point_before_an_answer_arrives`,
+    which proves exactly this for "final-gate" among the other four). Feeding
+    the old direct-label shape here would now just pause the run, which is
+    not what this control exists to prove.
 
-    Expected to PASS today (this is deliberately not a red assertion): the
-    current implementation already honours a genuine live-gate answer. This
-    test exists so a fix for test_ac1_status_checker_refusal_is_not_treated_as_user_decision
-    cannot regress this path — any refusal-detection mechanism must key off
-    something that distinguishes a refusal from a genuine answer, not merely
-    "does the live gate ever answer at all". Verified empirically
-    (2026-08-26, this branch, HEAD) via an ad-hoc harness run before writing
-    this assertion.
+    What this control still protects, unchanged: a genuine, non-refusal
+    decision arriving on the channel that DOES resolve a gate must still be
+    honoured and must still advance the workflow (apply-approval dispatched)
+    rather than being paused. Classified test_drift (Source-of-Truth
+    Discipline Rule 1) — production is correct per ACD-2100c-1's own
+    signed-off red_baseline; this test asserted the pre-ACD-2100c-1 contract.
     """
+    approve_answer = {
+        "gate_id": "final-gate",
+        "type": "single_choice",
+        **_GENUINE_APPROVE_ANSWER,
+    }
     result = run_workflow_under_e2(
         _PLAN_FEATURE_JS,
         timeout=_TIMEOUT,
-        label_responses={"final-gate": _GENUINE_APPROVE_ANSWER},
+        label_responses={"read-pause-record": {"exists": True, "stale": False}},
+        args={"run_id": "test-bo2300a1-genuine-approve", "resume_answer": approve_answer},
     )
     assert result.error == "", f"Harness error: {result.error}"
 
     labels = [c.label for c in result.agent_calls]
     assert "apply-approval" in labels, (
-        "A genuine, non-refusal approve answer at the live gate must still "
-        f"advance the workflow to apply-approval. Got labels: {labels}"
+        "A genuine, non-refusal approve answer delivered via args.resume_answer "
+        f"must still advance the workflow to apply-approval. Got labels: {labels}"
     )
 
     # And it must NOT have been diverted into a pause (that would mean the
-    # fix over-corrected into distrusting every live-gate answer).
+    # fix over-corrected into distrusting every resume-channel answer too).
     pauses = _pause_calls(result)
     assert len(pauses) == 0, (
-        "A genuine approve answer must not be paused — only a refusal-shaped "
-        f"reply should pause. Got {len(pauses)} pause-persist dispatch(es)."
+        "A genuine approve answer delivered via args.resume_answer must not "
+        f"be paused. Got {len(pauses)} pause-persist dispatch(es)."
     )
 
 

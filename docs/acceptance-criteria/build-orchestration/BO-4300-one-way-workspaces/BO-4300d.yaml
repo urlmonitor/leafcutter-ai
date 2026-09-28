@@ -1,0 +1,55 @@
+id: BO-4300d
+title: "Asking again is always safe and finishes a half-made workspace"
+component: build-orchestration
+components:
+  - worktree_manager
+  - build_orchestration
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: critical
+roadmap_phase: phase_1
+criteria: |
+  Ask again any time -- it finishes what was left and never makes a twin.
+
+  If making a workspace was interrupted part-way, the next request for it brings that
+  workspace to fully ready instead of reporting the broken one as fine or starting a
+  second copy beside it. A healthy workspace is simply handed back, and a place already
+  holding different work is left untouched and reported rather than taken over.
+depends_on: [BO-4300]
+doc_links:
+  - path: docs/analysis/2026-09-25-worktree-failure-modes.md
+    relationship: related
+    status: exists
+    relevance: F5 -- re-running returned "ok, reused" on a workspace containing almost nothing.
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-09-25
+amended_by: []
+superseded_by: null
+covered_by: [BO-4300d-1, BO-4300d-2, BO-4300d-3, BO-4300d-4, BO-4300d-5]
+implemented_by: []
+documentation_triggers:
+  - state-diagram
+change_target: code
+risk_surface: safety
+notes: |
+  Origin: F5 in the sandbox -- bootstrap failed, the re-run exited 0 with "created: false"
+  on a workspace holding only three files, because reuse skipped set-up entirely; and
+  KI-BO-20260831-1331, a half-made fast-lane workspace git did not list. Decision 2 means
+  the install is rebuilt on every request, reused or not, so "handed back" always means
+  "re-readied", never "trusted as last seen".
+
+  Neighbours: BO-1700c repairs ONLY missing check set-up; this record repairs readiness as
+  a whole. BO-4100e surfaces an invisible remnant and keeps it clearable (recovery via the
+  listing); this record completes it when the same work is asked for again.
+  BO-1500f's "never take over someone else's space" is the AC-authoring instance of the
+  last sentence -- cite, do not duplicate. BO-4300c defines what "fully ready" means.
+
+  documentation_triggers: state-diagram -- a workspace moves between absent, half-made,
+  ready and occupied-by-other-work with explicit transitions on each request.

@@ -1,0 +1,63 @@
+id: BO-4300a-1-i
+title: "No workflow asks an agent to make a workspace in its own words"
+component: build-orchestration
+components:
+  - worktree_manager
+  - build_orchestration
+level: L3
+status: superseded_by
+req_status: draft
+work_status: todo
+readiness: draft
+priority: critical
+roadmap_phase: phase_1
+change_target: pipeline
+risk_surface: contract_boundary
+criteria: |
+  Given each workflow that needs a workspace is run with a recording stand-in in
+    place of every agent it dispatches,
+  When the workflow reaches the point where it needs a workspace,
+  Then it either receives the workspace maker's answer as part of its input, or
+    issues exactly one request, which asks for the workspace maker to be run
+    unchanged and its answer relayed word for word,
+  And no dispatched request asks an agent to create, copy, set up, link or
+    repair a workspace by steps of the agent's own choosing,
+  And no workspace request is dispatched to an agent that is not permitted to
+    run commands.
+depends_on: [BO-4300a-1]
+doc_links:
+- path: docs/analysis/2026-09-25-worktree-creation-consolidation.md
+  relationship: describes
+  status: exists
+- path: docs/analysis/2026-09-25-worktree-failure-modes.md
+  relationship: describes
+  status: exists
+- path: docs/analysis/2026-09-25-worktree-component-proposal.md
+  relationship: describes
+  status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from: null
+package_surface: false
+origin_agent: business-analyst
+created: 2026-09-25
+amended_by:
+- reason: split-by-it-po
+  by: it-po
+  at: 2026-09-25
+  note: >-
+    Superseded by BO-4300a-1-ia (python-coder, workflow bodies) and BO-4300a-1-ib (llm-expert, entry skills and commands). The work crosses a technical boundary between agents that own
+    different surfaces; the children's criteria distribute this record's clauses without
+    adding behaviour. This record's criteria are untouched.
+superseded_by:
+- BO-4300a-1-ia
+- BO-4300a-1-ib
+covered_by: []
+implemented_by: []
+notes: |
+  F1 (shell steps sent to an agent that refuses them -- the incident's step 3) and F12 (a
+  worktree-creating agent acting on leaked conversation). Verified on the recorded dispatch
+  list of a workflow run, not on workflow source text (CLAUDE.md "Verify Behaviorally").
+  Holds whichever way callers are wired: the skill layer running the maker and passing the
+  answer in, or one dispatch that runs it verbatim.

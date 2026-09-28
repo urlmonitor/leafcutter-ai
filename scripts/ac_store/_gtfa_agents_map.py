@@ -266,6 +266,9 @@ def _build_agents_map(
 
     Args:
         assigned_agent: The agent name from the AC's assigned_agent field.
+            None is a real, common runtime value here despite the ``str``
+            annotation — see the Raises entry below, and the note under
+            ``_require_work_agent`` on why the annotation cannot yet say so.
         change_targets: List of change target categories (e.g. ['python_code', 'config']).
         risk_surface: Risk surface label (e.g. 'low', 'high', 'production').
         not_needed_overrides: Map of agent → 'not_needed' that must be preserved.

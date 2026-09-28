@@ -16,7 +16,7 @@ related_docs:
 # KI-BO-015 — `_worktree_exists` does not know the `fast-lane/` prefix, so a fast-lane run cannot recognise its own workspace and aborts at phase one
 
 > One known issue, split out of `docs/known-issues/build-orchestration.md` on
-> 2026-09-14. Index: [build-orchestration.md](../build-orchestration.md).
+> 2026-09-14. Index: [build-orchestration.md](../../build-orchestration.md).
 > Filename severity is the three-level index bucket (`high`); the
 > original grading is the `**Severity:**` line below, unchanged.
 

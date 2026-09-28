@@ -16,7 +16,7 @@ related_docs:
 # KI-KM-011 — A valid-JSON non-object line crashes the harvester with an unhandled `AttributeError`, and the sink already contains junk lines the repo's own checklist puts there
 
 > One known issue, split out of `docs/known-issues/knowledge-management.md` on
-> 2026-09-14. Index: [knowledge-management.md](../knowledge-management.md).
+> 2026-09-14. Index: [knowledge-management.md](../../knowledge-management.md).
 > Filename severity is the three-level index bucket (`low`); the
 > original grading is the `**Severity:**` line below, unchanged.
 

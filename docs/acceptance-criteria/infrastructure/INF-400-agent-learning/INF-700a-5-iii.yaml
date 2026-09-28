@@ -9,7 +9,7 @@ component: infrastructure
 level: L3
 status: active
 req_status: active
-work_status: todo
+work_status: done
 priority: high
 readiness: reviewed
 created_by: "docs/acceptance-criteria/infrastructure/INF-400-agent-learning/INF-700a-5.yaml"
@@ -83,8 +83,11 @@ origin_agent: business-analyst
 created: 2026-09-07
 amended_by: []
 superseded_by: null
-covered_by: []
-implemented_by: []
+covered_by:
+- unit_tests/workflows/test_inf_700a_5_iii.py
+implemented_by:
+- scripts/knowledge/completion_routing.py
+- scripts/knowledge/completion_routing_state.py
 test_spec:
   - name: test_two_overlapping_routing_steps_write_the_same_learning_once
     target_dir: unit_tests/workflows/

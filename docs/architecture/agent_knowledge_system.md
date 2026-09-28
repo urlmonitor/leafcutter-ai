@@ -1,20 +1,20 @@
 ---
-title: "Agent Knowledge System"
-type: "reference"
-status: "active"
-created: "2026-05-14"
-last_updated: "2026-06-05"
-flight_level: "L2-Container"
+title: Agent Knowledge System
+type: reference
+status: active
+created: '2026-05-14'
+last_updated: '2026-09-21'
+flight_level: L2-Container
 diagram_type: agent_flow
 components:
-  - agent_registry
-  - knowledge_system
+- agent_registry
+- knowledge_system
 related_agents:
-  - ".claude/skills/route-learning/SKILL.md"
-  - ".claude/skills/capture-learning/SKILL.md"
-  - "leafcutter/templates/agents/python-coder.md"
+- .claude/skills/route-learning/SKILL.md
+- .claude/skills/capture-learning/SKILL.md
+- leafcutter/templates/agents/python-coder.md
+description: Overview of Agent Knowledge System.
 ---
-
 # Agent Knowledge System
 
 This document describes how agents classify, route, and persist learnings across
@@ -111,6 +111,79 @@ completes its atomic sign-off write, it runs the prompt:
 
 On "yes", it loads `route-learning` and `capture-learning` in sequence and emits
 a `knowledge_captured` telemetry event to `agent_telemetry.jsonl`.
+
+---
+
+## §5 Write Eligibility and the Waiting Count
+
+### Eligibility rule
+
+A knowledge record is eligible to be written only if it carries non-empty
+`text`. A record without `text` — absent, `null`, or blank after whitespace
+normalisation — is **ineligible**, not deferred, and is **not outstanding**.
+This is a rule over a property of the data (`_is_no_learning_text`,
+`scripts/knowledge/harvest_learnings.py`), not a named exception for one
+corpus: a different textless body in a future install gets the same
+treatment with no change. The check runs before `entry_kind` routing on
+every harvest, so an ineligible record never lands in `skipped_unknown` on
+that account. See **Disposition** below for the body this rule governs today.
+
+### The waiting count
+
+The waiting count ("outstanding") is the number of records carrying
+non-empty `text` not yet written to their destination. Exactly two things
+zero out a record's contribution: **no text** (ineligible, above), or
+**already written** (hashed into the idempotency state). No floor, cap, or
+exclusion by age, agent, `entry_kind`, or destination adjusts it — a record
+that is unroutable but text-bearing still counts. This counts **records**,
+never agent runs: do not conflate it with the capture-health report's
+reached / recorded / failed figures, which count agent invocations reaching
+the sign-off capture step — a different denominator, a different question.
+
+### Exit codes (`harvest_learnings.py`)
+
+| Code | Meaning |
+|---|---|
+| `0` | Clean — nothing outstanding, no write failure. |
+| `1` | Sink unreadable, or the build-time sink declaration is stale. |
+| `2` | State file corrupt. |
+| `3` | Unroutable records remain (`skipped_unknown` > 0). |
+| `4` | A destination write failed and/or state could not persist — outranks `3`. |
+
+A run over the retained corpus below returns `0` — the steady-state form of
+"nothing outstanding," not a special case coded around this corpus.
+
+### Disposition: the 2026-08-26 retained corpus
+
+28 `knowledge_captured` records, emitted 2026-06-16 through 2026-08-12, sit
+in `debugging/logs/agent_telemetry.jsonl` (a byte-identical copy is tracked
+at `tests/fixtures/harvest_learnings/agent_telemetry_33_lines.jsonl` for a
+reader with no live install). Each carries exactly six fields — `event`,
+`timestamp`, `agent`, `component`, `destination`, `entry_kind` — and no
+`text`; under the rule above, all 28 are ineligible and none is outstanding.
+
+The 28 name 10 distinct destinations. Nine exist, holding real content from
+roughly 3.5 KB to over 23 KB at last check and still growing (one,
+`docs/acceptance-criteria/ac-store/PROJECT_CONTEXT.md`, is now well past
+23 KB — re-verify on read). The tenth,
+`memory/feedback_itpo_bo1700_worktree_gate_parity.md`, has never existed in
+git history.
+
+Resolving the 28 wrote nothing anywhere: no destination opened, no directory
+created, the stream unchanged. Nothing was moved, marked, archived, or
+watermarked. Because no per-record exemption is stored, revisiting needs no
+un-marking step — real `text` on one of the 28, or a rule change, makes it
+outstanding again next run, with no state to reset.
+
+**Default-sink note.** `harvest_learnings.py` leaves `--sink` unset by
+default; `scripts/knowledge/sink_resolution.py`'s `resolve_default_sink()`
+prefers a build-time declaration (`config/knowledge_sink.json`) and
+otherwise falls back to the literal `debugging/logs/knowledge_emissions.jsonl`
+— never existed in an unbuilt worktree. Do not read that literal as "the
+sink"; a built install's declaration may point elsewhere. The 28 predate the
+emitter-side repoint (`signoff` §7, `INF-400c-4`) and remain on the stream
+they were actually written to; they are addressed by the eligibility rule
+above, not by a sink repoint or recovery — no drain of this body is pending.
 
 ---
 
@@ -222,3 +295,4 @@ not found at <path>.`) without a Python traceback.
 - `scripts/backfill_descriptions.py` — one-time migration script; see `## Description Field Convention` above.
 - `scripts/commit_guardian/check_description_field.py` — pre-commit hook enforcing description: presence on new files (ticket 02b).
 - `docs/reference/workflow-constraints.md` §Removed Legacy Agents — canonical list of seven removed agent IDs that must not appear as dispatch targets in any workflow, skill, or command template (AC ACD-1100a-3).
+- `docs/acceptance-criteria/infrastructure/INF-400-agent-learning/INF-700c-2.yaml` (and its `-i`/`-ii` children) — the eligibility rule, disposition, and waiting-count definition §5 above records.

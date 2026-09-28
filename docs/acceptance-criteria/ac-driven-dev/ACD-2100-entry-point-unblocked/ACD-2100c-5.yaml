@@ -8,7 +8,7 @@ component: ac-driven-dev
 level: L2
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 roadmap_phase: phase_1
 criteria: |
   Given a run holding drafted work at a decision point,
@@ -21,9 +21,9 @@ criteria: |
     run records the person as the source of that choice.
 depends_on: [ACD-2100c, ACD-2100c-2, ACD-2100c-4]
 doc_links:
-  - path: docs/architecture/diagrams/c3-006-plan-feature-decision-gate-sequence.md
+  - path: docs/architecture/diagrams/c3-008-plan-feature-decision-gate-sequence.md
     relationship: describes
-    status: planned
+    status: exists
     relevance: "The sequence diagram authored by ACD-2100e-1 -- the discard path and the three non-discard exits are what it separates visually."
   - path: docs/known-issues/ac-driven-dev.md
     relationship: describes
@@ -109,9 +109,11 @@ origin_agent: business-analyst
 created: 2026-08-25
 amended_by: []
 superseded_by: null
-covered_by: []
+covered_by:
+- unit_tests/workflows/test_acd_2100c_5.py
 implemented_by:
 - tickets/00_inbox/epics/EPIC-StartingNewWorkTheProperWayAlways/18_TICKET-20260826-ACD-2100c-5.md
+- templates/workflows-js/plan-feature.js
 change_target: pipeline
 risk_surface: safety
 notes: |

@@ -144,6 +144,12 @@ boundary: 'Exercises the empty / one / many / limit / malformed-but-parseable
 failure: 'Feeds a known-bad input through the same entry point or gate and
   asserts it blocks (non-zero exit, or the blocker string in the payload) or
   degrades fail-closed, rather than only asserting the happy path succeeds.'
+discrimination: 'A conditional, trigger-fired angle: it fires for bug-fix or
+  gate/guard ACs, or when a test entry carries must_catch; it never consumes
+  one of the four angle slots by default and may share a test with
+  criterion. Its distinguishing rule: the test must go red under at least
+  one named plausible wrong version of the implementation, not only when the
+  code is absent — asserting only the absent-code case does not satisfy it.'
 ```
 <!-- TAUGHT-TEST-ANGLES:END -->
 

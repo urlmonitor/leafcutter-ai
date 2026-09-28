@@ -102,7 +102,8 @@ created: 2026-09-21
 amended_by: []
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260923-BO-4100b-2.md
 notes: >-
   Observed 2026-09-14: the refusing check's own summary line read "drifted=0 missing=0"
   while it refused the commit anyway, so its verdict was not derived from its findings

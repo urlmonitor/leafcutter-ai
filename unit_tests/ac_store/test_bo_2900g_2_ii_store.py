@@ -78,12 +78,42 @@ from generate_ticket_from_ac import _build_agents_map  # noqa: E402
 # value. it-po's original note argued true from the output being "user-facing
 # commit-time output whose exact wording is load-bearing" — that conflates
 # importance with durability, which is not what the derivation measures.
+# BO-2900g-1, BO-2900g-4 and BO-2900g-2-i removed 2026-09-22, reconciled rather
+# than aged out. All three were adjudicated in
+# docs/analysis/2026-09-21-declares-side-effect-five-record-audit.md, written from
+# two independent analyses with every claim re-verified against the tree. All three
+# declared true while asserting THE CONTENT OF A PRODUCED STRUCTURE — what a plan
+# "contains", whether descriptions "use a kind the definition permits", what a new
+# record "carries" — each satisfiable by a process that performs no durable write.
+# So the derived false is the honest value in all three and the authored true was
+# wrong, dating to one automated 2026-08-17 enrichment pass whose own amended_by
+# notes say "criteria untouched", i.e. the flag was attached to criteria that were
+# never re-read against it.
+#
+# THE REMAINING TWO ARE A DIFFERENT ANIMAL AND MUST NOT BE FLIPPED TO EMPTY THIS SET.
+# For BO-2400g-4 and BO-2400g-4-i the DERIVATION is what is wrong — they are false
+# negatives, not false positives:
+#   * BO-2400g-4 requires a halt to release its claims. claim_build_set writes
+#     work_status: in_progress into the AC YAML on disk (fast-lane-ship.js:982)
+#     BEFORE the Review phase that can stop the run (:1309), so doing nothing leaves
+#     the store saying in_progress — exactly what its clause 3 forbids. Satisfying it
+#     REQUIRES release_claim's second on-disk write. Not satisfiable by inaction,
+#     however absence-shaped its grammar looks.
+#   * BO-2400g-4-i requires findings to be visible on the pull request itself, "so a
+#     person who never saw the run can read them". A submitted PR body is persisted on
+#     a user-facing surface outside the process, and durability there IS the
+#     requirement rather than an incidental.
+# Two deriver defects produce these: vocabulary register (_DURABLE_EFFECT_RE has
+# "updates? the (database|store)" but the authors wrote the outcome, not the
+# mechanism; nothing covers "visible on the pull request") and negation blindness
+# (KI-CG-014). Flipping either would record a statement both analyses judged
+# substantively false in order to quiet a gate.
+#
+# So: this set going 5 -> 2 is the intended progress. It must NOT go to 0 by flipping
+# the last two; it goes to 0 only by widening the derivation.
 _KNOWN_PRE_EXISTING_DISAGREEMENTS = frozenset({
     "BO-2400g-4",
     "BO-2400g-4-i",
-    "BO-2900g-1",
-    "BO-2900g-2-i",
-    "BO-2900g-4",
 })
 
 

@@ -1,0 +1,124 @@
+id: BO-2500a-1-ii
+components:
+  - build_orchestration
+  - testing_quality
+title: "An AC the store itself declares untestable, with the reason recorded, is not blocked by the missing-test rule"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: done
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given an active leaf AC with no test tagged "# covers:<id>" for its id,
+  And the AC records test_required as false together with a non-empty
+    test_rationale stating why no test can prove it,
+  When the done-status of that AC is evaluated at any layer that decides it —
+    the pre-commit check, the oracle, and the CI sweep,
+  Then the missing linked test does not block the AC from being marked done,
+  And an AC recording test_required false WITHOUT a non-empty test_rationale is
+    still blocked, so the waiver cannot be taken by omitting the reason,
+  And an AC whose test_required is true or absent is still blocked by the
+    missing linked test exactly as before,
+  And every layer that decides this reaches the same verdict for the same AC,
+    because they consult one shared rule rather than each carrying a copy.
+depends_on: [BO-2500a-1]
+doc_links:
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-027-tdd-workflow-enforcement.md
+    relationship: constrains
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "THE RULE IS A CONJUNCTION AND MUST BE STORED ONCE. test_required is false AND test_rationale is non-empty after whitespace stripping. Define the predicate in scripts/ac_store/done_proof.py and have templates/scripts/commit_guardian/check_done_proof.py import it. Three hand-written copies of this conjunction is precisely how the layers came to disagree -- see the defect note below."
+  - "THREE LAYERS DECIDE THIS, AND THEY DISAGREED. check_staged_done_proofs (pre-commit) performs its own static covers-tag scan and never calls verify_done_eligible, so it refused every untestable AC outright. verify_done_eligible delegates to _handle_no_direct_tests, which returns eligible false with no awareness of either field. check_all_done_acs and check_changed_done_acs (CI) already skipped on `test_required is False` alone, ignoring test_rationale entirely. All three must end up on the shared predicate."
+  - "THE CI HALF IS A TIGHTENING, NOT A LOOSENING. Before this AC, an AC carrying test_required false with no recorded reason was silently waved through by the CI sweep while being refused at pre-commit. The conjunction closes that: the same AC is now reported. Do not describe this AC as only relaxing the gate -- it relaxes one half and tightens the other, and the tightening is the more important of the two."
+  - "REACH THE GATE THE WAY THE HOOK REACHES IT. At least one test must drive the real pre-commit CLI end to end and assert its exit code, not a helper's return value. A predicate that returns the right answer while the deployed hook still refuses is the phantom-done shape this whole BO-2500 family exists to prevent."
+  - "IF check_done_proof.py GAINS AN IMPORT IT DID NOT HAVE, confirm the imported module is reachable in the DEPLOYED layout, not only the source tree. done_proof.py itself was once created outside build_ac_store's deploy_map and the deployed hook crashed with ModuleNotFoundError while every source-tree test stayed green."
+  - "Must handle errors gracefully per the project error handling policy: a malformed or unreadable AC record must fail closed (still require the tag), never open."
+test_spec:
+  - name: test_ac_accept_test_required_false_with_real_rationale
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: behavioral
+    angle: reachability
+    surface_invoked: "the real check_done_proof.py --mode precommit CLI, as a subprocess, asserting its exit code"
+    description: "An AC with test_required false and a real test_rationale, staged with work_status done and no covers tag anywhere, makes the pre-commit hook exit 0."
+  - name: test_ac_refuse_test_required_false_missing_rationale
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: behavioral
+    angle: failure
+    description: "test_required false with no test_rationale key at all still exits non-zero. The waiver cannot be taken by omitting the reason."
+  - name: test_ac_refuse_test_required_false_whitespace_rationale
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: behavioral
+    angle: boundary
+    description: "A test_rationale of only whitespace is not a reason. Still exits non-zero."
+  - name: test_ac_refuse_test_required_true_no_tag
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "The baseline mandate is untouched: test_required true with no covers tag still exits non-zero."
+  - name: test_accepts_test_required_false_with_real_rationale
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: "verify_done_eligible returns eligible true for the waived shape, so the oracle agrees with the pre-commit layer."
+  - name: test_missing_rationale_still_reported
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: unit
+    angle: failure
+    description: "check_all_done_acs and check_changed_done_acs report an AC with test_required false and no rationale, closing the CI half of the divergence."
+test_rationale: |
+  Every descriptor asserts an observable verdict rather than the presence of a
+  predicate: the reachability descriptor asserts the real CLI's exit code,
+  which is the value a git commit actually sees, because the function that
+  produced the reported failure never calls the oracle and a test written only
+  against the oracle would have passed while commits stayed blocked. The three
+  refusal descriptors are the fence -- the waiver has to be un-takeable by
+  omitting the reason, and each half of the conjunction is asserted failing on
+  its own. The CI descriptor exists because that layer's pre-existing
+  test_required-only skip is a live hole in the opposite direction, and a fix
+  that only relaxed pre-commit would leave it open.
+delivers_to: null
+expects_from:
+  - ac_id: BO-2500a-1
+    contract: "The missing-linked-test blocking rule this AC bounds: the verdict and its reason string, which stay unchanged for every AC that does not record an explicit, reasoned waiver"
+origin_agent: BrainCandy
+created: 2026-09-22
+amended_by: []
+superseded_by: null
+covered_by:
+- unit_tests/commit_guardian/test_done_proof_test_required_rationale_gate.py
+implemented_by:
+- scripts/ac_store/_done_proof_phase_helpers.py
+- scripts/ac_store/done_proof.py
+- templates/scripts/commit_guardian/check_done_proof.py
+- templates/scripts/commit_guardian/_ac_store_locator.py
+- templates/scripts/commit_guardian/_staged_ac_yaml_paths.py
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  Found while marking INF-700c-3 (a documentation AC, change_target docs,
+  test_required false) done: the pre-commit hook refused with "no '# covers:
+  INF-700c-3' ... tag found anywhere under ." and "exemptions in force: 0", so
+  the documentation shipped while the store had to keep saying todo. The only
+  exemption seam available was config/reachability_exemptions.yaml, whose schema
+  is units and capabilities with no runtime entry point; an AC id is neither, so
+  using it would have recorded a false statement to buy a pass.
+
+  BP-1100f-6 is the evidence that this is a hole rather than a design: it is
+  change_target docs, test_required false, work_status done, and has no covers
+  tag anywhere in the tree. It is done today only because it landed before the
+  gate reached it, or without its AC file staged -- the documented blind spot
+  where these hooks read the git index rather than the store.

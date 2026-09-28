@@ -38,9 +38,18 @@ doc_links:
     relationship: constrains
     status: exists
     relevance: "Owns _call_generate_ticket_from_ac and generate_tickets_for_leaves — the goal-path half of the two generators this AC constrains."
-  - path: scripts/ac_store/generate_ticket_from_ac.py
+  - path: scripts/ac_store/_gtfa_impl_py.py
     relationship: constrains
     status: exists
+    relevance: "Holds is_implementation_python_path, which carries BOTH exclusions this AC exercises — the test_*.py / *_test.py basename forms and the tickets/ path form — and is applied per-entry, so a genuine implementation .py in the same list still qualifies. (Re-pointed 2026-09-22 off the generate_ticket_from_ac.py shell; see the amendment.)"
+  - path: scripts/ac_store/_gtfa_tests_section.py
+    relationship: constrains
+    status: exists
+    relevance: "Where the surviving stub is annotated, so the second Given's requirement that the stub name the implementation file and not the test file is observable."
+  - path: scripts/ac_store/_gtfa_body.py
+    relationship: constrains
+    status: exists
+    relevance: "The emission gate — the first Given's 'no section at all, and no warning about a missing one' outcome is decided here."
 assigned_agent: python-coder
 estimated_complexity: S
 it_requirements:
@@ -52,7 +61,28 @@ expects_from:
   contract: "The shared files_touched classification helper whose test-file and tickets-path exclusion rules this case exercises"
 origin_agent: business-analyst
 created: 2026-06-22
-amended_by: []
+amended_by:
+- reason: edit-surface-repoint
+  by: it-po
+  at: '2026-09-22'
+  note: 'Re-pointed off the bare scripts/ac_store/generate_ticket_from_ac.py entry, which
+    named a re-export shell as the edit surface via the edit-surface relationship
+    constrains. Surface corrected to what the implementing commit 4dcfd87c actually
+    touched: _gtfa_impl_py.py (is_implementation_python_path carries both exclusion
+    forms), _gtfa_tests_section.py (stub annotation, for the second Given) and
+    _gtfa_body.py (the emission gate, for the first). No shell entry: this AC adds no
+    re-exportable helper of its own.
+
+    NOTE ON THE CRITERIA, WHICH ARE UNTOUCHED: every path named in the Givens —
+    unit_tests/test_generate_ticket.py, scripts/ac_store/generator_test.py,
+    tickets/00_inbox/helper.py and scripts/ac_store/generate_ticket_from_ac.py — is an
+    EXAMPLE files_touched value in the test scenario, not an edit surface. The last one
+    in particular is the fixture''s stand-in for "a genuine implementation .py", and
+    reading it as this AC''s work surface is precisely the confusion this re-point
+    removes.
+
+    Recorded on an already-done record for accuracy only; work_status, readiness and
+    priority are unchanged.'
 superseded_by: null
 covered_by: []
 implemented_by: []

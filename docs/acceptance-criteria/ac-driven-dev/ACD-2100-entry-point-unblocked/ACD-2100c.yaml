@@ -139,7 +139,7 @@ notes: |
   a waiting run without reading the program") was authored as the sibling L1 the note
   above recommends, and its two children serve exactly these triggers:
 
-    - `ACD-2100e-1`  sequence-diagram  -> docs/architecture/diagrams/c3-006-plan-feature-decision-gate-sequence.md
+    - `ACD-2100e-1`  sequence-diagram  -> docs/architecture/diagrams/c3-008-plan-feature-decision-gate-sequence.md
     - `ACD-2100e-2`  how-to            -> docs/how-to/resume-a-paused-plan-feature-run.md
 
   The triggers stay declared here because this L1 is the SUBJECT the pages document;

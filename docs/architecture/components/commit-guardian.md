@@ -5,17 +5,19 @@ flight_level: L3-Component
 status: active
 type: reference
 created: 2026-06-08
-last_updated: 2026-09-07
+last_updated: 2026-09-25
 components:
   - commit_guardian
   - git_vcs_operations
 related_docs:
+  - docs/architecture/adrs/ADR-049-record-checker-trigger-scope.md
   - docs/architecture/adrs/ADR-038-commit-guardian-shared-change-set-derivation.md
   - docs/architecture/adrs/ADR-037-whole-collection-uniqueness-pass.md
   - docs/architecture/adrs/ADR-029-adr-number-collision-prevention.md
   - docs/architecture/adrs/ADR-001-self-hosting-boundary.md
   - docs/architecture/diagrams/c3-006-whole-collection-uniqueness-pass.md
   - docs/how-to/managing-pre-commit-hooks.md
+  - docs/reference/commit-guardian-negative-control-liveness.md
 related_code:
   - templates/scripts/commit_guardian/check_identifier_uniqueness.py
   - templates/scripts/commit_guardian/check_adr_collision.py
@@ -24,6 +26,7 @@ related_code:
   - templates/scripts/commit_guardian/change_set_source.py
   - templates/scripts/commit_guardian/check_contract_shrinking.py
   - templates/scripts/commit_guardian/check_doc_frontmatter.py
+  - templates/scripts/commit_guardian/check_negative_control_liveness.py
 ---
 
 # Commit Guardian

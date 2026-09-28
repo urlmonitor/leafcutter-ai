@@ -1,0 +1,103 @@
+id: BO-4300b-3
+title: "When more than one project could be meant, the request is refused and names them"
+component: build-orchestration
+components:
+  - worktree_manager
+  - build_orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: critical
+roadmap_phase: phase_1
+change_target: code
+risk_surface: safety
+criteria: |
+  Given a folder that is not a project and contains two projects, "shop" and
+    "blog",
+  When a workspace is requested from that folder without saying which project,
+  Then the request is refused,
+  And the refusal names both "shop" and "blog" as the candidates it could not
+    choose between,
+  And no workspace and no line of work is created in either project,
+  And given the same request names "shop" as its project, it is answered ready
+    with a workspace that is a copy of shop.
+depends_on: [BO-4300b]
+doc_links:
+- path: docs/analysis/2026-09-25-worktree-failure-modes.md
+  relationship: describes
+  status: exists
+- path: docs/analysis/2026-09-25-worktree-component-proposal.md
+  relationship: describes
+  status: exists
+- path: docs/architecture/components/worktree-manager.md
+  relationship: describes
+  status: exists
+  relevance: Component page for the one maker; rewritten for clones under BO-4300a-4.
+- path: docs/testing/test-angles.md
+  relationship: describes
+  status: exists
+  relevance: Angle taxonomy used by this record's test_spec.
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: BO-4300b-1
+  contract: Resolution search requiring exactly one candidate.
+package_surface: false
+it_requirements:
+- More than one candidate project -> refused AMBIGUOUS_REPO whose candidates list every one found; never
+  the first match (check_workspace_setup_permission.py's first-match behaviour is not reproduced).
+- 'A refusal made during resolution writes nothing: no landing place, lock, branch or marker in any candidate.'
+- Naming the project (--repo-root) resolves the ambiguity.
+- Answers conform to the result contract delivered by BO-4300c-2 (one JSON object on stdout, status/code/exit
+  mapping, workspace_path absent on every non-ok answer).
+- Proof runs the DEPLOYED maker -- the copy an install delivers, resolved through the shared test locator
+  delivered by BO-4300f-4 -- as a separate process against real temporary git repositories with a real
+  bare hub. No mock of git, no import of the maker module, no grep of its source (CLAUDE.md 'Gate / Workflow
+  ACs -- Verify Behaviorally, Not by Grep'); a test never falls back to the templates/ source copy.
+- 'Tests must not spawn the package''s own scripts/build.py (CLAUDE.md ''Tests must not spawn their own
+  build.py''): the deployed maker comes from the shared deployed layout, and fixture projects carry a
+  minimal stub build entry point that installs a real, rejecting hook in well under a second. A test that
+  must mutate the package and build its own copy says so and justifies it in its ticket.'
+- All temporary projects, hubs and workspaces live under the test's temp directory and run git with an
+  isolated global and system config; afterwards the developer's own repository's branches, registered
+  worktrees and local git config are unchanged (BO-4300f-4-i, F14, KI-TQ-012).
+test_required: true
+test_spec:
+- name: test_two_candidate_projects_are_refused_as_ambiguous
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: criterion
+  description: From a folder containing shop and blog the answer is refused, code AMBIGUOUS_REPO, candidates
+    naming both, exit 2.
+- name: test_ambiguous_refusal_creates_nothing_in_either_project
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: failure
+  description: Neither project gains a branch, a landing-place entry or a lock file.
+- name: test_naming_the_project_resolves_ambiguity
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: criterion
+  description: The same request with --repo-root shop is answered ok with a clone of shop.
+test_rationale: Every assertion is made on what the deployed maker actually did to real repositories --
+  its one JSON answer, its exit code, and the state of the workspace, the hub and the main copy afterwards.
+  A direct-import unit test would pass while the deployed copy is stale or mis-deployed (F13), and a git
+  mock cannot show the half-made and occupied states this family exists to handle.
+origin_agent: business-analyst
+created: 2026-09-25
+amended_by: []
+superseded_by: null
+covered_by: [BO-4300b-3-i]
+implemented_by:
+- tickets/00_inbox/TICKET-20260927-BO-4300b-3.md
+notes: |
+  F11's second half: the resolvers disagree on ambiguity -- one takes the first child
+  repository it finds, another refuses anything but exactly one. The customer intent is
+  "refuse when ambiguous, never guess".
+target_epic: EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace
