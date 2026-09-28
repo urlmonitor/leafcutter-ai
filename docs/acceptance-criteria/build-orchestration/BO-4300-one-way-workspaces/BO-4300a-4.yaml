@@ -1,0 +1,71 @@
+id: BO-4300a-4
+title: "Component diagram: the one workspace maker and everyone who calls it"
+component: build-orchestration
+components:
+  - worktree_manager
+  - build_orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: critical
+roadmap_phase: phase_1
+change_target: docs
+risk_surface: internal
+criteria: |
+  Given a reader wants to see where workspaces come from,
+  When they open the component diagram for the workspace maker,
+  Then it shows the workspace maker as one standalone component,
+  And it shows each caller -- workflows receiving its answer, the skill agents
+    run it from, agents, and a person at a terminal -- reaching workspaces only
+    through it,
+  And it shows the main copy, the shared project, the landing place for
+    workspaces, and each workspace holding its own installed tools,
+  And it shows no second path by which a workspace is made, found or cleared.
+depends_on: [BO-4300a, BO-4300a-1]
+doc_links:
+- path: docs/architecture/components/worktree-manager.md
+  relationship: modifies
+  status: exists
+- path: docs/analysis/2026-09-25-worktree-component-proposal.md
+  relationship: describes
+  status: exists
+- path: docs/analysis/2026-09-25-worktree-isolation-decision-memo.md
+  relationship: constrains
+  status: exists
+- path: docs/architecture/adrs/ADR-018-agent-isolation-topology.md
+  relationship: constrains
+  status: exists
+  relevance: Per-feature clones (section 1) accepted as decision 1; migration step 2 (gc.auto=0).
+assigned_agent: architecture-diagram-author
+estimated_complexity: M
+delivers_to: null
+expects_from:
+  ac_id: BO-4300a-1
+  contract: 'Component boundary: one stdlib script at <install>/scripts/worktree.py with verbs ensure/locate/list/verify/remove/where;
+    marker-based registry in the landing place.'
+package_surface: false
+it_requirements:
+- 'Rewrite docs/architecture/components/worktree-manager.md for per-feature clones: overview, responsibilities
+  and entry points change (git worktree lifecycle, setup_ticket_worktree.py and the ACD-2100a-2 resolution
+  notes are replaced by the one maker); add the C4 component diagram per the write-c4-diagram skill.'
+- The diagram shows the maker as one standalone component; callers (workflows receiving args.workspace
+  or one verbatim dispatch, the workspace skill, agents, a person at a terminal) reaching workspaces only
+  through it; the main copy, the hub, the landing place, and each workspace holding its own installed
+  tools; no second make/find/clear path.
+- Stay consistent with the components.json worktree_manager update recorded on BO-4300a-1 (description
+  and primary_code).
+test_required: false
+origin_agent: business-analyst
+created: 2026-09-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260927-BO-4300a-4.md
+notes: |
+  documentation_trigger component-diagram on BO-4300a. The existing worktree-manager
+  component page describes git worktree lifecycle management, which decision 1 makes
+  inaccurate; the diagram is drawn for per-feature copies (clones).
+target_epic: EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace

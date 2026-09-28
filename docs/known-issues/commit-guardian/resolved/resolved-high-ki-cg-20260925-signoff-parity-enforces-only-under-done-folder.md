@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: '2026-09-25'
-last_updated: '2026-09-25'
+last_updated: '2026-09-27'
 components:
   - commit_guardian
   - build_orchestration
@@ -19,7 +19,7 @@ related_docs:
 # KI-CG-20260925-signoff-parity-enforces-only-under-done-folder — check_ticket_signoff_parity blocks only for paths containing /done/, tickets are no longer moved there, so it is warn-only for every ticket and 51 tickets read done with pull-request still needed
 
 - **Severity:** high. The parity gate the signoff skill describes as "blocks the commit" blocks nothing; phantom-done tickets accumulate on main.
-- **Status:** open — no AC. Hook read and count taken 2026-09-25 (`scratchpad/phantom.py`, frontmatter regex over `tickets/**`).
+- **Status:** **RESOLVED** (PR #913, merged as cd2796c3; AC BO-400c-5; verified 2026-09-25 by a red/green/mutation-proof run of `test_bo_400c_5_signoff_parity_done_status.py` against the real hook).
 - **Where:** `templates/scripts/commit_guardian/check_ticket_signoff_parity.py:24-26, 295-310`; deployed registration `.leafcutter/pre-commit-config.yaml:440` (no `--enforce`).
 
 ## Symptom
@@ -42,6 +42,10 @@ Five recipes write `status: done` and only one checks anything (the `set_ticket_
 hand-edit, "change nothing else"), `finalize-feature.js:1599-1604` (regex replace), `ticket-supervisor.md:172-195`
 (edit + `git mv`), `pull-request.md:231-240` (flips its own ticket). `building-epics/SKILL.md:343-347` additionally
 writes `pull-request: signed_off` for a PR phase that never ran — which KI-BO-20260831-1930 L85-88 calls false.
+
+## Resolution (2026-09-27)
+
+A `status: done` ticket with a `needed` or `failed` phase now blocks the commit wherever the file lives. Every other parity finding on done tickets stays warn-only (blocking them all would have caught 638 of 725 done tickets, mostly for `cross_layer_seam_answer absent`). Legacy `/done/` paths and `--enforce` still block on every violation. **Data left to reconcile:** 109 existing done tickets carry a `needed` or `failed` phase (105 with an agent `needed`, including the 51 with `pull-request: needed`); each is now blocked when next edited and staged, until it is reconciled.
 
 ## Fix direction
 

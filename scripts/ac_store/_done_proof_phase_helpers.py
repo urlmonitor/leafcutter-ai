@@ -55,6 +55,8 @@ ARCHITECTURE: Two independent helper groups, moved verbatim from
 from __future__ import annotations
 
 import json
+import os
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -160,6 +162,148 @@ def is_covers_tag_waived(ac_info: dict | None) -> bool:
         return False
     rationale = ac_info.get("test_rationale")
     return isinstance(rationale, str) and bool(rationale.strip())
+
+
+_PYTEST_ROOTDIR_TOML_MARKERS: tuple[tuple[str, tuple[str, ...]], ...] = (("pyproject.toml", ("[tool.pytest.ini_options]", "[tool.pytest]")), ("tox.ini", ("[pytest]",)), ("setup.cfg", ("[tool:pytest]",)))
+
+
+def _pytest_ini_section_present(path: Path, sections: tuple[str, ...]) -> bool:
+    """Return whether *path* exists and has one of *sections* as a header line.
+
+    Backs :func:`_directory_declares_pytest_rootdir`'s handling of
+    ``pyproject.toml``/``tox.ini``/``setup.cfg`` -- pytest only treats those
+    three files as its own config source when they carry the specific
+    section/table header it reads from that file kind, so an unrelated
+    ``pyproject.toml`` with no pytest section must not falsely anchor the
+    walk. ``setup.cfg`` in particular is read ONLY via a literal
+    ``[tool:pytest]`` header -- pytest's own ``findpaths.py`` explicitly
+    rejects a bare ``[pytest]`` section there (issue #3086) -- and
+    ``pyproject.toml`` accepts either ``[tool.pytest.ini_options]`` (ini
+    mode) or ``[tool.pytest]`` (native-TOML mode, pytest 9+), hence
+    *sections* being a tuple of acceptable alternatives rather than one
+    fixed string.
+
+    Matching is by WHOLE LINE, not by an arbitrary substring search: a
+    header is only recognised when it appears, optionally surrounded by
+    horizontal whitespace, as an entire line of its own. This is what
+    correctly rejects ``[tool:pytest]``'s text against a caller mistakenly
+    asking for a bare ``[pytest]`` -- a naive substring search would also
+    reject that particular pair, but would wrongly ACCEPT a header string
+    that merely appears inside a comment, a quoted value, or as a longer
+    table name's prefix (e.g. ``[tool.pytest]`` is not a line-match against
+    a genuine ``[tool.pytest.ini_options]`` table, even though the shorter
+    string is a character-prefix of the longer one).
+
+    Args:
+        path: Candidate ini/toml file to inspect (need not exist).
+        sections: One or more literal section/table header lines pytest
+            itself reads from this file kind (e.g.
+            ``("[tool.pytest.ini_options]", "[tool.pytest]")``).
+
+    Returns:
+        ``True`` iff *path* is a file with at least one of *sections*
+        present as a whole, whitespace-trimmed line. A missing file, or one
+        that cannot be read, returns ``False`` (a read failure is logged to
+        stderr, never raised).
+    """
+    if not path.is_file():
+        return False
+    try:
+        text = path.read_text(encoding="utf-8")
+    except OSError as exc:
+        print(f"WARNING: done_proof: cannot read {path}: {exc}", file=sys.stderr)
+        return False
+    return any(
+        re.search(rf"^[ \t]*{re.escape(section)}[ \t]*$", text, re.MULTILINE)
+        for section in sections
+    )
+
+
+def _directory_declares_pytest_rootdir(directory: Path) -> bool:
+    """Return whether *directory* is one of pytest's own rootdir-ini directories.
+
+    Mirrors (reasonably) pytest's own config-file discovery precedence:
+    ``pytest.ini`` always counts on sight -- pytest never inspects its
+    contents before treating it as the config source; ``pyproject.toml``,
+    ``tox.ini``, and ``setup.cfg`` count only via
+    :func:`_pytest_ini_section_present`, per that function's docstring.
+
+    Args:
+        directory: Candidate directory to test.
+
+    Returns:
+        ``True`` iff *directory* contains one of pytest's rootdir ini files
+        with whatever section that file kind requires.
+    """
+    if (directory / "pytest.ini").is_file():
+        return True
+    return any(
+        _pytest_ini_section_present(directory / name, sections)
+        for name, sections in _PYTEST_ROOTDIR_TOML_MARKERS
+    )
+
+
+def _resolve_pytest_run_cwd(test_files: list[Path]) -> str | None:
+    """Return the ``cwd=`` for :func:`done_proof._run_pytest_and_parse`'s subprocess.
+
+    Defined here rather than in done_proof.py itself (BO-2900a-3) purely to
+    stay under that file's own file-size ratchet -- a plain, standalone move
+    like the ``_build_ac_status_map``/``is_covers_tag_waived`` pair above,
+    needing no symbol back from done_proof.py.
+
+    Starts from *test_files*' own common ancestor directory instead of
+    leaving ``cwd`` unset. Left unset, the child inherits the CALLING
+    process's cwd, and pytest's rootdir/config discovery in the child then
+    walks upward from the common ancestor of THAT cwd and *test_files* --
+    when the two share only a distant ancestor (e.g. a fixture rooted under
+    the OS temp directory while the caller runs from a project checkout,
+    sharing only a user's home directory), that walk crosses directories
+    wholly unrelated to *test_files* and can fail collection outright with a
+    spurious ``FileNotFoundError`` sourced from unrelated, transiently
+    changing directory content -- never a fault in *test_files* themselves.
+
+    BO-2900a-3 (this rework round, CI regression PR #925): the common
+    ancestor alone is not always the right answer either. When this repo's
+    own ``pytest.ini`` lives several directories ABOVE the common ancestor
+    (e.g. ``pytest.ini`` at the repo root, addopts naming a plugin that
+    lives beside it, while the linked test file lives under
+    ``unit_tests/ac_store``), anchoring the subprocess's cwd to the common
+    ancestor makes that ``-p <plugin>`` addopts entry unimportable --
+    ``python -m pytest`` only puts the subprocess's OWN cwd on
+    ``sys.path``, not the ini file's directory. So this now walks UPWARD
+    from the common ancestor, through every parent directory in turn, and
+    returns the first one :func:`_directory_declares_pytest_rootdir` accepts
+    -- the same directory pytest's own rootdir search would settle on. Only
+    when no ancestor declares itself a pytest rootdir at all does this fall
+    back to the plain common ancestor, preserving the original OS-temp-dir
+    fixture motivation above verbatim.
+
+    Args:
+        test_files: Absolute paths to Python test files about to be handed
+            to the pytest subprocess.
+
+    Returns:
+        The string form of the nearest ancestor (starting from, and
+        including, the common ancestor directory of every *test_files*
+        entry's parent) that declares itself a pytest rootdir per
+        :func:`_directory_declares_pytest_rootdir`; the plain common
+        ancestor itself when no such ancestor is found; or ``None`` when
+        *test_files* is empty or the entries share no common filesystem
+        ancestor (e.g. different Windows drives) -- ``None`` restores
+        ``subprocess.run``'s default of inheriting the caller's own cwd.
+    """
+    if not test_files:
+        return None
+    try:
+        common_ancestor = Path(
+            os.path.commonpath([str(f.resolve().parent) for f in test_files])
+        )
+    except ValueError:
+        return None
+    for candidate in (common_ancestor, *common_ancestor.parents):
+        if _directory_declares_pytest_rootdir(candidate):
+            return str(candidate)
+    return str(common_ancestor)
 
 
 # ---------------------------------------------------------------------------
@@ -626,4 +770,10 @@ def _build_failure_reason(
 #   module) does not crash with ModuleNotFoundError -- the same class of gap
 #   done_proof.py's own module docstring already documents for itself.
 #   (#BP-100n-4)
+# - 2026-09-25 [python-coder]: Added _resolve_pytest_run_cwd() here (not in
+#   done_proof.py) purely to stay under THAT file's own ratchet -- see its
+#   DECISION HISTORY addendum for the bug this fixes.
+#   (#EPIC-AProofThatReachedTheCodeByDirectImport/02, BO-2900a-3)
+# - 2026-09-28 00:31 [python-coder/BO-2900a-3 rework]: CI regression on PR #925 (Linux): "pytest run unfinished: 2 file(s), returncode 4" for BO-2900a-1 and BO-2900a-3. Root cause: the 2026-09-25 fix above anchored the pytest subprocess's cwd to *test_files*' own common ancestor unconditionally, but this repo's own pytest.ini (addopts -p scripts.ac_store.pytest_ac_enforcement, several directories ABOVE unit_tests/ac_store) then becomes unimportable from that cwd -- python -m pytest only puts the subprocess's OWN cwd on sys.path, not the ini's directory. Fixed by adding _directory_declares_pytest_rootdir() and _pytest_ini_section_present(): _resolve_pytest_run_cwd now walks UPWARD from the common ancestor through each parent, returning the first one that declares itself a pytest rootdir (pytest.ini on sight; pyproject.toml/tox.ini/setup.cfg only when they carry the section pytest itself reads from that file kind), falling back to the plain common ancestor -- preserving the original OS-temp-dir fixture motivation -- only when no ancestor qualifies. Single call site confirmed unchanged (done_proof._run_pytest_and_parse); return contract (str | None) unchanged, so no consumer updates needed. (#EPIC-AProofThatReachedTheCodeByDirectImport/02, BO-2900a-3)
+# - 2026-09-28 01:05 [python-coder/BO-2900a-3 rework 2]: pr-reviewer (00:57 blocker) verified against pytest 9.1.1's own _pytest/config/findpaths.py::load_config_dict_from_file that _PYTEST_ROOTDIR_TOML_MARKERS paired ("setup.cfg", "[pytest]") -- but real pytest reads setup.cfg ONLY via a "[tool:pytest]" section (a bare "[pytest]" section there is an explicit, rejected error, issue #3086); the wrong pairing silently never recognised a genuine setup.cfg rootdir, reintroducing the exact PR #925 addopts-plugin failure for any consumer repo configured via setup.cfg. Fixed the pairing to ("setup.cfg", ("[tool:pytest]",)); also added the pytest-9-supported "[tool.pytest]" native-TOML table as a second accepted pyproject.toml header alongside the existing "[tool.pytest.ini_options]", per findpaths.py's own toml_config/ini_config branch. Additionally hardened _pytest_ini_section_present from a plain substring search to a whole-line regex match (each candidate header must appear as its own line, optionally whitespace-padded) so a header string can never be satisfied by a comment, quoted value, or another header's character-prefix. test-writer (01:01) added test_setup_cfg_addopts_plugin_is_unimportable_because_the_rootdir_marker_checks_the_wrong_section_name (RED before this fix, GREEN after) plus a pyproject.toml "[tool.pytest.ini_options]" guard test; both, plus every pre-existing test in this file, verified green after this change. Single call site unchanged. (#EPIC-AProofThatReachedTheCodeByDirectImport/02, BO-2900a-3)
 # ================================================================================

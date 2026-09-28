@@ -1,0 +1,124 @@
+id: BO-4300a-2
+title: "The same piece of work is always recognised as the same workspace"
+component: build-orchestration
+components:
+  - worktree_manager
+  - build_orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: critical
+roadmap_phase: phase_1
+change_target: code
+risk_surface: safety
+criteria: |
+  Given the epic "Files Stay Workable" has a ready workspace that was obtained
+    through the long-running build route, and its line of work carries two
+    commits,
+  When the same epic is asked for again through the feature skill's epic route,
+    which today names epics differently, and again through the long-running
+    build route,
+  Then both requests are answered ready with the location of the existing
+    workspace,
+  And afterwards exactly one workspace and exactly one line of work exist for
+    that epic,
+  And the two commits are still on the line of work the workspace is on,
+  And given a different epic, "Files Stay Portable", is requested, it is answered
+    with a workspace of its own, at a different location from the first.
+depends_on: [BO-4300a]
+doc_links:
+- path: docs/analysis/2026-09-25-worktree-creation-consolidation.md
+  relationship: describes
+  status: exists
+- path: docs/analysis/2026-09-25-worktree-failure-modes.md
+  relationship: describes
+  status: exists
+- path: docs/analysis/2026-09-25-worktree-component-proposal.md
+  relationship: describes
+  status: exists
+- path: docs/architecture/components/worktree-manager.md
+  relationship: describes
+  status: exists
+  relevance: Component page for the one maker; rewritten for clones under BO-4300a-4.
+- path: docs/testing/test-angles.md
+  relationship: describes
+  status: exists
+  relevance: Angle taxonomy used by this record's test_spec.
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from:
+  ac_id: BO-4300a-1
+  contract: ensure/locate CLI with --kind epic --slug <raw identity>; the maker performs normalisation.
+package_surface: false
+it_requirements:
+- Identity normalisation is owned by the maker's single naming table (Q4 open). Whatever scheme is chosen,
+  spellings of the same work used by today's routes -- EPIC-<Name> (feature skill), epic/<kebab> (build-feature),
+  the epic's display title -- normalise to one identity, and distinct works never collide.
+- Matching is on the exact normalised identity, never a prefix or substring (the '_worktree_exists' prefix
+  table and finalize's branch-substring match are retired).
+- A re-request never abandons an existing line of work for a freshly named twin and never moves or resets
+  its commits (F10, KI-BO-20260921 'abandons the epic worktree branch').
+- Answers conform to the result contract delivered by BO-4300c-2 (one JSON object on stdout, status/code/exit
+  mapping, workspace_path absent on every non-ok answer).
+- Proof runs the DEPLOYED maker -- the copy an install delivers, resolved through the shared test locator
+  delivered by BO-4300f-4 -- as a separate process against real temporary git repositories with a real
+  bare hub. No mock of git, no import of the maker module, no grep of its source (CLAUDE.md 'Gate / Workflow
+  ACs -- Verify Behaviorally, Not by Grep'); a test never falls back to the templates/ source copy.
+- 'Tests must not spawn the package''s own scripts/build.py (CLAUDE.md ''Tests must not spawn their own
+  build.py''): the deployed maker comes from the shared deployed layout, and fixture projects carry a
+  minimal stub build entry point that installs a real, rejecting hook in well under a second. A test that
+  must mutate the package and build its own copy says so and justifies it in its ticket.'
+- All temporary projects, hubs and workspaces live under the test's temp directory and run git with an
+  isolated global and system config; afterwards the developer's own repository's branches, registered
+  worktrees and local git config are unchanged (BO-4300f-4-i, F14, KI-TQ-012).
+test_required: true
+test_spec:
+- name: test_same_epic_requested_via_other_spelling_returns_existing_location
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: criterion
+  description: With a ready workspace for 'Files Stay Workable' obtained as kind epic, requests using
+    the feature skill's EPIC-FilesStayWorkable spelling and the build route's spelling are both answered
+    ok with the existing workspace_path.
+- name: test_one_workspace_and_one_line_of_work_exist_after_rerequests
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: criterion
+  description: Afterwards the landing place holds one workspace for the epic and the hub and workspace
+    hold one line of work for it.
+- name: test_existing_commits_survive_rerequests
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: criterion
+  description: Both commits remain on the workspace's line of work, with unchanged shas.
+- name: test_distinct_epic_gets_its_own_location
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: boundary
+  description: '''Files Stay Portable'' is answered ok with a different workspace_path.'
+test_rationale: Every assertion is made on what the deployed maker actually did to real repositories --
+  its one JSON answer, its exit code, and the state of the workspace, the hub and the main copy afterwards.
+  A direct-import unit test would pass while the deployed copy is stale or mis-deployed (F13), and a git
+  mock cannot show the half-made and occupied states this family exists to handle.
+origin_agent: business-analyst
+created: 2026-09-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260927-BO-4300a-2.md
+notes: |
+  F10 and KI-BO-20260921 "abandons the epic worktree branch": a re-run moved the epic from
+  EPIC-FilesStayWorkable to a fresh epic/files-stay-workable cut from the shared main line
+  and drove the epic from the main checkout. OPEN (Q4, not decided here): which naming scheme
+  achieves this. This record fixes only the observable -- one piece of work, one workspace,
+  whichever route asked -- so it holds under any scheme the user picks, including an alias
+  for the old EPIC-<Name> spelling.
+target_epic: EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace
