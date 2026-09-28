@@ -83,6 +83,13 @@ This epic implements AC BO-4300: Every piece of separate work gets its workspace
 
 ## Dependencies
 
+> **Parent/child order reversed (2026-09-28, user decision).** A composite L2 ticket (one whose source AC
+> has child ACs) cannot be marked done before its children: `check-ticket-ac-status-parity` needs its AC done,
+> and `check-done-proof` refuses a done composite with unfinished children. As generated, every child depended
+> on its parent, so the epic deadlocked after ticket 01. For the 17 parents below, each child's dependency on its
+> parent was removed and the parent now depends on its children, so parents close last. Ticket frontmatter
+> `depends_on` is authoritative; the list below is the original generator output.
+
 ```
 BO-4300a-1 (no dependencies)
 BO-4300a-1-ia -> BO-4300a-1
