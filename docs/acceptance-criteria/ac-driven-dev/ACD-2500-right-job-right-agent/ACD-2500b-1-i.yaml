@@ -31,6 +31,9 @@ doc_links:
 assigned_agent: python-coder
 estimated_complexity: M
 it_requirements:
+- 'SHIP-TOGETHER (user decision 2026-09-28): must land in the same change as its parent ACD-2500b-1
+  (see that AC''s SHIP-TOGETHER requirement); the schema declaration here is what makes the parent''s
+  prompt change safe to ship.'
 - Delivers the schema registration of test_intent in config/ac_store_schema.json (closed items, all three
   keys required) and the field row in docs/reference/ac-schema.md, in the same change.
 - Outcome clauses are identified by the same Then/And clause splitter the ticket generator uses for its
@@ -87,6 +90,11 @@ test_spec:
 origin_agent: business-analyst
 created: 2026-09-25
 amended_by:
+- reason: "ship-together constraint recorded: ACD-2500b-1 (prompt) and ACD-2500b-1-i (schema) must land in
+    one change; the parent link in depends_on cannot be reversed without breaking the tree"
+  date: '2026-09-28'
+  by: it-po
+  directed_by: user
 - reason: it-po-technical-enrichment
   date: '2026-09-25'
   by: it-po
