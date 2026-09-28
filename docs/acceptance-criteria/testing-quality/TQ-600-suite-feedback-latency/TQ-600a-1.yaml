@@ -328,6 +328,13 @@ covered_by:
   - TQ-600a-1-ii
 implemented_by:
 - tickets/00_inbox/TICKET-20260921-TQ-600a-1.md
+- scripts/suite_performance/__init__.py
+- scripts/suite_performance/pytest_shared_reference_layout.py
+- scripts/suite_performance/_shared_layout_producer.py
+- scripts/suite_performance/_shared_layout_coordination.py
+- scripts/suite_performance/README.md
+- pytest.ini
+- requirements-dev.txt
 change_target: pipeline
 risk_surface: internal
 notes: |
