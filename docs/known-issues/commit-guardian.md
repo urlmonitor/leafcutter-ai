@@ -73,7 +73,7 @@ Severity in the **filename** is a three-level index bucket (`blocker` / `high` /
 
 Fixed issues move to [`commit-guardian/resolved/`](commit-guardian/resolved/) and are no longer listed as open. They are kept, not deleted.
 
-**Open: 71** (3 blocker, 30 high, 38 low) · **Resolved: 16**
+**Open: 70** (3 blocker, 29 high, 38 low) · **Resolved: 17**
 
 ## Open
 
@@ -111,7 +111,6 @@ Fixed issues move to [`commit-guardian/resolved/`](commit-guardian/resolved/) an
 | `high` | KI-CG-20260925-check-ac-schema-path-argument-is-ignored — prompts run 'check_ac_schema.py <path>' to validate a record, but the hook ignores argv and checks only the staged set, so those checks are vacuous passes | [open-high-ki-cg-20260925-check-ac-schema-path-argument-is-ignored.md](commit-guardian/open-high-ki-cg-20260925-check-ac-schema-path-argument-is-ignored.md) |
 | `high` | KI-CG-20260925-shared-root-resolver-accepts-non-repo-workspace-parent — _resolve_root.find_project_root() has no 'no repository' outcome and returns the workspace parent, so the fix direction of five open KIs would not fix them | [open-high-ki-cg-20260925-shared-root-resolver-accepts-non-repo-workspace-parent.md](commit-guardian/open-high-ki-cg-20260925-shared-root-resolver-accepts-non-repo-workspace-parent.md) |
 | `high` | KI-CG-20260927-file-size-hook-read-another-worktrees-index — check-file-size once measured the staged files of a different worktree, while every other hook in the same run saw the right ones | [open-high-ki-cg-20260927-file-size-hook-read-another-worktrees-index.md](commit-guardian/open-high-ki-cg-20260927-file-size-hook-read-another-worktrees-index.md) |
-| `high` | KI-CG-20260928-check-agent-registry-never-runs-in-this-repo — the commit-time agent-registry check looks for a `leafcutter/` folder this repository does not have and passes having checked nothing; fix specified by GE-113c-1-vi | [open-high-ki-cg-20260928-check-agent-registry-never-runs-in-this-repo.md](commit-guardian/open-high-ki-cg-20260928-check-agent-registry-never-runs-in-this-repo.md) |
 | `low` | KI-CG-002 — The diagram-type guard silently swaps its enum source when its declaring file is unreachable | [open-low-ki-cg-002.md](commit-guardian/open-low-ki-cg-002.md) |
 | `low` | KI-CG-011 — The roadmap mirror strips its own `description` frontmatter and backdates `created` to today | [open-low-ki-cg-011.md](commit-guardian/open-low-ki-cg-011.md) |
 | `low` | KI-CG-013 — The schema hook and the done-proof oracle disagree about what a leaf is, so one AC can be required to satisfy both branches | [open-low-ki-cg-013.md](commit-guardian/open-low-ki-cg-013.md) |
@@ -171,3 +170,4 @@ Fixed issues move to [`commit-guardian/resolved/`](commit-guardian/resolved/) an
 | `low` | KI-CG-20260914-doc-length-blocks-registers — RETRACTED: "check-doc-length tests absolute size and refuses any register edit" — tested and disproved; it ratchets on growth | [resolved-low-ki-cg-20260914-doc-length-blocks-registers.md](commit-guardian/resolved/resolved-low-ki-cg-20260914-doc-length-blocks-registers.md) |
 | `high` | KI-CG-20260908-ratchet-reads-pre-merge-head — `check-file-size`'s ratchet resolves a file's previous length from `HEAD`, which during a merge is the branch's pre-merge tip, so a file long-standing on `origin/main` but absent from the branch is judged against the absolute limit and can refuse a merge for content the merge did not author | [resolved-high-ki-cg-20260908-ratchet-reads-pre-merge-head.md](commit-guardian/resolved/resolved-high-ki-cg-20260908-ratchet-reads-pre-merge-head.md) |
 | `blocker` | KI-CG-021 — The whole-collection uniqueness pass is registered in no hook config and no CI workflow, and has never run — RESOLVED: PR #495 merged and `check_identifier_uniqueness.py` was registered in both `commit_guardian.json` and `.pre-commit-config.yaml` by GE-122d-6 | [resolved-blocker-ki-cg-021.md](commit-guardian/resolved/resolved-blocker-ki-cg-021.md) |
+| `high` | KI-CG-20260928-check-agent-registry-never-runs-in-this-repo — the commit-time agent-registry check looks for a `leafcutter/` folder this repository does not have and passes having checked nothing; fixed by GE-113c-1-vi | [resolved-high-ki-cg-20260928-check-agent-registry-never-runs-in-this-repo.md](commit-guardian/resolved/resolved-high-ki-cg-20260928-check-agent-registry-never-runs-in-this-repo.md) |

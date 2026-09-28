@@ -20,8 +20,10 @@ related_docs:
 - **Severity:** high. A required check reports success without looking. A registry error
   staged in this repository (an agent entry with no template, a bad field, or an unknown
   step kind once BO-2400a-1-iii lands) reaches `main` without being refused at commit time.
-- **Status:** open. AC **GE-113c-1-vi** specifies the fix, which is to be built straight after
-  BO-2400a-1-iii.
+- **Status:** resolved 2026-09-28 by GE-113c-1-vi. The hook now finds the package through the
+  shared project-root resolver plus the build manifest's `package_root`, blocks with its own
+  message when a scoped file is staged and no package is found, and was enabled against the
+  real registry with no errors.
 - **Where:** `templates/scripts/commit_guardian/check_agent_registry.py` (live copy
   `scripts/commit_guardian/check_agent_registry.py`), `main()`.
 
