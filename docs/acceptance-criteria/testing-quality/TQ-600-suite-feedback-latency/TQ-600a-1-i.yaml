@@ -29,6 +29,39 @@ doc_links:
       The boundary angle at its cheapest and most valuable: zero consumers and one
       consumer are the two ends this AC pins, and an eagerly-created shared layout
       passes every other AC in this tree.
+  - path: scripts/suite_performance/_shared_layout_producer.py
+    relationship: constrains
+    status: exists
+    relevance: >-
+      THE LAZINESS DECISION ITSELF. get_or_produce_shared_layout() is the one
+      function whose call is the trigger this AC pins to "first actual request":
+      nothing is copied, deployed or published until a caller enters it, and the
+      in-process cache plus the cross-process lock make the second and later
+      calls free. The zero case is simply that this function is never entered.
+  - path: scripts/suite_performance/pytest_shared_reference_layout.py
+    relationship: constrains
+    status: exists
+    relevance: >-
+      WHERE BOTH NAMED MUTATIONS LAND. The shared_reference_layout fixture is
+      scope="session" and REQUEST-SCOPED, not autouse, and the module does no
+      production at import time despite being registered whole-suite via
+      pytest.ini's `-p` addopts. Making the fixture session-autouse, or producing
+      at plugin import / in a worker-startup hook, are the exact regressions this
+      AC's descriptors are written to turn RED, and all three are edits to this
+      file.
+  - path: scripts/suite_performance/_shared_layout_coordination.py
+    relationship: related
+    status: exists
+    relevance: >-
+      OBSERVATION INSTRUMENT, NOT A SURFACE THIS AC GOVERNS — declared here at a
+      non-edit-surface relationship deliberately, so it stays OUT of
+      files_touched. emit_execution_signal() and EXECUTION_LOG_ENV_VAR are how
+      the "no deploy subprocess was executed" half of the zero case is observed
+      independently of the reported count, and worker_name() is what attributes
+      an execution to a worker for the idle-worker descriptor. But this AC
+      constrains WHEN production is triggered, which this module does not decide
+      — it decides where the layout lives and who gets to produce it. A coder
+      reads this file; a coder does not edit it for this AC.
 assigned_agent: python-coder
 estimated_complexity: S
 it_requirements:
@@ -171,6 +204,39 @@ amended_by:
     record, or defer those two descriptors to TQ-600a-6's own build — is left to that
     pass rather than taken here.
   by: business-analyst
+  at: 2026-09-28
+- reason: >-
+    doc_links ONLY — files_touched was empty, so the generated ticket gave the coder
+    no file scope at all, which is this repo's documented phantom-done vector. criteria,
+    work_status, depends_on, it_requirements, test_spec and expects_from UNTOUCHED.
+    CHANNEL: doc_links at relationship: constrains, NOT prose. files_touched is the
+    union of exactly two sources — file-path tokens in prose it_requirements gated on
+    is_file(), and doc_links at constrains/creates/implements/modifies/specifies. The
+    prose channel was rejected here because this AC's bullets are policy statements
+    about WHEN production may happen, and the only way to get a path into them is to
+    name a file the bullet is not actually about; doc_links carries a per-path
+    relationship, so each path's status as edit surface is declared rather than
+    inferred from a sentence.
+    SURFACE: _shared_layout_producer.py (get_or_produce_shared_layout is the trigger
+    this AC pins to first demand) and pytest_shared_reference_layout.py (both named
+    mutations — session-autouse fixture, worker-startup production — are edits to that
+    file). relationship: constrains rather than modifies, because the implementation
+    is already merged (PR #941) and this AC pins its behaviour; the coder's own new
+    files are the test descriptors, whose home is already carried by test_spec[].
+    target_dir.
+    SUPPRESSED: _shared_layout_coordination.py, added at relationship: related so it
+    is readable but stays out of files_touched. it_requirement 3 is observed through
+    that module's emit_execution_signal / EXECUTION_LOG_ENV_VAR and the idle-worker
+    descriptor through worker_name(), so the coder must READ it — but this AC
+    constrains when production is triggered, and that module decides where the layout
+    lives and who produces it, not when. Listing it at an edit-surface relationship
+    would have told a coder to edit a file this AC does not govern.
+    NOT RESOLVED HERE — the BA's sequencing gap is left exactly as found. Two
+    descriptors (..._reports_zero_deploys and ..._takes_the_count_from_zero_to_one)
+    read the reported deploy figure that TQ-600a-6's emitter produces, and a-6 builds
+    two waves later. Nothing in this edit changes that; adding file scope does not
+    create the emitter. See the report accompanying this pass.
+  by: it-po
   at: 2026-09-28
 superseded_by: null
 covered_by: []

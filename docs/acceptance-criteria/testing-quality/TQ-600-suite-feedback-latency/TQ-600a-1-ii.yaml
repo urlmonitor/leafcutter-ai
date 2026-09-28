@@ -30,6 +30,37 @@ doc_links:
       The failure angle. This is the single-point-of-failure case that sharing
       creates and that per-test deploys did not have, so it is new risk introduced
       by TQ-600a-1 and must be covered by TQ-600a-1's own work.
+  - path: scripts/suite_performance/_shared_layout_coordination.py
+    relationship: constrains
+    status: exists
+    relevance: >-
+      WHERE THE FAILURE IS CACHED AS A FAILURE. write_failure_record() /
+      read_failure_record() are the durable half of "cache the OUTCOME, not just
+      the success" — they are what makes a second waiter, in this process or
+      another worker's, raise the first attempt's error instead of spending
+      another 59.8s retrying. SharedReferenceLayoutError is defined here and is
+      the typed error the deploy's own diagnostic is carried on.
+  - path: scripts/suite_performance/_shared_layout_producer.py
+    relationship: constrains
+    status: exists
+    relevance: >-
+      WHERE THE DIAGNOSTIC IS CAPTURED AND THE RETRY IS REFUSED.
+      _run_build_subprocess() captures the subprocess's stdout, stderr and exit
+      status into the raised error rather than letting a later FileNotFoundError
+      stand in for it, and get_or_produce_shared_layout()'s except branch is the
+      single place that writes the failure record, caches it in-process and
+      re-raises. Deleting either the write or the re-raise is the retry storm
+      this AC prices.
+  - path: scripts/suite_performance/pytest_shared_reference_layout.py
+    relationship: constrains
+    status: exists
+    relevance: >-
+      WHERE THE LOAD-BEARING MUTATION LANDS. The vacuous-pass descriptor names
+      its injection as "make the fixture catch the deploy error and return the
+      empty target directory" — that edit is made HERE, in the two-line
+      shared_reference_layout fixture body. The fixture must let
+      SharedReferenceLayoutError propagate so the consumer fails at setup; a
+      partial or empty layout handed back is phantom-done via the fixture layer.
 assigned_agent: python-coder
 estimated_complexity: M
 it_requirements:
@@ -193,6 +224,38 @@ amended_by:
     built alongside TQ-600a-6 or deferred into its build is that pass's call, not this
     one's.
   by: business-analyst
+  at: 2026-09-28
+- reason: >-
+    doc_links ONLY — files_touched was empty, so the generated ticket gave the coder
+    no file scope at all, which is this repo's documented phantom-done vector. criteria,
+    work_status, depends_on, it_requirements, test_spec and expects_from UNTOUCHED.
+    CHANNEL: doc_links at relationship: constrains, NOT prose. files_touched unions
+    exactly two sources — path tokens in prose it_requirements gated on is_file(), and
+    doc_links at constrains/creates/implements/modifies/specifies. Prose was rejected
+    for the same reason as on TQ-600a-1-i: these bullets are policy statements about
+    caching, propagation and error handling, and a path can only be inserted into them
+    by naming a file the sentence is not about. doc_links declares each path's status
+    as edit surface instead of inferring it.
+    SURFACE — all three modules, and each for a distinct clause.
+    _shared_layout_coordination.py holds write_failure_record / read_failure_record
+    (the durable cache that makes the failure a cached OUTCOME rather than a cache
+    miss another waiter retries) and defines SharedReferenceLayoutError.
+    _shared_layout_producer.py captures the subprocess stdout/stderr/exit status into
+    that error and owns the single except branch that writes, caches and re-raises.
+    pytest_shared_reference_layout.py is where the load-bearing NAMED MUTATION lands —
+    "make the fixture catch the deploy error and return the empty target directory" is
+    an edit to the two-line fixture body and nowhere else. All three at constrains
+    rather than modifies: the implementation is merged (PR #941) and this AC pins its
+    behaviour.
+    NOTHING SUPPRESSED on this record — no path this AC's requirements forbid appears
+    in any channel. In particular scripts/build.py is NOT listed: the deploy subprocess
+    is what these requirements wrap, not what they change, and it reaches prose only
+    inside test_spec descriptions, which the derivation does not read.
+    NOT RESOLVED HERE — the BA's sequencing gap is left exactly as found. The fifth
+    descriptor, ..._the_reported_attempt_count_is_one_not_zero_or_absent, reads the
+    figure TQ-600a-6's emitter produces, and a-6 builds two waves later. File scope
+    does not create that emitter. See the report accompanying this pass.
+  by: it-po
   at: 2026-09-28
 superseded_by: null
 covered_by: []
