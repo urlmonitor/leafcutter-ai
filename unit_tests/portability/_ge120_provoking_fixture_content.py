@@ -19,6 +19,7 @@ from __future__ import annotations
 import json
 
 from _ge120_provoking_fixture_ac_content import build_ac_files
+from _ge120_provoking_fixture_content2 import build_files_2
 
 
 def _ticket_a() -> str:
@@ -384,4 +385,5 @@ def build_files() -> dict[str, str]:
     files["scripts/ge120fixture/leaked_secret.txt"] = _secret_leak_txt()
     files["docker-compose.yml"] = _docker_compose_yml()
     files["unit_tests/ge120fixture/test_contract_shrinking.py"] = _contract_shrinking_test()
+    files.update(build_files_2())
     return files

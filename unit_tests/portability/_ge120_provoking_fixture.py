@@ -19,7 +19,7 @@ ARCHITECTURE: Exposes exactly one public symbol, `stage(working_copy_dir)`,
     working_copy_dir AFTER calling this function — this module never invokes
     a check itself.
 
-    Two classes of check cannot be jointly provoked from one git index and are
+    ONE class of check cannot be jointly provoked from one git index and is
     NOT attempted here (see ge120b2i_verify_unchanged.py's sign-off comment
     for the full residual list, since that is where "still clean" is reported
     honestly rather than silently accepted):
@@ -27,11 +27,13 @@ ARCHITECTURE: Exposes exactly one public symbol, `stage(working_copy_dir)`,
         requires docs/components.json NOT staged; the latter requires it
         staged with a bad new entry. This fixture stages components.json, so
         check-structural-change is a deliberate, documented miss.
-      - Any check whose provocation logic lives entirely in a nested
-        `leafcutter/` package subdirectory (check-agent-registry,
-        check-architecture-scaffolds, check-doc-types-agents,
-        check-roadmap-schema's `leafcutter/config/roadmap.schema.json` path) —
-        out of scope for a staged-files-only fixture.
+
+    A second batch of checks (check-agent-registry, check-architecture-
+    scaffolds, check-doc-types-agents, check-roadmap-schema, check-paths-
+    integrity) turned out to be reachable via staged content after all — a
+    literal `leafcutter/config/...` or `leafcutter/templates/docs/architecture/
+    ...` path staged INSIDE this fixture is enough; no real nested package
+    directory is required. See _ge120_provoking_fixture_content2.py.
 
 DECISION HISTORY
 ====================================================================
@@ -41,6 +43,15 @@ DECISION HISTORY
   violation condition is reachable from staged file content alone. File
   content builders live in _ge120_provoking_fixture_content.py to keep this
   module under the 400-line new-file limit.
+- 2026-09-28 [python-coder/GE-120b-2-i, second pass]: Added
+  _provoke_agent_registry_violation() and _provoke_file_size_rule_parity_
+  violation(), mirroring _provoke_output_drift()'s technique of editing an
+  already-deployed `.leafcutter/...` file directly (never the `scripts/
+  commit_guardian` symlink). Also wired in _ge120_provoking_fixture_content2
+  .build_files_2() for the staged-content-only batch (see module docstring
+  above). Moved 30 of 75 manifest checks from clean to violation at time of
+  writing; see ge120b2i_verify_unchanged.py's sign-off comment for the exact
+  count and the honest residual list of checks still clean.
 ====================================================================
 """
 
@@ -88,6 +99,83 @@ def _provoke_output_drift(working_copy_dir: Path) -> str:
         logger.warning("Could not write %s to provoke drift: %s", target, exc)
         raise
     return _DRIFT_TARGET_REL
+
+
+_AGENT_REGISTRY_DEPLOYED_REL = ".leafcutter/config/agent_registry.json"
+_README_DEPLOYED_REL = ".leafcutter/scripts/commit_guardian/README.md"
+
+
+def _provoke_agent_registry_violation(working_copy_dir: Path) -> str:
+    """Append a self-loop agent entry to the DEPLOYED agent_registry.json.
+
+    check-agent-registry validates the registry reached via the resolved
+    package root's `.build_manifest.json` — in this harness's self-hosted
+    build that resolves to `.leafcutter/config/agent_registry.json`, never
+    the source-layout `config/agent_registry.json` this fixture already
+    stages for check-agent-spawn-consistency (a DIFFERENT check with its own,
+    unrelated scope). A self-loop (`spawn_allowlist` contains the agent's own
+    id) is registry_validator.py's simplest unconditional error — it needs no
+    identity/authorization context, unlike check-ac-governance's protected-
+    field rule. The entry also carries no `produces` field, so
+    validate_produces_field() reports a second, independent violation too.
+
+    Args:
+        working_copy_dir: Root of the working copy to modify.
+
+    Returns:
+        The repo-relative path that was modified, for staging.
+    """
+    target = working_copy_dir / _AGENT_REGISTRY_DEPLOYED_REL
+    try:
+        data = json.loads(target.read_text(encoding="utf-8"))
+    except OSError as exc:
+        logger.warning("Could not read %s to provoke a registry violation: %s", target, exc)
+        raise
+    agents = data.setdefault("agents", [])
+    agents.append(
+        {
+            "id": "ge120fixture-selfloop-agent",
+            "spawn_allowlist": ["ge120fixture-selfloop-agent"],
+            "spawned_by": [],
+        }
+    )
+    try:
+        target.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+    except OSError as exc:
+        logger.warning("Could not write %s to provoke a registry violation: %s", target, exc)
+        raise
+    return _AGENT_REGISTRY_DEPLOYED_REL
+
+
+def _provoke_file_size_rule_parity_violation(working_copy_dir: Path) -> str:
+    """Append a wrong file-size limit claim to the DEPLOYED README.md.
+
+    check-file-size-rule-parity reads README.md as one of its configured
+    `published_rule_surfaces` and extracts adjacency-style claims (a dotted
+    extension immediately followed by a number, e.g. ".py 400") from lines
+    that mention one of its anchor tokens ("check-file-size", "file_size",
+    "check_file_size.py"). A claimed ".py 999" disagrees with the real,
+    enforced FILE_LINE_LIMITS[".py"] == 400 from commit_guardian.json.
+
+    Args:
+        working_copy_dir: Root of the working copy to modify.
+
+    Returns:
+        The repo-relative path that was modified, for staging.
+    """
+    target = working_copy_dir / _README_DEPLOYED_REL
+    try:
+        existing = target.read_text(encoding="utf-8")
+    except OSError as exc:
+        logger.warning("Could not read %s to provoke a rule-parity violation: %s", target, exc)
+        raise
+    marker = "\n<!-- ge120fixture check-file-size claims: .py 999 -->\n"
+    try:
+        target.write_text(existing + marker, encoding="utf-8")
+    except OSError as exc:
+        logger.warning("Could not write %s to provoke a rule-parity violation: %s", target, exc)
+        raise
+    return _README_DEPLOYED_REL
 
 
 def _merge_components_json(working_copy_dir: Path) -> None:
@@ -161,6 +249,14 @@ def stage(working_copy_dir: Path) -> None:
 
     _merge_components_json(working_copy_dir)
     drift_target = _provoke_output_drift(working_copy_dir)
+    registry_target = _provoke_agent_registry_violation(working_copy_dir)
+    readme_target = _provoke_file_size_rule_parity_violation(working_copy_dir)
 
-    all_paths = sorted([*files.keys(), "docs/components.json", drift_target])
+    all_paths = sorted([
+        *files.keys(),
+        "docs/components.json",
+        drift_target,
+        registry_target,
+        readme_target,
+    ])
     _git_add(working_copy_dir, all_paths)

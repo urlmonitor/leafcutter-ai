@@ -113,4 +113,22 @@ def build_ac_files() -> dict[str, str]:
     files[f"{_AC_DIR}/GEFXPARITY-100.yaml"] = _ac_yaml(
         "GEFXPARITY-100", "L2", work_status="todo",
     )
+
+    # New AC file with NO origin_agent field at all -> check-ac-governance's
+    # audit-trail requirement (ACS-400c-1) fires regardless of committer
+    # identity, unlike the protected-field-authorization half of that check.
+    # Written directly rather than via _ac_yaml(), which always sets
+    # origin_agent.
+    files[f"{_AC_DIR}/GEFXGOV-100.yaml"] = (
+        "id: GEFXGOV-100\n"
+        'title: "GE-120b-2-i fixture record with no origin_agent"\n'
+        "level: L2\n"
+        "status: active\n"
+        "req_status: draft\n"
+        "readiness: approved\n"
+        "priority: low\n"
+        "created: 2026-09-08\n"
+        "criteria: |\n"
+        "  Fixture-only record for check-ac-governance's origin_agent audit rule.\n"
+    )
     return files
