@@ -175,35 +175,75 @@ def test_pt_authoring_dispatch_carries_an_explicit_anchor_warning():
     )
 
 
-def test_pt_store_path_without_a_worktree_stays_the_plain_relative_default():
+
+# BO-1500a-5-i (origin/main, merged into this branch after ACD-2400's fix) hardened
+# the worktree-setup gate in templates/workflows-js/plan-feature.js
+# (buildSetupFailureResult() and its two call sites, ~:2519-2572) to HALT before
+# Stage 0 -- before ac-triage, before the covered-route gate, before the PT phase --
+# on EVERY reply shape that would otherwise leave `authoringWorktreePath` null. The
+# comment there states the invariant outright: "authoringWorktreePath must NEVER stay
+# null past this point." That makes AC-3's old negative form (a no-worktree run still
+# reaching the PT authoring dispatch with the bare relative default) describe a state
+# that can no longer occur -- see ACD-2400.yaml's amended_by entry. The five shapes
+# enumerated below are exactly the ones buildSetupFailureResult()'s two call sites
+# cover: an uninterpretable reply, a refusal, a non-zero exit code, a success-shaped
+# reply naming no directory, and a no-failure-reported reply naming neither directory
+# nor branch.
+_UNREACHABLE_WORKTREE_SETUP_SHAPES = {
+    # wtParsed === null (raw reply is a plain string with no parseable JSON at all,
+    # and carries none of isAgentRefusal()'s AGENT_REFUSAL_MARKERS) -> "uninterpretable".
+    "uninterpretable": "The setup step could not determine what to do with this request.",
+    # wtParsed === null AND the free text matches an AGENT_REFUSAL_MARKERS phrase
+    # ("outside my scope") -> "refused".
+    "refused": "I'm sorry, but creating a worktree is outside my scope of responsibility.",
+    # wtParsed is a real object with an explicit non-zero exit_code -> fails hard
+    # before the no-worktree-path check is even reached.
+    "non_zero_exit": {"output": "", "exit_code": 1, "stderr": "fatal: unable to create worktree"},
+    # wtParsed.output parses to a real JSON object with an explicit exit_code but no
+    # worktree_path -> "no_workspace_named".
+    "success_no_directory": {
+        "output": json.dumps({"ac_store_path": "docs/acceptance-criteria"}),
+        "exit_code": 0,
+    },
+    # wtParsed.output parses to `{}` -- no worktree_path AND no exit_code at all,
+    # i.e. no failure reported either -> "silent_success".
+    "no_failure_no_directory": {"output": json.dumps({}), "exit_code": None},
+}
+
+
+def test_pt_phase_is_unreachable_without_an_authoring_worktree():
     # covers: ACD-2400
-    """AC-3 (ACD-2400), negative form: when NO authoring worktree is reported
-    (worktree-setup produces no usable payload), the PT store path falls back
-    to the plain relative "docs/product-truth" default, unchanged from
-    today's behaviour -- this fix must not invent a spurious anchor when
-    there is nothing to anchor to.
+    """AC-3 (ACD-2400), amended: the PT authoring dispatch (pt-mockdata-author) is
+    NEVER reached on any of the five worktree-setup reply shapes BO-1500a-5-i's gate
+    treats as a failed setup -- because that gate halts the entire run (status:
+    "error", a `setup_failure_kind`) before Stage 0's ac-triage dispatch, and the PT
+    phase runs strictly after Stage 0 in the script's own top-to-bottom control flow.
+    run_workflow_under_e2() always executes the FULL top-level body (there is no
+    separate resume entry point that starts partway through), so this is true on
+    every invocation, not just a first run -- proving there is no reachable route
+    that hands the PT authoring dispatch an unanchored (or any) store path when no
+    authoring worktree exists for the run.
     """
-    label_responses = _label_responses()
-    # Force the worktree-setup step to report no usable payload (unparseable
-    # output), so wtPayload stays null and authoringWorktreePath stays null,
-    # exactly like a worktree-setup dispatch failure today.
-    label_responses["worktree-setup"] = {"output": "not json", "exit_code": 0}
+    for shape_name, wt_response in _UNREACHABLE_WORKTREE_SETUP_SHAPES.items():
+        label_responses = _label_responses()
+        label_responses["worktree-setup"] = wt_response
 
-    result = run_workflow_under_e2(
-        _PLAN_FEATURE_JS,
-        timeout=_TIMEOUT,
-        label_responses=label_responses,
-        args={"run_id": "test-acd-2400-no-worktree"},
-    )
-    assert result.error == "", f"Harness error: {result.error}"
+        result = run_workflow_under_e2(
+            _PLAN_FEATURE_JS,
+            timeout=_TIMEOUT,
+            label_responses=label_responses,
+            args={"run_id": f"test-acd-2400-unreachable-{shape_name}"},
+        )
+        assert result.error == "", f"[{shape_name}] Harness error: {result.error}"
 
-    prompt = _pt_mockdata_author_prompt(result)
-
-    assert _FAKE_AUTHORING_WORKTREE not in prompt, (
-        "No authoring worktree was reported for this run, yet the dispatch "
-        f"prompt names one anyway. Full prompt:\n{prompt}"
-    )
-    assert "docs/product-truth" in prompt, (
-        "With no authoring worktree, the PT store path must still fall back "
-        f"to the plain relative default. Full prompt:\n{prompt}"
-    )
+        captured_labels = [c.label for c in result.agent_calls]
+        assert "pt-mockdata-author" not in captured_labels, (
+            f"[{shape_name}] The PT phase's pt-mockdata-author dispatch was reached "
+            "despite no usable authoring worktree being reported for this run -- "
+            "BO-1500a-5-i's worktree-setup gate should have halted before Stage 0. "
+            f"Captured labels: {captured_labels}"
+        )
+        assert isinstance(result.result, dict) and result.result.get("status") == "error", (
+            f"[{shape_name}] Expected the worktree-setup gate to halt the run with "
+            f"status: 'error'. Got: {result.result!r}"
+        )

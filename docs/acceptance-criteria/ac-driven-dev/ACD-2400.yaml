@@ -24,10 +24,7 @@ criteria: |
   And every other consumer of the product-truth store path (the store-presence
     check and the flow-backlink reconciliation step) resolves that same
     worktree-anchored location without joining the worktree root onto it a
-    second time,
-  And when no authoring worktree exists for this run, the store path remains
-    the plain relative "docs/product-truth" default, unchanged from before
-    this fix.
+    second time.
 depends_on: []
 doc_links:
   - path: docs/known-issues/ac-driven-dev/resolved/resolved-high-ki-acd-007.md
@@ -43,12 +40,40 @@ delivers_to: null
 expects_from: null
 origin_agent: BrainCandy
 created: 2026-09-23
-amended_by: []
+amended_by:
+  - reason: unreachable-clause-superseded-by-merge
+    entry: >-
+      The last `criteria` clause ("when no authoring worktree exists for this run,
+      the store path remains the plain relative docs/product-truth default") is
+      DROPPED, not merely re-tested: merging origin/main brought in BO-1500a-5-i,
+      which hardened the worktree-setup gate in
+      templates/workflows-js/plan-feature.js (buildSetupFailureResult() and its two
+      call sites, ~:2519-2572) to HALT the entire run -- before Stage 0's ac-triage,
+      before the covered-route gate, before the always-on PT phase -- on every reply
+      shape that would otherwise leave `authoringWorktreePath` null (uninterpretable
+      reply, refusal, non-zero exit code, success-shaped reply naming no directory,
+      no-failure-reported reply naming neither directory nor branch). The gate's own
+      comment states the invariant outright: "authoringWorktreePath must NEVER stay
+      null past this point." Since the PT phase's `ptStoreDir` computation sits
+      strictly after that gate in the script's single top-to-bottom control flow (no
+      resume/rehydrate path re-enters partway through -- every invocation, including
+      a resumed one, re-executes the full body per E2's own contract), the dropped
+      clause described a state that can no longer occur. The replacement test,
+      test_pt_phase_is_unreachable_without_an_authoring_worktree, pins the STRONGER
+      real invariant instead: pt-mockdata-author is never dispatched on any of the
+      five worktree-setup failure shapes, because the gate halts the run first. The
+      `if (authoringWorktreePath) {...}` guard around `ptStoreDir` in
+      plan-feature.js, whose false branch this dropped clause used to describe as
+      tested behaviour, is now dead code for the same reason and was simplified to
+      an unconditional `resolvePathOntoRoot()` call (mirroring acStoreDir's own
+      unconditional treatment above it), shedding a line.
+    confirmed_by: BrainCandy
+    confirmed_at: 2026-09-28
 superseded_by: null
 covered_by:
   - "unit_tests/workflows/test_acd_2400_pt_store_worktree_anchor.py::test_pt_authoring_dispatch_is_anchored_to_the_authoring_worktree"
   - "unit_tests/workflows/test_acd_2400_pt_store_worktree_anchor.py::test_pt_authoring_dispatch_carries_an_explicit_anchor_warning"
-  - "unit_tests/workflows/test_acd_2400_pt_store_worktree_anchor.py::test_pt_store_path_without_a_worktree_stays_the_plain_relative_default"
+  - "unit_tests/workflows/test_acd_2400_pt_store_worktree_anchor.py::test_pt_phase_is_unreachable_without_an_authoring_worktree"
 implemented_by:
   - "templates/workflows-js/plan-feature.js#ptStoreDir"
 change_target: pipeline

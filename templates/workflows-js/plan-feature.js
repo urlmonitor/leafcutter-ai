@@ -2751,9 +2751,8 @@ if (route === "covered" && !force) {
 // -------------------------------------------------------------------------
 phase('Product-Truth Phase')
 
-// KI-ACD-007: anchor to the worktree like acStoreDir above, via resolvePathOntoRoot() (BO-3900) — else this resolves against the caller's own checkout, not the authoring worktree.
-let ptStoreDir = "docs/product-truth";
-if (authoringWorktreePath) { const _r = resolvePathOntoRoot(authoringWorktreePath, ptStoreDir); ptStoreDir = _r.ok ? _r.path : ptStoreDir; }
+// KI-ACD-007 / BO-1500a-5-i: authoringWorktreePath is guaranteed non-null past the worktree-setup gate above (ACD-2400.yaml amended_by); always anchor via resolvePathOntoRoot(), mirroring acStoreDir's own unconditional treatment above.
+const ptStoreDir = resolvePathOntoRoot(authoringWorktreePath, "docs/product-truth").path;
 
 // State the PT phase hands forward to the AC pipeline.
 let ptFlowProduced = false;
