@@ -388,8 +388,13 @@ superseded_by: null
 covered_by:
   - GE-127e-3-i
   - GE-127e-3-ii
+  - "unit_tests/commit_guardian/test_ge_127e_3_no_future_promise_and_boundary.py"
+  - "unit_tests/commit_guardian/test_ge_127e_3_incumbent_and_already_done.py"
+  - "unit_tests/commit_guardian/test_ge_127e_3_reachability_and_deployed.py"
+  - "unit_tests/commit_guardian/test_ge_127e_3_action_audit_and_mutation.py"
 implemented_by:
 - tickets/00_inbox/epics/EPIC-FilesStayWorkable/04_TICKET-20260914-GE-127e-3.md
+- templates/scripts/commit_guardian/check_file_size.py
 change_target: code
 risk_surface: contract_boundary
 notes: |
