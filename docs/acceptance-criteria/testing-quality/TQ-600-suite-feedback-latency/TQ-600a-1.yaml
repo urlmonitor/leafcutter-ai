@@ -38,7 +38,14 @@ doc_links:
       The set-cover angle taxonomy this AC's test contract will be written against.
       The count-of-deploys clause is a reachability assertion, not a criterion one:
       a shared fixture that exists but that no test is routed to satisfies a
-      criterion test and still deploys 77 times.
+      criterion test and still deploys 77 times. THAT OBSERVATION IS NOW A CRITERION,
+      AND IT IS TQ-600a-8's. It sat here, in a relevance note that binds nothing, from
+      2026-09-21 until 2026-09-28 — correctly diagnosed, written in a field no
+      implementer is obliged to satisfy, and therefore true of the tree the whole time.
+      Read this sentence as history: the reachability it describes is enforced by
+      TQ-600a-8's examination over the existing deploy-site population, not by this
+      record, whose Given is deliberately "a selection" because the fixture must be
+      correct for whatever selection reaches it.
   - path: CLAUDE.md
     relationship: describes
     status: exists
@@ -322,6 +329,26 @@ amended_by:
 - action: approved
   agent: approve_acs
   date: '2026-09-21'
+- reason: >-
+    criteria DELIBERATELY UNTOUCHED; doc_links[0].relevance amended to point at
+    TQ-600a-8. This record's Given — "a selection of tests that need a deployed copy" —
+    is unbounded, and that unboundedness was the entry point for the whole migration
+    gap: the selection is supplied by whoever implements it, so a fixture with three
+    consumers in a brand-new directory satisfies every clause here while all 77
+    measured deploy sites keep deploying. It is nevertheless the RIGHT wording for this
+    record and is left alone for two reasons. First, the claim here is a property of
+    the fixture — produced once, identical root, complete before handout, one
+    production across workers — and those must hold for whatever selection reaches it;
+    binding the fixture to a particular population would make a correct fixture fail
+    for a reason that is not about the fixture. Second, this record is already
+    implemented and merged (scripts/suite_performance/, PR #941), and rewriting the
+    contract under shipped, reviewed code would invalidate work that is not wrong. What
+    WAS wrong is that the gap had been diagnosed and parked in a relevance note that
+    binds no implementer; the fix is to promote it to a criterion at the level it
+    belongs to — the population — which is TQ-600a-8. The relevance text now says so
+    rather than stating an unaddressed hazard.
+  by: business-analyst
+  at: 2026-09-28
 superseded_by: null
 covered_by:
   - TQ-600a-1-i
