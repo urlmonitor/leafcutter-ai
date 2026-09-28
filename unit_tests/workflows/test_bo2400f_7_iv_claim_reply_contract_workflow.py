@@ -212,7 +212,7 @@ class TestSucceededClaimIsNeverReportedAsNeverAttempted(unittest.TestCase):
     ) -> None:
         # covers: BO-2400f-7-iv
         # angle: criterion
-        for reply in (
+        replies: tuple[dict[str, Any], ...] = (
             {"claimed": [_AC_ID], "target_refused": False, "message": ""},
             {
                 "claimed": [_AC_ID],
@@ -220,7 +220,8 @@ class TestSucceededClaimIsNeverReportedAsNeverAttempted(unittest.TestCase):
                 "target_refused": False,
             },
             {"claimed": [_AC_ID], "target_refused": False},
-        ):
+        )
+        for reply in replies:
             with self.subTest(reply=reply):
                 result = _run_lane(reply)
                 self.assertIsNotNone(result.result, f"stderr={result.stderr!r}")
