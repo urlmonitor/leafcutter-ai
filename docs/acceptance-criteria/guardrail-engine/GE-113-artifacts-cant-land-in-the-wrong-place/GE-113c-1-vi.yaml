@@ -1,0 +1,323 @@
+id: GE-113c-1-vi
+components:
+  - commit_guardian
+  - agent_registry
+title: "The commit-time agent-registry check finds the package wherever it is laid out, and never passes having checked nothing"
+component: guardrail-engine
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+criteria: |
+  Given a commit that stages a file inside the agent-registry check's scope — the agent
+    registry, its schema, or an agent template,
+  And the package is laid out in any layout it really ships in: at the repository root,
+    as in this repository, where the registry is the repository's own
+    config/agent_registry.json; inside a leafcutter/ subdirectory of a consumer project;
+    or any further layout the package's build deploys,
+  When the commit-time agent-registry check runs,
+  Then it locates the package root for that layout and validates that layout's registry,
+  And it locates the package root by the same convention the build and the other
+    commit-time checks use, not by a location of its own.
+
+  Given the same staged file,
+  And no package root can be located by that convention,
+  When the check runs,
+  Then it does not report a pass,
+  And it reports that it could not locate the package, naming the locations it looked in
+    and the staged file it therefore did not check,
+  And it exits non-zero, so the commit does not complete,
+  And its message is its own — distinct from the message for a registry that was read and
+    found invalid — so the output alone tells "could not find the package" apart from
+    "found an error in the registry".
+
+  Given a commit that stages no file inside the check's scope,
+  When the check runs, whether or not a package root can be located,
+  Then it reports an ordinary pass, because nothing in its scope was offered to it
+    (the empty-scope rule of GE-120a-4).
+
+  Given this repository, and a staged registry in which the agent entry "fixture-agent"
+    names a template file that does not exist,
+  When the commit-time check runs,
+  Then it exits non-zero, the commit does not complete, and the output names
+    "fixture-agent" and the missing template,
+  And the same registry validated by the build without building reports the same error,
+  And given the registry is corrected, the same commit passes the check.
+
+  Given the live copy of the check and its packaged copy,
+  When each is run on the scenarios above,
+  Then both give the same verdicts and name the same errors, and the commit-time parity
+    check between the two copies passes.
+
+  Given the check starts actually inspecting this repository's registry at commit time,
+  And the registry already holds errors no commit-time run has reported before,
+  When the change that turns it on is made,
+  Then each such error is either fixed in that same change or recorded as a known issue
+    naming the error and the agent entry it sits in,
+  And the check is not switched off, narrowed, given an exemption or allow-list entry,
+    or made to warn instead of block to let that change through, so the check is
+    enabled with at least the scope it had before.
+depends_on: [GE-113c-1, GE-120a-1]
+doc_links:
+  - path: templates/scripts/commit_guardian/check_agent_registry.py
+    relationship: modifies
+    status: exists
+    relevance: "Canonical copy of the check-agent-registry hook. Its main() derives the package root as the repository root plus 'leafcutter' and returns success, checking nothing, when that path is absent — which is every commit in this repository."
+  - path: scripts/commit_guardian/check_agent_registry.py
+    relationship: describes
+    status: exists
+    relevance: "Live copy. In a build-provisioned workspace scripts/commit_guardian is a link into the build output (KI-CG-20260831-hook-parity-legs-alias-and-fail-open), so the change is made in the templates copy and reaches this one through the build."
+  - path: config/agent_registry.json
+    relationship: describes
+    status: exists
+    relevance: "The registry the check must actually read in this repository's layout."
+  - path: scripts/build.py
+    relationship: describes
+    status: exists
+    relevance: "build.py --validate-only already validates the same registry, so the build's verdict is the reference for the commit-time verdict, and its way of locating the package is the convention to reuse."
+  - path: scripts/commit_guardian/_resolve_root.py
+    relationship: describes
+    status: exists
+    relevance: "The shared project-root resolver GE-113c-1-iv consolidates guards onto. The package root is a different question from the project root in a consumer layout, but the same resolver family is where it belongs."
+  - path: docs/known-issues/commit-guardian/open-high-ki-cg-20260831-manifest-shadowing.md
+    relationship: describes
+    status: exists
+    relevance: "Records a package_root offset in the build manifest (for example 'leafcutter-ai'). Relevant to which layouts really ship and how the build records them."
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/agent-registry.md
+    relationship: describes
+    status: exists
+  - path: docs/known-issues/commit-guardian/open-high-ki-cg-20260928-check-agent-registry-never-runs-in-this-repo.md
+    relationship: describes
+    status: exists
+    relevance: "The open KI this record fixes. Close it when the record is done."
+  - path: docs/known-issues/commit-guardian/resolved/resolved-low-ki-cg-024.md
+    relationship: related
+    status: exists
+    relevance: "Same defect class in another hook: a default of leafcutter/config/agent_registry.json, 'a path that has never existed', which made a check fail open."
+  - path: docs/known-issues/commit-guardian/open-high-ki-cg-20260925-shared-root-resolver-accepts-non-repo-workspace-parent.md
+    relationship: describes
+    status: exists
+    relevance: "Open defect in the shared project-root resolver this record builds on. A resolver that returns a non-repo parent would make the package lookup look in the wrong place."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - >-
+    Confirmed at enrichment (2026-09-28): the shipped layouts differ in where the
+    package sits relative to the project root, and the build records that offset as
+    package_root in the project's .build_manifest.json. It is '' when the package is
+    the project root, as here, and a subdirectory name in an outer project ('leafcutter-ai'
+    observed in a real outer layout). check_build_drift and check_output_drift already
+    read it. KI-CG-024 records that leafcutter/config/agent_registry.json has never
+    existed as a layout.
+  - >-
+    Locate the package root as the project root from the shared resolver
+    (_resolve_root.py, the resolver GE-113c-1-iv consolidates onto) joined with the
+    manifest's package_root. Read package_root the way check_build_drift and
+    check_output_drift already do, and reuse that reading rather than adding a third
+    one. The hook must hold no literal 'leafcutter' path segment. Any fallback used
+    when the manifest is absent must be the same fallback those hooks use. Nothing
+    new is invented here.
+  - >-
+    Decide scope from the staged paths alone, before and independently of locating
+    the package. The staged paths in scope are the agent registry
+    (config/agent_registry.json), its schema (config/agent_registry.schema.json) and
+    agent templates (templates/agents/**), under whatever prefix they have. A root
+    that cannot be found must never hide the fact that in-scope files were staged.
+  - >-
+    Cannot locate the package: when an in-scope file is staged, the hook exits
+    non-zero. Its message names every location it tried (the project root, the
+    manifest path and the package_root value it read, and any fallback) and the
+    staged in-scope files it did not check. The message's wording is its own and
+    cannot be confused with the registry-invalid message, so the output alone tells
+    the two apart.
+  - >-
+    Nothing in scope staged: exit 0 with an ordinary pass, whether or not a root can
+    be found (the GE-120a-4 empty-scope rule).
+  - >-
+    Messages name the registry path that was actually resolved. The hard-coded
+    'See leafcutter/config/agent_registry.json' hint must go.
+  - >-
+    Verdict parity with the build: the commit-time hook and build.py --validate-only
+    call the same registry validation, so the same registry gives the same errors.
+    Existing warnings (about two dozen skill-reference warnings on the real registry
+    as of 2026-09-28) stay warnings. This change must not turn warnings into
+    blocking errors.
+  - >-
+    Edit templates/scripts/commit_guardian/check_agent_registry.py. The live copy
+    scripts/commit_guardian/check_agent_registry.py reaches parity through the build
+    (in a build-provisioned workspace it is a link into the build output,
+    KI-CG-20260831-hook-parity-legs-alias-and-fail-open). check-hook-parity passes.
+  - >-
+    No silent re-disable. The check-agent-registry entry in the hook configuration
+    keeps at least its current scope: no files: narrowing, no exemption or allow-list
+    entry, no warn-only mode, and no early success return. Enablement preview done at
+    enrichment on 2026-09-28: the real registry gave 0 errors both under build.py
+    --validate-only and under the current hook run against a copy of this repo laid
+    out the way the hook expects. So as of this date no known-issue entries are
+    needed to turn the gate on. Re-run both at implementation. Fix any new error in
+    the same change or record it in the open KI, naming the error and the agent entry.
+  - >-
+    Tests elsewhere that reach this hook through a bare leafcutter/ fixture directory
+    (for example the BO-2400a-1-iii test-writer's fixtures, per the open KI) must be
+    moved to a real layout from the list above. They are migrated, not deleted,
+    skipped or weakened.
+  - >-
+    When GE-120a-2 lands, this hook registers with cannot-run disposition 'block'.
+    That registration is not in this record's scope and is not a dependency (user
+    decision 2026-09-28).
+test_required: true
+test_spec:
+  - name: test_repo_root_layout_invalid_registry_blocks_naming_fixture_agent
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: failure
+    surface_invoked: ".leafcutter/scripts/commit_guardian/check_agent_registry.py run as a subprocess in a temporary git repository"
+    description: "A temporary git repository has the package at its root (package_root '') and the hook deployed under .leafcutter/scripts/commit_guardian/. A staged registry adds 'fixture-agent' (empty spawned_by) with a template_path that does not exist. The hook exits non-zero and its output names 'fixture-agent' and the missing template path."
+    must_catch:
+      - "the early exit 0 when <repo root>/leafcutter is absent (today's behaviour; this test fails today)"
+      - "an exit 0 with a warning instead of a block"
+  - name: test_repo_root_layout_corrected_registry_passes
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "In the same repository, after the fixture-agent template file is added and staged, the hook exits 0."
+  - name: test_manifest_named_subdirectory_layout_is_validated
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: boundary
+    description: "Parametrised over package_root 'leafcutter-ai' and 'leafcutter': an outer project repository with the package in that subdirectory, .build_manifest.json recording it, and the hook under .leafcutter/. The invalid fixture registry blocks naming fixture-agent, and the corrected one passes."
+    must_catch:
+      - "a hook that still hard-codes the 'leafcutter' segment passes the 'leafcutter' case and fails the 'leafcutter-ai' one"
+  - name: test_unlocatable_package_blocks_with_its_own_message
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: failure
+    description: "A repository with a staged config/agent_registry.json but no manifest and no locatable package makes the hook exit non-zero. The output names the locations tried and the staged file. It shares no identifying wording with the registry-invalid message, which is checked by comparing both outputs."
+    must_catch:
+      - "exit 0 when the package cannot be found"
+      - "the cannot-locate case reusing the 'validation failed' wording"
+  - name: test_nothing_in_scope_staged_passes_whether_or_not_package_is_found
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: boundary
+    description: "With only an out-of-scope file staged, the hook exits 0 both in a repository where the package can be located and in one where it cannot."
+    must_catch:
+      - "a fix that blocks every commit in a repository without the package"
+  - name: test_commit_time_and_build_validate_only_report_the_same_error
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: seam
+    description: "For the invalid fixture package, the hook and build.py --validate-only (subprocess, pointed at the fixture) both fail and both name fixture-agent and the missing template."
+  - name: test_live_and_packaged_copies_give_the_same_verdicts
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: deployed
+    description: "scripts/commit_guardian/check_agent_registry.py and templates/scripts/commit_guardian/check_agent_registry.py, each deployed into the fixture repositories, give the same exit codes and error lines on the invalid, corrected, unlocatable and nothing-in-scope scenarios, and check_hook_parity passes."
+  - name: test_real_repository_registry_passes_the_enabled_gate
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    description: "The fixed hook, run over a temporary clone of this repository at its real layout with the real config/agent_registry.json staged, exits 0, and build.py --validate-only on the real repository exits 0. Turning the gate on does not block the registry as it stands."
+  - name: test_check_agent_registry_hook_entry_is_not_narrowed_or_softened
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: "The check-agent-registry entry in the hook configuration (the shipped pre-commit config and the commit_guardian hooks manifest) has no files: narrowing, no exemption and no warn-only disposition. The entry must never be re-disabled."
+test_rationale: |
+  The defect is a hook that exits 0 before it looks, so every assertion is made on a real
+  subprocess run of the hook, from its deployed location, against a real temporary git
+  repository with a real staged set. The layout is the variable under test, and a direct
+  import would bypass the very path resolution that is broken.
+
+  The first test is the one that fails today: in the repo-root layout the current hook
+  returns 0. The manifest-named subdirectory test is parametrised over 'leafcutter' and
+  'leafcutter-ai' because a hook that keeps the literal segment passes one and fails the
+  other. The unlocatable and nothing-in-scope tests are the opposed pair. One requires a
+  block with its own wording; the other forbids the block, so "block everything" and
+  "pass everything" both fail. The build-parity test pins the commit-time verdict to the
+  build's, which already works.
+
+  The real-repository test is the enablement guard: it proves that switching the gate on
+  does not block the registry as it stands. A preview at enrichment on 2026-09-28 gave 0
+  errors. The hook-entry test backs the no-silent-re-disable clause mechanically. Every
+  fixture is a temporary directory, and no test calls a model or the network.
+delivers_to:
+  agent: python-coder
+  contract: "A commit-time check-agent-registry that locates the package as shared-resolver project root + .build_manifest.json package_root ('' or a subdirectory name), validates the resolved registry with the same function build.py --validate-only uses, exits non-zero with a distinct 'cannot locate package' message (locations tried + staged in-scope files) when in-scope files are staged and no package is found, and exits 0 when nothing in scope is staged. This is what makes BO-2400a-1-iii's commit-time step_kinds rejection actually run in this repository."
+expects_from:
+  ac_id: GE-120a-1
+  contract: "The generic no-silent-pass rule: a guard that could not inspect what it was given does not report a pass. This record applies it to check-agent-registry's package lookup; the empty-scope pass follows GE-120a-4."
+origin_agent: business-analyst
+created: 2026-09-28
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-09-28'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: internal
+notes: |
+  Found 2026-09-27 while building BO-2400a-1-iii, and approved by the user for an AC built right
+  after it. check-agent-registry's main() looks for the package at the repository root plus
+  'leafcutter' and returns 0 when that path is absent. In this repository the package sits at the
+  repository root, so the commit-time registry gate has passed every commit without reading
+  anything. Every "Check Agent Registry ... Passed" line here has been empty. The build's
+  --validate-only path calls the same registry validation and still checks the registry at build
+  time. It has never run at commit time in this repository.
+
+  RELATION TO BO-2400a-1-iii (approved, on main via PR #922). This record is what makes
+  BO-2400a-1-iii's clause "the registry gate that runs at commit time rejects an unknown step
+  kind" hold in this repository, and it is built right after BO-2400a-1-iii. USER DECISION
+  2026-09-28: no depends_on edge is added to the approved BO-2400a-1-iii. The fourth scenario
+  uses a missing template, which fails today, instead of an unknown step kind.
+
+  USER DECISIONS 2026-09-28. (1) Block, not warn. (2) GE-120a-2 is NOT a dependency: the check
+  blocks with a plain non-zero exit today, so this record can be built at once. When GE-120a-2
+  lands, check-agent-registry registers with cannot-run disposition "block". (3) The IT PO adds
+  GE-113c-1's missing test_spec in the same AC commit. (4) The orchestrator records the known
+  issue for the empty commit-time registry gate in this PR.
+
+  PLACEMENT. GE-113c ("A guard does its job the same way inside a consumer project as it does at
+  home") owns guards that resolve the wrong root for their layout. GE-113c-1 is the L2 for root
+  resolution per layout, and GE-113c-1-i already covers the source-repository layout for the
+  project root. This record is the package-root counterpart for one check. L2s carry no child
+  cap. The id skips -ii, which GE-113c-1's amendment reserves as "intentionally NOT authored".
+
+  OVERLAP, AND WHY THIS IS NOT A DUPLICATE. GE-120a-1 (done) and GE-120a-4 (done) state the
+  generic no-silent-pass rule. check-agent-registry breaks it through a path neither covers: an
+  early success return when its package path is missing, with no staged-file count and no
+  message. GE-120a-2 (todo) owns the block/announce disposition; this record does not rely on it
+  (see user decisions above). GE-113c-1-iv (todo) consolidates project-root resolution. This
+  record asks for package-root resolution through the same convention and does not invent a
+  second one.
+
+  WHY BLOCK. A staged registry that cannot be checked is exactly the silent pass this record
+  exists to end, and a warning would let the next unchecked registry through the way this one
+  went through.
+
+  NO SILENT RE-DISABLE. The last scenario exists because turning a dead gate on can make the next
+  commit fail on errors nobody has seen. The easy way out is to switch it back off or exempt the
+  registry. The criterion rules that out and makes those errors either fixed or recorded as known
+  issues. No known issue for this defect existed on 2026-09-28 (known-issues searched for
+  check_agent_registry, check-agent-registry and the 'leafcutter' path); the orchestrator adds
+  one in this PR.
+
+  The layout list comes from the defect report. The BA did not read the check's or the build's
+  source to confirm which layouts the package ships or how the build locates the package. The IT
+  PO confirms both at enrichment.
