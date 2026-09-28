@@ -52,8 +52,8 @@ related_docs:
 
 - **Severity:** high
 - **Status:** open
-- **Occurrences:** 2
-- **First seen:** 2026-08-25 · **Last seen:** 2026-09-01
+- **Occurrences:** 4
+- **First seen:** 2026-08-25 · **Last seen:** 2026-09-28
 - **Where:** `scripts/build.py` — `build_doc_index` (the `("Doc index", build_doc_index)`
   phase entry); `scripts/generate_doc_index.py` (`generate_index`, and its `No docs found.`
   emitter)
@@ -149,6 +149,34 @@ scanned rather than rendering the emptiness as content.
 > The refuse-to-overwrite-on-an-all-empty-scan guard is independently correct and worth landing
 > on its own, ahead of either option. It is the part that turns this from a silent 175-line
 > deletion into a loud failure, and unlike the path fix it cannot itself be got subtly wrong.
+
+**STILL LIVE 2026-09-28 — twice in one session, and the remedy is now unavailable.**
+Hit twice during the TQ-600a-1 drive, a month after the re-verification above and with the
+same numbers: `docs/INDEX.md` 239 lines → **57 lines with 9 `No docs found`** sections, 193
+lines deleted. First via `./build-self.sh --force`, run because `check-build-drift` demanded
+it after a merge; second during a window when another process built against this workspace.
+Both were caught only by running `git status` straight afterwards and reading the line count
+— exactly the manual discipline the Pre-Drive Checklist prescribes, which is to say the
+defect is still load-bearing on a human remembering.
+
+Two things this occurrence adds:
+
+1. **The advertised remedy is now blocked.** `build.py --force` against this workspace is
+   refused by the permission layer as irreversible local destruction. That is a correct
+   call given this defect — but it means the fix text printed by `check-build-drift` and
+   `check-output-drift` ("re-run build.py") now names a command an operator may be unable
+   to run. Any drift those gates report has to be repaired some other way, and neither gate
+   suggests one.
+2. **It compounds with KI-CG-20260928.** That defect leaves the deployed
+   `commit_guardian.json` drifted after every first commit in a worktree, and its gate also
+   prescribes re-running `build.py`. So the two defects form a loop: the drift gate sends
+   you to the command that destroys the doc index. The way out is the per-file restore
+   documented in KI-CG-20260928, not the build.
+
+Until the read/write path mismatch is fixed, the `refuse-to-overwrite-on-an-all-empty-scan`
+guard proposed above is the single highest-value piece — it is what turns this from a silent
+deletion into a loud one, and it would have made both of today's occurrences self-reporting
+rather than something an operator had to notice.
 
 **Pattern:** a resolver that reads one tree and writes another, with the failure rendering as
 ordinary output.

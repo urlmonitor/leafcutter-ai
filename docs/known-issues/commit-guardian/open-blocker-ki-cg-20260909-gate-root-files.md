@@ -25,6 +25,26 @@ related_docs:
 - **Occurrences:** measured once, `df1f0cfb5`. · **First seen:** 2026-09-09 · **Last seen:** 2026-09-09
 - **Where:** `templates/scripts/commit_guardian/check_root_files.py:34` (`git diff --cached --name-status`), `:51` (the status filter); allowlist at `commit_guardian.json` → `root_files.allowed_files` / `allowed_extensions`.
 
+> **PARTIALLY RESOLVED 2026-09-28 — the `M` half is fixed; the allowlist half is not.**
+> `check_root_files.py:51` now matches `A` and `R` only (GE-120e-1-ii, PR #857). The
+> "these five may never be modified again" consequence below is therefore **gone**:
+> `LEAFCUTTER_VERSION` can be bumped and `ruff.toml` edited, because a modification to a
+> path already tracked at the root is no longer treated as an addition. That was found the
+> hard way — a one-line addition of `pytest-xdist` to `requirements-dev.txt` was refused,
+> which is this entry's `requirements-dev.txt` row reaching someone in practice.
+>
+> **What remains open is the allowlist itself.** The five names are still absent from
+> `root_files.allowed_files`, and `.toml` is still not in `allowed_extensions`. With
+> `A`-only matching that now bites in a narrower set of cases — adding one of the five to a
+> fresh checkout, or deleting and re-adding one — rather than on every edit. Severity of the
+> remaining half is correspondingly lower than the `blocker` in this filename, which is kept
+> unchanged per the split convention.
+>
+> The deliberate scope call: PR #857 fixed the status filter and explicitly did **not**
+> bundle the allowlist, because the allowlist ships to adopters and each of the five needs
+> the one-line defensible-as-a-general-default rationale this entry's Definition of Done
+> already asks for. That reasoning is unchanged and still the right shape for the rest.
+
 **The numbers.** 5 of 12 tracked root files violate: `ruff.toml`, `requirements-dev.txt`, `build-self.sh`, `SETUP.md`, `LEAFCUTTER_VERSION`. The shipped allowlist permits `poetry.lock` and `pyproject.toml` but this repo uses `requirements-dev.txt`; permits `setup.sh` and `init-db.sh` but not `build-self.sh`; permits `README.md`/`BOOTSTRAP.md`/`CLAUDE.md` but not `SETUP.md`; and its only allowed extension is `.json`, so `.toml` and the extensionless `LEAFCUTTER_VERSION` both fall through.
 
 **Why this is worse than it sounds.** Line 51 matches `A`, `M` **and** `R`. So it is not "no new root files" — it is "these five may never be modified again." Bumping `LEAFCUTTER_VERSION` is part of every release; editing `ruff.toml` is routine lint maintenance.
