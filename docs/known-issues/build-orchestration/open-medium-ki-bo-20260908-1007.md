@@ -42,8 +42,21 @@ schema sets `additionalProperties: false` over 44 named properties and none of t
 2. **Path tokens regex-scraped out of `it_requirements` prose** by
    `_extract_paths_from_prose()`, existence-gated against the repo.
 
-**Source 2 is the defect.** Any on-disk path mentioned in an it_requirement SENTENCE becomes
-an edit-surface declaration, regardless of what the sentence says about it. `GE-122d-1` is the
+**Source 2 has already been hardened once, and the hardening does not reach this case.**
+`TKT-600a-1` added three filters to prose scraping, the third being on-disk existence
+(`_is_real_prose_path`, `scripts/ac_store/_gtfa_files_touched.py:171`) so that an *example*
+path quoted to illustrate a scenario cannot leak into `files_touched`. That is a real
+improvement and it closes the illustrative-path case. It does not close this one, and the
+module's own docstring says why:
+
+> None of the three reads English prose for authorial intent.
+
+`scripts/build_phases.py` is a real file that exists on disk, so it passes all three filters.
+The gap is not "the token isn't a path" — it is "the sentence says this path may *not* need
+touching", which no mechanical filter on the token itself can see.
+
+**Source 2 is therefore still the defect.** Any on-disk path mentioned in an it_requirement
+SENTENCE becomes an edit-surface declaration, regardless of what the sentence says about it. `GE-122d-1` is the
 worked example: every one of its `doc_links` carried `describes`/`context`, so source 1
 contributed nothing, and its entire `files_touched` — the single entry
 `scripts/build_phases.py` — existed because a regex lifted the string out of a sentence whose
