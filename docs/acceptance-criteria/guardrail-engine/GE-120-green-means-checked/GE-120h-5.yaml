@@ -1,0 +1,554 @@
+id: GE-120h-5
+title: "A refusal from the crowded-directory check names only help the author can actually get to, and naming nothing is better than naming something that is not there"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - precommit_hooks
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a directory is refused for holding more files than the crowding standard
+    allows, and the refusal names help the author is to turn to — a skill, a
+    specialist, a workflow, a command, a procedure, a document, or anything else
+    it calls by a name,
+  When each named thing is sought under the name the refusal gives it, and from
+    the place the refusal tells the author to turn to it,
+  Then each one is there, and is something the author can use from that place,
+  And given a refusal that names help which the project holds no instance of
+    under that name, or which exists somewhere but cannot be reached from where
+    the refusal is read,
+  When the same search is made,
+  Then the refusal is judged wrong for naming it, and the judgement follows from
+    the named thing not being reachable rather than from the words used to name
+    it — so a refusal that drops one unreachable name and introduces a different
+    one is caught on the same terms as the first, and removing a single sentence
+    settles nothing on its own,
+  And given a refusal that names no help at all, and says only that the directory
+    holds more files than it may and how far over it is,
+  When the author reads it,
+  Then this criterion is satisfied — offering nothing is acceptable and offering
+    something unreachable is not, because the second closes a gap in the reader's
+    head that is still open in the project, while the first leaves it visible.
+
+  Coverage note: what is checked is whatever the refusal names on the day it is
+  read, taken from the text the check actually emits, and each named thing is
+  then sought as the author would seek it. A finding that one particular phrase
+  is absent is not evidence for this criterion: the phrase can be deleted while
+  the refusal goes on naming something else that is not there, which is the
+  result this record exists to refuse. Note also that the help named here is a
+  plain noun phrase rather than a token of any recognisable shape, so a search
+  that only looks for names written in a fixed form will pass over it.
+depends_on:
+  - GE-120h
+  - GE-120h-3
+doc_links:
+  - path: docs/acceptance-criteria/guardrail-engine/GE-120-green-means-checked/GE-120h.yaml
+    relationship: parent
+    status: exists
+    relevance: >-
+      THE PROMISE THIS DISCHARGES, AND THE CLAUSE IT HANGS ON. The parent's
+      closing words are that nothing can look like protection the reader is not
+      in fact getting. Its four existing children cover the surfaces on which the
+      package describes its checks — the list that runs them, the quantity of
+      advertised-but-unrun ones, the five switched on, and the published index.
+      This record covers the surface the reader meets last and questions least:
+      what a check says to them at the moment it stops them. Help named in a
+      refusal and never delivered is the same defect on that surface.
+  - path: docs/acceptance-criteria/guardrail-engine/GE-120-green-means-checked/GE-120h-3.yaml
+    relationship: depends_on
+    status: exists
+    relevance: >-
+      WHY THIS RECORD EXISTS NOW AND NOT BEFORE. The crowded-directory check is
+      one of the five GE-120h-3 switches on, and until it was switched on no
+      author had ever read its refusal. GE-120h-3's fourth arm requires each of
+      the five to be able to say no and to name what it objected to; that arm is
+      recorded as NOT LANDED. This record constrains what else that refusal is
+      permitted to say once it does. The two do not overlap: one requires the
+      objection to be named, the other forbids naming help that is not there.
+      Neither may be closed as the other.
+  - path: templates/scripts/commit_guardian/check_folder_density.py
+    relationship: modifies
+    status: exists
+    relevance: >-
+      WHERE THE SENTENCE LIVES, AND THE FIRST APPLICATION — WHICH MUST BE
+      PERFORMED RATHER THAN ASSUMED. The refusal that ships today names two
+      things: a refactoring workflow and a complexity-reduction skill. Each is to
+      be sought as the message says to seek it, and kept only if it is found and
+      usable from a refusal read in a terminal. Whichever way the evidence falls,
+      the sentence either stays because it was sought and found or is deleted; a
+      softened wording is not a third option.
+  - path: templates/workflows/code-refactoring-specialist.md
+    relationship: context
+    status: exists
+    relevance: >-
+      IT PO — THE ARTIFACT ONE OF THE TWO NAMED THINGS RESOLVES TO, AND THE
+      REASON THE TWO NAMES MUST BE SOUGHT SEPARATELY. `/code-refactoring-specialist`
+      resolves here and is deployed as a slash command; the complexity-reduction
+      skill resolves to nothing — templates/skills/ was listed in full in this
+      worktree and holds 43 entries, none of them that one. So the refusal names
+      one kind of thing that exists and one that does not, in a single sentence,
+      and a seek that treats the sentence as one unit will get the wrong answer
+      for one of them. Note also GE-127e-3's settled verdict for the file-size
+      refusal — that a slash command does not resolve from the non-interactive
+      subprocess a commit-time refusal is printed by. That verdict is precedent
+      this record must adopt or distinguish in writing; it is not automatically
+      inherited, because this refusal opens "AI AGENT ACTION REQUIRED" and so
+      names its reader.
+  - path: docs/acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/GE-127e-3.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      THE SIBLING PRECEDENT AND THE STANCE TO MIRROR, DELIBERATELY NOT THE
+      PARENT. GE-127e-3 states this obligation for the FILE-SIZE refusal and its
+      last arm settles the stance this record copies: a bare verdict is
+      preferred to a promise nothing keeps. It cannot host this record — its L1
+      is about being told what to split in a file that has grown too long, and
+      its L0's subject is the length of a file, whereas the subject here is a
+      directory holding too many of them. NOT A DUPLICATE and neither closes the
+      other: two gates, two refusals, two populations of named help.
+  - path: docs/acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/GE-127e-3-ii.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      READ IT FOR THE TRAP IT ALREADY WALKED INTO, AND FOR THE ONE IT DOES NOT
+      COVER. It carries the file-size obligation one hop further, into the
+      instructions inside the artifact that refusal points at, and its lesson is
+      that a pointer chain is only as strong as its last hop. Its discharge
+      recognises a named thing by SHAPE — a command or an agent reference written
+      as a token. The help named in the crowded-directory refusal is an ordinary
+      noun phrase, so that recognition would pass straight over it. The
+      generalisation clause here is written against exactly that gap.
+  - path: docs/acceptance-criteria/guardrail-engine/GE-122-numbers-mean-one-thing/GE-122c-1.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      THE ANTI-PRECEDENT, RECORDED IN THIS COMPONENT ALREADY, AND THE MECHANICAL
+      CEILING IT SETTLES. It documents a gate published as automatically bringing
+      in a triage specialist whose dispatch path stamps every input with a
+      placeholder reason and returns success unconditionally, and every author
+      who read that line believed they were covered. It also settles the
+      mechanics: a check running at commit time can stop you and print, it cannot
+      bring anyone in. Any sentence in a refusal claiming a specialist has been
+      or will be engaged is therefore unkeepable by construction. NOT A
+      DUPLICATE: that record requires a clash to hand you the fix; this one
+      governs what a crowding refusal may claim.
+  - path: docs/acceptance-criteria/build-orchestration/BO-2900-runtime-reachability-guard/BO-2900b-3.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      FENCED, AND THE FENCE IS WHY THIS RECORD IS NEEDED AT ALL. BO-2900 owns
+      capabilities being genuinely connected to something that uses them, and
+      this record explicitly settles that only an actual invocation counts as a
+      caller — a capability's name in text does not. A name sitting in a refusal
+      is text, so no amount of that tree's work will ever notice it. Do not close
+      this as covered there, and do not widen that tree to absorb it.
+  - path: docs/acceptance-criteria/infrastructure/INF-1200-standards-reach-the-author/INF-1200.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      FENCED, BY THAT RECORD'S OWN WORDS. INF-1200 owns telling the author the
+      standards before the work, and states that no criterion of its own may be
+      discharged by changing what a refusal does. This record changes only what a
+      refusal does, so the two cannot be confused in either direction. It also
+      names crowding as one of three configured standards nobody has ever been
+      told about, which is the same gate seen from the other side.
+  - path: docs/known-issues/commit-guardian.md
+    relationship: context
+    status: exists
+    relevance: >-
+      The register for this component. It already carries the dead-command
+      finding for the file-size refusal and the fictional-remediation
+      anti-precedent; this defect is the third of the same family and the
+      register is where its instance belongs.
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      Establishes what the commit-time surface can and cannot do, which is the
+      ceiling on what any refusal may offer.
+  - path: templates/scripts/commit_guardian/README.md
+    relationship: related
+    status: exists
+  - path: docs/pre-commit-hooks.md
+    relationship: related
+    status: exists
+  - path: CLAUDE.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      "Gate / Workflow ACs — Verify Behaviorally, Not by Grep" is the whole
+      method here, with the caveat GE-127e-3-ii records: the artifact under test
+      IS text, so what makes the check behavioural is that it SEEKS each named
+      thing in the world rather than asserting something about the presence or
+      absence of a string.
+delivers_to: null
+expects_from:
+  ac_id: GE-120h-3
+  contract: >-
+    The crowded-directory check running on an ordinary commit and able to refuse,
+    so that its refusal is text an author actually reads. This record adds
+    nothing to what that refusal reports; it constrains what the refusal is
+    permitted to offer.
+origin_agent: business-analyst
+created: 2026-09-28
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+assigned_agent: python-coder
+estimated_complexity: M
+package_surface: false
+declares_side_effect: false
+it_requirements:
+  - "The population under audit must be read from the text a real refusal
+    actually emits on the run being audited. It may not come from a list held by
+    the checker, an allowlist of approved sentences, a message-template registry,
+    or a fixture of expected output. A held list is stale the moment a sentence is
+    added, and every one of those forms passes on a gate that delivers nothing —
+    the family GE-122c-1 rules out in this same component."
+  - "Recognition of a named thing must not be restricted to a fixed token shape.
+    MEASURED IN THIS WORKTREE, NOT ASSUMED: the line
+    check_folder_density.py:215 emits is
+    `Use the /code-refactoring-specialist workflow or the complexity-reduction skill.`
+    — it contains no backtick anywhere, and one of its two names is an ordinary
+    noun phrase in running prose. GE-127e-3's `extract_named_actions` iterates
+    backtick-quoted spans and keeps only `/slash` or `@agent` tokens, so it
+    returns an empty list against this refusal and reports the live defect clean.
+    Reusing it unmodified is therefore specified out. The recogniser this record
+    needs must pick up help named as plain prose AND token-shaped names whether or
+    not they are quoted."
+  - "The verdict must be produced by seeking the named thing, never by matching
+    the wording. A refusal that drops one unreachable name and introduces a
+    different one must be caught on the same terms as the first — that property,
+    not the absence of any particular phrase, is what this record buys."
+  - "Each name must be sought as the kind of thing the refusal calls it and from
+    the place the refusal sends the reader to. The two names in today's line are
+    of different kinds (a workflow and a skill) and live in different places, so a
+    seek that resolves the sentence as a single unit gives the wrong answer for one
+    of them."
+  - "The reader-context question must be settled in writing before any sentence is
+    kept. GE-127e-3 settled, for the file-size refusal, that a slash command does
+    not resolve from the non-interactive subprocess a commit-time refusal is
+    printed by, and deleted the sentence on that ground. That precedent must be
+    adopted or explicitly distinguished here — this refusal opens
+    `AI AGENT ACTION REQUIRED`, so it names its reader and may be argued to name a
+    different place. Leaving the question unaddressed is not an option; whichever
+    way it is settled, the surviving sentence must be defensible under the answer
+    given."
+  - "The gate must not check its own message at commit time. Verification belongs
+    in the test. A gate that seeks its own named help at refusal time puts
+    filesystem and subprocess I/O of unknown cost on every commit that refuses."
+  - "Deletion is the compliant move and must not be traded for substitution. This
+    record is a ceiling and carries no floor: a crowding refusal that names no help
+    at all satisfies it. Replacing a failed sentence with a vaguer one is how the
+    incumbent message came to exist. If the refusal should also hand the author a
+    starting point, that is a separate promise and needs its own record."
+  - "No sentence may claim that a specialist has been or will be engaged, that a
+    review has been run, or that anything has been queued. GE-122c-1 settles the
+    mechanics for this component: a commit-time hook can block and print, it cannot
+    bring anyone in, and the process exits with nothing surviving it."
+  - "NO NEW `build.py` SPAWN SITE. CLAUDE.md's spawn-site prohibition is absolute
+    and no shared session-scoped deployed layout exists yet in this worktree (the
+    suite has zero session-scoped fixtures, 77 spawn sites at ~59.8s each, 63% of a
+    1:29:47 run). This record therefore specifies NO deployed-layout descriptor:
+    template-to-deploy parity for this directory is an operational build step, not
+    a property of the refusal's own text, and `python scripts/build.py --target-dir .`
+    after the edit is part of the change rather than part of the suite. When
+    TQ-600a's shared deployed layout lands, a `deployed`-angle arm should be added
+    by reusing it — never by adding a build of its own."
+  - "NO PACKAGE SURFACE — MEASURED, NOT ASSUMED. `folder_density` is already a
+    top-level key and `check-folder-density` already a hooks_manifest id in
+    templates/scripts/commit_guardian/commit_guardian.json, both read in this
+    worktree. This record's whole effect is to audit and where necessary delete
+    printed text, and deleting text registers nothing. Plain list form; no
+    config_schema_fragment invented to satisfy the structured-spec validator."
+  - "Any seek code that reaches the filesystem or a subprocess must follow the repo
+    error-handling policy: specific-exception try/except, log at WARNING or higher
+    or re-raise, no bare or blind excepts."
+  - "THE THIRD SIGHTING STAYS OUT OF THE PRODUCTION CHANGE. check_complexity.py
+    line ~238 names the same absent skill, and this record's production edit must
+    not reach it — that gate is a separate subject. If the recogniser and seek are
+    written as a reusable audit over an arbitrary refusal text (the shape this
+    record prefers), they will generalise to that gate and to any future one at no
+    extra cost, which is the right way to leave the door open without widening the
+    change."
+test_spec:
+  - name: test_ge_120h_5_every_help_the_crowding_refusal_names_is_sought_and_found
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: >-
+      Stage a real commit that takes a directory from at-or-under to over the
+      crowding limit, capture the refusal it really emits, read the population of
+      named help out of that text, and seek each one under the name the refusal
+      gives it and from the place the refusal sends the reader to. Each must be
+      found and usable from there. Extraction is from the emitted text, so a
+      sentence added later is audited automatically rather than needing the test
+      updated.
+    must_catch:
+      - "put back into the refusal a sentence naming a kind of help the project
+        does not hold, written as plain prose rather than as a command or an agent
+        reference — under that injection this clause must go RED and return to
+        green on revert"
+      - "a refusal that names nothing at all left as the only case exercised —
+        every arm of this record is green on arrival against such a refusal, so an
+        unmutated pass here proves nothing on its own"
+  - name: test_ge_120h_5_the_two_incumbent_names_are_disposed_of_by_seeking_them_not_by_assumption
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: real_artifact
+    description: >-
+      THE FIRST APPLICATION, AGAINST THE MESSAGE THAT SHIPS TODAY, PERFORMED
+      RATHER THAN ASSUMED. Take the shipped line at its word and seek both things
+      it names separately — the refactoring workflow and the complexity-reduction
+      skill — each as the kind of thing the refusal calls it. Whichever way the
+      evidence falls for each, the sentence either stays because it was sought and
+      found or is deleted; a softened wording is not a third option.
+    must_catch:
+      - "the two names resolved as one unit, so that the workflow being found
+        carries the absent skill through with it"
+      - "the skill treated as present because the phrase `complexity-reduction`
+        appears in agent templates and a registry comment — those are other
+        mentions of the name, not an instance of the thing under it"
+  - name: test_ge_120h_5_the_finding_survives_swapping_one_unreachable_name_for_another
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: discrimination
+    description: >-
+      THE ARM THAT MAKES THIS RECORD WORTH MORE THAN A DELETED SENTENCE. The
+      judgement must follow from the named thing not being reachable rather than
+      from the words used to name it, so a refusal that drops one unreachable name
+      and introduces a different one is caught on the same terms as the first.
+    must_catch:
+      - "replace the offending name with a DIFFERENT name that is equally
+        unreachable — the clause must stay RED across the swap; if it goes green,
+        what was built recognises a phrase rather than seeking a thing"
+      - "the finding asserted as `'complexity-reduction' not in output` — that
+        passes the instant the phrase is deleted while a different unreachable
+        name remains, which is the result this record exists to refuse"
+      - "removing the single offending sentence and nothing else, with the
+        recogniser never exercised against a replacement"
+  - name: test_ge_120h_5_help_named_as_plain_prose_is_recognised_and_not_passed_over
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: discrimination
+    description: >-
+      The recogniser itself, exercised directly against refusal texts that name
+      help in each of the forms this component actually uses: an ordinary noun
+      phrase in running prose, a bare `/slash` command with no quoting, an
+      `@agent` reference, and the backtick-quoted forms. All must be found. This
+      is the descriptor that fails the sibling's shape-based extractor by
+      construction and so prevents it being reused unchanged.
+    must_catch:
+      - "GE-127e-3's `extract_named_actions` reused unmodified — it keeps only
+        backtick-quoted `/slash` or `@agent` spans, and the crowding refusal
+        contains no backtick at all, so it returns [] and reports the live defect
+        clean"
+      - "a recogniser that finds the bare slash command but passes over the prose
+        noun phrase beside it in the same sentence"
+  - name: test_ge_120h_5_a_crowding_refusal_that_names_no_help_at_all_satisfies_this_record
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: >-
+      THE CEILING STATED AS A PERMISSION, WHICH IS WHAT MAKES DELETION COMPLIANT.
+      A crowding refusal that says only that the directory holds more files than
+      it may and how far over it is passes this record. The descriptor exists so
+      that removing an unkeepable sentence is demonstrably not a regression, and
+      so that no implementer is pressured into adding a sentence in order to have
+      one. It deliberately asserts no floor.
+    must_catch:
+      - "an assertion that some help must always be named, which would turn this
+        ceiling into a floor and force a replacement sentence"
+  - name: test_ge_120h_5_the_audited_text_is_the_one_the_registered_hook_actually_emits
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: reachability
+    surface_invoked: "python templates/scripts/commit_guardian/run_hook.py templates/scripts/commit_guardian/check_folder_density.py"
+    description: >-
+      PRODUCTION ENTRY POINT. The text under audit is captured from the registered
+      hook wrapper's own output stream, not from a message-assembling helper called
+      in-process. A message that is honest when assembled directly and different
+      when printed through the hook is the only thing this descriptor can catch,
+      and it is the difference between auditing what the author reads and auditing
+      what the code intended them to read.
+    must_catch:
+      - "the refusal text taken from `_print_violations` called in-process rather
+        than from the wrapper's real stdout"
+test_rationale: >-
+  A DIRECT-IMPORT UNIT TEST CANNOT DISCHARGE THIS RECORD, AND NEITHER CAN THE
+  OBVIOUS STRING ASSERTION. The artifact under test is refusal TEXT, so the
+  tempting shortcut is `assert "complexity-reduction" not in output`. That is
+  satisfied by deleting one sentence while the refusal goes on naming something
+  else that is not there — CLAUDE.md's "Gate / Workflow ACs — Verify Behaviorally,
+  Not by Grep" names exactly this failure, and GE-122c-1 records what it costs in
+  this same component. What makes the shape below behavioural is not that it runs
+  a subprocess but that it SEEKS each named thing in the world rather than
+  asserting something about the presence or absence of a string; the two named
+  mutations are what prove the seek is load-bearing, and both must be executed
+  rather than described.
+
+
+  THE EXTRACTOR DECISION, MADE BY READING THE SIBLING RATHER THAN ASSUMING IT.
+  GE-127e-3 shipped `extract_named_actions` in
+  unit_tests/commit_guardian/_ge_127e_3_fixture.py, and it was the natural thing to
+  reuse. It cannot be reused unmodified here, for two independent reasons, both
+  measured in this worktree. First, it recognises a named thing by token shape —
+  a `/slash` command or an `@agent` reference — and "the complexity-reduction
+  skill" is an ordinary noun phrase in running prose, so it would be passed over.
+  Second, and decisively, it only ever looks INSIDE backtick-quoted spans, and the
+  line check_folder_density.py:215 emits carries no backtick at all: even the
+  slash command in it is bare. Run against today's real crowding refusal it
+  therefore returns an empty list and reports the refusal clean, which would have
+  produced a green test over a standing defect. Descriptor 4 exists specifically
+  to fail that extractor by construction so the reuse cannot be made quietly
+  later. Everything else in the sibling's fixture layer generalises and should be
+  reused rather than re-derived: the git/subprocess plumbing (`fresh_repo_dir`,
+  `init_repo`, `commit_all`, `stage_all`) and the disposable-copy mutation
+  machinery, which is where both named mutations must be applied — never against
+  the tracked template.
+
+
+  WHY THE MUTATIONS RUN AGAINST A PROSPECTIVE-FIX BASELINE. Today's real refusal is
+  already red for the incumbent defect, so layering an injection on top of it gives
+  an ambiguous red. Follow the sibling's model: apply the injections to a
+  disposable copy on which the offending sentence has first been deleted, so each
+  injection's own signal is isolated.
+
+
+  NO DEPLOYED-LAYOUT DESCRIPTOR, AND THIS IS A DELIBERATE OMISSION RATHER THAN AN
+  OVERSIGHT. The sibling justified exactly one `build.py` spawn and reused it
+  across two arms. CLAUDE.md has since closed that door outright — 77 spawn sites
+  at ~59.8s each, 63% of a 1:29:47 run, and no session-scoped fixture exists yet to
+  reuse. The residual risk a deployed arm would cover is that a sentence deleted
+  from the template is never built, which is a property of the build pipeline
+  rather than of this refusal's text, and is discharged operationally by re-running
+  the build as part of the change. Descriptor 6 still captures the text from the
+  registered wrapper, so the production entry point is exercised; only the
+  cold-deployed copy is out. When TQ-600a's shared layout lands, add the arm by
+  reusing it.
+notes: |
+  THE DEFECT, VERIFIED AND NOT HYPOTHETICAL. The crowded-directory refusal tells
+  the author to use a complexity-reduction skill. No such skill is packaged: the
+  package's skill templates were listed in full on 2026-09-28 and it is not among
+  them, and no registry names it. The only places that phrase appears are the
+  guard messages that offer it and the specialist instructions that assume it.
+  The reader is sent to something that has never existed.
+
+  WHY THIS IS FILED HERE AND NOT UNDER GE-127e. The question was asked properly
+  and the answer is not the convenient one.
+    - GE-127e was examined first, because its third child states this very
+      obligation for the file-size refusal and is the nearest thing in the store
+      to a model. It was rejected on SUBJECT, not on capacity — it has four L2s
+      against a cap of five, so a sibling would fit. Its own criterion opens
+      "when a file is refused for being too large", and its L0 is "files never
+      quietly grow past the point where they can be understood". Crowding is a
+      property of a directory, not the length of a file. Filing here under that
+      L0 would widen an approved goal's stated subject after the fact, which is
+      the move that L0's own notes reject twice over when explaining why INF-800
+      and CR-100 were not widened to host it.
+    - A Roman constraint child under GE-127e-3 was examined and rejected for the
+      same reason plus one more. GE-127e-3-ii's own notes set the test for that
+      level: a Roman child pins WHERE an already-specified obligation reaches and
+      adds no new behaviour. This record states the obligation for a gate no
+      record states it for, which is a behaviour, and the parent it would hang
+      under is scoped to the file-size gate in its first clause.
+    - WHAT ACTUALLY OWNS CROWDING, WHICH IS THE SURVEY'S REAL ANSWER: nothing
+      owns its BEHAVIOUR. BP-1600a-2 owns the census of gates wired to nothing.
+      INF-1200 owns telling authors the standard beforehand and fences itself off
+      from refusals explicitly. ACD-2200 owns the adoption ratchet across
+      standards generally. GE-120h-3 is the only record that touches this gate as
+      a gate — it switches it on, and its fourth arm is the one that requires it
+      to be able to refuse and to name its objection. The refusal an author reads
+      exists because of GE-120h-3, so the record constraining what that refusal
+      may offer belongs beside it.
+    - GE-126 was examined and has no room: every one of GE-126a..e is at the five
+      child cap, and its surface is interrogation — handing a check your file
+      yourself — not an ordinary commit.
+
+  CAPACITY. GE-120h holds four L2s; this is the fifth and takes it to the hard cap
+  of five with no override. There is no room for a sixth, and none should be
+  taken by raising the cap.
+
+  THE GENERALISATION IS THE WHOLE RECORD, AND WITHOUT IT THIS IS WORTHLESS. An
+  acceptance criterion satisfied by "the phrase is gone" is discharged by deleting
+  one sentence, and rots the day somebody adds a different bad one. The second arm
+  therefore binds the finding to the named thing not being reachable, whatever it
+  is called. Two consequences for whoever builds this, both deliberate:
+    - The population is taken from the text the refusal actually emits, not from a
+      list held by the thing doing the checking. A held list is stale the moment a
+      sentence is added, and a sentence added later in good faith is the likeliest
+      next instance.
+    - Recognising a named thing BY SHAPE is not enough here, and this is the
+      concrete lesson this defect teaches that its file-size sibling could not.
+      GE-127e-3-ii's discharge recognises commands and agent references written as
+      tokens. "the complexity-reduction skill" is an ordinary noun phrase in
+      running prose. A shape-based recogniser reports this refusal clean.
+
+  NAMED MUTATIONS — EXECUTE THEM, DO NOT MERELY DESCRIBE THEM. Every arm here is
+  an absence or a property of text that may not be present at all, so all of them
+  are green on arrival against a refusal that names nothing. Written so they can
+  be lifted verbatim into test descriptors.
+
+  (1) "each one is there, and is something the author can use from that place" —
+      MUTATION: put back into the refusal a sentence naming a kind of help the
+      project does not hold, written as plain prose rather than as a command or an
+      agent reference. Under that injection this clause must go RED and return to
+      green on revert. This is the shape of the live defect, and it is also the
+      shape a token-recognising check misses, which is why the injected sentence
+      must not be token-shaped.
+
+  (2) "the judgement follows from the named thing not being reachable rather than
+      from the words used to name it" — MUTATION: replace the offending name with a
+      DIFFERENT name that is equally unreachable. The clause must stay RED across
+      the swap. If it goes green, what was built recognises a phrase rather than
+      seeking a thing, and the record has been discharged by deletion — which is
+      the outcome this criterion exists to refuse.
+
+  THE EVIDENCE BAR, STATED SO IT IS NOT NEGOTIATED DOWN LATER. "The author can get
+  to it" is evidenced by seeking it as the author would, from a refusal the gate
+  really produced. It is NOT evidenced by the refusal containing a path that exists
+  on disk, by something being registered somewhere, or by the text matching an
+  approved list of sentences. GE-122c-1 rules out that entire family for the same
+  reason in this same component: each of them passes on a gate that delivers
+  nothing, which is exactly how the anti-precedent stayed green for months.
+
+  DELETION IS THE COMPLIANT MOVE. The third arm is a permission, and it is there so
+  that removing an unkeepable sentence is demonstrably not a regression. The
+  pressure to replace a deleted sentence with a vaguer one, so the message does not
+  look empty, is how the incumbent message came to exist. Note carefully that this
+  record is a CEILING and carries no floor: nothing here obliges the refusal to be
+  helpful. If the crowding refusal should also hand the author a starting point,
+  that is a separate promise and needs its own record; do not smuggle it in by
+  softening a sentence that failed this one.
+
+  A SECOND SIGHTING, RECORDED AND DELIBERATELY NOT ABSORBED. The same
+  complexity-reduction skill is named in the refusal emitted by the complexity
+  check as well, so the dead pointer is shared by at least two gates. That gate is
+  not this record's subject and must not be widened into it. It is written down
+  here because the obligation now has three instances in this component — the
+  file-size refusal, this one, and that one — which is the argument for whoever
+  next touches this family to lift it to a single promise rather than filing a
+  fourth point fix.
+
+  NOT AUTHORED HERE, BY DESIGN: assigned_agent, estimated_complexity,
+  it_requirements, test_spec, test_rationale, package_surface and
+  declares_side_effect. Those are the IT PO's fields. Both mutations above are
+  written to be turned directly into test descriptors.
+
+  PARENT DOCUMENTATION TRIGGER ALREADY DISCHARGED. GE-120h carries
+  documentation_triggers [reference-doc] and GE-120h-4 is the record that answers
+  it. No further documentation record is produced here.
