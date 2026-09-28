@@ -65,7 +65,7 @@ created: 2026-09-28
 amended_by: []
 superseded_by: null
 covered_by: [unit_tests/build_guards/test_bp_1500a_1_doc_index_scan_root.py]
-implemented_by: [scripts/build.py]
+implemented_by: [scripts/build_phases_doc_index.py, scripts/build.py]
 change_target: code
 risk_surface: internal
 test_spec:
