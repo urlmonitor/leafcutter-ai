@@ -59,7 +59,7 @@ class UnassignedWorkAgentError(ValueError):
     """
 
 
-def _require_work_agent(assigned_agent: "str | None") -> None:
+def _require_work_agent(assigned_agent: "str | None") -> str:
     """Refuse to resolve inputs for an AC that names no agent to do the work.
 
     Called from ``_build_agents_map``'s single entry point rather than from the
@@ -81,19 +81,35 @@ def _require_work_agent(assigned_agent: "str | None") -> None:
       gate phase with nobody assigned to build it — the phantom-done shape one
       level up, where the gates run over an implementation nobody wrote.
 
-    Why ``_build_agents_map`` still annotates the parameter ``str``. This
-    guard returns ``None``, so it narrows nothing for a type checker, and
-    ``_gtfa_agents_map`` reaches it through the ``_sib()`` importlib seam,
-    whose result is ``Any`` — so mypy cannot see the call at all. Widening
-    that caller to ``str | None`` therefore makes its own post-guard handoff
-    to ``_legacy_agents_map`` (a ``dict[str, str]`` builder that genuinely
-    cannot take None) unprovable, and mypy reports an arg-type error on a
-    line the guard above has already made safe. Expressing the guarantee
-    needs this function to RETURN the narrowed value and the caller to bind
-    it to a new name — a signature change, not an annotation change.
+    Why this RETURNS the agent rather than only raising. A ``-> None`` guard
+    narrows nothing for a type checker, which forced ``_build_agents_map`` to
+    keep annotating its parameter ``str`` while genuinely receiving None: the
+    honest ``str | None`` made its own post-guard handoff to
+    ``_legacy_agents_map`` (a ``dict[str, str]`` builder that really cannot
+    take None) unprovable, and mypy reported an arg-type error on a line this
+    guard had already made safe. Returning the narrowed value lets the caller
+    bind ``work_agent = _require_work_agent(assigned_agent)`` and widen its
+    own parameter to the truthful ``str | None``.
+
+    The ``-> str`` is itself machine-checked HERE: mypy verifies this body
+    cannot fall through to an implicit None, so deleting the raise below
+    fails type-checking rather than silently un-narrowing the callers.
+
+    Known limit — the ``_sib()`` seam. ``_gtfa_agents_map`` reaches this
+    function through the ``importlib`` sibling shim, whose result mypy types
+    as ``Any``, so at THAT call site the returned ``str`` decays back to
+    ``Any``. The guarantee is therefore checked at this definition and merely
+    propagated — not re-verified — at the caller. Closing that remaining gap
+    needs a real (non-importlib) import at the seam; it must NOT be faked
+    with a ``cast``, an ``assert``, or a ``# type: ignore`` at the call site,
+    which would only make the narrowing look checked to a reader.
 
     Args:
         assigned_agent: The agent name from the AC's ``assigned_agent`` field.
+
+    Returns:
+        *assigned_agent*, narrowed to ``str`` — it cannot be None past the
+        raise below.
 
     Raises:
         UnassignedWorkAgentError: when *assigned_agent* is None.
@@ -108,6 +124,7 @@ def _require_work_agent(assigned_agent: "str | None") -> None:
             "nobody assigned to build it. Author assigned_agent on the "
             "acceptance criterion and re-run."
         )
+    return assigned_agent
 
 
 def _resolve_effective_deferral(
