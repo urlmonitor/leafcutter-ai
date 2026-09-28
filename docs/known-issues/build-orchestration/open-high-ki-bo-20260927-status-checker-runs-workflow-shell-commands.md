@@ -21,7 +21,7 @@ related_docs:
 
 - **Severity:** high. The failure is silent and intermittent. `status-checker` complies most of the time. When it declines, the caller gets a failed or unparseable reply, and most sites treat that as a real answer: "no orphans", "branch unknown", "store absent".
 - **Status:** open. No AC. Widens `KI-BO-20260901-1620`, which covers only fast-lane-ship.js.
-- **Occurrences:** 2. Occurrence 1: `/plan-feature` run `wf_734389cf-248`, 2026-09-25, `pause_store.py write` → `pause_persist_failed` (session observation, not re-verified). Occurrence 2: three refusals in `plan-feature` and `finalize-feature` builds on 2026-09-25, moved here from `KI-BO-20260901-1620` on 2026-09-28 (see [Occurrences](#occurrences)). Its `pause-persist` refusal is probably the same event as Occurrence 1. Earlier refusals: `KI-BO-020` (fast-lane release, twice).
+- **Occurrences:** 3. Occurrence 3: `/plan-feature` run `wf_d49dfa3f-704`, 2026-09-25 07:01 UTC, `pause-persist` at `gate-ba` refused → `pause_persist_failed`, on a build that predates PR #896 (added 2026-09-28, see [Occurrences](#occurrences)). Occurrence 1: `/plan-feature` run `wf_734389cf-248`, 2026-09-25, `pause_store.py write` → `pause_persist_failed` (session observation, not re-verified). Occurrence 2: three refusals in `plan-feature` and `finalize-feature` builds on 2026-09-25, moved here from `KI-BO-20260901-1620` on 2026-09-28 (see [Occurrences](#occurrences)). Its `pause-persist` refusal is probably the same event as Occurrence 1. Earlier refusals: `KI-BO-020` (fast-lane release, twice).
 - **First seen:** 2026-09-25 · **Last seen:** 2026-09-25
 - **Where:** the `agentType: "status-checker"` sites below, `templates/workflows-js/*.js` on main at `93bd801c`.
 
@@ -93,6 +93,26 @@ Mutating table). The remaining sites from this occurrence are already in the tab
 A `pause_persist_failed` from a build that has #896 has a different cause: `worktree-agent` wraps
 the read-back in an envelope of its own and the verify rejects it. That is
 `KI-BO-20260928-pause-verify-rejects-an-enveloped-read-back`, not this entry.
+
+**Occurrence 3 — 2026-09-25 07:01 UTC, `/plan-feature` run `wf_d49dfa3f-704`; the run ended
+`pause_persist_failed` at `gate-ba`.** Added 2026-09-28. Reported by session `leafcutter-6d` on
+this machine. Not re-reproduced. Per the report, `status-checker` refused the `pause-persist`
+dispatch ("not my role"), and `pause-persist-verify` then returned `{"exists": false}`. The run's
+own record (the local workflow record `wf_d49dfa3f-704.json` in the reporting session's Claude Code transcript directory)
+supports this:
+
+- Its `timestamp` is `2026-09-25T07:01:12Z`, about ten hours before PR #896 merged (17:11 UTC).
+- The script it ran dispatches `pause-persist` and `pause-persist-verify` with
+  `agentType: "status-checker"`. On main both go through `_shellPermittedAgentId =
+  "worktree-agent"` (`plan-feature.js:1836`, `:1865`, `:1886`).
+- Its `result` is `{"status": "pause_persist_failed", "run_id": "default-run", "gate_id": "gate-ba", ...}`.
+
+This is the pre-#896 cause in this entry, not the enveloped read-back. That KI needs a record that
+was written and a reply that nests `exists: true` one level down, so the top-level check at
+`plan-feature.js:1891` misses it. Here the write was refused, so no record existed, and a flat
+`{"exists": false}` was the correct answer. The verify reported the run truthfully. The gate
+(`gate-ba`) and run id (`default-run`) differ from Occurrences 1 and 2 (`itpo-split-20260925`, and
+`gate-po`), so this looks like a separate run and not the same event.
 
 ## Detection
 
