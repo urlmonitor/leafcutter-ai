@@ -247,7 +247,7 @@ class TestNormalisePathLeadingDot(unittest.TestCase):
 class TestGitBinaryMissing(unittest.TestCase):
     """Tests that a missing git binary causes fail-open exit 0 — Defect 2."""
 
-    def test_main_exits_0_when_git_binary_missing(self) -> None:
+    def test_main_exits_0_when_git_binary_missing(self) -> None:  # covers: BP-1100e-2-a
         """Run hook with empty PATH — FileNotFoundError must not propagate to exit 1."""
         result = subprocess.run(
             [sys.executable, str(HOOK_PATH)],
@@ -433,7 +433,7 @@ class TestLoadConfigShapeRobust(unittest.TestCase):
         config_dir.mkdir(parents=True)
         (config_dir / "commit_guardian.json").write_text(content, encoding="utf-8")
 
-    def test_section_null_returns_disabled(self) -> None:
+    def test_section_null_returns_disabled(self) -> None:  # covers: BP-1100e-2-a
         """files_touched_reconciliation: null — must return (False, False), no crash."""
         with tempfile.TemporaryDirectory() as tmp:
             self._write_primary_config(tmp, '{"files_touched_reconciliation": null}')

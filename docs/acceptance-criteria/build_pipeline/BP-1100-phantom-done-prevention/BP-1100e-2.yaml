@@ -3,7 +3,7 @@ components:
   - build_pipeline
 readiness: approved
 priority: high
-title: "The reconciliation is advisory and fails open by default; strict blocking is opt-in"
+title: "The reconciliation blocks by default and fails open on its own errors; advisory-only reporting is opt-in"
 component: build-pipeline
 level: L2
 status: active
@@ -14,10 +14,11 @@ criteria: |
   Given the pre-done reconciliation produces a verdict that a ticket changed source
     files not present in its declared files_touched UNION out_of_scope
   When the reconciliation runs in its default configuration
-  Then it reports the mismatch as an advisory (it names the undeclared source files
-    and does not hard-block the ticket from reaching done) — the default is fail-open
-  And when the strict mode is explicitly opted into via configuration, the same
-    verdict blocks the ticket from being marked done until the scope is reconciled
+  Then it blocks the ticket from being marked done until the scope is reconciled
+    (it names the undeclared source files) — the default is block-on-mismatch
+  And when advisory mode is explicitly opted into via configuration, the same
+    verdict is reported only as an advisory and does not hard-block the ticket
+    from reaching done
   And when the reconciliation itself cannot run (an internal error computing the diff
     or reading frontmatter), it fails open — it does not block the ticket on account
     of its own failure
@@ -34,14 +35,14 @@ doc_links:
 assigned_agent: python-coder
 estimated_complexity: S
 it_requirements:
-  - "CONFIG MODEL — a top-level 'files_touched_reconciliation' section in commit_guardian.json with two boolean keys 'enabled' and 'strict' (enabled+strict shape, mirroring duplicate_code / diff_coverage; NOT a single 'mode' key). SHIPPED DEFAULTS: enabled:true, strict:false = the guard is ACTIVE in ADVISORY mode out of the box (report undeclared source, do not block), so the phantom-done guard exercises on every install rather than shipping dormant. enabled:false turns the check off; enabled:true + strict:true = BLOCK on a real mismatch. Advisory/fail-open remains the default posture."
+  - "CONFIG MODEL — a top-level 'files_touched_reconciliation' section in commit_guardian.json with two boolean keys 'enabled' and 'strict' (enabled+strict shape, mirroring duplicate_code / diff_coverage; NOT a single 'mode' key). SHIPPED DEFAULTS: enabled:true, strict:true = the guard is ACTIVE in BLOCKING mode out of the box (a real mismatch blocks the ticket from reaching done until the scope is reconciled), so the phantom-done guard enforces on every install rather than shipping advisory-only. enabled:false turns the check off; enabled:true + strict:false = ADVISORY (report undeclared source, do not block). Block-on-mismatch is the default posture; advisory and off remain available via configuration."
   - "Fail-open on INTERNAL error is orthogonal to the enabled/strict config: any exception in computing the verdict causes the check to not block (report to stderr, exit non-blocking), so a script error never strands a ticket — regardless of the strict setting."
   - "Must handle errors gracefully per the project error handling policy (CLAUDE.md Rules 1-3): specific exception types, log at WARNING or higher, never swallow silently."
-  - "PORTABLE per ADR-001: the check + its commit_guardian.json 'files_touched_reconciliation' section (enabled:true, strict:false defaults = advisory-on) ship to consumers via build.py, kept in parity via the build.py round-trip (canonical source = templates/scripts/commit_guardian/commit_guardian.json); it must NOT rely on the leafcutter repo's own root CLAUDE.md."
+  - "PORTABLE per ADR-001: the check + its commit_guardian.json 'files_touched_reconciliation' section (enabled:true, strict:true defaults = block-on) ship to consumers via build.py, kept in parity via the build.py round-trip (canonical source = templates/scripts/commit_guardian/commit_guardian.json); it must NOT rely on the leafcutter repo's own root CLAUDE.md."
 delivers_to: null
 expects_from:
   ac_id: BP-1100e-1
-  contract: "The declared-vs-actual reconciliation verdict (list of undeclared changed source files) that this AC gates behind the advisory-default / strict-opt-in mode."
+  contract: "The declared-vs-actual reconciliation verdict (list of undeclared changed source files) that this AC gates behind the block-by-default / advisory-opt-out mode."
 origin_agent: business-analyst-v3
 created: 2026-07-01
 amended_by:
@@ -53,6 +54,10 @@ amended_by:
     entry: "PO decision (dogfood): flip the shipped default from enabled:false to enabled:true (strict stays false) so the guard is ACTIVE in advisory mode out of the box instead of shipping dormant — resolving the tension with this AC's own criteria (which describes advisory-as-default) and giving leafcutter + every consumer the phantom-done advisory without a manual opt-in. Off-switch (enabled:false) and blocking (strict:true) remain available. Config, hook default behavior, and doc section 10 updated in lockstep."
     confirmed_by: BrainCandy
     confirmed_at: 2026-07-07
+  - reason: strict-default-block-on
+    entry: "Bringing the store into line with code, eleven weeks late: the shipped default actually became enabled:true, strict:true (blocking) in commit a36837dc (2026-08-13, 'feat(ac): ACS-500g pattern-producer specs + files_touched strict enforcement', #438), which flipped commit_guardian.json's 'strict' key from false to true to upgrade the AC->SourceFile chain from 'declared, unverified' to 'declared == actual at done-time'. That change superseded the shipped-default-advisory-on decision above (2026-07-07) in the running config, but this AC's criteria and it_requirements were never updated to match — they kept describing the old advisory-by-default / strict-opt-in posture a month after code moved on. This amendment corrects criteria and it_requirements to state the policy as it has actually shipped since 2026-08-13: block by default, advisory as the explicit opt-out, off still available. In the same pass, title, notes, and expects_from.contract were also corrected — they still asserted the superseded advisory-by-default posture and would otherwise have left the record contradicting its own criteria (the exact defect class tracked in KI-ACS-20260907-0920)."
+    confirmed_by: BrainCandy
+    confirmed_at: 2026-09-23
 superseded_by: null
 covered_by:
   - "unit_tests/commit_guardian/test_check_files_touched_reconciliation_remediation.py"
@@ -60,8 +65,11 @@ covered_by:
 implemented_by:
 - tickets/00_inbox/epics/EPIC-PhantomDoneFilesTouched/06_TICKET-20260706-BP-1100e-2.md
 notes: |
-  The user called out advisory/fail-open default with strict opt-in so the check
-  never hard-blocks by default. Distinct from BP-1100e-1-iv (no-op when no
+  Originally (2026-07-01) the user called out an advisory/fail-open default with
+  strict opt-in so the check never hard-blocked by default; the shipped default
+  has since become block-by-default (see amended_by "strict-default-block-on"),
+  with advisory as the explicit opt-out and fail-open on the reconciliation's own
+  internal errors unchanged. Distinct from BP-1100e-1-iv (no-op when no
   files_touched frontmatter exists): that is a scope guard, this is the
   enforcement-strength policy. Config model mirrors the existing duplicate_code /
   diff_coverage enabled+strict contract per the coordinator's directive.

@@ -21,7 +21,27 @@ related_docs:
 > original grading is the `**Severity:**` line below, unchanged.
 
 - **Severity:** high
-- **Status:** open
+- **Status:** open — PARTIALLY FIXED (re-verified 2026-09-23). Closed: `route-learning`
+  and `capture-learning` are retired per ADR-034 and removed from the fail-open path in
+  `signoff/SKILL.md` §7 and from PO v3 / BA v3 / IT PO v3
+  (`templates/agents/{product-owner,business-analyst,it-po}.md`), which now read "Do NOT
+  load `route-learning` or `capture-learning`" — the widest-blast-radius call sites this
+  entry named. The `agent-telemetry` skill has since been authored
+  (`templates/skills/agent-telemetry/` exists), resolving its 8 references in
+  `building-epics/SKILL.md`. Remains open: `scripts/check_skill_refs.py` is still not
+  wired into CI or `build.py` (no hit in `.github/workflows/*.yml` or
+  `.pre-commit-config.yaml`); two dangling imperative `route-learning` references survive
+  at `templates/agents/retrospective-agent.md:242` and `templates/skills/README.md:36`;
+  and the three trading-domain leftovers in `templates/agents/research-agent.md`
+  (`import-scanner`, `find-context-candle`, `trade-analysis`) are untouched. Running
+  `python3 scripts/check_skill_refs.py` today: `FAIL: 5 imperative reference(s) to 4
+  skill target(s) that do not exist` (down from the original 21 references / 6 skills).
+  New closure condition: that command exits 0 AND is wired in as a required CI/build
+  check. Affects `/plan-feature`: incidentally — the entry never names `/plan-feature`,
+  but three of the four now-fixed call sites (PO v3, BA v3, IT PO v3) plus the
+  still-live `signoff` skill are exactly the agents `/plan-feature`'s AC-authoring
+  pipeline dispatches, so this partial fix lands squarely in its path even though the
+  entry's own scope (also `build-feature`, `quick-fix`, `retrospective-agent`) is wider.
 - **Occurrences:** 1
 - **First seen:** 2026-08-18 · **Last seen:** 2026-08-18
 - **Where:** `scripts/build_phases.py:1970-1990` — the `skills_invoked` resolution loop, the

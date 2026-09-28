@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: '2026-08-18'
-last_updated: '2026-08-18'
+last_updated: '2026-09-23'
 components:
   - build_orchestration
 related_docs:
@@ -16,12 +16,13 @@ related_docs:
 # KI-BO-20260831-1930 — The driver deliberately drops the `pull-request` phase for an epic member, the generator emits it as `needed`, and nothing reconciles them — so every epic ticket halts the drive at completion
 
 > One known issue, split out of `docs/known-issues/build-orchestration.md` on
-> 2026-09-14. Index: [build-orchestration.md](../build-orchestration.md).
+> 2026-09-14. Index: [build-orchestration.md](../../build-orchestration.md).
 > Filename severity is the three-level index bucket (`blocker`); the
 > original grading is the `**Severity:**` line below, unchanged.
 
 - **Severity:** blocker
-- **Status:** open — no AC
+- **Status:** **RESOLVED 2026-09-23** — see the dated closure note at the foot of this entry.
+  Original line, preserved: open — no AC
 - **Occurrences:** 3 (three consecutive drives of EPIC-StartingNewWorkTheProperWayAlways,
   each halting on a different ticket as it became the first to finish)
 - **First seen:** 2026-08-31 · **Last seen:** 2026-08-31
@@ -102,5 +103,37 @@ status rather than phase membership).
 
 **Pattern:** `docs/reference/false-green-mechanisms.md` — the inverse: a gate that blocks
 correctly on a record the rest of the system has already decided to ignore.
+
+**Closed 2026-09-23.** Re-verified against the current code, not this entry's narrative:
+
+- **The generator side is fixed.** `config/phase_deferral.yaml` is a new, location-keyed
+  declaration: `epic_member: [pull-request]`, `standalone: []`. `generate_ticket_from_ac.py`'s
+  sibling module `scripts/ac_store/_gtfa_phases.py` (`_resolve_deferred_phases`) loads it and
+  REFUSES generation on a missing/malformed file rather than falling back to a built-in
+  default — the exact "must refuse rather than default" property this entry's fix direction
+  needed. `_gtfa_agents_map.py` records a deferred phase as explicit `not_needed`, "PERIOD ...
+  unlike a hand-authored not_needed_override", never silently omitted — so a ticket generated
+  into an `EPIC-*/` folder now states `pull-request: not_needed` in its own frontmatter,
+  matching what the driver actually does.
+- **The driver side is also fixed, independently.** `templates/workflows-js/build-feature.js`'s
+  `requiredPhasesForCompletion()` (lines 911-920) now subtracts `deferredPhases` from the union
+  of driven and record-needed phases before deciding completion — so even a stale ticket whose
+  record still names `pull-request: needed` no longer blocks completion once the phase is
+  deferred. This directly answers the entry's diagnosis: "nothing reconciles them."
+- **Verified by name.** `docs/acceptance-criteria/ticket-creation/TKT-600-clean-generated-frontmatter/TKT-600b-1.yaml`
+  and its `-i`/`-ii` children are all `work_status: done`; `TKT-600b-1-ii`'s own title is
+  "never silently omitted" and its record states the two-sided nature of the fix explicitly.
+- **One residual noted, not blocking closure.** `build-feature.js`'s own `deferredPhases`
+  value at the dispatch site is still the literal `isEpicMember ? ["pull-request"] : []`
+  rather than a read of `config/phase_deferral.yaml` itself — `phase_deferral.yaml`'s header
+  comment says both sides "must both derive their answer from THIS file." The two are
+  currently in agreement (`pull-request` for `epic_member`), so the specific defect this
+  entry names (generator says `needed`, driver drops it, nothing reconciles, ticket never
+  reaches done) is gone — but a future edit to `phase_deferral.yaml` alone would silently
+  re-diverge the dispatch side. Worth a fresh low-severity entry if seen; not the mechanism
+  this entry is about.
+- **The 316-ticket repair and the guard-unification sequencing this entry warned about are
+  out of scope for this closure** — they belong to `KI-BO-20260831-1932`, which remains open
+  in this register and was not touched.
 
 ---

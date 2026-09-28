@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: '2026-08-18'
-last_updated: '2026-08-18'
+last_updated: '2026-09-23'
 components:
   - build_orchestration
 related_docs:
@@ -16,13 +16,14 @@ related_docs:
 # KI-BO-019 — The context bundle is passed through an agent's JSON return value, so a large bundle arrives as a file path and the fail-closed gate halts a run whose bundle was fine
 
 > One known issue, split out of `docs/known-issues/build-orchestration.md` on
-> 2026-09-14. Index: [build-orchestration.md](../build-orchestration.md).
+> 2026-09-14. Index: [build-orchestration.md](../../build-orchestration.md).
 > Filename severity is the three-level index bucket (`blocker`); the
 > original grading is the `**Severity:**` line below, unchanged.
 
 - **Severity:** blocker — the fast lane cannot complete an end-to-end run on a real target
-- **Status:** open. The mitigation that shipped is the third fix option below, and the
-  second occurrence **disproves** it — see "Second occurrence" at the end of this entry.
+- **Status:** **RESOLVED 2026-09-23** — see the dated closure note at the foot of this entry.
+  Original line, preserved: open. The mitigation that shipped is the third fix option below,
+  and the second occurrence **disproves** it — see "Second occurrence" at the end of this entry.
 - **Occurrences:** 2
 - **First seen:** 2026-08-25 · **Last seen:** 2026-08-31
 - **Where:** `templates/workflows-js/fast-lane-ship.js` — the `fastlane-context-bundle`
@@ -185,5 +186,30 @@ agent starts from the same complete, named context instead of whatever it decide
 **Keep the fail-closed gate exactly as it is.** It is the one part of this family with a
 demonstrated win: on its first live run against a real target it caught a genuine transport
 defect and refused to proceed.
+
+**Closed 2026-09-23.** Re-verified against the current code, not this entry's narrative:
+
+- **The chosen direction landed.** `scripts/injection_builders.py:673` reads: "`--conventions`
+  and `--acs` were REMOVED here by `BO-2400c-1-vi`" — the two duplicate layers this entry
+  identified as 129,178 of 148,891 bytes are gone from the CLI surface, not merely
+  discouraged. `assemble.add_argument` at lines 678-688 now takes exactly three flags:
+  `--architecture`, `--high-level`, `--prior-tests`.
+- **The call site matches.** `templates/workflows-js/fast-lane-ship.js:1113-1115` invokes
+  `assemble-bundle` with only those three flags and states `SIZE EXPECTATION: ... roughly
+  twenty kilobytes (~20 KB)` — the genuinely-additive figure this entry computed.
+- **The fail-closed gate is unchanged, as instructed, and still catches the second
+  occurrence's failure mode.** `classifyContextBundle()` (fast-lane-ship.js:307-391) still
+  runs reference-rejection before the marker check, and the marker check
+  (`bundleText.indexOf(marker)`, line 363) still fails closed on an HTML-escaped marker —
+  exactly the corruption `KI-BO-019`'s "Second occurrence" observed.
+- **The AC store agrees.** `BO-2400c-1-iii.yaml` (the transport/gate contract) and
+  `BO-2400c-1-vi.yaml` (the layer-drop) are both `work_status: done`, with `BO-2400c-1-iii`'s
+  own amendment note recording the reset from `done` to `in_progress` and back, naming this
+  KI by id, and stating the layer-drop is "the primary mechanism" while reference-rejection
+  is "a cheap belt on a payload already cut by construction."
+- **Not verified end-to-end.** No live fast-lane run was executed as part of this closure —
+  the verdict rests on the code and the AC store's own recorded verification, not a fresh
+  `wf_*` run. If a comparably-sized transport failure recurs, reopen citing the specific new
+  symptom rather than assuming this fix regressed.
 
 ---
