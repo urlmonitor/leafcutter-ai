@@ -7,7 +7,7 @@ component: infrastructure
 level: L2
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -27,8 +27,8 @@ criteria: |
     And run against the shipped sources as they stood before this work, it
       fails and names every shipped place the address came from — at least
       templates/agents/test-writer.md, templates/agents/test-runner.md,
-      templates/workflows/test.md, config/skills_config.default.json and
-      config/skills_config.schema.json, and their built copies,
+      config/skills_config.default.json and config/skills_config.schema.json,
+      and their built copies,
     And leafcutter's own documentation tree (docs/, including the settings
       field reference, the testing guide, the analysis pages and the AC
       store) is not scanned, because a build does not ship it; those pages
@@ -87,10 +87,12 @@ it_requirements:
   - 'Runs in the normal test suite (no _MANUAL marker) in under 10 s. It must not spawn build.py
     (CLAUDE.md): built-output coverage uses TQ-600a''s shared session layout once it lands,
     and until then a synthetic built tree.'
-  - The pre-fix proof must use the real bytes of the five shipped source files (templates/agents/test-writer.md,
-    templates/agents/test-runner.md, templates/workflows/test.md, config/skills_config.default.json,
-    config/skills_config.schema.json) as they stood at the pinned pre-work commit e919a24f.
-    If that history is unavailable (e.g. a shallow CI clone), fail closed; never skip silently.
+  - 'The pre-fix proof must use the real bytes of the four shipped source files that carried the
+    address (templates/agents/test-writer.md, templates/agents/test-runner.md,
+    config/skills_config.default.json, config/skills_config.schema.json) as they stood at the
+    pinned pre-work commit e919a24f. templates/workflows/test.md is not one of them: at e919a24f
+    it only mentions "port 5403" in prose and holds no address.
+    If that history is unavailable (e.g. a shallow CI clone), fail closed; never skip silently.'
   - The check itself contains no literal of the old address (no stale-default detection, NQ1).
   - 'Build order: the real-roots scan goes green only after INF-1100d-1 and INF-1100d-2 remove
     the addresses (both now in depends_on). The implementer must not make it green by editing
@@ -110,8 +112,8 @@ test_spec:
     framework: pytest
     type: integration
     angle: real_artifact
-    description: Over a temp shipped tree holding the five shipped source files' real bytes
-      from commit e919a24f, the check exits non-zero and names each of the five files with a
+    description: Over a temp shipped tree holding the four shipped source files' real bytes
+      from commit e919a24f, the check exits non-zero and names each of the four files with a
       line number.
   - name: test_shipped_address_check_flags_reintroduced_address_with_file_and_line
     target_dir: unit_tests/portability/
@@ -135,7 +137,11 @@ test_rationale: 'This check is the behavioural proof for the whole L1, so it mus
   once it exists and a synthetic built tree until then.'
 origin_agent: business-analyst
 created: 2026-09-25
-amended_by: []
+amended_by:
+  - reason: "Corrected the pre-fix shipped-file count from five to four and removed templates/workflows/test.md from the pre-fix file list"
+    by: business-analyst
+    at: '2026-09-28'
+    note: "Verified with git show e919a24f:<path> and the new shipped-address check: only four shipped files carried the adopter address at e919a24f — templates/agents/test-writer.md:632, templates/agents/test-runner.md:127, config/skills_config.default.json:92, config/skills_config.schema.json:258. templates/workflows/test.md only mentions port 5403 in prose (no address). Criteria third Then clause, it_requirements pre-fix proof, test_spec pre-fix description and notes updated. work_status unchanged."
 superseded_by: null
 covered_by:
   - INF-1100d-4-i
@@ -150,12 +156,14 @@ notes: |
   The third Then clause is the adversarial case: a check that scans the wrong
   tree, or matches only the one literal, passes on the fixed sources and proves
   nothing. It must be shown to fail on the pre-fix sources. Of the PO's seven source
-  files, five are shipped and scanned: templates/agents/test-writer.md,
-  templates/agents/test-runner.md, templates/workflows/test.md,
-  config/skills_config.default.json, config/skills_config.schema.json. The other
-  two (docs/reference/skills-config-fields.md, docs/testing/README.md) are
-  leafcutter's own docs. They are not shipped, and INF-1100d-5 cleans them by
-  hand.
+  files, five are shipped and scanned, but only four of those carried the address
+  at e919a24f: templates/agents/test-writer.md:632, templates/agents/test-runner.md:127,
+  config/skills_config.default.json:92, config/skills_config.schema.json:258.
+  The fifth, templates/workflows/test.md, only mentions "port 5403" in prose and
+  holds no address, so the pre-fix proof does not expect it to be named (BA
+  correction 2026-09-28). The other two (docs/reference/skills-config-fields.md,
+  docs/testing/README.md) are leafcutter's own docs. They are not shipped, and
+  INF-1100d-5 cleans them by hand.
 
   "Shipped" means what a build puts into an install, not the whole repository —
   see INF-1100d-4-i for what is deliberately out of scope.
@@ -179,6 +187,7 @@ notes: |
   INF-1100d-5, but this check does not guard them.
 
   IT-PO PASS 2 (2026-09-25): it_requirements and test_spec aligned to shipped =
-  templates/ + config/. The pre-fix proof now names five shipped sources instead of seven, and
+  templates/ + config/. The pre-fix proof now names four shipped sources instead of seven
+  (five as first written; corrected to four by the BA on 2026-09-28), and
   the docs/ exclusion is covered by INF-1100d-4-i. must_catch "scan only templates/" -> the pre-fix
   test misses the two config/ files and goes red.
