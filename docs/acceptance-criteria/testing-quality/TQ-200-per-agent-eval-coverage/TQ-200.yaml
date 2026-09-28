@@ -36,12 +36,19 @@ doc_links:
     status: exists
 origin_agent: BrainCandy
 created: 2026-07-14
-amended_by: []
+amended_by:
+  - reason: "covered_by gains TQ-200d (the test-writing agents are scored on the incidents that taught them)"
+    by: product-owner
+    at: 2026-09-28
+    note: >-
+      Parent link for the new L1 from the Phase B planning pass of the
+      discrimination initiative. title, criteria and depends_on unchanged.
 superseded_by: null
 covered_by:
   - TQ-200a
   - TQ-200b
   - TQ-200c
+  - TQ-200d
 implemented_by: []
 change_target:
   - code
