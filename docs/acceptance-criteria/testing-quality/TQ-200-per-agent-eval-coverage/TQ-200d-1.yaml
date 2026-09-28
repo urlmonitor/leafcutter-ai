@@ -1,0 +1,188 @@
+id: TQ-200d-1
+components:
+  - testing_quality
+  - llm_authoring
+title: "The test writer has an eval set built from the incidents where its green tests let a wrong version through"
+component: testing-quality
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given the test writer has no eval set today,
+  When its eval set is added to the existing eval harness,
+  Then the set holds at least these rows, each an input paired with the
+      outcome expected of the test writer —
+        "refresh gate": asked for a test of the change from "if refresh_due"
+          to "if refresh_due and retry_due", the test it produces fails when
+          the retry_due condition is dropped from the gate, and its report
+          names that wrong version as one the test catches,
+        "new function or existing code": asked for test A, for a new function
+          summarise_window(), and test B, a regression test of the existing
+          refresh_config(), test B fails by reaching refresh_config() and
+          seeing a wrong result, never only because a name could not be
+          imported,
+        "empty window": asked for a check that every row in a window has
+          buy_volume >= 0, the test it produces counts the processed rows and
+          the non-NULL values, so an empty or all-NULL window fails it,
+        "presence is not correctness": asked for a check that every symbol has
+          a live value, the test it produces asserts at least one known value
+          seeded in its fixture,
+    And the set holds at least one trap — "input moved to a new column":
+      asked for a test of a gate whose input moved from cvd to cvd_delta_30,
+      a produced fixture that seeds only cvd fails the row, and the expected
+      outcome is a fixture that seeds cvd_delta_30 with values distinct from
+      cvd,
+    And a local run of the shared eval runner for the test writer picks up
+      every row without anyone naming them, and reports a score for each row,
+    And a result from such a local run is reported as a local result; nothing
+      presents it as checked by CI.
+depends_on:
+  - TQ-200d
+doc_links:
+  - path: scripts/evals/agent_eval_config.json
+    relationship: describes
+    status: exists
+    relevance: "Where the test writer's set is registered (artifact mode: the agent produces files). Read its per-agent key shapes before adding an entry (TQ-200c-4 notes)."
+  - path: scripts/evals/run_agent_eval.py
+    relationship: describes
+    status: exists
+    relevance: "The shared runner the rows join. No second harness."
+  - path: docs/analysis/2026-09-25-test-writers-prove-failure-not-discrimination.md
+    relationship: describes
+    status: exists
+    relevance: "Incident 1 (refresh gate, branch ran 0 times), incident 2 (cvd moved to cvd_delta_30; the NULL-skipping buy_volume >= 0 probe), incident 8 (presence measured instead of correctness)."
+  - path: docs/acceptance-criteria/testing-quality/TQ-500-checks-that-can-fail/TQ-500f-4.yaml
+    relationship: relates-to
+    status: exists
+    relevance: "Prompt-only AC whose test_rationale names the refresh-gate row as its behavioural substitute."
+  - path: docs/acceptance-criteria/testing-quality/TQ-500-checks-that-can-fail/TQ-500f-4-ii.yaml
+    relationship: relates-to
+    status: exists
+    relevance: "C1 (empty window) and C2 (presence is not correctness)."
+  - path: docs/acceptance-criteria/testing-quality/TQ-500-checks-that-can-fail/TQ-500f-3.yaml
+    relationship: relates-to
+    status: exists
+    relevance: "Test A / test B."
+  - path: docs/known-issues/testing-quality/open-high-ki-tq-20260907-agent-eval-gate-has-never-evaluated-an-agent.md
+    relationship: relates-to
+    status: exists
+    relevance: "Why these rows run locally only for now."
+assigned_agent: python-coder
+estimated_complexity: L
+delivers_to:
+  - agent: python-coder
+    ac_id: TQ-200d-4
+    contract: "The test writer's registered eval set, which TQ-200d-4 adds its database-setting rows to."
+expects_from: null
+it_requirements:
+- 'Join the existing harness (TQ-200c-4). Register the agent in scripts/evals/agent_eval_config.json with
+  ONE eval-set path of JSONL rows ({id, input, expected}). Test-writing agents produce test files, not
+  product-truth artifacts, so their scoring type lives in a sibling module under scripts/evals/. run_agent_eval.py
+  has 1438 counted lines, over the ratchet, and must not grow: any registration line added there is offset
+  in the same file.'
+- 'Each row runs in a throwaway sandbox: a temp copy of a small fixture project the row names. Never the
+  repository tree.'
+- 'Score mechanically wherever the expected outcome is mechanical: the fixture seeds cvd_delta_30 with
+  values distinct from cvd; the query or test counts processed rows and non-NULL values; the known seeded
+  value is asserted. Judge rubrics are only for report wording. The refresh-gate row''s test half moves
+  to a real wrong-version run in TQ-200d-1-i.'
+- Local only (user decision; KI-TQ-20260907). Registering the set must not make the CI eval job report
+  these rows as passed or checked. The result is stamped as a local run, and nothing claims TQ-200b-2.
+- Unit tests never call a live model. Row pickup and scoring are proven through the runner's gold-scoring
+  path, using recorded good and bad agent outputs as fixtures.
+- Record the before-score against today's test-writer. It is the eval's own red baseline.
+- Any database address in a template, fixture or doc is the placeholder postgresql://<user>:<password>@<host>:<port>/<database>.
+  INF-1100d-4 scans shipped files.
+- Every new or changed Python file stays at or under 400 counted lines (scripts/commit_guardian/_file_size_ratchet.py).
+  Files already over the limit must not grow.
+test_spec:
+- name: test_test_writer_set_registered_and_every_row_scored
+  target_dir: unit_tests/evals/
+  framework: pytest
+  type: integration
+  angle: reachability
+  surface_invoked: python scripts/evals/run_agent_eval.py (gold-scoring mode)
+  description: run_agent_eval.py, run as a subprocess in gold-scoring mode for test-writer, finds the
+    registered set and reports a score for each of the five row ids without any row being named on the
+    command line.
+- name: test_trap_row_fails_fixture_seeding_only_old_column
+  target_dir: unit_tests/evals/
+  framework: pytest
+  type: integration
+  angle: discrimination
+  description: A recorded output whose fixture seeds only cvd fails the 'input moved to a new column'
+    row, and the gold output seeding cvd_delta_30 distinct from cvd passes.
+  must_catch:
+  - trap row scored on report wording only
+  - fixture check accepts cvd-only seeding
+- name: test_gold_outputs_pass_each_positive_row
+  target_dir: unit_tests/evals/
+  framework: pytest
+  type: integration
+  angle: criterion
+  description: The recorded gold outputs for refresh gate, new function or existing code, empty window
+    and presence is not correctness each pass their row. An empty-window output that does not count non-NULL
+    values fails.
+  must_catch:
+  - empty-window row passes a NULL-skipping check
+- name: test_local_result_never_presented_as_ci
+  target_dir: unit_tests/evals/
+  framework: pytest
+  type: integration
+  angle: failure
+  description: The report of a local run carries the local run marker, and the CI eval selection does
+    not treat the set as checked.
+  must_catch:
+  - report omits the local marker
+  - CI job reports the set as passed
+test_rationale: An eval set's worth is that bad outputs fail it. So each row is proven with recorded good
+  AND bad outputs through the real runner, with no live model. The trap row carries the must_catch.
+origin_agent: business-analyst
+created: 2026-09-28
+amended_by: []
+superseded_by: null
+covered_by:
+  - TQ-200d-1-i
+implemented_by: []
+change_target:
+  - config
+  - code
+risk_surface: contract_boundary
+notes: |
+  TQ-200d SUGGESTED SPLIT, ITEM 1 (test-writer). Rows stand in for the unit
+  tests the prompt-only ACs TQ-500f-3, TQ-500f-4 and TQ-500f-4-ii cannot have.
+  The prompt ACs' test_rationale should point at these rows once
+  ac-authoring/tq-500f-2-ii-amend has merged (TQ-200d notes); not edited in
+  this pass.
+
+  NEGATIVE CASE (TQ-200a-4): "input moved to a new column" is the trap. It is
+  the incident-2 shape: the natural fixture keeps seeding the old input, and
+  the test then passes for the wrong reason.
+
+  RUN THE ROWS BEFORE THE PROMPT CHANGES LAND. These rows do not depend on
+  TQ-500f-3/-4/-4-ii being built: scored against today's test-writer, they
+  should mostly fail — the eval's own red baseline. That is evidence, not a
+  defect; record the before-score.
+
+  LOCAL ONLY (user decision at the PO gate, 2026-09-28): the CI eval gate has
+  never evaluated an agent (KI-TQ-20260907). The path to CI is TQ-200b-2; this
+  AC does not wait for it and does not claim it.
+
+  WHERE A JUDGE IS NOT NEEDED: the "refresh gate" row's test half is scored by
+  running the produced test against the wrong version (TQ-200d-1-i). Other rows
+  may start judge-scored; prefer a run wherever the expected outcome is a test
+  going red.
+
+  CASES COME FROM ONE ADOPTER'S WRITTEN RECORD, not re-verified against its
+  history (same caveat as TQ-500f-5).
+
+  IT-PO ENRICHMENT (2026-09-28)
+  The existing artifact mode is product-truth specific (mock/flow). Test
+  agents need their own scoring type, and it must live in a sibling module
+  because run_agent_eval.py is over the ratchet. The BA flag on TQ-200a-1-i
+  (in-scope list is not closed) stands.
+  Lane: fast lane (python-coder). It can go first in the TQ-200d family.
