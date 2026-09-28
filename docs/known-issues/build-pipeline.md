@@ -101,7 +101,7 @@ Severity in the **filename** is a three-level index bucket (`blocker` / `high` /
 
 Fixed issues move to [`build-pipeline/resolved/`](build-pipeline/resolved/) and are no longer listed as open. They are kept, not deleted.
 
-**Open: 47** (1 blocker, 24 high, 22 low) · **Resolved: 8**
+**Open: 48** (1 blocker, 24 high, 23 low) · **Resolved: 8**
 
 ## Open
 
@@ -155,6 +155,7 @@ Fixed issues move to [`build-pipeline/resolved/`](build-pipeline/resolved/) and 
 | `low` | KI-BP-20260914-build-crashes-on-a-cp1252-stdout — build.py dies with UnicodeEncodeError when its output is piped on Windows, so every test that runs the build as a subprocess fails locally | [open-low-ki-bp-20260914-build-crashes-on-a-cp1252-stdout.md](build-pipeline/open-low-ki-bp-20260914-build-crashes-on-a-cp1252-stdout.md) |
 | `low` | KI-BP-20260914-1415 — a test asserts a literal string appears exactly twice in `build.py`'s source text, so relocating either function fails a fixture premise far from the cause | [open-low-ki-bp-20260914-1415.md](build-pipeline/open-low-ki-bp-20260914-1415.md) |
 | `low` | KI-BP-20260927 — the closure walk's second-hop symlink fix has no regression test, so a reintroduced `.resolve()` would only be caught by an unrelated CI failure | [open-low-ki-bp-20260927-closure-walk-symlink-hop-untested.md](build-pipeline/open-low-ki-bp-20260927-closure-walk-symlink-hop-untested.md) |
+| `low` | KI-BP-20260928-closure-guard-reads-comparison-literals-as-file-reads — the intra-package closure guard treats a `dir/file.ext` literal used only for path comparison as a data-file read and fails the build with a false missing-deploy-mapping | [open-low-ki-bp-20260928-closure-guard-reads-comparison-literals-as-file-reads.md](build-pipeline/open-low-ki-bp-20260928-closure-guard-reads-comparison-literals-as-file-reads.md) |
 
 ## Resolved
 
