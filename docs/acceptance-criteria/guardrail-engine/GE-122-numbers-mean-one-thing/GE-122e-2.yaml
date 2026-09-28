@@ -168,7 +168,8 @@ amended_by:
     Nothing else changed; the survivor rule, the content-preservation clause and the
     out-of-scope cases are untouched.
 superseded_by: null
-covered_by: []
+covered_by:
+- unit_tests/commit_guardian/test_ge_122e_2.py
 implemented_by:
 - tickets/00_inbox/epics/EPIC-TheNumberingGuaranteeHoldsAtEveryStage/08_TICKET-20260825-GE-122e-2.md
 change_target: docs

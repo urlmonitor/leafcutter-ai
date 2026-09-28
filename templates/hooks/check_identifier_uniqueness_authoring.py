@@ -85,151 +85,86 @@ DECISION HISTORY:
     findings 1/2/9]: Three fixes, each independently reproduced before being
     fixed:
       - [Finding 1] ``_load_shared_uniqueness_module`` resolved the shared
-        module via a single fixed ``parent.parent / "scripts" /
-        "commit_guardian" / ...`` hop. Reproduced by invoking the deployed
-        Antigravity copy (``.leafcutter/gemini/hooks/...``) directly: it
-        raised ``ModuleNotFoundError`` looking for
-        ``.leafcutter/gemini/scripts/commit_guardian/check_identifier_uniqueness.py``
-        — a path that has never existed, because the shared module deploys
-        once, to ``.leafcutter/scripts/commit_guardian/``, not per platform.
-        Fixed by replacing the fixed hop with ``_find_shared_module_path``,
-        an ancestor walk that finds the shared module regardless of how
-        many directories separate this file's platform-specific hook
-        directory from the shared module's common ancestor — verified
-        against all three deployed/source locations (see the sign-off
-        comment for exact invocations).
+        module via a single fixed hop, which raised ``ModuleNotFoundError``
+        from the deployed Antigravity copy (a path that has never existed,
+        since the shared module deploys once, not per platform). Fixed by
+        ``_find_shared_module_path``, an ancestor walk correct at any depth.
       - [Finding 2, THE SERIOUS ONE] ``evaluate_identifier_uniqueness``
         computed ``contested_numbers`` purely from
         ``namespace_verdict.findings``, discarding
         ``namespace_verdict.passed`` entirely. GE-122e-3's "unresolvable
-        namespace" contract (see
-        _commit_disposition.py and _work_items_scanner.py) reports exactly
-        this shape for a misconfigured root: ``passed=False`` with an
-        EMPTY ``findings`` list — the root/config itself is the finding,
-        so there is no number to name. This function's old logic therefore
-        reported ``{"contested_numbers": []}`` (indistinguishable from
-        "genuinely clean") on precisely the root shape where the
-        commit-time stage's own ``main()`` / ``compute_commit_disposition``
-        exits 1, fail-closed — two stages of the SAME guard giving OPPOSITE
-        verdicts on the SAME input, exactly what GE-122d-1 exists to
-        forbid. Reproduced with a fixture root holding real, empty (but
-        RESOLVED) acceptance-criteria/decisions/diagrams directories and a
-        ``tickets/`` directory with NO ``ticket_lifecycle.json`` — before
-        the fix: commit-time ``verdict.passed == False`` /
-        ``disposition.blocking == True`` /
-        ``disposition.unresolvable_namespaces == ["work-items"]``, while
-        authoring-time reported ``{"contested_numbers": []}``, i.e. clean.
-        Fixed by having this function ALSO surface
-        ``namespace_verdict.passed`` — added ``"passed"`` (the whole
-        verdict's own ``verdict.passed``, verbatim — a caller that checks
-        only this one boolean field can never disagree with the
-        commit-time stage's own pass/fail outcome) and
-        ``"unresolvable_namespaces"`` (the same "passed=False with empty
-        findings" test ``compute_commit_disposition`` already uses,
-        applied here so a caller can name WHICH namespace could not be
-        resolved, mirroring ``main()``'s own operator-facing message) to
-        the returned JSON. ``contested_numbers`` keeps its exact prior
-        meaning and is unchanged for every input where every namespace
-        resolved — this is a strictly ADDITIVE fix; no existing consumer
-        (GE-122d-1's own three-stages-agree test only reads
-        ``contested_numbers`` for a genuine collision) is narrowed.
+        namespace" shape (``passed=False``, EMPTY ``findings`` -- the
+        root/config itself is the finding) therefore reported
+        ``{"contested_numbers": []}`` (indistinguishable from clean) on
+        exactly the root shape where the commit-time stage's own ``main()``
+        exits 1 fail-closed -- two stages of the SAME guard giving OPPOSITE
+        verdicts, exactly what GE-122d-1 forbids. Reproduced with a
+        resolved-but-misconfigured fixture root (real empty
+        acceptance-criteria/decisions/diagrams, ``tickets/`` with no
+        ``ticket_lifecycle.json``). Fixed, ADDITIVELY, by also surfacing
+        ``"passed"`` (verdict.passed verbatim) and
+        ``"unresolvable_namespaces"`` in the returned JSON;
+        ``contested_numbers`` is unchanged for every resolved input.
       - [Finding 9] ``_load_shared_uniqueness_module`` called
         ``sys.modules.setdefault(spec.name, module)`` BEFORE
-        ``spec.loader.exec_module(module)``. Two failure modes: (a) if
-        ``exec_module`` raised, the not-yet-executed (half-initialised)
-        module object stayed registered in ``sys.modules`` under
-        ``"check_identifier_uniqueness"`` for the rest of the process,
-        so a LATER, unrelated import of that name could silently receive
-        the broken half-init object rather than either a working module or
-        a fresh ``ImportError``; (b) ``setdefault`` never overwrites an
-        existing entry, so if some other loader had already registered a
-        DIFFERENT module object under that same name, this function would
-        execute and return a freshly-populated module while leaving the
-        stale, different object sitting in ``sys.modules`` — a caller that
-        looked the name up via ``sys.modules`` rather than this function's
-        own return value would silently diverge from what this function
-        just loaded. Fixed by moving the ``sys.modules`` write to AFTER a
-        successful ``exec_module`` call (inside a ``try`` whose
-        ``except`` re-raises after removing anything this call itself may
-        have started to register), and by unconditionally assigning
-        (``sys.modules[spec.name] = module``, never ``setdefault``) so the
-        registered object and the returned object are always identical on
-        success, and nothing is registered at all on failure.
+        ``exec_module``, so a raise left a half-initialised module
+        registered, and ``setdefault`` never overwrote a differing existing
+        entry. Fixed by writing ``sys.modules`` only AFTER a successful
+        ``exec_module`` (unconditional assignment, never ``setdefault``, and
+        removed on failure).
   - 2026-09-01 [python-coder/GE-122d-1, adversarial-review bug-fix]: Four
-    fixes, each reproduced by executing the real scripts against real
-    fixtures before being fixed (see the sign-off comment for the exact
-    before/after exit codes):
-      - [Blocker 1, agreement in both directions] ``main()`` branched on
-        ``evaluate_identifier_uniqueness``'s raw ``verdict.passed``, while
-        the commit-time stage (``check_identifier_uniqueness.py``'s own
-        ``main()``) branches on
-        ``compute_commit_disposition(verdict, staged_paths).blocking`` -- a
-        diff-scoped attribution decision, not the raw whole-collection
-        pass/fail. Reproduced: a repo with a COMMITTED collision and
-        NOTHING staged made the commit-time stage exit 0 (unattributed, not
-        blocking) while this hook exited 2 -- the same "three stages
-        disagree" shape GE-122d-1 forbids, now swung the OPPOSITE direction
-        from this AC's original defect (the authoring stage reporting clean
-        where the commit-time stage failed closed). Fixed by having
-        ``evaluate_identifier_uniqueness`` call the SAME
-        ``compute_commit_disposition`` the commit-time stage calls, over
-        the SAME staged-path lookup (the commit-time module's own
-        ``_get_staged_paths``, reused via the already-loaded shared module
-        rather than reimplemented) -- added a ``"blocking"`` field to the
-        returned JSON, which ``main()`` now branches on instead of
-        ``"passed"``. When the staged set itself cannot be determined (no
-        git repository -- one of this module's own pre-existing fixture
-        shapes), falls back to the commit-time stage's own literal fallback
-        (``not verdict.passed``) rather than a disposition computed against
-        an unknowable diff, mirroring the commit-time ``main()`` exactly.
-        ``"passed"`` keeps its exact prior meaning (the raw whole-collection
-        verdict) for any caller that still reads only that field.
+    fixes, each reproduced against real fixtures before being fixed (see the
+    sign-off comment for exact before/after exit codes):
+      - [Blocker 1, agreement in both directions] ``main()`` branched on the
+        raw ``verdict.passed`` where the commit-time stage branches on
+        ``compute_commit_disposition(...).blocking`` (diff-scoped
+        attribution). Reproduced: a COMMITTED collision with NOTHING staged
+        made commit-time exit 0 while this hook exited 2 -- disagreement
+        swung the OPPOSITE way from the AC's original defect. Fixed by
+        calling the SAME ``compute_commit_disposition`` over the SAME
+        ``_get_staged_paths`` and adding a ``"blocking"`` field ``main()``
+        now branches on; falls back to ``not verdict.passed`` when the
+        staged set can't be determined, mirroring commit-time ``main()``.
+        ``"passed"`` is unchanged for any caller still reading only it.
       - [Blocker 2, unscaffolded-project denial-of-service] A directory
-        containing only CLAUDE.md -- reproduced at this session's own
-        workspace root and in a bare consumer-shaped fixture -- makes every
-        one of the four namespaces report "unresolvable" (per GE-122e-3's
-        own binding contract, restated by GE-122d-3-ii's "THE BINDING
-        DESIGN DECISION": an absent root is NOT an empty collection), which
-        previously blocked (exit 2) EVERY Edit/Write in ANY unscaffolded
-        project -- exactly the adoption-blocking shape GE-122d-3-ii and
-        BP-900h-6 exist to prevent. GE-122d-3-ii's sanctioned fix is
-        scaffolding the four roots at install time (``scripts/build.py``),
-        never teaching the SCANNER that absence means empty -- that AC
-        governs namespace-scanning semantics and stays untouched here (the
-        scanners in ``_uniqueness_scanners.py`` / ``_work_items_scanner.py``
-        are not modified). This hook instead adds a narrower,
-        authoring-time-only heuristic: when EVERY namespace in the verdict
-        is unresolvable SIMULTANEOUSLY (a new ``"unscaffolded"`` JSON
-        field), that is diagnostic of "this project has no GE-122 tracking
-        set up at all" rather than a genuine misconfiguration of one
-        specific root -- a partially-scaffolded project (one root
-        renamed/deleted, the other three intact) still reports only 1-3
-        unresolvable namespaces, not every one of them, and still blocks
-        exactly as before. ``main()`` checks ``"unscaffolded"`` before
-        ``"blocking"`` and fails open (exit 0) when set, so an ordinary
-        Edit/Write in a fresh project is never blocked by a rule the
-        project was never scaffolded to participate in.
-      - [Fix 3, invisible block message] The block message was printed to
-        stdout while exiting 2; PostToolUse feeds stderr back to Claude, so
-        a blocked edit surfaced with no visible explanation at all. Fixed
-        by printing to ``sys.stderr``.
-      - [Fix 4, discarded stdin / docstring overstated parity] ``main()``
-        called ``sys.stdin.read()`` and discarded the result, relying
-        entirely on ``Path.cwd()`` -- while the docstring claimed it "reads
-        the same shape every other Edit|Write hook in this directory
-        reads," citing check_exception_handling_hook.py and
-        ticket_frontmatter_guard.py, both of which genuinely parse the
-        payload and extract a field from it. Fixed by actually parsing the
-        JSON payload and extracting ``tool_input.file_path`` /
-        ``tool_input.path`` (new ``_resolve_root_start_path``), mirroring
-        ticket_frontmatter_guard.py's own ``_resolve_ticket_path`` exactly
-        -- the edited file's own path is the authoritative signal a
-        PostToolUse hook is designed to use, where ``Path.cwd()`` is only
-        ever an approximation of it. Falls back to ``Path.cwd()`` when the
-        payload carries no usable file path (empty stdin, or a payload
-        shape this hook does not recognise), preserving the prior behavior
-        for that case exactly. The docstring below now describes what the
-        code actually does rather than a parity claim that was never true.
+        holding only CLAUDE.md made every namespace report "unresolvable"
+        (an absent root is NOT an empty collection, per GE-122e-3 /
+        GE-122d-3-ii), previously blocking EVERY Edit/Write in ANY
+        unscaffolded project. GE-122d-3-ii's sanctioned fix is scaffolding
+        the four roots at install time, never teaching the scanner absence
+        means empty -- untouched here. This hook adds a narrower
+        authoring-only heuristic: a new ``"unscaffolded"`` field, True iff
+        EVERY namespace is unresolvable SIMULTANEOUSLY (a partially
+        scaffolded project still reports 1-3 and still blocks as before).
+        ``main()`` checks it before ``"blocking"`` and fails open.
+      - [Fix 3] The block message printed to stdout while exiting 2;
+        PostToolUse feeds stderr back to Claude. Fixed: print to stderr.
+      - [Fix 4] ``main()`` discarded stdin and used only ``Path.cwd()``.
+        Fixed by parsing the payload and extracting
+        ``tool_input.file_path``/``tool_input.path`` (new
+        ``_resolve_root_start_path``, mirroring
+        ticket_frontmatter_guard.py's ``_resolve_ticket_path``), falling
+        back to ``Path.cwd()`` only when the payload names no usable path.
+  - 2026-09-07 [python-coder/GE-122d-3]: Added the ``could_not_establish``
+    field to ``evaluate_identifier_uniqueness``'s returned JSON and the new,
+    additive ``edited_path`` parameter (``main()`` passes the same path
+    ``_resolve_root_start_path`` resolves), plus the message-building it
+    feeds ``_build_block_message`` -- printing the same three statements
+    GE-122d-3 requires at every stage (named artifact, "NOT established",
+    read count), with the author's own just-written file excluded from the
+    reported count when it falls inside the affected namespace. The
+    could-not-establish namespace already made this hook block before this
+    change (caught by the pre-existing ``unresolvable_namespaces`` check,
+    since a lone unreadable artifact reports ``passed=False, findings=[]``
+    exactly like an unresolvable root/config) -- only the printed MESSAGE
+    was silent on which artifact and how many were read. The block message
+    now also states the author's file has NOT been reverted (true throughout:
+    this hook performs no write/revert of its own). The actual logic --
+    ``namespace_contains_edited_path`` / ``build_could_not_establish_entries``
+    / ``append_could_not_establish_lines`` -- moved to the new sibling
+    ``_identifier_uniqueness_could_not_establish.py`` (see that module's own
+    DECISION HISTORY) once this file's growth crossed the check_file_size.py
+    ratchet ceiling; see that module for the exclusion rationale in full.
 """
 
 from __future__ import annotations
@@ -242,6 +177,7 @@ from pathlib import Path
 _THIS_FILE = Path(__file__).resolve()
 _SHARED_MODULE_NAME = "check_identifier_uniqueness"
 _SHARED_MODULE_RELATIVE_PATH = Path("scripts") / "commit_guardian" / "check_identifier_uniqueness.py"
+_COULD_NOT_ESTABLISH_MODULE_NAME = "_identifier_uniqueness_could_not_establish"
 
 #: Project-root markers checked in order of preference when this hook is
 #: invoked with no explicit root argument (the real PostToolUse invocation
@@ -327,7 +263,47 @@ def _load_shared_uniqueness_module():
     return module
 
 
-def evaluate_identifier_uniqueness(root_path: str) -> str:
+def _load_could_not_establish_module():
+    """Import the GE-122d-3 could-not-establish message module by file path.
+
+    Resolved via the SAME ancestor walk as ``_load_shared_uniqueness_module``
+    -- both modules live together in ``scripts/commit_guardian/`` -- so this
+    works from every deploy depth with no second, separately-maintained
+    resolution strategy. See
+    ``_identifier_uniqueness_could_not_establish.py``'s own DECISION HISTORY
+    for why this module is NOT a plain same-directory sibling import: the
+    ``templates/hooks/*.py`` wildcard deploy mapping skips any filename
+    starting with ``_``, so a plain sibling file placed directly in this
+    hook's own directory silently never deploys at all.
+
+    Returns:
+        The executed module, exposing ``build_could_not_establish_entries``
+        and ``append_could_not_establish_lines``.
+
+    Raises:
+        ModuleNotFoundError: mirrors ``_load_shared_uniqueness_module``'s own
+            contract when the shared ``scripts/commit_guardian/`` directory
+            cannot be located at all.
+    """
+    shared_module_path = _find_shared_module_path()
+    if shared_module_path is None:
+        raise ModuleNotFoundError(
+            f"{_COULD_NOT_ESTABLISH_MODULE_NAME} could not be located: its sibling "
+            f"scripts/commit_guardian/ directory was not found in any ancestor of {_THIS_FILE}."
+        )
+    module_path = shared_module_path.parent / f"{_COULD_NOT_ESTABLISH_MODULE_NAME}.py"
+    spec = _ilu.spec_from_file_location(_COULD_NOT_ESTABLISH_MODULE_NAME, module_path)
+    module = _ilu.module_from_spec(spec)
+    try:
+        spec.loader.exec_module(module)
+    except Exception:
+        sys.modules.pop(_COULD_NOT_ESTABLISH_MODULE_NAME, None)
+        raise
+    sys.modules[_COULD_NOT_ESTABLISH_MODULE_NAME] = module
+    return module
+
+
+def evaluate_identifier_uniqueness(root_path: str, edited_path: str | None = None) -> str:
     """Evaluate GE-122's whole-collection uniqueness rule at authoring time.
 
     Delegates entirely to the shared ``run_uniqueness_pass`` — this function
@@ -336,11 +312,18 @@ def evaluate_identifier_uniqueness(root_path: str) -> str:
     Args:
         root_path: Root directory of the collection to inspect (the same
             argument shape ``run_uniqueness_pass`` accepts).
+        edited_path: ADDITIVE (GE-122d-3). The author's just-written file
+            path, when known (``main()`` passes the path
+            ``_resolve_root_start_path`` resolved). Forwarded verbatim to
+            ``build_could_not_establish_entries`` (see that function's own
+            docstring in ``_identifier_uniqueness_could_not_establish.py``);
+            has no effect on any other field, and none at all when ``None``.
 
     Returns:
         A JSON string of the form
         ``{"contested_numbers": [...], "passed": bool, "blocking": bool,
-        "unresolvable_namespaces": [...], "unscaffolded": bool}``.
+        "unresolvable_namespaces": [...], "unscaffolded": bool,
+        "could_not_establish": [...]}``.
 
         ``contested_numbers`` names every number claimed by two or more
         artifacts across every namespace the shared module is responsible
@@ -382,8 +365,18 @@ def evaluate_identifier_uniqueness(root_path: str) -> str:
         misconfiguration of one specific root, which leaves at least one
         other namespace resolved. ``main()`` checks this before
         ``"blocking"`` and fails open when set.
+
+        ``could_not_establish`` (ADDITIVE, GE-122d-3) names every namespace
+        with at least one individually unreadable/unparsable artifact -- as
+        opposed to ``unresolvable_namespaces``, whose own ROOT/CONFIG could
+        not be resolved at all. Built by
+        ``build_could_not_establish_entries`` (see
+        ``_identifier_uniqueness_could_not_establish.py`` for the entry
+        shape and the ``inspected_count`` exclusion rule); empty when every
+        namespace's artifacts were all individually readable and parsable.
     """
     shared = _load_shared_uniqueness_module()
+    could_not_establish_mod = _load_could_not_establish_module()
     verdict = shared.run_uniqueness_pass(root_path)
     contested = sorted(
         {
@@ -397,6 +390,7 @@ def evaluate_identifier_uniqueness(root_path: str) -> str:
         for namespace, namespace_verdict in verdict.namespaces.items()
         if namespace_verdict.passed is False and not namespace_verdict.findings
     )
+    could_not_establish = could_not_establish_mod.build_could_not_establish_entries(verdict, root_path, edited_path)
     total_namespaces = len(verdict.namespaces)
     unscaffolded = total_namespaces > 0 and len(unresolvable_namespaces) == total_namespaces
 
@@ -414,6 +408,7 @@ def evaluate_identifier_uniqueness(root_path: str) -> str:
             "blocking": blocking,
             "unresolvable_namespaces": unresolvable_namespaces,
             "unscaffolded": unscaffolded,
+            "could_not_establish": could_not_establish,
         }
     )
 
@@ -501,10 +496,12 @@ def _build_block_message(evaluation: dict) -> str:
         lines.append(f"  {number} is claimed by more than one artifact.")
     for namespace in evaluation.get("unresolvable_namespaces", []):
         lines.append(f"  namespace '{namespace}' could not be resolved at all (root/config missing or unreadable).")
+    _load_could_not_establish_module().append_could_not_establish_lines(lines, evaluation)
     lines.append("")
     lines.append(
         "This is the same whole-collection rule the commit-time and shared-build "
-        "stages enforce (GE-122d-1) — fixing it now is cheaper than at commit time."
+        "stages enforce (GE-122d-1) — fixing it now is cheaper than at commit time. "
+        "This file you just wrote has NOT been reverted."
     )
     return "\n".join(lines)
 
@@ -550,7 +547,7 @@ def main() -> None:
         sys.exit(0)
 
     try:
-        evaluation = json.loads(evaluate_identifier_uniqueness(str(project_root)))
+        evaluation = json.loads(evaluate_identifier_uniqueness(str(project_root), edited_path=str(start_path)))
     except (ModuleNotFoundError, OSError, ValueError) as exc:
         print(
             f"{_HOOK_PREFIX} could not evaluate the numbering rule: {exc}",

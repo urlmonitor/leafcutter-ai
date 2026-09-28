@@ -133,6 +133,25 @@ DECISION HISTORY
   test in this module fails at the same first gate: _require_mod's
   assertion that the canonical module file exists. See the sign-off
   comment's red_baseline block for the exact captured output.
+- 2026-08-25 [GE-122e-2/test-writer, ticket 08_TICKET-20260825-GE-122e-2.md]:
+  The repair module now exists and the real tickets/ tree has already been
+  repaired (commit 6715e4c3f). Added the three test names this ticket's own
+  "## Test Requirements" table names that this module did not yet have
+  under those exact names:
+    - test_repair_acts_only_on_the_enumerated_five (AC-6 negative control --
+      genuinely RED today: repair_work_item_duplicates has no allowlist
+      restricting it to the five enumerated identifiers, so an out-of-scope
+      "TICKET-*.md" duplicate this fixture plants gets repaired too).
+    - test_out_of_scope_duplicates_are_untouched (AC-6, the
+      terminal-vs-terminal shape the retired EPIC-MoveOnMainOnly case used
+      to be -- also genuinely RED today for the same allowlist reason).
+    - test_ge_122e_2_reachable_from_entry_point (BP-1100g-2 reachability --
+      see TestReachableFromEntryPoint's own docstring for the full
+      Reachability Entry-Point Resolution: no CLI, hook, slash command,
+      workflow step, or main(argv) currently exists for this repair, so the
+      test targets the CLI-via-subprocess shape the module's own docstring
+      claims ("can be loaded ... as a subprocess target") but does not yet
+      implement; genuinely RED today for that reason).
 """
 
 from __future__ import annotations
@@ -140,6 +159,7 @@ from __future__ import annotations
 import hashlib
 import importlib.util as _ilu
 import shutil
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -841,6 +861,219 @@ class TestRepairIsIdempotent(FiveDuplicatesFixtureTestCase):
                 _sha256(pair["expected_survivor_path"]),
                 survivor_hashes_after_first_run[identifier],
                 msg=f"{identifier}'s survivor file content changed on the second (idempotent) run.",
+            )
+
+
+# ---------------------------------------------------------------------------
+# AC-6: the repair acts ONLY on the five enumerated identifiers -- an
+# out-of-scope duplicate must be reported and left alone, never repaired.
+# ---------------------------------------------------------------------------
+
+
+class TestRepairActsOnlyOnEnumeratedFive(FiveDuplicatesFixtureTestCase):
+    """Plants one further "TICKET-*.md" duplicate NOT among the five
+    enumerated identifiers, same two-folder shape as the four in-scope
+    pairs, so a repair with no allowlist would happily "fix" it too.
+    """
+
+    def setUp(self) -> None:
+        super().setUp()
+        self.out_of_scope_name = "TICKET-20990701-OutOfScopeExtraDuplicate.md"
+        self.out_of_scope_todo_path = self.tickets_root / "00_inbox" / self.out_of_scope_name
+        self.out_of_scope_done_path = self.tickets_root / "99_done" / self.out_of_scope_name
+        _write_ticket(self.out_of_scope_todo_path, status="todo", title=self.out_of_scope_name)
+        _write_ticket(self.out_of_scope_done_path, status="done", title=self.out_of_scope_name)
+
+    def test_repair_acts_only_on_the_enumerated_five(self):
+        # covers: GE-122e-2
+        # angle: failure
+        """AC-6 -- NEGATIVE CONTROL on the scope list: the set of work-item
+        files the repair created, moved or deleted must be a SUBSET of the
+        files holding the five enumerated identifiers. An out-of-scope
+        duplicate this fixture plants (same two-folder shape, NOT one of
+        the five) must be reported and left alone rather than repaired,
+        however confidently a fresh scan might believe it is twice-held.
+
+        FAILS TODAY: repair_work_item_duplicates has no allowlist
+        restricting it to the five enumerated identifiers -- it repairs
+        every "TICKET-*.md" basename it finds held by exactly two lifecycle
+        folders, including this out-of-scope plant.
+        """
+        report = self._run_repair()
+
+        touched_identifiers = {r.identifier for r in report.resolutions}
+        self.assertNotIn(
+            self.out_of_scope_name,
+            touched_identifiers,
+            msg=(
+                f"{self.out_of_scope_name} is not one of the five enumerated identifiers but "
+                f"was repaired anyway (touched: {touched_identifiers}) -- the repair must act "
+                "only on the enumerated five and report, not fix, anything else it finds."
+            ),
+        )
+        self.assertTrue(
+            self.out_of_scope_todo_path.exists(),
+            msg=f"out-of-scope file {self.out_of_scope_todo_path} was removed; it must be left alone.",
+        )
+        self.assertTrue(
+            self.out_of_scope_done_path.exists(),
+            msg=f"out-of-scope file {self.out_of_scope_done_path} was removed; it must be left alone.",
+        )
+
+
+# ---------------------------------------------------------------------------
+# AC-6 (terminal-vs-terminal shape) + out-of-scope loose root tickets.
+# ---------------------------------------------------------------------------
+
+
+class TestOutOfScopeDuplicatesAreUntouched(FiveDuplicatesFixtureTestCase):
+    """Mirrors the historical EPIC-MoveOnMainOnly shape this AC's own
+    2026-08-18 amendment retired from the live tree (tickets/99_rejected
+    now holds only .gitkeep there) -- a "TICKET-*.md" identifier held by TWO
+    TERMINAL folders (99_done + 99_rejected) that disagree, and which is not
+    one of the five enumerated identifiers. Uses a synthetic fixture rather
+    than the live tree per this module's own "LIVE-TREE OVERRIDE" reasoning
+    (see module docstring): the real pair no longer exists, so asserting
+    against it would be unsatisfiable, but the SHAPE it represented --
+    terminal-vs-terminal disagreement outside the five -- is still exactly
+    what AC-6 requires the repair to report and leave alone.
+    """
+
+    def setUp(self) -> None:
+        super().setUp()
+        self.terminal_pair_name = "TICKET-20990801-OutOfScopeTerminalDisagreement.md"
+        self.terminal_done_path = self.tickets_root / "99_done" / self.terminal_pair_name
+        self.terminal_rejected_path = self.tickets_root / "99_rejected" / self.terminal_pair_name
+        _write_ticket(self.terminal_done_path, status="done", title=self.terminal_pair_name)
+        _write_ticket(self.terminal_rejected_path, status="deferred", title=self.terminal_pair_name)
+
+    def test_out_of_scope_duplicates_are_untouched(self):
+        # covers: GE-122e-2
+        # angle: boundary
+        """AC-6: an out-of-scope pair held by two TERMINAL folders that
+        disagree must be reported and left alone, not resolved --
+        terminal-vs-terminal is an edge the survivor rule's own tie-break
+        logic (both statuses count as terminal) would otherwise happily
+        resolve like any in-scope pair. The loose root tickets this
+        fixture also plants (via the shared setUp) must remain
+        byte-identical and in place, exactly as GE-122e-3 requires of the
+        unnumbered diagrams.
+
+        FAILS TODAY: no scope allowlist exists, so this pair is repaired
+        like any other two-way duplicate the scanner finds.
+        """
+        report = self._run_repair()
+
+        touched_identifiers = {r.identifier for r in report.resolutions}
+        self.assertNotIn(
+            self.terminal_pair_name,
+            touched_identifiers,
+            msg=(
+                f"{self.terminal_pair_name} is not one of the five enumerated identifiers but "
+                f"was repaired anyway (touched: {touched_identifiers})."
+            ),
+        )
+        self.assertTrue(self.terminal_done_path.exists(), msg=f"{self.terminal_done_path} must remain in place.")
+        self.assertTrue(
+            self.terminal_rejected_path.exists(),
+            msg=f"{self.terminal_rejected_path} must remain in place.",
+        )
+
+        for path in self.loose_root_tickets:
+            self.assertTrue(path.exists(), msg=f"loose root ticket {path} must remain untouched.")
+
+
+# ---------------------------------------------------------------------------
+# Reachability (BP-1100g-2): invoke the real production entry point, not
+# just the importable function.
+# ---------------------------------------------------------------------------
+
+
+class TestReachableFromEntryPoint(unittest.TestCase):
+    """REACHABILITY RESOLUTION (BP-1100g-2), recorded here because this is
+    where the resolved test lives:
+
+    Checked, against the real code, every shape in Reachability
+    Entry-Point Resolution Step 1 for repair_work_item_duplicates.py:
+      1. CLI script -- NO `if __name__ == "__main__":` guard and no argv
+         parsing exist in the module.
+      2. Pre-commit hook -- not registered in .pre-commit-config.yaml or
+         config/commit_guardian.json. (templates/hooks/
+         check_ticket_no_branch_move.py is ALSO unregistered per this
+         ticket's own Implementation Notes, but it is a DIFFERENT hook --
+         a branch-move guard, unrelated to this repair's own reachability.)
+      3. Slash command -- no templates/commands/*.md or .claude/commands/*.md
+         references this module.
+      4. Workflow dispatch -- no .leafcutter/workflows/*.js step invokes it.
+      5. main(argv) -- no such function exists; the only public symbol is
+         repair_work_item_duplicates(tickets_root, lifecycle_config_path),
+         called only from unit tests via importlib and, historically, from
+         a one-off ad hoc invocation for commit 6715e4c3f ("GE-122e-2, part
+         2/2") that was never committed as a reusable entry point.
+
+    None of the five apply: this is the honest Step 3 negative
+    (reachability_entry_point_answer.result: not_found -- recorded in this
+    ticket's sign-off comment, not fabricated as "resolved").
+
+    The test below still targets the CLOSEST available shape -- CLI via
+    subprocess -- because the module's own docstring already claims this
+    usage mode ("This module can be loaded three different ways -- as a
+    script, as a subprocess target from the deployed layout, and via
+    importlib.util.spec_from_file_location") without actually implementing
+    it. That gap is exactly what this test is written to surface and what
+    python-coder has a concrete target to close, rather than an
+    unactionable note.
+    """
+
+    def test_ge_122e_2_reachable_from_entry_point(self):
+        # covers: GE-122e-2
+        # angle: reachability
+        """REQUIRED reachability test: invoke repair_work_item_duplicates.py
+        as a real subprocess against a fixture holding one contested
+        identifier, and assert the duplicate was actually resolved on disk
+        as a result of that invocation -- not merely that the subprocess
+        exited cleanly, and not by importing the function directly.
+
+        FAILS TODAY: the module has no `if __name__ == "__main__":` guard
+        and parses no argv, so running it as a script performs no repair;
+        both copies remain on disk and the assertion below fails.
+        """
+        if not _CANONICAL.exists():
+            self.fail(f"repair_work_item_duplicates.py not found at canonical path {_CANONICAL}.")
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            tickets_root = root / "tickets"
+            lifecycle_config_path = _install_lifecycle_config(root)
+            name = "TICKET-20990901-ReachabilityFixture.md"
+            todo_path = tickets_root / "00_inbox" / name
+            done_path = tickets_root / "99_done" / name
+            _write_ticket(todo_path, status="todo", title=name)
+            _write_ticket(done_path, status="done", title=name)
+
+            result = subprocess.run(
+                [sys.executable, str(_CANONICAL), str(tickets_root), str(lifecycle_config_path)],
+                capture_output=True,
+                text=True,
+                timeout=30,
+                check=False,
+            )
+
+            self.assertEqual(
+                result.returncode,
+                0,
+                msg=f"subprocess invocation crashed: stdout={result.stdout!r} stderr={result.stderr!r}",
+            )
+            remaining = _resolve_identifier(tickets_root, name)
+            self.assertEqual(
+                len(remaining),
+                1,
+                msg=(
+                    f"expected the CLI invocation to resolve {name} to exactly one surviving "
+                    f"file, found {remaining} -- repair_work_item_duplicates.py has no "
+                    "__main__ guard / argv handling yet, so running it as a script performs no "
+                    "repair at all."
+                ),
             )
 
 

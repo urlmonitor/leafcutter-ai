@@ -136,6 +136,14 @@ DECISION HISTORY:
     additionally sees an explicit "BLOCKING: ... could not be resolved"
     line naming which namespace(s) failed, rather than only the terse
     per-namespace "FAILED (N inspected)" line with no stated reason.
+  - 2026-09-07 [python-coder/GE-122d-3]: Added `_print_unreadable_paths`,
+    printed per namespace alongside the existing finding lines, naming each
+    artifact the scan could not read/parse (new
+    `NamespaceVerdict.unreadable_paths`) and stating uniqueness was not
+    established plus the read count -- `main()` already blocked on this
+    shape (see _commit_disposition.py's history); this closes the gap in
+    what stderr actually SAYS, per
+    unit_tests/commit_guardian/test_ge_122d_3.py's reachability test.
 """
 
 from __future__ import annotations
@@ -221,6 +229,26 @@ def run_uniqueness_pass(collection_root: str | Path) -> UniquenessVerdict:
 # ---------------------------------------------------------------------------
 # CLI entry point
 # ---------------------------------------------------------------------------
+
+
+def _print_unreadable_paths(ns_verdict: NamespaceVerdict) -> None:
+    """Print every artifact a namespace could not read or parse, and state
+    that uniqueness for the namespace was therefore not established
+    (GE-122d-3 AC-2/AC-3/AC-4).
+
+    Args:
+        ns_verdict: The NamespaceVerdict to report on.
+    """
+    if not ns_verdict.unreadable_paths:
+        return
+    for path in ns_verdict.unreadable_paths:
+        print(f"  could not read or parse: {path}", file=sys.stderr)
+    print(
+        f"  uniqueness for this namespace was NOT established "
+        f"({len(ns_verdict.unreadable_paths)} of {ns_verdict.inspected_count} "
+        "artifact(s) could not be read or parsed)",
+        file=sys.stderr,
+    )
 
 
 def _print_finding(finding: Finding) -> None:
@@ -349,6 +377,7 @@ def main() -> None:
         )
         for finding in ns_verdict.findings:
             _print_finding(finding)
+        _print_unreadable_paths(ns_verdict)
 
     staged_paths = _get_staged_paths()
     if staged_paths is None:

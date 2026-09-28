@@ -821,13 +821,43 @@ class TestFastPathDivergenceHidesARealCollision(unittest.TestCase):
                 "genuinely fine."
             ),
         )
-        self.assertTrue(
+        # NOTE (GE-122d-3, 2026-09-07, test-writer): this assertion was
+        # previously `self.assertTrue(ac_verdict.passed, ...)`, encoding the
+        # PRE-GE-122d-3 contract that an unparsable file contributes no claim
+        # and so the namespace passes cleanly. GE-122d-3's own Gherkin (AC-1)
+        # explicitly and intentionally overturns that: a namespace holding an
+        # artifact the pass cannot parse must report could_not_establish, not
+        # a clean pass, regardless of whether that artifact's (unreadable)
+        # content would have collided with anything. Classification per the
+        # Source-of-Truth Discipline: test_drift -- production is correct per
+        # this ticket's own contract; only this test's stale final assertion
+        # is updated. The test's actual point above (no fabricated collision
+        # on GE-500) is unchanged and still enforced.
+        self.assertEqual(
+            ac_verdict.outcome,
+            _scanners.OUTCOME_COULD_NOT_ESTABLISH,
+            msg=(
+                "Per GE-122d-3 AC-1, a namespace holding an artifact the pass "
+                "cannot parse must report could_not_establish -- not a clean "
+                f"pass -- even though the unparsable file contributes no "
+                f"fabricated collision. Got outcome={ac_verdict.outcome!r}, "
+                f"findings={ac_verdict.findings}."
+            ),
+        )
+        self.assertFalse(
             ac_verdict.passed,
             msg=(
-                "Exactly one genuine claimant of 'GE-500' exists "
-                "(legit-ge500.yaml); the malformed file must contribute no "
-                f"claim, so this namespace must pass cleanly. Findings: "
-                f"{ac_verdict.findings}."
+                "A could_not_establish outcome must not also report passed=True "
+                "(GE-122d-3 AC-1: 'it does NOT report success')."
+            ),
+        )
+        self.assertIn(
+            str(path_malformed),
+            ac_verdict.unreadable_paths,
+            msg=(
+                "GE-122d-3 AC-2: the could_not_establish outcome must name the "
+                f"artifact it could not read. Got unreadable_paths="
+                f"{ac_verdict.unreadable_paths!r}."
             ),
         )
 

@@ -80,52 +80,36 @@ DECISION HISTORY:
     the regression coverage (nested-folder false negative, shared-basename
     false positive, flat-layout regression anchor, missing-folder
     fail-open).
-  - 2026-08-25 [python-coder/GE-122e-3, bug-fix]: Fixed a fail-open defect
-    found by pr-reviewer (feedback-id fb_2026-08-24_94dc4ba4, finding
-    [H-3]): ``_resolve_lifecycle_folder_paths`` returned an empty list for
-    THREE different situations that ``scan_work_items`` then collapsed
-    onto one identical ``passed=True, inspected_count=0`` outcome: (1) a
-    missing/unreadable ``ticket_lifecycle.json`` (misconfiguration -- the
-    config was never resolved), (2) unparsable JSON (same), and (3) a
-    present, valid config that explicitly declares zero folders (a
-    legitimately empty, resolved configuration). Per the contract fixed in
-    unit_tests/commit_guardian/test_ge_122e_3_root_resolution.py's module
-    docstring ("THE CONTRACT DECISION"), only case (3) may report
-    passed=True. ``_resolve_lifecycle_folder_paths`` now returns ``None``
-    (not ``[]``) for cases (1) and (2) -- config could not be resolved at
-    all -- while still returning ``[]`` for case (3), so ``scan_work_items``
-    can tell "nothing to walk because there is nothing declared" apart
-    from "nothing to walk because the config itself could not be read".
-    ``scan_work_items`` reports passed=False (empty findings -- the config
-    itself is the finding) only for the ``None`` case; the declared-empty
-    case is unchanged and still passes cleanly.
+  - 2026-08-25 [python-coder/GE-122e-3, bug-fix, feedback-id
+    fb_2026-08-24_94dc4ba4, finding [H-3]]: ``_resolve_lifecycle_folder_paths``
+    returned ``[]`` for THREE situations ``scan_work_items`` collapsed onto
+    one ``passed=True, inspected_count=0``: missing/unreadable config,
+    unparsable JSON, and a valid config declaring zero folders. Per "THE
+    CONTRACT DECISION" (test_ge_122e_3_root_resolution.py), only the third
+    may report passed=True. Fixed: returns ``None`` (not ``[]``) for the
+    first two -- ``scan_work_items`` reports passed=False only for ``None``;
+    the declared-empty case is unchanged.
   - 2026-08-25 [python-coder/GE-122e-3, bug-fix, pr-reviewer finding [H-3],
     feedback-id fb_2026-08-24_94dc4ba4]: Fixed
     ``_resolve_lifecycle_folder_paths`` returning one ``Path`` per DECLARED
-    config entry with no de-duplication by RESOLVED directory identity. Two
-    declared entries that alias the SAME physical directory -- a trailing
-    slash ("tickets/00_inbox/"), a "./" prefix ("./tickets/00_inbox"), or a
-    ".." round-trip ("tickets/00_inbox/../00_inbox") -- each independently
-    passed ``_resolve_one_folder_path``'s existing absolute-path and
-    outside-repo-root containment checks (neither rejection fires on an
-    aliasing form), so the walk visited that one real directory TWICE and
-    reported its single real file as if it collided with itself: a phantom
-    self-collision, with ``inspected_count`` double-counted. Fixed by
-    tracking each entry's resolved ``Path`` in a ``seen_resolved_identities``
-    set and skipping any entry whose resolved path was already seen,
-    preserving declaration order (the FIRST declared alias wins the walk
-    slot; later aliases are silently absorbed, not walked a second time).
-    Deliberately de-duplicates by RESOLVED identity, not by declared string
-    or by basename -- ``TestSharedBasenameDistinctFoldersNoCollision``
-    (two declared paths that merely SHARE a basename but resolve to
-    genuinely DIFFERENT directories) is the opposite case and must stay
-    green throughout; ``Path.resolve()`` (already computed by
-    ``_resolve_one_folder_path``) already normalizes the trailing-slash,
-    "./"-prefix, and ".."-round-trip forms to an identical ``Path`` object,
-    so no additional string normalization was needed here. See
+    config entry with no de-duplication by RESOLVED directory identity: two
+    entries aliasing the SAME physical directory (trailing slash, ``./``
+    prefix, ``..`` round-trip) both passed the existing absolute-path/
+    outside-root checks, so the walk visited that directory TWICE and
+    reported a phantom self-collision with ``inspected_count`` double-
+    counted. Fixed via a ``seen_resolved_identities`` set, de-duplicating by
+    RESOLVED identity (never declared string or basename -- a shared
+    BASENAME resolving to genuinely different directories must still walk
+    both). See
     unit_tests/commit_guardian/test_ge_122a_2_lifecycle_folder_paths.py's
-    ``TestAliasingLifecycleFolderPathsDoNotProducePhantomSelfCollision`` for
-    the regression coverage.
+    ``TestAliasingLifecycleFolderPathsDoNotProducePhantomSelfCollision``.
+  - 2026-09-07 [python-coder/GE-122d-3]: Set ``outcome`` (purely additive) on
+    this namespace's two ``NamespaceVerdict`` sites, mirroring
+    _uniqueness_scanners.py's root-missing shape: the missing/unparsable-
+    config branch reports ``OUTCOME_COULD_NOT_ESTABLISH`` +
+    ``unreadable_paths=[lifecycle_config_path]``; the normal path reports
+    ``OUTCOME_CONTESTED``/``OUTCOME_CLEAN`` matching ``findings``.
+    ``.passed``/``.inspected_count``/``.findings`` are unchanged.
 """
 
 from __future__ import annotations
@@ -135,7 +119,13 @@ import re
 import sys
 from pathlib import Path
 
-from _uniqueness_types import Finding, NamespaceVerdict  # type: ignore[import]
+from _uniqueness_types import (  # type: ignore[import]
+    OUTCOME_CLEAN,
+    OUTCOME_CONTESTED,
+    OUTCOME_COULD_NOT_ESTABLISH,
+    Finding,
+    NamespaceVerdict,
+)
 
 _HOOK_PREFIX = "[check_identifier_uniqueness]"
 
@@ -374,7 +364,8 @@ def _build_work_items_verdict(
         paths = [str(path) for path, _status in entries]
         declared_states = {str(path): (status or "unknown") for path, status in entries}
         findings.append(Finding(number=identifier, paths=paths, declared_states=declared_states))
-    return NamespaceVerdict(passed=not findings, inspected_count=inspected_count, findings=findings)
+    outcome = OUTCOME_CONTESTED if findings else OUTCOME_CLEAN
+    return NamespaceVerdict(passed=not findings, inspected_count=inspected_count, findings=findings, outcome=outcome)
 
 
 def scan_work_items(tickets_root: Path, lifecycle_config_path: Path) -> NamespaceVerdict:
@@ -408,7 +399,13 @@ def scan_work_items(tickets_root: Path, lifecycle_config_path: Path) -> Namespac
     del tickets_root  # See Args note: retained for signature stability only.
     folder_paths = _resolve_lifecycle_folder_paths(lifecycle_config_path)
     if folder_paths is None:
-        return NamespaceVerdict(passed=False, inspected_count=0, findings=[])
+        return NamespaceVerdict(
+            passed=False,
+            inspected_count=0,
+            findings=[],
+            outcome=OUTCOME_COULD_NOT_ESTABLISH,
+            unreadable_paths=[str(lifecycle_config_path)],
+        )
     if not folder_paths:
         return NamespaceVerdict(passed=True, inspected_count=0, findings=[])
 

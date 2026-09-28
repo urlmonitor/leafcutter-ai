@@ -83,6 +83,20 @@ DECISION HISTORY:
     `.unattributed_count`, and `.findings` keep their exact prior meaning;
     every existing consumer of this dataclass is unaffected by a field it
     never reads.
+  - 2026-09-07 [python-coder/GE-122d-3]: Widened the `unresolvable_namespaces`
+    check to ALSO match `ns_verdict.outcome == OUTCOME_COULD_NOT_ESTABLISH`
+    (ORed alongside the pre-existing `passed=False, findings=[]` shape check,
+    never replacing it) so a namespace with an individually unreadable or
+    unparsable artifact blocks the commit exactly as an unresolvable
+    root/config already does, per GE-122d-3's "the same disposition" mandate.
+    In every case this ticket's own tests exercise, the new artifact-level
+    could-not-establish shape ALSO satisfies the pre-existing
+    `findings=[]` check on its own (a lone unreadable file is not itself a
+    collision), so `.blocking` was already correct for those cases before
+    this change; the added `outcome` check only additionally covers the
+    (untested here) case of a namespace that is BOTH could-not-establish AND
+    holds a genuine collision among its readable artifacts, where
+    `findings` would be non-empty and the old check alone would miss it.
 """
 
 from __future__ import annotations
@@ -91,7 +105,7 @@ from collections.abc import Iterable
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from _uniqueness_types import UniquenessVerdict  # type: ignore[import]
+from _uniqueness_types import OUTCOME_COULD_NOT_ESTABLISH, UniquenessVerdict  # type: ignore[import]
 
 
 @dataclass(frozen=True)
@@ -221,10 +235,25 @@ def compute_commit_disposition(
     # of the staged set. It can never produce a CommitFinding (there is
     # nothing to name), so it must be checked directly against the source
     # verdict rather than derived from `commit_findings`.
+    #
+    # GE-122d-3 (2026-09-07) additionally checks `ns_verdict.outcome`
+    # directly rather than relying solely on the `findings=[]` shape above:
+    # a namespace with at least one unreadable/unparsable artifact reports
+    # `outcome=OUTCOME_COULD_NOT_ESTABLISH` even in the (currently
+    # untested-but-possible) case where the artifacts that WERE read also
+    # collide with each other, which would leave `findings` non-empty and
+    # invisible to the `not ns_verdict.findings` check alone. The two checks
+    # are OR'd (not replaced) so pre-existing callers that hand-construct a
+    # `NamespaceVerdict(passed=False, findings=[])` without ever setting
+    # `outcome` (outcome then defaults to "clean") -- see
+    # unit_tests/commit_guardian/test_ge_122e_3_root_resolution.py's H-1
+    # ADDENDUM fixture -- keep being caught by the original shape-based
+    # check exactly as before.
     unresolvable_namespaces = [
         namespace
         for namespace, ns_verdict in verdict.namespaces.items()
-        if ns_verdict.passed is False and not ns_verdict.findings
+        if (ns_verdict.passed is False and not ns_verdict.findings)
+        or ns_verdict.outcome == OUTCOME_COULD_NOT_ESTABLISH
     ]
 
     return CommitDisposition(

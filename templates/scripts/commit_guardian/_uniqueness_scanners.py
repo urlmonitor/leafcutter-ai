@@ -13,20 +13,19 @@ BUSINESS CONTEXT: See check_identifier_uniqueness.py's module docstring for
     what was actually inspected rather than what happened to parse cleanly.
 ARCHITECTURE: Two walk shapes, both non-git, pure filesystem:
       - acceptance-criteria: recursive walk of docs/acceptance-criteria/**/*.yaml,
-        keyed on each record's top-level ``id`` field. ``_read_yaml_id`` tries
-        a cheap line-scan fast path (``_fast_scan_top_level_id``) before ever
-        constructing a YAML parser; it falls back to a full parse (PyYAML,
-        with a minimal fallback parser when PyYAML is unavailable) only when
-        the line scan cannot prove its result matches what a full parse would
-        produce. This exists because yaml.safe_load-ing every file purely to
-        read one top-level scalar measured 10+ seconds against this store's
-        real ~3100-file collection -- see the DECISION HISTORY entry below.
+        keyed on each record's top-level ``id`` field. ``_read_yaml_id``
+        tries a cheap line-scan fast path (``_fast_scan_top_level_id``)
+        before constructing a YAML parser, falling back to a full parse
+        (PyYAML, or a minimal fallback) only when the scan cannot prove its
+        result matches -- yaml.safe_load-ing every file measured 10+ seconds
+        against this store's real ~3100-file collection (DECISION HISTORY).
       - decisions / diagrams: flat (non-recursive) walk of *.md files, keyed
         on a number captured from the filename via a compiled regex.
-    Each per-file read failure (unreadable, unparsable, non-matching
-    filename) is fail-open at the file level: it still counts toward
-    inspected_count but contributes no claim, since a file whose number
-    cannot be determined cannot be said to have claimed one.
+    A non-matching filename is fail-open at the file level: it still counts
+    toward inspected_count but contributes no claim. A genuinely unreadable
+    or unparsable acceptance-criteria file is NOT fail-open (GE-122d-3,
+    2026-09-07 DECISION HISTORY entry below): it yields
+    outcome=OUTCOME_COULD_NOT_ESTABLISH rather than a silent clean pass.
 
 DOC_LINKS:
   - docs/acceptance-criteria/guardrail-engine/GE-122-numbers-mean-one-thing/GE-122a-1.yaml
@@ -37,92 +36,74 @@ DECISION HISTORY:
     (check-file-size pre-commit hook).
   - 2026-08-18 [python-coder/GE-122a-1]: Added _fast_scan_top_level_id as the
     fast path ahead of yaml.safe_load in _read_yaml_id. pr-reviewer measured
-    run_uniqueness_pass at 10.2-11.4s against this repo's real collection
-    (3092 AC yaml files), isolated to scan_acceptance_criteria's per-file
-    yaml.safe_load call -- against the ticket's own <5s commit-time budget
-    ("a commit-time gate slower than that gets bypassed"). The fast path
-    recognizes only unambiguous id shapes and falls back to a full parse for
-    everything else, so correctness is unchanged: measured against the real
-    collection post-fix at under 5s (see the sign-off comment for exact
-    timings).
-  - 2026-08-25 [python-coder/GE-122e-3, bug-fix]: Fixed a fail-open defect
-    found by pr-reviewer (feedback-id fb_2026-08-24_94dc4ba4, finding
-    [H-3]): scan_acceptance_criteria and _scan_filename_numbered (backing
-    scan_decisions / scan_diagrams) returned
-    NamespaceVerdict(passed=True, inspected_count=0, findings=[]) whenever
-    their root directory did not exist -- so a wrong or renamed
-    collection_root reported a clean pass over a namespace that was never
-    actually inspected. Per the contract fixed in
-    unit_tests/commit_guardian/test_ge_122e_3_root_resolution.py's module
-    docstring ("THE CONTRACT DECISION"), a namespace may report
-    passed=True ONLY when its root was actually resolved (walked),
-    regardless of whether that walk found zero or many artifacts. An
-    ENTIRELY MISSING root now reports passed=False with an empty findings
-    list (there is nothing to name; the root itself is the finding) --
-    distinguishable from a genuine collision, which always populates
-    findings. A root that EXISTS as a real, empty directory is unaffected
-    and still passes cleanly with inspected_count == 0: that is a
-    legitimately empty, resolved namespace, not a misconfiguration.
+    run_uniqueness_pass at 10.2-11.4s against this repo's real ~3092-file AC
+    collection, against the ticket's own <5s commit-time budget. The fast
+    path recognizes only unambiguous id shapes and falls back to a full
+    parse otherwise, so correctness is unchanged; measured post-fix at
+    under 5s (see the sign-off comment for exact timings).
+  - 2026-08-25 [python-coder/GE-122e-3, bug-fix, feedback-id
+    fb_2026-08-24_94dc4ba4, finding [H-3]]: scan_acceptance_criteria and
+    _scan_filename_numbered returned ``passed=True, inspected_count=0`` for
+    a MISSING root -- a wrong/renamed collection_root reported clean over a
+    namespace never inspected. Per "THE CONTRACT DECISION"
+    (test_ge_122e_3_root_resolution.py), passed=True only when the root was
+    actually resolved. An entirely missing root now reports passed=False
+    with empty findings (nothing to name); an EXISTING empty directory is
+    unaffected and still passes with inspected_count==0.
   - 2026-08-19 [python-coder/GE-122a-1]: Fixed a correctness bug in
-    _fast_scan_top_level_id caught by
-    unit_tests/commit_guardian/test_ge_122a_1_fast_path_equivalence.py: the
-    fast path returned an unquoted plain scalar's raw source text (e.g.
-    'no', '007', '0x1F') even where PyYAML's implicit resolvers coerce that
-    same token to a non-string value under a full parse (False, 7, 31) --
-    making two records that YAML considers identical (e.g. ids 'no' and
-    'False') look like two different ids, silently hiding a real collision.
-    Fixed by asking PyYAML's own yaml.resolver.Resolver what tag it would
-    assign a plain scalar (_plain_scalar_is_unambiguous_string) and bailing
-    out to the full-parse fallback whenever the tag is not
-    tag:yaml.org,2002:str, rather than hand-rolling a denylist of coercible
-    tokens that would drift from PyYAML's actual resolver set. Also bails
-    out on any embedded C0 control character (_contains_control_character,
-    e.g. a raw tab) since that makes a full parse raise ScannerError with no
-    usable claim, which the fast path cannot reproduce by returning a
-    literal string. The resolver is constructed ONCE at module scope
-    (_RESOLVER) to keep the per-file cost of the fast path negligible.
-  - 2026-08-25 [python-coder/GE-122e-3, bug-fix, pr-reviewer findings
-    [H-2]/[H-2b], feedback-id fb_2026-08-24_94dc4ba4]: Fixed two more shapes
-    where _fast_scan_top_level_id returned a WRONG non-None answer -- the
-    dangerous case, since _read_yaml_id only falls back to a full parse when
-    the fast path returns None, so a wrong non-None answer was never
-    corrected: (1) a multi-document YAML stream ("id: GE-1\n---\nid: GE-2\n")
-    -- the fast path returned the LAST top-level id line it saw ('GE-2')
-    where a full yaml.safe_load raises ComposerError (no usable claim at
-    all); (2) a plain scalar folded across an indented continuation line
-    ("id: foo\n  bar\n") -- the fast path returned only the first line's
-    text ('foo') where a full parse folds the continuation per YAML's
-    plain-scalar line-folding rule ({'id': 'foo bar'}). Fixed by making the
-    fast path DECLINE (return None, letting the existing full-parse
-    fallback run) on both shapes, per _is_document_separator_line and
-    _plain_scalar_has_continuation, rather than attempting to reproduce
-    ComposerError detection or line-folding in the fast scan itself --
-    declining is always safe, answering wrongly is not. Re-verified the
-    equivalence harness against this repo's real ~3100-file AC collection
-    afterward to confirm the fast path's performance win survives: see the
-    sign-off comment for the exact fallback-count and wall-clock numbers.
-  - 2026-08-25 [python-coder/GE-122a-1, bug-fix, pr-reviewer finding [H-4],
-    feedback-id fb_2026-08-24_94dc4ba4]: _is_document_separator_line
-    recognized only the ``---`` document-start token; ``...``
-    (document-end) -- the grammatical sibling in the same YAML production --
-    was left unrecognized entirely, so a ``...`` marker mid-stream was
-    skipped as ordinary text and the fast path fabricated a claim from
-    whatever top-level ``id:`` line followed it, the same failure mode the
-    ``---`` fix above was meant to close off. Fixed by teaching
-    _is_document_separator_line the ``...`` token with the same column-0
-    shape as ``---`` (bare, or followed by whitespace), factored through a
-    new _is_document_boundary_token(raw_line, token) helper shared by both
-    tokens. Unlike ``---``, a ``...`` decline is NOT unconditional: a lone
-    ``...`` terminating the record's LAST line is legal YAML that
-    yaml.safe_load parses cleanly (verified empirically), so
-    _is_document_separator_line now takes an `is_last_line` flag (supplied
-    by _fast_scan_top_level_id, which alone knows each line's position) and
-    only declines on a ``...`` that is NOT the last line -- i.e. one with
-    further content after it, which is the actual malformed shape (a full
-    parse raises ParserError or ScannerError there). Re-verified the
-    equivalence harness against this repo's real ~3100-file AC collection
-    afterward to confirm the fast path's performance win survives: see the
-    sign-off comment for the exact fallback-count and wall-clock numbers.
+    _fast_scan_top_level_id (test_ge_122a_1_fast_path_equivalence.py): the
+    fast path returned an unquoted plain scalar's raw text (e.g. 'no',
+    '007') even where PyYAML's implicit resolvers coerce it to a non-string
+    (False, 7) under a full parse -- hiding a real collision between two ids
+    YAML considers identical. Fixed by asking PyYAML's own
+    yaml.resolver.Resolver what tag it would assign
+    (_plain_scalar_is_unambiguous_string), bailing to the full-parse
+    fallback whenever the tag isn't ``tag:yaml.org,2002:str``, rather than a
+    hand-rolled denylist that would drift from PyYAML's resolver set. Also
+    bails on any embedded C0 control character
+    (_contains_control_character), which makes a full parse raise
+    ScannerError. Resolver constructed ONCE at module scope (_RESOLVER).
+  - 2026-08-25 [python-coder/GE-122e-3, bug-fix, findings [H-2]/[H-2b],
+    feedback-id fb_2026-08-24_94dc4ba4]: Fixed two shapes where
+    _fast_scan_top_level_id returned a WRONG non-None answer (dangerous,
+    since the None-only fallback never corrects it): (1) a multi-document
+    YAML stream -- fast path returned the LAST id line where a full parse
+    raises ComposerError; (2) a plain scalar folded across an indented
+    continuation line -- fast path returned only the first line where a
+    full parse folds the continuation. Fixed by making the fast path
+    DECLINE (return None) on both, per _is_document_separator_line and
+    _plain_scalar_has_continuation -- declining is always safe.
+  - 2026-08-25 [python-coder/GE-122a-1, bug-fix, finding [H-4], feedback-id
+    fb_2026-08-24_94dc4ba4]: _is_document_separator_line recognized only
+    ``---``; ``...`` (document-end) was unrecognized, so a mid-stream
+    ``...`` was skipped as text and the fast path fabricated a claim from
+    whatever ``id:`` line followed. Fixed via a shared
+    _is_document_boundary_token(raw_line, token) helper. Unlike ``---``, a
+    lone ``...`` terminating the record's LAST line is legal YAML, so
+    _is_document_separator_line takes an ``is_last_line`` flag and only
+    declines on a non-final ``...`` (the actually malformed shape).
+  - 2026-09-07 [python-coder/GE-122d-3, bug-fix]: Fixed the per-file
+    fail-open gap: an AC record that could not be READ (OSError) or PARSED
+    (YAMLError) counted toward inspected_count but contributed no claim, and
+    the namespace still reported ``passed=True`` -- indistinguishable from
+    clean. ``_parse_yaml_dict`` now returns a ``(value, parse_failed)``
+    tuple, and a new ``_read_yaml_id_with_failure_flag`` wraps it into a
+    ``(value, could_not_establish)`` pair -- ``_read_yaml_id`` itself keeps
+    its EXACT original ``str | None`` signature (a pre-existing direct
+    consumer, test_ge_122a_1_fast_path_equivalence.py, asserts on it against
+    a full-parse oracle across ~30 shapes) and is now a thin wrapper over
+    the new function. ``scan_acceptance_criteria`` calls the new function
+    directly, collecting failed paths into a new ``unreadable_paths`` list
+    fed to ``_build_namespace_verdict``, which reports
+    ``outcome=OUTCOME_COULD_NOT_ESTABLISH`` (``passed=False``) whenever
+    non-empty -- taking precedence over ``OUTCOME_CONTESTED`` since an
+    unread artifact means the collection was never fully inspected. A
+    well-formed record with no ``id`` field is UNCHANGED (not a read/parse
+    failure). Also gave the missing-root branches the same
+    ``OUTCOME_COULD_NOT_ESTABLISH``/``unreadable_paths=[str(root)]`` shape,
+    additive alongside GE-122e-3/H-1's existing ``passed=False, findings=[]``.
+    See unit_tests/commit_guardian/test_ge_122d_3.py's "THE CONTRACT
+    DECISION" for the full widening.
 """
 
 from __future__ import annotations
@@ -132,7 +113,13 @@ import sys
 from collections.abc import Callable
 from pathlib import Path
 
-from _uniqueness_types import Finding, NamespaceVerdict  # type: ignore[import]
+from _uniqueness_types import (  # type: ignore[import]
+    OUTCOME_CLEAN,
+    OUTCOME_CONTESTED,
+    OUTCOME_COULD_NOT_ESTABLISH,
+    Finding,
+    NamespaceVerdict,
+)
 
 try:
     import yaml  # type: ignore[import]
@@ -163,8 +150,7 @@ _RESOLVER = yaml.resolver.Resolver() if _YAML_AVAILABLE else None
 def _parse_yaml_minimal(content: str) -> dict | None:
     """Parse only top-level scalar ``key: value`` lines from a YAML string.
 
-    Used when PyYAML is unavailable. Sufficient for extracting a record's
-    top-level ``id`` field, which is all this pass needs from an AC file.
+    Used when PyYAML is unavailable; sufficient for reading an AC file's id.
 
     Args:
         content: Raw YAML text.
@@ -183,7 +169,7 @@ def _parse_yaml_minimal(content: str) -> dict | None:
     return result or None
 
 
-def _parse_yaml_dict(content: str, source_label: Path) -> dict | None:
+def _parse_yaml_dict(content: str, source_label: Path) -> tuple[dict | None, bool]:
     """Parse a YAML string into a dict, preferring PyYAML with a minimal fallback.
 
     Args:
@@ -191,10 +177,16 @@ def _parse_yaml_dict(content: str, source_label: Path) -> dict | None:
         source_label: Path used in warning messages on parse failure.
 
     Returns:
-        The parsed dict, or None on parse failure or non-dict content.
+        A ``(parsed_dict_or_None, parse_failed)`` tuple (GE-122d-3).
+        ``parse_failed`` is True only when PyYAML raised ``YAMLError`` --
+        content that is genuinely not well-formed YAML at all. It is False
+        when parsing succeeded but produced something other than a dict
+        (e.g. a bare scalar or a list): that is not a malformed record, only
+        one with no top-level fields to claim, so it must not be reported as
+        a could-not-read/parse condition.
     """
     if not _YAML_AVAILABLE:
-        return _parse_yaml_minimal(content)
+        return _parse_yaml_minimal(content), False
     try:
         data = yaml.safe_load(content)
     except yaml.YAMLError as exc:
@@ -202,8 +194,8 @@ def _parse_yaml_dict(content: str, source_label: Path) -> dict | None:
             f"{_HOOK_PREFIX} WARNING: YAML parse error in {source_label}: {exc}",
             file=sys.stderr,
         )
-        return None
-    return data if isinstance(data, dict) else None
+        return None, True
+    return (data if isinstance(data, dict) else None), False
 
 
 _UNSAFE_SCALAR_PREFIXES = ("|", ">", "&", "*", "!", "%", "@", "`", "[", "{", "#")
@@ -230,10 +222,8 @@ def _plain_scalar_is_unambiguous_string(value: str) -> bool:
     Returns:
         True when it is safe for the fast path to use `value` as-is; False
         when the caller must fall back to a full parse. Always True when
-        PyYAML itself is unavailable, since in that case the full-parse
-        fallback (`_parse_yaml_minimal`) does not apply YAML's implicit
-        resolvers either, so there is nothing for the fast path to diverge
-        from.
+        PyYAML is unavailable, since the minimal fallback doesn't apply
+        implicit resolvers either, so there is nothing to diverge from.
     """
     if _RESOLVER is None:
         return True
@@ -245,13 +235,11 @@ def _contains_control_character(value: str) -> bool:
     """Detect a raw control character (e.g. an embedded tab) in a plain
     scalar's value text.
 
-    A raw tab -- or other C0 control character -- inside an unquoted YAML
-    scalar is not legal token content; a full parse raises ScannerError
-    rather than reading it as a string, and this module's contract is that
-    an unparsable record yields NO claim (never an invented one). The fast
-    path cannot reproduce a parse failure, so it must bail out to the full
-    parse whenever one of these characters is present, rather than accept
-    text a real parser would reject outright.
+    A raw C0 control character inside an unquoted YAML scalar is not legal
+    token content -- a full parse raises ScannerError rather than reading it
+    as a string. The fast path cannot reproduce a parse failure, so it must
+    bail to the full parse rather than accept text a real parser would
+    reject.
 
     Args:
         value: The raw, unquoted scalar text (already stripped of leading
@@ -267,11 +255,10 @@ def _contains_control_character(value: str) -> bool:
 def _strip_simple_quoted_scalar(value: str, quote: str) -> str | None:
     """Strip a simple, non-escaped quoted scalar's surrounding quote chars.
 
-    Only trusted as "simple" when the value is properly terminated with the
-    same quote character and contains no embedded quote or (for
-    double-quoted values) backslash escape -- either of which could change
-    the value a full YAML parse would produce in a way this cheap scan
-    cannot safely reproduce.
+    Only trusted as "simple" when properly terminated with the same quote
+    character and containing no embedded quote or (double-quoted) backslash
+    escape -- either could change what a full parse produces in a way this
+    cheap scan cannot reproduce.
 
     Args:
         value: The raw value text; must start with quote (caller's contract).
@@ -292,11 +279,10 @@ def _is_document_boundary_token(raw_line: str, token: str) -> bool:
     """Detect a bare YAML document-boundary token (``---`` or ``...``) at
     column 0 of one line.
 
-    A separator token is only ever a separator at column 0: an INDENTED
-    occurrence is a plain-scalar continuation line, not a boundary; a
-    QUOTED or MID-VALUE occurrence is ordinary scalar content. Requiring
-    `raw_line` to literally start with `token` (never merely contain it)
-    is what keeps those shapes from being misdetected.
+    Only column 0 counts as a boundary: an INDENTED occurrence is a
+    continuation line, a QUOTED/MID-VALUE one is ordinary content.
+    Requiring `raw_line` to literally START WITH `token` (never merely
+    contain it) is what keeps those shapes from being misdetected.
 
     Args:
         raw_line: One line of raw YAML text (no trailing newline).
@@ -315,46 +301,27 @@ def _is_document_separator_line(raw_line: str, *, is_last_line: bool) -> bool:
     """Detect a YAML document-boundary line (``---`` or ``...``) at column 0
     that forces the fast path to decline.
 
-    YAML has two document-boundary tokens, both handled here:
+    ``---`` (document-start) declines ANYWHERE in the stream: a
+    multi-document stream makes ``yaml.safe_load`` raise ``ComposerError``,
+    and the single-pass scan has no cheap way to tell "a harmless leading
+    marker" from "a real second document follows" -- conservative, costs a
+    handful of extra full-parse fallbacks, never a wrong answer.
 
-      - ``---`` (document-start / directives-end): a document separator
-        ANYWHERE in the stream -- including as the very first line -- makes
-        this function decline outright (see `_fast_scan_top_level_id`'s
-        docstring): a multi-document stream makes ``yaml.safe_load`` raise
-        ``ComposerError`` (no usable claim at all), and the fast path's
-        single-pass line scan has no cheap way to distinguish "a lone
-        leading document-start marker" from "a real second document
-        follows" without doing the equivalent of a real parse. Declining on
-        every ``---`` line -- even a harmless leading one -- is the safe,
-        conservative choice; it costs a handful of extra full-parse
-        fallbacks against this store's real collection (see the DECISION
-        HISTORY equivalence-harness numbers), never a wrong answer.
-      - ``...`` (document-end): the grammatical sibling of ``---``, but NOT
-        symmetric in when it forces a decline. A lone ``...`` terminating
-        the LAST line of an otherwise single, well-formed document is legal
-        YAML (``yaml.safe_load("id: GE-1\\n...\\n")`` cleanly returns
-        ``{'id': 'GE-1'}``, no raise) -- declining there would be a
-        needless fallback on ordinary, correctly-parsing content. A ``...``
-        that is NOT the last line, however, means at least one more line of
-        content follows a document-end marker with no accompanying
-        document-start token, which is illegal (a full parse raises
-        ``ParserError`` or ``ScannerError``, no usable claim at all) -- and
-        the fast path's single-line scan would otherwise skip the ``...``
-        line as ordinary unmatched text and fabricate a claim from whatever
-        ``id:`` line follows it. `is_last_line` (supplied by the caller,
-        which alone knows the line's position in the full scan) is what
-        distinguishes the two cases.
+    ``...`` (document-end) is NOT symmetric: a lone ``...`` terminating the
+    record's LAST line is legal YAML that parses cleanly (declining there
+    would be a needless fallback), but a ``...`` that is NOT the last line
+    means illegal trailing content (a full parse raises ParserError/
+    ScannerError) that the fast path would otherwise skip as text and
+    fabricate a claim from whatever ``id:`` follows. `is_last_line`
+    distinguishes the two.
 
     Args:
         raw_line: One line of raw YAML text (no trailing newline).
-        is_last_line: True when `raw_line` is the final line of the
-            record's content (``lines[-1]``); only relevant to the ``...``
-            check, since ``---`` always declines regardless of position.
+        is_last_line: True when `raw_line` is the record's final line; only
+            relevant to the ``...`` check.
 
     Returns:
-        True if `raw_line` forces the fast path to decline: a ``---``
-        boundary token anywhere, or a ``...`` boundary token that is not
-        the record's last line.
+        True if `raw_line` forces the fast path to decline.
     """
     if _is_document_boundary_token(raw_line, "---"):
         return True
@@ -367,13 +334,11 @@ def _plain_scalar_has_continuation(lines: list[str], id_line_index: int) -> bool
     parse.
 
     YAML's plain-scalar line-folding rule joins a plain scalar's first line
-    with any immediately-following line indented deeper than the key itself
-    (column 0 here), skipping blank lines, until it reaches a line at
-    column 0 or shallower. The fast path's single-line scan sees only the
-    first line and cannot reproduce this folding (see
-    "plain_scalar_continuation" in
-    unit_tests/commit_guardian/test_ge_122a_1_fast_path_equivalence.py), so
-    it must decline whenever a continuation is possible rather than guess.
+    with any immediately-following, deeper-indented line (skipping blanks)
+    until a line at column 0 or shallower. The fast path's single-line scan
+    cannot reproduce this, so it must decline whenever a continuation is
+    possible rather than guess (see "plain_scalar_continuation" in
+    test_ge_122a_1_fast_path_equivalence.py).
 
     Args:
         lines: The full record's lines (``content.splitlines()``).
@@ -382,9 +347,8 @@ def _plain_scalar_has_continuation(lines: list[str], id_line_index: int) -> bool
 
     Returns:
         True if the first non-blank line after `id_line_index` is indented
-        (starts with a space or tab) -- a possible continuation, so the
-        caller must decline. False if that line starts at column 0 (a new
-        top-level key, or end of content) -- no continuation is possible.
+        (a possible continuation, decline). False if it starts at column 0
+        or there is no more content (no continuation possible).
     """
     for line in lines[id_line_index + 1 :]:
         if line.strip() == "":
@@ -396,59 +360,37 @@ def _plain_scalar_has_continuation(lines: list[str], id_line_index: int) -> bool
 def _fast_scan_top_level_id(content: str) -> str | None:
     """Cheaply extract a record's top-level ``id`` field via a line scan.
 
-    This is the FAST PATH ahead of a full YAML parse (PyYAML or the minimal
-    fallback): a single pass over the raw lines with no parser construction
-    at all, which recognizes only the ``id`` value shapes this store's AC
-    records actually use in practice -- a bare plain scalar, or a simple
-    single/double-quoted plain scalar with no embedded quote, backslash
-    escape, or inline comment. Every other shape (block scalars, flow
-    collections, anchors/aliases/tags, an inline ``#`` comment, an embedded
-    colon) makes this function bail out with None -- "cannot prove this
-    matches what yaml.safe_load would produce" -- so the caller falls back
-    to a full parse rather than ever guess at the value.
+    FAST PATH ahead of a full YAML parse: a single pass over raw lines, no
+    parser construction, recognizing only the ``id`` value shapes this
+    store's AC records actually use -- a bare plain scalar, or a simple
+    single/double-quoted scalar with no embedded quote, backslash escape, or
+    inline comment. Every other shape bails out with None ("cannot prove
+    this matches yaml.safe_load") so the caller falls back to a full parse.
 
-    A quoted value is trusted directly once ``_strip_simple_quoted_scalar``
-    proves it simple: a quoted scalar is never subject to YAML's implicit
-    resolvers, so ``'007'`` and ``"null"`` stay literal strings under a full
-    parse too. An UNQUOTED (plain) value is different: YAML applies implicit
-    resolution to plain scalars, coercing tokens like ``null``, ``true``,
-    ``no``, ``007``, or ``0x1F`` to a non-string Python value. Rather than
-    hand-roll a denylist of such tokens (guesswork that drifts as PyYAML's
-    resolver set changes), this function asks PyYAML's own
-    ``yaml.resolver.Resolver`` what tag it would assign the plain scalar
-    (`_plain_scalar_is_unambiguous_string`) and bails out to a full parse
-    whenever that tag is not ``tag:yaml.org,2002:str``. It also bails out on
-    any embedded C0 control character (`_contains_control_character`) --
-    e.g. a raw tab -- since that makes a full parse raise ScannerError
-    (no usable claim), which the fast path cannot reproduce by returning a
-    literal string.
+    A QUOTED value is trusted directly once ``_strip_simple_quoted_scalar``
+    proves it simple (never subject to YAML's implicit resolvers). A PLAIN
+    (unquoted) value is different -- YAML coerces tokens like ``null``,
+    ``no``, ``007`` to a non-string value -- so this asks PyYAML's own
+    resolver what tag it would assign (`_plain_scalar_is_unambiguous_string`)
+    rather than hand-rolling a denylist that would drift from PyYAML's own
+    resolver set, and bails to a full parse whenever the tag isn't
+    ``tag:yaml.org,2002:str``. Also bails on an embedded C0 control
+    character (`_contains_control_character`), which makes a full parse
+    raise ScannerError.
 
-    Two further shapes (pr-reviewer finding [H-2]/[H-2b]/[H-4], feedback-id
-    fb_2026-08-24_94dc4ba4) also force a decline, because both make this
-    function return a WRONG non-None answer rather than merely an
-    unrecognized one -- the dangerous case, since a wrong answer is never
-    corrected by the caller's None-triggered fallback:
-      - A document-boundary token (``---`` ANYWHERE, or a ``...`` that is
-        not the record's last line -- `_is_document_separator_line`) -- a
-        multi-document or malformed-boundary stream makes a full parse
-        raise (``ComposerError``, ``ParserError``, or ``ScannerError``, no
-        usable claim at all), where the fast path would otherwise return
-        the LAST top-level ``id:`` line it sees, silently manufacturing a
-        claim a full parse never produces. A lone ``...`` terminating an
-        otherwise well-formed single document is excluded from this
-        decline: it is legal YAML that keeps resolving normally.
-      - A plain-scalar ``id`` value immediately followed by a
-        more-indented continuation line (`_plain_scalar_has_continuation`)
-        -- a full parse FOLDS the continuation into the same scalar
-        (joined with a single space), where the fast path's single-line
-        scan would otherwise return only the first line's text, silently
-        dropping the continuation.
+    Two further shapes force a decline because they'd otherwise produce a
+    WRONG non-None answer (never corrected by the None-fallback, the
+    dangerous case): a document-boundary token (``---`` anywhere, or a
+    non-final ``...`` -- `_is_document_separator_line`; a full parse raises
+    Composer/Parser/ScannerError, no usable claim, where the fast path would
+    otherwise fabricate a claim from the last ``id:`` line it saw); and a
+    plain-scalar ``id`` immediately followed by a more-indented continuation
+    line (`_plain_scalar_has_continuation` -- a full parse FOLDS it in,
+    where the single-line scan would silently drop it).
 
-    Only a line with zero leading whitespace is treated as top-level, since
-    no legal top-level ``id`` in this store's schema is nested under another
-    key. When more than one such line is present (a malformed duplicate
-    key), the LAST one wins, matching PyYAML's own last-value-wins behavior
-    for a mapping with a duplicate key.
+    Only a zero-indent line is top-level (no legal top-level ``id`` in this
+    schema nests under another key); a malformed duplicate key resolves to
+    the LAST such line, matching PyYAML's own last-value-wins behavior.
 
     Args:
         content: Raw YAML text of the record.
@@ -488,23 +430,44 @@ def _fast_scan_top_level_id(content: str) -> str | None:
 
 
 def _read_yaml_id(yaml_path: Path) -> str | None:
-    """Read one AC YAML file from disk and return its top-level ``id`` field.
+    """Read one AC YAML file's top-level ``id`` field (thin wrapper).
 
-    Tries the cheap _fast_scan_top_level_id line-scan first and only falls
-    back to a full YAML parse (_parse_yaml_dict) when the fast scan cannot
-    prove its result matches a full parse's -- see that function's docstring
-    for exactly which shapes are considered unambiguous.
-
-    Fails open per file: an unreadable or unparsable file contributes to the
-    namespace's inspected_count (tracked by the caller during the walk) but
-    makes no claim, since a file whose id cannot be determined cannot be said
-    to have claimed a number.
+    Discards the could-not-establish flag -- kept at this EXACT original
+    ``str | None`` signature (GE-122a-1) because
+    test_ge_122a_1_fast_path_equivalence.py calls this function directly
+    against a full-parse oracle across ~30 shapes (CLAUDE.md "Function
+    Signature Extension" rule). ``scan_acceptance_criteria`` calls
+    ``_read_yaml_id_with_failure_flag`` directly instead (GE-122d-3).
 
     Args:
         yaml_path: Path to the .yaml file to read.
 
     Returns:
         The non-empty ``id`` field value as a string, or None.
+    """
+    record_id, _could_not_establish = _read_yaml_id_with_failure_flag(yaml_path)
+    return record_id
+
+
+def _read_yaml_id_with_failure_flag(yaml_path: Path) -> tuple[str | None, bool]:
+    """Read one AC YAML file's ``id``, plus whether the read/parse itself
+    failed outright (GE-122d-3).
+
+    Tries the cheap _fast_scan_top_level_id line-scan first, falling back to
+    a full YAML parse (_parse_yaml_dict) when the fast scan cannot prove its
+    result matches -- see that function's docstring for which shapes are
+    unambiguous.
+
+    Args:
+        yaml_path: Path to the .yaml file to read.
+
+    Returns:
+        A ``(record_id_or_None, could_not_establish)`` tuple.
+        ``could_not_establish`` is True when the file could not be READ
+        (``OSError``/``UnicodeDecodeError``) or PARSED (a genuine YAML parse
+        failure) at all -- this AC's Gherkin "cannot read or cannot parse".
+        False otherwise, INCLUDING a well-formed record with no ``id`` field
+        (not a read/parse failure -- nothing to claim, unchanged fail-open).
     """
     try:
         content = yaml_path.read_text(encoding="utf-8")
@@ -513,17 +476,19 @@ def _read_yaml_id(yaml_path: Path) -> str | None:
             f"{_HOOK_PREFIX} WARNING: cannot read {yaml_path}: {exc}",
             file=sys.stderr,
         )
-        return None
+        return None, True
 
     fast_id = _fast_scan_top_level_id(content)
     if fast_id is not None:
-        return fast_id
+        return fast_id, False
 
-    data = _parse_yaml_dict(content, yaml_path)
+    data, parse_failed = _parse_yaml_dict(content, yaml_path)
+    if parse_failed:
+        return None, True
     if data is None:
-        return None
+        return None, False
     record_id = str(data.get("id", "")).strip()
-    return record_id or None
+    return (record_id or None), False
 
 
 # ---------------------------------------------------------------------------
@@ -534,6 +499,7 @@ def _read_yaml_id(yaml_path: Path) -> str | None:
 def _build_namespace_verdict(
     claims: dict[str, list[Path]],
     inspected_count: int,
+    unreadable_paths: list[str] | None = None,
 ) -> NamespaceVerdict:
     """Turn a number->claimant-paths map into a NamespaceVerdict.
 
@@ -544,19 +510,33 @@ def _build_namespace_verdict(
     Args:
         claims: Mapping of claimed number to the list of paths that claim it.
         inspected_count: Total artifacts walked in this namespace.
+        unreadable_paths: ADDITIVE (GE-122d-3). Artifact paths this namespace
+            could not read or parse. When non-empty, ``outcome`` is
+            ``OUTCOME_COULD_NOT_ESTABLISH`` regardless of ``claims`` -- an
+            unread artifact takes precedence over what WAS established.
 
     Returns:
-        The assembled NamespaceVerdict.
+        The assembled NamespaceVerdict. ``passed`` is True only when there is
+        neither a collision NOR an unreadable artifact.
     """
+    unreadable_paths = list(unreadable_paths or [])
     findings = [
         Finding(number=number, paths=[str(p) for p in paths])
         for number, paths in sorted(claims.items())
         if len(paths) > 1
     ]
+    if unreadable_paths:
+        outcome = OUTCOME_COULD_NOT_ESTABLISH
+    elif findings:
+        outcome = OUTCOME_CONTESTED
+    else:
+        outcome = OUTCOME_CLEAN
     return NamespaceVerdict(
-        passed=not findings,
+        passed=not findings and not unreadable_paths,
         inspected_count=inspected_count,
         findings=findings,
+        outcome=outcome,
+        unreadable_paths=unreadable_paths,
     )
 
 
@@ -576,27 +556,41 @@ def scan_acceptance_criteria(ac_root: Path) -> NamespaceVerdict:
         ac_root: Path to the docs/acceptance-criteria/ directory.
 
     Returns:
-        The NamespaceVerdict for the acceptance-criteria namespace. When
-        ac_root does not exist at all, reports passed=False with
-        inspected_count=0 and an empty findings list -- the root itself was
-        never resolved, so this is a misconfiguration, not evidence of a
-        genuinely empty namespace. An EXISTING but empty ac_root still
-        passes cleanly with inspected_count=0 (see GE-122e-3 "THE CONTRACT
-        DECISION" in unit_tests/commit_guardian/test_ge_122e_3_root_resolution.py).
+        The NamespaceVerdict for the acceptance-criteria namespace. A
+        missing ac_root reports passed=False, inspected_count=0, empty
+        findings, and outcome OUTCOME_COULD_NOT_ESTABLISH naming ac_root in
+        unreadable_paths (GE-122d-3) -- a misconfiguration, not an empty
+        namespace. An EXISTING empty ac_root still passes cleanly with
+        inspected_count=0 (GE-122e-3 "THE CONTRACT DECISION",
+        test_ge_122e_3_root_resolution.py). A SINGLE unreadable/unparsable
+        artifact within an otherwise-resolved ac_root also yields
+        OUTCOME_COULD_NOT_ESTABLISH naming that artifact, while every OTHER
+        file still counts toward inspected_count and any collision it is
+        part of.
     """
     if not ac_root.is_dir():
-        return NamespaceVerdict(passed=False, inspected_count=0, findings=[])
+        return NamespaceVerdict(
+            passed=False,
+            inspected_count=0,
+            findings=[],
+            outcome=OUTCOME_COULD_NOT_ESTABLISH,
+            unreadable_paths=[str(ac_root)],
+        )
 
     claims: dict[str, list[Path]] = {}
+    unreadable_paths: list[str] = []
     inspected_count = 0
     for yaml_path in sorted(ac_root.rglob("*.yaml")):
         inspected_count += 1
-        record_id = _read_yaml_id(yaml_path)
+        record_id, could_not_establish = _read_yaml_id_with_failure_flag(yaml_path)
+        if could_not_establish:
+            unreadable_paths.append(str(yaml_path))
+            continue
         if record_id is None:
             continue
         claims.setdefault(record_id, []).append(yaml_path)
 
-    return _build_namespace_verdict(claims, inspected_count)
+    return _build_namespace_verdict(claims, inspected_count, unreadable_paths)
 
 
 def _scan_filename_numbered(
@@ -618,16 +612,22 @@ def _scan_filename_numbered(
             contested-number string for that filename.
 
     Returns:
-        The NamespaceVerdict for the namespace rooted at directory. When
-        directory does not exist at all, reports passed=False with
-        inspected_count=0 and an empty findings list -- the root itself was
-        never resolved, so this is a misconfiguration, not evidence of a
-        genuinely empty namespace. An EXISTING but empty directory still
-        passes cleanly with inspected_count=0 (see GE-122e-3 "THE CONTRACT
-        DECISION" in unit_tests/commit_guardian/test_ge_122e_3_root_resolution.py).
+        The NamespaceVerdict for the namespace rooted at directory. A
+        missing directory reports passed=False, inspected_count=0, empty
+        findings, and outcome OUTCOME_COULD_NOT_ESTABLISH naming directory
+        in unreadable_paths (GE-122d-3) -- a misconfiguration, not an empty
+        namespace. An EXISTING empty directory still passes cleanly with
+        inspected_count=0 (GE-122e-3 "THE CONTRACT DECISION",
+        test_ge_122e_3_root_resolution.py).
     """
     if not directory.is_dir():
-        return NamespaceVerdict(passed=False, inspected_count=0, findings=[])
+        return NamespaceVerdict(
+            passed=False,
+            inspected_count=0,
+            findings=[],
+            outcome=OUTCOME_COULD_NOT_ESTABLISH,
+            unreadable_paths=[str(directory)],
+        )
 
     claims: dict[str, list[Path]] = {}
     inspected_count = 0

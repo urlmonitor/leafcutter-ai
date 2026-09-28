@@ -53,7 +53,22 @@ ARCHITECTURE: Thin orchestrator over two sibling modules (split out to keep
     lifecycle folders is reported at WARNING and skipped rather than guessed
     at -- the criteria this module satisfies name exactly five two-way
     duplicates, and guessing a three-way resolution is exactly the kind of
-    silent scope expansion this AC's own it_requirements forbid.
+    silent scope expansion this AC's own it_requirements forbid. Scope is
+    further pinned to an explicit allowlist of exactly those five basenames
+    (``_ENUMERATED_SCOPE``, mirroring GE-122e-2.yaml's own 2026-08-25
+    amendment): a "TICKET-*.md" basename held by two or more lifecycle
+    folders that is NOT one of the five is reported at WARNING and left
+    untouched rather than repaired, because the scope is the record the AC
+    already enumerates, not a set re-derived from a fresh scan at
+    implementation or runtime.
+    CLI ENTRY POINT: this module is also runnable directly --
+    ``python repair_work_item_duplicates.py <tickets_root>
+    <lifecycle_config_path>`` -- for the one-off, ad hoc invocation this
+    irreversible repair is meant for. ``main(argv)`` performs no I/O of its
+    own beyond delegating to ``repair_work_item_duplicates`` and printing a
+    summary, so it is not wrapped in try/except per CLAUDE.md Rule 4 (pure
+    orchestration; the actual I/O boundaries already fail open with a
+    WARNING inside the sibling modules).
 
 DOC_LINKS:
   - docs/acceptance-criteria/guardrail-engine/GE-122-numbers-mean-one-thing/GE-122e-2.yaml
@@ -69,6 +84,17 @@ DECISION HISTORY:
     (_work_item_repair_planning.py, _work_item_repair_io.py,
     _work_item_repair_types.py) to stay under the check-file-size 400-line
     limit for new files; the initial single-file draft was 608 lines.
+  - 2026-09-07 [python-coder/GE-122e-2, ticket
+    08_TICKET-20260825-GE-122e-2.md]: Added ``_ENUMERATED_SCOPE`` so the
+    repair only ever acts on the five identifiers this AC's Implementation
+    Notes list by name (an out-of-scope "TICKET-*.md" duplicate the
+    detection pass surfaces is now reported and left alone, never repaired)
+    and a ``main(argv)`` CLI entry point so the module is reachable as a
+    real subprocess target, not only as an importable function -- closing
+    the two gaps test-writer's 2026-08-25 red baseline
+    (test_repair_acts_only_on_the_enumerated_five,
+    test_out_of_scope_duplicates_are_untouched,
+    test_ge_122e_2_reachable_from_entry_point) recorded.
 """
 
 from __future__ import annotations
@@ -98,9 +124,26 @@ from _work_item_repair_planning import (  # type: ignore[import]  # noqa: E402
 )
 from _work_item_repair_types import RepairReport, Resolution  # type: ignore[import]  # noqa: E402
 
-__all__ = ["Resolution", "RepairReport", "repair_work_item_duplicates"]
+__all__ = ["Resolution", "RepairReport", "main", "repair_work_item_duplicates"]
 
 _HOOK_PREFIX = "[repair_work_item_duplicates]"
+
+# SCOPE IS THESE FIVE IDENTIFIERS AND NO OTHERS -- measured 2026-08-17 and
+# pinned in this AC's own Implementation Notes. A basename held by two or
+# more lifecycle folders that is not in this set is reported and left
+# alone; an entry here that the collection does not confirm is twice-held
+# is also reported and left alone (see _report_unconfirmed_scope_entries).
+# This is intentionally a literal set, never a value re-derived from a
+# fresh scan of the collection at runtime.
+_ENUMERATED_SCOPE = frozenset(
+    {
+        "TICKET-20260603-ConfigDrivenBuildPaths.md",
+        "TICKET-20260603-FeedbackAnalysisPipeline.md",
+        "TICKET-20260604-PullRequestAgentProjectContext.md",
+        "TICKET-20260605-ContractShrinkingSelfExclusion.md",
+        "TICKET-20260629-BP-1200a-1-ii.md",
+    }
+)
 
 
 def _repair_pair(
@@ -156,6 +199,25 @@ def _repair_pair(
     )
 
 
+def _report_unconfirmed_scope_entries(claims: dict[str, list[Claimant]], repaired: set[str]) -> None:
+    """Warn about enumerated identifiers the collection does not confirm as twice-held.
+
+    Args:
+        claims: Mapping of basename to its claimant list, as returned by
+            ``collect_claims`` -- covers every "TICKET-*.md" basename found,
+            not only the contested ones.
+        repaired: Basenames actually repaired in this call.
+    """
+    for basename in sorted(_ENUMERATED_SCOPE - repaired):
+        claimant_count = len(claims.get(basename, []))
+        print(
+            f"{_HOOK_PREFIX} WARNING: {basename} is one of the five enumerated identifiers but "
+            f"this collection holds it in {claimant_count} lifecycle folder(s), not two; "
+            "reporting and leaving it alone rather than guessing a resolution.",
+            file=sys.stderr,
+        )
+
+
 def repair_work_item_duplicates(tickets_root: str | Path, lifecycle_config_path: str | Path) -> RepairReport:
     """Reduce every twice-held work-item identifier to its one correct copy.
 
@@ -189,6 +251,14 @@ def repair_work_item_duplicates(tickets_root: str | Path, lifecycle_config_path:
     for basename, claimants in sorted(claims.items()):
         if len(claimants) < 2:
             continue
+        if basename not in _ENUMERATED_SCOPE:
+            print(
+                f"{_HOOK_PREFIX} WARNING: {basename} is held by {len(claimants)} lifecycle folders "
+                "but is not one of the five identifiers this repair is scoped to -- reporting and "
+                "leaving it untouched rather than repairing a set re-derived at runtime.",
+                file=sys.stderr,
+            )
+            continue
         if len(claimants) > 2:
             print(
                 f"{_HOOK_PREFIX} WARNING: {basename} is claimed by {len(claimants)} files; "
@@ -201,4 +271,36 @@ def repair_work_item_duplicates(tickets_root: str | Path, lifecycle_config_path:
         if resolution is not None:
             resolutions.append(resolution)
 
+    _report_unconfirmed_scope_entries(claims, {resolution.identifier for resolution in resolutions})
     return RepairReport(resolutions=resolutions)
+
+
+def main(argv: list[str] | None = None) -> int:
+    """CLI entry point: repair the "TICKET-*.md" collection at a given root.
+
+    Usage: ``python repair_work_item_duplicates.py <tickets_root> <lifecycle_config_path>``
+
+    Args:
+        argv: Command-line arguments, defaulting to ``sys.argv[1:]`` when
+            None -- exactly ``[tickets_root, lifecycle_config_path]``.
+
+    Returns:
+        0 on success (including when there was nothing to repair); 2 on a
+        usage error (wrong argument count).
+    """
+    args = list(sys.argv[1:]) if argv is None else argv
+    if len(args) != 2:
+        print(
+            f"{_HOOK_PREFIX} usage: repair_work_item_duplicates.py <tickets_root> <lifecycle_config_path>",
+            file=sys.stderr,
+        )
+        return 2
+
+    tickets_root, lifecycle_config_path = args
+    report = repair_work_item_duplicates(tickets_root, lifecycle_config_path)
+    print(f"{_HOOK_PREFIX} repaired {len(report.resolutions)} identifier(s).")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
