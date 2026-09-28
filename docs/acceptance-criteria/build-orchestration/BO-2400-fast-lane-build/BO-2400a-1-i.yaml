@@ -1,0 +1,324 @@
+id: BO-2400a-1-i
+components:
+  - build_orchestration
+title: "The fast lane has one dedicated command-step-runner, registered to run commands, that runs the given command in the named workspace and hands back its output untouched"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given the agent registry after this criterion is met,
+  When the entry for the command-step-runner is read,
+  Then it exists, it declares permits_shell true, and its declared role is running one
+    given command in one named workspace and returning that command's output,
+  And it declares, in the registry's step_kinds field (defined by BO-2400a-1-iii), that it
+    may run all four kinds of step: reads_store, changes_store, changes_repository and
+    publishes,
+  And no agent entry other than the command-step-runner's gains step_kinds in this change,
+  And the entry passes the registry gate that BO-2400a-1-iii makes check step_kinds,
+  And a fresh install of the package deploys the command-step-runner's agent definition, so the
+    fast lane can ask for it in any project the package is installed into,
+  And the package's agent index lists the command-step-runner.
+
+  Given a request naming one command and a target workspace — its absolute location, the
+    branch the run created there, and the acceptance-criterion id the run was started for
+    (BO-2400f-3-ii),
+  When the command-step-runner performs it,
+  Then it runs exactly that command, once, in that workspace,
+  And it returns structured data holding the command as it was run, the workspace it ran
+    in, the command's exit status, and the command's standard output and standard error
+    exactly as the command produced them,
+  And when the command printed JSON, that JSON is returned unchanged — not summarised,
+    reformatted, merged with commentary, or partly quoted.
+
+  Given the command runs and exits non-zero,
+  When the command-step-runner replies,
+  Then the reply is that command's result with its non-zero exit status and its output,
+    and not a decline, so the run can tell "the command failed" from "the step was not
+    run".
+
+  Given a legitimate step request aimed at the workspace the run opened,
+  And the command-step-runner was started in a different checkout — the main checkout or a
+    sibling worktree,
+  When it reads the request,
+  Then it runs the command in the named workspace,
+  And it does not call the request misrouted or injected, does not move the command to
+    the checkout it started in or to any other location, does not change or add to the
+    command, and does not judge whether the step is wise.
+
+  Given a request outside that role — to edit files by hand, to write code or tests, to
+    act as another agent's role, to run a command with no workspace named, or to run a
+    command somewhere other than the named workspace,
+  When the command-step-runner reads it,
+  Then it runs nothing and returns a decline naming the step it was asked for, itself as
+    the agent asked, and its reason, in the form the run reports as a declined step
+    (BO-2400f-5-iii),
+  And a decline can never be mistaken for a command result: it carries no exit status.
+
+  Given a fast-lane run that dispatches the command-step-runner for its command steps,
+  When the test-writer and coder invocations are counted for BO-2400a-1,
+  Then command-step-runner invocations are not among them, and the test-writer plus coder total
+    is still 2.
+depends_on: [BO-2400a-1, BO-2400a-1-iii]
+doc_links:
+  - path: config/agent_registry.json
+    relationship: modifies
+    status: exists
+    relevance: "Gains the command-step-runner's entry with permits_shell true. Only two agents declare permits_shell today (status-checker false, worktree-agent true); this is the third."
+  - path: config/agent_registry.schema.json
+    relationship: describes
+    status: exists
+    relevance: "Defines permits_shell ('false or absent means read-only'; the command-step-runner declares true explicitly) and, after BO-2400a-1-iii, step_kinds. This record does not modify it."
+  - path: templates/agents/worktree-agent.md
+    relationship: describes
+    status: exists
+    relevance: "The only existing agent declaring permits_shell true; a reference for how a shell-permitted agent template is laid out, not a template to copy the role from."
+  - path: docs/known-issues/build-orchestration/open-high-ki-bo-20260901-1620.md
+    relationship: describes
+    status: exists
+    relevance: "Suggested-fix step 4: 'Consider whether a chartered executor agent should exist.' The user decided yes on 2026-09-27; this record is that agent."
+  - path: docs/agents/README.md
+    relationship: describes
+    status: exists
+    relevance: "Agent index a new packaged agent is listed in."
+  - path: docs/reference/agent-template-frontmatter.md
+    relationship: describes
+    status: exists
+    relevance: "Frontmatter the new template must carry (name pattern, tools, portable, signoff) and how it cross-references the registry entry."
+  - path: docs/architecture/components/agent-registry.md
+    relationship: describes
+    status: exists
+    relevance: "Registry component: permits_shell semantics, check_agent_registry and generate_agent_cards as consumers of the new entry."
+  - path: templates/skills/add-agent-to-package/SKILL.md
+    relationship: describes
+    status: exists
+    relevance: "Canonical procedure for adding a packaged agent atomically: template, registry entry, docs/agents/README.md row, build.py validate and deploy."
+  - path: docs/architecture/adrs/ADR-033-agent-model-tiers.md
+    relationship: describes
+    status: exists
+    relevance: "Governs the model tier the command-step-runner is registered with."
+  - path: docs/known-issues/build-orchestration/open-high-ki-bo-20260927-status-checker-runs-workflow-shell-commands.md
+    relationship: describes
+    status: exists
+    relevance: "Widens KI-BO-20260901-1620 to about 40 shell dispatches in six workflows. Bears on whether the command-step-runner id should stay lane-specific."
+assigned_agent: llm-expert
+estimated_complexity: M
+it_requirements:
+  - >-
+    The agent id is command-step-runner. The template filename stem, its frontmatter
+    name, the registry id and every reference in BO-2400f-5-i, -5-ii, -5-iii, -3-ii and
+    -10-iii must be the same string. If the id is changed at approval, change it
+    everywhere in one edit.
+  - >-
+    The registry entry must declare permits_shell true explicitly. It is a utility-tier,
+    portable agent with is_ticket_phase false, so it never appears in a ticket agents:
+    map and never counts as a test-writer or coder invocation. Its spawn_allowlist is
+    empty (it runs at depth 1 and spawns nothing), and its spawned_by names the
+    dispatching workflow (fast-lane-ship.js) in the form the registry validator already
+    accepts for workflow spawners.
+  - >-
+    No other agent's registry entry is edited, and permits_shell is not added to or
+    changed on any existing agent. BO-2400f-7-iii forbids granting permission by editing
+    the registry.
+  - >-
+    Least privilege. The template grants shell execution and read access only, with no
+    file-editing or file-creating tool. The decline scenario (no hand edits) must be
+    backed by what the agent can do, not only by what it is told.
+  - >-
+    The template states the reply contract as one machine-parseable JSON value. A result
+    is {"command": string, "workspace": string (absolute path), "exit_status": integer,
+    "stdout": string, "stderr": string}, where stdout and stderr are verbatim. A decline
+    is {"declined": true, "step": string, "agent": "command-step-runner",
+    "reason": string} and never contains an exit_status key. The presence of
+    exit_status is the one signal BO-2400f-5-iii uses to tell a result from a decline,
+    so the template must not blur it.
+  - >-
+    The request the template must accept is {step, command, target: {workspace (absolute
+    path), branch, ac_id}}, with a statement that the run opened that workspace for that
+    AC. BO-2400f-3-ii composes this shape. A request with no absolute workspace is
+    declined, not guessed.
+  - >-
+    The template must not hold an allow-list of lane commands or step names. Its role is
+    any single given command in the named workspace, so a step added to the lane later
+    needs no template change.
+  - >-
+    The command-step-runner's entry lists all four kinds in step_kinds, using the field
+    and vocabulary BO-2400a-1-iii defines (which is in depends_on). This record does not
+    edit the schema or the registry gate. No other agent entry gains step_kinds.
+  - >-
+    The entry must pass BO-2400a-1-iii's registry gate unchanged. If the gate rejects
+    it, fix the entry and never the gate.
+  - >-
+    The model tier is declared in the registry and justified against ADR-033. The
+    capability that matters is verbatim relay of possibly large JSON, not reasoning.
+  - >-
+    The template must satisfy the registry self-description enforcement (currently
+    error-level) and the frontmatter reference. The build must deploy it: build.py
+    --validate-only passes, and a build compiles it to .claude/agents/command-step-runner.md.
+    The agent card docs/agents/cards/command-step-runner.card.md is generated by the
+    build and not hand-written. A docs/agents/README.md row is added as in
+    add-agent-to-package.
+  - >-
+    The commit that adds the agent must pass check-agent-registry,
+    check-agent-spawn-consistency, check-agent-diagrams and check-doc-types-agents
+    without their exemption lists being edited to admit the new agent.
+test_required: true
+test_spec:
+  - name: test_registry_declares_command_step_runner_with_permits_shell_true
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: "config/agent_registry.json has an entry with id command-step-runner whose permits_shell is the boolean true (not absent, not truthy-string)."
+    must_catch:
+      - "no registry entry for the command-step-runner exists (today's state)"
+      - "the entry exists but permits_shell is absent"
+      - "the entry exists but permits_shell is false"
+  - name: test_command_step_runner_declares_all_four_step_kinds
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: "The command-step-runner registry entry's step_kinds lists exactly reads_store, changes_store, changes_repository and publishes."
+  - name: test_only_the_command_step_runner_declares_step_kinds
+    target_dir: unit_tests/
+    framework: pytest
+    type: unit
+    angle: real_artifact
+    description: "In the shipped config/agent_registry.json exactly one entry carries step_kinds, and it is command-step-runner."
+  - name: test_shipped_registry_with_command_step_runner_passes_the_step_kinds_gate
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: seam
+    covers: [BO-2400a-1-i, BO-2400a-1-iii]
+    description: "Running BO-2400a-1-iii's registry gate over the shipped config/agent_registry.json, with the command-step-runner entry present, reports no step_kinds violation."
+  - name: test_agent_index_readme_lists_command_step_runner
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: unit
+    angle: real_artifact
+    description: "docs/agents/README.md has a table row for command-step-runner."
+    must_catch:
+      - "the agent is registered and deployed but missing from the package's agent index"
+  - name: test_command_step_runner_entry_and_template_are_one_agent
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: unit
+    angle: seam
+    description: "The entry's template_path exists, the template frontmatter name equals the registry id, portable is true, is_ticket_phase is false and spawn_allowlist is empty."
+  - name: test_command_step_runner_template_grants_shell_but_no_file_editing_tool
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: unit
+    angle: failure
+    description: "The template frontmatter tools include the shell tool and include none of the file-editing or file-creating tools, so a request to edit by hand cannot be carried out even if the prompt were ignored."
+    must_catch:
+      - "the template inherits a default tool set that includes Edit or Write"
+  - name: test_command_step_runner_template_states_result_and_decline_shapes
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: "The template body names every result field (command, workspace, exit_status, stdout, stderr) and every decline field (declined, step, agent, reason), and states that a decline carries no exit_status."
+  - name: test_command_step_runner_template_treats_nonzero_exit_as_a_result
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: "The template tells the agent that a command which ran and exited non-zero is reported as a result with that exit_status, and never as a decline."
+    must_catch:
+      - "the template tells the agent to report a failed command as 'could not complete this step'"
+  - name: test_command_step_runner_template_runs_in_named_workspace_regardless_of_launch_checkout
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: "The template tells the agent to run in the named workspace even when it started in a different checkout, and not to call such a request misrouted or injected, relocate the command, or alter it."
+  - name: test_fresh_build_deploys_the_command_step_runner_agent_definition
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: deployed
+    description: "Building the package into an empty temporary target directory produces .claude/agents/command-step-runner.md whose frontmatter name is command-step-runner."
+test_rationale: |
+  The agent is an LLM prompt, so its runtime behaviour cannot be proved without calling a
+  model. "Runs exactly once", "JSON returned unchanged" and "does not judge the step" are
+  model behaviour, and a unit suite must stay deterministic. The tests therefore pin three
+  things: the permission the lane will rely on (the registry entry), the capabilities the
+  agent holds (tools), and the contract the agent is given (template text). The tools test
+  is the strongest of these, because a missing Edit/Write tool enforces the no-hand-edit
+  decline mechanically and does not depend on the model reading its prompt.
+
+  Schema and gate behaviour for step_kinds is tested in BO-2400a-1-iii. This record tests
+  only its own entry: it declares all four kinds, it is the only entry carrying the field
+  (on the shipped registry), and it passes a-1-iii's gate. That last test is the seam
+  between the two records. The README test covers the agent-index clause that the
+  registry and deploy tests cannot see.
+
+  The deploy test uses the angle a registry-only check misses: an entry and a template
+  that both exist but that the build never compiles into .claude/agents/ would let every
+  other test pass while every installed project fails to dispatch the agent.
+
+  The last criteria scenario (command-step-runner dispatches do not count toward the test-writer
+  plus coder total of 2) can only be observed once the lane dispatches the command-step-runner.
+  Its test lives in BO-2400f-5-i's test_spec with covers: [BO-2400a-1-i, BO-2400f-5-i].
+  Any live verification of the model behaviours is a manual smoke run and is not part of
+  this contract.
+delivers_to:
+  agent: python-coder
+  contract: "A registered, deployed agent command-step-runner (config/agent_registry.json entry with permits_shell: true; templates/agents/command-step-runner.md; compiled to .claude/agents/command-step-runner.md). Request: {step: string, command: string, target: {workspace: absolute path string, branch: string, ac_id: string}}. Reply is exactly one JSON value, either result {command: string, workspace: string, exit_status: integer, stdout: string (verbatim), stderr: string (verbatim)} or decline {declined: true, step: string, agent: 'command-step-runner', reason: string} with no exit_status key. BO-2400f-5-i routes every command step to it; BO-2400f-5-iii classifies its replies."
+expects_from:
+  ac_id: BO-2400f-3-ii
+  contract: "The request's target block {workspace: absolute path as the worktree step confirmed it, branch: string, ac_id: string} plus the statement that this run opened that workspace for that AC. The shape is fixed here so this record can be built first; BO-2400f-3-ii makes the lane send it."
+origin_agent: business-analyst
+created: 2026-09-27
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-09-27'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+notes: |
+  USER DECISION 2026-09-27 (answering the BA's Q2): every fast-lane command step is run by a
+  new dedicated command-step-runner agent that declares permits_shell true. Its whole role is to run
+  the given command in the named worktree and return its JSON. The user also confirmed that an
+  agent whose registry entry is silent on permits_shell is NOT permitted (Q1).
+
+  PLACEMENT. The natural parent, BO-2400f-5, is being reset by the orchestrator and was not to
+  be touched, and BO-2400f (13/13) and BO-2400 (7/7) are full. BO-2400a-1 is the L2 that owns
+  which agents the fast lane runs and how many; the command-step-runner is an addition to that roster,
+  and the last clause keeps BO-2400a-1's two-invocation count true. BO-2400a-1 is also assigned
+  to llm-expert, which matches this record's surface.
+
+  ONE AGENT PER RECORD. This record is the agent itself (template, registry entry, deploy):
+  llm-expert. Routing the lane's dispatches to it is BO-2400f-5-i (python-coder). The structural
+  check (BO-2400f-5-ii) reads the registry and must not name this agent.
+
+  THE ID. USER DECISION 2026-09-27 (round 3): the agent is "command-step-runner", replacing
+  "fast-lane-step-runner". The name is deliberately not lane-specific so that the ~40 similar
+  status-checker shell dispatches in five other workflows (KI-BO-20260927) can reuse it later.
+  This AC set still moves only the fast lane; those workflows need their own ACs.
+
+  STEP KINDS. USER DECISION 2026-09-27 (round 3): an optional machine-readable registry field
+  declares which kinds of step an agent may run — reads_store, changes_store,
+  changes_repository, publishes — added to config/agent_registry.schema.json within this
+  record's scope. The criteria call it "the step-kinds field"; the IT PO settles the exact
+  key.
+
+  SPLIT 2026-09-27 (round 4, requested by the IT PO): the schema definition of step_kinds and
+  the registry-gate rejection of unknown kinds moved to BO-2400a-1-iii (python-coder), because
+  nothing validates the registry against its schema today and the gate is .py work. This
+  record keeps the template, the registry entry and the agent-index row (llm-expert). BO-2400f-5-ii's role-coverage clause reads it: a missing field covers nothing.
+
+  THE NON-ZERO-EXIT CLAUSE IS THE ONE MOST LIKELY TO BE LOST. An agent that reports a failed
+  command as "I could not complete this step" turns every real failure into a decline, and the
+  run then reports it as a declined step (BO-2400f-5-iii) instead of the step's own failure. A
+  reply that carries an exit status is a result; a reply without one is a decline.

@@ -16,11 +16,21 @@ criteria: |
     and its it_requirements is missing one or more of the config-schema fragment,
     the resolved reference-file path, the N-location rule, the required-skills list,
     or the post-write commands,
+    and it does not carry the explicit "reference file pending" marker (ACD-2500d-2-i),
   When the AC is validated,
   Then validation fails,
   And the failure names each required spec field that is missing.
+
+  And given a package-surface AC that carries the "reference file pending" marker because
+    the file-aware step (ACD-2500d-2) has not yet run,
+  When the AC is validated,
+  Then validation does not fail it for the missing reference-file path,
+  And it still fails, naming each one, for any of the other four fields that is missing,
+  And once the file-aware step has named the reference file and cleared the marker, the
+    five-field rule above applies unchanged.
 depends_on:
   - BO-2000d
+  - ACD-2500d-2-i
 doc_links:
   - path: config/ac_store_schema.json
     relationship: modifies
@@ -28,20 +38,35 @@ doc_links:
   - path: docs/reference/ac-schema.md
     relationship: describes
     status: exists
+  - path: docs/acceptance-criteria/ac-driven-dev/ACD-2500-right-job-right-agent/ACD-2500d-2-i.yaml
+    relationship: related
+    status: exists
 assigned_agent: python-coder
 estimated_complexity: M
 it_requirements:
   - "Add a machine-checkable validation rule: for ACs where assigned_agent == python-coder AND component in {build_pipeline, build-orchestration}, it_requirements MUST carry the config-schema fragment, resolved reference-file path, N-location rule, required_skills, and post-write commands."
   - "Test coverage: a package-surface AC missing any of these fields fails validation with a message naming each missing field; a fully-populated one passes."
+  - "Timing: the five-field rule is enforced after the file-aware step (ACD-2500d-2), not at IT PO write time. Between the planner stage and the file-aware step the explicit, schema-declared 'reference file pending' marker (ACD-2500d-2-i) excuses reference_file_path only; absence of the key alone never excuses it."
+  - "All enforcement points of this rule move together (validate_ac.py, the object branch of config/ac_store_schema.json via check_ac_schema.py / validate_ac_schema.py, and the stage-end rule check) — the change is owned and built by ACD-2500d-2-i."
 delivers_to:
   agent: it-po
-  contract: "A validator that rejects package-surface ACs lacking the mandatory implementation-spec fields"
+  contract: "A validator that rejects package-surface ACs lacking the mandatory implementation-spec fields, except that an AC carrying the explicit 'reference file pending' marker is not failed for reference_file_path alone"
 expects_from: null
 origin_agent: BrainCandy
 created: 2026-07-08
-amended_by: []
+amended_by:
+  - reason: "amend (timing only): rule content unchanged; it runs after the file-aware step (ACD-2500d-2), and the explicit 'reference file pending' marker (ACD-2500d-2-i) excuses reference_file_path only until then. work_status kept done (records the pre-amendment rule, which ships today); the timing change is built by ACD-2500d-2-i, now in depends_on. Criteria edited in place by it-po under explicit user direction."
+    date: '2026-09-25'
+    by: it-po
+    directed_by: user
 superseded_by: null
 covered_by:
 - BO-2000d-1-i
 - unit_tests/prompt_assembly/test_package_surface_spec.py
 implemented_by: []
+notes: |
+  AMENDMENT (2026-09-25, ACD-2500): timing only — the five-field rule itself is unchanged.
+  work_status is deliberately LEFT at done and NOT flipped to todo: "done" records the
+  pre-amendment rule as shipped. The pending-marker branch (second scenario) is built by
+  ACD-2500d-2-i, which this AC now depends_on; BO-2000d-1-i (non-package-surface ACs are
+  exempt) is unaffected.

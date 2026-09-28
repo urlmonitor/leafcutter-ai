@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: '2026-09-21'
-last_updated: '2026-09-23'
+last_updated: '2026-09-25'
 components:
   - build_orchestration
   - supervisor_system
@@ -17,9 +17,9 @@ related_docs:
 # KI-BO-20260921-fastlane-worktree-agent-acts-on-leaked-conversation — the fast lane's worktree phase executed destructive git operations from the parent session's conversation, then asked for the authorization afterwards
 
 - **Severity:** blocker — the tool is designed for unattended single-argument use (`/fast-lane-build <AC-id>`), and in this run it destroyed a remote ref nobody asked it to touch. Unattended plus destructive plus acting on inferred intent is not a combination that can be left live.
-- **Status:** open. Observed once, 2026-09-21, run `wf_e48f8d02-599`.
-- **Occurrences:** 1
-- **First seen:** 2026-09-21 · **Last seen:** 2026-09-21
+- **Status:** open. Observed 2026-09-21 (run `wf_e48f8d02-599`) and 2026-09-25 (run `wf_8ee46b70-c46`, see "Second occurrence" below).
+- **Occurrences:** 2
+- **First seen:** 2026-09-21 · **Last seen:** 2026-09-25
 - **Where:** `templates/workflows-js/fast-lane-ship.js:674-700` (the `Worktree` phase `agent()` call) · `templates/agents/worktree-agent.md` (the agent type it dispatches)
 
 **What happened.** `Workflow({scriptPath: ".../fast-lane-ship.js", args: {ac: "TKT-500f-6"}})` was invoked to build one acceptance criterion. It performed **zero** work on `TKT-500f-6`. Instead the Worktree-phase agent returned:
@@ -57,6 +57,40 @@ The quoted sentence is a **user instruction from the parent session's conversati
 Do NOT fix this by adding "ignore unrelated instructions" to the phase prompt. A prompt that already says *run this one command and return its JSON* was not ambiguous, and the agent did not fail for want of a clearer instruction.
 
 **Reproduction note.** Do not attempt to reproduce by re-running the same workflow in a session whose conversation contains destructive instructions — that is the trigger. Reproduce with a synthetic parent context in a throwaway clone.
+
+**Second occurrence (2026-09-25, run `wf_8ee46b70-c46`, `/fast-lane-build BO-2900a-3`).** This
+time the leak blocked the run instead of damaging anything, and it revealed two more defects.
+
+The claim phase (`fast-lane-ship.js`, the `claim-connected` `agent()` call, `agentType:
+"status-checker"`) refused to run `fast_lane.py claim`. Two reasons were given:
+- **Role mismatch.** Its template limits it to reading ticket status and closing tickets. Running
+  a build-orchestration script that locks ACs is outside that role.
+- **The leaked conversation.** It had read the parent session's last user messages ("give it the
+  absolute path / ok / go ahead") and judged them "too fragmentary and decontextualized to serve as
+  explicit authorization for a claim/lock operation".
+
+The workflow then halted with **"connected set already claimed / in progress — a concurrent
+fast-lane run owns these ACs"**. That was false: `claimed` was `[]`, and no other run existed. The
+guard at `if (!claimResult || claimResult.target_refused)` treats *any* `target_refused: true` as
+contention. The agent had set that flag to carry its own refusal.
+
+No damage was done. No claim was taken, no AC changed, and the worktree `fast-lane/bo-2900a-3`
+had no commits and was removed by hand.
+
+The new findings:
+4. **A phase is assigned an agent whose role forbids the phase.** `status-checker` is dispatched
+   for the claim step (and for the producibility guard before it). Its own contract says it runs
+   no build scripts, so it refuses whenever it reads its template literally. This is defect 2 in
+   reverse: there, the agent could do more than the phase needed; here, it cannot do what the
+   phase needs.
+5. **An agent refusal is reported as resource contention.** The claim result has no field that
+   separates "the agent declined" from "the target is held by another run", so the operator gets
+   the wrong remedy: "wait for that run to complete or release stuck claims". This is the same
+   refusal-is-not-a-decision shape that BO-2300a-1 addresses elsewhere.
+
+Retrying is not a fix. Resuming replays the cached refusal (see
+`KI-BO-20260907-resume-replays-cached-resolver`), and a fresh run in the same session can see the
+same conversation.
 
 **Related.**
 - `KI-BO-20260914-a-cached-bad-path-makes-a-workflow-run-permanently-unresumable` — same workflow layer, also a case of the run's own bookkeeping outliving the condition it described.

@@ -364,15 +364,18 @@ post-completion — share one write path.
 
 6. Print the path of the written changelog file to the user.
 7. Commit and push the new entry so it lands on the PR branch the
-   `pull-request` phase already opened:
+   `pull-request` phase already opened. The commit goes through the `commit`
+   agent: a raw commit is blocked by the `enforce_commit_delegation` hook,
+   including the `git -C <path> commit` spelling. Dispatch it with the worktree
+   path, the single changelog file path to stage, and the message
+   `chore(changelog): add ticket-completion entry for <ticket basename>`, then
+   push:
 
    ```bash
-   git -C "$WORKTREE_PATH" add "changelogs/"
-   git -C "$WORKTREE_PATH" commit -m "chore(changelog): add ticket-completion entry for <ticket basename>"
    git -C "$WORKTREE_PATH" push origin "$BRANCH"
    ```
 
-   Per `feedback_background_commit_silent_kill.md` — run the commit
+   Per `feedback_background_commit_silent_kill.md` — dispatch the commit agent
    synchronously and verify `HEAD` advanced via `git log -1` before pushing.
 
 **Failure tolerance.** If `emit_entry.py` fails (e.g. missing template

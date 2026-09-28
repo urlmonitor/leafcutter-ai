@@ -1,0 +1,113 @@
+id: BO-4300c-4
+title: "The workspace location comes only from the maker's ready answer"
+component: build-orchestration
+components:
+  - worktree_manager
+  - build_orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: critical
+roadmap_phase: phase_1
+change_target: pipeline
+risk_surface: contract_boundary
+criteria: |
+  Given a ready answer naming location L, relayed by an agent that also states in
+    its own words that the workspace is at a different location M,
+  When the workflow proceeds,
+  Then every step it dispatches is directed to work in L,
+  And the contents of M are identical before and after the run,
+  And given a ready answer that carries no location, the workflow ends with a
+    failure instead of using any other location.
+depends_on: [BO-4300c]
+doc_links:
+- path: docs/analysis/2026-09-25-worktree-failure-modes.md
+  relationship: describes
+  status: exists
+- path: docs/analysis/2026-09-25-worktree-component-proposal.md
+  relationship: describes
+  status: exists
+- path: docs/architecture/components/worktree-manager.md
+  relationship: describes
+  status: exists
+  relevance: Component page for the one maker; rewritten for clones under BO-4300a-4.
+- path: docs/architecture/adrs/ADR-030-dual-engine-workflow-support.md
+  relationship: constrains
+  status: exists
+  relevance: E2 workflow bodies have no filesystem or process access; agent() schema validation.
+- path: docs/testing/test-angles.md
+  relationship: describes
+  status: exists
+  relevance: Angle taxonomy used by this record's test_spec.
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from:
+  ac_id: BO-4300c-2
+  contract: 'The maker''s JSON answer per BO-4300c-2: halt unless status == ''ok'' and workspace_path
+    is a non-empty string; take the location only from workspace_path (worktree_path is its alias).'
+package_surface: false
+it_requirements:
+- The only source of a working location is workspace_path of an ok answer; prose from the relaying agent
+  is ignored for location purposes (retires fast-lane-ship's claimed-path fallback and the verify-reply
+  trust).
+- Every later dispatch names that location as its working location; an ok answer without workspace_path
+  is treated as a failure.
+- 'Every workflow applies ONE acceptance predicate to the maker''s answer: it parses as a single JSON
+  object AND status == ''ok'' AND workspace_path is a non-empty string; anything else ends the run with
+  status error, quoting (bounded to 2 KB) what was received. The predicate is the one in the build-inlined
+  WORKSPACE-ANSWER block delivered by BO-4300c-3 (byte-identical in every consuming workflow, parity-tested);
+  no workflow hand-copies or re-implements it.'
+- Proof runs the workflow under unit_tests/_workflow_engine_harness.py -- the deployed copy the build
+  produces, so the build's workflow transform is exercised -- with label-scripted agent replies, and asserts
+  on the RECORDED dispatch list, never on workflow source text. The harness must be able to model a workspace
+  step that declines its task, answers in prose, answers exit 0 with a non-JSON path, or answers JSON
+  without status (F13); extending the harness for this is in scope of the first AC that needs it.
+- Workflow edits are made in templates/workflows-js/*.js and reach .claude/workflows/ only through the
+  build; the deployed copy is what the tests run.
+test_required: true
+test_spec:
+- name: test_every_dispatch_uses_location_from_answer_not_agent_prose
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: criterion
+  description: With an ok answer naming L and relaying prose claiming M, every recorded later dispatch
+    names L and none names M.
+- name: test_location_named_only_in_prose_is_left_untouched
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: boundary
+  description: Folder M (a real temp folder) is identical before and after the run.
+- name: test_ok_answer_without_location_ends_the_run
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: failure
+  description: An ok answer lacking workspace_path ends the run with status error and no later dispatch.
+test_rationale: The 2026-09-25 incident was a perfect-enough maker with a caller that carried on, and
+  every source grep of plan-feature.js would have passed. So the assertions are made on the recorded dispatch
+  list of a real workflow run with scripted hostile answers, which is the only place 'no later step was
+  dispatched' can be observed.
+origin_agent: business-analyst
+created: 2026-09-25
+amended_by:
+- reason: duplication-audit-item-4
+  by: it-po
+  at: 2026-09-25
+  note: >-
+    Technical fields only; criteria unchanged. The acceptance-predicate it_requirement no longer says
+    the predicate is inlined per workflow by hand; it names the build-inlined WORKSPACE-ANSWER block
+    from BO-4300c-3. readiness reset to reviewed.
+superseded_by: null
+covered_by: [BO-4300c-4-i, BO-4300c-4-ii]
+implemented_by:
+- tickets/00_inbox/TICKET-20260927-BO-4300c-4.md
+notes: |
+  F2 / F4: the fast lane has twice seen worktree-agent echo a made-up path, and falls back to
+  the path the model claimed when its verify reply is empty. Taking the location from prose is
+  the same class as falling back to the current checkout.
+target_epic: EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace

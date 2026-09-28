@@ -1,0 +1,105 @@
+id: BO-4300c-4-i
+title: "A location handed in by a caller is confirmed with the maker before any step runs"
+component: build-orchestration
+components:
+  - worktree_manager
+  - build_orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: critical
+roadmap_phase: phase_1
+change_target: pipeline
+risk_surface: contract_boundary
+criteria: |
+  Given a workflow is started with a workspace location supplied by whoever
+    started it,
+  When the workflow begins,
+  Then it asks the workspace maker whether that location is a ready workspace for
+    this work before any authoring, phase or delivery step runs,
+  And when the maker does not confirm it, the workflow ends with a failure naming
+    the location it was given,
+  And when the maker confirms it, the workflow proceeds in that location.
+depends_on: [BO-4300c-4, BO-4300e-1]
+doc_links:
+- path: docs/analysis/2026-09-25-worktree-creation-consolidation.md
+  relationship: describes
+  status: exists
+- path: docs/analysis/2026-09-25-worktree-component-proposal.md
+  relationship: describes
+  status: exists
+- path: docs/architecture/components/worktree-manager.md
+  relationship: describes
+  status: exists
+  relevance: Component page for the one maker; rewritten for clones under BO-4300a-4.
+- path: docs/architecture/adrs/ADR-030-dual-engine-workflow-support.md
+  relationship: constrains
+  status: exists
+  relevance: E2 workflow bodies have no filesystem or process access; agent() schema validation.
+- path: docs/testing/test-angles.md
+  relationship: describes
+  status: exists
+  relevance: Angle taxonomy used by this record's test_spec.
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: BO-4300e-1
+  contract: 'locate/verify read-only answers: ok with workspace_path for a ready workspace; NOT_FOUND
+    or INCOMPLETE otherwise, never with workspace_path.'
+package_surface: false
+it_requirements:
+- A location supplied by the starter (args.worktree_path / args.workspace_path) is confirmed by one verbatim
+  `worktree.py verify --path <L>` (or locate) request before any working step; only an ok answer whose
+  workspace_path equals L (path-equivalence, both spellings) lets the run proceed. Retires build-ticket.js's
+  'trust it -- no ambient check'.
+- 'Workflow bodies run in the E2 engine with no filesystem or process access (ADR-030). They reach the
+  maker only through (a) args.workspace -- the maker''s JSON object passed verbatim by the entry command
+  or skill (BO-4300a-1-ib) -- or (b) exactly one agent() dispatch, carrying a result schema, to an agent
+  whose registry entry has permits_shell: true, instructing it to run one exact absolute command unchanged
+  and return stdout verbatim. Never status-checker (permits_shell: false), never free-form set-up steps.'
+- Proof runs the workflow under unit_tests/_workflow_engine_harness.py -- the deployed copy the build
+  produces, so the build's workflow transform is exercised -- with label-scripted agent replies, and asserts
+  on the RECORDED dispatch list, never on workflow source text. The harness must be able to model a workspace
+  step that declines its task, answers in prose, answers exit 0 with a non-JSON path, or answers JSON
+  without status (F13); extending the harness for this is in scope of the first AC that needs it.
+- Workflow edits are made in templates/workflows-js/*.js and reach .claude/workflows/ only through the
+  build; the deployed copy is what the tests run.
+test_required: true
+test_spec:
+- name: test_supplied_location_is_verified_before_any_working_step
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: criterion
+  description: The first recorded dispatch after start is the verify request for the supplied location.
+- name: test_unconfirmed_location_ends_the_run_naming_it
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: failure
+  description: A verify answer of NOT_FOUND/INCOMPLETE ends the run with status error naming the location.
+- name: test_confirmed_location_is_used_for_later_steps
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: criterion
+  description: With an ok verify answer, later dispatches name that location.
+test_rationale: The 2026-09-25 incident was a perfect-enough maker with a caller that carried on, and
+  every source grep of plan-feature.js would have passed. So the assertions are made on the recorded dispatch
+  list of a real workflow run with scripted hostile answers, which is the only place 'no later step was
+  dispatched' can be observed.
+origin_agent: business-analyst
+created: 2026-09-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260927-BO-4300c-4-i.md
+notes: |
+  build-ticket.js trusts args.worktree_path unchecked (consolidation inventory 2.2). Decision 4
+  has workflows receive the maker's result passed in -- this record keeps a hand-supplied
+  location from bypassing it. Uses the lookup of BO-4300e-1.
+target_epic: EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace

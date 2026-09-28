@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: 2026-08-18
-last_updated: 2026-09-23
+last_updated: '2026-09-27'
 components:
   - commit_guardian
 related_docs:
@@ -73,7 +73,7 @@ Severity in the **filename** is a three-level index bucket (`blocker` / `high` /
 
 Fixed issues move to [`commit-guardian/resolved/`](commit-guardian/resolved/) and are no longer listed as open. They are kept, not deleted.
 
-**Open: 69** (4 blocker, 27 high, 38 low) · **Resolved: 9**
+**Open: 70** (4 blocker, 27 high, 39 low) · **Resolved: 9**
 
 ## Open
 
@@ -91,7 +91,7 @@ Fixed issues move to [`commit-guardian/resolved/`](commit-guardian/resolved/) an
 | `high` | KI-CG-012 — The hooks' test seams disagree on both variable name and separator, so verifying a hook the wrong way exits 0 having checked nothing | [open-high-ki-cg-012-the-hooks-test-seams-disagree-on.md](commit-guardian/open-high-ki-cg-012-the-hooks-test-seams-disagree-on.md) |
 | `high` | KI-CG-012 — `check-ac-schema` reports a clean pass on a file it never validated, because Phase 1 fails open on an empty staged set | [open-high-ki-cg-012-check-ac-schema-reports-a-clean-pass-on.md](commit-guardian/open-high-ki-cg-012-check-ac-schema-reports-a-clean-pass-on.md) |
 | `high` | KI-CG-014 — `declares_side_effect` derivation is negation-blind, so an AC asserting that nothing is written is forced to declare that something is | [open-high-ki-cg-014.md](commit-guardian/open-high-ki-cg-014.md) |
-| `high` | KI-CG-017 — `check-build-drift` is filtered on the consumer layout path, so it has never run on this repo's own template changes | [open-high-ki-cg-017.md](commit-guardian/open-high-ki-cg-017.md) |
+| `high` | KI-CG-017 — `check-build-drift` is filtered on the consumer layout path, so it has never run on this repo's own template changes | [resolved-high-ki-cg-017.md](commit-guardian/resolved/resolved-high-ki-cg-017.md) |
 | `high` | KI-CG-018 — `check_ac_governance` exits 0 without inspecting anything, and its own "did I look?" diagnostic cannot fire on the paths where it did not | [open-high-ki-cg-018.md](commit-guardian/open-high-ki-cg-018.md) |
 | `high` | KI-CG-20260914-ac-hooks-resolve-root-from-cwd — all six AC gates take their project root AND their file set from the current directory, so from the wrong cwd they validate zero files and exit 0 | [open-high-ki-cg-20260914-ac-hooks-resolve-root-from-cwd.md](commit-guardian/open-high-ki-cg-20260914-ac-hooks-resolve-root-from-cwd.md) |
 | `high` | KI-CG-022 — `check_adr_collision.py` exists but is registered nowhere, and the branch that registers it also makes it fail closed without `origin/main` | [open-high-ki-cg-022.md](commit-guardian/open-high-ki-cg-022.md) |
@@ -114,11 +114,11 @@ Fixed issues move to [`commit-guardian/resolved/`](commit-guardian/resolved/) an
 | `low` | KI-CG-011 — The roadmap mirror strips its own `description` frontmatter and backdates `created` to today | [open-low-ki-cg-011.md](commit-guardian/open-low-ki-cg-011.md) |
 | `low` | KI-CG-013 — The schema hook and the done-proof oracle disagree about what a leaf is, so one AC can be required to satisfy both branches | [open-low-ki-cg-013.md](commit-guardian/open-low-ki-cg-013.md) |
 | `low` | KI-CG-015 — `declares_side_effect` is authored by the IT-PO pass and derived by the schema check, and on records about writing files the two systematically disagree | [open-low-ki-cg-015.md](commit-guardian/open-low-ki-cg-015.md) |
-| `low` | KI-CG-016 — `enforce_commit_delegation` matches the phrase anywhere in the command string, so read-only commands that merely mention committing are blocked | [open-low-ki-cg-016.md](commit-guardian/open-low-ki-cg-016.md) |
+| `low` | KI-CG-016 — `enforce_commit_delegation` matches the phrase anywhere in the command string, so read-only commands that merely mention committing are blocked | [resolved-low-ki-cg-016.md](commit-guardian/resolved/resolved-low-ki-cg-016.md) |
 | `low` | KI-CG-019 — the `templates/` copy of `check_ac_parent_covered_by` fail-opens on an import it can never satisfy, so verifying from `templates/` always passes | [open-low-ki-cg-019.md](commit-guardian/open-low-ki-cg-019.md) |
 | `low` | KI-CG-020 — hook registration has a fourth leg nobody documents: a hook absent from `blocking_hook_ids` is skipped by the autofix loop | [open-low-ki-cg-020.md](commit-guardian/open-low-ki-cg-020.md) |
 | `low` | KI-CG-023 — `check-predone-scope` cannot distinguish a ticket's subject from its driver, and reconciles branch-wide rather than commit-wide | [open-low-ki-cg-023.md](commit-guardian/open-low-ki-cg-023.md) |
-| `low` | KI-CG-024 — `check_ticket_signoff_parity.py` silently skips check #6 because its default registry path does not exist in this layout | [open-low-ki-cg-024.md](commit-guardian/open-low-ki-cg-024.md) |
+| `low` | KI-CG-024 — `check_ticket_signoff_parity.py` silently skips check #6 because its default registry path does not exist in this layout | [resolved-low-ki-cg-024.md](commit-guardian/resolved/resolved-low-ki-cg-024.md) |
 | `low` | KI-CG-025 — `check_ticket_state_integrity.py` retains an always-exit-0 contract that a coder cannot unilaterally retire | [open-low-ki-cg-025.md](commit-guardian/open-low-ki-cg-025.md) |
 | `low` | KI-CG-026 — The unattributed-collision count is computed and then discarded by `pre-commit` | [open-low-ki-cg-026.md](commit-guardian/open-low-ki-cg-026.md) |
 | `low` | KI-CG-027 — `main()` derives the project root from `Path.cwd()` while the canonical resolver sits unused beside it | [open-low-ki-cg-027.md](commit-guardian/open-low-ki-cg-027.md) |
@@ -148,6 +148,7 @@ Fixed issues move to [`commit-guardian/resolved/`](commit-guardian/resolved/) an
 | `low` | KI-CG-20260914-post-merge-stage-registers-but-installs-no-shim — a hook on the post-merge stage is registered, renders into the config, and still never fires in any checkout that did not create a ticket worktree | [open-low-ki-cg-20260914-post-merge-stage-registers-but-installs-no-shim.md](commit-guardian/open-low-ki-cg-20260914-post-merge-stage-registers-but-installs-no-shim.md) |
 | `low` | KI-CG-20260923-contract-shrinking-guard-rename-blind — `check-contract-shrinking` correlates deleted test names against added test names, so a renamed test reads as a deleted one | [open-low-ki-cg-20260923-contract-shrinking-guard-rename-blind.md](commit-guardian/open-low-ki-cg-20260923-contract-shrinking-guard-rename-blind.md) |
 | `low` | KI-CG-20260923-no-gate-validates-doc-to-doc-markdown-links — no hook resolves a markdown link between two docs; `check-doc-links` covers code-to-doc only, by design, so a doc split that leaves two dead links and an orphaned anchor passes every gate | [open-low-ki-cg-20260923-no-gate-validates-doc-to-doc-markdown-links.md](commit-guardian/open-low-ki-cg-20260923-no-gate-validates-doc-to-doc-markdown-links.md) |
+| `low` | KI-CG-20260927-subprocess-text-decode-uses-locale-codec-repo-wide — 212 subprocess calls under scripts/ and templates/scripts/ decode child output with text=True and no encoding, so on Windows UTF-8 git content is read as cp1252: mostly silent mojibake, sometimes a crash | [open-low-ki-cg-20260927-subprocess-text-decode-uses-locale-codec-repo-wide.md](commit-guardian/open-low-ki-cg-20260927-subprocess-text-decode-uses-locale-codec-repo-wide.md) |
 
 ## Resolved
 

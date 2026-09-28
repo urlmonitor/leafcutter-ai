@@ -1,0 +1,75 @@
+id: BO-4200c
+components:
+  - build_orchestration
+title: "Breakage anywhere stops the hand-off"
+component: build-orchestration
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Damage outside the new part blocks delivery as surely as a failing new check.
+
+  Finding that the project no longer works has the same consequence as finding
+  that the new work does not: the run stops and hands you the reason. A broken
+  project is never reported and then delivered anyway, and the work is never left
+  stranded — it goes back to being pickable, ready to be attempted again.
+depends_on: [BO-4200]
+doc_links:
+  - path: docs/known-issues/build-orchestration/open-high-ki-bo-20260831-1520.md
+    relationship: related
+    status: exists
+    relevance: >-
+      The second occurrence is this record's case: a pull request was opened on a
+      change that had broken 18 outcomes across 6 files. Note also the first
+      occurrence's cost — a full reading cycle spent on a branch that did not build,
+      whose three findings were all real and none of which mentioned that the project
+      was already broken.
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-09-22
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+documentation_triggers: []
+documentation_rationale: >-
+  No new operator procedure and no new surface: an existing stop-and-release path
+  gains one more reason to fire, and what the operator does about it is what they
+  already do when any other check refuses. The reason text itself is covered by
+  BO-4200b's reference doc.
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  WHY THIS IS NOT PART OF BO-4200a, WHICH IS THE COLLAPSE MOST LIKELY TO BE PROPOSED.
+  Running a wide check and acting on its result are separately failable, and the
+  evidence that they are is sitting in this component already: BO-2400f-4-vi's
+  2026-09-07 coverage note found that the field carrying an unsatisfied check into the
+  run's final report is a fixed empty value at its only call site, so the blocked
+  outcome is unreachable in the running route — a correct, tested consequence branch
+  that nothing can ever enter. A wide check whose result meets that shape produces an
+  accurate red finding and a delivered change anyway. This record exists so that
+  outcome is a failure of a stated requirement rather than an implementation detail
+  nobody owns.
+
+  THE RELEASE HALF IS DELIBERATELY IN THE SAME RECORD, not split out. Stopping without
+  releasing the work leaves it stuck in progress and unpickable, which turns one
+  failed run into a requirement nobody can attempt. The machinery already exists and
+  must be reused rather than reinvented — BO-2400f-10 owns "on failure or abort,
+  release the claim so work is never stuck" and the route has a release-on-failure
+  path for its existing phases. Consequence and release are one promise here because
+  half of it is a regression.
+
+  WHAT IS NOT DECIDED HERE, ON PURPOSE. Whether a pre-existing failure — one the
+  project already had before this work began — should stop the hand-off is a real
+  question with a defensible answer either way, and the origin entry supplies the
+  reason it must be answered rather than defaulted: it measured a control run against
+  the shared branch and found 8 failures that were an artefact of an unbuilt
+  workspace, not real breakage. A rule that cannot tell "this change broke it" from
+  "it was already broken" will either block every run or excuse every regression.
+  Deciding it is the Business Analyst's; this record fixes only that a genuine
+  regression has a consequence.

@@ -1,0 +1,56 @@
+id: BO-4300f-2-i
+title: "Written instructions carry no second recipe for workspaces"
+component: build-orchestration
+components:
+  - worktree_manager
+  - build_orchestration
+level: L3
+status: superseded_by
+req_status: draft
+work_status: todo
+readiness: draft
+priority: critical
+roadmap_phase: phase_1
+change_target: prompt
+risk_surface: contract_boundary
+criteria: |
+  Given the instructions an install delivers to agents and people -- agent
+    charters, skills, workflow texts, how-to guides and the project rules file,
+  When each passage about making, finding or clearing a workspace is read,
+  Then it directs the reader to the one workspace maker and to the how-to guide
+    for getting a workspace,
+  And none gives its own steps to copy the project, start a line of work,
+    install tools into a workspace, link or copy protection settings into one, or
+    delete one by hand.
+depends_on: [BO-4300f-2, BO-4300a-3]
+doc_links:
+- path: docs/analysis/2026-09-25-worktree-migration-plan.md
+  relationship: describes
+  status: exists
+- path: docs/analysis/2026-09-25-worktree-creation-consolidation.md
+  relationship: describes
+  status: exists
+assigned_agent: llm-expert
+estimated_complexity: M
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-09-25
+amended_by:
+- reason: split-by-it-po
+  by: it-po
+  at: 2026-09-25
+  note: >-
+    Superseded by BO-4300f-2-ia (llm-expert: agent charters, skills, workflow texts, CLAUDE.md) and BO-4300f-2-ib (documentation-expert: how-to guides). The work crosses a technical boundary between agents that own
+    different surfaces; the children's criteria distribute this record's clauses without
+    adding behaviour. This record's criteria are untouched.
+superseded_by:
+- BO-4300f-2-ia
+- BO-4300f-2-ib
+covered_by: []
+implemented_by: []
+notes: |
+  Migration plan steps 6 and 8: the feature skill's epic recipe, the manual-drive how-to's
+  EnterWorktree with no bootstrap, the CLAUDE.md manual bootstrap recipe with its fail-open OR
+  check. This is the one record in the family whose subject is written text, so reading the
+  delivered text is the behaviour -- it is not a stand-in for testing code.

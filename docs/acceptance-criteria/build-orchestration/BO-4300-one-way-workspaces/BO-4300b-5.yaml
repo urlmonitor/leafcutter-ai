@@ -1,0 +1,112 @@
+id: BO-4300b-5
+title: "The location handed back works from every shell on the machine"
+component: build-orchestration
+components:
+  - worktree_manager
+  - build_orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: critical
+roadmap_phase: phase_1
+change_target: code
+risk_surface: contract_boundary
+criteria: |
+  Given a Windows machine with a Linux shell running on it that can reach the
+    same project,
+  When a workspace for "alpha" is requested from a Windows shell,
+  Then the ready answer gives the workspace's location in a form usable from the
+    Windows shell and in a form usable from the Linux shell, both naming the same
+    folder,
+  And a request for "alpha" started from the Linux shell is answered with that
+    same workspace, not a second one,
+  And version-control commands run inside the workspace succeed from both shells.
+depends_on: [BO-4300b]
+doc_links:
+- path: docs/analysis/2026-09-25-worktree-isolation-decision-memo.md
+  relationship: constrains
+  status: exists
+- path: docs/analysis/2026-09-25-worktree-failure-modes.md
+  relationship: describes
+  status: exists
+- path: docs/architecture/components/worktree-manager.md
+  relationship: describes
+  status: exists
+  relevance: Component page for the one maker; rewritten for clones under BO-4300a-4.
+- path: docs/reference/workspace-maker-answer.md
+  relationship: describes
+  status: planned
+  relevance: Reference for the answer contract (authored under BO-4300a-5).
+- path: docs/testing/test-angles.md
+  relationship: describes
+  status: exists
+  relevance: Angle taxonomy used by this record's test_spec.
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from:
+  ac_id: BO-4300c-2
+  contract: workspace_path and workspace_path_posix fields.
+package_surface: false
+it_requirements:
+- Every emitted path appears in native form and in a POSIX alias (workspace_path / workspace_path_posix,
+  repo_root / repo_root_posix); on a Windows host the alias is the form a WSL shell can use (/mnt/<drive>/...),
+  and --repo-root/--path accept Git Bash, PowerShell and WSL spellings of the same folder.
+- 'The marker and every stored value hold no absolute path in only one platform''s spelling, so a request
+  from either shell recognises the same workspace (decision 1: clones embed no absolute path).'
+- The real two-shell arm runs where wsl.exe is available and is reported as not run otherwise; the spelling-equivalence
+  arm (the same --repo-root given in each of the three spellings) runs everywhere.
+- Answers conform to the result contract delivered by BO-4300c-2 (one JSON object on stdout, status/code/exit
+  mapping, workspace_path absent on every non-ok answer).
+- Proof runs the DEPLOYED maker -- the copy an install delivers, resolved through the shared test locator
+  delivered by BO-4300f-4 -- as a separate process against real temporary git repositories with a real
+  bare hub. No mock of git, no import of the maker module, no grep of its source (CLAUDE.md 'Gate / Workflow
+  ACs -- Verify Behaviorally, Not by Grep'); a test never falls back to the templates/ source copy.
+- 'Tests must not spawn the package''s own scripts/build.py (CLAUDE.md ''Tests must not spawn their own
+  build.py''): the deployed maker comes from the shared deployed layout, and fixture projects carry a
+  minimal stub build entry point that installs a real, rejecting hook in well under a second. A test that
+  must mutate the package and build its own copy says so and justifies it in its ticket.'
+- All temporary projects, hubs and workspaces live under the test's temp directory and run git with an
+  isolated global and system config; afterwards the developer's own repository's branches, registered
+  worktrees and local git config are unchanged (BO-4300f-4-i, F14, KI-TQ-012).
+test_required: true
+test_spec:
+- name: test_ready_answer_gives_native_and_posix_forms_of_the_same_folder
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: criterion
+  description: The two path fields name the same folder (each resolves to the same inode/volume path).
+- name: test_request_from_the_other_shell_returns_the_same_workspace
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: criterion
+  description: A second request for alpha using the other shell's spelling of --repo-root (and, where
+    WSL exists, from a WSL process) is answered ok with the same workspace, and the landing place still
+    holds one workspace.
+- name: test_git_commands_succeed_inside_the_workspace_from_both_spellings
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: boundary
+  description: git -C with each spelling of the workspace path succeeds.
+test_rationale: Every assertion is made on what the deployed maker actually did to real repositories --
+  its one JSON answer, its exit code, and the state of the workspace, the hub and the main copy afterwards.
+  A direct-import unit test would pass while the deployed copy is stale or mis-deployed (F13), and a git
+  mock cannot show the half-made and occupied states this family exists to handle.
+origin_agent: business-analyst
+created: 2026-09-25
+amended_by: []
+superseded_by: null
+covered_by: [BO-4300b-5-i]
+implemented_by:
+- tickets/00_inbox/TICKET-20260927-BO-4300b-5.md
+notes: |
+  BO-4300b's notes: "any platform" includes a Windows/WSL mix. Today two worktree entries made
+  from WSL are stuck "locked initializing" and unusable from Windows because the gitdir file
+  embeds one platform's path spelling; decision 1 (clones embed no absolute path) makes this
+  achievable.
+target_epic: EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace

@@ -4,12 +4,17 @@ description: "Step-by-step guide for enabling, disabling, configuring, and opt-i
 type: how_to
 status: active
 created: 2026-05-28
-last_updated: 2026-08-31
+last_updated: 2026-09-25
 components:
   - build_pipeline
+  - ux_prototyping
 related_docs:
   - docs/how-to/creating-a-claude-code-hook.md
+  - docs/how-to/transform-hooks-in-precommit.md
   - docs/architecture/components/commit-guardian.md
+  - docs/architecture/adrs/ADR-049-record-checker-trigger-scope.md
+  - docs/acceptance-criteria/guardrail-engine/GE-120-green-means-checked/GE-120.yaml
+  - docs/acceptance-criteria/ux-prototyping/UXP-700-truthful-project-record/UXP-700c-3.yaml
   - templates/scripts/commit_guardian/commit_guardian.json
 ---
 
@@ -333,111 +338,86 @@ backed by the shared `_authored_change` source — see
 
 ## Transform hooks and the transform tier
 
-Pre-commit hooks in leafcutter fall into two tiers, recorded in the `tier`
-field of each entry in the `hooks_manifest.hooks` array inside
-`commit_guardian.json`:
+> See [transform-hooks-in-precommit.md](transform-hooks-in-precommit.md) for
+> the `judgment`/`transform` tier split, the two shipped transform hooks
+> (`transform-doc-frontmatter`, `transform-description-field`), how silent
+> auto-fix and re-staging works, hook ordering relative to validators, and
+> fail-open / absent-docs-layout no-op behavior.
 
-| Tier | Behavior | Exit code |
-|------|----------|-----------|
-| `judgment` | Inspects staged files and **blocks** the commit when a policy is violated. | Non-zero on failure |
-| `transform` | Edits staged files in place to fill missing data, re-stages them, and always exits 0. | Always 0 |
+---
 
-You can inspect the tier of any hook by looking at its entry in
-`scripts/commit_guardian/commit_guardian.json` (or
-`templates/scripts/commit_guardian/commit_guardian.json` in the package source).
+## The record's checker runs automatically (product-truth validation)
 
-### The two transform hooks
+The record's checker (`docs/product-truth/scripts/validate_product_truth.py`)
+is registered as `check-product-truth-validate` in `hooks_manifest.hooks[]`
+alongside every other pre-commit check in this guide — it is not a separate
+pipeline. See
+[ADR-049](../architecture/adrs/ADR-049-record-checker-trigger-scope.md) for
+the full decision and
+[GE-120](../acceptance-criteria/guardrail-engine/GE-120-green-means-checked/GE-120.yaml)
+for the guarantee it exists to uphold: green must mean *checked*, never
+*could not look*.
 
-Two transform hooks shipped with EPIC-PrecommitSafetyNet (ticket 02):
+### Trigger scope is derived, not hand-written
 
-#### `transform-doc-frontmatter`
+The hook's `files:` regex is not a literal you edit freely. It MUST equal
+`product_truth_checks.resolvable_pointer_trigger_pattern()` — the union of
+`RESOLVABLE_POINTER_TRIGGER_PATTERNS`
+(`docs/product-truth/scripts/product_truth_trigger_scope.py`), one
+repository root per pointer kind the checker can actually resolve (today:
+the record's own root, `docs/product-truth/`, plus
+`docs/acceptance-criteria/` for acceptance-criterion-id pointers).
 
-**Script:** `scripts/commit_guardian/transform_doc_frontmatter.py`
+If you widen `is_resolvable_pointer_target()` to recognise a new pointer
+kind (e.g. a file-path pointer), add that kind's root to
+`RESOLVABLE_POINTER_TRIGGER_PATTERNS` **in the same commit**, and update the
+duplicated `files:` value in `.pre-commit-config.yaml`,
+`scripts/commit_guardian/commit_guardian.json`, and
+`templates/scripts/commit_guardian/commit_guardian.json` to match. A test
+asserts the configured regex equals the derived value — see
+`unit_tests/product_truth/test_uxp_700c_3.py`. If the new pointer kind's
+targets cannot be named as a bounded set of repository roots, do not widen
+the regex to a catch-all — write a new ADR instead (ADR-049 sub-decision 3).
 
-Fills missing YAML frontmatter fields in staged `docs/*.md` files before
-the `check-doc-frontmatter` judgment hook runs. Specifically, it fills:
+### The hook's verdict is the gate's verdict
 
-- `created` — set to today's ISO date when absent.
-- `last_updated` — set to today's ISO date when absent.
-- `type` — set to the first value in `doc_frontmatter.allowed_types`
-  (default: `how-to`) when absent.
-- `status` — set to the first value in `doc_frontmatter.allowed_statuses`
-  (default: `draft`) when absent.
+`check-product-truth-validate` carries no `fail_open` and is never wired as
+advisory: its process exit status **is** the pre-commit result. A `failed`
+verdict blocks the commit; a `degraded` verdict (an unresolvable pointer) is
+never reported as `checked-and-sound`.
 
-These defaults are read from the `doc_frontmatter` section of
-`commit_guardian.json` at runtime.
+### What "does not run" means for an unrelated change
 
-The hook **never overwrites a field that already has a value**. If a field
-is present (even if blank), the hook leaves it untouched.
+A commit touching neither the record nor anything it resolvably points at
+never matches the derived regex above, so `check-product-truth-validate` is
+not invoked and no product-truth verdict is reported for that commit — this
+is checked against the *configured trigger scope*, never by instrumenting
+whether the process launched.
 
-#### `transform-description-field`
+### Sequence: the record's checker as one of the automatic checks
 
-**Script:** `scripts/commit_guardian/transform_description_field.py`
+```mermaid
+sequenceDiagram
+    participant Dev as Developer
+    participant Git as git commit
+    participant PC as pre-commit
+    participant Scope as Derived trigger scope
+    participant Checker as check-product-truth-validate
 
-Fills a missing `description` field in staged `docs/*.md` files before the
-`check-description-field` judgment hook runs. When `description` is absent
-and a `title` field is present, it writes a stub description derived from
-the title: `"Overview of <title>."`.
-
-If `description` is already present, or if there is no `title` to derive
-from, the hook makes no edit and exits 0 immediately.
-
-### How transform hooks work (silent auto-fix and re-stage)
-
-When a transform hook fills a missing field, it:
-
-1. Edits the file on disk in place.
-2. Re-stages the file with `git add` so the corrected content is included in
-   the commit — no manual `git add` required.
-3. Prints a brief informational message to stderr (e.g.
-   `[transform-doc-frontmatter] docs/foo.md: filled 2 missing frontmatter field(s)`).
-4. Exits 0.
-
-The result: the commit proceeds with the corrected file. No user action is
-needed, and the commit is not blocked. If you run `git show HEAD` after the
-commit, you will see the filled fields in the staged content as if you had
-added them yourself.
-
-### Hook ordering: transforms run before validators
-
-Within a single pre-commit run, transform hooks execute **before** their
-matching judgment (validator) hooks. In `commit_guardian.json` the order is:
-
-1. `transform-doc-frontmatter` (`tier: transform`)
-2. `transform-description-field` (`tier: transform`)
-3. `check-description-field` (`tier: judgment`)
-
-This ensures that by the time the validator runs, the transform hook has
-already filled any deterministically-derivable missing field. The validator
-then sees a complete file and passes cleanly.
-
-> **Note:** `check-doc-frontmatter` runs earlier in the pipeline than the
-> two transform hooks above; see the full ordered list in `commit_guardian.json`.
-> The transform hooks cover only the fields they are responsible for.
-
-### Fail-open and absent-docs-layout no-op behavior
-
-Both transform hooks are **fail-open**: if anything goes wrong during
-parsing or writing, the hook logs a warning to stderr and exits 0. A commit
-is **never blocked** by a transform hook.
-
-Specific fail-open cases:
-
-- **No YAML frontmatter block** — the file does not start with `---`:
-  the hook skips the file and exits 0.
-- **YAML parse failure** — the frontmatter block exists but cannot be
-  parsed (e.g. invalid YAML): the hook skips the file and exits 0.
-- **`pyyaml` not installed** — the hook skips all files and exits 0.
-- **No staged docs files** — no `.md` files under the configured `docs_dir`
-  are staged: the hook exits 0 immediately.
-- **`docs/` layout absent** — if the project does not have a `docs/`
-  directory (or uses a non-default `docs_dir` that does not exist), no
-  files will match the git-diff filter and the hook exits 0 silently.
-
-This means adopters in projects without a `docs/` layout — or with a
-`docs_dir` override that points elsewhere — are completely unaffected by
-these hooks. The hooks stay silent and never interfere with unrelated
-projects.
+    Dev->>Git: git commit (staged files)
+    Git->>PC: run every hooks_manifest entry
+    PC->>Scope: staged set vs resolvable_pointer_trigger_pattern()?
+    alt touches the record or a resolvable pointer target
+        Scope-->>PC: match
+        PC->>Checker: run validate_product_truth.py
+        Checker-->>PC: exit status = verdict (checked-and-sound / degraded / failed)
+        PC-->>Git: propagate exit status unchanged
+    else touches neither
+        Scope-->>PC: no match
+        PC-->>Git: check-product-truth-validate not invoked, no verdict reported
+    end
+    Git-->>Dev: commit blocked or allowed
+```
 
 ---
 
@@ -549,3 +529,7 @@ See `docs/pre-commit-hooks.md` for the full configuration reference table.
   Guardian system overview and integration guide.
 - `docs/how-to/creating-a-claude-code-hook.md` — how to add Claude Code
   tool-event hooks (a separate system).
+- [`docs/how-to/transform-hooks-in-precommit.md`](transform-hooks-in-precommit.md) —
+  the transform tier, extracted from this guide.
+- [`docs/architecture/adrs/ADR-049-record-checker-trigger-scope.md`](../architecture/adrs/ADR-049-record-checker-trigger-scope.md) —
+  why the record's checker's trigger scope is derived, not hand-written.

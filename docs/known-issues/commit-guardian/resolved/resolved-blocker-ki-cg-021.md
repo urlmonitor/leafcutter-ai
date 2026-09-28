@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: '2026-08-18'
-last_updated: '2026-08-18'
+last_updated: '2026-09-25'
 components:
   - commit_guardian
 related_docs:
@@ -21,11 +21,15 @@ related_docs:
 > original grading is the `**Severity:**` line below, unchanged.
 
 - **Severity:** blocker
-- **Status:** resolved — see "Re-verified and closed 2026-09-23" below
-- **Status (as filed):** open — **the code is NOT on `main`**; `check_identifier_uniqueness.py` and its
-  four scanners live only on the unmerged PR #495 (`feat/ge-122-integrity-guard`). Filed
-  here because it is the gating precondition on landing that branch: the merge must not be
-  taken as "the gate now exists".
+- **Status:** **RESOLVED** (registered by `243b6489` / PR #635, GE-122d-6; CI stage added by
+  `8cc9fe3c` / PR #682, GE-122d-1; code itself merged via `e429421e` / PR #495; verified
+  2026-09-25 by grepping the registry, pre-commit config and CI on `origin/main`, running the
+  deployed hook entry, and a green targeted pytest run — see Resolution; independently
+  re-verified 2026-09-23, see "Also verified 2026-09-23" below)
+- **Original status (2026-08-18):** open — **the code was NOT on `main`**;
+  `check_identifier_uniqueness.py` and its four scanners lived only on the then-unmerged PR
+  #495 (`feat/ge-122-integrity-guard`). Filed at the time because it was the gating
+  precondition on landing that branch: the merge was not to be taken as "the gate now exists".
 - **Occurrences:** 1
 - **First seen:** 2026-08-25 · **Last seen:** 2026-08-25
 - **Where:** PR #495's `templates/scripts/commit_guardian/check_identifier_uniqueness.py`;
@@ -76,11 +80,38 @@ missing namespace roots, **then** register, **then** re-run the deployed-consume
 **Pattern:** `docs/reference/false-green-mechanisms.md` — a gate whose reachability was
 never asked about; verification that stops at the function and never reaches the entry point.
 
-**Re-verified and closed 2026-09-23 — FIXED.** PR #495 (`feat(guardrail-engine): whole-collection
-uniqueness pass for four numbered namespaces (GE-122)`) merged to `main`, and the follow-on
-registration commit `243b6489` (`feat(guardrail-engine): register the whole-collection numbering
-pass so it actually runs (GE-122d-6)`) landed the exact fix direction this entry prescribed
-("do not register it in the same change that ships it"). Confirmed against the current worktree:
+## Resolution
+
+Verified 2026-09-25 against `origin/main` (`4b05997a`); every claim in the Symptom is gone.
+
+- **Code on main.** `e429421e` (PR #495, 2026-08-26) merged
+  `templates/scripts/commit_guardian/check_identifier_uniqueness.py` with
+  `_uniqueness_scanners.py` and `_uniqueness_types.py`.
+- **Registered in the hook registry.** `243b6489` (PR #635, 2026-09-01, *"register the
+  whole-collection numbering pass so it actually runs (GE-122d-6)"*) added
+  `"id": "check-identifier-uniqueness"` to `commit_guardian.json` (line 578). Its entry runs
+  `run_hook.py .../check_identifier_uniqueness.py`. The same PR added
+  `scripts/build_architecture_scaffold.py`, which scaffolds the namespace roots. That follows
+  the order this KI's Fix direction required (see `KI-BO-030`).
+- **Present in the generated pre-commit config.** `.pre-commit-config.yaml` is gitignored and
+  built from the registry. The deployed copy carries `id: check-identifier-uniqueness` with
+  `always_run: true, pass_filenames: false`.
+- **Runs in CI.** `8cc9fe3c` (PR #682, GE-122d-1) added the `numbering-guarantee-valid` job to
+  `.github/workflows/ci.yml`. It runs `pre-commit run check-identifier-uniqueness`.
+- **It runs.** The deployed entry
+  `python .leafcutter/scripts/commit_guardian/run_hook.py .leafcutter/scripts/commit_guardian/check_identifier_uniqueness.py`
+  exits 0 and reports all four namespaces as `OK`. It inspected 4239 acceptance-criteria,
+  45 decisions, 27 diagrams and 327 work-items.
+- **Tests.** `python -m pytest unit_tests/commit_guardian/test_ge_122d_6.py
+  unit_tests/commit_guardian/test_ge_122d_1.py unit_tests/portability/test_ge_122d_6.py -q`
+  passed with 7 tests in 48s.
+
+**Also verified 2026-09-23 (independent pass, before the above) — FIXED.** PR #495
+(`feat(guardrail-engine): whole-collection uniqueness pass for four numbered namespaces
+(GE-122)`) merged to `main`, and the follow-on registration commit `243b6489`
+(`feat(guardrail-engine): register the whole-collection numbering pass so it actually runs
+(GE-122d-6)`) landed the exact fix direction this entry prescribed ("do not register it in
+the same change that ships it"). Confirmed against the worktree at that time:
 
 ```
 $ grep -n "check-identifier-uniqueness" templates/scripts/commit_guardian/commit_guardian.json
@@ -95,13 +126,13 @@ $ grep -n "check-identifier-uniqueness" .pre-commit-config.yaml
 114:        entry: python .leafcutter/scripts/commit_guardian/run_hook.py .leafcutter/scripts/commit_guardian/check_identifier_uniqueness.py
 ```
 
-`check_identifier_uniqueness.py` is present in both `templates/scripts/commit_guardian/` and the
-deployed `.leafcutter/scripts/commit_guardian/`, and is now named by both the hook manifest and the
-generated `.pre-commit-config.yaml` — the two files this entry's own reproduction grepped and found
-empty. The registration's own `_comment` records that its dependencies (GE-122d-3-ii's namespace
-scaffolding and GE-122e-3's excuse-free collection pass) were confirmed landed first, per this
-entry's fix direction. The specific mechanism this entry named — a fully-built, green-tested gate
-invoked by nothing in production — is gone: the gate is now reachable through its production entry
-point in both the source manifest and the generated consumer config.
+`check_identifier_uniqueness.py` was present in both `templates/scripts/commit_guardian/` and
+the deployed `.leafcutter/scripts/commit_guardian/`, and was named by both the hook manifest
+and the generated `.pre-commit-config.yaml` — the two files this entry's own reproduction
+grepped and found empty. The registration's own `_comment` records that its dependencies
+(GE-122d-3-ii's namespace scaffolding and GE-122e-3's excuse-free collection pass) were
+confirmed landed first, per this entry's fix direction. This independently corroborates the
+2026-09-25 pass above, run against a slightly later `main` and with the addition of the CI
+stage (`8cc9fe3c`) this earlier pass did not check for.
 
 ---

@@ -422,8 +422,10 @@ class TestRecoveryScanBeforeTriage(unittest.TestCase):
                     instructionSnippet: instructions.slice(0, 120),
                 });
 
-                // Detect git status scan (inside scanOrphanedAcDrafts).
-                if (instructions.includes('git status --porcelain') &&
+                // Detect git status scan (inside scanOrphanedAcDrafts). With a
+                // real authoring worktree the command is anchored
+                // (`git -C "<path>" status --porcelain`), not the bare form.
+                if (/git(?: -C "[^"]*")? status --porcelain/.test(instructions) &&
                     instructions.includes('docs/acceptance-criteria') &&
                     globalThis.__firstGitStatusCallIndex === null) {
                     globalThis.__firstGitStatusCallIndex = callIndex;
@@ -618,8 +620,10 @@ class TestResolveOrphanedDraftsYesBranch(unittest.TestCase):
                 if (agentType === 'status-checker') {
                     // E2 commitStageOutput() runs a fail-closed no-main branch
                     // check before committing the orphans — confirm a non-main
-                    // authoring branch so the commit agent is dispatched.
-                    if (instructions.includes('git branch --show-current')) {
+                    // authoring branch so the commit agent is dispatched. With
+                    // a real authoring worktree the command is anchored
+                    // (`git -C "<path>" branch --show-current`), not bare.
+                    if (/git(?: -C "[^"]*")? branch --show-current/.test(instructions)) {
                         return { output: 'ac-authoring/test', exit_code: 0 };
                     }
                     const isFinalGate = instructions.includes('IT PO v3 has enriched');

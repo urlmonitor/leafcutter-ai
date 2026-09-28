@@ -1,0 +1,252 @@
+id: BO-4300a-1-ia
+title: No workflow body asks an agent to make a workspace in its own words
+component: build-orchestration
+components:
+- worktree_manager
+- build_orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: critical
+roadmap_phase: phase_1
+change_target: pipeline
+risk_surface: contract_boundary
+criteria: |
+  Given each workflow that needs a workspace is run with a recording stand-in in
+    place of every agent it dispatches,
+  When the workflow reaches the point where it needs a workspace,
+  Then it either receives the workspace maker's answer as part of its input, or
+    issues exactly one request, which asks for the workspace maker to be run
+    unchanged and its answer relayed word for word,
+  And no dispatched request asks an agent to create, copy, set up, link or
+    repair a workspace by steps of the agent's own choosing,
+  And no workspace request is dispatched to an agent that is not permitted to
+    run commands.
+
+  Given every workflow the project delivers, and the agents' permissions to run
+    shell commands as they stand when the check runs,
+  When every step of every workflow that asks an agent to run a shell command is
+    checked -- including steps that a single run of the workflow does not reach --
+  Then no such step is sent to an agent that is not permitted to run shell
+    commands, and an agent with no stated permission counts as not permitted,
+  And each offending step is reported by workflow, step, agent and the command it
+    asks for,
+  And a workflow added later, or a change to an agent's permission, is covered
+    by the same check without anyone editing a list,
+  And when an agent asked to run a shell command declines, answers in prose, or
+    answers without a result, the workflow ends with an error that quotes the
+    answer received, and no later step of that workflow is dispatched -- a
+    refusal is never taken as the step having run.
+depends_on:
+- BO-4300a-1
+doc_links:
+- path: docs/analysis/2026-09-25-worktree-creation-consolidation.md
+  relationship: describes
+  status: exists
+- path: docs/analysis/2026-09-25-worktree-failure-modes.md
+  relationship: describes
+  status: exists
+- path: docs/analysis/2026-09-25-worktree-component-proposal.md
+  relationship: describes
+  status: exists
+- path: docs/architecture/components/worktree-manager.md
+  relationship: describes
+  status: exists
+  relevance: Component page for the one maker; rewritten for clones under BO-4300a-4.
+- path: docs/architecture/adrs/ADR-030-dual-engine-workflow-support.md
+  relationship: constrains
+  status: exists
+  relevance: E2 workflow bodies have no filesystem or process access; agent() schema validation.
+- path: docs/architecture/adrs/ADR-006-flatten-supervisor-chain.md
+  relationship: constrains
+  status: exists
+  relevance: Depth-1 dispatch rules for agents a workflow may call.
+- path: docs/testing/test-angles.md
+  relationship: describes
+  status: exists
+  relevance: Angle taxonomy used by this record's test_spec.
+assigned_agent: python-coder
+estimated_complexity: L
+delivers_to: null
+expects_from:
+  ac_id: BO-4300a-1-ib
+  contract: 'args.workspace: the maker''s ensure answer (a JSON object per BO-4300c-2) passed verbatim
+    by the workflow''s entry command or skill; absent when the workflow must obtain the workspace itself
+    via one verbatim dispatch.'
+package_surface: false
+it_requirements:
+- 'Workflow bodies run in the E2 engine with no filesystem or process access (ADR-030). They reach the
+  maker only through (a) args.workspace -- the maker''s JSON object passed verbatim by the entry command
+  or skill (BO-4300a-1-ib) -- or (b) exactly one agent() dispatch, carrying a result schema, to an agent
+  whose registry entry has permits_shell: true, instructing it to run one exact absolute command unchanged
+  and return stdout verbatim. Never status-checker (permits_shell: false), never free-form set-up steps.'
+- 'Remove every free-form workspace instruction from the workflow bodies: build-feature.js''s ''Open a
+  NEW git worktree ... Bootstrap it (copy/symlink .leafcutter ...)'' prompt, the resolver and branch-check
+  steps plan-feature.js sends to status-checker, finalize-feature.js''s `git worktree add/remove` and
+  `rm -rf` prompts, and fast-lane-ship.js''s create prompt. Line numbers in the analysis are hints; verify
+  against HEAD.'
+- A workspace dispatch's prompt carries only the exact absolute maker command and the instruction to run
+  it unchanged and relay stdout verbatim; the agent's reply is parsed with the BO-4300c-2 schema.
+- 'ONE SHARED DISPATCH HELPER (duplication audit C3/C2): the workspace dispatch is issued only through
+  the dispatch helper in the WORKSPACE-ANSWER block delivered by BO-4300c-3 (build-inlined, byte-identical
+  in every consuming workflow). No workflow builds its own workspace dispatch or its own reply parsing.'
+- 'Reply handling applies to EVERY step in every workflow that asks an agent to run a shell command, not
+  only workspace dispatches: the dispatch carries a result schema; a decline, a prose reply, a non-JSON
+  reply, or a reply without the result the step asked for (for the workspace dispatch: JSON without status)
+  is an error that ends the workflow, and the error quotes the reply received. No later step of that workflow
+  is dispatched after such a reply, and a refusal is never taken as the step having run. For the workspace
+  dispatch there is additionally no fallback to the current checkout, the epic folder or the start folder.
+  The rule is enforced in one shared place in the workflow runtime (not re-implemented per workflow), so a
+  new workflow inherits it.'
+- 'REPO-WIDE SHELL-DISPATCH LINT (duplication audit C2; covers EVERY workflow, not only workspace dispatches):
+  a test fails when any agent dispatch in any templates/workflows-js/*.js whose prompt instructs the agent
+  to run a shell command names an agentType whose config/agent_registry.json entry does not have permits_shell:
+  true (absent counts as not permitted). The workflow set is enumerated from the directory and the registry
+  is read at test time -- no hard-coded lists. What counts as "a prompt that runs a shell command" is
+  one declared, reviewed rule held in one place in the test (e.g. the prompt, including template-literal
+  fragments, names a command line starting with git, gh, python/python3, node/npm, pytest, rm, mv, cp,
+  bash/sh or pwsh), and the test carries a self-check proving the rule catches a known status-checker
+  git dispatch. Each failure names the workflow, the dispatch label or location, the agentType and the
+  command seen.'
+- 'Blast radius of the lint (verified 2026-09-25): 62 dispatches target status-checker (permits_shell:
+  false), and only worktree-agent has permits_shell: true -- commit, test-runner, python-coder and others
+  have no permits_shell field at all. The lint therefore goes red on today''s tree. Making it green is
+  in scope of this record: each offending dispatch is moved to a shell-permitted agent, or the registry
+  entry of an agent that genuinely runs shell by charter gains permits_shell: true with that charter
+  change reviewed; no dispatch is exempted by name.'
+- 'Commit spelling (KI-CG-20260925-commit-delegation-hook-misses-git-dash-c): no workflow prompt this record
+  touches spells a commit as `git -C <path> commit`; commits go through the commit agent per CLAUDE.md
+  Commit Delegation.'
+- 'The set of workflows under test is every workflow in the deployed workflow set, and the set of shell-permitted
+  agents is read from config/agent_registry.json (permits_shell: true) at test time -- neither is a hard-coded
+  list, so a new workflow or a changed registry entry inherits the check.'
+- Workflow edits are made in templates/workflows-js/*.js and reach .claude/workflows/ only through the
+  build; the deployed copy is what the tests run.
+- Proof runs the workflow under unit_tests/_workflow_engine_harness.py -- the deployed copy the build
+  produces, so the build's workflow transform is exercised -- with label-scripted agent replies, and asserts
+  on the RECORDED dispatch list, never on workflow source text. The harness must be able to model a workspace
+  step that declines its task, answers in prose, answers exit 0 with a non-JSON path, or answers JSON
+  without status (F13), and any other shell-running step that declines, answers in prose or answers
+  without its result; extending the harness for this is in scope of the first AC that needs it.
+- 'Must handle errors per the project error handling policy: a condition the maker cannot classify is
+  an error answer (code INTERNAL_ERROR) whose message names it -- never an ok answer, and never a traceback
+  on stdout.'
+test_required: true
+test_spec:
+- name: test_each_workflow_receives_answer_or_issues_one_verbatim_maker_request
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: criterion
+  description: Every deployed workflow that needs a workspace, run with recording stand-ins, either consumes
+    args.workspace or records exactly one workspace dispatch whose prompt is the exact maker command plus
+    a verbatim-relay instruction.
+- name: test_no_dispatch_asks_an_agent_to_build_a_workspace_by_its_own_steps
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: criterion
+  description: No recorded dispatch prompt in any workflow run asks an agent to create, copy, set up,
+    link or repair a workspace (no clone/worktree/symlink/copy/bootstrap instructions outside the one
+    maker command).
+- name: test_workspace_requests_only_reach_shell_permitted_agents
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: boundary
+  description: 'Every recorded workspace dispatch targets an agent whose registry entry has permits_shell:
+    true, read from the registry at test time.'
+- name: test_every_deployed_workflow_is_covered_without_editing_a_list
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: seam
+  description: The workflows exercised are enumerated from the deployed workflow directory, so adding
+    a workflow extends the check automatically.
+- name: test_every_shell_running_dispatch_in_every_workflow_targets_a_shell_permitted_agent
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: unit
+  angle: seam
+  description: 'Repo-wide lint over every templates/workflows-js/*.js: each agent dispatch whose prompt
+    runs a shell command names an agentType with permits_shell: true in config/agent_registry.json, read
+    at test time (an agent with no permits_shell field counts as not permitted), including dispatch sites
+    a single run does not reach; each violation is reported by workflow, step (dispatch label or location),
+    agentType and the command the prompt asks for.'
+- name: test_shell_dispatch_lint_catches_a_status_checker_git_dispatch
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: unit
+  angle: failure
+  description: Fed a fixture workflow that asks status-checker to run `git reset --hard`, and one that
+    asks an agent without a permits_shell field to run a python script, the lint reports both, each report
+    naming workflow, step, agent and command; fed the same prompts dispatched to worktree-agent it reports
+    neither.
+- name: test_refused_non_workspace_shell_step_ends_the_workflow_with_a_quoting_error
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: failure
+  description: 'Through unit_tests/_workflow_engine_harness.py, a deployed workflow is run with a NON-workspace
+    shell-running step (e.g. a git or test command) scripted to (a) decline, (b) answer in prose, and (c)
+    answer without the requested result; in each case the workflow ends with an error whose text quotes
+    the scripted reply, and the recorded dispatch list contains no step after the refused one.'
+- name: test_workspace_dispatch_goes_through_the_shared_block_helper
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: criterion
+  description: In each deployed workflow run that issues a workspace dispatch, the recorded dispatch's
+    prompt, agentType and schema are exactly those the WORKSPACE-ANSWER block's helper produces for the
+    same command.
+test_rationale: The 2026-09-25 incident was a perfect-enough maker with a caller that carried on, and
+  every source grep of plan-feature.js would have passed. So the assertions are made on the recorded dispatch
+  list of a real workflow run with scripted hostile answers, which is the only place 'no later step was
+  dispatched' can be observed. The shell-dispatch lint is the one deliberate static check here -- a census
+  of every dispatch site, including branches a harness run does not reach -- and it carries its own self-check
+  so a rule that matches nothing cannot pass silently.
+origin_agent: it-po
+created: 2026-09-25
+amended_by:
+- reason: duplication-audit-items-3-4-5
+  by: it-po
+  at: 2026-09-25
+  note: >-
+    Technical fields only; criteria unchanged. Item 3 (C2): repo-wide lint that every shell-running
+    dispatch in every workflow targets a permits_shell agent, with a self-check; reply-handling rules
+    kept (schema; refusal, prose, non-JSON or missing status is an error; no fallback to the current
+    checkout). Item 4 (C3): the workspace dispatch goes only through the build-inlined WORKSPACE-ANSWER
+    block helper (BO-4300c-3). Item 5: no `git -C <path> commit` spelling. readiness reset to reviewed.
+- reason: duplication-audit-scope-widening
+  by: business-analyst
+  at: 2026-09-27
+  note: >-
+    Criteria only, per the user's decision to widen the criteria to the reach of the repo-wide
+    shell-dispatch lint already in it_requirements. Added a second scenario: across every workflow,
+    no step that asks an agent to run a shell command goes to an agent not permitted to run one
+    (no stated permission counts as not permitted), each offender is reported by workflow, step,
+    agent and command, new workflows and permission changes are covered without a list edit, and a
+    refusal, prose or result-less answer to such a step ends the run with an error quoting it. The
+    workspace-dispatch scenario is unchanged. it_requirements, test_spec and contracts untouched
+    (IT PO follows). readiness stays reviewed.
+- reason: audit-decisions-finalised
+  by: it-po
+  at: 2026-09-27
+  note: >-
+    Technical fields only; criteria unchanged. Aligned with the BA's widened second scenario: the
+    reply-handling it_requirement now covers every shell-running step in every workflow (decline, prose
+    or result-less reply ends the workflow with an error quoting it; no later step dispatched; enforced
+    in one shared place). Added a runtime harness test for a refused non-workspace shell step, and the
+    lint tests' report now names workflow, step, agent and command, with no-permission counting as not
+    permitted. readiness stays reviewed.
+superseded_by: null
+covered_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260927-BO-4300a-1-ia.md
+notes: 'IT PO split of BO-4300a-1-i (2026-09-25), workflow-body half: carries the parent''s criteria verbatim.
+  The surface is templates/workflows-js/*.js (python-coder). The entry-skill half (skills and commands
+  that run the maker and pass its answer in) is BO-4300a-1-ib (llm-expert). F1 and F12; verified on the
+  recorded dispatch list of a workflow run, not on source text.'
+target_epic: EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace

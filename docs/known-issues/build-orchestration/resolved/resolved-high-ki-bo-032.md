@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: '2026-08-18'
-last_updated: '2026-09-23'
+last_updated: '2026-09-25'
 components:
   - build_orchestration
 related_docs:
@@ -21,8 +21,11 @@ related_docs:
 > original grading is the `**Severity:**` line below, unchanged.
 
 - **Severity:** high — the failure is a green run against the wrong work, with no signal
-- **Status:** **RESOLVED 2026-09-23** — see the dated closure note at the foot of this entry.
-  Original line, preserved: open
+- **Status:** **RESOLVED** (`4de20a79`, PR #675 — the orphan `fast-lane-build.js` was
+  deleted and `/fast-lane-build` now routes to `fast-lane-ship` with `{ac: $ARGUMENTS}`;
+  verified 2026-09-25 by grep for callers plus a live `select_connected` probe and 39
+  passing tests — see Resolution; independently re-verified 2026-09-23, see "Also verified
+  2026-09-23" below)
 - **Occurrences:** 1
 - **First seen:** 2026-09-01 · **Last seen:** 2026-09-01
 - **Where:** `templates/workflows-js/fast-lane-build.js` (hardcoded `select_batch`
@@ -76,28 +79,54 @@ this one. The shared shape is worth naming: the fast lane's failure mode is cons
 **successful run against the wrong inputs**, which no gate downstream of input selection can
 detect.
 
-**Closed 2026-09-23.** Re-verified against current code, not this entry's narrative.
-`templates/workflows-js/fast-lane-build.js` — the file this entry names as hardcoding
-`select_batch --limit N` and dropping the named AC — no longer exists. It was deleted
-2026-09-01 in `4de20a79` ("refactor(build-orchestration): delete the orphaned second
-fast-lane runner", PR #675 — itself closing the separate `KI-BO-006`; unrelated to the
-ACD-2100 epic). `/fast-lane-build`'s command template (`templates/commands/fast-lane-build.md`)
-is now a thin shim that passes the named AC straight through:
-`Workflow("fast-lane-ship", { ac: $ARGUMENTS })`.
+## Resolution
 
-`fast-lane-ship.js:864-866` resolves that id via
-`select_connected --ac ${targetAc} --ac-root ${acStoreRoot} --exclude-structural-parent` —
-exactly Fix-direction #1 ("Give `fast-lane-build.js` the `ac` argument its sibling already
-has"). `scripts/build_orchestration/fast_lane.py`'s own module docstring confirms the
-producibility check downstream of that resolution is "positive-declaration-only ... an
-unannotated record defaults to producible and readiness/priority/req_status/status are never
-read" — genuinely readiness-agnostic, not merely re-labelled.
+Verified 2026-09-25 on `main` at `d2fe85a1`.
 
-Confirmed behaviorally:
-`python -m pytest unit_tests/workflows/test_bo2400c1v_orphan_runner_removal.py unit_tests/workflows/test_bo2500d_gate_retirement.py unit_tests/workflows/test_fast_lane_ship_structure.py -q`
-→ 48 passed (2026-09-23).
+- **The defective runner is gone.** `templates/workflows-js/fast-lane-build.js` was deleted
+  in `4de20a79` (PR #675, 2026-09-01 12:30 +0200, "delete the orphaned second fast-lane
+  runner"). That commit landed a few hours *before* this KI was filed (`202a8082`, PR #670,
+  17:10 the same day), so the entry described a file that was already gone. No file named
+  `fast-lane-build*.js` exists in the repo now.
+- **No live caller of `select_batch`.** `grep -rln "select_batch\|selectBatch" --include=*.js`
+  finds nothing. The function survives in `_fl_selection.py` / `fast_lane.py` as a dormant
+  CLI subcommand, and its docstring says that nothing in the shipping lane invokes it.
+- **Fix direction half 1 is what shipped.** `/fast-lane-build`
+  (`templates/commands/fast-lane-build.md`) is a thin shim:
+  `Workflow("fast-lane-ship", { ac: $ARGUMENTS })`. `fast-lane-ship.js` exits with an error
+  when no AC id is given ("No AC id was supplied"). It then resolves the named AC through
+  `fast_lane.py select_connected --ac ${targetAc}`, which ignores readiness. It has no
+  batch fallback.
+- **Probe: draft ACs are built, not substituted.** Draft/todo ACs produced these results:
+  `select_connected --ac ACD-1200a-8-i` returned a 13-AC set that includes `ACD-1200a-8-i`.
+  `--ac ACD-1200` returned its 31-AC subtree. `select_connected --ac TKT-600a-1` (the
+  original repro, now `work_status: done`) returns `[]`. That empty result is the clean
+  no-op this entry describes, not a substitution.
+- **Tests:** `python -m pytest unit_tests/build_orchestration/test_fast_lane_connected.py
+  unit_tests/workflows/test_fast_lane_ship_structure.py -q` gave 39 passed.
 
-This fix predates the ACD-2100 epic (PR #675, 2026-09-01) and is unrelated to it, but the
-entry itself was never updated to reflect it.
+**Leftover doc staleness (this is not the defect):** `docs/how-to/fast-lane-build.md`
+still describes a `select_batch` "Step 1" gate and an "at least one approved AC"
+prerequisite. That describes the deleted runner. It misleads readers, but no code path
+behaves that way.
+
+**Also verified 2026-09-23 (independent pass, before the above).** Re-verified against
+current code, not this entry's narrative. `templates/workflows-js/fast-lane-build.js` — the
+file this entry names as hardcoding `select_batch --limit N` and dropping the named AC — no
+longer existed. It was deleted 2026-09-01 in `4de20a79` ("refactor(build-orchestration):
+delete the orphaned second fast-lane runner", PR #675 — itself closing the separate
+`KI-BO-006`; unrelated to the ACD-2100 epic). `/fast-lane-build`'s command template
+(`templates/commands/fast-lane-build.md`) was confirmed to be a thin shim that passes the
+named AC straight through: `Workflow("fast-lane-ship", { ac: $ARGUMENTS })`.
+
+`fast-lane-ship.js:864-866` resolved that id via `select_connected --ac ${targetAc}
+--ac-root ${acStoreRoot} --exclude-structural-parent` — exactly Fix-direction #1 ("Give
+`fast-lane-build.js` the `ac` argument its sibling already has"). Confirmed behaviorally with
+a different test selection than the 2026-09-25 pass above: `python -m pytest
+unit_tests/workflows/test_bo2400c1v_orphan_runner_removal.py
+unit_tests/workflows/test_bo2500d_gate_retirement.py
+unit_tests/workflows/test_fast_lane_ship_structure.py -q` → 48 passed. This fix predates the
+ACD-2100 epic (PR #675, 2026-09-01) and is unrelated to it, but the entry itself was never
+updated to reflect it until both of these audits ran.
 
 ---

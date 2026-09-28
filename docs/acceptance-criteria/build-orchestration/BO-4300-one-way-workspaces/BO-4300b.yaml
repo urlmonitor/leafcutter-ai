@@ -1,0 +1,61 @@
+id: BO-4300b
+title: "Getting a workspace works from wherever you start, on any machine"
+component: build-orchestration
+components:
+  - worktree_manager
+  - build_orchestration
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: critical
+roadmap_phase: phase_1
+criteria: |
+  From any folder, in any project, on any platform -- the same result.
+
+  It makes no difference whether you begin at the top of the project, in the folder
+  above it, inside another workspace, or in a project that simply installed these tools,
+  nor whether you are on Windows, Linux or macOS. The right project is found, or you are
+  told which candidates it could not choose between -- never guessed -- and the workspace
+  lands in a predictable place for that project.
+depends_on: [BO-4300]
+doc_links:
+  - path: docs/analysis/2026-09-25-worktree-failure-modes.md
+    relationship: related
+    status: exists
+    relevance: F3 (results depend on the working directory) and F11 (the installed copy cannot find the repository).
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-09-25
+amended_by: []
+superseded_by: null
+covered_by: [BO-4300b-1, BO-4300b-2, BO-4300b-3, BO-4300b-4, BO-4300b-5]
+implemented_by: []
+documentation_triggers: []
+documentation_rationale: >-
+  Success looks identical from every starting point, so there is nothing new for a user
+  to learn; the supported starting points and platforms belong in the reference doc
+  triggered by BO-4300a.
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  Origin: the 2026-09-25 run failed first because bare git ran from the workspace parent
+  (F3), and the installed copy of today's script cannot find the repository when it lives
+  outside it (F11, KI-ACD-004). The resolvers also disagree on ambiguity -- one takes the
+  first match, another refuses anything but exactly one. The customer intent is "refuse
+  when ambiguous, never guess".
+
+  OPEN, NOT DECIDED HERE: Q5 where workspaces live for a project that installed the tools
+  (inside the project, or beside it where every project in a folder would share one
+  directory). The intent is only "predictable per project". Q6 (whether the package
+  repository should carry its own stale install copy) bears on "the right project is
+  found" because today's resolver prefers that stale copy -- implementation, for IT PO.
+
+  Distinct from ACD-2100a, which is the requirements entry route finding its OWN files
+  from any folder. This record is about the workspace that any route receives.
+  "Any platform" includes a Windows/WSL mix: decision 1 (clones embed no absolute path)
+  is what makes that possible; paths handed back must be usable from either side.

@@ -16,7 +16,12 @@ criteria: |
   Then an AC that lacks concrete file targets (it_requirements) is flagged NOT implementation-ready,
   And an AC that lacks a test contract (a test_spec) is flagged NOT implementation-ready,
   And a flagged AC is held back for enrichment instead of being dispatched to a coder,
-  And the flag names which of the two is missing.
+  And the flag names which of the two is missing, as "missing file targets" and/or
+    "missing test contract",
+  And those two reasons are values of the store's single hold-reason list, which also holds
+    "test design pending", "reference file pending" and "file finding undecided"
+    (owned by ACD-2500b-2), so a record held for one of those other reasons is reported
+    under that reason's own name and is never folded into one of these two.
 depends_on: [ACD-1600c]
 doc_links:
   - path: docs/reference/ac-schema.md
@@ -32,11 +37,13 @@ it_requirements:
   - "The gate must flag an AC lacking concrete file targets (it_requirements naming file paths) as NOT implementation-ready and hold it back from the ready/dispatch set."
   - "The gate must flag an AC lacking a test contract (a test_spec, or an explicit test_required: false) as NOT implementation-ready."
   - "The flag must name which of {file targets, test contract} is missing — and both, when both are missing."
+  - "Reason strings must come from the single hold-reason list (docs/reference/ac-schema.md plus one code constant) defined by ACD-2500b-2 — never a second, gate-local list. If this AC builds before ACD-2500b-2, it creates that one list holding its two values and ACD-2500b-2 extends it in place."
+  - "The gate must not restrict its output to the two reasons it owns: a record carrying another listed reason must keep that reason in the report unchanged."
   - "The held-back decision must be data-driven on field presence, never keyed on specific AC ids."
   - "Gates on enrichment COMPLETENESS, complementary to and distinct from the approval-readiness gate (ACD-1200b). Ship advisory before required and grandfather schema_version < 2 ACs (ADR-026 rules 3-4)."
 delivers_to:
   agent: python-coder
-  contract: "The implementation-readiness completeness gate: a classifier that flags an AC NOT implementation-ready and names which of {file targets, test contract} is missing; consumed by the real-AC edge case ACD-1600c-1-i."
+  contract: "The implementation-readiness completeness gate: a classifier that flags an AC NOT implementation-ready with one or more reasons, each a value of the single hold-reason list (ACD-2500b-2): this gate owns 'missing file targets' and 'missing test contract' (both when both are absent); 'test design pending', 'reference file pending' and 'file finding undecided' are reported under their own names. Consumed by the real-AC edge case ACD-1600c-1-i and extended by ACD-2500b-2 / ACD-2500b-2-i."
 expects_from: null
 test_spec:
   - name: test_ac_missing_file_targets_flagged_not_ready
@@ -59,9 +66,18 @@ test_spec:
     framework: unittest
     type: unit
     description: "A flagged AC is excluded from the ready/dispatch set and held back for enrichment."
+  - name: test_flag_reasons_drawn_from_single_hold_reason_list
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    description: "Every reason the gate emits is a value of the single hold-reason list; a record held for a non-owned listed reason keeps that reason and is not reported as 'missing file targets' or 'missing test contract'."
 origin_agent: BrainCandy
 created: 2026-08-11
-amended_by: []
+amended_by:
+  - reason: "amend: hold reasons are values of the single hold-reason list owned by ACD-2500b-2 (adds 'test design pending', 'reference file pending', 'file finding undecided' as reported-by-name, never folded into the two owned reasons); the two owned reasons are unchanged. Criteria edited in place by it-po under explicit user direction (ACD-2500 amend-before-build list)."
+    date: '2026-09-25'
+    by: it-po
+    directed_by: user
 superseded_by: null
 covered_by:
   - ACD-1600c-1-i
@@ -75,3 +91,8 @@ notes: |
 
   IT-PO enrichment (2026-08-12): canonical gate surface scripts/ac_store/scan_ac_store.py,
   aligned with edge child ACD-1600c-1-i; data-driven on field presence, advisory-then-required.
+
+  AMENDMENT (2026-09-25, ACD-2500): the reason vocabulary is the single hold-reason list
+  owned by ACD-2500b-2. Build order: this AC may build first (it owns the two original
+  reasons and creates the one list if absent); ACD-2500b-2 already depends_on this AC and
+  extends the list. work_status stays todo (unchanged by the amendment).
