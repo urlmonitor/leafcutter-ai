@@ -61,6 +61,13 @@ doc_links:
       shared_reference_layout fixture body. The fixture must let
       SharedReferenceLayoutError propagate so the consumer fails at setup; a
       partial or empty layout handed back is phantom-done via the fixture layer.
+declared_files:
+  - path: scripts/suite_performance/_shared_layout_coordination.py
+    state: existing
+  - path: scripts/suite_performance/_shared_layout_producer.py
+    state: existing
+  - path: scripts/suite_performance/pytest_shared_reference_layout.py
+    state: existing
 assigned_agent: python-coder
 estimated_complexity: M
 it_requirements:

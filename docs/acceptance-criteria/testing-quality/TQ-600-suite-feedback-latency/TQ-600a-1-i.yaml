@@ -62,6 +62,11 @@ doc_links:
       constrains WHEN production is triggered, which this module does not decide
       — it decides where the layout lives and who gets to produce it. A coder
       reads this file; a coder does not edit it for this AC.
+declared_files:
+  - path: scripts/suite_performance/_shared_layout_producer.py
+    state: existing
+  - path: scripts/suite_performance/pytest_shared_reference_layout.py
+    state: existing
 assigned_agent: python-coder
 estimated_complexity: S
 it_requirements:
