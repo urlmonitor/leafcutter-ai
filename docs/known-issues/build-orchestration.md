@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: 2026-08-18
-last_updated: '2026-09-27'
+last_updated: '2026-09-28'
 components:
   - build_orchestration
 related_docs:
@@ -68,7 +68,7 @@ Severity in the **filename** is a three-level index bucket (`blocker` / `high` /
 
 Fixed issues move to [`build-orchestration/resolved/`](build-orchestration/resolved/) and are no longer listed as open. They are kept, not deleted.
 
-**Open: 52** (3 blocker, 30 high, 19 low) · **Resolved: 22**
+**Open: 54** (3 blocker, 32 high, 19 low) · **Resolved: 24**
 
 ## Open
 
@@ -110,6 +110,7 @@ Fixed issues move to [`build-orchestration/resolved/`](build-orchestration/resol
 | `high` | KI-BO-20260928-pause-verify-rejects-an-enveloped-read-back — plan-feature reports pause_persist_failed ("CANNOT be resumed") for a pause record that was written and read back, because the verify accepts `exists` only at the top level and worktree-agent wrapped the reply | [open-high-ki-bo-20260928-pause-verify-rejects-an-enveloped-read-back.md](build-orchestration/open-high-ki-bo-20260928-pause-verify-rejects-an-enveloped-read-back.md) |
 | `high` | KI-BO-20260928-stage-commit-leaves-the-edited-parent-unstaged — plan-feature's stage commit stages only the reported AC ids, never the parent whose covered_by the agent edited, so check-ac-parent-covered-by refuses every stage that adds children to an existing parent | [open-high-ki-bo-20260928-stage-commit-leaves-the-edited-parent-unstaged.md](build-orchestration/open-high-ki-bo-20260928-stage-commit-leaves-the-edited-parent-unstaged.md) |
 | `high` | KI-BO-20260928-release-decline-reported-as-partial-success — when the fast lane's release agent declines, its schema-shaped `released: []` reply is reported as "Release: partially succeeded", so the claimed ACs stay in_progress and nothing marks the release as failed | [open-high-ki-bo-20260928-release-decline-reported-as-partial-success.md](build-orchestration/open-high-ki-bo-20260928-release-decline-reported-as-partial-success.md) |
+| `high` | KI-BO-20260928-fast-lane-worktree-step-runs-another-clones-script — the worktree step names no repository root, so from a deleted cwd the agent ran another clone's script and opened the build worktree inside an unrelated project; launched from inside a worktree it opens it under worktrees/worktrees/ | [open-high-ki-bo-20260928-fast-lane-worktree-step-runs-another-clones-script.md](build-orchestration/open-high-ki-bo-20260928-fast-lane-worktree-step-runs-another-clones-script.md) |
 | `low` | KI-BO-008 — A structural test makes code comments load-bearing | [open-low-ki-bo-008.md](build-orchestration/open-low-ki-bo-008.md) |
 | `low` | KI-BO-009 — The harness default stub is generically positive, so a new gate silently breaks older fixtures | [open-low-ki-bo-009.md](build-orchestration/open-low-ki-bo-009.md) |
 | `low` | KI-BO-021 — TODO: `BO-2400e-4` is closed on two of its four specified tests, and the two missing ones are the pair that would survive a writer swap | [open-low-ki-bo-021.md](build-orchestration/open-low-ki-bo-021.md) |

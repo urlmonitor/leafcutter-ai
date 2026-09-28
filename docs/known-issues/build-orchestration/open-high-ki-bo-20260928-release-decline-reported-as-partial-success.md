@@ -26,11 +26,11 @@ related_docs:
   This is the same result `KI-BO-020` was filed for (stranded claims after an aborted run), except
   that the output now says the release partly worked.
 - **Status:** open. No AC.
-- **Occurrences:** 1 live. Fast-lane run `wf_e5633af0-efb`, 2026-09-25 ~12:30 UTC, for
+- **Occurrences:** 2 live. Fast-lane run `wf_e5633af0-efb`, 2026-09-25 ~12:30 UTC, for
   `INF-1100d-3-ii`. Recorded as side finding 1 of Occurrence 4 in `KI-BO-20260901-1620`. Not
-  re-reproduced.
-- **First seen:** 2026-09-25 · **Last seen:** 2026-09-25 (code re-read 2026-09-28 on
-  `origin/main` at `95903bbb`)
+  re-reproduced. Fast-lane run `wf_23078e50-7a4`, 2026-09-28, for `ACD-1600c-4` (Occurrence 2).
+- **First seen:** 2026-09-25 · **Last seen:** 2026-09-28 (Occurrence 2; code re-read 2026-09-28 on
+  `origin/main` at `95903bbb`, and again at `ae85a2a1` for Occurrence 2)
 - **Where:** `templates/workflows-js/fast-lane-ship.js`:
   - `RELEASE_SCHEMA`, `:423-430`. The only required field is `released`, and it has no refusal flag.
   - `buildReleaseOutcomeFields()`, `:543-588`. The branch at `:551-570` handles any array-valued
@@ -105,6 +105,34 @@ Both ACs were left `in_progress`. In that run they were in the copy of the store
 worktree, which the same occurrence records as having been created in a different repository.
 That worktree no longer exists, so the stranded state went with it. In the normal layout the store
 the run writes is the one the next run reads.
+
+## Occurrence 2 — 2026-09-28, fast-lane run `wf_23078e50-7a4` (`ACD-1600c-4`)
+
+Reported by the operator's session from the run's result. Not re-reproduced. Same path as
+Occurrence 1: `fastlane-context-bundle` (`python-coder`) declined (recorded as Occurrence 5 of
+`KI-BO-20260901-1620`), and the run dispatched `release-on-context-bundle-fail` to `python-coder`,
+which declined too. The run's result carried:
+
+- note: "Release: partially succeeded", with nothing listed as returned to todo
+- `release_attempted: true`, `release_error: null`, `release_executor: "python-coder"`
+- `released_ac_ids: []`
+- all five claimed ACs (`ACD-1600c-4`, `ACD-1600c-4-i`, `-4-ii`, `-4-iii`, `-4-iv`) left
+  `in_progress` in the store inside the run's worktree
+
+That is exactly the field combination the Detection section below describes, on a build of main
+that already carries the release-reporting fix (BO-2400f-10-ii). Re-checked on `ae85a2a1`:
+`buildReleaseOutcomeFields()` (`fast-lane-ship.js:543-588`) still takes the success branch for any
+array-valued `released` (`:551-570`), `RELEASE_EXECUTOR_AGENT_TYPE` is still `"python-coder"`
+(`:515`), and the release dispatch after a context-bundle failure is still `:1175-1181`. The
+chartered executor `command-step-runner` exists on main since 2026-09-28 but no fast-lane dispatch
+uses it yet (see `KI-BO-20260901-1620` Occurrence 5), so the decline that feeds this defect is
+still expected on every halting run.
+
+The stranded ACs were in the run's worktree copy of the store. That worktree was itself opened in
+the wrong place (`KI-BO-20260928-fast-lane-worktree-step-runs-another-clones-script`
+Occurrence 2), so the stranded state is not in the store a normal run reads. Release it with the
+Workaround below, pointed at that worktree's store, before removing the worktree, or delete the
+worktree.
 
 ## Detection
 
