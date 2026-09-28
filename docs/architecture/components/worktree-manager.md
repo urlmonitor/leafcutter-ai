@@ -1,35 +1,120 @@
 ---
-title: "Worktree Manager — Git Worktree Lifecycle"
-description: "Git worktree lifecycle management component that creates, tracks, and tears down isolated branch environments for parallel epic and ticket development."
+title: "Worktree Manager — One Workspace Maker, Per-Feature Clones"
+description: "Per-feature clone workspaces made, found, listed and cleared through one maker (templates/scripts/worktree.py + its resolver module), replacing the seven divergent worktree-creation recipes this component used to expose."
 flight_level: L3-Component
 status: active
 type: reference
 created: 2026-06-08
-last_updated: 2026-08-31
+last_updated: 2026-09-28
 components:
   - worktree_manager
+related_docs:
+  - docs/architecture/adrs/ADR-018-agent-isolation-topology.md
+  - docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+  - docs/analysis/2026-09-25-worktree-creation-consolidation.md
+  - docs/analysis/2026-09-25-worktree-isolation-decision-memo.md
+  - docs/analysis/2026-09-25-worktree-component-proposal.md
+  - docs/analysis/2026-09-25-worktree-delivered-maker.md
 ---
 
 # Worktree Manager
 
 ## Overview
 
-The Worktree Manager provides isolated branch environments for epic and ticket development using git worktrees. Each epic gets its own worktree so parallel tickets can proceed without cross-branch contamination.
+**Updated 2026-09-28 (BO-4300a-1).** The Worktree Manager no longer creates `git worktree`
+entries that share the main checkout's `.git`. Per [ADR-018 Amendment
+1](../adrs/ADR-018-agent-isolation-topology.md#amendment-1--2026-09-27--one-workspace-maker-hardlinked-clones-real-install-files),
+every workspace — for a long-running build, a quick fix, a requirements-authoring session,
+an agent following the workspace skill, or a person at a terminal — is now an independent,
+hardlinked local-path clone of the main checkout, made, found, listed and cleared through
+**one maker**: `templates/scripts/worktree.py`, deployed to `<install-root>/scripts/worktree.py`.
+No other code path in the package may create, clone, locate or remove a workspace once
+`BO-4300f-2` retires `setup_ticket_worktree.py`. The pre-2026-09-28 model (below, kept for
+history) described seven divergent recipes across two scripts, four workflows and one
+how-to; see the [worktree-consolidation
+analysis](../../analysis/2026-09-25-worktree-creation-consolidation.md) for that inventory
+and [its delivered-maker page §9](../../analysis/2026-09-25-worktree-delivered-maker.md#9-delivered--the-one-maker-2026-09-28)
+for how the maker replaces it.
+
+Each workspace carries a durable marker record (`.leafcutter/workspace.json`, outside
+version control) instead of being tracked through `git worktree list` — no git command
+lists clones, so `locate`/`list`/`verify` all read the marker registry directly.
+
+### Component map
+
+```mermaid
+graph TD
+    subgraph Callers["Five routes, one identically-shaped answer"]
+        EPIC["long-running build\nkind=epic"]
+        FEAT["quick fix\nkind=feature"]
+        AC["requirements-authoring session\nkind=ac"]
+        SKILL["agent via workspace skill\nkind=fastlane"]
+        TERM["person at a terminal\nkind=scratch"]
+    end
+
+    subgraph Maker["The one maker (templates/scripts/, deployed to <install-root>/scripts/)"]
+        WT["worktree.py\nensure · verify · where"]
+        ADMIN["worktree_admin.py\nlocate · list · remove"]
+        GIT["worktree_git.py\ngit / marker / install-build primitives"]
+        ROOT["workspace_root.py\nresolve(cwd, repo_root)"]
+    end
+
+    EPIC --> WT
+    FEAT --> WT
+    AC --> WT
+    SKILL --> WT
+    TERM --> WT
+
+    WT --> ROOT
+    WT --> GIT
+    WT --> ADMIN
+    ADMIN --> GIT
+
+    WT -.writes.-> MARKER[".leafcutter/workspace.json\nper-workspace marker registry"]
+    WT -.clones from.-> HUB[("hub = origin")]
+    WT -.lands in.-> LANDING["one landing place:\n<repo-parent>/worktrees/<kind>-<slug>"]
+```
 
 ## Responsibilities
 
-- Create and register git worktrees for new epics
-- Sweep orphan processes left behind after worktree teardown
+- Create, locate, list, verify and remove per-feature clone workspaces for every route —
+  build, fix, AC-authoring, agent skill, and terminal — through the one maker
+  (`templates/scripts/worktree.py`)
+- Resolve the calling project's root through a separate, uncached resolver module
+  (`templates/scripts/workspace_root.py`), never by re-implementing resolution inline and
+  never by reusing `commit_guardian/_resolve_root.py`
+- Build a real install (never a symlink) inside every workspace it makes, and prove each
+  declared hook stage rejects a canary commit before answering `ready`
+- Sweep orphan processes left behind after worktree teardown (legacy, `scripts/worktree/`)
 - Provide the commit serialization lock (`epic-commit-lock`) used by ticket-supervisor
 
 ## Entry Points
 
-- `scripts/worktree/sweep_processes.py` — orphan process cleanup
-- `scripts/setup_ticket_worktree.py` — worktree provisioning script
+- `templates/scripts/worktree.py` → deployed to `<install-root>/scripts/worktree.py` — the
+  one maker. Verbs: `ensure` (the only creation verb, idempotent), `locate`, `list`,
+  `verify`, `remove`, `where`.
+- `templates/scripts/workspace_root.py` → deployed beside it — the separate project-root
+  resolver `worktree.py` imports.
+- `templates/scripts/worktree_git.py`, `templates/scripts/worktree_admin.py` — helper
+  modules `worktree.py` imports (git/marker/install primitives, and locate/list/remove,
+  respectively); each has its own named deploy-manifest entry.
+- `scripts/worktree/sweep_processes.py` — orphan process cleanup (unchanged by this ticket)
+- `scripts/setup_ticket_worktree.py` — the retired-in-place provisioning script. Still
+  tracked pending `BO-4300f-2`; no new caller may be added against it.
 
 ## Safety Constraints
 
 Per building-epics §1.4, worktrees MUST NOT be closed until all sub-tickets are done. The All-Tickets-Done gate (§1.4.1) enforces this by counting open tickets before allowing `worktree-agent` to run.
+
+The maker's own safety constraints — the `ensure`-time canary commit that proves each
+declared hook stage actually rejects (per-workspace, real `.git/hooks`, never a shared
+worktree hooks directory), and the `remove` refusal of a dirty or unpushed workspace
+unless `--force` is passed — are recorded in [ADR-018 Amendment
+1](../adrs/ADR-018-agent-isolation-topology.md#amendment-1--2026-09-27--one-workspace-maker-hardlinked-clones-real-install-files)
+§A1.3–A1.4 and in [the delivered-maker reference table §9.3](../../analysis/2026-09-25-worktree-delivered-maker.md#93-reference--cli-json-and-marker-schema).
+The remainder of this section describes `scripts/setup_ticket_worktree.py`'s own
+constraints; it still applies while that script remains tracked (pending `BO-4300f-2`),
+but it is not the constraint set for the maker above.
 
 The caller that invokes `scripts/setup_ticket_worktree.py` (`templates/workflows-js/plan-feature.js`'s
 authoring-worktree creation step) MUST resolve it to an absolute, repository-anchored path

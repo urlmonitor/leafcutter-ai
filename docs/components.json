@@ -575,11 +575,15 @@
       "id": "worktree_manager",
       "name": "Worktree Manager",
       "type": "infrastructure",
-      "description": "Git worktree lifecycle management for isolated epic and ticket branch environments.",
+      "description": "Per-feature clone workspaces made, found, listed and cleared through one maker: every route (long-running build, quick fix, requirements-authoring session, an agent following the workspace skill, a person at a terminal) gets an identically-shaped answer from templates/scripts/worktree.py's ensure/locate/list/verify/remove/where verbs (ADR-018 Amendment 1, BO-4300a-1).",
       "detail_ref": "docs/architecture/components/worktree-manager.md",
       "status": "active",
       "primary_code": [
-        "scripts/worktree/"
+        "scripts/worktree/",
+        "templates/scripts/worktree.py",
+        "templates/scripts/workspace_root.py",
+        "templates/scripts/worktree_git.py",
+        "templates/scripts/worktree_admin.py"
       ]
     }
   }

@@ -1,11 +1,22 @@
 ---
+title: 'ADR-001: Self-Hosting Boundary — Config-Driven Path Resolution'
 description: Documents the self-hosting boundary for leafcutter-ai — config-driven
   path resolution, build output separation, and user-curated PROJECT_CONTEXT.md preservation
   across upgrades.
 created: '2026-08-13'
-last_updated: '2026-08-13'
-type: tutorial
+last_updated: '2026-09-27'
+type: adr
 status: active
+components:
+- build_pipeline
+- worktree_manager
+related_docs:
+- docs/architecture/adrs/ADR-004-consolidated-output-root.md
+- docs/architecture/adrs/ADR-018-agent-isolation-topology.md
+- docs/architecture/adrs/ADR-031-worktree-quality-gate-guard.md
+related_code:
+- scripts/build.py
+- templates/scripts/setup_ticket_worktree.py
 ---
 # ADR-001: Self-Hosting Boundary — Config-Driven Path Resolution
 
@@ -79,6 +90,23 @@ This means `/create-ac` and `/plan-feature` function correctly in both layouts
 without any user configuration. See
 [Agent Delivery Workflows §9](../agent_delivery_workflows.md#9-installed-copy-path-resolution-bo-1500e-2)
 for the full detection flowchart and directory tree examples.
+
+> **Scheduled to be replaced (2026-09-27, ADR-018 Amendment 1).** This section describes
+> how `setup_ticket_worktree.py` behaves until BO-4300f-2 retires it. From then on, per
+> [ADR-018 Amendment 1](ADR-018-agent-isolation-topology.md#amendment-1--2026-09-27--one-workspace-maker-hardlinked-clones-real-install-files):
+>
+> - Project-root resolution MUST come from the separate stdlib-only resolver module deployed
+>   in `<install-root>/scripts/` (§A1.5). `_resolve_installed_layout()` MUST NOT be carried
+>   into the new maker, and `commit_guardian/_resolve_root.py` MUST NOT be reused. BO-4300b-1
+>   owns the resolution order, including how the dev layout (package repo as a child of a
+>   non-repo workspace parent) and the consumer layout are told apart.
+> - Workspaces MUST be created, located and removed only by the maker
+>   (`templates/scripts/worktree.py` → `<install-root>/scripts/worktree.py`, §A1.2). Each is
+>   an independent clone that identifies its project only through the `project_root` field of
+>   its marker record (§A1.4).
+> - The ADR-001 boundary applies unchanged. The maker and the resolver are tracked only under
+>   `templates/scripts/`, and the build deploys them outside the source tree (§A1.6).
+> - Where adopter workspaces land (open question 5) is not decided here.
 
 ## Alternatives
 

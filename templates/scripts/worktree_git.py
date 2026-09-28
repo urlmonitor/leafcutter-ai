@@ -1,0 +1,676 @@
+"""
+MODULE: worktree_git
+GOAL: Low-level git-subprocess, marker-registry, and install-build primitives
+    for templates/scripts/worktree.py, the one maker every workspace route
+    goes through.
+BUSINESS CONTEXT: BO-4300a-1 ("Every route that asks gets the same kind of
+    workspace from the same maker") requires ONE place that runs git,
+    reads/writes the marker registry, and drives the per-workspace install
+    build -- so no caller can quietly reimplement a slightly different
+    recipe. This module carries that plumbing out of worktree.py's own CLI
+    dispatch so each file stays small and single-purpose (the same split
+    build_deploy_manifest_helpers.py already uses relative to build.py).
+    It also carries the shared pieces of the BO-4300c-2 result contract this
+    ticket's own "Expects From" clause names as governing -- config-path
+    derivation (A1.3), and the status/exit-code classification every verb's
+    answer must agree with -- so worktree.py and worktree_admin.py apply the
+    identical rule rather than each guessing separately (pr-reviewer
+    2026-09-28 00:43 H-2/H-3).
+ARCHITECTURE: Pure stdlib (json, os, subprocess, tempfile, contextlib,
+    logging, pathlib). ``run_git`` is the single subprocess boundary every
+    other function in this module goes through, always with its working
+    directory set to the target (never ``git -C <path> ...`` for anything
+    that could be a commit -- KI-CG-20260925-commit-delegation-hook-misses-
+    git-dash-c). The marker registry (``.leafcutter/workspace.json`` inside
+    each workspace) is this module's only persistent state; no git command
+    lists clones, so ``worktree.py``'s ``locate``/``list`` verbs read this
+    file, never ``git worktree list``.
+"""
+
+from __future__ import annotations
+
+import contextlib
+import json
+import logging
+import os
+import re
+import subprocess
+import sys
+import tempfile
+from pathlib import Path
+from typing import Any
+
+import workspace_root
+
+_log = logging.getLogger(__name__)
+
+MAKER_VERSION = "1"
+
+KIND_BRANCH_PREFIX: dict[str, str] = {
+    "ticket": "ticket",
+    "feature": "feature",
+    "ac": "ac-authoring",
+    "fastlane": "fast-lane",
+    "epic": "epic",
+    "scratch": "scratch",
+}
+VALID_KINDS: tuple[str, ...] = tuple(KIND_BRANCH_PREFIX)
+
+_CANARY_FILE_NAME = ".leafcutter_workspace_canary_probe.txt"
+_CANARY_CONTENT = "LEAFCUTTER_WORKSPACE_CANARY_PROBE\n"
+_GIT_TIMEOUT_SECONDS = 60
+_SLUG_DISALLOWED = re.compile(r"[^a-z0-9._-]+")
+
+# ANSWER_SCHEMA_VERSION versions the BO-4300c-2 result contract's "Common
+# fields" envelope (schema_version, verb, ...) -- distinct from MAKER_VERSION
+# (this maker's own build) and from a marker's own schema_version (the
+# on-disk registry record's shape).
+ANSWER_SCHEMA_VERSION = 1
+
+# _CONFIG_PLATFORM_DIRS mirrors scripts/build.py's own
+# _resolve_skills_config_path() auto-detection order exactly, so
+# derive_config_path() finds the SAME file build.py itself would have found
+# had --config-path been omitted -- never a guessed filename build.py's
+# --config-path never reads (KI: an earlier version of this module guessed
+# ``.pre-commit-config.yaml``, a file the build entry point does not consult
+# for --config-path at all).
+_CONFIG_PLATFORM_DIRS: tuple[str, ...] = (".claude", ".gemini", ".cursor", ".github", ".cline")
+
+# _REFUSED_CODES: the BO-4300c-2 result-contract codes this maker emits that
+# mean "a well-understood precondition was not met" (status "refused", exit
+# 2) rather than "an internal/system fault occurred" (status "error", exit
+# 1) or "the caller's own arguments were unusable" (status "error", code
+# USAGE, exit 64). Matches BO-4300c-2's own criteria text, which names
+# "refused" for an occupied location, an unreachable shared project, and a
+# failed install -- the three outcomes OCCUPIED, NO_HUB/FETCH_FAILED and
+# BOOTSTRAP_FAILED/NO_CONFIG cover here.
+_REFUSED_CODES: frozenset[str] = frozenset({
+    "NOT_FOUND", "OCCUPIED", "NO_HUB", "FETCH_FAILED", "BOOTSTRAP_FAILED",
+    "NO_CONFIG", "REFUSED", "PROCESS_HOLDS_FILES",
+})
+
+
+def run_git(args: list[str], cwd: Path, timeout: int = _GIT_TIMEOUT_SECONDS) -> subprocess.CompletedProcess:
+    """Run ``git <args>`` with the working directory set to *cwd*.
+
+    The single subprocess boundary for this module. Never uses ``git -C`` --
+    the working directory is always set via ``cwd=`` so the same spelling is
+    used whether the call could commit or not (KI-CG-20260925-commit-
+    delegation-hook-misses-git-dash-c). A launch failure (missing git binary,
+    OS-level error) is converted into a synthetic non-zero
+    ``CompletedProcess`` rather than raising, so every caller can uniformly
+    branch on ``.returncode``.
+
+    Args:
+        args: The git subcommand and its arguments, without the leading "git".
+        cwd: Absolute path to run git in.
+        timeout: Seconds to wait before giving up.
+
+    Returns:
+        The completed process (real or synthesized on launch failure).
+    """
+    try:
+        return subprocess.run(
+            ["git", *args],
+            cwd=str(cwd),
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+            check=False,
+        )
+    except (OSError, subprocess.SubprocessError) as exc:
+        _log.warning("run_git: 'git %s' failed to launch in %s: %s", " ".join(args), cwd, exc)
+        return subprocess.CompletedProcess(args=["git", *args], returncode=1, stdout="", stderr=str(exc))
+
+
+def marker_path(workspace: Path) -> Path:
+    """Return the absolute path of *workspace*'s marker file.
+
+    Lives at ``<workspace>/.leafcutter/workspace.json`` -- outside version
+    control and outside anything the install build rewrites or cleans (the
+    install build's own stub only ever writes ``INSTALLED_MARKER.txt`` and
+    the git hook, never ``.leafcutter/``).
+
+    Args:
+        workspace: Absolute path to the workspace root.
+
+    Returns:
+        Absolute path to the marker file (may not exist yet).
+    """
+    return workspace / ".leafcutter" / "workspace.json"
+
+
+def write_marker(workspace: Path, data: dict[str, Any]) -> None:
+    """Atomically write *data* as the marker for *workspace* (temp file + replace).
+
+    Args:
+        workspace: Absolute path to the workspace root.
+        data: The marker fields to persist (schema_version, kind, slug,
+            branch, hub, project_root, base_commit, maker_version, state,
+            created_at, and optionally checks).
+
+    Raises:
+        OSError: Propagated after logging when the write cannot complete --
+            a marker that silently failed to write would make every later
+            ``verify``/``locate`` call see a workspace that does not exist.
+    """
+    path = marker_path(workspace)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp_fd, tmp_name = tempfile.mkstemp(dir=str(path.parent), prefix=".workspace-", suffix=".json.tmp")
+    try:
+        with os.fdopen(tmp_fd, "w", encoding="utf-8") as handle:
+            json.dump(data, handle, indent=2)
+            handle.write("\n")
+        os.replace(tmp_name, str(path))
+    except OSError as exc:
+        with contextlib.suppress(OSError):
+            os.remove(tmp_name)
+        _log.warning("write_marker: failed to write marker at %s: %s", path, exc)
+        raise
+
+
+def read_marker(workspace: Path) -> dict[str, Any] | None:
+    """Read *workspace*'s marker file, or return ``None`` when absent/invalid.
+
+    Args:
+        workspace: Absolute path to the workspace root.
+
+    Returns:
+        The parsed marker dict, or ``None`` when the file is missing,
+        unreadable, or not valid JSON.
+    """
+    path = marker_path(workspace)
+    if not path.is_file():
+        return None
+    try:
+        text = path.read_text(encoding="utf-8")
+    except OSError as exc:
+        _log.warning("read_marker: cannot read %s: %s", path, exc)
+        return None
+    try:
+        return json.loads(text)
+    except json.JSONDecodeError as exc:
+        _log.warning("read_marker: invalid JSON at %s: %s", path, exc)
+        return None
+
+
+def origin_url(workspace: Path) -> str | None:
+    """Return *workspace*'s ``origin`` remote URL, or ``None`` if unset/unreadable."""
+    proc = run_git(["remote", "get-url", "origin"], workspace)
+    if proc.returncode != 0:
+        return None
+    url = proc.stdout.strip()
+    return url or None
+
+
+def git_config_get(workspace: Path, key: str) -> str | None:
+    """Return the value of git config *key* inside *workspace*, or ``None``."""
+    proc = run_git(["config", "--get", key], workspace)
+    if proc.returncode != 0:
+        return None
+    value = proc.stdout.strip()
+    return value or None
+
+
+def is_clean(workspace: Path) -> bool:
+    """Return ``True`` when no TRACKED path in *workspace* is modified/staged.
+
+    Untracked files are deliberately not a dirtiness signal here: the
+    install build always leaves real, untracked artefacts behind (e.g.
+    ``INSTALLED_MARKER.txt``) that are never meant to be committed, and a
+    workspace that already contains those is still "clean" in the sense
+    this check exists for (BOOTSTRAP_DIRTIED_TRACKED). ``restore_dirtied_
+    tracked`` uses the identical "??"-exclusion rule so the two can never
+    disagree about what counts as dirty.
+    """
+    proc = run_git(["status", "--porcelain"], workspace)
+    if proc.returncode != 0:
+        return False
+    for line in proc.stdout.splitlines():
+        if line.strip() and line[:2] != "??":
+            return False
+    return True
+
+
+def _same_location(a: str, b: str) -> bool:
+    """Best-effort equality of two path-or-URL strings, resolving filesystem paths."""
+    try:
+        return Path(a).resolve() == Path(b).resolve()
+    except OSError:
+        return a == b
+
+
+def hooks_dir(workspace: Path) -> Path | None:
+    """Resolve the effective git hooks directory for *workspace*.
+
+    Uses ``git rev-parse --git-common-dir`` (read-only, no ``-C`` spelling
+    concern since this can never be a commit) rather than any ``__file__``-
+    based walk.
+
+    Args:
+        workspace: Absolute path to the workspace root.
+
+    Returns:
+        Absolute path to the hooks directory, or ``None`` when it cannot be
+        resolved.
+    """
+    proc = run_git(["rev-parse", "--git-common-dir"], workspace)
+    if proc.returncode != 0:
+        return None
+    common_dir_str = proc.stdout.strip()
+    if not common_dir_str:
+        return None
+    common_dir = Path(common_dir_str)
+    if not common_dir.is_absolute():
+        common_dir = (workspace / common_dir).resolve()
+    return common_dir / "hooks"
+
+
+def compute_checks(workspace: Path, hub: str) -> dict[str, bool]:
+    """Compute the read-only readiness checks for *workspace*.
+
+    Deliberately excludes ``hooks_canary_rejected`` -- proving that requires
+    an actual commit attempt, which is a write and therefore only ever done
+    once, during ``ensure`` (see :func:`run_canary`); callers that need it
+    outside of ``ensure`` read the value the marker already stored.
+
+    Args:
+        workspace: Absolute path to the workspace root.
+        hub: The hub URL/path this workspace's origin is expected to equal.
+
+    Returns:
+        Dict with boolean keys ``is_independent_repo``, ``origin_matches_hub``,
+        ``gc_auto_disabled``, ``hooks_installed``, ``working_tree_clean``.
+    """
+    origin = origin_url(workspace)
+    hooks = hooks_dir(workspace)
+    return {
+        "is_independent_repo": (workspace / ".git").is_dir(),
+        "origin_matches_hub": bool(origin) and _same_location(origin, hub),
+        "gc_auto_disabled": git_config_get(workspace, "gc.auto") == "0",
+        "hooks_installed": bool(hooks and (hooks / "pre-commit").is_file()),
+        "working_tree_clean": is_clean(workspace),
+    }
+
+
+def run_canary(workspace: Path) -> bool:
+    """Attempt one real commit of a generic canary file, then revert it either way.
+
+    Proves whether *some* protection fires without the maker needing to know
+    any project-specific "known bad" content: the canary content is generic
+    ("LEAFCUTTER_WORKSPACE_CANARY_PROBE"), so a hook tuned to a specific
+    secret/sentinel pattern will not necessarily reject it -- the boolean
+    this returns records what actually happened, never an assumption.
+    Whichever way the commit went, the workspace is restored to exactly the
+    state it was in before this call: a rejected commit is unstaged and the
+    probe file removed; an accepted commit is undone with a hard reset to
+    the prior HEAD.
+
+    Args:
+        workspace: Absolute path to the workspace root. Must already be a
+            checked-out git repository with at least one commit.
+
+    Returns:
+        ``True`` when the commit was rejected (a hook fired), ``False`` when
+        it succeeded (no hook rejected the generic probe content).
+    """
+    head_before = run_git(["rev-parse", "HEAD"], workspace).stdout.strip()
+    canary_file = workspace / _CANARY_FILE_NAME
+    try:
+        canary_file.write_text(_CANARY_CONTENT, encoding="utf-8")
+    except OSError as exc:
+        _log.warning("run_canary: cannot write probe file at %s: %s", canary_file, exc)
+        return False
+
+    run_git(["add", "-A", "--", _CANARY_FILE_NAME], workspace)
+    commit_proc = run_git(["commit", "-q", "-m", "leafcutter workspace canary probe"], workspace)
+    rejected = commit_proc.returncode != 0
+
+    if rejected:
+        run_git(["reset", "-q"], workspace)
+        with contextlib.suppress(OSError):
+            canary_file.unlink()
+    elif head_before:
+        run_git(["reset", "-q", "--hard", head_before], workspace)
+
+    return rejected
+
+
+def run_install_build(workspace: Path, config_path: Path) -> tuple[bool, str | None]:
+    """Run the workspace's own install build with an explicit config path.
+
+    Args:
+        workspace: Absolute path to the workspace root. Its own
+            ``scripts/build.py`` (checked out from the project's own
+            contents, never the maker's own location) is what gets run.
+        config_path: Absolute path to the config file to pass explicitly.
+
+    Returns:
+        ``(True, None)`` on a zero exit. ``(False, "BOOTSTRAP_FAILED")`` when
+        the workspace has no ``scripts/build.py``, the build launches but
+        exits non-zero, or cannot be launched at all -- ``BOOTSTRAP_FAILED``
+        is the BO-4300c-2 result-contract code for every "the install
+        failed" outcome, so callers never see this maker's own internal
+        subtypes. ``(False, "NO_CONFIG")`` when *config_path* does not exist
+        -- kept distinct because it is the maker's own precondition check,
+        not a build-process failure.
+    """
+    build_script = workspace / "scripts" / "build.py"
+    if not build_script.is_file():
+        return False, "BOOTSTRAP_FAILED"
+    if not config_path.is_file():
+        return False, "NO_CONFIG"
+
+    try:
+        proc = subprocess.run(
+            [sys.executable, str(build_script), "--target-dir", str(workspace), "--config-path", str(config_path)],
+            cwd=str(workspace),
+            capture_output=True,
+            text=True,
+            timeout=300,
+            check=False,
+        )
+    except (OSError, subprocess.SubprocessError) as exc:
+        _log.warning("run_install_build: failed to launch %s: %s", build_script, exc)
+        return False, "BOOTSTRAP_FAILED"
+
+    if proc.returncode != 0:
+        _log.warning("run_install_build: %s exited %s: %s", build_script, proc.returncode, proc.stderr)
+        return False, "BOOTSTRAP_FAILED"
+    return True, None
+
+
+def restore_dirtied_tracked(workspace: Path) -> list[str]:
+    """Restore any TRACKED path the install build modified; return their names.
+
+    Untracked files the build wrote (e.g. ``INSTALLED_MARKER.txt``) are left
+    alone -- only tracked, modified/deleted paths are restored, matching the
+    decision memo's ``bootstrap.restored_tracked`` contract.
+
+    Args:
+        workspace: Absolute path to the workspace root.
+
+    Returns:
+        List of tracked paths (relative to *workspace*) that were dirtied
+        and then restored via ``git checkout --``. Empty when the tree was
+        already clean of tracked changes.
+    """
+    status = run_git(["status", "--porcelain"], workspace).stdout
+    dirtied: list[str] = []
+    for line in status.splitlines():
+        if not line.strip():
+            continue
+        code, rel_path = line[:2], line[3:].strip()
+        if code[0] != "?" and code[1] != "?":
+            dirtied.append(rel_path)
+    if dirtied:
+        run_git(["checkout", "--", *dirtied], workspace)
+    return dirtied
+
+
+def normalize_slug(raw: str) -> str:
+    """Normalise a caller-supplied work-identity slug to a safe directory/branch fragment."""
+    slug = _SLUG_DISALLOWED.sub("-", raw.strip().lower())
+    return slug.strip("-") or "workspace"
+
+
+def _git_toplevel_of(path: Path) -> Path | None:
+    """Return the git toplevel enclosing *path*, or ``None`` when it is not one."""
+    proc = run_git(["rev-parse", "--show-toplevel"], path)
+    if proc.returncode != 0:
+        return None
+    text = proc.stdout.strip()
+    return Path(text).resolve() if text else None
+
+
+def landing_place(repo_root: Path) -> Path:
+    """Return the project's one landing place for workspaces: ``<base>/worktrees``.
+
+    ``<base>`` is the repo's own parent directory, unless that parent is
+    itself inside a *different* git repository (the consumer/installed
+    layout), in which case ``<base>`` is the repo root itself. This mirrors
+    the existing dev-vs-consumer distinction the package already makes
+    elsewhere, recomputed here independently rather than imported from
+    ``templates/scripts/commit_guardian/_resolve_root.py`` (forbidden by
+    BO-4300a-1's own Implementation Notes).
+
+    Args:
+        repo_root: Absolute path to the main checkout.
+
+    Returns:
+        Absolute path to the shared landing directory (created by the caller
+        if it does not exist yet).
+    """
+    parent = repo_root.parent
+    parent_toplevel = _git_toplevel_of(parent)
+    if parent_toplevel is not None and parent_toplevel != repo_root:
+        return repo_root / "worktrees"
+    return parent / "worktrees"
+
+
+def status_for_code(code: str) -> str:
+    """Return the BO-4300c-2 status ('refused'|'error') this maker's own *code* means.
+
+    Falls back to ``'error'`` for any code not in :data:`_REFUSED_CODES`
+    (including ``USAGE``, whose distinct exit code ``exit_code_for_answer``
+    derives separately) -- never raises, since an unrecognised code is
+    itself the abnormal case ``_err`` exists to report, and classifying it
+    must not become a second way to crash the maker's own error path.
+
+    Args:
+        code: One of this maker's own error/refusal codes.
+
+    Returns:
+        ``"refused"`` when *code* is in :data:`_REFUSED_CODES`, else
+        ``"error"``.
+    """
+    return "refused" if code in _REFUSED_CODES else "error"
+
+
+def exit_code_for_answer(answer: dict[str, Any]) -> int:
+    """Return the process exit code BO-4300c-2 requires for *answer*.
+
+    0 for ``status: "ok"``; 64 for ``code: "USAGE"`` (still status
+    ``"error"``); 2 for any other ``status: "refused"``; 1 for every
+    remaining ``"error"``. This is the single place that maps an answer to
+    an exit code, so the exit code and the answer's own stated status can
+    never disagree (BO-4300c-2's own criterion: "the way the maker's run
+    ends signals the same outcome that the answer states").
+
+    Args:
+        answer: The answer dict about to be printed as the maker's one
+            JSON object.
+
+    Returns:
+        0, 1, 2, or 64.
+    """
+    if answer.get("status") == "ok":
+        return 0
+    if answer.get("code") == "USAGE":
+        return 64
+    return 2 if answer.get("status") == "refused" else 1
+
+
+def finalize_answer(verb: str, answer: dict[str, Any]) -> dict[str, Any]:
+    """Attach the BO-4300c-2 'Common fields' this maker can always supply.
+
+    Sets ``schema_version`` and ``verb`` on *answer* without overwriting
+    anything the dispatched verb's own handler already set. Called once,
+    from ``main()``, so every verb and every outcome carries these two
+    fields regardless of which branch produced the answer.
+
+    Args:
+        verb: The dispatched verb name (``args.verb``).
+        answer: The answer dict a verb handler returned.
+
+    Returns:
+        The same dict, mutated in place and returned for convenience.
+    """
+    answer.setdefault("schema_version", ANSWER_SCHEMA_VERSION)
+    answer.setdefault("verb", verb)
+    return answer
+
+
+def layout_for(repo_root: Path) -> str:
+    """Return ``'consumer'`` when *repo_root*'s parent is a different git repo, else ``'dev'``.
+
+    Mirrors the same dev-vs-consumer distinction :func:`landing_place`
+    already makes, exposed separately because the BO-4300c-2 result
+    contract's ``layout`` field is independent of where workspaces land.
+
+    Args:
+        repo_root: Absolute path to the main checkout.
+
+    Returns:
+        ``"consumer"`` or ``"dev"``.
+    """
+    parent_toplevel = _git_toplevel_of(repo_root.parent)
+    return "consumer" if parent_toplevel is not None and parent_toplevel != repo_root else "dev"
+
+
+def _read_top_level_packages(config_file: Path) -> tuple[str, ...]:
+    """Best-effort read of a skills_config.json's own ``top_level_packages`` list."""
+    try:
+        data = json.loads(config_file.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        _log.warning("_read_top_level_packages: cannot read %s: %s", config_file, exc)
+        return ()
+    packages = data.get("top_level_packages") if isinstance(data, dict) else None
+    return tuple(packages) if isinstance(packages, list) else ()
+
+
+def derive_config_path(repo_root: Path, workspace_path: Path) -> tuple[Path | None, str | None]:
+    """Derive the workspace's install config path from the main checkout's own resolved config.
+
+    Mirrors ``scripts/build.py``'s own ``_resolve_skills_config_path()``
+    auto-detection order (:data:`_CONFIG_PLATFORM_DIRS`) against *repo_root*
+    -- never a guessed filename the build entry point's own ``--config-path``
+    does not read.
+
+    KNOWN LIMITATION (pr-reviewer 2026-09-28 02:15 H-2, honestly disclosed
+    rather than silently left, matching the checks-dict scope boundary
+    already disclosed for BO-4300c-1-ii/BO-4300b-1): the search only looks
+    INSIDE *repo_root* -- it never looks above it. In the self-hosted
+    consumer layout (ADR-001; leafcutter-ai cloned as a nested git repo
+    under ``<consumer-root>/leafcutter-ai/``), the outer consumer root's own
+    ``.claude/skills_config.json`` sits ABOVE *repo_root* as this maker
+    resolves it today (:mod:`workspace_root`'s own docstring discloses it
+    implements only ``argument``/``git-common-dir`` resolution, which yields
+    the nested repo's own toplevel, not the consumer root); this function
+    cannot find that file in that case regardless of any prefix handling.
+    Distinguishing the dev vs. consumer layout is explicitly BO-4300b-1's own
+    scope (ADR-001 "Installed-Layout Path Resolution"; this ticket's own
+    Implementation Notes: "the resolution order and exclusions are
+    BO-4300b-1's") -- pre-empting that ordering here would contradict
+    architect-review's own design concern on this ticket, so it is left for
+    that ticket rather than guessed at now.
+
+    The ADR-018 Amendment 1 (A1.3) ``top_level_packages``-prefix-stripping
+    branch below is also narrower than its name suggests: because
+    ``candidate`` is always built as ``repo_root / platform_dir /
+    "skills_config.json"``, the only string ever tested against
+    ``top_level_packages`` is one of :data:`_CONFIG_PLATFORM_DIRS` itself
+    (e.g. ``".claude"``) -- never an ordinary importable package name, which
+    is how ``top_level_packages`` is documented and defaulted
+    (``config/skills_config.schema.json``). It therefore only strips a
+    segment for the narrow case where a caller has deliberately added a
+    platform directory name to its own ``top_level_packages`` list; for
+    every realistic project config today it is an inert no-op, not the
+    general self-hosting-boundary fix its name implies. Kept rather than
+    removed because it is harmless (falls through to the unstripped,
+    already-correct relative path) and forward-compatible once BO-4300b-1's
+    layout detection lands and a real above-repo_root search is added here.
+
+    Args:
+        repo_root: Absolute path to the main checkout.
+        workspace_path: Absolute path to the workspace being built (already
+            cloned and checked out).
+
+    Returns:
+        ``(absolute path inside workspace_path, None)`` when a main-checkout
+        config was found and the derived path exists inside *workspace_path*.
+        ``(None, "NO_CONFIG")`` when the main checkout has no discoverable
+        ``skills_config.json``, or the derived path does not exist in the
+        workspace.
+    """
+    for platform_dir in _CONFIG_PLATFORM_DIRS:
+        candidate = repo_root / platform_dir / "skills_config.json"
+        if not candidate.is_file():
+            continue
+        try:
+            rel = candidate.relative_to(repo_root)
+        except ValueError:
+            continue
+        packages = _read_top_level_packages(candidate)
+        rel_parts = rel.parts
+        if len(rel_parts) > 1 and rel_parts[0] in packages:
+            rel = Path(*rel_parts[1:])
+        derived = workspace_path / rel
+        return (derived, None) if derived.is_file() else (None, "NO_CONFIG")
+    return None, "NO_CONFIG"
+
+
+def resolve_repo_root(repo_root_arg: str | None) -> Path | None:
+    """Resolve the main checkout from an explicit ``--repo-root`` or the cwd.
+
+    Args:
+        repo_root_arg: The caller's ``--repo-root`` value, or ``None``.
+
+    Returns:
+        Absolute Path to the main checkout, or ``None`` when it cannot be
+        resolved (``--repo-root`` given but not a git repo, or the current
+        directory is not inside one and no argument was given).
+    """
+    if repo_root_arg:
+        candidate = Path(repo_root_arg).resolve()
+        return candidate if (candidate / ".git").exists() else None
+    result = workspace_root.resolve(str(Path.cwd()), None)
+    if result.get("status") == "ok":
+        return Path(result["project_root"])
+    return None
+
+
+def iter_markers(place: Path):
+    """Yield ``(workspace_path, marker)`` for every marked workspace under *place*."""
+    if not place.is_dir():
+        return
+    for child in sorted(place.iterdir()):
+        if not child.is_dir():
+            continue
+        marker = read_marker(child)
+        if marker is not None:
+            yield child, marker
+
+
+# ===========================================================================
+# DECISION HISTORY
+# ===========================================================================
+# - 2026-09-27 23:57 [python-coder/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/01]:
+#   Created this module to carry worktree.py's git-subprocess, marker-
+#   registry, canary and install-build plumbing out of the CLI dispatch file
+#   so each stays small and single-purpose. No git command lists clones, so
+#   the marker registry here (.leafcutter/workspace.json per workspace) is
+#   the only source locate/list ever read.
+#   (#EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/01) (ADR-018)
+# - 2026-09-28 02:10 [python-coder/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/01]:
+#   Fixed pr-reviewer H-2/H-3 (2026-09-28 00:43, corroborated by ac-validator
+#   2026-09-28 00:50): added derive_config_path() (real skills_config.json
+#   discovery mirroring build.py's own _resolve_skills_config_path order,
+#   with top_level_packages-prefix stripping per ADR-018 Amendment 1 A1.3 --
+#   replaces the hardcoded ".pre-commit-config.yaml" guess, a file
+#   --config-path never reads); added status_for_code/exit_code_for_answer/
+#   finalize_answer/layout_for so worktree.py and worktree_admin.py apply one
+#   shared BO-4300c-2 status/exit-code/common-fields rule instead of each
+#   hardcoding exit 1. Per-stage hook-check-dict parity with BO-4300c-2's
+#   full `checks` shape remains deferred: it needs BO-4300c-1-ii's per-stage
+#   hook declaration (not yet built) and BO-4300b-1's branch-safety checks
+#   (not yet built) as real inputs, not a renamed copy of this maker's own
+#   five checks.
+#   (#EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/01) (ADR-018)
+# - 2026-09-28 02:42 [python-coder/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/01]:
+#   Fixed pr-reviewer H-2 (2026-09-28 02:15): honestly narrowed
+#   derive_config_path()'s docstring instead of pre-empting BO-4300b-1's own
+#   layout-detection scope (see the docstring's own "KNOWN LIMITATION" for
+#   the full trace). No functional change.
+#   (#EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/01) (ADR-018)
+# ===========================================================================

@@ -271,9 +271,15 @@ amended_by:
     runs one canary per stage; git spelling rule (no `git -C <path> commit`). Item 6: no tracked copy
     outside templates/scripts/, with a test. readiness stays reviewed for re-approval.
 superseded_by: null
-covered_by: [BO-4300a-1-i, BO-4300a-1-ia, BO-4300a-1-ib, BO-4300a-1-ii]
+covered_by: [BO-4300a-1-i, BO-4300a-1-ia, BO-4300a-1-ib, BO-4300a-1-ii, unit_tests/build_orchestration/test_bo_4300a_1.py, unit_tests/build_orchestration/test_bo_4300a_1_deployed.py]
 implemented_by:
 - tickets/00_inbox/TICKET-20260927-BO-4300a-1.md
+- docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+- docs/architecture/adrs/ADR-018-agent-isolation-topology.md
+- docs/architecture/components/worktree-manager.md
+- docs/components.json
+- scripts/build_deploy_manifest_helpers.py
+- scripts/build_phases_script_deploy.py
 notes: |
   The load-bearing "one maker, one shape" behaviour (decision 4; decisions 1-3 define the
   shape). Freshness itself stays BO-4100a, protections firing stays BO-1700a/d -- this
@@ -282,3 +288,22 @@ notes: |
   behavioural: real test projects with a real shared project, the installed maker run as a
   separate process (BO-4300f-4).
 target_epic: EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace
+
+# ====================================================================
+# DECISION HISTORY
+# ====================================================================
+# - 2026-09-28 02:42 [python-coder/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/01]: (#EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/01)
+#   Added this file-level block (missing until now, found by the commit
+#   phase's 2026-09-28 02:41 staged-mode check_documentation.py run, which
+#   also caught pr-reviewer's still-open H-1/H-2). work_status was set to
+#   done by ac-fulfillment-gate on 2026-09-28 02:40, after ac-validator's
+#   2026-09-28 02:27 sign-off traced AC-4/AC-5 as covered against the
+#   BO-4300c-2 result contract on python-coder's 2026-09-28 02:10 reship.
+#   No criteria, test_spec, or delivers_to/expects_from content changed.
+# - 2026-09-28 10:30 [coordinator/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/01]: (#EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/01)
+#   work_status reverted done -> todo. BO-4300a-1 is a composite L2 whose children
+#   (a-1-ia, a-1-ib, a-1-ii) are separate, unbuilt tickets of this epic; check-done-proof
+#   refuses a done composite with unfinished children (CLAUDE.md 'AC-store commits').
+#   Ticket 01's own behaviour is built and its 10 tests are green; this record flips to
+#   done once its children are done.
+# ====================================================================

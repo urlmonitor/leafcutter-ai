@@ -421,92 +421,32 @@ def _deploy_fast_lane_release_dependency(target_root: Path, dry_run: bool,
     return 1
 
 
-def build_template_standalone_scripts(target_root: Path, config: dict[str, Any],
-                                      dry_run: bool, force: bool) -> int:
-    """Deploy standalone Python scripts from ``templates/scripts/`` to ``<target_root>/scripts/``.
-
-    Copies Python files (``*.py``) from ``templates/scripts/`` (excluding
-    subdirectories) to the consumer project's ``scripts/`` directory.
-
-    Currently deploys:
-
-    - ``templates/scripts/setup_ticket_worktree.py`` → ``scripts/setup_ticket_worktree.py``
-      Referenced by worktree-agent.md and build-single-ticket/SKILL.md.
-
-    Files are copied verbatim (no template compilation). The compare-before-write
-    guard prevents mtime churn on unchanged files.
-
-    Args:
-        target_root: Absolute path to the target project root directory.
-        config: Merged config dictionary (accepted for interface parity; not consumed).
-        dry_run: When True, logs intent but writes nothing.
-        force: When True, overwrites existing files.
-
-    Returns:
-        Count of files written (or that would be written in dry-run mode).
-
-    # DECISION HISTORY
-    # - 2026-06-17 [python-coder/EPIC-BuildGuardFalsePositive/03]:
-    #   Added build_template_standalone_scripts() phase. Deploys .py files from
-    #   templates/scripts/ (shallow, non-recursive) to consumer scripts/.
-    #   Primary driver: setup_ticket_worktree.py template was present but no
-    #   phase copied it to consumer projects (Class B gap). (#EPIC-BuildGuardFalsePositive/03)
-    """
-    import build_phases as _bp
-
-    templates_scripts_src = _bp.TEMPLATES_DIR / "scripts"
-    if not templates_scripts_src.exists():
-        return 0
-
-    output_dir = target_root / "scripts"
-    written = 0
-
-    # Shallow scan — only top-level .py files; subdirectories have their own phases
-    for src_file in sorted(templates_scripts_src.glob("*.py")):
-        if not src_file.is_file():
-            continue
-
-        output_path = output_dir / src_file.name
-
-        if not _bp._should_overwrite(output_path, force):
-            continue
-
-        if _bp._files_content_identical(src_file, output_path):
-            _bp._uptodate_count += 1
-            continue
-
-        if dry_run:
-            print(f"  [DRY-RUN] would copy scripts/{src_file.name}")
-            written += 1
-        else:
-            try:
-                output_path.parent.mkdir(parents=True, exist_ok=True)
-                shutil.copy2(src_file, output_path)
-            except OSError as exc:
-                _bp._log.warning(
-                    "build_template_standalone_scripts: failed to copy %s → %s: %s",
-                    src_file,
-                    output_path,
-                    exc,
-                )
-                raise
-            print(f"  scripts/{src_file.name}")
-            written += 1
-
-    return written
+# BO-4300a-1: build_template_standalone_scripts, _check_named_standalone_scripts,
+# and NAMED_STANDALONE_SCRIPTS moved to build_phases_script_deploy_standalone.py
+# (adding the maker's NAMED deploy entries pushed this file over the 400-line
+# ratchet). Re-exported here so every existing caller of this module
+# (build_phases.py, and build_deploy_manifest_helpers.py's direct import of
+# NAMED_STANDALONE_SCRIPTS) keeps working unchanged.
+from build_phases_script_deploy_standalone import (  # noqa: E402, F401
+    NAMED_STANDALONE_SCRIPTS,
+    _check_named_standalone_scripts,
+    build_template_standalone_scripts,
+)
 
 
 # ===========================================================================
 # DECISION HISTORY
 # ===========================================================================
-# - 2026-09-14 [python-coder/bp-size-split]: Moved the agent-support, build-
+# - 2026-09-14 12:00 [python-coder/bp-size-split]: (#refactor/build-phases-size-limit)
+#   Moved the agent-support, build-
 #   orchestration and template-standalone script deploy phases (plus their
 #   AGENT_SUPPORT_SCRIPT_DIRS / AGENT_SUPPORT_SCRIPT_FILES deploy
 #   declarations) verbatim from build_phases.py into this new sibling module
 #   to bring build_phases.py under the 400-counted-line check-file-size
 #   limit. Re-exported from build_phases.py so build.py's manifest
-#   derivation and every test import keeps working. (#refactor/build-phases-size-limit)
-# - 2026-08-31 [python-coder]: Fixed a BP-900g-9 review finding.
+#   derivation and every test import keeps working.
+# - 2026-08-31 12:00 [python-coder]: (#TICKETLESS reason=legacy-id-bp-900g-9-no-slash)
+#   Fixed a BP-900g-9 review finding.
 #   build_build_orchestration_scripts()'s own fail-closed branch did
 #   `record_deploy_failure(...); return 0` when its declared source directory
 #   was absent -- correct for that check alone, but the early return also
@@ -519,8 +459,9 @@ def build_template_standalone_scripts(target_root: Path, config: dict[str, Any],
 #   that had justified the old early return. Added
 #   test_bp_900g_9_build_orchestration_and_fast_lane_dependency_both_named_in_one_run
 #   to unit_tests/test_bp_900g_9.py; confirmed it fails on the pre-fix code
-#   via a `git stash` of this file. (#BP-900g-9)
-# - 2026-09-21 [python-coder/EPIC-StartingNewWorkTheProperWayAlways]: Ported
+#   via a `git stash` of this file.
+# - 2026-09-21 12:00 [python-coder/EPIC-StartingNewWorkTheProperWayAlways]: (#TICKETLESS reason=legacy-id-acd-2100b-5-no-slash)
+#   Ported
 #   the ACD-2100b-5 entry ("worktree/check_workspace_setup_permission.py")
 #   into AGENT_SUPPORT_SCRIPT_FILES. It existed on the branch's pre-split
 #   build_phases.py but was absent from main's file-size-ratchet refactor
@@ -531,8 +472,9 @@ def build_template_standalone_scripts(target_root: Path, config: dict[str, Any],
 #   justification across unchanged: its siblings import
 #   scripts/config_loader.py, which no phase deploys, so pulling in the whole
 #   scripts/worktree/ directory would trip the intra-package closure guard
-#   (AC BP-900g-8) over an unrelated, pre-existing gap. (#ACD-2100b-5)
-# - 2026-09-25 [python-coder]: Added "db_check" to AGENT_SUPPORT_SCRIPT_DIRS
+#   (AC BP-900g-8) over an unrelated, pre-existing gap.
+# - 2026-09-25 12:00 [python-coder]: (#TICKETLESS reason=fast-lane-inf-1100d-3-ac-pair)
+#   Added "db_check" to AGENT_SUPPORT_SCRIPT_DIRS
 #   for INF-1100d-3-i / INF-1100d-3-ii's shipped test-database checker/
 #   resolver module (scripts/db_check/checker.py) -- the pre-run
 #   reachability CLI and the Step 2b DB-test pattern's setUp() both need it
@@ -548,5 +490,24 @@ def build_template_standalone_scripts(target_root: Path, config: dict[str, Any],
 #   config_loader.load_config() uses), which needs no package-defaults file
 #   at all since this setting ships no default address (user decisions
 #   Q3/NQ1) -- see checker.py's own module docstring.
-#   (#TICKETLESS reason=fast-lane-inf-1100d-3-ac-pair)
+# - 2026-09-27 23:57 [python-coder/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/01]: (#EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/01)
+#   Split build_template_standalone_scripts, _check_named_standalone_scripts,
+#   and NAMED_STANDALONE_SCRIPTS out to build_phases_script_deploy_standalone.py
+#   and re-exported them here: adding the BO-4300a-1 maker's NAMED deploy
+#   entries to that phase pushed this file over the 400-counted-line
+#   check-file-size limit, the same "further split when a change grows an
+#   already-large file over the ratchet" move this file's own 2026-09-14
+#   entry made relative to build_phases.py. (ADR-018)
+# - 2026-09-28 02:42 [python-coder/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/01]: (#EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/01)
+#   Backfilled the missing mandatory HH:MM on the five entries above (2026-09-14,
+#   2026-08-31, 2026-09-21 and 2026-09-25 pre-date this ticket and had none
+#   recorded; 2026-09-27 is this ticket's own, using its known 23:57 sign-off
+#   time), and moved each entry's own tail-tag onto its first line (the
+#   pr-reviewer 2026-09-28 02:15 H-1 shape: the validator only inspects an
+#   entry's first line for the tag). Two of the pre-existing tags (BP-900g-9,
+#   ACD-2100b-5) predate the slash-delimited EPIC-Name/NN grammar the tail-tag
+#   validator enforces, so those two were given a #TICKETLESS backfill tag
+#   instead of a reformatted ticket tag that would misattribute them to an
+#   epic they were never part of; the original IDs stay in each entry's own
+#   prose. No functional change. (ADR-018)
 # ===========================================================================
