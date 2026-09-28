@@ -29,14 +29,24 @@ estimated_complexity: S
 it_requirements:
   - "Canonical source to change: scripts/ac_store/scan_ac_store.py (the leaf-readiness/completeness gate; source-only Python, no templates/ counterpart)."
   - "Fixtures for these two real ACs must be exercised via a temp store copy — the gate must flag each with the reason \"missing file targets\" and exclude it from the ready/dispatch set."
-  - "The held-back decision must be data-driven (absence of file targets in it_requirements), not keyed on the specific AC ids."
+  - "The held-back decision must be data-driven -- the record is in the 'no declared files' state per the declared-files seam (ACD-1600c-4) -- not keyed on the specific AC ids and not on what their it_requirements or doc_links say."
+  - "The fixture asserts its precondition (neither copied record carries declared_files) rather than assuming it, so a later declaration on the real records fails the fixture loudly instead of silently changing the verdict."
+  - "Both real records read as schema_version < 2, so under the default advisory mode they are reported with 'missing file targets' but not held (ACD-1600c-1 migration requirement); the held-back and not-dispatched assertions run with the gate in enforce mode on the temp store."
 delivers_to: null
 expects_from:
   ac_id: ACD-1600c-1
-  contract: "The implementation-readiness completeness gate: a classifier that flags an AC NOT implementation-ready and names which of {file targets, test contract} is missing."
+  contract: "The implementation-readiness completeness gate: a classifier that flags an AC NOT implementation-ready with reasons drawn from the single hold-reason list (ACD-2500b-2); this case exercises the owned reason 'missing file targets'."
 origin_agent: BrainCandy
 created: 2026-08-11
-amended_by: []
+amended_by:
+  - reason: "contract continuity: expects_from re-worded to match the amended ACD-1600c-1 delivers_to (single hold-reason list, ACD-2500b-2). Criteria unchanged."
+    date: '2026-09-25'
+    by: it-po
+    directed_by: user
+  - reason: "it-po: it_requirement 'absence of file targets in it_requirements' re-keyed to the 'no declared files' state (ACD-1600c-4-ii, per amended ACD-1600c-1); fixture precondition and enforce-mode requirement added so the hold assertion is consistent with the advisory / grandfathering posture. Criteria and readiness unchanged."
+    date: '2026-09-27'
+    by: it-po
+    directed_by: user
 superseded_by: null
 covered_by: []
 implemented_by: []

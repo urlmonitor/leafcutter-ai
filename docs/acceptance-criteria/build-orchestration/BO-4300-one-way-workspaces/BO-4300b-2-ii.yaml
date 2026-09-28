@@ -1,0 +1,103 @@
+id: BO-4300b-2-ii
+title: "An out-of-date installed copy inside the project does not change which project is found"
+component: build-orchestration
+components:
+  - worktree_manager
+  - build_orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: critical
+roadmap_phase: phase_1
+change_target: code
+risk_surface: safety
+criteria: |
+  Given the tools' own package project contains an out-of-date installed copy of
+    the tools inside it, and the current installed copy sits in the folder above
+    it, as in the package's development layout,
+  When a workspace for "alpha" is requested from the folder above, from the
+    package project's top folder, and from inside an existing workspace,
+  Then all three requests find the same project and are answered with the same
+    location,
+  And the tools installed inside the workspace are built from the workspace's own
+    contents, not taken from the out-of-date copy.
+depends_on: [BO-4300b-2]
+doc_links:
+- path: docs/analysis/2026-09-25-worktree-creation-consolidation.md
+  relationship: describes
+  status: exists
+- path: docs/analysis/2026-09-25-worktree-failure-modes.md
+  relationship: describes
+  status: exists
+- path: docs/architecture/components/worktree-manager.md
+  relationship: describes
+  status: exists
+  relevance: Component page for the one maker; rewritten for clones under BO-4300a-4.
+- path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+  relationship: constrains
+  status: exists
+  relevance: Dev layout (package repo as a child of a non-repo workspace) and the deployed-outside-the-repo
+    copy.
+- path: docs/testing/test-angles.md
+  relationship: describes
+  status: exists
+  relevance: Angle taxonomy used by this record's test_spec.
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: BO-4300b-1
+  contract: Project resolution order independent of any install copy.
+package_surface: false
+it_requirements:
+- 'Resolution never consults any installed copy''s location, including a stale gitignored install inside
+  the package repository (Q6 open: the copy may be removed or kept; the outcome must not depend on it).'
+- The install inside the workspace comes from the workspace's own build, never copied or linked from any
+  existing install tree.
+- Proof runs the DEPLOYED maker -- the copy an install delivers, resolved through the shared test locator
+  delivered by BO-4300f-4 -- as a separate process against real temporary git repositories with a real
+  bare hub. No mock of git, no import of the maker module, no grep of its source (CLAUDE.md 'Gate / Workflow
+  ACs -- Verify Behaviorally, Not by Grep'); a test never falls back to the templates/ source copy.
+- 'Tests must not spawn the package''s own scripts/build.py (CLAUDE.md ''Tests must not spawn their own
+  build.py''): the deployed maker comes from the shared deployed layout, and fixture projects carry a
+  minimal stub build entry point that installs a real, rejecting hook in well under a second. A test that
+  must mutate the package and build its own copy says so and justifies it in its ticket.'
+- All temporary projects, hubs and workspaces live under the test's temp directory and run git with an
+  isolated global and system config; afterwards the developer's own repository's branches, registered
+  worktrees and local git config are unchanged (BO-4300f-4-i, F14, KI-TQ-012).
+test_required: true
+test_spec:
+- name: test_stale_inner_install_does_not_change_the_project_found
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: criterion
+  description: In a dev-layout fixture with an out-of-date inner install and a current outer one, requests
+    from the parent, the package's top folder and inside a workspace return the same repo_root and workspace_path.
+- name: test_workspace_install_is_built_from_its_own_contents
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: real_artifact
+  description: Files in the workspace's install match the workspace's own build output (a marker value
+    planted only in the stale copy is absent).
+test_rationale: Every assertion is made on what the deployed maker actually did to real repositories --
+  its one JSON answer, its exit code, and the state of the workspace, the hub and the main copy afterwards.
+  A direct-import unit test would pass while the deployed copy is stale or mis-deployed (F13), and a git
+  mock cannot show the half-made and occupied states this family exists to handle.
+origin_agent: business-analyst
+created: 2026-09-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260927-BO-4300b-2-ii.md
+notes: |
+  Section 1 of the consolidation analysis: the resolver always preferred the stale gitignored
+  leafcutter-ai/.leafcutter copy (2026-09-09) over the current deployment (2026-09-24). OPEN
+  (Q6, not decided here): whether that inner copy should exist at all. This record holds
+  either way -- if the copy is removed it is trivially true; if it stays it must not steer the
+  outcome.
+target_epic: EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace

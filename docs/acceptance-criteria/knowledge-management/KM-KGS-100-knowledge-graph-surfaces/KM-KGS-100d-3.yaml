@@ -1,7 +1,7 @@
 id: KM-KGS-100d-3
 components:
   - knowledge_management
-readiness: draft
+readiness: approved
 priority: critical
 title: "A relationship entry becomes an edge whichever accepted shape it uses"
 component: knowledge-management

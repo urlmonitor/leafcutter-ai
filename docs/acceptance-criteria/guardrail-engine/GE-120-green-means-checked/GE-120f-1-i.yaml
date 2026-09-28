@@ -7,7 +7,7 @@ components:
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: critical
 roadmap_phase: phase_1
@@ -218,9 +218,13 @@ origin_agent: BrainCandy
 created: 2026-09-01
 amended_by: []
 superseded_by: null
-covered_by: []
+covered_by:
+- unit_tests/portability/test_ge_120f_1_i.py
+- unit_tests/portability/test_ge_120f_1_i_b.py
 implemented_by:
 - tickets/00_inbox/epics/EPIC-AGuardThatHasNeverSaidNoIsNotCountedAs/02_TICKET-20260914-GE-120f-1-i.md
+- templates/scripts/commit_guardian/check_negative_control_liveness.py
+- templates/scripts/commit_guardian/_negative_control_pairing.py
 change_target: code
 risk_surface: contract_boundary
 notes: |

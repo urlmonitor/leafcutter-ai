@@ -1222,8 +1222,14 @@ if (!contextBundleUsable) {
 // Gate invocations (inlined lean loop — scoped to the resolved ids)
 // ---------------------------------------------------------------------------
 
+// TQ-500f-3-i: --ac-root opts the ONE shared verify_red_baseline reader into
+// its declared-absence-only-red refusal rule. The AC store root is threaded
+// through unchanged (acStoreRoot, the same value every other gate/lifecycle
+// invocation in this file already passes) — never a second, independently
+// resolved path.
 const redBaselineInvocation =
-  `python3 ${gateScript} verify_red_baseline --ac-ids ${batchIds} --test-root ${worktreePath}`;
+  `python3 ${gateScript} verify_red_baseline --ac-ids ${batchIds} --test-root ${worktreePath}` +
+  ` --ac-root ${acStoreRoot}`;
 
 const greenCoverageInvocation =
   `python3 ${gateScript} verify_green_and_coverage` +

@@ -1,0 +1,164 @@
+id: BO-2400f-3-ii
+components:
+  - build_orchestration
+title: "Wherever the run is launched from, every step is told the run's own workspace by name, so a legitimate step is not taken for a misrouted one"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given an operator starts a fast-lane run for one acceptance criterion from a checkout
+    other than the workspace the run opens — the main checkout, a sibling worktree of the
+    same repository, or a subdirectory of either,
+  And the run has opened its own workspace and confirmed its location (BO-2400f-3,
+    BO-2400f-3-i),
+  When the run asks an agent to perform any step after that — context bundle, claim,
+    test-writer, coder, review, release, changelog, commit, push or pull request,
+  Then the request carries the target explicitly, as three facts together: the
+    workspace's absolute location as the worktree step confirmed it, the branch the run
+    created there, and the acceptance-criterion id the run was started for,
+  And the request states that this run opened that workspace for that criterion, so an
+    agent that starts in a different location reads the target as the run's own
+    workspace and not as a task aimed somewhere it should not go,
+  And no step takes its target from the location the run was launched from, and the
+    launch location does not appear in any step request as a place to work.
+
+  Given the same acceptance criterion and the same store,
+  When one run is launched from the main checkout and another from a sibling worktree,
+  Then every step request in both runs names the target in the same form, differing only
+    in the workspace location each run opened,
+  And neither run has a step declined as misrouted or injected.
+
+  Given a step agent nevertheless declines its step because it judges the target
+    foreign,
+  When the run reads that reply,
+  Then the run ends as a declined step (BO-2400f-5-iii) naming the step, the agent, the
+    target it was given, and its reason.
+depends_on: [BO-2400f-3, BO-2400f-3-i, BO-2400f-5-iii]
+doc_links:
+  - path: templates/workflows-js/fast-lane-ship.js
+    relationship: modifies
+    status: exists
+    relevance: "Composes every step request. The target each request names is set here."
+  - path: docs/acceptance-criteria/build-orchestration/BO-2400-fast-lane-build/BO-2400f-3-i.yaml
+    relationship: related
+    status: exists
+    relevance: "Confirms the workspace location against the repository the run operates in. This record carries that confirmed location to every later step."
+  - path: docs/how-to/fast-lane-build.md
+    relationship: describes
+    status: exists
+    relevance: "Should state that a run may be launched from any checkout, including a sibling worktree."
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - >-
+    The target block {workspace, branch, ac_id} is built once, from the worktree step's
+    confirmed output (BO-2400f-3-i), and every later dispatch uses that single value. No
+    request takes a location from the launch directory, the process working directory
+    or a caller-supplied cwd.
+  - >-
+    The block is rendered identically in every request, with the same labels, order and
+    sentence stating that this run opened <workspace> on <branch> for <ac_id>. Two runs
+    can then be compared by substituting the workspace value alone.
+  - >-
+    The workspace is given as the absolute path in the form the worktree step confirmed
+    it, with no re-normalisation per step. Paths in different forms (separators, drive
+    letter case) across requests of one run count as a defect, because they make a
+    legitimate target look foreign.
+  - >-
+    Specialist dispatches (test-writer, coder, pr-reviewer) get the same block. The
+    existing mechanism that makes them work in the workspace is kept.
+  - >-
+    The declined-step halt's target field (BO-2400f-5-iii) is filled with the same
+    block.
+  - >-
+    Edit the template lane and regenerate the deployed copy through build.py. Template
+    and deployed copies stay in parity.
+test_required: true
+test_spec:
+  - name: test_every_post_worktree_request_carries_workspace_branch_and_ac_id
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "In a stubbed run, every dispatch recorded after the worktree step (command steps and specialist phases) carries the confirmed absolute workspace, the created branch and the run's AC id together."
+    must_catch:
+      - "context-bundle request names the workspace but not the branch or AC id (today's state)"
+      - "specialist requests omitted from the target block"
+  - name: test_every_request_states_the_run_opened_the_workspace_for_the_ac
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "Every such request contains the ownership statement naming the same workspace, branch and AC id."
+  - name: test_launch_location_never_appears_in_any_step_request
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: integration
+    angle: failure
+    description: "Launched with a distinctive sentinel sibling-worktree path as the launch location, no recorded request contains that path."
+  - name: test_runs_from_main_and_sibling_worktree_differ_only_in_workspace
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: integration
+    angle: discrimination
+    description: "Two stubbed runs for the same AC and fixture store, launched from the main checkout and from a sibling worktree, produce request sequences that are identical once each run's workspace path is replaced by a placeholder."
+  - name: test_declined_step_halt_names_the_target_it_was_given
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: integration
+    angle: seam
+    covers: [BO-2400f-3-ii, BO-2400f-5-iii]
+    description: "A step whose stubbed agent declines the target as foreign halts as declined_step with target equal to the block the request carried, plus the step, agent and reason."
+test_rationale: |
+  "No step is declined as misrouted" is a claim about model judgement and cannot be tested
+  deterministically. What the lane controls is what each agent is told. The tests assert
+  that every request carries the complete target and the ownership statement, that the
+  launch location never leaks, and that the request stream does not depend on where the
+  run was launched. The sentinel path makes the leak test exact. A plain "cwd not in
+  prompt" check would pass whenever the two paths happened to share a prefix.
+
+  The differ-only-in-workspace test is the one that shows the fix is structural and not
+  per step. All tests run through the workflow engine harness with stubbed replies, so no
+  model is called.
+delivers_to:
+  agent: python-coder
+  contract: "Every dispatch after the worktree step in templates/workflows-js/fast-lane-ship.js carries target {workspace: absolute path string exactly as BO-2400f-3-i confirmed it, branch: string, ac_id: string} and the sentence 'This run opened <workspace> on branch <branch> for <ac_id>.'; the declined-step halt's target field (BO-2400f-5-iii) is the same object. Consumed by the command-step-runner request shape (BO-2400a-1-i) and BO-2400f-5-i."
+expects_from:
+  ac_id: BO-2400f-3-i
+  contract: "The workspace location the run confirmed against the repository it operates in (absolute path string) and the branch it created (string), available to the lane after the worktree step."
+origin_agent: business-analyst
+created: 2026-09-27
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-09-27'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+notes: |
+  Observed 2026-09-25: the session was launched from a sibling worktree. The context-bundle
+  agent (python-coder) saw a task aimed at a different worktree from its own, called it "a
+  misrouted or injected task" and declined. That was reasonable from where it stood: nothing in
+  the request told it the other worktree belonged to this run.
+
+  WHY UNDER BO-2400f-3. The target is the workspace BO-2400f-3 opens and BO-2400f-3-i confirms.
+  This record makes sure every later step is told about it. It is not a duplicate of BO-2400f-3-i,
+  which decides which location the run uses and says nothing about how later steps learn it.
+
+  The IT PO chooses how the three facts reach each agent. The criterion requires only that they
+  arrive together and that the launch location is never used as a target.
+
+  USER DECISION 2026-09-27: every command step (context bundle, claim, release, changelog,
+  commit, push, pull request) is run by the dedicated command-step-runner (BO-2400a-1-i),
+  which runs its command in the workspace named by these three facts. The specialist steps
+  (test-writer, coder, pr-reviewer) receive the same three facts. This record applies to both.

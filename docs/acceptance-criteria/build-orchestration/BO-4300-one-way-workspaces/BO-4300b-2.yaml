@@ -1,0 +1,118 @@
+id: BO-4300b-2
+title: "A project that installed the tools gets its workspaces the same way"
+component: build-orchestration
+components:
+  - worktree_manager
+  - build_orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: critical
+roadmap_phase: phase_1
+change_target: code
+risk_surface: safety
+criteria: |
+  Given a project "shop" that installed these tools, whose installed copy of the
+    workspace maker lives in a folder outside shop's version history,
+  When a workspace for the work "alpha" is requested from shop's top folder, and
+    again from the folder above shop,
+  Then both requests are answered ready with the same location,
+  And the workspace is a copy of shop, started from shop's shared main line tip,
+    with shop's own tools installed inside it,
+  And that location is the same on every request for "alpha" in shop, and lies
+    in the one place set aside for shop's workspaces.
+depends_on: [BO-4300b]
+doc_links:
+- path: docs/analysis/2026-09-25-worktree-failure-modes.md
+  relationship: describes
+  status: exists
+- path: docs/analysis/2026-09-25-worktree-creation-consolidation.md
+  relationship: describes
+  status: exists
+- path: docs/analysis/2026-09-25-worktree-component-proposal.md
+  relationship: describes
+  status: exists
+- path: docs/architecture/components/worktree-manager.md
+  relationship: describes
+  status: exists
+  relevance: Component page for the one maker; rewritten for clones under BO-4300a-4.
+- path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+  relationship: constrains
+  status: exists
+  relevance: Dev layout (package repo as a child of a non-repo workspace) and the deployed-outside-the-repo
+    copy.
+- path: docs/testing/test-angles.md
+  relationship: describes
+  status: exists
+  relevance: Angle taxonomy used by this record's test_spec.
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from:
+  ac_id: BO-4300b-1
+  contract: Project resolution order independent of the maker's location.
+package_surface: false
+it_requirements:
+- Consumer layout (the maker deployed in a folder outside shop's version history) resolves shop by the
+  BO-4300b-1 order, never from the maker's own location (F11, KI-ACD-004).
+- 'The landing place is ONE rule owned by the maker and reported as layout (Q5 open: inside the project
+  and ignored by git, or in the parent folder). Whichever is chosen, it is derived from the resolved project,
+  stable across requests, and -- if shared by several projects -- keeps them apart (BO-4300b-2-i).'
+- shop's install inside the workspace is built from the workspace's own contents with shop's own derived
+  config.
+- Answers conform to the result contract delivered by BO-4300c-2 (one JSON object on stdout, status/code/exit
+  mapping, workspace_path absent on every non-ok answer).
+- Proof runs the DEPLOYED maker -- the copy an install delivers, resolved through the shared test locator
+  delivered by BO-4300f-4 -- as a separate process against real temporary git repositories with a real
+  bare hub. No mock of git, no import of the maker module, no grep of its source (CLAUDE.md 'Gate / Workflow
+  ACs -- Verify Behaviorally, Not by Grep'); a test never falls back to the templates/ source copy.
+- 'Tests must not spawn the package''s own scripts/build.py (CLAUDE.md ''Tests must not spawn their own
+  build.py''): the deployed maker comes from the shared deployed layout, and fixture projects carry a
+  minimal stub build entry point that installs a real, rejecting hook in well under a second. A test that
+  must mutate the package and build its own copy says so and justifies it in its ticket.'
+- All temporary projects, hubs and workspaces live under the test's temp directory and run git with an
+  isolated global and system config; afterwards the developer's own repository's branches, registered
+  worktrees and local git config are unchanged (BO-4300f-4-i, F14, KI-TQ-012).
+test_required: true
+test_spec:
+- name: test_adopter_request_from_top_and_parent_folder_gives_same_location
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: criterion
+  description: An installed maker outside shop's history, run from shop's top folder and from its parent,
+    answers ok with the same workspace_path both times.
+- name: test_adopter_workspace_is_clone_of_shop_at_hub_main_with_own_install
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: criterion
+  description: The workspace is a clone of shop (origin = shop's hub), base_commit = shop's hub main tip,
+    and shop's install files are regular files built inside it.
+- name: test_adopter_location_is_stable_and_in_shops_landing_place
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: boundary
+  description: Repeated requests for alpha in shop return the same workspace_path, located in the one
+    place set aside for shop's workspaces.
+test_rationale: Every assertion is made on what the deployed maker actually did to real repositories --
+  its one JSON answer, its exit code, and the state of the workspace, the hub and the main copy afterwards.
+  A direct-import unit test would pass while the deployed copy is stale or mis-deployed (F13), and a git
+  mock cannot show the half-made and occupied states this family exists to handle.
+origin_agent: business-analyst
+created: 2026-09-25
+amended_by: []
+superseded_by: null
+covered_by: [BO-4300b-2-i, BO-4300b-2-ii]
+implemented_by:
+- tickets/00_inbox/TICKET-20260927-BO-4300b-2.md
+notes: |
+  F11: the installed copy of today's script cannot find the repository when it lives outside
+  it (KI-ACD-004). OPEN (Q5, not decided here): whether shop's workspaces live inside shop
+  (ignored by version control) or beside it in the parent folder. This record requires only
+  that the place is predictable per project; BO-4300b-2-i adds the constraint that any
+  shared-parent choice must still keep projects apart.
+target_epic: EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace
