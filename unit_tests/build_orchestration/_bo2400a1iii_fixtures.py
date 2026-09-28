@@ -244,6 +244,31 @@ def build_git_fixture_repo(tmp_path: Path, agents: list[dict[str, Any]], schema:
     ModuleNotFoundError('template_compiler') from inside the real,
     unmodified check_agent_registry.py, which is a fixture-completeness bug,
     not a signal about the code under test.
+
+    MIGRATION (GE-113c-1-vi, done by that AC's test-writer): a real
+    .build_manifest.json recording {"package_root": "leafcutter"} is now
+    written at the repo root alongside the bare leafcutter/ directory this
+    fixture already built. GE-113c-1-vi's own it_requirements name this
+    exact fixture as one that "reaches this hook through a bare leafcutter/
+    fixture directory" and must be "migrated to a real layout, not
+    weakened," because once that AC's fix lands (locate the package via the
+    shared resolver joined with the manifest's package_root, rather than the
+    current hardcoded `repo_root / "leafcutter"` literal), a bare
+    leafcutter/ directory with NO manifest would make the package
+    unlocatable — the fixed hook would then report "cannot locate package"
+    and block for a DIFFERENT reason than the one
+    test_unknown_step_kind_is_rejected_by_the_registry_gate_naming_kind_and_agent
+    actually asserts (it requires 'deploys' AND 'fixture-agent' named in the
+    output — only true once the registry is actually read). Adding the
+    manifest is purely additive: it does not change this fixture's directory
+    layout, and it does not affect TODAY's still-unfixed hook (which reads
+    no manifest at all) — confirmed by re-running the full step_kinds suite
+    (16 passed) immediately after this change. It only changes what happens
+    once GE-113c-1-vi's fix is live: the fixed hook will resolve
+    `find_project_root() (-> repo) / "leafcutter"` from this manifest,
+    exactly matching this fixture's real, on-disk package location, so the
+    test keeps genuinely exercising step_kinds rejection rather than
+    degrading into an unlocatable-package block.
     """
     repo = tmp_path / "repo"
     repo.mkdir(parents=True)
@@ -255,6 +280,9 @@ def build_git_fixture_repo(tmp_path: Path, agents: list[dict[str, Any]], schema:
     write_schema(
         pkg / "config" / "agent_registry.schema.json",
         schema if schema is not None else load_real_schema(),
+    )
+    (repo / ".build_manifest.json").write_text(
+        json.dumps({"package_root": "leafcutter"}, indent=2), encoding="utf-8"
     )
 
     subprocess.run(

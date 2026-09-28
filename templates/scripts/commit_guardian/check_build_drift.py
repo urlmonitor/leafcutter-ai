@@ -23,10 +23,16 @@ ARCHITECTURE: Reads .build_manifest.json written by build.py
     knowable in advance (this repo's own checkout is "leafcutter-ai"; a
     consumer install may name it anything), so the manifest path — and the
     template directories derived from its parent — are never built from a
-    hardcoded package-directory segment. See ``_candidate_manifest_roots``
-    below for the layout-independent search order (git toplevel, then the
-    structurally-derived workspace root, then that root's immediate
-    subdirectories). check_output_drift.py shares this identical resolver.
+    hardcoded package-directory segment. The layout-independent search order
+    (git toplevel, then the structurally-derived workspace root, then that
+    root's immediate subdirectories) now lives in the shared
+    ``_resolve_root`` module (pr-reviewer H-2 follow-up, GE-113c-1-vi):
+    ``_resolve_manifest_path`` below is a thin alias onto
+    ``_resolve_root.resolve_manifest_path``. check_output_drift.py and
+    check_agent_registry.py import the SAME implementation — see that
+    module's own docstring for why a third, independently-drifting copy was
+    rejected (and why it lives in ``_resolve_root.py`` rather than a new
+    sibling module).
 
     SCOPE: Covers two template trees:
     (1) templates/agents/ — .md files that build.py compiles into .claude/agents/.
@@ -81,7 +87,7 @@ from pathlib import Path
 
 import logging
 
-from _resolve_root import find_project_root
+from _resolve_root import resolve_manifest_path as _resolve_manifest_path
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.WARNING, format="%(levelname)s: %(message)s")
@@ -135,92 +141,6 @@ _GATE_NAME = "check-build-drift"
 # ---------------------------------------------------------------------------
 # Manifest resolution (GE-118b)
 # ---------------------------------------------------------------------------
-
-
-def _candidate_manifest_roots(hook_file: Path) -> list[Path]:
-    """Build the ordered list of plausible roots for .build_manifest.json.
-
-    build_helpers.write_build_manifest() always writes to
-    ``package_root / ".build_manifest.json"``, but package_root's directory
-    name is NOT knowable in advance: this repo's own checkout is named
-    "leafcutter-ai", while a consumer install may name it anything at all.
-    Roots are tried in priority order, never by matching a hardcoded name:
-
-    1. The git repository/worktree toplevel containing the current process
-       (via the sibling ``_resolve_root.find_project_root()``, already used
-       by the other hooks in this directory). pre-commit always invokes
-       hooks with cwd == the repo root, so for a package checkout or a
-       worktree of it this directly resolves to package_root.
-    2. The "workspace root" derived structurally from this hook's own
-       deployed location: two directories up from
-       ``scripts/commit_guardian/<hook>.py`` is the deploy root (e.g.
-       ``.leafcutter`` when deployed, ``templates`` when run from the
-       source tree); one more level up is the workspace root that holds
-       package_root as a sibling. Checked directly, for layouts where
-       package_root IS the workspace root.
-    3. Every immediate subdirectory of that workspace root (sorted for
-       deterministic output) — covers the deployed-consumer-install layout,
-       where package_root is a named sibling of the deploy root (this
-       repo's real production layout: ``.leafcutter/`` and ``leafcutter-ai/``
-       are siblings under the workspace root).
-
-    Args:
-        hook_file: Absolute, resolved path to this hook module
-            (``Path(__file__).resolve()``).
-
-    Returns:
-        Ordered list of candidate root directories. May include directories
-        that do not exist or do not contain the manifest — callers check
-        each with ``.exists()``.
-    """
-    roots: list[Path] = [find_project_root().resolve()]
-
-    deploy_root = hook_file.parents[2]
-    workspace_root = deploy_root.parent
-    roots.append(workspace_root)
-
-    try:
-        roots.extend(
-            sorted(
-                d.resolve()
-                for d in workspace_root.iterdir()
-                if d.is_dir() and not d.name.startswith(".")
-            )
-        )
-    except OSError as exc:
-        logger.warning(
-            "cannot list workspace root %s while searching for the build "
-            "manifest: %s",
-            workspace_root,
-            exc,
-        )
-
-    return roots
-
-
-def _resolve_manifest_path(hook_file: Path) -> tuple[Path | None, list[Path]]:
-    """Locate the real .build_manifest.json, searching plausible roots.
-
-    Args:
-        hook_file: Absolute, resolved path to this hook module.
-
-    Returns:
-        Tuple of (manifest_path, tried_paths). ``manifest_path`` is None
-        when no candidate exists on disk; ``tried_paths`` lists every
-        absolute path checked, in search order, for use in a diagnostic
-        message when the manifest genuinely cannot be found.
-    """
-    tried: list[Path] = []
-    seen_roots: set[Path] = set()
-    for root in _candidate_manifest_roots(hook_file):
-        if root in seen_roots:
-            continue
-        seen_roots.add(root)
-        candidate = root / ".build_manifest.json"
-        tried.append(candidate)
-        if candidate.exists():
-            return candidate, tried
-    return None, tried
 
 
 def _warn_manifest_not_found(tried: list[Path]) -> None:
@@ -850,4 +770,20 @@ if __name__ == "__main__":
 #   check_output_drift.py was read end to end and confirmed to consume
 #   neither half of the producing end (only ``output_mappings``), so it
 #   needed no change and is unregressed by this fix.
+# - 2026-09-28 07:15 [python-coder/GE-113c-1-vi, pr-reviewer follow-up H-2]:
+#   Extracted this file's ``_candidate_manifest_roots`` / ``_resolve_manifest
+#   _path`` pair (byte-for-byte identical to check_output_drift.py's own
+#   copy) into the shared ``_resolve_root.py`` module (already deployed
+#   alongside every hook in this directory — see that module's own DECISION
+#   HISTORY for why the extraction landed there rather than in a brand-new
+#   sibling module), so check_agent_registry.py's GE-113c-1-vi fix could
+#   import the SAME lookup instead of adding a third, independently
+#   -drifting copy — the AC's it_requirements explicitly forbid a third
+#   copy. ``_resolve_manifest_path`` here is now a one-line alias onto
+#   ``_resolve_root.resolve_manifest_path``; ``_candidate_manifest_roots``
+#   was dropped entirely (nothing in this file called it directly — only
+#   ``_resolve_manifest_path`` did, and that call now lives inside the
+#   shared module). No behaviour change: verified by re-running this file's
+#   full existing test suite before and after the extraction with identical
+#   pass counts.
 # ====================================================================
