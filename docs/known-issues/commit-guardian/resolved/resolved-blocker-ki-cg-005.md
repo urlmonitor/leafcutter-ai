@@ -16,12 +16,12 @@ related_docs:
 # KI-CG-005 — `check-product-truth-validate` / `check-product-truth-generate` hard-fail on an absent, explicitly optional product-truth store, gating every AC YAML commit
 
 > One known issue, split out of `docs/known-issues/commit-guardian.md` on
-> 2026-09-14. Index: [commit-guardian.md](../commit-guardian.md).
+> 2026-09-14. Index: [commit-guardian.md](../../commit-guardian.md).
 > Filename severity is the three-level index bucket (`blocker`); the
 > original grading is the `**Severity:**` line below, unchanged.
 
 - **Severity:** blocker
-- **Status:** open
+- **Status:** resolved — see "Re-verified and closed 2026-09-23" below
 - **Occurrences:** 1
 - **First seen:** 2026-08-18 · **Last seen:** 2026-08-18
 - **Where:** `templates/scripts/commit_guardian/commit_guardian.json:986` (`check-product-truth-validate`) and `:999` (`check-product-truth-generate`)
@@ -56,4 +56,39 @@ already encodes the decision that product-truth is optional. Make the hooks agre
 skip when the store is absent, the same way the workflow does. Pick one answer to "is this
 optional?" and have both halves honour it.
 
----
+**Re-verified and closed 2026-09-23.** ACD-2100 did not touch this mechanism, but
+EPIC-TruthfulProjectRecord (UXP-700a-1 / UXP-700a-2 / UXP-700b-1 / UXP-700b-2, landed
+2026-09-09 through 2026-09-17, all in the current worktree) closes it by a different route
+than the "skip when absent" direction proposed above: instead of the hooks detecting
+"is product-truth opted into?", `build_phases_product_truth.py::_scaffold_product_truth_record`
+now write-if-absent scaffolds a complete, runnable, EMPTY record on every `build.py` run
+(`flows/`, `mock-data/`, `mockups/` directories, an `index.json` declaring zero artifacts,
+and — the file this bug's original repro was missing — `classifier/eval.jsonl`), so the store
+is never structurally absent for a deployed consumer, opted in or not. `validate_product_truth.py`
+and `generate_product_truth.py` were separately hardened (same epic) to treat an empty store as
+`"nothing-examined"`/no-diff rather than crashing or hard-failing (`run_checks()`'s
+`_top_level_outcome`, `write_index`'s "A missing `index.json` is rebuilt... rather than
+crashing (UXP-700a-2)").
+
+Confirmed by reproducing the exact reported scenario — schemas + scripts deployed, zero
+flows/mock-data/mockups authored, one AC YAML with no `product_truth` field, "never opted in"
+— against the current source:
+
+```
+$ python3 validate_product_truth.py --quiet   # (against a from-scratch, unauthored store)
+{"outcome": "nothing-examined", "examined": 0, ...}
+exit: 0
+
+$ python3 generate_product_truth.py --check --quiet
+(no output)
+exit: 0
+```
+
+Both hooks' `files:` trigger in `commit_guardian.json` still fires on any staged AC YAML —
+that half of the original complaint is textually unchanged — but it no longer matters: a
+run against an absent/never-authored store now exits 0 with a stated "nothing-examined"
+outcome instead of hard-failing, so the optional feature's absence no longer gates the
+mandatory one. The specific mechanism this entry named — jsonschema-hard-dependency-shaped
+crash-or-refuse on missing store content — is gone; the `_comment`s in
+`commit_guardian.json` describing that dependency refer only to the `jsonschema` **package**
+being absent (a different, correctly-hard-failing case, unrelated to this defect).
