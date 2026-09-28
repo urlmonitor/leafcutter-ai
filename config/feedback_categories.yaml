@@ -45,6 +45,8 @@ categories:
       - reference-author
       - user-surface-smoker
       - documentation-verifier
+      - ac-validator
+      - ac-fulfillment-gate
       - frontend-coder
       - llm-expert
     default_severity: low
@@ -71,6 +73,8 @@ categories:
       - reference-author
       - user-surface-smoker
       - documentation-verifier
+      - ac-validator
+      - ac-fulfillment-gate
       - frontend-coder
       - llm-expert
     default_severity: medium
@@ -106,6 +110,8 @@ categories:
       - reference-author
       - user-surface-smoker
       - documentation-verifier
+      - ac-validator
+      - ac-fulfillment-gate
       - epic-supervisor
       - ticket-supervisor
       - frontend-coder
@@ -134,6 +140,8 @@ categories:
       - reference-author
       - user-surface-smoker
       - documentation-verifier
+      - ac-validator
+      - ac-fulfillment-gate
       - epic-supervisor
       - ticket-supervisor
       - frontend-coder
@@ -162,6 +170,8 @@ categories:
       - reference-author
       - user-surface-smoker
       - documentation-verifier
+      - ac-validator
+      - ac-fulfillment-gate
       - epic-supervisor
       - ticket-supervisor
       - frontend-coder
@@ -200,6 +210,8 @@ categories:
       - reference-author
       - user-surface-smoker
       - documentation-verifier
+      - ac-validator
+      - ac-fulfillment-gate
       - frontend-coder
       - llm-expert
     default_severity: low

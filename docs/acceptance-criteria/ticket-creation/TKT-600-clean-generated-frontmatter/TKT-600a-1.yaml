@@ -1,4 +1,32 @@
 amended_by:
+- reason: criteria-scoped-to-no-declared-files-records
+  date: '2026-09-28'
+  by: business-analyst
+  directed_by: user
+  entry: 'CRITERIA CHANGED (scope only). The three files_touched clauses (every path names
+    a file that exists on disk; a non-existent prose path is excluded; a real prose-named
+    source file is kept) now apply to records in the "no declared files" state -- the
+    derived path -- and a scope clause is added saying this AC makes no files_touched promise
+    for a record that declares its files (TKT-600a-3 does). The scope clause is a boundary,
+    not a behaviour claim. The depends_on clauses, title, level, test_spec,
+    it_requirements and priority are unchanged.
+
+    WHY: as written, "every path written to files_touched names a FILE that exists on
+    disk" contradicted TKT-600a-3 (readiness approved), which requires a declared path
+    marked to be created -- by definition absent -- to be written to files_touched. Both
+    cannot hold for a declaring record. TKT-600a-3''s it_requirements already scope this
+    record''s existence filter and bare-directory rejection to the derived path; this
+    entry brings the criteria into line with that.
+
+    WHY work_status STAYS done: narrowing a promise the shipped code already keeps does not
+    falsify it. The declared-files field (ACD-1600c-4) has not landed -- no record carries
+    it -- so every record the shipped generator has ever processed is in the "no declared
+    files" state, which is exactly the population the narrowed clauses still cover, and the
+    covering tests exercise records without the field. Nothing this record claims as done
+    became untrue; the new clause about declaring records is delivered by TKT-600a-3
+    (work_status todo), not claimed here. The 2026-09-01 caveat below (an illustrative path
+    that has an extension and exists is still harvested) is unchanged and now applies only
+    to the derived path.'
 - reason: criteria-narrowed-to-what-is-mechanically-decidable
   date: '2026-09-01'
   by: safety-security-expert
@@ -95,21 +123,28 @@ covered_by:
 - tests/ac_store/test_tkt_600a_1_depends_on_and_files_touched.py::test_files_touched_excludes_prose_paths_that_exist_on_disk
 - tests/ac_store/test_tkt_600a_1_depends_on_and_files_touched.py::test_files_touched_rejects_bare_directory_prose_mention
 created: 2026-08-11
-criteria: "Given generate_ticket_from_ac generating a ticket from an AC,\nWhen it\
-  \ builds the ticket frontmatter,\nThen every path written to files_touched names\
-  \ a FILE that exists on disk, so a\n  bare directory named in a prose it_requirements\
-  \ bullet (e.g. a bullet saying a\n  rule applies under docs/acceptance-criteria\
-  \ or templates/skills) is never written\n  as an edit surface, since a directory\
-  \ is not something a coder can edit,\nAnd a path named in a prose bullet that does\
-  \ NOT exist on disk (an illustrative\n  example such as src/foo.py) is likewise\
-  \ excluded,\nAnd a real source file named only inside a prose bullet (e.g. a bullet\
-  \ reading\n  \"Modify scripts/goal_to_epic.py to ...\") IS kept, preserving TKT-500f-8-i,\n\
-  And depends_on written to the ticket is guard-valid: an AC dependency\
-  \ that is the\n  AC's structural parent (or any AC id with no corresponding ticket\
-  \ in scope) is\n  dropped or translated to a co-located ticket filename, so the\
-  \ generated ticket\n  passes ticket_frontmatter_guard without manual fixup,\nAnd\
-  \ a standalone leaf AC whose only depends_on is its structural parent yields a\n\
-  \  ticket with depends_on: [] (not a dangling AC-id reference).\n"
+criteria: |
+  Given generate_ticket_from_ac generating a ticket from an AC,
+  When it builds the ticket frontmatter,
+  Then, for an AC in the "no declared files" state (it carries no declared-files list, so
+    its files_touched is derived from documentation links and technical requirements rather
+    than declared), every path written to files_touched names a FILE that exists on disk, so a
+    bare directory named in a prose it_requirements bullet (e.g. a bullet saying a
+    rule applies under docs/acceptance-criteria or templates/skills) is never written
+    as an edit surface, since a directory is not something a coder can edit,
+  And, for such an AC, a path named in a prose bullet that does NOT exist on disk (an
+    illustrative example such as src/foo.py) is likewise excluded,
+  And, for such an AC, a real source file named only inside a prose bullet (e.g. a bullet
+    reading "Modify scripts/goal_to_epic.py to ...") IS kept, preserving TKT-500f-8-i,
+  And an AC that declares its files is outside the three files_touched clauses above: this
+    AC makes no promise about its files_touched (TKT-600a-3 does, including declared paths
+    marked to be created that do not yet exist),
+  And depends_on written to the ticket is guard-valid: an AC dependency that is the
+    AC's structural parent (or any AC id with no corresponding ticket in scope) is
+    dropped or translated to a co-located ticket filename, so the generated ticket
+    passes ticket_frontmatter_guard without manual fixup,
+  And a standalone leaf AC whose only depends_on is its structural parent yields a
+    ticket with depends_on: [] (not a dangling AC-id reference).
 delivers_to: null
 depends_on:
 - TKT-600a
