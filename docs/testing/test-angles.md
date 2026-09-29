@@ -3,7 +3,7 @@ title: "Test Angles — A Set-Cover Taxonomy for Proof of Done"
 type: reference
 status: active
 created: 2026-08-14
-last_updated: 2026-09-21
+last_updated: 2026-09-28
 components:
 - testing_quality
 - build_orchestration
@@ -206,7 +206,7 @@ ungated drive is indistinguishable from a gated one in the commit log.
 ## Existing machinery — reuse, do not rebuild
 
 All four claims verified against the working tree on 2026-08-14; a fifth was added and
-verified on 2026-09-21 (TQ-600a-1).
+verified on 2026-09-21 (TQ-600a-1), and extended on 2026-09-28 (TQ-600a-1-i).
 
 - **`user-surface-smoker` already implements the reachability angle** for user-facing
   surfaces, at priority 11.5, with a built-in negative control (`placeholder_signature` —
@@ -258,6 +258,27 @@ verified on 2026-09-21 (TQ-600a-1).
   fixture — sharing would corrupt the shared copy for every other consumer. See CLAUDE.md
   "Tests must not spawn their own `build.py` — reuse a shared deployed layout" for the
   standing rule this fixture implements, and TQ-600a-1 for the full contract.
+  **TQ-600a-1-i pins the cheapest boundary case on top of that contract, with no
+  production code changed** — the behaviour already existed, merged under TQ-600a-1
+  (PR #941): a selection with zero consumers of `shared_reference_layout` must never
+  enter `get_or_produce_shared_layout()` at all — no deploy subprocess runs, and the
+  laziness holds per pytest-xdist worker, not merely per run — while widening the same
+  selection by exactly one consumer must trigger exactly one deploy. Three tests in
+  `unit_tests/suite_performance/test_tq_600a_1_i.py` pin this, came up green on first
+  run, and now protect this pre-existing behaviour: one asserts no `build.py
+  --target-dir` subprocess runs for the zero-consumer selection, one asserts an idle
+  pytest-xdist worker with no scheduled consumer produces nothing, and one reaches the
+  fixture only through the real, un-augmented `python -m pytest` entry point
+  (`pytest.ini`'s `-p scripts.suite_performance.pytest_shared_reference_layout`
+  registration), not an import-only path. Both mutations these tests are built to catch
+  land in the fixture itself, `scripts/suite_performance/pytest_shared_reference_layout.py`:
+  making `shared_reference_layout` `autouse=True`, or producing the layout at
+  plugin-import time or in a worker-startup hook instead of on first request. Non-entry
+  into the producer is observed independently of any run report, via
+  `emit_execution_signal()` / `EXECUTION_LOG_ENV_VAR`
+  (`scripts/suite_performance/_shared_layout_coordination.py`); the reported-deploy-count
+  halves of this same boundary are deferred to TQ-600a-6, which has no reporting surface
+  yet to assert against.
 
 ## Relationship to BO-2900
 
