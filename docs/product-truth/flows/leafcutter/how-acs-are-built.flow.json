@@ -139,8 +139,8 @@
       "implements": [
         "BO-530-1"
       ],
-      "impl_status": "done",
-      "impl_asof": "2026-07-20"
+      "impl_status": "not_started",
+      "impl_asof": "2026-09-29"
     },
     {
       "id": "code",
@@ -416,10 +416,10 @@
     }
   ],
   "impl_summary": {
-    "done": 2,
+    "done": 1,
     "in_progress": 2,
-    "not_started": 15,
+    "not_started": 16,
     "total": 19,
-    "asof": "2026-08-25"
+    "asof": "2026-09-29"
   }
 }

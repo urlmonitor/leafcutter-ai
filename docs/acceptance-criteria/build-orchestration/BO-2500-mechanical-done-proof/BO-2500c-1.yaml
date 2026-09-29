@@ -7,7 +7,7 @@ component: build-orchestration
 level: L2
 status: active
 req_status: draft
-work_status: done
+work_status: todo
 readiness: draft
 priority: medium
 roadmap_phase: phase_1
@@ -42,7 +42,8 @@ expects_from: null
 test_required: false
 origin_agent: BrainCandy
 created: 2026-07-21
-amended_by: []
+amended_by:
+  - reason: "business-analyst reconciliation (2026-09-29): work_status corrected from done to todo. Its sole covered_by AC-id child, BO-2500c-1-i, remains work_status: todo -- no child of this composite is done, so todo (not in_progress) reflects the true state. This parent was never staged alongside BO-2500c-1-i, so check-done-proof -- which validates only the files present in a commit's index, not the store -- never got the chance to see the inconsistency it exists to catch; its silence for this record was not evidence of correctness, only evidence it was never given this file (CLAUDE.md, 'AC-store commits -- stage the parent alongside the child'). readiness (draft) is unchanged -- only the implementation-status axis was wrong. Found by a component-wide sweep of build-orchestration on 2026-09-29, following the identical defect found earlier that day on BO-2300/BO-2300a/BO-2300e."
 superseded_by: null
 covered_by:
   - BO-2500c-1-i

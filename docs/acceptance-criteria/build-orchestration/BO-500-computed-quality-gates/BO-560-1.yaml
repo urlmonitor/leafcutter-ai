@@ -8,7 +8,7 @@ component: build-orchestration
 level: L2
 status: active
 req_status: active
-work_status: done
+work_status: todo
 criteria: |
   Given a ticket has:
     - change_type: flow_change
@@ -67,7 +67,9 @@ expects_from:
   contract: "Guardrails mapping from (change_target, risk_surface) pairs to mandatory agents"
 origin_agent: business-analyst-v3
 created: 2026-06-05
-amended_by: [it-po-v3]
+amended_by:
+  - it-po-v3
+  - reason: "business-analyst reconciliation (2026-09-29): work_status corrected from done to todo. Its covered_by AC-id child, BO-560-1-i, remains work_status: todo (the other covered_by entry, unit_tests/test_generate_ticket_from_ac.py, is a test path, not an AC child, and does not count toward this evaluation) -- no AC child of this composite is done, so todo (not in_progress) reflects the true state. This parent was never staged alongside BO-560-1-i, so check-done-proof -- which validates only the files present in a commit's index, not the store -- never got the chance to see the inconsistency it exists to catch; its silence for this record was not evidence of correctness, only evidence it was never given this file (CLAUDE.md, 'AC-store commits -- stage the parent alongside the child'). readiness (reviewed) is unchanged -- only the implementation-status axis was wrong. Found by a component-wide sweep of build-orchestration on 2026-09-29, following the identical defect found earlier that day on BO-2300/BO-2300a/BO-2300e."
 superseded_by: null
 covered_by:
 - BO-560-1-i
