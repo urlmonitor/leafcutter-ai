@@ -474,8 +474,13 @@ amended_by:
 superseded_by: null
 covered_by:
   - GE-127f-2-i
+  - unit_tests/commit_guardian/test_ge_127f_2_arms.py
+  - unit_tests/commit_guardian/test_ge_127f_2_reachability_and_deployed.py
+  - unit_tests/commit_guardian/test_ge_127f_2_seam_and_mutation.py
 implemented_by:
 - tickets/00_inbox/epics/EPIC-FilesStayWorkable/07_TICKET-20260914-GE-127f-2.md
+- templates/scripts/commit_guardian/_file_size_ratchet.py
+- templates/scripts/commit_guardian/check_file_size.py
 change_target: code
 risk_surface: contract_boundary
 notes: |

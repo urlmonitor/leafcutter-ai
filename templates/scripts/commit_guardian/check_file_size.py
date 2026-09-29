@@ -94,6 +94,7 @@ from _file_size_ratchet import (
     PreviousLengthSourceError,
     describe_measurement_rule,
     measure_current_length,
+    resolve_added_measured_lines,
     resolve_head_covered_paths,
     resolve_parent_revisions,
     resolve_previous_lengths,
@@ -339,23 +340,41 @@ def _print_grown_file(filepath: str, previous_length: int, current_length: int, 
     (via the shared ``Measures:`` line and asymmetry advice) what that
     length measures.
 
+    GE-127f-2: also states the GROSS measured lines the change PUT INTO the
+    file and the required length that leaves (``previous_length - added``),
+    recomputed here (rather than threaded through as a parameter) so this
+    function's own signature stays exactly the four positional arguments
+    every existing call site -- including the disposable-copy fixtures'
+    hand-maintained ``main()`` overrides in this suite's test files, which
+    this ticket must not edit -- already passes it.
+
     Args:
         filepath: The staged file's path.
         previous_length: The length it stood at, at HEAD, before the change.
         current_length: The length it stands at after the staged change.
         limit: The permitted length for this file's extension.
+
+    Raises:
+        AddedLineCountUnavailableError: the gross added-line count could not
+            be re-established for this already-refused file. Deliberately
+            left UNCAUGHT here -- see that exception's own docstring in
+            _file_size_ratchet.py; GE-127f-2-i owns catching it.
     """
+    added = resolve_added_measured_lines(filepath, resolve_parent_revisions())
+    required = previous_length - added
     print("❌ FILE GREW WHILE ALREADY OVER ITS LIMIT:")
     print(f"   {filepath}")
     print(f"   Previous length: {previous_length} lines")
     print(f"   New length: {current_length} lines")
     print(f"   Limit: {limit} lines")
+    print(f"   This change added {added} measured line(s).")
+    print(f"   Required length: {required} lines or below (previous length minus what this change added).")
     _print_measures_line()
     print()
     _print_file_description(filepath, current_length)
     print("   An already-oversized file may still be worked on, but a change")
-    print("   that leaves it LONGER than it stood before is refused. Shrink")
-    print("   it, or leave its length unchanged, to commit this edit.")
+    print("   that puts more measured lines into it than it takes out is")
+    print("   refused. Shrink it, or add no more than you remove, to commit this edit.")
     _print_asymmetry_advice()
     print()
 
@@ -489,6 +508,23 @@ def _classify_file(
 ) -> tuple[str, int, int | None]:
     """Classify one staged, covered file into pass / grew / too-large.
 
+    GE-127f-2: for a file already past its permitted length, the comparison
+    is no longer `lines > previous` (net growth -- the forbidden, self
+    -referential reading GE-127f-2's own Implementation Notes name as the
+    single most likely wrong implementation). It is
+    `lines > previous - added`, where `added` is the GROSS count of measured
+    lines the staged change PUT INTO the file (resolve_added_measured_lines,
+    denominated in the same unit as `lines`/`previous` via the shared
+    count_content_lines stripping rule -- never derived by subtracting
+    `lines` and `previous`, which are already in hand). This strictly
+    generalises the prior comparison: it is recovered EXACTLY when
+    `added == 0` (a pure deletion, or an edit touching only unmeasured
+    content), which is also GE-127b-1's own reconciled boundary -- see that
+    record's amended descriptor,
+    test_ge_127b_1_an_oversized_file_edited_only_in_unmeasured_content_commits_at_its_previous_length.
+    Per GE-127f-2's COST BUDGET note, `added` is established ONLY inside
+    this branch -- a file that is not already oversized never pays for it.
+
     Args:
         filepath: The staged file's path.
         previous_lengths: Mapping of path to its length at HEAD, for files
@@ -499,6 +535,12 @@ def _classify_file(
         one of "pass", "grew", or "too_large". reference_length is the
         previous length for "grew", the limit for "too_large", or None for
         "pass".
+
+    Raises:
+        AddedLineCountUnavailableError: the gross added-line count could not
+            be established for an already-oversized file. Deliberately left
+            UNCAUGHT here -- see that exception's own docstring in
+            _file_size_ratchet.py; GE-127f-2-i owns catching it.
     """
     lines = count_lines(filepath)
     limit = get_limit_for_extension(filepath)
@@ -506,8 +548,11 @@ def _classify_file(
 
     if previous is not None and previous > limit:
         # This file is already past its permitted length per GE-127b: judge
-        # it against its OWN previous length, never against the fixed limit.
-        if lines > previous:
+        # it against its OWN previous length, less what the change added
+        # (GE-127f-2), never against the fixed limit.
+        added = resolve_added_measured_lines(filepath, resolve_parent_revisions())
+        required = previous - added
+        if lines > required:
             return "grew", lines, previous
         return "pass", lines, None
 
@@ -600,6 +645,36 @@ if __name__ == "__main__":
 ====================================================================
 DECISION HISTORY
 ====================================================================
+- 2026-09-28 [python-coder/GE-127f-2]: `_classify_file`'s already-oversized
+  branch now judges `lines > previous - added` instead of `lines > previous`
+  -- `added` is the GROSS measured lines the staged change PUT INTO the
+  file (`_file_size_ratchet.resolve_added_measured_lines`), never the net
+  (current-minus-previous) growth, which is self-referential and collapses
+  back to GE-127b unchanged (a same-length replacement would register as
+  having added nothing). The new comparison is a strict generalisation of
+  the old one, recovered exactly when `added == 0` -- also the shape
+  GE-127b-1's own amended boundary descriptor now pins
+  (`test_ge_127b_1_an_oversized_file_edited_only_in_unmeasured_content_commits_at_its_previous_length`).
+  `added` is established ONLY inside this branch, per the AC's own COST
+  BUDGET note -- a file that is not already oversized pays nothing new.
+  `_print_grown_file` now also states the added-line count and the required
+  length, recomputed internally (via the same `resolve_added_measured_lines`
+  call) rather than threaded through as a new parameter, so its own
+  signature -- and `_classify_file`'s, and `_resolve_ratchet_or_
+  indeterminate`'s -- stay byte-for-byte the same as every existing call
+  site already calls them with, including two test/fixture modules in this
+  suite (`_ge_127a_1_ordinary_commit_fixture.py`'s string-replacement
+  mutation targets, `_ge_127e_3_i_fixture.py`'s disposable `main()`
+  override) that this ticket must not edit. Neither function's RETURN
+  shape changed either, for the same reason. Verified: the full
+  commit_guardian regression suite (GE-127a, GE-127b-1's four split files
+  plus `_i`, GE-127c-1, GE-127d-2, GE-127e-2/3/3-i/4, the KI-CG-20260908
+  merge-aware suite, and `test_ac_limits_merge_scope.py`) stayed green
+  throughout, `check_file_size_rule_parity.py` exits 0, and
+  `ruff check scripts unit_tests` is clean. TEMPLATES-ONLY: this change
+  was not built (`scripts/build.py --force` is denied in this workspace);
+  the deployed copy under `.leafcutter/`/`scripts/` reflects the PRE
+  -GE-127f-2 behaviour until the next build.
 - 2026-09-28 [python-coder/GE-127e-3-i]: `_print_file_description` now
   prints a `DESCRIPTION UNAVAILABLE: reason=<text>` line -- a NEW, third
   token in `_file_size_ratchet.py`'s `TOKEN: reason=<text>` line shape,
