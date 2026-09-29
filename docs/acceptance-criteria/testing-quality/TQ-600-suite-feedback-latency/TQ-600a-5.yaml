@@ -23,7 +23,6 @@ criteria: |
 depends_on:
   - TQ-600a
   - TQ-600a-1
-  - TQ-600a-2
 doc_links:
   - path: scripts/suite_performance/pytest_shared_reference_layout.py
     relationship: modifies
@@ -140,8 +139,14 @@ expects_from:
       fixture-request time, which this AC supplies the selector for.
   - ac_id: TQ-600a-2
     contract: >-
-      The unshared per-test package copy, which is the path an undeclared test is
-      routed to by default.
+      NOT A BUILD-ORDER EDGE — recorded as a relationship only, deliberately not
+      a depends_on. What this AC needs from a-2 is "an unshared path to route an
+      undeclared test to", and that path is the status quo: every test in the
+      suite builds its own copy today, which is the whole reason TQ-600 exists.
+      So the need is already met before a-2 is built. a-2's actual contribution
+      is downstream of this AC, not upstream of it: it GUARANTEES the declared
+      mutators keep their own copy and it DETECTS a mutator wrongly handed the
+      shared layout, both of which consume the selector this AC defines.
 test_spec:
   - name: test_tq600a_5_an_undeclared_test_receives_its_own_copy
     target_dir: unit_tests/suite_performance/
