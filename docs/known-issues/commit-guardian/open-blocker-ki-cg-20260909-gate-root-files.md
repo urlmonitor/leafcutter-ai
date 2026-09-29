@@ -47,7 +47,7 @@ related_docs:
 
 **The numbers.** 5 of 12 tracked root files violate: `ruff.toml`, `requirements-dev.txt`, `build-self.sh`, `SETUP.md`, `LEAFCUTTER_VERSION`. The shipped allowlist permits `poetry.lock` and `pyproject.toml` but this repo uses `requirements-dev.txt`; permits `setup.sh` and `init-db.sh` but not `build-self.sh`; permits `README.md`/`BOOTSTRAP.md`/`CLAUDE.md` but not `SETUP.md`; and its only allowed extension is `.json`, so `.toml` and the extensionless `LEAFCUTTER_VERSION` both fall through.
 
-**Why this is worse than it sounds.** Line 51 matches `A`, `M` **and** `R`. So it is not "no new root files" — it is "these five may never be modified again." Bumping `LEAFCUTTER_VERSION` is part of every release; editing `ruff.toml` is routine lint maintenance.
+**Why this was worse than it sounds — the half that PR #857 fixed.** The filter used to match `A`, `M` **and** `R`. So it was not "no new root files" — it was "these five may never be modified again." Bumping `LEAFCUTTER_VERSION` is part of every release; editing `ruff.toml` is routine lint maintenance. As of PR #857 the filter is `A` or `R` only (`check_root_files.py:55`), so a plain modification to an already-tracked root file no longer trips the gate. The allowlist half below is unchanged and still open.
 
 **This one needs no ratchet — the allowlist is simply wrong for this repo.** It encodes another project's conventions. Fix by adding the five names to `root_files.allowed_files` (and consider `.toml` in `allowed_extensions`). A `HEAD`-existence grandfather is the fallback if some of the five are judged genuinely unwanted, but the straightforward reading is that all five belong at the root of this repo and the config is stale.
 
@@ -77,11 +77,15 @@ requirements-dev.txt
 ruff.toml
 ```
 
-All five files are still tracked at the repo root and still absent from the allowlist; the
-status filter in `check_root_files.py:51` still matches `A`, `M`, **and** `R`. Since the gate
-is now live rather than hypothetical, staging a modification to any of the five (e.g. bumping
-`LEAFCUTTER_VERSION` for a release, or editing `ruff.toml`) would be refused today. This raises
-the entry's practical urgency; it does not change the verdict. Mechanism confirmed present and
-now demonstrably live; kept open.
+All five files are still tracked at the repo root and still absent from the allowlist.
+
+The status filter is no longer part of this: PR #857 narrowed it to `A` or `R`
+(`check_root_files.py:55`), so modifying one of the five — bumping `LEAFCUTTER_VERSION` for a
+release, editing `ruff.toml` — is no longer refused. That was the urgent half and it is closed.
+
+What remains is the allowlist itself, and it bites in a narrower set of cases: adding one of
+the five to a fresh checkout, or deleting and re-adding one. Mechanism confirmed present;
+kept open at reduced practical urgency, with the filename severity unchanged per the split
+convention.
 
 ---
