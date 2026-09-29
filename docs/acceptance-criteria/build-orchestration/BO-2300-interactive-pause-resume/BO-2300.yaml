@@ -6,7 +6,7 @@ component: build-orchestration
 level: L0
 status: active
 req_status: draft
-work_status: done
+work_status: in_progress
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -32,7 +32,8 @@ delivers_to: null
 expects_from: null
 origin_agent: product-owner-v3
 created: 2026-07-20
-amended_by: []
+amended_by:
+  - reason: "business-analyst reconciliation (2026-09-29): work_status corrected from done to in_progress. All five children (BO-2300a/b/c/d/e) read work_status: done on paper, so check-done-proof's composite check had nothing to flag and this L0 stayed apparently consistent. That consistency was itself false: BO-2300a was falsely done (see its own 2026-09-29 amended_by -- two of its three children were reopened to todo on 2026-08-25 and the parent was never staged alongside), and BO-2300e was falsely done (KI-ACD-20260928 -- its subject, a pause record surviving reliably, cannot even be created because the pause-store write is dispatched to an agent chartered to decline it). Both were corrected to in_progress in this same pass. This L0's own falsity was EXPOSED by those two corrections, not CAUSED by them -- BO-2300a's defect predates this session by over a month; fixing the children only made the grandparent's own already-false done visible. in_progress accurately reflects the current mix: BO-2300b, BO-2300c, and BO-2300d remain genuinely done; BO-2300a and BO-2300e are open. readiness stays approved -- the criteria were and remain approved; only the implementation-status axis was wrong."
 superseded_by: null
 covered_by: [BO-2300a, BO-2300b, BO-2300c, BO-2300d, BO-2300e]
 implemented_by: []

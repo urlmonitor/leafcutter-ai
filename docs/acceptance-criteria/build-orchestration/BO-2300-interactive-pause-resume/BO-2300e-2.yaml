@@ -1,0 +1,142 @@
+id: BO-2300e-2
+components:
+  - build_orchestration
+title: "Pause-store operations are dispatched to the agent chartered to run them, not to worktree-agent"
+component: build-orchestration
+level: L2
+status: active
+req_status: active
+work_status: todo
+readiness: draft
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given plan-feature.js needs to perform one of the six pause-store operations
+    against a run's paused_runs record -- peek-pause-record, read-pause-record,
+    clear-pause-record, clear-pause-record-verify, pause-persist, or
+    pause-persist-verify,
+  When the workflow selects which agent to dispatch that operation to,
+  Then the dispatch's agent type is command-step-runner, not worktree-agent,
+  And the dispatch's prompt names the specific target workspace command-step-runner
+    will run the command in,
+  And command-step-runner accepts the dispatch and returns the underlying
+    command's exit status, stdout, and stderr untouched, rather than declining
+    it as outside its charter (the charter worktree-agent invokes to decline
+    today: "I'm the worktree lifecycle agent, scoped to two actions: create and
+    remove").
+depends_on: [BO-2300e]
+assigned_agent: llm-expert
+estimated_complexity: M
+package_surface: false
+doc_links:
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-024-interactive-pause-resume.md
+    relationship: describes
+    status: exists
+  - path: docs/known-issues/ac-driven-dev/open-blocker-ki-acd-20260928-pause-store-dispatched-to-worktree-agent.md
+    relationship: describes
+    status: exists
+  - path: templates/agents/command-step-runner.md
+    relationship: describes
+    status: exists
+  - path: templates/agents/llm-expert.md
+    relationship: describes
+    status: exists
+  - path: config/agent_registry.json
+    relationship: implements
+    status: exists
+  - path: docs/known-issues/commit-guardian/open-high-ki-cg-20260923-ratchet-has-no-escape-for-unsplittable-files.md
+    relationship: describes
+    status: exists
+it_requirements:
+  - "Change each of the three separately-declared local `_shellPermittedAgentId` constants in templates/workflows-js/plan-feature.js (peekPausedGateId ~L1599, resolveGate ~L1647, pauseAtGate ~L1831 -- confirmed at these line numbers) from \"worktree-agent\" to \"command-step-runner\". Update all three individually -- do NOT collapse them into a single module-level constant: the file's own DECISION HISTORY (~L3583-3591) records that resolveGate()/pauseAtGate() (and, per the same note, peekPausedGateId()) are extracted VERBATIM into a standalone Node test driver by unit_tests/workflows/test_acd_2100c_1.py's TestSixthDecisionPointInheritsTheRule, with no top-level script body -- confirmed by direct execution that a reference to anything outside the extracted functions' own bodies throws ReferenceError there. The same constraint governs the workspace value below."
+  - "Every one of the six pause-store agent() dispatches must supply a non-empty, absolute target-workspace value; command-step-runner declines a request that names no workspace (or one that is not an absolute path), so the dispatch must always name one. The workflow already computes exactly this value -- the module-level `authoringWorktreePath` (set once, guaranteed non-null and non-empty by the time Stage 0 begins; the workflow halts earlier if it cannot establish one, per the \"authoringWorktreePath must NEVER stay null past this point\" guard ~L2560-2572) -- but peekPausedGateId(), resolveGate(), and pauseAtGate() do not currently receive it as a parameter. It must be THREADED IN as an explicit function parameter to each of the three (mirroring how runId/args/context/descriptor are already threaded), never read via closure over the module-level variable -- a closure reference would run fine at the top level but throw ReferenceError under test_acd_2100c_1.py's standalone-driver extraction described above, which does not carry authoringWorktreePath into its assembled source."
+  - "command-step-runner's declared `target` input is an object of {workspace, branch, ac_id} (per BO-2400f-3-ii, the fast lane's per-AC-build-step contract), but its own template's \"What You Do\" and \"Declines\" sections only ever inspect target.workspace for the decline check. Pause-store operations are not scoped to a single AC id the way a fast-lane build step is, so supply at minimum target.workspace (the resolved authoringWorktreePath); do not block the dispatch on synthesizing a branch or ac_id value the workflow does not have at this point in the pipeline."
+  - "config/agent_registry.json's command-step-runner entry's spawned_by list currently reads [\"user\"] and must be extended to include \"plan-feature.js\". Note KI-AR-002: registry_validator.py's spawn-symmetry check's _EXTERNAL_CALLERS set is {\"user\", \"finalize-feature.js\"} and excludes plan-feature.js, so that check will not validate this edge either way -- its silence is not evidence the edge is wired correctly or incorrectly."
+  - "Do NOT route these dispatches to status-checker as an alternative fix. It declares permits_shell: false (pre-flight returns permission_denied for it); the fact that ~37 other dispatches in this same workflow already send it shell commands anyway is a real, separately-tracked inconsistency (KI-BO-20260901-1620) and widening it here is not a fix."
+  - "Regression guard: unit_tests/workflows/test_acd_2100c_1.py's existing suite (which extracts resolveGate()/pauseAtGate() verbatim into a standalone driver with no top-level body) must remain green after this change without modification to its own extraction list -- a failure there is the direct signal that the workspace value was threaded in via closure rather than as an explicit parameter."
+  - "TEST STRATEGY: drive the real JS engine via unit_tests/_workflow_engine_harness.py run_workflow_under_e2(plan-feature.js) and assert on the captured agent_calls for each of the six pause-store dispatch labels -- agentType is command-step-runner, never worktree-agent, and the prompt/args include a workspace value. Do not grep the source for the agent name; a grep passes on dead code."
+  - "FILE-SIZE RATCHET (KI-CG-20260923): templates/workflows-js/plan-feature.js is a workflow body the ratchet can never relieve by extraction (the E2 engine gives it no module loader), and the file is already far over the per-file content-line limit that ratchet enforces elsewhere (~3,400 non-blank lines, against the ~400-line cap central registries like build_phases.py are measured against) -- so the ratchet refuses ANY growth, and it counts CONTENT lines, so trimming comments buys nothing. This AC's own diff is achievable at net-zero: the three `_shellPermittedAgentId` reassignments (\"worktree-agent\" -> \"command-step-runner\") change existing lines without adding any, and threading `authoringWorktreePath` into peekPausedGateId()/resolveGate()/pauseAtGate() as an explicit parameter extends existing signature and call-site lines rather than inserting new ones. If the implementer needs net-new lines for any reason (e.g. assembling the {workspace} target object), offset them with an equal-or-greater deletion in the same commit -- do not reach for `SKIP=check-file-size` as a first resort; the one precedent on record (ACS-1600a-1) required the full reasoning in the commit message, and an unexplained bypass trains people to skip the guard generally."
+  - "REACHABILITY (BO-2900a-3): the code this AC changes has a real way in that the covering tests must actually exercise -- the `plan-feature.js` workflow body run by the Workflow tool, via run_workflow_under_e2, not a hand-copied extraction of the three functions into an isolated harness. A test that imports peekPausedGateId()/resolveGate()/pauseAtGate() logic into a standalone driver that never runs plan-feature.js itself does not satisfy this AC -- per BO-2900a-3, a passing test over code no real invocation path reaches does not make the criterion eligible to be marked done."
+  - "KNOWN CONFLICT WITH BO-2300a-1-ii (already work_status: done, readiness: approved): that AC's own criteria prescribes dispatching the pause-store write/verify/peek/read/clear/clear-verify operations to worktree-agent (\"the agent the registry marks as permitted to run repository/shell commands\") -- the exact choice this AC now corrects, per the known issue's diagnosis that permits_shell answers a different question than role-fitness. BO-2300a-1-ii's covering test (unit_tests/workflows/test_bo_2300a_1_ii.py::test_pause_store_and_script_resolution_dispatch_to_shell_permitted_agent) asserts worktree-agent for exactly these six labels; implementing this AC WILL break that assertion, which is the correct outcome, not a regression, but it must be handled explicitly in the same commit -- either update that test to assert command-step-runner for the six pause-store labels while still asserting worktree-agent for the unrelated resolve-worktree-setup-script-path dispatch (which is out of this AC's scope, is not fed through `_shellPermittedAgentId`, and must keep going to worktree-agent), or have BO-2300a-1-ii reopened/narrowed by the BA. Do not leave BO-2300a-1-ii red without one of these two resolutions."
+test_spec:
+  - name: test_all_six_pause_store_ops_dispatch_to_command_step_runner
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "Via run_workflow_under_e2(plan-feature.js), each of peek-pause-record, read-pause-record, clear-pause-record, clear-pause-record-verify, pause-persist, and pause-persist-verify is dispatched with agentType command-step-runner, never worktree-agent, read from captured agent_calls."
+  - name: test_pause_store_dispatch_names_a_workspace
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: boundary
+    description: "Via the harness, each of the six pause-store dispatch calls carries a non-empty target-workspace value in its prompt/args."
+  - name: test_command_step_runner_accepts_and_returns_command_result
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "Via the harness with a command-step-runner stub configured to accept, the dispatched pause-store operation completes and its exit status/stdout/stderr are surfaced to the workflow, rather than a decline."
+test_rationale: >-
+  Per CLAUDE.md ("Gate / Workflow ACs -- Verify Behaviorally"), an AC about a
+  dispatch target must be proved by a test that drives the real workflow and
+  inspects the captured dispatch, not by grepping the source for an agent
+  name -- a grep-only test passes on dead code. All three tests read the
+  harness's captured agent_calls rather than the source text.
+delivers_to:
+  agent: llm-expert
+  contract: "Pause-store dispatches routed to command-step-runner with a named workspace in every one of the six call sites, and the agent registry's command-step-runner.spawned_by updated to include plan-feature.js. Consumed by BO-2300e-3, which governs how the workflow classifies the reply these dispatches return."
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-09-28
+amended_by:
+  - reason: "it-po enrichment (2026-09-29): assigned_agent python-coder -> llm-expert, for consistency with every other AC in this feature folder that edits templates/workflows-js/plan-feature.js (BO-2300a-1, BO-2300a-2, BO-2300b-1, BO-2300b-2, BO-2300d-1, BO-2300e-1 and their children all record the identical 2026-07-20 it-po correction 'retargeted to the E2 workflow ENGINE... assigned_agent python-coder -> llm-expert'). python-coder cannot act on .js files at all, so the prior assignment was a full technology contradiction (BP-1100f-3) against the declared surface. Added it_requirements covering the check-file-size ratchet net-zero constraint (KI-CG-20260923), reachability via the real engine (BO-2900a-3), and a known test conflict with the already-done BO-2300a-1-ii. Criteria unchanged. Caveat: llm-expert's own registry selection_criteria/description do not literally list templates/workflows-js/*.js as owned surface -- a pre-existing registry gap, followed here for consistency with the 11 sibling corrections rather than left as a fresh inconsistency."
+superseded_by: null
+covered_by: [BO-2300e-2-i]
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+notes: |
+  Covers the write/routing half of the defect filed as
+  docs/known-issues/ac-driven-dev/open-blocker-ki-acd-20260928-pause-store-dispatched-to-worktree-agent.md.
+  templates/workflows-js/plan-feature.js hardcodes
+  `const _shellPermittedAgentId = "worktree-agent"` at lines 1599, 1647 and 1831,
+  feeding all six pause-store dispatches. worktree-agent's charter is
+  create/remove worktrees only, so it declines every one of them, the pause
+  record is never written, and an interactive run halts pause_persist_failed at
+  its first gate -- every component behaved correctly; the routing was wrong.
+  `permits_shell: true` answers "may this agent run a command at all", not "is
+  this command within its role" (the same defect class as KI-BO-20260901-1620).
+
+  Fix direction per the known issue: dispatch to command-step-runner
+  (BO-2400a-1-i), the package's agent chartered to run exactly one given
+  command, once, in one named workspace, and hand back that command's exit
+  status, stdout and stderr untouched -- holding no judgement about whether a
+  command is wise.
+
+  Out of scope, deliberately: routing to status-checker instead. It declares
+  permits_shell: false while ~37 other dispatches in this same workflow already
+  send it shell commands; that contradiction is real and tracked separately as
+  KI-BO-20260901-1620 -- widening it is not a fix for this defect.
+
+  This AC does NOT by itself fix the read-path parsing defect (a refusal on
+  peek-pause-record being indistinguishable from "no record exists") -- that is
+  the separate behavior BO-2300e-3. Routing peek-pause-record to a chartered
+  agent removes the most common trigger for a refusal, but any future refusal,
+  transport failure, or malformed reply on that path must still never be read
+  as "no record"; fixing the router does not fix the parser.
+
+  RESOLVED (2026-09-29, business-analyst): the KNOWN CONFLICT WITH BO-2300a-1-ii
+  noted above is reconciled via the second option this AC's it_requirements
+  named -- BO-2300a-1-ii has been narrowed by the BA (superseded_by: BO-2300e-2,
+  criteria unchanged; see that record's own amended_by/notes for the full
+  account). BO-2300a-1-ii's routing claim over the six pause-store dispatches is
+  superseded by this AC; its claim over resolve-worktree-setup-script-path ->
+  worktree-agent is unaffected and remains this AC's stated exclusion. The
+  test-update instruction above (update test_bo_2300a_1_ii.py's pause-store
+  assertions to command-step-runner while keeping worktree-agent for the
+  script-path label, in the same commit) still stands and is now the only
+  outstanding action for that conflict.

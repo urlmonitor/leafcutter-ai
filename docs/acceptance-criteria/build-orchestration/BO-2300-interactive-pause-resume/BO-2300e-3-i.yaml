@@ -1,0 +1,85 @@
+id: BO-2300e-3-i
+components:
+  - build_orchestration
+title: "A well-formed refusal is not parsed as an empty pause-record result"
+component: build-orchestration
+level: L3
+status: active
+req_status: active
+work_status: todo
+readiness: draft
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a peek-pause-record or read-pause-record dispatch is answered with a
+    well-formed refusal -- a reply that is valid, parseable data but states
+    that the dispatched agent declined the request (for example, text naming
+    the request as outside the agent's charter, such as the historical
+    worktree-agent refusal "I'm the worktree lifecycle agent, scoped to two
+    actions: create and remove"),
+  When the workflow evaluates that reply to decide whether a pause record
+    exists,
+  Then the reply is classified as "could not determine", not as an empty
+    result,
+  And this is distinguished from a genuine empty read -- a dispatch that
+    actually queried the pause store and found nothing returns
+    {"exists": false, "stale": false, "record": null} and that reply still
+    correctly reports "no pause record exists".
+depends_on: [BO-2300e-3]
+assigned_agent: llm-expert
+estimated_complexity: S
+package_surface: false
+doc_links:
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+  - path: docs/known-issues/ac-driven-dev/open-blocker-ki-acd-20260928-pause-store-dispatched-to-worktree-agent.md
+    relationship: describes
+    status: exists
+  - path: templates/agents/llm-expert.md
+    relationship: describes
+    status: exists
+it_requirements:
+  - "The peek/read reply parser must treat a decline (a reply carrying refusal language or a non-success charter response) as a distinct category from an empty successful read, even though both currently surface as an absence of a usable record."
+  - "This must hold independently at BOTH call sites: peekPausedGateId()'s peek-pause-record dispatch and resolveGate()'s read-pause-record dispatch (see BO-2300e-3's it_requirements for why these are two separate, independently-fixable code locations with different downstream consequences)."
+  - "Reuse the existing refusal-detection convention already used elsewhere in this file (isAgentRefusal() / AGENT_REFUSAL_MARKERS) rather than introducing a second, differently-worded detector for this code path."
+  - "TEST STRATEGY: via unit_tests/_workflow_engine_harness.py run_workflow_under_e2(plan-feature.js), stub the peek/read dispatch reply first with the verbatim historical refusal text, then with a genuine {exists: false, stale: false, record: null} empty read, and assert the two produce different classifications -- exercised against both the peek-pause-record and read-pause-record labels."
+  - "FILE-SIZE and REACHABILITY: this AC's own fix and cost are accounted for under its parent BO-2300e-3's it_requirements (the KI-CG-20260923 net-content-line constraint and the shared-classification-helper recommendation); this record contributes no independent lines of its own, only the refusal-shape test coverage. Reachability (BO-2900a-3) is proven the same way as the parent -- via run_workflow_under_e2(plan-feature.js) actually executing the refusal-classification branch on a real run, never a synthetic classifier-function fixture."
+test_spec:
+  - name: test_worktree_agent_style_refusal_not_read_as_empty
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "Via the harness, a peek-pause-record dispatch reply carrying the verbatim historical refusal text is classified as 'could not determine', not 'no pause record'."
+  - name: test_read_pause_record_refusal_not_read_as_empty
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "Via the harness, a read-pause-record dispatch reply (resolveGate's resume-check dispatch) carrying the same verbatim historical refusal text is classified as 'could not determine', not 'no pause record' -- proving the fix at the second, independent call site."
+  - name: test_refusal_and_genuine_empty_read_are_distinguishable
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: boundary
+    description: "Via the harness, a refusal reply and a genuine {exists: false, record: null} reply produce two different, distinguishable classifications from the workflow, checked for both the peek-pause-record and read-pause-record labels."
+delivers_to: null
+expects_from:
+  ac_id: BO-2300e-3
+  contract: "The three-way classification (empty / refused / failed) this AC's parent establishes; this AC proves the refused branch specifically against the historical refusal shape."
+origin_agent: BrainCandy
+created: 2026-09-28
+amended_by:
+  - reason: "it-po enrichment (2026-09-29): assigned_agent python-coder -> llm-expert, matching BO-2300e-3 (its parent, and the same file) and the established 2026-07-20 it-po correction applied to every other plan-feature.js-editing AC in this folder. Added an it_requirement cross-referencing the parent's file-size and reachability constraints. Criteria unchanged."
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+notes: |
+  This is the exact shape recorded in the known issue's evidence: the run
+  journal for wf_51a32979-97e carries the worktree-agent refusal text verbatim
+  on the pause-persist dispatch (agent accc4fc0d12af3cc3); the same refusal
+  text is what peek-pause-record would have received on the read side, and it
+  parsed as "no paused record exists" there rather than surfacing as a refusal.

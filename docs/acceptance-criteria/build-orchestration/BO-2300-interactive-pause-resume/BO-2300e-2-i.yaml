@@ -1,0 +1,76 @@
+id: BO-2300e-2-i
+components:
+  - build_orchestration
+title: "A pause-store dispatch is never sent without naming its workspace"
+component: build-orchestration
+level: L3
+status: active
+req_status: active
+work_status: todo
+readiness: draft
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given each of the six pause-store dispatch call sites in plan-feature.js --
+    peek-pause-record, read-pause-record, clear-pause-record,
+    clear-pause-record-verify, pause-persist, and pause-persist-verify,
+  When the workflow constructs the agent() call for that operation,
+  Then the call's prompt/args always includes a specific, non-empty target
+    workspace for command-step-runner to run the command in,
+  And command-step-runner is never asked to perform a pause-store operation
+    without a named workspace, so its charter-declined path (declining a
+    request that names no workspace) is never exercised during normal
+    operation of any of the six call sites.
+depends_on: [BO-2300e-2]
+assigned_agent: llm-expert
+estimated_complexity: S
+package_surface: false
+doc_links:
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+  - path: templates/agents/command-step-runner.md
+    relationship: describes
+    status: exists
+  - path: templates/agents/llm-expert.md
+    relationship: describes
+    status: exists
+  - path: docs/known-issues/ac-driven-dev/open-blocker-ki-acd-20260928-pause-store-dispatched-to-worktree-agent.md
+    relationship: describes
+    status: exists
+it_requirements:
+  - "Every one of the six pause-store dispatch construction sites in templates/workflows-js/plan-feature.js must pass a non-empty workspace value; there is no call site that omits it. The value is the module-level `authoringWorktreePath`, which the workflow guarantees is non-null and non-empty before Stage 0 begins (see BO-2300e-2's it_requirements) -- it must be threaded into peekPausedGateId()/resolveGate()/pauseAtGate() as an explicit function parameter, never read via closure over the module-level variable, because closure would break under unit_tests/workflows/test_acd_2100c_1.py's standalone-driver extraction of resolveGate()/pauseAtGate() (a separate, pre-existing regression risk BO-2300e-2 already names in detail)."
+  - "TEST STRATEGY: via unit_tests/_workflow_engine_harness.py run_workflow_under_e2(plan-feature.js), inspect the prompt/args of every one of the six captured pause-store agent_calls and assert a non-empty workspace value is present in each. Do not grep the source for a workspace literal."
+  - "FILE-SIZE RATCHET: this AC's criteria are satisfied by the same parameter-threading edit introduced under BO-2300e-2 (see that AC's it_requirements for the net-zero-content-lines constraint under KI-CG-20260923); this AC contributes no additional lines of its own to plan-feature.js beyond BO-2300e-2's threaded parameter -- only additional test coverage of the existing threaded value."
+  - "REACHABILITY (BO-2900a-3): proven via the same real-engine invocation as BO-2300e-2 -- run_workflow_under_e2(plan-feature.js) -- inspecting the captured six agent_calls' actual prompt/args as produced by a real run of the workflow, not a fixture copy of the six call sites' argument-construction logic."
+test_spec:
+  - name: test_every_pause_store_call_site_supplies_a_workspace
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: boundary
+    description: "Via the harness, all six captured pause-store agent_calls (peek/read/clear/clear-verify/persist/persist-verify) carry a non-empty target-workspace value; none is missing or blank."
+test_rationale: >-
+  This is the boundary condition of BO-2300e-2's main behavior: command-step-runner's
+  charter declines a workspace-less request, so the fix is only complete if none
+  of the six sites can ever produce one. Asserted from the harness's captured
+  dispatch arguments, not from source inspection.
+delivers_to: null
+expects_from:
+  ac_id: BO-2300e-2
+  contract: "The six pause-store dispatches routed to command-step-runner; this AC asserts each one always names a workspace."
+origin_agent: BrainCandy
+created: 2026-09-28
+amended_by:
+  - reason: "it-po enrichment (2026-09-29): assigned_agent python-coder -> llm-expert, matching BO-2300e-2 (its parent, and the same file) and the established 2026-07-20 it-po correction applied to every other plan-feature.js-editing AC in this folder. Added it_requirements noting no independent file-size delta and reachability via the real-engine harness. Criteria unchanged."
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+notes: |
+  A dispatch that reaches command-step-runner without a named workspace is
+  declined by charter -- the same shape of failure this whole defect is about,
+  just relocated one level down. This AC exists so that fixing BO-2300e-2's
+  routing does not silently reintroduce the original failure mode via a missing
+  workspace argument instead of a wrong agent name.

@@ -1,0 +1,82 @@
+id: BO-2300e-3-ii
+components:
+  - build_orchestration
+title: "An unparseable reply or a failed dispatch is not parsed as an empty pause-record result"
+component: build-orchestration
+level: L3
+status: active
+req_status: active
+work_status: todo
+readiness: draft
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a peek-pause-record or read-pause-record dispatch returns no reply,
+    raises a transport or execution error, or returns a reply that is not
+    valid JSON or lacks the expected exists/record shape,
+  When the workflow evaluates that outcome to decide whether a pause record
+    exists,
+  Then the outcome is classified as "could not determine", not as an empty
+    result,
+  And the run does not silently proceed past the gate as though no pause
+    record exists.
+depends_on: [BO-2300e-3]
+assigned_agent: llm-expert
+estimated_complexity: S
+package_surface: false
+doc_links:
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+  - path: docs/known-issues/ac-driven-dev/open-blocker-ki-acd-20260928-pause-store-dispatched-to-worktree-agent.md
+    relationship: describes
+    status: exists
+  - path: templates/agents/llm-expert.md
+    relationship: describes
+    status: exists
+it_requirements:
+  - "The peek/read reply parser must treat 'no reply', a transport/exception error, and a reply that fails to parse as JSON or lacks the exists/record shape as the same 'could not determine' category as a refusal (BO-2300e-3-i) -- never coerced to the empty-result default."
+  - "Any exception encountered while parsing or transporting the dispatch reply must be handled per the project error-handling policy (typed except, WARNING+ log, no silent swallow) on the way to producing the 'could not determine' outcome -- it must not itself be swallowed into a default empty result."
+  - "In the current code, `await agent(...)` for both peek-pause-record (peekPausedGateId) and read-pause-record (resolveGate) sits OUTSIDE the existing try/catch -- only the subsequent parseAgentJson(...) call is wrapped. A transport/execution error raised by the dispatch itself therefore currently propagates uncaught rather than reaching any classification logic at all; the fix must additionally wrap the dispatch call itself (or equivalent) at BOTH sites, or this AC's transport-error scenario cannot be reached in normal execution."
+  - "This must hold independently at BOTH call sites: peekPausedGateId()'s peek-pause-record dispatch and resolveGate()'s read-pause-record dispatch."
+  - "TEST STRATEGY: via unit_tests/_workflow_engine_harness.py run_workflow_under_e2(plan-feature.js), stub the peek/read dispatch to (a) return no reply, (b) raise a transport error, and (c) return non-JSON/malformed data in turn, and assert each is classified as 'could not determine' -- exercised against both the peek-pause-record and read-pause-record labels."
+  - "FILE-SIZE and REACHABILITY: this AC's own fix and cost are accounted for under its parent BO-2300e-3's it_requirements (the KI-CG-20260923 net-content-line constraint, including the try/catch-around-the-dispatch-itself change this AC specifically requires, and the shared-classification-helper recommendation); this record contributes no independent lines of its own, only the failure-shape test coverage. Reachability (BO-2900a-3) is proven the same way as the parent -- via run_workflow_under_e2(plan-feature.js) actually executing the failure-classification branch (including the transport-error path, which requires the dispatch call itself to be reachable inside a try/catch) on a real run, never a synthetic classifier-function fixture."
+test_spec:
+  - name: test_no_reply_reported_as_could_not_determine
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: failure
+    description: "Via the harness, a peek-pause-record or read-pause-record dispatch that returns no reply at all is classified as 'could not determine' (checked for both labels)."
+  - name: test_transport_error_reported_as_could_not_determine
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: failure
+    description: "Via the harness, a peek-pause-record or read-pause-record dispatch that raises a transport/execution error from the agent() call itself (not just from parsing its reply) is classified as 'could not determine', with the error handled per the project error-handling policy rather than propagating uncaught or being silently swallowed. Checked for both labels."
+  - name: test_malformed_reply_reported_as_could_not_determine
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: failure
+    description: "Via the harness, a peek-pause-record or read-pause-record dispatch reply that is not valid JSON or lacks the expected exists/record shape is classified as 'could not determine' (checked for both labels)."
+delivers_to: null
+expects_from:
+  ac_id: BO-2300e-3
+  contract: "The three-way classification (empty / refused / failed) this AC's parent establishes; this AC proves the failed branch specifically against no-reply, transport-error, and malformed-reply inputs."
+origin_agent: BrainCandy
+created: 2026-09-28
+amended_by:
+  - reason: "it-po enrichment (2026-09-29): assigned_agent python-coder -> llm-expert, matching BO-2300e-3 (its parent, and the same file) and the established 2026-07-20 it-po correction applied to every other plan-feature.js-editing AC in this folder. Added an it_requirement cross-referencing the parent's file-size and reachability constraints. Criteria unchanged."
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+notes: |
+  Sibling of BO-2300e-3-i: that AC covers a well-formed refusal being
+  misread as empty; this one covers the remaining ways a read can fail to
+  produce a usable result (silence, transport error, garbled reply) without
+  being a refusal at all. Both must resolve to "could not determine", never
+  to the empty-result default, or the defect reappears through whichever
+  branch was left uncovered.
