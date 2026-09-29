@@ -1247,10 +1247,9 @@ const testWriterResult = await agent(
   `Worktree: ${worktreePath}\n` +
   `AC store: ${acStoreRoot}\n` +
   `Connected build set (dependency order): ${batchIds}\n\n` +
-  `Step 1 — Write failing stubs:\n` +
-  `For each AC id above, read its YAML from ${acStoreRoot} and write a minimal ` +
-  `failing test that asserts the AC behavior. Tag each test with a '# covers: <AC-id>' ` +
-  `comment. All stubs MUST be RED — do NOT write production code.\n\n` +
+  `Step 1 — Write the failing tests each criterion is owed:\nFor each AC id above, read its YAML from ${acStoreRoot}. If it declares a "test_spec", write ONE test per declared descriptor, using that descriptor's own name and honouring its "angle" — the declared set is the deliverable, not a representative sample of it. If it declares no test_spec, write the floor: a "criterion" test for the Gherkin Then clause, AND a "reachability" test.\n` +
+  `REACHABILITY means: start at the PRODUCTION entry point (CLI via subprocess, hook via its real runner, slash command, workflow dispatch, or main() with real argv) and assert both that the new behaviour occurs AND that its result is consumed in control flow. Importing the module, asserting a symbol exists, or asserting a value was merely passed as an argument does NOT satisfy it. This angle is not optional bookkeeping: the coder's contract is to make your red baseline green, so whatever you leave out is what they are free to skip — a criterion-only test makes "a function nothing calls" the cheapest way to pass.\n` +
+  `Cap: at most 4 angles per AC (docs/testing/test-angles.md); where three or more triggers fire, cover two with one test rather than dropping one — count angles covered, not tests written. Tag each test with a '# covers: <AC-id>' comment. All stubs MUST be RED — do NOT write production code.\n\n` +
   `Step 2 — Run the red-baseline gate (single Bash command):\n` +
   `   ${redBaselineInvocation}\n` +
   `Parse the JSON: { "gate_passed": <bool>, "reason": <string|null>, "red": [...], ` +
