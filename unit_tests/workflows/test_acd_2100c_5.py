@@ -221,7 +221,7 @@ def _cancel_answer(gate_id, channel):
 # ---------------------------------------------------------------------------
 
 _RESOLVE_GATE_SIGNATURE = (
-    "async function resolveGate(gateId, liveGateFn, args, context, descriptor, runId) {"
+    "async function resolveGate(gateId, liveGateFn, args, context, descriptor, runId, authoringWorktreePath) {"
 )
 
 

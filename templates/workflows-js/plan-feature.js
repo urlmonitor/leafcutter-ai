@@ -1593,13 +1593,13 @@ function applyAnswerByType(answer, type) {
  * @returns {Promise<string|null>} The gate_id the run is genuinely paused
  *   at right now, or null when there is nothing (valid) to resume.
  */
-async function peekPausedGateId(runId) {
+async function peekPausedGateId(runId, authoringWorktreePath) {
   // BO-2300a-1-ii: LOCAL, not module-level `workspaceSetupAgentId` -- see
   // this file's DECISION HISTORY for why (test_acd_2100c_1.py extraction).
-  const _shellPermittedAgentId = "worktree-agent";
+  const _shellPermittedAgentId = "command-step-runner";
   const _peekPrompt =
     "Read the durable pause record for this run (READ-ONLY — do not act on " +
-    "it or clear it). Run exactly:\n" +
+    "it or clear it). Run exactly in workspace '" + authoringWorktreePath + "':\n" +
     "  " + buildPauseStoreCommand("read --run-id " + runId) + "\n" +
     "Return EXACTLY its stdout JSON of the form {\"exists\":<bool>,\"stale\":<bool>,\"record\":<obj|null>}.";
   const _rawPeek = await agent(_peekPrompt, { agentType: _shellPermittedAgentId, label: "peek-pause-record" });
@@ -1607,7 +1607,7 @@ async function peekPausedGateId(runId) {
   try {
     _peekParsed = (typeof _rawPeek === "string")
       ? parseAgentJson(_rawPeek, { stage: "peek-pause-record", agent: _shellPermittedAgentId })
-      : _rawPeek;
+      : (_rawPeek && typeof _rawPeek.stdout === "string") ? parseAgentJson(_rawPeek.stdout, { stage: "peek-pause-record", agent: _shellPermittedAgentId }) : _rawPeek;
   } catch (_peekErr) {
     _peekParsed = null;
   }
@@ -1637,14 +1637,15 @@ async function peekPausedGateId(runId) {
  * @param {object}   context     - Context snapshot for the pause record.
  * @param {object}   [descriptor] - Gate question descriptor: { type, options, prompt }.
  * @param {string}   [runId]     - Explicit run id; falls back to args.run_id || "default-run".
+ * @param {string}   [authoringWorktreePath] - Absolute path to the authoring worktree, named as the target workspace on every pause-store dispatch this function makes.
  * @returns {Promise<object>}
  */
-async function resolveGate(gateId, liveGateFn, args, context, descriptor, runId) {
+async function resolveGate(gateId, liveGateFn, args, context, descriptor, runId, authoringWorktreePath) {
   runId = runId || (args && args.run_id) || "default-run";
   const answerType = (descriptor && descriptor.type) || "single_choice";
   const validOptions = (descriptor && Array.isArray(descriptor.options)) ? descriptor.options : null;
   // BO-2300a-1-ii: LOCAL constant -- see peekPausedGateId()'s comment above.
-  const _shellPermittedAgentId = "worktree-agent";
+  const _shellPermittedAgentId = "command-step-runner";
 
   // ADR-024 Rule 4: check resume_answer BEFORE liveGateFn.
   if (args && args.resume_answer && args.resume_answer.gate_id === gateId) {
@@ -1684,7 +1685,7 @@ async function resolveGate(gateId, liveGateFn, args, context, descriptor, runId)
     // explicit --store-dir in the SAME dispatched command, never the raw
     // `{{config.output_root}}`-relative placeholder (see buildPauseStoreCommand()).
     const _readPrompt =
-      "Read the durable pause record for this run. Run exactly:\n" +
+      "Read the durable pause record for this run. Run exactly in workspace '" + authoringWorktreePath + "':\n" +
       "  " + buildPauseStoreCommand("read --run-id " + runId) + "\n" +
       "Return EXACTLY its stdout JSON of the form {\"exists\":<bool>,\"stale\":<bool>,\"record\":<obj|null>}.";
     const _rawRec = await agent(_readPrompt, { agentType: _shellPermittedAgentId, label: "read-pause-record" });
@@ -1692,7 +1693,7 @@ async function resolveGate(gateId, liveGateFn, args, context, descriptor, runId)
     try {
       recCheck = (typeof _rawRec === "string")
         ? parseAgentJson(_rawRec, { stage: "read-pause-record", agent: _shellPermittedAgentId })
-        : _rawRec;
+        : (_rawRec && typeof _rawRec.stdout === "string") ? parseAgentJson(_rawRec.stdout, { stage: "read-pause-record", agent: _shellPermittedAgentId }) : _rawRec;
     } catch (_e) { recCheck = null; }
     // FAIL CLOSED: apply ONLY when exists===true AND stale is not true.
     if (!recCheck || recCheck.exists !== true) {
@@ -1728,7 +1729,7 @@ async function resolveGate(gateId, liveGateFn, args, context, descriptor, runId)
       const _clearPrompt =
         "This paused run has been resumed and is moving past the decision point " +
         "it was waiting on. Clear its durable pause record so it no longer shows " +
-        "as waiting. Run exactly:\n" +
+        "as waiting. Run exactly in workspace '" + authoringWorktreePath + "':\n" +
         "  " + buildPauseStoreCommand("clear --run-id " + runId) + "\n" +
         "Return EXACTLY the command's JSON stdout.";
       const _clearRaw = await agent(_clearPrompt, { agentType: _shellPermittedAgentId, label: "clear-pause-record" });
@@ -1745,7 +1746,7 @@ async function resolveGate(gateId, liveGateFn, args, context, descriptor, runId)
       try {
         _clearParsed = (typeof _clearRaw === "string")
           ? parseAgentJson(_clearRaw, { stage: "clear-pause-record", agent: _shellPermittedAgentId })
-          : _clearRaw;
+          : (_clearRaw && typeof _clearRaw.stdout === "string") ? parseAgentJson(_clearRaw.stdout, { stage: "clear-pause-record", agent: _shellPermittedAgentId }) : _clearRaw;
       } catch (_clearParseErr) {
         _clearParsed = null;
       }
@@ -1757,14 +1758,14 @@ async function resolveGate(gateId, liveGateFn, args, context, descriptor, runId)
         // clear actually landed.
         try {
           const _clearVerifyRaw = await agent(
-            "Confirm the pause record was cleared. Run exactly:\n" +
+            "Confirm the pause record was cleared. Run exactly in workspace '" + authoringWorktreePath + "':\n" +
             "  " + buildPauseStoreCommand("read --run-id " + runId) + "\n" +
             "Return EXACTLY its stdout JSON of the form {\"exists\":<bool>,\"stale\":<bool>,\"record\":<obj|null>}.",
             { agentType: _shellPermittedAgentId, label: "clear-pause-record-verify" }
           );
           const _clearVerifyParsed = (typeof _clearVerifyRaw === "string")
             ? parseAgentJson(_clearVerifyRaw, { stage: "clear-pause-record-verify", agent: _shellPermittedAgentId })
-            : _clearVerifyRaw;
+            : (_clearVerifyRaw && typeof _clearVerifyRaw.stdout === "string") ? parseAgentJson(_clearVerifyRaw.stdout, { stage: "clear-pause-record-verify", agent: _shellPermittedAgentId }) : _clearVerifyRaw;
           _clearVerified = !!(_clearVerifyParsed && _clearVerifyParsed.exists === false);
         } catch (_clearVerifyErr) {
           _clearVerified = false;
@@ -1805,7 +1806,7 @@ async function resolveGate(gateId, liveGateFn, args, context, descriptor, runId)
   // point routes through — instead of on a per-site opt-out that a sixth,
   // newly added gate would have to remember to apply.
   void liveGateFn;
-  return pauseAtGate(gateId, runId, context, descriptor);
+  return pauseAtGate(gateId, runId, context, descriptor, authoringWorktreePath);
 }
 
 /**
@@ -1824,11 +1825,12 @@ async function resolveGate(gateId, liveGateFn, args, context, descriptor, runId)
  * @param {string} runId         - Current run identifier.
  * @param {object} ctxSnapshot   - Workflow context snapshot at pause time.
  * @param {object} [descriptor]  - Gate question descriptor: { type, options, prompt }.
+ * @param {string} [authoringWorktreePath] - Absolute path to the authoring worktree, named as the target workspace on the pause-persist / pause-persist-verify dispatches below.
  * @returns {Promise<{status: "paused_awaiting_input", run_id: string, gate_id: string}>}
  */
-async function pauseAtGate(gateId, runId, ctxSnapshot, descriptor) {
+async function pauseAtGate(gateId, runId, ctxSnapshot, descriptor, authoringWorktreePath) {
   // BO-2300a-1-ii: LOCAL constant -- see peekPausedGateId()'s comment above.
-  const _shellPermittedAgentId = "worktree-agent";
+  const _shellPermittedAgentId = "command-step-runner";
   const questionType = (descriptor && descriptor.type) || "single_choice";
   const questionOptions = (descriptor && Array.isArray(descriptor.options))
     ? descriptor.options : ["approve", "edit", "cancel", "defer"];
@@ -1854,7 +1856,7 @@ async function pauseAtGate(gateId, runId, ctxSnapshot, descriptor) {
   // project's own store rather than nowhere reachable / under the worktree.
   const _persistPrompt =
     "Interactive gate '" + gateId + "' has no reachable human answerer. " +
-    "Persist this pending-question record so the run can be resumed later. Run exactly:\n" +
+    "Persist this pending-question record so the run can be resumed later. Run exactly in workspace '" + authoringWorktreePath + "':\n" +
     "  " + buildPauseStoreCommand("write --run-id " + runId + " --record '" + JSON.stringify(rec) + "'") + "\n" +
     "That writes to the repository's own paused_runs store. Return the command's JSON stdout.";
   await agent(_persistPrompt, { agentType: _shellPermittedAgentId, label: "pause-persist" });
@@ -1875,14 +1877,14 @@ async function pauseAtGate(gateId, runId, ctxSnapshot, descriptor) {
     // read-back verify can never disagree with where the write actually
     // landed.
     const _verifyRaw = await agent(
-      "Confirm a pause record was persisted. Run exactly:\n" +
+      "Confirm a pause record was persisted. Run exactly in workspace '" + authoringWorktreePath + "':\n" +
       "  " + buildPauseStoreCommand("read --run-id " + runId) + "\n" +
       "Return EXACTLY its stdout JSON of the form {\"exists\":<bool>,\"stale\":<bool>,\"record\":<obj|null>}.",
       { agentType: _shellPermittedAgentId, label: "pause-persist-verify" }
     );
     const _verified = (typeof _verifyRaw === "string")
       ? parseAgentJson(_verifyRaw, { stage: "pause-persist-verify", agent: _shellPermittedAgentId })
-      : _verifyRaw;
+      : (_verifyRaw && typeof _verifyRaw.stdout === "string") ? parseAgentJson(_verifyRaw.stdout, { stage: "pause-persist-verify", agent: _shellPermittedAgentId }) : _verifyRaw;
     _persistVerified = !!(_verified && _verified.exists === true);
   } catch (_verifyErr) {
     _persistVerified = false;
@@ -2617,7 +2619,7 @@ if (orphans.length > 0) {
         `[${orphanAcIdList}]. Choose: yes (commit them before starting new work), ` +
         `no (abort; resolve manually), or discard (delete them and start clean).`,
     },
-    args.run_id || "default-run"
+    args.run_id || "default-run", authoringWorktreePath
   );
   if (_orphanGateResult && _orphanGateResult.status &&
       ["paused_awaiting_input", "nothing_to_resume", "unresumable_stale", "pause_persist_failed"].includes(_orphanGateResult.status)) {
@@ -2699,7 +2701,7 @@ if (route === "covered" && !force) {
     args,
     { route: "covered", existing_acs },
     { type: "single_choice", options: ["cancel", "amend", "force"] },
-    args.run_id || "default-run"
+    args.run_id || "default-run", authoringWorktreePath
   );
   if (_covGateResult && _covGateResult.status &&
       ["paused_awaiting_input", "nothing_to_resume", "unresumable_stale", "pause_persist_failed"].includes(_covGateResult.status)) {
@@ -2871,7 +2873,7 @@ if (ptRunSet.skip) {
           args,
           { stage: ptStep.stage },
           { type: "single_choice", options: ["approve", "edit", "cancel"] },
-          args.run_id || "default-run"
+          args.run_id || "default-run", authoringWorktreePath
         );
         if (_ptGateResult && _ptGateResult.status &&
             ["paused_awaiting_input", "nothing_to_resume", "unresumable_stale", "pause_persist_failed"].includes(_ptGateResult.status)) {
@@ -3130,7 +3132,7 @@ for (const step of pipeline) {
   // — a fresh, non-resumed invocation never pays for this extra read.
   let isPausedAtThisStep = false;
   if (args && args.resume_answer) {
-    const _actualPausedGateId = await peekPausedGateId(args.run_id || "default-run");
+    const _actualPausedGateId = await peekPausedGateId(args.run_id || "default-run", authoringWorktreePath);
     isPausedAtThisStep = _actualPausedGateId === stepGateId;
   }
   const skipAuthorOnResume = isPausedAtThisStep && _resumeAction !== "edit";
@@ -3234,7 +3236,7 @@ for (const step of pipeline) {
         args,
         { stage: step.stage, acs: written },
         { type: "single_choice", options: ["approve", "edit", "cancel"] },
-        args.run_id || "default-run"
+        args.run_id || "default-run", authoringWorktreePath
       );
       if (_midGateResult && _midGateResult.status &&
           ["paused_awaiting_input", "nothing_to_resume", "unresumable_stale", "pause_persist_failed"].includes(_midGateResult.status)) {
@@ -3374,7 +3376,7 @@ for (const step of pipeline) {
         args,
         { stage: "final", acs: written, all_acs: allAcsWritten },
         { type: "priority_choice", options: ["approve", "edit", "defer", "cancel"] },
-        args.run_id || "default-run"
+        args.run_id || "default-run", authoringWorktreePath
       );
       // Non-proceed outcomes: exit immediately.
       if (_finalGateResult && _finalGateResult.status &&

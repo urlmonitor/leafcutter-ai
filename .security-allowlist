@@ -334,3 +334,15 @@ ENTROPY_HIGH:scripts/ac_store/_gtfa_files_touched.py:*
 # credential. Glob, not per-line: matches the treatment of every other changelog entry
 # in this file.
 ENTROPY_HIGH:changelogs/2026-09-23-1030-an-ambiguous-reference-pattern-is-now-refused-instead-of-silently-resolving-to-an-arbitrary-file.md:*
+
+# The spawn-consistency hook's _SPECIAL_TOKEN sentinel -- a constant whose value IS
+# its meaning, not a credential (not reproduced here, for the same reason as the
+# entries above: quoting it would trip the scanner this entry exists to suppress).
+# Exactly the shape the comment further up already describes for registry_validator.py,
+# whose own glob has been present at line 59 for some time; this sibling was simply
+# never added, because check-secrets only scans STAGED files and this template had
+# not been staged until now. Its silence was never a pass.
+# Glob, not per-line: the flagged constant sits near the top of a file under active
+# change (this commit edits the two lines directly above it), so a pinned line number
+# would rot silently -- the failure mode this file's other entries already avoid.
+GENERIC_SECRET:templates/scripts/commit_guardian/hooks/check_agent_spawn_consistency.py:*

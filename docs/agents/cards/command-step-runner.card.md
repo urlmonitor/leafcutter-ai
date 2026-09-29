@@ -42,6 +42,7 @@ facing; never a ticket phase)**
 ### Spawned By
 
 - `user`
+- `plan-feature.js`
 ---
 
 ## Knowledge Flow
@@ -62,9 +63,11 @@ flowchart TD
     classDef target fill:#fee2e2,stroke:#dc2626,stroke-width:3px
 
     user["user\n(phase tier)"]:::phase
+    plan_feature.js["plan-feature.js\n(phase tier)"]:::phase
     command_step_runner["command-step-runner\n(utility tier, priority ?)"]:::target
 
     user -->|dispatches| command_step_runner
+    plan_feature.js -->|dispatches| command_step_runner
 ```
 ---
 

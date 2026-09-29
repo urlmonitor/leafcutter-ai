@@ -3553,7 +3553,8 @@
             "domain": null,
             "spawn_allowlist": [],
             "spawned_by": [
-                "user"
+                "user",
+                "plan-feature.js"
             ],
             "is_ticket_phase": false,
             "selection_criteria": null,
