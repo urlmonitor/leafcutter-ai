@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: '2026-09-23'
-last_updated: '2026-09-23'
+last_updated: '2026-09-28'
 components:
   - build_orchestration
   - commit_guardian
@@ -17,8 +17,9 @@ related_docs:
 
 - **Severity:** high — it had no workaround that was both honest and effective. The hook's
   own printed remedy could not be followed.
-- **Status:** open — fix written and verified, then deliberately withheld; see "Why this is
-  still open" below
+- **Status:** resolved 2026-09-28 — the fix landed as an amendment to `BP-1100e-1-iii`
+  rather than as a new child, which sidesteps the blocker recorded below. See "Why this was
+  thought to be blocked — and why that was wrong".
 - **Occurrences:** 1 observed (BO-400e-5, 2026-09-23), but it applies to every docs-only
   ticket in every multi-ticket epic.
 - **First seen:** 2026-09-23 · **Last seen:** 2026-09-23
@@ -95,20 +96,36 @@ with three cases: the one that was broken, the one that must stay strict, and
 docs-only branch would satisfy the first and still be wrong. Red baseline: 1 of 3 failing,
 exactly the broken case. Full commit_guardian suite after: 1515 passed.
 
-**Why this is still open.** The change needs a new criterion, and any new child of
-`BP-1100e-1` must be listed in that parent's `covered_by` (`check-ac-parent-covered-by`).
-Listing it pulls the parent into `check-done-proof`'s `ci-changed` scope, where it fails on
-seven pre-existing children whose proof predates the covers-tag mandate
-(`KI-BP-20260923-0730`). Both gates are required, so the fix cannot land until that debt is
-cleared — and clearing it means verifying a genuine covering test for each of the seven,
-which is its own change and must not be done by tagging on name resemblance.
+**Why this was thought to be blocked — and why that was wrong (corrected 2026-09-28).**
+
+The original reasoning ran: the change needs a new criterion; any new child of `BP-1100e-1`
+must be listed in that parent's `covered_by` (`check-ac-parent-covered-by`); listing it pulls
+the parent into `check-done-proof`'s `ci-changed` scope, where it fails on seven pre-existing
+children whose proof predates the covers-tag mandate (`KI-BP-20260923-0730`); both gates are
+required; therefore the fix cannot land until that debt is cleared.
+
+Every step of that is correct **except the first**. The criterion does not have to be a new
+child. `BP-1100e-1-iii` is a **leaf** — its `covered_by` holds a test-file path, not child AC
+ids — and it is already the AC this behaviour belongs to. Amending it is not a tree-position
+change, so the parent is never staged; and `check_changed_done_acs` evaluates **only** the
+paths in its changed set ("ACs NOT in `changed_yaml_paths` are never evaluated"), so
+`BP-1100e-1` never enters scope and its seven children are never examined.
+
+Measured, not argued: with the hook fix, the amended `-iii`, and its new covering test staged
+and nothing else, `check_done_proof --mode ci-changed --base origin/main` exits **0** with
+`exemptions in force: 0`.
+
+The amendment is also the more correct home. `-iii`'s own `it_requirements[0]` already stated
+the rule — "absent from `files_touched` UNION `out_of_scope`" — so the union was always the
+intended behaviour; only the criteria text and the implementation lagged it. Nothing was
+widened to make the fix fit.
 
 Two alternatives were checked and rejected: `BP-1100e-2` is the wrong subject (advisory and
 fail-open behaviour, not scope guards), and the exemption registry waives *reachability*,
 not the covers-tag obligation.
 
-**Next step.** One PR that clears `KI-BP-20260923-0730`'s seven-child proof debt and lands
-this fix together. The code and tests above are known-good and can be restored verbatim.
+**`KI-BP-20260923-0730` is unaffected by this.** Its seven-child proof debt is still real and
+still open; it simply never gated this fix. Do not read this entry as clearing it.
 
 **Historical note on the workaround.** Before the fix, the only routes were
 `SKIP=check-predone-scope` with the ticket's zero-source diff quoted as evidence, or listing
