@@ -329,7 +329,8 @@ amended_by:
     criteria untouched.
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260929-TQ-600a-5.md
 change_target: pipeline
 risk_surface: internal
 notes: |
