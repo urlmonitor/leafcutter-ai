@@ -101,6 +101,35 @@ proceeds with every gate passing and no `SKIP=`. This satisfies the gate's
 invariant rather than bypassing it — the deployed artifact genuinely becomes the
 content the manifest describes again.
 
+**Do NOT restore from `templates/` instead — it looks equivalent and is not.**
+The obvious-seeming `cp templates/scripts/commit_guardian/commit_guardian.json`
+over the deployed copy trades this entry's drift for a second, quieter one. The
+deployed artifact is not a byte copy of its template: `inject_config` resolves
+`{{config.output_root}}` at deploy time, so the two differ by **150 lines** —
+every `hooks_manifest[].entry` path. Restoring from the template reintroduces
+150 unresolved `{{config.output_root}}` tokens, and `check-output-drift`
+refuses again with the identical message naming the identical file, which reads
+as "the workaround did not work" rather than "you restored the wrong content."
+
+Only the `config/` copy is post-deploy content. That is the whole reason this
+workaround names it.
+
+Observed 2026-09-29 on `feature/tq600a-migration`: the template restore was
+tried first, failed indistinguishably from the original symptom, and cost two
+commit attempts before a full `build.py --force` re-run cleared it by
+regenerating outputs and manifest together. A `build.py` re-run is therefore a
+valid second remedy where the permission layer allows it (see the
+irreversible-local-destruction caveat above) — but the one-line `config/`
+restore above is cheaper and does not touch the doc index.
+
+**A related detail that makes this harder to diagnose in a worktree.**
+`<worktree>/scripts/commit_guardian` is a symlink to
+`../.leafcutter/scripts/commit_guardian`, so the path `check-output-drift`
+prints (`scripts/commit_guardian/commit_guardian.json`) and the path this
+workaround writes (`.leafcutter/scripts/…`) are the same file. Reading one
+before a repair and the other after can look like two copies disagreeing when
+there is only ever one.
+
 **Remediation.**
 
 1. Identify the hook that rewrites the deployed `commit_guardian.json` during a
