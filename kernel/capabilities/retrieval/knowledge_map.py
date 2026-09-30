@@ -1,0 +1,152 @@
+"""
+MODULE: kernel.capabilities.retrieval.knowledge_map
+GOAL: The `knowledge_map` strategy: bridge to the existing scripts/knowledge_query.py so the
+    retrieval adapter reuses the repository's own knowledge-map facility (ADRs, components,
+    skills, agents) instead of re-implementing it.
+BUSINESS CONTEXT: The knowledge map already indexes the project's decision and component
+    surfaces (design part 4). Reusing it keeps one source of truth; a load failure must mark the
+    source unavailable and never masquerade as "no results" (Rev 3 section 10.3).
+ARCHITECTURE: The module is loaded with importlib.util.spec_from_file_location and cached per
+    process; maps are cached per (root, surface) because a full build costs seconds. Node paths
+    pass through the same ReadPolicy containment and deny checks as file reads.
+"""
+
+from __future__ import annotations
+
+import hashlib
+import importlib.util
+import logging
+import sys
+from pathlib import Path
+from types import ModuleType
+
+from kernel.capabilities.retrieval.access import ReadPolicy
+from kernel.capabilities.retrieval.candidates import Candidate, SearchReport
+from kernel.config import RetrievalConfig, SourceConfig
+from kernel.contracts.enums import SourceKind
+
+logger = logging.getLogger(__name__)
+
+STRATEGY = "knowledge_map"
+SCRIPT = Path("scripts") / "knowledge_query.py"
+PATHS_JSON = Path("config") / "paths.json"
+_LOAD_ERRORS = (ImportError, OSError, SyntaxError, AttributeError, SystemExit, ValueError,
+                KeyError, TypeError)
+_MODULES: dict[str, ModuleType] = {}
+_NODES: dict[tuple[str, str], list] = {}
+
+
+STAGE_NO_SPEC = "script cannot be loaded"
+STAGE_LOAD = "script failed to load"
+STAGE_BUILD = "build failed"
+
+
+class KnowledgeMapUnavailable(Exception):
+    """The knowledge map could not be loaded or built."""
+
+    def __init__(self, stage: str, detail: str = "") -> None:
+        """Build the reason from the failing stage and an optional detail."""
+        self.reason = f"knowledge map {stage}" + (f": {detail}" if detail else "")
+        super().__init__(self.reason)
+
+
+def clear_caches() -> None:
+    """Drop the per-process module and map caches (tests)."""
+    _MODULES.clear()
+    _NODES.clear()
+
+
+def _load_module(root: Path) -> ModuleType:
+    """Load scripts/knowledge_query.py below root (cached); raise KnowledgeMapUnavailable."""
+    key = str(root)
+    if key in _MODULES:
+        return _MODULES[key]
+    script = root / SCRIPT
+    name = "leafcutter_kernel_kq_" + hashlib.sha256(key.encode("utf-8")).hexdigest()[:8]
+    spec = importlib.util.spec_from_file_location(name, script)
+    if spec is None or spec.loader is None:
+        raise KnowledgeMapUnavailable(STAGE_NO_SPEC, SCRIPT.as_posix())
+    try:
+        module = importlib.util.module_from_spec(spec)
+        sys.modules[name] = module
+        spec.loader.exec_module(module)
+    except _LOAD_ERRORS as exc:
+        sys.modules.pop(name, None)
+        logger.warning("knowledge map script failed to load: %s", exc)
+        raise KnowledgeMapUnavailable(STAGE_LOAD, repr(exc)) from exc
+    _MODULES[key] = module
+    return module
+
+
+def _surface_nodes(root: Path, surface: str) -> list:
+    """Return the nodes of one surface (cached); raise KnowledgeMapUnavailable on failure."""
+    key = (str(root), surface)
+    if key not in _NODES:
+        module = _load_module(root)
+        try:
+            built = module.build_knowledge_map(root, root / PATHS_JSON, surface_filter=surface)
+        except _LOAD_ERRORS as exc:
+            logger.warning("knowledge map build failed for %s: %s", surface, exc)
+            raise KnowledgeMapUnavailable(STAGE_BUILD, repr(exc)) from exc
+        _NODES[key] = list(built.nodes)
+    return _NODES[key]
+
+
+def _node_candidate(policy: ReadPolicy, source: SourceConfig, node: object, terms: list[str],
+                    report: SearchReport) -> Candidate | None:
+    """Build a Candidate for a node whose title or description contains a term."""
+    excerpt = f"{node.title}: {node.description}".strip()
+    hits = sum(excerpt.lower().count(t) for t in terms)
+    if hits == 0 or getattr(node, "missing", False):
+        return None
+    raw = Path(node.path)
+    rel = policy.relative(raw if raw.is_absolute() else policy.root / raw)
+    if rel is None:
+        report.skip("outside_root")
+        return None
+    if policy.is_denied(rel):
+        report.skip("denied")
+        return None
+    return Candidate(
+        source_id=source.id, kind=SourceKind.KNOWLEDGE_NODE, strategy=STRATEGY, path=rel,
+        title=node.title, locator=f"{rel}#node={node.id}", excerpt=excerpt, hits=hits,
+        terms=tuple(t for t in terms if t in excerpt.lower()))
+
+
+def search_knowledge_map(policy: ReadPolicy, source: SourceConfig, terms: list[str],
+                         cfg: RetrievalConfig) -> SearchReport:
+    """Search the source's knowledge-map surfaces for the terms.
+
+    Args:
+        policy: Read policy (containment and deny globs apply to node paths).
+        source: The catalog entry (its `surfaces` select the map surfaces).
+        terms: Query terms (lowercase).
+        cfg: Retrieval bounds.
+
+    Returns:
+        SearchReport: Ranked candidates, or `unavailable_reason` if the map could not be built.
+    """
+    report = SearchReport(source_id=source.id)
+    try:
+        nodes = [n for surface in source.surfaces for n in _surface_nodes(policy.root, surface)]
+    except KnowledgeMapUnavailable as exc:
+        report.unavailable_reason = exc.reason
+        return report
+    report.files_scanned = len(nodes)
+    found = [c for c in (_node_candidate(policy, source, n, terms, report) for n in nodes)
+             if c is not None]
+    found.sort(key=lambda c: (-c.hits, c.locator))
+    if len(found) > cfg.max_candidates:
+        report.notes.append(f"{len(found) - cfg.max_candidates} nodes cut at "
+                            f"max_candidates={cfg.max_candidates}")
+    report.candidates = found[:cfg.max_candidates]
+    return report
+
+
+# ====================================================================
+# DECISION HISTORY
+# ====================================================================
+# - 2026-09-30 23:00 [python-coder]: SystemExit is caught explicitly because
+#   build_knowledge_map exits the process when paths.json is missing; that must become an
+#   unavailable source, never end the run. (#KernelBootstrapV0/P5)
+# ====================================================================

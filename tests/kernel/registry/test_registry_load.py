@@ -1,7 +1,7 @@
 """
 MODULE: tests.kernel.registry.test_registry_load
 GOAL: Test loading, validation, admission rules, hashing and snapshot pinning of the capability
-    registry, including the committed (empty) config/capability_registry.json.
+    registry, including the committed config/capability_registry.json.
 BUSINESS CONTEXT: The registry starts empty and legacy assets may enter only with a recorded
     admission decision; a run must be pinned to one snapshot (user override of Rev 3 2.1/6).
 ARCHITECTURE: Real files in a temp directory, produced with json.dumps exactly as a writer would.
@@ -46,11 +46,13 @@ class RegistryCase(unittest.TestCase):
 
 
 class TestCommittedRegistry(unittest.TestCase):
-    """The committed registry starts empty."""
+    """The committed registry holds exactly the seven V0 native and host-handoff entries."""
 
-    def test_committed_registry_is_valid_and_empty(self) -> None:
+    def test_committed_registry_is_valid_and_lists_the_v0_capabilities(self) -> None:
         snapshot = load_registry(CONFIG / "capability_registry.json")
-        self.assertEqual(snapshot.descriptors, [])
+        self.assertEqual([d.id for d in snapshot.descriptors], [
+            "decision", "host.formulate_question", "host.generate_options", "host.research",
+            "host.synthesize", "research", "retrieve.repository"])
         self.assertEqual(snapshot.registry_id, "leafcutter.capabilities")
 
     def test_component_ids_load_from_components_json(self) -> None:
