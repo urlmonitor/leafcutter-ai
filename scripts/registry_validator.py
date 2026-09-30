@@ -44,7 +44,7 @@ _SPECIAL_TOKEN = "__ticket_phase_agents__"
 # is the finalization workflow that spawns these agents at depth 0 (the legacy
 # finalize-feature *agent* was removed in ADR-006 — see EPIC-FinalizeFeatureHardening
 # ticket 03 — leaving the .js workflow as the sole, non-agent, spawner).
-_EXTERNAL_CALLERS = {"user", "finalize-feature.js"}
+_EXTERNAL_CALLERS = {"user", "finalize-feature.js", "fast-lane-ship.js"}
 
 # ---------------------------------------------------------------------------
 # Skill reference detection patterns (AC INF-600g-3)

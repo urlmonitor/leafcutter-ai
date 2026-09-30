@@ -61,8 +61,6 @@ optional field someone demands in the gate but not in the contract.
 """
 from __future__ import annotations
 
-import json
-import re
 import sys
 import tempfile
 import unittest
@@ -75,6 +73,8 @@ if str(_UNIT_TESTS_DIR) not in sys.path:
     sys.path.insert(0, str(_UNIT_TESTS_DIR))
 
 from _workflow_engine_harness import HarnessResult, run_workflow_under_e2  # noqa: E402
+
+import workflows._fast_lane_claim_fixtures as _claim_fx  # noqa: E402
 
 _WORKFLOW_PATH = _REPO_ROOT / "templates" / "workflows-js" / "fast-lane-ship.js"
 
@@ -142,26 +142,46 @@ def _labels_seen(result: HarnessResult) -> list[str | None]:
     return [c.label for c in result.agent_calls]
 
 
-def _declared_required_fields_for_claim_dispatch() -> list[str]:
-    """Extract the claim dispatch's OWN declared `required` list from the source.
+_CLAIM_SCHEMA_ANCHOR = "const CLAIM_RUNNER_SCHEMA = {"
 
-    Used to build the input for descriptor 3, never to assert on. The window is
-    anchored on the `label: "claim-connected"` line and walks backwards to the
-    nearest preceding `required: [...]`, which is the schema attached to that
-    dispatch.
+
+def _claim_dispatch_schema_source() -> str:
+    """Return the source of the schema object the claim dispatch declares.
+
+    Anchored on the schema's own named const, and bounded by the
+    `claim-connected` label that consumes it.
+
+    The previous version of this helper anchored only on the label and walked
+    BACKWARDS to the nearest preceding `required: [...]`. That worked for as
+    long as the claim dispatch happened to be the nearest thing with a
+    required list. When the dispatch was rewired to `command-step-runner` on
+    2026-09-30 and stopped declaring one, the backwards walk did not fail — it
+    kept going and found an unrelated dispatch's schema (`["producible"]`),
+    then reported it as the claim's declared contract. Its own guard could not
+    fire, because a match WAS found; it was simply the wrong one.
+
+    So this raises when the anchor is missing rather than falling back to
+    whatever is nearby. A test that silently measures a different dispatch is
+    worse than a test that stops and says it cannot find the one it wants.
     """
     source = _WORKFLOW_PATH.read_text(encoding="utf-8")
-    label_at = source.index('label: "claim-connected"')
-    preceding = source[:label_at]
-    matches = list(re.finditer(r"required:\s*(\[[^\]]*\])", preceding))
-    if not matches:
+    schema_at = source.find(_CLAIM_SCHEMA_ANCHOR)
+    if schema_at == -1:
         raise AssertionError(
-            "Could not locate a `required: [...]` schema preceding the "
-            "claim-connected dispatch in fast-lane-ship.js. If the dispatch "
-            "shape changed, update this extractor — do not delete the test."
+            f"Could not locate {_CLAIM_SCHEMA_ANCHOR!r} in fast-lane-ship.js. "
+            f"If the claim dispatch's schema was renamed or inlined, update "
+            f"this anchor — do not loosen it into a search for the nearest "
+            f"schema-shaped thing, which is the defect this helper carries a "
+            f"docstring about."
         )
-    raw = matches[-1].group(1).replace("'", '"')
-    return json.loads(raw)
+    label_at = source.index('label: "claim-connected"')
+    if schema_at >= label_at:
+        raise AssertionError(
+            "CLAIM_RUNNER_SCHEMA is declared AFTER the claim-connected "
+            "dispatch that uses it, so the two are no longer the pair this "
+            "test assumes. Re-read the dispatch before trusting this file."
+        )
+    return source[schema_at:label_at]
 
 
 class TestSuccessfulClaimOmittingOptionalExcludedFieldProceeds(unittest.TestCase):
@@ -177,15 +197,15 @@ class TestSuccessfulClaimOmittingOptionalExcludedFieldProceeds(unittest.TestCase
     ) -> None:
         # covers: BO-2400f-7-iv
         # angle: failure
-        successful_reply = {
-            "claimed": [_AC_ID],
-            "target_refused": False,
-            "message": "",
-        }
+        successful_reply = _claim_fx.claim_ran(
+            [_AC_ID], message="", include_excluded_key=False
+        )
         self.assertNotIn(
             "excluded_claimed",
-            successful_reply,
-            "This test's whole point is the ABSENT optional key.",
+            successful_reply["stdout"],
+            "This test's whole point is the ABSENT optional key. It is now "
+            "absent from the gate payload carried in stdout, which is where "
+            "the lane reads it from.",
         )
         result = _run_lane(successful_reply)
 
@@ -212,17 +232,22 @@ class TestSucceededClaimIsNeverReportedAsNeverAttempted(unittest.TestCase):
     ) -> None:
         # covers: BO-2400f-7-iv
         # angle: criterion
-        replies: tuple[dict[str, Any], ...] = (
-            {"claimed": [_AC_ID], "target_refused": False, "message": ""},
-            {
-                "claimed": [_AC_ID],
-                "excluded_claimed": [],
-                "target_refused": False,
-            },
-            {"claimed": [_AC_ID], "target_refused": False},
+        replies: tuple[tuple[str, dict[str, Any]], ...] = (
+            (
+                "empty-message-no-excluded-key",
+                _claim_fx.claim_ran([_AC_ID], message="", include_excluded_key=False),
+            ),
+            (
+                "explicit-empty-excluded",
+                _claim_fx.claim_ran([_AC_ID]),
+            ),
+            (
+                "bare-minimum-payload",
+                _claim_fx.claim_ran([_AC_ID], include_excluded_key=False),
+            ),
         )
-        for reply in replies:
-            with self.subTest(reply=reply):
+        for case_name, reply in replies:
+            with self.subTest(case=case_name):
                 result = _run_lane(reply)
                 self.assertIsNotNone(result.result, f"stderr={result.stderr!r}")
                 as_text = str(result.result or {}).lower()
@@ -230,9 +255,9 @@ class TestSucceededClaimIsNeverReportedAsNeverAttempted(unittest.TestCase):
                     self.assertNotIn(
                         marker,
                         as_text,
-                        f"A claim reporting {len(reply['claimed'])} claimed "
-                        f"id(s) was described as never attempted "
-                        f"('{marker}'). Reply: {reply}",
+                        f"[{case_name}] A claim reporting 1 claimed id was "
+                        f"described as never attempted ('{marker}'). "
+                        f"Reply: {reply}",
                     )
 
 
@@ -250,26 +275,34 @@ class TestUsabilityTestRequiresNoMoreThanTheDeclaredContract(unittest.TestCase):
     ) -> None:
         # covers: BO-2400f-7-iv
         # angle: seam
-        required = _declared_required_fields_for_claim_dispatch()
-        self.assertIn(
-            "claimed",
-            required,
-            "The claim dispatch must at minimum require `claimed`; the "
-            "extractor found a different schema.",
+        schema_source = _claim_dispatch_schema_source()
+
+        # The dispatch must declare NO required fields, and that absence is a
+        # decision rather than an oversight: command-step-runner answers with
+        # either a result (carrying `exit_status`) or a decline (carrying
+        # `declined` and no `exit_status`), and those two shapes share no
+        # mandatory key. Requiring either one would reject the other at the
+        # schema layer — converting a decline, which the lane must report as
+        # "never attempted", into a validation failure it cannot describe.
+        #
+        # This is the same trap as the original BO-2400f-7-iv defect seen from
+        # the other side. That one demanded a field the producer left
+        # optional; this would demand a field one of the two legal shapes
+        # never carries. Both turn a valid reply into a halt.
+        self.assertNotIn(
+            "required",
+            schema_source,
+            "The claim dispatch declares a `required` list. Under the "
+            "command-step-runner contract it must not: a result and a "
+            "decline share no mandatory key, so requiring anything rejects "
+            "one of the two legal replies outright.",
         )
 
-        # A minimal reply: exactly the declared required fields, nothing more.
-        # Values are chosen to describe a fully successful claim.
-        minimal: dict[str, Any] = {}
-        for field in required:
-            if field == "claimed":
-                minimal[field] = [_AC_ID]
-            elif field == "excluded_claimed":
-                minimal[field] = []
-            elif field == "target_refused":
-                minimal[field] = False
-            else:
-                minimal[field] = ""
+        # The contract that DOES have mandatory content is the gate's, and it
+        # travels as JSON inside stdout. The minimum it ever emits on a run
+        # that claimed something is a `claimed` array — so a reply carrying
+        # exactly that, and nothing else, must be usable.
+        minimal = _claim_fx.claim_ran([_AC_ID], include_excluded_key=False)
 
         result = _run_lane(minimal)
 
@@ -277,9 +310,10 @@ class TestUsabilityTestRequiresNoMoreThanTheDeclaredContract(unittest.TestCase):
         self.assertIn(
             _LABEL_AFTER_CLAIM,
             _labels_seen(result),
-            f"A reply carrying exactly the dispatch's OWN declared required "
-            f"fields {required} was judged unusable. The gate demands more "
-            f"than the contract it declared. Result: {result.result}",
+            f"A runner reply whose stdout carries exactly the gate's "
+            f"mandatory `claimed` field, and nothing else, was judged "
+            f"unusable. The lane demands more than either contract states. "
+            f"Result: {result.result}",
         )
 
 
@@ -293,12 +327,9 @@ class TestDeclineStillHaltsAsNotAttempted(unittest.TestCase):
     def test_a_performer_that_declines_still_halts_as_not_attempted(self) -> None:
         # covers: BO-2400f-7-iv
         # angle: criterion
-        decline_reply = {
-            "claimed": [],
-            "excluded_claimed": [],
-            "target_refused": True,
-            "message": "declining to run a store-mutating command",
-        }
+        decline_reply = _claim_fx.claim_declined(
+            "declining to run a store-mutating command"
+        )
         result = _run_lane(decline_reply)
 
         self.assertIsNotNone(result.result, f"stderr={result.stderr!r}")

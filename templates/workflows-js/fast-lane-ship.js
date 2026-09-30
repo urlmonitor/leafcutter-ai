@@ -1035,41 +1035,109 @@ if (producibilityResult.producible !== true) {
 /**
  * Lifecycle: claim the connected set (flip todo → in_progress).
  *
- * Performer (BO-2400f-7-iii): the claim command MUTATES the store, so per
+ * Performer (BO-2400f-7-iii; rewired to the chartered executor 2026-09-30):
+ * the claim command MUTATES the store, so per
  * config/agent_registry.schema.json the dispatched agent needs
  * `permits_shell: true` — not merely "does not explicitly forbid it", the
  * wrong reading KI-BO-20260901-1620 documents for python-coder above.
- * `worktree-agent` is the ONLY registry entry declaring `permits_shell:
- * true`; that is the sole (real) reason it is picked here. Honest
- * weakness: its charter is worktree lifecycle, not AC-store claims, so it
- * may still decline on role grounds exactly as status-checker did — a
- * dedicated chartered executor for this dispatch class remains out of
- * scope (KI-BO-20260901-1620, item 4). A decline is handled below as
- * "not attempted", never as contention.
+ *
+ * This used to be `worktree-agent`, chosen when it was the only registry
+ * entry declaring `permits_shell: true`. That choice carried a stated
+ * weakness: its own template says it has "exactly two actions: create and
+ * remove", so an AC-store claim is outside its charter and it could decline
+ * on role grounds exactly as `status-checker` did. `command-step-runner`
+ * is the dedicated chartered executor those notes called for
+ * (KI-BO-20260901-1620 item 4, and the "Suggested fix" of
+ * KI-BO-20260927-status-checker-runs-workflow-shell-commands): its whole
+ * role is to run one given command in one named workspace, so there is no
+ * longer a charter for it to decline on.
+ *
+ * Its contract is NOT the old one, and the difference is the point. It runs
+ * the command and hands back {command, workspace, exit_status, stdout,
+ * stderr} — it does not read, reshape, or interpret what the command
+ * printed. The previous prompt asked the performer to BOTH run the command
+ * and, on failure, synthesise `{"target_refused": true}` — the gate script's
+ * own vocabulary — which made "the agent would not run it" and "the store
+ * says someone else holds these" the same token, distinguishable only by
+ * whether the agent had also remembered to leave `excluded_claimed` empty.
+ * That is what BO-2400f-7-iii had to repair in prose.
+ *
+ * Now the split is STRUCTURAL: a decline is a reply with no `exit_status`
+ * key at all, and `target_refused` can only ever come from `_fl_lifecycle.py`
+ * via parsed stdout. No cooperation from the agent is required for the two
+ * to stay distinct, and no reply it can produce can forge a claim that the
+ * store did not make.
  */
-const CLAIM_EXECUTOR_AGENT_TYPE = "worktree-agent";
-const claimResult = await agent(
-  `You are the claim-phase agent for a fast-lane build.\n\n` +
-  `Run this single Bash command and parse its JSON stdout:\n` +
-  `   python3 ${gateScript} claim --ac-ids ${batchIdsCsv} --ac-root ${acStoreRoot}\n\n` +
-  `Returns {"claimed":[...],"excluded_claimed":[...],"target_refused":<bool>}. Return that JSON verbatim. If you cannot run this command at all, do NOT report contention — return ` +
-  `{"claimed":[],"excluded_claimed":[],"target_refused":true,"message":"<why>"}, leaving excluded_claimed EMPTY. If it DOES run and finds members already in_progress, put those ids in "excluded_claimed" — that is genuine contention.`,
+const CLAIM_EXECUTOR_AGENT_TYPE = "command-step-runner";
+const claimInvocation =
+  `python3 ${gateScript} claim --ac-ids ${batchIdsCsv} --ac-root ${acStoreRoot}`;
+
+/**
+ * The runner answers with one of two shapes that share NO mandatory key: a
+ * result carries `exit_status`, a decline carries `declined` and omits it.
+ * So this schema requires nothing — demanding a field of either shape would
+ * reject the other outright, which is the exact failure BO-2400f-7-iii's
+ * `claimUsable` note below warns about, one level up in the stack.
+ */
+const CLAIM_RUNNER_SCHEMA = {
+  type: "object",
+  properties: {
+    command: { type: "string" },
+    workspace: { type: "string" },
+    exit_status: { type: "integer" },
+    stdout: { type: "string" },
+    stderr: { type: "string" },
+    declined: { type: "boolean" },
+    step: { type: "string" },
+    agent: { type: "string" },
+    reason: { type: "string" },
+  },
+};
+
+/**
+ * Reduce the runner's reply to the lifecycle payload the rest of this phase
+ * already speaks, or to `null` meaning "the store was never reached".
+ *
+ * Every `null` path below is a NOT-ATTEMPTED, never contention: a decline
+ * (no `exit_status`), a non-zero exit, stdout that is not JSON, or JSON
+ * without the `claimed` array the gate always emits on a successful run. A
+ * non-zero exit is a genuine result as far as the runner is concerned — the
+ * command ran — but for THIS phase it still means no AC was flipped, so it
+ * belongs with the declines and not with the holds.
+ *
+ * Returning the parsed gate payload unchanged is deliberate: `claimed`,
+ * `excluded_claimed` and `target_refused` keep coming from `_fl_lifecycle.py`
+ * exactly as before, so the three-way decision below is untouched by this
+ * rewiring.
+ */
+function interpretClaimRunnerReply(reply) {
+  if (!reply || typeof reply !== "object") return null;
+  if (!Object.prototype.hasOwnProperty.call(reply, "exit_status")) return null;
+  if (reply.exit_status !== 0) return null;
+  let parsed;
+  try {
+    parsed = JSON.parse(reply.stdout);
+  } catch {
+    return null;
+  }
+  if (!parsed || typeof parsed !== "object" || !Array.isArray(parsed.claimed)) return null;
+  return parsed;
+}
+
+const claimRunnerReply = await agent(
+  JSON.stringify({
+    step: "claim-connected",
+    command: claimInvocation,
+    target: { workspace: worktreePath, branch, ac_id: targetAc },
+  }),
   {
     agentType: CLAIM_EXECUTOR_AGENT_TYPE,
-    schema: {
-      type: "object",
-      required: ["claimed", "target_refused"],
-      properties: {
-        claimed: { type: "array", items: { type: "string" } },
-        excluded_claimed: { type: "array", items: { type: "string" } },
-        target_refused: { type: "boolean" },
-        message: { type: "string" },
-      },
-    },
+    schema: CLAIM_RUNNER_SCHEMA,
     label: "claim-connected",
     phase: "Resolve",
   }
 );
+const claimResult = interpretClaimRunnerReply(claimRunnerReply);
 /**
  * Three different facts have to be told apart here, and each has a different
  * remedy. A DECLINE means nothing was ever checked against the store — fixed by
@@ -1079,13 +1147,18 @@ const claimResult = await agent(
  * any two of them sends an operator after a cause that does not exist
  * (BO-2400f-7-iii, BO-2400f-7-iv).
  *
- * `claimUsable` must mirror the dispatch's own `required` list a few lines
- * above — `claimed` and `target_refused` — and must NOT demand more.
- * `excluded_claimed` is OPTIONAL in that contract, and a performer that claims
- * everything and excludes nothing has no reason to send an empty array. On
+ * `claimUsable` must mirror what `interpretClaimRunnerReply` above already
+ * guarantees — a `claimed` array — and must NOT demand more. Since the
+ * rewiring to `command-step-runner` the fields read here come from
+ * `_fl_lifecycle.py`'s stdout rather than from an agent's own reply, so the
+ * contract to mirror is the GATE's, not the dispatch schema's (which now
+ * requires nothing, because a result and a decline share no mandatory key).
+ *
+ * `excluded_claimed` is OPTIONAL in that contract, and a run that claims
+ * everything and excludes nothing has no reason to emit an empty array. On
  * 2026-09-23 one did not, this gate demanded it anyway, and a fully successful
- * 25-AC claim was reported as never attempted. If you change the schema above,
- * change this line with it; requiring a field the contract leaves optional
+ * 25-AC claim was reported as never attempted. If you change either contract,
+ * change this line with it; requiring a field the producer leaves optional
  * turns a valid reply into a halt.
  *
  * An absent optional collection means empty, so `excludedClaimed` normalises it
@@ -1099,7 +1172,7 @@ const claimHaltFields = { worktree_path: worktreePath, branch, ac_ids: acIds };
 if (!claimUsable || (claimResult.target_refused && excludedClaimed.length === 0)) {
   return {
     status: "halt", classification: "halt",
-    message: `The claim was never attempted: the dispatched performer either declined to run the repository-mutating claim command or returned no usable result, so no AC was flipped to in_progress — this is not a report of another run's ownership. Detail: ${JSON.stringify(claimResult)}`,
+    message: `The claim was never attempted: the dispatched performer either declined to run the repository-mutating claim command, exited non-zero, or returned output the gate contract does not recognise, so no AC was flipped to in_progress — this is not a report of another run's ownership. Detail: ${JSON.stringify(claimRunnerReply)}`,
     ...claimHaltFields,
   };
 }
