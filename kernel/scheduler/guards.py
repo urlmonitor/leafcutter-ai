@@ -50,9 +50,15 @@ class GuardTrip:
 
 
 def max_iterations_for(limits: LimitsConfig, explicit: int | None = None) -> int:
-    """Return the scheduler-iteration limit: the explicit value or one derived from recursion."""
+    """Return the scheduler-iteration limit.
+
+    Order: the explicit runtime value, then `limits.max_scheduler_iterations`, then a value
+    derived from the LangGraph recursion limit.
+    """
     if explicit is not None:
         return explicit
+    if limits.max_scheduler_iterations is not None:
+        return limits.max_scheduler_iterations
     return max(1, limits.langgraph_recursion_limit // SUPERSTEPS_PER_ITERATION)
 
 

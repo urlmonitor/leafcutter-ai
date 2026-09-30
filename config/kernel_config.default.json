@@ -16,7 +16,8 @@
     "max_active_seconds": 300,
     "max_cost_usd": null,
     "capability_timeout_seconds": 120,
-    "langgraph_recursion_limit": 500
+    "langgraph_recursion_limit": 500,
+    "max_scheduler_iterations": null
   },
   "routing": {
     "min_selected_probability": 0.8,
@@ -70,6 +71,7 @@
   ],
   "jev": {
     "model": "jev-latest",
+    "transport": "classifier",
     "timeout_seconds": 30,
     "max_questions_per_call": 20,
     "max_state_chars": 60000,

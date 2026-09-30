@@ -173,7 +173,8 @@ class RoutingAssessment(PersistedModel):
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
-# - 2026-09-30 22:00 [python-coder]: Criterion.approval_status defaults to proposed so a
-#   criterion is never silently treated as approved; callers mark supplied criteria approved.
+# - 2026-09-30 22:00 [python-coder]: Criterion.approval_status defaults to not_required (a
+#   caller-supplied criterion); a generated one must carry proposal_status proposed plus an
+#   approval_status of proposed, approved or rejected, enforced by _check_proposal.
 #   (#KernelBootstrapV0/P1)
 # ====================================================================

@@ -165,10 +165,19 @@
           "exclusiveMinimum": 0,
           "title": "Timeout Seconds",
           "type": "number"
+        },
+        "transport": {
+          "enum": [
+            "classifier",
+            "http"
+          ],
+          "title": "Transport",
+          "type": "string"
         }
       },
       "required": [
         "model",
+        "transport",
         "timeout_seconds",
         "max_questions_per_call",
         "max_state_chars",
@@ -269,6 +278,18 @@
           "title": "Max Retries",
           "type": "integer"
         },
+        "max_scheduler_iterations": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Max Scheduler Iterations"
+        },
         "max_work_items": {
           "minimum": 1,
           "title": "Max Work Items",
@@ -292,7 +313,8 @@
         "max_active_seconds",
         "max_cost_usd",
         "capability_timeout_seconds",
-        "langgraph_recursion_limit"
+        "langgraph_recursion_limit",
+        "max_scheduler_iterations"
       ],
       "title": "LimitsConfig",
       "type": "object"

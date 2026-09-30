@@ -24,7 +24,7 @@
   "routing": "semantic",
   "admission": {
     "kind": "legacy_admission",
-    "decision_ref": "ADR-055",
+    "decision_ref": "ADR-999",
     "admitted_on": "2026-09-30",
     "admitted_by": "BrainCandy",
     "legacy_source": {

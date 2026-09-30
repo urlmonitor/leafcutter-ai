@@ -117,6 +117,7 @@ class JevResult(KernelModel):
     usage: Usage
     latency_ms: int | None = Field(default=None, ge=0)
     input_fingerprint: str | None = None
+    adapter_version: str | None = None
 
     def noul(self, question_id: str) -> NoulAnswer:
         """Return the answer to question_id, which must be a NoulAnswer."""

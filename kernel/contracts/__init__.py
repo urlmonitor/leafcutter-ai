@@ -66,6 +66,7 @@ from kernel.contracts.enums import *  # noqa: F403
 from kernel.contracts.evidence import (  # noqa: F401
     Evidence,
     EvidenceBundle,
+    EvidenceBundlePayload,
     EvidenceInput,
     EvidenceNeed,
     EvidenceSource,
@@ -99,9 +100,12 @@ from kernel.contracts.schema_catalog import (  # noqa: F401
 )
 from kernel.contracts.task import Actor, Constraint, Scope, Task, TaskInput  # noqa: F401
 from kernel.contracts.work import (  # noqa: F401
+    Binding,
     CapabilityInvocation,
+    ChildOutcome,
     Continuation,
     Request,
+    RequestBody,
     RequestProposal,
     WorkItem,
 )

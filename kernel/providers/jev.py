@@ -165,14 +165,15 @@ class TypeSafeJevAdapter:
 
     @classmethod
     def from_config(cls, cfg: KernelConfig, api_key: str, *,
-                    transport: TransportName = "classifier", base_url: str | None = None,
+                    transport: TransportName | None = None, base_url: str | None = None,
                     client: Any = None) -> TypeSafeJevAdapter:
         """Build an adapter from the kernel config.
 
         Args:
             cfg: Validated kernel config (jev section and limits.max_retries are used).
             api_key: Jev API key value (from kernel.secrets).
-            transport: "classifier" (langchain-typesafe) or "http" (direct fallback).
+            transport: "classifier" (langchain-typesafe) or "http" (direct fallback); None
+                reads `jev.transport` from the config.
             base_url: Optional API root override.
             client: Optional injected async HTTP client matching the transport (tests).
 
@@ -180,7 +181,7 @@ class TypeSafeJevAdapter:
             TypeSafeJevAdapter: Ready adapter.
         """
         jev = cfg.jev
-        if transport == "http":
+        if (transport or jev.transport) == "http":
             tr: JevTransport = HttpTransport(
                 api_key=api_key, model=jev.model, timeout_seconds=jev.timeout_seconds,
                 **({"base_url": base_url} if base_url else {}), client=client)
@@ -271,12 +272,15 @@ class TypeSafeJevAdapter:
                     latency_ms)
         return JevResult(model_id=model, request_id=",".join(ids) or None, answers=answers,
                          usage=usage, latency_ms=latency_ms,
-                         input_fingerprint=batch.input_fingerprint())
+                         input_fingerprint=batch.input_fingerprint(),
+                         adapter_version=self.adapter_version)
 
 
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-09-30 23:59 [python-coder]: Transport defaults from `jev.transport`; results carry
+#   adapter_version. (#KernelBootstrapV0/INT)
 # - 2026-09-30 23:00 [python-coder]: Retry lives in the adapter because langchain-typesafe has
 #   none; unknown token counts make totals and cost None rather than partial sums.
 #   (#KernelBootstrapV0/P3)

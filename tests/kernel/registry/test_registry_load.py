@@ -128,7 +128,7 @@ class TestAdmission(RegistryCase):
     def test_legacy_admission_with_adr_reference_loads(self) -> None:
         snapshot = load_registry(self.write([load_json("registry/descriptor_legacy.json")]))
         admission = snapshot.descriptors[0].admission
-        self.assertEqual((admission.kind, admission.decision_ref), ("legacy_admission", "ADR-055"))
+        self.assertEqual((admission.kind, admission.decision_ref), ("legacy_admission", "ADR-999"))
         self.assertEqual(admission.legacy_source.id, "test-writer")
 
     def test_legacy_admission_needs_source_and_adr_ref(self) -> None:

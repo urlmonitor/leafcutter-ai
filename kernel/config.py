@@ -72,6 +72,7 @@ class LimitsConfig(_Section):
     max_cost_usd: float | None = Field(ge=0)
     capability_timeout_seconds: float = Field(gt=0)
     langgraph_recursion_limit: int = Field(ge=1)
+    max_scheduler_iterations: int | None = Field(ge=1)
 
 
 class RoutingConfig(_Section):
@@ -138,6 +139,7 @@ class JevConfig(_Section):
     """Jev provider settings."""
 
     model: str
+    transport: Literal["classifier", "http"]
     timeout_seconds: float = Field(gt=0)
     max_questions_per_call: int = Field(ge=1)
     max_state_chars: int = Field(ge=1)
@@ -284,6 +286,8 @@ def write_config_schema(path: Path) -> None:
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-09-30 23:59 [python-coder]: Added jev.transport and limits.max_scheduler_iterations
+#   (null = derive from the LangGraph recursion limit). (#KernelBootstrapV0/INT)
 # - 2026-09-30 22:00 [python-coder]: Config models have no field defaults so the default JSON is
 #   the only place a threshold value exists; max_cost_usd and price use null for unknown.
 #   (#KernelBootstrapV0/P1)

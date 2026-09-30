@@ -179,7 +179,7 @@ class Admission(KernelModel):
             if self.legacy_source is None:
                 fail("legacy_admission requires legacy_source")
             if not ADR_REF.match(self.decision_ref):
-                fail("legacy_admission requires a decision_ref like ADR-051")
+                fail("legacy_admission requires a decision_ref like ADR-nnn")
         else:
             if self.legacy_source is not None:
                 fail("native_registration must not carry legacy_source")
