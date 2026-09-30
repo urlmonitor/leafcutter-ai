@@ -435,6 +435,34 @@ its own `build.py` subprocess. A test that mutates the package before building �
 NOT be routed onto the shared fixture: sharing would corrupt the shared copy for every
 other consumer and destroy the very behaviour those tests exist to prove.
 
+**You must DECLARE which kind your test is — requesting the fixture is not enough
+(TQ-600a-5).** Routing is decided per test from a pytest marker, and from nothing else:
+not the filename, not the directory, not whether you requested the fixture. The two
+markers are registered in `pytest.ini` and spelled exactly:
+
+```python
+@pytest.mark.shared_layout_reader     # -> the ONE shared deployed layout
+@pytest.mark.shared_layout_mutator    # -> a private copy of its own, never shared
+```
+
+Copy those spellings rather than retyping them. A marker that differs by one character
+is a different marker, and the consequence is silent rather than loud: the test is
+treated as UNDECLARED.
+
+**An undeclared test is safe but expensive.** It still runs and still passes — it is
+handed its own private copy, never the shared layout, so it cannot corrupt anything.
+But a private copy means a real `build.py` subprocess, so an undeclared test silently
+pays the full ~59.8s this section exists to eliminate. The run names every undeclared
+test by node id in its terminal summary and reports `declared_mutator_count` and
+`undeclared_count` as two separate figures — if your test appears there, you meant to
+declare it and did not.
+
+`pytest.ini` sets `strict_markers = true` as a direct ini key. Do NOT move it into
+`addopts` as `--strict-markers`: measured on pytest 9.0.3, that spelling has **no
+effect** — an unregistered marker only warns and the run exits 0. The file carried the
+inert form until 2026-09-30, so marker strictness was never actually enforced here, and
+a grep-only test asserting the string's presence passed the whole time.
+
 Do not assume this is cheap because collection is fast — collection is 5.33s and the
 `pytest_ac_enforcement` plugin only fires on failures. Both were measured and ruled out.
 The build subprocess is the whole cost.
