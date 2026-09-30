@@ -359,7 +359,7 @@ def shared_reference_layout(request: pytest.FixtureRequest) -> Path:
     return _produce_private_copy()
 
 
-def pytest_terminal_summary(terminalreporter: object) -> None:
+def pytest_terminal_summary(terminalreporter: pytest.TerminalReporter) -> None:
     """Announce every undeclared-routed test by node id, loudly, at session
     finish, plus a summary line -- and append the matching JSONL summary.
 
