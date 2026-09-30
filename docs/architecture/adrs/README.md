@@ -71,7 +71,13 @@ python scripts/adr_refs.py --index --write
 | [ADR-042](ADR-042-product-truth-checker-outcome-vocabulary.md) | Active | The Product-Truth Checker Reports a Closed Outcome Vocabulary on a Structured Channel | 2026-09-09 |
 | [ADR-043](ADR-043-journey-record-carries-its-own-behind-mark.md) | Active | A Journey Known to Be Behind Carries a Durable `behind` Mark in the Record Itself | 2026-09-09 |
 | [ADR-044](ADR-044-example-content-self-declares-its-product.md) | Active | Example Content Declares Its Example Product in One `example_product` Key, Cross-Checked Against Its Product Root | 2026-09-16 |
+| [ADR-046](ADR-046-completion-demanded-set-is-record-only.md) | Active | The Completion Decision's Demanded-Step Set Is Derived Solely From the Ticket's Own Record | 2026-09-14 |
+| [ADR-047](ADR-047-single-writer-ticket-close-path.md) | Active | The Finished State Is Written Only by the Mechanism That Checks It | 2026-09-21 |
+| [ADR-048](ADR-048-order-independent-per-ticket-completion.md) | Active | One Run Gives One Answer Per Condition — Completion Is Order-Independent | 2026-09-22 |
+| [ADR-049](ADR-049-record-checker-trigger-scope.md) | Active | The Record's Checker Triggers on a Scope Derived From Its Own Resolvable-Pointer Surface | 2026-09-25 |
+| [ADR-050](ADR-050-runtime-reachability-guard-refuses-not-warns.md) | Active | The Runtime Reachability Guard Inventories the Built Surface and Refuses, Never Warns | 2026-09-25 |
 | [ADR-052](ADR-052-capabilities-replace-agents-prompts-are-compiled.md) | Active | Capabilities Replace Agents — Prompts Are Compiled Outputs, Not the Source of Truth | 2026-09-30 |
 | [ADR-053](ADR-053-intelligence-selection-deterministic-jev-llm-human.md) | Active | Intelligence Selection — Deterministic vs Jev vs LLM vs Human | 2026-09-30 |
 | [ADR-054](ADR-054-process-representation-and-maturity-model.md) | Active | Process Representation and the Process-Maturity Model — Workflow vs Policy/Checklist vs LLM-Guided | 2026-09-30 |
 | [ADR-055](ADR-055-capability-registry-starts-empty.md) | Active | The Kernel's Capability Registry Starts Empty — Legacy Agents and Skills Enter Only by Recorded Decision | 2026-09-30 |
+| [ADR-056](ADR-056-colony-memory-evidence-reinforcement.md) | Active | Colony Memory — Evidence Reinforcement from Observed Outcomes | 2026-09-30 |

@@ -1,15 +1,17 @@
 ---
 title: "leafcutter-ai Vision"
-description: "Product vision — what leafcutter-ai is, who it serves, and the outcomes it delivers"
+description: "Product vision — what leafcutter-ai is, who it serves, the outcomes it delivers, and the colony model it grows toward"
 type: cross-cutting
-status: accepted
+status: active
 created: 2026-05-19
-last_updated: 2026-05-21
+last_updated: 2026-09-30
 components:
   - documentation_system
+  - decision_kernel
 tags:
   - vision
   - roadmap
+  - colony-memory
 build_behavior: write_if_absent
 ---
 
@@ -17,7 +19,49 @@ build_behavior: write_if_absent
 
 ## Mission Statement
 
-leafcutter-ai is a domain-agnostic agent/skill/workflow package that installs a full AI-assisted development workflow into any project. Edit one JSON config file, run `build.py`, and the complete system is generated: agents, skills, hooks, ticket lifecycle, documentation scaffolds, and quality gates. The goal is to make AI IDEs and agents (Claude Code, Antigravity, etc.) productive and disciplined in any codebase without requiring project-specific prompt engineering.
+leafcutter-ai makes AI-assisted software development disciplined in any codebase, and over time learns from observed outcomes which engineering processes and decisions actually work.
+
+Today it is delivered as a domain-agnostic agent/skill/workflow package that installs a full AI-assisted development workflow into any project. Edit one JSON config file, run `build.py`, and the complete system is generated: agents, skills, hooks, ticket lifecycle, documentation scaffolds, and quality gates. The goal is to make AI IDEs and agents (Claude Code, Antigravity, etc.) productive and disciplined in any codebase without requiring project-specific prompt engineering.
+
+Its long-term core is the Decision Kernel: a runtime that works like a leafcutter colony. It starts small and leans on a general-purpose model, and it grows stronger with every task it resolves.
+
+## Why "Leafcutter": The Colony Model
+
+Leafcutter ants have no central planner. They coordinate through *stigmergy*: foragers that find food lay pheromone on the way back, other ants follow the strongest trails, and trails that stop paying off evaporate. The colony gets better at foraging without anyone directing it. Leafcutters also don't eat the leaves they carry. They grow a fungus garden on them and live from the garden.
+
+Leafcutter works the same way:
+
+| Ant colony | Leafcutter |
+|------------|------------|
+| Colony | The Leafcutter runtime (Decision Kernel) |
+| Worker | A capability: a LangGraph workflow with contracts, pre-checks and post-checks ([ADR-052](architecture/adrs/ADR-052-capabilities-replace-agents-prompts-are-compiled.md)) |
+| Scout | Research and capability-gap handling: going where no capability exists yet |
+| Food found | A task resolved and verified |
+| Pheromone trail | A learned routing preference, built from verified outcomes |
+| Dead-end trail | A failed path, or a decision later proven wrong |
+| Evaporation | Evidence fading with age and with new policy, template or model versions |
+| Colony memory | Execution statistics and decision outcomes ([ADR-056](architecture/adrs/ADR-056-colony-memory-evidence-reinforcement.md)) |
+| Leaves → fungus garden | Raw LLM work, cultivated into ADRs, policies and workflows ([ADR-054](architecture/adrs/ADR-054-process-representation-and-maturity-model.md)) |
+| Queen | The bootstrap. A human plus a general-purpose model found the colony, but they do not stay its central controller |
+
+**Governing principle:** Leafcutter learns from the observed outcome of every capability invocation and important decision. Successful paths gain evidence, unsuccessful paths lose evidence, and repeated capability gaps create pressure for new specialized workflows.
+
+**Safeguard:** usage alone is never evidence of correctness. A path called 5,000 times is popular, not proven. Only verified outcomes reinforce a trail, wrong decisions count against it, and some runs explore alternatives so an early bad choice cannot lock itself in. Trails may rank and propose; they may not legislate. Turning a trail into a policy or workflow stays a reviewed step.
+
+Every question goes to the cheapest mechanism that can answer it reliably, in this order: deterministic code, then Jev, then an LLM, then a human ([ADR-053](architecture/adrs/ADR-053-intelligence-selection-deterministic-jev-llm-human.md)). Knowledge moves the same way over time, from LLM exploration to policy to workflow, and where possible to deterministic code (ADR-054).
+
+Why it matters: software engineering rarely has empirical evidence about which of its processes and decisions work. A colony that records its outcomes produces exactly that evidence.
+
+## Growing the Colony, Step by Step
+
+The Decision Kernel is developed inside leafcutter-ai and is not yet shipped to adopters. It is built in stages, and each stage must leave the colony measurably stronger, not just bigger:
+
+1. **Founding (kernel Stage 1 / V0).** The colony starts with no workers: the capability registry starts empty, and legacy agents and skills join only by recorded decision ([ADR-055](architecture/adrs/ADR-055-capability-registry-starts-empty.md)). The human and Claude still do most of the work. The kernel routes requests, makes bounded decisions with Jev, and records everything. Every trace carries the IDs and versions it needs to be counted later, because traces recorded without them can never be counted retroactively.
+2. **First workers (Stages 2–3).** Retrieval, engineering workflows and executable component policies arrive as capabilities. This gives trails something to form on.
+3. **Trails (Stage 4).** An evaluation job turns traces into a performance store. Wrong decisions and dead ends feed reviewed policy-gap and promotion proposals. Capability gaps are ranked by frequency, fallback cost and failure rate to propose what to build next; a human still sets the priority. Once the performance store exists and passes evaluation, routing starts to weigh historical success, failures and confidence calibration alongside semantic fit, and occasionally explores alternatives.
+4. **Specialists (Stage 5).** Where scout evidence shows the colony still relies on the host for a kind of work, a specialized executor takes it over, and the general-purpose "queen/scout" intelligence becomes less central.
+
+See [ADR-056](architecture/adrs/ADR-056-colony-memory-evidence-reinforcement.md) for the staged adoption plan.
 
 ## Current Phase
 
@@ -29,10 +73,10 @@ leafcutter-ai is a domain-agnostic agent/skill/workflow package that installs a 
 
 The following are explicitly out of scope until a future phase decision:
 
-- Multi-LLM support (non-Anthropic models)
+- Multi-LLM support for generative work (non-Anthropic models). Jev, a bounded decision model, is the deliberate exception (ADR-053)
 - Package registry / versioned releases (npm, pip, etc.)
 - GUI or web-based configuration interface
-- Runtime telemetry dashboard or analytics
+- A user-facing analytics dashboard product. Internal colony memory (traces, outcome records, performance statistics) *is* in scope (ADR-056)
 - Plugin marketplace for community-contributed agents/skills
 
 ## Strategic Assets / Differentiators
@@ -44,6 +88,8 @@ The following are explicitly out of scope until a future phase decision:
 | AC-driven delivery | Each acceptance criterion carries its own agent assignments, sign-offs, and work status — the requirement IS the work order | Eliminates drift between specs and execution; supervisors walk the AC hierarchy directly without an intermediate ticket layer |
 | Self-hosting dogfood | leafcutter develops itself using its own agents and skills (ADR-001) | Every UX issue is discovered during development, not after release |
 | Quality gate suite | Pre-commit hooks for build drift, secrets, doc coverage, structural changes | Adopters get guardrails without writing their own hook infrastructure |
+| Decision Kernel | Capabilities with contracts, checks and compiled prompts; Jev for bounded decisions; routing by process maturity (ADR-052–054) | The engineering process lives in software, not in giant prompts, and each decision uses the cheapest mechanism that can resolve it |
+| Colony memory | Outcomes of capability runs and decisions are recorded and fed back into routing and policy (ADR-056) | The system gets measurably better with use and produces evidence about which engineering processes work |
 
 ## Roadmap (Phases)
 
@@ -65,6 +111,10 @@ Unlocks adoption beyond the original author by making the package maintainable b
 
 Transitions from a personal tool to a shared open-source package.
 
+### Decision Kernel Track (parallel)
+
+The colony stages from [Growing the Colony, Step by Step](#growing-the-colony-step-by-step) run as their own roadmap phases, `phase_kernel_1_founding` (active) through `phase_kernel_5_specialists`, in `docs/roadmap.json`. Every stage after founding has to show a colony-health improvement over the previous stage before it counts as done.
+
 ## Success Criteria
 
 | Criterion | Target | How to measure |
@@ -74,10 +124,27 @@ Transitions from a personal tool to a shared open-source package.
 | Build idempotency | Consecutive builds produce zero git diff | Run `build.py` twice; `git status` shows no changes |
 | Self-hosting parity | leafcutter's own workflow uses the same agents it ships | All leafcutter development tickets are driven by compiled agents from its own templates |
 
+### Colony Health: How We Know It Is Getting Stronger
+
+These are long-term measures for the Decision Kernel. They show a direction to track, not a target for the current phase.
+
+| Measure | Healthy direction | Evidence source |
+|---------|-------------------|-----------------|
+| Share of requests resolved by specialized capabilities rather than fallback | Rising | Routing and outcome records |
+| Decision accuracy and calibration per decision type | Rising, and closer to the stated confidence | Decision outcome records |
+| Cost and time per resolved task | Falling | Langfuse traces |
+| Rework rate after acceptance (repairs, reverts, overrides) | Falling | Outcome records |
+| Recurrence of a capability gap after its capability ships | Near zero | Gap records |
+
 ## Key Decisions Log
 
 | Date | Decision | Rationale |
 |------|----------|-----------|
+| 2026-09-30 | Colony memory: paths are reinforced by verified outcomes, never by usage alone (ADR-056) | Leafcutter learns which processes and decisions work, and capability gaps drive what gets built next |
+| 2026-09-30 | The kernel's capability registry starts empty; legacy agents and skills join only by recorded decision (ADR-055) | The colony is founded on capabilities that meet the contract, not on inherited prompts |
+| 2026-09-30 | Process representation and maturity levels 0–4 (ADR-054) | LLMs bootstrap process knowledge; repeated reasoning is promoted into policies and then workflows |
+| 2026-09-30 | Intelligence selection: deterministic, then Jev, then LLM, then human (ADR-053) | Each question goes to the cheapest mechanism that can answer it reliably |
+| 2026-09-30 | Capabilities replace agents; prompts are compiled from contracts (ADR-052) | The engineering process becomes software; prompts stop being its source of truth |
 | 2026-05-19 | Self-hosting via config-driven paths, not `--self` flag (ADR-001) | More general; avoids special code paths. `skills_config.json` points paths into `leafcutter-ai/` for package development. |
 | 2026-05-13 | YAML frontmatter stripping in template compilation | Keeps metadata in templates for tooling but out of compiled agent prompts |
 | 2026-05-13 | Default overwrite semantics in build.py | Old skip-existing caused silently stale outputs; overwrite + compare-before-write is safer |

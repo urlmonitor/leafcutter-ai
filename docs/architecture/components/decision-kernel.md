@@ -18,6 +18,7 @@ related_docs:
   - docs/architecture/adrs/ADR-053-intelligence-selection-deterministic-jev-llm-human.md
   - docs/architecture/adrs/ADR-054-process-representation-and-maturity-model.md
   - docs/architecture/adrs/ADR-055-capability-registry-starts-empty.md
+  - docs/architecture/adrs/ADR-056-colony-memory-evidence-reinforcement.md
 related_code:
   - kernel/__init__.py
 tags:
@@ -79,6 +80,7 @@ in [Decision Kernel V0 Design — Part 1](../../analysis/2026-09-30-decision-ker
 | [ADR-053](../adrs/ADR-053-intelligence-selection-deterministic-jev-llm-human.md) | Which mechanism answers each check: deterministic code, Jev, an LLM or a human. |
 | [ADR-054](../adrs/ADR-054-process-representation-and-maturity-model.md) | How process knowledge is held (workflow, policy/checklist or LLM-guided) and how it matures. |
 | [ADR-055](../adrs/ADR-055-capability-registry-starts-empty.md) | The capability registry starts empty. Legacy agents and skills enter only by recorded decision. |
+| [ADR-056](../adrs/ADR-056-colony-memory-evidence-reinforcement.md) | Colony memory: paths gain evidence from verified outcomes, never from usage alone. Decisions carry outcomes, and capability gaps drive what gets built next. V0 records the prerequisites only. |
 
 ## Specification
 

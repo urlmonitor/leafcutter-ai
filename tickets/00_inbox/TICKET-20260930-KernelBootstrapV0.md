@@ -6,6 +6,7 @@ components:
 created: 2026-09-30
 depends_on: []
 priority: high
+roadmap_phase: phase_kernel_1_founding
 requires_diagram: true
 requires_adr: true
 change_target: code

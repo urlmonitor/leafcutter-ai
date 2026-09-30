@@ -129,6 +129,7 @@ call, so tests can assert names, correlation IDs and nesting.
   - `jev.<purpose>`: generation
   - events: `routing.assessed`, `decision.status`, `guard.tripped`, `interaction.opened` / `submission.accepted` / `submission.rejected`, `gap.recorded`, `run.finalized`
 - **Correlation IDs.** Every observation's metadata carries the non-null `CorrelationIds`: `run_id`, `root_task_id`, `task_id`, `work_item_id`, `request_id`, `invocation_id`, `decision_id`, `capability_id`, `interaction_id`, `parent_work_item_id` and `causation_seq`. Evidence is referenced by id and locator, never by full payload.
+- **Colony-memory recording prerequisites (recommended by [ADR-056 §9](../architecture/adrs/ADR-056-colony-memory-evidence-reinforcement.md); a V0 decision, not yet V0 scope).** Traces recorded without these fields can never be counted retroactively: (1) policy, template and model version fields next to `CorrelationIds`; (2) an outcome event that references an earlier `decision_id`, across runs if needed (name and schema left to the build); (3) gap records that stay countable. The roadmap's founding exit criterion asks that each item is implemented or explicitly deferred by a recorded decision.
 - **Degraded mode (§12.4).**
   - Triggers: missing keys, a failed `auth_check()` at segment open, or any SDK exception (caught and logged at WARNING).
   - Effect: the tracer writes observation records to `telemetry_spool.jsonl`, and the envelope reports `trace_refs.observability="degraded"`.

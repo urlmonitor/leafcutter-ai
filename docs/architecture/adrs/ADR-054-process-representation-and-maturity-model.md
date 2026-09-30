@@ -12,6 +12,7 @@ components:
 related_docs:
   - docs/architecture/adrs/ADR-052-capabilities-replace-agents-prompts-are-compiled.md
   - docs/architecture/adrs/ADR-053-intelligence-selection-deterministic-jev-llm-human.md
+  - docs/architecture/adrs/ADR-056-colony-memory-evidence-reinforcement.md
   - docs/architecture/components/decision-kernel.md
   - docs/analysis/2026-09-30-decision-kernel-design.md
   - docs/analysis/2026-09-30-decision-kernel-design-2-contracts-registry-config.md
@@ -132,7 +133,9 @@ capability or policy, but it MUST NOT activate or execute newly generated code b
 ([spec part 1](../../analysis/2026-09-30-leafcutter-kernel-spec-rev3.md), §2.3). New native
 capabilities are implemented, tested, reviewed, versioned and registered like any other code
 ([spec part 6](../../analysis/2026-09-30-leafcutter-kernel-spec-rev3-6-gaps-build-verification.md), §14).
-How promotion is detected or triggered is not decided here (see Open Questions).
+How promotion is detected or triggered is not decided here (see Open Questions). Its direction
+is set by [ADR-056](ADR-056-colony-memory-evidence-reinforcement.md): promotion is proposed from
+recorded outcome evidence and activated only after review.
 
 ### 4. The kernel resolves a request by capability and by process maturity
 
@@ -269,7 +272,9 @@ This ADR explicitly does not decide:
    both. Existing inputs are `CapabilityGap` observations (`occurrence_count`,
    `example_run_ids`, `host_only` fallback reliance) and the prioritization signals in spec §14
    (fallback frequency, total cost where known, latency, failure rate, usefulness). None of these
-   is a decided trigger.
+   is a decided trigger. [ADR-056](ADR-056-colony-memory-evidence-reinforcement.md) sets the
+   direction (evidence-driven proposals, reviewed before activation) but leaves the concrete
+   trigger open.
 2. **Where policies are stored.** Spec part 7, §18.4 shows illustrative Stage 3 policy data
    (`LG-PARALLEL-001`). No storage location or format is decided.
 
