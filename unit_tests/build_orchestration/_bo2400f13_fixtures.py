@@ -3,6 +3,17 @@ MODULE: unit_tests/build_orchestration/_bo2400f13_fixtures.py
 GOAL: Shared REAL-git-repo fixture helpers for the BO-2400f-13 family of
       tests (BO-2400f-13, -i, -ii, -iii, -iv) — the occupied-build-workspace
       refusal criteria.
+BUSINESS CONTEXT: Every BO-2400f-13-* test needs the same real-subprocess
+    scaffolding around setup_ticket_worktree.py, and — per BO-4300f-4's own
+    Implementation Notes ("RE-POINT") — must run the shared DEPLOYED layout's
+    copy, never a tracked scripts/ copy this package repository carries
+    (BO-4300f-4's "NO SECOND COPY" rule).
+ARCHITECTURE: DEPLOYED_SCRIPT is a PEP 562 lazy module attribute (resolved
+    via _resolve_deployed_script(), which builds/caches the shared deployed
+    layout through BO-4300f-4's own locator, unit_tests/build_orchestration/
+    _workspace_maker_fixtures.ensure_deployed_layout()) rather than a
+    module-level constant, so importing this file never itself triggers the
+    ~60s scripts/build.py spawn for a test that never touches it.
 
 NOT a test file itself (leading underscore — mirrors the convention already
 established by unit_tests/_workflow_engine_harness.py). Nothing in here is
@@ -51,10 +62,46 @@ from typing import Any
 
 _REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 TEMPLATE_SCRIPT = _REPO_ROOT / "templates" / "scripts" / "setup_ticket_worktree.py"
-DEPLOYED_SCRIPT = _REPO_ROOT / "scripts" / "setup_ticket_worktree.py"
 
 _GIT_USER_EMAIL = "test-writer@example.com"
 _GIT_USER_NAME = "Test Writer"
+
+_DEPLOYED_SETUP_TICKET_WORKTREE_NAME = "setup_ticket_worktree.py"
+
+
+def _resolve_deployed_script() -> Path:
+    """Resolve ``setup_ticket_worktree.py`` from the shared deployed layout.
+
+    Re-pointed off the tracked ``scripts/`` copy (BO-4300f-4's own
+    Implementation Notes, "RE-POINT") onto BO-4300f-4's shared
+    deployed-layout locator: a tracked copy under this package's own
+    ``scripts/`` must never become the thing five BO-2400f-13-* tests
+    exercise (ADR-018 Amendment 1, A1.6; BO-4300f-4's own "NO SECOND COPY"
+    rule exists for exactly this reason -- the mutation probe of
+    known issue KI-TQ-20260831 landed in the
+    wrong copy this way). Migrating these five tests onto the workspace
+    maker itself is ticket 14's job, not this re-point's.
+    """
+    from unit_tests.build_orchestration._workspace_maker_fixtures import (
+        ensure_deployed_layout,
+    )
+
+    layout_root = ensure_deployed_layout()
+    return layout_root / ".leafcutter" / "scripts" / _DEPLOYED_SETUP_TICKET_WORKTREE_NAME
+
+
+def __getattr__(name: str) -> Path:
+    """PEP 562 lazy module attribute for ``DEPLOYED_SCRIPT``.
+
+    Resolves (and, via ensure_deployed_layout()'s own cache, builds) the
+    shared deployed layout only on first access -- so importing this module
+    never triggers a ~60s scripts/build.py spawn for a test that never
+    touches DEPLOYED_SCRIPT.
+    """
+    if name == "DEPLOYED_SCRIPT":
+        return _resolve_deployed_script()
+    msg = f"module {__name__!r} has no attribute {name!r}"
+    raise AttributeError(msg)
 
 
 def run_git(args: list[str], cwd: Path, check: bool = True) -> subprocess.CompletedProcess:
@@ -111,15 +158,23 @@ def clone_repo_root(origin: Path, tmp_path: Path, dirname: str = "repo_root") ->
     return repo_root
 
 
-def stage_script(repo_root: Path, source: Path = DEPLOYED_SCRIPT) -> Path:
+def stage_script(repo_root: Path, source: Path | None = None) -> Path:
     """Copy *source* (the script under test) into ``repo_root/scripts/``.
 
     This is the anchoring trick documented in the module docstring: it makes
     ``_git_toplevel(anchor=None)`` resolve to *repo_root*, not the real
     development tree, when the copied script is later invoked directly.
 
+    Args:
+        repo_root: Fixture repository root to stage the script into.
+        source: Script to copy. Defaults to the shared deployed
+            ``setup_ticket_worktree.py`` (``DEPLOYED_SCRIPT``, resolved
+            lazily) when omitted.
+
     Returns the path to the copied script.
     """
+    if source is None:
+        source = _resolve_deployed_script()
     dest_dir = repo_root / "scripts"
     dest_dir.mkdir(parents=True, exist_ok=True)
     dest = dest_dir / "setup_ticket_worktree.py"
@@ -212,9 +267,25 @@ def make_fresh_fastlane_worktree(script_path: Path, slug: str, timeout: int = 60
     proc = run_create_fastlane_worktree(script_path, slug, timeout=timeout)
     payload = parse_json_stdout(proc)
     if proc.returncode != 0 or not payload or not payload.get("worktree_path"):
-        raise AssertionError(
+        msg = (
             "Fixture precondition failed: could not create a prior fast-lane "
             f"worktree for slug={slug!r}. exit={proc.returncode} "
             f"stdout={proc.stdout!r} stderr={proc.stderr!r}"
         )
+        raise AssertionError(msg)
     return Path(payload["worktree_path"])
+
+
+# ===========================================================================
+# DECISION HISTORY
+# ===========================================================================
+# - 2026-09-28 [python-coder/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/02,
+#   BO-4300f-4]: Re-pointed DEPLOYED_SCRIPT off the tracked
+#   scripts/setup_ticket_worktree.py copy onto BO-4300f-4's shared deployed
+#   layout locator (lazy PEP 562 module attribute, _resolve_deployed_script()
+#   -> _workspace_maker_fixtures.ensure_deployed_layout()); stage_script()'s
+#   default parameter changed from the now-removed module constant to
+#   None-then-lazy-resolve. All five test_bo2400f_13*.py callers needed no
+#   change (they already pass source=fx.DEPLOYED_SCRIPT explicitly).
+#   (#EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/02) (ADR-051)
+# ===========================================================================

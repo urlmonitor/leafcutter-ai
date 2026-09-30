@@ -7,6 +7,16 @@ GOAL: Test-only REAL-git fixture helpers for test_bo_4300a_1.py. Builds a
     build entry point that installs a REAL rejecting git hook -- so the
     maker's own `ensure` verb has something genuine to run and something
     genuine to prove rejects a bad commit.
+BUSINESS CONTEXT: BO-4300a-1's own AC requires proving the maker against a
+    real bare hub and a real project, never a mock -- this module is the
+    narrow, self-contained stand-in for that ticket's own test_spec, built
+    ahead of BO-4300f-4's fuller shared fixture API (see the section below).
+ARCHITECTURE: Stdlib-only (json, os, stat, subprocess, sys, pathlib).
+    `DeployedMakerBuild.build()` reuses BO-4300f-4's shared, session-cached
+    `_workspace_maker_fixtures.ensure_deployed_layout()` (2026-09-28
+    migration, see DECISION HISTORY) rather than spawning its own
+    `scripts/build.py` -- the one shared spawn site the whole
+    unit_tests/build_orchestration/ proof suite now shares.
 
 NOT a test file itself (leading underscore -- mirrors the convention already
 established by unit_tests/build_orchestration/_bo2400f13_fixtures.py and
@@ -29,21 +39,11 @@ these tests should be migrated onto its fixture module rather than this one
 growing to match it feature-for-feature.
 
 === The "no new build.py spawn site" tension, and how this module resolves it ===
-CLAUDE.md's "Tests must not spawn their own build.py" rule exists because 77
-existing spawn sites each pay the ~60s full-package build cost with no
-sharing. This ticket is different in kind, not degree: `templates/scripts/
-worktree.py` and its resolver module do not exist in ANY already-built
-deployed layout (there is nothing to share -- this ticket is what first adds
-the deploy-manifest entries). Two of this ticket's own test_spec entries are
-tagged `angle: deployed` for exactly this reason (BP-1100g-1's "deployed"
-angle IS "runs build.py into a temporary target directory and exercises the
-DEPLOYED copy"). This module therefore builds the deployed layout EXACTLY
-ONCE per test-class run (via `DeployedMakerBuild`, intended for
-`setUpClass`), and every other test in the file re-uses that one build --
-never one spawn per test. This is the single new spawn site this ticket's
-own Implementation Notes justify ("A test that must mutate the package and
-build its own copy says so and justifies it in its ticket" -- see this
-ticket's Implementation Notes and this module's DECISION HISTORY below).
+CLAUDE.md's "Tests must not spawn their own build.py" rule forbids a second,
+independent spawn site. `DeployedMakerBuild` (below) no longer spawns its own
+`scripts/build.py` -- see DECISION HISTORY's 2026-09-28 entry: it now reuses
+BO-4300f-4's shared, session-cached `ensure_deployed_layout()`, the ONE spawn
+site the whole `unit_tests/build_orchestration/` proof suite shares.
 
 DECISION HISTORY
 ====================================================================
@@ -57,6 +57,15 @@ DECISION HISTORY
   own contents", not a cached/generic template) and a real rejecting
   `.git/hooks/pre-commit` that fails any commit whose staged diff contains
   REJECT_SENTINEL.
+- 2026-09-28 [python-coder/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/02,
+  BO-4300f-4]: Migrated `DeployedMakerBuild.build()` off its own
+  `scripts/build.py --target-dir <tmp>` spawn (which CLAUDE.md's "Tests
+  must not spawn their own build.py" rule forbids as a second, independent
+  spawn site) onto BO-4300f-4's shared, session-cached
+  `_workspace_maker_fixtures.ensure_deployed_layout()` -- the migration 01
+  test-writer flagged as owed. `target_dir`/`maker_path`/`resolver_path`
+  are unchanged; only the build call itself moved.
+  (#EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/02) (ADR-051)
 ====================================================================
 """
 from __future__ import annotations
@@ -66,7 +75,6 @@ import os
 import stat
 import subprocess
 import sys
-import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -256,7 +264,7 @@ def make_project(tmp: Path, hub: Path) -> Path:
 
 @dataclass
 class DeployedMakerBuild:
-    """Builds the shared package deployed layout EXACTLY ONCE (intended for
+    """Resolves the shared package deployed layout (intended for
     `setUpClass`) and exposes the deployed maker / resolver module paths.
 
     This IS the "deployed" test angle for this AC's own two `angle: deployed`
@@ -264,6 +272,13 @@ class DeployedMakerBuild:
     temporary target directory and exercises the DEPLOYED copy"). Every other
     test in the file re-uses this SAME build rather than spawning its own --
     see this module's docstring "The no new build.py spawn site tension".
+
+    MIGRATION (BO-4300f-4, 2026-09-28): ``build()`` no longer spawns its own
+    ``scripts/build.py`` -- it now reuses BO-4300f-4's shared, session-cached
+    layout via ``_workspace_maker_fixtures.ensure_deployed_layout()``, the
+    ONE spawn site this whole package's proof suite shares. This was 01
+    test-writer's own owed migration ("Tests must not spawn their own
+    build.py" otherwise forbids a second, independent spawn site here).
     """
 
     target_dir: Path
@@ -272,19 +287,12 @@ class DeployedMakerBuild:
 
     @classmethod
     def build(cls) -> "DeployedMakerBuild":
-        target_dir = Path(tempfile.mkdtemp(prefix="bo4300a1-deployed-"))
-        build_script = REPO_ROOT / "scripts" / "build.py"
-        proc = subprocess.run(
-            [sys.executable, str(build_script), "--target-dir", str(target_dir)],
-            capture_output=True,
-            text=True,
-            timeout=300,
+        from unit_tests.build_orchestration._workspace_maker_fixtures import (
+            ensure_deployed_layout,
         )
-        return cls(
-            target_dir=target_dir,
-            build_stdout=(proc.stdout or "") + (proc.stderr or ""),
-            build_returncode=proc.returncode,
-        )
+
+        target_dir = ensure_deployed_layout()
+        return cls(target_dir=target_dir, build_stdout="", build_returncode=0)
 
     @property
     def maker_path(self) -> Path:

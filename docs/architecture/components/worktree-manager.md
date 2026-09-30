@@ -11,6 +11,7 @@ components:
 related_docs:
   - docs/architecture/adrs/ADR-018-agent-isolation-topology.md
   - docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+  - docs/architecture/adrs/ADR-051-developer-repo-guard-session-exclusivity.md
   - docs/analysis/2026-09-25-worktree-creation-consolidation.md
   - docs/analysis/2026-09-25-worktree-isolation-decision-memo.md
   - docs/analysis/2026-09-25-worktree-component-proposal.md
