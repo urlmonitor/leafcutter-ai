@@ -163,10 +163,21 @@ flowchart TD
 - ACD-1900c-6: At enforce, the gate's absent-coverage skip flips from ok to blocker
 - ACD-200a: BA v3 produces documentation ACs when decomposing features with flows or state
 - ACD-200a-1: BA v3 template contains documentation AC generation rules
-- ACD-200b: IT PO v3 validates documentation AC presence before promoting to reviewed
-- ACD-200b-1: IT PO v3 template contains documentation AC validation gate
+- ACD-200b: A feature's missing documentation AC is filled in before its batch is promoted to reviewed
+- ACD-200b-1: IT PO template acts on the rule check's documentation-coverage finding instead of carrying its own gate
 - ACD-200c: PO v3 signals documentation intent at L0/L1 level
 - ACD-200c-1: PO v3 template contains documentation_triggers field instruction
+- ACD-2500b-1: The technical planner records per outcome clause whether a test is needed and why
+- ACD-2500c-1: The code-aware step turns test intent into a test design grounded in files it opened
+- ACD-2500c-2-i: The test writer builds from the design and never authors one
+- ACD-2500d-1: A file-aware step confirms each declared file actually holds the behaviour
+- ACD-2500d-1-i: Behaviour found outside every declared file is reported, not quietly added
+- ACD-2500d-2: The reference file a piece of work should follow is chosen by a step that opened it
+- ACD-2500d-3: The file-aware step reports findings; the technical planner still decides routing
+- ACD-2500d-5: One code-aware planning agent is registered and writes the test design and the file findings as two separate outputs
+- ACD-2500e-1: The technical planner's profile says it changes and produces requirement records
+- ACD-2500e-2: The technical planner's instructions hold only the duties it keeps
+- ACD-2500e-3: An enrichment run's output carries none of the relocated fields
 - ACD-300a: A fast triage agent classifies the request and checks for duplicates before authoring begins
 - ACD-300a-1: Triage routes 'new feature / strategic' requests to PO v3 first
 - ACD-300a-2: Triage routes 'behavioral addition' requests directly to BA v3
@@ -284,7 +295,7 @@ flowchart TD
 - BO-2000b-4: python-coder reads a file before editing it
 - BO-2000b-5: python-coder spot-checks against the real artifact and bans phantom tests
 - BO-2000b-6: python-coder restates the single-simple-command shell discipline
-- BO-2000d-3: The IT-PO template states the package-surface spec obligation
+- BO-2000d-3: The IT-PO template states the package-surface spec obligation (four planner fields; reference file from the file-aware step)
 - BO-200c-1: Commit message follows the project's conventional-commit format
 - BO-200c-2: Commit message body explains the intent, not just the file changes
 - BO-200c-3: Commit message is written by a dedicated agent, not inline by the supervisor
@@ -325,6 +336,7 @@ flowchart TD
 - BO-2300e-1-ii: Resuming a run with no pending pause is a no-op
 - BO-2300e-1-iii: A stale or expired pause is handled gracefully
 - BO-2400a-1: Exactly one test-writer and one coder agent per batch
+- BO-2400a-1-i: The fast lane has one dedicated command-step-runner, registered to run commands, that runs the given command in the named workspace and hands back its output untouched
 - BO-2400a-3: Red-baseline verification is a deterministic script gate before the coder runs
 - BO-2400a-3-i: Red-baseline gate halts when the batch will not go red
 - BO-2400a-4-i: Green gate refuses commit staging when the coder cannot make all tests pass
@@ -363,6 +375,8 @@ flowchart TD
 - BO-400c-2: finalize-feature-archive-check scans by frontmatter, not folder position
 - BO-400c-2-i: Mixed state: some tickets in done/ folder, some with status: done at root
 - BO-400c-4: status-checker close-out calls set_ticket_status.py instead of git mv
+- BO-4300a-1-ib: Entry skills run the one maker and hand its answer to the workflow unchanged
+- BO-4300f-2-ia: Agent charters, skills, workflow texts and the rules file carry no second recipe for workspaces
 - BO-510-2: Agent template frontmatter carries the produces trait matching the registry
 - BO-510-4: llm-expert populates the produces trait on every existing agent template
 - BO-510-4-i: llm-expert flags ambiguous agent trait for human review
@@ -452,6 +466,7 @@ flowchart TD
 - BP-700d-2: Onboard wizard no longer offers frontend-design as a separate optional skill
 - GE-104a-2: Planning-time trigger flips documentation-expert to needed when a ticket adds a new page without its reference doc
 - GE-104a-2-i: DSL trigger expresses a new-page-without-matching-doc condition (negation feasibility open question)
+- GE-120f-5: The rule is written where the next check author is already looking, in the vocabulary the machine reads, and the written procedure and the enforced procedure say the same thing
 - GE-123a-4: The reference says that recognising a file by its name adds to the checking rather than ending it
 - GE-123b-5: The reference says when a suppression is declined, what it is judged against, and what the author will see
 - GE-123c-5: The document that lists the accepted suppression forms also says what is rejected and why
@@ -471,6 +486,10 @@ flowchart TD
 - INF-1100b-1: A hand-off test path that disagrees with config is overridden by the config-resolved path
 - INF-1100b-1-i: A hand-off path that already agrees with config is used unchanged and raises no contradiction
 - INF-1100b-2: The config-vs-hand-off contradiction is surfaced, not silently corrected
+- INF-1100d-2: Agents that write or run database tests use the connection your settings name, and no other
+- INF-1100d-3: A missing test database setting is reported by name, never guessed
+- INF-1300b-4: What the authoring instructions promise is what a produced document actually is
+- INF-1300e-2: The instruction that arrives and the means that arrives describe the same act
 - INF-200a-3: No-print convention lives in the logging rule, not CLAUDE.md
 - INF-200a-6: Rules for same file type are merged — one rule + one hook per glob
 - INF-300a-2: PO and BA agents consult the surface map before placing knowledge
@@ -590,6 +609,11 @@ flowchart TD
 - TQ-500c-1: One recorded outcome per test per alteration, and no combined verdict standing in for them
 - TQ-500d-1: Passing on arrival is the expected result here, and it is not the answer
 - TQ-500e-1: The record says what was altered and what each test did, in the record's own words
+- TQ-500f-2-ii: Bug-fix and gate requirements arrive at the test writer with their wrong versions already named
+- TQ-500f-3: Failing because the code was missing is recorded as just that, and never proves a test guards code that already exists
+- TQ-500f-4: Both test writers ask what small wrong change would keep their test green, and fix the test before handing on
+- TQ-500f-4-i: The database test writer, which does not run its tests, labels its answers as reasoning, not as results
+- TQ-500f-4-ii: A check that passes best when nothing happened is caught by the second question
 - UXP-100a-1: Prototype composition reads the component library catalog before assembly
 - UXP-100a-1-i: Empty or missing component library catalog halts prototype assembly with a diagnostic
 - UXP-100a-2: Prototype output preserves visual and structural consistency with existing pages

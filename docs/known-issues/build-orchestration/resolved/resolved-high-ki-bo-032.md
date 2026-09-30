@@ -24,7 +24,8 @@ related_docs:
 - **Status:** **RESOLVED** (`4de20a79`, PR #675 — the orphan `fast-lane-build.js` was
   deleted and `/fast-lane-build` now routes to `fast-lane-ship` with `{ac: $ARGUMENTS}`;
   verified 2026-09-25 by grep for callers plus a live `select_connected` probe and 39
-  passing tests — see Resolution)
+  passing tests — see Resolution; independently re-verified 2026-09-23, see "Also verified
+  2026-09-23" below)
 - **Occurrences:** 1
 - **First seen:** 2026-09-01 · **Last seen:** 2026-09-01
 - **Where:** `templates/workflows-js/fast-lane-build.js` (hardcoded `select_batch`
@@ -108,5 +109,24 @@ Verified 2026-09-25 on `main` at `d2fe85a1`.
 still describes a `select_batch` "Step 1" gate and an "at least one approved AC"
 prerequisite. That describes the deleted runner. It misleads readers, but no code path
 behaves that way.
+
+**Also verified 2026-09-23 (independent pass, before the above).** Re-verified against
+current code, not this entry's narrative. `templates/workflows-js/fast-lane-build.js` — the
+file this entry names as hardcoding `select_batch --limit N` and dropping the named AC — no
+longer existed. It was deleted 2026-09-01 in `4de20a79` ("refactor(build-orchestration):
+delete the orphaned second fast-lane runner", PR #675 — itself closing the separate
+`KI-BO-006`; unrelated to the ACD-2100 epic). `/fast-lane-build`'s command template
+(`templates/commands/fast-lane-build.md`) was confirmed to be a thin shim that passes the
+named AC straight through: `Workflow("fast-lane-ship", { ac: $ARGUMENTS })`.
+
+`fast-lane-ship.js:864-866` resolved that id via `select_connected --ac ${targetAc}
+--ac-root ${acStoreRoot} --exclude-structural-parent` — exactly Fix-direction #1 ("Give
+`fast-lane-build.js` the `ac` argument its sibling already has"). Confirmed behaviorally with
+a different test selection than the 2026-09-25 pass above: `python -m pytest
+unit_tests/workflows/test_bo2400c1v_orphan_runner_removal.py
+unit_tests/workflows/test_bo2500d_gate_retirement.py
+unit_tests/workflows/test_fast_lane_ship_structure.py -q` → 48 passed. This fix predates the
+ACD-2100 epic (PR #675, 2026-09-01) and is unrelated to it, but the entry itself was never
+updated to reflect it until both of these audits ran.
 
 ---

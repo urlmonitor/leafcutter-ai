@@ -413,9 +413,27 @@ The rule, once TQ-600a lands the shared fixture:
   Sharing a layout with those would corrupt the shared copy *and* destroy the
   behaviour they exist to prove.
 
-Until that fixture exists, the prohibition alone applies: do not add new spawn sites.
-If you believe you need one, say so in the ticket and justify why the read-only path
-does not cover it.
+The shared fixture landed under TQ-600a-1: `shared_reference_layout`, a
+session-scoped pytest fixture defined in
+`scripts/suite_performance/pytest_shared_reference_layout.py`. It is registered as a
+pytest plugin via `pytest.ini`'s `addopts` entry
+`-p scripts.suite_performance.pytest_shared_reference_layout`, mirroring the existing
+`-p scripts.ac_store.pytest_ac_enforcement` precedent named above — this repo has no
+root `conftest.py` and no `unit_tests/conftest.py`, so registering in a per-directory
+`conftest.py` would have been invisible outside that one directory. For a caller
+outside any fixture context (e.g. a plain function-scoped test), use the underlying
+`get_or_produce_shared_layout()` function directly — it is defined in
+`scripts/suite_performance/_shared_layout_producer.py` and re-exported from the plugin
+module.
+
+The read-vs-mutate boundary is a rule, not a description: a read-only test — one that
+only inspects what the deploy produced, never altering the package beforehand nor the
+result afterward — MUST request the `shared_reference_layout` fixture (or call
+`get_or_produce_shared_layout()` directly, outside fixture context) INSTEAD OF spawning
+its own `build.py` subprocess. A test that mutates the package before building — the
+`unit_tests/test_bp_900g_8*.py` family named above — still builds its own copy and must
+NOT be routed onto the shared fixture: sharing would corrupt the shared copy for every
+other consumer and destroy the very behaviour those tests exist to prove.
 
 Do not assume this is cheap because collection is fast — collection is 5.33s and the
 `pytest_ac_enforcement` plugin only fires on failures. Both were measured and ruled out.

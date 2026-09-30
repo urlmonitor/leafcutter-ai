@@ -1,0 +1,192 @@
+id: ACD-2100a-2-ii
+components:
+  - ac_driven_dev
+  - worktree_manager
+readiness: approved
+priority: high
+title: "Every worktree-creating subcommand uses the same repository resolution, not just create-only"
+component: ac-driven-dev
+level: L3
+status: active
+req_status: draft
+work_status: done
+roadmap_phase: phase_1
+criteria: |
+  Given a copy of the worktree setup step placed in a directory that is not inside
+    any git repository and has no repository among its ancestors,
+  And exactly one git repository exists among the immediate subdirectories of that
+    directory,
+  When the AC-authoring worktree subcommand and the fast-lane worktree subcommand
+    are each executed from that directory with no repository location supplied by
+    the caller,
+  Then each of those subcommands resolves the repository it operates on by the same
+    ordered contract the create-only subcommand already uses -- the script's own
+    location first, then the bounded search of the immediate subdirectories -- and
+    selects that one repository,
+  And each of those subcommands exits successfully with the requested worktree
+    present on disk under that repository,
+  And each of those subcommands states on its error stream which repository it
+    selected and that the selection came from a search rather than from the
+    script's own location,
+  And the bug symptom ("/plan-feature aborts at Stage 0 with 'Authoring worktree creation failed (exit code 1)'. The deployed script prints: 'ERROR: subprocess failed: Could not resolve a git repository from any candidate anchor. This copy of setup_ticket_worktree.py appears to be deployed outside the repository it manages. Candidates tried: - script's own directory (/home/henzeh/projects/leafcutter/.leafcutter/scripts): ... returned non-zero exit status 128.' Reproduced 2026-09-30 against origin/main ee47a88e. The fast lane's create-fastlane-worktree subcommand has the identical hole and fails the same way, so both AC authoring and the fast lane are unable to create their worktree from any deployed copy.") must not occur.
+depends_on: [ACD-2100a-2]
+doc_links:
+  - path: templates/scripts/setup_ticket_worktree.py
+    relationship: implements
+    status: exists
+    relevance: "Canonical source. cmd_create_ac_worktree() (~line 1943) and cmd_create_fastlane_worktree() (~line 2043) each call the bare _git_toplevel(); cmd_create_only() (~line 1866) already calls _resolve_repository_with_search_fallback()."
+  - path: docs/known-issues/ac-driven-dev.md
+    relationship: describes
+    status: exists
+    relevance: "KI-ACD-004 carries the reproduction command and the exit-128 evidence for the resolution layer this record extends to the two remaining subcommands."
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: describes
+    status: exists
+    relevance: "The self-hosting dev layout in which <repo>/.leafcutter is a symlink to the untracked workspace parent, so Path(__file__).resolve().parent lands outside any git repository."
+  - path: docs/architecture/components/worktree-manager.md
+    relationship: describes
+    status: exists
+    relevance: "Component doc for the worktree-creation surface whose subcommands must all resolve the repository the same way."
+  - path: docs/reference/plan-feature-layout-and-startup-checks.md
+    relationship: describes
+    status: exists
+    relevance: "The operator-facing page that states the resolution order; it must describe the order as holding for every worktree-creating subcommand, not only create-only."
+  - path: docs/reference/fixture-policy.md
+    relationship: describes
+    status: exists
+    relevance: "The authenticity rules the fixture must satisfy -- a tmp_path fixture that IS a git repository never reaches the fallback and is not evidence."
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "The change must land under templates/scripts/setup_ticket_worktree.py. The deployed copy under .leafcutter/scripts/ is build output and was already patched by hand once on 2026-08-18; that patch was regenerated away."
+  - "Reuse _resolve_repository_with_search_fallback() exactly as cmd_create_only() already calls it. Do NOT introduce a second resolver, a wrapper, or a per-subcommand variant -- a third resolution path is the defect this record exists to close, not a fix for it."
+  - "The anchor must remain the first choice in both subcommands. Callers whose anchor already resolves -- every in-repo invocation working today -- must be byte-for-byte unaffected."
+  - "Callers that supply an explicit repository location must keep bypassing both the anchor and the search, unchanged."
+  - "The ambiguous case (two or more candidates) must refuse in these two subcommands exactly as ACD-2100a-2-i already requires of create-only; the shared helper is what makes that free, and re-implementing resolution locally is what would lose it."
+  - "Must satisfy the repository error-handling policy: the git invocation is external I/O and must be wrapped in a typed except that logs at WARNING or re-raises; it must not be swallowed."
+  - "No new helper, no new configuration key and no new CLI flag is warranted -- the fix is the substitution of the existing call at the two remaining sites."
+test_spec:
+  - name: test_ac_worktree_subcommand_resolves_repository_by_search_when_script_lives_outside_any_repo
+    target_dir: unit_tests/ac_driven_dev/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: >-
+      A genuinely non-repository directory holding exactly one git repository among its
+      immediate subdirectories, with the script copied outside that repository; the
+      AC-authoring worktree subcommand resolves to that repository and the requested
+      worktree is present on disk under it after the process exits.
+  - name: test_fastlane_worktree_subcommand_resolves_repository_by_search_when_script_lives_outside_any_repo
+    target_dir: unit_tests/ac_driven_dev/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: >-
+      The identical layout exercised through the fast-lane worktree subcommand; it
+      resolves to the same single repository and the requested worktree is present on
+      disk under it after the process exits.
+  - name: test_both_subcommands_reached_through_their_real_command_line_entry_points
+    target_dir: unit_tests/ac_driven_dev/
+    framework: unittest
+    type: integration
+    angle: reachability
+    surface_invoked: "templates/scripts/setup_ticket_worktree.py invoked as a subprocess with real argv for the create-ac-worktree and create-fastlane-worktree subcommands, cwd set to the non-repository directory and no repository location supplied"
+    description: >-
+      Each subcommand is exercised in a fresh subprocess through the script's own
+      command-line entry point -- not by importing the resolver -- and each exit status
+      is success.
+  - name: test_both_subcommands_announce_the_searched_repository_on_stderr
+    target_dir: unit_tests/ac_driven_dev/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: >-
+      The error stream of each of those subprocesses names the selected repository and
+      marks the selection as coming from a search rather than from the script's own
+      location.
+  - name: test_subcommands_fail_when_resolution_is_left_anchored_only
+    target_dir: unit_tests/ac_driven_dev/
+    framework: unittest
+    type: integration
+    angle: discrimination
+    must_catch:
+      - "the bare _git_toplevel() call is left in place in cmd_create_ac_worktree() and only cmd_create_fastlane_worktree() is changed"
+      - "the bare _git_toplevel() call is left in place in cmd_create_fastlane_worktree() and only cmd_create_ac_worktree() is changed"
+      - "the source merely mentions _resolve_repository_with_search_fallback() in a comment, docstring or an unreached branch while the executed call is still the bare anchor"
+    description: >-
+      The behavioural assertions go red under each named half-fix and under a
+      name-present-but-unreached implementation, so a grep-shaped test cannot stand in
+      for the proof.
+  - name: test_explicit_repository_location_still_bypasses_the_search_in_both_subcommands
+    target_dir: unit_tests/ac_driven_dev/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: >-
+      With an explicit repository location supplied, each subcommand uses it even when
+      the search would find a different candidate, and emits no search announcement.
+test_rationale: >-
+  ACD-2100a-2 built the resolver and proved it through cmd_create_only(); that proof
+  says nothing about the two subcommands that never call it, which is exactly how this
+  regression reached origin/main with the AC green. The coverage therefore has to be
+  per-subcommand and behavioural: the Given must be built for real -- a directory that
+  is genuinely not a repository, with no repository among its ancestors and the script
+  copied outside the repository it is pointed at -- because the existing tmp_path
+  fixture IS a git repository, so the anchor always resolves and the fallback is never
+  reached. Running each subcommand as a subprocess through its own argv is what makes
+  the reachability claim real: an imported resolver can be correct while the
+  command-line path still anchors on __file__. The discrimination entry is not
+  optional here; the cheapest passing implementation is a one-site substitution, and a
+  test that greps the file for the helper name would pass on dead code and on either
+  half-fix (CLAUDE.md, "Gate / Workflow ACs -- Verify Behaviorally").
+delivers_to: null
+expects_from:
+  - ac_id: ACD-2100a-2
+    contract: "The ordered repository resolver _resolve_repository_with_search_fallback() -- anchor first, then a bounded search of the immediate subdirectories of cwd, announcing a search-based hit on stderr at WARNING and raising on zero-or-multiple candidates -- already present in templates/scripts/setup_ticket_worktree.py and already wired into cmd_create_only()."
+origin_agent: BrainCandy
+created: 2026-09-30
+amended_by: []
+superseded_by: null
+covered_by:
+  - unit_tests/ac_driven_dev/test_acd_2100a_2_ii.py
+  - unit_tests/ac_driven_dev/test_acd_2100a_2_ii_more.py
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+notes: |
+  Authored by /quick-fix. Root cause: _git_toplevel() anchors on
+  Path(__file__).resolve().parent. In the ADR-001 self-hosting dev layout
+  <repo>/.leafcutter is a symlink to the untracked workspace parent's .leafcutter/, so
+  resolve() lands outside any git repository and git exits 128. ACD-2100a-2 already
+  added _resolve_repository_with_search_fallback() to this same file for exactly this
+  deployed-outside-the-repo case (anchor first, then a bounded search of the immediate
+  subdirectories of cwd, announcing a search-based hit on stderr at WARNING and raising
+  on zero-or-multiple candidates), but it was wired into cmd_create_only() ONLY.
+  cmd_create_ac_worktree() and cmd_create_fastlane_worktree() still call bare
+  _git_toplevel(). The fix is to replace the bare _git_toplevel() call in those two
+  handlers with _resolve_repository_with_search_fallback(), matching cmd_create_only()'s
+  existing usage -- no new helper is needed, and callers whose anchor already resolves
+  are unaffected because the anchor remains the first choice. Coverage must be
+  behavioural: exercise each subcommand's resolution path with the script's own
+  directory outside any git repository and assert it resolves via the bounded search
+  and announces on stderr. A test that merely greps the file for the helper name would
+  pass on dead code and must not be accepted.
+
+  WHY THIS IS AN L3 ON ACD-2100a-2 RATHER THAN A SIXTH L2. ACD-2100a is at the L2 hard
+  cap of 5 (ACD-2100a-1 .. ACD-2100a-5) and its own sizing note records that the cap is
+  full on purpose. This record is not a new behaviour: it is a technical constraint on
+  the behaviour ACD-2100a-2 already specifies -- that the ordered resolution contract
+  holds at every worktree-creating entry point of the script, not only at the one site
+  the original ticket happened to change. No child_limit_override was added; that is an
+  audited waiver and is not a bug-fix decision.
+
+  CALL SITES AS OF 2026-09-30 in templates/scripts/setup_ticket_worktree.py:
+    - 1866  cmd_create_only()             -> _resolve_repository_with_search_fallback()
+    - 1943  cmd_create_ac_worktree()      -> _git_toplevel()                   [defect]
+    - 2043  cmd_create_fastlane_worktree()-> _git_toplevel()                   [defect]
+    - 1809  cmd_setup_ticket()            -> _git_toplevel(ticket_path.parent) [anchored
+            on the ticket path, a caller-supplied location; out of scope here]
+
+  THE BLAST RADIUS IS BOTH ENTRY POINTS. The same hole disables /plan-feature Stage 0
+  and the fast lane's worktree creation, which is why the symptom reads as two separate
+  outages and is one substitution.

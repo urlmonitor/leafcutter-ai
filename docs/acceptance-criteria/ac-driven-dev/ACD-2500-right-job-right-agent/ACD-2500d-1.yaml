@@ -23,6 +23,7 @@ criteria: |
   And its report names every file it opened.
 depends_on:
   - ACD-2500d
+  - ACD-1600c-4
 doc_links:
 - path: templates/agents/it-po.md
   relationship: describes
@@ -77,6 +78,10 @@ amended_by:
 - reason: it-po-technical-enrichment
   date: '2026-09-25'
   by: it-po
+- reason: "depends_on gains the declared-files schema AC ACD-1600c-4 (and ACD-1600c-4-ii where the record's criteria use the 'no declared files' state); BLOCKED AT FINAL GATE note updated to name it. Criteria, it_requirements and readiness unchanged."
+  date: '2026-09-27'
+  by: business-analyst
+  directed_by: user
 superseded_by: null
 covered_by:
   - ACD-2500d-1-i
@@ -88,6 +93,13 @@ notes: |
   declared-files schema AC (AC-level list of files a piece of work changes, with a
   to-be-created marker) is authored via a separate /plan-feature run and added to
   depends_on here. Today's file list is derived from doc_links (KI-ACS-002).
+  UPDATE 2026-09-27 (business-analyst, user-directed): that AC is ACD-1600c-4 ("a
+  requirement lists the files its work changes, each marked existing or to be created"),
+  with edge cases ACD-1600c-4-i (existence vs marker), ACD-1600c-4-ii ("no declared files"
+  state; doc_links never stand in) and ACD-1600c-4-iii (path form). It is now in depends_on.
+  Readiness is unchanged -- lifting the hold is the user's call. Any it_requirement here
+  that still reads declared files through the doc_links derivation is superseded in intent
+  by ACD-1600c-4 and awaits the IT PO's amendment.
 
   This is the judgment half of the planner's S2.8 intent-vs-surface check; the mechanical
   half (file type -> specialist) is ACD-2500a-3.

@@ -109,7 +109,11 @@ notes: |
   /plan-feature or ticket):
   - ADR-018 status Proposed -> Accepted for per-feature clones; ADR-031 sections 4/5 (create-time
     gate in _bootstrap, three-script parity) go stale and need an update (adr-author).
-  - TICKET-20260923-BO-4100e-4.md was written against BO-4100e-4's old wording; re-check it.
+  - DONE 2026-09-28: TICKET-20260923-BO-4100e-4.md was written against BO-4100e-4's old
+    wording. Re-generated against the amended record and reconciled in place (filename and
+    created date kept, so this reference and the AC's implemented_by stay valid). The two
+    amendment changes — the narrowed Given clause and the SCOPE it_requirement — are now in
+    the ticket; diffed against a fresh generator run, nothing else differs.
   - A Windows CI job so BO-4300b-4 (no symlink permission) and BO-4300e-2-i (long paths) run
     somewhere other than a developer machine.
   - The rest of the BO-4100e family still names setup_ticket_worktree.py / list_workspaces.py;

@@ -438,10 +438,20 @@ carrying {"passed", "entered_entry_point", "reached_through", "error"}.
 Never reads source text to decide reachability -- the verdict comes solely
 from watching the call stack (via sys.setprofile) while the test function
 actually executes.
+
+A covers-tagged test is addressed BY NAME ONLY, because that is all the
+covers tag records. Two shapes carry that name in this repository, and both
+must be executable here or the gate refuses a sound proof it merely could
+not call: a module-level function, and a method on a unittest.TestCase
+subclass. The unittest shape is run through the TestCase's own run(), so
+setUp and tearDown execute exactly as they do under pytest -- calling the
+unbound method directly would skip the fixture the test's own body relies
+on and report a failure the real suite never sees.
 """
 import importlib.util
 import json
 import sys
+import unittest
 from pathlib import Path
 
 _TEST_FILE = sys.argv[1]
@@ -480,6 +490,24 @@ def _profiler(frame, event, arg):
     return None
 
 
+def _find_case_class(module, name):
+    """Return the unittest.TestCase subclass defining *name*, or None.
+
+    Prefers a class that defines the method in its OWN body over one that
+    merely inherits it, so a shared base class is never run in place of the
+    subclass whose fixture the test actually depends on.
+    """
+    inherited = None
+    for _obj in vars(module).values():
+        if not isinstance(_obj, type) or not issubclass(_obj, unittest.TestCase):
+            continue
+        if name in vars(_obj):
+            return _obj
+        if inherited is None and hasattr(_obj, name):
+            inherited = _obj
+    return inherited
+
+
 _passed = False
 _error = None
 try:
@@ -487,16 +515,34 @@ try:
     _module = importlib.util.module_from_spec(_spec)
     sys.modules[_module_name] = _module
     _spec.loader.exec_module(_module)
-    _test_func = getattr(_module, _FUNCTION_NAME)
-    sys.setprofile(_profiler)
-    try:
-        _test_func()
-        _passed = True
-    except AssertionError as _exc:
-        _passed = False
-        _error = f"AssertionError: {_exc}"
-    finally:
-        sys.setprofile(None)
+    _test_func = getattr(_module, _FUNCTION_NAME, None)
+    if _test_func is not None:
+        sys.setprofile(_profiler)
+        try:
+            _test_func()
+            _passed = True
+        except AssertionError as _exc:
+            _passed = False
+            _error = f"AssertionError: {_exc}"
+        finally:
+            sys.setprofile(None)
+    else:
+        _case_cls = _find_case_class(_module, _FUNCTION_NAME)
+        if _case_cls is None:
+            raise AttributeError(
+                f"{_module_name} defines no module-level function and no "
+                f"unittest.TestCase method named {_FUNCTION_NAME!r}"
+            )
+        _case_result = unittest.TestResult()
+        sys.setprofile(_profiler)
+        try:
+            _case_cls(_FUNCTION_NAME).run(_case_result)
+        finally:
+            sys.setprofile(None)
+        _passed = _case_result.wasSuccessful()
+        if not _passed:
+            _problems = _case_result.errors + _case_result.failures
+            _error = _problems[0][1].strip().splitlines()[-1] if _problems else "failed"
 except Exception as _exc:  # noqa: BLE001 -- subprocess boundary, reports all
     _passed = False
     _error = f"{type(_exc).__name__}: {_exc}"
@@ -1453,10 +1499,10 @@ def _resolve_all_child_ids(
 ) -> list[str]:
     """Flatten a composite's ``covered_by`` tree into its leaf descendant ids.
 
-    A child that is itself a composite (its own ``covered_by`` is non-empty)
-    is expanded recursively rather than treated as a leaf requiring a direct
-    test — only leaf descendants (empty/absent ``covered_by``) need their own
-    covers-tagged test.  Cycles are broken defensively via *_seen* (a
+    A child that is itself a composite (its own ``covered_by`` RESOLVES to real
+    ACs — BO-2500a-6-ii) is expanded recursively rather than treated as a leaf
+    requiring a direct test; a child holding only test-file paths is a LEAF
+    needing its own covers-tagged test.  Cycles are broken via *_seen* (a
     malformed store could otherwise recurse forever); a child id already
     visited is not expanded a second time.
 
@@ -1489,7 +1535,7 @@ def _resolve_all_child_ids(
         if child_info is None:
             continue  # unresolvable entry (e.g. legacy test-file path) — skip
         child_covered_by = child_info.get("covered_by", [])
-        if child_covered_by:
+        if _has_resolvable_child(child_covered_by, ac_status_map):
             leaf_ids.extend(_resolve_all_child_ids(child_covered_by, ac_status_map, seen))
         else:
             leaf_ids.append(child_id)

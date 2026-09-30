@@ -1,0 +1,145 @@
+id: ACD-1600c-4-iv
+components:
+  - ac_driven_dev
+  - ac_store
+readiness: approved
+priority: high
+title: "A finished requirement whose declared existing file was later deleted is reported store-wide, never refused when it is committed"
+component: ac-driven-dev
+level: L3
+status: active
+req_status: draft
+work_status: done
+roadmap_phase: phase_acbuild_1_foundation
+criteria: |
+  Given requirement F, whose work is finished, declares scripts/ac_store/legacy_helper.py
+    marked existing,
+    and requirement U, whose work is not finished, declares the same file marked existing,
+    and later, unrelated work has deleted scripts/ac_store/legacy_helper.py from the repository,
+  When a change that edits only F's notes is checked before it enters the repository,
+  Then F is accepted, and no refusal message names F or scripts/ac_store/legacy_helper.py,
+  And a change that edits U is refused, naming U and scripts/ac_store/legacy_helper.py as
+    neither present nor marked to be created, exactly as for any unfinished requirement,
+  And the store-wide declared-files report lists F with scripts/ac_store/legacy_helper.py as
+    "declared existing, now absent (work finished)", naming F and the path,
+  And the report states how many such entries it found across the store (1 here),
+  And F's declared-files list is unchanged by the check and by the report: nothing removes
+    the entry or re-marks it automatically.
+depends_on:
+  - ACD-1600c-4
+  - ACD-1600c-4-i
+  - ACD-1600c-4-ii
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+  - path: docs/acceptance-criteria/ac-driven-dev/ACD-1600-single-source-buildable/ACD-1600c-4-i.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      The unfinished-record refusal this AC stays consistent with. Its it_requirements scope
+      the refusal to unfinished records and say a finished record whose 'existing' entry is
+      now absent must not block unrelated commits (open question Q4); this AC answers Q4.
+  - path: docs/acceptance-criteria/ac-driven-dev/ACD-1600-single-source-buildable/ACD-1600c-4-ii.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      Defines the store-wide declared-files report (read-only, deterministic, via the seam's
+      command-line entry point). This AC adds one section to that same report, not a second
+      report.
+  - path: docs/architecture/adrs/ADR-026-ac-driven-build-v2-phased-migration.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+    relevance: "The check-ac-schema commit hook is the point that must NOT refuse F."
+  - path: docs/architecture/components/ac-driven-dev.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "The finished/unfinished boundary is implemented once, in the declared-files seam (scripts/ac_store/declared_files.py, ACD-1600c-4), extending the ACD-1600c-4-i existence-vs-marker rule rather than adding a second rule. 'Finished' is read from the record's work_status (done) -- data-driven, never keyed on ids or paths."
+  - "Commit-time enforcement: the check-ac-schema hook is the load-bearing gate, and in BOTH its jsonschema and manual-fallback branches, and in the agent-side validator (validate_ac_schema.py), a finished record's 'existing' entry that is absent produces no refusal and no warning. An unfinished record with the same entry keeps the ACD-1600c-4-i refusal -- exactly one message, not a second one from this rule."
+  - "Store-wide reporting: the 'declared existing, now absent (work finished)' entries are a new section of the store-wide declared-files report defined in ACD-1600c-4-ii, produced through the seam's command-line entry point -- not a second report, script or parser. The section label text is verbatim, one line per (record, path) naming both, sorted by record id then declared order, followed by the section's total."
+  - "The section is informational: its entries never make the report command exit non-zero, and they are never raised at commit time."
+  - "Read-only: neither the check nor the report writes any record; a finished record's declared_files entry is never removed, re-marked or re-ordered (ACD-1600c-4-ii's no-back-fill rule holds)."
+  - "The report stays deterministic (two runs on the same store and tree are byte-identical) and within ACD-1600c-4-ii's budget of 10 seconds for 5,000 records with the section added; existence checks do not spawn a subprocess per declared path."
+  - "Tests run against a temporary repository tree and a fixture store, never the live ones, so deleting scripts/ac_store/legacy_helper.py in a fixture never touches the working tree."
+test_spec:
+  - name: test_finished_record_absent_existing_entry_accepted_by_hook
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "A change editing only F's notes passes check_ac_schema (exit 0) in both branches and validate_ac_schema, and no output line names F or legacy_helper.py."
+    angle: boundary
+  - name: test_unfinished_record_absent_existing_entry_refused_once
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "A change editing U is refused (non-zero exit) with exactly one message naming U and legacy_helper.py as neither present nor marked to be created."
+    angle: failure
+  - name: test_store_report_lists_finished_absent_entry
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    description: "The store-wide declared-files report has a section listing F with legacy_helper.py as 'declared existing, now absent (work finished)'; U is not listed in that section."
+  - name: test_store_report_section_states_count
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    description: "The section states a total of 1 for the fixture store, and the report command exits 0."
+  - name: test_check_and_report_leave_declared_list_unchanged
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    description: "F's record file is byte-identical after the hook run and after the report run; the declared_files entry is neither removed nor re-marked."
+  - name: test_report_section_comes_from_single_report_entry_point
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    description: "The section is emitted by the same seam command-line entry point as the 'no declared files' listing of ACD-1600c-4-ii, and two runs are byte-identical."
+    angle: seam
+delivers_to: null
+expects_from:
+  - ac_id: ACD-1600c-4
+    contract: "The declared-files answer from the single declared-files seam (scripts/ac_store/declared_files.py): entries in declared order, each {path: repo-root-relative POSIX string, state: 'existing' | 'to_be_created'}, or the state 'no declared files'."
+  - ac_id: ACD-1600c-4-ii
+    contract: "The store-wide declared-files report: read-only, deterministic, sorted by id, emitted by the seam's command-line entry point, stating totals and records scanned. This AC adds one section to it."
+origin_agent: business-analyst
+created: 2026-09-28
+amended_by:
+  - reason: "it-po technical enrichment: it_requirements (boundary in the seam, finished = work_status done; hook both branches and validator never refuse F; one section of the ACD-1600c-4-ii report, not a second report; informational, read-only, deterministic, temp-tree tests), test_spec, expects_from gains ACD-1600c-4-ii, doc_link to ac-driven-dev.md. Criteria unchanged."
+    date: '2026-09-28'
+    by: it-po
+    directed_by: user
+superseded_by: null
+covered_by: [unit_tests/ac_store/test_acd_1600c_4_iv.py, unit_tests/commit_guardian/test_acd_1600c_4_iv.py]
+implemented_by: [scripts/ac_store/declared_files.py, scripts/ac_store/_declared_files_path_form.py, templates/scripts/commit_guardian/_declared_files_bridge.py, templates/scripts/commit_guardian/check_ac_schema.py, scripts/ac_store/validate_ac_schema.py, config/ac_store_schema.json, scripts/build_phases_ac_store.py]
+change_target: schema
+risk_surface: contract_boundary
+notes: |
+  ORIGIN (2026-09-28, user decision on open question Q4 of the declared-files run,
+  follow-up C2). Q4 asked what happens to a FINISHED requirement that declares an existing
+  file which other work has since deleted: refuse, report or ignore. Decision: report, in
+  the store-wide declared-files report; never refuse at commit time.
+
+  WHY NOT REFUSE. The file was present when the work was done; the declaration was true
+  then. Refusing would block every later commit that touches F for any reason (a notes
+  edit, a store-wide field migration) on a fact that F's author cannot fix and that F's
+  own work did not cause -- historical records would hold unrelated work hostage.
+
+  WHY NOT IGNORE. A declared existing file that no longer exists is still information: a
+  reader of F, or someone re-opening F's work, would otherwise trust a file list that points
+  at nothing. The store-wide report makes the drift countable without making it blocking.
+
+  CONSISTENCY WITH ACD-1600c-4-i. That AC refuses "neither present nor marked to be
+  created" for requirements whose work is not finished, and its it_requirements already
+  exclude finished records from the refusal. U in this AC is the control case showing the
+  boundary is exactly finished vs unfinished. ACD-1600c-4-i's own NOTES still call Q4 open;
+  this AC is the answer (its record was not edited in this run).
+
+  NOT SPECIFIED HERE: a finished record whose to-be-created file was created and later
+  deleted. ACD-1600c-4-i exempts finished records from the "marked to be created but already
+  exists" report; the reverse drift is not decided.
