@@ -26,7 +26,7 @@ criteria: |
     {"exists": false, "stale": false, "record": null} and that reply still
     correctly reports "no pause record exists".
 depends_on: [BO-2300e-3]
-assigned_agent: llm-expert
+assigned_agent: python-coder
 estimated_complexity: S
 package_surface: false
 doc_links:
@@ -36,7 +36,7 @@ doc_links:
   - path: docs/known-issues/ac-driven-dev/open-blocker-ki-acd-20260928-pause-store-dispatched-to-worktree-agent.md
     relationship: describes
     status: exists
-  - path: templates/agents/llm-expert.md
+  - path: templates/agents/python-coder.md
     relationship: describes
     status: exists
 it_requirements:
@@ -72,6 +72,7 @@ origin_agent: BrainCandy
 created: 2026-09-28
 amended_by:
   - reason: "it-po enrichment (2026-09-29): assigned_agent python-coder -> llm-expert, matching BO-2300e-3 (its parent, and the same file) and the established 2026-07-20 it-po correction applied to every other plan-feature.js-editing AC in this folder. Added an it_requirement cross-referencing the parent's file-size and reachability constraints. Criteria unchanged."
+  - reason: "it-po correction (2026-09-29, second pass): assigned_agent llm-expert -> python-coder, reversing this record's own earlier 2026-09-29 retarget above, and matching BO-2300e-3 (its parent, and the same file). That retarget followed the sibling 2026-07-20 precedent (\"retargeted to the E2 workflow ENGINE... assigned_agent python-coder -> llm-expert\") and flagged its own risk -- that llm-expert's registry entry does not list workflow JS as owned surface. The flag was right, and dispatching the sibling BO-2300e-2 work against the same file proved it. VERIFIED AGAINST config/agent_registry.json rather than taken on report: llm-expert's selection_criteria DSL trigger reads \"files_touched contains templates/agents/*.md OR files_touched contains templates/skills/*/SKILL.md OR files_touched contains templates/workflows/*.md\" -- three markdown surfaces -- and llm-expert DECLINED on exactly those charter grounds. templates/workflows/ holds command-prompt .md docs (build-ac.md, commit.md, plan.md, ...); templates/workflows-js/ holds the executable workflow bodies including plan-feature.js, which this AC edits. Both directories exist and are distinct; their names differ by a suffix, and the 2026-07-20 amendment appears to have conflated the two. workflow-architect also declined, confirming no agent in the package is chartered for workflow-JS bodies. python-coder accepted and completed the sibling work because config/agent_registry.json gives it owns_file_extensions [\".py\", \".js\"]. That ownership is PROVISIONAL BY THE REGISTRY'S OWN ACCOUNT -- its owns_file_extensions_rationale reads \"'.js' is an EXPEDIENT, not a judgement that a Python agent is the right owner of JavaScript... The proper fix is a dedicated workflow-author agent, with ownership driven by per-consumer configuration rather than a hardcoded list; ACs for that are being authored. Revisit this entry when they land.\" Revisit this assignment when that agent lands. This record's refusal-classification behavior is NOT implemented: work_status stays todo, and criteria, it_requirements, test_spec and readiness are unchanged. STALE POINTER FIXED IN THE SAME PASS (superseding this entry's earlier note that it was being left as-is; the coordinator widened the field fence for exactly this): doc_links' templates/agents/llm-expert.md -> templates/agents/python-coder.md. That link was the IMPLEMENTER'S REFERENCE, not a subject of this criterion -- llm-expert appears nowhere in this record's criteria, notes or it_requirements. Considered and rejected retaining it as prompt-authoring craft: this AC's subject is how a REFUSAL REPLY is classified, and its own it_requirements direct the implementer to reuse the existing isAgentRefusal()/AGENT_REFUSAL_MARKERS convention already in plan-feature.js -- that is JS control flow over a returned value, not the authoring of LLM instructions, and llm-expert.md's declared scope is \"LLM instructions inside agent templates, skill files, and slash-command prompts\". So replacement, not retention and not removal. delivers_to is null and expects_from names only an ac_id on this record, so neither carried a stale agent name."
 superseded_by: null
 covered_by: []
 implemented_by: []

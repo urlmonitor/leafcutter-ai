@@ -6,7 +6,7 @@ component: build-orchestration
 level: L2
 status: active
 req_status: active
-work_status: todo
+work_status: done
 readiness: draft
 priority: high
 roadmap_phase: phase_1
@@ -25,7 +25,7 @@ criteria: |
     today: "I'm the worktree lifecycle agent, scoped to two actions: create and
     remove").
 depends_on: [BO-2300e]
-assigned_agent: llm-expert
+assigned_agent: python-coder
 estimated_complexity: M
 package_surface: false
 doc_links:
@@ -41,7 +41,7 @@ doc_links:
   - path: templates/agents/command-step-runner.md
     relationship: describes
     status: exists
-  - path: templates/agents/llm-expert.md
+  - path: templates/agents/python-coder.md
     relationship: describes
     status: exists
   - path: config/agent_registry.json
@@ -87,16 +87,23 @@ test_rationale: >-
   name -- a grep-only test passes on dead code. All three tests read the
   harness's captured agent_calls rather than the source text.
 delivers_to:
-  agent: llm-expert
+  agent: python-coder
   contract: "Pause-store dispatches routed to command-step-runner with a named workspace in every one of the six call sites, and the agent registry's command-step-runner.spawned_by updated to include plan-feature.js. Consumed by BO-2300e-3, which governs how the workflow classifies the reply these dispatches return."
 expects_from: null
 origin_agent: BrainCandy
 created: 2026-09-28
 amended_by:
   - reason: "it-po enrichment (2026-09-29): assigned_agent python-coder -> llm-expert, for consistency with every other AC in this feature folder that edits templates/workflows-js/plan-feature.js (BO-2300a-1, BO-2300a-2, BO-2300b-1, BO-2300b-2, BO-2300d-1, BO-2300e-1 and their children all record the identical 2026-07-20 it-po correction 'retargeted to the E2 workflow ENGINE... assigned_agent python-coder -> llm-expert'). python-coder cannot act on .js files at all, so the prior assignment was a full technology contradiction (BP-1100f-3) against the declared surface. Added it_requirements covering the check-file-size ratchet net-zero constraint (KI-CG-20260923), reachability via the real engine (BO-2900a-3), and a known test conflict with the already-done BO-2300a-1-ii. Criteria unchanged. Caveat: llm-expert's own registry selection_criteria/description do not literally list templates/workflows-js/*.js as owned surface -- a pre-existing registry gap, followed here for consistency with the 11 sibling corrections rather than left as a fresh inconsistency."
+  - reason: "it-po correction (2026-09-29, second pass): assigned_agent llm-expert -> python-coder, reversing this record's own earlier 2026-09-29 retarget above. That retarget followed the sibling 2026-07-20 precedent (\"retargeted to the E2 workflow ENGINE... assigned_agent python-coder -> llm-expert\") and flagged its own risk -- that llm-expert's registry entry does not list workflow JS as owned surface. The flag was right, and dispatching the work proved it. VERIFIED AGAINST config/agent_registry.json rather than taken on report: llm-expert's selection_criteria DSL trigger reads \"files_touched contains templates/agents/*.md OR files_touched contains templates/skills/*/SKILL.md OR files_touched contains templates/workflows/*.md\" -- three markdown surfaces -- and llm-expert DECLINED this work on exactly those charter grounds. templates/workflows/ holds command-prompt .md docs (build-ac.md, commit.md, plan.md, ...); templates/workflows-js/ holds the executable workflow bodies including plan-feature.js. Both directories exist and are distinct; their names differ by a suffix, and the 2026-07-20 amendment appears to have conflated the two. workflow-architect also declined, confirming no agent in the package is chartered for workflow-JS bodies. python-coder accepted and did the work because config/agent_registry.json gives it owns_file_extensions [\".py\", \".js\"]. That ownership is PROVISIONAL BY THE REGISTRY'S OWN ACCOUNT -- its owns_file_extensions_rationale reads \"'.js' is an EXPEDIENT, not a judgement that a Python agent is the right owner of JavaScript... The proper fix is a dedicated workflow-author agent, with ownership driven by per-consumer configuration rather than a hardcoded list; ACs for that are being authored. Revisit this entry when they land.\" Revisit this assignment when that agent lands. Criteria, it_requirements, test_spec and readiness unchanged. STALE POINTERS FIXED IN THE SAME PASS (the coordinator widened the field fence for exactly these, because a record pointing at an agent that declines the work is the same stale-pointer rot this branch has been correcting): (1) delivers_to.agent llm-expert -> python-coder -- its own contract text says the output is \"Consumed by BO-2300e-3\", and BO-2300e-3 is now assigned to python-coder, so the consumer named here has to match; (2) doc_links' templates/agents/llm-expert.md -> templates/agents/python-coder.md. On (2) the link was the IMPLEMENTER'S REFERENCE, not a subject of this criterion: llm-expert appears nowhere in this record's criteria, notes or it_requirements, unlike templates/agents/command-step-runner.md, which IS a genuine subject (its charter is quoted in the criteria) and is therefore kept unchanged. Considered and rejected the argument that llm-expert.md still applies as prompt-authoring craft because this AC's second Then clause concerns \"the dispatch's prompt\": that prompt is a runtime argument string assembled by JavaScript, not an authored LLM-instruction artifact, and llm-expert.md's own declared scope is \"LLM instructions inside agent templates, skill files, and slash-command prompts\" -- none of which this record touches. So replacement, not retention and not removal."
+  - reason: "it-po done-reconciliation (2026-09-29): work_status todo -> done, with evidence, and implemented_by/covered_by wired. Implemented by commit 179d5245 \"fix(build-orchestration): dispatch pause-store work to a chartered runner (BO-2300e-2)\". implemented_by names SOURCE FILE PATHS, which is this store's actual convention for the field (config/ac_store_schema.json: \"Source file paths (optionally with #anchor) that implement this criterion\"; a sweep of every AC under docs/acceptance-criteria/ found no record carrying a bare commit SHA there), so the SHA is recorded here in prose rather than invented into the field. The two paths listed implement the criterion itself: templates/workflows-js/plan-feature.js (all three _shellPermittedAgentId declarations moved to command-step-runner, authoringWorktreePath threaded into peekPausedGateId()/resolveGate()/pauseAtGate() as an explicit parameter, and the five reply-consuming sites unwrapped to parse the JSON inside command-step-runner's stdout) and config/agent_registry.json (command-step-runner.spawned_by extended with plan-feature.js, this AC's fourth it_requirement). The same commit also touched scripts/registry_validator.py and templates/hooks/check_agent_spawn_consistency.py (_EXTERNAL_CALLERS allowlist, without which the build refuses that registry edit) -- enabling changes, named here rather than in implemented_by. covered_by gains the three covers-tagged tests in unit_tests/workflows/test_bo_2300e_2.py plus test_bo_2300a_1_ii.py::test_pause_store_and_script_resolution_dispatch_to_shell_permitted_agent, which carries its own \"# covers: BO-2300e-2\" tag added in the same commit when its six pause-store assertions were retargeted to command-step-runner; the child entry BO-2300e-2-i is retained. All four tests verified PASSED under AC_ENFORCE_STRICT=1 on 2026-09-29, driving the real on-disk plan-feature.js through run_workflow_under_e2 and asserting on captured agent_calls, never on source text. RESIDUAL, recorded rather than glossed: the third Then clause's \"command-step-runner accepts the dispatch... rather than declining it\" is proven only as far as a harness can prove it -- the dispatch now carries everything that agent's charter requires (correct agentType, named absolute workspace), its untouched exit_status/stdout/stderr reply is genuinely consumed rather than failing closed, and the decline path is separately asserted unreachable by test_bo_2300a_1_ii.py::test_status_checker_scope_refusal_no_longer_reachable_on_pause. The live agent's own acceptance is not executed by any automated test and cannot be; no clause is left with zero coverage. Siblings BO-2300e-3/-3-i/-3-ii (the read-path fail-open) are NOT implemented and remain todo, so parent BO-2300e correctly stays in_progress."
 superseded_by: null
-covered_by: [BO-2300e-2-i]
-implemented_by: []
+covered_by:
+- BO-2300e-2-i
+- unit_tests/workflows/test_bo_2300e_2.py
+- unit_tests/workflows/test_bo_2300a_1_ii.py::test_pause_store_and_script_resolution_dispatch_to_shell_permitted_agent
+implemented_by:
+- templates/workflows-js/plan-feature.js
+- config/agent_registry.json
 change_target: pipeline
 risk_surface: internal
 notes: |
