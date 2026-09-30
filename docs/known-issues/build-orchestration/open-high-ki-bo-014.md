@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: '2026-08-18'
-last_updated: '2026-08-18'
+last_updated: '2026-09-25'
 components:
   - build_orchestration
 related_docs:
@@ -21,12 +21,70 @@ related_docs:
 > original grading is the `**Severity:**` line below, unchanged.
 
 - **Severity:** high
-- **Status:** open — no AC; `BO-2600a-5` is `done` and its coverage is incomplete, see
-  the AC-coverage note below
+- **Status:** **PARTIAL (open) — re-verified 2026-09-25.** Both named symptoms and the
+  root cause (two inline copies) are fixed on `main`; residuals (a) and (b) below are still
+  present, and a Windows-only residual (c) was found. Neither is tracked by another KI.
+  *2026-09-25 re-verification, on `main` at `d2fe85a1`.*
+  **Fixed:** `4711c9c7` (TKT-016, #759) and `88c6b58e` (TKT-017, #765) are on `main`. The
+  consolidation cited below as `8b2b899ae` does not exist in this repository: it was a branch
+  commit squashed into **`fb07b48d`** (#844, "split goal_to_epic.py into 14 modules").
+  **(a) still present:** `scripts/ac_store/epic_pipeline.py` `run()` (`:60`) calls
+  `_apply_epic_backrefs(..., warn_unrelativisable=True)` at `:146-150`, and
+  `build_epic_from_ids()` (`:175`) calls it with `warn_unrelativisable=False` at `:243-247`.
+  A probe of `epic_phases._relativise_backref_pair` with an underivable root and with an epic
+  path outside the root returned the same absolute value for both flag settings, but logged
+  2 WARNINGs with True and 0 with False.
+  **(b) still present:** `test_bo_2600a_5.py`'s only `run()` test is still
+  `test_ac_mode_preserved_backward_compatible` (a signature check).
+  **(c) new, Windows only:** `_relativise_backref_pair` (`epic_phases.py:165,171`) builds its
+  result with `str(Path(...).relative_to(root))`, so on Windows it records
+  `tickets\00_inbox\epics\...` with backslashes. `python -m pytest
+  unit_tests/ac_store/test_tkt_016_epic_backref_is_relative.py
+  unit_tests/ac_store/test_tkt_017_epic_depends_on_resolves.py
+  unit_tests/build_orchestration/test_bo_2600a_5.py -q` gave **1 failed, 9 passed** on
+  Windows. The failure is `test_bo_2600a_5.py::TestBuildEpicFromIds::test_implemented_by_written_repo_relative`,
+  which got `'tickets\\00_inbox\\epics\\EPIC-TestAcBo5d1\\01_TICKET-BO-5D1.md'` where it
+  expects the `tickets/` prefix. The helper is shared, so both entry paths are affected. The
+  "10/10 green" result below was presumably a POSIX run.
+  *Original 2026-09-14 status, kept as the historical record:* **RESOLVED 2026-09-14 — verified behaviourally on both entry paths, with one
+  residual noted below.** Both symptoms were closed on `main` *before* this register's
+  citations were retargeted: TKT-016 (`4711c9c79`) relativised the `implemented_by` pair in
+  `run()`, TKT-017 (`88c6b58e8`) back-ported the `depends_on` translation to it. Each landed
+  a *second inline copy*, so the root cause this entry names — two copies that can disagree —
+  survived those fixes. `8b2b899ae` removed it: both entrypoints now call one
+  `_epic_filename_map` / `_wire_epic_depends_on` / `_apply_epic_backrefs`
+  (`scripts/ac_store/epic_phases.py`).
+  *Evidence, behavioural not structural.* A three-leaf store with a within-epic chain
+  A←B←C, driven through the real CLI. At `4711c9c79^` the `--ac` route wrote absolute
+  `implemented_by` and `depends_on` entries naming files that do not exist, and
+  `ticket_frontmatter_guard._check_depends_on` rejected 2 of 3 tickets. At `8b2b899ae` the
+  `--ac` and `--ids` routes emit **byte-identical** ticket files (only Master_Plan's epic
+  name and goal summary differ, both documented), repo-relative `implemented_by`, and the
+  guard accepts both. `test_tkt_016_*`, `test_tkt_017_*` (which *does* parametrise `--ac`
+  and `--ids`) and `test_bo_2600a_5`: 10/10 green.
+  *What remains.* (a) `_apply_epic_backrefs` still takes `warn_unrelativisable` — True for
+  `run()`, False for `build_epic_from_ids()`. Given an inbox outside the
+  `<worktree>/tickets/00_inbox` convention both routes record a non-portable
+  back-reference, but only `--ac` says so (3 warnings vs 0, reproduced). The wiring
+  converged; the diagnostic did not. (b) The fix direction below was followed in spirit,
+  not to the letter: `test_bo_2600a_5.py` still exercises only `build_epic_from_ids`, and
+  its single `run()` test is a signature/`getsource` check — the grep-shaped kind. The
+  cross-entrypoint behavioural coverage lives in `test_tkt_017_*` instead.
+  *Two corrections to the text below, which is otherwise left as the historical record.*
+  The `:9xx`/`:19xx`/`:21xx`/`:23xx` citations in the body are pre-split monolith lines and
+  are stale; the owners today are `epic_phases.py`, `epic_tickets.py` and `epic_pipeline.py`.
+  And symptom 2's "stays an AC id" was true when filed, but TKT-600a-1 later made the
+  generator emit the loose ticket basename, so the bad value observed at repro time was
+  `TICKET-…-KIT-100b.md` with no `NN_` prefix — same dangling reference, different string.
+  **Do not delete this entry** — acceptance criteria and commit messages cite it by id.
+  The filename still reads `open-` because residual (a) is a live behavioural difference;
+  rename to `resolved-` only when that is closed or explicitly accepted.
 - **Occurrences:** 1
 - **First seen:** 2026-08-25 · **Last seen:** 2026-08-25
-- **Where:** `scripts/goal_to_epic.py` — `run()` (`:2170`), against
-  `build_epic_from_ids()` (`:2013`); call sites at `:2344` and `:2113`
+- **Where:** `scripts/ac_store/epic_pipeline.py` — `run()` (`:60`), against
+  `build_epic_from_ids()` (`:175`). The `_apply_epic_backrefs` call sites are at `:146-150`
+  and `:243-247` (re-checked 2026-09-25). The helper is in `scripts/ac_store/epic_phases.py`
+  (`_relativise_backref_pair` `:118`, `_apply_epic_backrefs` `:185`).
 - **Reported by:** customer bug report 2026-08-25
 
 **This entry deliberately covers two symptoms under one root cause.** They present as

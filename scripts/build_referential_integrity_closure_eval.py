@@ -106,12 +106,22 @@ def _build_local_assignments(
     When *tree* is supplied and *scope* is a function (not the module itself),
     the function's own assignments are overlaid ON TOP OF the module's
     top-level assignments -- mirroring Python's own local-then-global name
-    resolution. This is required for a pattern like ``goal_to_epic.py``'s
-    ``run()``: it pushes ``sys.path.insert(0, str(_sibling_dir))`` where
-    ``_sibling_dir`` is assigned at MODULE level, not inside ``run()`` itself.
-    Without the module-level fallback, that name would never resolve from
-    inside the function scope and the reference would be misclassified as
-    unresolvable. A same-named LOCAL assignment always wins over the
+    resolution. This is required for any function-scope
+    ``sys.path.insert(0, str(_sibling_dir))`` whose ``_sibling_dir`` is assigned
+    at MODULE level rather than inside the function. Without the module-level
+    fallback, that name would never resolve from inside the function scope and
+    the reference would be misclassified as unresolvable.
+
+    ``goal_to_epic.py``'s ``run()`` used to be the live instance of this shape.
+    As of the 2026-09 decomposition its push sits at MODULE scope (the
+    re-export block needs the siblings importable at load time), so it now
+    exercises the ``scope is tree`` path instead. The overlay behaviour below is
+    retained deliberately: it is the general rule this module implements for
+    Python name resolution, not a workaround for one call site. A live instance
+    does still exist -- ``scripts/ac_store/epic_ac_phases.py`` assigns
+    ``_sibling_dir`` at module scope and pushes it inside a function before
+    ``from scan_ac_store import traverse_ac_tree``.
+    A same-named LOCAL assignment always wins over the
     module-level one, so this cannot reintroduce the cross-function shadowing
     bug ``_iter_same_scope`` guards against -- only true module globals are
     merged in, never another function's locals.

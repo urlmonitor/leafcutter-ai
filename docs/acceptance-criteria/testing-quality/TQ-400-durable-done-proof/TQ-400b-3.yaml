@@ -38,12 +38,22 @@ doc_links:
       predicate is _matches_work_status (:148, default todo) AND readiness ==
       "approved" (:189) AND status/level filters, plus dependency gating that
       counts a dependency as met only when it is work_status done (:229).
-  - path: scripts/ac_store/generate_ticket_from_ac.py
+  - path: scripts/ac_store/_gtfa_frontmatter.py
     relationship: implements
     status: exists
     relevance: >-
       Downstream of the listing: the reason must survive into the ticket
       generated from a picked record, or it stops travelling with the work.
+      _build_frontmatter is the machine-readable half of that surface.
+  - path: scripts/ac_store/_gtfa_body.py
+    relationship: implements
+    status: exists
+    relevance: >-
+      The human-readable half of the same surface — _build_ticket_body /
+      _build_implementation_notes_section is where the demotion reason becomes
+      visible to whoever picks the work up. Whether it lands in frontmatter, in
+      the body, or in both is the implementer's call; both modules are declared
+      so either choice is already a declared surface.
   - path: scripts/build_phases.py
     relationship: describes
     status: exists

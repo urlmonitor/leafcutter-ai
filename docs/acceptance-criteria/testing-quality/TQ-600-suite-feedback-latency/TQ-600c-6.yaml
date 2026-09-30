@@ -1,0 +1,279 @@
+id: TQ-600c-6
+components:
+  - testing_quality
+title: "A contributor the cost guard has just failed can find out where the limit came from and what to do about it"
+component: testing-quality
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a contributor whose change has just been failed by the suite-cost guard, who
+    has the project's written guidance and nothing else — no access to the guard's
+    source and nobody to ask,
+  When they follow it,
+  Then they can say where the limit that failed them came from: that it was derived
+    from a measured run rather than chosen, by the procedure the guidance states, and
+    what would have to happen for it to be derived again,
+    And they can reach the recorded limit, and the run record their run was compared
+      against, at the locations the guidance gives, without searching the repository
+      for them,
+    And they can read their own run's record and name the tests responsible for the
+      cost, distinguishing time spent preparing for a test from time spent inside the
+      test itself, so they do not begin by optimising a test whose cost is repeated
+      preparation,
+    And they can state the responses available to them and say which one their case
+      calls for — making the work cheaper, or having the limit derived again from a
+      new measured baseline with that derivation recorded — and can say which response
+      is not available to them: suppressing the guard, or editing the recorded limit
+      without a measurement behind it,
+    And the guidance states no limit of its own anywhere in it: the number lives only
+      in the record the guard reads, and a reader who wants to know it is sent there,
+      so the guidance cannot come to disagree with the guard it explains,
+    And every location and every command it gives works as written against the
+      repository at the time it is published.
+depends_on:
+  - TQ-600c
+  - TQ-600c-1
+  - TQ-600c-2
+  - TQ-600c-3
+doc_links:
+  - path: docs/testing/README.md
+    relationship: related
+    status: exists
+    relevance: >-
+      A candidate surface, and the one TQ-600b-6 targets. WHICH SURFACE CARRIES THIS
+      GUIDE IS AN IT-PO DECISION. If it lands here it must cross-link with TQ-600b-6's
+      material rather than restate it — how to run the suite and what to do when its
+      cost guard fails are different questions with one reader.
+  - path: docs/acceptance-criteria/testing-quality/TQ-600-suite-feedback-latency/TQ-600c-3.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      Owns the limit: measured, dated, single-source, looked up by the guard rather
+      than written into it. The derivation procedure and the record's location are
+      that AC's to deliver and this guidance's to report — which is exactly why this
+      guidance must not carry a second copy of the number.
+  - path: docs/acceptance-criteria/testing-quality/TQ-600-suite-feedback-latency/TQ-600c-2.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      Owns what the contributor is actually looking at when they arrive: a failing
+      guard that names who spent the time. The guidance's account of the failure
+      output must match what that AC emits, quoted rather than paraphrased.
+  - path: docs/acceptance-criteria/testing-quality/TQ-600-suite-feedback-latency/TQ-600c-1.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      Owns the cost record, including the separation of setup time from call time that
+      the third clause here depends on. That separation is the most actionable fact
+      this investigation produced and the one a reader is most likely to miss.
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      Where the reader is sent when the honest answer to "make the work cheaper" is
+      that the test is doing more than it needs to, rather than that the budget is
+      wrong.
+  - path: docs/testing/suite-cost-guard.md
+    relationship: describes
+    status: planned
+    relevance: >-
+      THE SURFACE DECISION, made at enrichment: a dedicated page, not a section of
+      docs/testing/README.md. Two reasons, both mechanical. That README is 326
+      lines against check-doc-length's 300-line limit and the gate refuses growth
+      of an already-over file. And a reader arrives here from a failed run, so the
+      guidance needs a stable path that the guard's own output can name.
+assigned_agent: documentation-expert
+estimated_complexity: M
+it_requirements:
+  - >-
+    SURFACE DECISION, WHICH THE BA EXPLICITLY LEFT HERE: a new page,
+    `docs/testing/suite-cost-guard.md`. Verified at enrichment: `check-doc-length`
+    refuses a commit in which a file already over the 300-line limit grows, and
+    `docs/testing/README.md` is 326 lines — so it cannot absorb this material, and
+    even a one-line pointer added there must be offset by at least as many lines
+    removed in the same commit. A new file is not growth. The gate is PRE-COMMIT
+    ONLY and runs in no CI job, so a violation surfaces as a local refusal only.
+  - >-
+    THE PAGE MUST BE REACHABLE FROM WHERE THE READER ACTUALLY ARRIVES, which is a
+    failed run and not a table of contents. Preferred: the guard's failure output
+    names this page's path, and that path is where the page is. Note that this is
+    a two-sided obligation and TQ-600c-2's criteria do not currently require the
+    guard to name a documentation location — if that pointer is not added, the
+    discoverability must be solved another way and the gap must be raised rather
+    than absorbed by publishing somewhere only a search will find.
+  - >-
+    NO NUMBER, AND THE ENFORCEMENT POINT THAT ACTUALLY GATES MUST BE THE ONE
+    IMPLEMENTED. The fifth clause is an absence with two possible checks: (a) no
+    figure in the guidance equals any value in the declared budget record, and (b)
+    no duration literal appears in the guidance at all. While TQ-600c-3 is
+    structurally blocked and the record carries no value, (a) is VACUOUSLY TRUE —
+    it would report clean over a page quoting an invented number. (b) is the
+    load-bearing check and the one that must be built; (a) may be added as well,
+    but not instead.
+  - >-
+    QUOTE THE OUTPUT AND THE FIELD NAMES AS DELIVERED by TQ-600c-2 and TQ-600c-1
+    — in particular the separate setup, call and teardown figures per test, which
+    is the distinction the third clause teaches and the most actionable fact this
+    investigation produced. A paraphrase of a field name sends the reader looking
+    for something that is not in the record.
+  - >-
+    THE UNAVAILABLE RESPONSES ARE STATED AS A PROHIBITION, NOT LEFT OUT.
+    Suppressing the guard, and editing the recorded limit without a measurement
+    behind it, must both be named as not available. Omission is what lets a guard
+    be quietly neutered the first time it is inconvenient, and this repository's
+    history is of checks that reported clean forever.
+  - >-
+    PUBLISH AFTER TQ-600c-1, TQ-600c-2 AND TQ-600c-3 LAND, BUT DO NOT WAIT FOR THE
+    BUDGET VALUE. The page states no number, so the absence of a measured baseline
+    does not block it — but the derivation procedure it reports must be the one
+    TQ-600c-3 actually shipped, not the one intended.
+  - >-
+    THE NEW PAGE MUST BE COMMITTABLE AND REACHABLE: YAML frontmatter as
+    `check-doc-frontmatter` requires, and a link from the doc index. Cross-link
+    with TQ-600b-6's material rather than restating it — how to run the suite and
+    what to do when its cost guard fails are different questions with one reader.
+  - >-
+    VERIFY THE GATES FROM INSIDE THE WORKTREE. Commit-guardian hooks resolve their
+    target set from the current working directory; invoked with absolute paths
+    from elsewhere they examine nothing and exit 0, which is indistinguishable
+    from a pass. Use `env --chdir=<worktree>` with worktree-relative paths and
+    read silence as "it examined nothing".
+delivers_to: null
+expects_from:
+  - ac_id: TQ-600c-3
+    contract: >-
+      The derivation procedure as delivered and the location of the recorded limit.
+      This guidance reports both and reproduces neither — in particular it never
+      restates the number, which is the single constraint that keeps the guidance and
+      the guard from ever disagreeing.
+  - ac_id: TQ-600c-2
+    contract: >-
+      The guard's failure output as delivered, including how it names the tests that
+      spent the time, so the guidance describes the screen the reader is looking at.
+  - ac_id: TQ-600c-1
+    contract: >-
+      The cost record's location and its named fields, including the separate setup
+      and call figures per test, which the guidance teaches a contributor to read.
+test_spec:
+  - name: test_tq600c_6_the_guidance_states_no_limit_of_its_own
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: >-
+      No duration literal appears anywhere in the page — no number presented as a
+      limit, a baseline, a headroom or a runtime — and, whenever the declared
+      budget record carries values, none of them appears in the page either. The
+      first half is the one with teeth: while TQ-600c-3 is blocked and the record
+      holds no value, the second half is vacuously true and would report clean
+      over a page quoting an invented figure. NAMED MUTATION: paste a budget
+      figure into the page as an illustration; this test must go RED.
+  - name: test_tq600c_6_every_location_and_command_the_guidance_gives_resolves
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    surface_invoked: "the locations and commands extracted verbatim from the published page"
+    description: >-
+      Every repository path the page gives exists, and every command it gives runs
+      as written — including the one that shows the reader the recorded limit and
+      the one that opens their own run's cost record. NAMED MUTATION: move the
+      cost record's directory without updating the page; this test must go RED.
+      "Works as written against the repository at the time it is published" is the
+      clause, so the test runs it rather than reading it.
+  - name: test_tq600c_6_the_page_is_reachable_from_where_a_failed_contributor_arrives
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: integration
+    angle: seam
+    description: >-
+      The page is linked from a surface the reader reaches at the moment of
+      failure — the guard's own failure output where that names a location, the
+      testing index otherwise — and the link resolves to the page. NAMED MUTATION:
+      publish the page with no inbound link; every content descriptor stays green
+      and this test must go RED. A guidance page reachable only by searching the
+      repository is reachable by nobody at the moment they need it.
+test_rationale: |
+  Four of this AC's six clauses are reader outcomes and no descriptor can check
+  them: whether a contributor can say where the limit came from, read their own
+  record and tell repeated preparation apart from work done inside the test, name
+  the responses available to them, and say which one their case calls for. Those
+  are verified by a reader trial against the published page, and are recorded as
+  such rather than approximated by a check that the right headings are present. A
+  page with the right headings teaches nobody and passes every presence check.
+
+  The two mechanical clauses are tested as such. The no-number clause is checkable
+  precisely because it was written as an absence, and its descriptor names WHICH
+  of its two possible checks actually gates: comparing the page against the
+  recorded budget is vacuous while the record has no value, so the check that
+  forbids any duration literal is the real one. Building the vacuous half alone
+  would be a gate that reports clean over exactly the failure it exists to catch.
+
+  The resolves-as-written clause is tested by running the commands, not by
+  matching them, for the same reason TQ-600b-6's are: a location that has moved
+  looks identical to one that has not until someone follows it.
+
+  The reachability descriptor is separate from the content descriptors on purpose.
+  Everything else here can be satisfied by a page nobody ever opens, and this
+  reader arrives from a failed run rather than from a table of contents.
+origin_agent: business-analyst
+created: 2026-09-21
+amended_by:
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-09-21
+  note: 'documentation-expert, M. Made the surface decision the BA delegated: a dedicated
+    page docs/testing/suite-cost-guard.md rather than a section of docs/testing/README.md,
+    on two mechanical grounds — check-doc-length ratchets against a 300-line limit
+    and that README is already 326 lines, and the reader arrives from a failed run
+    so the page needs a stable path the guard''s output can name. Recorded that the
+    guard naming that path is a two-sided obligation TQ-600c-2''s criteria do not
+    currently carry, and raised it rather than assuming it. On the no-number clause,
+    named both possible enforcement points and identified which one gates: while the
+    budget record holds no value the compare-against-the-record check is vacuous,
+    so the no-duration-literal check is the load-bearing one. The four reader-outcome
+    clauses are stated as reader-trial verification; no descriptor greps for the page''s
+    existence. criteria untouched.'
+- action: approved
+  agent: approve_acs
+  date: '2026-09-21'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: docs
+risk_surface: internal
+notes: |
+  Satisfies the how-to entry in TQ-600c's documentation_triggers.
+
+  NO NUMBER APPEARS IN THIS GUIDANCE, AND THAT IS A REQUIREMENT RATHER THAN AN
+  OVERSIGHT. TQ-600c's own boundary says the limit must be derived from a measured
+  post-fix baseline that does not exist yet, and TQ-600c-3 makes it a single-source
+  record the guard looks up instead of a literal. A guide that quoted the figure would
+  reintroduce the second source by the back door — and a documented number that
+  disagrees with the enforced one is worse than no documentation, because the reader
+  believes the document. The clause is written as an absence so it can be checked.
+
+  THE "WHICH RESPONSE IS NOT AVAILABLE" CLAUSE IS THE LOAD-BEARING ONE. The natural
+  response to a guard that fails your change is to find the way to turn it off, and a
+  guide that explains the guard without addressing that leaves the reader to discover
+  the answer themselves. Saying plainly that raising the limit requires a measurement
+  and a recorded derivation — and that suppression is not among the responses — is
+  what stops the guard being quietly neutered the first time it is inconvenient. This
+  repository's own history is of checks that reported clean forever; a check nobody
+  may silence but everybody may re-derive honestly is the shape that survives.
+
+  THE SETUP-VERSUS-CALL CLAUSE IS HERE BECAUSE THE READER WILL GET IT WRONG OTHERWISE.
+  Two of the three most expensive measured entries were fixture setup rather than the
+  test. A contributor told only "your tests are slow" optimises the test body and
+  achieves nothing. The guidance has to teach the distinction, not merely expose the
+  fields that carry it.
+
+  WHAT IS NOT DECIDED HERE: which surface carries the guidance, and whether it is one
+  document or a section of an existing one. Both are it-po decisions, and both should
+  be settled together with TQ-600b-6's surface so the two do not each grow an account
+  of the other.

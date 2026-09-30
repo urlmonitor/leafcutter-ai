@@ -63,7 +63,36 @@ origin_agent: BrainCandy
 created: 2026-08-10
 amended_by: []
 superseded_by: null
-covered_by: [BO-2400f-7-i, BO-2400f-7-ii]
+covered_by: [BO-2400f-7-i, BO-2400f-7-ii, BO-2400f-7-iii, BO-2400f-7-iv]
 implemented_by: []
 change_target: pipeline
 risk_surface: internal
+notes: |
+  PROOF MOVED 2026-09-28, and where it moved from matters as much as where it
+  moved to. This record's covers-tagged tests all reached claim_build_set by
+  DIRECT IMPORT. BO-2900's reachability guard refuses that: a function that
+  works when called directly proves nothing about the command the lane actually
+  shells out to. The tags now sit on three module-level tests in
+  unit_tests/build_orchestration/test_bo2400f_7_cli_proof.py that drive
+  fast_lane.main(["claim", ...]) — the real way in, argument parsing included.
+  That file is a new sibling of test_bo2400f_lifecycle.py, split out because
+  test_bo2400f_lifecycle.py was already over the check-file-size limit and
+  could not grow to hold them.
+
+  Two previously-tagged tests were untagged rather than converted, and NOT
+  because they are weak:
+    - test_fastlane_lifecycle_cli.py drives the CLI in a SUBPROCESS. That is a
+      stronger proof than an in-process call, but the guard observes entry with
+      an in-process profiler and cannot see another process at all.
+    - test_fast_lane_ship_structure.py asserts TEXTUALLY on fast-lane-ship.js.
+      It can never enter a Python entry point, and a grep test should not have
+      been a done-proof to begin with (see the repo's own "Verify Behaviorally,
+      Not by Grep" rule).
+  Both tests remain and still run. Only the traceability tag moved, to tests
+  whose proof the guard can actually observe.
+
+  The guard's blindness to out-of-process proofs is a real limitation, not a
+  fact about these tests, and is filed separately alongside the defect that its
+  observation runner resolves a test with getattr(module, name) and so cannot
+  call a unittest.TestCase method at all — which is why the replacements are
+  module-level functions rather than methods.

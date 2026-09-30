@@ -343,9 +343,9 @@ cannot be told from theirs when you pop it back (BP-600c-3-ii).
   git -C "<WORKTREE_ROOT>" stash list
   git -C "<WORKTREE_ROOT>" stash pop "stash@{<index-of-your-labelled-entry>}"
 
-Option B — commit in two steps:
-  git -C "<WORKTREE_ROOT>" add <target_file>
-  git -C "<WORKTREE_ROOT>" commit -m "wip: save work before quick-fix"
+Option B — commit it through the commit agent (a raw commit is blocked by the
+enforce_commit_delegation hook, whichever git spelling is used):
+  /commit <target_file> in <WORKTREE_ROOT> with message "wip: save work before quick-fix"
 
 Then re-run /quick-fix with the same diagnosis.
 ```
@@ -687,11 +687,27 @@ Record the set of modified files as `MODIFIED_FILES`.
 
 ---
 
-## Phase 3.5 — Scope Expansion Warning (BP-600e-1)
+## Phase 3.5 — Scope Expansion Warning (BP-600e-1, BP-600e-1-i, BP-600e-1-ii)
 
 If `MODIFIED_FILES` contains any file other than `target_file` (ignoring the
-AC YAML(s) and the test file, which are expected additions), display this
-warning:
+AC YAML(s) and the test file, which are expected additions, and any path
+already dirty before the coder ran), display this warning:
+
+The three ignored paths are the AC written in Phase 1, the parent it was
+back-linked into, and the test file from Phase 2. They are always dirty by the
+time this phase runs, so a report naming only those is not a scope expansion —
+`quick-fix.js` filters them out of both its `extra_files` and `modified_files`
+before deciding (BP-600e-1-ii). An agent claiming expansion while naming no
+unexpected path is likewise not a halt; what halts is a path that survives the
+filter.
+
+Before dispatching python-coder, `quick-fix.js` also snapshots `git status
+--porcelain` in the worktree and folds every path it reports into that same
+exclusion set (BP-600e-1-i). A file already dirty for any reason before the
+fix — pre-commit auto-formatting, a doc-enforcer rewrite, or ordinary
+worktree drift — is therefore not scope expansion either; only what is new
+at Fix time counts as intentional. An unavailable snapshot degrades to the
+three-artifact exclusion above, never to a halt on everything.
 
 ```
 Warning: python-coder modified files beyond the target.
@@ -1109,9 +1125,10 @@ Preserved artefacts (in <WORKTREE_ROOT>):
   Branch:       <ACTIVE_BRANCH>
 
 Next steps:
-  1. Stage and commit the AC YAML(s) and test file if not already committed:
-       git -C "<WORKTREE_ROOT>" add <parent AC YAML path> <child AC YAML path> <TEST_FILE>
-       git -C "<WORKTREE_ROOT>" commit -m "chore: stage quick-fix artefacts for escalated fix (<AC-ID>)"
+  1. Commit the AC YAML(s) and test file if not already committed, through the
+     commit agent (a raw commit is blocked by the enforce_commit_delegation hook):
+       /commit <parent AC YAML path> <child AC YAML path> <TEST_FILE> in <WORKTREE_ROOT>
+       with message "chore: stage quick-fix artefacts for escalated fix (<AC-ID>)"
 
   2. Create a ticket referencing the AC:
        /create-ticket

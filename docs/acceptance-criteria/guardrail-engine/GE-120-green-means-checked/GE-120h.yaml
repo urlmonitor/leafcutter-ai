@@ -88,6 +88,7 @@ covered_by:
   - GE-120h-2
   - GE-120h-3
   - GE-120h-4
+  - GE-120h-5
 implemented_by: []
 change_target: code
 risk_surface: contract_boundary

@@ -1,6 +1,7 @@
 {
   "id": "fern-and-fig/sign-in",
   "component": "ux-prototyping",
+  "example_product": "fern-and-fig",
   "screen": "sign-in",
   "title": "Sign in",
   "summary": "STUB — registered so the customer-buys-a-plant flow's `signin` step resolves. Asks the customer to sign in or create an account before checkout, preserving the cart. Not yet drawn; see plant-listing / checkout for the gold-reference shape.",

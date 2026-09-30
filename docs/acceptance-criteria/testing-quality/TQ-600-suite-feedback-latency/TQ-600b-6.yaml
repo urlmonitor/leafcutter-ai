@@ -1,0 +1,243 @@
+id: TQ-600b-6
+components:
+  - testing_quality
+title: "The command for running the suite is written down in the places people look, and so is the way to force it back to one at a time"
+component: testing-quality
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a contributor who wants to run the test suite and has the project's written
+    guidance and nothing else,
+  When they follow it,
+  Then they run the suite with the documented command and the run spreads across the
+    machine, without their having to know the parallel runner's own flags or to have
+    been told about it by somebody,
+    And the same guidance states, in the same place, the one documented way to force
+      the run back to one test at a time, and that way works as written,
+    And it states the occasions on which a reader would want to do that — reading
+      output that interleaves between workers, and isolating a failure that only shows
+      up when tests run beside each other — so the serial run is presented as a
+      diagnostic step rather than as a matter of taste,
+    And it says what to do when a test passes one at a time and fails in parallel:
+      that this is a finding about the test rather than a reason to stop running in
+      parallel, and where the guidance on per-test scratch space and on not touching
+      the checkout the run started from can be found,
+    And the command and the escape hatch are stated in both of the places a
+      contributor looks — docs/testing/README.md and unit_tests/README.md — and the
+      two agree with each other, so neither can drift into naming a command the other
+      does not.
+depends_on:
+  - TQ-600b
+  - TQ-600b-1
+  - TQ-600b-2
+  - TQ-600b-5
+doc_links:
+  - path: docs/testing/README.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      TARGET SURFACE, named by the it-po. 10,452 bytes as of 2026-09-21. The general
+      testing guide, and the surface a contributor who does not yet know where the
+      suite lives will reach first.
+  - path: unit_tests/README.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      SECOND TARGET SURFACE, named by the it-po. 10,958 bytes as of 2026-09-21. The
+      readme sitting in the suite's own directory, which is where a contributor
+      already inside the tests looks. The agreement clause exists because two surfaces
+      is two chances to drift; if the it-po rules that one should link rather than
+      restate, the agreement clause is satisfied by the link and the single statement.
+  - path: docs/acceptance-criteria/testing-quality/TQ-600-suite-feedback-latency/TQ-600b-5.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      Owns the standard invocation — parallel by default, from a plain checkout. The
+      guidance documents the command that AC delivers, including whatever it decides
+      about a plain `pytest` invocation versus a named one.
+  - path: docs/acceptance-criteria/testing-quality/TQ-600-suite-feedback-latency/TQ-600b-1.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      Owns serial/parallel verdict equivalence and the naming of disagreements. It is
+      the reason the guidance can tell a contributor that a parallel-only failure is a
+      finding about the test: the machinery that says so is that AC's.
+  - path: pytest.ini
+    relationship: describes
+    status: exists
+    relevance: >-
+      Verified at enrichment: it reads
+      `addopts = --continue-on-collection-errors -p scripts.ac_store.pytest_ac_enforcement`,
+      and TQ-600b-5 is required to EXTEND that line rather than replace it. If the
+      worker default lands there, the command this guidance documents is the plain
+      invocation, because the plain invocation inherits it.
+assigned_agent: documentation-expert
+estimated_complexity: S
+it_requirements:
+  - >-
+    BOTH SURFACES ARE NAMED BY THE CRITERIA AND ONE OF THEM CANNOT GROW. Verified
+    at enrichment: `check-doc-length` refuses a commit in which a file already
+    over the 300-line limit grows, and passes one that shrinks or holds steady.
+    `docs/testing/README.md` is 326 lines; `unit_tests/README.md` is 228 and has
+    room. The docs/testing/README.md half must therefore be an in-place, net
+    non-growing edit — its existing run-command material is where the statement
+    goes, replacing rather than appending. The gate is PRE-COMMIT ONLY and runs
+    in no CI job, so a violation appears as a local refusal and nowhere else.
+  - >-
+    QUOTE THE INVOCATION TQ-600b-5 ACTUALLY DELIVERS, including whether the plain
+    `python -m pytest` form inherits the parallel default. A guide naming a flag
+    the runner does not accept is worse than no guide, because the reader
+    concludes the suite is broken rather than the sentence.
+  - >-
+    AGREEMENT IS SATISFIABLE BY A LINK, AND A LINK IS PREFERRED. Given the
+    constraint above, the full account belongs in `unit_tests/README.md` — which
+    already carries a "Running the suite" section — and `docs/testing/README.md`
+    states the command and links to it. What the criteria forbid is two accounts
+    naming different commands; they do not require two accounts.
+  - >-
+    THE ESCAPE HATCH IS SHOWN BESIDE THE PARALLEL COMMAND, NOT IN ANOTHER
+    SECTION, and it is the request TQ-600b-5 actually kept reachable, quoted
+    verbatim. A contributor staring at interleaved output does not go looking in
+    a second document for the way back.
+  - >-
+    DOCUMENT NO SPEED FIGURE. The measured wall clock on this workspace is
+    contaminated by shared-host load, so a stated saving is a number nobody can
+    reproduce — and the first contributor who fails to reproduce it discounts the
+    rest of the page. The guidance documents the command, not the saving.
+  - >-
+    CROSS-LINK RATHER THAN RESTATE: TQ-600a-7 owns declaring a test, TQ-600b-2
+    owns the per-test scratch-space rule this AC's fourth clause sends the reader
+    to. Restating either half here creates the second account that the agreement
+    clause exists to forbid.
+  - >-
+    VERIFY THE GATES FROM INSIDE THE WORKTREE. Commit-guardian hooks resolve
+    their target set from the current working directory; invoked with absolute
+    paths from elsewhere they examine nothing and exit 0, which is
+    indistinguishable from a pass. Use `env --chdir=<worktree>` with
+    worktree-relative paths and read silence as "it examined nothing".
+delivers_to: null
+expects_from:
+  - ac_id: TQ-600b-5
+    contract: >-
+      The standard invocation as delivered, and the documented means of forcing a
+      serial run. Both are quoted, not invented: a guide naming a flag the runner does
+      not accept is worse than no guide, because the reader concludes the suite is
+      broken rather than the sentence.
+  - ac_id: TQ-600b-1
+    contract: >-
+      The form in which a serial/parallel disagreement is reported, so the guidance's
+      account of "a test that passes alone and fails in parallel" matches what the
+      contributor will actually be shown.
+  - ac_id: TQ-600b-2
+    contract: >-
+      The per-test scratch-space rule as delivered, which is where the guidance sends
+      a contributor whose test turns out to be the one colliding.
+test_spec:
+  - name: test_tq600b_6_the_command_the_guidance_documents_spreads_across_more_than_one_worker
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    surface_invoked: "the run command extracted verbatim from the published guidance"
+    description: >-
+      The command is EXTRACTED FROM THE DOCUMENT and executed over a small
+      selection; more than one worker results. This is distinct from TQ-600b-5's
+      reachability descriptor, which invokes the command that AC specifies: only
+      this descriptor fails when the document drifts away from the delivered
+      invocation. NAMED MUTATION: change the documented command to a form that
+      does not inherit the parallel default; this test must go RED while
+      TQ-600b-5's own descriptors stay green.
+  - name: test_tq600b_6_the_documented_serial_escape_hatch_produces_exactly_one_worker
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: >-
+      The escape hatch is extracted from the document and executed; exactly one
+      worker results and the run completes. NAMED MUTATION: document a flag the
+      runner does not accept; the run errors instead of serialising and this test
+      must go RED. "Works as written" is the clause, so the test writes it out.
+  - name: test_tq600b_6_the_two_surfaces_name_the_same_command_and_the_same_escape_hatch
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: unit
+    angle: seam
+    description: >-
+      The statements are extracted from docs/testing/README.md and
+      unit_tests/README.md and compared: either they are equal, or one is a link
+      to the other. NAMED MUTATION: change the command in one surface only; this
+      test must go RED. Two documents describing one command is two chances for
+      one to rot, and the one that rots keeps being believed.
+test_rationale: |
+  Two of this AC's five clauses are reader outcomes and no descriptor can check
+  them: whether the guidance gives a contributor the occasions on which a serial
+  run is the right diagnostic step, and whether it leaves them knowing that a
+  parallel-only failure is a finding about their test rather than an argument
+  against parallelism. Those are verified by a reader trial against the published
+  text, and are recorded as such rather than approximated by a grep for the
+  headings they would appear under.
+
+  The three clauses that are mechanical are tested by EXECUTION, not by reading.
+  Both command descriptors extract the command from the document and run it,
+  which is the only way to catch the failure this AC exists to prevent: a guide
+  that names a flag the runner does not accept, whose reader concludes the suite
+  is broken rather than the sentence. Asserting that a string appears in a
+  README would pass on exactly that guide.
+
+  The agreement descriptor is mechanical by construction because the criteria
+  were phrased as agreement rather than as "both are kept up to date". It is
+  satisfied by a link, which is also what the doc-length ratchet on
+  docs/testing/README.md pushes the implementation toward.
+
+  No speed figure appears in this contract or may appear in the guidance. The
+  measured wall clock is contaminated by shared-host load and a documented saving
+  would be unreproducible.
+origin_agent: business-analyst
+created: 2026-09-21
+amended_by:
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-09-21
+  note: 'documentation-expert, S. The criteria name both surfaces, so there was no
+    surface decision to make here — but one of the two cannot take new material: check-doc-length
+    ratchets against a 300-line limit and docs/testing/README.md is 326 lines, so
+    its half must be a net non-growing in-place edit while unit_tests/README.md (228
+    lines) carries the full account. Read pytest.ini at enrichment and recorded that
+    the documented command depends on TQ-600b-5 extending its addopts line. Both command
+    descriptors extract the command from the document and EXECUTE it; the two reader-outcome
+    clauses are stated as reader-trial verification rather than given a presence check.
+    criteria untouched.'
+- action: approved
+  agent: approve_acs
+  date: '2026-09-21'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: docs
+risk_surface: internal
+notes: |
+  Satisfies the how-to entry in TQ-600b's documentation_triggers.
+
+  THE ESCAPE HATCH IS THE REASON THIS AC IS NOT OPTIONAL. Making parallel the default
+  takes something away from every contributor: a readable, ordered, one-thing-at-a-time
+  run. If the way back is undocumented, the predictable response to interleaved output
+  is not to look for a flag — it is to conclude the parallel default was a mistake and
+  to work around it, or to argue for reverting it. A documented, supported serial run
+  costs one sentence and removes that whole conversation.
+
+  THE TWO-SURFACE AGREEMENT CLAUSE IS WRITTEN FROM THIS REPOSITORY'S OWN HISTORY. Two
+  documents describing one command is two chances for one of them to rot, and the one
+  that rots keeps being believed. The clause is satisfiable either by one statement
+  plus a link or by two statements that match; what it forbids is two statements that
+  do not. That is mechanically checkable, which is why it is phrased as agreement
+  rather than as "both are kept up to date".
+
+  DELIBERATELY NOT HERE: any claim about how much faster the parallel run is. The
+  measured wall clock on this workspace is contaminated by shared-host load, and a
+  documented speed figure would be a number nobody could reproduce. The guidance
+  documents the command, not the saving.

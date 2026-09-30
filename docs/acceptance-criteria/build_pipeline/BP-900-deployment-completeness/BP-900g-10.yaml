@@ -47,10 +47,22 @@ doc_links:
   - path: "docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/BP-900g.yaml"
     relationship: parent
     status: exists
-  - path: scripts/ac_store/generate_ticket_from_ac.py
+  - path: scripts/ac_store/_gtfa_components.py
     relationship: modifies
     status: exists
-    relevance: "The live instance: sibling resolution ~line 328, OSError caught ~line 334 returning an empty mapping. The degraded path produces a ticket with the wrong components list rather than no ticket."
+    relevance: "The live instance, after the generator decomposition: _load_migration_map resolves the sibling and catches (OSError, AttributeError, ImportError, SyntaxError, RuntimeError) returning an empty mapping; _load_valid_component_ids does the same on (OSError, json.JSONDecodeError). The degraded path produces a ticket with the wrong components list rather than no ticket."
+  - path: scripts/ac_store/_gtfa_config.py
+    relationship: modifies
+    status: exists
+    relevance: "Second runtime-load site carried over from the pre-decomposition file — the guardrail-gates / agent-registry reads, which absorb (OSError, json.JSONDecodeError) into a default. In scope because n_location_rule is 'all': every load site that was in the one file."
+  - path: scripts/ac_store/_gtfa_store.py
+    relationship: modifies
+    status: exists
+    relevance: "Third runtime-load site carried over from the pre-decomposition file — AC-store / ticket lookup and the derive_parent_id loader, which absorb OSError and import errors. In scope for the same 'all' rule."
+  - path: scripts/ac_store/_gtfa_phases.py
+    relationship: modifies
+    status: exists
+    relevance: "Fourth runtime-load site carried over from the pre-decomposition file — the phase-deferral declaration read, which catches (OSError, yaml.YAMLError). In scope for the same 'all' rule; classify it REQUIRED or OPTIONAL explicitly rather than leaving it unclassified."
   - path: scripts/ac_store/_component_migration_map.py
     relationship: describes
     status: exists
@@ -78,7 +90,7 @@ doc_links:
 assigned_agent: python-coder
 estimated_complexity: M
 it_requirements:
-  reference_file_path: "scripts/ac_store/generate_ticket_from_ac.py"
+  reference_file_path: "scripts/ac_store/_gtfa_components.py"
   n_location_rule: "all"
   required_skills:
     - python-coder
@@ -105,7 +117,7 @@ it_requirements:
         description: "The load can fail as absent, unreadable (permissions), or unloadable (syntax/import error). All three take the stop path for a REQUIRED dependency. Catching only the absent case leaves two live fail-open branches."
   constraints:
     - "DO NOT SATISFY THIS BY DEPLOYING THE ONE SIBLING. Adding _component_migration_map.py to the deploy map makes the live symptom disappear and leaves the fail-open loader in place for the next undeployed dependency. That is BP-900g-5's failure mode repeated — fixing the instances on the list while the mechanism that produced them stays as it was. The deploy fix belongs to BP-900g-8; this AC is not done until the loader itself fails closed on a tree where the dependency is withheld."
-    - "n_location_rule IS 'all' AND IT MEANS EVERY LOAD SITE IN THE FILE. The Because clause names the sibling loader at ~328/334, but the criterion is a class rule. Audit scripts/ac_store/generate_ticket_from_ac.py for every runtime load whose failure is currently absorbed into a neutral default — an empty mapping, an empty list, a passthrough — classify each as REQUIRED or OPTIONAL, and enumerate the findings in the sign-off. Point-fixing line 334 reproduces the exact history BP-900g-8's criteria cite: three prior instances fixed one at a time while the fourth shipped."
+    - "n_location_rule IS 'all' AND IT MEANS EVERY LOAD SITE. The Because clause names the sibling loader as it stood at HEAD 339b0981c, when generate_ticket_from_ac.py was one 4035-line file; that file has since been decomposed into a 386-line re-export shell plus _gtfa_* siblings, and the load sites moved with the implementation. The criterion is a class rule, so audit ALL of scripts/ac_store/_gtfa_components.py, _gtfa_config.py, _gtfa_store.py and _gtfa_phases.py for every runtime load whose failure is currently absorbed into a neutral default — an empty mapping, an empty list, a passthrough — classify each as REQUIRED or OPTIONAL, and enumerate the findings in the sign-off. Point-fixing the one named loader reproduces the exact history BP-900g-8's criteria cite: three prior instances fixed one at a time while the fourth shipped."
     - "THIS NARROWS CLAUDE.md RULE 3 FOR ONE CLASS ONLY, AND THE NARROWING MUST BE WRITTEN DOWN. Rule 3 permits log-at-WARNING OR re-raise. The live defect satisfies Rule 3 and is still a silent-degradation bug, because the choice was made against a dependency the output's correctness depends on. For REQUIRED dependencies, logging is no longer one of the two options. Rule 3 is undisturbed for optional dependencies, caches and telemetry, where degrading is correct. Whoever implements this must ensure the narrowing is discoverable by the next author, not just present in one function."
     - "ALL THREE FAILURE MODES, NOT ONLY ABSENCE. Absent, unreadable (permission denied), and unloadable (syntax or import error) must all take the stop path for a REQUIRED dependency. The live code catches OSError, which covers absent and unreadable but not unloadable; narrowing the fix to 'file missing' leaves live fail-open branches behind a change that reads as complete."
     - "NO ARTIFACT ON THE FAILING PATH IS THE LOAD-BEARING ASSERTION, NOT THE EXIT CODE. A script that writes the degraded ticket and then exits non-zero satisfies an exit-code assertion while leaving the same wrong file on disk for the next step to consume. Order the work so the dependency is resolved before anything is written, and assert the artifact's ABSENCE. If a write has already begun when the failure is detected, the partial artifact must be removed."

@@ -1,0 +1,66 @@
+id: TQ-500g-5-ii
+components:
+  - testing_quality
+  - build_orchestration
+title: "A sequence diagram shows one wrong-version run from alteration to put-back, including the ways it can fail"
+component: testing-quality
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a reader tracing what happens to the code during a wrong-version run,
+  When they open the sequence diagram for the runs,
+  Then it shows, in order: the copy of the code as written is taken, the wrong
+      version is applied, the tests in scope run, the run is read, the code is
+      put back and compared byte for byte, and the verdict is returned to the
+      route,
+    And it shows the branch where the wrong version does not load or changes
+      nothing, and is not run or not counted,
+    And it shows the branch where a database suite re-installs the correct
+      code and the run is reported invalid,
+    And it shows the branch where the run is cut short and the code is put
+      back before anything else, or the drive stops naming the copy,
+    And it shows the survivor branch stopping the work before commit.
+depends_on:
+  - TQ-500g-5
+  - TQ-500g-1
+doc_links:
+  - path: docs/architecture/diagrams/c3-done-proof-evaluation-sequence.md
+    relationship: relates-to
+    status: exists
+    relevance: "The existing done-proof sequence diagram, the house style to follow."
+assigned_agent: architecture-diagram-author
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+it_requirements:
+- Follow the house style of docs/architecture/diagrams/c3-done-proof-evaluation-sequence.md. The branches
+  mirror -1-i (happy path, survivor), -1-ii (did not load, not applied), -1-iii (cut short, and the recovery
+  on resume) and -2-i (re-deploy trap, invalid).
+- docs/**.md is under the blocking doc-length ratchet (300 lines after frontmatter). docs/how-to/fast-lane-build.md
+  (461) and docs/testing/test-angles.md (325) are over the limit and must not grow, so any pointer added
+  there is offset in the same file.
+- 'Firewall (as in TQ-500f-5): no behavioural AC is closed by pointing at these documents.'
+test_required: false
+test_rationale: 'Documentation only: a sequence diagram. Firewall as in TQ-500g-5. It is reviewed, not
+  tested.'
+origin_agent: business-analyst
+created: 2026-09-28
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: docs
+risk_surface: internal
+notes: |
+  Answers TQ-500g's sequence-diagram trigger. Documentation only — see the
+  firewall in TQ-500g-5's notes. The branches mirror TQ-500g-1-i (happy path and
+  survivor), -1-ii (did not load / not applied), -1-iii (cut short) and -2-i
+  (re-deploy trap).
+
+  IT-PO ENRICHMENT (2026-09-28)
+  architecture-diagram-author lane, with TQ-500g-5.

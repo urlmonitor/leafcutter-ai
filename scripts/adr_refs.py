@@ -31,6 +31,8 @@ from collections import defaultdict
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from adr_index_frontmatter import index_frontmatter
+
 ADR_DIR = Path("docs/architecture/adrs")
 
 SKIP_DIRS = {
@@ -371,11 +373,8 @@ def _build_index(s: Scan, root: Path) -> str:
         rows.append(f"| [{name}]({f.path.name}) | {status} | {title} | {date} |")
 
     return (
-        '---\ntitle: "Architecture Decision Records"\n'
-        'description: "Index of all Architecture Decision Records (ADRs) for the '
-        'leafcutter-ai package, listing each decision\'s number, status, title, '
-        'and date."\ntype: "reference"\n---\n\n'
-        "# Architecture Decision Records\n\n"
+        index_frontmatter(root / ADR_DIR / "README.md")
+        + "# Architecture Decision Records\n\n"
         "This directory contains Architecture Decision Records (ADRs) for the "
         "leafcutter-ai\npackage. ADRs document significant architectural decisions "
         "— the context, the choice\nmade, and the consequences — so that future "

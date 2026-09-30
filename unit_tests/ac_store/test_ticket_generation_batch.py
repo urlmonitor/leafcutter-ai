@@ -5,6 +5,17 @@ GOAL: Unit tests for batch ticket generation in goal_to_epic.py.
       and that generated tickets include required frontmatter fields.
 TICKET: EPIC-GoalToEpic/01_tree-traversal-ticket-generation.md
 COVERS: ACD-1200a-2
+
+MOCK TARGET NOTE: the `_call_generate_ticket_from_ac` patches below target
+`epic_tickets`, NOT `goal_to_epic`. `generate_tickets_for_leaves` and
+`_call_generate_ticket_from_ac` both live in `epic_tickets`, so the call
+between them is a bare-name lookup resolved through `epic_tickets`' module
+globals. `goal_to_epic` merely re-exports both names; rebinding the attribute
+there leaves the real generate_ticket_from_ac.py subprocess running unmocked.
+Importing `goal_to_epic` (below) is what puts scripts/ac_store on sys.path and
+makes the bare `epic_tickets` module name resolvable. Before goal_to_epic.py
+was split into sibling modules the two forms were the same object, and these
+patches read `goal_to_epic._call_generate_ticket_from_ac`.
 """
 
 from __future__ import annotations
@@ -82,7 +93,7 @@ class TestGenerateTicketsForLeaves:
             ticket = _write_ticket_for_ac(tickets_root, ac_id)
             return str(ticket)
 
-        with patch("goal_to_epic._call_generate_ticket_from_ac", side_effect=_mock_generate) as mock_gen:
+        with patch("epic_tickets._call_generate_ticket_from_ac", side_effect=_mock_generate) as mock_gen:
             generate_tickets_for_leaves(leaf_ids, ac_root, tickets_root)
 
         assert mock_gen.call_count == len(leaf_ids), (
@@ -103,7 +114,7 @@ class TestGenerateTicketsForLeaves:
             ticket = _write_ticket_for_ac(tickets_root, ac_id)
             return str(ticket)
 
-        with patch("goal_to_epic._call_generate_ticket_from_ac", side_effect=_mock_generate):
+        with patch("epic_tickets._call_generate_ticket_from_ac", side_effect=_mock_generate):
             ticket_paths = generate_tickets_for_leaves(leaf_ids, ac_root, tickets_root)
 
         for path_str, expected_ac_id in zip(ticket_paths, leaf_ids):
@@ -127,7 +138,7 @@ class TestGenerateTicketsForLeaves:
             ticket = _write_ticket_for_ac(tickets_root, ac_id)
             return str(ticket)
 
-        with patch("goal_to_epic._call_generate_ticket_from_ac", side_effect=_mock_generate):
+        with patch("epic_tickets._call_generate_ticket_from_ac", side_effect=_mock_generate):
             ticket_paths = generate_tickets_for_leaves(leaf_ids, ac_root, tickets_root)
 
         content = Path(ticket_paths[0]).read_text(encoding="utf-8")
@@ -151,7 +162,7 @@ class TestGenerateTicketsForLeaves:
             return str(ticket)
 
         start = time.perf_counter()
-        with patch("goal_to_epic._call_generate_ticket_from_ac", side_effect=_mock_generate):
+        with patch("epic_tickets._call_generate_ticket_from_ac", side_effect=_mock_generate):
             generate_tickets_for_leaves(leaf_ids, ac_root, tickets_root)
         elapsed = time.perf_counter() - start
 
@@ -170,7 +181,7 @@ class TestGenerateTicketsForLeaves:
             ticket = _write_ticket_for_ac(tickets_root, ac_id)
             return str(ticket)
 
-        with patch("goal_to_epic._call_generate_ticket_from_ac", side_effect=_mock_generate):
+        with patch("epic_tickets._call_generate_ticket_from_ac", side_effect=_mock_generate):
             result = generate_tickets_for_leaves(leaf_ids, ac_root, tickets_root)
 
         assert len(result) == 3, f"Expected 3 ticket paths, got {len(result)}"

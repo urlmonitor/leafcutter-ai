@@ -1,6 +1,6 @@
 # Continuous-integration gate for leafcutter-ai.
 #
-# Runs on every push to main and every PR targeting main. Eight jobs — six
+# Runs on every push to main and every PR targeting main. Nine jobs — seven
 # BLOCKING (the required status checks named in the branch-protection ruleset)
 # and two informational:
 #
@@ -10,6 +10,20 @@
 #   component-vocab — every `components` value is a canonical id in
 #                docs/components.json. BLOCKING. Diff-scoped on PRs, full tree
 #                on push to main.
+#
+#   shipped-address-check — nothing under templates/ (including templates/docs/)
+#                or config/ carries a real-looking database connection address
+#                (INF-1100d-4 / INF-1100d-4-i). BLOCKING, full tree every run —
+#                a build ships the whole of both roots regardless of what any
+#                one PR touched, so this is not diff-scoped. Runs
+#                scripts/portability/check_shipped_addresses.py with no flags,
+#                the same normal-suite entry point the check's own unit tests
+#                (unit_tests/portability/test_inf_1100d_4*.py, part of the
+#                `test` job below) already exercise; this step is the
+#                comparable-package-check wiring (mirrors
+#                scripts/ci/check_declaring_files.py's direct-invocation shape)
+#                that makes a reintroduced address fail CI even on a
+#                contributor whose local pre-commit hooks are not installed.
 #
 #   test       — full pytest suite over tests/ and unit_tests/. BLOCKING: there
 #                is no continue-on-error on this job, so a PR carrying a failing
@@ -27,6 +41,20 @@
 #                by the required-status-checks list (BP-1200c) — do NOT rename it.
 #
 #   done-proof — proof-of-done coverage (BO-2500b). BLOCKING, diff-scoped.
+#
+#   reachability-guard — forward runtime-reachability guard (BO-2900b-1):
+#                every capability a command surface's built parser registers
+#                must have an automation caller. BLOCKING — REFUSES, NOT
+#                WARNS (ADR-050 SS4): no continue-on-error on this job. When
+#                no --surface/--automation overrides are supplied (this job's
+#                current invocation), check_reachability.py's own
+#                no-automation-supplied default applies and it exits 0
+#                honestly ("nothing to check yet", ADR-050 SS8) rather than
+#                the job downgrading via continue-on-error — see the job's
+#                own comment for why (collected_invocations() does not yet
+#                parse this repo's real JavaScript automation) and the single
+#                line that adds real --surface/--automation arguments once
+#                BO-2900b-3/BO-2900c-4 land.
 #
 #   ac-store-valid — the AC store passes its schema and governance hooks.
 #                BLOCKING. Diff-scoped to the pull request (ACS-200g).
@@ -140,6 +168,25 @@ jobs:
         if: github.event_name != 'pull_request'
         run: python scripts/check_component_vocab.py
 
+  shipped-address-check:
+    name: Shipped address check (INF-1100d-4)
+    runs-on: ubuntu-latest
+    # BLOCKING. No pip install step: check_shipped_addresses.py is
+    # stdlib-only. Full tree every run (not diff-scoped): a build ships the
+    # whole of templates/ and config/ regardless of what one PR touched, so
+    # an address reintroduced by an earlier, already-merged PR must still
+    # fail every subsequent run, not just the run that added it.
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Check shipped sources for database connection addresses
+        run: python scripts/portability/check_shipped_addresses.py
+
   test:
     name: Test suite (pytest)
     runs-on: ubuntu-latest
@@ -226,6 +273,55 @@ jobs:
         # JS-covered AC would be reported as having no proof. node_modules/,
         # .next/ and dist/ are excluded by the scanner.
         run: python scripts/commit_guardian/check_done_proof.py --mode ci-changed --base origin/${{ github.base_ref }} --test-root .
+
+  reachability-guard:
+    name: Reachability guard (BO-2900b-1, forward direction)
+    runs-on: ubuntu-latest
+    # BLOCKING — REFUSES, NOT WARNS (ADR-050 SS4): no continue-on-error on
+    # this job; dropping it is the whole point (mirrors the `test` job's own
+    # "NO continue-on-error" comment above). Registers the `--mode ci` half
+    # of the check_done_proof.py two-layer precedent this AC's own
+    # constraints name, but collected_invocations() (scripts/commit_guardian/
+    # _reachability_inventory.py, re-exported from the sibling
+    # _reachability_invocation_collector.py) recognises only Python
+    # automation scripts today — see that module's own ROLLOUT NOTE. This
+    # repository's real automation (templates/workflows-js/fast-lane-ship.js)
+    # is JavaScript, and deriving the real surface/automation-script set is
+    # BO-2900c-4's scope, not yet implemented. This step therefore passes no
+    # --surface/--automation overrides, so check_reachability.py's own
+    # no-automation-supplied default applies: it honestly reports "nothing to
+    # check yet" and exits 0 every run (ADR-050 SS8), rather than
+    # false-refusing every PR that touches scripts/build_orchestration/ or
+    # templates/workflows-js/ against an invocation collector that cannot yet
+    # read its only real caller, and rather than papering over a future real
+    # finding with a downgrade flag.
+    #
+    # Add --surface/--automation arguments deriving the real sets once
+    # BO-2900b-3 (JS invocation collection) and BO-2900c-4 (derived
+    # surface/automation-script sets) land. Until then this job is a
+    # structural placeholder that can never produce a false pass on a real
+    # finding, because it has no real inputs — the honest exit-0 default
+    # above is the sanctioned inert state (ADR-050 SS8), not a downgrade
+    # flag on the job itself.
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install dev dependencies
+        run: pip install -r requirements-dev.txt
+
+      - name: Build — run install_shims to create scripts/ symlinks
+        # Required before invoking check_reachability.py: install_shims()
+        # creates the symlinks at scripts/commit_guardian/ etc. so the
+        # hook's imports resolve correctly on a fresh checkout (ADR-016).
+        run: python scripts/build.py --target-dir .
+
+      - name: Run reachability guard (CI mode)
+        run: python scripts/commit_guardian/check_reachability.py --mode ci
 
   ac-store-valid:
     name: AC store valid
@@ -532,7 +628,13 @@ jobs:
         if: github.event_name == 'pull_request'
         run: |
           git fetch --no-tags --depth=1 origin "${{ github.base_ref }}"
-          CHANGED=$(git diff --name-only --diff-filter=ACM "origin/${{ github.base_ref }}"...HEAD -- 'scripts/**/*.py' 'tests/**/*.py' 'unit_tests/**/*.py')
+          # KI-BP-20260831-0620: git pathspec '**/*.py' does NOT match files directly
+          # inside the named directory (e.g. scripts/build.py) -- only files at least
+          # one level deeper. The 'dir/*.py' forms alongside the existing 'dir/**/*.py'
+          # forms are required so top-level scripts are not silently excluded from
+          # mypy, which previously reported SUCCESS while never seeing 64 of 123
+          # tracked scripts, including scripts/build.py.
+          CHANGED=$(git diff --name-only --diff-filter=ACM "origin/${{ github.base_ref }}"...HEAD -- 'scripts/*.py' 'scripts/**/*.py' 'tests/*.py' 'tests/**/*.py' 'unit_tests/*.py' 'unit_tests/**/*.py')
           if [ -z "$CHANGED" ]; then
             echo "No changed Python files under scripts/, tests/, or unit_tests/ — skipping mypy."
             exit 0

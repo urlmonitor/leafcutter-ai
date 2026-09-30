@@ -1,6 +1,7 @@
 {
   "id": "fern-and-fig/checkout-and-pay",
   "component": "ux-prototyping",
+  "example_product": "fern-and-fig",
   "product": "Fern & Fig",
   "name": "Checkout & pay (inside the buy-a-plant checkout step)",
   "level": "pipeline",

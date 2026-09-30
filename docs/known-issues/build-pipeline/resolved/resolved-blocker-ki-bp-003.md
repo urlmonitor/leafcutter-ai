@@ -16,7 +16,7 @@ related_docs:
 # KI-BP-003 — `config/doc_types.json` is never deployed alongside the hooks that read it, so `check-doc-frontmatter` hard-crashes in the self-hosted workspace and in every adopter worktree
 
 > One known issue, split out of `docs/known-issues/build-pipeline.md` on
-> 2026-09-14. Index: [build-pipeline.md](../build-pipeline.md).
+> 2026-09-14. Index: [build-pipeline.md](../../build-pipeline.md).
 > Filename severity is the three-level index bucket (`blocker`); the
 > original grading is the `**Severity:**` line below, unchanged.
 

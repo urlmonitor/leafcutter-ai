@@ -1,6 +1,7 @@
 {
   "id": "fern-and-fig/plant-detail",
   "component": "ux-prototyping",
+  "example_product": "fern-and-fig",
   "screen": "plant-detail",
   "title": "Plant detail",
   "summary": "One plant's detail screen: large photo, name, price and a colour-coded stock badge, with an add-to-cart action. Populated by hand from the fern-and-fig/catalog Plant records (Monstera Deliciosa as the in-stock case), and showing the out-of-stock notify-me variant (Snake Plant) as a second state.",

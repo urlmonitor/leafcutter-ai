@@ -30,9 +30,10 @@ criteria: |
     none).
 depends_on: [TKT-500f]
 doc_links:
-  - path: scripts/ac_store/generate_ticket_from_ac.py
+  - path: scripts/ac_store/_gtfa_body.py
     relationship: constrains
     status: exists
+    relevance: "_criteria_checkboxes and _build_ticket_body — the '## Acceptance Criteria' renderer that must emit the machine-parseable '- [ ] AC-N:' lines alongside the human-readable Gherkin block."
   - path: docs/reference/ac-schema.md
     relationship: specifies
     status: exists
@@ -57,8 +58,8 @@ delivers_to:
 expects_from: null
 it_requirements:
   config_schema_fragment: null
-  reference_file_path: "scripts/ac_store/generate_ticket_from_ac.py"
-  n_location_rule: "1 (the '## Acceptance Criteria' section renderer in _build_ticket_body, near line 923+)"
+  reference_file_path: "scripts/ac_store/_gtfa_body.py"
+  n_location_rule: "1 (the '## Acceptance Criteria' section renderer — _criteria_checkboxes, called from _build_ticket_body)"
   required_skills:
     - python-coder
   post_write_commands:

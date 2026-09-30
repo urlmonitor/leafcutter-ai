@@ -1,0 +1,138 @@
+---
+title: "KI-BO-018 — `/plan-feature` halts on a false `worktree-agent` permission verdict, caused by a truncated agent-relayed config read rather than anything wrong with the agent's charter"
+description: "blocker — this is not a workflow inconvenience: per ADR-012, `/plan-feature`"
+type: reference
+category: reference
+status: active
+created: '2026-08-18'
+last_updated: '2026-09-25'
+components:
+  - build_orchestration
+related_docs:
+  - docs/known-issues/build-orchestration.md
+  - docs/known-issues/README.md
+---
+
+# KI-BO-018 — `/plan-feature` halts on a false `worktree-agent` permission verdict, caused by a truncated agent-relayed config read rather than anything wrong with the agent's charter
+
+> One known issue, split out of `docs/known-issues/build-orchestration.md` on
+> 2026-09-14. Index: [build-orchestration.md](../../build-orchestration.md).
+> Filename severity is the three-level index bucket (`blocker`); the
+> original grading is the `**Severity:**` line below, unchanged.
+
+- **Severity:** blocker — this is not a workflow inconvenience: per ADR-012, `/plan-feature`
+  is the canonical entry path for **all** new work, and this defect halts that workflow
+  before any authoring agent is dispatched. There is no fallback path that avoids it.
+- **Status:** **RESOLVED** (`e4ee392d` — ACD-2100b-5, "the startup check reads the registry itself instead of asking an agent", on main since 2026-09-07; verified 2026-09-25 by code read of `templates/workflows-js/plan-feature.js`, a live run of the pre-flight script, and `pytest` of the ACD-2100b / BO-1500f-1 tests; independently re-verified 2026-09-23, see "Also verified 2026-09-23" below)
+- **Occurrences:** 2 (reproduced twice, same day)
+- **First seen:** 2026-08-25 · **Last seen:** 2026-08-25
+- **Where:** `templates/workflows-js/plan-feature.js` (deployed at
+  `.leafcutter/workflows/plan-feature.js`), ~lines 1747-1770; `config/agent_registry.json`
+
+**Symptom.** `/plan-feature` halts before dispatching any authoring agent with the message:
+"Workspace-setup step 'worktree-setup' is configured to dispatch to agent 'worktree-agent',
+whose registered charter does not permit running repository/shell commands." That message is
+FALSE — `config/agent_registry.json` gives `worktree-agent` `permits_shell: true` (verified
+by direct read of the registry file).
+
+**Real mechanism.** `plan-feature.js` (deployed at `.leafcutter/workflows/plan-feature.js`,
+~lines 1747-1770) resolves the permission NOT by reading the registry file directly, but by
+DISPATCHING a `status-checker` agent with the prompt "Run the following command and return
+ONLY the raw stdout output: `cat .leafcutter/config/agent_registry.json`", then
+`JSON.parse`-ing the returned wrapper. `config/agent_registry.json` is 129,787 bytes. The
+agent round-trip truncates the payload at exactly 75,000 characters, splitting an escape
+sequence mid-token, so `JSON.parse` raises: `Invalid \escape: line 1 column 75001 (char
+75000)`. The surrounding try/catch is fail-closed — the code comment at the catch site reads
+`permitsShell = false; // fail closed` — so a transport failure (truncation) becomes a
+substantive verdict about the agent's charter, and the run halts.
+
+**General lesson (the reusable finding).** A check that could not perform its inspection
+(the config read was truncated and unparseable) reports a confident SUBSTANTIVE verdict
+("this agent is not permitted") instead of "undetermined" — and its remediation text sends
+the reader to go fix `permits_shell`, a field that is already correct. This is the mirror
+image of the existing guarantee **GE-120a-1** ("a check that could not perform its
+inspection reports a degraded outcome, not a clean pass").
+
+**Secondary observation, same entry.** The workflow's shell probes run with the process
+working directory set to the untracked workspace parent, not the repository — evidenced by a
+sibling probe in the same run returning `fatal: not a git repository (or any of the parent
+directories): .git` (exit 128) while the `cat` of `.leafcutter/config/agent_registry.json`
+succeeded from that same directory. The registry read therefore succeeds only INCIDENTALLY,
+because that particular workspace parent happens to hold a populated `.leafcutter/` — this
+would not hold for every layout.
+
+**Fix direction.** Read the registry from disk directly (e.g. via the workflow's own
+file-read primitive) rather than round-tripping it through an agent's text response; and on
+any parse failure, report "could not determine" rather than asserting the charter denies
+permission. Not implemented — this entry records the defect and the proposed direction only.
+
+## Resolution
+
+Verified 2026-09-25 against `main` (HEAD `d2fe85a1`). Fixed by `e4ee392d`
+(`refactor(ac-driven-dev): the startup check reads the registry itself instead of asking an
+agent (ACD-2100b-5)`, 2026-09-07). It was tracked in parallel as KI-ACD-009, which is now in
+`ac-driven-dev/resolved/`.
+
+- **The relayed read is gone.** `git log -S "cat .leafcutter/config/agent_registry.json" --
+  templates/workflows-js/plan-feature.js` returns only `e4ee392d`, the commit that removed it.
+  `plan-feature.js` (Pre-Stage-0, ~lines 2319-2432) now makes no `agent()` dispatch and does no
+  filesystem read for this check. It only consumes `args.workspace_setup_permission`. That
+  verdict comes from `scripts/worktree/check_workspace_setup_permission.py`, which the
+  plan-feature skill runs locally in the main loop before it invokes the workflow. No
+  agent-relayed text means no 75,000-character truncation. The registry is now 131,138 bytes.
+- **A failed read no longer turns into a charter verdict.** The pre-flight returns separate
+  outcomes: `read_failure`, `parse_failure`, `agent_not_found`, `no_entries_collection` and
+  `permission_denied`. The workflow gives each outcome its own message. Only
+  `permission_denied` points the reader at `permits_shell`. A truncated registry is reported as
+  `parse_failure` (`test_acd_2100b_2.py::test_truncated_registry_outcome_is_parse_failure`,
+  passing). A missing verdict is reported as a missing pre-flight, not as a denial.
+- **The working-directory dependence is gone (secondary observation).** The script finds the
+  registry relative to the repository. Run from the repo root, and again from the non-repo
+  parent `C:/Users/Hendrik/Code/leafcutter`, both runs printed `{"permits": true, "outcome":
+  "granted", "agent_id": "worktree-agent", "location": "...\leafcutter-ai\.leafcutter\config\agent_registry.json"}`
+  (exit 0).
+- **Tests.** `python -m pytest unit_tests/ac_driven_dev/test_acd_2100b_1.py
+  unit_tests/ac_driven_dev/test_acd_2100b_2.py unit_tests/ac_driven_dev/test_acd_2100b_3.py
+  unit_tests/ac_driven_dev/test_acd_2100b_5.py
+  unit_tests/workflows/test_bo_1500f_1_real_registry_read.py -q` gave 15 passed and 2 failed.
+  Both failures are in `test_acd_2100b_1.py::TestUnreadableRegistryClassification`
+  (permission-refused registry). They fail because `chmod(0o000)` does not block reads on
+  Windows, so the file stays readable and the verdict is `granted`. That is a limit of the test
+  platform. It is not this defect: neither test involves truncation or a relayed read.
+
+**Also verified 2026-09-23 (independent pass, before the above).** Re-verified against the
+current code, not this entry's narrative:
+
+- **Primary mechanism confirmed gone.** No `resolve-workspace-setup-permission` dispatch, and
+  no read of `config/agent_registry.json` via an agent round-trip, remained anywhere in
+  `templates/workflows-js/plan-feature.js` at that time. Lines 2140-2148 documented the removal
+  directly: "ACD-2100b-5 removed that dispatch (the registry read now happens locally, in
+  `scripts/worktree/check_workspace_setup_permission.py`...) and these four helpers had no
+  other caller, so they were removed with it." Lines 2320-2432 showed the workflow only
+  consuming a pre-computed verdict via `args.workspace_setup_permission`, failing closed when
+  it is absent, and rendering six distinguishable `outcome` values (`granted`, `read_failure`,
+  `parse_failure`, `agent_not_found`, `no_entries_collection`, `permission_denied`) as six
+  different messages — the same fix the 2026-09-25 pass above confirms independently, on a
+  Linux run rather than Windows.
+- **Behavioral evidence on that platform.**
+  `AC_ENFORCE_STRICT=1 python -m pytest unit_tests/workflows/test_bo_1500f_1.py unit_tests/workflows/test_bo_1500f_1_real_registry_read.py -q`
+  → 8 passed, mask off — a clean run with none of the two Windows-only `chmod` failures noted
+  above, consistent with those being a test-platform limit rather than a real gap.
+- **Duplicate, confirmed and cross-linked.** This is the same mechanism and the same cwd
+  defect as `KI-ACD-009`
+  ([`docs/known-issues/ac-driven-dev/resolved/resolved-blocker-ki-acd-009.md`](../../ac-driven-dev/resolved/resolved-blocker-ki-acd-009.md)),
+  which records the identical 2026-09-07 `ACD-2100b-5` fix and was itself closed 2026-09-23
+  once its own closure condition (the `BO-1500f-1` store transition) landed via PR #864. This
+  entry closes as a duplicate resolution, not an independent one.
+
+**Recurrence, 2026-09-16 (recorded 2026-09-16 on `acs/bo-3200f-chartered-executor` against the open entry; carried into this resolved entry when that branch merged main on 2026-09-30).** Before the `ACD-2100b-5` fix (`e4ee392d`) reached main
+(after 2026-09-22), the same shape — a relayed config read whose transport failure is turned into
+a substantive and false verdict — recurred in `/plan-feature` with a different transport failure:
+not truncation but a **charter refusal**. `status-checker` declined the registry read as out of
+scope and put `exit_code: 1` inside its refusal payload, so the run reported "exit code 1, no
+stdout" and blamed a 131 KB registry that was present and readable at both candidate locations.
+See `KI-ACD-009`. The general rule — a failure in the layer carrying an answer must never be
+reported as a finding about the subject — is `BO-3200g`; moving mechanical errands off
+read-only agents is `BO-3200f`.
+
+---

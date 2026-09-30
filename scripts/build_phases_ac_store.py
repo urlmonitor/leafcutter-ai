@@ -1,29 +1,35 @@
 """
 MODULE: build_phases_ac_store
-GOAL: Deploy the AC (Acceptance Criteria) pipeline scripts and their
-    documentation — the phases that were previously defined inline in
-    build_phases.py.
+GOAL: Deploy the AC (Acceptance Criteria) pipeline scripts — the phase that
+    was previously defined inline in build_phases.py.
 BUSINESS CONTEXT: build_phases.py is grandfathered many times over the
     400-content-line check-file-size limit, and the GE-127b-1 ratchet refuses
     any change that leaves an already-oversized file longer than it was. This
-    module carries the AC-store deploy declaration and its two phase
-    functions out of build_phases.py to restore headroom, with no behaviour
-    change, exactly as build_phases_knowledge.py and
-    build_phases_product_truth.py did for their own phases.
+    module carries the AC-store deploy declaration and its phase function out
+    of build_phases.py to restore headroom, with no behaviour change, exactly
+    as build_phases_knowledge.py and build_phases_product_truth.py did for
+    their own phases. Its sibling ``build_ac_store_docs`` was carried one
+    step further, into build_phases_ac_store_docs.py, when a merge-driven
+    growth of ``AC_STORE_DEPLOY_MAP`` pushed this file 8 lines over the same
+    limit with no comment-only trimming margin left (see that module's
+    DECISION HISTORY).
 ARCHITECTURE: One module-level constant, ``AC_STORE_DEPLOY_MAP`` (the single,
     explicit, human-readable deploy declaration for ``build_ac_store`` — AC
-    BP-900g-8 Set B), and two public phase functions, ``build_ac_store`` and
-    ``build_ac_store_docs``, re-exported from build_phases.py so every
-    existing caller (notably build.py, which imports both from
-    ``build_phases``, and ``_manifest_ac_store_scripts``, which derives
-    Set C directly from ``AC_STORE_DEPLOY_MAP``) keeps working unchanged.
-    Both functions share the standard phase signature
-    (target_root, config, dry_run, force) and defer their imports of
-    build_phases's private write/deploy helpers (``PACKAGE_ROOT``,
-    ``_should_overwrite``, ``_files_content_identical``, ``record_deploy_failure``,
-    ``_write``) and shared ``_uptodate_count`` module state to function scope,
-    to avoid a circular import at module load time (build_phases.py imports
-    this module at its own top level).
+    BP-900g-8 Set B), and one public phase function, ``build_ac_store``,
+    re-exported from build_phases.py so every existing caller (notably
+    build.py, which imports it from ``build_phases``, and
+    ``_manifest_ac_store_scripts``, which derives Set C directly from
+    ``AC_STORE_DEPLOY_MAP``) keeps working unchanged. ``build_ac_store``
+    shares the standard phase signature (target_root, config, dry_run, force)
+    and defers its imports of build_phases's private write/deploy helpers
+    (``PACKAGE_ROOT``, ``_should_overwrite``, ``_files_content_identical``,
+    ``record_deploy_failure``, ``_write``) and shared ``_uptodate_count``
+    module state to function scope, to avoid a circular import at module load
+    time (build_phases.py imports this module at its own top level).
+    ``build_ac_store_docs`` is imported (module scope, no cycle) from its own
+    sibling module, build_phases_ac_store_docs.py, and re-exported below so
+    ``from build_phases_ac_store import build_ac_store_docs`` -- and
+    build_phases.py's own re-export of it -- keep working unchanged.
 """
 
 from __future__ import annotations
@@ -31,6 +37,8 @@ from __future__ import annotations
 import shutil
 from pathlib import Path
 from typing import Any
+
+from build_phases_ac_store_docs import build_ac_store_docs  # noqa: F401  # re-exported for callers
 
 
 # ---------------------------------------------------------------------------
@@ -65,6 +73,55 @@ AC_STORE_DEPLOY_MAP: tuple[tuple[str, str], ...] = (
     ("scripts/ac_store/scan_ac_store.py",            "scan_ac_store.py"),
     ("scripts/ac_store/generate_ticket_from_ac.py",  "generate_ticket_from_ac.py"),
     ("scripts/ac_store/_component_migration_map.py", "_component_migration_map.py"),
+    # generate_ticket_from_ac.py's 24 _gtfa_* siblings. The 4035-line original
+    # was split to clear the 400-line size gate; what remains at that path is a
+    # 386-line re-export shell that is USELESS without every one of these. Omit
+    # one and the deployed generator dies at import -- loudly, unlike the
+    # importlib try/except degradation above, because the shell imports them
+    # unconditionally.
+    #
+    # The shell resolves them via importlib.import_module under a prefix
+    # COMPUTED from its own __name__ (it must work both package-qualified and
+    # as a bare directory import). A computed name is undecidable statically,
+    # so build.py's derived closure guard cannot see these from the call site;
+    # the shell carries an `if TYPE_CHECKING:` block of relative imports purely
+    # so the analyser can. That block is what keeps the guard able to check
+    # this list at all -- see unit_tests/ac_store/test_gtfa_sibling_closure_guard.py.
+    ("scripts/ac_store/_gtfa_agents_inputs.py",       "_gtfa_agents_inputs.py"),
+    ("scripts/ac_store/_gtfa_agents_map.py",          "_gtfa_agents_map.py"),
+    ("scripts/ac_store/_gtfa_body.py",                "_gtfa_body.py"),
+    ("scripts/ac_store/_gtfa_cli.py",                 "_gtfa_cli.py"),
+    ("scripts/ac_store/_gtfa_cli_parser.py",          "_gtfa_cli_parser.py"),
+    ("scripts/ac_store/_gtfa_components.py",          "_gtfa_components.py"),
+    ("scripts/ac_store/_gtfa_config.py",              "_gtfa_config.py"),
+    ("scripts/ac_store/_gtfa_constants.py",           "_gtfa_constants.py"),
+    ("scripts/ac_store/_gtfa_contracts.py",           "_gtfa_contracts.py"),
+    ("scripts/ac_store/_gtfa_decision_history.py",    "_gtfa_decision_history.py"),
+    ("scripts/ac_store/_gtfa_doc_gates.py",           "_gtfa_doc_gates.py"),
+    ("scripts/ac_store/_gtfa_doc_genre.py",           "_gtfa_doc_genre.py"),
+    ("scripts/ac_store/_gtfa_files_touched.py",       "_gtfa_files_touched.py"),
+    ("scripts/ac_store/_gtfa_frontmatter.py",         "_gtfa_frontmatter.py"),
+    # _gtfa_impl_py.py owns the "implementation .py in scope" predicate that
+    # gates the generated ticket's ## Test Requirements section (TKT-500f-6).
+    # _gtfa_body.py and _gtfa_tests_section.py import it at MODULE scope, so
+    # omitting it here ships a generator that dies at import with
+    # ModuleNotFoundError in the deployed layout while every unit test --
+    # importing from source -- stays green.
+    ("scripts/ac_store/_gtfa_impl_py.py",             "_gtfa_impl_py.py"),
+    ("scripts/ac_store/_gtfa_implemented_by.py",      "_gtfa_implemented_by.py"),
+    ("scripts/ac_store/_gtfa_paths.py",               "_gtfa_paths.py"),
+    # _gtfa_phase_agent.py owns the ticket-phase eligibility check and the
+    # substitution rule (TKT-500f-5 / -5-i). _gtfa_cli.py imports it at MODULE
+    # scope, so omitting it here ships a generator that dies at import with
+    # ModuleNotFoundError on every consumer install while the source-tree tests
+    # stay green.
+    ("scripts/ac_store/_gtfa_phase_agent.py",         "_gtfa_phase_agent.py"),
+    ("scripts/ac_store/_gtfa_phases.py",              "_gtfa_phases.py"),
+    ("scripts/ac_store/_gtfa_report.py",              "_gtfa_report.py"),
+    ("scripts/ac_store/_gtfa_seams.py",               "_gtfa_seams.py"),
+    ("scripts/ac_store/_gtfa_store.py",               "_gtfa_store.py"),
+    ("scripts/ac_store/_gtfa_test_descriptors.py",    "_gtfa_test_descriptors.py"),
+    ("scripts/ac_store/_gtfa_tests_section.py",       "_gtfa_tests_section.py"),
     ("scripts/ac_store/ac_prioritizer.py",            "ac_prioritizer.py"),
     ("scripts/ac_store/mark_ac_done.py",              "mark_ac_done.py"),
     ("scripts/ac_store/scan_ac_orphans.py",           "scan_ac_orphans.py"),
@@ -84,6 +141,23 @@ AC_STORE_DEPLOY_MAP: tuple[tuple[str, str], ...] = (
     # name — unit_tests/ac_store/test_bp_1100g_3_ii.py::_MODULE_FILES builds its
     # own simulated deployed tree and does not read this map.
     ("scripts/ac_store/_done_proof_phase_helpers.py", "_done_proof_phase_helpers.py"),
+    # _done_proof_entry_point_gate.py (BO-2900a-1) is a THIRD sibling
+    # extracted out of done_proof.py, alongside _done_proof_phase_helpers.py,
+    # and done_proof.py imports it at MODULE scope too. Same fast-lane gate,
+    # same failure mode, same second-copy note above.
+    ("scripts/ac_store/_done_proof_entry_point_gate.py", "_done_proof_entry_point_gate.py"),
+    # _done_proof_automation_gate.py (BO-2900a-3 rework): FOURTH sibling out
+    # of done_proof.py, same MODULE-scope import, same deploy requirement.
+    ("scripts/ac_store/_done_proof_automation_gate.py", "_done_proof_automation_gate.py"),
+    # done_proof_kind_support.py (TQ-500f-3-i) -- kind classification for the
+    # red-baseline gate, imported by _fl_common.py. No leading underscore
+    # (BP-900h-4): an underscore reads to the declaring-files inspector as
+    # "same-dir sibling", wrong for this cross-directory import.
+    ("scripts/ac_store/done_proof_kind_support.py", "done_proof_kind_support.py"),
+    # _kind_plugin.py (TQ-500f-3-i H-1) -- the pytest plugin (-p _kind_plugin)
+    # done_proof_kind_support.py loads to read each test's real exception
+    # type from pytest's own hook data. Must deploy alongside it.
+    ("scripts/ac_store/_kind_plugin.py",              "_kind_plugin.py"),
     # ac_parent_id.py provides derive_parent_id, imported at module scope by
     # scripts/build_orchestration/fast_lane.py. Without it the deployed
     # fast_lane.py exists but dies at import with ModuleNotFoundError, so
@@ -102,15 +176,30 @@ AC_STORE_DEPLOY_MAP: tuple[tuple[str, str], ...] = (
     # scripts the AC requires (deploy_map completeness gap, not a
     # missing-source gap).
     ("scripts/ac_store/validate_ac_schema.py",        "validate_ac_schema.py"),
+    # declared_files.py (ACD-1600c-4): the single declared_files read seam.
+    # Imported by validate_ac_schema.py (`from declared_files import
+    # declared_files_commit_messages`) AND by the check-ac-schema commit hook
+    # (templates/scripts/commit_guardian/check_ac_schema.py, via
+    # _ac_store_locator.ensure_ac_store_on_syspath()) -- deploy-manifest-first
+    # per ADR-026 safety rule 2, so neither importer crashes with
+    # ModuleNotFoundError on a fresh install.
+    ("scripts/ac_store/declared_files.py",            "declared_files.py"),
+    # _declared_files_path_form.py: path_form_errors/load_build_definition,
+    # extracted out of declared_files.py to stay under the check-file-size
+    # ratchet (H-1 fix). declared_files.py imports it at module scope
+    # (`from _declared_files_path_form import ...`); MUST deploy alongside
+    # its only importer or the deployed declared_files.py crashes with
+    # ModuleNotFoundError.
+    ("scripts/ac_store/_declared_files_path_form.py", "_declared_files_path_form.py"),
     # _ac_components.py is imported by validate_ac_schema.py
     # (`from _ac_components import components_field_errors, load_registry_ids`).
     # It was present in source but absent from this map -- discovered by AC
     # BP-900g-8's derived closure guard, not by manual audit -- so consumer
     # installs shipped validate_ac_schema.py without a sibling it imports at
     # module load time, which crashes with ModuleNotFoundError (an import
-    # statement fails loudly, unlike the importlib.util try/except pattern
-    # used elsewhere in this file).
+    # statement fails loudly, unlike the importlib.util try/except elsewhere).
     ("scripts/ac_store/_ac_components.py",            "_ac_components.py"),
+    ("scripts/ac_store/_ac_schema_test_spec_validators.py", "_ac_schema_test_spec_validators.py"),  # TQ-500f-1/-2-i: same import hazard as _ac_components.py
     ("scripts/ac_store/ac_triage.py",                 "ac_triage.py"),
     ("scripts/ac_store/create_ac_workflow.py",        "create_ac_workflow.py"),
     ("scripts/ac_store/cross_reference_audit.py",     "cross_reference_audit.py"),
@@ -125,6 +214,25 @@ AC_STORE_DEPLOY_MAP: tuple[tuple[str, str], ...] = (
     ("scripts/ac_store/__init__.py",                  "__init__.py"),
     ("scripts/build_ac_mode_detection.py",            "build_ac_mode_detection.py"),
     ("scripts/goal_to_epic.py",                       "goal_to_epic.py"),
+    # goal_to_epic.py's 14 siblings. It imports every one of them at MODULE
+    # scope, so a deploy that ships the entry point without all fourteen does
+    # not degrade -- it raises ModuleNotFoundError on first use. Two of them
+    # (epic_ac_phases, epic_phases) arrive only transitively via epic_pipeline
+    # and are exactly as load-bearing as the twelve named directly.
+    ("scripts/ac_store/epic_ac_phases.py",            "epic_ac_phases.py"),
+    ("scripts/ac_store/epic_ac_store.py",             "epic_ac_store.py"),
+    ("scripts/ac_store/epic_assembly.py",             "epic_assembly.py"),
+    ("scripts/ac_store/epic_cli.py",                  "epic_cli.py"),
+    ("scripts/ac_store/epic_dependencies.py",         "epic_dependencies.py"),
+    ("scripts/ac_store/epic_errors.py",               "epic_errors.py"),
+    ("scripts/ac_store/epic_master_plan.py",          "epic_master_plan.py"),
+    ("scripts/ac_store/epic_naming.py",               "epic_naming.py"),
+    ("scripts/ac_store/epic_phases.py",               "epic_phases.py"),
+    ("scripts/ac_store/epic_pipeline.py",             "epic_pipeline.py"),
+    ("scripts/ac_store/epic_readiness.py",            "epic_readiness.py"),
+    ("scripts/ac_store/epic_readiness_gate.py",       "epic_readiness_gate.py"),
+    ("scripts/ac_store/epic_runtime.py",              "epic_runtime.py"),
+    ("scripts/ac_store/epic_tickets.py",              "epic_tickets.py"),
 )
 
 
@@ -404,82 +512,17 @@ def build_ac_store(target_root: Path, config: dict[str, Any],
     return written
 
 
-def build_ac_store_docs(target_root: Path, config: dict[str, Any],
-                        dry_run: bool, force: bool) -> int:
-    """Install AC Traceability Store documentation into the target project.
-
-    Copies ``templates/docs/how-to/ac-traceability-store.md`` to
-    ``{target_root}/docs/how-to/ac-traceability-store.md`` and
-    ``templates/docs/reference/ac-schema.md`` to
-    ``{target_root}/docs/reference/ac-schema.md``.
-
-    Uses write-if-absent semantics — existing files are never overwritten,
-    regardless of the ``force`` parameter.  This preserves user-edited
-    documentation across subsequent build runs.
-
-    Args:
-        target_root: Absolute path to the target project root.
-        config: Build configuration dict (not used, accepted for interface
-            consistency).
-        dry_run: When True, logs intent but writes nothing.
-        force: Ignored — this phase always uses write-if-absent semantics.
-
-    Returns:
-        Count of files written (or that would be written in dry-run mode).
-
-    # DECISION HISTORY
-    # - 2026-06-04 13:10 [documentation-expert/EPIC-ACTraceabilityStore/09]:
-    #   Created to install how-to and reference docs for the AC store.
-    #   Both files are write-if-absent so user-edited versions are preserved.
-    #   (#EPIC-ACTraceabilityStore/09)
-    """
-    import build_phases as _bp  # noqa: PLC0415
-    from template_compiler import inject_config  # noqa: PLC0415
-
-    docs_dir = config.get("docs_root", "docs/").rstrip("/")
-    docs_template_dir = _bp.TEMPLATES_DIR / "docs"
-    doc_files = [
-        (
-            docs_template_dir / "how-to" / "ac-traceability-store.md",
-            target_root / docs_dir / "how-to" / "ac-traceability-store.md",
-            "how-to/ac-traceability-store.md",
-        ),
-        (
-            docs_template_dir / "reference" / "ac-schema.md",
-            target_root / docs_dir / "reference" / "ac-schema.md",
-            "reference/ac-schema.md",
-        ),
-    ]
-
-    written = 0
-    for template_path, dest_path, display_name in doc_files:
-        if not template_path.exists():
-            # BP-900g-9 (n_location_rule: all). Was a bare print(f"[WARNING]
-            # ...") rather than _log.warning — precisely why every
-            # grep-based audit of this file for warn-and-continue sites
-            # missed it. Record and keep going so one run reports the whole
-            # remediation set; build.py raises once at the end.
-            _bp.record_deploy_failure("build_ac_store_docs", display_name, template_path)
-            continue
-        if dest_path.exists():
-            print(f"  ac-store-docs: docs/{display_name} exists (skipped)")
-            continue
-        if dry_run:
-            print(f"  [DRY-RUN] would write docs/{display_name}")
-            written += 1
-        else:
-            dest_path.parent.mkdir(parents=True, exist_ok=True)
-            content = inject_config(
-                template_path.read_text(encoding="utf-8"), config
-            )
-            dest_path.write_text(content, encoding="utf-8")
-            print(f"  docs/{display_name}")
-            written += 1
-
-    return written
-
-
 # DECISION HISTORY
+# - 2026-09-28 [python-coder/merge-driven-split, EPIC-AProofThatReachedThe
+#   CodeByDirectImport/BO-2900a-3]: Moved build_ac_store_docs() out again,
+#   verbatim, into the new sibling module build_phases_ac_store_docs.py (and
+#   re-exported it from here via `from build_phases_ac_store_docs import
+#   build_ac_store_docs` at module scope) -- landing a `git merge
+#   origin/main` had grown AC_STORE_DEPLOY_MAP (both this ticket's and
+#   main's new entries) to 408 content lines, 8 over the check-file-size
+#   hook's 400-content-line limit, with no comment-only trimming margin left
+#   to close an 8-line gap honestly. See that module's own DECISION HISTORY
+#   for the full account. (#BO-2900a-3)
 # - 2026-09-14 [python-coder/bp-size-split]: Moved AC_STORE_DEPLOY_MAP,
 #   build_ac_store and build_ac_store_docs verbatim from build_phases.py into
 #   this new sibling module to bring build_phases.py under the
@@ -498,3 +541,14 @@ def build_ac_store_docs(target_root: Path, config: dict[str, Any],
 #   layout, so the deployed gate's CLI invocation would crash with
 #   ModuleNotFoundError even though unit tests importing from source stay
 #   green. (#ACD-1900b-5-i)
+# - 2026-09-28 [python-coder/ACD-1600c-4]: Added declared_files.py to
+#   build_ac_store's deploy_map (ADR-026 safety rule 2, deploy-manifest-
+#   first). Both validate_ac_schema.py (module-scope import) and the
+#   check-ac-schema commit hook (via _ac_store_locator's sibling lookup)
+#   import this new single declared_files read seam; without a deploy_map
+#   entry it would exist in source but not the deployed layout, crashing both
+#   importers with ModuleNotFoundError on a fresh install.
+# - 2026-09-28 [python-coder/ACD-1600c-4 H-1 fix]: Added
+#   _declared_files_path_form.py, split out of declared_files.py to stay
+#   under check-file-size. Same reasoning as the entry above: declared_files.py
+#   imports it at module scope, so it must deploy alongside it.

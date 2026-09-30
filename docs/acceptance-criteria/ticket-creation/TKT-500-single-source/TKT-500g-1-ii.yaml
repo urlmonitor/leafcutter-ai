@@ -26,10 +26,14 @@ doc_links:
     relationship: specifies
     status: exists
     relevance: "States the rule this criterion pins: the criteria-derived fallback tags its own descriptors and appends one mandatory reachability descriptor, while an authored demand is taken as-is and gets no generator-added entries. The two routes must not be blended."
-  - path: scripts/ac_store/generate_ticket_from_ac.py
+  - path: scripts/ac_store/_gtfa_tests_section.py
     relationship: constrains
     status: exists
-    relevance: "The authored route and the derive-from-criteria route meet here. The top-up belongs to the derive route only."
+    relevance: "The authored route and the derive-from-criteria route meet here, in _build_test_requirements_section. The top-up belongs to the derive route only."
+  - path: scripts/ac_store/_gtfa_test_descriptors.py
+    relationship: constrains
+    status: exists
+    relevance: "Holds the derive route (_derive_tests_from_criteria) and the reachability floor (_ensure_reachability_floor / _reachability_descriptor) — the statement this criterion says must NOT be appended to an authored demand."
   - path: docs/testing/test-angles.md
     relationship: describes
     status: exists

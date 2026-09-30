@@ -40,10 +40,22 @@ doc_links:
   - path: docs/architecture/components/ac-driven-dev.md
     relationship: describes
     status: exists
-  - path: scripts/ac_store/generate_ticket_from_ac.py
+  - path: scripts/ac_store/_gtfa_body.py
     relationship: modifies
     status: exists
-    relevance: "The three fallback sites — ac.get('assigned_agent', 'python-coder') at lines 2456, 3195 and 3235 — plus the two places the resulting value reaches the phase map: all_needed.add(assigned_agent) at line 964 (computed path, which silently drops a None) and agents_legacy[assigned_agent] = 'needed' at line 1116 (legacy path, no filter, emits the nameless phase)."
+    relevance: "Holds one of the ac.get('assigned_agent', 'python-coder') fallback sites, in _build_ticket_body — the read that feeds the body's agents map."
+  - path: scripts/ac_store/_gtfa_cli.py
+    relationship: modifies
+    status: exists
+    relevance: "Holds the other ac.get('assigned_agent', 'python-coder') fallback site, in _build_agents_map_for_write_path — the read on the path that writes the ticket to disk."
+  - path: scripts/ac_store/_gtfa_agents_inputs.py
+    relationship: modifies
+    status: exists
+    relevance: "The computed path's all_needed.add(assigned_agent) in _collect_needed_agents — a None added here is silently DROPPED when the map is built by iterating phase_order, so the record simply loses its producer phase."
+  - path: scripts/ac_store/_gtfa_agents_map.py
+    relationship: modifies
+    status: exists
+    relevance: "The legacy path's agents_legacy[assigned_agent] = 'needed' in _legacy_agents_map — no filter, so a None or empty producer emits the literally nameless phase entry this criterion exists to prevent."
   - path: scripts/ac_store/scan_ac_store.py
     relationship: related
     status: exists
@@ -55,8 +67,8 @@ it_requirements:
     assigned_agent_read:
       type: string
       description: "The single coalescing read that replaces ac.get('assigned_agent', 'python-coder') at every site: a present-and-null value, an absent key, and an empty string all resolve to the same default producer, and the resolution records whether the value was declared or defaulted so ACS-100i-10's ticket annotation can state which. Default value: python-coder."
-  reference_file_path: "scripts/ac_store/generate_ticket_from_ac.py"
-  n_location_rule: "3"
+  reference_file_path: "scripts/ac_store/_gtfa_body.py"
+  n_location_rule: "1 here, plus the sibling read in _gtfa_cli.py and the two phase-map consumers in _gtfa_agents_inputs.py and _gtfa_agents_map.py — see doc_links. Prefer one shared coalescing read over parallel edits."
   required_skills:
     - python-coder
   post_write_commands:

@@ -244,7 +244,7 @@ def build_workflow_scripts(target_root: Path, config: dict[str, Any],
 
     version_known = version_str is not None
     version_ok = False
-    if version_known:
+    if version_str is not None:  # not `version_known`: mypy cannot narrow via a bool
         try:
             version_ok = Version(version_str) >= Version(_MINIMUM_VERSION)
         except InvalidVersion:
@@ -310,7 +310,14 @@ def build_workflow_scripts(target_root: Path, config: dict[str, Any],
         if not _bp._should_overwrite(dest, force):
             continue
 
-        # Compare-before-write guard (binary — SHA-256).
+        # Compare-before-write guard (binary — SHA-256). This branch does NOT
+        # route through _bp._files_content_identical() (it compares the
+        # rendered `emitted` bytes to `dest`, not two on-disk files) —
+        # ACD-2100d-2-i names it as the load-bearing fourth branch precisely
+        # because of that: it is the path the route's own deployed copy
+        # (.claude/workflows/*.js) takes, so it must call
+        # _bp.announce_if_local_change_replaced() itself rather than relying
+        # on instrumentation elsewhere.
         if dest.exists():
             import hashlib as _hashlib
             existing_digest = _hashlib.sha256(dest.read_bytes()).hexdigest()
@@ -319,6 +326,7 @@ def build_workflow_scripts(target_root: Path, config: dict[str, Any],
                 _bp._uptodate_count += 1
                 unchanged += 1
                 continue
+            _bp.announce_if_local_change_replaced(dest)
 
         if dry_run:
             print(f"  [DRY-RUN] would write .claude/workflows/{js_file.name}")
@@ -410,6 +418,26 @@ def build_workflow_tools(target_root: Path, config: dict[str, Any],
 
     - ``scripts/add_component.py`` — used by the add-component skill.
     - ``scripts/knowledge_query.py`` — used by the knowledge-query skill.
+    - ``scripts/knowledge_frontmatter_reader.py`` — knowledge_query.py's
+      sibling frontmatter/YAML reader module (KM-KGS-100a-3-xi); must ship
+      alongside it or knowledge_query.py fails to import in consumers.
+    - ``scripts/frontmatter_path_resolver.py`` — GE-118d's shared
+      path-bearing-frontmatter-entry resolver, imported by
+      templates/scripts/commit_guardian/frontmatter_validators.py via the
+      sibling locator module _frontmatter_path_resolver_locator.py; must
+      ship as a sibling of scripts/commit_guardian/ under this phase's
+      real deploy root (never under templates/scripts/commit_guardian/
+      itself — see the resolver's own docstring for why) or the deployed
+      check-doc-frontmatter guard fails to import it on any document using
+      the labelled entry shape.
+    - ``scripts/knowledge_file_nodes.py`` — knowledge_query.py's second
+      sibling module (KM-KGS-100d-4), resolving file-path relationship
+      values to path-keyed graph nodes; must also ship alongside it for the
+      same reason.
+    - ``scripts/knowledge_surface_check.py`` — knowledge_query.py's third
+      sibling module (KM-KGS-100c-1/-i/-ii), the surface-set completeness
+      check; loaded on demand by knowledge_query.check_surface_set() and
+      must also ship alongside it.
     - ``scripts/set_ticket_status.py`` — used by ticket-lifecycle agents and skills.
     - ``scripts/ticket_prioritizer.py`` — used by the ticket-prioritizer skill.
     - ``scripts/port_registry.py`` — used by the live-surface-tester agent.
@@ -443,6 +471,28 @@ def build_workflow_tools(target_root: Path, config: dict[str, Any],
     #   can import it in consumer projects. Previously absent from the deployed
     #   .leafcutter/scripts/ tree, making the hook a silent no-op outside the
     #   source tree. Parity with _manifest_workflow_tool_scripts() in build.py.
+    # - 2026-09-17 12:00 [python-coder/KM-KGS-100a-3-xi]: Added
+    #   knowledge_frontmatter_reader.py right after knowledge_query.py so the
+    #   extracted reader module deploys side by side with it in every
+    #   consumer install. (#TICKETLESS reason=km-kgs-100a-3-xi-fastlane)
+    # - 2026-09-25 [python-coder/KM-KGS-100d-4 epic]: Added
+    #   knowledge_file_nodes.py right after knowledge_frontmatter_reader.py --
+    #   knowledge_query.py's second sibling module, loaded the same eager way
+    #   at import time, so a consumer install missing it fails to import
+    #   knowledge_query.py at all. (#TICKETLESS reason=km-fast-lane-file-nodes)
+    # - 2026-09-25 15:16 [python-coder/KM-KGS-100c-1 surface-check]: Added
+    #   knowledge_surface_check.py right after knowledge_file_nodes.py --
+    #   knowledge_query.py's third sibling module, loaded on demand via
+    #   _load_sibling_module() by check_surface_set(), so a consumer install
+    #   missing it fails that call. (#TICKETLESS reason=km-kgs-100c-1-surface-check)
+    # - 2026-09-28 [python-coder/GE-118d]: Added frontmatter_path_resolver.py
+    #   right after knowledge_frontmatter_reader.py. Placement in this list
+    #   has no import-order dependency on any other entry; it is the second
+    #   of two required deploy-manifest locations for this ticket (see
+    #   _manifest_workflow_tool_scripts() in build_phases_knowledge.py for
+    #   the first, and this ticket's Implementation Notes for the
+    #   architect-review correction of which file that second location
+    #   actually lives in).
     """
     import shutil
 
@@ -452,6 +502,10 @@ def build_workflow_tools(target_root: Path, config: dict[str, Any],
     deploy_scripts = [
         "add_component.py",
         "knowledge_query.py",
+        "knowledge_frontmatter_reader.py",
+        "frontmatter_path_resolver.py",
+        "knowledge_file_nodes.py",
+        "knowledge_surface_check.py",
         "set_ticket_status.py",
         "ticket_prioritizer.py",
         "port_registry.py",
@@ -544,4 +598,12 @@ def build_workflow_tools(target_root: Path, config: dict[str, Any],
 #   build_phases.py under the 400-counted-line check-file-size limit.
 #   Re-exported from build_phases.py so build.py and every test import
 #   keeps working. (#refactor/build-phases-size-limit)
+# - 2026-09-14 [python-coder/KI-BP-20260831-0620]: Reapplied the mypy narrowing
+#   fix to build_workflow_scripts() after the bp-size-split moved it here:
+#   `if version_str is not None:` in place of `if version_known:` -- mypy
+#   cannot narrow an Optional through an intermediate bool, so the widened
+#   CI pathspec (this file now being checked for the first time) flagged
+#   Version(version_str) as str | None where str is required. version_known
+#   still holds the same value and is still consulted below; behaviour is
+#   unchanged. (#KI-BP-20260831-0620)
 # ===========================================================================

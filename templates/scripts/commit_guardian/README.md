@@ -37,7 +37,8 @@ Every script present in `scripts/commit_guardian/` that acts as a hook has a row
 | `check_complexity.py` | `check-complexity` | Blocking | Blocks Python files where any function/method exceeds the cyclomatic complexity limit. | `complexity.max_score` (default: 15) | — |
 | `check_sql_complexity.py` | `check-sql-complexity` | Blocking | Blocks SQL files where keyword-counted structural complexity exceeds the limit. | `sql_complexity.max_score` (default: 65) | — |
 | `check_docstrings.py` | `check-docstrings` | Blocking | Enforces Google-style docstrings (summary, `Args:`, `Returns:`) on all Python functions, methods, and classes. Catches stale param names using `docstring-parser`. | `docstrings.style`, `docstrings.trivial_max_lines`, `docstrings.exempt_dunders` | — |
-| `check_file_size.py` | `check-file-size` | Blocking | Blocks new Python (`.py`) and SQL (`.sql`) files that exceed the line-count limit. Modifications to existing large files are exempt (incremental refactor path). | `file_size.line_limits`, `file_size.default_limit` | — |
+| `check_file_size.py` | `check-file-size` | Blocking | Blocks any covered file — `.py`, `.sql`, `.js`, `.mjs`, `.ts`, `.tsx`, `.sh` — that exceeds its line-count limit. Applies to every changed file of a covered kind, not only newly added ones; an already-oversized file may shrink and commit cleanly, and growing it further is refused (the incremental ratchet) — but staying at the same length is not by itself enough: the gate judges the measured lines the change put into the file, not merely the file's resulting length, so a same-length change that replaces measured content can still be refused, while a change that adds no measured lines is free. The rule used to arrive at a file's quoted length is published — never restated as prose here — by `_file_size_ratchet.describe_measurement_rule()`, which is generated from the same counting function the refusal itself calls; every refusal prints that generated statement on its own `Measures:` line, so it is always current with the rule actually in force. | `file_size.line_limits`, `file_size.default_limit`, `file_size.checked_extensions` | — |
+| `check_file_size_rule_parity.py` | `check-file-size-rule-parity` | Blocking | Reconciles every configured published statement of the file-size rule's covered kinds (this row and `file_size._comment` below) against the real, enforced `file_size.checked_extensions`, refusing a commit that leaves either side saying something the other does not. | `file_size.published_rule_surfaces` | — |
 | `check_folder_density.py` | `check-folder-density` | Blocking | Blocks commits when any folder would exceed the maximum number of non-markdown files, encouraging sub-folder modularity. `__init__.py` and `.md` files are exempt. | `folder_density.max_files_per_folder` (default: 15) | — |
 | `check_adr_cross_reference.py` | `check-adr-cross-reference` | Advisory by default; blocking with `--strict` | For staged ADRs, verifies each listed `components` entry has a back-link from its `detail_ref` doc. For staged `detail_ref` docs, checks the reverse direction. | _(no config key — `--strict` flag on hook entry)_ | — |
 | `check_structural_change.py` | `check-structural-change` | Blocking | Detects structural additions (new `models/*.py`, new docker-compose service, new top-level package, new SQL procedure namespace, new `live_trader/*.py` module, new collector worker) and requires `docs/components.json` to be staged in the same commit. | _(no config key — signals are hardcoded patterns; see escape hatch below)_ | — |
@@ -66,9 +67,10 @@ Directories excluded from ALL hooks unless a hook section provides its own `excl
 
 | Key | Type | Default | Governs |
 |-----|------|---------|---------|
-| `line_limits` | object | `{".py": 400, ".sql": 600}` | Per-extension hard limits for new files. |
+| `line_limits` | object | `{".py": 400, ".sql": 600}` | Per-extension hard limits, applied to every changed file of a covered kind (not only newly added ones — see `check-file-size` above). |
 | `default_limit` | integer | `400` | Fallback limit for extensions not in `line_limits`. |
 | `checked_extensions` | array | `[".py", ".sql"]` | File extensions that are checked. |
+| `published_rule_surfaces` | array | `["README.md", "commit_guardian.json"]` | Paths (relative to `check_file_size_rule_parity.py`'s own directory) of every published statement of this rule's covered kinds, watched by `check-file-size-rule-parity`. |
 
 ### `complexity`
 
@@ -381,7 +383,7 @@ To verify the pipeline end-to-end:
 ## Critical Context
 
 - **Git Worktree Support**: All hooks run through `run_hook.py`, which detects git worktrees and uses the main worktree's `.venv` Python. This is necessary because Poetry's `virtualenvs.in-project = true` creates an empty `.venv` per directory, causing `ModuleNotFoundError` for `docstring-parser`, `psycopg2`, etc. in worktrees. No `--no-verify` is needed for worktree commits.
-- **New Files vs. Modified Files**: The file size check targets only newly-added files. Modifications to existing large files are exempt to allow for incremental refactoring.
+- **New Files vs. Modified Files**: The file size check applies to every changed file of a covered kind, not only newly-added ones (since 2026-05-01, to drive progressive refactoring). An already-oversized file may shrink and commit cleanly, and growing it further is refused — the incremental ratchet — but staying at the same length is not by itself enough: the gate judges the measured lines the change put into the file, not the file's resulting length, so a same-length change that replaces measured content can still be refused, while a change that adds no measured lines is free.
 - **Windows Compatibility**: File handling in this module is Windows-compatible (temporary file locking handled via stdlib).
 - **Pre-commit Integration**: Scripts are intended to be run via `pre-commit`. They are configured in `.pre-commit-config.yaml` at the project root.
 

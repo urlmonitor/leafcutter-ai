@@ -46,6 +46,8 @@ if str(_UNIT_TESTS_DIR) not in sys.path:
 
 from _workflow_engine_harness import HarnessResult, run_workflow_under_e2  # noqa: E402
 
+import workflows._fast_lane_claim_fixtures as _claim_fx  # noqa: E402
+
 _WORKFLOW_PATH = _REPO_ROOT / "templates" / "workflows-js" / "fast-lane-ship.js"
 _REGISTRY_PATH = _REPO_ROOT / "config" / "agent_registry.json"
 
@@ -88,12 +90,9 @@ def _base_label_responses(worktree_root: Path, ac_ids: list[str]) -> dict[str, A
     return {
         "fastlane-worktree": _worktree_label_response(worktree_root),
         "resolve-connected": {"ac_ids": ac_ids, "message": f"{len(ac_ids)} to build"},
-        "claim-connected": {
-            "claimed": ac_ids,
-            "excluded_claimed": [],
-            "target_refused": False,
-            "message": f"claimed {len(ac_ids)} ACs",
-        },
+        "claim-connected": _claim_fx.claim_ran(
+            ac_ids, message=f"claimed {len(ac_ids)} ACs"
+        ),
         "test-writer-connected": {
             "status": "ok",
             "tests_written": ["unit_tests/x/test_stub.py"],
@@ -336,12 +335,11 @@ class TestReleaseTargetsClaimedIds(_FixtureCase):
         must target the narrower (actually-claimed) list, not the full
         resolved set."""
         narrow_overrides = dict(_HALT_SCENARIOS["coder-fail"])
-        narrow_overrides["claim-connected"] = {
-            "claimed": ["FLT-9111a"],
-            "excluded_claimed": ["FLT-9111b"],
-            "target_refused": False,
-            "message": "claimed 1 of 2 (other owned by a concurrent run)",
-        }
+        narrow_overrides["claim-connected"] = _claim_fx.claim_ran(
+            ["FLT-9111a"],
+            excluded_claimed=["FLT-9111b"],
+            message="claimed 1 of 2 (other owned by a concurrent run)",
+        )
         result = self._run_to(narrow_overrides)
         calls = _release_calls(result)
         self.assertTrue(calls, f"no release call recorded. stderr={result.stderr!r}")
@@ -396,12 +394,26 @@ class TestClaimDispatchUnaltered(_FixtureCase):
     def test_the_claim_dispatch_is_not_altered_by_this_change(self) -> None:
         # covers: BO-2400f-10-i
         """No-collateral-change guard: exactly one claim-connected dispatch
-        is still recorded, with agentType status-checker (the claim dispatch
-        belongs to BO-2400f-7 and must be left alone by this fix)."""
+        is still recorded, and the release-path change does not alter its
+        performer.
+
+        The performer was status-checker when this guard was written. BO-2400f-7-iii
+        later changed it deliberately — status-checker declares permits_shell: false
+        and refused the claim command in a live run on 2026-09-23 — so the expected
+        value tracks that record, not the original literal. It moved once more on
+        2026-09-30, from worktree-agent to the dedicated command-step-runner: the
+        former was only ever standing in as the sole permits_shell: true entry, and
+        its own charter ("exactly two actions: create and remove") left it free to
+        decline the claim the same way status-checker had.
+
+        What this guard still asserts is what it was always for: that the RELEASE
+        path's wiring leaves the claim dispatch alone, one call, performer unchanged
+        by anything here.
+        """
         result = self._run_to(_HALT_SCENARIOS["coder-fail"])
         claim_calls = [c for c in result.agent_calls if c.label == "claim-connected"]
         self.assertEqual(len(claim_calls), 1, f"expected exactly one claim-connected call: {result.agent_calls}")
-        self.assertEqual(claim_calls[0].agent_type, "status-checker")
+        self.assertEqual(claim_calls[0].agent_type, "command-step-runner")
 
 
 if __name__ == "__main__":

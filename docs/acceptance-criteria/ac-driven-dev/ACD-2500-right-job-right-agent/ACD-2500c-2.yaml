@@ -1,0 +1,113 @@
+id: ACD-2500c-2
+components:
+  - ac_driven_dev
+  - testing_quality
+  - build_orchestration
+readiness: approved
+priority: high
+title: "The test design is produced after technical planning and before the approval gate"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  Given the feature-planning workflow has finished the technical planner stage for a batch
+    of 4 leaf code requirements,
+  When the workflow continues,
+  Then the code-aware test-design step runs on those 4 requirements before the final
+    approval gate is shown,
+  And the approval gate shows each requirement's test design next to its criteria,
+  And a requirement the step could not design (for example its declared files could not
+    be opened) is shown at the gate as "test design pending" and is not offered for approval,
+  And when the step is skipped or fails for the whole batch, none of the 4 is offered for
+    approval.
+depends_on:
+  - ACD-2500c
+  - ACD-2500c-1
+  - ACD-2500b-2
+doc_links:
+- path: templates/agents/it-po.md
+  relationship: describes
+  status: exists
+- path: docs/architecture/adrs/ADR-006-flatten-supervisor-chain.md
+  relationship: describes
+  status: exists
+- path: docs/architecture/diagrams/c3-008-plan-feature-decision-gate-sequence.md
+  relationship: describes
+  status: exists
+- path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+  relationship: describes
+  status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+- 'Edits templates/workflows-js/plan-feature.js (python-coder craft per ACD-1700b-1): a new stage after
+  the technical-planner stage and before the final approval gate, running in order: the pre-pass script
+  (ACD-2500d-5-i), the code-aware agent (ACD-2500d-5), then the requirement rule check (ACD-2500a-1).'
+- 'Dispatch topology per ADR-006: the depth-0 workflow dispatches the agent; the agent spawns nothing.'
+- 'Fail-closed: a skipped, failed, undetermined or unparseable result for the batch means no record in
+  the batch is offered for approval; a per-record failure marks only that record ''test design pending''.'
+- Success is judged from the records' on-disk state (design present and rule check passed), never from
+  the agent's returned text.
+- The approval gate shows each record's test design next to its criteria and lists 'test design pending'
+  records separately with no approve option.
+- 'Ships to consumer projects with the plan-feature workflow: canonical source and deployed copy kept
+  in parity through the build (ADR-001, ADR-013) and verified from the deployed layout after a rebuild.'
+delivers_to:
+  agent: architecture-diagram-author
+  contract: 'Stage order: technical planner -> rule check -> pre-pass script -> code-aware agent -> rule
+    check -> approval gate; pending branch at the gate. Drawn by ACD-2500c-4.'
+expects_from:
+- ac_id: ACD-2500d-5
+  contract: 'Agent id ''test-designer'' (working name, user to confirm). Machine-parsed result: one
+    JSON value {status: ''ok''|''blocked'', records: [{id: str, test_design: ''written''|''pending''|''not_needed'',
+    file_findings: ''written''|''none'', reason: str|null}], anomalies: [str]}; the workflow judges success
+    from on-disk record state, the JSON only routes.'
+- ac_id: ACD-2500b-2
+  contract: 'Closed hold-reason vocabulary, defined once (docs/reference/ac-schema.md plus one code constant):
+    ''missing file targets'', ''missing test contract'' (ACD-1600c-1, unchanged), ''test design pending''
+    (ACD-2500b-2), ''reference file pending'' (ACD-2500d-2-i), ''file finding undecided'' (ACD-2500d-3-i).
+    Approval report shape: {approved: [id], held: [{id: str, file: str, reason: <vocabulary value>}]}.'
+test_spec:
+- name: test_code_aware_step_runs_before_final_gate
+  target_dir: unit_tests/ac_driven_dev/
+  framework: pytest
+  type: integration
+  description: 'Workflow harness: the code-aware step runs on the 4 requirements before the final gate
+    is shown.'
+  angle: reachability
+- name: test_gate_shows_design_next_to_criteria
+  target_dir: unit_tests/ac_driven_dev/
+  framework: pytest
+  type: integration
+  description: The approval gate payload carries each requirement's test design next to its criteria.
+- name: test_undesignable_record_shown_pending_not_offered
+  target_dir: unit_tests/ac_driven_dev/
+  framework: pytest
+  type: integration
+  description: A record whose declared files could not be opened is shown 'test design pending' and not
+    offered for approval.
+  angle: failure
+- name: test_batch_skip_or_failure_offers_none
+  target_dir: unit_tests/ac_driven_dev/
+  framework: pytest
+  type: integration
+  description: When the step is skipped or fails for the whole batch, none of the 4 is offered for approval.
+  angle: failure
+origin_agent: business-analyst
+created: 2026-09-25
+amended_by:
+- reason: it-po-technical-enrichment
+  date: '2026-09-25'
+  by: it-po
+superseded_by: null
+covered_by:
+  - ACD-2500c-2-i
+implemented_by: []
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  Ordering inside the goal: ACD-2500b and ACD-2500c ship together (ACD-2500 notes). If
+  this AC ships without ACD-2500c-1, ACD-2500b-2 holds every new code requirement at
+  "test design pending" - visible, not silent, but blocking. IT-PO should batch them.

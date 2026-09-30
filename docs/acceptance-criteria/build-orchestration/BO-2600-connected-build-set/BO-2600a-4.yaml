@@ -41,6 +41,11 @@ doc_links:
   - path: scripts/goal_to_epic.py
     relationship: related
     status: exists
+    relevance: "Still the correct CLI to invoke (`goal_to_epic.py --ids <a,b,c>`) — unchanged by the 2026-09-14 decomposition. The flag's own parsing now lives in epic_cli.py below, which is what a prose citation of the --ids contract should point at."
+  - path: scripts/ac_store/epic_cli.py
+    relationship: related
+    status: exists
+    relevance: "Owns the --ids argparse declaration and _run_ids_mode's comma split — the contract build-ac.md must describe correctly (space-separated tokens are not accepted)."
 assigned_agent: llm-expert
 estimated_complexity: M
 delivers_to: null

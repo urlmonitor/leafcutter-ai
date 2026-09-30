@@ -144,6 +144,12 @@ boundary: 'Exercises the empty / one / many / limit / malformed-but-parseable
 failure: 'Feeds a known-bad input through the same entry point or gate and
   asserts it blocks (non-zero exit, or the blocker string in the payload) or
   degrades fail-closed, rather than only asserting the happy path succeeds.'
+discrimination: 'A conditional, trigger-fired angle: it fires for bug-fix or
+  gate/guard ACs, or when a test entry carries must_catch; it never consumes
+  one of the four angle slots by default and may share a test with
+  criterion. Its distinguishing rule: the test must go red under at least
+  one named plausible wrong version of the implementation, not only when the
+  code is absent — asserting only the absent-code case does not satisfy it.'
 ```
 <!-- TAUGHT-TEST-ANGLES:END -->
 
@@ -622,15 +628,37 @@ Look up `testing_context.directories[<subdir_name>]`:
 
 ### 2b — DB test pattern (when `db_required: true`)
 
+Never hard-code a connection address. Take it from the shared resolver
+(`resolve_test_db_address`, deployed under `{{config.output_root}}/scripts/db_check/`)
+so the test uses the project's own `testing_context.db_connection_test` setting
+and nothing else:
+
 ```python
-import psycopg2
+import sys
 import unittest
+from pathlib import Path
+
+sys.path.insert(0, "{{config.output_root}}/scripts")
+from db_check.checker import resolve_test_db_address
+
+import psycopg2
 
 class TestFooBar(unittest.TestCase):
     def setUp(self):
-        self.conn = psycopg2.connect(
-            "postgresql://trader:trader@localhost:5403/LIVE"
-        )
+        # resolve_test_db_address() takes the PROJECT ROOT (it looks for this
+        # project's own skills_config.json under it) — NOT
+        # "{{config.output_root}}", which is the install subdirectory
+        # (".leafcutter" by default). Suites in this project are always
+        # invoked with cwd at the project root (see test-runner.md's suite
+        # commands, e.g. "-t ." for the live-trader suite), so Path.cwd() is
+        # that root regardless of where this test file itself lives.
+        #
+        # Raises DbConnectionTestNotConfiguredError, naming
+        # testing_context.db_connection_test, when the setting is unset —
+        # let it propagate. Never catch it to skip the test, and never
+        # substitute a fallback address.
+        address = resolve_test_db_address(Path.cwd())
+        self.conn = psycopg2.connect(address)
         self.conn.autocommit = False
 
     def tearDown(self):

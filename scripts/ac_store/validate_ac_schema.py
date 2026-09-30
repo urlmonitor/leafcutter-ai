@@ -47,9 +47,9 @@ from typing import Any
 
 import yaml
 
-# _ac_components lives alongside this script; sys.path[0] is the script dir when
-# invoked as `python scripts/ac_store/validate_ac_schema.py ...`.
 from _ac_components import components_field_errors, load_registry_ids  # noqa: E402
+from _ac_schema_test_spec_validators import test_spec_entry_errors  # noqa: E402
+from declared_files import declared_files_commit_messages  # noqa: E402
 
 # Same schema file the commit-time hook (templates/scripts/commit_guardian/
 # check_ac_schema.py, SCHEMA_PATH) validates staged ACs against. Resolving the
@@ -69,6 +69,21 @@ def _default_schema_path() -> Path:
     """
     repo_root = Path(__file__).resolve().parent.parent.parent
     return repo_root / _SCHEMA_REL
+
+
+def _infer_repo_root(ac_path: Path) -> Path:
+    """Repo root for an AC file: the ancestor of its docs/acceptance-criteria/.
+
+    Works for both this repo's own store and a fixture store under a temp
+    directory (declared_files existence checks must run against whichever
+    tree the AC actually lives in, never a fixed cwd). Falls back to cwd
+    when no such ancestor is found (e.g. a file passed outside any store).
+    """
+    parts = ac_path.resolve().parts
+    for i in range(len(parts) - 1):
+        if parts[i] == "docs" and parts[i + 1] == "acceptance-criteria":
+            return Path(*parts[:i])
+    return Path.cwd()
 
 
 # ---------------------------------------------------------------------------
@@ -173,6 +188,7 @@ def _validate_file(
     path: Path,
     registry_ids: set[str] | None = None,
     schema: dict[str, Any] | None = None,
+    declared_files_reports: list[str] | None = None,
 ) -> list[str]:
     """Validate a single YAML file for required readiness/priority/components fields.
 
@@ -188,6 +204,8 @@ def _validate_file(
             call — callers must surface that explicitly (see
             `load_ac_store_schema`'s warning return value) rather than let the
             skip look like a passing schema check.
+        declared_files_reports: Non-blocking declared_files (ACD-1600c-4)
+            reports appended to, when supplied.
 
     Returns a list of error strings. Empty list = valid.
     """
@@ -266,6 +284,7 @@ def _validate_file(
                     f"ACs. AC {data['id']} has level {ac_level!r}."
                 )
 
+    errors.extend(test_spec_entry_errors(path, data, schema))  # TQ-500f-1 / TQ-500f-2-i
     # --- Validate against config/ac_store_schema.json (ACS-200e) ---
     # This is the SAME schema file the commit-time hook
     # (templates/scripts/commit_guardian/check_ac_schema.py) validates staged
@@ -276,6 +295,13 @@ def _validate_file(
     # schema check having run).
     if schema is not None:
         errors.extend(_schema_field_errors(path, data, schema))
+
+    # declared_files (ACD-1600c-4): one seam call, unconditional — the JSON
+    # schema cannot express empty-list/path-form/existence rules at all.
+    refusals, reports = declared_files_commit_messages(data, _infer_repo_root(path))
+    errors.extend(refusals)
+    if declared_files_reports is not None:
+        declared_files_reports.extend(reports)
 
     return errors
 
@@ -409,10 +435,16 @@ def main(argv: list[str] | None = None) -> int:
     paths, resolve_errors = _resolve_ac_yaml_paths(args)
     all_errors.extend(resolve_errors)
 
+    declared_files_reports: list[str] = []
     for path in paths:
-        errors = _validate_file(path, registry_ids, schema)
+        errors = _validate_file(path, registry_ids, schema, declared_files_reports)
         all_errors.extend(errors)
         files_checked += 1
+
+    # declared_files reports are informational (ACD-1600c-4-i) — printed
+    # regardless of pass/fail, never affecting the exit code.
+    for report in declared_files_reports:
+        print(f"REPORT: {report}")
 
     if all_errors:
         print("AC schema validation FAILED:", file=sys.stderr)
@@ -473,3 +505,10 @@ if __name__ == "__main__":
 #   ordinary pass. Changed the empty-argv branch to return 0 while still
 #   printing the usage text to stderr for a human running it bare.
 #   (#GE-120a-4)
+# - 2026-09-28 [python-coder/ACD-1600c-4]: Wired the declared_files seam
+#   (scripts/ac_store/declared_files.py) into _validate_file() unconditionally
+#   (the JSON schema cannot express empty-list/path-form/existence rules), so
+#   this validator's verdict agrees with the commit-time hook's on declared
+#   files. Added _infer_repo_root() so existence checks run against whichever
+#   tree the AC file actually lives in (a fixture store under a temp
+#   directory, or this repo's own store), never a fixed cwd.

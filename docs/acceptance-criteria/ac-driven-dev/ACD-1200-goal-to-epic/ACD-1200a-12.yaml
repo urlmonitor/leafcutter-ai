@@ -29,6 +29,11 @@ doc_links:
   - path: scripts/goal_to_epic.py
     relationship: describes
     status: exists
+    relevance: "Facade only since the 2026-09-14 decomposition. The primary surface (generate_ticket_from_ac._write_implemented_by, above) is unaffected by the split; the goal path's relativiser moved to epic_phases.py below."
+  - path: scripts/ac_store/epic_phases.py
+    relationship: describes
+    status: exists
+    relevance: "Owns _relativise_backref_pair / _apply_epic_backrefs — the goal path's repo-relative implemented_by write (shared with TKT-016)."
   - path: docs/architecture/components/ac-driven-dev.md
     relationship: describes
     status: exists

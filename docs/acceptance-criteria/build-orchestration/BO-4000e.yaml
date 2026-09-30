@@ -1,0 +1,148 @@
+id: BO-4000e
+title: "Once a worktree is established, nothing the drive dispatches names a location inside the main checkout"
+component: build-orchestration
+components:
+  - build_orchestration
+  - worktree_manager
+level: L3
+status: active
+req_status: draft
+work_status: done
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+change_target: pipeline
+risk_surface: contract_boundary
+package_surface: false
+criteria: |
+  Given a run whose worktree has been established
+  When target resolution hands back the epic or ticket as an absolute path inside the
+    MAIN CHECKOUT, rather than inside that worktree
+  Then the path is re-rooted onto the worktree before it reaches the planner
+  And no agent the run dispatches is given a path inside the main checkout
+  And the work the drive plans is the work as it stands in the worktree, including
+    everything the branch has already committed.
+
+  Given the same run
+  When resolution instead hands back a repo-relative path, or a path already inside the
+    worktree
+  Then both still land on the worktree copy
+  And a path that is already worktree-resident is returned unchanged, never joined onto
+    itself a second time.
+
+  Given the drive has re-rooted the target
+  When a phase agent writes to the ticket record
+  Then the write lands in the worktree
+  And the main checkout's own copy of that ticket is left untouched.
+depends_on:
+  - BO-4000
+doc_links:
+  - path: templates/workflows-js/build-feature.js
+    relationship: implements
+    status: exists
+    relevance: "The drive whose every toWorktreePath call was a no-op for the absolute clone paths resolution actually returns."
+  - path: unit_tests/_workflow_engine_harness.py
+    relationship: specifies
+    status: exists
+    relevance: "Harness that runs the driver's own top-level body so the dispatched paths can be read back as facts."
+  - path: docs/architecture/components/worktree-manager.md
+    relationship: describes
+    status: exists
+    relevance: "Worktree lifecycle component whose isolation guarantee this record restores."
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "The correction is applied to the INPUT: an absolute main-checkout ticket path is reduced to its repo-relative tail so toWorktreePath's existing relative branch re-roots it once."
+  - "BO-3900's contract that an absolute path is normalised and returned as-is, never joined, is NOT changed. It exists to prevent double-joining and remains correct; the defect was that the drive fed it a clone path and treated the result as worktree-resident."
+  - "Re-rooting is idempotent. A path already inside the worktree reduces to the same tail and rejoins to itself, so repeated application cannot accumulate a second copy of the tail."
+  - "A path carrying no recognisable repo-relative tail is passed through unchanged, so no currently-working shape is altered."
+  - "The guarantee is stated over dispatches, not over one call site: no prompt handed to any agent may name a location inside the main checkout once a worktree exists."
+delivers_to: null
+expects_from:
+  ac_id: BO-4000
+  contract: "The established worktree location, and the resolved target in whatever form resolution produced it."
+test_required: true
+test_spec:
+  - name: test_no_dispatch_names_a_location_inside_the_main_clone
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    surface_invoked: templates/workflows-js/build-feature.js
+    description: "With resolution returning an absolute main-checkout epic path, no captured dispatch prompt names any location inside the main checkout."
+  - name: test_the_planner_is_given_the_worktree_copy_of_the_epic
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: real_artifact
+    surface_invoked: templates/workflows-js/build-feature.js
+    description: "Paired positive: the worktree-rooted epic path is actually the one dispatched, so the record cannot pass on a run that dispatched nothing."
+  - name: test_a_repo_relative_epic_path_still_lands_in_the_worktree
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: "The input shape that already worked keeps working."
+  - name: test_an_epic_path_already_inside_the_worktree_is_left_where_it_is
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: seam
+    description: "Idempotence: a worktree-resident path is unchanged and never acquires a doubled epic tail."
+test_rationale: |
+  Every existing BO-3900 and BO-4000 test stubs resolution with a bare epic name or a
+  repo-relative path, so toWorktreePath's relative branch runs and the tests are green.
+  The defect lives exclusively in the absolute branch, on the one input shape no fixture
+  used — which is the shape the real resolver actually returns. That is why a whole family
+  of path-handling ACs could be done and correct while the drive silently built the clone.
+
+  The assertion is therefore written over the dispatches rather than over the helper: a
+  unit test of the helper would have to assume which call sites use it, and the incident
+  was precisely that the call sites were all present and all no-ops. Reading the prompts
+  the driver really emitted, from the driver's own top-level body, is the only form that
+  could have failed on the broken code.
+
+  The negative and positive are deliberately paired. "No prompt names the clone" is
+  satisfied by a run that dispatches nothing at all, which is how a fix that aborts early
+  would look identical to a fix that works.
+covered_by:
+  - unit_tests/workflows/test_bo4000e_clone_path_does_not_escape_the_worktree.py
+implemented_by:
+  - templates/workflows-js/build-feature.js
+origin_agent: BrainCandy
+created: 2026-09-21
+amended_by: []
+superseded_by: null
+notes: |
+  FIELD EVIDENCE — workflow run wf_ecb6b1ae-a1c, 2026-09-21, driving
+  EPIC-WorkIsOnlyEverMarkedFinishedThroughThe. Resolution returned
+  `epic_path: <clone>/tickets/00_inbox/epics/EPIC-WorkIsOnlyEverMarkedFinishedThroughThe`
+  while `worktree_path` correctly named the worktree. The drive planned from the clone.
+
+  Observable damage, all from one run:
+    - Ticket 01 was `status: done` with `test-writer: signed_off` in the worktree, and
+      `status: todo` with `test-writer: failed` in the clone. The drive read the clone,
+      re-drove a finished ticket, and halted on the stale failure.
+    - Tickets 02-05 were reported as "discovered after planning and not built".
+    - The main checkout was left DIRTY on `main`: ticket 01 carried new architect-review
+      and adr-author sign-offs and a test-writer failure written at 19:18-19:36, plus an
+      untracked `.pending/` directory. Phase agents wrote to main.
+    - ~973k subagent tokens spent re-doing completed work.
+
+  The header comment above `toWorktreePath` already stated the intent exactly — "resolve
+  may return epic_path / ticket_path as an absolute main-clone path ... Either way we must
+  land inside realWorktreePath before passing paths to the planner or phase agents" — while
+  the function it introduces returns that very shape unchanged. Intent and implementation
+  contradicted each other in adjacent lines, and the contradiction was invisible because
+  no fixture ever supplied the shape.
+
+  NAMED MUTATIONS (each turns only this record's tests red):
+    M1 — pass resolve's epic_path to the planner unchanged (the incident). Caught by
+         test_no_dispatch_names_a_location_inside_the_main_clone.
+    M2 — "fix" this by making toWorktreePath re-root absolute paths. This would pass these
+         tests and break BO-3900's ratified contract instead; it is rejected on purpose.
+         The input is corrected, the rule is not.
+    M3 — strip the tail but forget to rejoin, dispatching a bare relative path. Caught by
+         test_the_planner_is_given_the_worktree_copy_of_the_epic.
+    M4 — join unconditionally, doubling the tail for an already-worktree-resident path.
+         Caught by test_an_epic_path_already_inside_the_worktree_is_left_where_it_is.

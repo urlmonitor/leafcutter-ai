@@ -52,4 +52,18 @@ under `templates/workflows-js/` is by construction not an agent — or at minimu
 `plan-feature.js` alongside `finalize-feature.js` and note why the set exists. Any new
 workflow that dispatches agents hits this the same way.
 
+**Re-verified 2026-09-23:** STILL TRUE, verbatim. `scripts/registry_validator.py:36`
+still reads `_EXTERNAL_CALLERS = {"user", "finalize-feature.js"}` — unchanged;
+`plan-feature.js` is still absent. Confirmed the consequence directly: loaded
+`config/agent_registry.json` and read `worktree-agent`'s `spawned_by` field — it is
+`['user', 'epic-supervisor', 'finalize-feature.js']`, with `plan-feature.js` still
+missing despite `plan-feature.js` dispatching `worktree-agent` for its workspace-setup
+step (see KI-BP-012's re-verification, same worktree, same date). `plan-feature.js`
+itself now carries 37 `agentType:` dispatch sites (`grep -c "agentType:"
+templates/workflows-js/plan-feature.js`), up from "around thirty" at filing — the
+asymmetry with `finalize-feature.js` has not narrowed. Affects `/plan-feature`: yes,
+unambiguously — `plan-feature.js` is the specific caller named as excluded from
+`_EXTERNAL_CALLERS`, and the unrecorded relationship is `/plan-feature`'s own
+workspace-setup dispatch, not some other workflow's.
+
 ---

@@ -6,7 +6,7 @@ component: build-orchestration
 level: L3
 status: active
 req_status: active
-work_status: todo
+work_status: done
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -19,9 +19,14 @@ criteria: |
 depends_on:
   - BO-2000c-3
 doc_links:
-  - path: scripts/ac_store/generate_ticket_from_ac.py
+  - path: scripts/ac_store/_gtfa_files_touched.py
     relationship: modifies
     status: exists
+    relevance: "Holds _resolve_reference_patterns — the zero-match / multiple-match failure branch this scenario exercises, and the error that must name the AC id and the unresolvable pattern. (Re-pointed 2026-09-22: scripts/ac_store/generate_ticket_from_ac.py is now a re-export shell; the implementation moved to the _gtfa_* siblings.)"
+  - path: scripts/ac_store/_gtfa_body.py
+    relationship: modifies
+    status: exists
+    relevance: "Holds _build_implementation_notes_section, the caller (at _gtfa_body.py:107) that must let the authoring error surface rather than emitting a raw pattern or broken path into the ticket body."
 assigned_agent: python-coder
 estimated_complexity: S
 it_requirements:
@@ -33,7 +38,85 @@ expects_from:
   contract: "The path-resolution step whose failure branch this scenario exercises"
 origin_agent: BrainCandy
 created: 2026-07-08
-amended_by: []
+amended_by:
+- reason: edit-surface-repoint
+  by: it-po
+  at: '2026-09-22'
+  note: 'doc_links re-pointed off scripts/ac_store/generate_ticket_from_ac.py at
+    relationship: modifies, for the same reason as parent BO-2000c-3: that file is now a
+    re-export shell with one real def, and modifies is an edit-surface relationship, so
+    it fed files_touched and a generated ticket named only the shell. Targets re-derived
+    from the criteria: the zero-match / multiple-match failure branch lives in
+    _gtfa_files_touched._resolve_reference_patterns, and the caller that must let the
+    error surface rather than emit a broken path is
+    _gtfa_body._build_implementation_notes_section. criteria untouched.'
+- reason: test-contract
+  by: it-po
+  at: '2026-09-22'
+  note: 'Added test_spec. check-ac-schema refuses an approved, not-done, leaf code AC
+    with no test contract; reclassifying as non-code would be false here (python-coder,
+    real generator behaviour). Both failure modes named in the Given — zero matches and
+    more than one match — get their own descriptor, because an implementation that only
+    guards the empty case passes a single-test contract and still emits a wrong path when
+    a pattern is ambiguous. criteria untouched.'
+- reason: test-spec-correspondence
+  by: it-po
+  at: '2026-09-23'
+  note: 'test_spec corrected to name the tests that actually exist and pass, for the same
+    two staleness reasons as parent BO-2000c-3: (1) every descriptor targeted
+    unit_tests/ac_store/, while the covering tests live in unit_tests/prompt_assembly/ —
+    the wrong directory exists, so it read as plausible; (2) none of the four descriptor
+    names matched a real test, with one exception noted below — a grep across unit_tests/
+    found them nowhere. The harm was concrete: an agent reading this literally would
+    duplicate four already-passing tests into a second directory. Corrected to the four
+    tests carrying "# covers: BO-2000c-3-i", which match covered_by exactly:
+    test_implementation_notes_emission.py::TestReferencePatternResolution::test_ac3i_unresolvable_pattern_errors,
+    and in test_reference_pattern_resolution.py
+    ::TestAmbiguousReferencePatternIsAnAuthoringError::test_pattern_matching_more_than_one_file_raises_an_authoring_error
+    (the one descriptor already named correctly — directory fixed only),
+    ::TestNoImplementationNotesEmittedOnFailure::test_no_implementation_notes_emitted_on_zero_match
+    and ::test_no_implementation_notes_emitted_on_multi_match. Two structural changes
+    beyond renaming. test_authoring_error_names_both_the_ac_id_and_the_pattern was REMOVED:
+    it is real behaviour and it IS tested, but never as its own def — both failure tests
+    assert the AC id and the pattern inline, and the multi-match one additionally asserts
+    every match is listed, so it is covered under a differently-shaped test. And the single
+    test_no_implementation_notes_path_line_is_emitted_on_failure descriptor was SPLIT in
+    two, because the non-emission clause is proven by two separate real tests, one per
+    failure mode; their type is integration, not unit, since both drive the generator CLI
+    as a subprocess. No name was invented for any behaviour lacking a test. All four named
+    tests were run and pass. criteria untouched; work_status, readiness, priority,
+    implemented_by and covered_by untouched.'
 superseded_by: null
-covered_by: []
-implemented_by: []
+covered_by:
+- unit_tests/prompt_assembly/test_implementation_notes_emission.py::TestReferencePatternResolution::test_ac3i_unresolvable_pattern_errors
+- unit_tests/prompt_assembly/test_reference_pattern_resolution.py::TestAmbiguousReferencePatternIsAnAuthoringError::test_pattern_matching_more_than_one_file_raises_an_authoring_error
+- unit_tests/prompt_assembly/test_reference_pattern_resolution.py::TestNoImplementationNotesEmittedOnFailure::test_no_implementation_notes_emitted_on_zero_match
+- unit_tests/prompt_assembly/test_reference_pattern_resolution.py::TestNoImplementationNotesEmittedOnFailure::test_no_implementation_notes_emitted_on_multi_match
+implemented_by:
+- scripts/ac_store/_gtfa_files_touched.py
+- scripts/ac_store/_gtfa_body.py
+test_spec:
+  - name: test_ac3i_unresolvable_pattern_errors
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: unit
+    angle: failure
+    description: "In test_implementation_notes_emission.py::TestReferencePatternResolution. Zero-match half of the Given: a reference_pattern matching no file raises ValueError rather than resolving to nothing silently, and the same test asserts the message names BOTH the AC id and the unresolvable pattern."
+  - name: test_pattern_matching_more_than_one_file_raises_an_authoring_error
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: unit
+    angle: failure
+    description: "In test_reference_pattern_resolution.py::TestAmbiguousReferencePatternIsAnAuthoringError. Multi-match half of the Given, separately discriminating: an implementation guarding only the empty case passes the zero-match test and still picks an arbitrary glob-order match. Asserts the error names the AC id, the pattern, and every match."
+  - name: test_no_implementation_notes_emitted_on_zero_match
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: "In test_reference_pattern_resolution.py::TestNoImplementationNotesEmittedOnFailure. The 'does not silently emit' clause on the zero-match path, run through the generator CLI: non-zero exit, no '## Implementation Notes' section, and no raw pattern in stdout. This is the boundary that stops the error being raised and then swallowed by a caller that emits the unresolved value anyway."
+  - name: test_no_implementation_notes_emitted_on_multi_match
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: "In test_reference_pattern_resolution.py::TestNoImplementationNotesEmittedOnFailure. The same clause on the multi-match path, and additionally asserts that no arbitrarily-chosen match reaches the body as though it were the resolved answer — a broken path that looks correct is worse than a surviving raw pattern."

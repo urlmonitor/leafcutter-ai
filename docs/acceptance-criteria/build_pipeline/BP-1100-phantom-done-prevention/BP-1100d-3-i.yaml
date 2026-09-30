@@ -1,0 +1,79 @@
+id: BP-1100d-3-i
+components:
+  - build_pipeline
+  - commit_guardian
+title: "No commit recipe the package ships is newly blocked when the delegation hook starts recognising git -C commits"
+component: build-pipeline
+level: L3
+status: active
+req_status: draft
+work_status: done
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given the commit-delegation hook recognises a commit by the git subcommand that runs,
+    so a commit spelled with a global option such as -C is now blocked,
+  And the package ships commit recipes in skill, agent and workflow markdown and in
+    JS workflow prompts,
+  When every shipped recipe is evaluated by the hook's own detector,
+  Then no recipe that the previous substring rule allowed is blocked by the new detector
+    unless it carries the commit-agent exemption,
+  And the recipes that previously committed with the -C spelling route through the
+    commit agent (skills run in the main loop) or carry the exemption the workflows
+    already use (finalize's closure commit, as fast-lane-ship does),
+  And the census fails loudly when it finds no recipes at all, so a broken extractor
+    cannot report a clean pass.
+depends_on:
+  - BP-1100d-3
+doc_links:
+  - path: "docs/acceptance-criteria/build_pipeline/BP-1100-phantom-done-prevention/BP-1100d-3.yaml"
+    relationship: parent
+    status: exists
+  - path: templates/workflows-js/finalize-feature.js
+    relationship: modifies
+    status: exists
+  - path: templates/skills/build-single-ticket/SKILL.md
+    relationship: modifies
+    status: exists
+  - path: templates/skills/plan-feature/SKILL.md
+    relationship: modifies
+    status: exists
+  - path: templates/skills/quick-fix/SKILL.md
+    relationship: modifies
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Evaluate recipes with the real hook's _is_git_commit_call and _is_commit_agent_mode, imported from templates/hooks, never a re-implemented matcher"
+  - "Scan fenced blocks in templates/**/*.md and git-bearing lines in templates/workflows-js/*.js"
+  - "Only flag recipes newly blocked relative to the old substring rule; bare git commit recipes that were already blocked are out of scope for this constraint"
+delivers_to: null
+expects_from:
+  ac_id: BP-1100d-3
+  contract: "The argv-parsing detector whose deployment this constraint makes safe."
+origin_agent: BrainCandy
+created: 2026-09-27
+amended_by: []
+superseded_by: null
+covered_by:
+  - "unit_tests/commit_guardian/test_bp_1100d_3_i_no_recipe_newly_blocked.py"
+implemented_by:
+  - templates/workflows-js/finalize-feature.js
+  - templates/skills/build-single-ticket/SKILL.md
+  - templates/skills/plan-feature/SKILL.md
+  - templates/skills/quick-fix/SKILL.md
+change_target: code
+risk_surface: internal
+test_spec:
+  - name: test_no_shipped_recipe_is_newly_blocked_by_the_argv_parser
+    target_dir: unit_tests/commit_guardian
+    framework: pytest
+    type: unit
+    description: "Runs the real hook detector over every shipped recipe; none is newly blocked without the exemption."
+  - name: test_census_actually_sees_recipes
+    target_dir: unit_tests/commit_guardian
+    framework: pytest
+    type: unit
+    description: "The census extracts at least the known exempt fast-lane commit recipe, so an empty scan cannot pass."
+notes: "Migration guard for BP-1100d-3: before the fix, five shipped recipes committed with git -C and no exemption (finalize-feature.js closure commit, build-single-ticket changelog commit, plan-feature orphaned-AC commit, two quick-fix halt recipes). The census was red on exactly those five before migration."

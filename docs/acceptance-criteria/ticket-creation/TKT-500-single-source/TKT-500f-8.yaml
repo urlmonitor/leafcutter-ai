@@ -33,9 +33,10 @@ criteria: |
   Then that path appears exactly once in files_touched (no duplicate entry).
 depends_on: [TKT-500f]
 doc_links:
-  - path: scripts/ac_store/generate_ticket_from_ac.py
+  - path: scripts/ac_store/_gtfa_files_touched.py
     relationship: constrains
     status: exists
+    relevance: "_build_files_touched and _extract_local_paths — the single files_touched assembly point that must union the it_requirements edit surface with the edit-surface doc_links. (The generate_ticket_from_ac.py path in this AC's criteria is an EXAMPLE reference_file_path value, not the edit surface.)"
   - path: docs/reference/ac-schema.md
     relationship: specifies
     status: exists
@@ -59,8 +60,8 @@ delivers_to:
 expects_from: null
 it_requirements:
   config_schema_fragment: null
-  reference_file_path: "scripts/ac_store/generate_ticket_from_ac.py"
-  n_location_rule: "all files_touched-assembly sites (currently the two doc_links-only sites near lines 1419 and 1453, fed by _extract_local_paths)"
+  reference_file_path: "scripts/ac_store/_gtfa_files_touched.py"
+  n_location_rule: "all files_touched-assembly sites, which since the generator decomposition all live in this one module (_build_files_touched, fed by _extract_local_paths)"
   required_skills:
     - python-coder
   post_write_commands:

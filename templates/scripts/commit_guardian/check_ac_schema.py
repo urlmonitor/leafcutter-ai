@@ -5,15 +5,13 @@ GOAL: Pre-commit hook validating staged AC YAML files against the JSON Schema,
 BUSINESS CONTEXT: Malformed AC files are rejected at commit time. The
     pattern_bindings completeness and field-preservation checks enforce ACS-500f.
 ARCHITECTURE: Phase 1 validates only STAGED AC YAML files against
-    config/ac_store_schema.json; staged files are determined via
-    `git diff --cached --name-only --diff-filter=AM` (or the
-    HOOK_TEST_STAGED_FILES env var seam for tests). Cross-file checks are
-    delegated to _ac_schema_validators.py and use the full on-disk store as a
-    lookup index (not narrowed to staged only). Phase 2 compares HEAD vs staged
-    for each modified AC and blocks if implements_pattern was present in HEAD
-    but absent in staged. HEAD blobs for all modified files are fetched in a
-    single batched ``git cat-file --batch`` invocation (O(1) subprocesses
-    regardless of the number of staged-modified files). Fail-open.
+    config/ac_store_schema.json; staged files come from `git diff --cached
+    --name-only --diff-filter=AM` (or HOOK_TEST_STAGED_FILES for tests).
+    Cross-file checks (_ac_schema_validators.py) and per-entry angle/
+    must_catch naming (_test_spec_entry_bridge.py, TQ-500f-1/-2-i) both use
+    the full on-disk store, not narrowed to staged only. Phase 2 compares
+    HEAD vs staged per modified AC, blocking a dropped implements_pattern,
+    via one batched ``git cat-file --batch`` HEAD-blob fetch. Fail-open.
 
 Exit codes:
     0 - All staged AC YAML files pass validation
@@ -58,6 +56,9 @@ DECISION HISTORY:
     into the per-file validation pass so a staged leaf code AC must declare a test
     contract (test_spec or test_required: false). ACs are the source of truth for
     what test-writer must test. (AC BO-2000e)
+  - 2026-09-28 [python-coder/ACD-1600c-4]: Wired declared_files (both
+    branches) via sibling _declared_files_bridge.py (carries import/fail-open
+    logic; this file must not grow further past its ratchet).
 """
 
 from __future__ import annotations
@@ -76,6 +77,9 @@ from _ac_schema_validators import (  # noqa: E402
     validate_pattern_bindings_completeness, validate_test_contract,
     validate_with_jsonschema,
 )
+from _test_spec_entry_bridge import test_spec_entry_errors  # noqa: E402
+from _ac_store_file_discovery import find_ac_files  # noqa: E402
+from _declared_files_bridge import declared_files_messages, drain_reports  # noqa: E402
 
 try:
     from _ac_store_index import get_ac_index  # type: ignore[import]
@@ -519,21 +523,7 @@ def _check_implements_pattern_preserved(
 # ---------------------------------------------------------------------------
 # File discovery and schema loading
 # ---------------------------------------------------------------------------
-
-def _find_ac_files(root: Path) -> list[Path]:
-    """Discover all .yaml files under docs/acceptance-criteria/.
-
-    Args:
-        root: Repository root directory.
-
-    Returns:
-        Sorted list of Paths.
-    """
-    ac_dir = root / AC_GLOB_PATTERN
-    if not ac_dir.is_dir():
-        return []
-    return sorted(p for p in ac_dir.rglob("*.yaml") if p.name != "index.yaml")
-
+# find_ac_files relocated to sibling _ac_store_file_discovery.py.
 
 def _load_schema(root: Path) -> dict[str, Any] | None:
     """Load config/ac_store_schema.json; None if absent.
@@ -563,6 +553,7 @@ def _validate_file(
     path: Path,
     schema: dict[str, Any] | None,
     all_ac_data: dict[str, dict[str, Any]] | None = None,
+    repo_root: Path | None = None,
 ) -> list[str]:
     """Validate a single AC YAML file and return error messages.
 
@@ -571,6 +562,7 @@ def _validate_file(
         schema: Pre-loaded JSON Schema dict, or None.
         all_ac_data: Optional AC id to parsed content mapping; enables
             cross-file checks when provided.
+        repo_root: declared_files (ACD-1600c-4) repo root; None skips it.
 
     Returns:
         Error message strings; empty when valid.
@@ -613,15 +605,11 @@ def _validate_file(
     if not schema_validated:
         errors.extend(validate_manually(data))
 
-    # Test-contract gate (single-file, semantic): a leaf code AC must declare a
-    # test_spec or an explicit test_required: false. ACs are the source of truth
-    # for what test-writer must test.
+    errors.extend(test_spec_entry_errors(path, data, schema))  # TQ-500f-1/-2-i
+    # Test-contract gate: a leaf code AC must declare test_spec or test_required: false.
     errors.extend(validate_test_contract(path, data))
 
-    # declares_side_effect gate (single-file, semantic): the declaration must be
-    # DERIVED from the AC's own criteria, never authored by opinion and never
-    # left unset when the criteria assert a durable, observable effect
-    # (BO-2900g-2 / BO-2900g-2-i).
+    # declares_side_effect gate: DERIVED from criteria, never opinion (BO-2900g-2/-i).
     errors.extend(validate_declares_side_effect(path, data))
 
     if all_ac_data is not None:
@@ -629,6 +617,8 @@ def _validate_file(
         errors.extend(validate_deprecated_pattern_reference(path, data, all_ac_data))
         errors.extend(validate_criteria_not_pattern_duplicate(path, data, all_ac_data))
 
+    if repo_root is not None:  # declared_files (ACD-1600c-4), via the bridge.
+        errors.extend(declared_files_messages(data, repo_root))
     return errors
 
 
@@ -686,18 +676,17 @@ def main() -> int:
         # No staged AC files — skip Phase 1 entirely; still run Phase 2 below.
         failed: list[tuple[Path, list[str]]] = []
     else:
-        # Build the full-store lookup index for cross-file checks (AC-4: not narrowed).
-        # Use the shared mtime-cached index when available; fall back to the
-        # direct _find_ac_files + _build_ac_index walk otherwise.
+        # Full-store lookup index for cross-file checks (AC-4: not narrowed);
+        # shared mtime-cached index when available, else the direct walk.
         ac_store_dir = root / AC_GLOB_PATTERN
         if _AC_STORE_INDEX_AVAILABLE:
             all_ac_data = get_ac_index(str(ac_store_dir))
         else:
-            all_store_files = _find_ac_files(root)
+            all_store_files = find_ac_files(root)
             all_ac_data = _build_ac_index(all_store_files)
         failed = []
         for path in staged_files:
-            errs = _validate_file(path, schema, all_ac_data)
+            errs = _validate_file(path, schema, all_ac_data, root)
             if errs:
                 failed.append((path, errs))
     # Phase 2: implements_pattern field-preservation
@@ -718,6 +707,8 @@ def main() -> int:
         )
         if p_errs:
             failed.append((Path(abs_path), p_errs))
+    for report in drain_reports():  # informational only (ACD-1600c-4-i).
+        print(f"{_HOOK_PREFIX} {report}")
     if not failed:
         return 0
     print(f"{_HOOK_PREFIX}: {len(failed)} file(s) failed validation:", file=sys.stderr)

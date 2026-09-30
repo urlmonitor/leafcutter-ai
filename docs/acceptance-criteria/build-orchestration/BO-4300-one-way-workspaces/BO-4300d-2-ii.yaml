@@ -1,0 +1,96 @@
+id: BO-4300d-2-ii
+title: "Whatever stage an interruption hit, the next request ends fully ready"
+component: build-orchestration
+components:
+  - worktree_manager
+  - build_orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: critical
+roadmap_phase: phase_1
+change_target: code
+risk_surface: safety
+criteria: |
+  Given four half-made workspaces, each left by a request interrupted at a
+    different stage: after the copy was made but before its line of work existed;
+    after the line of work existed but before the install; after the install but
+    before the protections were shown to fire; and while the maker was recording
+    that it made the workspace,
+  When each is requested again with the cause removed,
+  Then each is answered ready, and every part of readiness from BO-4300c-1 holds
+    for each,
+  And none of the four is answered ready at any point while a part of readiness
+    is missing.
+depends_on: [BO-4300d-2]
+doc_links:
+- path: docs/analysis/2026-09-25-worktree-migration-plan.md
+  relationship: describes
+  status: exists
+- path: docs/analysis/2026-09-25-worktree-isolation-decision-memo.md
+  relationship: constrains
+  status: exists
+- path: docs/architecture/components/worktree-manager.md
+  relationship: describes
+  status: exists
+  relevance: Component page for the one maker; rewritten for clones under BO-4300a-4.
+- path: docs/testing/test-angles.md
+  relationship: describes
+  status: exists
+  relevance: Angle taxonomy used by this record's test_spec.
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from:
+  ac_id: BO-4300d-2
+  contract: Half-made identification and completion.
+package_surface: false
+it_requirements:
+- The four interrupted states are produced by really interrupting the deployed maker. A stage-abort seam
+  (an environment variable naming a stage) is permitted only if it can do nothing but abort at that stage
+  -- it can never skip a step or yield ok -- and it is documented as a test seam.
+- The marker write is atomic, so an interruption while recording leaves either the 'creating' record or
+  the complete one, never a torn record that is accepted.
+- Proof runs the DEPLOYED maker -- the copy an install delivers, resolved through the shared test locator
+  delivered by BO-4300f-4 -- as a separate process against real temporary git repositories with a real
+  bare hub. No mock of git, no import of the maker module, no grep of its source (CLAUDE.md 'Gate / Workflow
+  ACs -- Verify Behaviorally, Not by Grep'); a test never falls back to the templates/ source copy.
+- 'Tests must not spawn the package''s own scripts/build.py (CLAUDE.md ''Tests must not spawn their own
+  build.py''): the deployed maker comes from the shared deployed layout, and fixture projects carry a
+  minimal stub build entry point that installs a real, rejecting hook in well under a second. A test that
+  must mutate the package and build its own copy says so and justifies it in its ticket.'
+- All temporary projects, hubs and workspaces live under the test's temp directory and run git with an
+  isolated global and system config; afterwards the developer's own repository's branches, registered
+  worktrees and local git config are unchanged (BO-4300f-4-i, F14, KI-TQ-012).
+test_required: true
+test_spec:
+- name: test_each_of_four_interruption_stages_completes_to_ok_on_next_request
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: criterion
+  description: For interruptions after clone, after branch, after install and during the marker write,
+    the next request (cause removed) answers ok with every readiness ingredient true.
+- name: test_no_interrupted_state_is_ever_answered_ok_while_an_ingredient_is_missing
+  target_dir: unit_tests/build_orchestration/
+  framework: unittest
+  type: behavioral
+  angle: failure
+  description: verify/locate on each interrupted state before completion never answers ok.
+test_rationale: Every assertion is made on what the deployed maker actually did to real repositories --
+  its one JSON answer, its exit code, and the state of the workspace, the hub and the main copy afterwards.
+  A direct-import unit test would pass while the deployed copy is stale or mis-deployed (F13), and a git
+  mock cannot show the half-made and occupied states this family exists to handle.
+origin_agent: business-analyst
+created: 2026-09-25
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260927-BO-4300d-2-ii.md
+notes: |
+  The "prior state" axis of the migration plan's test matrix. Decision memo: a half-made clone
+  is a directory without the maker's record and can be deleted and redone.
+target_epic: EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace

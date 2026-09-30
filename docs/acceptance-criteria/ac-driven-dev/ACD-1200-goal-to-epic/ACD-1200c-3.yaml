@@ -36,6 +36,15 @@ doc_links:
   - path: scripts/goal_to_epic.py
     relationship: related
     status: exists
+    relevance: "Facade only since the 2026-09-14 decomposition — re-exports topological_sort and CyclicDependencyError but defines neither. The two modules below own the scoped-build hard-fail side of this AC."
+  - path: scripts/ac_store/epic_dependencies.py
+    relationship: related
+    status: exists
+    relevance: "Owns topological_sort and _extract_cycle — the intra-scope cycle detection that must still hard-fail a scoped epic build."
+  - path: scripts/ac_store/epic_errors.py
+    relationship: related
+    status: exists
+    relevance: "Defines CyclicDependencyError, the typed error the scoped-build path raises before any ticket file is written."
   - path: docs/architecture/adrs/ADR-010-ac-store-as-authoritative-backlog.md
     relationship: describes
     status: exists
@@ -58,5 +67,30 @@ superseded_by: null
 covered_by:
   - ACD-1200c-3-i
 implemented_by: []
+test_spec:
+  - name: test_scan_ac_store_cycle_degrades_to_warning
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: "A cycle confined to one subtree does not hard-abort the store-wide scan; it surfaces as a warning naming the cyclic AC ids, and the scan exits 0."
+  - name: test_scan_ac_store_acyclic_remainder_ranked_after_cycle
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: "The scan continues to rank and emit ready ACs from the acyclic remainder — the clause that distinguishes 'degraded to a warning' from 'silently produced nothing'."
+  - name: test_topological_sort_raises_on_intra_scope_cycle
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: "The second half of the AC: a genuine cycle among the leaves actually being built still raises CyclicDependencyError for that scoped build. This is the asymmetry the AC exists to pin — warn store-wide, hard-fail in scope."
+  - name: test_real_store_cycle_is_warning_not_abort
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    description: "Runs the scan against the actual on-disk AC store rather than a synthetic fixture, so a cycle present in the real store is confirmed to warn rather than abort."
 change_target: code
 risk_surface: contract_boundary

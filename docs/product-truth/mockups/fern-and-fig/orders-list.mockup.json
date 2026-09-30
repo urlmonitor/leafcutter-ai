@@ -1,6 +1,7 @@
 {
   "id": "fern-and-fig/orders-list",
   "component": "ux-prototyping",
+  "example_product": "fern-and-fig",
   "screen": "orders-list",
   "title": "My orders",
   "summary": "STUB — registered so the track-an-order flow's `orders` step resolves. Lists the customer's past orders with number, item, total and status. Not yet drawn; see plant-listing for the gold-reference shape.",

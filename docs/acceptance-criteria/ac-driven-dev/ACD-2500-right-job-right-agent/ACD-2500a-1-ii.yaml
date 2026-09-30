@@ -1,0 +1,77 @@
+id: ACD-2500a-1-ii
+components:
+  - ac_driven_dev
+  - ac_store
+readiness: approved
+priority: high
+title: "An unreadable record or a rule that errors is a failure, never a skipped pass"
+component: ac-driven-dev
+level: L3
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  Given a feature folder holds 3 requirement records and one of them cannot be read as a
+    requirement record (a YAML syntax error at line 7),
+  When the requirement rule check runs,
+  Then the overall result is failed,
+  And one finding names that file, states that it could not be read, and gives line 7,
+  And the other 2 records are still checked in the same run and their own findings,
+    if any, are reported,
+  And when one rule family raises an internal error while evaluating a readable record,
+    that is reported as a failure for that record and that rule family, and the overall
+    result is failed rather than passed with the rule silently skipped.
+depends_on:
+  - ACD-2500a-1
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+- An error in one record or one rule family must not stop evaluation of the other records or families
+  in the same run.
+- The unreadable-record finding carries the parser's line number when the parser provides one.
+- Must log repairs at info and findings/failures at warning or above per the project error handling policy.
+delivers_to: null
+expects_from:
+  ac_id: ACD-2500a-1
+  contract: 'Requirement rule-check report: JSON on stdout, exit 0 iff verdict is passed. Shape: {verdict:
+    ''passed''|''failed'', location: str (the path given, repo-root-relative POSIX), records_checked:
+    int, findings: [{file: str (repo-root-relative POSIX), record_id: str|null (null only when the file
+    could not be read), rule_family: str (human family name, e.g. ''producer/consumer contract symmetry''),
+    disposition: ''fixed''|''needs a decision''|''failed''|''not evaluated'', message: str, line: int|null,
+    detail: object|null}]}. Findings sorted by file then rule_family; at most one finding per (file, record_id,
+    rule_family, subject).'
+test_spec:
+- name: test_yaml_error_record_finding_names_file_and_line
+  target_dir: unit_tests/ac_store/
+  framework: pytest
+  type: unit
+  description: A record with a YAML syntax error at line 7 yields a 'failed' finding naming the file,
+    'could not be read' and line 7.
+  angle: failure
+- name: test_other_records_still_checked_when_one_unreadable
+  target_dir: unit_tests/ac_store/
+  framework: pytest
+  type: unit
+  description: The 2 readable records are still checked and their findings reported in the same run.
+- name: test_rule_family_exception_is_failure_not_skip
+  target_dir: unit_tests/ac_store/
+  framework: pytest
+  type: unit
+  description: A rule family that raises on a readable record yields a failure for that record and family
+    and verdict failed.
+  angle: failure
+origin_agent: business-analyst
+created: 2026-09-25
+amended_by:
+- reason: it-po-technical-enrichment
+  date: '2026-09-25'
+  by: it-po
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary

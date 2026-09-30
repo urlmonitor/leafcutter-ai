@@ -95,6 +95,18 @@ EXCLUDED_DIRS: set[str] = set(load_config().get("excluded_dirs", []))
 FILE_LINE_LIMITS: dict[str, int] = _get("file_size", "line_limits", {".py": 400, ".sql": 600})
 DEFAULT_LINE_LIMIT: int = _get("file_size", "default_limit", 400)
 CHECKED_EXTENSIONS: list[str] = _get("file_size", "checked_extensions", [".py", ".sql"])
+# GE-127d-1: every surface that PUBLISHES a human-readable statement of the
+# file-size rule (which kinds are covered), read here so
+# check_file_size_rule_parity.py never carries its own copy of the list --
+# a surface list written into the check is the same drift one level up (a
+# newly added surface would be unwatched). Each entry is a path relative to
+# the reconciliation script's OWN directory (config.py's own __file__
+# -relative resolution convention), not the project root, so the same list
+# works whether this package is self-hosted (templates/scripts/commit_guardian/)
+# or deployed into a consumer project (.leafcutter/scripts/commit_guardian/).
+PUBLISHED_RULE_SURFACES: list[str] = _get(
+    "file_size", "published_rule_surfaces", ["README.md", "commit_guardian.json"]
+)
 
 # ---------------------------------------------------------------------------
 # check_complexity
@@ -222,7 +234,7 @@ TICKET_FM_TICKETS_DIR: str = _get("ticket_frontmatter", "tickets_dir", "tickets"
 # check_ticket_signoff_parity — agent registry
 # ---------------------------------------------------------------------------
 AGENT_REGISTRY_PATH: str = _get(
-    "ticket_signoff_parity", "agent_registry_path", "leafcutter/config/agent_registry.json"
+    "ticket_signoff_parity", "agent_registry_path", "config/agent_registry.json"
 )
 
 # ---------------------------------------------------------------------------
@@ -305,6 +317,25 @@ TICKET_AC_PARITY_AC_STORE_ROOT: str = _get(
 ====================================================================
 DECISION HISTORY
 ====================================================================
+- 2026-09-15 [python-coder/GE-127d-1]: Added PUBLISHED_RULE_SURFACES, read
+  from the new nested file_size.published_rule_surfaces config key (default
+  ["README.md", "commit_guardian.json"]), for the new
+  check_file_size_rule_parity.py reconciliation gate. Deliberately NOT a new
+  top-level key -- the ticket's own constraint requires the surface list to
+  live nested under the existing file_size section so the whole-document
+  mapping_keys watcher (which only sees the top-level dotted path "") never
+  needs to change.
+- 2026-09-14 [python-coder/KI-CG-024]: Changed AGENT_REGISTRY_PATH default from
+  'leafcutter/config/agent_registry.json' to 'config/agent_registry.json'. The
+  old value does not exist in any deployed layout; the real file is at
+  <project_root>/config/agent_registry.json (mirrors the DOC_FM_COMPONENTS_REGISTRY
+  / load_components_registry() convention already used elsewhere in this file —
+  a plain project-root-relative default, resolved by the caller joining it onto
+  find_project_root()). Because the old default never resolved,
+  load_agent_registry() in _signoff_parity_checks.py always hit its
+  registry-not-found fail-open branch and check_ticket_signoff_parity's check #6
+  (unchecked-tasks parity guard) silently skipped on every ticket commit since
+  the hook was registered.
 - 2026-08-13 12:00 [python-coder]: Changed SECURITY_SCANNER_SCRIPTS_DIR default
   from '.claude/skills/security-scanner/scripts' to
   '.leafcutter/skills/security-scanner/scripts' — a git worktree has the

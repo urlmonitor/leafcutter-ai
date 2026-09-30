@@ -1,0 +1,96 @@
+id: KM-300a-1
+components:
+  - knowledge_management
+  - documentation_system
+readiness: approved
+priority: high
+title: "Every link in the documentation map uses forward slashes, whichever OS generated it"
+component: knowledge-management
+level: L2
+status: active
+req_status: draft
+work_status: done
+created_by: "docs/acceptance-criteria/knowledge-management/KM-300-docs-same-everywhere/KM-300a.yaml"
+criteria: |
+  Given the docs folder contains these documentation files:
+    - docs/architecture/components/ac-driven-dev.md   (a component page)
+    - docs/architecture/adrs/ADR-001-self-hosting-boundary.md   (an ADR, three folders deep)
+    - docs/retrospectives/EPIC-ACDrivenDevelopment.md   (a retrospective)
+    - docs/glossary.md   (listed in the single-file Glossary section, not a table)
+  And the documentation map is generated on a Windows host, whose native path
+    separator is a backslash
+  When the documentation map is generated
+  Then every entry's link text uses "/" as the only path separator, e.g.
+    "docs/architecture/adrs/ADR-001-self-hosting-boundary.md"
+  And every entry's link target uses "/" as the only path separator
+  And this holds for entries in every section of the map — the component,
+    diagram, ADR, how-to, reference, explanation, conventions and retrospective
+    tables AND the single-file sections such as Glossary
+  And no link text or link target anywhere in the map contains a "\" character
+  And generating the same docs folder on a Linux or macOS host yields the same
+    link text and link targets character for character
+
+  Scope note: this AC governs the separator only. Which folder a link target is
+  relative to (so that it opens the page when followed) is KM-300a-2.
+depends_on:
+  - KM-300a
+doc_links:
+  - path: docs/INDEX.md
+    relationship: describes
+    status: exists
+  - path: scripts/generate_doc_index.py
+    relationship: implements
+    status: exists
+  - path: docs/architecture/agent_knowledge_system.md
+    relationship: context
+    status: exists
+  - path: docs/acceptance-criteria/ac-store/ACS-400-ac-governance/ACS-400e-4.yaml
+    relationship: context
+    status: exists
+    relevance: "Same bug class (str(Path.relative_to()) yields backslashes on Windows) fixed in the governance hook; mirror its test technique"
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Both link-producing sites must emit the forward-slash form: the single-file section renderer and the directory-table renderer in scripts/generate_doc_index.py. A fix to only one site does not satisfy this AC"
+  - "The forward-slash form must be derived from the path value itself (a POSIX rendering of the repo-relative path), not by a text replace of the host separator, so it is correct whatever separator the host path flavour uses"
+  - "Link text and link target must stay identical to each other in this AC; changing what the target is relative to belongs to KM-300a-2 and must not be folded into this fix"
+  - "Must not change entry order, descriptions, section headings or the front-matter header"
+  - "check-file-size ratchet: scripts/generate_doc_index.py is 480 lines against the 400-line .py limit (already over). The change must leave it no longer than at HEAD (net-zero or shrink). If new logic does not fit, extract it to a new module and add that module to every deploy list that already names generate_doc_index.py (scripts/build_deploy_manifest_helpers.py, scripts/build_phases_knowledge.py, scripts/build_phases_workflows.py) so the deployed transform-doc-index hook can still import it"
+  - "The committed docs/INDEX.md must be regenerated in the same change, so the tracked map already shows the fixed output (it currently holds backslash links generated on Windows)"
+  - "Record the change in the generator's DECISION HISTORY with the AC id, per the doc-enforcer convention"
+delivers_to:
+  agent: python-coder
+  contract: "A documentation map whose every link text and link target is a forward-slash path on any host OS; consumed by KM-300a-2 (target resolution), KM-300b-3 (cross-OS byte identity) and KM-300c-1 (commit-time separator guard)"
+expects_from: null
+origin_agent: business-analyst
+created: 2026-09-25
+amended_by: []
+superseded_by: null
+covered_by: [unit_tests/commit_guardian/test_km_300a_1_doc_index_posix_links.py]
+implemented_by: [scripts/generate_doc_index.py]
+change_target: code
+risk_surface: internal
+test_spec:
+  - name: test_doc_index_links_use_forward_slashes_in_table_and_single_file_sections
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    description: "Builds a temp repo whose docs/ holds architecture/adrs/ADR-001-self-hosting-boundary.md (a table-section entry three folders deep), architecture/components/ac-driven-dev.md, retrospectives/EPIC-ACDrivenDevelopment.md and glossary.md (the single-file Glossary section); calls generate_doc_index.generate_index(repo_root); extracts every [text](target) pair; asserts the ADR row's link text is exactly docs/architecture/adrs/ADR-001-self-hosting-boundary.md, the Glossary entry's link text is docs/glossary.md, and no link text or target contains a backslash. Fails red on the current code on a Windows host, where both sites render str(WindowsPath) with backslashes."
+  - name: test_doc_index_links_forward_slash_under_simulated_windows_path_flavour
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    description: "Same fixture, but patches the generator's repo-relative path computation so it returns a PureWindowsPath (backslash-stringifying) for every entry; asserts one table-section entry and the Glossary single-file entry both still carry forward-slash link text and target and no backslash anywhere inside [..] or (..). Makes the defect red on a POSIX CI host too; a half-fix covering only one rendering site stays red."
+  - name: test_doc_index_links_identical_across_path_flavours
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    description: "Generates the same fixture once natively and once under the simulated Windows path flavour and asserts the extracted link text/target lists are equal character for character."
+test_rationale: "The defect is a stringification at two rendering sites, so a direct-import unit test over a temp docs tree is the tightest proof. A test on a real tree alone is red only on a Windows host; the simulated PureWindowsPath case makes it red on POSIX CI as well, and asserting one table entry plus the Glossary entry stops a half-fix (one site only) from passing."
+notes: |
+  The /quick-fix target for the known defect. Per the KM-300a L1 note, BOTH
+  link-producing sites must be covered: the single-file sections AND the
+  directory-table rendering. A test that exercises only one section passes
+  against a half-fix — the test must include at least one table-section entry
+  and one single-file-section entry, generated with a Windows-style path
+  flavour so it fails red on a POSIX CI host too.

@@ -52,6 +52,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+from _ac_governance_baseline import read_baseline_blob
+
 
 # ---------------------------------------------------------------------------
 # Constants — field categories (ACS-400b-3 requirement: named constants at
@@ -214,45 +216,32 @@ def _load_staged_content(file_path: str) -> dict | None:
 
 
 def _load_head_content(file_path: str) -> dict | None:
-    """Load the HEAD version of an AC YAML file from git.
+    """Load the version of an AC YAML file that this commit amends FROM.
 
-    Returns None if the file does not exist in HEAD (new file scenario).
+    Normally that is HEAD. During a merge it is whichever parent holds the
+    identical staged blob, so a record taken verbatim from the other branch —
+    an AC-id collision resolved in its favour — is not misread as an amendment
+    this committer authored. See `_ac_governance_baseline` for why that is
+    safe; outside a merge the answer is always HEAD.
+
+    Returns None if the file does not exist there (new file scenario).
 
     Args:
         file_path: Relative path from repo root (as git knows it).
 
     Returns:
-        Parsed dict of HEAD version, or None when absent or on error.
+        Parsed dict of the baseline version, or None when absent or on error.
     """
     if os.environ.get("HOOK_NO_GIT"):
         # Test mode: treat all files as new (no HEAD version) unless
         # HOOK_SIMULATE_CRITERIA_CHANGED / other sim flags are set.
         return None
 
-    try:
-        env_root = os.environ.get("HOOK_ROOT")
-        git_cmd = ["git"]
-        if env_root:
-            git_cmd = ["git", "-C", env_root]
-
-        result = subprocess.run(
-            [*git_cmd, "show", f"HEAD:{file_path}"],
-            capture_output=True,
-            text=True,
-            timeout=10,
-        )
-    except (subprocess.SubprocessError, OSError) as exc:
-        print(
-            f"{_HOOK_PREFIX} WARNING: git show failed for {file_path}: {exc}",
-            file=sys.stderr,
-        )
+    baseline = read_baseline_blob(file_path)
+    if baseline is None:
         return None
-
-    if result.returncode != 0:
-        # File not in HEAD — it is a new file
-        return None
-
-    return _load_yaml_safe(result.stdout, source_label=f"HEAD:{file_path}")
+    revision, content = baseline
+    return _load_yaml_safe(content, source_label=f"{revision}:{file_path}")
 
 
 # ---------------------------------------------------------------------------
@@ -309,7 +298,7 @@ def _get_staged_ac_paths() -> list[str]:
         result = subprocess.run(
             ["git", "diff", "--cached", "--name-only", "--diff-filter=AM"],
             capture_output=True,
-            text=True,
+            text=True, encoding="utf-8",
             timeout=10,
         )
     except (subprocess.SubprocessError, OSError) as exc:
@@ -443,7 +432,7 @@ def _check_file(
                 rel_path = str(Path(file_path).relative_to(project_root))
             except ValueError:
                 rel_path = file_path
-        head = _load_head_content(rel_path)
+        head = _load_head_content(Path(rel_path).as_posix())
 
     is_new_file = (head is None)
     authorized = _is_authorized(agent_id, registry_path=registry_path)
@@ -649,7 +638,7 @@ def main() -> int:
             result = subprocess.run(
                 ["git", "config", "user.name"],
                 capture_output=True,
-                text=True,
+                text=True, encoding="utf-8",
                 timeout=5,
             )
             agent_id = result.stdout.strip() if result.returncode == 0 else "unknown"

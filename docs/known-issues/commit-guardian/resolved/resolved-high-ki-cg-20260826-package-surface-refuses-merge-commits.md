@@ -16,7 +16,7 @@ related_docs:
 # KI-CG-20260826-package-surface-refuses-merge-commits — merging `origin/main` into a branch is refused as if the branch had added every registry entry landed upstream since it forked
 
 > One known issue, split out of `docs/known-issues/commit-guardian.md` on
-> 2026-09-14. Index: [commit-guardian.md](../commit-guardian.md).
+> 2026-09-14. Index: [commit-guardian.md](../../commit-guardian.md).
 > Filename severity is the three-level index bucket (`high`); the
 > original grading is the `**Severity:**` line below, unchanged.
 

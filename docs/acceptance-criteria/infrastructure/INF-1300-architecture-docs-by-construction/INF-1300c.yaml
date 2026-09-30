@@ -41,6 +41,7 @@ covered_by:
   - INF-1300c-2
   - INF-1300c-3
   - INF-1300c-4
+  - INF-1300c-5
 implemented_by: []
 documentation_triggers: []
 documentation_rationale: "The benefit is that an existing index stays complete without anyone remembering to update it; the index itself is the documentation, and a second document describing it would be a second place for it to go stale."

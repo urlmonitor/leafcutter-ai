@@ -34,6 +34,15 @@ doc_links:
   - path: scripts/goal_to_epic.py
     relationship: describes
     status: exists
+    relevance: "Facade only since the 2026-09-14 decomposition. The primary surface (generate_ticket_from_ac._write_implemented_by, above) is unaffected by the split; the goal path's worktree-root derivation moved to the two modules below."
+  - path: scripts/ac_store/epic_phases.py
+    relationship: describes
+    status: exists
+    relevance: "Owns _relativise_backref_pair, including the TKT-016 second clause that handles an underivable worktree root — the goal path's version of the out-of-worktree case this AC specifies."
+  - path: scripts/ac_store/epic_runtime.py
+    relationship: describes
+    status: exists
+    relevance: "Owns _find_worktree_root and _derive_worktree_from_inbox — the goal path's repo-root derivation the relativiser depends on."
   - path: docs/architecture/components/ac-driven-dev.md
     relationship: describes
     status: exists

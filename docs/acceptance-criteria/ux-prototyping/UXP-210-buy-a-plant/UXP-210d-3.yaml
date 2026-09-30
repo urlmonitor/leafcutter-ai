@@ -1,5 +1,5 @@
 id: UXP-210d-3
-product: fern-and-fig
+example_product: fern-and-fig
 components:
   - ux_prototyping
 readiness: reviewed

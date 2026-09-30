@@ -20,13 +20,21 @@ Read this before authoring or decomposing ACs in this component.
 
 - L0s occupy hundreds: 100, 200, 201, 202, 300, 400, 500, 700, 800, 900, 1100,
   1200, 1300, 1400, 1500, 1600, 1700, 1800, 1900, 2000, 2100, 2200, 2300, 2400,
-  2500, 2600, 2700, 2800, 2900, 3100, 3200, 3500, 3600, 3800. Slots 3000, 3700
-  and 3701 are occupied by loose `BO-NNNN.yaml` L2/L3 records sitting at the
-  component root — a loose file reserves its slot exactly as a folder does.
-- Next free L0 hundred is **BO-3900** (correct as of 2026-09-14, when BO-3800 was
-  added). Pick the next free hundred for any new L0.
-- **This line has now gone stale three times** — it has previously claimed
-  BO-1900, BO-2300 and BO-3300 while the store had already moved past each.
+  2500, 2600, 2700, 2800, 2900, 3100, 3200, 3500, 3600, 3800, 4100, 4200. Slots
+  3000, 3700, 3701, 3900 and 4000 are occupied by loose `BO-NNNN.yaml` L2/L3
+  records sitting at the component root — a loose file reserves its slot exactly
+  as a folder does.
+- Next free L0 hundred is **BO-4400** (correct as of 2026-09-25, when BO-4300 was
+  added; verified against folders AND loose `BO-*.yaml` files). Pick the next free
+  hundred for any new L0.
+- **BO-4300** ("Every piece of separate work gets its workspace one dependable way",
+  2026-09-25) is the ONE DOOR through which BO-4100 / BO-1700 / BO-1800 workspace
+  properties are delivered: a single standalone maker, every caller halts on anything
+  but "ready". It does not re-derive those properties — see its L0 notes for the map.
+  A new workspace-shaped request asks first: is it a property (BO-4100/1700/1800) or a
+  promise about the one door and its callers (BO-4300)?
+- **This line has now gone stale four times** — it has previously claimed
+  BO-1900, BO-2300, BO-3300 and BO-3900 while the store had already moved past each.
   Treat the number above as a hint, never as an answer: `ls` the component
   directory (folders AND loose `BO-*.yaml` files) and confirm the highest
   existing slot before assigning, then update this line in the same pass.
@@ -129,6 +137,80 @@ main-branch gating during drives), not build-pipeline or infrastructure. The
 BO-2200 documentation-coverage guarantee (2026-07-15) followed the same rule: a
 drive-time documentation GATE belongs here, alongside BO-500 computed gates.
 
+## Sound workspace by construction — BO-4100 family (the BO-1700 sibling, and why)
+
+BO-4100 ("The workspace you are given is sound, and what you are told about it is
+true", added 2026-09-21, origin BrainCandy) is the SIBLING of BO-1700, authored
+after an overlap audit of a six-item worktree incident report. Five L1s:
+BO-4100a (baseline freshness at creation), b (supporting material is the
+workspace's own), c (disposability is knowable), d (the account of what was made
+is truthful), e (the set of workspaces is complete and every leftover is clearable
+— added 2026-09-21 on operator ruling, after the BA's first decomposition pass).
+
+**BO-4100e is NOT part of BO-4100c, and the reason generalises.** All four of
+BO-4100c's L2 children presuppose the workspace APPEARS in the live set: c-1
+assesses that set, c-2/c-3/c-4 each act on an entry within it. A workspace the
+listing cannot see (KI-BO-20260831-1331) is outside the domain of all four, and
+folding it in would force every one of them to carry a weaker precondition ("for
+workspaces the listing can see…"). Different promises, too: c promises the
+disposability VERDICT is right; e promises the listing is COMPLETE and that
+something unlistable is still recoverable. BO-4100e is scoped to the RECOVERY half
+only — prevention is already BO-4100a-3-i ("a refused creation leaves no branch,
+directory or registration behind").
+
+**Every L1 in this family carries `documentation_triggers: []`.** That is deliberate
+and follows from the framing decision below, not from oversight. Two were cleared on
+operator ruling 2026-09-21 after the BA declined to author documentation ACs to
+satisfy them. BO-4100b's is recorded as a DEFERRAL — the shared-versus-own topology
+may deserve a component diagram as architecture documentation later — and BO-4100c's
+as a denial on the merits, since a how-to telling an operator to judge ~150
+workspaces by hand is the instrument that already failed. When adding to this family,
+a documentation trigger is the exception that needs arguing, not the default.
+
+**Why it is a sibling and not four more BO-1700 children — read before adding
+anything worktree-shaped.** Two independent reasons, and the second is the real one:
+
+1. BO-1700 sits at its 8-child cap under `child_limit_override: 8`, whose own
+   amendment record says the waiver is temporary and must be REMOVED by folding
+   into a sibling L0 — not widened. Raising it again is not an authoring agent's
+   call to make silently.
+2. The SUBJECT differs. BO-1700 makes exactly one promise: quality gates cannot be
+   switched off. BO-4100's four properties are not gate-shaped — freshness,
+   independence, disposability, truthful naming. Only BO-4100b touches gates at
+   all, and from the opposite side. Folding them in would turn BO-1700 into
+   "everything about worktrees" and cost it a tight, falsifiable goal.
+
+**The three freshness ACs are all needed and none implies another.** This is the
+single most likely thing to be got wrong near here:
+
+- **BO-4100a** — freshness AT CREATION. What commit the workspace is rooted at.
+- **BO-900a** — divergence DURING a long drive, measured in commits ahead, with a
+  configurable threshold and a pause.
+- **BO-1800f** — freshness AT DELIVERY, before finished work leaves its copy.
+
+**Polarity warning on BO-4100b.** It concerns a check that wrongly REFUSES over
+material the workspace borrowed from a shared install tree. BO-1700's entire family
+concerns a check that wrongly stays SILENT. BO-1700h's phrase "a stale workspace is
+flagged rather than trusted" reads like a match and is not one — that is the guard
+staying CORRECT under drift. Also distinct from BO-1700e (guard portability across
+layouts) and BO-1700f (standing aside where a project genuinely has no checks — a
+true negative, not a false positive).
+
+**BO-4100c vs BO-1800d.** BO-1800d was rejected as the host. It is the do-no-harm
+constraint on background tidying against a drive that is STILL RUNNING, and it
+presupposes tidying exists. It is silent on accumulation, on how a finished
+workspace is recognised, and on a workspace that is idle yet still holds work that
+never reached the shared line. Both records are needed.
+
+**Framing decision, settled at PO stage — do not re-open at L2.** The request
+arrived as "a skill that TELLS an agent how to create, verify and clean up a
+workspace" and was deliberately reframed as enforcement. Guidance that must be read
+to help is a weaker instrument than a property that holds by construction: the
+incident that prompted the request happened to an operator who had not read the
+guidance, in a repository whose own CLAUDE.md documented the symptom and pointed at
+the broken remedy rather than naming the canonical script. No child of BO-4100 may
+be decomposed into "a document explains how to...".
+
 ## Refusal-triggered specialist handoff — BO-3800 family (placement + the BO-210 seam)
 
 BO-3800 ("When a standard turns work away, the right craft is brought in to finish
@@ -190,6 +272,14 @@ the restructuring WAS performed by the specialist. What is provable is the SEQUE
 that the specialist is actually asked on the refusal path before delivery is retried.
 That is a reachability-shaped claim, and `fast-lane-build.js` is this repo's scar on
 what happens when such a claim is covered by a grep-only test instead.
+
+## The three fast-lane goals — read before adding anything lane-shaped
+
+BO-2400 (+f, g) owns the ARC; **BO-3500** the RANGE it can carry (producer routing and
+the `test_required: false` proof gap of KI-BO-013 are deliberately ONE goal); **BO-4200**
+the TRUTH of the verdict. A roster/producer request belongs to BO-3500, not a new goal.
+Pattern C is unavailable on BO-2400f — BO-2400 sits at 7/7 L1s — so a sibling L0
+(Pattern A) is the answer. Both findings are argued in full in `BO-4200.yaml`'s notes.
 
 ## Cross-component placement notes (parity & registry — NOT build-orchestration)
 

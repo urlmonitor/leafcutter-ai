@@ -29,6 +29,11 @@ doc_links:
   - path: scripts/goal_to_epic.py
     relationship: describes
     status: exists
+    relevance: "Facade only since the 2026-09-14 decomposition. The primary surface (generate_ticket_from_ac._write_implemented_by, above) is unaffected by the split; the SECOND implemented_by writer — the goal path's — moved to epic_assembly.py below and must dedupe the same way."
+  - path: scripts/ac_store/epic_assembly.py
+    relationship: describes
+    status: exists
+    relevance: "Owns _replace_implemented_by_entry / _swapped_implemented_by / _splice_implemented_by_block — the goal path's implemented_by writer, the second place a regenerated ticket could leave a duplicate entry."
   - path: docs/architecture/components/ac-driven-dev.md
     relationship: describes
     status: exists

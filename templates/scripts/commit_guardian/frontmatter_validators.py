@@ -12,7 +12,7 @@ ARCHITECTURE: Not needed.
 import fnmatch
 import subprocess
 from datetime import date
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import Any
 
 import yaml
@@ -33,6 +33,25 @@ from doc_type_validators import (
     is_component_exempt,
     validate_doc_type,
     validate_requires_documentation,
+)
+
+# GE-118d: validate_paths() resolves each path-bearing frontmatter entry via
+# the shared top-level resolver scripts/frontmatter_path_resolver.py (ONE
+# ROUTINE, ONE DECLARED ACCEPTED-SHAPE SET, IN EXACTLY ONE PLACE -- see that
+# module's own docstring and this ticket's Implementation Notes). The
+# sibling locator module bridges the import across every layout this file
+# runs from, including the symlinked-deploy realpath hazard -- see its own
+# docstring for why a naive Path(__file__).resolve().parent.parent is not
+# sufficient here.
+from _frontmatter_path_resolver_locator import (  # noqa: E402
+    ensure_frontmatter_path_resolver_on_syspath,
+)
+
+ensure_frontmatter_path_resolver_on_syspath()
+
+from frontmatter_path_resolver import (  # noqa: E402
+    PathEntryRefusal,
+    resolve_frontmatter_path_entry,
 )
 
 
@@ -227,25 +246,42 @@ def validate_paths(fm: dict[str, Any], project_root_path: Path) -> list[str]:
     """Check that paths in optional path fields actually exist on disk.
 
     Broken paths block the commit — if you reference a file, it must exist.
+    Each list element is classified by the shared
+    ``resolve_frontmatter_path_entry`` resolver (GE-118d) rather than by an
+    inline type check here — a bare string and a single-key mapping
+    (``{field_name: path_string}``) are both accepted shapes; an
+    unsupported shape (e.g. a multi-key mapping) is refused by the resolver
+    rather than raising, and is reported here as its own error naming the
+    accepted-shape set instead of the parsed element's repr.
 
     Args:
         fm: Parsed frontmatter dictionary.
         project_root_path: Absolute path to the project root.
 
     Returns:
-        list[str]: Error messages for paths that do not exist.
+        list[str]: Error messages for paths that do not exist, plus one
+            error per entry whose shape the resolver refuses.
     """
     errors = []
     path_fields = ["related_docs", "related_code", "architecture_diagrams"]
 
     for field in path_fields:
-        paths = fm.get(field)
-        if not paths or not isinstance(paths, list):
+        entries = fm.get(field)
+        if not entries or not isinstance(entries, list):
             continue
-        for p in paths:
-            full_path = project_root_path / p
+        for entry in entries:
+            resolved = resolve_frontmatter_path_entry(entry, field)
+            if isinstance(resolved, PathEntryRefusal):
+                errors.append(
+                    f"Unsupported entry in '{field}': accepted shapes are "
+                    f"{', '.join(resolved.accepted_shapes)}"
+                )
+                continue
+            full_path = project_root_path / resolved
             if not full_path.exists():
-                errors.append(f"Broken path in '{field}': '{p}' does not exist")
+                errors.append(
+                    f"Broken path in '{field}': '{resolved}' does not exist"
+                )
 
     return errors
 
@@ -363,14 +399,70 @@ def validate_ticket_type_enum(fm: dict[str, Any]) -> list[str]:
     return []
 
 
+def _prefixed_depends_candidates(
+    entry: str, parent: Path, grandparent: Path | None
+) -> list[Path]:
+    """Resolve a repo-relative prefixed ``depends_on`` entry by basename.
+
+    Mirrors ``ticket_frontmatter_guard._depends_candidates`` — the sibling
+    validator for this same ``depends_on`` field (see this module's DECISION
+    HISTORY for why a third enforcement layer existed with only the bare-form
+    rule). Deliberately matches that function's semantics rather than
+    inventing a second interpretation, since the two validators diverging is
+    what let a repo-relative entry pass one check and fail the other.
+
+    Only entries containing a "/" are considered. The path's second-to-last
+    component must equal *parent*'s directory name (i.e. this ticket's own
+    epic folder), or *grandparent*'s when the ticket itself sits in a
+    ``done/`` subfolder — otherwise nothing is returned. This directory-name
+    gate is what stops a cross-epic path
+    (``tickets/.../EPIC-Other/99_foo.md``) from validating merely because a
+    same-named file happens to sit in THIS ticket's own epic folder; basename
+    resolution alone, without it, would accept that.
+
+    Args:
+        entry: The raw ``depends_on`` string, possibly repo-relative-prefixed.
+        parent: ``ticket_path.parent`` — this ticket's own epic folder (or its
+            ``done/`` subfolder).
+        grandparent: ``parent.parent`` when the ticket itself sits in a
+            ``done/`` subfolder, else ``None``.
+
+    Returns:
+        list[Path]: Additional candidate paths to check. Empty when *entry*
+            has no "/" or its directory component names a different epic.
+    """
+    if "/" not in entry:
+        return []
+    entry_parts = PurePosixPath(entry).parts
+    if len(entry_parts) < 2:
+        return []
+    epic_dir_component, filename = entry_parts[-2], entry_parts[-1]
+    if epic_dir_component == parent.name:
+        return [parent / filename, parent / "done" / filename]
+    if grandparent is not None and epic_dir_component == grandparent.name:
+        return [grandparent / filename]
+    return []
+
+
 def validate_depends_on(fm: dict[str, Any], ticket_path: Path) -> list[str]:
     """Validate that ``depends_on`` entries reference existing sibling tickets.
 
-    Each entry must be a string filename. The referenced file must exist in:
-    - ``ticket_path.parent / entry``, OR
-    - ``ticket_path.parent / "done" / entry``, OR
-    - if the ticket is itself inside a ``done/`` subfolder, also
-      ``ticket_path.parent.parent / entry``.
+    Each entry must be a string filename. Two spellings are accepted for the
+    same-epic constraint, mirroring ``ticket_frontmatter_guard._depends_candidates``
+    (see ``_prefixed_depends_candidates`` above and this module's DECISION
+    HISTORY):
+
+    1. **Bare sibling filename** (e.g. ``06_TICKET-....md``) — resolved
+       against:
+       - ``ticket_path.parent / entry``, OR
+       - ``ticket_path.parent / "done" / entry``, OR
+       - if the ticket is itself inside a ``done/`` subfolder, also
+         ``ticket_path.parent.parent / entry``.
+    2. **Repo-relative prefixed path** (e.g.
+       ``tickets/00_inbox/epics/EPIC-Foo/06_TICKET-....md``, the form
+       ``build-feature.js``'s ``toWorktreePath`` needs) — resolved by
+       basename via ``_prefixed_depends_candidates``, gated on the path
+       naming this ticket's own epic folder.
 
     An empty list ``[]`` is acceptable. A missing field is caught by the
     required-fields validator and not re-reported here.
@@ -408,6 +500,7 @@ def validate_depends_on(fm: dict[str, Any], ticket_path: Path) -> list[str]:
         candidates = [parent / entry, parent / "done" / entry]
         if grandparent is not None:
             candidates.append(grandparent / entry)
+        candidates.extend(_prefixed_depends_candidates(entry, parent, grandparent))
 
         if not any(c.exists() for c in candidates):
             tried = ", ".join(str(c) for c in candidates)
@@ -529,6 +622,57 @@ def validate_ticket_file(filepath: str, valid_components: set[str],
 ====================================================================
 DECISION HISTORY
 ====================================================================
+- 2026-09-28 [python-coder/GE-118d]: validate_paths() now resolves each
+  related_docs / related_code / architecture_diagrams element via the new
+  shared resolver scripts/frontmatter_path_resolver.py's
+  resolve_frontmatter_path_entry(), instead of assuming every element is a
+  bare string and doing project_root_path / p directly. A labelled entry
+  (single-key mapping, e.g. {"explanation": "docs/foo.md"}) previously
+  raised TypeError: unsupported operand type(s) for /: 'PosixPath' and
+  'dict' (docs/known-issues/commit-guardian/open-blocker-ki-cg-008.md). The
+  resolver is imported via the new sibling module
+  _frontmatter_path_resolver_locator.py, which tries an immediate-sibling
+  candidate first (this file's own resolved __file__.parent.parent) --
+  correct for a real build.py deploy, where build_workflow_tools() is
+  actually invoked with output_root (not target_root, despite its
+  docstring) as its deploy root, so frontmatter_path_resolver.py lands as a
+  TRUE sibling of the (possibly symlinked) commit_guardian/ directory under
+  <output_root>/scripts/ -- then falls back to a project-root walk (.git /
+  CLAUDE.md marker on its own __file__, never cwd) for the raw templates/
+  source tree, where the resolver instead lives at the true project root's
+  scripts/ directory. A resolver refusal (unsupported shape, e.g. a
+  multi-key mapping) is reported as its own error naming the field and the
+  accepted-shape set, never the parsed element's repr -- deliberately NOT
+  the multi-key "take all values" fix the known-issue's own sketch
+  suggested. Bare-string verdicts are unchanged (regression-tested against
+  a real tracked document).
+- 2026-09-08 [python-coder/EPIC-StartingNewWorkTheProperWayAlways]:
+  validate_depends_on() now accepts a second spelling for a depends_on entry,
+  via the new _prefixed_depends_candidates() helper: a repo-relative prefixed
+  path (e.g. "tickets/00_inbox/epics/EPIC-Foo/06_TICKET-....md"), in addition
+  to the existing bare sibling filename form. This is the third of three
+  consumers of the same depends_on field to need the fix — build-feature.js's
+  toWorktreePath resolves depends_on entries against the worktree root (so a
+  bare filename never exists there and the dependant ticket is silently
+  withheld from a build), and ticket_frontmatter_guard.py's
+  _depends_candidates() already accepted both spellings as of f9ee688c0. This
+  validator (invoked by the check-doc-frontmatter pre-commit hook) had been
+  missed and was still bare-only, so a prefixed entry concatenated into a
+  doubled, non-existent path and reported a real dependency as missing.
+  _prefixed_depends_candidates() deliberately mirrors _depends_candidates()'s
+  semantics rather than inventing a second interpretation: resolution is by
+  basename, gated on the prefixed path's own parent-directory component
+  matching the ticket's own epic folder name (ticket_path.parent.name, or
+  .parent.parent.name when the ticket itself sits in a done/ subfolder) --
+  this is what stops a cross-epic path from validating via a same-named
+  sibling that happens to sit in THIS epic folder. Genuinely missing files
+  still report an error under either spelling (no fail-open); bare filenames
+  continue to resolve exactly as before (unchanged code path). FLAGGED AS
+  FOLLOW-UP (not done here): _depends_candidates() and
+  _prefixed_depends_candidates() now implement the same rule in two places.
+  Extracting a shared helper would need a deploy-manifest entry (a hook
+  importing an undeployed module raises ModuleNotFoundError at hook runtime),
+  so it was judged too risky mid-drive.
 - 2026-08-31 [python-coder/GE-120e-1]: Removed merge_scoped_md_paths and its
   _name_only helper. That implementation duplicated
   check_contract_shrinking.py's _merge_scoped_paths idiom byte-for-byte

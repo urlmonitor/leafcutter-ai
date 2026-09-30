@@ -24,7 +24,7 @@ related_docs:
 - **Status:** open
 - **Occurrences:** 1
 - **First seen:** 2026-08-25 · **Last seen:** 2026-08-25
-- **Where:** `scripts/goal_to_epic.py:217` (`_normalize_non_ascii_punct`) and `:306`
+- **Where:** `scripts/ac_store/epic_naming.py:84` (`_normalize_non_ascii_punct`) and `:173`
   (`_to_pascal_case`, the split regex)
 - **Reported by:** customer bug report 2026-08-25
 
@@ -45,7 +45,7 @@ downstream can catch it.
 `EPIC-ReconcileWiringNodesToRealRdkMaterials,` — trailing comma included. From there the
 comma propagated into `target_epic` on **8** ACs, into every `implemented_by` path those
 ACs carry, and into the generated Master_Plan. The name is 39 characters, which keeps it
-under the 40-character `_EPIC_NAME_MAX_CHARS` cap (`:314`), so truncation never fired and
+under the 40-character `_EPIC_NAME_MAX_CHARS` cap (`epic_naming.py:181`), so truncation never fired and
 never incidentally clipped the trailing character — a one-character-longer title would
 have hidden the defect by accident.
 

@@ -120,20 +120,44 @@ Return a structured verdict:
 
 ## Closing protocol
 
-Close a ticket **only** when:
-1. Every Implementation Task is confirmed via git or prod-puller output.
-2. The user explicitly asks to close in the same turn ("close this ticket",
-   "mark done", "/status close"). Looking-done is not enough — refuse to close
-   on speculative completeness.
+This is **the single door** through which a ticket's `status:` frontmatter ever
+reaches `done` (ADR-047, BO-400e-3). Both `build-feature.js` and
+`build-ticket.js` dispatch their completion-write step to you with the literal
+instruction "Follow your own Closing protocol" — this section is that
+protocol, and it is invoked identically whether you were reached by an
+interactive `/status close` turn or by one of those drivers. There is no
+second, driver-specific closing procedure to look for elsewhere, and you must
+not improvise one.
 
-When both conditions hold:
+Close a ticket **only** when one of the following authorizations holds:
+1. **Interactive request.** The user explicitly asks to close in the same
+   turn ("close this ticket", "mark done", "/status close"), AND every
+   Implementation Task is confirmed via git or prod-puller output.
+   Looking-done is not enough — refuse to close on speculative completeness.
+2. **Driver-dispatched completion write.** You were dispatched by
+   `build-feature.js` or `build-ticket.js`'s completion-write step
+   (`writeTicketCompletion()`), naming the ticket's confirmed phases as
+   already verified from the record itself. That dispatch **is** the
+   authorization — it is not a request you independently re-litigate by
+   re-running your own Investigation protocol from scratch; the driver has
+   already confirmed every needed phase's sign-off before reaching you.
+
+In either case, the write itself goes through exactly the same mechanism, with
+no shortcut for the driver-dispatched path:
 1. Invoke `set_ticket_status.py` to update the ticket frontmatter to `status: done`:
    ```bash
    python scripts/set_ticket_status.py --ticket <absolute_ticket_path> --status done
    ```
-   If the script exits non-zero (e.g. agents still have status `needed`), surface
-   the error to the user as a blocker — do NOT use `--force` without explicit user
-   authorization.
+   If the script exits non-zero (e.g. agents still have status `needed`), the
+   ticket is **not closed** — do NOT use `--force` to push it through anyway.
+   On the interactive path, surface the error to the user as a blocker (only
+   the user, in a later, separate turn, may explicitly authorize `--force`).
+   On the driver-dispatched path there is no user to ask: report the failure
+   back to the driver exactly as its dispatch prompt instructs (e.g.
+   `{"status": "error", ...}`) and stop — never reach for `--force` to make a
+   refusal look like a close. The override also switches off the
+   allowed-transition rules, so it is not a narrower, safer substitute either
+   way (ADR-047).
 2. The script stages the file automatically via `git add`. Do NOT use `git mv` to
    move the file — the ticket remains at its original path (BO-400c-4).
 3. Report the updated status and confirm the ticket file path is unchanged.
@@ -143,10 +167,11 @@ frontmatter; list the unconfirmed tasks instead.
 
 ## Auto-close trigger
 
-In addition to the user-gated closing path above, `status-checker` MUST check
-whether a ticket qualifies for **automatic closure** whenever it is invoked.
-The auto-close trigger fires when **both** of the following conditions hold
-simultaneously:
+This trigger serves an **investigation** invocation — someone asking what state a
+ticket is in, carrying no authorization to close it. It does NOT gate the
+driver-dispatched completion write above. `status-checker` MUST check this
+trigger whenever it is invoked WITHOUT one of the two authorizations above. It
+fires when **both** of the following conditions hold simultaneously:
 
 1. **All sign-offs complete.** Every entry in the ticket's frontmatter `agents:`
    map is `signed_off` or `not_needed` (no `needed` or `failed` entries remain).
@@ -164,9 +189,17 @@ simultaneously:
 
    Capture the first matching commit SHA for the audit entry.
 
-**Precedence:** Check the auto-close trigger **before** the user-gated close
+**Precedence:** Check the auto-close trigger **before** the *interactive* close
 path. If the auto-close fires, the ticket is closed immediately without
-requesting explicit user authorization; the user-gated path is not reached.
+requesting explicit user authorization; the interactive path is not reached.
+
+A **driver-dispatched** completion write does not reach this trigger at all. It
+arrives already authorized, and the merge-commit condition is one an epic-branch
+drive cannot satisfy by construction — the branch is unmerged precisely because
+the work is still being driven. Applying this trigger to that path turns every
+in-drive close into a refusal that names an unmet merge condition the driver was
+never supposed to meet, which is exactly what happened on 2026-09-22 when the
+two closing sections were left unreconciled.
 
 **When both conditions hold:**
 

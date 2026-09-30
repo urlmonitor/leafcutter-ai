@@ -115,52 +115,47 @@ def _product_truth_introduction() -> str:
     return chr(10).join(lines)
 
 
-#: Files the product-truth checker opens BEFORE it begins per-artifact
-#: checking. A deploy that silently omits one of these installs a checker that
-#: cannot start, so each is verified by name after the copy loop rather than
-#: left to the glob (which simply yields one fewer file and reports nothing).
-#: Declared as a list so a new start-up input is added here, once
-#: (UXP-700a-4-i).
-_PRODUCT_TRUTH_REQUIRED_FILES: tuple[str, ...] = (
-    "schemas/flow.schema.json",
-    "schemas/mock-data.schema.json",
-    "schemas/mockup.schema.json",
-    "schemas/classifier-eval.schema.json",
-    "scripts/generate_product_truth.py",
-    "scripts/validate_product_truth.py",
-)
+def _run_product_truth_smoke_test(product_truth_src: Path, dry_run: bool) -> None:
+    """Prove a from-scratch record works before this build ships one.
 
-
-def _verify_product_truth_required_files(output_base: Path, dry_run: bool) -> None:
-    """Fail the build when a declared start-up input was not installed.
-
-    The copy loop above globs, so a file missing from the package source is
-    simply never copied and the build would otherwise finish green having
-    installed a checker that cannot run. Each missing file is RECORDED (not
-    raised on the spot) so one run reports the whole remediation set; build.py
-    raises once at the end (UXP-700a-4-i).
+    Runs the REAL, just-deployed checker (docs/product-truth/scripts/
+    validate_product_truth.py) against a throwaway, wholly empty record, and
+    states how many start-up files that run needed -- both DERIVED from what
+    the checker actually read, never a hand-restated list (UXP-700a-4). A
+    start-up input the checker tried to read but did not find is recorded
+    the same way every other declared-deploy gap already is, naming it, so
+    one run reports it and build.py raises once at the end (UXP-700a-4-i,
+    carried over from the file-presence check this replaces).
 
     Args:
-        output_base: The target project's docs/product-truth/ directory.
-        dry_run: When True, nothing was written, so nothing is verified.
+        product_truth_src: The package's own docs/product-truth root.
+        dry_run: When True, nothing was written, so there is nothing to
+            smoke-test.
     """
     # Deferred: build_phases imports THIS module at its own top level, so a
     # module-scope import back would be circular. Same pattern, and same
-    # reason, as build_phases_knowledge.py.
+    # reason, as build_phases_knowledge.py. build_phases_product_truth_smoke
+    # is a plain sibling import (no cycle) -- kept function-scoped alongside
+    # the build_phases one for a single, consistent import style in this
+    # function.
     import build_phases as _bp  # noqa: PLC0415
+    import build_phases_product_truth_smoke as _smoke  # noqa: PLC0415
 
     if dry_run:
         return
-    product_truth_src = _bp.PACKAGE_ROOT / "docs" / "product-truth"
-    for rel in _PRODUCT_TRUTH_REQUIRED_FILES:
-        if not (output_base / rel).is_file():
-            # Named repo-relative, the way a reader would go find it, rather
-            # than as the absolute temp path of whichever install produced it.
-            _bp.record_deploy_failure(
-                "build_product_truth",
-                f"docs/product-truth/{rel}",
-                product_truth_src / rel,
-            )
+    try:
+        required_files = _smoke.run_product_truth_smoke_test(product_truth_src)
+    except _smoke.RequiredFileMissing as exc:
+        # Named repo-relative, the way a reader would go find it, rather
+        # than as the absolute temp path of whichever install produced it.
+        _bp.record_deploy_failure(
+            "build_product_truth",
+            f"docs/product-truth/{exc.rel}",
+            product_truth_src / exc.rel,
+        )
+        return
+    print(f"  product-truth: {len(required_files)} required file(s) checked "
+          "(from-scratch record smoke test)")
 
 
 def _scaffold_product_truth_record(output_base: Path, dry_run: bool) -> int:
@@ -302,7 +297,7 @@ def build_product_truth(target_root: Path, config: dict[str, Any],
                 written += 1
 
     written += _scaffold_product_truth_record(output_base, dry_run)
-    _verify_product_truth_required_files(output_base, dry_run)
+    _run_product_truth_smoke_test(product_truth_src, dry_run)
 
     return written
 
@@ -318,5 +313,16 @@ DECISION HISTORY
   build_phases.py re-exports build_product_truth, so build.py and every other
   caller are untouched. Helper imports stay function-scoped to avoid the
   circular import. (#EPIC-TruthfulProjectRecord)
+- 2026-09-16 16:20 [python-coder]: UXP-700a-4 -- replaced the hand-restated
+  ``_PRODUCT_TRUTH_REQUIRED_FILES`` tuple and ``_verify_product_truth_
+  required_files`` (bare on-disk presence check, six hand-named files, never
+  actually ran the checker) with ``_run_product_truth_smoke_test``, which
+  delegates to the new sibling module build_phases_product_truth_smoke.py:
+  it runs the REAL, just-deployed checker against a throwaway, wholly empty
+  record and DERIVES the required-file set (and its stated count) from what
+  that run actually read, rather than a list an author had to remember to
+  edit by hand. The new module was split out (not grown in place) to keep
+  this already-near-its-limit file inside GE-127b-1's ratchet.
+  (#EPIC-TruthfulProjectRecord/08)
 ====================================================================
 """

@@ -195,6 +195,7 @@ flowchart TD
 - ACD-1200b-4: Non-interactive run with an approval flag clears the readiness gate; without a flag and without a TTY it fails clearly
 - ACD-1200b-5: A supported approval mechanism promotes reviewed leaf ACs to approved without hand-editing YAML
 - ACD-1200b-5-i: Approval mechanism leaves already-approved and non-reviewed leaves unchanged
+- ACD-1200b-5-ii: Promotion preserves a multi-line amended_by history, and success is never reported for output the mechanism cannot itself parse
 - ACD-1200c-1: AC depends_on relationships are propagated to ticket depends_on fields
 - ACD-1200c-1-i: Circular dependency among leaf ACs is detected and reported before ticket generation
 - ACD-1200c-2: Multi-hop dependency chains produce transitive ticket ordering
@@ -237,6 +238,11 @@ flowchart TD
 - ACD-1600c-1: An AC missing file targets or a test contract is flagged not implementation-ready
 - ACD-1600c-1-i: Real ACs lacking file targets (ACD-300c-3, TQ-200a-1) are held back, not dispatched
 - ACD-1600c-2: An AC carrying both file targets and a test contract is released to its builder
+- ACD-1600c-4: A requirement lists the files its work changes, each marked existing or to be created, and that list is the only answer to which files the work changes
+- ACD-1600c-4-i: A declared file that neither exists nor is marked to be created is refused; one marked to be created that already exists is reported
+- ACD-1600c-4-ii: A requirement without a declared-files list is in the named state 'no declared files', and its documentation links never stand in for one
+- ACD-1600c-4-iii: A declared path outside the repository, or inside a copy the build regenerates, is refused
+- ACD-1600c-4-iv: A finished requirement whose declared existing file was later deleted is reported store-wide, never refused when it is committed
 - ACD-1600d-1: A file target pointing at a deployed copy of a template is flagged for the canonical source
 - ACD-1600d-1-i: A genuinely source-only path under scripts/ is not falsely flagged
 - ACD-1600d-2: The canonical-source check applies to implemented_by and doc_links, not just file targets
@@ -338,6 +344,7 @@ flowchart TD
 - ACD-2100b-3-i: A registry that holds no agent entries is reported as unusable rather than as a missing agent
 - ACD-2100b-4: Every unresolved outcome of the startup check still stops the run before any authoring work begins
 - ACD-2100b-5: The startup check reads the registry itself instead of asking an agent to read it
+- ACD-2100b-5-i: The dead classifyWorkspaceSetupPermission() helper is removed from plan-feature.js
 - ACD-2100c-1: Every decision the route records as the user's is put to the user and to no agent
 - ACD-2100c-2: A run that cannot reach a person waits with a durable record instead of proceeding or discarding
 - ACD-2100c-3: A paused run picks up at the decision it was waiting on when the answer arrives
@@ -348,6 +355,29 @@ flowchart TD
 - ACD-2100d-2: A repair that is missing from the source an installed file is generated from is reported as not delivered
 - ACD-2100d-2-i: An install that replaces a locally changed generated file says so rather than replacing it silently
 - ACD-2100d-3: Installing into a project where the route starts leaves the route still able to start
+- ACD-2500a-1: The requirement rule check runs after every authoring stage and fails closed, naming file and rule
+- ACD-2500a-1-i: A rule check that examined zero records does not pass
+- ACD-2500a-1-ii: An unreadable record or a rule that errors is a failure, never a skipped pass
+- ACD-2500a-2: Five one-right-answer rule families are checked; safe ones are repaired, the rest reported
+- ACD-2500a-2-i: A missing parent back-link is appended once and nothing else in the parent changes
+- ACD-2500a-2-ii: The graph component list is filled only when the namespace maps to exactly one graph id
+- ACD-2500a-2-iii: One-sided producer/consumer contracts are reported with both ends named, never completed
+- ACD-2500a-2-iv: Readiness raised to approved by an authoring agent is restored to its prior value
+- ACD-2500a-2-v: A documentation trigger with no matching documentation requirement is reported by trigger and specialist
+- ACD-2500a-3: Specialist-versus-surface compatibility is judged from the one surface-to-specialist map
+- ACD-2500a-3-i: A Node workflow body assigned to python-coder passes; a SQL file assigned to python-coder does not
+- ACD-2500a-3-ii: A documentation link saying the work modifies a file missing from the declared list needs a decision, and the file is never added automatically
+- ACD-2500b-1-i: An outcome clause with no test-intent entry, or an entry for a clause that no longer exists, is reported
+- ACD-2500b-2: A requirement with test intent but no test design cannot be approved
+- ACD-2500b-2-i: A requirement that reaches approved with its test design pending is still never built
+- ACD-2500b-3: Requirements whose test design the planner wrote before this change keep it and stay buildable
+- ACD-2500c-1-i: A test-design entry naming a file that neither exists nor is declared to-be-created is rejected
+- ACD-2500c-2: The test design is produced after technical planning and before the approval gate
+- ACD-2500c-3: Each test-design entry is tied to its outcome clause and the design carries its author
+- ACD-2500d-2-i: A package-surface requirement whose reference file is still pending cannot be approved
+- ACD-2500d-3-i: A file finding with no recorded planner decision holds the requirement at reviewed
+- ACD-2500d-5-i: The mechanical file facts the code-aware agent needs come from a deterministic pre-pass script
+- ACD-2500e-1-i: An agent whose tools can edit files but whose profile says it changes nothing is flagged
 - ACD-300b: A workflow script orchestrates the authoring agents in sequence based on the triage decision
 - ACD-300b-1: The strategic route dispatches PO v3, then BA v3, then IT PO v3 in strict sequence
 - ACD-300b-2: The behavioral and technical routes skip upstream agents and start at the correct stage
@@ -481,6 +511,7 @@ flowchart TD
 - ACS-100i-6-ii: How a record spells its component no longer changes whether the spec obligation applies
 - ACS-100i-7: The records that declare no package surface stop being refused, and nothing else about the store's verdict changes
 - ACS-100i-7-i: A record that declares a package surface is refused by the whole-store pass just as it is by a single-file check
+- ACS-100i-7-ii: The package-surface spec validator walks a directory it is given and never reports success for a run that examined no records
 - ACS-100i-8: A package surface cannot come into existence without a record that declared it
 - ACS-100i-8-i: Denying the surface, and citing no record at all, are refused on the same terms as omitting the declaration
 - ACS-100i-8-ii: An entry a merge carries from a parent is not an entry the merge registers
@@ -522,6 +553,8 @@ flowchart TD
 - ACS-200e: The standalone AC validator enforces the same schema as the commit-time gate
 - ACS-200f: An AC whose covering tests genuinely pass can be marked done through the normal path, without the operator knowing an environment variable
 - ACS-200f-1: An AC whose covering tests genuinely fail, or that has no covering test at all, is still refused — the gate is unblocked, not weakened
+- ACS-200f-2: A parametrised covering test proves an AC only when every one of its cases passes
+- ACS-200f-3: When the done-marking tool reports an AC marked done, the record's own work_status key really is done and nothing else in the file changed
 - ACS-200g: Every pull request that changes the requirements store has those changes checked against the store's own rules before merge
 - ACS-200g-1: A pull request introducing a malformed acceptance criterion is blocked from merging
 - ACS-200g-2: A pull request is not failed for pre-existing problems it did not introduce
@@ -577,6 +610,8 @@ flowchart TD
 - ACS-400e-1-i: Hook failure does not block legitimate commits (fail-open)
 - ACS-400e-2: Only staged AC YAML files are inspected — unmodified files are ignored
 - ACS-400e-3: Non-AC files in the same commit are not affected by governance rejection
+- ACS-400e-4: The governance hook compares an existing AC file against its HEAD version on every platform, including Windows
+- ACS-400e-5: The governance hook reads an AC file's HEAD version as UTF-8, so non-ASCII text never looks changed
 - ACS-500a-1: A pattern AC defines shared behavior with parameterized slots
 - ACS-500a-2: Pattern definitions live in the existing component registry hierarchy
 - ACS-500a-3: Schema validates implements_pattern references point to existing ACs
@@ -818,6 +853,12 @@ flowchart TD
 - BO-1800e-1-i: An attempt to commit onto local main during a drive is prevented or flagged
 - BO-1800e-2: Scaffold and finalize bookkeeping lands via a branch and pull request, never a direct local-main commit
 - BO-1800e-3: A developer's local main sync is fetch plus fast-forward-only (read-only)
+- BO-1800f-1: A delivery is replayed onto the shared branch as it stands at the moment of delivery
+- BO-1800f-1-i: A shared branch whose current state cannot be read stops the delivery
+- BO-1800f-1-ii: A replay that cannot complete cleanly stops the delivery and restores the copy
+- BO-1800f-2: A delivery that would still take away what the shared branch has does not leave the copy
+- BO-1800f-2-i: A declared removal is delivered; an undeclared removal alongside it is not
+- BO-1800f-2-ii: What the copy's own commits took away is reported apart from what the copy's starting state never had
 - BO-1900a-4: Resolving an epic target says the isolated working copy is not yet determined, never a stand-in location
 - BO-1900a-4-i: No phase agent is spawned while the isolated working copy is still undetermined
 - BO-1900a-4-ii: A plan reply the drive cannot use holds the ticket back, and is never read as a ticket with no work left
@@ -835,6 +876,7 @@ flowchart TD
 - BO-2000c-3: The reference file is emitted as a resolved path, not a raw pattern
 - BO-2000c-3-i: An unresolvable reference pattern is surfaced as an authoring error
 - BO-2000c-4: The deterministic dispatch stays thin but tells the agent to read the ticket
+- BO-2000c-5: The phase dispatch tells the agent to fill the reply tool's fields directly, never to return a JSON string
 - BO-2000d-1: A package-surface AC missing required spec fields fails validation
 - BO-2000d-1-i: A non-package-surface AC is exempt from the mandatory spec fields
 - BO-2000d-2: A fictional registration reference is rejected by the schema
@@ -896,6 +938,9 @@ flowchart TD
 - BO-2200d-1-i: Removing documentation-expert from the flow-change gates leaves the other pre-coder gates intact
 - BO-2200d-2: On a doc-required ticket, the writer runs after code and tests and the verifier runs last before commit
 - BO-2200d-2-i: With multiple coders, documentation-expert is ordered after the last coder
+- BO-2300a-1-ii: The pause record is written and read by an agent chartered to run commands, so a pause never fails on a scope refusal
+- BO-2400a-1-ii: A command output too large to relay is handed over as a file in the run's workspace, named by path and hash, and checked by whoever reads it
+- BO-2400a-1-iii: The registry schema defines step_kinds once, and the registry gate that actually runs rejects an unknown kind by name
 - BO-2400a-2: Batch AC selection is done by a deterministic script, not an agent
 - BO-2400a-2-i: Selection truncates a batch that exceeds the cohesion cap
 - BO-2400a-3-ii: Newly-added covering tests are derived from git at test-function granularity
@@ -911,8 +956,11 @@ flowchart TD
 - BO-2400c-1-ii: The prompt-caching layer is reachable the only way the lane can reach Python — as a command that runs
 - BO-2400c-1-iii: The prompt a dispatched fast-lane agent receives is the assembled bundle
 - BO-2400c-1-iv: Across one run's successive dispatches the cacheable prefix is byte-identical
+- BO-2400c-1-ix: A bundle damaged on the way is reported as damaged on the way, not as a bad bundle
 - BO-2400c-1-v: The orphaned second runner is removed once the live lane is wired, and the grep test guarding it goes with it
 - BO-2400c-1-vi: The bundle carries only what the receiving agent does not already have
+- BO-2400c-1-viii: The bundle the lane acts on is proved to be the bundle that was assembled
+- BO-2400c-1-x: The delivery guarantee holds at any bundle size, and a ceiling announces itself
 - BO-2400c-2: A drive's own record states whether the stable prefix held across its invocations
 - BO-2400c-2-i: A prefix that changes mid-drive shows in the record as a break, never as a clean anchor
 - BO-2400c-3: Prior-phase distilled outputs are threaded forward rather than re-derived
@@ -928,6 +976,7 @@ flowchart TD
 - BO-2400e-4: Recording progress on a requirement changes the progress and nothing else
 - BO-2400f-10-i: The release actually releases, on every path that halts after the claim
 - BO-2400f-10-ii: A release that did not release is read, and named in the halt beside the failure that triggered it
+- BO-2400f-10-iii: A declined step leaves nothing claimed: before the claim the store is untouched, after it the claim is released, and a retry is not blocked
 - BO-2400f-11: The green change is reviewed before it is committed, and the reviewer's own high-confidence findings stop the run
 - BO-2400f-12: Refuse an unbuildable resolved set up front, naming what cannot be made and why
 - BO-2400f-12-i: A refusal leaves the store exactly as it found it, and holds no claim to release
@@ -937,23 +986,33 @@ flowchart TD
 - BO-2400f-13-ii: A workspace the lane did not open for this criterion is named as foreign and left alone
 - BO-2400f-13-iii: The occupied-workspace refusal costs one check, holds no claim, and touches neither store nor occupant
 - BO-2400f-13-iv: A free location is never refused, and the run that proceeds says its workspace is new
+- BO-2400f-3-i: The worktree location the run proceeds on is confirmed against the repository the run is operating in
+- BO-2400f-3-ii: Wherever the run is launched from, every step is told the run's own workspace by name, so a legitimate step is not taken for a misrouted one
 - BO-2400f-4-i: Whether the run owes a changelog entry is decided by the merge check's own rule, not a copied list
 - BO-2400f-4-ii: A run whose whole change is exempt writes no changelog entry
 - BO-2400f-4-iii: The run writes the required changelog entry itself, from what it already knows
 - BO-2400f-4-iv: The entry's breaking flag is never guessed: emitted not-breaking and declared undetermined
 - BO-2400f-4-v: Failing to produce a required entry halts the run with a named reason; it never proceeds as a warning
 - BO-2400f-4-vi: A reported success means a landable pull request — never one with a known-failing required check
+- BO-2400f-5-i: Every step of the one-command arc is asked of an agent whose charter covers that step, so no step is refused as someone else's job
+- BO-2400f-5-ii: A lane step that names an agent not chartered for it fails a structural check before any run can reach it
+- BO-2400f-5-iii: A step whose agent declines ends the run as a declined step, naming the step, the agent and its reason, and is never read as that step's result
+- BO-2400f-7-iii: The claim is attempted by something permitted to make it, and a refusal to attempt it is never reported as contention
 - BO-2400g-1: Work built the fast way is asked for the same proof-of-wiring as work built the thorough way
 - BO-2400g-1-i: Every requirement the run picked up is asked for the proof, not just the one that was named
 - BO-2500a-1: An AC with no linked covers test cannot be marked done
 - BO-2500a-1-i: A covers tag pointing at a non-active AC id does not satisfy any AC's done proof
+- BO-2500a-1-ii: An AC the store itself declares untestable, with the reason recorded, is not blocked by the missing-test rule
 - BO-2500a-2: An AC whose linked covers test fails cannot be marked done
 - BO-2500a-2-i: An xfailed or skipped linked test does not count as passing
 - BO-2500a-3: An AC with a present, passing linked test is eligible to be marked done
 - BO-2500a-6: A done composite AC derives its proof from its children, not from a direct linked test
 - BO-2500a-6-i: Editing only a non-coverage field of a done composite does not trip the proof-of-done check
+- BO-2500a-6-ii: The leaf-or-composite classification is applied at every level of the tree, not only the top
+- BO-2500a-7: A proof run that did not finish is reported as unfinished, never as a list of tests that failed
 - BO-2500b-1: A pre-commit check gives fast local proof-of-done feedback and is skippable
 - BO-2500b-1-ii: A done composite is proven by its children, not by a covers tag it can never legitimately carry
+- BO-2500b-1-iii: Any done AC with a non-empty covered_by is proven by its children, whatever its level
 - BO-2500b-5: The proof-of-done gate scans the same tree whether it runs locally or in CI
 - BO-2500c-1-i: A hand-typed fixture that could reproduce the bug's own blind spot is flagged
 - BO-2500e-1: The oracle discovers // covers:<id> tags in front-end tests through the shared seam
@@ -1010,6 +1069,7 @@ flowchart TD
 - BO-2900g-2-ii: The declaration is not handed out for merely mentioning a write, so an author is never asked to choose between two false statements
 - BO-2900g-3: One set of words for a required proof, with the reached-the-real-way kind named once
 - BO-2900g-4: What is actually asked for is expressed in the one set of words, and anything that reads it reads that one
+- BO-3000b: A phase reply missing `status` is rejected for the missing status alone, never with a handoff_target demand that points the retrying agent at the wrong field
 - BO-300a: Epic completion shows summary, worktree, test hints, and finalize command
 - BO-300a-1: Step 6 return object includes worktree_path and manual_tests fields
 - BO-300a-2: Step 6 message string contains all four sections in order
@@ -1090,6 +1150,22 @@ flowchart TD
 - BO-3500d-2-i: A requirement the report cannot classify is counted as unbuildable and listed, never as buildable
 - BO-3500d-3: The report gives starting points as well as records, both from the one reading of the backlog
 - BO-3500d-4: The report is a view, not a verdict: it changes nothing and nothing consults it
+- BO-3800a-1: A refusal that asks for a craft leaves the author's change untouched, does not advance the run past delivery, and re-offers that same change to the same standard once the file has been put right
+- BO-3800e-1: A refusal that asks for no craft engages no restructuring specialist and recovers exactly the way it does before this capability exists
+- BO-3800e-2: A run in which nothing is refused engages nobody extra and does no extra work on account of this capability
+- BO-3900: Paths the build workflows resolve, join, compare and hand to agents name the right file on Windows and on POSIX alike
+- BO-3900a: Whether a path is absolute is decided by how it is spelled, not by the host it runs on, and the proof fails on a Linux runner against POSIX-only code
+- BO-3900b: A path counts as inside the worktree only at a whole-segment boundary, with Windows letter case and trailing separators ignored and POSIX case respected
+- BO-3900c: A path whose form is neither recognisably absolute nor recognisably relative is refused by name, never joined onto the worktree
+- BO-3900d: A POSIX-only absolute-path test added to any workflow script is caught automatically, over a set of scripts that is derived rather than listed
+- BO-3900e: A ticket's prerequisite is found where the ticket names it: beside the ticket, not at the worktree root
+- BO-4000: The build workflow reuses the worktree it resolved for the target, or opens one at a fixed location it names itself, never inside a checkout or at the target's folder
+- BO-4000a: A worktree step that reports any location other than the one it was told stops the run before a single phase agent is dispatched
+- BO-4000b: A local branch that is behind origin/main is never silently checked out into a new worktree
+- BO-4000c: A run started inside an unrelated worktree, or aimed at an occupied location, still never nests a worktree and never picks a second location
+- BO-4000d: Repository facts that come back wrapped in a second reply envelope are still read, so a fact the helper reported correctly never counts as unavailable
+- BO-4000e: Once a worktree is established, nothing the drive dispatches names a location inside the main checkout
+- BO-4000f: The worktree step asks about the repository using a reference drawn from the target it resolved, so a healthy worktree is never called unavailable because of where the run was launched
 - BO-400a-2-ii: A ticket the drive carried to completion is recorded done in the ticket's own record
 - BO-400a-2-iii: A ticket with any needed phase skipped, blocked or unrecorded is never recorded done
 - BO-400a-2-iv: A completion decision reached with no phase required of the ticket never records it done
@@ -1104,10 +1180,90 @@ flowchart TD
 - BO-400c-3: Parity guard rejects commits that move ticket files into epic subfolders
 - BO-400c-3-i: Editing a ticket already residing under done/ (no move) is not blocked
 - BO-400c-3-ii: Branch commit moving a ticket into tickets/99_done/ is blocked (finalize carve-out)
+- BO-400c-5: Parity guard blocks a status: done ticket that still has a needed or failed phase, wherever the file lives
 - BO-400e-1: The steps a close is checked against are the ones the ticket's own record demands, and the caller cannot change that list
+- BO-400e-1-i: A phase that finished by handing work on has finished, provided the work was actually picked up
 - BO-400e-2: A demanded step nobody accounted for still blocks the finished state, and the block is not lifted by softening what counts
 - BO-400e-3: One door: the finished state is only ever written by the mechanism that checks it, and the blanket override is not the way through
+- BO-400e-3-i: Finalization closes a ticket through the same checking mechanism as the drivers, or leaves it open
 - BO-400e-4: Several tickets in the identical state, carried by one run, all get the same answer -- and it is the strict one
+- BO-4100a-1: Every way of creating a workspace roots it at the current shared tip
+- BO-4100a-1-i: Commits sitting only on the machine's local copy never reach the new workspace
+- BO-4100a-2: The rooted commit is checked after the workspace exists, not predicted before it
+- BO-4100a-3: When the shared line cannot be read, creation refuses instead of falling back to the old copy
+- BO-4100a-3-i: A refused creation leaves no half-made workspace behind
+- BO-4100b-1: A check may only refuse over material the commit itself changed
+- BO-4100b-1-i: Real drift in material the commit did change is still refused
+- BO-4100b-2: A check that found nothing cannot refuse
+- BO-4100b-3: A workspace's supporting material is its own, not another session's
+- BO-4100b-3-i: A workspace's own supporting material carries the same checks as the shared one
+- BO-4100b-4: The remedy a refusal offers repairs your workspace and leaves everyone else's alone
+- BO-4100c-1: Every live workspace carries a definite verdict on whether it still holds something
+- BO-4100c-1-i: Work that already reached the shared line does not keep a workspace alive
+- BO-4100c-2: Disposal is refused for a workspace that still holds something, and says what it holds
+- BO-4100c-3: A workspace nobody could reach a verdict on is never disposed of
+- BO-4100c-4: A workspace holding nothing is disposed of completely, and leaves the live set
+- BO-4100c-4-i: Disposing of one workspace removes only that workspace
+- BO-4100d-1: Ask for a fix and you get a fix, not a feature wearing its name
+- BO-4100d-2: A kind that cannot be honoured is refused, never quietly swapped for one that can
+- BO-4100d-3: The account of the workspace is read back off what exists, not repeated from the request
+- BO-4100d-3-i: A name that had to be altered is reported as altered, and as the altered name
+- BO-4100e-1: A workspace with no registration entry is still shown in the list
+- BO-4100e-1-i: Ordinary directories are not reported as leftover workspaces
+- BO-4100e-2: A leftover that was never registered can still be cleared away
+- BO-4100e-2-i: Being a leftover is not a licence to delete work
+- BO-4100e-3: A leftover is reported as a local remnant, never as damage to the shared record
+- BO-4100e-4: Surfacing a leftover does not turn it into a workspace you can be handed
+- BO-4300a-1: Every route that asks gets the same kind of workspace from the same maker
+- BO-4300a-1-ia: No workflow body asks an agent to make a workspace in its own words
+- BO-4300a-1-ii: A ready workspace made for a ticket states where that ticket is inside the workspace
+- BO-4300a-2: The same piece of work is always recognised as the same workspace
+- BO-4300b-1: The same request from any folder in or around the project gives the same workspace
+- BO-4300b-1-i: Starting inside another workspace never nests the new one there or roots it on that work
+- BO-4300b-2: A project that installed the tools gets its workspaces the same way
+- BO-4300b-2-i: Two projects in the same folder never share or collide on a workspace
+- BO-4300b-2-ii: An out-of-date installed copy inside the project does not change which project is found
+- BO-4300b-3: When more than one project could be meant, the request is refused and names them
+- BO-4300b-3-i: Started where no project can be found, the request is refused and says where it looked
+- BO-4300b-4: On Windows without permission to create links, the workspace is still fully ready
+- BO-4300b-5: The location handed back works from every shell on the machine
+- BO-4300b-5-i: A project under a folder whose name contains spaces gets a usable workspace
+- BO-4300c-1: Ready is only answered when every part of readiness holds on the workspace as it exists
+- BO-4300c-1-i: A failed install inside the workspace is a refusal, never a warning
+- BO-4300c-1-ii: Every protection the project declares must fire; one that is present but does not fire produces a refusal
+- BO-4300c-1-iii: Setting up a workspace never leaves stray changes in the project's own files
+- BO-4300c-2: The maker's answer is one readable answer and nothing else
+- BO-4300c-3: Every caller stops on anything but a ready answer
+- BO-4300c-3-i: Success reported with output that is not a valid answer is a failure, never 'use the current checkout'
+- BO-4300c-3-ii: An agent that declines the workspace step ends the run, and no other command is substituted
+- BO-4300c-4: The workspace location comes only from the maker's ready answer
+- BO-4300c-4-i: A location handed in by a caller is confirmed with the maker before any step runs
+- BO-4300c-4-ii: After a whole run, the main copy is exactly as it was
+- BO-4300d-1: Asking again for a healthy workspace hands it back re-readied, with the work in it untouched
+- BO-4300d-1-i: Re-readying never overwrites a change the work made to a file the set-up also writes
+- BO-4300d-1-ii: Two requests for the same work at the same moment never make two workspaces
+- BO-4300d-2: A workspace left half-made by an interrupted request is finished by the next one
+- BO-4300d-2-i: A half-made workspace is never answered ready while the cause remains
+- BO-4300d-2-ii: Whatever stage an interruption hit, the next request ends fully ready
+- BO-4300d-2-iii: A half-made workspace in which work has since been done is not wiped to finish it
+- BO-4300d-3: A location already holding different work is left untouched and reported
+- BO-4300d-3-i: A workspace for the same work made the old way is not quietly taken over
+- BO-4300d-4: Asking for work whose line already exists on the shared project resumes that line
+- BO-4300e-1: Asking where a piece of work's workspace is gets a definite answer from the same maker
+- BO-4300e-1-i: Looking a workspace up never creates or changes one
+- BO-4300e-2: Clearing a workspace answers at once and never waits for someone to say yes
+- BO-4300e-2-i: A workspace with very long file paths on Windows is cleared completely
+- BO-4300e-2-ii: A workspace with a program still running inside it is never left half-cleared
+- BO-4300e-3: Loss of unsent work happens only when authorised up front
+- BO-4300e-3-i: Authorisation given for one workspace clears no other
+- BO-4300e-4: Temporary comparison workspaces come and go through the same maker and leave nothing behind
+- BO-4300f-1: Every existing route now gets its workspace from the one maker
+- BO-4300f-2: The former ways of making a workspace are gone from what an install delivers
+- BO-4300f-3: Workspaces made the old way are brought over or retired without losing work
+- BO-4300f-3-i: Running the cut-over again changes nothing further
+- BO-4300f-3-ii: Until the cut-over completes, automatic housekeeping cannot prune the shared history
+- BO-4300f-4: The proof runs the copy of the maker that a project actually receives
+- BO-4300f-4-i: Running the proof leaves the developer's own project unchanged
 - BO-510-1: Agent registry entries carry a produces trait field from a defined enum
 - BO-550-1: Ticket frontmatter supports a structured test_constraints field
 - BO-570-1: Deterministic render-smoke runner helper for the frontend sign-off gate
@@ -1207,6 +1363,7 @@ flowchart TD
 - BP-100f-1-i: No secondary git calls fire before the guard in finalize-feature
 - BP-100f-2: changelog-agent emits warning and skips git steps outside a git worktree
 - BP-100f-2-i: No secondary git calls fire before the guard in changelog-agent
+- BP-100f-4: Build status output never crashes on a console whose encoding cannot represent the message
 - BP-100g-1: build.py exits non-zero when a SKILL.md has invalid YAML frontmatter
 - BP-100g-2: build.py exits non-zero when SKILL.md name does not match directory name
 - BP-100g-3: build.py exits non-zero when SKILL.md allowed-tools contains unrecognised tool
@@ -1225,9 +1382,11 @@ flowchart TD
 - BP-100k-3: An artifact the build deliberately does not police is a declared exemption; an unrecorded, undeclared artifact is a reported gap, never a pass
 - BP-100k-3-i: A freshly built, unmodified tree yields zero uncomparable artifacts and a clean drift run — the stricter reporting raises no false alarms
 - BP-100k-3-ii: The action a drift gate prescribes is one that, carried out, clears the report -- and where the build cannot produce the artifact, the gate does not send the reader to the build
+- BP-100k-3-iii: The known never-build-determined files in a worked-in tree are declared exempt with distinct grounds, and a stale orphan with no template left to produce it is removed rather than exempted
 - BP-100k-4: A registered commit gate whose activation condition can never match anything the repository is able to stage is reported as unreachable and blocks — a gate that cannot fire is not protection
 - BP-100k-4-i: The reachability check raises no false alarm on gates that can fire, and fails rather than passing when it cannot determine reachability at all
 - BP-100k-4-ii: A trigger that matches nothing because the project holds no file of that kind is a gate with nothing to do, not a gate that cannot fire — the two are told apart by what a checkout could ever produce, never by what it holds today
+- BP-100k-4-iii: Consumer installs count existing untracked, stageable files when checking hook reachability
 - BP-100k-5: The drift gate examines the deployed surface the build actually wrote, and reports the size of the population it did not examine — a verified count with no denominator is not a pass
 - BP-100k-5-i: The unexamined deployed population reaches zero by registering the deploy surface, never by exempting it, and the newly covered files are provably drift-checked
 - BP-100m-1: Two source templates deploying to the same command path fail the build, naming both sources and the target
@@ -1238,6 +1397,9 @@ flowchart TD
 - BP-100n-1: A deployed output the build recorded writing but that is absent from disk is reported and fails the run — deletion is the most complete drift there is, and it is the only kind the gate ignores
 - BP-100n-2: A guard skips a check only because the configuration declares the capability off — never because the capability's output happens to be absent, which is the failure the guard exists to catch
 - BP-100n-3: The build-equality guard covers every platform the build can emit, taken from the build's own platform set — a guard that proves equality only for the platforms it chose to enable proves nothing about the rest
+- BP-100n-4: The population of commit gates the reachability check walks is taken from the gate scripts present on disk, so a script the registry never mentions is reported as invoked by nothing — a guard whose input is the registry cannot see what the registry omits
+- BP-100n-4-i: A script that is deliberately not a gate is recorded as one with a stated ground and the check honours it; a record that states no ground is itself refused and the script it names stays reported
+- BP-100n-4-ii: The check states how many gate scripts it compared, and a run that compared none is an unresolved run that fails — a comparison that never happened must not be able to look like a comparison that found nothing wrong
 - BP-100n-5: A finished record's declaration that names parts of a real configuration file is read back against that file, and a named part that is not there is reported by name and fails the run — a declaration checked only for shape is a check that never opened anything
 - BP-100n-5-i: A declaration whose shape the check cannot interpret, and a named file it cannot open, are each reported as their own unresolved condition — never folded into the conforming class and never into each other
 - BP-1100a-3: The surface a generated ticket names contains the file the requirement says will change
@@ -1247,6 +1409,8 @@ flowchart TD
 - BP-1100b-5: A newly added presence-only assertion over workflow or gate source is rejected before the change is accepted
 - BP-1100d-1: A pre-commit guard blocks workflow JavaScript that pairs git commit with a non-commit agent
 - BP-1100d-1-i: A git commit string in a documentation file does not trip the workflow commit-delegation guard
+- BP-1100d-3: The commit-delegation hook recognises a git commit by the command that runs, not by the words in the command text
+- BP-1100d-3-i: No commit recipe the package ships is newly blocked when the delegation hook starts recognising git -C commits
 - BP-1100e-1: Before a ticket is marked done, source files changed but not declared are flagged
 - BP-1100e-1-i: out_of_scope entries and generated/lockfiles are exempt from the mismatch flag
 - BP-1100e-1-ii: Path comparison is normalized for separators and case so NTFS/APFS paths are not false-flagged
@@ -1561,6 +1725,7 @@ flowchart TD
 - GE-113c-1-iii: check-secrets resolves its scripts_dir and project root so scan_secrets imports and runs in a fresh worktree from both layouts
 - GE-113c-1-iv: Every guard obtains the project root through one shared resolver so the wrong-root bug class cannot recur
 - GE-113c-1-v: check-secrets reads the .security-allowlist from the worktree checkout root so worktree-local suppressions are honored
+- GE-113c-1-vi: The commit-time agent-registry check finds the package wherever it is laid out, and never passes having checked nothing
 - GE-113c-2: A guard runs its check against the consumer project tree in the deployed layout
 - GE-113c-3: Allowlist entries suppress findings only when the allowlist path segments are a suffix of the finding path segments
 - GE-113c-3-i: A path-qualified allowlist entry does not suppress findings at a different directory with the same basename
@@ -1600,6 +1765,10 @@ flowchart TD
 - GE-118a-1: check_secrets resolves scan_secrets from the layout build.py deploys, not a hardcoded .claude path
 - GE-118b: The drift hooks find the build manifest where build.py actually writes it
 - GE-118c: A guard enforces the document types the project declared, not a narrower list it kept to itself
+- GE-118d: A document's path-bearing frontmatter entries are resolved whichever of the two accepted shapes they use
+- GE-118d-1: An entry in a shape the guard does not accept is refused by name, and the guard never raises
+- GE-118d-2: A labelled entry carrying more than one path is refused rather than resolved by guesswork
+- GE-118f: The commit-time guard and the knowledge map resolve a frontmatter entry through one shared rule
 - GE-120a-1: A check that could not perform its inspection reports a degraded outcome, not a clean pass
 - GE-120a-1-i: One unparseable input, while the check still ran, remains an ordinary pass
 - GE-120a-1-ii: A check that falls back to a weaker inspection reports its clean result as unverified
@@ -1623,6 +1792,7 @@ flowchart TD
 - GE-120e-2: Which checks work out their own change set is read from the manifest, not from the two that were caught
 - GE-120e-4: Undoing or replaying someone else's recorded change is treated the same way as merging it in
 - GE-120e-4-i: Reworking a merge after the operation record is gone still attributes only the author's part
+- GE-120f: A guard that has never said no is not counted as protection
 - GE-120f-1: A check's refusal is established by putting its declared known-bad input through the entry point the protected surface uses, and the record says what was observed rather than what was declared
 - GE-120f-1-i: A refusal produced by reaching inside a check is not a demonstration — the run states the entry point it used, and only the entry point the protected surface invokes counts
 - GE-120f-1-ii: A check that also refuses the work it is meant to accept has demonstrated nothing — refusing everything is as inert as refusing nothing, and is reported under its own wording
@@ -1634,6 +1804,11 @@ flowchart TD
 - GE-120g-1: An ordinary commit leaves the working copy holding exactly the content it held before, whether the checks let it through or refuse it
 - GE-120g-1-i: The leave-it-as-you-found-it rule binds a check by the role it declares, so a check declared to fix as it goes is not caught by it and no judging check can be let off it
 - GE-120g-2: A commit is refused only because a check objected, and a set of verdicts that objects to nothing always lets it through
+- GE-120h-1: A check the package presents as protecting you is reconciled against the one list that causes it to run, and one that is advertised while nothing runs it is named and refused
+- GE-120h-1-i: A place the reconciliation could not read is reported as unread, never counted as agreement
+- GE-120h-2: The advertised checks already left unrun are carried as a quantity that can only fall, so the change that adds one is refused and the change that fixes one is required to say so
+- GE-120h-3: Five checks the package has always presented as protecting you begin to run on an ordinary commit, and none of them refuses work the same repository accepted the day before
+- GE-120h-3-i: A check that works out for itself what to examine is switched on without a condition it never reads, because a filter the check ignores is a promise nothing keeps
 - GE-122a-1: A whole-collection pass reports every number claimed by two artifacts
 - GE-122a-1-i: A collision is found even when only one claimant is in the current change set
 - GE-122a-1-ii: Excusing a merged-in decision record must not excuse the author's own record claiming the same number
@@ -1779,6 +1954,9 @@ flowchart TD
 - GE-127e-3-i: Guidance that could not be produced is said so plainly, and whether guidance exists never moves the commit verdict in either direction
 - GE-127e-3-ii: Every tool named by an instruction a refusal sends the author to actually exists
 - GE-127e-4: Everything needed to choose arrives with the refusal, the division is offered as a starting point, and declining it costs nothing
+- GE-127f-1: An addition to an already-oversized file must leave it at or below the less demanding of its permitted length and its previous length minus what the change added
+- GE-127f-2: What the change added is the measured lines it put into the file, not the amount the file grew, so a change that gives back what it took has still added something
+- GE-127f-2-i: A run that cannot establish what a change added says which situation it is in and refuses, rather than recording the change as having added nothing
 - INF-1000a-1: Detect stale fixtures when a required field is added to a schema
 - INF-1000a-1-i: Schema file with no required-field changes passes without scanning fixtures
 - INF-1000a-1-ii: Fixture files that already contain the new field are not flagged
@@ -1798,6 +1976,12 @@ flowchart TD
 - INF-1100c-1: Compiled agent instructions contain the resolved work-location path
 - INF-1100c-1-i: A work-location placeholder with no configured value fails compilation loudly
 - INF-1100c-2: An automated test guards compiled prompts against unresolved work-location placeholders
+- INF-1100d-1: A fresh install carries no test database address
+- INF-1100d-1-i: Upgrading keeps a project's own database setting and never writes a shipped default back
+- INF-1100d-3-i: "Not configured" and "configured but unreachable" are different reports, and neither shows a password
+- INF-1100d-3-ii: A database test run without the setting stops and names the missing setting
+- INF-1100d-4: The package refuses to ship a database address again
+- INF-1100d-4-i: The address check flags real-looking addresses, allows obvious placeholders, and leaves unshipped history alone
 - INF-1200a-1: The standard is stated in the material the specialist begins from, not pointed at from it
 - INF-1200a-2: The telling does not wait for something to go wrong, and is not changed by something having gone wrong
 - INF-1200a-3: Whether a standard's check currently runs does not decide whether its audience hears about it
@@ -1813,6 +1997,28 @@ flowchart TD
 - INF-1200e-2: An examination that could not look says so, and a run that examined nothing never reads as a clean one
 - INF-1200f-1: The figure in the brief and the figure applied to the work are one figure, and they move together
 - INF-1200f-2: The one pairing that already has this property keeps it, at every point in the brief that holds it today
+- INF-1300a-1: The document handed to the author is committable exactly as produced, with nothing added by hand
+- INF-1300a-2: The link to the document above is complete in both directions the moment the document exists
+- INF-1300a-2-i: A document with nothing above it says so, and no parent is invented for it
+- INF-1300a-3: Every value in the produced document traces to something the request supplied or the project declares — nothing is filled in with a placeholder
+- INF-1300a-4: Acceptance holds for every kind of picture the project declares, not for the one it was demonstrated with
+- INF-1300b-1: Two documents produced for different pictures still have the same sections in the same order
+- INF-1300b-2: The explanatory key explains the notation this kind of picture uses, and is the same for every document of that kind
+- INF-1300b-3: The document says which parts are yours to write, so the rule against rewriting the rest can be obeyed
+- INF-1300c-1: A new document appears in the collection's index, reachable by following the link
+- INF-1300c-1-i: A document that is not settled yet is listed with its state shown, not left out of the index
+- INF-1300c-2: The collection has an index at the place the instructions name, created if it is not there
+- INF-1300c-3: Listing the same document twice updates its entry rather than adding a second one
+- INF-1300c-4: When the listing is not asked for, nothing outside the new document and its parent is written
+- INF-1300c-5: Regenerating the decision-record index keeps the frontmatter the project's document checks require
+- INF-1300d-1: A kind of picture the project does not declare is refused; one it declares but has retired is honoured under its current name
+- INF-1300d-1-i: Which names are recognised is read from the project's declaration, so changing the declaration changes what is accepted
+- INF-1300d-2: A place that is already taken is reported as taken, and nobody's document is overwritten
+- INF-1300d-3: Every refusal says what to do next and leaves the project exactly as it found it
+- INF-1300d-4: A kind of picture that obliges a fact only the author has is refused until the author supplies it, never filled in with a stand-in
+- INF-1300e-1: In a project that has only adopted this way of working, the mandatory step can be performed
+- INF-1300e-3: The document produced in an adopting project is accepted by that project's own checks
+- INF-1300e-4: The guard that watches for an instruction shipped without its means reports on this one truthfully again
 - INF-200a-1: check_no_print pre-commit hook blocks print() outside CLI entry points
 - INF-200a-2: check_no_print hook registered in commit_guardian.json with config section
 - INF-200a-4: Rule and pre-commit hook are a paired unit — one manages both
@@ -1901,10 +2107,29 @@ flowchart TD
 - INF-700c-2: Knowledge history that has already been honoured stops being reported as work outstanding
 - INF-700c-2-i: The disposition of an honoured record is auditable afterwards, and the record itself survives
 - INF-700c-2-ii: The waiting count stays truthful in the other direction — a real unwritten learning still raises it
+- KM-300a-1: Every link in the documentation map uses forward slashes, whichever OS generated it
+- KM-300a-2: Each link in the documentation map points at its page relative to where the map itself lives
+- KM-300b-1: Entries in the documentation map appear in the same order on every operating system
+- KM-300b-2: The documentation map is written with the same line endings and encoding on every operating system
+- KM-300b-3: A map committed from one operating system is left untouched when refreshed on another
+- KM-300c-1: A commit carrying a map with machine-specific link paths is refused with an explanation
+- KM-300c-1-i: Backslashes outside link paths, such as in a page description, do not trip the separator check
+- KM-300c-1-ii: A map check that finds no links to inspect refuses instead of passing silently
+- KM-300c-2: A commit carrying a map with a link that opens nothing is refused with an explanation
 - KM-KGS-100a-1: The acceptance-criteria store is a declared surface in the surfaces config
 - KM-KGS-100a-2: Each acceptance-criterion file becomes one node in the knowledge map
 - KM-KGS-100a-2-i: Non-criterion and unparseable files under the acs surface produce no spurious nodes
 - KM-KGS-100a-3: An acceptance criterion's four relationship fields each become a distinct edge
+- KM-KGS-100a-3-i: Column-zero block lists are read, not silently dropped
+- KM-KGS-100a-3-ii: Zero-, two- and four-space indented block lists all read to the same value
+- KM-KGS-100a-3-iii: Quoted block-list items lose their quotes, matching the inline-sequence result
+- KM-KGS-100a-3-iv: A test-function suffix on a coverage item survives reading intact
+- KM-KGS-100a-3-ix: Comment and blank lines between block-list items do not end the list
+- KM-KGS-100a-3-v: A symbol anchor on an implementation item is not mistaken for a comment
+- KM-KGS-100a-3-vi: A comma inside a quoted inline item does not split that item in two
+- KM-KGS-100a-3-vii: An explicitly empty list and an absent field both read as no values
+- KM-KGS-100a-3-x: Continuation lines and trailing comments inside a block list neither end the list nor leak into item values
+- KM-KGS-100a-3-xi: The knowledge map's frontmatter reader lives in its own module with reading, reachability, deployment and size unchanged or improved
 - KM-KGS-100b-1: Answer which code file delivers an acceptance criterion by following its edges
 - KM-KGS-100b-10: With the feature flag off (default), behavior is identical to today's live parse
 - KM-KGS-100b-10-i: Reader-first rollout: the reader and staleness guard are safe with the writer disabled
@@ -1915,6 +2140,8 @@ flowchart TD
 - KM-KGS-100b-12-ii: A build refreshes the registry-derived surfaces as a final build step
 - KM-KGS-100b-12-iii: A session-start freshness check catches events missed by a branch switch, pull, or fresh worktree
 - KM-KGS-100b-2: Acceptance criteria and their links are visible in the knowledge-graph visualization
+- KM-KGS-100b-2-i: The knowledge-map page draws even when a relationship's far end is not on the page
+- KM-KGS-100b-2-ii: Files named by requirements and tickets are drawn on the page, and a missing file looks different
 - KM-KGS-100b-5: Index-backed read returns the same graph as a live full parse
 - KM-KGS-100b-5-i: Persisted index reuses the existing render_json output shape (byte-parity)
 - KM-KGS-100b-6: Every index-backed read performs a mandatory stat-only staleness check
@@ -1923,10 +2150,20 @@ flowchart TD
 - KM-KGS-100b-8: A missed refresh event degrades to slower-not-wrong, never to a wrong answer
 - KM-KGS-100b-9: A missing or unparseable index falls back to the live full parse
 - KM-KGS-100c-1: Every surface declared in the config is ingested, however many there are
+- KM-KGS-100c-1-i: A declared surface counts as contributing only when items were read from its own path
+- KM-KGS-100c-1-ii: A node on a surface that is neither declared nor one of the map's named synthetic surfaces fails the surface check
 - KM-KGS-100c-2: Declaring a new surface makes it join the map with no code change
+- KM-KGS-100c-4: A ticket's files_touched declarations become ticket-to-file edges in the map
 - KM-KGS-100d-1: Each declared surface is validated for the relationship kinds it promises
 - KM-KGS-100d-2: Every edge points to a node that actually exists
 - KM-KGS-100d-2-i: A relationship pointing at a missing target is dropped, not rendered as a dead end
+- KM-KGS-100d-3: A relationship entry becomes an edge whichever accepted shape it uses
+- KM-KGS-100d-3-i: An entry the builder cannot turn into an edge is reported, never passed over in silence
+- KM-KGS-100d-4: Every relationship that names the same file lands on one node keyed by that file's path
+- KM-KGS-100d-4-i: A file path never lands on a node because a name matches or because several items share it
+- KM-KGS-100d-4-ii: A file a relationship names that does not exist stays on the map, marked missing
+- KM-KGS-100d-4-iii: A relationship value that is not a file in this project is reported, never silently lost
+- KM-KGS-100d-4-iv: A map restricted to one surface still shows the files that surface's relationships name
 - KM-KGS-100e-1: An acceptance criterion cannot be committed without declaring its component
 - KM-KGS-100e-1-i: A missing component key, an empty list, and an empty name all fail identically
 - KM-KGS-100e-1-ii: A component name that is not a real component is rejected, not silently accepted
@@ -2039,6 +2276,8 @@ flowchart TD
 - TKT-500g-5: The readiness report never calls a demanded proof unnecessary
 - TKT-600a-1: Generated files_touched excludes prose-illustration paths; depends_on is guard-valid
 - TKT-600a-2: A path the record itself declares as non-edit-surface is not harvested from its own prose
+- TKT-600a-3: A ticket generated from a requirement that declares its files touches exactly those files, and reads the same list the checks read
+- TKT-600a-3-i: A ticket generated from a requirement with no declared files says its files were derived, not declared, and generation leaves the hold to the readiness gate
 - TKT-600b-1: The generated phase record names exactly the phases the drive will dispatch for that ticket's location
 - TKT-600b-1-i: Generation refuses rather than guesses when the ticket's final location is not yet settled
 - TKT-600b-1-ii: A phase the drive will not run is recorded as excluded, never left out of the record
@@ -2046,6 +2285,7 @@ flowchart TD
 - TKT-600b-3: A ticket generated outside an epic keeps its own pull-request phase and cannot finish without it
 - TKT-600b-4: The drive never edits a ticket's phase record to make it agree with the drive's own behaviour
 - TKT-600b-4-i: A phase that ran records its own outcome; that is the only write the drive makes to the phase record
+- TKT-600b-5: An AC that names no work agent is refused by name, never generated into a ticket with a null phase
 - TQ-100a-1: The suite runs every loadable test even when one file fails to load
 - TQ-100a-1-i: A test file importing a nonexistent module does not stop the other files
 - TQ-100a-1-ii: A test file that raises at module scope does not stop the other files
@@ -2060,6 +2300,7 @@ flowchart TD
 - TQ-100b-4: Only captures shaped like an acceptance-criterion id count as coverage tags
 - TQ-100b-4-i: A real tag whose id is malformed is reported as malformed, never dropped
 - TQ-100b-4-ii: An id-shaped covers phrase inside a string literal or docstring is not a tag
+- TQ-100b-4-iii: The tag gate reads a docstring-first test function on every supported Python version without crashing
 - TQ-100b-5: Every coverage-tag recognition rule in the repo recognises the same tags over the real tree
 - TQ-100b-5-i: Changing one coverage-tag rule without the others is blocked, not merely noted
 - TQ-100c-1: A test with no covers tag is enforced by default, requiring no backfill
@@ -2146,6 +2387,36 @@ flowchart TD
 - TQ-500d-3: Ordinary before-and-after evidence answers the question outright, and asks nothing more
 - TQ-500e-2: A later reader retrieves what a test was shown to catch, without re-running anything
 - TQ-500e-2-i: Work predating the record returns no answer, and the boundary is the record, not the date
+- TQ-500f-1: "Discrimination" is a kind of test a requirement can ask for, and the work generated from it accepts it
+- TQ-500f-1-i: All three lists of test kinds move together, or the lockstep check names the one that did not
+- TQ-500f-2: A requirement names the wrong versions its test must catch, and the test writer receives them word for word
+- TQ-500f-2-i: An empty or malformed wrong-versions list is refused, and the fallback route never invents one
+- TQ-500f-3-i: The red-baseline check refuses absence-only red for a test that names wrong versions to catch
+- TQ-500f-3-ii: The /build-feature path runs the same red-baseline reader the fast lane uses, and does not take the test writer's word for it
+- TQ-500f-3-iii: A covering tag is matched to the one test it sits on, so two tests sharing a name never lend each other their result
+- TQ-600a-1: The reference layout is produced once for the whole run, and shared across workers rather than rebuilt by each
+- TQ-600a-1-i: Nobody pays for the shared layout when nobody asked for it
+- TQ-600a-1-ii: When the one shared deploy fails, every waiting test says so and none of them passes
+- TQ-600a-2: A test that alters the package before deploying keeps a copy of its own, and still proves what it proved
+- TQ-600a-3: Read-only is proved, not promised — a run that dirties the shared layout says so and names the test
+- TQ-600a-4: Every converted test gives the same answer it gave when it deployed its own copy
+- TQ-600a-5: A test that has not said which kind it is gets the safe kind
+- TQ-600a-6: The run says how many times it really deployed the package, and that figure is bounded by the tests that needed their own copy
+- TQ-600b-1: The many-worker run and the one-at-a-time run agree test by test, or the disagreement is named
+- TQ-600b-1-i: The equivalence comparison is shown disagreeing before it is trusted agreeing
+- TQ-600b-2: No test keeps its scratch work at a fixed address two workers can both reach
+- TQ-600b-3: No test stages anything in the checkout the run was started from
+- TQ-600b-3-i: Reading the real checkout stays allowed; only changing it does not
+- TQ-600b-4: A test that reads back what it emitted sees its own entries and nobody else's
+- TQ-600b-5: The standard way of running the suite is the parallel way, from a plain checkout
+- TQ-600c-1: Every run leaves behind what it cost, per test, separating preparation from the test itself
+- TQ-600c-1-i: A run that did not finish says so, and is never compared against a whole-run budget
+- TQ-600c-2: Fed an over-budget run, the guard fails and names who spent the time
+- TQ-600c-2-i: A guard that examined nothing reports that, and never reports clean
+- TQ-600c-3: The budget is a measured, dated, single-source number the guard looks up — not a literal in the guard
+- TQ-600c-3-i: No budget record, no fallback number — the guard fails instead of inventing one
+- TQ-600c-4: One test that got much slower is named, even when the run as a whole is still within budget
+- TQ-600c-5: The guard runs as part of the checks that gate a change, not only when someone thinks to run it
 - UXP-100c-2: Pipeline blocks until the user provides an explicit prototype decision
 - UXP-100c-2-i: Prototype with pending component research cannot be approved — only deferred
 - UXP-100c-4: Rejection stops the pipeline and records the rejection rationale
@@ -2208,6 +2479,8 @@ flowchart TD
 - UXP-700d-2-i: The three example criteria that are dispatchable today are the proof
 - UXP-700d-2-ii: A real criterion stored beside the example set is still dispatchable
 - UXP-700d-3: Every piece of example content says it is an example, read on its own
+- UXP-700d-3-i: Every piece of example content carries its own example marker, and the project's own record carries none
+- UXP-700d-3-ii: An example marker that disagrees with where the content lives is reported, naming both
 - UXP-700d-4: An artifact type whose whole population is example content is reported
 - UXP-700e-1: The record declares a reviewable size for each thing it holds, and reports what exceeds it
 - UXP-700e-1-i: A new bound arrives as a warning behind a declared shape version, and blocks nothing that predates it

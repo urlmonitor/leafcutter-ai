@@ -419,8 +419,17 @@
                             },
                             "angle": {
                                 "type": "string",
-                                "enum": ["criterion", "reachability", "seam", "real_artifact", "deployed", "boundary", "failure"],
-                                "description": "Which proof-of-done question this test answers, from the set-cover taxonomy in docs/testing/test-angles.md — five core angles (criterion, reachability, seam, real_artifact, deployed) plus two conditional ones (boundary, failure). Authoring it here is how an it-po declares that this test already covers a given angle: generate_ticket_from_ac.py passes the value straight through onto the ticket's ## Test Requirements entry. Note the criteria-derived fallback (used when no test_spec is authored) tags its own descriptors 'criterion' and appends one mandatory 'reachability' descriptor; an authored test_spec that already carries one 'reachability'-angle entry keeps it unaltered and gains no second one (BO-2900g-1-i). Omit when the angle has not been classified."
+                                "enum": ["criterion", "reachability", "seam", "real_artifact", "deployed", "boundary", "failure", "discrimination"],
+                                "description": "Which proof-of-done question this test answers, from the set-cover taxonomy in docs/testing/test-angles.md — five core angles (criterion, reachability, seam, real_artifact, deployed) plus three conditional ones (boundary, failure, discrimination). Authoring it here is how an it-po declares that this test already covers a given angle: generate_ticket_from_ac.py passes the value straight through onto the ticket's ## Test Requirements entry. Note the criteria-derived fallback (used when no test_spec is authored) tags its own descriptors 'criterion' and appends one mandatory 'reachability' descriptor; an authored test_spec that already carries one 'reachability'-angle entry keeps it unaltered and gains no second one (BO-2900g-1-i). 'discrimination' (TQ-500f-1) fires for bug-fix or gate ACs, or when must_catch is present: the test must go red under at least one named plausible wrong version of the code, not only when the code is absent. Omit when the angle has not been classified."
+                            },
+                            "must_catch": {
+                                "type": "array",
+                                "minItems": 1,
+                                "items": {
+                                    "type": "string",
+                                    "pattern": "\\S"
+                                },
+                                "description": "TQ-500f-2: an ordered list of wrong versions this entry's test must go red under, in the requirement author's own words. Copied verbatim (same strings, same order, no trimming/case-change/dedupe) onto the generated ticket's Test Requirements entry by generate_ticket_from_ac.py — MUST be kept identical in shape to the same property in config/test_requirements.schema.json (the same copy-through coupling documented for framework/type/angle), or a well-formed AC produces a ticket that violates its own schema. Optional; when present, must be non-empty and every item must contain at least one non-whitespace character (an empty list or a blank-only entry is rejected, since absence already means 'none named'). Omit when the requirement names no specific wrong version."
                             },
                             "surface_invoked": {
                                 "type": "string",
@@ -513,6 +522,27 @@
             },
             "default": []
         },
+        "declared_files": {
+            "type": "array",
+            "description": "ACD-1600c-4: the files this AC's work changes, each marked existing or to_be_created, declared order preserved. This is the ONLY answer to which files the work changes -- doc_links never stand in for it. Optional; absence means the named state 'no declared files' (never a violation). An empty list is refused by the declared-files seam (scripts/ac_store/declared_files.py), not by this JSON-schema layer, so the seam's worded message is the only refusal for that case.",
+            "items": {
+                "type": "object",
+                "required": ["path", "state"],
+                "additionalProperties": false,
+                "properties": {
+                    "path": {
+                        "type": "string",
+                        "minLength": 1,
+                        "description": "Repo-root-relative POSIX path, exactly as declared (no normalisation)."
+                    },
+                    "state": {
+                        "type": "string",
+                        "description": "Whether the file already exists or is to be created by this AC's work.",
+                        "enum": ["existing", "to_be_created"]
+                    }
+                }
+            }
+        },
         "req_status": {
             "type": "string",
             "description": "Requirement lifecycle status. Tracks whether the requirement is still active from a product perspective (independent of implementation work_status).",
@@ -598,17 +628,10 @@
             "description": "Scope qualifier for this AC (e.g. 'standing' for standing/permanent requirements that persist across sprints).",
             "minLength": 1
         },
-        "product": {
-            "description": "Product-root ownership marker (UXP-700d-2). Set only on AC records that describe an example product shipped alongside the project's own record (e.g. the fern-and-fig demo plant shop under UXP-210-buy-a-plant / UXP-220-track-an-order), never on the project's own work. When present and different from the project's own product root, the ready-leaf scanner (scripts/ac_store/scan_ac_store.py's _is_example_content()) excludes the record from both the ready and blocked sets and reports it via the JSON output's set_aside_count instead of dropping it — separation, not deletion (ADR-022). Absent (the common case) on every AC that belongs to the project's own record.",
-            "oneOf": [
-                {
-                    "type": "string",
-                    "minLength": 1
-                },
-                {
-                    "type": "null"
-                }
-            ]
+        "example_product": {
+            "description": "Self-declared example-product marker (ADR-044; supersedes the earlier `product` field of UXP-700d-2 -- that spelling MUST NOT be used, so the fact has one name). Set only on AC records that describe an example product shipped alongside the project's own record (e.g. the fern-and-fig demo plant shop under UXP-210-buy-a-plant / UXP-220-track-an-order), to that product's product-root slug -- never a display name, never on the project's own work. When present and different from the project's own product root, the ready-leaf scanner (scripts/ac_store/scan_ac_store.py's _is_example_content()) excludes the record from both the ready and blocked sets and reports it via the JSON output's set_aside_count instead of dropping it — separation, not deletion (ADR-022). Absent (the common case, and the ONLY representation of 'not an example') on every AC that belongs to the project's own record; a null or empty value is deliberately not accepted here -- omit the key entirely instead.",
+            "type": "string",
+            "pattern": "^[a-z0-9-]+$"
         },
         "child_limit_override": {
             "description": "Per-parent override that raises (never lowers) the default child count hard cap for this specific AC. When set to an integer N, the check-ac-tree-limits hook uses max(default_cap, N) as the effective cap for this parent. An override below the default cap is silently ignored (fail-open). An OVERRIDE ACTIVE audit line is emitted to stderr when the override is active and child_count exceeds the default. This field is a temporary, audited escape hatch -- it should be removed once the structural reorganisation (e.g. AC-UID-decoupling) is complete. Only meaningful on L0 and L1 ACs (the only levels with a child hard cap).",

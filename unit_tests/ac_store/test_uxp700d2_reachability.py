@@ -62,7 +62,7 @@ def _write_ac(root: Path, ac_id: str, *, product: str | None) -> Path:
         "depends_on": [],
     }
     if product is not None:
-        record["product"] = product
+        record["example_product"] = product
     path = root / f"{ac_id}.yaml"
     lines = []
     for key, value in record.items():

@@ -32,6 +32,7 @@ covered_by:
   - BO-2500a-4
   - BO-2500a-5
   - BO-2500a-6
+  - BO-2500a-7
 child_limit_override: 8
 implemented_by: []
 documentation_triggers: [how-to, sequence-diagram]

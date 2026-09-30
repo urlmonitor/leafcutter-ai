@@ -1,0 +1,268 @@
+id: TQ-600b-3
+components:
+  - testing_quality
+title: "No test stages anything in the checkout the run was started from"
+component: testing-quality
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given the suite's 979 subprocess call sites across 349 test files, among them 94
+    sites that create a fresh repository for the test's own use,
+  When the suite is run across several workers,
+  Then no test issues a version-control command that alters the state of the
+    checkout the run was started from — its staged set, its branch, its stashes or
+    its working tree,
+    And the checkout's staged set and current branch are the same after the run as
+      they were before it, including when two workers reach their version-control
+      steps at the same moment,
+    And any test that does alter the run's own checkout is named, with the command
+      it issued,
+    And when a test that stages a file in the run's own checkout is deliberately
+      introduced, it is named and the run reports a failure.
+depends_on:
+  - TQ-600b
+doc_links:
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      The failure angle covers the deliberately introduced offender in the last
+      clause. The before-and-after comparison in the second clause is a criterion
+      assertion and does not substitute for it.
+assigned_agent: python-coder
+estimated_complexity: L
+it_requirements:
+  - >-
+    THE RED-BASELINE PROBLEM IS THIS AC'S DEFINING RISK AND MUST BE HANDLED
+    FIRST. It is entirely possible that ZERO tests violate this rule today — the
+    979 subprocess sites and 94 `git init` calls were counted, but the offender
+    population was never established, because doing so requires reading test
+    source. Before implementing, run the detector over the real suite and RECORD
+    the offender count. If it is zero, this is a standing guard with no natural
+    red, and the deliberately introduced offender of the fourth clause is its
+    ONLY red baseline. In that case the offender must be a PERMANENT, COMMITTED
+    fixture exercised by a test — never a throwaway local experiment. A guard
+    whose only red was a temporary hand-edit is indistinguishable, six months
+    later, from a guard that cannot fail.
+  - >-
+    THE DELIBERATE OFFENDER MUST NEVER TOUCH THE DEVELOPER'S REAL CHECKOUT. The
+    detector must take the checkout root as a parameter, and the offender fixture
+    must operate on a disposable clone standing in for "the run's own checkout".
+    This is not hypothetical caution: this workspace has documented incidents of
+    a concurrent session removing a worktree mid-drive and of a shared .git
+    object store corrupted by parallel activity. A test that stages into the
+    working tree to prove staging is detected is the defect it is testing.
+  - >-
+    DETECTION IS BY OBSERVED STATE CHANGE, NOT BY COMMAND NAME. Sample the named
+    checkout before and after. TQ-600b-3-i's third clause forbids the
+    command-name rule in both of its error directions, so a name-based
+    implementation fails that AC even if it passes this one.
+  - >-
+    ALL FOUR SURFACES THE CRITERIA NAME MUST BE COMPARED — staged set, current
+    branch, stash list, working tree — and the comparison must STATE which
+    surfaces it compared. A comparison of one surface reported as a comparison is
+    the examined-nothing shape in a different costume.
+  - >-
+    COMPARE THE STAGED CONTENT, NOT THE INDEX FILE. `git status` and `git diff`
+    legitimately refresh `.git/index`'s cached stat data without changing what is
+    staged. A comparison over the index file's bytes or mtime reports every
+    legitimate reader as an offender, which destroys TQ-600b-3-i's carve-out and
+    gets the guard turned off within a week.
+  - >-
+    ATTRIBUTION REQUIRES PER-TEST SAMPLING, NOT A WHOLE-RUN BEFORE AND AFTER. A
+    whole-run comparison detects that something moved and names nobody —
+    precisely the multi-hour investigation across 349 subprocess-spawning test
+    files that the notes call out. Under parallel workers, sample around each
+    test on its own worker so the offender and its command can be named.
+  - >-
+    REPOSITORIES A TEST CREATES FOR ITS OWN USE ARE OUT OF SCOPE BY CONSTRUCTION —
+    the 94 measured `git init` sites must not be reported. Scope is the single
+    checkout the run was started from.
+  - >-
+    DO NOT BE DEFEATED BY INDIRECTION. A subprocess reaching the run's checkout
+    through `GIT_DIR`, `GIT_WORK_TREE`, an explicit `-C`, or an inherited cwd is
+    still reaching it. Resolve to the real repository path before deciding scope.
+  - >-
+    If shipped as a commit-guardian hook or a CI gate, register it where the
+    gate actually runs and deploy any helper it imports; an unregistered guard
+    runs for nobody. A manifest entry makes this a package surface and would
+    require this AC to be amended with `package_surface: true` and the five-field
+    structured spec first.
+delivers_to:
+  - agent: python-coder
+    ac_id: TQ-600b-3-i
+    contract: >-
+      A state-change detector parameterised by checkout root, reporting an
+      offending test by node id with the command it issued, and deciding solely
+      on observed change to the staged content, branch, stash list and working
+      tree. TQ-600b-3-i asserts the read-only carve-out over the same detector.
+expects_from: null
+test_spec:
+  - name: test_tq600b_3_a_deliberately_introduced_staging_test_is_named_and_the_run_fails
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: failure
+    description: >-
+      THIS DESCRIPTOR IS THIS AC'S RED BASELINE AND IS NOT SUBSTITUTABLE. A
+      PERMANENT, COMMITTED offender fixture — a test that runs `git add` against
+      the checkout it was handed — is executed with the detector pointed at a
+      DISPOSABLE CLONE standing in for the run's own checkout. The detector exits
+      non-zero, names that test by node id, and states the command it issued. The
+      current suite may contain zero natural offenders, in which case this is the
+      only red this AC will ever have; a throwaway local experiment does not
+      satisfy it. The offender must never be pointed at the developer's real
+      working tree.
+  - name: test_tq600b_3_a_clean_parallel_run_leaves_the_staged_set_and_branch_unchanged
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: >-
+      Over a disposable clone, with the suite spread across more than one worker,
+      the staged set and current branch are identical before and after. This is
+      the criterion assertion and it does NOT substitute for the offender
+      descriptor above.
+  - name: test_tq600b_3_all_four_checkout_surfaces_are_compared_and_the_comparison_says_which
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: >-
+      Staged set, branch, stash list and working tree each appear by name in the
+      comparison's output. NAMED MUTATION: drop the stash surface; a
+      stash-creating offender is then missed and this test must go RED. A
+      comparison of one surface reported as a comparison is the examined-nothing
+      shape.
+  - name: test_tq600b_3_two_workers_staging_at_the_same_moment_are_both_detected_and_both_named
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: failure
+    description: >-
+      The concurrency clause. Two offender fixtures on different workers are
+      forced by a synchronisation barrier to reach their staging step at the same
+      instant, against the disposable clone. Both are named; neither masks the
+      other. NAMED MUTATION: implement attribution as a single whole-run before
+      and after; the run then reports that something moved and names nobody, and
+      this test must go RED.
+  - name: test_tq600b_3_a_test_that_stages_inside_its_own_git_init_repository_is_not_reported
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: >-
+      The false-positive control over the 94 measured `git init` population. A
+      test that creates a repository for its own use and stages inside it is
+      silent. Without this the guard fires on a large legitimate population and
+      is disabled.
+  - name: test_tq600b_3_an_offender_reaching_the_checkout_through_an_environment_variable_is_still_detected
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: failure
+    description: >-
+      An offender that stages via `GIT_DIR`/`GIT_WORK_TREE` pointed at the
+      disposable clone, from a cwd elsewhere, is still named. NAMED MUTATION:
+      decide scope from the subprocess's cwd alone; this test must go RED.
+  - name: test_tq600b_3_the_detector_reports_how_many_tests_it_observed
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: >-
+      The observed-test count appears in the output. Zero observed is a failing
+      status, not a clean one — a detector wired to nothing must not look like a
+      detector that found nothing.
+  - name: test_tq600b_3_the_offender_count_over_the_real_suite_is_measured_and_recorded
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    description: >-
+      The detector is run over the actual suite against a disposable clone and
+      its offender list is recorded as the measured population. NO LITERAL
+      EXPECTED COUNT — the count was not established at authoring time. This
+      descriptor exists to make the answer, including a zero answer, an explicit
+      recorded fact rather than an assumption, since a zero answer is what makes
+      the offender-fixture descriptor this AC's only red.
+test_rationale: |
+  THIS AC MAY HAVE NO NATURAL RED, AND THAT IS THE CENTRAL FACT ABOUT ITS TEST
+  CONTRACT. The 979 subprocess sites and 94 `git init` calls were counted, but
+  nobody established how many tests actually mutate the run's own checkout — it
+  may well be none. If it is none, the criterion assertion (state unchanged
+  before and after a clean run) is green on day one and green forever,
+  including on a detector that examines nothing. That is precisely the shape
+  this repository has been burned by three documented times.
+
+  So the deliberately introduced offender is not a supplementary failure-angle
+  descriptor here; it is the only evidence this guard can fail, and it is
+  specified as a PERMANENT COMMITTED fixture rather than a local experiment. A
+  red that existed once on somebody's machine is not a red baseline.
+
+  The offender must run against a disposable clone, never the real working
+  tree. This workspace has documented incidents of a concurrent session
+  removing a worktree mid-drive and of a shared .git object store being
+  corrupted; a test that stages into the developer's checkout to prove staging
+  is detected would be committing the defect it is testing.
+
+  The whole-run-attribution injection is the load-bearing one among the named
+  mutations. A whole-run before-and-after detects that something moved and
+  names nobody, which passes the criterion descriptor and fails the purpose:
+  diagnosing a corrupted index across 349 subprocess-spawning test files is
+  exactly the multi-hour investigation TQ-600 exists to prevent.
+
+  The real-suite descriptor records the measured offender count, including a
+  zero, as an explicit fact. An unrecorded zero is how a guard with no red
+  quietly becomes a guard nobody re-examines.
+origin_agent: business-analyst
+created: 2026-09-21
+amended_by:
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-09-21
+  note: 'python-coder, L. Treated the weak red-baseline story as this AC''s defining
+    risk: the offender population may be zero, so the deliberately introduced offender
+    is specified as a PERMANENT COMMITTED fixture and is named as the only red this
+    AC may ever have. Required the detector to take the checkout root as a parameter
+    so the offender runs against a disposable clone, never the developer''s working
+    tree. Pinned staged-CONTENT comparison rather than index-file bytes, since git
+    status legitimately rewrites the index stat cache and would make every legitimate
+    reader a false positive. criteria untouched.'
+- action: approved
+  agent: approve_acs
+  date: '2026-09-21'
+superseded_by: null
+covered_by:
+  - TQ-600b-3-i
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+notes: |
+  THE SECOND OF THE THREE NAMED COLLISION SOURCES. A repository has exactly one
+  index per working tree. Two workers staging at once do not merely interleave —
+  they corrupt each other's staged set, and the damage lands in the developer's own
+  checkout rather than in a temporary directory. This is the collision source with
+  consequences outside the test run.
+
+  IT IS ALSO ALREADY A REAL HAZARD IN THIS WORKSPACE, NOT A HYPOTHETICAL. The
+  project's memory records a parallel session removing a worktree mid-drive and a
+  shared .git object store corrupted by parallel supervisors. Adding test workers
+  to a machine that already runs concurrent agents makes an existing failure mode
+  more frequent, so the criterion is written about the checkout's observable state
+  rather than about worker count.
+
+  WHY BOTH A CONCURRENCY CLAUSE AND A NAMING CLAUSE. The before-and-after
+  comparison detects that something moved; it does not say what. Without the
+  offender's name and command, diagnosing a corrupted index across 349 test files
+  that spawn subprocesses is exactly the multi-hour investigation TQ-600 exists to
+  prevent.
+
+  THE READ-ONLY CARVE-OUT IS DELIBERATELY NOT IN THIS AC — see TQ-600b-3-i. Reading
+  tracked content from the real checkout is legitimate and common; stating the
+  carve-out here would weaken the clause into ambiguity.

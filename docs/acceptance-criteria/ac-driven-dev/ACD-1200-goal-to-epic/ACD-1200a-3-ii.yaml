@@ -38,6 +38,11 @@ doc_links:
   - path: scripts/goal_to_epic.py
     relationship: modifies
     status: exists
+    relevance: "Facade only since the 2026-09-14 decomposition — re-exports the naming helpers but defines none of them. epic_naming.py below owns this behaviour."
+  - path: scripts/ac_store/epic_naming.py
+    relationship: modifies
+    status: exists
+    relevance: "Owns _QUOTE_CHARS_TO_STRIP, _strip_quote_chars and _to_pascal_case — the quote/apostrophe deletion this AC specifies. Its module docstring carries the ACD-1200a-3-ii annotation."
   - path: docs/architecture/components/build-epic-workflow-dispatch.md
     relationship: describes
     status: exists
@@ -61,5 +66,54 @@ superseded_by: null
 covered_by: []
 implemented_by:
   - tickets/00_inbox/epics/EPIC-GoalToEpicBugfixes/03_apostrophe_safe_epic_names.md
+test_spec:
+  - name: test_ascii_apostrophe_stripped_midword
+    target_dir: tests/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "\"user's\" becomes \"Users\" — the apostrophe is deleted in place, not replaced by a space, separator or placeholder, and the word is not split into \"User\" + \"S\"."
+  - name: test_curly_apostrophe_u2019_stripped
+    target_dir: tests/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "The second Given: the typographic apostrophe U+2019 is deleted on the same terms as the ASCII one."
+  - name: test_double_quote_stripped
+    target_dir: tests/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "U+0022 double quote is deleted in place, per the Then clause listing quote characters alongside the apostrophe."
+  - name: test_backtick_stripped
+    target_dir: tests/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "U+0060 backtick is deleted in place — the fourth character named by the criterion."
+  - name: test_derive_epic_name_ascii_apostrophe
+    target_dir: tests/
+    framework: unittest
+    type: integration
+    angle: seam
+    description: "The full _derive_epic_name pipeline yields exactly ValidateUsersApiInputs, not just the helper in isolation — this is what proves the stripping is actually reached by the naming path."
+  - name: test_result_contains_no_literal_quote
+    target_dir: tests/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "The derived name contains no literal apostrophe, quote or backtick."
+  - name: test_no_empty_segment_produced
+    target_dir: tests/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: "Stripping leaves no empty or truncated path segment — the final clause of the Then."
+  - name: test_no_word_boundary_at_quote_position
+    target_dir: tests/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: "The quote position does not become a word boundary, which is the specific failure mode that would produce \"User\" + \"S\"."
 change_target: code
 risk_surface: internal

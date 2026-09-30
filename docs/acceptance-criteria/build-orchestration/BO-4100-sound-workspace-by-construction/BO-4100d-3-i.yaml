@@ -1,0 +1,100 @@
+id: BO-4100d-3-i
+title: "A name that had to be altered is reported as altered, and as the altered name"
+component: build-orchestration
+components:
+  - build_orchestration
+  - worktree_manager
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+change_target: code
+risk_surface: contract_boundary
+package_surface: false
+criteria: |
+  Given a requested workspace name containing characters the branch name cannot
+    carry, so creation alters it,
+  When creation reports what it made,
+  Then the name it reports is character-for-character the name of the branch that
+    exists,
+  And the report states that the requested name was altered and gives the
+    requested name alongside it,
+  And the kind of work carried by the altered name is the kind that was
+    requested.
+depends_on: [BO-4100d-3]
+doc_links:
+  - path: docs/architecture/components/worktree-manager.md
+    relationship: describes
+    status: exists
+  - path: templates/scripts/setup_ticket_worktree.py
+    relationship: modifies
+    status: exists
+    relevance: "Canonical source. The deterministic, kind-preserving sanitisation rule and the two separate requested/created name fields in the report live on the same creation paths as BO-4100d-3's read-back; the reconnect lookup (_worktree_exists, l.232) depends on the sanitiser being deterministic."
+  - path: scripts/setup_ticket_worktree.py
+    relationship: modifies
+    status: exists
+    relevance: "Build output of the template above. Must change in parity or CI's build overwrites the fix (ADR-001)."
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Sanitisation must be reported, not hidden. The requested name and the created name must be carried as two separate machine-readable values, so a caller can tell an alteration from an exact match without comparing strings itself."
+  - "The sanitisation rule must preserve the kind. An alteration that strips or mangles the kind prefix turns a legitimate rename into a BO-4100d-1 violation, and the two records would then contradict each other."
+  - "Sanitisation must be deterministic -- the same requested name always yields the same branch name -- or the reconnect/reuse lookup cannot find the prior workspace and a repeated request produces a second one."
+  - "The set of characters that trigger alteration must be derived from what a branch name can actually carry (git's own ref-name rules), not from a hand-written list, so a character git rejects and the list omits does not produce a creation failure instead of a rename."
+  - "This carve-out must not widen BO-4100d-3: a difference between requested and created name is acceptable ONLY when it is an alteration this rule produced. Any other difference is still the failure BO-4100d-3 reports."
+delivers_to: null
+expects_from:
+  ac_id: BO-4100d-3
+  contract: "The report derived from the branch that exists. This record narrows it: when the difference between requested and existing name is a sanitisation this rule produced, the report states both values and succeeds rather than reporting failure."
+test_required: true
+test_spec:
+  - name: test_the_reported_name_is_character_for_character_the_branch_that_exists
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "A name containing characters a branch cannot carry is requested; the reported name is compared for exact equality against git's own branch list entry. Reporting the requested name sends the caller looking for a branch that does not exist -- the same lie as the original defect, by the opposite route."
+  - name: test_the_report_states_that_the_name_was_altered_and_gives_the_requested_name
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "Both the alteration flag and the original requested name are present as separate fields, so a caller need not diff two strings to discover a rename happened."
+  - name: test_the_altered_name_still_carries_the_requested_kind
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: "The kind is asserted on the sanitised branch. A sanitiser that strips the prefix separator, or that normalises the whole name including its kind, reintroduces BO-4100d-1's defect through this carve-out."
+  - name: test_sanitisation_is_deterministic_across_repeated_requests
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: "The same awkward name is requested twice; the second call reuses the first workspace rather than creating a second. A sanitiser that includes a timestamp or a counter passes every other test here and silently doubles the workspace count."
+test_rationale: |
+  This is the one legitimate reason the created name may differ from the requested one, so
+  it is also the one place BO-4100d-3's failure rule is relaxed -- which makes it the
+  natural place for the original defect to come back. Quiet sanitisation reports a name
+  that does not exist, which is the same untrue account by a different route, so the first
+  test asserts exact equality against git's own listing rather than against anything the
+  tool said.
+  Determinism is tested because it is the hidden coupling to the reuse lookup: a
+  non-deterministic sanitiser satisfies every clause of this record and quietly reintroduces
+  the accumulation BO-4100c exists to end.
+origin_agent: BrainCandy
+created: 2026-09-21
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260921-BO-4100d-3-i.md
+notes: >-
+  The one legitimate reason the created name may differ from the requested one, carved out
+  so BO-4100d-3 does not have to treat every alteration as a failure. The risk it closes is
+  the reverse of the original defect: an implementation that sanitises quietly and reports
+  the requested name sends the caller looking for a branch that does not exist, which is
+  the same lie by a different route.

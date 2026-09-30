@@ -1,0 +1,127 @@
+id: KM-KGS-100a-3-ix
+components:
+  - knowledge_management
+readiness: approved
+priority: high
+title: "Comment and blank lines between block-list items do not end the list"
+component: knowledge-management
+level: L3
+status: active
+req_status: draft
+work_status: done
+roadmap_phase: phase_1
+created_by: "docs/acceptance-criteria/knowledge-management/KM-KGS-100-knowledge-graph-surfaces/KM-KGS-100a-3.yaml"
+criteria: |
+  Given an acceptance-criterion record whose covered_by field is declared as a block
+    list in which two comment lines and one blank line sit between its items, the
+    second comment line starting at column zero and holding text shaped like a key,
+    followed immediately by the next top-level key with its own block list:
+      covered_by:
+        - "unit_tests/test_alpha.py"
+        # Added by a later criterion; the entry above is kept.
+      # covers: KM-EX-010
+        - unit_tests/test_beta.py::test_gamma
+
+        - unit_tests/test_delta.py
+      implemented_by:
+        - scripts/example_module.py#example_function
+  When that record's frontmatter is read for relationship extraction
+  Then the value obtained for covered_by is the three-item list
+    ["unit_tests/test_alpha.py", "unit_tests/test_beta.py::test_gamma",
+     "unit_tests/test_delta.py"]
+  And no item of that value contains the text of either comment line, and no item
+    begins with the # character
+  And no item of that value is the empty string
+  And the value obtained for implemented_by is the one-item list
+    ["scripts/example_module.py#example_function"], with no item of covered_by
+    appearing in it and no item of implemented_by appearing in covered_by
+  And a record declaring implemented_by as a block list with the same comment and
+    blank lines between its items yields all of its items in the same way
+depends_on:
+  - KM-KGS-100a-3
+  - KM-KGS-100a-3-i
+doc_links:
+  - path: scripts/knowledge_query.py
+    relationship: describes
+    status: exists
+  - path: docs/reference/ac-schema.md
+    relationship: context
+    status: exists
+  - path: docs/acceptance-criteria/build-orchestration/BO-201.yaml
+    relationship: context
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Measured evidence (2026-09-16, 4127 store files, after the in-progress fix for KM-KGS-100a-3-i..-viii): a differential against PyYAML as reference reader left exactly one disagreement. BO-201.yaml declares covered_by as a block list whose first item is followed by seven indented comment lines and then a second, unquoted item carrying a ::TestListFormRegression suffix. PyYAML reads two items; the stdlib reader treats the first comment line as the end of the list and reads one, silently dropping every item after the comment."
+  - "In YAML a line whose first non-space character is # is a comment line wherever it sits, and a blank line carries no content. Neither ends a block sequence, and neither contributes an item. This holds regardless of the comment line's own indentation, including column zero, so a comment at column zero must not be mistaken for the next top-level key. A comment whose text looks like 'key: value' is still a comment."
+  - "The list still ends at the next top-level key (the termination rule already pinned by KM-KGS-100a-3-ii). Skipping comment and blank lines must not make the scan run on and absorb the following field's items."
+  - "A # inside an item value is not a comment. This must stay consistent with KM-KGS-100a-3-v: comment-line detection applies only to a line whose first non-space character is #, and must never strip or truncate a path#symbol anchor within an item."
+  - "No existing sibling pins blank lines between block-list items; this criterion covers both comment lines and blank lines, because both are non-item lines that a line-oriented reader can wrongly treat as the end of the list."
+  - "Standard-library-only constraint applies (KM-KQS-007)."
+  - "SCOPE-NEUTRAL: this criterion is about the value read into the field, before any edge-target resolution. Whether such a value later resolves to a graph node or stays a raw path string is a separate, deferred decision and must not be asserted here."
+test_spec:
+  - name: test_column_zero_key_shaped_comment_does_not_end_covered_by_list
+    target_dir: unit_tests/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: "A real AC file carrying the criteria fixture (an indented comment and a column-zero '# covers: KM-EX-010' comment between covered_by items) reads covered_by through the file-reading entry point to exactly ['unit_tests/test_alpha.py', 'unit_tests/test_beta.py::test_gamma', 'unit_tests/test_delta.py'], so the items after the key-shaped comment are kept"
+  - name: test_comment_text_never_becomes_list_item
+    target_dir: unit_tests/
+    framework: pytest
+    type: unit
+    angle: boundary
+    description: "No item of the covered_by value read from that file contains the text of either comment line (including 'covers: KM-EX-010'), and no item begins with the # character"
+  - name: test_blank_line_does_not_end_list_or_yield_empty_item
+    target_dir: unit_tests/
+    framework: pytest
+    type: unit
+    angle: boundary
+    description: "The item that follows the blank line (unit_tests/test_delta.py) is present in the covered_by value, and no item of that value is the empty string"
+  - name: test_list_with_comment_and_blank_lines_still_ends_at_next_top_level_key
+    target_dir: unit_tests/
+    framework: pytest
+    type: unit
+    angle: boundary
+    description: "The implemented_by value read from the same file is exactly ['scripts/example_module.py#example_function']; no covered_by item appears in it and no implemented_by item appears in covered_by, so skipping comment and blank lines does not make the scan absorb the following field"
+  - name: test_implemented_by_block_list_with_comment_and_blank_lines_yields_all_items
+    target_dir: unit_tests/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: "A second real AC file declaring implemented_by as a block list with the same indented comment, column-zero key-shaped comment and blank line between its items reads to the full ordered item list, with no comment text, no item beginning with # and no empty-string item"
+  - name: test_symbol_anchor_survives_comment_skipping_in_covered_by_and_implemented_by
+    target_dir: unit_tests/
+    framework: pytest
+    type: unit
+    angle: boundary
+    description: "In a file where both covered_by and implemented_by carry a path#symbol item placed after comment and blank lines, each field's value contains that item in full (not truncated at #, not dropped as a comment), consistent with KM-KGS-100a-3-v"
+  - name: test_bo_201_shaped_list_reads_both_items
+    target_dir: unit_tests/
+    framework: pytest
+    type: unit
+    angle: failure
+    description: "Regression shape of BO-201.yaml, written to a temp AC file: covered_by with a double-quoted first item, then seven indented comment lines, then an unquoted item carrying a ::TestClass suffix, then the next top-level key; covered_by reads to exactly those two items in order"
+test_required: true
+test_rationale: >-
+  The one remaining real divergence (BO-201) was a reader that treated a comment line inside a
+  block list as the end of the list and silently dropped later items. Each Then is proven by
+  reading real temp AC files through the production file-reading entry point: the key-shaped
+  column-zero comment and the blank line must not end the list, comment text and empty strings
+  must never become items, the list must still stop at the next top-level key, and a # inside an
+  item value (path#symbol) must survive in both covered_by and implemented_by. A dedicated
+  BO-201-shaped fixture pins the observed regression. Only parsed field values are asserted,
+  never whether a target resolves to a graph node.
+delivers_to: null
+expects_from:
+  ac_id: KM-KGS-100a-3
+  contract: "The frontmatter field values of a single acceptance-criterion record, read from disk prior to any edge-target resolution"
+origin_agent: business-analyst
+created: 2026-09-16
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary

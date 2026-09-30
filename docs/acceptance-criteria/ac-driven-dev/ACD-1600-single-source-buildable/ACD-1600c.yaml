@@ -32,6 +32,8 @@ covered_by:
   - ACD-1600c-1
   - ACD-1600c-2
   - ACD-1600c-3
+  - ACD-1600c-4
+  - ACD-1600c-5
 implemented_by: []
 change_target: pipeline
 risk_surface: contract_boundary

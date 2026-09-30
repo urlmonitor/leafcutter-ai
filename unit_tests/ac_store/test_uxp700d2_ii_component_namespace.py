@@ -12,8 +12,9 @@ TICKET: fast-lane build UXP-700d-1 UXP-700d-2 UXP-700d-2-i UXP-700d-2-ii
 COVERS: UXP-700d-2-ii
 
 RED-STATE CONTRACT: same as test_uxp700d2_ready_leaf_scan.py — the
-example-content classification (marker: `product: fern-and-fig`) must be
-independent of `component`/`components`.
+example-content classification (marker: `example_product: fern-and-fig`,
+renamed from `product:` by ADR-044/UXP-700d-3-i) must be independent of
+`component`/`components`.
 """
 from __future__ import annotations
 
@@ -48,7 +49,7 @@ def _write_ac(root: Path, subdir: str, ac_id: str, *, component: str, product: s
         "estimated_complexity": "S",
     }
     if product is not None:
-        data["product"] = product
+        data["example_product"] = product
     data.update(overrides)
     path = target / f"{ac_id}.yaml"
     path.write_text(yaml.safe_dump(data, sort_keys=False), encoding="utf-8")

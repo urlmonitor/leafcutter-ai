@@ -43,6 +43,11 @@ doc_links:
   - path: scripts/goal_to_epic.py
     relationship: modifies
     status: exists
+    relevance: "Facade only since the 2026-09-14 decomposition — re-exports the naming helpers but defines none of them. epic_naming.py below owns this behaviour; reference_file_path was retargeted to it in the same pass."
+  - path: scripts/ac_store/epic_naming.py
+    relationship: modifies
+    status: exists
+    relevance: "Owns _normalize_non_ascii_punct, _to_pascal_case and _truncate_pascal_at — the ASCII-safe slug, the no-mid-word-truncation rule and the dry-run/real-run parity this AC specifies. Its module docstring and DECISION HISTORY carry the ACD-1200a-3-iii annotations."
   - path: docs/architecture/components/build-epic-workflow-dispatch.md
     relationship: describes
     status: exists
@@ -67,8 +72,8 @@ assigned_agent: python-coder
 estimated_complexity: M
 it_requirements:
   config_schema_fragment: null
-  reference_file_path: "scripts/goal_to_epic.py"
-  n_location_rule: "1 (the single slug / PascalCase epic-name derivation function; both dry-run and real run must call this one shared function)"
+  reference_file_path: "scripts/ac_store/epic_naming.py"
+  n_location_rule: "1 (the single slug / PascalCase epic-name derivation function; both dry-run and real run must call this one shared function). Retargeted from scripts/goal_to_epic.py on 2026-09-14: the decomposition moved _derive_epic_name / _normalize_non_ascii_punct / _to_pascal_case / _truncate_pascal_at into epic_naming.py, and goal_to_epic.py now only re-exports them."
   required_skills:
     - python-coder
   post_write_commands:
@@ -107,10 +112,14 @@ notes: |
       _to_pascal_case('Ship parts tree - the fast path, quickly')
         -> 'ShipPartsTreeTheFastPath,Quickly'      [em-dash in the real input]
 
-  Root cause, scripts/goal_to_epic.py:245 -- `if ord(ch) < 128: result.append(ch)` passes every
-  ASCII character through untouched, so the em-dash handling the criterion describes works
-  while ordinary punctuation does not. :306 then splits only on whitespace, hyphen and
-  underscore, so the comma is never a word boundary either.
+  Root cause, scripts/ac_store/epic_naming.py:112 (_normalize_non_ascii_punct) --
+  `if ord(ch) < 128: result.append(ch)` passes every ASCII character through untouched, so the
+  em-dash handling the criterion describes works while ordinary punctuation does not.
+  epic_naming.py:173 (_to_pascal_case) then splits only on whitespace, hyphen and underscore
+  (`re.split(r"[\s\-_]+", normalized)`), so the comma is never a word boundary either.
+  Both sites were at scripts/goal_to_epic.py:245 and :306 before the 2026-09-14 decomposition
+  moved them into epic_naming.py; the original citations were verified correct against
+  2524993b9 before being retargeted, and the code at both is unchanged by the move.
 
   Why the tests missed it: all three in unit_tests/ac_driven_dev/test_acd_1200a_3_iii.py assert
   result.isascii(), which is True for a comma. The one assertion that would have caught it,

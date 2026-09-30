@@ -268,14 +268,25 @@ dead code, so it cannot distinguish "the gate is wired and runs" from "the gate 
 is defined and ignored." Pair every such AC with an independent adversarial review
 (code-review + a logic-check that runs the code) before marking it done.
 
-**Why this matters:** The fast-lane feature — built specifically to defeat phantom-done —
-itself shipped a phantom-done runner: `fast-lane-build.js` passed its grep-only structural
-tests while **never executing** its red/green gates, and `fast_lane.py` had no CLI so the
-runner's `select_batch` call was a silent no-op. Both were invisible to the structural
-tests and were caught only by an independent code-review agent + a logic-check agent that
-executed the code; the fix required behavioral (CLI) and semantic-consumption (guarded
-control-flow) tests.
+**This rule outranks the ticket's own `test_spec`.** An AC's `type`/`angle` may explicitly
+sanction the grep form; write the behavioral test anyway. The same authoring pass writes
+both the weak test and the spec that blesses it, so the declaration is not independent
+evidence that the seam is the right one — and a deliberate-looking scope is exactly what
+makes a reviewer downgrade the finding to medium confidence instead of pulling on it.
+
+**Why this matters:** The fast-lane feature — built to defeat phantom-done — itself shipped
+a phantom-done runner: `fast-lane-build.js` passed its grep-only structural tests while
+**never executing** its red/green gates, and `fast_lane.py` had no CLI, so `select_batch`
+was a silent no-op. Caught only by an independent code-review + a logic-check that ran it.
 (Source: fast-lane build + review, 2026-07-22.)
+
+Later instance: a marker-registration test asserted only that `--strict-markers` appeared
+in `pytest.ini` — the form its AC's `test_spec` declared as `type: unit, angle: seam`.
+Rewritten behaviorally, it showed `--strict-markers` inside `addopts` enforces nothing on
+pytest 9.0.3: the string was present and the behavior absent for as long as the file had
+existed. All three defects on that drive were found by asking **why** something was red,
+not whether it was red.
+(Source: TQ-600a-5, 2026-09-30.)
 
 ### New Hook / Gate Dependencies Must Be in the Build Deploy-Manifest
 
@@ -394,6 +405,99 @@ path. If you are testing a hook, verify it actually saw your file before trustin
 code. For the out-of-band store-wide sweep, see "AC-store hygiene" below — and note the
 bare-directory no-op documented there.
 (Source: ACD-400a drift, found 2026-08-18.)
+
+### Tests must not spawn their own `build.py` — reuse a shared deployed layout
+
+Do **not** add a test that runs `python scripts/build.py --target-dir <tmp>` of its own.
+One build measures **59.8s**. The suite already contains **77** such invocation sites
+across 52 test files and has **zero** `scope="session"` fixtures, so every one of them
+pays the full 60s — which is how a full run reached **1:29:47**, with 63% of wall clock
+sitting in 60 of 5318 tests.
+
+The rule, once TQ-600a lands the shared fixture:
+
+- A test that only **reads** a deployed layout must reuse the shared session-scoped
+  reference build. It must not produce one.
+- A test that **mutates** the package before building — withholding a dependency,
+  editing `build.py`'s declaration tuples, then asserting the build *fails* — still
+  builds its own copy. `unit_tests/test_bp_900g_8*.py` is the canonical example.
+  Sharing a layout with those would corrupt the shared copy *and* destroy the
+  behaviour they exist to prove.
+
+The shared fixture landed under TQ-600a-1: `shared_reference_layout`, a
+session-scoped pytest fixture defined in
+`scripts/suite_performance/pytest_shared_reference_layout.py`. It is registered as a
+pytest plugin via `pytest.ini`'s `addopts` entry
+`-p scripts.suite_performance.pytest_shared_reference_layout`, mirroring the existing
+`-p scripts.ac_store.pytest_ac_enforcement` precedent named above — this repo has no
+root `conftest.py` and no `unit_tests/conftest.py`, so registering in a per-directory
+`conftest.py` would have been invisible outside that one directory. For a caller
+outside any fixture context (e.g. a plain function-scoped test), use the underlying
+`get_or_produce_shared_layout()` function directly — it is defined in
+`scripts/suite_performance/_shared_layout_producer.py` and re-exported from the plugin
+module.
+
+The read-vs-mutate boundary is a rule, not a description: a read-only test — one that
+only inspects what the deploy produced, never altering the package beforehand nor the
+result afterward — MUST request the `shared_reference_layout` fixture (or call
+`get_or_produce_shared_layout()` directly, outside fixture context) INSTEAD OF spawning
+its own `build.py` subprocess. A test that mutates the package before building — the
+`unit_tests/test_bp_900g_8*.py` family named above — still builds its own copy and must
+NOT be routed onto the shared fixture: sharing would corrupt the shared copy for every
+other consumer and destroy the very behaviour those tests exist to prove.
+
+**You must DECLARE which kind your test is — requesting the fixture is not enough
+(TQ-600a-5).** Routing is decided per test from a pytest marker, and from nothing else:
+not the filename, not the directory, not whether you requested the fixture. The two
+markers are registered in `pytest.ini` and spelled exactly:
+
+```python
+@pytest.mark.shared_layout_reader     # -> the ONE shared deployed layout
+@pytest.mark.shared_layout_mutator    # -> a private copy of its own, never shared
+```
+
+Copy those spellings rather than retyping them. A marker that differs by one character
+is a different marker, and the consequence is silent rather than loud: the test is
+treated as UNDECLARED.
+
+**An undeclared test is safe but expensive.** It still runs and still passes — it is
+handed its own private copy, never the shared layout, so it cannot corrupt anything.
+But a private copy means a real `build.py` subprocess, so an undeclared test silently
+pays the full ~59.8s this section exists to eliminate. The run names every undeclared
+test by node id in its terminal summary and reports `declared_mutator_count` and
+`undeclared_count` as two separate figures — if your test appears there, you meant to
+declare it and did not.
+
+`pytest.ini` sets `strict_markers = true` as a direct ini key. Do NOT move it into
+`addopts` as `--strict-markers`: measured on pytest 9.0.3, that spelling has **no
+effect** — an unregistered marker only warns and the run exits 0. The file carried the
+inert form until 2026-09-30, so marker strictness was never actually enforced here, and
+a grep-only test asserting the string's presence passed the whole time.
+
+Do not assume this is cheap because collection is fast — collection is 5.33s and the
+`pytest_ac_enforcement` plugin only fires on failures. Both were measured and ruled out.
+The build subprocess is the whole cost.
+
+(Source: test-suite profiling, 2026-09-21, origin/main 624d39ac. Full evidence and the
+read-vs-mutate boundary: `docs/acceptance-criteria/testing-quality/TQ-600-suite-feedback-latency/TQ-600.yaml`.)
+
+### Ticket-Mandated Sequential Resource Paths Go Stale on Long-Lived Branches
+
+When a ticket's Implementation Notes hardcode a shared numbered/sequential resource
+(a diagram id, a migration number, an allocated port) computed at ticket-authoring
+time, re-verify the allocation is still free immediately before publishing — do not
+trust the authoring-time computation, especially on an epic that spans multiple
+`origin/main` catch-up merges. Re-run the actual allocator (e.g.
+`scripts/next_diagram_seq.py`) rather than re-reading the ticket's stated number.
+
+**Why this matters:** `ACD-2100e-1`'s Implementation Notes (written 2026-08-26)
+asserted diagram id c3-006 was free. The ticket executed 19 days and two
+`origin/main` merges later (2026-09-14), by which point c3-006 and c3-007 had both
+landed from unrelated epics. `check-identifier-uniqueness` is `always_run: true`,
+so committing at the stale path would have blocked every commit in the repo, not
+just this ticket's. Caught only because `architecture-diagram-author` independently
+re-measured against the real tree before publishing rather than trusting the notes.
+(Source: EPIC-StartingNewWorkTheProperWayAlways retrospective KI-3, 2026-09-23.)
 
 ## Pre-Drive Checklist
 
@@ -705,6 +809,19 @@ command was never wrong — the ref it compared against was. A check that examin
 must not look like a check that found nothing. Treat a clean result from any audit command
 in this file as provisional until you've confirmed the ref or file it compares against is
 actually current.
+
+**The mirror image also occurred, and is not yet covered by the paragraph above.** During
+EPIC-StartingNewWorkTheProperWayAlways, `verify_precommit_active.py` returned `git_hook:
+false` on three separate agent dispatches purely because it was invoked from outside the
+worktree root (KI-CG-20260901); `check_identifier_uniqueness` and `validate_ac_schema`
+returned `FAILED (0 inspected)` from the workspace parent; and 9 of 11 `commit_guardian`
+failures traced to a stale deployment (`ModuleNotFoundError: No module named
+'_reachability_inventory'`), not real merge damage. Each was reported and initially read as
+a real finding, not as "the check couldn't look here." Before acting on a guard tool's
+FAILURE — not just before trusting its pass — confirm it ran from the worktree root against
+a freshly-built deployment, the same discipline this section already prescribes for a
+clean-looking audit result.
+(Source: EPIC-StartingNewWorkTheProperWayAlways retrospective KI-2, 2026-09-23.)
 
 ### Real-artifact behavioral spot-check before declaring done
 

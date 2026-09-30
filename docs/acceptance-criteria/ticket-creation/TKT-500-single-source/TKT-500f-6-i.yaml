@@ -8,7 +8,7 @@ component: ticket-creation
 level: L3
 status: active
 req_status: active
-work_status: todo
+work_status: done
 created_by: "docs/acceptance-criteria/ticket-creation/TKT-500-single-source/TKT-500f.yaml"
 criteria: |
   Given a leaf AC whose files_touched list contains a mix of paths:
@@ -25,9 +25,19 @@ doc_links:
   - path: scripts/goal_to_epic.py
     relationship: constrains
     status: exists
-  - path: scripts/ac_store/generate_ticket_from_ac.py
+    relevance: "Facade only since the 2026-09-14 decomposition. The goal-path generator this AC constrains is now scripts/ac_store/epic_tickets.py, below."
+  - path: scripts/ac_store/epic_tickets.py
     relationship: constrains
     status: exists
+    relevance: "Owns _call_generate_ticket_from_ac and generate_tickets_for_leaves — the goal-path half of the two generators this AC constrains."
+  - path: scripts/ac_store/_gtfa_impl_py.py
+    relationship: constrains
+    status: exists
+    relevance: "Holds the any-vs-all decision this AC turns on: qualifying_implementation_paths folds is_implementation_python_path over the list per-entry, and requires_test_requirements_section is the logical OR over the result. A unanimity check would live here too, which is why this is the surface. (Re-pointed 2026-09-22 off the generate_ticket_from_ac.py shell; see the amendment.)"
+  - path: scripts/ac_store/_gtfa_body.py
+    relationship: constrains
+    status: exists
+    relevance: "Calls the OR-gate to decide whether the section is emitted at all — the point where accompanying docs/config entries must not suppress it."
 assigned_agent: python-coder
 estimated_complexity: S
 it_requirements:
@@ -39,9 +49,46 @@ expects_from:
   contract: "The shared files_touched classification helper whose presence-of-any-qualifying-.py rule this case exercises"
 origin_agent: business-analyst
 created: 2026-06-22
-amended_by: []
+amended_by:
+- reason: edit-surface-repoint
+  by: it-po
+  at: '2026-09-22'
+  note: 'Re-pointed off the bare scripts/ac_store/generate_ticket_from_ac.py entry, which
+    named a re-export shell as the edit surface via the edit-surface relationship
+    constrains. Surface corrected to what the implementing commit 4dcfd87c actually
+    touched for this behaviour: _gtfa_impl_py.py (qualifying_implementation_paths /
+    requires_test_requirements_section — the per-entry fold and the logical OR this AC''s
+    any-vs-all rule lives in) and _gtfa_body.py (the emission gate). No shell entry: this
+    AC adds no re-exportable helper of its own.
+
+    NOTE ON THE CRITERIA, WHICH ARE UNTOUCHED: the
+    "scripts/ac_store/generate_ticket_from_ac.py" named in the Given is an EXAMPLE
+    files_touched value inside the test scenario — the implementation file the fixture
+    AC points at — not this AC''s edit surface. Do not read it as one.
+
+    Recorded on an already-done record for accuracy only; work_status, readiness and
+    priority are unchanged and no claim about completion is made or withdrawn here.'
 superseded_by: null
 covered_by: []
 implemented_by: []
+test_spec:
+  - name: test_mixed_impl_docs_config_set_still_emits_test_requirements
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "files_touched holding one implementation .py plus docs/reference/ac-schema.md plus config/agent_registry.json still generates a '## Test Requirements' section."
+  - name: test_mixed_set_stub_entry_names_the_single_implementation_file
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "The section carries at least one stub entry for scripts/ac_store/generate_ticket_from_ac.py specifically — the one qualifying path among the three."
+  - name: test_docs_and_config_paths_do_not_suppress_the_section
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: "The discriminating assertion: an implementation that requires ALL paths to qualify (rather than ANY) would omit the section here while passing TKT-500f-6's single-file case. This is the any-vs-all boundary."
 change_target: code
 risk_surface: internal

@@ -1,0 +1,101 @@
+id: UXP-700d-3-ii
+title: "An example marker that disagrees with where the content lives is reported, naming both"
+component: ux-prototyping
+components:
+  - ux_prototyping
+  - ac_store
+level: L3
+status: active
+req_status: draft
+work_status: done
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given journeys, screens, datasets and acceptance criteria that may carry `example_product`,
+  When the product-truth checker runs,
+  Then an artifact whose `example_product` differs from the product root it lives under is
+    reported, naming the declared value and the root,
+  And an artifact under the example product's root that carries no `example_product` is
+    reported as undeclared, naming the root,
+  And an `example_product` naming the project's own product is reported wherever it appears,
+  And an acceptance criterion is compared against the product roots of its
+    implemented-by-step links only, and one with no such link is not reported for lacking a
+    root,
+  And every finding reaches the checker's existing error channel and outcome, not a new one,
+  And which product an artifact belongs to is still decided by where it lives, never by its
+    marker.
+depends_on:
+  - UXP-700d-3-i
+doc_links:
+  - path: docs/architecture/adrs/ADR-044-example-content-self-declares-its-product.md
+    relationship: specifies
+    status: exists
+    relevance: "Sections 6 to 7: the three findings, the roots compared against, and the ownership predicate as the authority."
+  - path: docs/product-truth/scripts/product_ownership.py
+    relationship: modifies
+    status: exists
+  - path: docs/product-truth/scripts/validate_product_truth.py
+    relationship: modifies
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from:
+  ac_id: UXP-700d-3-i
+  contract: "Every existing example item already marked, so the undeclared finding reports nothing on the current store."
+origin_agent: BrainCandy
+created: 2026-09-16
+amended_by:
+- reason: split-from-parent
+  date: 2026-09-16
+  by: claude
+  changes: Split from UXP-700d-3 at the user's direction on 2026-09-16. This half
+    adds the cross-check once UXP-700d-3-i has marked every example item.
+- action: approved
+  agent: approve_acs
+  date: '2026-09-17'
+superseded_by: null
+covered_by: []
+implemented_by:
+  - docs/product-truth/scripts/product_ownership.py
+  - docs/product-truth/scripts/product_truth_example_checks.py
+  - docs/product-truth/scripts/product_truth_checks.py
+  - docs/product-truth/scripts/validate_product_truth.py
+  - docs/acceptance-criteria/ux-prototyping/UXP-500-product-truth-generation/UXP-515.yaml
+  - unit_tests/product_truth/test_uxp_700d_3_ii.py
+  - unit_tests/product_truth/_uxp_700c_2_fixtures.py
+  - unit_tests/product_truth/test_uxp_700c_2_ii.py
+change_target:
+  - code
+risk_surface: contract_boundary
+test_required: true
+test_rationale: |
+  A marker nothing checks is a second hand-written field that drifts. The failure test
+  builds a mismatch and asserts both values are named; the reachability test drives the
+  real checker CLI, because a verdict helper that is never called from main() checks
+  nothing.
+test_spec:
+  - name: test_declaration_disagreeing_with_the_product_root_is_reported
+    target_dir: unit_tests/product_truth/
+    framework: unittest
+    type: integration
+    angle: failure
+    description: "A journey declaring an example_product other than its product root is reported naming both values."
+  - name: test_uxp_700d_3_reachable_from_entry_point
+    target_dir: unit_tests/product_truth/
+    framework: unittest
+    type: integration
+    angle: reachability
+    surface_invoked: docs/product-truth/scripts/validate_product_truth.py
+    description: "The checker CLI, run as a subprocess over a store with a mismatched and an undeclared example artifact, reports both."
+notes: |
+  The pure verdict helper lives in product_ownership.py beside the ownership predicate it
+  cross-checks (ADR-044 section 7); validate_product_truth.py only loads records and calls
+  it. A root counts as an example root only when it equals EXAMPLE_PRODUCT, so the
+  project's own `guardrails/` dataset is not reported as undeclared.
+
+  NOT YET IMPLEMENTED as of 2026-09-17: this AC's own work is out of scope for the
+  UXP-700d-3-i change that created this file. It depends on UXP-700d-3-i (registration +
+  backfill) landing first -- see that AC's notes for why the split is ordered this way.
+target_epic: EPIC-TruthfulProjectRecord

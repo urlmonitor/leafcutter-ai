@@ -16,7 +16,7 @@ related_docs:
 # KI-BO-20260826-1214 — The fast lane cannot complete: its context-bundle gate demands a 1359-line document inlined into a JSON field, and the agent returns a pointer instead
 
 > One known issue, split out of `docs/known-issues/build-orchestration.md` on
-> 2026-09-14. Index: [build-orchestration.md](../build-orchestration.md).
+> 2026-09-14. Index: [build-orchestration.md](../../build-orchestration.md).
 > Filename severity is the three-level index bucket (`blocker`); the
 > original grading is the `**Severity:**` line below, unchanged.
 

@@ -295,6 +295,7 @@ class TestBP600WorkflowFullRunTopology:
         # covers: BP-600d-2
         # covers: BP-600d-3
         # covers: BP-600d-4
+        # covers: BP-600e-1-i
         """An uninterrupted successful run dispatches exactly these labels,
         in this order, and returns status: ok."""
         result = run_workflow_under_e2(_JS_PATH, label_responses=_full_success_responses())
@@ -304,10 +305,19 @@ class TestBP600WorkflowFullRunTopology:
             "ac-creation",
             "test-writer",
             "red-verify/strict",
+            "baseline-dirty-snapshot",
             "python-coder/fix",
             "green-verify/strict",
             "related-tests/strict",
             "mutation-proof",
+            # INF-700a-1: the knowledge-routing step is dispatched immediately
+            # before this path's FIRST (fix) commit, so any learning it routes
+            # is carried by a commit the path already makes -- ADR-040. It is
+            # deliberately NOT anchored to the later "commit/changelog" call;
+            # INF-700a-5's it_requirements name the fix commit specifically,
+            # and attaching it to the changelog commit was called out there as
+            # the wrong anchor.
+            "knowledge-routing-step",
             "commit",
             "changelog-author",
             "commit/changelog",

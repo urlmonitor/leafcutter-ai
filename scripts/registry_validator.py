@@ -17,6 +17,14 @@ ARCHITECTURE: Public function validate_agent_registry(package_root) delegates
     (AC INF-600g-3). Entries with descriptive_only: true are excluded from the
     cross-reference check — they document inline capabilities and have no
     corresponding skill directory or template body reference by design (M-1).
+    step_kinds validation (check_step_kinds) and the requires_verification
+    flag check (validate_verification_flags) live in the sibling modules
+    step_kinds_validator.py and registry_verification_flags.py respectively —
+    both imported here and wired into validate_agent_registry() — because
+    this module is already over the project's file-size ratchet limit and
+    must not grow; validate_verification_flags was moved out (a pure move,
+    no behaviour change) to make room for the new check without the file
+    growing (BO-2400a-1-iii).
 """
 
 from __future__ import annotations
@@ -26,6 +34,9 @@ import re
 from pathlib import Path
 from typing import Any
 
+from registry_verification_flags import validate_verification_flags
+from step_kinds_validator import check_step_kinds, get_agent_step_kinds  # noqa: F401 (shared reader re-export for BO-2400f-5-ii)
+
 _SPECIAL_TOKEN = "__ticket_phase_agents__"
 # External (non-agent) callers permitted in an agent's spawned_by list. These are
 # not themselves registry agents, so they are exempt from the unknown-agent and
@@ -33,7 +44,7 @@ _SPECIAL_TOKEN = "__ticket_phase_agents__"
 # is the finalization workflow that spawns these agents at depth 0 (the legacy
 # finalize-feature *agent* was removed in ADR-006 — see EPIC-FinalizeFeatureHardening
 # ticket 03 — leaving the .js workflow as the sole, non-agent, spawner).
-_EXTERNAL_CALLERS = {"user", "finalize-feature.js"}
+_EXTERNAL_CALLERS = {"user", "finalize-feature.js", "fast-lane-ship.js"}
 
 # ---------------------------------------------------------------------------
 # Skill reference detection patterns (AC INF-600g-3)
@@ -118,6 +129,7 @@ def validate_agent_registry(package_root: Path) -> list[str]:
     errors.extend(_check_spawn_bidirectionality(spawn_map, spawned_by_map, registry_ids))
     errors.extend(_check_self_loops(spawn_map))
     errors.extend(_check_skills_used(portable_agents, package_root))
+    errors.extend(check_step_kinds(agents, package_root))
     errors.extend(validate_verification_flags(template_dir))
     errors.extend(validate_produces_field(agents, template_dir))
     _warn_redundant_phase_agents(agents)
@@ -214,7 +226,7 @@ def _check_orphan_templates(
     Returns:
         List of error strings, one per orphaned template file.
     """
-    errors = []
+    errors: list[str] = []
     if not template_dir.exists():
         return errors
     # Non-agent files that may legitimately live in templates/agents/:
@@ -355,56 +367,6 @@ def _check_skills_used(
                     f"Agent '{agent['id']}' skills_used references skill '{skill}' "
                     f"but no directory exists at {skill_path}."
                 )
-    return errors
-
-
-def validate_verification_flags(template_dir: Path) -> list[str]:
-    """Validate requires_verification flag in agent templates.
-
-    - Bidirectional rule A: if tools: has Edit or Write and requires_verification is not True -> error.
-    - Bidirectional rule B: if requires_verification: true but tools: has neither Edit nor Write -> error.
-    - Rule C: if requires_verification: true but Bash is not in tools: -> error.
-
-    Args:
-        template_dir: Path to the templates/agents/ directory.
-
-    Returns:
-        List of error strings.
-    """
-    from template_compiler import parse_frontmatter
-
-    errors = []
-    if not template_dir.exists():
-        return errors
-
-    for tmpl_file in sorted(template_dir.glob("*.md")):
-        if tmpl_file.name.startswith("_"):
-            continue
-
-        text = tmpl_file.read_text(encoding="utf-8")
-        fm, _ = parse_frontmatter(text)
-
-        tools = fm.get("tools", [])
-        if isinstance(tools, str):
-            tools = [t.strip() for t in tools.split(",")]
-
-        has_edit_or_write = "Edit" in tools or "Write" in tools
-        requires_verification = fm.get("requires_verification") is True
-
-        if has_edit_or_write and not requires_verification:
-            errors.append(
-                f"Template '{tmpl_file.name}' has Edit/Write in tools but lacks requires_verification: true."
-            )
-        elif requires_verification and not has_edit_or_write:
-            errors.append(
-                f"Template '{tmpl_file.name}' has requires_verification: true but lacks Edit/Write in tools."
-            )
-
-        if requires_verification and "Bash" not in tools:
-            errors.append(
-                f"Template '{tmpl_file.name}' has requires_verification: true but lacks Bash in tools (required for git diff)."
-            )
-
     return errors
 
 
@@ -1037,4 +999,20 @@ if __name__ == "__main__":
 #   transparent to the xref check — no warning is emitted in either direction.
 #   Consistent behavior: an entry marked descriptive_only is neither expected
 #   to resolve to a skill dir NOR to appear in the template body.
+# - 2026-09-28 [python-coder]: Wired step_kinds validation into (#TICKETLESS reason=bo-2400a-1-iii-step-kinds)
+#   validate_agent_registry() (BO-2400a-1-iii): imports check_step_kinds and
+#   the shared get_agent_step_kinds reader from the new sibling module
+#   step_kinds_validator.py, and calls check_step_kinds(agents, package_root)
+#   as its own errors.extend(...) line. get_agent_step_kinds is re-exported
+#   from here (suppressing the unused-import lint finding on that name,
+#   since it is not called in this module) so BO-2400f-5-ii and other
+#   consumers can keep importing it from registry_validator. Also extracted
+#   validate_verification_flags() verbatim (pure move, no behaviour change)
+#   into the new sibling module registry_verification_flags.py, and
+#   re-imported it here, because this
+#   file was already over the project's file-size ratchet limit (400 lines,
+#   measured via count_content_lines) and the ratchet forbids it growing
+#   further: the extraction made room for the step_kinds wiring without net
+#   growth, instead of gaming the ratchet with joined import/call lines (the
+#   earlier draft of this change did that and was corrected on review).
 # ====================================================================

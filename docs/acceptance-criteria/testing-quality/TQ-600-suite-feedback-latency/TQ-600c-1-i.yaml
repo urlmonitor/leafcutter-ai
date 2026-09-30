@@ -1,0 +1,193 @@
+id: TQ-600c-1-i
+components:
+  - testing_quality
+title: "A run that did not finish says so, and is never compared against a whole-run budget"
+component: testing-quality
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a run that stops early, or that ends with tests it could not collect —
+    against a measured baseline of 96 collection errors over 5318 collected tests,
+  When that run ends,
+  Then the record it leaves behind covers the tests that did run, and states that
+    the run was partial together with how many tests did not run,
+    And the budget guard reading that record declines to compare it against the
+      whole-run budget, and says so, rather than passing because a partial run
+      cost less than a whole one,
+    And a run that completed is marked complete, so the two are distinguishable
+      without counting entries.
+depends_on:
+  - TQ-600c-1
+doc_links:
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      The boundary angle: complete and partial are the two states, and an
+      implementation that records only a list of timings cannot express the
+      difference at all, which is the defect this AC prevents.
+  - path: docs/acceptance-criteria/testing-quality/TQ-600-suite-feedback-latency/TQ-600.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      Records the 96 collection errors measured on 2026-09-21, which is why the
+      partial case is specified as the normal case rather than as a rare one.
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - >-
+    COMPLETENESS IS AN EXPLICIT MARK SET BY THE RUN FROM HOW IT ENDED, never
+    inferred. Deciding by comparing the entry count against an expected total
+    needs an expected total, which changes with every test added and is itself
+    the thing being measured.
+  - >-
+    THREE END STATES MUST BE DISTINGUISHED AND MARKED: a normal finish; an early
+    stop (`-x`, a keyboard interrupt, a worker crash); and a finish with
+    collection errors present. The measured baseline has 96 collection errors
+    over 5318 collected tests, so the collection-error case is the CURRENT
+    NORMAL, not an edge case. Decide explicitly whether such a run counts as
+    complete-with-errors or as partial, record the decision, and make the guard's
+    behaviour follow it — a guard built for the complete case and patched later
+    for the partial one is wrong from its first day.
+  - >-
+    THE NOT-RUN COUNT MUST BE DERIVED FROM THE RUN (collected minus executed,
+    plus the un-collected), not estimated.
+  - >-
+    THE VERDICT VOCABULARY MUST HAVE THREE VALUES — pass, fail, and
+    declined-because-partial — and the declined value must never be rendered as a
+    pass by any surface that consumes it, including the CI report of TQ-600c-5. A
+    partial run is always under a whole-run budget, so mapping declined onto pass
+    makes the guard most reassuring exactly when the suite's health is worst.
+  - >-
+    The guard must SAY which of the three it encountered, and must not silently
+    compare a partial record against the whole-run budget under any
+    circumstances.
+delivers_to:
+  - agent: python-coder
+    ac_id: TQ-600c-2
+    contract: >-
+      An explicit completeness mark and not-run count in the cost record's
+      header, plus the third verdict value (declined-because-partial) the budget
+      guard must return rather than passing or comparing.
+expects_from:
+  ac_id: TQ-600c-1
+  contract: >-
+    The cost record's header, extended with a completeness mark set by the run
+    from how it ended and a count of tests that did not run.
+test_spec:
+  - name: test_tq600c_1_i_a_run_that_stopped_early_is_marked_partial_with_the_not_run_count
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: >-
+      A child session stopped early leaves a record covering the tests that did
+      run, marked partial, stating how many did not.
+  - name: test_tq600c_1_i_a_completed_run_is_marked_complete
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: >-
+      The other end of the boundary. An implementation that records only a list
+      of timings cannot express the difference at all, which is the defect this
+      AC prevents.
+  - name: test_tq600c_1_i_the_guard_declines_to_compare_a_partial_record_against_the_whole_run_budget
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: unit
+    angle: failure
+    description: >-
+      THE KEY DESCRIPTOR. Given a partial record whose total is far below the
+      budget, the guard does NOT report a pass; it declines and says why. NAMED
+      MUTATION: compare the total regardless of the mark; the guard then reports
+      comfortably-within-budget and this test must go RED.
+  - name: test_tq600c_1_i_the_declined_verdict_is_distinguishable_from_a_pass_in_every_consuming_surface
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: unit
+    angle: failure
+    description: >-
+      Declined is its own value, not a pass with a note. NAMED MUTATION: map
+      declined onto success in the verdict vocabulary; this test must go RED. A
+      partial run is always under budget, so this mapping makes the guard most
+      reassuring exactly when things are worst.
+  - name: test_tq600c_1_i_completeness_is_read_from_the_mark_not_inferred_from_the_entry_count
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: unit
+    angle: seam
+    description: >-
+      A complete run with few entries is complete; a partial run with many is
+      partial. NAMED MUTATION: infer completeness by comparing the entry count
+      against an expected total; both cases are then misclassified and this test
+      must go RED.
+  - name: test_tq600c_1_i_a_run_with_collection_errors_is_classified_per_the_declared_rule_and_its_error_count_stated
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: >-
+      The current-normal case, against a measured baseline of 96 collection
+      errors. The record states the collection-error count and the classification
+      matches the recorded decision, whichever way that decision went.
+test_rationale: |
+  A partial run is always under budget, which makes it the perfect false green:
+  the worse the suite's health becomes — the more tests fail to collect, the
+  earlier the run aborts — the more confidently a naive guard reports that the
+  suite is comfortably within budget. The guard would be most reassuring exactly
+  when things are worst.
+
+  This is not a hypothetical edge case here. The measured run already had 96
+  collection errors, so the partial case is the current normal and its
+  descriptor asserts the declared classification rather than assuming one.
+
+  The infer-from-count injection is the load-bearing named mutation. Deciding
+  completeness by comparing the entry count against an expected total is the
+  obvious cheap inference, and it needs an expected total that changes with
+  every test added and is itself the thing being measured. An explicit mark set
+  by the run that knows how it ended is the only reliable form — the same
+  discipline as the examined-count clauses elsewhere in this tree: state the
+  fact, do not let a later reader infer it.
+origin_agent: business-analyst
+created: 2026-09-21
+amended_by:
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-09-21
+  note: python-coder, S. Made the verdict vocabulary three-valued — pass, fail, declined-because-partial
+    — and required that declined never render as a pass in any consuming surface including
+    TQ-600c-5's CI report. Required the collection-error case (96 measured, the current
+    normal) to be classified by an explicit recorded decision rather than left implicit.
+    criteria untouched.
+- action: approved
+  agent: approve_acs
+  date: '2026-09-21'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: internal
+notes: |
+  A PARTIAL RUN IS ALWAYS UNDER BUDGET, WHICH MAKES IT THE PERFECT FALSE GREEN. If
+  the guard cannot tell a short run from a fast one, then the worse the suite's
+  health becomes — the more tests fail to collect, the earlier the run aborts — the
+  more confidently the guard reports that the suite is comfortably within budget.
+  The guard would be most reassuring exactly when things are worst.
+
+  THIS IS NOT A HYPOTHETICAL EDGE CASE IN THIS REPOSITORY. The measured run already
+  had 96 collection errors. The partial case is the current normal, so a guard
+  built for the complete case and patched later for the partial one would be wrong
+  from its first day.
+
+  THE THIRD CLAUSE STOPS THE OBVIOUS CHEAP INFERENCE. Deciding completeness by
+  comparing the entry count against an expected total needs an expected total,
+  which changes with every test added and is itself the thing being measured. An
+  explicit mark, set by the run that knows how it ended, is the only reliable
+  form — and it is the same discipline as the examined-count clauses elsewhere in
+  this tree: state the fact, do not let a later reader infer it.

@@ -1,0 +1,240 @@
+id: GE-128a-1
+title: "The test-declaration check reaches a verdict on a test with a docstring on every supported Python version"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - testing_quality
+level: L2
+status: superseded_by
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Scenario 1 - a declaration carried in the docstring is recognised, not crashed on
+  Given a staged test file containing exactly one test function, test_alpha,
+    with no declaration comment on the line above its definition, whose body
+    opens with the docstring "Checks alpha. covers: GE-128a-1"
+  And the test-declaration check runs under Python 3.14
+  When the check evaluates that file
+  Then it reports test_alpha as declared and reports no violation for the file
+  And its output contains no traceback and no attribute error.
+
+  Scenario 2 - an undeclared test with a docstring is a violation, not a crash
+  Given a staged test file containing exactly one test function, test_beta,
+    whose body opens with the docstring "Checks beta." and which carries no
+    declaration anywhere (not above the definition, not in the docstring, not on
+    the first body line)
+  And the check runs under Python 3.14
+  When the check evaluates that file
+  Then it reports test_beta by file and function name as a test with no
+    declaration
+  And the commit outcome is the one the check's configured mode gives any other
+    violation - allowed with a warning in warning mode, refused in error mode
+  And its output contains no traceback and no attribute error, so a refusal in
+    error mode is distinguishable from a crash by the output and not by the
+    outcome alone.
+
+  Scenario 3 - a first statement that is a constant but not text is "no declaration"
+  Given a staged test file containing exactly one test function, test_gamma,
+    whose first body statement is the bare number expression 42 and which carries
+    no declaration anywhere
+  And the check runs under Python 3.14
+  When the check evaluates that file
+  Then it reports test_gamma as a test with no declaration, exactly as in
+    Scenario 2
+  And it does not report test_gamma as declared
+  And its output contains no traceback.
+
+  Scenario 4 - the verdict does not depend on the interpreter version
+  Given the three files from Scenarios 1, 2 and 3
+  When the check evaluates each of them once under Python 3.13 and once under
+    Python 3.14, in the same mode
+  Then for each file the set of reported undeclared tests and the commit outcome
+    are identical across the two versions
+  And neither run on either version produces a traceback.
+
+  Scenario 5 - the real files that crashed on 2026-09-16 now get a verdict
+  Given the committed test files test_km_kgs_100a_3.py,
+    test_km_kgs_100a_3_i.py, test_km_kgs_100a_3_v.py,
+    test_km_kgs_100a_3_viii.py and test_km_kgs_100a_3_ix.py from the unit-test tree
+  When the check evaluates each of them under Python 3.14
+  Then every run ends with a declared/undeclared verdict for each test function in
+    the file and no run produces a traceback or attribute error.
+depends_on:
+  - GE-128a
+doc_links:
+  - path: docs/acceptance-criteria/guardrail-engine/GE-128-tests-declare-what-they-prove/GE-128a.yaml
+    relationship: describes
+    status: exists
+    relevance: >-
+      Parent L1. The ratchet it specifies is judged by this check; a check that
+      crashes on the commonest test shape (a docstring, no declaration comment
+      above the def) cannot judge anything, so this defect is a precondition of
+      every GE-128a behaviour rather than part of the ratchet itself.
+  - path: docs/acceptance-criteria/testing-quality/TQ-100-trustworthy-test-gate/TQ-100b-4-i.yaml
+    relationship: relates-to
+    status: exists
+    relevance: >-
+      Owns the rule that a docstring in tag position counts as a declaration.
+      This AC does NOT re-decide which positions count or what a well-formed id
+      looks like; it only requires that the docstring position is evaluated
+      without crashing.
+  - path: docs/acceptance-criteria/testing-quality/TQ-100-trustworthy-test-gate/TQ-100b-5.yaml
+    relationship: relates-to
+    status: exists
+    relevance: >-
+      Recogniser parity across the repo. The fix here must not change what this
+      check recognises, only whether it survives recognising it.
+  - path: templates/scripts/commit_guardian/check_test_ac_tags.py
+    relationship: modifies
+    status: exists
+    relevance: >-
+      Tracked source of the check. The deployed copies under .leafcutter/ and
+      the scripts/ shim are gitignored build outputs; edit the template only.
+  - path: docs/known-issues/commit-guardian.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: XS
+it_requirements:
+  - >-
+    EVIDENCE (verified 2026-09-16, Python 3.14.2 on the developer machine). The
+    docstring branch of the tag check, at lines 143-144 of
+    templates/scripts/commit_guardian/check_test_ac_tags.py, reads the string
+    payload of an ast.Constant through the `.s` attribute. `.s` was a deprecated
+    alias and Python 3.14 removed it: `hasattr(ast.Constant('x'), 's')` is False.
+    The branch runs whenever a test function has no covers tag on the line above
+    its def and its first statement is an expression, which includes every test
+    with a docstring.
+  - >-
+    REPRODUCTION (2026-09-16). Running
+    `python .leafcutter/scripts/commit_guardian/check_test_ac_tags.py <file>` on
+    each of unit_tests/test_km_kgs_100a_3.py, test_km_kgs_100a_3_i.py,
+    test_km_kgs_100a_3_v.py, test_km_kgs_100a_3_viii.py and
+    test_km_kgs_100a_3_ix.py exits 1 with
+    `AttributeError: 'Constant' object has no attribute 's'`.
+  - >-
+    IMPACT. On 3.14 the hook crashes instead of judging, blocks every local
+    commit that stages such a file, and its failure says nothing about whether
+    the tags are right. CI runs Python 3.13 (where `.s` still exists) and does
+    not run this hook, so no CI signal catches it.
+  - >-
+    REQUIRED ACCESSOR. Read the constant's payload through `.value`, which exists
+    on every supported Python version, and keep the string-type guard so a
+    non-string constant (e.g. a bare number) falls through to "no docstring tag".
+    Do not introduce any accessor that exists on only some supported versions.
+  - >-
+    SCOPE GUARD. Do not change COVERS_REGEX, the accepted tag positions, or the
+    warn/error mode resolution in this change; recognition breadth is owned by
+    TQ-100b-4 / TQ-100b-5 and mode by GE-128a.
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-09-16
+amended_by: []
+superseded_by: TQ-100b-4-iii
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: internal
+test_required: true
+test_spec:
+  - name: test_docstring_declaration_is_recognised_without_crash
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: >-
+      Scenario 1. Writes a real temp file test_ge128_alpha.py whose only test,
+      test_alpha, has no tag above its def and opens with the docstring
+      "Checks alpha. covers: GE-128a-1"; runs the real hook CLI
+      (sys.executable + templates/scripts/commit_guardian/check_test_ac_tags.py
+      <path>) with CHECK_TEST_AC_TAGS_MODE=error on the current interpreter and
+      asserts exit 0, no line naming test_alpha as missing a tag, and neither
+      "Traceback" nor "AttributeError" in stdout or stderr. RED on the current
+      code under Python 3.14 (the docstring branch crashes, exit 1 with
+      AttributeError).
+  - name: test_undeclared_docstring_test_is_a_violation_not_a_crash
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: >-
+      Scenario 2. Real temp file whose only test, test_beta, opens with the
+      docstring "Checks beta." and carries no declaration anywhere; runs the
+      real hook CLI twice. With CHECK_TEST_AC_TAGS_MODE=warn it asserts exit 0
+      and a WARNING line naming the file path and test_beta. With
+      CHECK_TEST_AC_TAGS_MODE=error it asserts exit 1 and an ERROR line naming
+      the file path and test_beta. In both modes it asserts neither "Traceback"
+      nor "AttributeError" appears, so the error-mode exit 1 is proven to be a
+      refusal and not a crash. RED on the current code under Python 3.14.
+  - name: test_non_string_constant_first_statement_is_no_declaration
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: >-
+      Scenario 3. Real temp file whose only test, test_gamma, has the bare
+      expression 42 as its first body statement and no declaration anywhere;
+      runs the real hook CLI in error mode and asserts exit 1, an ERROR line
+      naming test_gamma exactly as in Scenario 2, and no "Traceback" or
+      "AttributeError" in the output. Fails if the string-type guard is
+      dropped or if a non-string constant is treated as a declaration. RED on
+      the current code under Python 3.14.
+  - name: test_hook_source_uses_no_version_specific_constant_accessor
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: real_artifact
+    description: >-
+      Scenario 4 (version-independence proof on one interpreter). Parses the
+      tracked source templates/scripts/commit_guardian/check_test_ac_tags.py
+      with ast and asserts it contains no attribute access named s or n (the
+      deprecated ast.Constant aliases removed in Python 3.14), so the payload
+      is read only through .value, which exists on 3.13 and 3.14 alike. RED on
+      the current code, which reads value.s at lines 143-144.
+  - name: test_same_verdict_across_modes_is_version_independent
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: >-
+      Scenario 4 (behavioural half). Runs the real hook CLI once per mode over
+      the three Scenario 1-3 files together and asserts the reported
+      undeclared set is exactly {test_beta, test_gamma} (test_alpha absent),
+      the exit code is 0 in warn and 1 in error, and no run emits a traceback.
+      Combined with the source-accessor test this pins the verdict to logic
+      that is identical on every supported interpreter.
+  - name: test_real_km_kgs_100a_3_files_reach_a_verdict_without_traceback
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    description: >-
+      Scenario 5. Runs the real hook CLI in warn mode over each of the repo's
+      unit_tests/test_km_kgs_100a_3.py, test_km_kgs_100a_3_i.py,
+      test_km_kgs_100a_3_v.py, test_km_kgs_100a_3_viii.py and
+      test_km_kgs_100a_3_ix.py (resolved from the repo root, asserted to
+      exist) and asserts, per file, exit 0 and neither "Traceback" nor
+      "AttributeError" in the output. It deliberately does NOT assert which
+      tests are declared or undeclared. RED on the current code under Python
+      3.14 (every file exits 1 with AttributeError).
+test_rationale: >-
+  Every behavioural test drives the real hook CLI over real temp or committed
+  files because the defect lives in the docstring branch reached only through
+  main -> check_file on a parsed file; a helper test on a hand-built AST is the
+  shape that hid the bug. Scenario 4 is not run on two interpreters at test
+  time: CI is 3.13 and this machine is 3.14, so a dual-interpreter test would be
+  unrunnable or skipped in both places. Instead an AST scan of the tracked
+  source fails if any .s/.n accessor remains, which together with the
+  behavioural tests on the current interpreter proves the verdict cannot vary
+  by version. Verdicts are asserted by forcing CHECK_TEST_AC_TAGS_MODE, since
+  the configured default is warn (exit 0 either way) and would hide the
+  refusal-versus-crash distinction; Scenario 5 uses warn so exit 0 plus no
+  traceback is an unambiguous no-crash signal. Fixtures use the simple id
+  GE-128a-1 because COVERS_REGEX cannot match compound ids such as
+  KM-KGS-100a-3-i (known adjacent defect, out of scope); for the same reason
+  Scenario 5 asserts only that a verdict is reached without a traceback or
+  AttributeError and never that the KM-KGS-100a-3 files come back as declared.

@@ -1,0 +1,341 @@
+id: TQ-600a-3
+components:
+  - testing_quality
+  - build_pipeline
+title: "Read-only is proved, not promised — a run that dirties the shared layout says so and names the test"
+component: testing-quality
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given the shared reference layout of TQ-600a-1, and a record of its exact contents
+    taken at the moment the single deploy that produced it finished,
+  When every test that consumes the shared layout has finished,
+  Then a comparison against that record reports no file added, no file changed and
+    no file missing,
+    And when one consuming test is deliberately made to alter a file inside the
+      shared layout, the same comparison reports a difference, identifies the altered
+      file, and the run reports a failure naming the test that ran between the two
+      matching states,
+    And the comparison reports how many files it compared, so a comparison that
+      inspected nothing is distinguishable from one that found nothing,
+    And the comparison reports how many consuming tests ran between the two states, and
+      a run in which none did says so rather than reporting a clean comparison — a run
+      that had nothing to check and a run that checked everything and found it
+      untouched must not read the same.
+depends_on:
+  - TQ-600a
+  - TQ-600a-1
+doc_links:
+  - path: scripts/suite_performance/shared_layout_integrity.py
+    relationship: creates
+    status: planned
+    relevance: >-
+      THE EDIT SURFACE. The integrity comparison — post-deploy content record, the
+      three-way difference report, the file and consumer counts — lives beside the
+      producer it guards rather than inside it, so the guard and the thing guarded
+      fail separately. Named at this pass because the record had no edit-surface
+      declaration and its generated ticket's files_touched would have pointed only at
+      a file this AC does not change.
+  - path: scripts/suite_performance/_shared_layout_coordination.py
+    relationship: related
+    status: exists
+    relevance: >-
+      Cited in the corrected scope it_requirement purely as EVIDENCE that the shipped
+      layout is run-scoped and shared across xdist workers (run identity from
+      PYTEST_XDIST_TESTRUNUID, production serialised on a file lock), which is why
+      attribution is across the run's consumers rather than within one worker's.
+      Declared at a non-edit-surface relationship so the citation is suppressed from
+      files_touched — this AC reads that module's behaviour, it does not change it.
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      The failure angle is mandatory for this AC: the second clause is a
+      deliberately-induced failure, and an AC of this shape covered only at the
+      criterion angle is the exact shape of guard this repository keeps shipping
+      by accident.
+  - path: docs/acceptance-criteria/testing-quality/TQ-600-suite-feedback-latency/TQ-600c.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      Sibling L1 carrying the three documented precedents of a check that examined
+      nothing and reported clean. The third clause here applies the same discipline
+      to this integrity comparison rather than only to the runtime budget.
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - >-
+    THE RECORD MUST BE TAKEN BEFORE ANY CONSUMER RUNS. Capture it immediately
+    after the single deploy returns. A record captured lazily on first consumer
+    request is blind to that consumer's own mutation, which is the likeliest
+    first offender.
+  - >-
+    COMPARE BY CONTENT DIGEST, NOT BY MODIFICATION TIME. A deploy writes its
+    whole tree within a second, so mtimes are near-identical and an mtime-based
+    comparison cannot see a rewrite. Cover all three difference kinds — added,
+    changed, missing — and prove each separately.
+  - >-
+    EXCLUDE `__pycache__/` AND `*.pyc` FROM THE COMPARISON. Importing from the
+    deployed tree generates bytecode as a side effect of reading it, so an
+    unfiltered comparison reports a difference on every clean run and the check
+    is disabled within a week. This repo has already been bitten by exactly this
+    tree: idempotency tests that read every deployed file as UTF-8 crashed on
+    `__pycache__/*.pyc` under pytest (recorded in CLAUDE.md).
+  - >-
+    A COMPARISON OVER ZERO FILES IS A FAILURE, NOT A PASS. Report the compared
+    file count on every path. The repo's AC-store validator globbed zero files,
+    printed a success-shaped message and exited 0 for eight days; a count in the
+    output is the cheap defence against repeating it here.
+  - >-
+    THE CONSUMER COUNT IS REPORTED ALONGSIDE THE FILE COUNT AND IS NOT A FAILURE AT
+    ZERO. The 2026-09-28 clause requires a second figure: how many consuming tests
+    ran between the two states. The file count cannot see the case it catches — a
+    comparison that ran correctly over a complete layout that no test ever touched
+    — and while the deploy-site migration is incomplete that is the ORDINARY case,
+    not an edge one, so without it this guard would spend the whole migration
+    reporting clean about a layout nobody used. Deliberately NOT a failure at zero:
+    at zero consumers TQ-600a-1-i requires that no layout be produced at all, so
+    failing here would contradict that laziness claim. Stating the figure is
+    enough; the record that FAILS while the population is unconverted is
+    TQ-600a-8. Both figures must be present on every path, including the clean one.
+  - >-
+    STATE THE SCOPE THE COMPARISON ACTUALLY HAS, AND VERIFY IT AGAINST THE SHIPPED
+    PRODUCER RATHER THAN ASSUMING. Corrected at this pass: the earlier form of this
+    requirement said "under pytest-xdist the shared layout is per worker, so the
+    comparison and its offender attribution are per worker". TQ-600a-1 shipped
+    (PR #941) with cross-process coordination — scripts/suite_performance/_shared_layout_coordination.py
+    derives run identity from `PYTEST_XDIST_TESTRUNUID` and serialises production on
+    a file lock, so one layout is produced per RUN and shared across workers, which
+    is also what TQ-600a-6's whole-run clause requires. Attribution is therefore
+    across the run's consumers, not within one worker's. Read the producer before
+    writing the scope line into the output: a report claiming per-worker scope over
+    a run-scoped layout understates what an offender contaminated.
+  - >-
+    Must complete in a few seconds over the deployed tree so it can run at
+    teardown without re-introducing the cost this goal removes. Digest the tree
+    once at capture and once at comparison; do not re-walk per consumer unless
+    the per-test attribution mode is explicitly requested.
+  - >-
+    Failure must be non-zero for the run and must name the test that ran between
+    the last matching state and the first differing one.
+delivers_to: null
+expects_from:
+  ac_id: TQ-600a-1
+  contract: >-
+    The shared layout root path and the instant its single deploy finished, so
+    the contents record is taken before any consumer runs; plus the ordered
+    sequence of consuming tests, so a difference can be attributed to the test
+    that ran between two states.
+test_spec:
+  - name: test_tq600a_3_a_clean_run_reports_no_added_changed_or_missing_file
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: >-
+      After a session of genuine read-only consumers, the comparison against the
+      post-deploy record reports zero differences in all three categories.
+  - name: test_tq600a_3_a_deliberately_dirtied_layout_is_reported_with_the_altered_file_named
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: failure
+    description: >-
+      THE CAN-FAIL PROOF. One consuming test is made to alter a file inside the
+      shared layout; the comparison reports a difference and identifies that file
+      by path. Without this descriptor the comparison is a guard that reports
+      clean forever.
+  - name: test_tq600a_3_an_added_file_and_a_missing_file_are_each_reported
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: >-
+      The other two difference kinds. NAMED MUTATION: implement the comparison as
+      a one-directional walk of the recorded file list; an ADDED file is then
+      invisible and this test must go RED.
+  - name: test_tq600a_3_a_content_rewrite_with_an_unchanged_modification_time_is_reported
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: unit
+    angle: failure
+    description: >-
+      NAMED MUTATION: compare by mtime and size instead of content digest. A file
+      rewritten to different content of the same length with its mtime restored
+      is then missed and this test must go RED.
+  - name: test_tq600a_3_the_comparison_states_how_many_files_it_compared
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: >-
+      The count is present in the output, is greater than zero for a real layout,
+      and equals the number of files in the record.
+  - name: test_tq600a_3_a_comparison_that_inspected_nothing_fails_rather_than_reporting_clean
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: unit
+    angle: failure
+    description: >-
+      Pointed at an empty or absent layout root, the comparison reports a
+      compared count of 0 and a failing status. NAMED MUTATION: return "clean" on
+      an empty file list; this test must go RED. This is the AC-store-validator
+      shape, reproduced deliberately.
+  - name: test_tq600a_3_the_test_that_ran_between_the_two_states_is_named
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: failure
+    description: >-
+      With one offender among several consumers, the run's failure names that
+      test by node id — not merely "the layout changed".
+  - name: test_tq600a_3_the_comparison_states_how_many_consuming_tests_ran_between_the_two_states
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: >-
+      The consumer count appears in the output alongside the file count, on the
+      clean path as well as the failing one, and equals the number of tests that
+      actually requested the shared layout.
+  - name: test_tq600a_3_a_run_with_no_consumers_says_so_rather_than_reporting_a_clean_comparison
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: >-
+      THE 2026-09-28 CLAUSE. Over a selection in which nothing consumed the shared
+      layout, the output states a consumer count of 0 and says it had nothing to
+      check — distinguishably from a run that checked every consumer and found the
+      layout untouched. NAMED MUTATION: report only the file count; the two runs
+      then read identically and this test must go RED. While the deploy-site
+      migration is incomplete the zero-consumer run is the ordinary case, so this is
+      the descriptor that stops the guard reporting clean about nothing for the whole
+      migration. It must NOT assert a failure at zero — TQ-600a-1-i requires no
+      layout be produced then, and failing here would contradict that.
+  - name: test_tq600a_3_bytecode_churn_is_not_reported_as_a_difference
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: >-
+      The false-positive control. A session that only caused `__pycache__`
+      entries to appear inside the layout reports clean. Without this the check
+      fires on every run and is turned off.
+test_rationale: |
+  Sharing is only safe if read-only is enforced rather than assumed, and the
+  premise is an assumption about code nobody has audited test-by-test. The cost
+  of an unnoticed violation is the worst kind: a layout silently wrong for
+  every test that runs after the offender, presenting as intermittent unrelated
+  failures elsewhere.
+
+  Three descriptors are negative controls and each names its injection. The
+  one-directional-walk injection is the likely implementation shape and hides
+  added files. The mtime-versus-digest injection is the likely shortcut and
+  hides rewrites — a deploy writes its whole tree in under a second, so mtimes
+  are useless here. The empty-layout injection reproduces this repository's own
+  AC-store validator, which globbed zero files and exited 0 for eight days.
+
+  The bytecode descriptor is a false-POSITIVE control rather than a negative
+  one, and it is not optional: importing from the deployed tree generates
+  `__pycache__` as a side effect of reading it, so an unfiltered comparison
+  reports a difference on every clean run and gets disabled.
+origin_agent: business-analyst
+created: 2026-09-21
+amended_by:
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-09-21
+  note: 'python-coder, M. Decided the two things the BA deliberately left open: the
+    record is a content digest (mtime is useless because a deploy writes its whole
+    tree in under a second) and the comparison runs at teardown with per-test attribution
+    available on request. Added the `__pycache__` exclusion as a false-positive control
+    — CLAUDE.md records this tree breaking idempotency tests the same way. criteria
+    untouched.'
+- action: approved
+  agent: approve_acs
+  date: '2026-09-21'
+- reason: >-
+    criteria AMENDED — one clause added, nothing removed. The When reads "When every
+    test that consumes the shared layout has finished", which is satisfied by a run in
+    which no test consumed it at all, and the existing compared-FILE count does not
+    catch that: it counts files in the layout, not consumers, so a zero-consumer run
+    either reports a clean comparison over an intact layout or has no layout to compare
+    (TQ-600a-1-i correctly requires none to be produced). Both read as a pass. Today
+    every one of the 77 measured deploy sites is a non-consumer, so the integrity check
+    that guards the shared layout would report clean over a population of zero for as
+    long as the migration is incomplete — a guard reporting clean about nothing, which
+    is this repository's most-repeated defect. The new clause requires the consumer
+    count alongside the file count, so "nothing to check" and "checked and untouched"
+    are distinguishable. Deliberately NOT made a failure: at zero consumers no layout is
+    produced and none should be, so failing here would contradict TQ-600a-1-i's
+    laziness claim. Saying so is enough; the record that FAILS while the population is
+    unconverted is TQ-600a-8.
+  by: business-analyst
+  at: 2026-09-28
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-09-28
+  note: >-
+    Covered the clause the BA's 2026-09-28 amendment added, and corrected one stale
+    it_requirement. ADDED an it_requirement requiring the consumer count alongside the
+    file count on every path, with the deliberate non-failure at zero recorded and its
+    reason (TQ-600a-1-i requires no layout be produced when nothing consumes one, so
+    failing here would contradict that laziness claim). ADDED two descriptors: the
+    consumer count is stated, and a zero-consumer run says so rather than reporting a
+    clean comparison — the second carries the named mutation and is the one that stops
+    this guard reporting clean about nothing for the whole migration, since every one of
+    the 77 measured sites is a non-consumer today. CORRECTED it_requirement 5, which said
+    the shared layout is per worker under xdist and that attribution is therefore per
+    worker. TQ-600a-1 shipped in PR #941 with cross-process coordination —
+    scripts/suite_performance/_shared_layout_coordination.py keys run identity off
+    PYTEST_XDIST_TESTRUNUID and serialises production on a file lock — so one layout is
+    produced per RUN and shared across workers, which is also what TQ-600a-6's whole-run
+    clause requires. A report claiming per-worker scope over a run-scoped layout
+    understates what an offender contaminated. assigned_agent and estimated_complexity
+    unchanged (python-coder, M). test_spec target_dirs left at
+    unit_tests/suite_performance/: every descriptor here asserts a property of the
+    integrity comparison over a controlled session, not of the existing deploy-site
+    population. criteria untouched.
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+notes: |
+  THE CONSUMER COUNT AND THE FILE COUNT ARE TWO DIFFERENT ANTI-FALSE-GREEN FIGURES AND
+  BOTH ARE REQUIRED. The file count catches a comparison whose layout walk found
+  nothing. The consumer count, added 2026-09-28, catches the case the file count cannot
+  see: a comparison that ran correctly over a complete layout that no test ever touched.
+  While the deploy-site migration is incomplete that is the ordinary case, not an edge
+  one, so without the second figure this guard would have spent the whole migration
+  reporting clean about a layout nobody used.
+
+  SHARING IS ONLY SAFE IF READ-ONLY IS ENFORCED RATHER THAN ASSUMED. TQ-600a-1
+  hands one layout to many tests on the premise that they only read it. That
+  premise is an assumption about code nobody has audited test-by-test, and it will
+  be violated eventually — most likely by a test added a year from now by someone
+  who has never read this AC. The cost of an unnoticed violation is the worst kind:
+  a shared layout silently wrong for every test that runs after the offender, which
+  presents as intermittent unrelated failures.
+
+  THE SECOND CLAUSE IS THE CAN-FAIL PROOF AND IS NOT OPTIONAL. A comparison that
+  always reports "clean" is worth less than no comparison at all, because it
+  licenses the assumption it was supposed to test. Deliberately dirtying the layout
+  and requiring a named, located difference is the only evidence the comparison is
+  live.
+
+  THE THIRD CLAUSE EXISTS BECAUSE OF THIS REPO'S OWN HISTORY. The AC-store
+  validator exited 0 having globbed zero files for eight days and looked clean
+  throughout. A file-count in the output is cheap and makes that failure mode
+  visible.
+
+  DELIBERATELY NOT SPECIFIED: how the contents record is taken (hashes, sizes,
+  modification times) and whether the comparison runs once at the end or between
+  tests. Both are implementation decisions for the it-po; the criteria constrain
+  what must be observable, not how.

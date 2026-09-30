@@ -3,7 +3,7 @@ title: Portable Testing Conventions
 type: reference
 status: active
 created: 2026-05-13
-last_updated: 2026-08-14
+last_updated: 2026-09-28
 components:
 - infrastructure
 related_docs:
@@ -101,11 +101,18 @@ Run: `poetry run python -m unittest discover -s unit_tests/live_trader -t . -p "
 ```python
 import pytest
 import psycopg2
+from pathlib import Path
+from db_check.checker import resolve_test_db_address
+
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
 
 @pytest.fixture
 def db_conn():
-    conn = psycopg2.connect("postgresql://trader:trader@localhost:5403/LIVE")
+    # Reads testing_context.db_connection_test from skills_config.json.
+    # Raises DbConnectionTestNotConfiguredError if the setting is unset,
+    # empty, or whitespace-only — see scripts/db_check/checker.py.
+    conn = psycopg2.connect(resolve_test_db_address(PROJECT_ROOT))
     conn.autocommit = False
     yield conn
     conn.rollback()
@@ -211,7 +218,7 @@ Edit `testing_context` in your `.claude/skills_config.json`:
     },
     "max_test_duration_seconds": 5,
     "manual_test_suffix": "_MANUAL",
-    "db_connection_test": "postgresql://myuser:mypass@localhost:5432/mydb",
+    "db_connection_test": "postgresql://<user>:<password>@<host>:<port>/<database>",
     "naming_pattern": "test_*.py",
     "test_output_rules": "Never write to project dirs; use tmp_path or %TEMP%"
   }

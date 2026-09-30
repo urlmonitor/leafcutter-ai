@@ -3,12 +3,13 @@ title: "Test Angles — A Set-Cover Taxonomy for Proof of Done"
 type: reference
 status: active
 created: 2026-08-14
-last_updated: 2026-08-14
+last_updated: 2026-09-28
 components:
 - testing_quality
 - build_orchestration
 related_docs:
 - docs/testing/README.md
+- docs/testing/test-angles-failure-catalogue.md
 - docs/architecture/components/phantom-done-prevention.md
 - docs/reference/ac-schema.md
 description: "The five core + two conditional test angles required per acceptance criterion, the observed repo incidents that justify each, the literature behind them, and the failure classes this taxonomy explicitly does not fix."
@@ -131,85 +132,10 @@ Source-tree imports are structurally blind to deploy-manifest gaps.
 
 ## Failure catalogue — the evidence base
 
-Grouped by mechanism. Every core angle below is justified by incidents observed *in this
-repository*.
-
-### Reachability gap — never invoked from a production entry point
-
-| Incident | What was actually broken | Why the suite missed it |
-|---|---|---|
-| BO-2400f-7..10 (`8f0c55c2b` #411 → `9c58f4550` #422) | lifecycle functions had no CLI subcommand and no workflow call | tests imported the functions directly |
-| fast lane, 2026-07-22 (CLAUDE.md "Gate / Workflow ACs") | `fast-lane-build.js` never executed its red/green gates; `fast_lane.py` had no CLI, so the runner's `select_batch` call was a silent no-op | grep-only structural tests assert a string is *present* — they pass on dead code |
-| BO-1700, EPIC-BOPhantomDoneRemediation T02 (2026-07-15, `50e28cc1`) | `check_hook_freshness()`'s return value silently discarded; `resolve_hooks_path(cwd)` re-resolved internally and ignored | tests called the helpers directly, never via `run_checks()` |
-| BO-2300 Interactive Pause/Resume — phantom-built **twice** | dispatch happened; the instruction payload and the on-disk effect did not | tests keyed on dispatch topology — presence, labels, counts of dispatched helpers that a mock controls (`docs/architecture/components/phantom-done-prevention.md`) |
-| `finalize-feature.js` (EPIC-FinalizeFeatureHardening F2, 2026-06-24; EPIC-PrecommitSafetyNet KI-3) | legacy `async function run({...})` wrapper with no top-level body — the Workflow tool **never invokes it**; the agent fallback was dead, all 6 finalize steps done by hand | nothing executed the script through the real Workflow tool; a never-called entry function looks fine statically |
-| TQ-100 collection isolation, `2a377f91` (2026-07-08) | CI's `-x` aborted at the first failure; the guarantee was inert in real CI | per-ticket tests built their own subprocess calls *without* `-x` — never the production invocation |
-
-### Seam gap — both sides tested, never wired together
-
-| Incident | What was actually broken | Why the suite missed it |
-|---|---|---|
-| EPIC-ComputedQualityGates FP-1 layer 1 (2026-07-08, PR #201) | all three real call sites invoked `_build_agents_map(assigned_agent)` with no axes, so the computed path was dead code | tests called the function with the new kwargs; no test ran the generator end-to-end |
-| BO-400c-3-i, EPIC-BOPhantomDoneRemediation T04 (2026-07-15) | the sole production call site (in `check_ticket_signoff_parity.py`) still passed one argument | all unit tests called the extended function correctly |
-| EPIC-ComputedQualityGates FP-1 layer 3 | hook's `ALLOWED_CHANGE_TARGETS` and `guardrail_gates.yaml` keys were **disjoint** vocabularies | each side was tested against its own copy; no cross-source set-equality contract test existed |
-| EPIC-PrecommitSafetyNet FP-1 (2026-06-17, `656b6d6`, PR #89) | tier lookup read a field from a file the re-dispatch path never opened; 4 of 7 `blocking_hook_ids` had no manifest entry, so lookup returned `null` and judgment-tier failures never routed | producer and consumer each green in isolation; the cross-ticket `delivers_to`/`expects_from` contract was never traced, and the consumer mocked the dependency |
-| EPIC-AcPipelineDeployGaps inbound gap 4 (2026-06-17) | finalize step 3's output schema did not match step 6a's reader — the whole failure-tracking loop was dead code | writer and reader covered in isolation; no test round-tripped a real artifact between them |
-
-### Authenticity gap — the fixture was not the real artifact
-
-| Incident | What was actually broken | Why the suite missed it |
-|---|---|---|
-| EPIC-PhantomDoneFilesTouched KI-1 (2026-07-07, PR #209 / `17c538fe`) | `files_touched` parser was a **complete no-op on every real ticket** — PyYAML emits list items at column 0; the regex required indented dashes | every fixture was hand-typed with indentation, reproducing the exact bias that hid the bug. The *first* remediation spot-check reused indented fixtures and missed it again |
-| EPIC-ComputedQualityGates FP-1 layer 2 (2026-07-08) | **no AC in the 1,802-record store carried `change_target`/`risk_surface`** — the computed path returned `None` for every real AC even after the call sites were wired | every test fed hand-built AC dicts that already contained the axes; no test loaded a real on-disk AC |
-| GenReviewFixes H-2 (2026-07-21, PR #372 / `439b74007`) | forward-reference `NameError` in `_load_migration_map`'s cold-import fallback — fires only in a genuinely fresh process | tests used `importlib.reload()`, which re-executes in an already-populated namespace, so names that would raise on true first import were already bound |
-| GenReviewFixes root `conftest.py` (2026-07-21) | a repo-root `conftest.py` silently hijacked `from conftest import load_fixture` in an unrelated test tree | per-file runs resolve conftest relative to that file and passed; only the full strict suite reproduced real collection order |
-| EPIC-ComputedQualityGates FP-7 (2026-07-07) | the `[NO-FEEDBACK-CHECK]` bypass reads `GIT_COMMIT_MSG`, which git only writes *after* the pre-commit stage — the bypass never fires | the tests set the env var themselves, reproducing a state git never produces at pre-commit time |
-| EPIC-InFlightVisibility FP-1 / FP-7, `BO-1000b-1-i` (2026-07-23, fix `17735a2ed`) | every skipped step double-recorded in `stepOutcomes[]` | the count-guard regex matched only quoted-string first args and was blind to the template-literal calls it was meant to catch |
-
-### Deployment gap — source tree green, deployed copy broken
-
-| Incident | What was actually broken | Why the suite missed it |
-|---|---|---|
-| `done_proof.py`, 2026-07-22 (CLAUDE.md "New Hook / Gate Dependencies") | omitted from `build_ac_store`'s `deploy_map`; the deployed hook raised `ModuleNotFoundError` — would have blocked **every** merge once required | unit tests import from the source tree; caught only when the hook fired on its own commit |
-| BP-811, EPIC-AcPipelineDeployGaps Finding #3 (2026-06-17) | the shim wrote workflows to `output_root/workflows/`, not `.claude/workflows/` — the deployed file was unreachable at the invocation path | **the AC asserted the copy tier ("file present in build output"), never the reachability tier ("the command resolves and executes")**. This is the cleanest statement in the corpus of why `deployed` and `reachability` are separate angles |
-| EPIC-AcPipelineDeployGaps inbound gap 2 | `plan-feature.js` was absent from `templates/workflows-js/`, so `build.py` never deployed it to any consumer | all tests ran the workflow from the source tree; nothing asserted the build manifest contained it |
-| EPIC-FinalizeFeatureHardening F4-2 (2026-06-24) | the committed deployed mirror `scripts/workflows/plan-feature.js` diverged from its template source | the mirror relationship is codified nowhere an agent can check; the only detecting test lives in main's CI |
-| EPIC-DocumentationCoverageGuarantee FP-2 (2026-08-10) | missing `requires_verification: true` failed `install_shims`, blocking the pytest gate *before any test ran* | the failure is in the build step, which no unit test exercises |
-
-### Negative-control gap — the guard could not actually block
-
-| Incident | What was actually broken | Why the suite missed it |
-|---|---|---|
-| BO-1700, EPIC-BOPhantomDoneRemediation (2026-07-15) | the gate was **fail-open**; had to be flipped to fail-closed | no test fed known-bad input through the gate and asserted a block |
-| FIN-100h, `a0bcb8a6c` (#437) | finalize Step 2's final `else` was the *success* path, so an observed `{"status":"refused"}` recorded a clean merge that never happened — directly upstream of merge-to-main | no test fed a refusal or unrecognised status through the branch |
-| EPIC-InFlightVisibility FP-5 (2026-07-23) | merging origin/main silently deleted main's H-1/H-2 deploy-parity guards from `finalize-feature.js`; a malformed test run could then merge to main | the guards had no test feeding a failing/contradictory post-merge state, so deleting them broke nothing observable. All 353 tests stayed green |
-| TQ-100 L-4 / BP-1200b (2026-07-08) | the CI pytest job is `continue-on-error: true` — the gate fires and merges proceed anyway | the plugin's own tests pass; nothing asserts the verdict is *consumed* by CI |
-
-### The two conditional angles: real but concentrated evidence
-
-Evidence for `boundary` and `failure` exists, but it comes from **two sources only** —
-GenReviewFixes (PR #372) and EPIC-PhantomDoneFilesTouched rounds 1-2. Five other
-retrospectives mined contribute none.
-
-- `boundary` — TKT-500f-15: a scalar-string `components` value was iterated
-  per-character instead of wrapped in a single-element list (the one-vs-many shape
-  boundary). PhantomDone round-1 defects #3-#6: quoted paths, multi-ticket union, flow-list
-  YAML (`[a, b]`) vs block list, `lstrip` path mangling. EPIC-BOPhantomDoneRemediation
-  T03: `_check_change_target` had an empty-list guard, the identically structured
-  `_check_risk_surface` did not, and all 22 tests passed because none exercised
-  `risk_surface: []`.
-- `failure` — PhantomDone round-1 #2: an `OSError` path did not honour the hook's
-  fail-open contract. Round 2 then inverted it: a wrong-shape `commit_guardian.json`
-  raised an uncaught exception and **blocked commits**. TKT-500f-18-i and ACD-1200a-14-i:
-  malformed/unavailable mapping source and `git rev-parse` fallback both had to be made to
-  degrade without raising.
-
-**Two honest caveats.** Nearly every one of these was found by post-merge adversarial
-review, not by a boundary test someone had identified in advance — the AC simply never
-specified the edge case, so the fix is AC-authoring coverage at least as much as a test
-angle. And both angles were caught by `pr-reviewer`, which already exists. That is why
-they are **conditional and trigger-fired**: never mandatory, and never worth one of the
-four angle slots by default.
+> See [test-angles-failure-catalogue.md](test-angles-failure-catalogue.md) for the full
+> incident-by-incident evidence base — reachability, seam, authenticity, deployment, and
+> negative-control gaps, plus the two conditional angles' concentrated evidence — that
+> justifies every core angle in the taxonomy above.
 
 ## Literature grounding
 
@@ -279,7 +205,8 @@ ungated drive is indistinguishable from a gated one in the commit log.
 
 ## Existing machinery — reuse, do not rebuild
 
-All four claims verified against the working tree on 2026-08-14.
+All four claims verified against the working tree on 2026-08-14; a fifth was added and
+verified on 2026-09-21 (TQ-600a-1), and extended on 2026-09-28 (TQ-600a-1-i).
 
 - **`user-surface-smoker` already implements the reachability angle** for user-facing
   surfaces, at priority 11.5, with a built-in negative control (`placeholder_signature` —
@@ -310,6 +237,48 @@ All four claims verified against the working tree on 2026-08-14.
   `_classify_outcomes()` treats `XFAIL`, `XPASS`, `SKIPPED`, `FAILED`, `ERROR` and
   "nodeid not found" as non-passing (fail-closed) — which is what defeats xfail-masking.
   An angle gate should extend this scanner with a second tag axis, not duplicate it.
+- **`shared_reference_layout` (TQ-600a-1) now gives the "deployed exactly once" criterion
+  test a fixture to request instead of a harness to invent**: a session-scoped pytest
+  fixture in `scripts/suite_performance/pytest_shared_reference_layout.py`, registered
+  whole-suite via `pytest.ini`'s `-p scripts.suite_performance.pytest_shared_reference_layout`
+  addopts entry (mirroring the `-p scripts.ac_store.pytest_ac_enforcement` precedent above).
+  The underlying `get_or_produce_shared_layout()` (`scripts/suite_performance/_shared_layout_producer.py`)
+  is lazy, cross-process-lock-safe, and hands every requester — including requesters on
+  different pytest-xdist workers — the identical, fully-produced root path, exactly once
+  per run however many callers ask. It exists specifically so a criterion-angle test
+  asserting "the package is really deployed exactly once for the whole run" can request
+  the fixture directly rather than each test inventing its own deploy-counting harness.
+  **Existence is a `reachability`-angle fact, not a `criterion`-angle one**: the fixture
+  being real does not by itself prove any given test is routed onto it — exactly the
+  `user-surface-smoker` gap above, where the mechanism exists and fires on 0 of 2,888
+  records. A test that never requests `shared_reference_layout` still deploys its own
+  copy. The boundary is read-only: it is only for tests that read a deployed layout
+  without mutating it. A test that mutates the package before building (e.g.
+  `unit_tests/test_bp_900g_8*.py`) still builds its own copy and must not route onto this
+  fixture — sharing would corrupt the shared copy for every other consumer. See CLAUDE.md
+  "Tests must not spawn their own `build.py` — reuse a shared deployed layout" for the
+  standing rule this fixture implements, and TQ-600a-1 for the full contract.
+  **TQ-600a-1-i pins the cheapest boundary case on top of that contract, with no
+  production code changed** — the behaviour already existed, merged under TQ-600a-1
+  (PR #941): a selection with zero consumers of `shared_reference_layout` must never
+  enter `get_or_produce_shared_layout()` at all — no deploy subprocess runs, and the
+  laziness holds per pytest-xdist worker, not merely per run — while widening the same
+  selection by exactly one consumer must trigger exactly one deploy. Three tests in
+  `unit_tests/suite_performance/test_tq_600a_1_i.py` pin this and protect the
+  pre-existing behaviour: no `build.py --target-dir` subprocess for the zero-consumer
+  selection; an idle pytest-xdist worker produces nothing; and the fixture is reached
+  only through the real `python -m pytest` entry point (`pytest.ini`'s `-p` registration),
+  not an import-only path. Both mutations they catch land in the fixture itself: making
+  `shared_reference_layout` `autouse=True`, or producing at plugin-import / worker-startup
+  instead of on first request. Non-entry is observed independently of any run report via
+  `emit_execution_signal()` / `EXECUTION_LOG_ENV_VAR`
+  (`scripts/suite_performance/_shared_layout_coordination.py`); the reported-deploy-count
+  halves of this same boundary are deferred to TQ-600a-6, which has no reporting surface
+  yet to assert against.
+  **TQ-600a-5 (PR #957) makes the route a declaration, so this boundary has THREE cases:
+  declared reader, declared mutator, and UNDECLARED — the one an implementation omits,
+  whose two-branch default sends it to the shared layout, the corrupting direction.
+  Routing reads the marker and nothing else; CLAUDE.md has the rule and the spellings.**
 
 ## Relationship to BO-2900
 
@@ -326,6 +295,9 @@ and `declares_side_effect`.
 
 ## Cross-links
 
+- [docs/testing/test-angles-failure-catalogue.md](test-angles-failure-catalogue.md) — the
+  per-mechanism incident evidence base extracted from this doc: reachability, seam,
+  authenticity, deployment, and negative-control gaps, plus the two conditional angles.
 - [docs/testing/test-angles.verification.flow.json](test-angles.verification.flow.json) —
   the machine-readable companion to this doc: 16 falsifiable checks, each with a runnable
   command, a negative control, and an observed state, that answer "is this taxonomy live

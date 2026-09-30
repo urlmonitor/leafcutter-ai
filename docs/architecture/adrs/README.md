@@ -3,7 +3,7 @@ title: "Architecture Decision Records"
 description: "Index of all Architecture Decision Records (ADRs) for the leafcutter-ai package, listing each decision's number, status, title, and date."
 type: "reference"
 created: '2026-08-13'
-last_updated: '2026-09-08'
+last_updated: '2026-09-17'
 status: active
 components:
 - documentation_system
@@ -68,3 +68,6 @@ python scripts/adr_refs.py --index --write
 | [ADR-039](ADR-039-fast-lane-occupied-workspace-refusal.md) | Active | Fast-Lane Occupied-Workspace Refusal | 2026-09-07 |
 | [ADR-040](ADR-040-knowledge-write-publication-rides-completion-commit.md) | Active | Knowledge-Write Publication Rides the Completion Path's Own Commit | 2026-09-07 |
 | [ADR-041](ADR-041-recomputed-attribution-at-item-granularity.md) | Active | Ownership in an Installed Tree Is Decided by Recomputed Attribution at Item Granularity | 2026-09-08 |
+| [ADR-042](ADR-042-product-truth-checker-outcome-vocabulary.md) | Active | The Product-Truth Checker Reports a Closed Outcome Vocabulary on a Structured Channel | 2026-09-09 |
+| [ADR-043](ADR-043-journey-record-carries-its-own-behind-mark.md) | Active | A Journey Known to Be Behind Carries a Durable `behind` Mark in the Record Itself | 2026-09-09 |
+| [ADR-044](ADR-044-example-content-self-declares-its-product.md) | Active | Example Content Declares Its Example Product in One `example_product` Key, Cross-Checked Against Its Product Root | 2026-09-16 |

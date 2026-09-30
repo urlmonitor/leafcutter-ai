@@ -51,10 +51,10 @@ doc_links:
     relationship: relates-to
     status: exists
     relevance: "Evidence that the concept already exists downstream under different words. Verified 2026-08-18: scoring_mode is `label` for pt-classifier and `artifact` for mock-data-author and flow-author, and the per-agent key sets differ by that mode. The authoring-side vocabulary must be reconcilable with this one rather than becoming a third dialect. NOT an edit surface of this AC — registration is TQ-200c-4's."
-  - path: scripts/ac_store/generate_ticket_from_ac.py
+  - path: scripts/ac_store/_gtfa_tests_section.py
     relationship: modifies
     status: exists
-    relevance: "The producer side of the plan, and the third file this AC edits. Its ## Test Requirements descriptors are what a consumer reads; a judged proof must survive from the AC record into that plan intact, since a word that is dropped in transit is not shared. Retagged describes -> modifies by it-po 2026-08-18."
+    relevance: "The producer side of the plan. _build_test_requirements_section emits the ## Test Requirements descriptors a consumer reads; a judged proof must survive from the AC record into that plan intact, since a word that is dropped in transit is not shared. Retagged describes -> modifies by it-po 2026-08-18; re-pointed off the generator shell 2026-09-14 after the decomposition."
 assigned_agent: python-coder
 estimated_complexity: L
 it_requirements:

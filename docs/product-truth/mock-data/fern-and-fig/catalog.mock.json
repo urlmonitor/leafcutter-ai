@@ -1,6 +1,7 @@
 {
   "id": "fern-and-fig/catalog",
   "component": "ux-prototyping",
+  "example_product": "fern-and-fig",
   "status": "active",
   "readiness": "approved",
   "superseded_by": null,

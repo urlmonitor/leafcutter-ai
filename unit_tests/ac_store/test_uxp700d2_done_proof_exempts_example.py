@@ -35,7 +35,7 @@ import check_done_proof as cdp  # noqa: E402
 def _write_ac(directory: Path, ac_id: str, product: str | None) -> Path:
     body = [f"id: {ac_id}", "work_status: done", "readiness: approved"]
     if product is not None:
-        body.append(f"product: {product}")
+        body.append(f"example_product: {product}")
     path = directory / f"{ac_id}.yaml"
     path.write_text("\n".join(body) + "\n", encoding="utf-8")
     return path
@@ -68,7 +68,7 @@ class TestDoneProofExemptsExampleContent(unittest.TestCase):
         self.assertEqual(
             [v["ac_id"] for v in violations],
             ["UXP-999z"],
-            "An AC with no product field is the project's own record and must "
+            "An AC with no example_product field is the project's own record and must "
             "still be held to BO-2500b. If this passes, the exemption has been "
             "widened into a hole that disables the gate for everything.",
         )

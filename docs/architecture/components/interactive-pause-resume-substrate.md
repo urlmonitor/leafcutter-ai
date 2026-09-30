@@ -16,6 +16,7 @@ related_docs:
   - docs/architecture/adrs/ADR-024-interactive-pause-resume.md
   - docs/architecture/diagrams/c3-001-interactive-pause-resume-run-lifecycle.md
   - docs/architecture/diagrams/c3-002-interactive-pause-resume-sequence.md
+  - docs/how-to/resume-a-paused-plan-feature-run.md
 related_code:
   - templates/workflows-js/plan-feature.js
   - templates/workflows-js/finalize-feature.js
@@ -71,3 +72,4 @@ This container groups the mechanism into two component-level (L3) child diagrams
 
 - [Build Orchestration — Epic & Ticket Dispatch Sequencing](build-orchestration.md) — the component that owns the engine workflow files carrying `resolveGate()`.
 - [ADR-024 — Interactive Gates Pause and Persist Instead of Cancelling When Headless](../adrs/ADR-024-interactive-pause-resume.md) — the design of record.
+- [How to resume a paused /plan-feature run](../../how-to/resume-a-paused-plan-feature-run.md) — the operator procedure for listing runs waiting on this store and answering them.

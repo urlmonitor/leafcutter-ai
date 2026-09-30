@@ -46,6 +46,7 @@ superseded_by: null
 covered_by:
   - "unit_tests/workflows/test_quick_fix_workflow.py"
   - BP-600e-1-i
+  - BP-600e-1-ii
 implemented_by:
 - tickets/00_inbox/TICKET-20260608-BP-600e-1.md
 change_target: pipeline

@@ -1,0 +1,96 @@
+id: INF-1300c-5
+title: "Regenerating the decision-record index keeps the frontmatter the project's document checks require"
+component: infrastructure
+components:
+  - documentation_system
+  - infrastructure
+level: L2
+status: active
+req_status: draft
+work_status: done
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+parent: INF-1300c
+criteria: |
+  Given docs/architecture/adrs/README.md already exists with complete frontmatter
+    (title, description, type, status, created, last_updated, components)
+    and a new ADR has just been added to docs/architecture/adrs/,
+  When the index is regenerated with `python scripts/adr_refs.py --index --write`,
+  Then the rewritten README keeps every existing frontmatter field and value
+    (status, created, components and any others) and sets last_updated to today's date,
+  And when no README exists yet, the written README carries a complete frontmatter
+    block with status: active, created and last_updated set to today, and
+    components: [documentation_system],
+  And the generated body below the frontmatter is unchanged,
+  And the bug symptom ("Regenerating docs/architecture/adrs/README.md with `adr_refs.py --index --write` drops the required frontmatter fields status, created, last_updated and components, leaving only title/description/type; check-doc-frontmatter then fails, and the fields had to be restored by hand after the ADR-044 registration (PR #835).") must not occur
+depends_on:
+  - INF-1300c
+doc_links:
+  - path: docs/acceptance-criteria/infrastructure/INF-1300-architecture-docs-by-construction/INF-1300c.yaml
+    relationship: parent
+    status: exists
+  - path: scripts/adr_refs.py
+    relationship: implements
+    status: exists
+    relevance: "_build_index() emits a fixed frontmatter block with only title, description and type; the --index --write branch writes it over the existing README."
+  - path: scripts/adr_index_frontmatter.py
+    relationship: implements
+    status: exists
+    relevance: "Builds the index frontmatter: carries over an existing README's fields with last_updated advanced, or synthesises a complete block. Separate module because adr_refs.py is already over the file-size limit."
+  - path: docs/architecture/adrs/README.md
+    relationship: describes
+    status: exists
+    relevance: "The generated index whose frontmatter (status, created, last_updated, components) must survive regeneration."
+  - path: scripts/commit_guardian/check_doc_frontmatter.py
+    relationship: describes
+    status: exists
+    relevance: "The docs/** frontmatter check that rejects the regenerated README when the required fields are dropped."
+assigned_agent: python-coder
+estimated_complexity: S
+change_target:
+  - code
+risk_surface: internal
+test_required: true
+it_requirements:
+  - "Preserve existing frontmatter by parsing the current README's leading YAML block and carrying every key through unchanged except last_updated, which is set to today's ISO date."
+  - "When the README is absent, emit title, description, type, status: active, created, last_updated (both today) and components: [documentation_system]."
+  - "The body text generated below the frontmatter must be byte-identical to the current output for the same ADR set."
+  - "Read/write failures keep the existing SystemExit error style of adr_refs.py; no partially written README."
+test_spec:
+  - name: test_index_write_preserves_existing_frontmatter_fields
+    target_dir: unit_tests/docs/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    description: "In a temporary repo with docs/architecture/adrs/ holding two ADRs and a README whose frontmatter has status, created, components and an extra custom key, run adr_refs.py --index --write. Assert every original key/value survives, last_updated equals today, and the body matches _build_index output."
+  - name: test_index_write_emits_complete_frontmatter_when_readme_absent
+    target_dir: unit_tests/docs/
+    framework: pytest
+    type: integration
+    angle: boundary
+    description: "In a temporary repo with ADRs but no README, run --index --write. Assert frontmatter contains status: active, created and last_updated equal to today, and components == ['documentation_system'] alongside title/description/type."
+  - name: test_regenerated_index_passes_doc_frontmatter_check
+    target_dir: unit_tests/docs/
+    framework: pytest
+    type: integration
+    angle: deployed
+    surface_invoked: "python scripts/adr_refs.py --index --write"
+    description: "Regenerate the index and validate the written README's frontmatter with the real check-doc-frontmatter validation logic; assert no missing-field errors (status, created, last_updated, components)."
+test_rationale: >-
+  The bug is a lost-data regression on rewrite, so the observation must start from a README
+  that already carries fields the generator does not know about; starting from nothing cannot
+  distinguish preserving from re-emitting a fixed block. The absent-README case is the second
+  boundary, and the frontmatter check is run because it is the gate that actually failed.
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-09-17
+amended_by: []
+superseded_by: null
+covered_by:
+  - unit_tests/docs/test_adr_index_frontmatter_preserved.py
+implemented_by:
+  - scripts/adr_refs.py
+  - scripts/adr_index_frontmatter.py
+notes: "Authored by /quick-fix. Root cause: _build_index() emits a fixed frontmatter block containing only title, description and type instead of carrying over the existing README's frontmatter. Fix: when the index README already exists, preserve its existing frontmatter fields (status, created, components, and any others) and set last_updated to today's date; when it does not exist, emit a complete frontmatter block including status: active, created and last_updated set to today, and components: [documentation_system]. The generated body below the frontmatter is unchanged.."
