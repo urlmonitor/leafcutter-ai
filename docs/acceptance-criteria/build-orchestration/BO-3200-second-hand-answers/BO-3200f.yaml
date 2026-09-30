@@ -23,39 +23,86 @@ criteria: |
 depends_on: [BO-3200]
 documentation_triggers: [reference-doc, component-diagram]
 doc_links:
+  - path: docs/known-issues/build-orchestration/open-high-ki-bo-20260927-status-checker-runs-workflow-shell-commands.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      THE REMAINING SCOPE OF THIS L1. Enumerates about 40 shell, git and script
+      dispatches across plan-feature, build-feature, build-ticket, build-epic,
+      fast-lane-ship and finalize-feature that still go to status-checker, which is
+      registered permits_shell false and declines them by charter, intermittently. Its
+      Suggested fix item 2 also records that the sites moved to worktree-agent are a
+      stopgap outside that agent's charter, and names a dedicated executor as the
+      durable answer. fast-lane-ship's sites are routed under BO-2400f-5-i, not here.
+  - path: templates/agents/command-step-runner.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      THE CHARTERED EXECUTOR THIS L1 ASKED FOR, built under BO-2400a-1-i (on main
+      2026-09-28) together with its config/agent_registry.json entry (permits_shell
+      true). Runs exactly one given command, once, in a named workspace and returns the
+      output verbatim, or declines a request outside that role. This L1 adopts it for
+      command steps during a run; it does not re-specify it.
+  - path: scripts/worktree/check_workspace_setup_permission.py
+    relationship: describes
+    status: exists
+    relevance: >-
+      THE WORKED EXAMPLE OF THE OTHER ACCEPTED ROUTE. ACD-2100b-5's pre-flight: the
+      plan-feature skill runs this script before the workflow starts and passes the
+      verdict in through args (e4ee392d, on main via PR #864, 2026-09-22). Accepted on
+      2026-09-30 as the route for facts knowable before a run starts.
   - path: docs/reference/workflow-authoring-contract.md
     relationship: describes
     status: exists
     relevance: >-
-      THE CONSTRAINT THIS L1 EXISTS TO RESOLVE. Section 1 enumerates the globals the
-      E2 engine injects into a workflow body -- agent, parallel, pipeline, phase, log,
+      THE CONSTRAINT BOTH ROUTES WORK AROUND. Section 1 enumerates the globals the E2
+      engine injects into a workflow body -- agent, parallel, pipeline, phase, log,
       args, workflow, budget. There is no filesystem and no subprocess primitive, so
-      today every read and every side effect must go through an agent() call. Until
-      that changes, BO-3200a-1 and ACD-2100b-5 (both readiness approved) are
-      unbuildable as written: both require a run to obtain a value with dispatch
-      impossible.
+      inside a run every read and every side effect goes through an agent() call.
+      Section 5, Edge 1 already passes values the body cannot produce in through args
+      before the run starts. (The 2026-09-16 version of this entry said this constraint
+      made BO-3200a-1 and ACD-2100b-5 unbuildable as written. That claim was withdrawn
+      on 2026-09-30; see notes.)
   - path: docs/known-issues/build-orchestration/open-high-ki-bo-20260901-1620.md
     relationship: describes
     status: exists
     relevance: >-
       Records the same constraint and flags it by name -- "just call the CLI directly
-      is the obvious suggestion and it cannot be done". Its fix direction 4 proposes a
-      chartered executor instead. That entry was Status "open -- no AC"; this L1 is its
-      home.
-  - path: docs/known-issues/ac-driven-dev/open-blocker-ki-acd-009.md
+      is the obvious suggestion and it cannot be done". Its fix direction 4 proposed a
+      chartered executor; its Status line now names this L1 for that direction and
+      command-step-runner (BO-2400a-1-i) as the executor that was built.
+  - path: docs/known-issues/ac-driven-dev/resolved/resolved-blocker-ki-acd-009.md
     relationship: describes
     status: exists
     relevance: >-
-      The blocker whose third cause this L1 removes at the root: the startup check
-      cannot read the registry that says whether shell is permitted, because reading it
-      requires a shell dispatch to an agent that is not permitted shell.
+      Resolved. Its third cause -- the startup check could not read the registry,
+      because reading it needed a shell dispatch to an agent not permitted shell -- was
+      removed by ACD-2100b-5's pre-flight, not by this L1. (The 2026-09-16 version of
+      this entry pointed at the then-open file and said this L1 removed that cause at
+      the root.) Kept as evidence of the refusal class; the entry names this L1 as the
+      coverage for moving mechanical errands to a chartered executor.
 assigned_agent: null
 estimated_complexity: null
 delivers_to: null
 expects_from: null
 origin_agent: product-owner
 created: 2026-09-16
-amended_by: []
+amended_by:
+  - reason: decision-reversal
+    by: product-owner
+    at: 2026-09-30
+    note: >-
+      Criteria and title untouched. Notes and doc_links rewritten to record the user's
+      2026-09-30 decision ("Keep main's approach"): resolving a fact before the run
+      starts and passing it in through args (ACD-2100b-5's pre-flight, e4ee392d) is an
+      accepted route for facts knowable at start, and command-step-runner
+      (BO-2400a-1-i) is the chartered executor for command steps during a run. The
+      2026-09-16 rejection of pre-resolution is marked reversed, not deleted. The
+      2026-09-16 authorisation to narrow BO-3200a-1 and ACD-2100b-5, and the claim that
+      both were unbuildable as written, are withdrawn. Scope re-stated as coverage of
+      KI-BO-20260927-status-checker-runs-workflow-shell-commands, with the fast lane
+      left to BO-2400f-5-i. doc_links: KI-ACD-009 repointed to its resolved path; that
+      KI, command-step-runner and the pre-flight script added.
 superseded_by: null
 covered_by: []
 implemented_by: []
@@ -65,63 +112,117 @@ notes: |
   WHY THIS IS AN L1 AND NOT A NEW L0. BO-3200 already owns the principle, in the
   user's own words on the L0: "only JUDGEMENT is delegable to a specialist. I/O,
   control flow, and consent are not." Nothing here restates that. This L1 supplies
-  the CAPABILITY that rule presumes and that nothing in the tree currently delivers.
-  Five approved L2s across two components are written against a runtime that cannot
-  satisfy them; this record is where that is fixed, rather than discovered by a coder
-  mid-ticket.
+  the CAPABILITY that rule presumes: a sanctioned way for every workflow to get its
+  routine reads and chores done, when the workflow body itself has no filesystem and
+  no subprocess of its own.
 
-  THE MECHANISM IS DECIDED. The user chose a CHARTERED EXECUTOR on 2026-09-16: one
-  agent whose entire charter is to carry out one exact command and return its output
-  verbatim, exercising no judgement. Two alternatives were considered and rejected,
-  recorded here so a later reader does not re-derive them:
+  TWO ACCEPTED ROUTES, AS OF 2026-09-30. Routine mechanical work goes to one of them,
+  never to an agent whose charter lets it decline:
 
-    - AN ENGINE-LEVEL READ/EXEC PRIMITIVE. Rejected as UPSTREAM. The E2 workflow
-      engine is Claude Code's, not leafcutter's, so adding a filesystem or subprocess
-      global to the workflow body is not a change this project can make. This is the
-      option that would have made BO-3200a-1 literally true as written, and it is the
-      reason that AC needs the reword below rather than simply waiting.
-    - PRE-RESOLVING THE FACTS INTO args BEFORE THE RUN STARTS. Rejected as
-      second-hand by another route. It works within the engine, but it moves a
-      load-bearing read into an LLM-mediated prelude in the slash-command wrapper,
-      which is the same class of relay this whole L0 exists to eliminate -- only
-      earlier, and with no record of it in the run.
+    - A FACT KNOWABLE BEFORE THE RUN STARTS is resolved before the run starts and
+      passed in through args. ACD-2100b-5 is the worked example: the plan-feature
+      skill, which has real shell and file access, runs
+      scripts/worktree/check_workspace_setup_permission.py before the workflow starts
+      and passes the verdict in (e4ee392d, on main via PR #864 on 2026-09-22;
+      ACD-2100b-5 is work_status done), and the workflow fails closed when a caller
+      supplies no verdict. docs/reference/workflow-authoring-contract.md section 5,
+      Edge 1 already uses the same route for timestamps.
+    - A COMMAND STEP DURING A RUN goes to the chartered executor,
+      command-step-runner (templates/agents/command-step-runner.md and its
+      config/agent_registry.json entry, permits_shell true; BO-2400a-1-i, on main
+      2026-09-28). It runs exactly one given command, once, in a named workspace and
+      returns the output verbatim, or declines a request outside that role. It
+      exercises no judgement over the command, so the only thing it declines is a
+      request that was never its job. It was built under BO-2400 for the fast lane;
+      this record adopts it and does not specify a second executor.
 
-  Repointing the dispatches at worktree-agent and widening permits_shell were both
-  rejected outright: the first loads roughly twenty unrelated errands onto a charter
-  scoped to worktree lifecycle, and the second contradicts this L0's standing rule.
+  Which route fits a given site is the BA's call at L2. The rule of thumb: a fact
+  fixed before the run starts can be resolved then; anything that depends on what the
+  run has already done, or that changes the repository, is a command step.
 
-  STANDING INSTRUCTION FOR THE BUSINESS ANALYST -- AN AUTHORISED REWORD THIS RECORD
-  MAY NOT PERFORM ITSELF. BO-3200a-1's first Given is "an environment in which
-  dispatching a specialist is impossible" and its Then is "it obtains the correct
-  value and proceeds, so the value did not come through a specialist." Under the
-  chartered-executor decision that premise can never hold, so the record as written is
-  unsatisfiable. The user authorised narrowing it to "no JUDGEMENT is requested" --
-  the value may arrive through a dispatch, provided the dispatched party exercises no
-  judgement over it and cannot decline on charter grounds. This IS a real narrowing of
-  an approved AC and must be recorded as an explicit amended_by entry carrying that
-  framing, never as a silent edit. The Product Owner's jurisdiction ends at L1, so the
-  amendment is the BA's to make; it is recorded here so the authorisation is not lost.
-  ACD-2100b-5 carries the identical impossible premise in another component's tree and
-  needs the same treatment.
+  DECISION HISTORY -- MADE 2026-09-16, PARTLY REVERSED 2026-09-30. Kept so a later
+  reader neither re-derives it nor mistakes the reversal for an oversight.
 
-  WHY critical. While this is unbuilt, the mandated route into new work has no
-  sanctioned path. ADR-012 retires /create-ticket and makes /plan-feature the only
-  entry point; CLAUDE.md mandates that every code change be ticket-driven. The two
-  therefore fail together, which blocks every new piece of work rather than degrading
-  one surface.
+    - 2026-09-16, STANDS: the user chose a CHARTERED EXECUTOR -- one agent whose
+      entire charter is to carry out one exact command and return its output
+      verbatim, exercising no judgement. command-step-runner is that executor.
+    - 2026-09-16, STANDS: AN ENGINE-LEVEL READ/EXEC PRIMITIVE was rejected as
+      UPSTREAM. The E2 workflow engine is Claude Code's, not leafcutter's, so adding a
+      filesystem or subprocess global to the workflow body is not a change this
+      project can make.
+    - 2026-09-16, REVERSED 2026-09-30: PRE-RESOLVING THE FACTS INTO args BEFORE THE
+      RUN STARTS was rejected as "second-hand by another route", on the grounds that
+      it moved a load-bearing read into an LLM-mediated prelude in the slash-command
+      wrapper, the same class of relay this L0 exists to eliminate. Main had
+      meanwhile built ACD-2100b-5 by exactly that route, and on 2026-09-30 the user
+      chose "Keep main's approach". What the objection feared -- a read relayed by a
+      specialist that can paraphrase, truncate or decline -- is not what was built:
+      the read is done by a script the user's own session runs, and the workflow
+      fails closed if the verdict does not arrive. Pre-resolution is therefore an
+      accepted route for facts knowable at start.
+    - 2026-09-16, WITHDRAWN IN FULL 2026-09-30: on the strength of that rejection this
+      record authorised the BA to narrow two approved ACs, BO-3200a-1 and
+      ACD-2100b-5, from "no dispatch" to "no judgement requested", called both
+      unbuildable as written, and said more broadly that five approved L2s across two
+      components were written against a runtime that could not satisfy them (only
+      those two were ever named). Neither is unbuildable -- ACD-2100b-5 is built --
+      and neither needs any amendment on account of this record. BO-3200a-1 is back to
+      its approved wording, and ACD-2100b-5 and its parent ACD-2100b are back to
+      main's versions (0ac98ffd). This record places no constraint on either.
+    - 2026-09-16, STANDS: repointing the dispatches at worktree-agent and widening
+      permits_shell were both rejected outright. The first loads unrelated errands
+      onto a charter scoped to creating and removing worktrees; the second
+      contradicts this L0's standing rule. The sites already moved to worktree-agent
+      as a stopgap are inside this record's scope for that reason.
+
+  WHAT REMAINS FOR THIS L1, 2026-09-30. Both routes exist; the value still
+  undelivered is coverage. Routine mechanical work in every workflow goes to one of
+  the two routes instead of to an agent that may decline. The open inventory is
+  docs/known-issues/build-orchestration/open-high-ki-bo-20260927-status-checker-runs-workflow-shell-commands.md:
+  about 40 shell, git and script dispatches across plan-feature, build-feature,
+  build-ticket, build-epic, fast-lane-ship and finalize-feature still go to
+  status-checker, which is registered permits_shell false. They include git reset
+  --hard, git restore and rm. Fast-lane routing is tracked separately as
+  BO-2400f-5-i, so this record does not decompose fast-lane-ship's sites again.
+
+  WHY critical, RE-STATED 2026-09-30. The 2026-09-16 rationale was a total halt: the
+  /plan-feature startup check stopped every run before any authoring agent, and since
+  ADR-012 makes /plan-feature the only sanctioned entry point and CLAUDE.md mandates
+  ticket-driven change, all new work was blocked. ACD-2100b-5's pre-flight removed
+  that halt. What remains is intermittent rather than total: any of the ~40 sites can
+  fail whenever status-checker declines, most sites read the decline as a real answer
+  ("no orphans", "branch unknown", "store absent"), and some of them reset, restore or
+  delete. Priority is left at critical as set on 2026-09-16; whether it still
+  warrants critical is the user's call at approval.
 
   EVIDENCE, 2026-09-16: two reproductions of the /plan-feature halt (wf_6e6de02b-3f9,
   wf_82e1655d-e68), both stopping at resolve-workspace-setup-permission before any
   authoring agent was dispatched, zero ACs produced. Roughly 20 shell steps in
-  plan-feature.js are dispatched to status-checker, which declares permits_shell false
-  and refuses by charter. Exactly 1 of 60 registered agents declares permits_shell
-  true, and it is worktree-agent.
+  plan-feature.js were dispatched to status-checker, which declares permits_shell
+  false and refuses by charter. Exactly 1 of 60 registered agents declared
+  permits_shell true, and it was worktree-agent.
+  RE-MEASURED 2026-09-30: the resolve-workspace-setup-permission dispatch is gone
+  (ACD-2100b-5). 2 of 61 registered agents declare permits_shell true: worktree-agent
+  and command-step-runner. Across the six workflows above, 58 dispatch lines still
+  name status-checker as the agent type (plan-feature 21, finalize-feature 20,
+  build-feature 8, build-ticket 5, build-epic 2, fast-lane-ship 2); the KI counts
+  about 40 of them as shell, git or script commands and the rest as within that
+  agent's charter.
 
-  BOUNDARIES -- four neighbours this must not absorb:
+  BOUNDARIES -- neighbours this must not absorb:
     - BO-3200a -- facts are read at the source. That is the RULE. This is the MEANS.
       An implementer who satisfies one has not satisfied the other.
     - BO-3200b -- required actions are performed. Same relationship.
-    - ACD-2100b-5 -- the same means applied to one specific read on one specific
-      startup path. That record stays: it is the instance, this is the capability.
+    - ACD-2100b-5 -- built by the pre-resolve route; the worked example of this
+      record's first route. This record neither changes it nor depends on it.
+    - BO-2400a-1-i -- owns command-step-runner itself: its charter, its registry
+      entry, its verbatim result and its decline shape. This record adopts the
+      executor and must not re-specify it.
+    - BO-2400f-5-i -- routes the fast lane's command steps to command-step-runner.
+      Those sites are counted there, not here.
+    - INF-600k-1 -- lets the registry accept any workflow filename as a legitimate
+      caller (today fast-lane-ship.js and finalize-feature.js are admitted by name).
+      Each workflow that starts dispatching command-step-runner needs that; the
+      capability is INF-600k-1's, not this record's.
     - BO-3800 -- a GUARDRAIL refusal summoning a craft. Different refusal, different
       layer, and it depends on INF-800f rather than on this.

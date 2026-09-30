@@ -1,5 +1,5 @@
 id: BO-3200a-1
-title: "A fact the build depends on is still obtained when no one can be asked to judge it"
+title: "A fact the build depends on is still obtained when no specialist can be dispatched at all"
 component: build-orchestration
 components:
   - build_orchestration
@@ -8,23 +8,16 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
+readiness: approved
 priority: medium
 roadmap_phase: phase_1
 criteria: |
   Given a build that must know a recorded fact about the project before it can decide what to
     do next,
-    And an environment in which no party can be asked to judge anything -- the only party that
-    can be dispatched is one chartered to carry out an exact command and return its output
-    verbatim, whose charter admits every exact command so it has no grounds to decline one, and
-    which treats whatever it receives as a literal command and so gives no answer to a request
-    to look, decide, interpret or summarise; every dispatch to any other party fails
-    immediately,
+    And an environment in which dispatching a specialist is impossible,
   When the build resolves that fact,
-  Then it obtains the correct value and proceeds, so no judgement over the value was requested
-    of anyone,
-    And every dispatch made while resolving the fact went to that chartered party and carried
-    an exact command, and none was addressed to any other party.
+  Then it obtains the correct value and proceeds, so the value did not come through a
+    specialist.
 
   Given the same fact recorded in a source larger than the size at which a relayed reply is
     shortened — at least 130 kilobytes,
@@ -188,19 +181,61 @@ amended_by:
     or judgement; a dispatch to the chartered executor has no declared home in that scheme.
     BO-3200f's notes say five approved L2s are affected; only this record and ACD-2100b-5 were
     authorised for reword.
+- reason: narrowing-withdrawn-approved-criteria-and-title-restored-per-user-decision
+  by: business-analyst
+  at: 2026-09-30
+  note: |
+    THE 2026-09-16 NARROWING ABOVE IS WITHDRAWN IN FULL. Title, first scenario and readiness
+    are restored word for word to the version approved on 2026-08-26 (the approve_acs entry
+    above), which is also main's version of this record. Decided by the user (BrainCandy) on
+    2026-09-30, verbatim choice "Keep main's approach".
+
+    WHY. The narrowing rested on one rejection: pre-resolving facts into args before the run
+    starts had been ruled "second-hand by another route" (BO-3200f's notes, DECISION HISTORY).
+    Main has since built the sibling ACD-2100b-5 by exactly that route -- the plan-feature
+    skill runs scripts/worktree/check_workspace_setup_permission.py before the workflow starts
+    and passes the verdict in through args (e4ee392d; ACD-2100b-5 work_status done). The user
+    kept that approach, so the rejection is reversed and the narrowing built on it is
+    withdrawn. BO-3200f's notes record the 2026-09-16 authorisation to narrow this record as
+    "WITHDRAWN IN FULL 2026-09-30".
+
+    READINESS draft -> approved. This restores the text the user approved on 2026-08-26; it
+    does not approve a new text, so it is a restoration by user decision, not a promotion by
+    the BA. The 2026-09-16 demotion existed to re-run the approval gate for the narrowed
+    wording, and that wording is gone.
+
+    WHAT IS REMOVED (verbatim).
+    Narrowed title: "A fact the build depends on is still obtained when no one can be asked to
+    judge it"
+    Narrowed first scenario:
+      Given a build that must know a recorded fact about the project before it can decide what to
+        do next,
+        And an environment in which no party can be asked to judge anything -- the only party that
+        can be dispatched is one chartered to carry out an exact command and return its output
+        verbatim, whose charter admits every exact command so it has no grounds to decline one, and
+        which treats whatever it receives as a literal command and so gives no answer to a request
+        to look, decide, interpret or summarise; every dispatch to any other party fails
+        immediately,
+      When the build resolves that fact,
+      Then it obtains the correct value and proceeds, so no judgement over the value was requested
+        of anyone,
+        And every dispatch made while resolving the fact went to that chartered party and carried
+        an exact command, and none was addressed to any other party.
+    The second and third scenarios were never changed and are untouched.
+
+    WHAT IN THE 2026-09-16 ENTRY ABOVE NO LONGER APPLIES. That entry is kept as history, but
+    its "CRITERIA-ONLY CHANGE -- THE TECHNICAL LAYER IS NOW STALE" list and its "KNOWN
+    KNOCK-ON, NOT AUTHORISED HERE" passage were written as consequences of the narrowed wording
+    and are withdrawn with it. The technical fields (it_requirements, delivers_to, test_spec,
+    test_rationale) were never edited and are the ones written for the restored criteria, so
+    nothing is owed to the IT PO on this record's account. This entry takes no position on
+    BO-3200a-2. The 2026-09-16 "PREMISE NARROWED, READ THIS FIRST" paragraph is removed from
+    notes, which are again main's notes.
 superseded_by: null
 covered_by:
   - BO-3200a-1-i
 implemented_by: []
 notes: |
-  2026-09-16 (business-analyst) -- PREMISE NARROWED, READ THIS FIRST. The first scenario's
-  premise changed from "dispatching a specialist is impossible" to "no party can be asked to
-  judge anything" (only a chartered executor of exact commands is dispatchable). Authorised by
-  the user via BO-3200f's chartered-executor decision; the old wording, the reason and the list
-  of now-stale technical fields are in amended_by. Where the paragraphs below speak of
-  "removing the ability to dispatch", they describe the SUPERSEDED premise; read them as
-  "removing the ability to obtain judgement".
-
   THE FIRST SCENARIO IS THE DISCRIMINATING TEST and it is the reason this AC is testable at
   all. "Reads the fact directly" is a claim about how, which no assertion on the returned value
   can distinguish — a relayed read returns the right value most of the time. Removing the

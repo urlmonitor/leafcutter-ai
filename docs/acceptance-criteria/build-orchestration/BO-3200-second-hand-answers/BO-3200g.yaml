@@ -22,31 +22,45 @@ criteria: |
 depends_on: [BO-3200]
 documentation_triggers: [reference-doc]
 doc_links:
-  - path: docs/known-issues/ac-driven-dev/open-blocker-ki-acd-009.md
+  - path: docs/known-issues/build-orchestration/open-high-ki-bo-20260927-status-checker-runs-workflow-shell-commands.md
     relationship: describes
     status: exists
     relevance: >-
-      The entry this L1 adds a cause to. Its two recorded causes are worktree
-      path-absence and a transient API error. The 2026-09-16 reproductions show a
+      Where this L1's defect is live as of 2026-09-30. About 40 shell, git and script
+      dispatches across six workflows still go to status-checker, which declines them
+      intermittently, and most sites read the decline as a real answer -- "no
+      orphans", "branch unknown", "store absent". Added 2026-09-30, after the anchor
+      case's startup path stopped dispatching anyone.
+  - path: docs/known-issues/ac-driven-dev/resolved/resolved-blocker-ki-acd-009.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      The entry this L1 added a cause to, now filed under resolved/ (the link pointed
+      at the open file until 2026-09-30). Its two earlier causes are worktree
+      path-absence and a transient API error. The 2026-09-16 reproductions showed a
       third: a charter refusal. In run 2 the refusing agent returned
       {"output":"","exit_code":1,"error":"out-of-scope..."} -- a fabricated exit code
       inside a refusal payload, which the run then reported as "exit code 1, no
-      stdout", indistinguishable from a genuinely unreadable file.
-  - path: docs/known-issues/build-orchestration/open-blocker-ki-bo-018.md
+      stdout", indistinguishable from a genuinely unreadable file. That startup
+      dispatch is gone since ACD-2100b-5 (e4ee392d); the entry is kept as the anchor
+      case.
+  - path: docs/known-issues/build-orchestration/resolved/resolved-blocker-ki-bo-018.md
     relationship: describes
     status: exists
     relevance: >-
-      The same shape one layer out -- a 130 KB config relayed through an agent,
-      truncated mid-escape-sequence, and the parse failure fail-closed into a
-      substantive and false verdict about an agent's permissions. A truncation is not a
-      refusal, but both are transport failures rendered as findings about the subject.
-  - path: docs/known-issues/ac-driven-dev/open-blocker-ki-acd-005.md
+      Resolved; the link pointed at the open file until 2026-09-30. The same shape
+      one layer out -- a 130 KB config relayed through an agent, truncated
+      mid-escape-sequence, and the parse failure fail-closed into a substantive and
+      false verdict about an agent's permissions. A truncation is not a refusal, but
+      both are transport failures rendered as findings about the subject.
+  - path: docs/known-issues/ac-driven-dev/resolved/resolved-blocker-ki-acd-005.md
     relationship: describes
     status: exists
     relevance: >-
-      The sibling misparse: the same out-of-scope refusal read as the user choosing to
-      cancel. Same family, different victim. BO-3200c owns that one; this L1 must not
-      absorb it.
+      Resolved; the link pointed at the open file until 2026-09-30. The sibling
+      misparse: the same out-of-scope refusal read as the user choosing to cancel.
+      Same family, different victim. BO-3200c owns that one; this L1 must not absorb
+      it.
   - path: docs/reference/false-green-mechanisms.md
     relationship: describes
     status: exists
@@ -60,7 +74,22 @@ delivers_to: null
 expects_from: null
 origin_agent: product-owner
 created: 2026-09-16
-amended_by: []
+amended_by:
+  - reason: decision-reversal
+    by: product-owner
+    at: 2026-09-30
+    note: >-
+      Criteria and title untouched. Notes and doc_links corrected after the user's
+      2026-09-30 decision ("Keep main's approach"). BOUNDARY WITH ACD-2100b no longer
+      says ACD-2100b was amended to name a fifth outcome: that amendment was removed by
+      0ac98ffd, and none is needed because ACD-2100b-5's pre-flight (e4ee392d) removed
+      the startup dispatch, so no party on that path can refuse. WHY high no longer
+      credits BO-3200f with removing the startup halt; ACD-2100b-5's pre-flight did.
+      Both notes now say what changed for this L1: it no longer relies on ACD-2100b
+      for the startup path, and its live cases are the dispatches in
+      KI-BO-20260927-status-checker-runs-workflow-shell-commands. WHY NOT A FIFTH
+      KNOWN ISSUE now says three of its four entries are resolved. doc_links: the
+      three KI links repointed to their resolved/ paths, and KI-BO-20260927 added.
 superseded_by: null
 covered_by: []
 implemented_by: []
@@ -85,19 +114,39 @@ notes: |
   an outcome.
 
   BOUNDARY WITH ACD-2100b. That L1 enumerates four startup-check outcomes: registry
-  unreadable, uninterpretable, agent absent, agent denied. A refusal is a FIFTH and is
-  not among them. ACD-2100b-3-i already demonstrates the enumeration is not closed,
-  and ACD-2100b-4's it_requirements warn against implementing the guard as a
-  four-branch table. ACD-2100b has been amended to name the fifth outcome rather than
-  having it annexed here: this L1 is the general rule, that tree is the one startup
-  path that must obey it.
+  unreadable, uninterpretable, agent absent, agent denied. When this record was
+  written, a refusal was a possible FIFTH on that path and was not among them.
+  ACD-2100b-3-i already demonstrates the enumeration is not closed, and ACD-2100b-4's
+  it_requirements warn against implementing the guard as a four-branch table.
+  CORRECTED 2026-09-30. As written on 2026-09-16, this paragraph went on to say that
+  ACD-2100b had been amended to name the fifth outcome. That amendment was removed by
+  0ac98ffd, and none is needed. ACD-2100b-5's pre-flight (e4ee392d) reads the
+  registry before the run starts, so the startup check dispatches no agent and no
+  party on that path can refuse. ACD-2100b stays at four outcomes. WHAT THIS CHANGES
+  FOR THIS L1: it no longer relies on ACD-2100b to carry the rule on the startup
+  path, and its anchor case now lies on a path that no longer dispatches. The rule
+  itself is unchanged. It applies to every path that still asks a party that can
+  decline, chiefly the dispatches in
+  KI-BO-20260927-status-checker-runs-workflow-shell-commands.
 
-  WHY high AND NOT critical. This is the misdiagnosis rather than the blockage. With
-  BO-3200f built the run no longer halts here at all; with only this built the run
-  still halts, but it says something true about why. It cost this session two full
-  runs of operator time and pointed at a 131 KB file that was present and readable at
-  both candidate locations, which is why it is not medium.
+  WHY high AND NOT critical. This is the misdiagnosis rather than the blockage.
+  CORRECTED 2026-09-30. As written on 2026-09-16, this said that with BO-3200f built
+  the run would no longer halt here at all. The halt it meant -- /plan-feature
+  stopping at the startup check -- was removed by ACD-2100b-5's pre-flight
+  (e4ee392d, on main via PR #864 on 2026-09-22), not by BO-3200f, and it cannot
+  recur there because that check no longer dispatches anyone. The anchor case cost
+  two full runs of operator time and pointed at a 131 KB file that was present and
+  readable at both candidate locations, which is why this is not medium. The same
+  misdiagnosis remains possible wherever a routine step is still sent to a party
+  that may decline. BO-3200f moves those steps to routes that do not decline them,
+  and this L1 makes sure any decline that still happens is reported as a decline.
+  The executor BO-3200f adopts, command-step-runner, can itself decline a request
+  outside its role; its decline has no exit status, so it cannot pass for a
+  command's result (BO-2400a-1-i).
 
-  WHY NOT A FIFTH KNOWN ISSUE. Four open entries already describe this family --
-  KI-ACD-009, KI-ACD-005, KI-BO-018, KI-BO-20260901-1620. The user directed that they
-  be updated and cross-referenced rather than joined by another.
+  WHY NOT A FIFTH KNOWN ISSUE. When this record was written, four open entries
+  described this family -- KI-ACD-009, KI-ACD-005, KI-BO-018, KI-BO-20260901-1620 --
+  and the user directed that they be updated and cross-referenced rather than joined
+  by another. As of 2026-09-30, KI-ACD-009, KI-ACD-005 and KI-BO-018 are filed under
+  resolved/. KI-BO-20260901-1620 and KI-BO-20260927-status-checker-runs-workflow-shell-commands
+  are open and carry the live cases.

@@ -49,6 +49,18 @@ amended_by:
     by: it-po
     at: 2026-08-26
     note: "Added change_target/risk_surface for BO-2900 parity. Composite — no assigned_agent. criteria untouched."
+  - reason: decision-reversal
+    by: product-owner
+    at: 2026-09-30
+    note: >-
+      Criteria and title untouched. Notes only. In the "AT THE HARD CAP AS OF
+      2026-09-16" block, the BO-3200f entry's claim that five approved L2s across this
+      tree and ACD-2100 are written against a runtime that cannot satisfy them is
+      marked withdrawn (user decision 2026-09-30, "Keep main's approach"). It is
+      followed by what is true: ACD-2100b-5 is built by the pre-resolve route
+      (e4ee392d), BO-3200a-1 and ACD-2100b-5 are back to main's approved versions, and
+      the chartered executor exists as command-step-runner (BO-2400a-1-i). The cap
+      bookkeeping is unchanged.
 superseded_by: null
 covered_by:
   - BO-3200a
@@ -113,10 +125,19 @@ notes: |
   and accepted it knowingly. The next L1 that belongs under this goal forces an
   ac-tree-split (Pattern A sibling L0, or Pattern C intermediate), not a cap bump.
   The two additions were:
-    - BO-3200f -- the CAPABILITY this whole tree presumes and nothing delivered.
-      Five approved L2s across this tree and ACD-2100 are written against a runtime
-      that cannot satisfy them, because the E2 workflow engine injects no filesystem
-      or subprocess primitive into a workflow body. Chartered executor chosen.
+    - BO-3200f -- the CAPABILITY this whole tree presumes: a sanctioned way to get
+      routine reads and chores done, because the E2 workflow engine injects no
+      filesystem or subprocess primitive into a workflow body. Chartered executor
+      chosen.
+      CORRECTED 2026-09-30. As added on 2026-09-16, this entry also said that five
+      approved L2s across this tree and ACD-2100 were written against a runtime that
+      cannot satisfy them. That claim was withdrawn on 2026-09-30, when the user
+      chose to keep main's approach. Only two of the five were ever named,
+      BO-3200a-1 and ACD-2100b-5, and both are back to main's approved versions.
+      ACD-2100b-5 is built (e4ee392d) by resolving the fact before the run starts
+      and passing it in, which is now an accepted route for facts knowable at start.
+      The chartered executor exists as command-step-runner (BO-2400a-1-i). BO-3200f's
+      notes carry the full decision history.
     - BO-3200g -- a refusal is reported as a refusal and not as a damaged file.
       Considered as a fifth L2 under BO-3200e and promoted to L1 instead, because
       "you are not sent to repair a healthy file" is a distinct benefit from
