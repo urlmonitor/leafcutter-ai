@@ -96,19 +96,22 @@ def retrieval_operation(payload: dict, sources: list[SourceConfig]) -> str:
     """Return the registry operation a retrieval_request.v1 child needs.
 
     `bounded_research` when the request names a host_research source, else `retrieve`. Both
-    `retrieve.repository` and `host.research` accept retrieval requests, so the scheduler passes
-    this as the `operation` argument of filter_candidates to bind the child deterministically.
+    `retrieve.repository` and `host.research` accept retrieval requests, so `_child` stores it in
+    `RequestProposal.operation` and the scheduler passes it to filter_candidates.
     """
     host_ids = {s.id for s in sources if s.kind == "host_research"}
     asked = set(payload.get("source_ids") or [])
     return "bounded_research" if asked and asked <= host_ids else "retrieve"
 
 
-def _child(need: EvidenceNeed, source_ids: list[str]) -> RequestProposal:
-    """Build the retrieval child request for one need."""
+def _child(need: EvidenceNeed, source_ids: list[str], sources: list[SourceConfig]
+           ) -> RequestProposal:
+    """Build the retrieval child request for one need, naming the operation it needs."""
     payload = RetrievalRequestPayload(need=need, source_ids=source_ids)
+    operation = retrieval_operation({"source_ids": source_ids}, sources)
     return RequestProposal(
         kind=RequestKind.EVIDENCE, question=need.question, evidence_needs=[need],
+        operation=operation,
         payload_schema=schema_ids.RETRIEVAL_REQUEST, payload=payload.model_dump(mode="json"),
         requested_output_schema=schema_ids.EVIDENCE_BUNDLE, priority=need.priority)
 
@@ -138,7 +141,7 @@ def resolve_sources(ctx: ExecutionContext, needs: list[EvidenceNeed], plan: Plan
         if chosen:
             ids = [s.id for s in chosen]
             out.needs.append(need)
-            out.requests.append(_child(need, ids))
+            out.requests.append(_child(need, ids, ctx.config.sources))
             out.child_map[need.id] = ids
             out.attempted += ids
             continue
@@ -156,6 +159,8 @@ def resolve_sources(ctx: ExecutionContext, needs: list[EvidenceNeed], plan: Plan
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-09-30 23:59 [python-coder]: Retrieval children carry `operation` (set here from
+#   retrieval_operation) instead of the scheduler deriving it. (#KernelBootstrapV0/INT)
 # - 2026-09-30 23:00 [python-coder]: Source filtering by `technologies` is not applied because a
 #   SourceConfig carries no technology field; technologies only feed retrieval query terms.
 #   (#KernelBootstrapV0/P5)

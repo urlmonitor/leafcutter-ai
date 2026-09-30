@@ -75,6 +75,7 @@ class ExecutionContext:
     clock: Callable[[], datetime]
     cancel_probe: Callable[[], bool]
     descriptor: CapabilityDescriptor | None = None
+    constraints: tuple[str, ...] = ()
 
     def evidence(self, ids: Sequence[str]) -> list[Evidence]:
         """Return the evidence items for ids (unknown ids are omitted), in the given order."""
@@ -97,6 +98,9 @@ class CapabilityExecutor(Protocol):
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-09-30 23:59 [python-coder]: `constraints` carries the task's constraint texts (filled by
+#   the scheduler) so executors can quote them to Jev without storing them as evidence.
+#   (#KernelBootstrapV0/INT)
 # - 2026-09-30 22:00 [python-coder]: BudgetPort.reserve returns a bool instead of raising so
 #   guards can turn a refusal into a recorded budget_exhausted outcome; BudgetExhausted is
 #   provided for callers that prefer to raise. (#KernelBootstrapV0/P1)

@@ -72,6 +72,15 @@ class RunOutcome(KernelModel):
 STATE_MODELS: tuple[type, ...] = (Budgets, RunOutcome, TraceState)
 
 
+def result_artifact_name(invocation_id: str) -> str:
+    """Return the artifact name under which an invocation's CapabilityResult JSON is stored.
+
+    `ChildOutcome.result_ref` carries this name, so a resumed parent reads a child's output with
+    `ctx.artifacts.read_artifact(ctx.run_id, result_ref)`.
+    """
+    return f"result-{invocation_id}.json"
+
+
 def _revision(value: object) -> int:
     """Return the `updated_revision` of a value, or 0 when it has none."""
     return int(getattr(value, "updated_revision", 0))
@@ -172,6 +181,9 @@ def new_event(run_id: str, at: datetime, kind: str, detail: str = "", **refs: st
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-09-30 23:59 [python-coder]: Child results reach parents as run artifacts named by
+#   result_artifact_name; `WorkItem.result_ref` stays the invocation id (the key of `results`).
+#   (#KernelBootstrapV0/INT)
 # - 2026-09-30 22:30 [python-coder]: Event numbering lives in the reducer (not in nodes) so
 #   parallel writers cannot collide on seq. (#KernelBootstrapV0/P4)
 # - 2026-09-30 22:30 [python-coder]: Added `dispatch`, `halt_reason`, `permissions` and

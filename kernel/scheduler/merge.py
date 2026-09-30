@@ -38,7 +38,7 @@ from kernel.contracts import WorkItemStatus as WS
 from kernel.contracts.evidence import EvidenceBundlePayload
 from kernel.contracts.work import ChildOutcome
 from kernel.scheduler import guards
-from kernel.scheduler.state import Budgets, KernelState, new_event
+from kernel.scheduler.state import Budgets, KernelState, new_event, result_artifact_name
 
 _AS_RESULT = {WS.COMPLETED: ResultStatus.COMPLETED, WS.PARTIAL: ResultStatus.PARTIAL,
               WS.BLOCKED: ResultStatus.BLOCKED, WS.FAILED: ResultStatus.FAILED,
@@ -153,7 +153,8 @@ def child_outcomes(item: WorkItem, items: Mapping[str, WorkItem],
         out.append(ChildOutcome(
             work_item_id=ref, request_kind=request.kind, status=_AS_RESULT[child.status],
             output_schema_id=result.output_schema_id if result else None,
-            result_ref=child.result_ref, priority=request.priority))
+            result_ref=result_artifact_name(child.result_ref) if result else None,
+            priority=request.priority))
     return out
 
 

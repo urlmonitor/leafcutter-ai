@@ -38,7 +38,12 @@ from kernel.contracts import (
 from kernel.contracts.work import Binding
 from kernel.registry.eligibility import filter_candidates
 from kernel.scheduler import guards
-from kernel.scheduler.context import KernelRuntime, run_corr, sequential_node
+from kernel.scheduler.context import (
+    KernelRuntime,
+    constraint_texts,
+    run_corr,
+    sequential_node,
+)
 from kernel.scheduler.merge import Draft, child_outcomes, create_children, plan_proposals
 from kernel.scheduler.routing import (
     RouteEntry,
@@ -255,7 +260,8 @@ class _Router:
             else:
                 report = filter_candidates(request, state["registry"], self.ctx.bindings,
                                            state.get("permissions", []), draft.budgets, self.cfg,
-                                           scope=state["task"].scope)
+                                           scope=state["task"].scope,
+                                           operation=request.operation)
                 entries.append(RouteEntry(item.id, request, report, self._clarifications(item)))
         results = {e.item_id: deterministic_result(e.report) for e in entries}
         semantic = [e for e in entries if results[e.item_id] is None]
@@ -308,7 +314,7 @@ def _packet(state: KernelState, invocation_id: str, shares: dict[str, int]) -> d
     return {"invocation": invocation,
             "descriptor": state["registry"].get(invocation.capability_id),
             "evidence": dict(state.get("evidence", {})), "scope": state["task"].scope,
-            "shares": dict(shares)}
+            "constraints": constraint_texts(state), "shares": dict(shares)}
 
 
 # ====================================================================

@@ -61,7 +61,7 @@ class Assessment:
 
 def _state(ctx: ExecutionContext, work: Working) -> dict[str, JsonValue]:
     """Build the quoted state: question, options, criteria, evidence, constraints, findings."""
-    constraints = [e.excerpt or "" for e in ctx.evidence(work.constraint_ids)]
+    constraints = [*ctx.constraints, *(e.excerpt or "" for e in ctx.evidence(work.constraint_ids))]
     constraints += work.cont.human_inputs
     evidence = evidence_state(ctx, work.evidence)
     for item in work.evidence:

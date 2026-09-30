@@ -43,6 +43,9 @@ class RequestBody(KernelModel):
     priority: Priority = Priority.REQUIRED
     context_refs: list[str] = Field(default_factory=list)
     depends_on: list[str] = Field(default_factory=list)
+    #: Registry operation the request needs (for example `bounded_research`); the scheduler
+    #: passes it to the eligibility filter so fixed-routing candidates do not tie.
+    operation: str | None = None
 
     @model_validator(mode="after")
     def _validate_schemas_and_payload(self) -> RequestBody:
@@ -135,6 +138,9 @@ class CapabilityInvocation(PersistedModel):
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-09-30 23:59 [python-coder]: Added optional `operation` to RequestBody so two fixed
+#   capabilities that accept the same schema (retrieve.repository, host.research) route by
+#   operation instead of tying on the lowest id. (#KernelBootstrapV0/INT)
 # - 2026-09-30 22:00 [python-coder]: Request and RequestProposal share RequestBody so the
 #   identity-free proposal cannot drift from the registered request. (#KernelBootstrapV0/P1)
 # ====================================================================

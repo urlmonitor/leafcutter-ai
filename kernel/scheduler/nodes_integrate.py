@@ -14,17 +14,41 @@ ARCHITECTURE: Runs once per superstep after all workers finished (several edges 
 
 from __future__ import annotations
 
+import logging
 from typing import Any
 
 from langgraph.runtime import Runtime
 
-from kernel.contracts import CapabilityInvocation, ResultStatus, WorkItem, WorkItemStatus
+from kernel.contracts import (
+    CapabilityInvocation,
+    CapabilityResult,
+    ResultStatus,
+    WorkItem,
+    WorkItemStatus,
+)
 from kernel.scheduler import guards
 from kernel.scheduler.context import KernelRuntime, sequential_node
 from kernel.scheduler.merge import Draft, reject_result, resume_ready_parents, settle_result
 from kernel.scheduler.nodes_execute import ELAPSED_KEY, JEV_RESERVED_KEY
-from kernel.scheduler.state import KernelState
+from kernel.scheduler.state import KernelState, result_artifact_name
 from kernel.scheduler.validation import validate_result
+
+
+logger = logging.getLogger(__name__)
+
+
+def store_result_artifact(runtime: KernelRuntime, run_id: str, invocation_id: str,
+                          result: CapabilityResult) -> None:
+    """Persist the result JSON so a resumed parent can read it by `ChildOutcome.result_ref`.
+
+    A store failure is logged and not raised: the parent then records the child output as
+    unreadable instead of the whole run crashing on a disk problem.
+    """
+    try:
+        runtime.artifacts.write_artifact(run_id, result_artifact_name(invocation_id),
+                                         result.model_dump_json())
+    except (OSError, ValueError):
+        logger.warning("could not store result of invocation %s", invocation_id, exc_info=True)
 
 
 def pending_invocations(state: KernelState, items: dict[str, WorkItem]
@@ -78,6 +102,7 @@ def _integrate_one(state: KernelState, draft: Draft, invocation: CapabilityInvoc
     if not verdict.ok:
         reject_result(draft, item, invocation, verdict.code, verdict.text())
         return
+    store_result_artifact(runtime, state["run_id"], invocation.id, result)
     revision = state["task"].scope.revision
     scope_revision = revision.model_dump() if revision else None
     repeated = False
@@ -121,6 +146,9 @@ async def integrate(state: KernelState, runtime: Runtime[KernelRuntime]) -> dict
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-09-30 23:59 [python-coder]: Every validated result is stored as a run artifact before
+#   it is settled, because P5 executors read child output through the artifact store.
+#   (#KernelBootstrapV0/INT)
 # - 2026-09-30 22:30 [python-coder]: The no-progress fingerprint counts only WAITING attempts:
 #   a completed result ends the work and a retried transient failure is not a new attempt.
 #   (#KernelBootstrapV0/P4)

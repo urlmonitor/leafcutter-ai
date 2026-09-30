@@ -80,7 +80,7 @@ def _context(packet: dict[str, Any], ctx: KernelRuntime, budget: ShareBudget
         run_id=corr.run_id or "", scope=packet["scope"], config=ctx.config, jev=ctx.jev,
         tracer=ctx.tracer, corr=corr, artifacts=ctx.artifacts, budget=budget,
         evidence_lookup=lookup, clock=ctx.clock, cancel_probe=ctx.cancel_probe,
-        descriptor=packet["descriptor"])
+        descriptor=packet["descriptor"], constraints=tuple(packet.get("constraints", ())))
 
 
 async def _run_executor(packet: dict[str, Any], ctx: KernelRuntime, budget: ShareBudget

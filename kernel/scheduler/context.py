@@ -23,7 +23,7 @@ from typing import Any
 from langgraph.runtime import Runtime
 
 from kernel.config import KernelConfig
-from kernel.contracts import CorrelationIds, utc_now
+from kernel.contracts import CorrelationIds, canonical_json, utc_now
 from kernel.persistence.base import ArtifactStorePort, GapStorePort, RunStorePort
 from kernel.providers.base import JevPort
 from kernel.registry.bindings import BindingTable
@@ -51,8 +51,9 @@ class KernelRuntime:
         clock: Wall clock for timestamps (injectable for tests).
         monotonic: Monotonic seconds for active-time accounting (injectable for tests).
         cancel_probe: Returns True when cancellation was requested.
-        max_scheduler_iterations: Explicit iteration guard; None derives it from the LangGraph
-            recursion limit (see guards.max_iterations_for).
+        max_scheduler_iterations: Explicit iteration guard; None uses
+            `limits.max_scheduler_iterations`, then the LangGraph recursion limit (see
+            guards.max_iterations_for).
     """
 
     config: KernelConfig
@@ -67,6 +68,16 @@ class KernelRuntime:
     monotonic: Callable[[], float] = time.monotonic
     cancel_probe: Callable[[], bool] = field(default=lambda: False)
     max_scheduler_iterations: int | None = None
+
+
+def constraint_texts(state: KernelState) -> tuple[str, ...]:
+    """Return the task's constraints as short texts (`[severity] kind: value`), in input order."""
+    task_input = state.get("task_input")
+    if task_input is None:
+        return ()
+    return tuple(f"[{c.severity.value}] {c.kind}: "
+                 f"{c.value if isinstance(c.value, str) else canonical_json(c.value)}"
+                 for c in task_input.constraints)
 
 
 def run_corr(state: KernelState, **updates: str | int | None) -> CorrelationIds:
@@ -133,6 +144,8 @@ def flush_events(run_store: RunStorePort, state: KernelState) -> int:
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-09-30 23:59 [python-coder]: constraint_texts feeds ExecutionContext.constraints from
+#   the task input. (#KernelBootstrapV0/INT)
 # - 2026-09-30 22:30 [python-coder]: max_scheduler_iterations is an explicit runtime parameter
 #   (not a config key) because P1 owns config; the needed `limits.max_scheduler_iterations` key
 #   is listed in the P4 report. (#KernelBootstrapV0/P4)
