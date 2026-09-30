@@ -1,6 +1,6 @@
 ---
 title: 'The maker''s answer: one JSON object, one code table, paths usable from every shell'
-status: todo
+status: done
 components:
 - worktree_manager
 created: '2026-09-28'
@@ -37,6 +37,20 @@ files_touched:
 - unit_tests/build_orchestration/test_bo_4300c_2.py
 - unit_tests/build_orchestration/test_bo_4300b_5.py
 - unit_tests/build_orchestration/test_bo_4300b_5_i.py
+- unit_tests/build_orchestration/_workspace_maker_fixtures.py
+- unit_tests/build_orchestration/test_bo_4300a_1_deployed.py
+out_of_scope:
+- scripts/build_phases_script_deploy.py
+- templates/scripts/workspace_root.py
+- unit_tests/build_orchestration/_bo2400f13_fixtures.py
+- unit_tests/build_orchestration/_bo_4300a_1_fixtures.py
+- unit_tests/build_orchestration/_developer_repo_guard.py
+- unit_tests/build_orchestration/_workspace_maker_build_helpers.py
+- unit_tests/build_orchestration/_workspace_maker_builders.py
+- unit_tests/build_orchestration/conftest.py
+- unit_tests/build_orchestration/test_bo_4300a_1.py
+- unit_tests/build_orchestration/test_bo_4300f_4.py
+- unit_tests/build_orchestration/test_bo_4300f_4_i.py
 agents:
   ac-fulfillment-gate: signed_off
   ac-validator: signed_off
