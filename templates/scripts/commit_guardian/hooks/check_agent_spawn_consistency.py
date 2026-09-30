@@ -19,8 +19,8 @@ ARCHITECTURE: Standalone script (no leafcutter-internal imports). Reads the
     Also checks card<->registry mirror: parses the mermaid spawn diagram in
     each docs/agents/cards/<id>.card.md and compares against the registry
     spawn_allowlist and spawned_by for that agent (both directions).
-    Skips __ticket_phase_agents__ special token and "user"/"finalize-feature.js"
-    external callers. Emits structured errors to stderr naming both agents
+    Skips __ticket_phase_agents__ special token and "user"/"finalize-feature.js"/
+    "plan-feature.js" external callers. Emits structured errors to stderr naming both agents
     involved in any asymmetry or mismatch per AC INF-600g-1 and INF-600l-1.
     Triggers when config/agent_registry.json OR any docs/agents/cards/*.card.md
     is staged.
@@ -37,7 +37,7 @@ from pathlib import Path
 _REGISTRY_PATH = "config/agent_registry.json"
 _CARDS_DIR_PATH = "docs/agents/cards"
 _SPECIAL_TOKEN = "__ticket_phase_agents__"
-_EXTERNAL_CALLERS = {"user", "finalize-feature.js"}
+_EXTERNAL_CALLERS = {"user", "finalize-feature.js", "plan-feature.js"}
 
 _MERMAID_SPAWNS_PATTERN = re.compile(r"^\s*(\w+)\s*-->\|spawns\|\s*(\w+)")
 _MERMAID_DISPATCHES_PATTERN = re.compile(r"^\s*(\w+)\s*-->\|dispatches\|\s*(\w+)")

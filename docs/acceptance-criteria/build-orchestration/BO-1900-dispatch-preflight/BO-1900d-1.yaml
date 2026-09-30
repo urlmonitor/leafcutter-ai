@@ -6,7 +6,7 @@ component: build-orchestration
 level: L2
 status: active
 req_status: active
-work_status: done
+work_status: todo
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -56,6 +56,7 @@ created: 2026-07-07
 amended_by:
   - it-po-v3
   - "2026-08-18 BrainCandy: retired the clauses 'the phase agent is spawned with only those pointer values' and 'no free-composed prose prompt is attached to the dispatch' as unsatisfiable under the runtime contract. The workflow agent(prompt, opts) call accepts opts of only {agentType, schema, label, phase, model, effort, isolation}; there is no arbitrary-args channel, so an extra ticket_path key in opts is silently dropped and prose is the ONLY channel from a workflow driver to a phase agent. As written the AC demanded a dispatch mechanism that does not exist, so it could never be satisfied or tested, while the real defect it was aimed at went unspecified: 30 agent templates gate their sign-off on 'Skip this entire section if no ticket_path was provided' (templates/agents/_signoff_block.md:1,35), and both drivers send the path as narrative ('You are the <phase> phase agent for ticket: <path>.') rather than as the named token build-epic.js:357 already uses ('worktree_path: <path>'). That is the most plausible mechanism for sign-off recording being INCONSISTENT across tickets rather than uniformly absent. The intent is preserved -- a dispatch must not rely on an agent inferring its pointers from narrative phrasing -- but is now expressed as the achievable contract: named pointer tokens embedded IN the prompt. Also amended the title, the delivers_to contract and it_requirements, which restated the same retired mechanism. Testable as amended by unit_tests/prompt_assembly/test_phase_dispatch_ticket_path_pointer.py, whose matcher is deliberately permissive about form (':' or '=', value optionally quoted) so it pins the contract without pinning wording. work_status left todo -- the fix is not built yet. NOTE: the L1 parent BO-1900d still says 'never a free-written prompt'; that is PO-owned wording and is left for the PO to reconcile."
+  - "business-analyst reconciliation (2026-09-29): work_status corrected from done to todo. Its sole covered_by AC-id child, BO-1900d-1-i, remains work_status: todo -- no child of this composite is done, so todo (not in_progress) reflects the true state. This parent was never staged alongside BO-1900d-1-i, so check-done-proof -- which validates only the files present in a commit's index, not the store -- never got the chance to see the inconsistency it exists to catch; its silence for this record was not evidence of correctness, only evidence it was never given this file (CLAUDE.md, 'AC-store commits -- stage the parent alongside the child'). readiness stays approved -- the criteria were and remain approved; only the implementation-status axis was wrong. Found by a component-wide sweep of build-orchestration on 2026-09-29, following the identical defect found earlier that day on BO-2300/BO-2300a/BO-2300e."
 superseded_by: null
 covered_by:
   - BO-1900d-1-i

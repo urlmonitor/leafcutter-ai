@@ -8,7 +8,7 @@ status: active
 readiness: approved
 priority: medium
 req_status: active
-work_status: done
+work_status: todo
 criteria: |
   Given staged files do not match any routing config entry,
     and the staged files are:
@@ -40,9 +40,38 @@ delivers_to:
 expects_from:
   ac_id: BO-1100a-1
   contract: "JSON classification result: {matched: false, unmatched_files: string[], structural_shape: {dir_pattern: string, extensions: string[]}}"
+test_spec:
+  - name: test_unmatched_shape_logged_with_dir_pattern_count_and_extensions
+    target_dir: unit_tests/
+    framework: unittest
+    type: unit
+    description: "Given the two unmatched staged files docs/architecture/components/new-component.md and docs/architecture/diagrams/new-component-c4.mmd (no routing config entry matches), invoke the shape-logging function and read back the persisted entry from the actual on-disk store (not the function's return value) -- assert the recorded structural shape has directory pattern 'docs/architecture/**', file count 2, and extensions {'.md', '.mmd'} (set/order-independent). A test that only greps source for these literals is not acceptable; the assertion must read the real persisted record."
+  - name: test_shape_log_entry_survives_process_restart
+    target_dir: unit_tests/
+    framework: unittest
+    type: integration
+    description: "After logging one unmatched-shape occurrence in one process invocation, open the shape-tracking store fresh (a new read, e.g. a separate function call against the same path, or a subprocess) and assert the entry is still present. Proves the write is durable to disk -- not lost when the logging invocation ends -- as the AC's Then clause requires; an in-memory-only store must fail this test."
+  - name: test_shape_log_entry_includes_iso8601_timestamp
+    target_dir: unit_tests/
+    framework: unittest
+    type: unit
+    description: "After logging an unmatched-shape occurrence, read back the persisted entry and assert it carries a timestamp value that parses as ISO-8601 (e.g. via datetime.fromisoformat on the stored string). Asserted against the actual stored field value, not against the presence of the string 'timestamp' in source."
+test_rationale: |
+  Derived one test per Then clause in this AC's own Gherkin criteria: the shape
+  fields recorded (dir pattern, file count, extensions), the durability of the
+  write (survives beyond the invocation), and the timestamp. All three assert
+  against the real persisted record read back from disk/subprocess, per this
+  repo's rule that a gate/runner/logging behavior must be verified by executing
+  it, never by grepping source for a string. Deliberately excludes the
+  file-count-invariant identity rule (shapes differing only in file count are
+  the same shape) -- that edge case belongs to and is already specified by the
+  child AC BO-1100d-1-i, and restating it here would duplicate that contract.
 origin_agent: business-analyst-v3
 created: 2026-06-05
-amended_by: [it-po-v3]
+amended_by:
+  - it-po-v3
+  - reason: "business-analyst reconciliation (2026-09-29): work_status corrected from done to todo. Its sole covered_by AC-id child, BO-1100d-1-i, remains work_status: todo -- no child of this composite is done, so todo (not in_progress) reflects the true state. This parent was never staged alongside BO-1100d-1-i, so check-done-proof -- which validates only the files present in a commit's index, not the store -- never got the chance to see the inconsistency it exists to catch; its silence for this record was not evidence of correctness, only evidence it was never given this file (CLAUDE.md, 'AC-store commits -- stage the parent alongside the child'). readiness stays approved -- the criteria were and remain approved; only the implementation-status axis was wrong. Found by a component-wide sweep of build-orchestration on 2026-09-29, following the identical defect found earlier that day on BO-2300/BO-2300a/BO-2300e."
+  - reason: "it-po (2026-09-29): added a non-empty test_spec (3 entries, one per Then clause: structural-shape fields recorded, durable persistence beyond the invocation, timestamp inclusion), each requiring the test to read back the real persisted record rather than grep source. Chose the test_spec branch over reclassification because this AC's criteria describe genuine executable behavior (a Python logging function producing a durable, inspectable record), assigned_agent is python-coder and change_target is code -- there is real code behaviour here to test, so reclassifying as docs/prompt would be dishonest. This gap was surfaced, not created, by the phantom-done work_status correction above: validate_test_contract only applies to a leaf code AC that is approved and not yet done, so while this record incorrectly carried work_status: done it sat outside the rule's scope; correcting the status to todo pulled it into scope and exposed the missing test contract. work_status, readiness, covered_by, and criteria left untouched."
 superseded_by: null
 covered_by:
 - BO-1100d-1-i

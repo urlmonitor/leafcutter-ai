@@ -69,12 +69,13 @@ Severity in the **filename** is a three-level index bucket (`blocker` / `high` /
 
 Fixed issues move to [`ac-driven-dev/resolved/`](ac-driven-dev/resolved/) and are no longer listed as open. They are kept, not deleted.
 
-**Open: 31** (0 blocker, 24 high, 7 low) · **Resolved: 6**
+**Open: 32** (1 blocker, 24 high, 7 low) · **Resolved: 6**
 
 ## Open
 
 | Severity | Issue | File |
 |---|---|---|
+| `blocker` | KI-ACD-20260928 — every pause-store write in `/plan-feature` is dispatched to `worktree-agent`, which refuses it, so no interactive run can ever pass a gate | [open-blocker-ki-acd-20260928-pause-store-dispatched-to-worktree-agent.md](ac-driven-dev/open-blocker-ki-acd-20260928-pause-store-dispatched-to-worktree-agent.md) |
 | `high` | KI-ACD-001 — `ac_prioritizer` discards each AC's `priority` field, so `critical` never surfaces | [open-high-ki-acd-001.md](ac-driven-dev/open-high-ki-acd-001.md) |
 | `high` | KI-ACD-002 — Generated Agent Contracts lines have no pipe delimiters, so documentation-verifier fail-closes on every generated ticket | [open-high-ki-acd-002.md](ac-driven-dev/open-high-ki-acd-002.md) |
 | `high` | KI-ACD-003 — `ac-fulfillment-gate` returns `ok` on an AC it left with `covered_by: []` | [open-high-ki-acd-003.md](ac-driven-dev/open-high-ki-acd-003.md) |

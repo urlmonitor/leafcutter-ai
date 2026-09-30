@@ -1,0 +1,129 @@
+id: BO-2300e-3
+components:
+  - build_orchestration
+title: "A pause-store read that could not run is reported as undetermined, never as 'no record'"
+component: build-orchestration
+level: L2
+status: active
+req_status: active
+work_status: done
+readiness: draft
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given the workflow dispatches a peek-pause-record or read-pause-record
+    operation to check whether a run has a pending pause,
+  When the dispatched agent declines the request, the dispatch does not
+    complete, or its reply cannot be parsed as a pause-record result,
+  Then the workflow reports that outcome as "could not determine whether a
+    pause record exists for this run" -- an outcome distinct from "no pause
+    record exists",
+  And the workflow does not proceed past the gate as though no pause record
+    exists,
+  And the workflow does not resume, clear, re-establish, or otherwise act on the
+    run as if the check had found a legitimate empty result.
+depends_on: [BO-2300e]
+assigned_agent: python-coder
+estimated_complexity: M
+package_surface: false
+doc_links:
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-024-interactive-pause-resume.md
+    relationship: describes
+    status: exists
+  - path: docs/known-issues/ac-driven-dev/open-blocker-ki-acd-20260928-pause-store-dispatched-to-worktree-agent.md
+    relationship: describes
+    status: exists
+  - path: templates/agents/python-coder.md
+    relationship: describes
+    status: exists
+  - path: docs/known-issues/commit-guardian/open-high-ki-cg-20260923-ratchet-has-no-escape-for-unsplittable-files.md
+    relationship: describes
+    status: exists
+it_requirements:
+  - "The peek-pause-record / read-pause-record result parser must distinguish three outcomes, not two: (1) a genuine empty read -- the dispatched agent actually queried the store and found nothing, e.g. {\"exists\": false, \"stale\": false, \"record\": null}; (2) a refusal -- the dispatched agent declined the request, well-formed or not; (3) a failure -- no reply, a transport/exception error, or a reply that is not valid JSON or lacks the expected exists/record shape. Only (1) may be reported as 'no pause record exists'; both (2) and (3) must be reported as 'could not determine'."
+  - "This fix must be applied at BOTH of the two existing peek/read call sites independently: peekPausedGateId()'s peek-pause-record dispatch (which currently collapses any of the three failure shapes to a bare `return null`) and resolveGate()'s read-pause-record dispatch inside its resume-answer branch (which currently collapses the same failure shapes to `{status: \"nothing_to_resume\"}`). These are two separate, independently-maintained code locations with two different downstream consequences -- a peek-pause-record false negative causes the pipeline loop to needlessly re-dispatch an already-answered step's authoring agent (~L3131-3136), while a read-pause-record false negative causes a genuinely-supplied resume answer to be discarded as though there were nothing to resume. A fix, or a test suite, that only exercises one of the two call sites cannot detect a defect left in the other."
+  - "The dispatch itself, not only its reply parse, must be brought inside the three-way classification: in the current code, `await agent(...)` for both peek-pause-record and read-pause-record sits OUTSIDE the existing try/catch -- only the subsequent parseAgentJson(...) call is wrapped. A transport/execution error thrown by the dispatch itself therefore currently propagates uncaught rather than resolving to any outcome at all; the fix must wrap the dispatch call itself (or equivalent), not just its reply's JSON parse, or this AC's own failure branch is unreachable in normal execution."
+  - "If a shared classification helper is factored out for use by more than one of peekPausedGateId()/resolveGate()/pauseAtGate(), it must be added to (or deliberately kept out of, if self-contained per call site) unit_tests/workflows/test_acd_2100c_1.py's `_assemble_gate_machinery_source()` extraction list consistently with where it is called from -- that test builds a standalone Node driver from an explicit, named list of top-level functions/consts extracted from plan-feature.js, and a new top-level helper referenced by resolveGate()/pauseAtGate() but absent from that list throws ReferenceError under that test, independent of whether the helper's own logic is correct."
+  - "The refusal-vs-failure distinction should be consistent with the existing refusal-detection convention already used elsewhere in this same file (isAgentRefusal() / AGENT_REFUSAL_MARKERS, used at the wtParsed===null branch ~L2519-2530) rather than introducing a second, differently-worded refusal detector for this new code path."
+  - "The 'could not determine' outcome must be surfaced to whatever consumes the peek/read result (the caller deciding whether to proceed, pause, or resume) as a distinguishable value from both the empty-read outcome and a genuine paused_awaiting_input record -- never silently coerced to one of those two on the way out."
+  - "This is a parsing/interpretation fix, not a routing fix: it must hold even after BO-2300e-2 correctly routes the dispatch to command-step-runner, because a chartered agent can still refuse (no workspace named), time out, or return a malformed reply."
+  - "TEST STRATEGY: drive the real JS engine via unit_tests/_workflow_engine_harness.py run_workflow_under_e2(plan-feature.js), configuring the peek/read dispatch's stubbed reply to each of the three shapes above in turn, and assert the workflow's resulting classification for each -- exercised independently against BOTH the peek-pause-record and read-pause-record labels (label_responses is keyed by label, so each can be stubbed independently). Do not grep the source for a status string."
+  - "FILE-SIZE RATCHET (KI-CG-20260923): unlike BO-2300e-2's reassignment-only diff, this fix is likely NOT achievable at net-zero content lines -- it adds a three-way classification at two independently-maintained call sites plus the additional try/catch wrapping each dispatch call itself. plan-feature.js is a workflow body the ratchet can never relieve by extraction and is already far over the per-file content-line limit (~3,400 non-blank lines against a ~400-line cap), so it refuses ANY net growth, comments included. Prefer factoring the three-way classification into ONE shared helper called from both call sites (see the shared-helper it_requirement above) -- writing the logic once instead of twice is very likely to net fewer lines than today's two independent inline collapses, even after adding the helper's own definition. If a shared helper still nets positive, or is infeasible, this is a blocker to raise back to the IT PO / user before implementation, not something to route around with an unexplained `SKIP=check-file-size` -- the one precedent on record (ACS-1600a-1) required the full reasoning recorded in the commit message."
+  - "REACHABILITY (BO-2900a-3): proven via run_workflow_under_e2(plan-feature.js) with the peek/read dispatch's stubbed reply set to each of the three shapes in the TEST STRATEGY above -- the real engine must actually execute the classification branch on a real run of plan-feature.js. A test that unit-tests an extracted classifier function against synthetic inputs without ever invoking it from a running plan-feature.js gate does not satisfy this AC; per BO-2900a-3, a passing test over code no real invocation path reaches does not make the criterion eligible to be marked done."
+test_spec:
+  - name: test_refusal_reply_reported_as_could_not_determine
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "Via run_workflow_under_e2, stubbing the peek-pause-record label's reply as a well-formed refusal, the workflow classifies the outcome as 'could not determine', not as 'no pause record'."
+  - name: test_read_pause_record_refusal_also_reported_as_could_not_determine
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "Via run_workflow_under_e2, stubbing the read-pause-record label's reply (resolveGate's resume-check dispatch) as a well-formed refusal, the resume path classifies the outcome as 'could not determine' and does not report 'nothing_to_resume' as though the record were genuinely absent -- independent proof the fix was not applied to peek-pause-record only."
+  - name: test_could_not_determine_does_not_advance_past_gate
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "Via the harness, when either the peek-pause-record or the read-pause-record outcome is 'could not determine', the workflow does not proceed past the gate as though no pause exists, and does not resume, clear, or re-persist the run's record."
+  - name: test_genuine_empty_read_still_reports_no_record
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: boundary
+    description: "Via the harness, a genuine empty read ({exists: false, stale: false, record: null} from an actual store query) on EITHER the peek-pause-record or read-pause-record label is still correctly classified as 'no pause record exists', confirming the fix does not turn the legitimate empty case into a false positive for 'could not determine' at either call site."
+test_rationale: >-
+  The defect's own diagnosis is that a refusal on this path parses identically
+  to the legitimate empty case, which is why it stayed invisible for three
+  days while the write-side twin of the same defect failed loudly. A test that
+  only checks the write path (persist) would leave this half unverified; the
+  boundary test against a genuine empty read is included so the fix cannot
+  overcorrect into treating every read as undetermined. peekPausedGateId()'s
+  peek-pause-record dispatch and resolveGate()'s read-pause-record dispatch
+  are two independently-maintained call sites with two different downstream
+  consequences (needless step re-authoring vs. a discarded resume answer), so
+  at least one test targets each label independently rather than assuming a
+  single shared fix covers both.
+delivers_to: null
+expects_from:
+  ac_id: BO-2300e-2
+  contract: "The command-step-runner dispatch and its reply (exit status/stdout/stderr) for peek-pause-record and read-pause-record; this AC governs how that reply is classified once received, including when the dispatch itself fails or is declined."
+origin_agent: BrainCandy
+created: 2026-09-28
+amended_by:
+  - reason: "it-po enrichment (2026-09-29): assigned_agent python-coder -> llm-expert, for consistency with every other AC in this feature folder that edits templates/workflows-js/plan-feature.js (see BO-2300e-2's amended_by for the full precedent list). Added it_requirements flagging that this fix, unlike BO-2300e-2's routing-only change, is likely to add net content lines against the check-file-size ratchet (KI-CG-20260923) and must be resolved via a shared classification helper or an explicit escalation, plus a reachability requirement tied to BO-2900a-3. Criteria unchanged."
+  - reason: "business-analyst wording fix (2026-09-29): replaced the verb 're-persist' with 're-establish' in the third Then/And clause (does not resume, clear, re-persist -> re-establish, or otherwise act on the run...). check-ac-schema's declares_side_effect derivation (_DURABLE_EFFECT_RE in _ac_schema_validators.py) matched the bare 'persist' stem inside 're-persist' -- the regex's persist(?:ed|s)?\\b alternative has a trailing \\b but no leading one -- and, having no notion of negation, read this record's explicit denial of persisting as an assertion that it DOES persist, wrongly demanding declares_side_effect: true. This record asserts no durable effect at all: its Then clauses are exclusively about how an outcome is REPORTED and about what the workflow must NOT do (not proceed, not resume, not clear, not re-establish/re-persist). Meaning is unchanged -- 're-establish' names the same prohibited action (bringing the pause record back into being as though the check had legitimately found it empty) that 're-persist' named; verified the replacement against every alternative in _DURABLE_EFFECT_RE (written to disk/a file; <durable noun> is/are written; is/are written to/into/under; writes/saves a/the/an file/record; persist(ed/s); saved to disk; is/are saved; record is persisted; created/removed from disk; deletes a file; state-changing command; leaves the system in a different state; changes the system's state; commits a change/transaction; pushed to; deployed to; updates the database/store) and none matches. The declares_side_effect derivation now correctly returns False; the field is deliberately NOT set on this record, in either direction. The regex's own leading-\\b gap and its lack of negation-awareness are real defects in the guard itself and are being filed separately as a known issue -- this edit works around them without weakening the criterion or authoring a false declares_side_effect value."
+  - reason: "it-po correction (2026-09-29, second pass): assigned_agent llm-expert -> python-coder, reversing this record's own earlier 2026-09-29 retarget above. That retarget followed the sibling 2026-07-20 precedent (\"retargeted to the E2 workflow ENGINE... assigned_agent python-coder -> llm-expert\") and flagged its own risk -- that llm-expert's registry entry does not list workflow JS as owned surface. The flag was right, and dispatching the sibling BO-2300e-2 work against the same file proved it. VERIFIED AGAINST config/agent_registry.json rather than taken on report: llm-expert's selection_criteria DSL trigger reads \"files_touched contains templates/agents/*.md OR files_touched contains templates/skills/*/SKILL.md OR files_touched contains templates/workflows/*.md\" -- three markdown surfaces -- and llm-expert DECLINED on exactly those charter grounds. templates/workflows/ holds command-prompt .md docs (build-ac.md, commit.md, plan.md, ...); templates/workflows-js/ holds the executable workflow bodies including plan-feature.js, which this AC edits. Both directories exist and are distinct; their names differ by a suffix, and the 2026-07-20 amendment appears to have conflated the two. workflow-architect also declined, confirming no agent in the package is chartered for workflow-JS bodies. python-coder accepted and completed the sibling work because config/agent_registry.json gives it owns_file_extensions [\".py\", \".js\"]. That ownership is PROVISIONAL BY THE REGISTRY'S OWN ACCOUNT -- its owns_file_extensions_rationale reads \"'.js' is an EXPEDIENT, not a judgement that a Python agent is the right owner of JavaScript... The proper fix is a dedicated workflow-author agent, with ownership driven by per-consumer configuration rather than a hardcoded list; ACs for that are being authored. Revisit this entry when they land.\" Revisit this assignment when that agent lands. This record's read-path fail-open is NOT implemented: work_status stays todo, and criteria, it_requirements, test_spec and readiness are unchanged. STALE POINTER FIXED IN THE SAME PASS: doc_links' templates/agents/llm-expert.md -> templates/agents/python-coder.md. That link was the IMPLEMENTER'S REFERENCE, not a subject of this criterion -- llm-expert appears nowhere in this record's criteria, notes or it_requirements. llm-expert.md's own declared scope is \"LLM instructions inside agent templates, skill files, and slash-command prompts\"; this record edits an executable JS workflow body, so none of that craft applies and the python-coder template is the correct replacement rather than a retention or a removal. delivers_to is null on this record; expects_from names ac_id BO-2300e-2 with no agent field, so neither carried a stale agent name."
+  - reason: "it-po done-reconciliation (2026-09-30): work_status todo -> done, with evidence, and implemented_by/covered_by wired. Implemented by commit 78d452ff \"fix(build-orchestration): tell a refused pause-read from an empty one (BO-2300e-3)\". implemented_by names SOURCE FILE PATHS, which is this store's actual convention for the field (config/ac_store_schema.json: \"Source file paths (optionally with #anchor) that implement this criterion\"; the sweep run for BO-2300e-2 found no record anywhere under docs/acceptance-criteria/ carrying a bare commit SHA there), so the SHA is recorded here in prose rather than invented into the field. ONE path is listed, and that is the verified answer rather than an assumption: a grep for this AC id across templates/, scripts/ and config/ returns templates/workflows-js/plan-feature.js and nothing else, and the commit's other touched files are enabling or test-side, not implementations of this criterion -- unit_tests/_workflow_engine_harness.py gained the additive __harness_agent_throws__ sentinel (without which the transport-error scenario could not be constructed at all, since every pre-existing label_responses shape resolves and none rejects), unit_tests/workflows/test_acd_2100c_1.py gained readPauseStore in its _assemble_gate_machinery_source() extraction list (this AC's own fourth it_requirement), and unit_tests/test_plan_feature_pt_phase.py / unit_tests/test_workflow_dual_engine.py had 23 stale test-side literals repaired that BO-2300e-2's commit had broken. The fix itself: a shared readPauseStore(label, prompt, agentType, runId) helper at plan-feature.js L1611-1628 classifies three outcomes, returning {parsed, undetermined}; peekPausedGateId() (L1671-1672) and resolveGate()'s resume branch (L1757-1758) each surface the undetermined case independently, the second via a new terminal status pause_read_undetermined added to all five gate-result guard arrays; the `await agent(...)` call is now INSIDE the try (L1615), which it was not before. covered_by gains unit_tests/workflows/test_bo_2300e_3.py; the child entries BO-2300e-3-i and BO-2300e-3-ii are retained. The covers-tag mapping was read rather than assumed -- a grep of the whole unit_tests/ tree for `covers: BO-2300e-3` returns exactly ten tagged functions, four of them in test_bo_2300e_3.py claiming this record and none of them in a sibling file, so the file-name-to-AC mapping is in fact 1:1 here. unit_tests/workflows/_bo_2300e_3_fixtures.py is deliberately NOT listed in covered_by: it defines the shared two-hop scenario helpers and reply fixtures the three sibling files import, but it contains no test function, carries no covers tag, and is not collected by pytest (no test_ prefix), so it asserts nothing about this criterion. All four tests verified PASSED under AC_ENFORCE_STRICT=1 on 2026-09-30, driving the real on-disk templates/workflows-js/plan-feature.js through run_workflow_under_e2 and asserting on the script's own terminal payload and captured agent_calls, never on source text -- satisfying this record's REACHABILITY it_requirement (BO-2900a-3). The red baseline was re-verified independently of the commit message: `git show 78d452ff^:templates/workflows-js/plan-feature.js` contains no \"could not determine\" text and no undetermined classification on either pause-read path (its only `status: \"undetermined\"` occurrences are the pre-existing, unrelated gate-answer vocabulary at L2717/L2887/L3252/L3408), and both `await agent(...)` calls sat outside their try, so the thirteen assertions on that wording could not have passed before the change. RESIDUAL, recorded rather than glossed: the third Then clause prohibits four actions -- resume, clear, re-establish, and \"otherwise act on the run\". test_could_not_determine_does_not_advance_past_gate asserts the absence of the apply-approval label (resume) and the clear-pause-record label (clear); no test names a pause-persist dispatch, so the RE-ESTABLISH verb specifically has no direct assertion. It is structurally unreachable rather than merely untested -- resolveGate() returns the pause_read_undetermined payload at L1758 before any later dispatch in that function can fire, and the terminal-payload assertions prove the run ended there -- but the clause is proven by control flow plus the terminal payload rather than by a label assertion of its own, and that distinction is worth the record. A one-line addition asserting \"pause-persist\" not in dispatched_labels(hop2) would close it. Separately, for the peek call site the \"does not proceed past the gate\" clause is proven by the terminal payload being the undetermined classification (the return at L3176 precedes the authoring while-loop) rather than by a negative author-dispatch assertion; the positive control exists in the opposite direction (test_genuine_empty_read_still_reports_no_record asserts the author IS still dispatched on a genuine empty peek), so the boundary is not one-sided. No clause is left with zero coverage."
+superseded_by: null
+covered_by:
+- BO-2300e-3-i
+- BO-2300e-3-ii
+- unit_tests/workflows/test_bo_2300e_3.py
+implemented_by:
+- templates/workflows-js/plan-feature.js
+change_target: pipeline
+risk_surface: internal
+notes: |
+  This is the second, silent half of
+  docs/known-issues/ac-driven-dev/open-blocker-ki-acd-20260928-pause-store-dispatched-to-worktree-agent.md:
+  "peek-pause-record is dispatched the same way and refused the same way, but a
+  refusal there is parsed as 'no paused record exists' -- indistinguishable from
+  the legitimate no-record case. So the run sails past peek and only fails at
+  persist. One defect, failing open on one path and closed on another; only the
+  closed one is visible." Fixing the routing (BO-2300e-2) removes the most
+  common trigger for a refusal here but does not fix the parser -- any future
+  refusal, timeout, or malformed reply on this path must still never be read as
+  "no record".
+
+  This repo already names the general shape: CLAUDE.md's post-merge-diff-audit
+  guidance states the same principle for a different check -- "A check that
+  examined nothing must not look like a check that found nothing." This AC is
+  that principle applied to the pause-store peek/read path: a check that could
+  not look must not report what it would have found.

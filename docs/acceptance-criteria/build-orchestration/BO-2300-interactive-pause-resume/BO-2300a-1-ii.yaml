@@ -45,8 +45,9 @@ expects_from:
   contract: "The pauseAtGate / resolveGate pause-store round trip whose dispatch target this edge constrains."
 origin_agent: BrainCandy
 created: 2026-09-25
-amended_by: []
-superseded_by: null
+amended_by:
+  - reason: "business-analyst reconciliation (2026-09-29) against docs/known-issues/ac-driven-dev/open-blocker-ki-acd-20260928-pause-store-dispatched-to-worktree-agent.md: superseded_by set to BO-2300e-2, narrowly, for the six pause-store dispatch clauses only. This record's own notes already named the residual driving this: 'worktree-agent's charter names worktree lifecycle, not pause-store I/O; a dedicated shell-executor agent (KI-BO-20260901-1620 item 4) would be the durable fix.' That agent now exists -- command-step-runner (BO-2400a-1-i), permits_shell: true, chartered to run exactly one given command in one named workspace and hand back its result untouched -- and BO-2300e-2 is the durable fix this residual anticipated. The resolve-worktree-setup-script-path clause is untouched and remains this record's live, governing scope: that dispatch IS worktree lifecycle work and correctly stays on worktree-agent. Criteria left unchanged; see notes below for the full narrowing account and the required test-file update (test_bo_2300a_1_ii.py) that must ship alongside BO-2300e-2. work_status left untouched pending that implementation."
+superseded_by: BO-2300e-2
 covered_by: [unit_tests/workflows/test_bo_2300a_1_ii.py]
 implemented_by: [templates/workflows-js/plan-feature.js]
 change_target: code
@@ -72,3 +73,60 @@ notes: |
   both touch the resolve-worktree-setup-script-path dispatch.
   Residual: worktree-agent's charter names worktree lifecycle, not pause-store I/O; a
   dedicated shell-executor agent (KI-BO-20260901-1620 item 4) would be the durable fix.
+
+  SUPERSEDED_BY BO-2300e-2 (2026-09-29, business-analyst, reconciliation pass against
+  docs/known-issues/ac-driven-dev/open-blocker-ki-acd-20260928-pause-store-dispatched-to-worktree-agent.md).
+  The residual noted immediately above is exactly what BO-2300e-2 now fixes: the
+  dedicated shell-executor agent it called for exists as command-step-runner
+  (BO-2400a-1-i) -- permits_shell: true, chartered to "run[] exactly one given
+  command, once, in one named workspace, and hand[] back that command's exit
+  status, stdout and stderr untouched" -- and BO-2300e-2 reroutes the six
+  pause-store dispatches to it.
+
+  What is superseded is narrower than the whole AC. This record's criteria name
+  SEVEN dispatch targets it constrains to worktree-agent: the pause-store write,
+  the verify read, and the resume-side peek / read / clear / clear-verify steps
+  (six pause-store operations total), plus the step that locates the
+  worktree-setup script. BO-2300e-2 covers exactly the six pause-store
+  operations and reroutes them to command-step-runner -- correctly, per the
+  known issue's own diagnosis that permits_shell answers "may this agent run a
+  command at all", not "is this command within its role." The seventh --
+  resolve-worktree-setup-script-path -- is NOT part of this defect: it IS
+  worktree lifecycle work, squarely inside worktree-agent's charter, and
+  BO-2300e-2 deliberately excludes it (see BO-2300e-2's own it_requirements:
+  "the unrelated resolve-worktree-setup-script-path dispatch... is out of this
+  AC's scope, is not fed through `_shellPermittedAgentId`, and must keep going
+  to worktree-agent"). This record's criteria are left UNCHANGED and remain the
+  live, governing specification for that one dispatch; only the six pause-store
+  clauses are ceded to BO-2300e-2.
+
+  Read path checked separately, per the same reconciliation pass: this record's
+  criteria constrain only WHICH AGENT receives a dispatch, never how that
+  agent's reply is classified once received. BO-2300e-3 (and its children
+  BO-2300e-3-i / BO-2300e-3-ii) govern a different, non-contradicting axis -- a
+  peek-pause-record or read-pause-record refusal, transport failure, or
+  malformed reply being misparsed as "no pause record exists" -- which this
+  record's criteria never asserted anything about, either way. No further
+  narrowing of this record is needed for that read-path reply-classification
+  defect.
+
+  Test consequence: unit_tests/workflows/test_bo_2300a_1_ii.py::
+  test_pause_store_and_script_resolution_dispatch_to_shell_permitted_agent
+  currently asserts agent_type worktree-agent for all seven dispatches. Once
+  BO-2300e-2 ships, that assertion WILL fail for the six pause-store labels --
+  correctly, not as a regression. Per BO-2300e-2's own it_requirements, the
+  implementer must update this test's pause-store assertions to
+  command-step-runner IN THE SAME COMMIT that ships BO-2300e-2, while KEEPING
+  the worktree-agent assertion for the resolve-worktree-setup-script-path label
+  unchanged. Do not delete or weaken the test -- narrow its assertion set to
+  match the two now-separate routing rules; check-contract-shrinking exists
+  precisely to catch that shortcut.
+
+  work_status left untouched (done) per BA policy: this is a records
+  reconciliation, not an implementation change, and the one clause this record
+  still governs (resolve-worktree-setup-script-path -> worktree-agent) remains
+  accurately described as done today. Once BO-2300e-2 ships and the test above
+  is updated, work_status should be revisited -- until then this record's own
+  prose still describes an already-superseded routing choice for six of its
+  seven original assertions, which is exactly why superseded_by (not silence)
+  is doing that job here.

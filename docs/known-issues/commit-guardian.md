@@ -73,7 +73,7 @@ Severity in the **filename** is a three-level index bucket (`blocker` / `high` /
 
 Fixed issues move to [`commit-guardian/resolved/`](commit-guardian/resolved/) and are no longer listed as open. They are kept, not deleted.
 
-**Open: 70** (2 blocker, 30 high, 38 low) · **Resolved: 17**
+**Open: 74** (2 blocker, 34 high, 38 low) · **Resolved: 17**
 
 ## Open
 
@@ -114,6 +114,7 @@ Fixed issues move to [`commit-guardian/resolved/`](commit-guardian/resolved/) an
 | `high` | KI-CG-20260927-file-size-hook-read-another-worktrees-index — check-file-size once measured the staged files of a different worktree, while every other hook in the same run saw the right ones | [open-high-ki-cg-20260927-file-size-hook-read-another-worktrees-index.md](commit-guardian/open-high-ki-cg-20260927-file-size-hook-read-another-worktrees-index.md) |
 | `high` | KI-CG-20260928-ac-schema-not-deployed-at-consumer-root — the schema is deployed only under .leafcutter/config/, so check-ac-schema degrades to manual field validation in every consumer install | [open-high-ki-cg-20260928-ac-schema-not-deployed-at-consumer-root.md](commit-guardian/open-high-ki-cg-20260928-ac-schema-not-deployed-at-consumer-root.md) |
 | `high` | KI-CG-20260928-first-commit-leaves-the-deployed-config-drifted — the first commit in a worktree strips every em-dash from the deployed `commit_guardian.json`, so EVERY commit after the first is refused by `check-output-drift` for a change no author made (19 refusals across 5+ worktrees) | [open-high-ki-cg-20260928-first-commit-leaves-the-deployed-config-drifted.md](commit-guardian/open-high-ki-cg-20260928-first-commit-leaves-the-deployed-config-drifted.md) |
+| `high` | KI-CG-20260929-side-effect-derivation-is-negation-blind — `declares_side_effect` derives from a positive-only regex whose `persist` stem lacks a leading word boundary, so a Then clause forbidding a durable write (`does not ... re-persist`) is read as asserting one; the field cannot resolve it either, because an authored value disagreeing with the derivation is rejected in both directions | [open-high-ki-cg-20260929-side-effect-derivation-is-negation-blind.md](commit-guardian/open-high-ki-cg-20260929-side-effect-derivation-is-negation-blind.md) |
 | `low` | KI-CG-002 — The diagram-type guard silently swaps its enum source when its declaring file is unreachable | [open-low-ki-cg-002.md](commit-guardian/open-low-ki-cg-002.md) |
 | `low` | KI-CG-011 — The roadmap mirror strips its own `description` frontmatter and backdates `created` to today | [open-low-ki-cg-011.md](commit-guardian/open-low-ki-cg-011.md) |
 | `low` | KI-CG-013 — The schema hook and the done-proof oracle disagree about what a leaf is, so one AC can be required to satisfy both branches | [open-low-ki-cg-013.md](commit-guardian/open-low-ki-cg-013.md) |

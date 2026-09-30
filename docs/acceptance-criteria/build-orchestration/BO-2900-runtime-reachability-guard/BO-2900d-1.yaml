@@ -7,7 +7,7 @@ component: build-orchestration
 level: L2
 status: active
 req_status: draft
-work_status: done
+work_status: todo
 readiness: reviewed
 priority: medium
 roadmap_phase: phase_1
@@ -99,7 +99,8 @@ test_spec:
 test_rationale: "Three of the four assertions are about a whole-system effect: that a record in a config file changes the verdict of a gate in a different package, and that nothing ELSE changes it. A direct-import unit test of an is_exempt() predicate would prove string equality and would pass unchanged on an implementation where the registry is never loaded at hook runtime — which is the live failure mode in this repository, since a hook runs from the deployed layout and an undeployed config file silently reads as empty. The tests therefore run the real guard and the real verify_done_eligible over a fixture tree containing a real registry file, and assert the released-criterion case in the ac_store suite so the cross-package release is genuinely exercised."
 origin_agent: BrainCandy
 created: 2026-08-13
-amended_by: []
+amended_by:
+  - reason: "business-analyst reconciliation (2026-09-29): work_status corrected from done to todo. Its sole covered_by AC-id child, BO-2900d-1-i, remains work_status: todo -- no child of this composite is done, so todo (not in_progress) reflects the true state. This parent was never staged alongside BO-2900d-1-i, so check-done-proof -- which validates only the files present in a commit's index, not the store -- never got the chance to see the inconsistency it exists to catch; its silence for this record was not evidence of correctness, only evidence it was never given this file (CLAUDE.md, 'AC-store commits -- stage the parent alongside the child'). readiness (reviewed) is unchanged -- only the implementation-status axis was wrong. Found by a component-wide sweep of build-orchestration on 2026-09-29, following the identical defect found earlier that day on BO-2300/BO-2300a/BO-2300e."
 superseded_by: null
 covered_by:
   - BO-2900d-1-i

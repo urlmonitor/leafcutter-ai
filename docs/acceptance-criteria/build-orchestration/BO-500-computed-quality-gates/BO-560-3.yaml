@@ -8,7 +8,7 @@ component: build-orchestration
 level: L2
 status: active
 req_status: active
-work_status: done
+work_status: todo
 criteria: |
   Given a ticket has a pre-existing manually-authored agents map in its frontmatter:
     agents:
@@ -46,6 +46,7 @@ doc_links:
     status: exists
 assigned_agent: llm-expert
 estimated_complexity: L
+declares_side_effect: true
 it_requirements:
   - "Must preserve signed_off statuses during replacement for crash-resume safety"
   - "Must write the replacement BEFORE dispatching any agent to avoid race conditions"
@@ -56,7 +57,10 @@ expects_from:
   contract: "Chain computation algorithm that produces the complete agent sequence"
 origin_agent: business-analyst-v3
 created: 2026-06-05
-amended_by: [it-po-v3]
+amended_by:
+  - it-po-v3
+  - reason: "business-analyst reconciliation (2026-09-29): work_status corrected from done to todo. Its covered_by AC-id child, BO-560-3-i, remains work_status: todo (the other covered_by entry, unit_tests/test_generate_ticket_from_ac.py, is a test path, not an AC child, and does not count toward this evaluation) -- no AC child of this composite is done, so todo (not in_progress) reflects the true state. This parent was never staged alongside BO-560-3-i, so check-done-proof -- which validates only the files present in a commit's index, not the store -- never got the chance to see the inconsistency it exists to catch; its silence for this record was not evidence of correctness, only evidence it was never given this file (CLAUDE.md, 'AC-store commits -- stage the parent alongside the child'). readiness (reviewed) is unchanged -- only the implementation-status axis was wrong. Found by a component-wide sweep of build-orchestration on 2026-09-29, following the identical defect found earlier that day on BO-2300/BO-2300a/BO-2300e."
+  - reason: "it-po (2026-09-29): added declares_side_effect: true, DERIVED from this AC's own Then clause 'the replacement is written to the ticket file before any agent is dispatched' (BO-2900g-2) -- this matches the durable is-written-to-a-non-transient-destination pattern (_DURABLE_EFFECT_RE): a positive, unnegated assertion that a real file (the ticket file) is written, which is neither a stream/console destination nor a negated clause. Independently confirmed this is NOT the KI-CG-20260929 false-positive shape (that case was a negated 're-persist' clause matched by the unanchored persist(?:ed|s)?\\b alternative) -- this clause has no negation and matches on the separate is-written-to alternative, not the persist alternative. Surfaced, not created, by the same sweep that produced the work_status correction above: validate_declares_side_effect runs unconditionally on every staged AC (unlike validate_test_contract, it carries no readiness/work_status gate), so this gap was always owed -- it was simply never checked because this record had not been staged since the field was introduced. Staging it now to fix work_status is what put it in front of the hook for the first time. work_status, readiness, covered_by, and criteria left untouched."
 superseded_by: null
 covered_by:
 - BO-560-3-i

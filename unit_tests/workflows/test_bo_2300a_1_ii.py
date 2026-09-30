@@ -26,6 +26,20 @@ TICKET: quick-fix (no ticket file; red-phase authored ahead of the fix that
     templates/workflows-js/plan-feature.js still needs).
 AC: BO-2300a-1-ii (docs/acceptance-criteria/build-orchestration/
     BO-2300-interactive-pause-resume/BO-2300a-1-ii.yaml)
+
+SUPERSESSION (2026-09-29, business-analyst): BO-2300a-1-ii's routing claim
+    over the SIX pause-store dispatches (pause-persist, pause-persist-verify,
+    peek-pause-record, read-pause-record, clear-pause-record,
+    clear-pause-record-verify) is superseded by BO-2300e-2 -- per that AC's
+    own diagnosis, `permits_shell: true` answers "may this agent run a
+    command at all", not "is this command within its role", and the correct
+    target for those six is command-step-runner (BO-2400a-1-i), not
+    worktree-agent. This file's own routing assertion below is updated
+    accordingly: the six pause-store labels now expect 'command-step-runner';
+    resolve-worktree-setup-script-path -- genuine worktree-lifecycle work,
+    outside BO-2300e-2's scope -- is UNCHANGED and still expects
+    'worktree-agent'. See also unit_tests/workflows/test_bo_2300e_2.py and
+    test_bo_2300e_2_i.py, which cover BO-2300e-2 / BO-2300e-2-i directly.
 """
 
 from __future__ import annotations
@@ -58,7 +72,21 @@ _TARGET_LABELS = (
 )
 
 _FORBIDDEN_AGENT_TYPE = "status-checker"
-_REQUIRED_AGENT_TYPE = "worktree-agent"
+
+# BO-2300e-2 SUPERSESSION: the six pause-store labels now route to
+# command-step-runner; resolve-worktree-setup-script-path is unaffected and
+# stays on worktree-agent (out of BO-2300e-2's scope -- see module docstring).
+_PAUSE_STORE_LABELS = frozenset({
+    "pause-persist",
+    "pause-persist-verify",
+    "peek-pause-record",
+    "read-pause-record",
+    "clear-pause-record",
+    "clear-pause-record-verify",
+})
+_SCRIPT_RESOLUTION_LABEL = "resolve-worktree-setup-script-path"
+_REQUIRED_AGENT_TYPE_FOR_PAUSE_STORE = "command-step-runner"
+_REQUIRED_AGENT_TYPE_FOR_SCRIPT_RESOLUTION = "worktree-agent"
 
 
 def _granted_permission() -> dict:
@@ -178,17 +206,27 @@ def _run_resume(run_id: str, label_responses: dict, gate_id: str) -> HarnessResu
 
 def test_pause_store_and_script_resolution_dispatch_to_shell_permitted_agent():
     # covers: BO-2300a-1-ii
+    # covers: BO-2300e-2
     # angle: criterion
     """Then: "each of those dispatches goes to the agent the registry marks
-    as permitted to run repository/shell commands (worktree-agent,
-    permits_shell: true), and none of them goes to status-checker."
+    as permitted to run repository/shell commands, and none of them goes to
+    status-checker."
+
+    SUPERSEDED ROUTING TARGET (see module docstring): the six pause-store
+    labels now expect 'command-step-runner' (BO-2300e-2), not
+    'worktree-agent' -- 'permits_shell: true' alone does not make a dispatch
+    correctly ROLE-scoped, and worktree-agent's own charter is create/remove
+    worktrees only. resolve-worktree-setup-script-path is unaffected and
+    still expects 'worktree-agent'.
 
     Drives a headless pause (hop 1) then a resume (hop 2) so all seven
     target dispatches -- resolve-worktree-setup-script-path, pause-persist,
     and pause-persist-verify in hop 1; peek-pause-record, read-pause-record,
     clear-pause-record, and clear-pause-record-verify in hop 2 -- are
     actually reached in one scenario, and asserts every single one of them
-    carries agentType='worktree-agent', never 'status-checker'.
+    carries its OWN expected agentType (command-step-runner for the six
+    pause-store labels, worktree-agent for resolve-worktree-setup-script-path),
+    never 'status-checker'.
     """
     run_id = "test-bo2300a1ii-dispatch-target"
 
@@ -219,25 +257,32 @@ def test_pause_store_and_script_resolution_dispatch_to_shell_permitted_agent():
 
     wrongly_dispatched = _wrongly_dispatched(hop1) + _wrongly_dispatched(hop2)
     assert not wrongly_dispatched, (
-        "BO-2300a-1-ii: the following pause-store / script-resolution "
-        f"dispatches were sent to '{_FORBIDDEN_AGENT_TYPE}' instead of "
-        f"'{_REQUIRED_AGENT_TYPE}': "
+        "BO-2300a-1-ii / BO-2300e-2: the following pause-store / "
+        f"script-resolution dispatches were sent to '{_FORBIDDEN_AGENT_TYPE}': "
         f"{[(c.label, c.agent_type) for c in wrongly_dispatched]}. "
         "Every one of resolve-worktree-setup-script-path, pause-persist, "
         "pause-persist-verify, peek-pause-record, read-pause-record, "
-        "clear-pause-record, and clear-pause-record-verify must be "
-        f"dispatched to '{_REQUIRED_AGENT_TYPE}' (permits_shell: true), "
-        f"never to '{_FORBIDDEN_AGENT_TYPE}' (permits_shell: false)."
+        f"clear-pause-record, and clear-pause-record-verify must never go to "
+        f"'{_FORBIDDEN_AGENT_TYPE}' (permits_shell: false)."
     )
 
     all_target_calls = hop1_targets + hop2_targets
-    non_worktree_agent = [
-        c for c in all_target_calls if c.agent_type != _REQUIRED_AGENT_TYPE
-    ]
-    assert not non_worktree_agent, (
-        "BO-2300a-1-ii: every one of the seven target dispatches must carry "
-        f"agentType='{_REQUIRED_AGENT_TYPE}'. Found dispatch(es) with a "
-        f"different agentType: {[(c.label, c.agent_type) for c in non_worktree_agent]}"
+    wrong_agent_type = []
+    for call in all_target_calls:
+        expected = (
+            _REQUIRED_AGENT_TYPE_FOR_SCRIPT_RESOLUTION
+            if call.label == _SCRIPT_RESOLUTION_LABEL
+            else _REQUIRED_AGENT_TYPE_FOR_PAUSE_STORE
+        )
+        if call.agent_type != expected:
+            wrong_agent_type.append((call.label, call.agent_type, expected))
+    assert not wrong_agent_type, (
+        "BO-2300a-1-ii / BO-2300e-2: every one of the seven target dispatches "
+        "must carry its OWN expected agentType -- 'command-step-runner' for "
+        "the six pause-store labels, 'worktree-agent' for "
+        "resolve-worktree-setup-script-path. Found dispatch(es) with a "
+        "different agentType (label, found, expected): "
+        f"{wrong_agent_type}"
     )
 
 

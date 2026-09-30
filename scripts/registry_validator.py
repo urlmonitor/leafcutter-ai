@@ -38,13 +38,13 @@ from registry_verification_flags import validate_verification_flags
 from step_kinds_validator import check_step_kinds, get_agent_step_kinds  # noqa: F401 (shared reader re-export for BO-2400f-5-ii)
 
 _SPECIAL_TOKEN = "__ticket_phase_agents__"
-# External (non-agent) callers permitted in an agent's spawned_by list. These are
-# not themselves registry agents, so they are exempt from the unknown-agent and
-# bidirectional-allowlist checks. "user" is a human invoker; "finalize-feature.js"
-# is the finalization workflow that spawns these agents at depth 0 (the legacy
-# finalize-feature *agent* was removed in ADR-006 — see EPIC-FinalizeFeatureHardening
-# ticket 03 — leaving the .js workflow as the sole, non-agent, spawner).
-_EXTERNAL_CALLERS = {"user", "finalize-feature.js"}
+# External (non-agent) callers permitted in an agent's spawned_by list. Not registry
+# agents, so exempt from the unknown-agent and bidirectional-allowlist checks. "user"
+# is a human invoker. "finalize-feature.js" and "plan-feature.js" are workflows that
+# spawn agents at depth 0 with no wrapping agent (the legacy finalize-feature *agent*
+# was removed in ADR-006 — EPIC-FinalizeFeatureHardening ticket 03 — leaving the .js
+# workflows as the sole non-agent spawners; plan-feature.js spawns command-step-runner).
+_EXTERNAL_CALLERS = {"user", "finalize-feature.js", "plan-feature.js"}
 
 # ---------------------------------------------------------------------------
 # Skill reference detection patterns (AC INF-600g-3)

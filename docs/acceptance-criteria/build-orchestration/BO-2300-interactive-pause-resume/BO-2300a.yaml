@@ -6,7 +6,7 @@ component: build-orchestration
 level: L1
 status: active
 req_status: draft
-work_status: done
+work_status: in_progress
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -22,7 +22,8 @@ delivers_to: null
 expects_from: null
 origin_agent: product-owner-v3
 created: 2026-07-20
-amended_by: []
+amended_by:
+  - reason: "business-analyst reconciliation (2026-09-29): work_status corrected from done to in_progress. BO-2300a-1 and BO-2300a-2 were reopened to todo on 2026-08-25 (KI-ACD-005/KI-ACD-006/KI-ACD-019, recorded in their own notes) while BO-2300a-3 remains genuinely done, but this parent, BO-2300a.yaml, was never staged alongside that 2026-08-25 reopening -- so check-done-proof, which validates only the files present in a commit's index, never got the chance to see the inconsistency it exists to catch. Per CLAUDE.md ('AC-store commits -- stage the parent alongside the child'), a fact true of the store but absent from the staged set is structurally unreachable to that hook; its silence for over a month was not evidence of correctness, only evidence it was never given this file. in_progress (not todo) reflects the true state -- one child done, two open. readiness stays approved -- the criteria were and remain approved; only the implementation-status axis was wrong. Found and corrected in the same pass as the identical defect on the sibling composite BO-2300e (and its own grandparent BO-2300), while reconciling BO-2300e-2/BO-2300e-3 against KI-ACD-20260928."
 superseded_by: null
 covered_by: [BO-2300a-1, BO-2300a-2, BO-2300a-3]
 implemented_by: []

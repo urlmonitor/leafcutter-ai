@@ -257,6 +257,8 @@ flowchart TD
 - TQ-400a-6: The component diagram shows one verdict source with three checkers over three populations
 - TQ-400b-6: The lifecycle diagram shows done as an exit-able state, with the demotion edge and what it writes
 - TQ-500b-3: A state diagram showing the five recorded states and which of them mean incomplete
+- TQ-500g-5-i: A component diagram shows the one wrong-version runner, the four routes that call it, and what it reuses
+- TQ-500g-5-ii: A sequence diagram shows one wrong-version run from alteration to put-back, including the ways it can fail
 - UXP-100a-4: Component diagram showing the prototype assembly data flow
 - UXP-100b-4: Sequence diagram showing gap detection and research initiation flow
 - UXP-100c-6: Sequence diagram showing the prototype approval gate lifecycle
