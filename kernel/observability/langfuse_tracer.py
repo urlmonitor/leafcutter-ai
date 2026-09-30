@@ -30,6 +30,7 @@ from kernel.contracts.base import CorrelationIds, TraceContext
 from kernel.contracts.capability import Usage
 from kernel.contracts.enums import ObservabilityStatus
 from kernel.observability.correlation import deterministic_trace_id
+from kernel.observability.observation_map import observation_type
 from kernel.observability.redaction import Redactor
 from kernel.observability.spool import TelemetrySpool
 from kernel.observability.tracer import SpanHandle, TraceState
@@ -38,8 +39,6 @@ from kernel.secrets import SecretSettings
 logger = logging.getLogger(__name__)
 
 TRACE_TAG = "leafcutter-kernel"
-_OBSERVATION_TYPES = frozenset({"span", "agent", "tool", "chain", "retriever", "evaluator",
-                                "guardrail"})
 _CURRENT: contextvars.ContextVar[_Handle | None] = contextvars.ContextVar(
     "langfuse_tracer_span", default=None)
 
@@ -225,7 +224,7 @@ class LangfuseTracer:
     def _observe(self, name: str, kind: str, corr: CorrelationIds, input_value: Any,
                  metadata: dict[str, Any] | None) -> _Handle:
         """Create a child observation under the current parent (obs None when degraded)."""
-        as_type = kind if kind in _OBSERVATION_TYPES else "span"
+        as_type = observation_type(name, kind)
         meta = {**corr.as_metadata(), **(metadata or {})}
         data: dict[str, Any] = {"input": input_value, "metadata": dict(meta)}
         parent = self._parent()
