@@ -522,6 +522,27 @@
             },
             "default": []
         },
+        "declared_files": {
+            "type": "array",
+            "description": "ACD-1600c-4: the files this AC's work changes, each marked existing or to_be_created, declared order preserved. This is the ONLY answer to which files the work changes -- doc_links never stand in for it. Optional; absence means the named state 'no declared files' (never a violation). An empty list is refused by the declared-files seam (scripts/ac_store/declared_files.py), not by this JSON-schema layer, so the seam's worded message is the only refusal for that case.",
+            "items": {
+                "type": "object",
+                "required": ["path", "state"],
+                "additionalProperties": false,
+                "properties": {
+                    "path": {
+                        "type": "string",
+                        "minLength": 1,
+                        "description": "Repo-root-relative POSIX path, exactly as declared (no normalisation)."
+                    },
+                    "state": {
+                        "type": "string",
+                        "description": "Whether the file already exists or is to be created by this AC's work.",
+                        "enum": ["existing", "to_be_created"]
+                    }
+                }
+            }
+        },
         "req_status": {
             "type": "string",
             "description": "Requirement lifecycle status. Tracks whether the requirement is still active from a product perspective (independent of implementation work_status).",

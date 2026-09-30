@@ -443,6 +443,60 @@ class TestParseCardSpawnEdges(unittest.TestCase):
         self.assertEqual(spawn_set, set())
         self.assertEqual(spawned_by_set, set())
 
+    def test_parses_a_dispatcher_whose_id_contains_a_dot(self) -> None:
+        """A workflow-script dispatcher (id ending .js) is parsed, not dropped.
+
+        Not every spawner is an agent. `finalize-feature.js` and
+        `fast-lane-ship.js` are workflow scripts named in agents' `spawned_by`
+        and permitted there by `_EXTERNAL_CALLERS`. generate_agent_cards emits
+        their ids with only the `-`→`_` swap, so the mermaid node id keeps its
+        dot: `finalize_feature.js`.
+
+        The edge patterns used `\\w+`, which does not match `.`. The effect was
+        not a truncated id but NO MATCH AT ALL, so the edge vanished from the
+        parsed set and the mirror check accused the registry of claiming an
+        edge the card "does not show" while the card showed it in plain text.
+
+        This stayed invisible because the mirror check only reads STAGED cards,
+        and cards are build output that is rarely staged. Five cards carrying a
+        `finalize-feature.js` edge were mismatched the whole time. Parsing
+        test-failure-triage.card.md returned an empty spawned_by set.
+        """
+        card_text = _make_card_text(
+            "test-failure-triage",
+            dispatched_by=["finalize-feature.js"],
+        )
+        _, spawned_by_set = self.module._parse_card_spawn_edges(
+            card_text, "test-failure-triage"
+        )
+        self.assertIn(
+            "finalize-feature.js",
+            spawned_by_set,
+            "A dispatcher id containing a dot must survive the round trip "
+            f"through the mermaid node encoding. Got: {sorted(spawned_by_set)}",
+        )
+
+    def test_parses_a_spawned_child_whose_id_contains_a_dot(self) -> None:
+        """The same dot handling applies to the spawns edge, not only dispatches.
+
+        Both patterns carried the identical `\\w+` bug. Fixing only the one
+        that happened to fail in production would leave the other waiting for
+        the first card that needs it.
+        """
+        card_text = _make_card_text(
+            "some-supervisor",
+            spawns=["fast-lane-ship.js"],
+        )
+        spawn_set, _ = self.module._parse_card_spawn_edges(
+            card_text, "some-supervisor"
+        )
+        self.assertIn(
+            "fast-lane-ship.js",
+            spawn_set,
+            f"Expected the dotted child id in spawn_allowlist_set. "
+            f"Got: {sorted(spawn_set)}",
+        )
+
     def test_does_not_pick_up_other_agents_edges(self) -> None:
         """parse only picks up edges involving the target agent."""
         # Card for python-coder, but we parse as if agent_id is sql-coder

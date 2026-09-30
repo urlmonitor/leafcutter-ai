@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: 2026-08-18
-last_updated: 2026-09-27
+last_updated: '2026-09-28'
 components:
   - testing_quality
 related_docs:
@@ -55,7 +55,7 @@ Severity in the **filename** is a three-level index bucket (`blocker` / `high` /
 
 Fixed issues move to [`testing-quality/resolved/`](testing-quality/resolved/) and are no longer listed as open. They are kept, not deleted.
 
-**Open: 23** (1 blocker, 13 high, 9 low) · **Resolved: 3**
+**Open: 25** (1 blocker, 13 high, 11 low) · **Resolved: 3**
 
 ## Open
 
@@ -84,6 +84,8 @@ Fixed issues move to [`testing-quality/resolved/`](testing-quality/resolved/) an
 | `low` | KI-TQ-20260914-tempdir-cleanup-race-fails-a-green-test-run — a real-git fixture's teardown races its own `.git/objects` and fails a suite in which every assertion passed | [open-low-ki-tq-20260914-tempdir-cleanup-race-fails-a-green-test-run.md](testing-quality/open-low-ki-tq-20260914-tempdir-cleanup-race-fails-a-green-test-run.md) |
 | `low` | KI-TQ-20260914-test-fixtures-hand-enumerate-their-production-dependencies — the deploy-manifest failure mode one layer down, where the error message names something other than its cause | [open-low-ki-tq-20260914-test-fixtures-hand-enumerate-their-production-dependencies.md](testing-quality/open-low-ki-tq-20260914-test-fixtures-hand-enumerate-their-production-dependencies.md) |
 | `low` | KI-TQ-20260927-full-pytest-run-has-114-collection-errors — a bare pytest run imports scripts/ac_store as the top-level package ac_store, so all 112 test modules in unit_tests/ac_store fail to collect; two more modules import POSIX-only stdlib at module level | [open-low-ki-tq-20260927-full-pytest-run-has-114-collection-errors.md](testing-quality/open-low-ki-tq-20260927-full-pytest-run-has-114-collection-errors.md) |
+| `low` | KI-TQ-20260928-windows-pytest-collection-flake — freshly written test files intermittently fail collection with WinError 2 on Windows, so gates report inconclusive for an environmental reason | [open-low-ki-tq-20260928-windows-pytest-collection-flake.md](testing-quality/open-low-ki-tq-20260928-windows-pytest-collection-flake.md) |
+| `low` | KI-TQ-20260928-subtest-failures-read-as-passed — the shared pytest outcome parser reads a test whose only failures are in subTest blocks as PASSED | [open-low-ki-tq-20260928-subtest-failures-read-as-passed.md](testing-quality/open-low-ki-tq-20260928-subtest-failures-read-as-passed.md) |
 
 ## Resolved
 

@@ -16,6 +16,23 @@ ARCHITECTURE: parse_card_spawn_edges(card_text, agent_id) is the public entry
     directory, deployed alongside the hook by build_commit_guardian() exactly
     like agent_spawn_external_callers.py, and imported the same way (an
     adjacent sys.path entry the hook already sets up).
+NODE IDS MAY CONTAIN A DOT (BO-2400a-1-v, 2026-09-30): a spawner is not always
+    an agent. A workflow script named in an agent's `spawned_by` is emitted by
+    generate_agent_cards with only the `-`→`_` swap, so `fast-lane-ship.js`
+    becomes the node id `fast_lane_ship.js`. The two _MERMAID_*_PATTERN regexes
+    below therefore accept `[\\w.]+` and NOT `\\w+`.
+    `\\w` does not match `.`, and the effect was not a truncated capture but NO
+    MATCH AT ALL: once `(\\w+)` stopped at the dot, the next expected token was
+    whitespace or `-->`. The edge vanished from the parsed set, and the mirror
+    check then reported the registry as claiming an edge "the card does not
+    show" while the card showed it plainly under "Spawned By".
+    It stayed latent because the mirror check only reads STAGED cards, and cards
+    are build output nobody normally stages — five cards carrying a
+    `finalize-feature.js` edge were mismatched without ever failing a commit.
+    Before the fix, parsing test-failure-triage.card.md returned an EMPTY
+    spawned_by set despite that card carrying the edge in plain text.
+    (Carried here from check_agent_spawn_consistency.py, where these regexes
+    lived when BO-2400a-1-v fixed them; INF-600k-1 moved them into this module.)
 """
 
 from __future__ import annotations
@@ -24,8 +41,8 @@ import re
 
 _SPECIAL_TOKEN = "__ticket_phase_agents__"
 
-_MERMAID_SPAWNS_PATTERN = re.compile(r"^\s*(\w+)\s*-->\|spawns\|\s*(\w+)")
-_MERMAID_DISPATCHES_PATTERN = re.compile(r"^\s*(\w+)\s*-->\|dispatches\|\s*(\w+)")
+_MERMAID_SPAWNS_PATTERN = re.compile(r"^\s*([\w.]+)\s*-->\|spawns\|\s*([\w.]+)")
+_MERMAID_DISPATCHES_PATTERN = re.compile(r"^\s*([\w.]+)\s*-->\|dispatches\|\s*([\w.]+)")
 
 
 def node_id_to_agent_id(node_id: str) -> str:
@@ -104,4 +121,11 @@ def parse_card_spawn_edges(
 #   check_agent_spawn_consistency.py, to make room for a pr-reviewer-mandated
 #   fix on AC INF-600k-1 without growing that file past its HEAD line count.
 #   (#TICKETLESS reason=inf-600k-1-workflow-callers)
+# - 2026-09-30 15:20 [python-coder/INF-600k-1 merge with origin/main]: Merged PR
+#   #967 (BO-2400a-1-v), which changed the two mermaid regexes from (\w+) to
+#   ([\w.]+) inside check_agent_spawn_consistency.py. Those regexes live here
+#   now, so the fix and its explanatory NODE IDS MAY CONTAIN A DOT note are
+#   carried into this module's regexes and docstring; #967's tests in
+#   test_check_agent_spawn_consistency.py exercise them through the hook's
+#   parse_card_spawn_edges alias. (#TICKETLESS reason=inf-600k-1-workflow-callers)
 # ====================================================================

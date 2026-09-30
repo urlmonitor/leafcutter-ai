@@ -1,0 +1,130 @@
+id: BO-2400a-1-v
+components:
+  - build_orchestration
+title: "The fast lane's claim command is run by the dedicated command-step executor, and a refusal to run it cannot be mistaken for the store reporting a hold"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given the fast lane must run a command that changes the acceptance-criterion store,
+  When it dispatches that command step,
+  Then the performer it dispatches to declares that it is permitted to run commands,
+  And that performer's role does not give it grounds to decline the request,
+  And the reply is read as the command's own output rather than as the performer's
+    account of what the output meant,
+  And a performer that ran nothing is reported as not having attempted the claim,
+  And a performer's reply cannot assert that the set is held by another run unless
+    the command itself named the held members.
+depends_on: [BO-2400a-1-i]
+doc_links:
+  - path: templates/workflows-js/fast-lane-ship.js
+    relationship: modifies
+    status: exists
+  - path: templates/agents/command-step-runner.md
+    relationship: describes
+    status: exists
+  - path: docs/known-issues/build-orchestration/open-high-ki-bo-20260927-status-checker-runs-workflow-shell-commands.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "The performer must be resolved against config/agent_registry.json rather than
+     against a deny-list of agent names. `permits_shell` is three-state read as two:
+     ABSENT means read-only exactly as an explicit false does (KI-BO-20260901-1620).
+     A test that merely excludes the one agent already known to have refused passes
+     for every other read-only agent, which is how worktree-agent — permitted, but
+     chartered only to create and remove worktrees — became the performer of a store
+     mutation without any check objecting."
+  - "command-step-runner returns {command, workspace, exit_status, stdout, stderr} on
+     a run and {declined, step, agent, reason} on a refusal, and it never interprets
+     what the command printed. So the gate payload must be parsed caller-side out of
+     stdout. Do NOT ask the performer to reshape the result into the lane's own
+     vocabulary: that is what previously made a role refusal indistinguishable from
+     contention, because the agent was being asked to synthesise the same
+     `target_refused` flag the gate emits."
+  - "The dispatch schema must require NO field. The two legal reply shapes share no
+     mandatory key, so requiring one rejects the other at the schema layer. This is
+     the mirror image of the BO-2400f-7-iv defect — that one demanded a field the
+     producer left optional; this would demand a field one legal shape never carries.
+     Both convert a valid reply into a halt."
+  - "The request must carry step, command, and a target naming workspace, branch and
+     ac_id. A request with no workspace named is a decline by this agent's charter,
+     not a run, so an adopter that omits it has replaced one refusal with another."
+  - "Registering a non-agent dispatcher in `spawned_by` requires adding it to
+     `_EXTERNAL_CALLERS` in scripts/registry_validator.py, alongside the existing
+     `finalize-feature.js` precedent. Without that the asymmetric-spawn check rejects
+     the registry."
+  - "The BO-2400f-7-iii and BO-2400f-7-iv behaviours must survive unchanged: a
+     decline still halts as not-attempted with no contention vocabulary, genuine
+     contention still names the held members, and an absent optional collection is
+     still read as empty."
+test_spec:
+  - name: test_the_claim_is_attempted_by_a_performer_permitted_to_change_the_store
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: integration
+    angle: seam
+    description: "Reads the agentType actually dispatched for the claim-connected
+      label, looks that id up in config/agent_registry.json, and asserts it declares
+      permits_shell true — defaulting to False when the field is absent, since absent
+      means read-only. Fails for any read-only performer, not merely for the one that
+      refused in production."
+  - name: test_genuine_contention_still_reports_contention_and_names_the_members
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "A runner reply whose stdout carries a non-empty excluded set must
+      still produce a contention halt naming the held member. The fixture's own gate
+      message must contain NO contention vocabulary, because the lane echoes the
+      reply into the halt detail — a fixture that supplies the words being searched
+      for makes the assertion pass on any branch the lane takes."
+  - name: test_a_contention_report_naming_no_held_member_is_impossible
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: integration
+    angle: boundary
+    description: "Sweeps the shapes that mean nothing was claimed — a runner decline,
+      a non-zero exit, unparseable stdout, a null reply, and the legacy
+      agent-synthesised payloads — and asserts none of them produces contention
+      language. Retaining the legacy shapes asserts that an agent cannot hand the
+      lane a claim the gate never made."
+  - name: test_the_usability_test_requires_no_more_than_the_declared_contract
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: integration
+    angle: seam
+    description: "Asserts the claim dispatch declares no required fields, and that a
+      runner reply carrying only the gate's mandatory `claimed` field is usable. The
+      schema is located by its own named const and raises when that anchor is absent,
+      rather than walking backwards to the nearest schema-shaped thing — which is how
+      the earlier extractor silently measured an unrelated dispatch."
+test_required: true
+origin_agent: BrainCandy
+created: 2026-09-30
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  2026-09-30: authored alongside the change it describes. BO-2400a-1-i built the
+  command-step-runner agent and is done; nothing covered the lane actually USING it,
+  and its own adopter_notes recorded adoption as "routed separately". This record is
+  that adoption, for the claim step only.
+
+  The remaining roughly forty shell dispatches across six workflows are enumerated in
+  KI-BO-20260927-status-checker-runs-workflow-shell-commands, whose Suggested fix
+  names this agent as the durable answer and worktree-agent as "a stopgap, not the
+  answer". Those are deliberately NOT in scope here; this record covers one dispatch,
+  so that the first adoption is proven before it is repeated.
+
+  Not in scope, and still live: fast-lane-ship.js keeps `RELEASE_EXECUTOR_AGENT_TYPE
+  = "python-coder"` and two read-only `status-checker` dispatches at the resolve and
+  producibility steps. The release path is the inverse operation on the same state and
+  is the more obvious next adopter.

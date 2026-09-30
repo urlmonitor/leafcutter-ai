@@ -926,4 +926,10 @@ if __name__ == "__main__":
 #   broke on a fresh clone (ModuleNotFoundError, silently swallowed by
 #   check_agent_registry.py's `except ImportError`).
 #   (#TICKETLESS reason=inf-600k-1-workflow-callers)
+# - 2026-09-30 15:20 [python-coder/INF-600k-1 merge with origin/main]: Merged PR #967
+#   (BO-2400a-1-v), which had added "fast-lane-ship.js" as a third literal to
+#   _EXTERNAL_CALLERS here. The shared is_recognized_external_caller() rule wins:
+#   no literal caller set remains, and fast-lane-ship.js is accepted because
+#   templates/workflows-js/fast-lane-ship.js exists. #967's other changes are
+#   kept unchanged. (#TICKETLESS reason=inf-600k-1-workflow-callers)
 # ====================================================================

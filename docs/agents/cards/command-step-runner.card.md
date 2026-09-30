@@ -42,6 +42,7 @@ facing; never a ticket phase)**
 ### Spawned By
 
 - `user`
+- `fast-lane-ship.js`
 ---
 
 ## Knowledge Flow
@@ -62,9 +63,11 @@ flowchart TD
     classDef target fill:#fee2e2,stroke:#dc2626,stroke-width:3px
 
     user["user\n(phase tier)"]:::phase
+    fast_lane_ship.js["fast-lane-ship.js\n(phase tier)"]:::phase
     command_step_runner["command-step-runner\n(utility tier, priority ?)"]:::target
 
     user -->|dispatches| command_step_runner
+    fast_lane_ship.js -->|dispatches| command_step_runner
 ```
 ---
 

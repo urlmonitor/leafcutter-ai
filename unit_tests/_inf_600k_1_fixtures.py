@@ -44,6 +44,10 @@ DECISION HISTORY
     satisfy check-file-size's flat 400-content-line cap on new files. Every
     helper is an unmodified relocation; no test name, body, `covers:`/
     `angle:` tag, or assertion changed anywhere in this split.
+- 2026-09-30 [python-coder/INF-600k-1]: Merge-with-main and CI fix. Dropped three
+    unused re-exported imports (ruff F401; test_inf_600k_1.py now imports them
+    directly) and copy the new package_root_lookup.py sibling into the
+    deployed-layout fixture. No assertion or test body changed.
 """
 
 from __future__ import annotations
@@ -62,10 +66,6 @@ SCRIPTS_DIR = REPO_ROOT / "scripts"
 if str(SCRIPTS_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPTS_DIR))
 
-import registry_validator  # noqa: E402
-import build_phases_lifecycle  # noqa: E402
-from template_compiler import inject_config  # noqa: E402
-
 HOOK_PATH = REPO_ROOT / "scripts" / "commit_guardian" / "hooks" / "check_agent_spawn_consistency.py"
 TEMPLATE_HOOK_PATH = (
     REPO_ROOT / "templates" / "scripts" / "commit_guardian" / "hooks" / "check_agent_spawn_consistency.py"
@@ -78,6 +78,7 @@ TEMPLATES_CG_DIR = REPO_ROOT / "templates" / "scripts" / "commit_guardian"
 _RESOLVE_ROOT_SRC = TEMPLATES_CG_DIR / "_resolve_root.py"
 _AGENT_SPAWN_EXTERNAL_CALLERS_SRC = TEMPLATES_CG_DIR / "agent_spawn_external_callers.py"
 _CARD_MERMAID_PARSER_SRC = TEMPLATES_CG_DIR / "card_mermaid_parser.py"
+_PACKAGE_ROOT_LOOKUP_SRC = TEMPLATES_CG_DIR / "package_root_lookup.py"
 _CHECK_AGENT_REGISTRY_SRC = TEMPLATES_CG_DIR / "check_agent_registry.py"
 _CHECK_AGENT_SPAWN_CONSISTENCY_SRC = TEMPLATES_CG_DIR / "hooks" / "check_agent_spawn_consistency.py"
 
@@ -375,7 +376,8 @@ def _build_workspace_parent_fixture(workspace: Path) -> dict[str, Path]:
             docs/agents/cards/spawner-agent.card.md
             scripts/commit_guardian/
               _resolve_root.py, agent_spawn_external_callers.py,
-              card_mermaid_parser.py       real, deployed sibling modules
+              card_mermaid_parser.py, package_root_lookup.py
+                                            real, deployed sibling modules
               check_agent_registry.py       deployed at commit_guardian/ depth
                                              -- the REGRESSION CONTROL: not
                                              nested under hooks/, so its
@@ -404,6 +406,7 @@ def _build_workspace_parent_fixture(workspace: Path) -> dict[str, Path]:
     shutil.copy(_RESOLVE_ROOT_SRC, resolve_root_dest)
     shutil.copy(_AGENT_SPAWN_EXTERNAL_CALLERS_SRC, cg_dir / "agent_spawn_external_callers.py")
     shutil.copy(_CARD_MERMAID_PARSER_SRC, cg_dir / "card_mermaid_parser.py")
+    shutil.copy(_PACKAGE_ROOT_LOOKUP_SRC, cg_dir / "package_root_lookup.py")
 
     registry_hook = cg_dir / "check_agent_registry.py"
     shutil.copy(_CHECK_AGENT_REGISTRY_SRC, registry_hook)

@@ -633,6 +633,16 @@ def _manifest_workflow_tool_scripts(package_root: Path) -> set[str]:
     #   it on demand via the same _load_sibling_module() pattern -- a
     #   consumer install missing it would fail check_surface_set() calls.
     #   (#TICKETLESS reason=km-kgs-100c-1-surface-check)
+    # - 2026-09-28 [python-coder/GE-118d, architect-review correction]: Added
+    #   frontmatter_path_resolver.py right after knowledge_frontmatter_reader.py.
+    #   This is the SECOND of GE-118d's two required deploy-manifest
+    #   locations for the new resolver module (the first is the
+    #   deploy_scripts list inside build_workflow_tools(),
+    #   scripts/build_phases_workflows.py). The ticket's own initial guess
+    #   named build_phases_workflows.py for this location too; architect-review
+    #   corrected that before dispatch, since this function moved here (not
+    #   build_phases_workflows.py) by the GE-127b-1 fix above. Placement has
+    #   no import-order dependency on any other entry in this tuple.
     """
     result: set[str] = set()
     scripts_src = package_root / "scripts"
@@ -640,6 +650,7 @@ def _manifest_workflow_tool_scripts(package_root: Path) -> set[str]:
         "add_component.py",
         "knowledge_query.py",
         "knowledge_frontmatter_reader.py",
+        "frontmatter_path_resolver.py",
         "knowledge_file_nodes.py",
         "knowledge_surface_check.py",
         "set_ticket_status.py",

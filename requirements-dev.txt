@@ -19,6 +19,12 @@ pytest>=8.0
 ruff==0.15.15
 mypy>=1.8
 
+# Runs the suite across multiple real OS-process workers (`-n <N>`). Required
+# by TQ-600a-1's cross-worker shared-reference-layout tests, which can only
+# distinguish "once per run" from "once per worker" under real multi-worker
+# execution.
+pytest-xdist>=3.5
+
 # Runs the AC guardrail hooks in the ac-store-valid CI job. The job invokes the
 # same .pre-commit-config.yaml the local guardrails use so the two rule sets
 # cannot drift (ACS-200i); those hooks are language: system, so pre-commit

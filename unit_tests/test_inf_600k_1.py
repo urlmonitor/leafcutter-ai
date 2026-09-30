@@ -118,9 +118,6 @@ from _inf_600k_1_fixtures import (
     REAL_WORKFLOWS_DIR,
     REPO_ROOT,
     TEMPLATE_HOOK_PATH,
-    build_phases_lifecycle,
-    inject_config,
-    registry_validator,
     _card_text,
     _copy_real_workflow,
     _has_unknown_agent_error,
@@ -131,6 +128,11 @@ from _inf_600k_1_fixtures import (
     _write_registry,
     _write_schema,
 )
+
+# _inf_600k_1_fixtures (imported above) puts scripts/ on sys.path.
+import build_phases_lifecycle  # noqa: E402
+import registry_validator  # noqa: E402
+from template_compiler import inject_config  # noqa: E402
 
 # ---------------------------------------------------------------------------
 # Test 1 -- criterion

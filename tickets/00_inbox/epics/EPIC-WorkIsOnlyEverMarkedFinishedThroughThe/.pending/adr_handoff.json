@@ -1,0 +1,8 @@
+{
+  "adr_id": "ADR-048",
+  "affected_files": [
+    "templates/workflows-js/build-feature.js",
+    "templates/workflows-js/build-ticket.js"
+  ],
+  "one_line_summary": "A run decides each ticket's close solely from that ticket's own record, carrying no state between tickets, so identical tickets get identical answers regardless of order."
+}

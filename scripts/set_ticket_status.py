@@ -46,9 +46,22 @@ from typing import TypedDict
 # ---------------------------------------------------------------------------
 
 # Transitions allowed without --force
+#
+# ADR-047 Decision 4 / architect-review Risk 2 (BO-400e-3): ("todo", "done")
+# is included here rather than left force-only. Once the drivers' completion
+# write routes through this script instead of an unguarded direct frontmatter
+# edit, an ordinary ticket that never visited "in_progress" (the common case)
+# must still close without --force -- otherwise every such close would fail
+# for a lifecycle-allow-list reason having nothing to do with the parity
+# check, manufacturing pressure to reach for --force just to get an ordinary
+# close through. --force also disables the parity check, so leaning on it for
+# this case would recreate the lenient direct-edit branch behind a flag. This
+# is a data-table widening only; it must not be accompanied by a change to
+# the parity check below.
 ALLOWED_TRANSITIONS: frozenset[tuple[str, str]] = frozenset(
     {
         ("todo", "in_progress"),
+        ("todo", "done"),
         ("in_progress", "done"),
         ("in_progress", "todo"),
     }
@@ -57,7 +70,6 @@ ALLOWED_TRANSITIONS: frozenset[tuple[str, str]] = frozenset(
 # Additional transitions allowed only with --force
 FORCE_ALLOWED_TRANSITIONS: frozenset[tuple[str, str]] = frozenset(
     {
-        ("todo", "done"),
         ("done", "todo"),
         ("done", "in_progress"),
         ("inbox", "todo"),
@@ -120,6 +132,17 @@ def _get_current_status(yaml_block: str) -> str | None:
 
 def _get_needed_agents(yaml_block: str) -> list[str]:
     """Extract agent names that have status 'needed' from the agents: map.
+
+    BO-400e-1 / ADR-046: this is deliberately the ONLY source this module reads
+    for the demanded-step set, and this function deliberately takes no
+    exclusion/skip parameter. See
+    docs/architecture/adrs/ADR-046-completion-demanded-set-is-record-only.md
+    Decision (2) and docs/known-issues/build-orchestration.md's
+    `KI-BO-20260831-1932` for why: a caller-trusted exclusion list here would
+    reopen, one layer below the workflow drivers, the exact caller-controlled
+    channel those drivers' twin `requiredPhasesForCompletion` functions were
+    changed to remove. The absence of such a parameter is load-bearing, not an
+    oversight — do not add one.
 
     Args:
         yaml_block: The raw YAML content between frontmatter delimiters.

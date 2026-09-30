@@ -132,6 +132,7 @@ flowchart TD
 
 ### reference-author
 
+- BO-1800f-4: A contributor can look up the exact form of a removal declaration before typing one
 - BO-1900c-3: Reference doc defines the charter-vs-task-verb matching rules
 - BO-1900d-3: Reference doc specifies the allowlisted dispatch-payload contract
 - BO-2900g-5: Reference documentation states the one set of words for a required proof and what is always asked for

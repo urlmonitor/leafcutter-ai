@@ -158,6 +158,7 @@ flowchart TD
 - ACD-1200g-1: How-to guide documents the goal-to-epic workflow for users
 - ACD-1600a-4: Reference doc for the thin-ticket (reference-not-copy) convention
 - ACD-1600c-3: Reference doc for the implementation-readiness completeness gate
+- ACD-1600c-5: Reference doc describes the declared-files list, its two markers, and the 'no declared files' state
 - ACD-1600d-3: Reference doc for the canonical-source pointer rule
 - ACD-1600e-3: Reference doc for the behaviour-only criteria rule
 - ACD-1600f-3: Reference doc for the AC-vs-supporting-artifact consistency gate
@@ -180,6 +181,9 @@ flowchart TD
 - ACD-2000b-5: Reference doc describes how a requirement is taken, handed back, and reclaimed
 - ACD-2100d-4: A reference page states which copy of the route runs and where a repair has to land
 - ACD-2100e-2: A how-to guide takes an operator from a waiting run back to a running one
+- ACD-2500a-5: Reference doc for the requirement rule check
+- ACD-2500b-4: Reference doc for test intent and the test-design-pending state
+- ACD-2500e-4: Reference doc for the technical planner's role after the split
 - ACD-400e-1a: One written account of how work is chosen, stating all five verdicts in a form a reader and a check can both use
 - ACD-400e-4: The account states how the fast lane's approval posture differs from the backlog queue's, and the difference is demonstrable
 - ACS-1200a-3: The written back-link rule matches the enforced one
@@ -209,6 +213,7 @@ flowchart TD
 - BO-2100d-4: How-to guide for diagnosing a live-app check that cannot run
 - BO-2200c-6: A reference doc explains the documentation-coverage gate, the verifier, and the Agent Contracts brief
 - BO-2400a-6: How-to: run the fast-lane build loop for a cohesive batch
+- BO-2400a-6-i: How-to update: the command-step-runner, the declined-step halt and its remedy, and launching from any checkout
 - BO-2400b-4: How-to: choose the right build path (fast lane vs heavy pipeline)
 - BO-2400c-1-vii: The bundle's reference page describes the function that exists
 - BO-2400c-4: Reference: fast-lane prompt caching (layout, TTL, prefix reuse)
@@ -226,6 +231,10 @@ flowchart TD
 - BO-2900d-5: Reference: the exemption contract — what is recorded, what it covers, and how it appears in output
 - BO-2900e-4: How-to: one table mapping every refusal the guard can emit to the action that clears it
 - BO-2900f-5: Reference documentation states the skipped-gate record contract and its boundary with the workflow-step record
+- BO-4300a-3: How-to: getting a workspace, for agents and people alike
+- BO-4300a-5: Reference: the answer every caller receives, and what a caller must do with it
+- BO-4300e-5: How-to: clearing a workspace by hand, and authorising the loss of unsent work
+- BO-4300f-2-ib: How-to guides carry no second recipe for workspaces
 - BP-1000c-2: How-to guide for reading a parity failure and resolving the drift it names
 - BP-1000d-2: Reference doc defining which scripts are in scope for the parity check and which are exempt
 - BP-100b-10: Drift hook docs include a developer checklist for adding new template categories
@@ -264,12 +273,13 @@ flowchart TD
 - GE-117c-2: How-to guide: the extended decision-history tail-tag with ticket and AC references
 - GE-117d-4: How-to guide: understanding and clearing a declaration-guardrail block
 - GE-117e-3: How-to guide: fixing a missing declaration or deliberately opting out
+- GE-118e: An author learns the accepted entry shapes from the project's own documentation, before a guard tells them
 - GE-120a-5: The no-silent-pass rule is written where the next check author will find it
 - GE-120b-5: The manual link-the-layout workaround is deleted, not left standing beside the fix
 - GE-120d-5: The how-to states what a prepared working copy guarantees and how to confirm it
 - GE-120e-5: The attribution rule is written where the next check author decides how to get their diff
-- GE-120f-5: The rule is written where the next check author is already looking, in the vocabulary the machine reads, and the written procedure and the enforced procedure say the same thing
 - GE-120g-3: The guidance a check author reads states what declaring a role commits the check to, and states that a refusal comes from an objection
+- GE-120h-4: The page a reader trusts says which one of its statements switches a check on, so a seriousness rating beside a check's name is never mistaken for protection
 - GE-122a-3: The numbering rules for all four namespaces are written down in one place
 - GE-122b-3: An author with no prior knowledge can find out how to get a number
 - GE-122b-4: Which locations must carry a number, and which need not, is written down
@@ -290,6 +300,9 @@ flowchart TD
 - GE-126d-4: Following the procedure for adding a check leaves nothing to discover later
 - GE-126d-5: What each registration leg buys you is written down beside the list of legs
 - GE-126e-5: The first measured answer is published with the question that produced it
+- INF-1100d-5: Reference documentation says the test database setting has no default and what happens when it is missing
+- INF-1300a-5: An author who has been refused can read what to supply, and doing what they read gets the document accepted
+- INF-1300b-5: One place to look up what an architecture document is made of, kind by kind, that cannot quietly fall behind what is produced
 - INF-300a-1: Knowledge surface map documents all surfaces with when-to-use rules
 - INF-700a-3: A how-to gets a person from a finished piece of work to the learning on its page
 - INF-700a-4: Reference documentation states when the routing step runs and what its report means
@@ -311,6 +324,11 @@ flowchart TD
 - TQ-400e-6: The exemption reference states when a declaration is honoured, when refused, and which records may carry one
 - TQ-500d-2: A how-to that names the exception and walks through taking the substitute evidence
 - TQ-500e-3: Reference documentation defining the answer's recorded form and every state it can hold
+- TQ-500f-5: Reference guidance names the discrimination-shaped failure family, its catalogue, the new test kind and the wrong-versions field
+- TQ-500f-6: A how-to: write a test that catches the plausible wrong version
+- TQ-600a-7: Someone adding a test that needs a deployed package can find out how to reuse the shared one, and the standing rule agrees with them
+- TQ-600b-6: The command for running the suite is written down in the places people look, and so is the way to force it back to one at a time
+- TQ-600c-6: A contributor the cost guard has just failed can find out where the limit came from and what to do about it
 - UXP-100a-3: How-to guide for assembling prototypes from the component library
 - UXP-100c-5: How-to guide for reviewing and deciding on a prototype
 - UXP-606: How-to: read decision diamonds in the Atlas Flows view

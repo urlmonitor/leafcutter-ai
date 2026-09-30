@@ -22,7 +22,6 @@ criteria: |
       attempt count stays at one for the whole run.
 depends_on:
   - TQ-600a-1
-  - TQ-600a-6
 doc_links:
   - path: docs/testing/test-angles.md
     relationship: describes
@@ -31,6 +30,44 @@ doc_links:
       The failure angle. This is the single-point-of-failure case that sharing
       creates and that per-test deploys did not have, so it is new risk introduced
       by TQ-600a-1 and must be covered by TQ-600a-1's own work.
+  - path: scripts/suite_performance/_shared_layout_coordination.py
+    relationship: constrains
+    status: exists
+    relevance: >-
+      WHERE THE FAILURE IS CACHED AS A FAILURE. write_failure_record() /
+      read_failure_record() are the durable half of "cache the OUTCOME, not just
+      the success" — they are what makes a second waiter, in this process or
+      another worker's, raise the first attempt's error instead of spending
+      another 59.8s retrying. SharedReferenceLayoutError is defined here and is
+      the typed error the deploy's own diagnostic is carried on.
+  - path: scripts/suite_performance/_shared_layout_producer.py
+    relationship: constrains
+    status: exists
+    relevance: >-
+      WHERE THE DIAGNOSTIC IS CAPTURED AND THE RETRY IS REFUSED.
+      _run_build_subprocess() captures the subprocess's stdout, stderr and exit
+      status into the raised error rather than letting a later FileNotFoundError
+      stand in for it, and get_or_produce_shared_layout()'s except branch is the
+      single place that writes the failure record, caches it in-process and
+      re-raises. Deleting either the write or the re-raise is the retry storm
+      this AC prices.
+  - path: scripts/suite_performance/pytest_shared_reference_layout.py
+    relationship: constrains
+    status: exists
+    relevance: >-
+      WHERE THE LOAD-BEARING MUTATION LANDS. The vacuous-pass descriptor names
+      its injection as "make the fixture catch the deploy error and return the
+      empty target directory" — that edit is made HERE, in the two-line
+      shared_reference_layout fixture body. The fixture must let
+      SharedReferenceLayoutError propagate so the consumer fails at setup; a
+      partial or empty layout handed back is phantom-done via the fixture layer.
+declared_files:
+  - path: scripts/suite_performance/_shared_layout_coordination.py
+    state: existing
+  - path: scripts/suite_performance/_shared_layout_producer.py
+    state: existing
+  - path: scripts/suite_performance/pytest_shared_reference_layout.py
+    state: existing
 assigned_agent: python-coder
 estimated_complexity: M
 it_requirements:
@@ -161,6 +198,72 @@ amended_by:
 - action: approved
   agent: approve_acs
   date: '2026-09-21'
+- reason: >-
+    depends_on EDGE REMOVED — TQ-600a-6. criteria, work_status, expects_from and every
+    it-po-owned field DELIBERATELY UNTOUCHED. The edge was added on 2026-09-21 by the
+    entry two above this one, whose stated reason was that this record's third clause —
+    the reported attempt count stays at one — "asserts over the figure TQ-600a-6 now
+    owns". That is a CONTRACT relationship and it is already carried, in this record's
+    expects_from entry for TQ-600a-6 and in TQ-600a-6's matching delivers_to entry, so
+    removing the build-order edge takes nothing away. What it removes is a cycle that
+    left the whole TQ-600a branch without an entry point: TQ-600a-6 depends_on
+    TQ-600a-1, TQ-600a-1 is a composite that cannot reach work_status: done until this
+    record and TQ-600a-1-i are done, and this record waited on TQ-600a-6.
+    THE ALTERNATIVE CUT — TQ-600a-6's edge to TQ-600a-1 — WAS WEIGHED AND REJECTED.
+    That one is a mechanism edge: TQ-600a-6 declares TQ-600a-1's
+    scripts/suite_performance/pytest_shared_reference_layout.py at relationship:
+    modifies and counts the signal TQ-600a-1 emits, so it cannot precede its producer.
+    The edge removed here is an assert-over-a-reported-figure edge, and TQ-600a-6
+    itself already expresses three relationships of exactly that kind — to TQ-600a-2,
+    TQ-600a-5 and TQ-600c-1 — in expects_from with no depends_on edge at all.
+    WHAT THIS RECORD NEEDS IN ORDER is TQ-600a-1's cached outcome, which is implemented
+    and merged (scripts/suite_performance/, PR #941): write_failure_record /
+    read_failure_record persist the deploy's diagnostic durably and every waiter raises
+    from that same cached failure rather than retrying. Four of this record's five
+    descriptors — including the vacuous-pass control its own test_rationale calls the
+    load-bearing one, and the attempt-count one that deliberately observes executed
+    subprocesses instead of the report — are buildable against that today.
+    GAP LEFT FOR THE it-po, NOT PAPERED OVER HERE. This record is now sequenced BEFORE
+    TQ-600a-6, and its fifth descriptor,
+    test_tq600a_1_ii_the_reported_attempt_count_is_one_not_zero_or_absent, reads a
+    figure TQ-600a-6's emitter has not produced yet — as does the third criteria clause
+    it covers. test_spec and expects_from are it-po-owned, so whether that descriptor is
+    built alongside TQ-600a-6 or deferred into its build is that pass's call, not this
+    one's.
+  by: business-analyst
+  at: 2026-09-28
+- reason: >-
+    doc_links ONLY — files_touched was empty, so the generated ticket gave the coder
+    no file scope at all, which is this repo's documented phantom-done vector. criteria,
+    work_status, depends_on, it_requirements, test_spec and expects_from UNTOUCHED.
+    CHANNEL: doc_links at relationship: constrains, NOT prose. files_touched unions
+    exactly two sources — path tokens in prose it_requirements gated on is_file(), and
+    doc_links at constrains/creates/implements/modifies/specifies. Prose was rejected
+    for the same reason as on TQ-600a-1-i: these bullets are policy statements about
+    caching, propagation and error handling, and a path can only be inserted into them
+    by naming a file the sentence is not about. doc_links declares each path's status
+    as edit surface instead of inferring it.
+    SURFACE — all three modules, and each for a distinct clause.
+    _shared_layout_coordination.py holds write_failure_record / read_failure_record
+    (the durable cache that makes the failure a cached OUTCOME rather than a cache
+    miss another waiter retries) and defines SharedReferenceLayoutError.
+    _shared_layout_producer.py captures the subprocess stdout/stderr/exit status into
+    that error and owns the single except branch that writes, caches and re-raises.
+    pytest_shared_reference_layout.py is where the load-bearing NAMED MUTATION lands —
+    "make the fixture catch the deploy error and return the empty target directory" is
+    an edit to the two-line fixture body and nowhere else. All three at constrains
+    rather than modifies: the implementation is merged (PR #941) and this AC pins its
+    behaviour.
+    NOTHING SUPPRESSED on this record — no path this AC's requirements forbid appears
+    in any channel. In particular scripts/build.py is NOT listed: the deploy subprocess
+    is what these requirements wrap, not what they change, and it reaches prose only
+    inside test_spec descriptions, which the derivation does not read.
+    NOT RESOLVED HERE — the BA's sequencing gap is left exactly as found. The fifth
+    descriptor, ..._the_reported_attempt_count_is_one_not_zero_or_absent, reads the
+    figure TQ-600a-6's emitter produces, and a-6 builds two waves later. File scope
+    does not create that emitter. See the report accompanying this pass.
+  by: it-po
+  at: 2026-09-28
 superseded_by: null
 covered_by: []
 implemented_by: []

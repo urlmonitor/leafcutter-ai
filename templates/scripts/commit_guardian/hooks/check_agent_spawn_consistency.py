@@ -44,7 +44,7 @@ ARCHITECTURE: Standalone script (no leafcutter-internal package imports).
     hook validates spawn consistency, and AC INF-600k-1 does not require
     blocking on a missing manifest, so it mirrors check_build_drift.py's /
     check_output_drift.py's warn-and-continue policy instead (see
-    _resolve_package_root()). That resolved package_root is a DIFFERENT root
+    resolve_package_root_or_project_root()). That resolved package_root is a DIFFERENT root
     from the one used to find docs/agents/cards/ (still
     _resolve_root.find_project_root() directly) -- see main()'s own comment
     for why those two must not be conflated.
@@ -59,7 +59,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from agent_spawn_external_callers import is_recognized_external_caller  # noqa: E402
 from card_mermaid_parser import parse_card_spawn_edges  # noqa: E402
-from _resolve_root import find_project_root, resolve_package_root  # noqa: E402
+from package_root_lookup import resolve_package_root_or_project_root  # noqa: E402
 
 _HOOK_FILE = Path(__file__).resolve()
 _parse_card_spawn_edges = parse_card_spawn_edges  # back-compat alias (moved to card_mermaid_parser.py)
@@ -140,7 +140,7 @@ def _check_asymmetric_spawns(agents: list[dict], package_root: Path) -> list[str
         agents: List of agent dicts from the registry.
         package_root: Absolute path to the package root (for resolving real
             workflow filenames as recognized external callers). main()
-            resolves this via _resolve_package_root(), the GE-113c-1-vi
+            resolves this via resolve_package_root_or_project_root(), the GE-113c-1-vi
             manifest-based lookup (it_requirement #3).
 
     Returns:
@@ -188,7 +188,7 @@ def _get_repo_root() -> Path:
     """Get the repository root path via git rev-parse.
 
     Used for docs/agents/cards/ resolution (_resolve_cards_dir) only -- a
-    DIFFERENT need from _resolve_package_root() below: cards-dir and
+    DIFFERENT need from resolve_package_root_or_project_root() (package_root_lookup.py): cards-dir and
     skills_config.json are workspace-level and not necessarily inside the
     manifest-derived package_root in a consumer layout that vendors the
     package as a subdirectory.
@@ -211,38 +211,6 @@ def _get_repo_root() -> Path:
     if result.returncode != 0 or not result.stdout.strip():
         raise OSError("git rev-parse --show-toplevel returned no output")  # noqa: TRY003
     return Path(result.stdout.strip())
-
-
-def _resolve_package_root() -> Path:
-    """Resolve the package root the GE-113c-1-vi way (AC INF-600k-1).
-
-    Delegates to ``_resolve_root.resolve_package_root()`` — the SAME lookup
-    check_agent_registry.py uses — rather than a hand-rolled ``git
-    rev-parse`` (the prior placeholder). Unlike check_agent_registry.py, this
-    hook's own policy on a miss is WARN, not block: it validates spawn
-    consistency, and AC INF-600k-1 does not require blocking the commit when
-    no manifest can be found. This mirrors check_build_drift.py's /
-    check_output_drift.py's warn-and-continue policy on the identical
-    missing-manifest condition (a fresh clone with no manifest yet must not
-    self-block) rather than check_agent_registry.py's block policy (a
-    different gate's different criterion — see ``_resolve_root.py``'s own
-    "POLICY IS NOT SHARED" docstring note).
-
-    Returns:
-        The resolved package root, or ``_resolve_root.find_project_root()``
-        (the repo root) with a WARNING to stderr when no manifest could be
-        located. Never raises, never returns ``None``.
-    """
-    package_root, tried = resolve_package_root(_HOOK_FILE)
-    if package_root is not None:
-        return package_root
-    tried_str = "\n  ".join(tried)
-    print(
-        "[check-agent-spawn-consistency] WARNING: no .build_manifest.json "
-        f"resolved a package root; falling back to the repo root. Tried:\n  {tried_str}",
-        file=sys.stderr,
-    )
-    return find_project_root()
 
 
 def _resolve_cards_dir(repo_root: Path) -> Path:
@@ -321,7 +289,7 @@ def _check_card_registry_mirror(
             the current working directory when omitted -- callers that only
             exercise agent-id / literal-"user" / special-token classification
             (unaffected by the workflow directory's contents) may omit it.
-            main() always passes it explicitly, via _resolve_package_root().
+            main() always passes it explicitly, via resolve_package_root_or_project_root().
 
     Returns:
         List of human-readable mismatch error strings. Empty list when all
@@ -466,8 +434,8 @@ def main() -> int:
         return 0
 
     # Resolved ONCE, threaded into both checks below (a DIFFERENT root from
-    # repo_root below -- see _resolve_package_root()'s docstring).
-    package_root = _resolve_package_root()
+    # repo_root below -- see resolve_package_root_or_project_root()'s docstring).
+    package_root = resolve_package_root_or_project_root(_HOOK_FILE)
 
     errors: list[str] = []
 
@@ -609,4 +577,9 @@ if __name__ == "__main__":
 #   blocking. package_root (is_recognized_external_caller) is now resolved
 #   separately from repo_root (_get_repo_root(), for docs/agents/cards/).
 #   (#TICKETLESS reason=inf-600k-1-workflow-callers)
+# - 2026-09-30 16:00 [python-coder/INF-600k-1 merge with origin/main]: Merged #967
+#   (its literal caller set and regex fix are superseded/moved, see
+#   registry_validator.py and card_mermaid_parser.py). _resolve_package_root()
+#   moved unchanged to package_root_lookup.py as
+#   resolve_package_root_or_project_root(hook_file). (#TICKETLESS reason=inf-600k-1-workflow-callers)
 # ====================================================================
