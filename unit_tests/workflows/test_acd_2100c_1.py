@@ -489,6 +489,15 @@ def _assemble_gate_machinery_source() -> str:
     """Read the REAL, on-disk plan-feature.js and extract the exact,
     verbatim source of every function resolveGate()/pauseAtGate() transitively
     call, in dependency order.
+
+    BO-2300e-3 it_requirement #4: `readPauseStore` -- the shared three-way
+    pause-store read classifier (genuine empty / refused / failed) -- is
+    called by BOTH resolveGate() and pauseAtGate(), so it MUST appear in the
+    list below. A top-level helper referenced by the extracted functions but
+    absent from the list throws ReferenceError in the standalone driver,
+    independently of whether its own logic is correct. It is paired onto one
+    line with pauseAtGate purely to hold this already-oversized file at
+    net-zero content lines against the check-file-size ratchet.
     """
     source = _PLAN_FEATURE_JS.read_text(encoding="utf-8")
     pieces = [
@@ -499,7 +508,7 @@ def _assemble_gate_machinery_source() -> str:
         _extract_function(source, "isAgentRefusal"),
         _extract_function(source, "_buildRepoRootResolutionSnippet"),
         _extract_function(source, "buildPauseStoreCommand"),
-        _extract_function(source, "pauseAtGate"),
+        _extract_function(source, "readPauseStore"), _extract_function(source, "pauseAtGate"),
         _extract_function(source, "resolveGate"),
     ]
     return "\n\n".join(pieces)

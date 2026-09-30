@@ -302,6 +302,23 @@ async function agent(promptOrOpts, opts) {
   }
 
   __capturedCalls__.push({ prompt: promptOrOpts, opts: opts || null });
+
+  // BO-2300e-3-ii (transport/execution-error angle): no existing
+  // label_responses shape can make this mock REJECT -- every prior shape is a
+  // resolved VALUE, so a scenario needing `await agent(...)` itself to throw
+  // (as opposed to returning malformed/empty data the caller's OWN parse
+  // fails on) had no way to be reached. A response object carrying this one
+  // reserved key makes the mock throw instead of resolving, after the call is
+  // still recorded above (so a test can assert the dispatch was attempted).
+  // Purely additive: no pre-existing label_responses value anywhere in this
+  // repo uses this key, so no existing test's behaviour changes.
+  if (
+    response && typeof response === 'object' && !Array.isArray(response) &&
+    Object.prototype.hasOwnProperty.call(response, '__harness_agent_throws__')
+  ) {
+    throw new Error(String(response.__harness_agent_throws__));
+  }
+
   return response;
 }
 """,

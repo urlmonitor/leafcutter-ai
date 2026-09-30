@@ -581,8 +581,12 @@ def test_dispatch_order_plan_feature() -> None:
       args.resume_answer supplied, this default stub run is headless, so
       resolveGate() falls straight through to pauseAtGate(), which persists a
       durable pending-question record instead):
-        9. worktree-agent  label='pause-persist' (BO-2300a-1-ii: worktree-agent,
-           not status-checker — see step 2's note.)
+        9. command-step-runner  label='pause-persist' (BO-2300e-2: the six
+           pause-store round-trip labels route to command-step-runner, the
+           chartered command runner, superseding BO-2300a-1-ii's earlier
+           worktree-agent routing claim over these same six labels —
+           resolve-worktree-setup-script-path in step 2 is outside
+           BO-2300e-2's scope and stays on worktree-agent.)
 
     BO-1500a-5-i note: this test used to rely on run_workflow_under_e2()'s
     generic default stub response for 'worktree-setup'
@@ -631,9 +635,9 @@ def test_dispatch_order_plan_feature() -> None:
         # See this test's docstring above for the rationale behind each step
         # (ACD-2100a-1 script-path resolution, ACD-2100b-5's no-dispatch
         # permission gate, BO-1500f-1's resolved worktree-setup target,
-        # BO-2300a-1-ii's worktree-agent dispatch target, the always-on
-        # self-skipping PT phase, and ACD-2100c-1's pauseAtGate()/
-        # "pause-persist" in place of a live final-gate answer).
+        # BO-2300e-2's command-step-runner target for pause-persist (supersedes
+        # BO-2300a-1-ii's worktree-agent claim), the always-on self-skipping PT
+        # phase, and ACD-2100c-1's pauseAtGate()/"pause-persist" answer).
         ("status-checker", "detect-current-branch"),
         ("worktree-agent", "resolve-worktree-setup-script-path"),
         ("worktree-agent", "worktree-setup"),
@@ -642,7 +646,7 @@ def test_dispatch_order_plan_feature() -> None:
         ("ac-triage", "stage-0-triage"),
         ("pt-classifier", "pt-classify"),
         ("it-po", "stage-itpo-author"),
-        ("worktree-agent", "pause-persist"),
+        ("command-step-runner", "pause-persist"),
     ]
 
     actual_count = result.dispatch_count

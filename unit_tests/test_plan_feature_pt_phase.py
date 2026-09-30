@@ -50,14 +50,17 @@ async function mockAgent(call) {
   const instructions = (call.input && call.input.instructions) || '';
   globalThis.__capturedAllCalls.push({ agentType, label, instr: instructions.slice(0, 1600) });
 
-  // BO-2300a-1-ii moved the pause-store round-trip labels from agentType
-  // 'status-checker' to 'worktree-agent'. Matched by LABEL, not agentType,
-  // and kept separate from the status-checker block below so it never
-  // shadows 'resolve-worktree-setup-script-path' / 'worktree-setup' (also
-  // dispatched under worktree-agent) -- those two fall through to this
-  // mock's generic { status: 'ok' } tail, which the harness recognises as
-  // a non-override and replaces with its own real default response.
-  if (agentType === 'worktree-agent') {
+  // BO-2300e-2 moved the six pause-store round-trip labels from agentType
+  // 'status-checker' to 'command-step-runner' (superseding BO-2300a-1-ii's
+  // earlier 'worktree-agent' routing claim over these same six labels --
+  // see test_bo_2300a_1_ii.py's module docstring). Kept separate from the
+  // status-checker block below so it never shadows
+  // 'resolve-worktree-setup-script-path' / 'worktree-setup' (still
+  // dispatched under worktree-agent, BO-2300e-2's scope excludes them) --
+  // those two fall through to this mock's generic { status: 'ok' } tail,
+  // which the harness recognises as a non-override and replaces with its
+  // own real default response.
+  if (agentType === 'command-step-runner') {
     if (label === 'pause-persist') { return { status: 'ok' }; }
     if (label === 'pause-persist-verify') { return { exists: true, stale: false }; }
     if (label === 'peek-pause-record') { return { exists: true, stale: false }; }
@@ -105,7 +108,7 @@ async function mockAgent(call) {
     // code post-migration: resolveGate() never calls the liveGateFn closure
     // that would have reached them. The pause/resume bookkeeping labels
     // (pause-persist, read-pause-record, etc.) ADR-024's substrate itself
-    // dispatches now arrive under agentType 'worktree-agent' (BO-2300a-1-ii)
+    // dispatches now arrive under agentType 'command-step-runner' (BO-2300e-2)
     // -- handled in the block above, not here.
     if (label === 'apply-approval') { return { status: 'ok', updated: ['ACD-BA', 'ACD-ITPO'] }; }
     return { status: 'ok' };

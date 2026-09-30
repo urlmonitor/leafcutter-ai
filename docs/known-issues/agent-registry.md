@@ -55,12 +55,13 @@ Severity in the **filename** is a three-level index bucket (`blocker` / `high` /
 
 Fixed issues move to [`agent-registry/resolved/`](agent-registry/resolved/) and are no longer listed as open. They are kept, not deleted.
 
-**Open: 3** (0 blocker, 0 high, 3 low) · **Resolved: 0**
+**Open: 4** (0 blocker, 1 high, 3 low) · **Resolved: 0**
 
 ## Open
 
 | Severity | Issue | File |
 |---|---|---|
+| `high` | KI-AR-004 — no agent is chartered for `templates/workflows-js/` bodies; `llm-expert`'s scope names the near-identical `templates/workflows/`, and 32 ACs assign that work to an agent that declines it — only 18 of them findable by a path sweep | [open-high-ki-ar-004-no-agent-is-chartered-for-workflow-js-bodies.md](agent-registry/open-high-ki-ar-004-no-agent-is-chartered-for-workflow-js-bodies.md) |
 | `low` | KI-AR-001 — `agent_registry.schema.json` is inert: nothing validates the registry against it | [open-low-ki-ar-001.md](agent-registry/open-low-ki-ar-001.md) |
 | `low` | KI-AR-002 — `_EXTERNAL_CALLERS` is a hardcoded two-item set, so documenting a real spawn relationship fails the build | [open-low-ki-ar-002.md](agent-registry/open-low-ki-ar-002.md) |
 | `low` | KI-AR-003 — `skills_invoked` still declares `signoff` for two agents whose sign-off obligation was removed, and the resulting mismatch is advisory only | [open-low-ki-ar-003.md](agent-registry/open-low-ki-ar-003.md) |
