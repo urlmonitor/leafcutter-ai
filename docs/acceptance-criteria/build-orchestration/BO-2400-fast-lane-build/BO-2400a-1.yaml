@@ -54,7 +54,7 @@ origin_agent: BrainCandy
 created: 2026-07-21
 amended_by: []
 superseded_by: null
-covered_by: [BO-2400a-1-i, BO-2400a-1-ii, BO-2400a-1-iii]
+covered_by: [BO-2400a-1-i, BO-2400a-1-ii, BO-2400a-1-iii, BO-2400a-1-iv]
 implemented_by:
   - "templates/workflows-js/fast-lane-ship.js"
   - "scripts/build_orchestration/fast_lane.py"

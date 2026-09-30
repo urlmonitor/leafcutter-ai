@@ -3,7 +3,7 @@ title: "Test Angles — A Set-Cover Taxonomy for Proof of Done"
 type: reference
 status: active
 created: 2026-08-14
-last_updated: 2026-09-21
+last_updated: 2026-09-28
 components:
 - testing_quality
 - build_orchestration
@@ -206,7 +206,7 @@ ungated drive is indistinguishable from a gated one in the commit log.
 ## Existing machinery — reuse, do not rebuild
 
 All four claims verified against the working tree on 2026-08-14; a fifth was added and
-verified on 2026-09-21 (TQ-600a-1).
+verified on 2026-09-21 (TQ-600a-1), and extended on 2026-09-28 (TQ-600a-1-i).
 
 - **`user-surface-smoker` already implements the reachability angle** for user-facing
   surfaces, at priority 11.5, with a built-in negative control (`placeholder_signature` —
@@ -258,6 +258,27 @@ verified on 2026-09-21 (TQ-600a-1).
   fixture — sharing would corrupt the shared copy for every other consumer. See CLAUDE.md
   "Tests must not spawn their own `build.py` — reuse a shared deployed layout" for the
   standing rule this fixture implements, and TQ-600a-1 for the full contract.
+  **TQ-600a-1-i pins the cheapest boundary case on top of that contract, with no
+  production code changed** — the behaviour already existed, merged under TQ-600a-1
+  (PR #941): a selection with zero consumers of `shared_reference_layout` must never
+  enter `get_or_produce_shared_layout()` at all — no deploy subprocess runs, and the
+  laziness holds per pytest-xdist worker, not merely per run — while widening the same
+  selection by exactly one consumer must trigger exactly one deploy. Three tests in
+  `unit_tests/suite_performance/test_tq_600a_1_i.py` pin this and protect the
+  pre-existing behaviour: no `build.py --target-dir` subprocess for the zero-consumer
+  selection; an idle pytest-xdist worker produces nothing; and the fixture is reached
+  only through the real `python -m pytest` entry point (`pytest.ini`'s `-p` registration),
+  not an import-only path. Both mutations they catch land in the fixture itself: making
+  `shared_reference_layout` `autouse=True`, or producing at plugin-import / worker-startup
+  instead of on first request. Non-entry is observed independently of any run report via
+  `emit_execution_signal()` / `EXECUTION_LOG_ENV_VAR`
+  (`scripts/suite_performance/_shared_layout_coordination.py`); the reported-deploy-count
+  halves of this same boundary are deferred to TQ-600a-6, which has no reporting surface
+  yet to assert against.
+  **TQ-600a-5 (PR #957) makes the route a declaration, so this boundary has THREE cases:
+  declared reader, declared mutator, and UNDECLARED — the one an implementation omits,
+  whose two-branch default sends it to the shared layout, the corrupting direction.
+  Routing reads the marker and nothing else; CLAUDE.md has the rule and the spellings.**
 
 ## Relationship to BO-2900
 

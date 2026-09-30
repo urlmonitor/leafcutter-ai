@@ -160,10 +160,20 @@ class TestTQ600a1SharedReferenceLayout(unittest.TestCase):
         subprocess this whole AC exists to stop repeating.
         """
         children_dir = self.tmp_path / "children"
+        # TQ-600a-5 note: these consumers only ever read the deployed layout
+        # and never mutate it, so they explicitly declare
+        # @pytest.mark.shared_layout_reader. Before TQ-600a-5's marker-based
+        # routing landed, EVERY consumer -- declared or not -- was handed the
+        # one shared layout by default; TQ-600a-5 changed that default so an
+        # UNDECLARED consumer now correctly receives its own private copy
+        # instead, which would silently break this test's "exactly one
+        # deploy" assertion below unless these consumers declare themselves.
         consumer_body = """
             import os
+            import pytest
             from pathlib import Path
 
+            @pytest.mark.shared_layout_reader
             def test_consumer_{n}(shared_reference_layout):
                 root = Path(shared_reference_layout)
                 assert root.exists()
@@ -224,10 +234,20 @@ class TestTQ600a1SharedReferenceLayout(unittest.TestCase):
         result_dir = self.tmp_path / "results"
         result_dir.mkdir(parents=True, exist_ok=True)
 
+        # TQ-600a-5 note: these consumers only ever read the deployed layout
+        # and never mutate it, so they explicitly declare
+        # @pytest.mark.shared_layout_reader. Before TQ-600a-5's marker-based
+        # routing landed, EVERY consumer -- declared or not -- was handed the
+        # one shared layout by default; TQ-600a-5 changed that default so an
+        # UNDECLARED consumer now correctly receives its own private copy
+        # instead, which would silently break this test's "identical root"
+        # assertion below unless these consumers declare themselves.
         consumer_body = """
             import os
+            import pytest
             from pathlib import Path
 
+            @pytest.mark.shared_layout_reader
             def test_reads_root_{n}(shared_reference_layout):
                 out = Path(os.environ["RESULT_DIR"]) / "root_{n}.txt"
                 out.write_text(str(shared_reference_layout))
