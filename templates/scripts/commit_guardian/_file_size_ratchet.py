@@ -133,17 +133,21 @@ class AddedLineCountUnavailableError(Exception):
     ``CurrentLengthUnmeasurableError`` (the two failures this record wraps),
     even though its reason text may quote one of theirs verbatim.
 
-    Deliberately left UNCAUGHT at every call site inside this ticket's own
-    scope (``check_file_size.py``'s ``_classify_file`` / ``_print_grown_file``):
-    GE-127f-2-i (a later record) owns catching this and printing its own
-    named refusal token, distinct from ``INDETERMINATE`` and
-    ``EMPTY HISTORY``. An unhandled exception is itself "never degrading to
-    zero" in the interim.
+    GE-127f-2-i catches this at both of its raising call sites in
+    ``check_file_size.py`` (``_classify_file``'s classification loop in
+    ``main()``, and the ``grown_files`` print loop that calls
+    ``_print_grown_file``) and REUSES the pinned ``INDETERMINATE`` token and
+    exit-2 contract unchanged, per architect-review's ruling -- this
+    situation is the opposite shape from GE-127e-3-i's ``DESCRIPTION
+    UNAVAILABLE`` (which fires AFTER a verdict is already decided): the
+    unavailable count is itself an input the verdict depends on, exactly
+    what ``PreviousLengthSourceError`` already models one input earlier in
+    this same pipeline. No fourth token is minted; see
+    ``check_file_size.py``'s shared ``_report_indeterminate`` printer.
 
     Attributes:
         reason: Human-readable text naming which of the two situations
-            occurred, for GE-127f-2-i's future ``TOKEN: reason=<text>``
-            printer to quote verbatim.
+            occurred, printed verbatim after ``INDETERMINATE: reason=``.
     """
 
     def __init__(self, reason: str) -> None:
@@ -886,9 +890,11 @@ def resolve_added_measured_lines(filepath: str, parent_revisions: list[str] | No
         AddedLineCountUnavailableError: the current content cannot be
             opened or decoded, a named parent's previous content could not
             be read, or NONE of the named parents has the file at all (so
-            there is nothing to diff against). Deliberately left UNCAUGHT
-            here — see this exception's own docstring. Never raised for a
-            staged deletion; see above.
+            there is nothing to diff against). Left UNCAUGHT here by design
+            — this function itself stays pure; GE-127f-2-i's floor catches
+            it at both call sites in check_file_size.py and reuses the
+            pinned INDETERMINATE token (see this exception's own docstring).
+            Never raised for a staged deletion; see above.
     """
     if not Path(filepath).exists():
         return 0
@@ -928,6 +934,22 @@ def resolve_added_measured_lines(filepath: str, parent_revisions: list[str] | No
 ====================================================================
 DECISION HISTORY
 ====================================================================
+- 2026-09-29 [python-coder/GE-127f-2-i]: This module's own code is
+  UNCHANGED by this ticket -- `AddedLineCountUnavailableError` and
+  `resolve_added_measured_lines` were already correct and already raised
+  for exactly the two situations this ticket's floor now catches. Updated
+  `AddedLineCountUnavailableError`'s and `resolve_added_measured_lines`'s
+  own docstrings, which previously stated (accurately, at the time of
+  ticket 07) that the exception would be "deliberately left UNCAUGHT" and
+  that a future ticket would print "its own named refusal token, distinct
+  from INDETERMINATE" -- architect-review ruled the opposite on this
+  ticket: REUSE the pinned `INDETERMINATE` token and exit 2 unchanged,
+  since the unavailable count here is itself an input the verdict depends
+  on (the same shape `PreviousLengthSourceError` already models one input
+  earlier in this pipeline), not a post-verdict description failure like
+  GE-127e-3-i's distinctly-named `DESCRIPTION UNAVAILABLE`. See
+  check_file_size.py's own DECISION HISTORY entry for the two catch sites
+  and the shared `_report_indeterminate` printer.
 - 2026-09-29 [python-coder/GE-127f-2 bug fix]: `resolve_added_measured_lines`
   crashed the whole gate on a staged DELETION of an already-oversized
   covered file -- `_classify_file` calls it for any file whose HEAD length

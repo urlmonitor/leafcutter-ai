@@ -51,6 +51,27 @@ ARCHITECTURE: Delegates previous-length resolution and the shared line
     the SAME exit-1 refusal, on stdout -- never exit 2, and never printed at
     all for a file that is not already refused.
 
+    ADDED-LINE COUNT UNAVAILABLE (GE-127f-2-i): the opposite shape from the
+    one above -- here the unavailable quantity (the GROSS measured lines a
+    staged change PUT INTO an already-oversized file,
+    ``_file_size_ratchet.resolve_added_measured_lines``) is itself an INPUT
+    the verdict depends on (whether ``lines > previous - added`` can be
+    evaluated at all), not something printed after the verdict is already
+    known. Per architect-review's ruling this REUSES the pinned
+    ``INDETERMINATE`` token and exit 2 rather than minting a fourth token --
+    the same reused vocabulary GE-127b-1-i already established one input
+    earlier in this same pipeline. Both of
+    ``AddedLineCountUnavailableError``'s two situations (the previous
+    content unreachable; the current content reached but uninterpretable)
+    are caught at the two call sites that raise it
+    (``_classify_file``, ``_print_grown_file``) through the shared
+    ``_report_indeterminate`` printer, which every exit-2 site on this
+    module's floor now shares. The genuine-zero arm -- a change that
+    measurably added nothing to an already-oversized file, including a
+    staged DELETION -- never reaches this catch at all: it is a return
+    value (0), never an exception, so it stays on the ordinary exit-0
+    "pass" path and is never mistaken for either refusing situation.
+
 Pre-commit hook to block files exceeding line limits.
 
 Line Limits (see commit_guardian.json's file_size section for the
@@ -66,8 +87,11 @@ Exit Codes:
         the previous-length history is empty)
     1 - One or more files exceed limits, or grew while already over
     2 - INDETERMINATE: the previous-length source could not be reached at
-        all, a resolvable HEAD blob could not be interpreted, or a staged
-        file's CURRENT content could not be opened or decoded (GE-127a-1-i)
+        all, a resolvable HEAD blob could not be interpreted, a staged
+        file's CURRENT content could not be opened or decoded (GE-127a-1-i),
+        or the gross measured lines an already-oversized file's staged
+        change put into it could not be established -- unreachable or
+        uninterpretable (GE-127f-2-i)
 
 Usage:
     poetry run python scripts/commit_guardian/check_file_size.py
@@ -90,6 +114,7 @@ from _file_description import (
 )
 from _file_size_ratchet import (
     EMPTY_HISTORY_REASON,
+    AddedLineCountUnavailableError,
     CurrentLengthUnmeasurableError,
     PreviousLengthSourceError,
     describe_measurement_rule,
@@ -121,6 +146,32 @@ _NO_HELP_MARKER = (
     "content inside triple-quoted strings or block comments does NOT count toward "
     "this length and removing it will NOT reduce it"
 )
+
+
+def _report_indeterminate(reason: str) -> int:
+    """Print the one, shared ``INDETERMINATE: reason=<text>`` line and return
+    its exit code.
+
+    ONE OUTCOME, NEVER A SECOND SURFACE (GE-127f-2-i), applied to the printer
+    itself rather than just to the message: every call site on this module's
+    fail-closed floor -- the staged-file listing, either half of previous
+    -length source resolution, a staged file's current content, and (as of
+    GE-127f-2-i) either half of establishing what a change added to an
+    already-oversized file -- reuses this single function so the wording and
+    exit status can never drift apart between them. Reuses BP-1600a-2-ii's
+    pinned ``INDETERMINATE`` token and exit-2 contract unchanged; this
+    function mints nothing new.
+
+    Args:
+        reason: The verbatim reason text naming which situation occurred.
+            Printed unparaphrased -- callers pass an exception's own
+            ``.reason`` attribute.
+
+    Returns:
+        2, always -- the pinned INDETERMINATE exit status.
+    """
+    print(f"INDETERMINATE: reason={reason}", file=sys.stderr)
+    return 2
 
 
 def get_staged_files() -> dict[str, bool]:
@@ -356,9 +407,13 @@ def _print_grown_file(filepath: str, previous_length: int, current_length: int, 
 
     Raises:
         AddedLineCountUnavailableError: the gross added-line count could not
-            be re-established for this already-refused file. Deliberately
-            left UNCAUGHT here -- see that exception's own docstring in
-            _file_size_ratchet.py; GE-127f-2-i owns catching it.
+            be re-established for this already-refused file. Left UNCAUGHT
+            here by design -- GE-127f-2-i's own floor in ``main()`` wraps
+            the loop that calls this function and converts it to the same
+            ``INDETERMINATE`` (exit 2) refusal used everywhere else on this
+            module's fail-closed floor, via the shared ``_report_indeterminate``
+            printer. This function itself stays a pure printer that never
+            catches its own callee's failure.
     """
     added = resolve_added_measured_lines(filepath, resolve_parent_revisions())
     required = previous_length - added
@@ -483,8 +538,7 @@ def _resolve_ratchet_or_indeterminate(covered_paths: list[str]) -> tuple[dict[st
     try:
         covered_at_head = resolve_head_covered_paths(CHECKED_EXTENSIONS)
     except PreviousLengthSourceError as exc:
-        print(f"INDETERMINATE: reason={exc.reason}", file=sys.stderr)
-        return None, 2
+        return None, _report_indeterminate(exc.reason)
 
     if not covered_at_head:
         # Empty history (unborn HEAD, or a tree with no covered file) --
@@ -497,8 +551,7 @@ def _resolve_ratchet_or_indeterminate(covered_paths: list[str]) -> tuple[dict[st
         parent_revisions = resolve_parent_revisions()
         previous_lengths = resolve_previous_lengths(covered_paths, parent_revisions)
     except PreviousLengthSourceError as exc:
-        print(f"INDETERMINATE: reason={exc.reason}", file=sys.stderr)
-        return None, 2
+        return None, _report_indeterminate(exc.reason)
 
     return previous_lengths, None
 
@@ -538,9 +591,13 @@ def _classify_file(
 
     Raises:
         AddedLineCountUnavailableError: the gross added-line count could not
-            be established for an already-oversized file. Deliberately left
-            UNCAUGHT here -- see that exception's own docstring in
-            _file_size_ratchet.py; GE-127f-2-i owns catching it.
+            be established for an already-oversized file. Left UNCAUGHT
+            here by design -- GE-127f-2-i's own floor in ``main()`` wraps the
+            classification loop that calls this function and converts it to
+            the same ``INDETERMINATE`` (exit 2) refusal used everywhere else
+            on this module's fail-closed floor, via the shared
+            ``_report_indeterminate`` printer. This function itself stays a
+            pure classifier that never catches its own callee's failure.
     """
     lines = count_lines(filepath)
     limit = get_limit_for_extension(filepath)
@@ -571,8 +628,11 @@ def main() -> int:
         empty), 1 (a file exceeds its limit or grew while already
         oversized), or 2 (INDETERMINATE — the previous-length source could
         not be reached at all, a resolvable HEAD blob could not be
-        interpreted, or a staged file's CURRENT content could not be opened
-        or decoded).
+        interpreted, a staged file's CURRENT content could not be opened or
+        decoded, or (GE-127f-2-i) the gross measured lines an already
+        -oversized file's staged change put into it could not be
+        established -- the account of the change is unreachable, or it is
+        reached but its current content is uninterpretable).
     """
     # Ensure header output (emojis) works on Windows
     if sys.stdout.encoding.lower() != "utf-8":
@@ -585,8 +645,7 @@ def main() -> int:
     try:
         staged_files = get_staged_files()
     except PreviousLengthSourceError as exc:
-        print(f"INDETERMINATE: reason={exc.reason}", file=sys.stderr)
-        return 2
+        return _report_indeterminate(exc.reason)
 
     if not staged_files:
         return 0
@@ -611,17 +670,19 @@ def main() -> int:
                 failed_files.append((filepath, lines, reference))
             else:
                 passed_files.append((filepath, lines, is_new))
-    except CurrentLengthUnmeasurableError as exc:
-        print(f"INDETERMINATE: reason={exc.reason}", file=sys.stderr)
-        return 2
+    except (CurrentLengthUnmeasurableError, AddedLineCountUnavailableError) as exc:
+        return _report_indeterminate(exc.reason)
 
     # Print results
     print("\n📏 File Size Check\n")
     _print_scope_declaration(measured_kinds, unmeasured_kinds)
     print(f"📊 Compared {len(previous_lengths)} file(s) against their previous length.\n")
 
-    for filepath, previous, lines in grown_files:
-        _print_grown_file(filepath, previous, lines, get_limit_for_extension(filepath))
+    try:
+        for filepath, previous, lines in grown_files:
+            _print_grown_file(filepath, previous, lines, get_limit_for_extension(filepath))
+    except AddedLineCountUnavailableError as exc:
+        return _report_indeterminate(exc.reason)
 
     for filepath, lines, limit in failed_files:
         _print_too_large_file(filepath, lines, limit)
@@ -645,6 +706,35 @@ if __name__ == "__main__":
 ====================================================================
 DECISION HISTORY
 ====================================================================
+- 2026-09-29 [python-coder/GE-127f-2-i]: Catches
+  `AddedLineCountUnavailableError` -- deliberately left uncaught by ticket
+  07/GE-127f-2 -- at its two raising call sites: the classification loop in
+  `main()` (extended the existing `except CurrentLengthUnmeasurableError`
+  tuple to also catch it, since both already print the identical
+  `INDETERMINATE: reason=...` shape and return 2) and a NEW `try/except`
+  wrapped around the `grown_files` print loop that calls `_print_grown_file`
+  (kept as a SEPARATE catch site, per architect-review's ruling against
+  collapsing it into `_classify_file`'s: `_print_grown_file`'s four
+  -positional-argument signature is depended on verbatim by hand-maintained
+  disposable `main()` overrides in `_ge_127e_3_i_fixture.py` and mutation
+  targets in `_ge_127a_1_ordinary_commit_fixture.py`, neither in this
+  ticket's scope to edit). REUSES the pinned `INDETERMINATE` token and exit
+  2 unchanged -- does NOT mint a fourth verdict, per architect-review's
+  ruling that this situation (an input the verdict itself depends on) is the
+  opposite shape from GE-127e-3-i's `DESCRIPTION UNAVAILABLE` (which fires
+  after a verdict is already decided). Extracted the previously 4x-duplicated
+  `print(f"INDETERMINATE: reason={exc.reason}", file=sys.stderr); return 2`
+  pattern into one shared `_report_indeterminate(reason)` helper and
+  converted all SIX now-existing call sites (the two pre-existing
+  `_resolve_ratchet_or_indeterminate` sites, `main()`'s `get_staged_files`
+  site, `main()`'s classification-loop site, and this ticket's two new
+  sites) to call it -- this ticket's own "ONE OUTCOME, NEVER A SECOND
+  SURFACE" note applied to the printer itself, verified behaviour
+  -preserving by re-running every sibling AC's own regression suite (see
+  sign-off comment for the exact counts) rather than assumed. The
+  genuine-zero arm (including a staged DELETION) never reaches either new
+  catch: `resolve_added_measured_lines` returns 0 for it, never raises, so
+  it stays on the ordinary exit-0 "pass" path untouched by this change.
 - 2026-09-28 [python-coder/GE-127f-2]: `_classify_file`'s already-oversized
   branch now judges `lines > previous - added` instead of `lines > previous`
   -- `added` is the GROSS measured lines the staged change PUT INTO the
