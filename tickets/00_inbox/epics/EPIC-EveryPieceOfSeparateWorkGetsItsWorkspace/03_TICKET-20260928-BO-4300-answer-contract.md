@@ -41,7 +41,7 @@ agents:
   ac-fulfillment-gate: signed_off
   ac-validator: signed_off
   architect-review: signed_off
-  commit: needed
+  commit: signed_off
   documentation-expert: not_needed
   documentation-verifier: not_needed
   frontend-coder: not_needed
@@ -418,7 +418,7 @@ tests:
 - [x] pr-reviewer — 2026-09-30 21:05
 - [x] ac-validator — 2026-09-30 23:45
 - [x] ac-fulfillment-gate — 2026-09-30 23:59
-- [ ] commit
+- [x] commit — 2026-09-30 23:59
 
 ## Comments
 
@@ -536,3 +536,12 @@ Anomaly: combined run of the three modules gave 14 passed, 1 skipped, 1 error (D
 ### 2026-09-30 23:59 — ac-fulfillment-gate (status: ok)
 feedback-id: (submit-failed)
 All 3 ACs verified (BO-4300c-2, BO-4300b-5, BO-4300b-5-i). 3 auto-fixes applied: work_status todo->done on all three; implemented_by appended with the 7 implementation files from files_touched that are in the diff; covered_by populated from `# covers:` tags (BO-4300c-2 -> test_bo_4300c_2.py, BO-4300b-5-i -> test_bo_4300b_5_i.py). check_ac_schema.py exit 0 on all three; resolver re-run ok:true. Commit phase may proceed.
+
+### 2026-09-30 23:59 — commit (status: ok)
+feedback-id: (submit-failed)
+Committed e5d42f9a (16 files) with all pre-commit hooks passing. Also staged AC yamls, _workspace_maker_fixtures.py and test_bo_4300a_1_deployed.py (not in files_touched, per pr-reviewer M-3).
+
+completion_manifest:
+  pre_commit_hooks_pass: true
+  commit_message_valid: true
+  ticket_staged: true
