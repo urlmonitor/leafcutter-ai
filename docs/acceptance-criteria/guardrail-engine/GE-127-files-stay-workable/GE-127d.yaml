@@ -6,7 +6,7 @@ components:
 level: L1
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: draft
 priority: medium
 roadmap_phase: phase_1
@@ -58,7 +58,30 @@ documentation_triggers:
   - reference-doc
 origin_agent: BrainCandy
 created: 2026-09-01
-amended_by: []
+amended_by:
+- reason: composite-closure-reconciliation
+  by: ac-fulfillment-gate
+  at: '2026-09-30'
+  note: >-
+    work_status flipped todo -> done. This L1's two children are both verified
+    done: GE-127d-1 (covered_by test_ge_127d_1.py, test_ge_127d_1_real_artifact.py,
+    test_ge_127d_1_scope_extension.py — 12 descriptors, all re-run at d17fc463
+    and passing) and GE-127d-2 (covered_by test_ge_127d_2.py,
+    test_ge_127d_2_reachability_and_deployed.py,
+    test_ge_127d_2_real_artifact_and_seam.py — 9 descriptors, all re-run and
+    passing). Every listed test file carries a matching `# covers:` tag.
+    implemented_by files (README.md, check_file_size.py,
+    check_file_size_rule_parity.py, commit_guardian.json, config.py) are
+    confirmed on disk; the stale "new-files-only" claim is gone from README.md
+    and commit_guardian.json now carries the check-file-size-rule-parity
+    reconciliation gate plus a published_rule_surfaces list. A directory glob
+    for GE-127d-* found no additional child. Precedent: GE-127e (L1, 4/4 L2
+    children done), GE-127e-3 (L2, 2/2 L3 children done) and GE-127f-2 (L2, its
+    sole L3 child GE-127f-2-i done) were all flipped to done by later gates in
+    this same epic once their remaining children closed; this record was the
+    more cautious outlier left behind by GE-127d-2's own gate, which declined to
+    flip a composite parent as out of its own scope. Applying the same
+    precedent here.
 superseded_by: null
 covered_by:
   - GE-127d-1
