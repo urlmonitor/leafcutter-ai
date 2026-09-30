@@ -8,6 +8,7 @@ created: '2026-09-28'
 last_updated: '2026-09-28'
 depends_on:
 - 04_TICKET-20260928-BO-4300-project-resolution.md
+- 05_TICKET-20260928-BO-4300-readiness.md
 priority: critical
 roadmap_phase: phase_1
 advances_current_outcome: true
@@ -58,7 +59,7 @@ agents:
   python-coder: needed
   sql-coder: not_needed
   test-runner: needed
-  test-writer: signed_off
+  test-writer: needed
   user-surface-smoker: not_needed
 ---
 
@@ -293,7 +294,7 @@ see `requires_adr: true` and `agents.adr-author: needed` in this ticket's frontm
 
 - [x] architect-review — 2026-09-30 10:20
 - [x] adr-author — 2026-09-28 13:50
-- [x] test-writer — 2026-09-28 13:55
+- [ ] test-writer
 - [ ] python-coder
 - [ ] test-runner
 - [ ] pr-reviewer
@@ -536,3 +537,43 @@ Re-dispatch after commit 2388321f. The 2026-09-28 classification stands: large (
 
 Branch: opus
 Reason: files_touched = 14 (>5) and two components (worktree_manager, testing_quality); no always-large trigger.
+
+### 2026-09-30 11:00 — python-coder (status: ok)
+feedback-id: (submit-failed)
+Reconciled the fixtures with landed BO-4300b-1. (1) `_ensure_maker_siblings` now copies every `worktree*.py` plus `workspace_root.py` from the deployed layout (the hardcoded list missed `worktree_layout.py`, so the faulted copy could not launch). (2) `make_project` builds its seed repo in a scratch dir outside `tmp` and deletes it after the push, so no sibling repo makes `parent_above`/`sibling_beside` AMBIGUOUS_REPO. Under `AC_ENFORCE_STRICT=1`, `test_bo_4300f_4.py` is 4/4 green (six starting points pass) and `test_bo_4300f_4_i.py` is 3/3 green. Anomalies: (a) the ADR-051 guard raised `DeveloperRepoChangedError` in one run because another session created worktree `kernel-v0-p7` in the shared repo; that is concurrent-session noise the lock cannot prevent, not a suite leak. (b) `test_bo_4300a_1_deployed.py::test_every_route_workspace_lands_in_the_one_landing_place_MANUAL` fails under strict because the maker now lands workspaces at `<landing>/<kind>/<slug>` (BO-4300a-1 test drift, not caused by this change; the test file is owned by ticket 01). Ruff E722/BLE001/TRY clean; files 340/257/127 lines.
+
+### 2026-09-30 12:00 — test-runner (status: blocker)
+feedback-id: (submit-failed)
+Ran the ticket's touched tests (test_bo_4300f_4*, test_bo2400f_13*, test_bo_4300a_1_deployed) with pytest: 10 failed, 47 passed, 6 xfailed (counts varied run to run; an earlier run showed 35 failed, and 13iv passes alone). Persistent failures: test_bo_4300a_1_deployed.py (workspace_location(answer) returns None -> TypeError; landing-place test drift already noted by python-coder, owned by ticket 01) and test_bo2400f_13i...::test_unreadable_occupant_reports_uncommitted_state_as_undetermined_not_clean (PermissionError on Windows reading .git). Also flaky: `scripts/build.py` exits 1 on an empty target dir (unresolved TODO/QUESTION marker scan), making ensure_deployed_layout raise DeployedMakerNotFoundError in some runs. No files edited. Remediation: respawn python-coder to fix/triage the 4300a_1 drift, the Windows unreadable-occupant test, and the flaky deployed-layout build.
+
+completion_manifest:
+  test_suite_executed: true
+  all_tests_passing:
+    result: false
+    reason: "10 failures (4300a_1 deployed drift, 13i unreadable-occupant PermissionError) plus run-to-run flakiness in deployed-layout build"
+    remediation: "respawn python-coder"
+  failure_report_structured: true
+
+### 2026-09-30 12:30 — pr-reviewer (status: ok)
+feedback-id: (submit-failed)
+completion_manifest:
+  diff_reviewed: true
+  contract_validation_pass: true
+  high_confidence_findings: 0
+  medium_confidence_findings: 2
+Re-review of the post-commit working diff for this ticket (only `_workspace_maker_builders.py` and `_workspace_maker_fixtures.py` changed; other diff entries belong to tickets 04/05). Contract shapes unchanged (make_project/starting_points/run_maker/deployed_maker_path). No high findings. [M-1] `_workspace_maker_builders.py` make_project: the seed TemporaryDirectory is cleaned with a bare `seed_holder.cleanup()` after the push, not in try/finally, so a failed git step leaks the scratch dir (harmless but untidy; ignore_cleanup_errors limits Windows lock noise). [M-2] `_workspace_maker_fixtures.py` `_ensure_maker_siblings` now calls `ensure_deployed_layout()` on every override-copy call, even when no sibling is missing (the old early return is gone), and the `worktree*.py` glob pulls in any future worktree_* module from the deployed layout, including ones a fault-injection test might intend to be absent; acceptable, but note the behaviour. Suppressed: 0 low nits noted. Not reviewed away: test-runner's 2026-09-30 12:00 blocker (4300a_1 landing-place drift, Windows unreadable-occupant PermissionError, flaky empty-target build.py) remains open and is not caused by this diff. Anomaly: no Skill/Agent tool, so direct reads replaced review-pr and research-agent. Next: test-runner re-run after python-coder triage.
+
+### 2026-09-30 13:00 — ac-fulfillment-gate (status: blocker)
+feedback-id: (submit-failed)
+Resolver: BO-4300f-4 (L2) fails `work_status` (todo); BO-4300f-4-i (L3) passes. Auto-fixed append-only: BO-4300f-4 `covered_by` gained `unit_tests/build_orchestration/test_bo_4300f_4.py` (genuine `# covers: BO-4300f-4` tag; it previously listed only the child AC id). `check_ac_schema.py` passed. `work_status: done` was tried and reverted: under `AC_ENFORCE_STRICT=1`, `test_bo_4300f_4.py` and `test_bo_4300f_4_i.py` give 5 passed, 2 errors. Both `_MANUAL` tests of BO-4300f-4 error because `ensure_deployed_layout` runs `scripts/build.py --target-dir <tmp>`, which exits 1 (`compute_intra_package_closure: unresolvable data-file read in scripts/ac_store/_ac_components.py at line 60`). This is the flaky deployed-layout build that test-runner's 12:00 blocker already recorded. Forcing done would unmask those errors. Remediation: respawn python-coder to fix the deployed-layout build (or the `_ac_components.py` data-file read) and the other test-runner findings, then re-run test-runner and this gate.
+
+### 2026-09-30 13:30 — commit (status: blocker)
+feedback-id: (submit-failed)
+Did not commit. Two upstream gates are still failed on this ticket (test-runner 12:00 and ac-fulfillment-gate 13:00: deployed-layout build.py exit 1 at `scripts/ac_store/_ac_components.py` line 60, 4300a_1 landing-place drift, Windows unreadable-occupant PermissionError). Also, the shared index holds staged work from tickets 04/05 (worktree_readiness.py, precommit_canary.py, test_bo_4300c_1*, ticket 05) that does not belong in this commit, and the ticket 02 working diff (_workspace_maker_builders.py, _workspace_maker_fixtures.py) is unstaged. Probe passed; no --no-verify used; HEAD unchanged at 45e6f226. Remediation: respawn python-coder to fix the deployed-layout build and remaining test failures, re-run test-runner and ac-fulfillment-gate, then re-dispatch commit with a clean index.
+
+### 2026-09-30 14:00 — python-coder (status: handoff)
+feedback-id: (submit-failed)
+Triage of the commit-phase blocker. (1) Deployed-layout build.py exit 1: root cause was NOT _ac_components.py (those are warnings only); it was a literal NUL byte in the unstaged working copy of templates/scripts/worktree_readiness.py (ticket 05's in-flight file), tripping the closure guard "UNANALYSABLE SCRIPT ... null bytes". Another session removed it during this dispatch; build.py --target-dir now exits 0 with no CLOSURE GUARD output. No fixture change needed. (2) test_bo2400f_13i unreadable-occupant: `git_file.write_text(...)` on the worktree `.git` raises PermissionError on Windows (file is read-only/hidden); fix is test-side (unlink/chmod then write). (3) test_bo_4300a_1_deployed.py (ticket 01's file): ensure answers now 'refused' for marker/reachability layouts and workspace_location returns None; test drift vs BO-4300b-1. Both (2) and (3) are test-file edits, which python-coder may not make.
+### test-writer follow-ups
+- Fix 13i unreadable-occupant test to work on Windows (remove read-only attr / unlink then rewrite .git).
+- Reconcile test_bo_4300a_1_deployed.py with BO-4300b-1 + `<landing>/<kind>/<slug>` landing layout.
