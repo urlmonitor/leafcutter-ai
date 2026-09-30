@@ -59,6 +59,7 @@ class HostWorkRequest(PersistedModel):
     forbidden_operations: list[str] = Field(default_factory=list)
     output_schema_id: str
     output_json_schema: dict[str, JsonValue] = Field(default_factory=dict)
+    output_requirements: list[str] = Field(default_factory=list)
     context_limits: ContextLimits = Field(default_factory=ContextLimits)
     trace_context: TraceContext = Field(default_factory=TraceContext)
     state_revision: int = Field(ge=0)
@@ -83,15 +84,16 @@ class HumanQuestion(PersistedModel):
     relevant_evidence_ids: list[str] = Field(default_factory=list)
     choices: list[Choice] = Field(default_factory=list)
     free_text_allowed: bool = False
+    structured_allowed: bool = False
     why_research_cannot_settle: str = ""
     required_actor_kind: str = Field(default="human", pattern="^human$")
     state_revision: int = Field(ge=0)
 
     @model_validator(mode="after")
     def _answerable(self) -> HumanQuestion:
-        """A question must offer choices or allow free text."""
-        if not self.choices and not self.free_text_allowed:
-            fail("a human question needs choices or free_text_allowed")
+        """A question must offer choices, allow free text or allow a structured answer."""
+        if not self.choices and not self.free_text_allowed and not self.structured_allowed:
+            fail("a human question needs choices, free_text_allowed or structured_allowed")
         return self
 
 
@@ -123,6 +125,10 @@ class InteractionSubmission(KernelModel):
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-09-30 23:40 [python-coder]: HostWorkRequest.output_requirements states rules JSON Schema
+#   cannot express (generated options are proposals a human approves). (#KernelBootstrapV0/P6)
+# - 2026-09-30 23:30 [python-coder]: HumanQuestion.structured_allowed marks approve-or-edit
+#   questions that accept a structured answer. (#KernelBootstrapV0/P6)
 # - 2026-09-30 22:00 [python-coder]: Actor kind and response schema are bound in both directions
 #   so a generative host result cannot impersonate a human answer (spec section 7.8).
 #   (#KernelBootstrapV0/P1)

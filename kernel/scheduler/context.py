@@ -28,6 +28,7 @@ from kernel.persistence.base import ArtifactStorePort, GapStorePort, RunStorePor
 from kernel.providers.base import JevPort
 from kernel.registry.bindings import BindingTable
 from kernel.scheduler.state import Budgets, KernelState
+from kernel.observability.redaction import Redactor
 from kernel.observability.tracer import Tracer
 
 logger = logging.getLogger(__name__)
@@ -54,6 +55,8 @@ class KernelRuntime:
         max_scheduler_iterations: Explicit iteration guard; None uses
             `limits.max_scheduler_iterations`, then the LangGraph recursion limit (see
             guards.max_iterations_for).
+        redactor: Masks secrets in packets before they leave the kernel; None uses a
+            pattern-only redactor built from `config.data_policy`.
     """
 
     config: KernelConfig
@@ -68,6 +71,7 @@ class KernelRuntime:
     monotonic: Callable[[], float] = time.monotonic
     cancel_probe: Callable[[], bool] = field(default=lambda: False)
     max_scheduler_iterations: int | None = None
+    redactor: Redactor | None = None
 
 
 def constraint_texts(state: KernelState) -> tuple[str, ...]:
@@ -144,6 +148,8 @@ def flush_events(run_store: RunStorePort, state: KernelState) -> int:
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-09-30 23:58 [python-coder]: Optional `redactor` so host packets are masked with the
+#   run's real secret values; absent, a pattern-only redactor is used. (#KernelBootstrapV0/P6)
 # - 2026-09-30 23:59 [python-coder]: constraint_texts feeds ExecutionContext.constraints from
 #   the task input. (#KernelBootstrapV0/INT)
 # - 2026-09-30 22:30 [python-coder]: max_scheduler_iterations is an explicit runtime parameter

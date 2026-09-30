@@ -98,8 +98,12 @@ class TestHostWork(unittest.IsolatedAsyncioTestCase):
         again = await rig.resume(graph, config, bad)
         self.assertEqual(again.interrupts[0].value["id"], packet["id"])
         self.assertEqual(again.value["interaction_queue"], [packet["id"]])
-        self.assertIn("interaction.rejected", [e.kind for e in again.value["events"]])
         self.assertNotIn("outcome", again.value)
+        good = _submission(packet, run_id, kind=ActorKind.HOST,
+                           schema=schema_ids.EVIDENCE_BUNDLE, response=BUNDLE)
+        final = (await rig.resume(graph, config, good)).value
+        self.assertEqual(final["outcome"].status, RunStatus.COMPLETED)
+        self.assertIn("interaction.rejected", [e.kind for e in final["events"]])
 
     async def test_a_host_actor_cannot_answer_a_schema_violating_payload(self) -> None:
         rig = _host_rig()
@@ -212,6 +216,9 @@ if __name__ == "__main__":
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-09-30 23:55 [python-coder]: A rejected resume now waits inside the node, so its
+#   rejection event shows in the final state after the valid answer, not while still paused.
+#   (#KernelBootstrapV0/P6)
 # - 2026-09-30 22:40 [python-coder]: The host capability gets a bound (never executed) executor:
 #   eligibility requires a binding for every candidate, host_handoff included.
 #   (#KernelBootstrapV0/P4)

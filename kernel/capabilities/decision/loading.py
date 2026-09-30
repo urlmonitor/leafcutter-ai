@@ -119,8 +119,10 @@ def _absorb_outcome(work: Working, outcome: ChildOutcome, payload: dict | None,
     elif outcome.output_schema_id == schema_ids.FINDINGS:
         _absorb_findings(work, payload)
     elif outcome.output_schema_id == schema_ids.HUMAN_ANSWER:
+        if not outcome.current_wait:
+            return  # an answer to an earlier question (e.g. the router's clarification)
         answer = cast(HumanAnswerPayload, validate_payload(schema_ids.HUMAN_ANSWER, payload))
-        apply_human_answer(work, answer, actor)
+        apply_human_answer(work, answer, outcome.actor_id or actor)
 
 
 def _check_failures(invocation: CapabilityInvocation, outcomes: list[ChildOutcome],
@@ -196,6 +198,9 @@ def load_working(invocation: CapabilityInvocation, ctx: ExecutionContext) -> Wor
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-09-30 23:30 [python-coder]: Only human answers of the latest wait are applied; every
+#   finished child is handed to a resumed parent, and the router's clarification answer once
+#   became an approved criterion of a later phase. (#KernelBootstrapV0/P6)
 # - 2026-09-30 23:00 [python-coder]: Evidence provenance.actor from the context refs names the
 #   approver; without it approvals are recorded as "human" because the human_answer payload
 #   carries no actor. (#KernelBootstrapV0/P5)

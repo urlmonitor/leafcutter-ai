@@ -74,6 +74,11 @@
       "title": "Schema Version",
       "type": "string"
     },
+    "structured_allowed": {
+      "default": false,
+      "title": "Structured Allowed",
+      "type": "boolean"
+    },
     "subject_ids": {
       "items": {
         "type": "string"

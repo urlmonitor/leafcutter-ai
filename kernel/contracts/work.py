@@ -86,6 +86,7 @@ class Continuation(KernelModel):
     capability_version: str
     state: dict[str, JsonValue] = Field(default_factory=dict)
     resume_reason: str = Field(pattern="^(children_done|interaction_answered|retry)$")
+    wait_child_ids: list[str] = Field(default_factory=list)
 
 
 class WorkItem(PersistedModel):
@@ -116,6 +117,8 @@ class ChildOutcome(KernelModel):
     output_schema_id: str | None = None
     result_ref: str | None = None
     priority: Priority = Priority.REQUIRED
+    current_wait: bool = True
+    actor_id: str | None = None
 
 
 class CapabilityInvocation(PersistedModel):
@@ -138,6 +141,12 @@ class CapabilityInvocation(PersistedModel):
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-09-30 23:45 [python-coder]: ChildOutcome.actor_id names who produced a child's evidence
+#   (the answering human), so approvals are attributed to a real actor rather than a default.
+#   (#KernelBootstrapV0/P6)
+# - 2026-09-30 23:30 [python-coder]: Continuation.wait_child_ids and ChildOutcome.current_wait
+#   (default true) mark which finished children belong to a parent's latest wait.
+#   (#KernelBootstrapV0/P6)
 # - 2026-09-30 23:59 [python-coder]: Added optional `operation` to RequestBody so two fixed
 #   capabilities that accept the same schema (retrieve.repository, host.research) route by
 #   operation instead of tying on the lowest id. (#KernelBootstrapV0/INT)

@@ -1,9 +1,89 @@
 {
+  "$defs": {
+    "CriterionEdit": {
+      "additionalProperties": false,
+      "description": "One criterion the human supplies or edits inside a structured approval answer.",
+      "properties": {
+        "id": {
+          "anyOf": [
+            {
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Id"
+        },
+        "priority": {
+          "$ref": "#/$defs/Priority",
+          "default": "required"
+        },
+        "question": {
+          "minLength": 1,
+          "title": "Question",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "question"
+      ],
+      "title": "CriterionEdit",
+      "type": "object"
+    },
+    "Priority": {
+      "description": "Required (blocking) versus supporting work.",
+      "enum": [
+        "required",
+        "supporting"
+      ],
+      "title": "Priority",
+      "type": "string"
+    }
+  },
   "$id": "leafcutter.human_answer.v1",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
-  "description": "leafcutter.human_answer.v1: exactly one of choice_id or free_text.",
+  "description": "leafcutter.human_answer.v1: exactly one of choice_id, free_text or a structured answer.\n\nThe structured answer answers an approve-or-edit question about proposed criteria and\noptions: `approved_*_ids` approve a subset (the listed ids are approved, every other pending\nproposal of that kind is declined) and `edited_criteria` replaces the pending criteria by the\nhuman's own (an entry with the id of a proposal edits it, an entry without an id is new).",
   "properties": {
+    "approved_criterion_ids": {
+      "anyOf": [
+        {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Approved Criterion Ids"
+    },
+    "approved_option_ids": {
+      "anyOf": [
+        {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Approved Option Ids"
+    },
     "choice_id": {
       "anyOf": [
         {
@@ -15,6 +95,22 @@
       ],
       "default": null,
       "title": "Choice Id"
+    },
+    "edited_criteria": {
+      "anyOf": [
+        {
+          "items": {
+            "$ref": "#/$defs/CriterionEdit"
+          },
+          "minItems": 1,
+          "type": "array"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Edited Criteria"
     },
     "free_text": {
       "anyOf": [

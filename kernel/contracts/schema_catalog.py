@@ -116,6 +116,7 @@ class SemanticContext:
     known_finding_ids: frozenset[str] = field(default_factory=frozenset)
     supplied_option_ids: frozenset[str] | None = None
     offered_choice_ids: frozenset[str] | None = None
+    subject_ids: frozenset[str] | None = None
 
 
 def _missing(cited: Iterable[str], known: Iterable[str], what: str) -> list[str]:
@@ -146,6 +147,23 @@ def _bundle_violations(p: EvidenceBundlePayload, ctx: SemanticContext) -> list[s
     return out
 
 
+def _answer_violations(p: HumanAnswerPayload, ctx: SemanticContext) -> list[str]:
+    """Semantic checks for a structured human answer: cited ids must be the question's subjects."""
+    if ctx.subject_ids is None:
+        return []
+    cited = [*(p.approved_option_ids or []), *(p.approved_criterion_ids or []),
+             *(e.id for e in p.edited_criteria or [] if e.id)]
+    return _missing(cited, ctx.subject_ids, "subject")
+
+
+def _options_violations(p: OptionsPayload) -> list[str]:
+    """Generated options and criteria must stay proposals: a generator cannot approve itself."""
+    items = [("option", i.id, i.approval_status, i.approved_by) for i in p.options]
+    items += [("criterion", i.id, i.approval_status, i.approved_by) for i in p.proposed_criteria]
+    return [f"generated {kind} {item_id} must have approval_status proposed and no approved_by"
+            for kind, item_id, status, by in items if status.value != "proposed" or by]
+
+
 def semantic_violations(schema_id: str, payload: KernelModel, ctx: SemanticContext) -> list[str]:
     """Return the reference violations of a validated payload (empty list means OK).
 
@@ -164,7 +182,9 @@ def semantic_violations(schema_id: str, payload: KernelModel, ctx: SemanticConte
     if isinstance(payload, HumanAnswerPayload):
         if payload.choice_id and ctx.offered_choice_ids is not None:
             return _missing([payload.choice_id], ctx.offered_choice_ids, "choice")
-        return []
+        return _answer_violations(payload, ctx)
+    if isinstance(payload, OptionsPayload):
+        return _options_violations(payload)
     if isinstance(payload, DecisionRequestPayload):
         return _missing(payload.evidence_ids, ctx.known_evidence_ids, "evidence")
     if isinstance(payload, (OptionsRequestPayload, SynthesisRequestPayload)):
@@ -224,6 +244,10 @@ def export_json_schemas(directory: Path) -> list[Path]:
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-09-30 23:40 [python-coder]: A generated options payload that arrives pre-approved is a
+#   semantic violation, closing a self-approval path for host output. (#KernelBootstrapV0/P6)
+# - 2026-09-30 23:30 [python-coder]: SemanticContext.subject_ids bounds structured approval
+#   answers to the ids the question asked about. (#KernelBootstrapV0/P6)
 # - 2026-09-30 22:00 [python-coder]: Semantic checks return violation lists (pure) so the
 #   resume path can map them to semantic_invalid without catching exceptions.
 #   (#KernelBootstrapV0/P1)

@@ -97,11 +97,11 @@ def synthesis_request(work: Working, why: str) -> RequestProposal:
 
 
 def _human(work: Working, question: str, why: str, choices: list[Choice], free_text: bool,
-           subjects: list[str]) -> RequestProposal:
+           subjects: list[str], structured: bool = False) -> RequestProposal:
     """Build a human_question_request proposal."""
     payload = HumanQuestionRequestPayload(
         question=question, choices=choices, free_text_allowed=free_text,
-        why_research_cannot_settle=why, subject_ids=subjects)
+        structured_allowed=structured, why_research_cannot_settle=why, subject_ids=subjects)
     return RequestProposal(
         kind=RequestKind.HUMAN, question=question,
         payload_schema=schema_ids.HUMAN_QUESTION_REQUEST,
@@ -126,12 +126,14 @@ def approval_request(work: Working) -> RequestProposal:
         lines += ["Proposed criteria:", *map(_describe, criteria)]
     question = (f"For the decision '{work.question}', approve these generated proposals?\n"
                 + "\n".join(lines)
-                + "\nAnswer 'approve', or reply with the criteria you want, one per line.")
+                + "\nAnswer 'approve', approve a subset (approved_criterion_ids, "
+                "approved_option_ids) or supply edited_criteria; free text is only recorded.")
     choice = Choice(id=APPROVE, label="Approve as proposed",
                     consequences="The proposals become usable for the decision.")
     return _human(work, question,
                   "Generated options and criteria are proposals until a human approves them.",
-                  [choice], True, [*(c.id for c in criteria), *(o.id for o in options)])
+                  [choice], True, [*(c.id for c in criteria), *(o.id for o in options)],
+                  structured=True)
 
 
 def decision_approval_request(work: Working, option: Option) -> RequestProposal:
@@ -155,6 +157,8 @@ def escalation_request(work: Working, reason: str, text: str, tied: list[Option]
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-09-30 23:30 [python-coder]: The approval question accepts a structured answer (subset
+#   or edited criteria); free text stays as a recorded fallback. (#KernelBootstrapV0/P6)
 # - 2026-09-30 23:00 [python-coder]: The approval question lists option ids after criterion ids
 #   in subject_ids; with criteria only it is exactly the proposed criterion ids, as the user
 #   decision requires. (#KernelBootstrapV0/P5)

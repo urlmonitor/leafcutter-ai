@@ -143,6 +143,7 @@ def child_outcomes(item: WorkItem, items: Mapping[str, WorkItem],
     """Return the terminal summaries of an item's children and linked dependencies."""
     refs = sorted({*item.child_ids, *item.dependency_ids},
                   key=lambda i: (items[i].created_seq, i) if i in items else (0, i))
+    current = set(item.continuation.wait_child_ids) if item.continuation else set()
     out: list[ChildOutcome] = []
     for ref in refs:
         child = items.get(ref)
@@ -154,7 +155,9 @@ def child_outcomes(item: WorkItem, items: Mapping[str, WorkItem],
             work_item_id=ref, request_kind=request.kind, status=_AS_RESULT[child.status],
             output_schema_id=result.output_schema_id if result else None,
             result_ref=result_artifact_name(child.result_ref) if result else None,
-            priority=request.priority))
+            priority=request.priority, current_wait=not current or ref in current,
+            actor_id=next((e.provenance.actor for e in result.evidence
+                           if e.provenance.actor), None) if result else None))
     return out
 
 
@@ -346,7 +349,8 @@ def _settle_waiting(draft: Draft, item: WorkItem, invocation: CapabilityInvocati
     skipped = [f"{c}: a supporting child request was rejected" for _, c in plan.rejected]
     continuation = Continuation(
         capability_id=invocation.capability_id, capability_version=invocation.capability_version,
-        state=dict(result.continuation_state or {}), resume_reason="children_done")
+        state=dict(result.continuation_state or {}), resume_reason="children_done",
+        wait_child_ids=[*children, *plan.linked])
     draft.put_item(item, status=WS.WAITING, child_ids=[*item.child_ids, *children],
                    dependency_ids=dependencies, continuation=continuation,
                    result_ref=invocation.id, interaction_ref=None,
@@ -377,6 +381,10 @@ __all__ = ["Draft", "ProposalPlan", "child_outcomes", "create_children",
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-09-30 23:30 [python-coder]: A resumed parent still sees every finished child, but each
+#   ChildOutcome says whether the child belongs to the parent's latest wait; a capability that
+#   applies answers (decision) must apply only current ones, because the child list also holds
+#   children of an earlier binding of the same item. (#KernelBootstrapV0/P6)
 # - 2026-09-30 22:30 [python-coder]: A parent's COMPLETED result is rejected whenever any
 #   required child failed or blocked (design 8.1 step 10 says "cites"; results carry no
 #   citation list, so the safe over-approximation prevents a false success). (#KernelBootstrapV0/P4)

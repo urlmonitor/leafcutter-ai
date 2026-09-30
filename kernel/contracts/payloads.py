@@ -14,9 +14,9 @@ from typing import Literal
 
 from pydantic import Field, model_validator
 
-from kernel.contracts.base import KernelModel, fail
+from kernel.contracts.base import KernelModel, StableId, fail
 from kernel.contracts.decision import CriterionAssessment, Criterion, Option, Rationale
-from kernel.contracts.enums import ApprovalStatus, DecisionStatus, ProposalStatus
+from kernel.contracts.enums import ApprovalStatus, DecisionStatus, Priority, ProposalStatus
 from kernel.contracts.evidence import EvidenceBundlePayload, EvidenceNeed, Finding
 from kernel.contracts.interaction import Choice
 from kernel.contracts.run import TraceRefs
@@ -176,36 +176,66 @@ class HumanQuestionRequestPayload(KernelModel):
     question: str = Field(min_length=1)
     choices: list[Choice] = Field(default_factory=list)
     free_text_allowed: bool = False
+    structured_allowed: bool = False
     why_research_cannot_settle: str = ""
     decision_id: str | None = None
     subject_ids: list[str] = Field(default_factory=list)
 
     @model_validator(mode="after")
     def _answerable(self) -> HumanQuestionRequestPayload:
-        """Offer choices or allow free text; choice ids must be unique."""
-        if not self.choices and not self.free_text_allowed:
-            fail("offer choices or allow free text")
+        """Offer choices, free text or a structured answer; choice ids must be unique."""
+        if not self.choices and not self.free_text_allowed and not self.structured_allowed:
+            fail("offer choices or allow free text or a structured answer")
         _unique([c.id for c in self.choices], "choice")
         return self
 
 
+class CriterionEdit(KernelModel):
+    """One criterion the human supplies or edits inside a structured approval answer."""
+
+    id: StableId | None = None
+    question: str = Field(min_length=1)
+    priority: Priority = Priority.REQUIRED
+
+
 class HumanAnswerPayload(KernelModel):
-    """leafcutter.human_answer.v1: exactly one of choice_id or free_text."""
+    """leafcutter.human_answer.v1: exactly one of choice_id, free_text or a structured answer.
+
+    The structured answer answers an approve-or-edit question about proposed criteria and
+    options: `approved_*_ids` approve a subset (the listed ids are approved, every other pending
+    proposal of that kind is declined) and `edited_criteria` replaces the pending criteria by the
+    human's own (an entry with the id of a proposal edits it, an entry without an id is new).
+    """
 
     choice_id: str | None = None
     free_text: str | None = None
+    approved_option_ids: list[str] | None = None
+    approved_criterion_ids: list[str] | None = None
+    edited_criteria: list[CriterionEdit] | None = Field(default=None, min_length=1)
+
+    @property
+    def is_structured(self) -> bool:
+        """True if any structured approval field is set."""
+        return any(v is not None for v in (self.approved_option_ids,
+                                           self.approved_criterion_ids, self.edited_criteria))
 
     @model_validator(mode="after")
     def _exactly_one(self) -> HumanAnswerPayload:
-        """Exactly one of choice_id and non-empty free_text must be set."""
+        """Exactly one of choice_id, non-empty free_text and the structured fields must be set."""
         has_text = bool(self.free_text and self.free_text.strip())
-        if (self.choice_id is not None) == has_text:
-            fail("set exactly one of choice_id and free_text")
+        modes = [self.choice_id is not None, has_text, self.is_structured]
+        if sum(modes) != 1:
+            fail("set exactly one of choice_id, free_text and a structured approval answer")
+        if self.approved_criterion_ids is not None and self.edited_criteria is not None:
+            fail("approved_criterion_ids and edited_criteria are alternatives")
+        _unique(self.approved_option_ids or [], "approved option")
+        _unique(self.approved_criterion_ids or [], "approved criterion")
+        _unique([e.id for e in self.edited_criteria or [] if e.id], "edited criterion")
         return self
 
 
 __all__ = [
-    "DecisionReportPayload", "DecisionRequestPayload", "EvidenceBundlePayload",
+    "CriterionEdit", "DecisionReportPayload", "DecisionRequestPayload", "EvidenceBundlePayload",
     "FindingsPayload", "GoalRequestPayload", "HumanAnswerPayload",
     "HumanQuestionRequestPayload", "OptionsPayload", "OptionsRequestPayload",
     "ResearchRequestPayload", "RetrievalLimits", "RetrievalRequestPayload",
@@ -215,6 +245,9 @@ __all__ = [
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-09-30 23:30 [python-coder]: human_answer.v1 gains a structured approval answer
+#   (approved ids, edited criteria) and the question gains `structured_allowed`; both additive,
+#   free text stays as a recorded fallback. (#KernelBootstrapV0/P6)
 # - 2026-09-30 22:00 [python-coder]: goal_request, human_question_request and human_answer are
 #   added to the nine Rev 3 section 7.11 schemas because the root request, human interaction
 #   and human answer need registered payloads (design part 2). (#KernelBootstrapV0/P1)

@@ -31,7 +31,7 @@ class RunService(Protocol):
 - **Errors:**
   - `InvalidTaskInput`
   - `RunNotFound`
-  - `SubmissionRejected(code, message, details)`, where `code` is one of `stale_submission`, `kind_mismatch`, `schema_invalid`, `semantic_invalid`, `conflicting_duplicate` or `run_cancelled`
+  - `SubmissionRejected(code, message, details)`, where `code` is one of `stale_revision`, `not_pending` (a conflicting duplicate carries `details.reason=conflicting_duplicate`), `wrong_kind`, `actor_mismatch`, `schema_invalid`, `semantic_invalid`, `forged_id` or `cancelled_or_superseded`
   - `ProviderUnavailable`
 - **Composition root.** `bootstrap.py` (P7) builds the trusted `BindingTable`. It is the only place where binding keys map to Python classes:
   - `decision`: `DecisionCapability`
@@ -162,3 +162,12 @@ P10 writes `docs/how-to/inspect-kernel-traces-with-langfuse-mcp.md` from the cur
 - **Smoke test.** Fetch the demonstration run's observations by `trace_id`.
 - **User step.** Adding the MCP server means `claude mcp add …` or editing `.mcp.json`, with credentials. The **user** must do it, or approve it. Agents do not edit Claude Code settings or MCP config.
 - **Setup blocker.** If account configuration blocks the smoke test, report it as a setup blocker. Never mark it verified.
+
+## As built (P6)
+
+- **Resume entry point.** `kernel.interaction.submit_interaction(graph, config, runtime, run_store, run_id, raw)` is what `resume_run` calls. It checks cancellation, looks up the submission ledger (same hash: replay, or finish an interrupted resume; other hash: `not_pending` with `details.reason=conflicting_duplicate`), validates with `check_submission`, writes the ledger entry and only then resumes with `Command(resume=...)`. It returns `SubmitResult(status, state, pending)` or raises `SubmissionRejected`.
+- **Repair.** Invalid host output (`schema_invalid`, `semantic_invalid`) is the only rejection that reaches the graph; `await_interaction` counts it against `host.max_repair_attempts` and then fails the item with `host_output_invalid`.
+- **Rejection fork fix.** A rejected submission used to return `Command(goto="await_interaction")`, which left the static edge to `integrate` active and ran two branches. `await_interaction` now loops inside the node with repeated `interrupt()` calls; LangGraph replays earlier resume values, so the repair count survives a restart.
+- **`current_wait` scoping.** A resumed parent still receives every finished child, but `ChildOutcome.current_wait` marks the children of its latest wait (`Continuation.wait_child_ids`). Decision applies only current human answers; `ChildOutcome.actor_id` attributes approvals to the answering actor.
+- **Events.** `interaction.opened` and `submission.accepted` are traced by the nodes; `submission.rejected` (with the code) is traced by `submit_interaction`, because the node replays earlier rejections.
+- **Open for P7.** `state["trace"]` is not refreshed on resume, so invocation and packet `trace_context` parent ids still point at the start segment.

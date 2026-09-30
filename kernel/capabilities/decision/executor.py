@@ -90,8 +90,19 @@ async def _combine(state: DecisionState, config: RunnableConfig) -> dict[str, An
         "selected": verdict.selected_option_id, "revision": work.revision(),
         "thresholds": ctx.config.decision.model_dump(mode="json")})
     if verdict.status.value == "resolved":
-        return {"verdict": verdict, "result": resolved_result(invocation, work, verdict)}
+        result = resolved_result(invocation, work, verdict)
+        _status_event(ctx, verdict, result.decisions[0].approval_status.value)
+        return {"verdict": verdict, "result": result}
+    _status_event(ctx, verdict, "proposed" if work.pending_ids else "not_required")
     return {"verdict": verdict, "followup": followup_for(work, verdict)}
+
+
+def _status_event(ctx: ExecutionContext, verdict: Verdict, approval: str) -> None:
+    """Record the small `decision.status` event (ids and counts only, never excerpts)."""
+    ctx.tracer.event("decision.status", ctx.corr, payload={
+        "assessment_status": verdict.status.value, "approval_status": approval,
+        "selected_option_id": verdict.selected_option_id,
+        "missing_needs": len(verdict.missing)})
 
 
 async def _emit(state: DecisionState, config: RunnableConfig) -> dict[str, Any]:
@@ -150,6 +161,9 @@ class DecisionExecutor:
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-09-30 23:50 [python-coder]: `decision.status` is emitted beside `decision.combine`
+#   with ids and counts only, so the observation map shows status and approval per assessment.
+#   (#KernelBootstrapV0/P6)
 # - 2026-09-30 23:00 [python-coder]: The invocation and ExecutionContext travel in
 #   config["configurable"] so they are never part of graph state (Rev 3 section 5.1).
 #   (#KernelBootstrapV0/P5)
