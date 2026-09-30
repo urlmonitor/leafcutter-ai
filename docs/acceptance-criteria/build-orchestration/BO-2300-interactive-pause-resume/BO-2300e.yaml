@@ -6,7 +6,7 @@ component: build-orchestration
 level: L1
 status: active
 req_status: draft
-work_status: in_progress
+work_status: done
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -24,9 +24,19 @@ origin_agent: product-owner-v3
 created: 2026-07-20
 amended_by:
   - reason: "business-analyst reconciliation (2026-09-29): work_status corrected from done to in_progress. This composite was marked done while its own subject -- a paused run waiting reliably until you get back to it -- was broken by KI-ACD-20260928: every pause-store write in an interactive /plan-feature run is dispatched to worktree-agent, which declines it as outside its charter, so the run halts at the first gate and a pause record is never even created. That was already false before this session touched the folder; adding BO-2300e-2 and BO-2300e-3 as todo children did not cause the defect, it exposed it -- check-done-proof surfaced the inconsistency only because this commit stages the parent alongside its new children (see CLAUDE.md, 'AC-store commits -- stage the parent alongside the child'). in_progress (not todo) reflects the true state: BO-2300e-1 is genuinely done, while BO-2300e-2 and BO-2300e-3 are open. readiness stays approved -- the criteria themselves were and remain approved; only the implementation-status axis was wrong. Returns to done once BO-2300e-2 and BO-2300e-3 are implemented and covered."
+  - reason: "it-po composite re-derivation (2026-09-30): work_status in_progress -> done, discharging the exit condition this record's own prior amendment set (\"Returns to done once BO-2300e-2 and BO-2300e-3 are implemented and covered\"). The three children were re-read on disk rather than taken from that list: BO-2300e-1 done (with BO-2300e-1-i, -1-ii and -1-iii all done), BO-2300e-2 done (with BO-2300e-2-i done), BO-2300e-3 done as of this same pass (with BO-2300e-3-i and -3-ii done). No child or grandchild under this subtree is left todo or in_progress -- checked individually, since the dominant phantom-done shape this branch has been correcting is exactly an L2 flipped done while its Roman-suffixed constraint siblings stay todo. implemented_by is populated for the first time with templates/workflows-js/plan-feature.js and config/agent_registry.json -- the union of what the children name, which is the whole implementation surface of this composite; the two enabling commits are 179d5245 (write/routing half) and 78d452ff (read/classification half), recorded here in prose because this field takes source paths, not SHAs. covered_by keeps its three children and additionally names the tests that cover the composite behaviour through them. The subject of this record -- a paused run holding its question, context and place until you answer -- was broken end to end by KI-ACD-20260928 in both directions: the write half sent every pause-store persist to worktree-agent, which declined it, so no record was ever created; the read half then parsed that same refusal as \"no pause record exists\", so a run sailed past the peek and only failed later at persist. Both halves are now implemented and covered by green tests driving the real on-disk plan-feature.js through the E2 engine harness (14 tests for the read half verified PASSED under AC_ENFORCE_STRICT=1 on 2026-09-30; the full unit_tests/workflows/ suite reported 852 passed / 0 failed under the same flag at 78d452ff). RESIDUALS CARRIED UP, recorded rather than glossed: (1) from BO-2300e-2, the clause \"command-step-runner accepts the dispatch rather than declining it\" is proven only as far as a harness can prove it -- the dispatch now carries everything that agent's charter requires and the decline path is separately asserted unreachable, but the live agent's own acceptance is a property of another agent's template that no automated test can execute; (2) from BO-2300e-3, the \"re-establish\" verb in its third Then clause has no direct label assertion, being proven instead by control flow (resolveGate returns before any later dispatch) plus the terminal payload; (3) from BO-2300e-3-ii, the WARNING-log half of its error-handling it_requirement is satisfied in code at plan-feature.js L1626 but is not asserted by any test. None of the three leaves a criterion clause with zero coverage, and none is a reason to withhold done from this composite. Separately noted and NOT actioned: BO-2300e's documentation_triggers lists state-diagram, and no state-diagram AC exists in this folder covering the new pause_read_undetermined terminal status. That is a documentation-coverage gap for a follow-up pass, not an implementation gap in this record's children, and this reconciliation pass was fenced to work_status/implemented_by/covered_by/amended_by."
 superseded_by: null
-covered_by: [BO-2300e-1, BO-2300e-2, BO-2300e-3]
-implemented_by: []
+covered_by:
+- BO-2300e-1
+- BO-2300e-2
+- BO-2300e-3
+- unit_tests/workflows/test_bo_2300e_2.py
+- unit_tests/workflows/test_bo_2300e_3.py
+- unit_tests/workflows/test_bo_2300e_3_i.py
+- unit_tests/workflows/test_bo_2300e_3_ii.py
+implemented_by:
+- templates/workflows-js/plan-feature.js
+- config/agent_registry.json
 documentation_triggers: [state-diagram]
 change_target: pipeline
 risk_surface: internal
