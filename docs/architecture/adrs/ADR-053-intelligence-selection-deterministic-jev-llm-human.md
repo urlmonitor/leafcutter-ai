@@ -197,9 +197,16 @@ previous attempt. The routing outcome `no_match` (earlier `NO_CAPABILITY`) means
 registered capability can meet the need. The kernel records a capability gap and then either
 runs an approved fallback or returns a `blocked` result.
 
-V0 splits the "options or criteria are missing" branch in two. A request with no options goes
-to an options request with `propose_criteria=true`. A request that has options but no criteria
-goes to a `human` request for the criteria (`validate_basis`).
+V0 splits the "options or criteria are missing" branch in two, and a human approves any
+criteria an LLM proposes before Jev decides:
+
+- A request with no options goes to an options request with `propose_criteria=true`.
+- A request that has options but no criteria goes to `host.generate_options` with
+  `propose_criteria=true, max_options=0`. The run then pauses on a `human_question_request.v1`
+  so a human can approve or edit the proposed criteria.
+- Jev decides only against approved criteria.
+
+The flow is specified in [design part 4][design4].
 
 ## Consequences
 

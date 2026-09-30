@@ -74,6 +74,7 @@ criteria are the eligible ids (text = descriptor `description`) plus `__NONE__` 
 - **Accepts:** `goal_request.v1` and `decision_request.v1`. **Produces:** `decision_report.v1`.
 - **Continuation** (`DecisionContinuation`): `phase`, `attempt`, `requested: list[dedup_key]`, `options_version`, `criteria_version`, `last_assessment_fp`.
 - **Execution:** the graph is compiled once and has **no** checkpointer. The kernel owns durability. Each invocation runs it with `ainvoke`.
+- **Constraints.** `ExecutionContext.constraints` is a tuple of texts (`[severity] kind: value`) that the scheduler builds from `TaskInput.constraints` for every worker. `assess` quotes them first in the Jev `constraints` state, before constraint evidence and human inputs, so a caller constraint reaches Jev without being stored as evidence.
 
 | Node | Behaviour |
 |---|---|
@@ -170,7 +171,7 @@ to `open_interactions`, which builds a `HostWorkRequest` (part 5, packet).
 |---|---|---|---|
 | `host.generate_options` | generate_options | options_request.v1 → options.v1 | read_supplied_artifacts, propose_options |
 | `host.synthesize` | synthesize_evidence | synthesis_request.v1 → findings.v1 | read_supplied_artifacts, synthesize |
-| `host.research` | bounded_research | retrieval_request.v1 / research_request.v1 → evidence_bundle.v1 | read_supplied_artifacts, read_repo_paths, web_fetch |
+| `host.research` | bounded_research | retrieval_request.v1 → evidence_bundle.v1 | read_supplied_artifacts, read_repo_paths, web_fetch |
 | `host.formulate_question` | formulate_question | human_question_request.v1 → human_question_request.v1 | read_supplied_artifacts |
 
 - **Forbidden for every host operation:** `edit_repository`, `approve_policy`, `change_permissions`, `choose_next_step`, `run_other_leafcutter_commands`.

@@ -45,6 +45,10 @@ order the parallel workers finish in. Only the kernel nodes write lifecycle fiel
 | `requests` | dict[str, Request] | merge_by_id | intake, integrate, interaction |
 | `work_items` | dict[str, WorkItem] | merge_by_id (newer `updated_revision` wins) | all kernel nodes |
 | `agenda` | list[str] | replace | schedule |
+| `task_input`, `permissions` | TaskInput, list[str] | replace | graph input, intake (added: the run permissions are not in `Task`; constraints are read from `task_input`) |
+| `dispatch` | dict | replace | route (plan for the dispatch edge: native invocation ids, interaction and gap items, worker budget shares; integrate clears it) |
+| `halt_reason` | str \| None | replace | schedule (why the run stops: guard name, cancelled or deadlock) |
+| `events_flushed` | int | replace | intake, schedule, finalize (events already mirrored to the run store) |
 | `invocations` | dict[str, CapabilityInvocation] | merge_by_id | route/dispatch |
 | `results` | dict[str, CapabilityResult] | merge_by_id | execute (Send worker), interaction |
 | `routing` | dict[str, RoutingAssessment] | merge_by_id | route |
@@ -54,7 +58,7 @@ order the parallel workers finish in. Only the kernel nodes write lifecycle fiel
 | `gaps` | dict[str, CapabilityGap] | merge_by_id | record_gaps |
 | `budgets` | Budgets | replace | schedule, integrate |
 | `fingerprints` | dict[str, int] | sum per key | integrate |
-| `events` | list[RunEvent] | append, then sort by seq | all |
+| `events` | list[RunEvent] | append; **`seq` is assigned in the reducer** (nodes emit seq 0), so parallel writers cannot collide | all |
 | `state_revision` | int | replace (monotonic) | integrate, interaction, finalize |
 | `status` | RunStatus | replace | schedule, await_interaction, finalize |
 | `outcome` | RunOutcome \| None | replace | finalize |
@@ -74,6 +78,7 @@ order the parallel workers finish in. Only the kernel nodes write lifecycle fiel
 - `run_store`, `gap_store`, `artifacts`
 - `clock` (injectable for tests)
 - `cancel_probe: Callable[[], bool]`
+- `max_scheduler_iterations: int | None` (None uses `limits.max_scheduler_iterations`, then a value derived from `langgraph_recursion_limit`)
 
 ## Graph topology (`scheduler/graph.py`)
 
@@ -87,11 +92,10 @@ flowchart TD
   R -->|Send per native item| X[execute]
   R -->|host or human item| OI[open_interactions]
   R -->|no_match| G[record_gaps]
-  R -->|nothing dispatchable| SC
+  R -->|nothing dispatchable| IN
   X --> IN[integrate]
-  G --> OI
   G --> IN
-  OI --> SC
+  OI --> IN
   AW --> IN
   IN --> SC
   F --> E([END])
@@ -151,6 +155,22 @@ Every trip emits a `guard.tripped` event and a Langfuse event (part 5).
 - Workers return only `results`. `integrate` runs once per superstep.
 - Every map is merged in sorted-key order, and presentation always sorts by `(created_seq, id)`.
 - Host work is sequential (`max_concurrent_host=1`). The spec forbids calling cooperative host operations parallel workers.
+
+## As built: deviations from the tables above (P4 and integration)
+
+- **Topology.** Every `route` branch ends in `integrate`, including "nothing dispatchable". Integrate is where parents of items that were blocked while routing are resumed. `record_gaps` and `open_interactions` both lead to `integrate`; P9 adds the gap to interaction chain for host fallback.
+- **Event numbering.** Nodes emit events with `seq` 0. The `events` reducer numbers them after the existing ones, so the log order is the order LangGraph applies updates in. `flush_events` mirrors the unsaved tail to the run store and stops at the first write failure.
+- **Worker budget shares.** `route` splits the remaining Jev calls and work-item slots evenly over the native workers it dispatches (`dispatch.shares`). A worker reserves only from its own share (`ShareBudget`), so concurrent workers cannot overspend and the split is deterministic. Workers get no host share. Reserved Jev calls and elapsed time return in `CapabilityResult.diagnostics` and `integrate` adds them to `budgets`.
+- **Child results.** `WorkItem.result_ref` is the invocation id (the key of `results`). `integrate` also stores every validated result as the run artifact `result-<invocation_id>.json` (full `CapabilityResult` JSON, payload under `output_payload`), and `ChildOutcome.result_ref` is that artifact name, so a resumed parent reads it with `ctx.artifacts.read_artifact(ctx.run_id, result_ref)`. A failed artifact write is logged; the parent then records the child output as unreadable.
+- **Evidence lookup.** The worker packet holds a snapshot of `state["evidence"]`; `ExecutionContext.evidence(ids)` resolves from it, so evidence a child added is visible to the resumed parent.
+- **Research routing.** A `research_request.v1` child of kind `evidence` is the only eligible shape for `research`, so it binds deterministically without Jev.
+- **No-progress rules.**
+  - The per-item fingerprint counts only `waiting` attempts. A completed result ends the work, and a retried transient failure is not a new attempt.
+  - Transient retries are neutral for the run-level streak (they neither reset nor add to it); `max_retries` bounds them.
+  - The run streak resets on new evidence, a finding, a decision status change, a terminal item or a newly created work item. Counting new work items keeps a healthy root, child, grandchild chain from tripping the guard before evidence exists.
+  - Once the root is terminal, guard trips are suppressed: finishing work is never turned into a guard stop by a late counter.
+  - A required child proposal rejected by a guard blocks the parent before any child is created.
+- **Completion.** A parent's `completed` result is rejected whenever any required child failed or was blocked (results carry no citation list, so this over-approximates "cites a failed child").
 
 ## Persistence layout (`persistence/`, P2)
 

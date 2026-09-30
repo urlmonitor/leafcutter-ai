@@ -70,7 +70,7 @@ Back to [part 1](2026-09-30-decision-kernel-design.md).
 | `Finding` (evidence) | `id`, `claim`, `kind`, `supporting_evidence_ids`, `contradicting_evidence_ids`, `limitations`, `producer`, `producer_version` |
 | `EvidenceNeed` (evidence) | `id`; `category`; `question`; `priority`; `acceptable_source_kinds`; `resolution` (source ids); `status` (open, satisfied, partial or unavailable) |
 | `EvidenceBundle` (evidence) | `id`, `request_id`, `evidence_ids`, `finding_ids`, `coverage: dict[need_id, status]`, `attempted_sources`, `unavailable_sources: list[{source_id, reason}]`, `contradictions: list[{a, b, note}]`, `limitations`, `truncated` |
-| `Request` (work) | `id`, `origin_work_item_id`, `kind`, `goal`, `question`, `payload_schema`, `payload: dict` (validated by the catalog in a model validator), `requested_output_schema`, `evidence_needs`, `priority`, `context_refs`, `depends_on`, `dedup_key` |
+| `Request` (work) | `id`, `origin_work_item_id`, `kind`, `goal`, `question`, `payload_schema`, `payload: dict` (validated by the catalog in a model validator), `requested_output_schema`, `evidence_needs`, `priority`, `context_refs`, `depends_on`, `operation: str \| None` (registry operation the request needs; see eligibility), `dedup_key` |
 | `RequestProposal` (work) | The same fields without `id` or `dedup_key`. Capabilities propose; the kernel assigns identity. |
 | `WorkItem` (work) | `id`, `root_task_id`, `request_id`, `status`, `dependency_ids`, `child_ids`, `continuation: Continuation \| None`, `binding: Binding \| None` (`capability_id`, `version`, `execution_mode`), `attempts`, `depth`, `result_ref`, `routing_ref`, `interaction_ref`, `limitations`, `created_seq`, `updated_revision` |
 | `Continuation` (work) | `capability_id`, `capability_version`, `state: dict` (validated by the capability's own continuation model), `resume_reason` (children_done, interaction_answered or retry) |
@@ -162,7 +162,7 @@ P5 adds these entries with `native_registration` and `decision_ref: TICKET-20260
 - `decision` (native, semantic)
 - `research` (native, semantic)
 - `retrieve.repository` (native, fixed)
-- `host.generate_options`, `host.synthesize`, `host.research`, `host.formulate_question` (host_handoff; fixed except `host.research`)
+- `host.generate_options`, `host.synthesize`, `host.research`, `host.formulate_question` (host_handoff, all `fixed`). As built, `host.research` accepts only `retrieval_request.v1` (operation `bounded_research`); it is not a semantic capability. The free-form `research_request.v1` goes to the native `research` capability.
 
 ## Registry adapter and eligibility (`registry/`)
 
@@ -173,7 +173,8 @@ P5 adds these entries with `native_registration` and `decision_ref: TICKET-20260
 - **`BindingTable`** (`bindings.py`).
   - Methods: `register(key, version, factory)`, `resolve(key, version) -> CapabilityExecutor` (raises `BindingUnavailable`), and `keys()`.
   - Only the composition root (`bootstrap.py`, P7) and tests populate it.
-- **`filter_candidates(request, snapshot, bindings, run_permissions, budgets, cfg) -> EligibilityReport`** (pure).
+- **`filter_candidates(request, snapshot, bindings, run_permissions, budgets, cfg, *, scope=None, operation=None) -> EligibilityReport`** (pure).
+  - `operation` (the scheduler passes `request.operation`) keeps a candidate only if the operation is in its `operations`. Without it, `retrieve.repository` and `host.research` (both accept `retrieval_request.v1`, both `fixed`) tie on the lowest id. The research capability sets `operation` on each retrieval child (`retrieve` or `bounded_research`); no resolver hook exists.
   - Checks run in this order, and each exclusion records a reason code:
     1. `disabled`
     2. `unavailable:<reason>`
@@ -202,13 +203,13 @@ recorded in traces.
 | Section | Keys and defaults |
 |---|---|
 | `paths` | `run_root: ".leafcutter/kernel"`, `registry: "config/capability_registry.json"` |
-| `limits` (§13.2) | `max_work_items 32`, `max_depth 4`, `max_concurrent_native 4`, `max_concurrent_host 1`, `max_retries 2`, `no_progress_limit 2`, `max_jev_calls 40`, `max_host_operations 8`, `max_active_seconds 300`, `max_cost_usd null`, `capability_timeout_seconds 120`, `langgraph_recursion_limit 500` |
+| `limits` (§13.2) | `max_work_items 32`, `max_depth 4`, `max_concurrent_native 4`, `max_concurrent_host 1`, `max_retries 2`, `no_progress_limit 2`, `max_jev_calls 40`, `max_host_operations 8`, `max_active_seconds 300`, `max_cost_usd null`, `capability_timeout_seconds 120`, `langgraph_recursion_limit 500`, `max_scheduler_iterations null` (null: derived from the recursion limit; `KernelRuntime.max_scheduler_iterations` overrides it) |
 | `routing` | `min_selected_probability 0.8`, `min_confidence 0.5`, `on_insufficient_context "human"` |
 | `decision` | `sufficiency_threshold 0.8`, `satisfies_threshold 0.8`, `preference_threshold 0.7`, `conflict_threshold 0.7`, `missing_min_probability 0.4` |
 | `research` | `need_required_threshold 0.8`, `need_supporting_threshold 0.5`, `evaluable_threshold 0.7`, `allow_synthesis true`, `category_descriptions {…6 entries…}` |
 | `retrieval` | `relevance_threshold 0.5`, `top_k 6`, `max_candidates 20`, `excerpt_context_lines 12`, `max_excerpt_chars 2000`, `max_file_bytes 400000`, `deny_globs [".env*","**/*.pem","**/*.key",".security-allowlist","**/.git/**"]` |
 | `sources` | A list of `{id, kind: repo_text, knowledge_map or host_research, categories, roots or surfaces}`. Defaults are listed in part 4. Category names never contain vendor names. |
-| `jev` | `model "jev-latest"`, `timeout_seconds 30`, `max_questions_per_call 20`, `max_state_chars 60000`, `retry_backoff_seconds 1.0`, `price_per_input_token_usd 4.2e-8` (estimate; provenance `estimated`) |
+| `jev` | `model "jev-latest"`, `transport "classifier"` (or `http`; `TypeSafeJevAdapter.from_config` reads it), `timeout_seconds 30`, `max_questions_per_call 20`, `max_state_chars 60000`, `retry_backoff_seconds 1.0`, `price_per_input_token_usd 4.2e-8` (estimate; provenance `estimated`) |
 | `host` | `enabled true`, `fallback_on_no_match true`, `max_repair_attempts 1`, `formulate_questions false`, `max_input_chars 60000` |
 | `data_policy` | `send_repo_excerpts_to_jev true`, `telemetry_excerpts "truncated"` (truncated, hash or none), `telemetry_max_field_chars 4000` |
 | `langfuse` | `enabled true`, `environment "development"`, `trace_name "leafcutter-run"`, `flush_on_exit true` |
