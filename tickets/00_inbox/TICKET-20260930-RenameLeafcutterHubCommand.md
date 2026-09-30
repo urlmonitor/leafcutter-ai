@@ -96,8 +96,7 @@ rename: a plain build and a `--clean` build both leave the old `leafcutter.md` i
 `leafcutter-help.md`. `_cleanup_stale_paths` only handles pre-consolidation
 directories; `clean_stale_artifacts` only sweeps `.claude/{agents,skills,hooks,workflows}`,
 and its source manifest lists only `templates/workflows-js/*.js`, not the `.md`
-workflow templates deployed to `commands/`. Adopters upgrading must delete the old
-`leafcutter.md` by hand until a follow-up ticket teaches the build to retire it.
+workflow templates deployed to `commands/`.
 
 The stale copy also blocks commits. In this ticket's own worktree,
 `check-output-drift` reported `GAP .claude/commands/leafcutter.md` and
@@ -105,8 +104,21 @@ The stale copy also blocks commits. In this ticket's own worktree,
 copies (plus their `.leafcutter/` sources) were deleted by hand. Rerunning `build.py`,
 as the hook suggests, does not help because the template no longer exists.
 
+**Resolved on the same branch by TICKET-20260930-RetireRenamedCommandOutputs.** The
+build now retires an installed command/workflow file whose template the package no
+longer ships, on a plain build and under `--clean`. It does so only when the previous
+install recorded the file and the file is still byte-identical to what the package
+wrote. An adopter upgrading across this rename therefore loses the old `leafcutter.md`
+automatically, and `check-output-drift` stays green. One case remains manual. If an
+adopter edited their installed `leafcutter.md`, the build keeps it and names it in the
+run output as kept, and `check-output-drift` keeps reporting it as a GAP until they
+delete it.
+
 ## Risk & Safety
 - Touches money? No.
 - Touches data? No. It renames one shipped prompt file.
 - Reversibility: fully reversible by renaming back. Adopters who typed `/leafcutter`
   for the hub need `/leafcutter-help` from now on (see the changelog entry).
+- Ships together with TICKET-20260930-RetireRenamedCommandOutputs, which removes the old
+  installed copy on upgrade. Landing this rename without it would strand
+  `leafcutter.md` in every existing install.
