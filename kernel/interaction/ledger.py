@@ -47,6 +47,8 @@ class SubmissionRejected(Exception):
         self.code = code
         self.message = message
         self.details = dict(details or {})
+        #: The run's current RunEnvelope, attached by the service so a client can re-present it.
+        self.envelope: Any = None
 
     def to_error(self) -> dict[str, Any]:
         """Return the `{code, message, details}` object of the CLI error payload."""
@@ -228,4 +230,7 @@ async def _submit(graph: Any, config: dict[str, Any], context: Any,
 # - 2026-09-30 23:55 [python-coder]: Invalid host output is the only rejection that resumes the
 #   graph, without a ledger entry, because a repair counter kept anywhere but in the checkpoint
 #   (the paused node's replayed resume values) would be lost on restart. (#KernelBootstrapV0/P6)
+# - 2026-10-01 11:05 [python-coder]: SubmissionRejected carries an optional `envelope` the
+#   service fills in, so the CLI can print {error, envelope} without a second segment.
+#   (#KernelBootstrapV0/P7)
 # ====================================================================

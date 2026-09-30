@@ -36,6 +36,7 @@ from kernel.contracts import (
     sha256_hex,
 )
 from kernel.contracts.work import Binding
+from kernel.observability.tracer import TraceState
 from kernel.registry.eligibility import filter_candidates
 from kernel.scheduler import guards
 from kernel.scheduler.context import (
@@ -68,8 +69,13 @@ def _scope_revision(state: KernelState) -> dict[str, Any] | None:
 
 
 def build_invocation(draft: Draft, state: KernelState, item: WorkItem, binding: Binding,
-                     n_invocations: int) -> CapabilityInvocation:
-    """Build the invocation for an item: input, continuation, child outcomes, trace context."""
+                     n_invocations: int, current_trace: TraceState | None = None
+                     ) -> CapabilityInvocation:
+    """Build the invocation for an item: input, continuation, child outcomes, trace context.
+
+    `current_trace` is this process's segment (runtime context); it wins over the trace stored
+    in state, which still names the segment that started the run.
+    """
     request = draft.request_of(item)
     resumed = item.continuation is not None and item.continuation.resume_reason == "children_done"
     outcomes = child_outcomes(item, draft.items, draft.requests, draft.results) if resumed else []
@@ -77,7 +83,7 @@ def build_invocation(draft: Draft, state: KernelState, item: WorkItem, binding: 
     corr = run_corr(state, work_item_id=item.id, request_id=request.id,
                     invocation_id=invocation_id, capability_id=binding.capability_id,
                     parent_work_item_id=request.origin_work_item_id)
-    trace = state.get("trace")
+    trace = current_trace or state.get("trace")
     fingerprint = sha256_hex(canonical_json({
         "capability": [binding.capability_id, binding.version],
         "schema": request.payload_schema, "payload": request.payload,
@@ -130,7 +136,8 @@ class _Router:
     def _dispatch(self, item: WorkItem, binding: Binding, routing_ref: str | None) -> None:
         """Create the invocation and move the item to DISPATCHED (native) or WAITING."""
         all_invocations = len(self.state.get("invocations", {})) + len(self.invocations)
-        invocation = build_invocation(self.draft, self.state, item, binding, all_invocations)
+        invocation = build_invocation(self.draft, self.state, item, binding, all_invocations,
+                                     self.ctx.trace)
         self.invocations[invocation.id] = invocation
         native = binding.execution_mode is ExecutionMode.NATIVE
         status = WorkItemStatus.DISPATCHED if native else WorkItemStatus.WAITING
@@ -326,4 +333,7 @@ def _packet(state: KernelState, invocation_id: str, shares: dict[str, int]) -> d
 # - 2026-09-30 22:30 [python-coder]: Insufficient context with policy `human` creates a human
 #   child request and parks the item with a `kernel.router` continuation, reusing the generic
 #   wait/resume machinery instead of a second pause mechanism. (#KernelBootstrapV0/P4)
+# - 2026-10-01 10:00 [python-coder]: build_invocation prefers the runtime's current segment trace
+#   over state["trace"], so invocations and host packets created after a resume nest under the
+#   resuming segment (bug D). (#KernelBootstrapV0/P7)
 # ====================================================================

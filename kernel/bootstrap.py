@@ -1,0 +1,197 @@
+"""
+MODULE: kernel.bootstrap
+GOAL: The composition root: load config and secrets, verify and pin the capability registry,
+    build the trusted BindingTable, the file stores, the redactor, the tracer and the Jev factory
+    into one KernelEnvironment that the application service runs against.
+BUSINESS CONTEXT: Every other module depends on ports; exactly one place may know which concrete
+    class serves which binding key, which credentials exist and where runs live on disk (Rev 3
+    sections 5.1 and 13). Keeping that here lets tests swap any piece without touching the service.
+ARCHITECTURE: `build_environment` is synchronous and does no network IO. The Jev adapter owns a
+    pooled HTTP client bound to an event loop, so the environment stores a *factory*: the service
+    calls it inside the run's loop and closes the adapter in the same loop. The tracer is ONE
+    instance shared by the scheduler runtime and the Jev adapter, so generations nest under the
+    same segment. Host bindings are eligibility placeholders until P8 supplies host operations.
+"""
+
+from __future__ import annotations
+
+import logging
+from collections.abc import Callable
+from dataclasses import dataclass
+from pathlib import Path
+
+import kernel
+from kernel.capabilities.decision import DecisionExecutor
+from kernel.capabilities.research import ResearchExecutor
+from kernel.capabilities.retrieval import RepositoryRetrievalExecutor
+from kernel.config import KernelConfig, load_kernel_config, repo_root
+from kernel.contracts import ExecutionMode, RegistrySnapshot
+from kernel.observability.langfuse_tracer import LangfuseTracer
+from kernel.observability.redaction import Redactor
+from kernel.observability.tracer import Tracer
+from kernel.persistence import FileArtifactStore, FileGapStore, FileRunStore
+from kernel.providers.base import JevPort
+from kernel.providers.jev import TypeSafeJevAdapter
+from kernel.registry import BindingTable
+from kernel.registry.adapter import load_component_ids, load_registry
+from kernel.secrets import SecretSettings, load_secrets
+
+logger = logging.getLogger(__name__)
+
+#: Native bindings and the version each executor implements (registry `binding` -> factory).
+NATIVE_BINDINGS: dict[str, Callable[[], object]] = {
+    "decision": DecisionExecutor,
+    "research": ResearchExecutor,
+    "retrieve.repository": RepositoryRetrievalExecutor,
+}
+NATIVE_VERSION = "1.0.0"
+TELEMETRY_SPOOL = "telemetry_spool.jsonl"
+
+
+class HostBindingExecuted(RuntimeError):
+    """A host_handoff binding was executed in-process, which the scheduler must never do."""
+
+    def __init__(self) -> None:
+        """Build the fixed message."""
+        super().__init__("a host_handoff binding must never execute in-process")
+
+
+class HostMarkerExecutor:
+    """Stands in for a host_handoff binding so eligibility finds it; the graph pauses instead."""
+
+    async def ainvoke(self, invocation: object, ctx: object) -> object:
+        """Never called: host items open an interaction and wait for the client (P8 replaces)."""
+        raise HostBindingExecuted
+
+
+@dataclass
+class KernelEnvironment:
+    """Everything one service instance needs; built once per process.
+
+    Attributes:
+        config: Validated kernel configuration.
+        secrets: Loaded credentials (presence booleans only; never printed).
+        snapshot: The verified registry snapshot a new run pins.
+        bindings: Trusted executor factories.
+        repo_root: Root of the kernel checkout (relative config paths resolve against it).
+        run_root: Directory holding runs, the checkpoint database and the telemetry spool.
+        run_store: File run store.
+        gap_store: File gap store.
+        artifacts: File artifact store.
+        tracer: The single tracer instance shared with the Jev adapter.
+        redactor: Masks secrets in packets before they leave the kernel.
+        jev_factory: Builds the Jev port inside the running event loop; None when no credential
+            is configured (runs that need Jev then report provider_unavailable).
+    """
+
+    config: KernelConfig
+    secrets: SecretSettings
+    snapshot: RegistrySnapshot
+    bindings: BindingTable
+    repo_root: Path
+    run_root: Path
+    run_store: FileRunStore
+    gap_store: FileGapStore
+    artifacts: FileArtifactStore
+    tracer: Tracer
+    redactor: Redactor
+    jev_factory: Callable[[], JevPort] | None
+
+    def shutdown(self) -> None:
+        """Stop the tracer's background workers (once, at the end of the process)."""
+        stop = getattr(self.tracer, "shutdown", None)
+        if callable(stop):
+            stop()
+
+
+@dataclass
+class EnvironmentOverrides:
+    """Test seams: any piece set here replaces the production wiring."""
+
+    tracer: Tracer | None = None
+    jev_factory: Callable[[], JevPort] | None = None
+    bindings: BindingTable | None = None
+    snapshot: RegistrySnapshot | None = None
+    secrets: SecretSettings | None = None
+
+
+def resolve_run_root(config: KernelConfig, root: Path) -> Path:
+    """Return the run root from config: absolute as given, else relative to the repo root."""
+    configured = Path(config.paths.run_root)
+    return configured if configured.is_absolute() else (root / configured).resolve()
+
+
+def build_bindings(snapshot: RegistrySnapshot) -> BindingTable:
+    """Return the trusted table: native executors plus host placeholders for host descriptors."""
+    table = BindingTable()
+    for key, factory in NATIVE_BINDINGS.items():
+        table.register(key, NATIVE_VERSION, factory)
+    for descriptor in snapshot.descriptors:
+        if descriptor.execution_mode is ExecutionMode.HOST_HANDOFF:
+            table.register(descriptor.binding, descriptor.version, HostMarkerExecutor)
+    return table
+
+
+def load_snapshot(config: KernelConfig, root: Path) -> RegistrySnapshot:
+    """Load and verify the registry named by config (components are checked when known)."""
+    components = root / "docs" / "components.json"
+    known = load_component_ids(components) if components.is_file() else None
+    registry = Path(config.paths.registry)
+    return load_registry(registry if registry.is_absolute() else root / registry,
+                         known_components=known)
+
+
+def _jev_factory(config: KernelConfig, secrets: SecretSettings, tracer: Tracer
+                 ) -> Callable[[], JevPort] | None:
+    """Return the factory of the live Jev adapter, or None without an API key."""
+    if secrets.jev_api_key is None:
+        return None
+    key = secrets.jev_api_key.get_secret_value()
+    return lambda: TypeSafeJevAdapter.from_config(config, key, tracer=tracer)
+
+
+def build_environment(*, config_path: Path | None = None, env_file: Path | None = None,
+                      overrides: EnvironmentOverrides | None = None) -> KernelEnvironment:
+    """Compose the production environment (no network IO).
+
+    Args:
+        config_path: Config override file (else LEAFCUTTER_KERNEL_CONFIG, else defaults only).
+        env_file: Env file with credentials (else LEAFCUTTER_ENV_FILE, then a walked-up .env).
+        overrides: Test seams replacing the tracer, Jev factory, bindings, snapshot or secrets.
+
+    Returns:
+        KernelEnvironment: Ready for KernelService.
+
+    Raises:
+        ConfigError: The config is unreadable or invalid.
+        RegistryError: The registry is unreadable or invalid.
+    """
+    seams = overrides or EnvironmentOverrides()
+    root = repo_root()
+    config = load_kernel_config(config_path)
+    secrets = seams.secrets if seams.secrets is not None else load_secrets(env_file)
+    run_root = resolve_run_root(config, root)
+    snapshot = seams.snapshot or load_snapshot(config, root)
+    deny = list(config.retrieval.deny_globs)
+    tracer = seams.tracer or LangfuseTracer(
+        secrets=secrets, config=config.langfuse, policy=config.data_policy, deny_globs=deny,
+        spool_path=run_root / TELEMETRY_SPOOL, release=kernel.__version__)
+    factory = seams.jev_factory or _jev_factory(config, secrets, tracer)
+    return KernelEnvironment(
+        config=config, secrets=secrets, snapshot=snapshot,
+        bindings=seams.bindings or build_bindings(snapshot), repo_root=root, run_root=run_root,
+        run_store=FileRunStore(run_root), gap_store=FileGapStore(run_root),
+        artifacts=FileArtifactStore(run_root), tracer=tracer,
+        redactor=Redactor(secrets.secret_values(), config.data_policy, deny), jev_factory=factory)
+
+
+# ====================================================================
+# DECISION HISTORY
+# ====================================================================
+# - 2026-10-01 10:40 [python-coder]: The environment holds a Jev *factory*, not an adapter: the
+#   adapter's pooled client is bound to one event loop and must be created and closed in the
+#   loop that runs the graph. (#KernelBootstrapV0/P7)
+# - 2026-10-01 10:40 [python-coder]: Host placeholders are derived from the registry's
+#   host_handoff descriptors (not a hard-coded id list), so a new host capability needs only a
+#   registry entry until P8 gives it an operation. (#KernelBootstrapV0/P7)
+# ====================================================================

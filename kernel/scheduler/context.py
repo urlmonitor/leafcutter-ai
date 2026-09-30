@@ -29,7 +29,7 @@ from kernel.providers.base import JevPort
 from kernel.registry.bindings import BindingTable
 from kernel.scheduler.state import Budgets, KernelState
 from kernel.observability.redaction import Redactor
-from kernel.observability.tracer import Tracer
+from kernel.observability.tracer import TraceState, Tracer
 
 logger = logging.getLogger(__name__)
 
@@ -57,6 +57,8 @@ class KernelRuntime:
             guards.max_iterations_for).
         redactor: Masks secrets in packets before they leave the kernel; None uses a
             pattern-only redactor built from `config.data_policy`.
+        trace: The CURRENT process segment's trace identity. New invocations (and so host packets)
+            nest under it; None falls back to the `trace` the run was started with.
     """
 
     config: KernelConfig
@@ -72,6 +74,7 @@ class KernelRuntime:
     cancel_probe: Callable[[], bool] = field(default=lambda: False)
     max_scheduler_iterations: int | None = None
     redactor: Redactor | None = None
+    trace: TraceState | None = None
 
 
 def constraint_texts(state: KernelState) -> tuple[str, ...]:
@@ -148,6 +151,8 @@ def flush_events(run_store: RunStorePort, state: KernelState) -> int:
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 10:00 [python-coder]: `trace` carries the current segment so work created after a
+#   resume nests under it, not under the start segment (bug D). (#KernelBootstrapV0/P7)
 # - 2026-09-30 23:58 [python-coder]: Optional `redactor` so host packets are masked with the
 #   run's real secret values; absent, a pattern-only redactor is used. (#KernelBootstrapV0/P6)
 # - 2026-09-30 23:59 [python-coder]: constraint_texts feeds ExecutionContext.constraints from
