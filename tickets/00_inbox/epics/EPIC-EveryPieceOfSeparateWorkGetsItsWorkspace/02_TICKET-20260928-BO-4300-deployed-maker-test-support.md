@@ -48,7 +48,7 @@ agents:
   ac-validator: signed_off
   adr-author: signed_off
   architect-review: signed_off
-  commit: failed
+  commit: signed_off
   documentation-expert: not_needed
   documentation-verifier: not_needed
   frontend-coder: not_needed
@@ -298,7 +298,7 @@ see `requires_adr: true` and `agents.adr-author: needed` in this ticket's frontm
 - [x] pr-reviewer — 2026-09-28 14:47
 - [x] ac-validator — 2026-09-28 14:52
 - [x] ac-fulfillment-gate — 2026-09-28 15:05
-- [ ] commit — failed 2026-09-28 15:08
+- [x] commit — 2026-09-30 10:05
 
 ## Comments
 
@@ -507,3 +507,11 @@ Staged all 13 files_touched changes (the two test_bo2400f13*/test_bo_4300a_1_dep
 ### 2026-09-30 10:00 — commit (status: ok)
 feedback-id: fb_2026-09-30_d7e4e6ae
 Auto-authorized commit gate: subject "test(worktree-manager): deployed-maker locator + repo guard (BO-4300f-4)"; staged files: 15 files (ticket 02 deliverables, ticket file, BO-4300f-4 / f-4-i AC store updates, ADR-051, worktree-manager.md back-link).
+
+### 2026-09-30 10:05 — commit (status: ok)
+feedback-id: fb_2026-09-30_6762dff1
+completion_manifest:
+  pre_commit_hooks_pass: true
+  commit_message_valid: true
+  ticket_staged: true
+Committed 15 staged files as 2388321f "test(worktree-manager): deployed-maker locator + repo guard (BO-4300f-4)". The first attempt this session failed check-feedback-id on the audit entry lacking a feedback-id line; fixed by submitting feedback and adding the line, then the retry passed all hooks (check-secrets and check-output-drift clean). No --no-verify used. Not pushed.
