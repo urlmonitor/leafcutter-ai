@@ -45,10 +45,10 @@ files_touched:
 - unit_tests/build_orchestration/_workspace_maker_build_helpers.py
 - unit_tests/build_orchestration/_workspace_maker_builders.py
 agents:
-  ac-fulfillment-gate: signed_off
+  ac-fulfillment-gate: needed
   ac-validator: signed_off
   adr-author: signed_off
-  architect-review: signed_off
+  architect-review: needed
   commit: signed_off
   documentation-expert: not_needed
   documentation-verifier: not_needed
