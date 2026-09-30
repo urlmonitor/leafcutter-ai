@@ -28,7 +28,6 @@ from ._test_helpers import (
 )
 from ._test_helpers_tq_600a_5 import (
     MUTATOR_MARKER,
-    PYTEST_INI_PATH,
     READER_MARKER,
     ROUTING_LOG_ENV_VAR,
     consumer_source,
@@ -236,41 +235,68 @@ class TestTQ600a5ReportingAndRegistration(unittest.TestCase):
         # covers: TQ-600a-5
         # angle: seam
         """
-        Static (type: unit, per the AC's test_spec) check: pytest.ini
-        registers both marker names in its ``[pytest] markers =`` section,
-        AND its addopts carries ``--strict-markers`` (test-writer's assumed
-        design choice) -- so a MISSPELLED variant of either marker is a hard
-        pytest collection error rather than a silently-tolerated custom mark
-        indistinguishable from an honest, deliberate omission.
+        Behavioral (not grep-only) check that pytest.ini's marker
+        registration plus ``--strict-markers`` actually turns a MISSPELLED
+        marker declaration into a hard collection error -- distinguishing
+        "the enforcement is wired and runs" from "the config string is
+        merely present" (see this repo's CLAUDE.md "Gate / Workflow ACs --
+        Verify Behaviorally, Not by Grep").
 
-        NAMED MUTATION: remove the marker registration from pytest.ini; the
-        assertions below go RED.
+        Spawns a real child pytest session (cwd=worktree root, so the child
+        discovers this repo's actual pytest.ini) over a test file that
+        declares a deliberately misspelled variant of READER_MARKER. The
+        child test body does no real work and never requests the
+        shared_reference_layout fixture: an unknown marker under
+        --strict-markers is rejected at COLLECTION time, before any fixture
+        would run, so this stays cheap -- no build.py deploy is ever
+        triggered.
 
-        Not suffixed _MANUAL: this reads pytest.ini directly, no subprocess.
+        NAMED MUTATION: remove the marker registration (or the
+        --strict-markers addopts entry) from pytest.ini; the misspelled
+        marker would then be silently tolerated, the child session would
+        exit 0, and the assertions below go RED.
+
+        children_dir lives under _SUITE_PERF_DIR (inside the worktree), NOT
+        a tempfile tempdir: pytest's rootdir/inifile discovery walks up from
+        the given path's own ancestry, not from `cwd`, so a /tmp-rooted
+        child would never find this repo's pytest.ini -- silently defeating
+        the very registration this test exists to prove (see test 10's
+        docstring below for the same trap).
         """
-        ini_text = PYTEST_INI_PATH.read_text(encoding="utf-8")
-        self.assertIn(
-            "markers",
-            ini_text,
-            msg="pytest.ini has no [pytest] markers section registering the declaration",
+        misspelled_marker = f"{READER_MARKER}_typo_tq600a5"
+        children_dir = _SUITE_PERF_DIR / "_strict_marker_child_tq600a5"
+        self.addCleanup(_rmtree_if_exists, children_dir)
+        _write_consumer_test(
+            children_dir,
+            "test_misspelled_marker.py",
+            (
+                "import pytest\n\n\n"
+                f"@pytest.mark.{misspelled_marker}\n"
+                "def test_uses_misspelled_marker():\n"
+                "    assert True\n"
+            ),
         )
-        self.assertIn(
-            READER_MARKER,
-            ini_text,
-            msg=f"pytest.ini does not register the {READER_MARKER!r} marker",
+        result = run_child_session(
+            children_dir,
+            force_register_plugin=False,
         )
-        self.assertIn(
-            MUTATOR_MARKER,
-            ini_text,
-            msg=f"pytest.ini does not register the {MUTATOR_MARKER!r} marker",
-        )
-        self.assertIn(
-            "--strict-markers",
-            ini_text,
+        self.assertNotEqual(
+            0,
+            result.returncode,
             msg=(
-                "pytest.ini addopts does not carry --strict-markers -- a "
-                "misspelled marker variant would only warn, not error, and "
-                "could go unnoticed indistinguishably from an honest omission"
+                "child session with a misspelled marker did not fail -- "
+                "--strict-markers is not actually enforced, so a typo'd "
+                "declaration is silently ignored rather than caught as a "
+                f"hard collection error:\nstdout={result.stdout}\n"
+                f"stderr={result.stderr}"
+            ),
+        )
+        self.assertIn(
+            misspelled_marker,
+            result.stdout + result.stderr,
+            msg=(
+                "misspelled marker name did not appear in the failure "
+                f"output:\nstdout={result.stdout}\nstderr={result.stderr}"
             ),
         )
 
