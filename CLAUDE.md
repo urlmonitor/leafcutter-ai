@@ -268,14 +268,25 @@ dead code, so it cannot distinguish "the gate is wired and runs" from "the gate 
 is defined and ignored." Pair every such AC with an independent adversarial review
 (code-review + a logic-check that runs the code) before marking it done.
 
-**Why this matters:** The fast-lane feature — built specifically to defeat phantom-done —
-itself shipped a phantom-done runner: `fast-lane-build.js` passed its grep-only structural
-tests while **never executing** its red/green gates, and `fast_lane.py` had no CLI so the
-runner's `select_batch` call was a silent no-op. Both were invisible to the structural
-tests and were caught only by an independent code-review agent + a logic-check agent that
-executed the code; the fix required behavioral (CLI) and semantic-consumption (guarded
-control-flow) tests.
+**This rule outranks the ticket's own `test_spec`.** An AC's `type`/`angle` may explicitly
+sanction the grep form; write the behavioral test anyway. The same authoring pass writes
+both the weak test and the spec that blesses it, so the declaration is not independent
+evidence that the seam is the right one — and a deliberate-looking scope is exactly what
+makes a reviewer downgrade the finding to medium confidence instead of pulling on it.
+
+**Why this matters:** The fast-lane feature — built to defeat phantom-done — itself shipped
+a phantom-done runner: `fast-lane-build.js` passed its grep-only structural tests while
+**never executing** its red/green gates, and `fast_lane.py` had no CLI, so `select_batch`
+was a silent no-op. Caught only by an independent code-review + a logic-check that ran it.
 (Source: fast-lane build + review, 2026-07-22.)
+
+Later instance: a marker-registration test asserted only that `--strict-markers` appeared
+in `pytest.ini` — the form its AC's `test_spec` declared as `type: unit, angle: seam`.
+Rewritten behaviorally, it showed `--strict-markers` inside `addopts` enforces nothing on
+pytest 9.0.3: the string was present and the behavior absent for as long as the file had
+existed. All three defects on that drive were found by asking **why** something was red,
+not whether it was red.
+(Source: TQ-600a-5, 2026-09-30.)
 
 ### New Hook / Gate Dependencies Must Be in the Build Deploy-Manifest
 
