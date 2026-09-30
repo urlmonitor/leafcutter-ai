@@ -31,7 +31,7 @@ pytest-xdist>=3.5
 # provisions no environments and only dispatches the commands.
 pre-commit>=3.5
 
-# Decision kernel runtime (leafcutter_kernel/ — leafcutter-ai only, NOT shipped
+# Decision kernel runtime (kernel/ — leafcutter-ai only, NOT shipped
 # to adopter projects by build.py). Pinned exactly (==), unlike the loose pins
 # above: the kernel's checkpoint serialization, interrupt/resume semantics and
 # provider response shapes are version-sensitive, and langchain-typesafe is a

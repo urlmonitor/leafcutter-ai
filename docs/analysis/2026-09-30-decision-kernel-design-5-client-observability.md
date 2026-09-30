@@ -41,17 +41,17 @@ class RunService(Protocol):
 
 ## CLI (`adapters/cli.py`, `adapters/envelope.py`, P7)
 
-The spec's `leafcutter …` command is `python -m leafcutter_kernel …` here: the repo has no
+The spec's `leafcutter …` command is `python -m kernel …` here: the repo has no
 `pyproject.toml`. Request content always travels as JSON files or on stdin (`-`). A free-form
 goal is never interpolated into a shell command (§11.2).
 
 ```bash
-python -m leafcutter_kernel run     --input task-input.json --json [--config F] [--env-file F]
-python -m leafcutter_kernel resume  --run-id RUN --response response.json --json
-python -m leafcutter_kernel status  --run-id RUN --json
-python -m leafcutter_kernel cancel  --run-id RUN --actor human:<id> --json
-python -m leafcutter_kernel install-skill --target-dir <dir>/.claude/skills --name <name> [--force]
-python -m leafcutter_kernel gaps    --json          # aggregated gap view (P9)
+python -m kernel run     --input task-input.json --json [--config F] [--env-file F]
+python -m kernel resume  --run-id RUN --response response.json --json
+python -m kernel status  --run-id RUN --json
+python -m kernel cancel  --run-id RUN --actor human:<id> --json
+python -m kernel install-skill --target-dir <dir>/.claude/skills --name <name> [--force]
+python -m kernel gaps    --json          # aggregated gap view (P9)
 ```
 
 - stdout carries exactly one JSON document; logs go to stderr.
@@ -72,17 +72,17 @@ or `HumanQuestion`, including `interaction.id`, `state_revision`, `output_schema
 
 ## Claude Code skill (P7)
 
-- **Source.** `leafcutter_kernel/adapters/claude_code/SKILL.md` is tracked in-package and never under `templates/`, so it is never shipped.
+- **Source.** `kernel/adapters/claude_code/SKILL.md` is tracked in-package and never under `templates/`, so it is never shipped.
 - **Install location.** In this repo `.claude/skills/` is gitignored build output. The user's Claude Code session runs from the **workspace root** (`C:\Users\Hendrik\Code\leafcutter`), whose `.claude/skills/` build.py manages. It keeps unknown directories and warns about them.
 - **Install command.** `install-skill` renders the template, substituting the absolute repo root and the Python executable, and writes `<target-dir>/<name>/SKILL.md`. It refuses to overwrite a directory whose `SKILL.md` lacks the marker `<!-- leafcutter-kernel-skill -->` unless `--force` is given. Running it writes outside the repo, so **the user runs it once, or approves it**.
 - **Name: open user decision.** `/leafcutter` already exists as the shipped knowledge-hub command (`templates/workflows/leafcutter.md` → `.claude/commands/leafcutter.md`). Claude Code documents neither which one wins nor a warning when a skill and a legacy command share a name. Options:
   - (a) Rename the hub command (a shipped change needing its own ticket), then install the skill as `leafcutter`, as the spec says.
   - (b) Install as `leafcutter` and let P7 verify precedence empirically in a real session.
   - (c) Use another name such as `leafcutter-run`.
-- **Skill frontmatter:** `name`, `description`, `argument-hint: [goal]`, `disable-model-invocation: true`, and `allowed-tools: Bash(PYTHONPATH=<repo> <python> -m leafcutter_kernel:*), Read, Write, AskUserQuestion`.
+- **Skill frontmatter:** `name`, `description`, `argument-hint: [goal]`, `disable-model-invocation: true`, and `allowed-tools: Bash(PYTHONPATH=<repo> <python> -m kernel:*), Read, Write, AskUserQuestion`.
 - **Skill body** (transport only, per §11.4):
 
-1. Write `$ARGUMENTS` verbatim as `goal` into a TaskInput JSON file in the session scratch directory, with `caller={"id":"user","kind":"human"}` and `scope.repository_root=<repo>`. Run `PYTHONPATH=<repo> <python> -m leafcutter_kernel run --input <file> --json`.
+1. Write `$ARGUMENTS` verbatim as `goal` into a TaskInput JSON file in the session scratch directory, with `caller={"id":"user","kind":"human"}` and `scope.repository_root=<repo>`. Run `PYTHONPATH=<repo> <python> -m kernel run --input <file> --json`.
 2. `waiting_human`:
    - Present `question`, `choices` and their consequences with AskUserQuestion, allowing free text only if `free_text_allowed`.
    - Write a `leafcutter.human_answer.v1` submission with `actor={"kind":"human","id":"user"}` and `relayed_by="claude_code"`, echoing `interaction_id` and `state_revision`.

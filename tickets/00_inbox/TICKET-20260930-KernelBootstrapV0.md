@@ -20,7 +20,7 @@ last_updated: 2026-09-30
 files_touched:
   - requirements-dev.txt
   - docs/components.json
-  - leafcutter_kernel/__init__.py
+  - kernel/__init__.py
   - docs/architecture/components/decision-kernel.md
   - docs/analysis/2026-09-30-decision-kernel-design.md
   - docs/analysis/2026-09-30-decision-kernel-design-2-contracts-registry-config.md

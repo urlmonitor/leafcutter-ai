@@ -82,30 +82,30 @@ scratchpad and were not committed.
 | Capability registry | `config/agent_registry.json`, `config/skill_registry.json` (+ draft-07 schemas), slash commands in `templates/commands/*.md` and `templates/workflows/*.md` | **Excluded** (user decision). These describe Claude Code agents, skills and commands. They are write-capable, have no typed I/O contracts, and are shipped to adopters. The kernel reads only the new `config/capability_registry.json`, which starts empty. A legacy asset enters only through an `admission` record (part 2). |
 | Glossary / components | `docs/glossary.md` (`### term`; no lookup API), `docs/components.json` (dict keyed by id) | `Scope.component_ids` is validated against `components.json`. Both are knowledge-map surfaces for retrieval. Deeper use is Stage 2. |
 | Configuration | `scripts/config_loader.py` (build-time `skills_config` only): JSON defaults in `config/` + schema + project override | Same convention: `config/kernel_config.default.json` + `.schema.json`, validated by a Pydantic `KernelConfig`. No second config framework. |
-| Secrets | No `.env` helper and no python-dotenv. `debugging/test_judge/judge.py::load_api_key` checks env first, then parses a `.env` file | Same pattern in `leafcutter_kernel/secrets.py`, with a walk-up search for `.env`. The workspace `.env` sits above the repo, and worktrees do not receive it. |
+| Secrets | No `.env` helper and no python-dotenv. `debugging/test_judge/judge.py::load_api_key` checks env first, then parses a `.env` file | Same pattern in `kernel/secrets.py`, with a walk-up search for `.env`. The workspace `.env` sits above the repo, and worktrees do not receive it. |
 | Model clients | None shared. `judge.py` is a direct-HTTP prototype; `scripts/evals` shells out to `claude -p` | `langchain-typesafe` (spec §9.1) behind `providers/jev.py`. `judge.py` stays the reference for request/response shapes and the `uid` self-consistency trick. |
 | Source / repo access | `scripts/knowledge_query.py::build_knowledge_map` (title/description substring match over `config/paths.json` surfaces; about 11.7 s for a full map). `knowledge_frontmatter_reader.py`, `adr_refs.scan`. No grep helper | Retrieval adapter = knowledge-map bridge (loaded by path, filtered by surface, cached per process) plus a bounded lexical search over allowlisted roots (part 4). |
 | Logging / observability | `logging.getLogger(__name__)`; `basicConfig` only in `main()`. JSONL sinks in gitignored `debugging/logs/` | Same logger convention. Run events go to the run directory. Langfuse is new. |
 | Persistence | No sqlite anywhere. `scripts/pause_store.py` keeps one JSON per run in `.leafcutter/paused_runs/` (gitignored, survives build clean) | Run root `.leafcutter/kernel/` by the same precedent, holding `AsyncSqliteSaver` checkpoints plus run records (part 3). |
 | Redaction | None. `templates/skills/security-scanner/scripts/scan_secrets.py` *detects* secrets (`_RULES`, entropy) but does not mask them | New `observability/redaction.py`: exact masking of loaded secret values, reuse of `_RULES` loaded by path (with a local fallback), truncation. |
 | Human pause / resume | ADR-024 substrate (`resolveGate`, `.leafcutter/paused_runs/`) in the JS workflow engine | Not reusable from Python. Its durable pending-question pattern informs the interaction ledger. |
-| CLI and tests | argparse CLIs printing JSON. `pytest.ini`: `pythonpath = .`, `strict_markers`. `tests/` is a package; `unit_tests/` is not | `python -m leafcutter_kernel …`. Tests go in `tests/leafcutter_kernel/`: a `unit_tests/leafcutter_kernel/` package would shadow the real package. |
+| CLI and tests | argparse CLIs printing JSON. `pytest.ini`: `pythonpath = .`, `strict_markers`. `tests/` is a package; `unit_tests/` is not | `python -m kernel …`. Tests go in `tests/kernel/`: a `unit_tests/kernel/` package would shadow the real package. |
 | Claude Code surfaces | `.claude/commands` and `.claude/skills` are gitignored build outputs of `templates/` (shipped). `/leafcutter` already exists as the knowledge hub (`templates/workflows/leafcutter.md`) | The kernel skill source is tracked in-package and installed by an explicit command. The name collision is an open user decision (part 5). |
 
 ## Package location
 
-A new top-level package, **`leafcutter_kernel/`**, at the repository root.
+A new top-level package, **`kernel/`**, at the repository root.
 
 - `build.py` deploys `templates/` and `scripts/`. A top-level package is never shipped to
   adopters, which satisfies user decision 2 with no package-boundary changes.
 - `scripts/` is a flat `sys.path` script collection with no `__init__.py`. `templates/` is the
   shipped source. Neither fits an importable, packaging-ready runtime.
-- `pytest.ini` sets `pythonpath = .`, so `import leafcutter_kernel` works in tests, and
-  `python -m leafcutter_kernel` is the CLI.
+- `pytest.ini` sets `pythonpath = .`, so `import kernel` works in tests, and
+  `python -m kernel` is the CLI.
 - It is packaging-ready: the only cross-tree dependency is the knowledge-map bridge in
   `capabilities/retrieval/knowledge_map.py`, which loads `scripts/knowledge_query.py` by path
   and degrades to "source unavailable".
-- Phase 0 created `leafcutter_kernel/__init__.py` in the same commit as the `decision_kernel`
+- Phase 0 created `kernel/__init__.py` in the same commit as the `decision_kernel`
   entry in `docs/components.json`, which `check-structural-change` requires.
 
 ## Module map
@@ -115,7 +115,7 @@ targets 300 lines or fewer; the hard limit is 400 (`check-file-size`).
 Pn = the owning phase (part 6).
 
 ```text
-leafcutter_kernel/
+kernel/
   __init__.py            P0 version marker; P7 re-exports RunService
   __main__.py            P7 -> adapters.cli.main
   config.py              P1 KernelConfig + load_kernel_config()
@@ -129,7 +129,7 @@ leafcutter_kernel/
   registry/              P1 adapter.py eligibility.py bindings.py __init__.py
   providers/             P1 base.py (JevPort + normalized answers), fakes.py (ScriptedJev)
                          P3 jev.py (TypeSafeClassifier adapter), jev_errors.py
-  kernel/                P4 state.py graph.py context.py guards.py fingerprint.py validation.py
+  scheduler/             P4 state.py graph.py context.py guards.py fingerprint.py validation.py
                          P4 nodes_intake.py nodes_routing.py nodes_execution.py
                          P4 nodes_integration.py nodes_finalize.py routing_templates.py
                          P4 creates, P6 takes over: nodes_interaction.py
@@ -150,7 +150,7 @@ config/capability_registry.json          P1 creates empty; P5 adds all entries
 config/capability_registry.schema.json   P1
 config/kernel_config.default.json        P1 (every key in part 2; later phases read only)
 config/kernel_config.schema.json         P1 (generated from KernelConfig)
-tests/leafcutter_kernel/                 per phase; __init__.py in every directory (part 6)
+tests/kernel/                 per phase; __init__.py in every directory (part 6)
 ```
 
 ## Deliberate deviations from the specification
@@ -161,11 +161,11 @@ tests/leafcutter_kernel/                 per phase; __init__.py in every directo
    It is an ADR candidate (next free number ADR-051) and has not been written yet.
 2. **Skill location.** Spec §11.1 names `.claude/skills/leafcutter/SKILL.md`. In this repo that
    directory is gitignored build output, and `/leafcutter` is already the shipped knowledge-hub
-   command. The source is therefore tracked at `leafcutter_kernel/adapters/claude_code/SKILL.md`
+   command. The source is therefore tracked at `kernel/adapters/claude_code/SKILL.md`
    and installed on request (part 5). The final name is an open user decision.
 3. **JSON config, not YAML.** Spec §21 of V0 sketched YAML. Revision 3 forbids a second config
    system, and the repo convention is JSON + schema in `config/`.
 4. **No console script.** The repo has no `pyproject.toml`, so the spec's
-   `leafcutter run …` is `python -m leafcutter_kernel run …` with identical flags.
+   `leafcutter run …` is `python -m kernel run …` with identical flags.
 5. **Host output schemas are registered IDs only.** Spec §7.11 prefers registered IDs.
    Free-form `required_output_schema` JSON Schema from models is not accepted in V0.

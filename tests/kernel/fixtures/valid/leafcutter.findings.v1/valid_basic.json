@@ -1,0 +1,16 @@
+{
+  "findings": [
+    {
+      "id": "find-0123456789abcdef",
+      "claim": "The ADR mandates sqlite.",
+      "kind": "source_fact",
+      "supporting_evidence_ids": [
+        "ev-f542bf3ea1abf8d1"
+      ],
+      "producer": "host.synthesize"
+    }
+  ],
+  "unknowns": [
+    "Disk quota"
+  ]
+}

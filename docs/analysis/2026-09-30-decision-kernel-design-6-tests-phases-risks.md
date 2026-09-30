@@ -16,12 +16,12 @@ Back to [part 1](2026-09-30-decision-kernel-design.md). Exit gate: §16 in
 
 ## Test layout
 
-All kernel tests live in `tests/leafcutter_kernel/`, with an `__init__.py` in every directory.
-`tests/` is a package, so modules import as `tests.leafcutter_kernel.*`. A
-`unit_tests/leafcutter_kernel/` package would shadow the real `leafcutter_kernel` under pytest's
+All kernel tests live in `tests/kernel/`, with an `__init__.py` in every directory.
+`tests/` is a package, so modules import as `tests.kernel.*`. A
+`unit_tests/kernel/` package would shadow the real `kernel` under pytest's
 prepend import mode.
 
-Shared helpers live in `tests/leafcutter_kernel/helpers.py` and are imported explicitly (no
+Shared helpers live in `tests/kernel/helpers.py` and are imported explicitly (no
 conftest, per `tests/README`). They provide:
 
 - a temporary run root
@@ -33,26 +33,26 @@ conftest, per `tests/README`). They provide:
 Rules for every test:
 
 - **Offline by default.** No network. Jev is always `ScriptedJev` or an `httpx2.MockTransport`-backed classifier.
-- **Live tests** live in `tests/leafcutter_kernel/live/` and are guarded by `@pytest.mark.skipif(os.environ.get("LEAFCUTTER_KERNEL_LIVE") != "1", …)`. Use `skipif`, never `pytest.skip`, because `check-contract-shrinking` rejects the latter. No new pytest markers.
-- **Real entry points.** Assert behaviour through the real entry points: `graph.ainvoke`, `RunService`, and `python -m leafcutter_kernel` as a subprocess. Never by grepping source (CLAUDE.md "verify behaviorally").
+- **Live tests** live in `tests/kernel/live/` and are guarded by `@pytest.mark.skipif(os.environ.get("LEAFCUTTER_KERNEL_LIVE") != "1", …)`. Use `skipif`, never `pytest.skip`, because `check-contract-shrinking` rejects the latter. No new pytest markers.
+- **Real entry points.** Assert behaviour through the real entry points: `graph.ainvoke`, `RunService`, and `python -m kernel` as a subprocess. Never by grepping source (CLAUDE.md "verify behaviorally").
 
 ## Spec §16 exit gate → tests
 
-| §16 scenario | Test (path under `tests/leafcutter_kernel/`) | Phase |
+| §16 scenario | Test (path under `tests/kernel/`) | Phase |
 |---|---|---|
 | Existing applicable decision basis | `integration/test_demo_scenarios.py::test_existing_basis_resolves_without_host_work` | P10 |
 | Missing decision basis → evidence → resume | `integration/test_decision_loop.py::test_insufficient_then_research_then_resolved` | P10 |
 | Unknown options | `integration/test_demo_scenarios.py::test_unknown_options_use_host_proposals` | P10 |
 | Missing human preference | `interaction/test_human_interrupt_resume.py`; `integration/test_demo_scenarios.py::test_preference_pauses_and_resumes` | P6, P10 |
-| Two independent evidence needs run concurrently | `kernel/test_parallel_fanout.py` (time overlap + deterministic merge order) | P4 |
-| Child finishes before root | `kernel/test_root_completion.py` | P4 |
+| Two independent evidence needs run concurrently | `scheduler/test_parallel_fanout.py` (time overlap + deterministic merge order) | P4 |
+| Child finishes before root | `scheduler/test_root_completion.py` | P4 |
 | True capability gap | `integration/test_gap_fallback.py`, `integration/test_gap_no_fallback.py` | P9 |
-| Known but unavailable | `registry/test_eligibility.py`, `kernel/test_routing.py::test_unavailable_is_not_a_gap` | P1, P4 |
+| Known but unavailable | `registry/test_eligibility.py`, `scheduler/test_routing.py::test_unavailable_is_not_a_gap` | P1, P4 |
 | Invalid host result or forged IDs | `interaction/test_submissions.py::test_rejects_*` | P6 |
 | Duplicate resume | `interaction/test_submissions.py::test_identical_replay_idempotent`, `…conflicting…`, `…stale…` | P6 |
 | Process restart at handoff | `interaction/test_restart_resume.py` (CLI subprocess killed before and after the ledger write) | P6, P7 |
-| Repeated question, no new information | `kernel/test_guards.py::test_no_progress_*` | P4, P9 |
-| Provider failure | `providers/test_jev_adapter.py::test_retries_then_unavailable`, `kernel/test_routing.py::test_provider_unavailable_fails_without_gap` | P3, P4 |
+| Repeated question, no new information | `scheduler/test_guards.py::test_no_progress_*` | P4, P9 |
+| Provider failure | `providers/test_jev_adapter.py::test_retries_then_unavailable`, `scheduler/test_routing.py::test_provider_unavailable_fails_without_gap` | P3, P4 |
 | Conflicting evidence | `capabilities/test_decision_graph.py::test_conflict_escalates`, `capabilities/test_research_graph.py::test_conflict_recorded` | P5 |
 | Unknown billing | `contracts/test_models.py::test_usage_unknown_is_none`, `capabilities/test_host_operations.py::test_host_usage_unavailable` | P1, P8 |
 | Malicious source instructions | `capabilities/test_retrieval_repository.py::test_instruction_text_stays_evidence` | P5 |
@@ -63,9 +63,9 @@ Rules for every test:
 Earlier V0 §25 items are covered as follows:
 
 - **Contract validation and serialization.** `contracts/test_models.py`, `test_schema_catalog.py`, `test_fixtures.py` (valid/invalid JSON fixtures per schema id), `test_schema_export.py` (committed JSON Schemas match) and `persistence/test_checkpointer_serde.py` (strict msgpack round-trip). Owners: P1, P2.
-- **Routing, including NONE and low confidence.** `kernel/test_routing.py`.
-- **Merge semantics.** `kernel/test_merge.py`.
-- **Every guard.** `kernel/test_guards.py`.
+- **Routing, including NONE and low confidence.** `scheduler/test_routing.py`.
+- **Merge semantics.** `scheduler/test_merge.py`.
+- **Every guard.** `scheduler/test_guards.py`.
 - **Registry adaptation.** `registry/test_registry_load.py` and `test_bindings.py`.
 - **Host fallback with a fake adapter.** `capabilities/test_host_operations.py`.
 - **Live suite.** `live/test_live_jev.py` and `live/test_live_end_to_end.py`.
@@ -75,18 +75,18 @@ Earlier V0 §25 items are covered as follows:
 "Owns" lists the files a phase creates or edits. No two phases in the same wave touch the same
 file. A file handed from one phase to the next is marked "takes over".
 
-| Phase | §15.2 | Owns (under `leafcutter_kernel/` unless given as a full path) | Depends on | Parallel-safe with |
+| Phase | §15.2 | Owns (under `kernel/` unless given as a full path) | Depends on | Parallel-safe with |
 |---|---|---|---|---|
-| **P0** (done) | Stage 0 | `requirements-dev.txt`, `docs/components.json` (`decision_kernel` entry), `leafcutter_kernel/__init__.py`, ticket, spec copy, design docs, `docs/architecture/components/decision-kernel.md` | — | — |
-| **P1** | 1 | `config.py`, `secrets.py`, `service.py` (protocol only), `contracts/*` (12 files), `schemas/*`, `registry/*`, `providers/{__init__,base,fakes}.py`, `observability/{__init__,tracer,correlation}.py`, `persistence/{__init__,base,memory}.py`, `capabilities/{__init__,base}.py`, `config/capability_registry.json` (empty) + `.schema.json`, `config/kernel_config.default.json` + `.schema.json`, `tests/leafcutter_kernel/{__init__,helpers}.py`, `tests/leafcutter_kernel/{fixtures,contracts,registry,config}/**`, `tests/leafcutter_kernel/observability/test_recording_tracer.py` | P0 | — |
-| **P2** | 2 | `persistence/{run_store,checkpointer,gap_store,artifacts}.py`, `observability/{langfuse_tracer,redaction,spool}.py`, `tests/leafcutter_kernel/persistence/**`, `tests/…/observability/{test_langfuse_tracer,test_redaction}.py` | P1 | P3, P4, P5 |
+| **P0** (done) | Stage 0 | `requirements-dev.txt`, `docs/components.json` (`decision_kernel` entry), `kernel/__init__.py`, ticket, spec copy, design docs, `docs/architecture/components/decision-kernel.md` | — | — |
+| **P1** | 1 | `config.py`, `secrets.py`, `service.py` (protocol only), `contracts/*` (12 files), `schemas/*`, `registry/*`, `providers/{__init__,base,fakes}.py`, `observability/{__init__,tracer,correlation}.py`, `persistence/{__init__,base,memory}.py`, `capabilities/{__init__,base}.py`, `config/capability_registry.json` (empty) + `.schema.json`, `config/kernel_config.default.json` + `.schema.json`, `tests/kernel/{__init__,helpers}.py`, `tests/kernel/{fixtures,contracts,registry,config}/**`, `tests/kernel/observability/test_recording_tracer.py` | P0 | — |
+| **P2** | 2 | `persistence/{run_store,checkpointer,gap_store,artifacts}.py`, `observability/{langfuse_tracer,redaction,spool}.py`, `tests/kernel/persistence/**`, `tests/…/observability/{test_langfuse_tracer,test_redaction}.py` | P1 | P3, P4, P5 |
 | **P3** | 3 | `providers/{jev,jev_errors}.py`, `tests/…/providers/**`, `tests/…/live/{__init__,test_live_jev}.py` | P1 | P2, P4, P5 |
-| **P4** | 4 (+ base guards of 9) | `kernel/*` except where later taken over. P4 creates `nodes_interaction.py` (basic open/await with `interrupt`) and `nodes_gaps.py` (record, then block). `tests/…/kernel/**` | P1 | P2, P3, P5 |
+| **P4** | 4 (+ base guards of 9) | `scheduler/*` except where later taken over. P4 creates `nodes_interaction.py` (basic open/await with `interrupt`) and `nodes_gaps.py` (record, then block). `tests/…/scheduler/**` | P1 | P2, P3, P5 |
 | **P5** | 5 | `capabilities/{decision,research,retrieval}/**`; `config/capability_registry.json` entries (all 7, including `host.*` descriptors); `tests/…/capabilities/test_{decision_graph,research_graph,retrieval_repository,knowledge_map_bridge}.py` | P1 | P2, P3, P4 |
-| **P6** | 6 | Takes over `kernel/nodes_interaction.py`; `interaction/{__init__,submissions,packets}.py`; `tests/…/interaction/**` | P2, P4 | — |
+| **P6** | 6 | Takes over `scheduler/nodes_interaction.py`; `interaction/{__init__,submissions,packets}.py`; `tests/…/interaction/**` | P2, P4 | — |
 | **P7** | 7 | Takes over `service.py` (implementation); `bootstrap.py`, `__main__.py`, `__init__.py` (re-exports), `adapters/**` incl. `claude_code/{SKILL.md,install.py}`; `tests/…/adapters/**` | P2, P3, P5, P6 | — |
 | **P8** | 8 | `capabilities/host/**`; edits `bootstrap.py` (registers `host.*` bindings) after P7; `tests/…/capabilities/test_host_operations.py` | P6, P7 | — |
-| **P9** | 9 | Takes over `kernel/nodes_gaps.py` and `kernel/guards.py` (hardening); edits `service.py` (`cancel_run` path); `tests/…/integration/{__init__,test_gap_fallback,test_gap_no_fallback,test_cancel}.py`, `tests/…/kernel/test_guards_hardening.py` | P7, P8 | — |
+| **P9** | 9 | Takes over `scheduler/nodes_gaps.py` and `scheduler/guards.py` (hardening); edits `service.py` (`cancel_run` path); `tests/…/integration/{__init__,test_gap_fallback,test_gap_no_fallback,test_cancel}.py`, `tests/…/scheduler/test_guards_hardening.py` | P7, P8 | — |
 | **P10** | 10 | `tests/…/integration/{test_decision_loop,test_demo_scenarios}.py`, `tests/…/live/{test_live_langfuse,test_live_end_to_end}.py`, `docs/how-to/run-the-decision-kernel.md`, `docs/how-to/inspect-kernel-traces-with-langfuse-mcp.md`, demo report doc, `changelogs/<entry>.md`, `docs/components.json` (status active, `exposed_interfaces`), updates to this design series | all | — |
 | **P11** (after MVP) | §15.5 | Dogfood run on workflow representation; a proposed ADR (next free: ADR-051/052), never auto-approved | P10 | — |
 
@@ -151,7 +151,7 @@ A config key missing from part 2 needs an orchestrator-sequenced edit. Never add
 | 5 | `aupdate_state(as_node="finalize")` on an interrupted thread is not yet verified | P9 verifies; `run.json` stays authoritative for cancellation |
 | 6 | Nodes re-execute on resume | No side effects before `interrupt()`; tracer spans in `await_interaction` open only after resume |
 | 7 | The knowledge map takes about 11.7 s per full build and is rebuilt per CLI process | Surface filter, per-process cache, timeout; a slow source becomes a limitation |
-| 8 | The CI ruff job lints only `scripts tests unit_tests`, so `leafcutter_kernel/` is not linted in CI | Proposed ci.yml change needs user approval; phases run `ruff check leafcutter_kernel` locally |
+| 8 | The CI ruff job lints only `scripts tests unit_tests`, so `kernel/` is not linted in CI | Proposed ci.yml change needs user approval; phases run `ruff check kernel` locally |
 | 9 | The Langfuse legacy trace API returns 410; MCP tool names are unverified | Use the observations API; P10 reads the current L3 docs; the user configures MCP |
 | 10 | CI now installs langchain, langgraph and langfuse | Accepted; the pins keep it reproducible |
 | 11 | `transform-doc-index` regenerates `docs/INDEX.md` on every docs commit | Review the INDEX diff before each commit |

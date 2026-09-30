@@ -101,8 +101,8 @@ Back to [part 1](2026-09-30-decision-kernel-design.md).
 `SCHEMA_CATALOG: dict[str, type[KernelModel]]` maps each schema ID to a payload model.
 `validate_payload(schema_id, data) -> KernelModel` raises `UnknownSchemaError` or
 `PayloadValidationError`. `export_json_schemas(dir)` writes
-`leafcutter_kernel/schemas/<id>.schema.json`, and a test asserts the committed files match.
-Fixtures live in `tests/leafcutter_kernel/fixtures/{valid,invalid}/<id>/*.json`.
+`kernel/schemas/<id>.schema.json`, and a test asserts the committed files match.
+Fixtures live in `tests/kernel/fixtures/{valid,invalid}/<id>/*.json`.
 
 | Schema ID | Payload fields |
 |---|---|

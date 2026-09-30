@@ -1,0 +1,230 @@
+"""
+MODULE: kernel.contracts.schema_catalog
+GOAL: Map schema ids to payload models, validate payloads, run semantic (reference) checks and
+    export the committed JSON Schemas.
+BUSINESS CONTEXT: Schema validation proves structure, not truth (Rev 3 section 7.11); semantic
+    checks add the cheap, deterministic truths: cited evidence exists, a selected option was
+    supplied, a human answer picked an offered choice.
+ARCHITECTURE: SCHEMA_CATALOG is the single registry; errors build their own messages. JSON
+    Schema files are written deterministically and a test asserts they match the models.
+"""
+
+from __future__ import annotations
+
+import json
+import logging
+from collections.abc import Iterable
+from dataclasses import dataclass, field
+from pathlib import Path
+
+from pydantic import ValidationError
+
+from kernel.contracts import schema_ids as sid
+from kernel.contracts.base import KernelModel
+from kernel.contracts.payloads import (
+    DecisionReportPayload,
+    DecisionRequestPayload,
+    EvidenceBundlePayload,
+    FindingsPayload,
+    GoalRequestPayload,
+    HumanAnswerPayload,
+    HumanQuestionRequestPayload,
+    OptionsPayload,
+    OptionsRequestPayload,
+    ResearchRequestPayload,
+    RetrievalRequestPayload,
+    SynthesisRequestPayload,
+)
+
+logger = logging.getLogger(__name__)
+
+JSON_SCHEMA_DIALECT = "https://json-schema.org/draft/2020-12/schema"
+
+SCHEMA_CATALOG: dict[str, type[KernelModel]] = {
+    sid.GOAL_REQUEST: GoalRequestPayload,
+    sid.DECISION_REQUEST: DecisionRequestPayload,
+    sid.DECISION_REPORT: DecisionReportPayload,
+    sid.RESEARCH_REQUEST: ResearchRequestPayload,
+    sid.RETRIEVAL_REQUEST: RetrievalRequestPayload,
+    sid.EVIDENCE_BUNDLE: EvidenceBundlePayload,
+    sid.OPTIONS_REQUEST: OptionsRequestPayload,
+    sid.OPTIONS: OptionsPayload,
+    sid.SYNTHESIS_REQUEST: SynthesisRequestPayload,
+    sid.FINDINGS: FindingsPayload,
+    sid.HUMAN_QUESTION_REQUEST: HumanQuestionRequestPayload,
+    sid.HUMAN_ANSWER: HumanAnswerPayload,
+}
+
+
+class UnknownSchemaError(ValueError):
+    """The schema id is not registered in SCHEMA_CATALOG."""
+
+    def __init__(self, schema_id: str) -> None:
+        """Build the message from the offending id."""
+        super().__init__(f"unknown schema id: {schema_id}")
+        self.schema_id = schema_id
+
+
+class PayloadValidationError(ValueError):
+    """A payload failed structural validation against its registered schema."""
+
+    def __init__(self, schema_id: str, detail: str) -> None:
+        """Build the message from the schema id and Pydantic detail."""
+        super().__init__(f"payload invalid for {schema_id}: {detail}")
+        self.schema_id = schema_id
+        self.detail = detail
+
+
+class SemanticValidationError(ValueError):
+    """A structurally valid payload violated a reference rule."""
+
+    def __init__(self, schema_id: str, violations: list[str]) -> None:
+        """Build the message from the violations (kept on .violations)."""
+        super().__init__(f"semantic check failed for {schema_id}: {'; '.join(violations)}")
+        self.schema_id = schema_id
+        self.violations = violations
+
+
+def validate_payload(schema_id: str, data: dict) -> KernelModel:
+    """Validate data against the registered model for schema_id.
+
+    Args:
+        schema_id: A registered schema id.
+        data: The payload dict.
+
+    Returns:
+        KernelModel: The validated payload model.
+
+    Raises:
+        UnknownSchemaError: The id is not registered.
+        PayloadValidationError: The payload does not match the schema.
+    """
+    model = SCHEMA_CATALOG.get(schema_id)
+    if model is None:
+        raise UnknownSchemaError(schema_id)
+    try:
+        return model.model_validate(data)
+    except ValidationError as exc:
+        raise PayloadValidationError(schema_id, str(exc)) from exc
+
+
+@dataclass(frozen=True)
+class SemanticContext:
+    """Ids known to the run, used to check references inside a payload."""
+
+    known_evidence_ids: frozenset[str] = field(default_factory=frozenset)
+    known_finding_ids: frozenset[str] = field(default_factory=frozenset)
+    supplied_option_ids: frozenset[str] | None = None
+    offered_choice_ids: frozenset[str] | None = None
+
+
+def _missing(cited: Iterable[str], known: Iterable[str], what: str) -> list[str]:
+    """Return one violation per cited id that is not known."""
+    known_set = set(known)
+    return [f"{what} {c} does not exist" for c in sorted(set(cited) - known_set)]
+
+
+def _report_violations(p: DecisionReportPayload, ctx: SemanticContext) -> list[str]:
+    """Semantic checks for decision_report.v1."""
+    cited = [*p.supporting_evidence_ids, *p.contradicting_evidence_ids,
+             *(e for a in p.criterion_assessments for e in a.evidence_ids)]
+    out = _missing(cited, ctx.known_evidence_ids, "evidence")
+    if p.selected_option_id and ctx.supplied_option_ids is not None:
+        out += _missing([p.selected_option_id], ctx.supplied_option_ids, "selected option")
+    return out
+
+
+def _bundle_violations(p: EvidenceBundlePayload, ctx: SemanticContext) -> list[str]:
+    """Semantic checks for evidence_bundle.v1 (inline items count as known)."""
+    inline_ev = {e.id for e in p.evidence}
+    inline_fi = {f.id for f in p.findings}
+    out = _missing(p.evidence_ids, ctx.known_evidence_ids | inline_ev, "evidence")
+    out += _missing(p.finding_ids, ctx.known_finding_ids | inline_fi, "finding")
+    for f in p.findings:
+        cited = [*f.supporting_evidence_ids, *f.contradicting_evidence_ids]
+        out += _missing(cited, ctx.known_evidence_ids | inline_ev, "evidence")
+    return out
+
+
+def semantic_violations(schema_id: str, payload: KernelModel, ctx: SemanticContext) -> list[str]:
+    """Return the reference violations of a validated payload (empty list means OK).
+
+    Args:
+        schema_id: The payload's schema id.
+        payload: The validated payload model.
+        ctx: Ids known to the run.
+
+    Returns:
+        list[str]: Human-readable violations.
+    """
+    if isinstance(payload, DecisionReportPayload):
+        return _report_violations(payload, ctx)
+    if isinstance(payload, EvidenceBundlePayload):
+        return _bundle_violations(payload, ctx)
+    if isinstance(payload, HumanAnswerPayload):
+        if payload.choice_id and ctx.offered_choice_ids is not None:
+            return _missing([payload.choice_id], ctx.offered_choice_ids, "choice")
+        return []
+    if isinstance(payload, DecisionRequestPayload):
+        return _missing(payload.evidence_ids, ctx.known_evidence_ids, "evidence")
+    if isinstance(payload, (OptionsRequestPayload, SynthesisRequestPayload)):
+        return _missing(payload.evidence_ids, ctx.known_evidence_ids, "evidence")
+    return []
+
+
+def validate_semantics(schema_id: str, payload: KernelModel, ctx: SemanticContext) -> None:
+    """Raise SemanticValidationError if the payload has reference violations.
+
+    Args:
+        schema_id: The payload's schema id.
+        payload: The validated payload model.
+        ctx: Ids known to the run.
+    """
+    violations = semantic_violations(schema_id, payload, ctx)
+    if violations:
+        raise SemanticValidationError(schema_id, violations)
+
+
+def json_schema_for(schema_id: str) -> dict:
+    """Return the JSON Schema (draft 2020-12) of a registered payload, with $id and $schema."""
+    model = SCHEMA_CATALOG.get(schema_id)
+    if model is None:
+        raise UnknownSchemaError(schema_id)
+    schema = model.model_json_schema(mode="validation")
+    return {"$schema": JSON_SCHEMA_DIALECT, "$id": schema_id, **schema}
+
+
+def render_json_schema(schema_id: str) -> str:
+    """Return the deterministic text committed for a schema id."""
+    return json.dumps(json_schema_for(schema_id), indent=2, sort_keys=True) + "\n"
+
+
+def export_json_schemas(directory: Path) -> list[Path]:
+    """Write <schema_id>.schema.json for every catalog entry into directory.
+
+    Args:
+        directory: Target directory (created if missing).
+
+    Returns:
+        list[Path]: The written files in schema-id order.
+    """
+    written: list[Path] = []
+    try:
+        directory.mkdir(parents=True, exist_ok=True)
+        for schema_id in sorted(SCHEMA_CATALOG):
+            target = directory / f"{schema_id}.schema.json"
+            target.write_text(render_json_schema(schema_id), encoding="utf-8", newline="\n")
+            written.append(target)
+    except OSError:
+        logger.exception("could not export JSON schemas to %s", directory)
+        raise
+    return written
+
+
+# ====================================================================
+# DECISION HISTORY
+# ====================================================================
+# - 2026-09-30 22:00 [python-coder]: Semantic checks return violation lists (pure) so the
+#   resume path can map them to semantic_invalid without catching exceptions.
+#   (#KernelBootstrapV0/P1)
+# ====================================================================

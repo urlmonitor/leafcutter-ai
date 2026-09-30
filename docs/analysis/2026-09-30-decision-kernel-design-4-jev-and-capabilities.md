@@ -54,7 +54,7 @@ class JevPort(Protocol):
 - Nothing that code can compute goes to Jev.
 - Every template has an id and a version.
 
-## Routing template (`kernel/routing_templates.py`, P4)
+## Routing template (`scheduler/routing_templates.py`, P4)
 
 The state is `{"request": {kind, goal, question, payload_summary}, "task": {goal, component_ids}}`.
 Each item that needs semantic routing gets one question, `route.<work_item_id>`: a `choice` whose
@@ -124,7 +124,7 @@ bindings carry the specifics.
 | `repo.principles` | repo_text | internal_principles | `CLAUDE.md`, `docs/conventions`, `docs/vision.md` |
 | `repo.decisions` | repo_text | prior_decisions | `docs/architecture/adrs` |
 | `knowledge.decisions` | knowledge_map | prior_decisions | surface `adrs` |
-| `repo.patterns` | repo_text | existing_patterns | `leafcutter_kernel`, `scripts`, `docs/architecture` |
+| `repo.patterns` | repo_text | existing_patterns | `kernel`, `scripts`, `docs/architecture` |
 | `knowledge.components` | knowledge_map | existing_patterns, task_context | surfaces `components`, `skills`, `agents` |
 | `host.research` | host_research | authoritative_guidance, external_practices | none (host handoff) |
 
@@ -169,7 +169,7 @@ to `open_interactions`, which builds a `HostWorkRequest` (part 5, packet).
 - **Answer handling:** the answer (`human_answer.v1`) becomes `Evidence(category=task_context, semantic_type=human_input, source.kind=human, provenance.actor=<id>, relayed_by)`. The owning parent then resumes.
 - **Unanswered questions:** silence answers nothing. An unanswered question keeps the run in `waiting_human` indefinitely, until it is cancelled.
 
-## Capability gaps (`persistence/gap_store.py` P2; `kernel/nodes_gaps.py` P4 basic, P9 fallback)
+## Capability gaps (`persistence/gap_store.py` P2; `scheduler/nodes_gaps.py` P4 basic, P9 fallback)
 
 | Gap type | Recorded when | Backlog draft? |
 |---|---|---|

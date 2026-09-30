@@ -30,7 +30,7 @@ The design uses these LangGraph APIs:
 - `aget_state`, `aupdate_state`.
 - `config={"configurable": {"thread_id": run_id}, "recursion_limit": limits.langgraph_recursion_limit, "callbacks": tracer.langchain_callbacks(corr)}`.
 
-## KernelState (`kernel/state.py`)
+## KernelState (`scheduler/state.py`)
 
 `TypedDict(total=False)`. Every value is a contract model from part 2, or a scalar.
 Map reducers merge by id and apply keys in sorted order, so a merge is deterministic whatever
@@ -68,14 +68,14 @@ order the parallel workers finish in. Only the kernel nodes write lifecycle fiel
 - `retries: dict[work_item_id, int]`
 - `no_progress_streak`
 
-`KernelRuntime` (`kernel/context.py`, a frozen dataclass):
+`KernelRuntime` (`scheduler/context.py`, a frozen dataclass):
 
 - `config`, `secrets`, `bindings`, `jev: JevPort`, `tracer`
 - `run_store`, `gap_store`, `artifacts`
 - `clock` (injectable for tests)
 - `cancel_probe: Callable[[], bool]`
 
-## Graph topology (`kernel/graph.py`)
+## Graph topology (`scheduler/graph.py`)
 
 ```mermaid
 flowchart TD
@@ -129,7 +129,7 @@ flowchart TD
 A `failed` result with `error.retryable` and `retries[item] < max_retries` sets the item back to
 ready with the same binding (§13.2). The retry does not count as progress.
 
-## Guards (`kernel/guards.py`, pure functions; P4, hardened in P9)
+## Guards (`scheduler/guards.py`, pure functions; P4, hardened in P9)
 
 | Guard | Algorithm | Outcome |
 |---|---|---|

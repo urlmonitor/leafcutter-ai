@@ -1,6 +1,6 @@
 ---
 title: "Decision Kernel — Container Overview"
-description: "Container-level overview of the Leafcutter decision kernel (leafcutter_kernel/): the client-independent run service, the fixed LangGraph scheduler, the Jev decision port, the new capability registry, native decision and research capabilities, the read-only retrieval adapter, cooperative Claude Code handoff, and Langfuse observability. Status: planned; Phase 0 of TICKET-20260930-KernelBootstrapV0."
+description: "Container-level overview of the Leafcutter decision kernel (kernel/): the client-independent run service, the fixed LangGraph scheduler, the Jev decision port, the new capability registry, native decision and research capabilities, the read-only retrieval adapter, cooperative Claude Code handoff, and Langfuse observability. Status: planned; Phase 0 of TICKET-20260930-KernelBootstrapV0."
 type: reference
 status: draft
 flight_level: L2-Container
@@ -15,7 +15,7 @@ related_docs:
   - docs/analysis/2026-09-30-decision-kernel-design-3-kernel-scheduler.md
   - docs/analysis/2026-09-30-leafcutter-kernel-spec-rev3.md
 related_code:
-  - leafcutter_kernel/__init__.py
+  - kernel/__init__.py
 tags:
   - decision-kernel
   - langgraph
@@ -31,7 +31,7 @@ native decision and research capabilities. Generative or human work goes out as 
 checkpointed handoffs. Every run ends in a typed terminal state with evidence and a Langfuse
 trace.
 
-It lives only in leafcutter-ai, as the top-level package `leafcutter_kernel/`. It is **not**
+It lives only in leafcutter-ai, as the top-level package `kernel/`. It is **not**
 shipped to adopter projects.
 
 **Status: planned.** Phase 0 is complete: dependencies are pinned, the Stage 0 mapping and live

@@ -1,0 +1,7 @@
+{
+  "$schema": "./capability_registry.schema.json",
+  "_comment": "Kernel-routable capabilities only. Starts empty by user decision: legacy agent and skill registries are never read, normalised or routed. A legacy asset may enter only with an admission record of kind legacy_admission that names a recorded decision (ADR-nnn).",
+  "registry_id": "leafcutter.capabilities",
+  "registry_version": 1,
+  "capabilities": []
+}

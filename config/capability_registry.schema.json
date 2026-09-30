@@ -1,0 +1,318 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "capability_registry.schema.json",
+  "title": "Capability Registry",
+  "description": "Schema for config/capability_registry.json: the kernel's own capability registry. It starts empty. Legacy agent/skill registries are never read; a legacy-derived entry requires an admission record of kind legacy_admission naming a recorded decision.",
+  "type": "object",
+  "required": [
+    "registry_id",
+    "registry_version",
+    "capabilities"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "_comment": {
+      "type": "string"
+    },
+    "registry_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "registry_version": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "capabilities": {
+      "type": "array",
+      "minItems": 0,
+      "items": {
+        "$ref": "#/definitions/capability"
+      }
+    }
+  },
+  "definitions": {
+    "schema_id": {
+      "type": "string",
+      "enum": [
+        "leafcutter.goal_request.v1",
+        "leafcutter.decision_request.v1",
+        "leafcutter.decision_report.v1",
+        "leafcutter.research_request.v1",
+        "leafcutter.retrieval_request.v1",
+        "leafcutter.evidence_bundle.v1",
+        "leafcutter.options_request.v1",
+        "leafcutter.options.v1",
+        "leafcutter.synthesis_request.v1",
+        "leafcutter.findings.v1",
+        "leafcutter.human_question_request.v1",
+        "leafcutter.human_answer.v1"
+      ]
+    },
+    "admission": {
+      "type": "object",
+      "required": [
+        "kind",
+        "decision_ref",
+        "admitted_on",
+        "admitted_by"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": [
+            "native_registration",
+            "legacy_admission"
+          ]
+        },
+        "decision_ref": {
+          "type": "string",
+          "minLength": 1
+        },
+        "admitted_on": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+        },
+        "admitted_by": {
+          "type": "string",
+          "minLength": 1
+        },
+        "legacy_source": {
+          "type": "object",
+          "required": [
+            "registry",
+            "id"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "registry": {
+              "type": "string",
+              "minLength": 1
+            },
+            "id": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "legacy_admission"
+              }
+            },
+            "required": [
+              "kind"
+            ]
+          },
+          "then": {
+            "required": [
+              "legacy_source"
+            ],
+            "properties": {
+              "decision_ref": {
+                "pattern": "^ADR-\\d{3}$"
+              }
+            }
+          },
+          "else": {
+            "not": {
+              "required": [
+                "legacy_source"
+              ]
+            },
+            "properties": {
+              "decision_ref": {
+                "pattern": "^(ADR-\\d{3}|TICKET-[A-Za-z0-9_-]+)$"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "capability": {
+      "type": "object",
+      "required": [
+        "id",
+        "name",
+        "description",
+        "version",
+        "request_kinds",
+        "accepts_schemas",
+        "produces_schemas",
+        "execution_mode",
+        "binding",
+        "side_effect_class",
+        "admission"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9._-]*$"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "description": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 400
+        },
+        "version": {
+          "type": "string",
+          "pattern": "^\\d+\\.\\d+\\.\\d+$"
+        },
+        "request_kinds": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "enum": [
+              "evidence",
+              "options",
+              "synthesis",
+              "human",
+              "capability"
+            ]
+          }
+        },
+        "operations": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "accepts_schemas": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/definitions/schema_id"
+          }
+        },
+        "produces_schemas": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/definitions/schema_id"
+          }
+        },
+        "scope_tags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "components": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "execution_mode": {
+          "type": "string",
+          "enum": [
+            "native",
+            "host_handoff"
+          ]
+        },
+        "binding": {
+          "type": "string",
+          "minLength": 1
+        },
+        "side_effect_class": {
+          "type": "string",
+          "enum": [
+            "none",
+            "read_only",
+            "run_artifacts",
+            "repo_write",
+            "external_write"
+          ]
+        },
+        "permissions_required": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "enabled": {
+          "type": "boolean"
+        },
+        "availability": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "status": {
+              "type": "string",
+              "enum": [
+                "available",
+                "unavailable",
+                "experimental"
+              ]
+            },
+            "reason": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        },
+        "routing": {
+          "type": "string",
+          "enum": [
+            "semantic",
+            "fixed"
+          ]
+        },
+        "process_maturity": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0,
+          "maximum": 4,
+          "description": "Optional ADR-054 process maturity level: 0 unknown, 1 LLM-guided, 2 policy-guided, 3 workflow-guided, 4 deterministic."
+        },
+        "cost_hints": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "jev_calls": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "minimum": 0
+            },
+            "host_operations": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "minimum": 0
+            },
+            "latency_ms": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "minimum": 0
+            }
+          }
+        },
+        "admission": {
+          "$ref": "#/definitions/admission"
+        }
+      }
+    }
+  }
+}

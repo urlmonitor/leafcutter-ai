@@ -1,0 +1,11 @@
+{
+  "question": "What does the project say about caching?",
+  "evidence_needs": [
+    {
+      "id": "need-1",
+      "category": "prior_decisions",
+      "question": "Which store does the cache use?"
+    }
+  ],
+  "expected_coverage": "best_effort"
+}

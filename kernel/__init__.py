@@ -1,5 +1,5 @@
 """
-MODULE: leafcutter_kernel
+MODULE: kernel
 GOAL: Package root of the Leafcutter decision kernel: a resumable LangGraph runtime that
     routes goals to registered capabilities with Jev, gathers evidence, and hands bounded
     generative or human work to a cooperative client.
