@@ -287,7 +287,7 @@ class TestBO4300a1DeployedMaker(unittest.TestCase):
         )
         self.assertEqual(next(iter(statuses)), "ok")
 
-        identity_derived = {"slug", "branch", "kind", "workspace_path", "worktree_path", "base_commit"}
+        identity_derived = {"slug", "branch", "kind", "workspace_path", "workspace_path_posix", "worktree_path", "base_commit"}
         shared_keys = set(answers[0].keys()) - identity_derived
         for key in shared_keys:
             values = {json.dumps(a.get(key), sort_keys=True) for a in answers}

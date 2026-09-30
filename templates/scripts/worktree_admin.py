@@ -28,36 +28,30 @@ import shutil
 from pathlib import Path
 from typing import Any
 
+import worktree_answer as wa
 import worktree_git as wg
+import worktree_paths as wp
 
 _log = logging.getLogger(__name__)
 
 
-def _err(code: str, message: str, **extra: Any) -> dict[str, Any]:
-    """Build the maker's standard non-ok answer: never an 'ok' shape, never a traceback.
-
-    ``status`` is derived from *code* via :func:`worktree_git.status_for_code`
-    -- the identical rule worktree.py's own ``_err`` applies, so a caller
-    sees one consistent status/code classification regardless of which
-    module answered its request.
-    """
-    return {"status": wg.status_for_code(code), "code": code, "message": message, **extra}
+_err = wa.error_answer  # shared status/code rule; worktree_answer owns the table
 
 
 def cmd_locate(args: argparse.Namespace) -> dict[str, Any]:
     """Read-only lookup of a workspace by ``--path``, ``--kind``/``--slug``, or ``--branch``."""
     if args.path:
-        workspace_path = Path(args.path).resolve()
+        workspace_path = wp.resolve_arg(args.path)
         marker = wg.read_marker(workspace_path)
         if marker is None:
             return _err("NOT_FOUND", f"No workspace marker found at {workspace_path}.")
-        return {"status": "ok", "workspace_path": str(workspace_path), "marker": marker}
+        return {"status": "ok", **wp.path_fields(workspace_path), "marker": marker}
 
     repo_root = wg.resolve_repo_root(args.repo_root)
     if repo_root is None:
         return _err("NO_REPO", "Could not resolve the main checkout for --kind/--slug/--branch lookup.")
     place = wg.landing_place(repo_root)
-    ctx = {"repo_root": str(repo_root), "repo_root_posix": repo_root.as_posix(), "layout": wg.layout_for(repo_root)}
+    ctx = {**wp.repo_fields(repo_root), "layout": wg.layout_for(repo_root)}
 
     if args.kind and args.slug:
         slug = wg.normalize_slug(args.slug)
@@ -65,12 +59,12 @@ def cmd_locate(args: argparse.Namespace) -> dict[str, Any]:
         marker = wg.read_marker(workspace_path)
         if marker is None:
             return {**_err("NOT_FOUND", f"No workspace marker found at {workspace_path}."), **ctx}
-        return {**ctx, "status": "ok", "workspace_path": str(workspace_path), "marker": marker}
+        return {**ctx, "status": "ok", **wp.path_fields(workspace_path), "marker": marker}
 
     if args.branch:
         for workspace_path, marker in wg.iter_markers(place):
             if marker.get("branch") == args.branch:
-                return {**ctx, "status": "ok", "workspace_path": str(workspace_path), "marker": marker}
+                return {**ctx, "status": "ok", **wp.path_fields(workspace_path), "marker": marker}
         return {**_err("NOT_FOUND", f"No workspace found for branch {args.branch!r}."), **ctx}
 
     return _err("USAGE", "locate requires --path, or --kind with --slug, or --branch.")
@@ -83,12 +77,11 @@ def cmd_list(args: argparse.Namespace) -> dict[str, Any]:
         return _err("NO_REPO", "Could not resolve the main checkout to list its landing place.")
     place = wg.landing_place(repo_root)
     workspaces = [
-        {"workspace_path": str(path), "marker": marker} for path, marker in wg.iter_markers(place)
+        {**wp.path_fields(path), "marker": marker} for path, marker in wg.iter_markers(place)
     ]
     return {
         "status": "ok", "landing_place": str(place), "workspaces": workspaces,
-        "repo_root": str(repo_root), "repo_root_posix": repo_root.as_posix(),
-        "layout": wg.layout_for(repo_root),
+        **wp.repo_fields(repo_root), "layout": wg.layout_for(repo_root),
     }
 
 
@@ -102,7 +95,7 @@ def _branch_pushed(workspace_path: Path, branch: str | None) -> bool:
 
 def cmd_remove(args: argparse.Namespace) -> dict[str, Any]:
     """Remove the workspace at ``--path``, refusing a dirty/unpushed one unless ``--force``."""
-    workspace_path = Path(args.path).resolve()
+    workspace_path = wp.resolve_arg(args.path)
     marker = wg.read_marker(workspace_path)
     if marker is None:
         return _err("NOT_FOUND", f"No workspace marker found at {workspace_path}.")
@@ -132,7 +125,7 @@ def cmd_remove(args: argparse.Namespace) -> dict[str, Any]:
         # concept "REMOVE_FAILED" never named in the contract's own code enum.
         return _err("PROCESS_HOLDS_FILES", f"Could not remove {workspace_path}: {exc}")
 
-    return {"status": "ok", "workspace_path": str(workspace_path)}
+    return {"status": "ok", **wp.path_fields(workspace_path)}
 
 
 # ===========================================================================
@@ -152,4 +145,9 @@ def cmd_remove(args: argparse.Namespace) -> dict[str, Any]:
 #   the non-contract REMOVE_FAILED; locate/list attach
 #   repo_root/repo_root_posix/layout once repo_root resolves.
 #   (#EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/01) (ADR-018)
+# - 2026-09-30 22:05 [python-coder/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/03]:
+#   (#EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/03)
+#   Answers now carry native + POSIX path fields (worktree_paths) and --path
+#   accepts any shell's spelling; _err is the shared worktree_answer rule.
+#   (ADR-018)
 # ===========================================================================

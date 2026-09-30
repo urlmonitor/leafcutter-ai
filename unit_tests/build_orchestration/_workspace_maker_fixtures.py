@@ -66,7 +66,7 @@ RESOLVER_MODULE_NAME = "workspace_root.py"
 # directory on sys.path"). A single-file override copy of MAKER_NAME alone
 # cannot even start (ModuleNotFoundError at import time, before any of the
 # maker's own error handling runs) -- see _ensure_maker_siblings().
-_MAKER_SIBLING_MODULES: tuple[str, ...] = ("worktree_admin.py", "worktree_git.py", RESOLVER_MODULE_NAME)
+_MAKER_SIBLING_MODULES: tuple[str, ...] = ("worktree_admin.py", "worktree_git.py", "worktree_answer.py", "worktree_paths.py", RESOLVER_MODULE_NAME)
 
 # scripts/build.py's own documented default output_root
 # (config.get("output_root", ".leafcutter"), scripts/build.py:1931): a fresh

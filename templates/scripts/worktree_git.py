@@ -41,6 +41,8 @@ from pathlib import Path
 from typing import Any
 
 import workspace_root
+import worktree_answer
+import worktree_paths
 
 _log = logging.getLogger(__name__)
 
@@ -61,12 +63,6 @@ _CANARY_CONTENT = "LEAFCUTTER_WORKSPACE_CANARY_PROBE\n"
 _GIT_TIMEOUT_SECONDS = 60
 _SLUG_DISALLOWED = re.compile(r"[^a-z0-9._-]+")
 
-# ANSWER_SCHEMA_VERSION versions the BO-4300c-2 result contract's "Common
-# fields" envelope (schema_version, verb, ...) -- distinct from MAKER_VERSION
-# (this maker's own build) and from a marker's own schema_version (the
-# on-disk registry record's shape).
-ANSWER_SCHEMA_VERSION = 1
-
 # _CONFIG_PLATFORM_DIRS mirrors scripts/build.py's own
 # _resolve_skills_config_path() auto-detection order exactly, so
 # derive_config_path() finds the SAME file build.py itself would have found
@@ -75,20 +71,6 @@ ANSWER_SCHEMA_VERSION = 1
 # ``.pre-commit-config.yaml``, a file the build entry point does not consult
 # for --config-path at all).
 _CONFIG_PLATFORM_DIRS: tuple[str, ...] = (".claude", ".gemini", ".cursor", ".github", ".cline")
-
-# _REFUSED_CODES: the BO-4300c-2 result-contract codes this maker emits that
-# mean "a well-understood precondition was not met" (status "refused", exit
-# 2) rather than "an internal/system fault occurred" (status "error", exit
-# 1) or "the caller's own arguments were unusable" (status "error", code
-# USAGE, exit 64). Matches BO-4300c-2's own criteria text, which names
-# "refused" for an occupied location, an unreachable shared project, and a
-# failed install -- the three outcomes OCCUPIED, NO_HUB/FETCH_FAILED and
-# BOOTSTRAP_FAILED/NO_CONFIG cover here.
-_REFUSED_CODES: frozenset[str] = frozenset({
-    "NOT_FOUND", "OCCUPIED", "NO_HUB", "FETCH_FAILED", "BOOTSTRAP_FAILED",
-    "NO_CONFIG", "REFUSED", "PROCESS_HOLDS_FILES",
-})
-
 
 def run_git(args: list[str], cwd: Path, timeout: int = _GIT_TIMEOUT_SECONDS) -> subprocess.CompletedProcess:
     """Run ``git <args>`` with the working directory set to *cwd*.
@@ -110,7 +92,7 @@ def run_git(args: list[str], cwd: Path, timeout: int = _GIT_TIMEOUT_SECONDS) -> 
         The completed process (real or synthesized on launch failure).
     """
     try:
-        return subprocess.run(
+        proc = subprocess.run(
             ["git", *args],
             cwd=str(cwd),
             capture_output=True,
@@ -121,6 +103,8 @@ def run_git(args: list[str], cwd: Path, timeout: int = _GIT_TIMEOUT_SECONDS) -> 
     except (OSError, subprocess.SubprocessError) as exc:
         _log.warning("run_git: 'git %s' failed to launch in %s: %s", " ".join(args), cwd, exc)
         return subprocess.CompletedProcess(args=["git", *args], returncode=1, stdout="", stderr=str(exc))
+    worktree_answer.forward_git_output(args, proc)
+    return proc
 
 
 def marker_path(workspace: Path) -> Path:
@@ -374,8 +358,9 @@ def run_install_build(workspace: Path, config_path: Path) -> tuple[bool, str | N
         _log.warning("run_install_build: failed to launch %s: %s", build_script, exc)
         return False, "BOOTSTRAP_FAILED"
 
+    worktree_answer.forward_child_output(proc)
     if proc.returncode != 0:
-        _log.warning("run_install_build: %s exited %s: %s", build_script, proc.returncode, proc.stderr)
+        _log.warning("run_install_build: %s exited %s", build_script, proc.returncode)
         return False, "BOOTSTRAP_FAILED"
     return True, None
 
@@ -424,15 +409,12 @@ def _git_toplevel_of(path: Path) -> Path | None:
 
 
 def landing_place(repo_root: Path) -> Path:
-    """Return the project's one landing place for workspaces: ``<base>/worktrees``.
+    """Return the project's one landing place: ``<parent>/<project-dir-name>-worktrees``.
 
-    ``<base>`` is the repo's own parent directory, unless that parent is
-    itself inside a *different* git repository (the consumer/installed
-    layout), in which case ``<base>`` is the repo root itself. This mirrors
-    the existing dev-vs-consumer distinction the package already makes
-    elsewhere, recomputed here independently rather than imported from
-    ``templates/scripts/commit_guardian/_resolve_root.py`` (forbidden by
-    BO-4300a-1's own Implementation Notes).
+    The Q5 sibling rule (decided 2026-09-28), derived only from the resolved
+    main checkout and identical in the dev and consumer layouts. Nothing is
+    ever created inside the project's own working tree. (Ticket 04 moves
+    this rule into its own layout module and adds the validated override.)
 
     Args:
         repo_root: Absolute path to the main checkout.
@@ -441,74 +423,7 @@ def landing_place(repo_root: Path) -> Path:
         Absolute path to the shared landing directory (created by the caller
         if it does not exist yet).
     """
-    parent = repo_root.parent
-    parent_toplevel = _git_toplevel_of(parent)
-    if parent_toplevel is not None and parent_toplevel != repo_root:
-        return repo_root / "worktrees"
-    return parent / "worktrees"
-
-
-def status_for_code(code: str) -> str:
-    """Return the BO-4300c-2 status ('refused'|'error') this maker's own *code* means.
-
-    Falls back to ``'error'`` for any code not in :data:`_REFUSED_CODES`
-    (including ``USAGE``, whose distinct exit code ``exit_code_for_answer``
-    derives separately) -- never raises, since an unrecognised code is
-    itself the abnormal case ``_err`` exists to report, and classifying it
-    must not become a second way to crash the maker's own error path.
-
-    Args:
-        code: One of this maker's own error/refusal codes.
-
-    Returns:
-        ``"refused"`` when *code* is in :data:`_REFUSED_CODES`, else
-        ``"error"``.
-    """
-    return "refused" if code in _REFUSED_CODES else "error"
-
-
-def exit_code_for_answer(answer: dict[str, Any]) -> int:
-    """Return the process exit code BO-4300c-2 requires for *answer*.
-
-    0 for ``status: "ok"``; 64 for ``code: "USAGE"`` (still status
-    ``"error"``); 2 for any other ``status: "refused"``; 1 for every
-    remaining ``"error"``. This is the single place that maps an answer to
-    an exit code, so the exit code and the answer's own stated status can
-    never disagree (BO-4300c-2's own criterion: "the way the maker's run
-    ends signals the same outcome that the answer states").
-
-    Args:
-        answer: The answer dict about to be printed as the maker's one
-            JSON object.
-
-    Returns:
-        0, 1, 2, or 64.
-    """
-    if answer.get("status") == "ok":
-        return 0
-    if answer.get("code") == "USAGE":
-        return 64
-    return 2 if answer.get("status") == "refused" else 1
-
-
-def finalize_answer(verb: str, answer: dict[str, Any]) -> dict[str, Any]:
-    """Attach the BO-4300c-2 'Common fields' this maker can always supply.
-
-    Sets ``schema_version`` and ``verb`` on *answer* without overwriting
-    anything the dispatched verb's own handler already set. Called once,
-    from ``main()``, so every verb and every outcome carries these two
-    fields regardless of which branch produced the answer.
-
-    Args:
-        verb: The dispatched verb name (``args.verb``).
-        answer: The answer dict a verb handler returned.
-
-    Returns:
-        The same dict, mutated in place and returned for convenience.
-    """
-    answer.setdefault("schema_version", ANSWER_SCHEMA_VERSION)
-    answer.setdefault("verb", verb)
-    return answer
+    return repo_root.parent / f"{repo_root.name}-worktrees"
 
 
 def layout_for(repo_root: Path) -> str:
@@ -622,7 +537,7 @@ def resolve_repo_root(repo_root_arg: str | None) -> Path | None:
         directory is not inside one and no argument was given).
     """
     if repo_root_arg:
-        candidate = Path(repo_root_arg).resolve()
+        candidate = worktree_paths.resolve_arg(repo_root_arg)
         return candidate if (candidate / ".git").exists() else None
     result = workspace_root.resolve(str(Path.cwd()), None)
     if result.get("status") == "ok":
@@ -673,4 +588,13 @@ def iter_markers(place: Path):
 #   layout-detection scope (see the docstring's own "KNOWN LIMITATION" for
 #   the full trace). No functional change.
 #   (#EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/01) (ADR-018)
+# - 2026-09-30 22:05 [python-coder/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/03]:
+#   (#EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/03)
+#   Moved status_for_code/exit_code_for_answer/finalize_answer and the refused
+#   set to worktree_answer.py; run_git and run_install_build now forward the
+#   child's output to stderr; --repo-root accepts any shell's spelling via
+#   worktree_paths. (ADR-018)
+#   landing_place() now follows the Q5 sibling rule
+#   <parent>/<project-dir-name>-worktrees (the red baseline's fixtures require
+#   it; ticket 04 owns moving/extending it). (ADR-018)
 # ===========================================================================

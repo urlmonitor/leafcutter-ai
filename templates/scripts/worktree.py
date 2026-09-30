@@ -37,58 +37,25 @@ import argparse
 import json
 import logging
 import shutil
-import subprocess
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
 import worktree_admin
+import worktree_answer as wa
 import worktree_git as wg
+import worktree_paths as wp
 
 _log = logging.getLogger(__name__)
 
 
-def _err(code: str, message: str, **extra: Any) -> dict[str, Any]:
-    """Build the maker's standard non-ok answer: never an 'ok' shape, never a traceback.
-
-    ``status`` is derived from *code* via :func:`worktree_git.status_for_code`
-    (``"refused"`` for a well-understood precondition, ``"error"`` otherwise
-    -- including ``USAGE``, whose distinct exit 64 ``main()`` derives from
-    the code, not from status) so a caller can always tell the two apart
-    without inspecting *message* text (BO-4300c-2's own criterion).
-    """
-    return {"status": wg.status_for_code(code), "code": code, "message": message, **extra}
+_err = wa.error_answer  # the one status/code rule (worktree_answer owns the table)
 
 
 def _now_iso() -> str:
     """Return the current UTC time as an ISO-8601 string with a trailing 'Z'."""
     return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
-
-
-def _resolve_ticket_in_workspace(repo_root: Path, workspace_path: Path, ticket_arg: str) -> Path | None:
-    """Map a ticket path given relative to the main checkout onto its workspace copy."""
-    ticket_path = Path(ticket_arg)
-    if not ticket_path.is_absolute():
-        ticket_path = (repo_root / ticket_path).resolve()
-    else:
-        ticket_path = ticket_path.resolve()
-    try:
-        rel = ticket_path.relative_to(repo_root.resolve())
-    except ValueError:
-        return None
-    return workspace_path / rel
-
-
-def _add_ticket_fields(answer: dict[str, Any], args: argparse.Namespace, repo_root: Path, workspace_path: Path) -> None:
-    """Add ``ticket_path_in_worktree(_posix)`` to *answer* only when ``--ticket`` was given."""
-    ticket_arg = getattr(args, "ticket", None)
-    if not ticket_arg:
-        return
-    ticket_in_ws = _resolve_ticket_in_workspace(repo_root, workspace_path, ticket_arg)
-    if ticket_in_ws is not None:
-        answer["ticket_path_in_worktree"] = str(ticket_in_ws)
-        answer["ticket_path_in_worktree_posix"] = ticket_in_ws.as_posix()
 
 
 def _copy_optional_files(repo_root: Path, workspace_path: Path) -> None:
@@ -105,11 +72,7 @@ def _copy_optional_files(repo_root: Path, workspace_path: Path) -> None:
 
 def _repo_context(repo_root: Path) -> dict[str, Any]:
     """Build the BO-4300c-2 'Common fields' this maker can supply as soon as repo_root resolves."""
-    return {
-        "repo_root": str(repo_root),
-        "repo_root_posix": repo_root.as_posix(),
-        "layout": wg.layout_for(repo_root),
-    }
+    return {**wp.repo_fields(repo_root), "layout": wg.layout_for(repo_root)}
 
 
 def _answer_from_existing(workspace_path: Path, marker: dict[str, Any], hub: str) -> dict[str, Any]:
@@ -123,8 +86,7 @@ def _answer_from_existing(workspace_path: Path, marker: dict[str, Any], hub: str
         "slug": marker.get("slug"),
         "branch": marker.get("branch"),
         "hub": hub,
-        "workspace_path": str(workspace_path),
-        "worktree_path": str(workspace_path),
+        **wp.path_fields(workspace_path),
         "base_commit": marker.get("base_commit"),
         "bootstrap": {"restored_tracked": []},
         "checks": checks,
@@ -132,15 +94,19 @@ def _answer_from_existing(workspace_path: Path, marker: dict[str, Any], hub: str
 
 
 def _build_marker(kind: str, slug: str, branch: str, hub: str, repo_root: Path, base_commit: str | None,
-                   state: str, checks: dict[str, bool] | None = None) -> dict[str, Any]:
-    """Assemble the marker dict this maker always writes (schema_version 1)."""
+                   state: str, checks: dict[str, bool] | None = None, *, workspace: Path) -> dict[str, Any]:
+    """Assemble the marker dict this maker always writes (schema_version 1).
+
+    ``hub`` and ``project_root`` are stored relative to *workspace* (BO-4300b-5:
+    no absolute path in one platform's spelling), so either shell recognises it.
+    """
     marker: dict[str, Any] = {
         "schema_version": 1,
         "kind": kind,
         "slug": slug,
         "branch": branch,
-        "hub": hub,
-        "project_root": str(repo_root),
+        "hub": wp.portable(hub, workspace),
+        "project_root": wp.portable(str(repo_root), workspace),
         "base_commit": base_commit,
         "maker_version": wg.MAKER_VERSION,
         "state": state,
@@ -156,9 +122,9 @@ def _create_workspace(repo_root: Path, hub: str, kind: str, slug: str, branch: s
     """Clone, fetch, checkout, install, and mark a brand-new workspace ready."""
     clone_proc = wg.run_git(["clone", "--no-checkout", "--local", hub, str(workspace_path)], repo_root)
     if clone_proc.returncode != 0:
-        return _err("GIT_FAILED", f"git clone --no-checkout --local failed: {clone_proc.stderr.strip()}")
+        return _err("FETCH_FAILED", f"git clone --no-checkout --local failed: {clone_proc.stderr.strip()}")
 
-    wg.write_marker(workspace_path, _build_marker(kind, slug, branch, hub, repo_root, None, "creating"))
+    wg.write_marker(workspace_path, _build_marker(kind, slug, branch, hub, repo_root, None, "creating", workspace=workspace_path))
 
     wg.run_git(["remote", "set-url", "origin", hub], workspace_path)
     fetch_proc = wg.run_git(["fetch", "origin", "main"], workspace_path)
@@ -178,7 +144,7 @@ def _create_workspace(repo_root: Path, hub: str, kind: str, slug: str, branch: s
     _copy_optional_files(repo_root, workspace_path)
 
     if args.config_path:
-        config_path = Path(args.config_path).resolve()
+        config_path = wp.resolve_arg(args.config_path)
     else:
         config_path, derive_err = wg.derive_config_path(repo_root, workspace_path)
         if derive_err:
@@ -199,7 +165,8 @@ def _create_workspace(repo_root: Path, hub: str, kind: str, slug: str, branch: s
     checks["hooks_canary_rejected"] = canary_rejected
 
     wg.write_marker(
-        workspace_path, _build_marker(kind, slug, branch, hub, repo_root, base_commit, "ready", checks)
+        workspace_path, _build_marker(kind, slug, branch, hub, repo_root, base_commit, "ready", checks,
+                      workspace=workspace_path)
     )
 
     answer = {
@@ -209,13 +176,12 @@ def _create_workspace(repo_root: Path, hub: str, kind: str, slug: str, branch: s
         "slug": slug,
         "branch": branch,
         "hub": hub,
-        "workspace_path": str(workspace_path),
-        "worktree_path": str(workspace_path),
+        **wp.path_fields(workspace_path),
         "base_commit": base_commit,
         "bootstrap": {"restored_tracked": restored},
         "checks": checks,
     }
-    _add_ticket_fields(answer, args, repo_root, workspace_path)
+    wp.add_ticket_fields(answer, getattr(args, "ticket", None), repo_root, workspace_path)
     return answer
 
 
@@ -243,7 +209,7 @@ def cmd_ensure(args: argparse.Namespace) -> dict[str, Any]:
     existing_marker = wg.read_marker(workspace_path) if workspace_path.exists() else None
     if existing_marker is not None and existing_marker.get("state") == "ready":
         answer = {**ctx, **_answer_from_existing(workspace_path, existing_marker, hub)}
-        _add_ticket_fields(answer, args, repo_root, workspace_path)
+        wp.add_ticket_fields(answer, getattr(args, "ticket", None), repo_root, workspace_path)
         return answer
     if workspace_path.exists() and existing_marker is None:
         return {
@@ -256,29 +222,30 @@ def cmd_ensure(args: argparse.Namespace) -> dict[str, Any]:
 
 def cmd_verify(args: argparse.Namespace) -> dict[str, Any]:
     """Read-only readiness re-check of the workspace marker at ``--path``."""
-    workspace_path = Path(args.path).resolve()
+    workspace_path = wp.resolve_arg(args.path)
     marker = wg.read_marker(workspace_path)
     if marker is None:
         return _err("NOT_FOUND", f"No leafcutter workspace marker found at {workspace_path}.")
-    hub = marker.get("hub", "")
+    hub = wp.from_portable(marker.get("hub", ""), workspace_path)
     checks = wg.compute_checks(workspace_path, hub)
     checks["hooks_canary_rejected"] = marker.get("checks", {}).get("hooks_canary_rejected", False)
-    answer = {"status": "ok", "path": str(workspace_path), "workspace_path": str(workspace_path),
+    answer = {"status": "ok", "path": str(workspace_path), **wp.path_fields(workspace_path),
               "marker": marker, "checks": checks, "hub": hub}
     project_root = marker.get("project_root")
     if project_root:
-        answer.update(_repo_context(Path(project_root)))
+        answer.update(_repo_context(Path(wp.from_portable(project_root, workspace_path))))
     return answer
 
 
 def cmd_where(_args: argparse.Namespace) -> dict[str, Any]:
     """Print the maker's own absolute path."""
-    return {"status": "ok", "path": str(Path(__file__).resolve())}
+    here = Path(__file__).resolve()
+    return {"status": "ok", "path": str(here), "path_posix": wp.to_posix(here)}
 
 
 def build_parser() -> argparse.ArgumentParser:
     """Build the argparse parser for all six verbs."""
-    parser = argparse.ArgumentParser(prog="worktree.py")
+    parser = wa.MakerParser(prog="worktree.py")
     sub = parser.add_subparsers(dest="verb", required=True)
 
     ensure_p = sub.add_parser("ensure")
@@ -340,18 +307,22 @@ def main(argv: list[str] | None = None) -> int:
         The BO-4300c-2 result-contract exit code for the printed answer: 0
         for ``status: "ok"``, 2 for ``"refused"``, 64 for ``code: "USAGE"``,
         1 for every other ``"error"`` -- see
-        :func:`worktree_git.exit_code_for_answer`, the single place that
+        :func:`worktree_answer.exit_code_for_answer`, the single place that
         maps an answer to an exit code so the two can never disagree.
     """
-    parser = build_parser()
-    args = parser.parse_args(argv)
+    verb = "unknown"
     try:
-        answer = _DISPATCH[args.verb](args)
-    except (OSError, subprocess.SubprocessError, RuntimeError, ValueError) as exc:
+        args = build_parser().parse_args(argv)
+        verb = args.verb
+        answer = _DISPATCH[verb](args)
+    except wa.UsageError as exc:
+        answer = _err("USAGE", f"Usage error: {exc}")
+    except Exception as exc:  # noqa: BLE001 - last-resort boundary: still exactly one JSON object
+        _log.warning("main: unhandled %s: %s", type(exc).__name__, exc)
         answer = _err("INTERNAL_ERROR", f"{type(exc).__name__}: {exc}")
-    answer = wg.finalize_answer(args.verb, answer)
+    answer = wa.finalize_answer(verb, answer)
     print(json.dumps(answer))
-    return wg.exit_code_for_answer(answer)
+    return wa.exit_code_for_answer(answer)
 
 
 if __name__ == "__main__":
@@ -390,4 +361,12 @@ if __name__ == "__main__":
 #   remains deferred to BO-4300c-1-ii/BO-4300b-1, neither of which is built
 #   yet -- documented, not silently claimed.
 #   (#EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/01) (ADR-018)
+# - 2026-09-30 22:05 [python-coder/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/03]:
+#   (#EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/03)
+#   BO-4300c-2/b-5/b-5-i: the answer table moved to worktree_answer.py and
+#   path spelling to worktree_paths.py; main() now always prints one JSON
+#   object (USAGE on a parse failure, INTERNAL_ERROR on any exception); every
+#   path is answered native + POSIX; the marker stores hub/project_root
+#   relative to the workspace; an unreachable hub on clone answers
+#   FETCH_FAILED (refused). (ADR-018)
 # ===========================================================================

@@ -246,9 +246,10 @@ def _manifest_template_standalone_scripts(package_root: Path) -> set[str]:
     ``.py`` files and returns manifest entries.  These are deployed by
     ``build_template_standalone_scripts``.  ``NAMED_STANDALONE_SCRIPTS`` --
     the maker (``worktree.py``), its resolver module (``workspace_root.py``),
-    and its locate/list/remove helper (``worktree_admin.py``) -- is unioned
+    its locate/list/remove helper (``worktree_admin.py``), and the answer-table and
+    path-spelling modules (``worktree_answer.py``, ``worktree_paths.py``) -- is unioned
     in explicitly (BO-4300a-1: "the matching manifest helper... [gets] its
-    own named entry") so those three names appear in Set B even on a source
+    own named entry") so those names appear in Set B even on a source
     tree state where the dynamic scan would otherwise miss one, keeping this
     helper in parity with ``_check_named_standalone_scripts()`` in
     ``build_phases_script_deploy``.
@@ -366,4 +367,8 @@ def _manifest_sync_platforms_scripts(package_root: Path) -> set[str]:
 #   time), and moved each entry's tail-tag onto its own first line (the
 #   pr-reviewer 2026-09-28 02:15 H-1 shape: the validator only inspects an
 #   entry's first line for the tag). No functional change. (ADR-018)
+# - 2026-09-30 22:10 [python-coder/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/03]: (#EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/03)
+#   NAMED_STANDALONE_SCRIPTS now also names worktree_answer.py and
+#   worktree_paths.py, so this helper's Set B union covers them with no
+#   code change here. (ADR-018)
 # ====================================================================

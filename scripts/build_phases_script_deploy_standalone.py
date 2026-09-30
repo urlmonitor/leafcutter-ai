@@ -55,6 +55,8 @@ NAMED_STANDALONE_SCRIPTS: tuple[str, ...] = (
     "workspace_root.py",
     "worktree_git.py",
     "worktree_admin.py",
+    "worktree_answer.py",
+    "worktree_paths.py",
 )
 
 
@@ -81,6 +83,10 @@ def build_template_standalone_scripts(target_root: Path, config: dict[str, Any],
       build helper module.
     - ``templates/scripts/worktree_admin.py`` → ``scripts/worktree_admin.py``
       (NAMED entry): worktree.py's own locate/list/remove helper module.
+    - ``templates/scripts/worktree_answer.py`` → ``scripts/worktree_answer.py``
+      (NAMED entry): the BO-4300c-2 result-contract table and stdout discipline.
+    - ``templates/scripts/worktree_paths.py`` → ``scripts/worktree_paths.py``
+      (NAMED entry): native/POSIX path spelling (BO-4300b-5).
 
     Files are copied verbatim (no template compilation). The compare-before-write
     guard prevents mtime churn on unchanged files. After the shallow glob,
@@ -111,6 +117,10 @@ def build_template_standalone_scripts(target_root: Path, config: dict[str, Any],
     #   this phase into its own sibling module (this file) because adding it
     #   pushed build_phases_script_deploy.py over the 400-line ratchet.
     #   (#EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/01) (ADR-018)
+    # - 2026-09-30 22:10 [python-coder/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/03]: (#EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/03)
+    #   Added worktree_answer.py and worktree_paths.py as NAMED entries (the
+    #   maker's answer table and path-spelling modules; BO-4300c-2 / b-5).
+    #   (ADR-018)
     """
     import build_phases as _bp
 
