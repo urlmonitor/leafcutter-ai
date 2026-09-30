@@ -48,16 +48,16 @@ agents:
   ac-fulfillment-gate: needed
   ac-validator: signed_off
   adr-author: signed_off
-  architect-review: needed
-  commit: signed_off
+  architect-review: signed_off
+  commit: needed
   documentation-expert: not_needed
   documentation-verifier: not_needed
   frontend-coder: not_needed
-  pr-reviewer: signed_off
+  pr-reviewer: needed
   pull-request: not_needed
-  python-coder: signed_off
+  python-coder: needed
   sql-coder: not_needed
-  test-runner: signed_off
+  test-runner: needed
   test-writer: signed_off
   user-surface-smoker: not_needed
 ---
@@ -291,15 +291,15 @@ see `requires_adr: true` and `agents.adr-author: needed` in this ticket's frontm
 
 ## Sign-offs
 
-- [x] architect-review — 2026-09-28 13:32
+- [x] architect-review — 2026-09-30 10:20
 - [x] adr-author — 2026-09-28 13:50
 - [x] test-writer — 2026-09-28 13:55
-- [x] python-coder — 2026-09-28 14:27
-- [x] test-runner — 2026-09-28 14:39
-- [x] pr-reviewer — 2026-09-28 14:47
+- [ ] python-coder
+- [ ] test-runner
+- [ ] pr-reviewer
 - [x] ac-validator — 2026-09-28 14:52
-- [x] ac-fulfillment-gate — 2026-09-28 15:05
-- [x] commit — 2026-09-30 10:05
+- [ ] ac-fulfillment-gate
+- [ ] commit
 
 ## Comments
 
@@ -354,6 +354,10 @@ mechanism is an implementation detail that satisfies the existing AC text rather
 
 No diagrams suggested: this is internal test-support tooling (fixtures, a locator, a session
 guard) with no new service, container, external actor, user-facing surface, or state machine.
+
+### 2026-09-30 10:40 — ac-fulfillment-gate (status: blocker)
+feedback-id: (submit-failed)
+Re-dispatch after ticket 04 landed. Resolver: BO-4300f-4 (L2) fails `work_status` (todo); BO-4300f-4-i (L3) passes. Auto-fix to `done` was tried and reverted: under `AC_ENFORCE_STRICT=1`, `test_bo_4300f_4.py` still fails 3 tests: `test_fault_only_in_deployed_copy_fails_the_suite_naming_the_behaviour_MANUAL` (maker could not be launched), and `test_suite_runs_deployed_maker_as_separate_process_from_every_starting_point_MANUAL` for `parent_above` (NO_REPO/refused) and `sibling_beside` (AMBIGUOUS_REPO: the fixture's `project` and `seed` siblings both look like projects, candidates named in the answer). Forcing done would unmask real failures, so the AC stays todo. Suggested remediation: respawn python-coder to reconcile the fixtures (`starting_points()` layout, the seed sibling, the faulted-copy launch) with the landed BO-4300b-1 resolution, then re-run this gate.
 
 ## Escalation
 
@@ -516,3 +520,19 @@ completion_manifest:
   commit_message_valid: true
   ticket_staged: true
 Committed 15 staged files as 2388321f "test(worktree-manager): deployed-maker locator + repo guard (BO-4300f-4)". The first attempt this session failed check-feedback-id on the audit entry lacking a feedback-id line; fixed by submitting feedback and adding the line, then the retry passed all hooks (check-secrets and check-output-drift clean). No --no-verify used. Not pushed.
+
+### 2026-09-30 10:20 — architect-review (status: ok)
+feedback-id: fb_2026-09-30_ba765c20
+completion_manifest:
+  blast_radius_reviewed: true
+  impact_classified: true
+  cross_layer_seam_answer:
+    result: not_applicable
+    reason: "architect-review authors no code; no producing/consuming pair to pin for this phase."
+    remediation: "n/a -- not_applicable is a first-class outcome, not a defect."
+Re-dispatch after commit 2388321f. The 2026-09-28 classification stands: large (14 files, 2 components), escalation opus, requires_adr true, ADR-051 landed. The ADR-051 guard decision (session-exclusive lock, unfiltered snapshot, distinct timeout error) is what was built. Frontmatter `architect-review` was still `needed` while Sign-offs showed `[x]`; repaired to `signed_off`. Acceptance adjustments: none. Suggested diagrams: none. Anomaly: no Agent tool in this run, so research-agent was not spawned; the prior comment and committed artefacts were used instead.
+
+## Escalation
+
+Branch: opus
+Reason: files_touched = 14 (>5) and two components (worktree_manager, testing_quality); no always-large trigger.
