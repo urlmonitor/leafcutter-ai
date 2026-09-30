@@ -18,8 +18,13 @@ related_docs:
 
 - **Severity:** high
 - **Status:** open
-- **Occurrences:** 2 (two independent worktrees, same day)
-- **First seen:** 2026-09-28 · **Last seen:** 2026-09-28
+- **Occurrences:** **19 refused commits across at least 5 worktrees**, 2026-09-28 to
+  2026-09-30. Counted from the commit stderr logs in `~/tq600a1-backup/`: 19 distinct
+  `git commit` invocations whose refusal names
+  `output:   scripts/commit_guardian/commit_guardian.json`. Per worktree:
+  `tq600a5` 6, `close-a5` 1, `ki-register` 1, and 11 across `tq600a-migration` and the
+  two worktrees this entry originally recorded.
+- **First seen:** 2026-09-28 · **Last seen:** 2026-09-30
 - **Where:** `.leafcutter/scripts/commit_guardian/commit_guardian.json` (deployed
   output), `check_output_drift.py`, and whichever hook performs the rewrite —
   **not yet identified**
@@ -61,6 +66,25 @@ the template.
 Reproduced independently in a second worktree the same day, with the same
 `e9b58e6e` manifest expectation — the manifest hash is stable across worktrees,
 which is what makes the post-commit divergence attributable to the commit.
+
+**Correction, 2026-09-30: it is not "the second commit" — it is every commit after
+the first.** This entry's title and its original `Occurrences: 2` both read the defect
+as firing once per worktree, and that understated it by an order of magnitude. The
+`tq600a5` worktree is the clean measurement: **7 commits landed, 1 passed, and all 6
+subsequent ones were refused** — at 09-29 13:21, 09-29 16:45, 09-30 08:59, 09-30 09:19,
+09-30 09:36 and 09-30 11:01, each cleared by the one-line `config/` restore below and
+then re-run. A 1:1 correspondence with no exceptions. The rewrite therefore happens on
+**every** hook run, not only the first: the repair is not a one-off per worktree but a
+step before every commit after the first, for the life of the worktree.
+
+Two counting traps, both hit while recounting this:
+
+- The hook name appears in every commit log, passing or failing. `grep -l "Check Output
+  Drift"` matches ~all of them and proves nothing. Count the refusal message
+  (`output file(s) were directly edited`) or the `…Failed` line.
+- Not every `check-output-drift` failure is *this* defect. Two logs in the same corpus
+  fail the same hook on gitignored `.claude/.cache/readme_markers/` GAP entries — a
+  different issue entirely. Match on the named output path, not on the hook.
 
 **Why it is worse than one blocked commit.** Any workflow that commits twice in
 one worktree — `quick-fix` (fix commit, then changelog commit), any drive that
@@ -151,4 +175,5 @@ it no longer makes the advertised remedy unsafe, though the permission-layer
 refusal noted above can still make it unavailable).
 
 **Pattern:** a gate whose own enforcement run mutates the artifact it is
-enforcing, so the guarantee holds exactly once per worktree.
+enforcing, so the guarantee holds only for a worktree's first commit and the
+artifact must be repaired before every commit thereafter.

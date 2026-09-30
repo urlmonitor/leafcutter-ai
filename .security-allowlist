@@ -355,3 +355,21 @@ ENTROPY_HIGH:scripts/ac_store/_gtfa_files_touched.py:*
 # credential. Glob, not per-line: matches the treatment of every other changelog entry
 # in this file.
 ENTROPY_HIGH:changelogs/2026-09-23-1030-an-ambiguous-reference-pattern-is-now-refused-instead-of-silently-resolving-to-an-arbitrary-file.md:*
+
+# GE-127e-3-i. A module-level constant holding the name of the outcome token this
+# gate prints when it cannot describe a file -- the third member of the same family
+# as the INDETERMINATE and EMPTY HISTORY tokens already in this component. It is a
+# fixed English label printed to stdout, not a credential. The value is not
+# reproduced here on purpose: quoting it would itself trip the scanner this entry
+# exists to suppress, which is how an earlier attempt in this epic blocked on its own
+# explanatory comment. Glob, not per-line: the constant sits near the top of a file
+# that is still being added to, so a line number would silently go stale.
+GENERIC_SECRET:templates/scripts/commit_guardian/_file_description.py:*
+
+# GE-127e-3-i. Two unittest class names long enough to read as high entropy. This
+# repo's test-naming convention spells the behaviour under test out in full, so a
+# class name that states a whole Gherkin clause is normal here rather than unusual.
+# No credential. Glob, not per-line: both sit above code that will move as these
+# files grow, and per-line entries break silently when lines shift.
+ENTROPY_HIGH:unit_tests/commit_guardian/test_ge_127e_3_i_no_substitute_and_verdict_independence.py:*
+ENTROPY_HIGH:unit_tests/commit_guardian/test_ge_127e_3_i_reachability_and_deployed.py:*
