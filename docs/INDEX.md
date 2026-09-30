@@ -31,6 +31,7 @@ task, then pull only those files.
 | changelog | [docs/architecture/components/changelog.md](architecture/components/changelog.md) | Automated changelog entry management system that tracks feature delivery history with structured YAML entries linked to tickets and commits. |
 | code review | [docs/architecture/components/code-review.md](architecture/components/code-review.md) | Architecture of the Fowler code-smell review capability: the developer-facing /code-smell-review flow, the shared core review method plus the two bucket catalogues, the two cost-tiered leaf reviewers (Sonnet + Opus), and the top-level orchestration that fans them out in parallel and merges their findings into one severity-ranked report. |
 | commit guardian | [docs/architecture/components/commit-guardian.md](architecture/components/commit-guardian.md) | Pre-commit hook orchestration system that enforces code quality, ADR coverage, component integrity, and structural rules before every commit lands. |
+| decision kernel | [docs/architecture/components/decision-kernel.md](architecture/components/decision-kernel.md) | Container-level overview of the Leafcutter decision kernel (leafcutter_kernel/): the client-independent run service, the fixed LangGraph scheduler, the Jev decision port, the new capability registry, native decision and research capabilities, the read-only retrieval adapter, cooperative Claude Code handoff, and Langfuse observability. Status: planned; Phase 0 of TICKET-20260930-KernelBootstrapV0. |
 | doc compliance | [docs/architecture/components/doc-compliance.md](architecture/components/doc-compliance.md) | Documentation compliance verification system that enforces frontmatter presence, description fields, doc-length limits, and coverage requirements across all project documentation. |
 | epic retrospective | [docs/architecture/components/epic-retrospective.md](architecture/components/epic-retrospective.md) | Post-epic fact extraction subsystem. Reads a completed epic's ticket frontmatter, git history, and comment stream to produce a structured, machine-readable facts blob that grounds the retrospective-agent's narrative in measured evidence rather than recollection. |
 | feedback collector | [docs/architecture/components/feedback-collector.md](architecture/components/feedback-collector.md) | Structured feedback collection system that aggregates agent quality signals into JSONL logs for retrospective analysis and continuous improvement. |
@@ -211,8 +212,8 @@ task, then pull only those files.
 
 | Name | Path | Description |
 |------|------|-------------|
-| PROJECT CONTEXT injection | [docs/conventions/PROJECT_CONTEXT-injection.md](conventions/PROJECT_CONTEXT-injection.md) | Overview of Convention: PROJECT_CONTEXT Injection for Portable Agents. |
 | adr numbering | [docs/conventions/adr-numbering.md](conventions/adr-numbering.md) | Overview of Convention: ADR Numbering and Collision Prevention. |
+| PROJECT CONTEXT injection | [docs/conventions/PROJECT_CONTEXT-injection.md](conventions/PROJECT_CONTEXT-injection.md) | Overview of Convention: PROJECT_CONTEXT Injection for Portable Agents. |
 
 ## Retrospectives
 
@@ -220,9 +221,9 @@ task, then pull only those files.
 |------|------|-------------|
 | 2026 05 22 epic antigravity support | [docs/retrospectives/2026-05-22-epic-antigravity-support.md](retrospectives/2026-05-22-epic-antigravity-support.md) | Retrospective: Dual Platform Antigravity Support |
 | EPIC ACDrivenDevelopment | [docs/retrospectives/EPIC-ACDrivenDevelopment.md](retrospectives/EPIC-ACDrivenDevelopment.md) | Date: 2026-06-05 |
-| EPIC ACTraceabilityStore | [docs/retrospectives/EPIC-ACTraceabilityStore.md](retrospectives/EPIC-ACTraceabilityStore.md) | Date: 2026-06-04 |
 | EPIC AcPatternEnforcementIsMechanically | [docs/retrospectives/EPIC-AcPatternEnforcementIsMechanically.md](retrospectives/EPIC-AcPatternEnforcementIsMechanically.md) | Retrospective for EPIC-AcPatternEnforcementIsMechanically (ACS-500f) |
 | EPIC AcPipelineDeployGaps | [docs/retrospectives/EPIC-AcPipelineDeployGaps.md](retrospectives/EPIC-AcPipelineDeployGaps.md) | Post-merge retrospective for EPIC-AcPipelineDeployGaps (PR #88), covering |
+| EPIC ACTraceabilityStore | [docs/retrospectives/EPIC-ACTraceabilityStore.md](retrospectives/EPIC-ACTraceabilityStore.md) | Date: 2026-06-04 |
 | EPIC BOPhantomDoneRemediation | [docs/retrospectives/EPIC-BOPhantomDoneRemediation.md](retrospectives/EPIC-BOPhantomDoneRemediation.md) | Overview of Retrospective: EPIC-BOPhantomDoneRemediation. |
 | EPIC CodeQualityHooks | [docs/retrospectives/EPIC-CodeQualityHooks.md](retrospectives/EPIC-CodeQualityHooks.md) | Epic retrospective for EPIC-CodeQualityHooks — jscpd duplicate-code detection and diff-cover test-coverage enforcement hooks. |
 | EPIC CompletionManifestSignoff | [docs/retrospectives/EPIC-CompletionManifestSignoff.md](retrospectives/EPIC-CompletionManifestSignoff.md) | Date: 2026-05-30 |

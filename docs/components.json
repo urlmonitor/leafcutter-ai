@@ -127,6 +127,21 @@
         "scripts/config_loader.py"
       ]
     },
+    "decision_kernel": {
+      "id": "decision_kernel",
+      "name": "Decision Kernel",
+      "type": "orchestration",
+      "description": "Resumable LangGraph decision-and-research runtime (leafcutter_kernel/): Jev-routed capabilities over its own capability registry, native decision and research graphs, read-only repository retrieval, cooperative Claude Code handoff, capability-gap records and Langfuse tracing. leafcutter-ai only; not shipped to adopters.",
+      "detail_ref": "docs/architecture/components/decision-kernel.md",
+      "status": "planned",
+      "primary_code": [
+        "leafcutter_kernel/",
+        "config/capability_registry.json",
+        "config/kernel_config.default.json"
+      ],
+      "agent_affinity": [],
+      "exposed_interfaces": []
+    },
     "doc_compliance": {
       "id": "doc_compliance",
       "name": "Doc Compliance",
