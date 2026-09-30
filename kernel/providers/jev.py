@@ -26,7 +26,14 @@ from pydantic import TypeAdapter
 
 from kernel.contracts.base import canonical_json
 from kernel.contracts.capability import Usage
-from kernel.providers.base import JevBatch, JevInvalidResponse, JevResult, QuestionSpec
+from kernel.observability.tracer import Tracer
+from kernel.providers.base import (
+    JevBatch,
+    JevError,
+    JevInvalidResponse,
+    JevResult,
+    QuestionSpec,
+)
 from kernel.providers.jev_errors import (
     JevInvalidRequest,
     JevPayloadTooLarge,
@@ -34,6 +41,7 @@ from kernel.providers.jev_errors import (
     JevUnavailable,
 )
 from kernel.providers.jev_http import HttpTransport
+from kernel.providers.jev_trace import emit_generation
 from kernel.providers.jev_wire import RawResponse, map_answers, parse_body, question_to_wire
 
 if TYPE_CHECKING:
@@ -65,7 +73,8 @@ class ClassifierTransport:
     name = "typesafe-classifier"
 
     def __init__(self, *, api_key: str, model: str, timeout_seconds: float,
-                 base_url: str | None = None, async_client: Any = None) -> None:
+                 base_url: str | None = None, async_client: Any = None,
+                 detach_callbacks: bool = False) -> None:
         """Create the classifier, passing the key explicitly (the class defaults to another env var).
 
         Args:
@@ -74,6 +83,9 @@ class ClassifierTransport:
             timeout_seconds: Timeout for the clients the classifier creates.
             base_url: Optional API root override.
             async_client: Optional injected httpx2.AsyncClient (tests).
+            detach_callbacks: Run the classifier with an empty callback list so graph-level
+                LangChain handlers do not add a usage-less CHAIN observation; the adapter then
+                emits the GENERATION itself.
         """
         import langchain_typesafe as lts  # noqa: PLC0415 - lazy: only vendor import site
 
@@ -84,6 +96,7 @@ class ClassifierTransport:
             kwargs["base_url"] = base_url
         if async_client is not None:
             kwargs["async_client"] = async_client
+        self._detach_callbacks = detach_callbacks
         self._owns_clients = async_client is None
         self._classifier = lts.TypeSafeClassifier(**kwargs)
 
@@ -96,8 +109,10 @@ class ClassifierTransport:
         request = {"state": state,
                    "questions": {k: adapter.validate_python(v) for k, v in questions.items()}}
         try:
-            response = await self._classifier.ainvoke(
-                request, config={"run_name": f"jev.{purpose}" if purpose else "jev"})
+            config: dict[str, Any] = {"run_name": f"jev.{purpose}" if purpose else "jev"}
+            if self._detach_callbacks:
+                config["callbacks"] = []
+            response = await self._classifier.ainvoke(request, config=config)
         except lts_client.TypeSafeAPIResponseValidationError as exc:
             reason = f"jev response failed validation at {exc.field_path}"
             raise JevInvalidResponse(reason) from exc
@@ -140,7 +155,8 @@ class TypeSafeJevAdapter:
     def __init__(self, transport: JevTransport, *, timeout_seconds: float,
                  max_questions_per_call: int, max_state_chars: int, max_retries: int,
                  retry_backoff_seconds: float, price_per_input_token_usd: float | None = None,
-                 sleep: Callable[[float], Awaitable[None]] = asyncio.sleep) -> None:
+                 sleep: Callable[[float], Awaitable[None]] = asyncio.sleep,
+                 tracer: Tracer | None = None, model_name: str | None = None) -> None:
         """Create the adapter.
 
         Args:
@@ -153,6 +169,9 @@ class TypeSafeJevAdapter:
                 asks for a specific delay.
             price_per_input_token_usd: Used to estimate cost; None leaves cost unknown.
             sleep: Awaitable sleep (injected in tests).
+            tracer: When set, every assess call emits one `jev.<purpose>` GENERATION through it
+                (parented to the current span of the caller, correlated by `batch.correlation`).
+            model_name: Configured model, reported when the provider does not name one.
         """
         self._transport = transport
         self._timeout = timeout_seconds
@@ -162,11 +181,13 @@ class TypeSafeJevAdapter:
         self._backoff = retry_backoff_seconds
         self._price = price_per_input_token_usd
         self._sleep = sleep
+        self._tracer = tracer
+        self._model_name = model_name
 
     @classmethod
     def from_config(cls, cfg: KernelConfig, api_key: str, *,
                     transport: TransportName | None = None, base_url: str | None = None,
-                    client: Any = None) -> TypeSafeJevAdapter:
+                    client: Any = None, tracer: Tracer | None = None) -> TypeSafeJevAdapter:
         """Build an adapter from the kernel config.
 
         Args:
@@ -176,6 +197,9 @@ class TypeSafeJevAdapter:
                 reads `jev.transport` from the config.
             base_url: Optional API root override.
             client: Optional injected async HTTP client matching the transport (tests).
+            tracer: Optional Tracer. When given the adapter emits one GENERATION per call and
+                the classifier transport detaches inherited LangChain callbacks, so Langfuse
+                shows one observation per call instead of a duplicate usage-less CHAIN.
 
         Returns:
             TypeSafeJevAdapter: Ready adapter.
@@ -188,12 +212,14 @@ class TypeSafeJevAdapter:
         else:
             tr = ClassifierTransport(
                 api_key=api_key, model=jev.model, timeout_seconds=jev.timeout_seconds,
-                base_url=base_url, async_client=client)
+                base_url=base_url, async_client=client,
+                detach_callbacks=tracer is not None)
         return cls(tr, timeout_seconds=jev.timeout_seconds,
                    max_questions_per_call=jev.max_questions_per_call,
                    max_state_chars=jev.max_state_chars, max_retries=cfg.limits.max_retries,
                    retry_backoff_seconds=jev.retry_backoff_seconds,
-                   price_per_input_token_usd=jev.price_per_input_token_usd)
+                   price_per_input_token_usd=jev.price_per_input_token_usd, tracer=tracer,
+                   model_name=jev.model)
 
     @property
     def adapter_version(self) -> str:
@@ -206,6 +232,27 @@ class TypeSafeJevAdapter:
 
     async def assess(self, batch: JevBatch) -> JevResult:
         """Answer every question of the batch (see JevPort.assess for the error contract)."""
+        started = time.perf_counter()
+        try:
+            result = await self._assess(batch)
+        except JevError as exc:
+            self._trace(batch, started, error=exc)
+            raise
+        self._trace(batch, started, result=result)
+        return result
+
+    def _trace(self, batch: JevBatch, started: float, *, result: JevResult | None = None,
+               error: JevError | None = None) -> None:
+        """Emit the GENERATION for this call when a tracer is configured."""
+        if self._tracer is None:
+            return
+        emit_generation(
+            self._tracer, batch, adapter_version=self.adapter_version,
+            model_name=self._model_name, state_chars=len(canonical_json(batch.state)),
+            latency_ms=int((time.perf_counter() - started) * 1000), result=result, error=error)
+
+    async def _assess(self, batch: JevBatch) -> JevResult:
+        """Validate, send (chunked, with retry) and map the answers."""
         ids = [q.id for q in batch.questions]
         if len(set(ids)) != len(ids):
             reason = "duplicate question ids in batch"
@@ -279,6 +326,10 @@ class TypeSafeJevAdapter:
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 00:30 [python-coder]: With a tracer the adapter emits the GENERATION and the
+#   classifier runs with callbacks=[] (an explicit empty list overrides the inherited graph-level
+#   handler), so the usage-less LangChain CHAIN is not duplicated. Without a tracer behaviour is
+#   unchanged. (#KernelBootstrapV0/OBS)
 # - 2026-09-30 23:59 [python-coder]: Transport defaults from `jev.transport`; results carry
 #   adapter_version. (#KernelBootstrapV0/INT)
 # - 2026-09-30 23:00 [python-coder]: Retry lives in the adapter because langchain-typesafe has

@@ -31,6 +31,7 @@ from kernel.contracts import (
     new_id,
 )
 from kernel.scheduler.context import KernelRuntime
+from kernel.scheduler.context import run_corr
 from kernel.scheduler.guards import normalize_text
 from kernel.scheduler.merge import Draft
 from kernel.scheduler.state import KernelState
@@ -94,6 +95,16 @@ def _store(runtime: KernelRuntime, gap: CapabilityGap) -> bool:
     return True
 
 
+def _trace_gap(runtime: KernelRuntime, state: KernelState, item: WorkItem,
+               gap: CapabilityGap) -> None:
+    """Emit the `gap.recorded` tracer event (countable: key, type, need; no payload)."""
+    runtime.tracer.event(
+        "gap.recorded", run_corr(state, work_item_id=item.id),
+        payload={"gap_id": gap.id, "gap_key": gap.gap_key, "gap_type": gap.gap_type.value,
+                 "normalized_need": gap.normalized_need,
+                 "request_kind": gap.request_kind.value})
+
+
 async def record_gaps(state: KernelState, runtime: Runtime[KernelRuntime]) -> dict[str, Any]:
     """Record a gap for each no_match (unsupported) or insufficient_context (ambiguous) item."""
     ctx = runtime.context
@@ -110,6 +121,7 @@ async def record_gaps(state: KernelState, runtime: Runtime[KernelRuntime]) -> di
                         GapType.UNSUPPORTED if unsupported else GapType.AMBIGUOUS, draft.now)
         gaps[gap.id] = gap
         draft.emit("gap.recorded", gap.gap_type.value, work_item_id=item.id, gap_id=gap.id)
+        _trace_gap(ctx, state, item, gap)
         if not _store(ctx, gap):
             draft.emit("gap.record_failed", gap.gap_key, work_item_id=item.id)
         if unsupported:
@@ -122,6 +134,9 @@ async def record_gaps(state: KernelState, runtime: Runtime[KernelRuntime]) -> di
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 00:30 [python-coder]: `gap.recorded` goes to the tracer next to the run event so
+#   gaps stay countable in traces (design part 5, colony-memory prerequisites). The tracer call
+#   is not wrapped: tracers degrade internally and never raise. (#KernelBootstrapV0/OBS)
 # - 2026-09-30 22:30 [python-coder]: `ambiguous` observations are recorded for every
 #   insufficient_context outcome (design part 4 gap table) but never block here: the route node
 #   already chose between a human clarification and blocking. (#KernelBootstrapV0/P4)

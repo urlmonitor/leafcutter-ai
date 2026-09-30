@@ -78,6 +78,21 @@ def select_sources(ctx: ExecutionContext, request: RetrievalRequestPayload
 
 async def _search_one(ctx: ExecutionContext, policy: ReadPolicy, source: SourceConfig,
                       terms: list[str]) -> SearchReport:
+    """Search one source inside a `retrieval.<source>` retriever observation."""
+    meta = {"source_id": source.id, "strategy": source.kind, "term_count": len(terms)}
+    with ctx.tracer.span(f"retrieval.{source.id}", "retriever", ctx.corr, input={"terms": terms},
+                         metadata=meta) as span:
+        report = await _search_source(ctx, policy, source, terms)
+        span.update(output={"files_scanned": report.files_scanned,
+                            "candidates": len(report.candidates),
+                            "skipped": dict(report.skipped),
+                            "unavailable_reason": report.unavailable_reason},
+                    level="WARNING" if report.unavailable_reason else None)
+    return report
+
+
+async def _search_source(ctx: ExecutionContext, policy: ReadPolicy, source: SourceConfig,
+                         terms: list[str]) -> SearchReport:
     """Search one source in a worker thread; unreachable sources become unavailable reports."""
     cfg = ctx.config.retrieval
     if source.kind == "knowledge_map":
@@ -234,6 +249,9 @@ class RepositoryRetrievalExecutor:
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 00:30 [python-coder]: Each source search is a `retrieval.<source>` retriever span
+#   under the capability span (design observation map); output carries counts only, never
+#   excerpts. (#KernelBootstrapV0/OBS)
 # - 2026-09-30 23:00 [python-coder]: A need whose sources are all unreachable yields a partial
 #   bundle with coverage `unavailable` (not failed, not empty) so research can report the
 #   unavailable sources. (#KernelBootstrapV0/P5)

@@ -17,6 +17,7 @@ import hashlib
 import importlib.util
 import logging
 import sys
+import threading
 from pathlib import Path
 from types import ModuleType
 
@@ -34,6 +35,7 @@ _LOAD_ERRORS = (ImportError, OSError, SyntaxError, AttributeError, SystemExit, V
                 KeyError, TypeError)
 _MODULES: dict[str, ModuleType] = {}
 _NODES: dict[tuple[str, str], list] = {}
+_LOAD_LOCK = threading.RLock()
 
 
 STAGE_NO_SPEC = "script cannot be loaded"
@@ -52,15 +54,28 @@ class KnowledgeMapUnavailable(Exception):
 
 def clear_caches() -> None:
     """Drop the per-process module and map caches (tests)."""
-    _MODULES.clear()
-    _NODES.clear()
+    with _LOAD_LOCK:
+        _MODULES.clear()
+        _NODES.clear()
 
 
 def _load_module(root: Path) -> ModuleType:
-    """Load scripts/knowledge_query.py below root (cached); raise KnowledgeMapUnavailable."""
+    """Load scripts/knowledge_query.py below root (cached); raise KnowledgeMapUnavailable.
+
+    Loading is serialised: the script registers its sibling modules in `sys.modules` before they
+    finish executing, so a second worker thread must never start a load while one is running.
+    """
     key = str(root)
-    if key in _MODULES:
-        return _MODULES[key]
+    with _LOAD_LOCK:
+        if key in _MODULES:
+            return _MODULES[key]
+        module = _exec_script(root, key)
+        _MODULES[key] = module
+        return module
+
+
+def _exec_script(root: Path, key: str) -> ModuleType:
+    """Execute the script as a uniquely named module (caller holds the load lock)."""
     script = root / SCRIPT
     name = "leafcutter_kernel_kq_" + hashlib.sha256(key.encode("utf-8")).hexdigest()[:8]
     spec = importlib.util.spec_from_file_location(name, script)
@@ -74,7 +89,6 @@ def _load_module(root: Path) -> ModuleType:
         sys.modules.pop(name, None)
         logger.warning("knowledge map script failed to load: %s", exc)
         raise KnowledgeMapUnavailable(STAGE_LOAD, repr(exc)) from exc
-    _MODULES[key] = module
     return module
 
 
@@ -146,6 +160,9 @@ def search_knowledge_map(policy: ReadPolicy, source: SourceConfig, terms: list[s
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 00:30 [python-coder]: Module loading holds an RLock because the shipped script's
+#   _load_sibling_module publishes half-loaded modules in sys.modules; parallel retrieval workers
+#   otherwise saw them (scripts/ is a package file and is not edited here). (#KernelBootstrapV0/OBS)
 # - 2026-09-30 23:00 [python-coder]: SystemExit is caught explicitly because
 #   build_knowledge_map exits the process when paths.json is missing; that must become an
 #   unavailable source, never end the run. (#KernelBootstrapV0/P5)

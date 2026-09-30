@@ -48,7 +48,7 @@ from kernel.contracts.evidence import EvidenceInput
 from kernel.observability.correlation import deterministic_trace_id
 from kernel.observability.tracer import TraceState
 from kernel.scheduler import guards
-from kernel.scheduler.context import KernelRuntime, flush_events, sequential_node
+from kernel.scheduler.context import KernelRuntime, flush_events, run_corr, sequential_node
 from kernel.scheduler.state import Budgets, KernelState, RunOutcome, new_event
 
 logger = logging.getLogger(__name__)
@@ -247,6 +247,12 @@ async def finalize(state: KernelState, runtime: Runtime[KernelRuntime]) -> dict[
     ctx = runtime.context
     outcome = _write_report(ctx, state, decide_outcome(state))
     event = new_event(state["run_id"], ctx.clock(), "run.finished", outcome.status.value)
+    ctx.tracer.event("run.finalized", run_corr(state), payload={
+        "status": outcome.status.value, "limitation_count": len(outcome.limitations),
+        "error_codes": [e.code for e in outcome.errors],
+        "open_question_count": len(outcome.open_questions),
+        "halt_reason": state.get("halt_reason"), "state_revision": state.get("state_revision", 0)
+    })
     return {"status": outcome.status, "outcome": outcome, "events": [event],
             "state_revision": state.get("state_revision", 0) + 1,
             "events_flushed": flush_events(ctx.run_store, state)}
@@ -257,6 +263,8 @@ __all__ = ["IntakeError", "decide_outcome", "finalize", "intake", "render_report
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 00:30 [python-coder]: `run.finalized` is a tracer event inside the finalize span
+#   (status and counts only; limitation text stays in run.json). (#KernelBootstrapV0/OBS)
 # - 2026-09-30 22:30 [python-coder]: A root that completed but fails the completion contract
 #   is reported `partial` (with the problems as limitations) rather than `completed`; the work
 #   is useful but the contract is not met. (#KernelBootstrapV0/P4)
