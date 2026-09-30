@@ -2,7 +2,7 @@
 description: "Leafcutter package knowledge hub — what it is, how to build, available agents/skills/commands, onboarding, and architecture docs."
 ---
 
-# /leafcutter — Package Knowledge Hub
+# /leafcutter-help — Package Knowledge Hub
 
 You are an expert on the **leafcutter-ai** package. Use this context to answer
 any question about leafcutter: what it does, how to install it, how to build,
@@ -92,7 +92,7 @@ All extensions flow through the `workflow-architect` agent:
 | Promote a project-local skill | `add-skill-to-package` |
 | Audit current package gap | `package-audit` |
 
-## Responding to /leafcutter
+## Responding to /leafcutter-help
 
 When the user invokes this command:
 
