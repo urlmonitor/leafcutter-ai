@@ -158,7 +158,7 @@ tests/kernel/                 per phase; __init__.py in every directory (part 6)
 1. **New, initially empty capability registry.** This is a user override of spec §2.1(3) and §6
    ("reuse the existing registry"). The eligibility filter, snapshot pinning and descriptor
    normalization of §6 still apply, but over `config/capability_registry.json`.
-   It is an ADR candidate (next free number ADR-051) and has not been written yet.
+   Recorded in [ADR-055](../architecture/adrs/ADR-055-capability-registry-starts-empty.md).
 2. **Skill location.** Spec §11.1 names `.claude/skills/leafcutter/SKILL.md`. In this repo that
    directory is gitignored build output, and `/leafcutter` is already the shipped knowledge-hub
    command. The source is therefore tracked at `kernel/adapters/claude_code/SKILL.md`

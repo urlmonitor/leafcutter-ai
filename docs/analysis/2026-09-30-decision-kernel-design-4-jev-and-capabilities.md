@@ -77,11 +77,29 @@ criteria are the eligible ids (text = descriptor `description`) plus `__NONE__` 
 
 | Node | Behaviour |
 |---|---|
-| `load` | Question, options and criteria come from the payload or from child outcomes (`options.v1` proposals and their `proposed_criteria`). Evidence excerpts are read through `ctx.evidence(ids)`. Constraints and approval requirement are loaded. |
-| `validate_basis` | Deterministic checks. No options: `waiting` with an `options` request (`options_request.v1`, `propose_criteria=true`). Options exist but no criteria: `waiting` with a `human` request asking for criteria (free text). If the continuation shows the same request already failed, the result is `blocked`. |
+| `load` | Question, options and criteria come from the payload or from child outcomes (`options.v1` proposals and their `proposed_criteria`, and the human answer that approves or edits proposed criteria). Evidence excerpts are read through `ctx.evidence(ids)`. Constraints and approval requirement are loaded. |
+| `validate_basis` | Deterministic checks. No options: `waiting` with an `options` request (`options_request.v1`, `propose_criteria=true`). Options exist but no criteria: the criteria-proposal path below; `assess` does not run until the criteria are approved. If the continuation shows the same request already failed, the result is `blocked`. |
 | `assess` | One Jev batch. **`sufficient.<crit>`** (noul): "Does `evidence` contain enough information to judge each option in `options` against `criteria.<crit>`?" **`satisfies.<crit>.<opt>`** (noul): "According to `evidence`, does option `options.<opt>` satisfy `criteria.<crit>`?" **`missing`** (choice): the MissingKnowledge taxonomy plus `none`. **`preference`** (noul): "Does choosing between `options` depend on a user preference, requirement or authorization that `constraints` do not state?" **`conflict`** (noul): "Do items in `evidence` contradict each other on a point that affects `question`?" |
 | `combine` | Pure, thresholds from `decision.*`. **Resolved only if all hold (§9.4):** every required criterion has `sufficient ≥ T_suff`; the selected option passes every required criterion (`satisfies ≥ T_sat`, fail when ≤ 1−T_sat, otherwise uncertain); exactly one option passes (supporting criteria break ties); the option was supplied; `conflict < T_conf`; `preference < T_pref`; and approval is either not required or obtained. **Otherwise `needs_*`, in this precedence:** unknown options → `needs_options`; insufficient required criteria → `needs_evidence`, with categories from the `missing` answer and the map below; sufficient but uncertain, or conflict → `needs_synthesis`; preference, a tie, or approval → `needs_human`. |
 | `emit` | `resolved`: `completed` with the report; the rationale is template-built and labelled `origin: template`; `approval_status` is `proposed` when criteria or options are only proposed. `needs_*`: `waiting` with child proposals — evidence goes to `research_request.v1` (needs pre-filled), options to `options_request.v1`, synthesis to `synthesis_request.v1`, human to `human_question_request.v1`. The same `needs_*` with an unchanged `evidence_revision` makes the result `partial` with open questions (no-progress). |
+
+**Criteria-proposal path (options supplied, criteria missing).** User decision, BrainCandy,
+2026-09-30. It replaces the earlier design, which sent this case straight to a `human` request
+asking for criteria. Jev decides only against criteria that a human has approved:
+
+1. **An LLM proposes criteria as host work.** `validate_basis` returns `waiting` with an
+   `options_request.v1` that lists the supplied options in `existing_option_ids`, sets
+   `max_options=0` and `propose_criteria=true`. `host.generate_options` serves it. The returned
+   `proposed_criteria` carry `proposal_status=proposed` and `approval_status=proposed`.
+2. **The run pauses for human approval or edit.** On continuation, `validate_basis` returns
+   `waiting` with a `human_question_request.v1` that shows the proposed criteria and asks the
+   human to approve or edit them. The run stays in `waiting_human` until answered or cancelled.
+3. **Jev decides against the approved criteria.** `assess` runs only after the answer arrives.
+   It uses the criteria as approved or edited, marked `approval_status=approved` with
+   `approved_by` set to the human. Unapproved proposals never reach `assess` on this path.
+
+Open for P5/P6: how an edit is expressed. `human_answer.v1` carries either a `choice_id` or
+`free_text`, and nothing yet turns free text into `Criterion` entries.
 
 MissingKnowledge maps to evidence needs as follows:
 

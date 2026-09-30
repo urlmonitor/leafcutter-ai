@@ -88,7 +88,7 @@ file. A file handed from one phase to the next is marked "takes over".
 | **P8** | 8 | `capabilities/host/**`; edits `bootstrap.py` (registers `host.*` bindings) after P7; `tests/…/capabilities/test_host_operations.py` | P6, P7 | — |
 | **P9** | 9 | Takes over `scheduler/nodes_gaps.py` and `scheduler/guards.py` (hardening); edits `service.py` (`cancel_run` path); `tests/…/integration/{__init__,test_gap_fallback,test_gap_no_fallback,test_cancel}.py`, `tests/…/scheduler/test_guards_hardening.py` | P7, P8 | — |
 | **P10** | 10 | `tests/…/integration/{test_decision_loop,test_demo_scenarios}.py`, `tests/…/live/{test_live_langfuse,test_live_end_to_end}.py`, `docs/how-to/run-the-decision-kernel.md`, `docs/how-to/inspect-kernel-traces-with-langfuse-mcp.md`, demo report doc, `changelogs/<entry>.md`, `docs/components.json` (status active, `exposed_interfaces`), updates to this design series | all | — |
-| **P11** (after MVP) | §15.5 | Dogfood run on workflow representation; a proposed ADR (next free: ADR-051/052), never auto-approved | P10 | — |
+| **P11** (after MVP) | §15.5 | Dogfood run on workflow representation; a proposed ADR (number allocated when it is written), never auto-approved | P10 | — |
 
 **Waves.**
 

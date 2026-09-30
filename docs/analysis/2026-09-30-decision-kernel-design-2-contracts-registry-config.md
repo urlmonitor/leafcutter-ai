@@ -127,6 +127,8 @@ Semantic checks run after schema checks:
 
 ## Capability registry (new, starts empty)
 
+The decision is recorded in
+[ADR-055](../architecture/adrs/ADR-055-capability-registry-starts-empty.md).
 `config/capability_registry.json` follows the draft-07 convention of its siblings
 `config/agent_registry.json` and `config/skill_registry.json`:
 

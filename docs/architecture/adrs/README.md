@@ -3,7 +3,7 @@ title: "Architecture Decision Records"
 description: "Index of all Architecture Decision Records (ADRs) for the leafcutter-ai package, listing each decision's number, status, title, and date."
 type: "reference"
 created: '2026-08-13'
-last_updated: '2026-09-17'
+last_updated: '2026-09-30'
 status: active
 components:
 - documentation_system
@@ -71,3 +71,7 @@ python scripts/adr_refs.py --index --write
 | [ADR-042](ADR-042-product-truth-checker-outcome-vocabulary.md) | Active | The Product-Truth Checker Reports a Closed Outcome Vocabulary on a Structured Channel | 2026-09-09 |
 | [ADR-043](ADR-043-journey-record-carries-its-own-behind-mark.md) | Active | A Journey Known to Be Behind Carries a Durable `behind` Mark in the Record Itself | 2026-09-09 |
 | [ADR-044](ADR-044-example-content-self-declares-its-product.md) | Active | Example Content Declares Its Example Product in One `example_product` Key, Cross-Checked Against Its Product Root | 2026-09-16 |
+| [ADR-052](ADR-052-capabilities-replace-agents-prompts-are-compiled.md) | Active | Capabilities Replace Agents — Prompts Are Compiled Outputs, Not the Source of Truth | 2026-09-30 |
+| [ADR-053](ADR-053-intelligence-selection-deterministic-jev-llm-human.md) | Active | Intelligence Selection — Deterministic vs Jev vs LLM vs Human | 2026-09-30 |
+| [ADR-054](ADR-054-process-representation-and-maturity-model.md) | Active | Process Representation and the Process-Maturity Model — Workflow vs Policy/Checklist vs LLM-Guided | 2026-09-30 |
+| [ADR-055](ADR-055-capability-registry-starts-empty.md) | Active | The Kernel's Capability Registry Starts Empty — Legacy Agents and Skills Enter Only by Recorded Decision | 2026-09-30 |

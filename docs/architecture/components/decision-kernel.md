@@ -14,6 +14,10 @@ related_docs:
   - docs/analysis/2026-09-30-decision-kernel-design.md
   - docs/analysis/2026-09-30-decision-kernel-design-3-kernel-scheduler.md
   - docs/analysis/2026-09-30-leafcutter-kernel-spec-rev3.md
+  - docs/architecture/adrs/ADR-052-capabilities-replace-agents-prompts-are-compiled.md
+  - docs/architecture/adrs/ADR-053-intelligence-selection-deterministic-jev-llm-human.md
+  - docs/architecture/adrs/ADR-054-process-representation-and-maturity-model.md
+  - docs/architecture/adrs/ADR-055-capability-registry-starts-empty.md
 related_code:
   - kernel/__init__.py
 tags:
@@ -61,11 +65,20 @@ in [Decision Kernel V0 Design — Part 1](../../analysis/2026-09-30-decision-ker
 | Claude Code skill + CLI | Transport only. It forwards the goal, presents questions and results, and does exactly the host work requested. | [part 5](../../analysis/2026-09-30-decision-kernel-design-5-client-observability.md) |
 | RunService | Client-independent API: `start_run`, `resume_run`, `get_run`, `cancel_run`. Validates submissions and keeps resume idempotent. | [part 5](../../analysis/2026-09-30-decision-kernel-design-5-client-observability.md) |
 | Kernel scheduler | A fixed LangGraph with dynamic work items: routing, dispatch, validation, continuation, guards, finalization. | [part 3](../../analysis/2026-09-30-decision-kernel-design-3-kernel-scheduler.md) |
-| Capability registry | New `config/capability_registry.json`, empty at start. Legacy agent and skill registries are never routed. | [part 2](../../analysis/2026-09-30-decision-kernel-design-2-contracts-registry-config.md) |
+| Capability registry | New `config/capability_registry.json`, empty at start. Legacy agent and skill registries are never routed ([ADR-055](../adrs/ADR-055-capability-registry-starts-empty.md)). | [part 2](../../analysis/2026-09-30-decision-kernel-design-2-contracts-registry-config.md) |
 | Jev port | Bounded, batched classification through `langchain-typesafe`. Uncertainty is treated as data. | [part 4](../../analysis/2026-09-30-decision-kernel-design-4-jev-and-capabilities.md) |
 | Capabilities | Native `decision` and `research` graphs, the `retrieve.repository` adapter, and `host.*` handoffs. | [part 4](../../analysis/2026-09-30-decision-kernel-design-4-jev-and-capabilities.md) |
 | Run root | `.leafcutter/kernel/`: checkpoints, run records, artifacts, interaction ledger, capability gaps. | [part 3](../../analysis/2026-09-30-decision-kernel-design-3-kernel-scheduler.md) |
 | Observability | Langfuse v4 traces that stay continuous across process restarts, correlation IDs on every observation, and redaction. | [part 5](../../analysis/2026-09-30-decision-kernel-design-5-client-observability.md) |
+
+## Decisions
+
+| ADR | Decides |
+|---|---|
+| [ADR-052](../adrs/ADR-052-capabilities-replace-agents-prompts-are-compiled.md) | The contract-driven capability, not the agent, is the unit of work. Prompts are compiled outputs of a deterministic invocation compiler. |
+| [ADR-053](../adrs/ADR-053-intelligence-selection-deterministic-jev-llm-human.md) | Which mechanism answers each check: deterministic code, Jev, an LLM or a human. |
+| [ADR-054](../adrs/ADR-054-process-representation-and-maturity-model.md) | How process knowledge is held (workflow, policy/checklist or LLM-guided) and how it matures. |
+| [ADR-055](../adrs/ADR-055-capability-registry-starts-empty.md) | The capability registry starts empty. Legacy agents and skills enter only by recorded decision. |
 
 ## Specification
 
