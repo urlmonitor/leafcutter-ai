@@ -374,3 +374,4 @@ ENTROPY_HIGH:unit_tests/portability/fixtures/ge_120b_2_i/main_checkout_verdict_b
 ENTROPY_HIGH:docs/known-issues/commit-guardian/open-high-ki-cg-20260928-ticket-test-requirements-gate-reads-stdin-nothing-writes.md:*
 ENTROPY_HIGH:docs/known-issues/commit-guardian/open-high-ki-cg-20260928-folder-density-blocking-branch-unreachable.md:*
 ENTROPY_HIGH:docs/known-issues/commit-guardian/open-high-ki-cg-20260928-mermaid-parent-link-dead-in-deployed-layout.md:*
+ENTROPY_HIGH:docs/known-issues/commit-guardian/open-high-ki-cg-20260930-doc-index-transform-prefers-stale-deployed-generator.md:*

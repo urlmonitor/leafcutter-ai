@@ -73,7 +73,7 @@ Severity in the **filename** is a three-level index bucket (`blocker` / `high` /
 
 Fixed issues move to [`commit-guardian/resolved/`](commit-guardian/resolved/) and are no longer listed as open. They are kept, not deleted.
 
-**Open: 74** (3 blocker, 33 high, 38 low) · **Resolved: 16**
+**Open: 75** (3 blocker, 34 high, 38 low) · **Resolved: 16**
 
 ## Open
 
@@ -115,6 +115,7 @@ Fixed issues move to [`commit-guardian/resolved/`](commit-guardian/resolved/) an
 | `high` | KI-CG-20260928-folder-density-blocking-branch-unreachable — check-folder-density takes its before-commit snapshot with `git ls-files`, which reads the post-`git add` index, so a newly-crossing folder measures as already-over and the sole `return 1` is dead code | [open-high-ki-cg-20260928-folder-density-blocking-branch-unreachable.md](commit-guardian/open-high-ki-cg-20260928-folder-density-blocking-branch-unreachable.md) |
 | `high` | KI-CG-20260928-mermaid-parent-link-dead-in-deployed-layout — check-mermaid-parent-link derives REPO_ROOT from `parents[2]` of its own file, which lands inside `.leafcutter/` in the layout the manifest invokes, so every architecture doc lookup misses and it returns clean | [open-high-ki-cg-20260928-mermaid-parent-link-dead-in-deployed-layout.md](commit-guardian/open-high-ki-cg-20260928-mermaid-parent-link-dead-in-deployed-layout.md) |
 | `high` | KI-CG-20260928-ticket-test-requirements-gate-reads-stdin-nothing-writes — the gate takes its file list from stdin, the manifest sets `pass_filenames:false`, and run_hook pipes no stdin, so it inspects an empty list and exits 0 on every commit | [open-high-ki-cg-20260928-ticket-test-requirements-gate-reads-stdin-nothing-writes.md](commit-guardian/open-high-ki-cg-20260928-ticket-test-requirements-gate-reads-stdin-nothing-writes.md) |
+| `high` | KI-CG-20260930-doc-index-transform-prefers-stale-deployed-generator — transform-doc-index imports the generator from the deployed directory before the source one, so a stale `.leafcutter/` resurrects fixed generator bugs and the hook re-stages the damage into your commit | [open-high-ki-cg-20260930-doc-index-transform-prefers-stale-deployed-generator.md](commit-guardian/open-high-ki-cg-20260930-doc-index-transform-prefers-stale-deployed-generator.md) |
 | `low` | KI-CG-002 — The diagram-type guard silently swaps its enum source when its declaring file is unreachable | [open-low-ki-cg-002.md](commit-guardian/open-low-ki-cg-002.md) |
 | `low` | KI-CG-011 — The roadmap mirror strips its own `description` frontmatter and backdates `created` to today | [open-low-ki-cg-011.md](commit-guardian/open-low-ki-cg-011.md) |
 | `low` | KI-CG-013 — The schema hook and the done-proof oracle disagree about what a leaf is, so one AC can be required to satisfy both branches | [open-low-ki-cg-013.md](commit-guardian/open-low-ki-cg-013.md) |
