@@ -6,7 +6,8 @@ components:
 - testing_quality
 created: '2026-09-28'
 last_updated: '2026-09-28'
-depends_on: []
+depends_on:
+- 04_TICKET-20260928-BO-4300-project-resolution.md
 priority: critical
 roadmap_phase: phase_1
 advances_current_outcome: true
