@@ -177,7 +177,6 @@ try:
 except (ImportError, AttributeError):
     pass
 
-
 # ---------------------------------------------------------------------------
 # Shared fixture helpers
 # ---------------------------------------------------------------------------
@@ -303,7 +302,6 @@ class TestClaimBuildSet(unittest.TestCase):
             )
 
     def test_claim_flips_todo_to_in_progress_before_build(self) -> None:
-        # covers: BO-2400f-7
         """At run start, every resolved leaf AC with work_status todo is flipped to in_progress.
 
         Real-artifact behavioral test: claim_build_set is called with real YAML files,
@@ -346,7 +344,6 @@ class TestClaimBuildSet(unittest.TestCase):
         self.assertIn("BO-F7-002", claimed, "BO-F7-002 must appear in claimed list.")
 
     def test_claim_lands_as_merged_status_only_change_first(self) -> None:
-        # covers: BO-2400f-7
         """The claim is a status-only change: only work_status is modified in the YAML.
 
         No other field (title, level, readiness, priority, etc.) may be altered.
@@ -386,7 +383,6 @@ class TestClaimBuildSet(unittest.TestCase):
         )
 
     def test_claimed_acs_excluded_from_concurrent_ready_scan(self) -> None:
-        # covers: BO-2400f-7
         """Once claimed (in_progress), an AC is excluded from a concurrent ready scan.
 
         After claim_build_set flips an AC to in_progress, select_batch must NOT
@@ -432,6 +428,8 @@ class TestClaimBuildSet(unittest.TestCase):
             "The unclaimed todo AC must remain in the ready scan after another AC is claimed.",
         )
 
+
+# BO-2400f-7's module-level CLI proof tests moved to test_bo2400f_7_cli_proof.py (file-size ratchet split).
 
 # ---------------------------------------------------------------------------
 # BO-2400f-7-i — Failed claim halts run before build

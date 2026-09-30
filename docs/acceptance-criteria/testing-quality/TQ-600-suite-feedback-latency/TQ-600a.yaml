@@ -59,6 +59,35 @@ amended_by:
       superseded, which frees a slot back toward 5.
     by: business-analyst
     at: 2026-09-21
+  - reason: >-
+      child_limit_override raised 7 -> 8 to admit TQ-600a-8, and the removal condition
+      recorded in the 7-override above is now WRONG and is corrected here. That override
+      said a slot frees up "when the migration of the 77 measured deploy sites
+      completes". It assumed some record required that migration. None did. TQ-600a-1's
+      Given is "a selection of tests" — unbounded and chosen by the implementer;
+      TQ-600a-4 presupposed "the set of tests moved" and is vacuously true at size zero;
+      TQ-600a-6's bound `reported_deploys <= 1 + unshared_routed` grew LOOSER with every
+      test left unconverted; TQ-600a-5's safe default routes all 77 undeclared tests to
+      a copy of their own and merely names them. So all seven children could be
+      implemented correctly and completely with the suite still at ~1:29:47, and the
+      condition for removing the override could never have been reached by building the
+      children the override exists to hold. WHAT THE OVERRIDE ADMITS: one further
+      behavioural child, TQ-600a-8, which is the ratchet over the EXISTING deploy-site
+      population — the a-branch equivalent of TQ-600b-2 and TQ-600b-3, which already
+      ratchet over their own existing populations in the sibling L1 and cannot be closed
+      while an offender remains. WHY REDISTRIBUTING WOULD BE WORSE: the same reasoning
+      the 7-override gives, and more sharply. A sibling L1 holding the migration would
+      separate the obligation to move the population from the mechanism it moves onto and
+      from the declaration that decides each test's path — TQ-600a-8 reads TQ-600a-5's
+      declaration and routes onto TQ-600a-1's layout, so it is not a second behaviour but
+      the completion of the one these eight children describe. The eight are still one
+      behaviour seen from eight angles, which is the case this override exists for.
+      REMOVE THIS OVERRIDE when a PO-owned split rebalances the TQ-600 tree, or when
+      TQ-600a-8 is closed — its closure is now the real, checkable form of the condition
+      the 7-override stated and could not enforce, and it frees TQ-600a-5's
+      undeclared-test safety net toward supersession at the same moment.
+    by: business-analyst
+    at: 2026-09-28
 superseded_by: null
 covered_by:
   - TQ-600a-1
@@ -68,8 +97,9 @@ covered_by:
   - TQ-600a-5
   - TQ-600a-6
   - TQ-600a-7
+  - TQ-600a-8
 implemented_by: []
-child_limit_override: 7
+child_limit_override: 8
 change_target: pipeline
 risk_surface: internal
 documentation_triggers:

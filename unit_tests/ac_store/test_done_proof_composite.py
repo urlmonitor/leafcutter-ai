@@ -146,7 +146,7 @@ sys.path.insert(0, str(_TEMPLATES_COMMIT_GUARDIAN_DIR))
 # check_done_proof's own `from done_proof import verify_done_eligible` binds
 # to that real, patchable implementation rather than the templates/ stub
 # sibling ac_store/ (.gitkeep only).
-from check_done_proof import check_changed_done_acs  # noqa: E402
+from check_done_proof import check_changed_done_acs, main  # noqa: E402
 
 _PYTHON_EXE = sys.executable
 
@@ -218,6 +218,40 @@ def _write_test_file(test_root: Path, filename: str, content: str) -> Path:
     path = test_root / filename
     path.write_text(textwrap.dedent(content), encoding="utf-8")
     return path
+
+
+def _assert_cli_agrees(
+    case: unittest.TestCase, ac_root: Path, test_root: Path, expected_exit: int
+) -> None:
+    """Assert the gate reaches the same verdict when driven through its CLI.
+
+    Every test here exercises ``verify_done_eligible`` (or the ci-changed
+    wrapper) directly, for the reasons the module docstring sets out: that is
+    the most direct exercise of the composite/leaf logic and it needs no git
+    fixture. This adds the other half rather than replacing it — the SAME
+    fixture store driven through ``check_done_proof:main``, which is how CI
+    actually reaches this code.
+
+    Both halves are needed because they can disagree. A store that the oracle
+    judges correctly can still come out wrong once the CLI's own argument
+    wiring, project-root resolution and violation-reporting sit in the path,
+    and a direct call can never see that. Keeping the oracle assertion pins
+    the logic; this pins the route to it.
+
+    Args:
+        case: The calling TestCase, used for the assertion.
+        ac_root: Fixture AC store the gate should evaluate.
+        test_root: Fixture test tree the gate should scan for covers tags.
+        expected_exit: 0 when every done AC in *ac_root* must be judged
+            eligible; 1 when at least one must be reported as a violation.
+    """
+    argv = ["--mode", "ci", "--ac-root", str(ac_root), "--test-root", str(test_root)]
+    case.assertEqual(
+        main(argv),
+        expected_exit,
+        f"check_done_proof:main must exit {expected_exit} for this fixture "
+        "store; the direct-call assertion above and the CLI must agree.",
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -319,6 +353,7 @@ class TestDoneCompositeWithCoveredChildrenPasses(unittest.TestCase):
             "The reason must be empty when the composite is eligible via "
             f"its covered children. Got verdict: {verdict}",
         )
+        _assert_cli_agrees(self, self.ac_root, self.test_root, 0)
 
     def test_composite_check_via_ci_changed_wrapper_reports_no_violation(
         self,
@@ -348,6 +383,7 @@ class TestDoneCompositeWithCoveredChildrenPasses(unittest.TestCase):
             "violation when its children are each covered by a passing "
             f"test. Got violations: {violations}",
         )
+        _assert_cli_agrees(self, self.ac_root, self.test_root, 0)
 
 
 # ---------------------------------------------------------------------------
@@ -409,6 +445,7 @@ class TestDoneLeafWithoutTestStillFails(unittest.TestCase):
             "The ineligibility reason must name the leaf AC id so the "
             f"failure is diagnosable. Got verdict: {verdict}",
         )
+        _assert_cli_agrees(self, self.ac_root, self.test_root, 1)
 
     def test_leaf_check_via_ci_changed_wrapper_still_reports_violation(
         self,
@@ -433,6 +470,7 @@ class TestDoneLeafWithoutTestStillFails(unittest.TestCase):
             "check_changed_done_acs must still report a done leaf AC with "
             f"no covers-tagged test as a violation. Got violations: {violations}",
         )
+        _assert_cli_agrees(self, self.ac_root, self.test_root, 1)
 
 
 # ---------------------------------------------------------------------------
@@ -600,6 +638,7 @@ class TestCompositeFailClosedEdgeCases(unittest.TestCase):
             "A covered_by self-reference must not be eligible for done — "
             f"it can never resolve to a real covered leaf. Got: {verdict}",
         )
+        _assert_cli_agrees(self, self.ac_root, self.test_root, 1)
 
     def test_covered_by_two_node_cycle_is_not_eligible_and_terminates(self) -> None:
         # covers: BO-2500a-6
@@ -640,6 +679,7 @@ class TestCompositeFailClosedEdgeCases(unittest.TestCase):
             verdict["eligible"],
             f"A two-node covered_by cycle must not be eligible. Got: {verdict}",
         )
+        _assert_cli_agrees(self, self.ac_root, self.test_root, 1)
 
     def test_composite_with_genuinely_uncovered_child_is_not_eligible(self) -> None:
         # covers: BO-2500a-6
@@ -685,6 +725,7 @@ class TestCompositeFailClosedEdgeCases(unittest.TestCase):
             verdict.get("reason", ""),
             f"The reason must name the uncovered child id. Got: {verdict}",
         )
+        _assert_cli_agrees(self, self.ac_root, self.test_root, 1)
 
     def test_nested_composite_with_covered_grandchildren_is_eligible(self) -> None:
         # covers: BO-2500a-6
@@ -766,6 +807,7 @@ class TestCompositeFailClosedEdgeCases(unittest.TestCase):
             f"passing test must be eligible. Got: {verdict}",
         )
         self.assertEqual(verdict.get("reason", ""), "")
+        _assert_cli_agrees(self, self.ac_root, self.test_root, 0)
 
     def test_legacy_covered_by_test_file_paths_treated_as_leaf(self) -> None:
         # covers: BO-2500a-6
@@ -809,6 +851,7 @@ class TestCompositeFailClosedEdgeCases(unittest.TestCase):
             "The legacy test-file-path shape must not be misdiagnosed as a "
             f"composite with uncovered children. Got: {verdict}",
         )
+        _assert_cli_agrees(self, self.ac_root, self.test_root, 1)
 
 
 if __name__ == "__main__":

@@ -1,0 +1,152 @@
+id: TQ-500g-2-ii
+components:
+  - testing_quality
+  - build_orchestration
+title: "Database tests are in the wrong-version runs, on your configured test database only, and a missing database never reads as a catch"
+component: testing-quality
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a gate fix whose guarding tests are two database tests, DB1 and DB2,
+    whose entries name must_catch ["drop the retry_due condition"],
+    and the database test writer's hand-off names "treat a NULL retry_due as
+    true" as a wrong version to run later,
+  When the wrong-version runs are made for that fix in three projects —
+      P1: the test database setting names a reachable database,
+      P2: the test database setting is not set,
+      P3: the test database setting names a database that cannot be reached,
+  Then in P1, DB1 and DB2 are run against "drop the retry_due condition",
+      against "the fix undone" and against "treat a NULL retry_due as true",
+      on the database the setting names and on no other,
+    And in P1 "treat a NULL retry_due as true" is reported with its own
+      outcome for DB1 and DB2, like the wrong versions the requirement named,
+    And when "treat a NULL retry_due as true" survives DB1 or DB2, that is
+      reported by name and does not by itself stop the work, while a survivor
+      of "drop the retry_due condition" does,
+    And in P2 the database runs are reported as not run for want of
+      configuration, naming testing_context.db_connection_test — never as
+      caught, never as passed — and the work stays unfinished,
+    And in P3 the database runs are reported as not run because the
+      configured database could not be reached, and the work stays unfinished,
+    And in no project does any run connect to an address the runner chose
+      itself.
+depends_on:
+  - TQ-500g-2
+  - TQ-500g-1-i
+  - INF-1100d-3-i
+doc_links:
+  - path: docs/acceptance-criteria/infrastructure/INF-1100-agents-work-in-the-right-place/INF-1100d-3-i.yaml
+    relationship: relates-to
+    status: exists
+    relevance: "The existing not-configured / unreachable report of the test database check, reused for P2 and P3."
+  - path: docs/acceptance-criteria/infrastructure/INF-1100-agents-work-in-the-right-place/INF-1100d-3.yaml
+    relationship: relates-to
+    status: exists
+  - path: docs/acceptance-criteria/testing-quality/TQ-500-checks-that-can-fail/TQ-500f-4-i.yaml
+    relationship: relates-to
+    status: exists
+    relevance: "Source of the 'to run later' list the runs take up."
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from:
+  - ac_id: TQ-500g-2
+    contract: "The database test writer's 'to run later' wrong versions, in a form the runner takes up."
+  - ac_id: INF-1100d-3-i
+    contract: "The test database check's not-configured and unreachable outcomes, naming the setting and never the credentials."
+it_requirements:
+- 'A test counts as a database test when its AC test_spec entry says requires_db: true. That is declared,
+  never inferred from the code.'
+- 'Before any database run, call check_test_db in scripts/db_check/checker.py (the one reader). not_configured:
+  every database run is not_run, naming testing_context.db_connection_test. unreachable: not_run, ''the
+  configured database could not be reached''. Both leave the work unfinished. Neither ever says caught
+  or passed. Credentials never appear.'
+- 'Extra wrong versions from to_run_later.json (the TQ-500g-2 shape) go through the preparer and the runs
+  like named ones. They are reported per test with blocking: false. Their survivors are named but never
+  set gate_passed false on their own. Survivors of named wrong versions still stop the work.'
+- The runner never constructs or defaults an address. Test processes get the resolved address through
+  the same mechanism as the INF-1100d-3-ii database-test pattern.
+- Every new or changed Python file stays at or under 400 counted lines (scripts/commit_guardian/_file_size_ratchet.py).
+  Files already over the limit must not grow.
+- Any database address in a template, fixture or doc is the placeholder postgresql://<user>:<password>@<host>:<port>/<database>.
+  INF-1100d-4 scans shipped files.
+test_spec:
+- name: test_p1_named_and_extra_wrong_versions_run_on_configured_database
+  target_dir: unit_tests/build_orchestration/
+  framework: pytest
+  type: integration
+  angle: criterion
+  description: 'P1: DB1 and DB2 are run against the named version, the fix undone and the extra version,
+    with the database address taken only from the setting. The extra version has its own per-test outcomes.'
+  requires_db: false
+- name: test_extra_survivor_reported_but_not_blocking
+  target_dir: unit_tests/build_orchestration/
+  framework: pytest
+  type: integration
+  angle: discrimination
+  description: An extra-version survivor is named, with blocking false, and gate_passed stays true. A
+    named-version survivor in the same run makes gate_passed false.
+  must_catch:
+  - writer's extra wrong versions block the work
+  - extra wrong versions silently dropped
+  - named-version survivor made non-blocking
+- name: test_p2_not_configured_reports_not_run_and_unfinished
+  target_dir: unit_tests/build_orchestration/
+  framework: pytest
+  type: integration
+  angle: reachability
+  surface_invoked: the shared runner CLI
+  description: The runner CLI, run as a subprocess on a temp project with no setting, reports the database
+    runs as not_run naming testing_context.db_connection_test, with gate_passed false and no caught result.
+  must_catch:
+  - not-configured database runs reported as passed
+  - runner falls back to a default address
+- name: test_p3_unreachable_reports_not_run
+  target_dir: unit_tests/build_orchestration/
+  framework: pytest
+  type: integration
+  angle: failure
+  description: 'P3: the setting names an unreachable placeholder host. The runs are not_run, ''could not
+    be reached'', and the work is unfinished. No connection is made to any other address.'
+  must_catch:
+  - unreachable database read as caught
+test_rationale: P2 and P3 run through the real CLI with real project config and the real db_check reader,
+  and need no database. P1 uses a runner-level test double for the database execution, so it runs in CI.
+  The extra-versus-named survivor pair pins the Q2 decision in both directions.
+origin_agent: business-analyst
+created: 2026-09-28
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  "DATABASE TESTS INCLUDED" (TQ-500g's criteria) and the "to run later" pick-up
+  from the PO's plan item g-2.
+
+  USER DECISION AT THE BA GATE (Q2, 2026-09-28): the database test writer's
+  own extra wrong versions ("to run later") are RUN and each outcome is
+  REPORTED, but a survivor among them does NOT stop the work. Whether it should
+  is the deferred Phase C question ("wrong versions proposed by the agent
+  itself"), recorded in TQ-500g's notes. They are run because the writer's
+  report (TQ-500f-4, -4-i) says the test catches them, and running them checks
+  that. The survivor reports are the evidence Phase C is waiting for. The
+  Then clause on survivors pins this: a control named by the requirement still
+  stops the work, so a rule that stops on nothing, or on everything, fails.
+
+  P2 AND P3 KEEP THE RUNS HONEST WITHOUT A DATABASE. Both leave the work
+  unfinished, following TQ-500b (a run owed and not taken is incomplete). If the
+  user wants database-free projects to proceed, that is a change to this AC, not
+  a silent skip.
+
+  PLACEHOLDER ADDRESSES ONLY in fixtures and docs:
+  postgresql://<user>:<password>@<host>:<port>/<database> (INF-1100d-4).
+
+  IT-PO ENRICHMENT (2026-09-28)
+  Lane: python-coder after TQ-500g-2 (prompt) and TQ-500g-1-i.

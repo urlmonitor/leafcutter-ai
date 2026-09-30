@@ -101,4 +101,26 @@ questions, and a test suite answers only the first. Nothing in 3,772 passing tes
 distinguish this gate from a gate that had never been wired up, because nothing in it looked
 outside the source tree.
 
+**Re-verified 2026-09-23: STILL TRUE as a pattern — kept open; one cited fact below is now
+stale and corrected here rather than silently.** The detection half remains shipped and live:
+`unit_tests/commit_guardian/test_hook_registration_inventory.py` still exists, and its
+`UNREGISTERED_BASELINE` ratchet has continued to shrink since the 2026-09-14 measurement this
+entry records (18 → 9): it is **5** today (`check_ac_coverage.py`, `check_complexity.py`,
+`check_doc_coverage.py`, `check_docstrings.py`, `check_documentation.py`), per the file's own
+comment trail ("9 once the five gates needing no code work were registered... 5 now that
+BP-100n-4 has registered four more"). The pattern half remains exactly as open as described:
+`registry_validator.py` still has no check that forces a reviewer to ask "what invokes this in
+production," and the remaining 5 orphans are the standing evidence the class persists.
+
+**Correction:** this entry's own "Status" line states the instance, `KI-CG-021`, "is also
+still open — its code lives only on unmerged PR #495." That is no longer accurate: PR #495
+merged, and `check_identifier_uniqueness.py` was subsequently registered in both
+`commit_guardian.json` and `.pre-commit-config.yaml` by commit `243b6489` (GE-122d-6) —
+`KI-CG-021` is now closed (resolved 2026-09-23, this same pass, in
+`docs/known-issues/commit-guardian/resolved/resolved-blocker-ki-cg-021.md`). This does not
+close the pattern entry itself: the review-method gap this entry tracks is a property of *how
+reviews are conducted*, not of any one instance, and the instance closing is exactly the kind
+of individual fix this entry warns will keep recurring until the method itself is enforced.
+Kept open.
+
 ---

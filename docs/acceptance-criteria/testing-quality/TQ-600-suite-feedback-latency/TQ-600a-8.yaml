@@ -1,0 +1,555 @@
+id: TQ-600a-8
+components:
+  - testing_quality
+  - build_pipeline
+title: "No test still deploys its own copy merely to read it, and one that does is named and fails the examination"
+component: testing-quality
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given the suite as it stands, in which tests obtain a deployed copy of the package by
+    running a deploy of their own — 77 such invocation sites across 52 test files when
+    this was measured on 2026-09-21 — and the shared reference layout of TQ-600a-1,
+    which a test that only reads a deployed copy can consume instead,
+  When every test that obtains a deployed copy of the package is examined,
+  Then each such test is found either to consume the shared reference layout, or to
+    carry at the test itself the declaration of TQ-600a-5 saying it must have a copy of
+    its own,
+    And every test that still runs a deploy of its own while carrying no such
+      declaration is named, together with the site at which it runs it, and the
+      examination reports a failure rather than a note,
+    And the examination reports how many tests it inspected, and separately how many of
+      those consume the shared layout and how many keep a copy of their own, so an
+      examination that inspected nothing is distinguishable from one that found nothing,
+      and a migration that reached its end by declaring every test a mutator is visible
+      in those two figures rather than presenting as a clean report,
+    And when a test that runs its own deploy without declaring why is deliberately
+      introduced into the examined population, the examination names it and fails,
+    And the examination is one of the checks a change to this repository must pass, so a
+      test added later that runs its own deploy without declaring why is refused when it
+      is added rather than found by a measurement months afterwards.
+depends_on:
+  - TQ-600a
+  - TQ-600a-1
+  - TQ-600a-5
+doc_links:
+  - path: CLAUDE.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      Carries the standing rule "Tests must not spawn their own build.py — reuse a
+      shared deployed layout", which states the read-only reuse obligation as a
+      prohibition on NEW sites. A prohibition binds the next author and says nothing
+      about the 77 sites already there; this AC is the half that moves the existing
+      population, and it is the reason the rule's promise is redeemed rather than
+      merely repeated.
+  - path: docs/acceptance-criteria/testing-quality/TQ-600-suite-feedback-latency/TQ-600b-2.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      THE SHAPE THIS AC COPIES, DELIBERATELY AND ALMOST CLAUSE FOR CLAUSE. TQ-600b-2
+      ratchets over the suite's EXISTING population of scratch-path offenders: it names
+      each one, fails rather than notes, and states its inspected count. It cannot be
+      closed while an offender remains. Before this record the a-branch had no
+      equivalent, which is precisely why every a-branch leaf could be satisfied with
+      the 77 sites untouched.
+  - path: docs/acceptance-criteria/testing-quality/TQ-600-suite-feedback-latency/TQ-600.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      Holds the measured evidence the Given quotes: 77 `--target-dir` invocation sites
+      across 52 test files, one deploy measured at 59.8s, 63% of a 1:29:47 run
+      concentrated in 60 of 5318 tests. Note the caveat recorded there — 77 counts
+      SITES, not invocations, so no clause here asserts a per-run deploy figure.
+  - path: docs/acceptance-criteria/testing-quality/TQ-600-suite-feedback-latency/TQ-600a-5.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      Owns the per-test declaration this examination reads, and owns the deliberate
+      decision that an UNDECLARED test is routed safely and named rather than refused
+      at run time. That decision is about the running test; this AC is about the
+      repository. The two are compatible and must both hold: an undeclared test still
+      runs and still passes, and the examination still fails until it is declared or
+      moved.
+  - path: templates/scripts/commit_guardian/commit_guardian.json
+    relationship: related
+    status: exists
+    relevance: >-
+      NAMED IN it_requirement 1 AS THE FILE NOT TO EDIT, and declared here at a
+      non-edit-surface relationship so it is suppressed from the generated ticket's
+      files_touched rather than read as an instruction. Adding an entry here makes
+      this a package surface and triggers ACS-100i-8's refusal; see it_requirement 1
+      for the decision and the escape route.
+  - path: scripts/build_phases.py
+    relationship: related
+    status: exists
+    relevance: >-
+      Named in it_requirement 1 only as part of the escape route that applies IF a
+      later pass reverses the not-a-hook decision — a hook's helper modules must be
+      added to the deploy map here or the deployed hook raises ModuleNotFoundError.
+      Not an edit surface for this AC as scoped, and declared at a non-edit-surface
+      relationship so it is suppressed from files_touched.
+  - path: config/ac_store_schema.json
+    relationship: related
+    status: exists
+    relevance: >-
+      Named in it_requirement 1 only to explain why a package-surface declaration
+      would force it_requirements into the five-field object form. Context for the
+      surface decision, never a file this AC changes.
+  - path: scripts/suite_performance/check_shared_layout_migration.py
+    relationship: creates
+    status: planned
+    relevance: >-
+      THE EXAMINATION ITSELF, and the only file this AC brings into existence. It
+      lives beside the fixture it checks routing onto
+      (scripts/suite_performance/pytest_shared_reference_layout.py) rather than under
+      scripts/commit_guardian/, which is a deliberate consequence of the not-a-hook
+      decision recorded in it_requirements 1.
+  - path: .github/workflows/ci.yml
+    relationship: modifies
+    status: exists
+    relevance: >-
+      Where the examination becomes "one of the checks a change to this repository
+      must pass". A new job here, wired as a required status check, is the gate the
+      final criterion demands. This repository already gates on CI jobs of exactly
+      this shape — "Shipped address check (INF-1100d-4)", "Reachability guard
+      (BO-2900b-1)", "Proof-of-done coverage check (BO-2500b)" — so the surface is
+      precedented rather than invented.
+assigned_agent: python-coder
+estimated_complexity: L
+it_requirements:
+  - >-
+    DO NOT SHIP THIS AS A COMMIT-GUARDIAN MANIFEST ENTRY, AND THIS IS A DECISION,
+    NOT AN OMISSION. templates/scripts/commit_guardian/commit_guardian.json is one
+    of the four watched package registries; adding an entry to it makes this a
+    PACKAGE SURFACE, which the check-package-surface-declaration hook (ACS-100i-8)
+    refuses unless a cited AC carries `package_surface: true`, and which
+    config/ac_store_schema.json then forces into the five-field STRUCTURED
+    it_requirements object. That object form would delete every policy constraint
+    below — the inspected count, fail-not-note, the two-figure clause, the
+    data-driven declaration — which are the constraints this AC's criteria exist to
+    impose. Ship instead as a CLI under scripts/suite_performance/ plus a dedicated
+    job in .github/workflows/ci.yml, promoted to a required status check. IF A
+    LATER PASS STILL WANTS THE PRE-COMMIT HOOK: amend this AC with
+    `package_surface: true` and the five-field spec FIRST, and add the checker and
+    every helper module it imports to the build deploy map in
+    scripts/build_phases.py — a hook dependency absent from the deploy map raises
+    ModuleNotFoundError from the deployed layout while the unit tests, which import
+    from the source tree, stay green. That failure mode has blocked merges in this
+    repository before; CLAUDE.md records it under done_proof.py.
+  - >-
+    THE EXAMINATION RUNS OVER THE REAL SUITE ROOTS — `unit_tests/` and `tests/`,
+    walked recursively — never over a fixture corpus and never over
+    unit_tests/suite_performance/ alone. The measured population is 77 invocation
+    sites across 52 files spread over at least
+    unit_tests/portability/test_bp_1500d_1_i.py,
+    unit_tests/portability/test_ge_120c_1.py,
+    unit_tests/commit_guardian/test_bp_100k_5.py,
+    unit_tests/build_guards/test_command_reachability_guard.py,
+    unit_tests/ac_store/test_done_proof_composite.py and
+    tests/test_build_clean.py. Those are ANCHORS naming where the cost actually is,
+    not the checker's input list: discovery must be count-agnostic and derived from
+    a directory walk, so a file added tomorrow inherits the rule without anyone
+    editing the checker. NO LITERAL POPULATION SIZE — neither 77 nor 52 may be
+    written into the checker or into any test of it.
+  - >-
+    A RUN THAT INSPECTED ZERO FILES IS A FAILURE, NOT A PASS, and the inspected
+    count must be present in the output on EVERY path including the clean one.
+    This repository has shipped this exact false green three times — the AC-store
+    validator's bare-directory glob (exited 0 for eight days), the
+    feedback_categories.yaml path one directory too high, and the merge audit
+    against a stale origin/main. The criteria make the count mandatory precisely so
+    a fourth is not filed as a success.
+  - >-
+    REPORT THREE FIGURES, NOT ONE VERDICT: how many tests were inspected, how many
+    consume the shared reference layout, and how many keep a copy of their own
+    under a declaration. All three on every path. The two-figure clause is the
+    anti-gaming clause and it is not satisfiable by a green tick — "inspected 52,
+    shared 3, own copy 49" and "inspected 52, shared 49, own copy 3" both pass the
+    offender check and are not the same result. An implementation that emits only
+    a pass/fail, or that emits the counts only on failure, does not satisfy the
+    criteria.
+  - >-
+    IT MUST FAIL, NOT NOTE. Non-zero exit, with every offender named together with
+    the file and line of the site at which it runs its own deploy. The criteria say
+    "reports a failure rather than a note"; a warning-level implementation does not
+    satisfy them, and neither does one that names the file but not the site.
+  - >-
+    RECOGNISE THE SHAPES A DEPLOY SITE ACTUALLY TAKES IN THIS SUITE, INCLUDING
+    INDIRECT ONES. Verified at enrichment against the tree on disk, at minimum
+    three: (a) a subprocess invocation, e.g.
+    `subprocess.run([sys.executable, str(build_script), "--target-dir", str(target)])`;
+    (b) an in-process call into the build module, e.g.
+    `_build.main(["--target-dir", str(target_dir)])`, which carries no `build.py`
+    token at all; and (c) an INDIRECT site, where the test itself contains no
+    deploy and reaches one through a helper module — real, present, and the shape
+    a naive checker misses:
+    unit_tests/portability/_bp1500d1_harness.py runs the deploy on behalf of the
+    tests that import it, and unit_tests/portability/_deployed_check_harness.py
+    does the same. A checker that greps only `test_*.py` for the literal
+    `--target-dir` reports those importing tests as clean while they each still pay
+    the full 59.8s, which would let the migration report done with the cost intact.
+  - >-
+    THE DECLARATION IS READ FROM TQ-600a-5'S REGISTERED MARKER AT THE SITE, NEVER
+    FROM A FILE NAME, A DIRECTORY OR A HARDCODED ALLOWLIST. The cheapest wrong
+    implementation exempts anything matching `test_bp_900g_8*` — that glob was a
+    proxy for the known mutators and was never verified to be the complete set, and
+    a name-keyed exemption means a new offender does not inherit the rule. Any
+    exemption must derive from a data property declared at the site, exactly as
+    TQ-600b-2 requires of its own examination.
+  - >-
+    A FILE THE EXAMINATION COULD NOT PARSE IS REPORTED AS UNEXAMINED, NOT SKIPPED.
+    A static walk that swallows a parse error inflates its own inspected count, and
+    an inspected count that overstates what was checked defeats the defence in
+    requirement 3. State which mode was chosen — static inspection of test sources
+    or runtime observation — and make the choice visible in the output.
+  - >-
+    THIS RECORD AND TQ-600a-6 MUST FAIL INDEPENDENTLY, ON SEPARATE EVIDENCE. Both
+    go red for the same underlying fact and that is intended, but this examination
+    reads the TEST SOURCES at commit time while TQ-600a-6 reads the RUN'S EMITTED
+    RECORD at run time. The checker must not import TQ-600a-6's emitter, read its
+    cost record, or consult its bound; TQ-600a-6's assertions must not shell out to
+    this checker. A single merged "the migration is done" check would let either
+    failure hide behind the other's evidence — the same separation TQ-600a-4's
+    notes already require against TQ-600b-1.
+  - >-
+    THE MIGRATION ITSELF IS IN SCOPE, NOT ONLY THE CHECKER THAT MEASURES IT. This
+    AC is red until the examination passes over the real tree, which means the
+    read-only sites must actually move onto
+    scripts/suite_performance/pytest_shared_reference_layout.py's fixture and the
+    genuine mutators must actually carry the marker. The mutator family
+    unit_tests/test_bp_900g_8.py and its siblings must NOT be moved — they alter
+    the package before building and assert the build fails, so sharing a layout
+    would corrupt it for every other consumer and destroy the behaviour those tests
+    exist to prove. They are declared, not converted. Every site the checker
+    reports must end up in one bucket or the other; a site left in neither is the
+    failure state, not an accepted residue.
+  - >-
+    THE MARKER MUST BE REGISTERED BEFORE THIS AC CAN PASS. The declaration this
+    examination reads is TQ-600a-5's, and an unregistered pytest marker is silently
+    ignored under some configurations — a misspelled declaration would then read as
+    an honest omission. pytest.ini currently carries an `addopts` line and no
+    `markers` section; registration there is TQ-600a-5's obligation and this AC
+    depends on it having happened.
+  - >-
+    Must complete in seconds over the ~667 test files so it can run on every change
+    without re-introducing the cost this goal removes, and it must not itself
+    deploy a copy of the package.
+delivers_to:
+  - agent: python-coder
+    ac_id: TQ-600a-4
+    contract: >-
+      The identity and the size of the deploy-site population as this examination
+      counts it — the inspected count plus the per-file verdict list (shared /
+      declared own copy / offender). TQ-600a-4's compared count must equal that
+      population size rather than the size of whichever subset somebody chose to
+      move, and an empty population must reach TQ-600a-4 as a failure rather than
+      as agreement.
+  - agent: documentation-expert
+    ac_id: TQ-600a-7
+    contract: >-
+      The examination's name, how a contributor runs it locally, and the exact
+      wording of the refusal it emits, so the how-to tells an author what will
+      block their change before CI does rather than after.
+expects_from:
+  - ac_id: TQ-600a-1
+    contract: >-
+      The shared reference layout as shipped — the `shared_reference_layout`
+      fixture and the `get_or_produce_shared_layout()` entry point in
+      scripts/suite_performance/ — which is the destination a converted read-only
+      site is moved onto and the thing "consumes the shared layout" means when the
+      examination reports it.
+  - ac_id: TQ-600a-5
+    contract: >-
+      The per-test declaration as REGISTERED — the marker's exact spelling and its
+      permitted values — which is the sole input the examination may use to decide
+      whether a remaining own-copy site is declared or an offender. A marker
+      differing by one character from the one the checker looks for turns every
+      declared mutator into a reported offender.
+test_spec:
+  - name: test_tq600a_8_the_examination_reports_how_many_tests_it_inspected
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: >-
+      The inspected count appears in the output on a clean run as well as a failing
+      one, and equals the number of test files present under the scanned roots.
+  - name: test_tq600a_8_an_examination_that_inspected_nothing_fails_rather_than_reporting_clean
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: unit
+    angle: failure
+    description: >-
+      Pointed at an empty directory, or at a root whose discovery walk matches
+      nothing, the examination reports an inspected count of 0 and a FAILING status.
+      NAMED MUTATION: return success whenever the offender list is empty without
+      consulting the inspected count; this test must go RED. This is the AC-store
+      validator's eight-day false green, reproduced deliberately.
+  - name: test_tq600a_8_the_shared_count_and_the_own_copy_count_are_both_reported
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: >-
+      THE ANTI-GAMING DESCRIPTOR. Over a population with a known mix, the output
+      carries three distinct figures — inspected, consuming the shared layout,
+      keeping a declared copy of their own — and the two latter sum with the
+      offender count to the former. NAMED MUTATION: emit only inspected and a
+      pass/fail; a migration that reached its end by declaring every test a mutator
+      then reads identically to one that converted everything, and this test must go
+      RED.
+  - name: test_tq600a_8_a_deliberately_introduced_undeclared_deploy_site_is_named_and_the_examination_fails
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: failure
+    description: >-
+      THE RED. A committed offender fixture that runs its own deploy while carrying
+      no declaration is placed inside a scanned root; the examination exits non-zero
+      and names it together with the file and line of the site. An examination that
+      walks every file and recognises nothing passes every other descriptor here.
+  - name: test_tq600a_8_an_indirect_deploy_site_reached_through_a_helper_module_is_recognised
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: >-
+      Parametrised over the three site shapes that actually occur: a subprocess
+      invocation, an in-process `_build.main(["--target-dir", ...])` call carrying no
+      `build.py` token, and a test whose own body contains no deploy but which
+      reaches one through an imported helper. NAMED MUTATION: grep only `test_*.py`
+      for the literal `--target-dir`; the importers of
+      unit_tests/portability/_bp1500d1_harness.py and
+      unit_tests/portability/_deployed_check_harness.py then report clean while still
+      paying 59.8s each, and this test must go RED.
+  - name: test_tq600a_8_a_declared_mutator_is_not_reported_as_an_offender
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: >-
+      The false-positive control. A site carrying TQ-600a-5's mutator declaration is
+      silent, and is counted in the own-copy figure rather than the offender list.
+      Without this the examination fires on the correct population and is disabled.
+  - name: test_tq600a_8_the_declaration_is_read_from_the_marker_never_from_the_file_name
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: unit
+    angle: seam
+    description: >-
+      A declared site is exempt wherever it lives, and an undeclared site is reported
+      even when it lives in a file whose name matches the known mutator family. NAMED
+      MUTATION: exempt anything matching `test_bp_900g_8*`, or add a hardcoded
+      allowlist of filenames; a new offender added to an exempt file is then missed
+      and this test must go RED.
+  - name: test_tq600a_8_a_file_the_examination_could_not_parse_is_reported_rather_than_skipped
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: unit
+    angle: failure
+    description: >-
+      An unparseable test file appears in the output as unexamined. NAMED MUTATION:
+      swallow the parse error and continue; the inspected count then overstates what
+      was checked and this test must go RED.
+  - name: test_tq600a_8_the_examination_runs_over_the_real_suite_and_reports_its_own_three_figures
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    surface_invoked: "python scripts/suite_performance/check_shared_layout_migration.py unit_tests tests"
+    description: >-
+      Executed against the actual unit_tests/ and tests/ tree — not a fixture corpus —
+      the examination produces its own offender list and its own three figures. The
+      assertion is that the inspected count matches the test files on disk and that
+      the three figures reconcile, NOT that any of them holds a particular value: no
+      literal count may be written here, because 77 counts invocation sites across 52
+      files rather than invocations and the figure moves as the migration proceeds.
+  - name: test_tq600a_8_the_heaviest_measured_deploy_sites_are_each_resolved_to_shared_or_declared
+    target_dir: unit_tests/portability/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    surface_invoked: "python scripts/suite_performance/check_shared_layout_migration.py unit_tests tests"
+    description: >-
+      Run over the real roots, the examination returns a verdict for each of the two
+      heaviest sites the 2026-09-21 profile measured —
+      unit_tests/portability/test_bp_1500d_1_i.py at 206.74s of fixture setup and
+      unit_tests/portability/test_ge_120c_1.py at 73.03s — and each verdict is
+      "consumes the shared layout" or "declared own copy", never "offender", never
+      "unexamined" and never absent. This descriptor lives beside the files it names
+      so it is collected whenever that directory is, and so a later edit reintroducing
+      an undeclared deploy in either file is caught by the directory's own suite
+      rather than only by the whole-tree gate. It asserts a verdict per named file,
+      never a total.
+  - name: test_tq600a_8_the_examination_is_a_check_a_change_to_this_repository_must_pass
+    target_dir: unit_tests/build_guards/
+    framework: unittest
+    type: integration
+    angle: reachability
+    surface_invoked: ".github/workflows/ci.yml (the examination's own CI job)"
+    description: >-
+      The CI workflow actually invokes the examination, and a non-zero exit from it
+      fails the job rather than being tolerated by a `continue-on-error` or a
+      swallowing shell pipeline. NAMED MUTATION: define the job but never reference
+      the checker, or mark it informational; the gate is then present in the file and
+      inert, and this test must go RED. Lives in unit_tests/build_guards/ beside
+      unit_tests/build_guards/test_bo2500b_ci_workflow.py, which is this repository's
+      established home for CI-gate wiring guards.
+  - name: test_tq600a_8_the_examination_fails_on_source_evidence_alone_with_no_run_record_present
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: seam
+    description: >-
+      THE INDEPENDENCE DESCRIPTOR. With TQ-600a-6's emitter absent and no cost record
+      on disk, the examination still reaches a verdict over a population containing an
+      offender and still fails. NAMED MUTATION: have the checker read TQ-600a-6's
+      reported figures, or skip when no record is found; the two records then share a
+      verdict, either failure can hide behind the other's evidence, and this test must
+      go RED.
+test_rationale: |
+  This record is the a-branch's ratchet over the population that already exists, so
+  every descriptor is written against the shape of failure a ratchet actually has:
+  passing while having examined nothing, or examining everything and recognising
+  nothing. TQ-600b-2 already carries the same pair for its own population and the
+  symmetry is deliberate — a reader who understands b-2 reads this without being
+  taught a second pattern.
+
+  Three descriptors are anti-false-green and they catch different defects. The
+  inspected-count descriptor catches broken discovery. The deliberately introduced
+  offender catches a walk that recognises nothing. The two-figure descriptor catches
+  the gaming path the criteria name explicitly: an examination demanding "consume the
+  shared layout OR declare a copy of your own" is satisfiable by declaring all 77 a
+  mutator, and nothing mechanical distinguishes an honest declaration from a lazy one,
+  so the contract requires the outcome to be a pair of numbers a human reads rather
+  than a tick.
+
+  The indirect-site descriptor is the load-bearing recognition test and it was written
+  against the tree rather than against the criteria. unit_tests/portability/_bp1500d1_harness.py
+  and unit_tests/portability/_deployed_check_harness.py each run a real deploy on
+  behalf of the tests that import them, so a checker scanning only `test_*.py` for
+  `--target-dir` reports their importers clean while every one still pays 59.8s. That
+  is the migration reporting done with the cost intact, which is the precise failure
+  this record was created to prevent.
+
+  Two descriptors reach outside unit_tests/suite_performance/ on purpose. The
+  heaviest-sites descriptor sits in unit_tests/portability/ because that directory
+  holds the two worst measured offenders and the guard should be collected whenever
+  they are. The CI-wiring descriptor sits in unit_tests/build_guards/ beside this
+  repository's other CI-gate wiring guards. Every other descriptor tests the checker
+  itself and belongs beside it.
+
+  The independence descriptor exists because this record and TQ-600a-6 are designed to
+  fail together and for the same reason. That is intended, and it is exactly the
+  condition under which a well-meaning implementer merges them into one verdict. They
+  must fail on separate evidence: source at commit time here, the emitted record at run
+  time there.
+origin_agent: business-analyst
+created: 2026-09-28
+amended_by:
+- reason: 'Created to close the migration gap in TQ-600a. No record''s criteria required
+    any of the 77 measured deploy sites to move onto the shared layout, so every leaf
+    in TQ-600a and TQ-600c could be implemented correctly and completely with the
+    suite still at ~1:29:47. TQ-600a-1''s Given is "a selection of tests" — unbounded,
+    and supplied by whoever implements it; TQ-600a-4''s "the set of tests moved" is
+    vacuously true at size zero; TQ-600a-6''s bound grew looser with every test left
+    unconverted; TQ-600a-5''s safe default for the 77 undeclared tests is a copy of
+    their own. This record supplies the missing ratchet over the EXISTING population,
+    copying the shape TQ-600b-2 and TQ-600b-3 already use in the sibling L1. The diagnosis
+    it acts on was already written down — inside TQ-600a-1''s doc_links[].relevance,
+    a field that binds nothing: "a shared fixture that exists but that no test is
+    routed to satisfies a criterion test and still deploys 77 times." It is now a
+    criterion.'
+  by: business-analyst
+  at: 2026-09-28
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-09-28
+  note: 'First enrichment pass on a record created the same day with no technical
+    fields. python-coder, L. THE SURFACE DECISION, taken first because everything
+    else depends on it: this ships as a CLI under scripts/suite_performance/ plus
+    a dedicated required job in .github/workflows/ci.yml, and NOT as a commit_guardian.json
+    manifest entry. A manifest entry makes this a package surface, which ACS-100i-8''s
+    hook refuses without `package_surface: true` and which config/ac_store_schema.json
+    then forces into the five-field STRUCTURED it_requirements object — an object
+    form that would delete the inspected count, the fail-not-note rule, the two-figure
+    clause and the data-driven declaration, which are the constraints this AC''s criteria
+    exist to impose. The trap TQ-600b-2''s it_requirement 6 records is therefore avoided
+    rather than paid, and the escape route is written into it_requirement 1 for whoever
+    later wants the pre-commit form. CONTRACT REACH: it_requirements name the two
+    real suite roots and six anchor files in the measured population, so the generated
+    ticket''s files_touched reaches unit_tests/portability/, unit_tests/commit_guardian/,
+    unit_tests/build_guards/, unit_tests/ac_store/ and tests/ rather than only the
+    new directory — verified against scripts/ac_store/_gtfa_files_touched.py, which
+    derives files_touched from prose it_requirements paths that exist on disk plus
+    doc_links at edit-surface relationships, NOT from test_spec target_dir. The anchors
+    are named as anchors, not as the checker''s input list: discovery is required
+    to be a count-agnostic directory walk and no literal population size may be written
+    anywhere. VERIFIED AGAINST THE TREE, not inferred from the criteria: unit_tests/portability/_bp1500d1_harness.py
+    and unit_tests/portability/_deployed_check_harness.py each execute a real deploy
+    on behalf of the tests that import them, so INDIRECT sites are a real shape and
+    a checker scanning only test_*.py for `--target-dir` would report their importers
+    clean while each still pays 59.8s. That is now it_requirement 6 and its own descriptor.
+    INDEPENDENCE FROM TQ-600a-6 is a stated requirement with its own descriptor on
+    both records: they fail together and for the same reason by design, which is exactly
+    when an implementer merges them, so the evidence is split — source at commit time
+    here, emitted record at run time there. criteria untouched.'
+- action: approved
+  agent: approve_acs
+  date: '2026-09-28'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+notes: |
+  WHY THIS IS AN EXAMINATION OVER THE EXISTING POPULATION AND NOT A ROUTING RULE. Every
+  other behavioural leaf under TQ-600a describes what happens to a test that is already
+  in the new world: it is handed the shared layout, or refused it, or compared against
+  its old outcome, or counted. Not one of them says the old world must end. The
+  distinction matters because a mechanism can be perfect and unused — that is exactly
+  the state the tree was in, and it is the state the suite would have shipped in.
+
+  WHY IT MIRRORS TQ-600b-2 RATHER THAN INVENTING A SHAPE. The b-branch already solved
+  this problem for its own population. TQ-600b-2 ("every test that creates scratch files
+  is examined... every test still using a fixed shared location is named... the
+  examination reports a failure rather than a note... reports how many tests it
+  inspected") cannot be closed while an offender remains. TQ-600b-3 does the same for
+  version-control sites. The a-branch's lack of an equivalent was the asymmetry, and
+  symmetry is the fix: a reader who understands b-2 understands this record without
+  being taught a second pattern.
+
+  THE TWO-FIGURE CLAUSE IS THE ANTI-GAMING CLAUSE. An examination that demands "consume
+  the shared layout OR declare a copy of your own" is satisfiable by declaring all 77 a
+  mutator. Nothing mechanical can distinguish an honest declaration from a lazy one, so
+  this AC does not pretend to: it requires both figures to be reported, so the outcome
+  of the migration is a pair of numbers a human can read rather than a green tick. A run
+  reporting "inspected 52, shared 3, own copy 49" and a run reporting "inspected 52,
+  shared 49, own copy 3" both pass the offender clause and are not the same result.
+
+  THE INSPECTED COUNT IS NOT BOILERPLATE. This repository has three documented instances
+  of a check that examined nothing and reported the same shape as a check that found
+  nothing: the AC-store validator's bare-directory glob (exited 0 for eight days), the
+  feedback_categories.yaml path that was one directory too high (reported missing on
+  every worktree for months), and the merge audit run against a stale origin/main. The
+  count is the cheap defence and it is required by the criteria, not left to the it-po.
+
+  NO PER-RUN DEPLOY COUNT IS ASSERTED HERE. The 77 in the Given counts invocation SITES
+  across 52 files, exactly as it does in TQ-600.yaml — a looped or parametrised site may
+  deploy more than once, and the true per-run figure was never established. The
+  examination's own inspected count is the figure this AC asserts against, and it is
+  measured by the examination rather than written into it. The per-run deploy figure and
+  its bound live on TQ-600a-6.
+
+  RELATIONSHIP TO TQ-600a-5, WHICH IS NOT A CONTRADICTION. TQ-600a-5 chose fail-safe over
+  fail-fast on purpose: an undeclared test runs, gets its own copy, and is named. That is
+  the right call for a running test and this record does not reverse it. This record acts
+  on the repository rather than on the run: the test still passes, and the examination
+  still fails until somebody declares it or moves it. Fail-safe at run time, fail-loud at
+  commit time.
