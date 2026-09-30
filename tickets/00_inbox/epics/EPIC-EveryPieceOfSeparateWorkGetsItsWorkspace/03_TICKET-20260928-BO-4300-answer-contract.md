@@ -5,8 +5,7 @@ components:
 - worktree_manager
 created: '2026-09-28'
 last_updated: '2026-09-28'
-depends_on:
-- 02_TICKET-20260928-BO-4300-deployed-maker-test-support.md
+depends_on: []
 priority: critical
 roadmap_phase: phase_1
 advances_current_outcome: true

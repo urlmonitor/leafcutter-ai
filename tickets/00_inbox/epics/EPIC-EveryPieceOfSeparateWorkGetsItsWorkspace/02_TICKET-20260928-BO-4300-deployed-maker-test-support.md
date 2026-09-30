@@ -1,6 +1,6 @@
 ---
 title: 'Proof runs the deployed maker: shared test locator, fixtures and developer-repo guard'
-status: todo
+status: in_progress
 components:
 - worktree_manager
 - testing_quality
