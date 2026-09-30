@@ -319,6 +319,27 @@ GENERIC_SECRET:templates/scripts/commit_guardian/check_file_size_rule_parity.py:
 GENERIC_SECRET:unit_tests/commit_guardian/_ge_127d_1_fixture.py:*
 ENTROPY_HIGH:unit_tests/commit_guardian/test_ge_127d_1.py:*
 
+# BO-2400a-1-v (2026-09-30). The entry the comment four paragraphs above already
+# claimed was here.
+#
+# That comment cites "the `_SPECIAL_TOKEN` entries for registry_validator.py and
+# check_agent_spawn_consistency.py" as established precedent. Only the first of
+# those two entries existed (line ~59); this file's never did. The two modules
+# carry the SAME module-level sentinel — a constant whose assigned value restates
+# its own name, matched against registry data — so the scanner treats them
+# identically, and the name containing "TOKEN" is what trips it rather than
+# anything about the value.
+#
+# It went unnoticed because check-secrets scans STAGED files, and this hook had
+# not been staged since the entry was written. Adding a dispatcher to an agent's
+# spawned_by staged it for the first time and the omission surfaced at once.
+#
+# Glob rather than a line number, matching every neighbour here: the constant
+# sits near the top of a file under active change, so a pinned line would rot
+# silently — and a suppression that has drifted off its target is worse than
+# none, because it still reads as covered.
+GENERIC_SECRET:templates/scripts/commit_guardian/hooks/check_agent_spawn_consistency.py:*
+
 # A keyword argument passing a module-level constant of edit-surface relationship
 # names into a helper call -- ordinary code, no credential (not reproduced here for
 # the same reason as the entries above: quoting it would trip the scanner this entry

@@ -59,6 +59,8 @@ if str(_UNIT_TESTS_DIR) not in sys.path:
 
 from _workflow_engine_harness import HarnessResult, run_workflow_under_e2  # noqa: E402
 
+import workflows._fast_lane_claim_fixtures as _claim_fx  # noqa: E402
+
 _WORKFLOW_PATH = _REPO_ROOT / "templates" / "workflows-js" / "fast-lane-ship.js"
 
 _AC_ID = "BO-STUB-1"
@@ -93,11 +95,7 @@ def _run_lane_to_test_writer() -> HarnessResult:
         label_responses = {
             "fastlane-worktree": _opened_worktree_payload(str(worktree_root)),
             "resolve-connected": {"ac_ids": [_AC_ID], "message": "1 to build"},
-            "claim-connected": {
-                "claimed": [_AC_ID],
-                "excluded_claimed": [],
-                "target_refused": False,
-            },
+            "claim-connected": _claim_fx.claim_ran([_AC_ID]),
         }
         return run_workflow_under_e2(
             _WORKFLOW_PATH,
