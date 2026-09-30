@@ -9,7 +9,7 @@ component: ac-driven-dev
 level: L2
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 roadmap_phase: phase_acbuild_1_foundation
 criteria: |
   Given requirement R declares the files its work changes as:
@@ -123,7 +123,7 @@ covered_by:
   - ACD-1600c-4-ii
   - ACD-1600c-4-iii
   - ACD-1600c-4-iv
-implemented_by: []
+implemented_by: [scripts/ac_store/declared_files.py, scripts/ac_store/_declared_files_path_form.py, templates/scripts/commit_guardian/_declared_files_bridge.py, templates/scripts/commit_guardian/check_ac_schema.py, scripts/ac_store/validate_ac_schema.py, config/ac_store_schema.json, scripts/build_phases_ac_store.py]
 change_target: schema
 risk_surface: contract_boundary
 notes: |

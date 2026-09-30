@@ -108,6 +108,16 @@ expects_from:
       reachable from a mutating test.
   - ac_id: TQ-600a-5
     contract: >-
+      BUILD a-5 BEFORE THIS AC. Until 2026-09-29 this pair was a cycle: a-5
+      carried `depends_on: TQ-600a-2` while this record expects a-5's selector
+      as its sole routing input, so neither could be generated honestly. The
+      a-5 edge was the spurious one and has been dropped (see a-5's expects_from
+      for the reasoning); the real order is a-5, then this. Do NOT build this AC
+      against the `test_bp_900g_8*` glob because a-5 has not landed yet — the
+      Implementation Notes name glob-keyed routing as the silent-misrouting
+      defect this AC exists to prevent, and the ticket generator will quietly
+      drop the a-5 edge rather than refuse, producing a buildable-looking
+      ticket with only the forbidden option available.
       The per-test declaration that selects reader or mutator, which is the sole
       permitted routing input for this AC.
 test_spec:

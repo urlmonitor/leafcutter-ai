@@ -1940,7 +1940,7 @@ def cmd_create_ac_worktree(args: argparse.Namespace) -> None:
     """
     import datetime
 
-    leafcutter_repo = _git_toplevel()
+    leafcutter_repo = _resolve_repository_with_search_fallback()
     # Resolve the effective repo root and worktrees base.  In the consumer/
     # installed layout the AC store path emitted in the JSON payload points
     # into the authoring worktree rooted at the consumer project, so callers
@@ -2040,7 +2040,7 @@ def cmd_create_fastlane_worktree(args: argparse.Namespace) -> None:
         args: Parsed argparse namespace. Expected attribute: ``slug`` — the
             short build-session slug (derived from the AC id by the caller).
     """
-    leafcutter_repo = _git_toplevel()
+    leafcutter_repo = _resolve_repository_with_search_fallback()
     main_repo, worktrees_base = _resolve_installed_layout(leafcutter_repo)
     os.chdir(main_repo)
 

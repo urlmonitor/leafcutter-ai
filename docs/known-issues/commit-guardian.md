@@ -73,13 +73,12 @@ Severity in the **filename** is a three-level index bucket (`blocker` / `high` /
 
 Fixed issues move to [`commit-guardian/resolved/`](commit-guardian/resolved/) and are no longer listed as open. They are kept, not deleted.
 
-**Open: 75** (3 blocker, 34 high, 38 low) · **Resolved: 16**
+**Open: 78** (2 blocker, 37 high, 39 low) · **Resolved: 17**
 
 ## Open
 
 | Severity | Issue | File |
 |---|---|---|
-| `blocker` | KI-CG-008 — `check-doc-frontmatter` crashes with a `TypeError` on any non-string entry in `related_docs`, making the labelled-list form uncommittable | [open-blocker-ki-cg-008.md](commit-guardian/open-blocker-ki-cg-008.md) |
 | `blocker` | KI-CG-20260909-gate-complexity — `check-complexity` judges every function absolutely, so registering it refuses 49 existing files including the two most-edited in the repo | [open-blocker-ki-cg-20260909-gate-complexity.md](commit-guardian/open-blocker-ki-cg-20260909-gate-complexity.md) |
 | `blocker` | KI-CG-20260909-gate-root-files — `check-root-files` refuses 5 legitimate root files and matches `M`, so registering it makes `ruff.toml` and `LEAFCUTTER_VERSION` permanently uneditable | [open-blocker-ki-cg-20260909-gate-root-files.md](commit-guardian/open-blocker-ki-cg-20260909-gate-root-files.md) |
 | `high` | KI-CG-001 — AC hooks are scoped to the git index, so parent-level drift is unreachable | [open-high-ki-cg-001.md](commit-guardian/open-high-ki-cg-001.md) |
@@ -91,6 +90,8 @@ Fixed issues move to [`commit-guardian/resolved/`](commit-guardian/resolved/) an
 | `high` | KI-CG-012 — `check-ac-schema` reports a clean pass on a file it never validated, because Phase 1 fails open on an empty staged set | [open-high-ki-cg-012-check-ac-schema-reports-a-clean-pass-on.md](commit-guardian/open-high-ki-cg-012-check-ac-schema-reports-a-clean-pass-on.md) |
 | `high` | KI-CG-014 — `declares_side_effect` derivation is negation-blind, so an AC asserting that nothing is written is forced to declare that something is | [open-high-ki-cg-014.md](commit-guardian/open-high-ki-cg-014.md) |
 | `high` | KI-CG-018 — `check_ac_governance` exits 0 without inspecting anything, and its own "did I look?" diagnostic cannot fire on the paths where it did not | [open-high-ki-cg-018.md](commit-guardian/open-high-ki-cg-018.md) |
+| `high` | KI-CG-20260929-output-drift-scans-gitignored-cache — `check-output-drift` reports a GAP on a gitignored runtime cache, and its own stated remedy can never clear it | [open-high-ki-cg-20260929-output-drift-scans-gitignored-cache.md](commit-guardian/open-high-ki-cg-20260929-output-drift-scans-gitignored-cache.md) |
+| `high` | KI-CG-20260929-hook-run-strips-em-dashes-from-deployed-config — a commit's own hook run rewrites the deployed `commit_guardian.json` without its em-dashes, so the next commit fails `check-output-drift` | [open-high-ki-cg-20260929-hook-run-strips-em-dashes-from-deployed-config.md](commit-guardian/open-high-ki-cg-20260929-hook-run-strips-em-dashes-from-deployed-config.md) |
 | `high` | KI-CG-20260914-ac-hooks-resolve-root-from-cwd — all six AC gates take their project root AND their file set from the current directory, so from the wrong cwd they validate zero files and exit 0 | [open-high-ki-cg-20260914-ac-hooks-resolve-root-from-cwd.md](commit-guardian/open-high-ki-cg-20260914-ac-hooks-resolve-root-from-cwd.md) |
 | `high` | KI-CG-022 — `check_adr_collision.py` exists but is registered nowhere, and the branch that registers it also makes it fail closed without `origin/main` | [open-high-ki-cg-022.md](commit-guardian/open-high-ki-cg-022.md) |
 | `high` | KI-CG-035 — `check-proof-promise-claim` is a done-time gate that fires at creation time, so no generated epic scaffold can be committed | [open-high-ki-cg-035.md](commit-guardian/open-high-ki-cg-035.md) |
@@ -116,6 +117,7 @@ Fixed issues move to [`commit-guardian/resolved/`](commit-guardian/resolved/) an
 | `high` | KI-CG-20260928-mermaid-parent-link-dead-in-deployed-layout — check-mermaid-parent-link derives REPO_ROOT from `parents[2]` of its own file, which lands inside `.leafcutter/` in the layout the manifest invokes, so every architecture doc lookup misses and it returns clean | [open-high-ki-cg-20260928-mermaid-parent-link-dead-in-deployed-layout.md](commit-guardian/open-high-ki-cg-20260928-mermaid-parent-link-dead-in-deployed-layout.md) |
 | `high` | KI-CG-20260928-ticket-test-requirements-gate-reads-stdin-nothing-writes — the gate takes its file list from stdin, the manifest sets `pass_filenames:false`, and run_hook pipes no stdin, so it inspects an empty list and exits 0 on every commit | [open-high-ki-cg-20260928-ticket-test-requirements-gate-reads-stdin-nothing-writes.md](commit-guardian/open-high-ki-cg-20260928-ticket-test-requirements-gate-reads-stdin-nothing-writes.md) |
 | `high` | KI-CG-20260930-doc-index-transform-prefers-stale-deployed-generator — transform-doc-index imports the generator from the deployed directory before the source one, so a stale `.leafcutter/` resurrects fixed generator bugs and the hook re-stages the damage into your commit | [open-high-ki-cg-20260930-doc-index-transform-prefers-stale-deployed-generator.md](commit-guardian/open-high-ki-cg-20260930-doc-index-transform-prefers-stale-deployed-generator.md) |
+| `high` | KI-CG-20260928-first-commit-leaves-the-deployed-config-drifted — the first commit in a worktree strips every em-dash from the deployed `commit_guardian.json`, so EVERY commit after the first is refused by `check-output-drift` for a change no author made (19 refusals across 5+ worktrees) | [open-high-ki-cg-20260928-first-commit-leaves-the-deployed-config-drifted.md](commit-guardian/open-high-ki-cg-20260928-first-commit-leaves-the-deployed-config-drifted.md) |
 | `low` | KI-CG-002 — The diagram-type guard silently swaps its enum source when its declaring file is unreachable | [open-low-ki-cg-002.md](commit-guardian/open-low-ki-cg-002.md) |
 | `low` | KI-CG-011 — The roadmap mirror strips its own `description` frontmatter and backdates `created` to today | [open-low-ki-cg-011.md](commit-guardian/open-low-ki-cg-011.md) |
 | `low` | KI-CG-013 — The schema hook and the done-proof oracle disagree about what a leaf is, so one AC can be required to satisfy both branches | [open-low-ki-cg-013.md](commit-guardian/open-low-ki-cg-013.md) |
@@ -159,6 +161,7 @@ Fixed issues move to [`commit-guardian/resolved/`](commit-guardian/resolved/) an
 
 | Severity | Issue | File |
 |---|---|---|
+| `blocker` | KI-CG-008 — `check-doc-frontmatter` crashes with a `TypeError` on any non-string entry in `related_docs`, making the labelled-list form uncommittable — RESOLVED: GE-118d added `scripts/frontmatter_path_resolver.py` as the shared entry-shape resolver and wired `validate_paths()` to it; a multi-key mapping is refused by name rather than taking all its values | [resolved-blocker-ki-cg-008.md](commit-guardian/resolved/resolved-blocker-ki-cg-008.md) |
 | `blocker` | KI-CG-005 — `check-product-truth-validate` / `check-product-truth-generate` hard-fail on an absent, explicitly optional product-truth store, gating every AC YAML commit — RESOLVED: EPIC-TruthfulProjectRecord's write-if-absent empty-record scaffold + fail-open "nothing-examined" outcome mean the described scenario now exits 0 | [resolved-blocker-ki-cg-005.md](commit-guardian/resolved/resolved-blocker-ki-cg-005.md) |
 | `blocker` | KI-CG-20260831-0713 — a fresh consumer install could not make its first commit because check-hook-trigger-reachability failed it (resolved by BP-100k-4-ii and BP-100k-4-iii; unreachable=0 on 2026-09-28) | [resolved-blocker-ki-cg-20260831-0713.md](commit-guardian/resolved/resolved-blocker-ki-cg-20260831-0713.md) |
 | `high` | KI-CG-017 — `check-build-drift` is filtered on the consumer layout path, so it has never run on this repo's own template changes | [resolved-high-ki-cg-017.md](commit-guardian/resolved/resolved-high-ki-cg-017.md) |
