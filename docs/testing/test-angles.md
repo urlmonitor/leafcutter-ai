@@ -264,21 +264,21 @@ verified on 2026-09-21 (TQ-600a-1), and extended on 2026-09-28 (TQ-600a-1-i).
   enter `get_or_produce_shared_layout()` at all — no deploy subprocess runs, and the
   laziness holds per pytest-xdist worker, not merely per run — while widening the same
   selection by exactly one consumer must trigger exactly one deploy. Three tests in
-  `unit_tests/suite_performance/test_tq_600a_1_i.py` pin this, came up green on first
-  run, and now protect this pre-existing behaviour: one asserts no `build.py
-  --target-dir` subprocess runs for the zero-consumer selection, one asserts an idle
-  pytest-xdist worker with no scheduled consumer produces nothing, and one reaches the
-  fixture only through the real, un-augmented `python -m pytest` entry point
-  (`pytest.ini`'s `-p scripts.suite_performance.pytest_shared_reference_layout`
-  registration), not an import-only path. Both mutations these tests are built to catch
-  land in the fixture itself, `scripts/suite_performance/pytest_shared_reference_layout.py`:
-  making `shared_reference_layout` `autouse=True`, or producing the layout at
-  plugin-import time or in a worker-startup hook instead of on first request. Non-entry
-  into the producer is observed independently of any run report, via
+  `unit_tests/suite_performance/test_tq_600a_1_i.py` pin this and protect the
+  pre-existing behaviour: no `build.py --target-dir` subprocess for the zero-consumer
+  selection; an idle pytest-xdist worker produces nothing; and the fixture is reached
+  only through the real `python -m pytest` entry point (`pytest.ini`'s `-p` registration),
+  not an import-only path. Both mutations they catch land in the fixture itself: making
+  `shared_reference_layout` `autouse=True`, or producing at plugin-import / worker-startup
+  instead of on first request. Non-entry is observed independently of any run report via
   `emit_execution_signal()` / `EXECUTION_LOG_ENV_VAR`
   (`scripts/suite_performance/_shared_layout_coordination.py`); the reported-deploy-count
   halves of this same boundary are deferred to TQ-600a-6, which has no reporting surface
   yet to assert against.
+  **TQ-600a-5 (PR #957) makes the route a declaration, so this boundary has THREE cases:
+  declared reader, declared mutator, and UNDECLARED — the one an implementation omits,
+  whose two-branch default sends it to the shared layout, the corrupting direction.
+  Routing reads the marker and nothing else; CLAUDE.md has the rule and the spellings.**
 
 ## Relationship to BO-2900
 
