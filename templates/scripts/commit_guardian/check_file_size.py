@@ -391,13 +391,16 @@ def _print_grown_file(filepath: str, previous_length: int, current_length: int, 
     (via the shared ``Measures:`` line and asymmetry advice) what that
     length measures.
 
-    GE-127f-2: also states the GROSS measured lines the change PUT INTO the
-    file and the required length that leaves (``previous_length - added``),
-    recomputed here (rather than threaded through as a parameter) so this
-    function's own signature stays exactly the four positional arguments
-    every existing call site -- including the disposable-copy fixtures'
-    hand-maintained ``main()`` overrides in this suite's test files, which
-    this ticket must not edit -- already passes it.
+    GE-127f-2 / GE-127f-1: also states the GROSS measured lines the change
+    PUT INTO the file and the required length that leaves -- the LESS
+    DEMANDING of ``limit`` and ``previous_length - added``
+    (``max(limit, previous_length - added)``), never the uncapped
+    subtraction alone -- recomputed here (rather than threaded through as a
+    parameter) so this function's own signature stays exactly the four
+    positional arguments every existing call site -- including the
+    disposable-copy fixtures' hand-maintained ``main()`` overrides in this
+    suite's test files, which this ticket must not edit -- already passes
+    it.
 
     Args:
         filepath: The staged file's path.
@@ -416,14 +419,17 @@ def _print_grown_file(filepath: str, previous_length: int, current_length: int, 
             catches its own callee's failure.
     """
     added = resolve_added_measured_lines(filepath, resolve_parent_revisions())
-    required = previous_length - added
+    required = max(limit, previous_length - added)
     print("❌ FILE GREW WHILE ALREADY OVER ITS LIMIT:")
     print(f"   {filepath}")
     print(f"   Previous length: {previous_length} lines")
     print(f"   New length: {current_length} lines")
     print(f"   Limit: {limit} lines")
     print(f"   This change added {added} measured line(s).")
-    print(f"   Required length: {required} lines or below (previous length minus what this change added).")
+    print(
+        f"   Required length: {required} lines or below (the less demanding of the "
+        "permitted length and previous length minus what this change added)."
+    )
     _print_measures_line()
     print()
     _print_file_description(filepath, current_length)
@@ -561,18 +567,22 @@ def _classify_file(
 ) -> tuple[str, int, int | None]:
     """Classify one staged, covered file into pass / grew / too-large.
 
-    GE-127f-2: for a file already past its permitted length, the comparison
-    is no longer `lines > previous` (net growth -- the forbidden, self
-    -referential reading GE-127f-2's own Implementation Notes name as the
+    GE-127f-2 / GE-127f-1: for a file already past its permitted length, the
+    comparison is no longer `lines > previous` (net growth -- the forbidden,
+    self-referential reading GE-127f-2's own Implementation Notes name as the
     single most likely wrong implementation). It is
-    `lines > previous - added`, where `added` is the GROSS count of measured
-    lines the staged change PUT INTO the file (resolve_added_measured_lines,
-    denominated in the same unit as `lines`/`previous` via the shared
-    count_content_lines stripping rule -- never derived by subtracting
-    `lines` and `previous`, which are already in hand). This strictly
+    `lines > max(limit, previous - added)`, where `added` is the GROSS count
+    of measured lines the staged change PUT INTO the file
+    (resolve_added_measured_lines, denominated in the same unit as
+    `lines`/`previous` via the shared count_content_lines stripping rule --
+    never derived by subtracting `lines` and `previous`, which are already
+    in hand), and the `max(limit, ...)` term (GE-127f-1) caps the demand at
+    the permitted length so an already-oversized file is never asked to give
+    back more than it would take to reach `limit` outright. This strictly
     generalises the prior comparison: it is recovered EXACTLY when
-    `added == 0` (a pure deletion, or an edit touching only unmeasured
-    content), which is also GE-127b-1's own reconciled boundary -- see that
+    `added == 0` and `previous - added >= limit` (a pure deletion, or an
+    edit touching only unmeasured content, on a file the cap does not
+    reach), which is also GE-127b-1's own reconciled boundary -- see that
     record's amended descriptor,
     test_ge_127b_1_an_oversized_file_edited_only_in_unmeasured_content_commits_at_its_previous_length.
     Per GE-127f-2's COST BUDGET note, `added` is established ONLY inside
@@ -605,10 +615,12 @@ def _classify_file(
 
     if previous is not None and previous > limit:
         # This file is already past its permitted length per GE-127b: judge
-        # it against its OWN previous length, less what the change added
-        # (GE-127f-2), never against the fixed limit.
+        # it against the LESS DEMANDING of its permitted length and its own
+        # previous length less what the change added (GE-127f-2's `-added`
+        # term, floored at `limit` by GE-127f-1's cap) -- never the
+        # uncapped subtraction alone.
         added = resolve_added_measured_lines(filepath, resolve_parent_revisions())
-        required = previous - added
+        required = max(limit, previous - added)
         if lines > required:
             return "grew", lines, previous
         return "pass", lines, None
@@ -706,6 +718,50 @@ if __name__ == "__main__":
 ====================================================================
 DECISION HISTORY
 ====================================================================
+- 2026-09-30 [python-coder/GE-127f-1]: `_classify_file` and
+  `_print_grown_file` both computed the already-oversized-file requirement
+  as the uncapped `previous - added`, so a file only modestly over its
+  limit (e.g. 410 lines against a 400 limit, +50 added) was wrongly asked
+  to shrink to 360 instead of the true, less-demanding requirement of 400
+  -- 100 lines removed instead of the 60 the AC's worked example requires.
+  Changed both call sites to `required = max(limit, previous - added)`:
+  "the less demanding of" means the ceiling that is EASIER to satisfy, i.e.
+  the LARGER of the two candidates (confirmed against GE-127f-1.yaml's own
+  worked arithmetic, "410 with 50 added -> the less demanding of 400 and
+  360 is 400" -- `max()`, not `min()`; `min()` would invert the gate into
+  something harsher than the ratchet is meant to be). `limit` was already
+  in scope at both sites, so NEITHER function's signature changed -- the
+  three fixture files that depend on both signatures verbatim
+  (`_ge_127e_3_i_fixture.py`'s injected `main()`,
+  `_ge_127a_1_ordinary_commit_fixture.py`'s mutation targets,
+  `test_ge_127d_1.py`'s live `inspect.signature` check) are unaffected.
+  Also corrected `_print_grown_file`'s printed parenthetical, which
+  previously read "(previous length minus what this change added)" and
+  became factually wrong the moment the cap binds (a required length of
+  400 is not "410 minus 50"); it now reads "(the less demanding of the
+  permitted length and previous length minus what this change added)".
+  Updated both functions' docstrings and `_classify_file`'s inline comment
+  to state the capped formula rather than the uncapped one they described
+  before this change. PERMISSIVENESS CHECKED, NOT ASSUMED: capping at
+  `limit` makes the gate strictly MORE PERMISSIVE for a file far above its
+  limit (previous - added already exceeds `limit` there, so `max` never
+  binds and the comparison is unchanged) and identical for a file whose
+  uncapped requirement was already below `limit` in the old, buggy sense
+  that never triggered a refusal by itself -- the sibling suites explicitly
+  re-run after this change (GE-127f-2's own 3 files, GE-127f-2-i, all four
+  split GE-127b-1 files plus GE-127b-1-i, GE-127a, GE-127c-1, GE-127d-2,
+  GE-127e-2/3/3-i/4, and the merge-aware suite) all stayed green at their
+  documented counts, confirming no sibling descriptor relied on the
+  uncapped behaviour to refuse something this change now permits. TWO
+  NAMED-MUTATION INJECTIONS BOTH BITE ON THE POST-FIX CODE: THE CAP
+  (dropping `max(limit, ...)` back to the bare subtraction) now finds a
+  real target line and reddens the 410-at-400 arm while leaving every
+  GE-127f-2 arm green; THE MULTIPLIER (reverting to `previous` alone,
+  ignoring `added`) reddens the three previously-already-refused arms
+  while leaving the cap/free/silence arms green. TEMPLATES-ONLY: this
+  change was not built (`scripts/build.py --force` is denied in this
+  workspace); the deployed copy under `.leafcutter/`/`scripts/` reflects
+  the pre-GE-127f-1 (uncapped) behaviour until the next build.
 - 2026-09-29 [python-coder/GE-127f-2-i]: Catches
   `AddedLineCountUnavailableError` -- deliberately left uncaught by ticket
   07/GE-127f-2 -- at its two raising call sites: the classification loop in
