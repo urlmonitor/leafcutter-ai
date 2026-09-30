@@ -247,7 +247,8 @@ def _manifest_template_standalone_scripts(package_root: Path) -> set[str]:
     ``build_template_standalone_scripts``.  ``NAMED_STANDALONE_SCRIPTS`` --
     the maker (``worktree.py``), its resolver module (``workspace_root.py``),
     its locate/list/remove helper (``worktree_admin.py``), and the answer-table and
-    path-spelling modules (``worktree_answer.py``, ``worktree_paths.py``) -- is unioned
+    path-spelling modules (``worktree_answer.py``, ``worktree_paths.py``) and the
+    landing-place module (``worktree_layout.py``) -- is unioned
     in explicitly (BO-4300a-1: "the matching manifest helper... [gets] its
     own named entry") so those names appear in Set B even on a source
     tree state where the dynamic scan would otherwise miss one, keeping this
@@ -371,4 +372,7 @@ def _manifest_sync_platforms_scripts(package_root: Path) -> set[str]:
 #   NAMED_STANDALONE_SCRIPTS now also names worktree_answer.py and
 #   worktree_paths.py, so this helper's Set B union covers them with no
 #   code change here. (ADR-018)
+# - 2026-09-30 23:10 [python-coder/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/04]: (#EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/04)
+#   NAMED_STANDALONE_SCRIPTS now also names worktree_layout.py (BO-4300b-2),
+#   so this helper's Set B union covers it; docstring updated. (ADR-018)
 # ====================================================================

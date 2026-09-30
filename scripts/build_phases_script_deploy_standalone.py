@@ -57,6 +57,7 @@ NAMED_STANDALONE_SCRIPTS: tuple[str, ...] = (
     "worktree_admin.py",
     "worktree_answer.py",
     "worktree_paths.py",
+    "worktree_layout.py",
 )
 
 
@@ -87,6 +88,9 @@ def build_template_standalone_scripts(target_root: Path, config: dict[str, Any],
       (NAMED entry): the BO-4300c-2 result-contract table and stdout discipline.
     - ``templates/scripts/worktree_paths.py`` → ``scripts/worktree_paths.py``
       (NAMED entry): native/POSIX path spelling (BO-4300b-5).
+    - ``templates/scripts/worktree_layout.py`` → ``scripts/worktree_layout.py``
+      (NAMED entry): the landing place, ``--landing-root`` validation and
+      install-config derivation (BO-4300b-2, ADR-018 A1.12).
 
     Files are copied verbatim (no template compilation). The compare-before-write
     guard prevents mtime churn on unchanged files. After the shallow glob,
@@ -121,6 +125,9 @@ def build_template_standalone_scripts(target_root: Path, config: dict[str, Any],
     #   Added worktree_answer.py and worktree_paths.py as NAMED entries (the
     #   maker's answer table and path-spelling modules; BO-4300c-2 / b-5).
     #   (ADR-018)
+    # - 2026-09-30 23:10 [python-coder/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/04]: (#EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/04)
+    #   Added worktree_layout.py as a NAMED entry (landing place, override
+    #   validation, config derivation; BO-4300b-2). (ADR-018)
     """
     import build_phases as _bp
 

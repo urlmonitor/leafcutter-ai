@@ -21,9 +21,10 @@ ARCHITECTURE: Stdlib-only CLI (argparse, json, subprocess, shutil, sys,
     worktree_admin`` resolve both in the source tree (as siblings under
     ``templates/scripts/``) and after deploy (as siblings under
     ``<install-root>/scripts/``). All git-subprocess, marker-registry,
-    install-build, and identity/landing-place plumbing lives in
-    ``worktree_git``; project-root resolution lives in ``workspace_root``
-    (never re-implemented here); the read-only/removal verbs live in
+    install-build, and identity plumbing lives in ``worktree_git``;
+    project-root resolution lives in ``workspace_root`` and the landing
+    place, ``--landing-root`` validation and config derivation in
+    ``worktree_layout`` (never re-implemented here); the read-only/removal verbs live in
     ``worktree_admin`` so this file stays under the package's file-size
     ratchet. A caller-supplied condition this script cannot classify is
     answered as ``{"status": "error", "code": "INTERNAL_ERROR", ...}`` on
@@ -45,6 +46,7 @@ from typing import Any
 import worktree_admin
 import worktree_answer as wa
 import worktree_git as wg
+import worktree_layout as wl
 import worktree_paths as wp
 
 _log = logging.getLogger(__name__)
@@ -72,7 +74,7 @@ def _copy_optional_files(repo_root: Path, workspace_path: Path) -> None:
 
 def _repo_context(repo_root: Path) -> dict[str, Any]:
     """Build the BO-4300c-2 'Common fields' this maker can supply as soon as repo_root resolves."""
-    return {**wp.repo_fields(repo_root), "layout": wg.layout_for(repo_root)}
+    return {**wp.repo_fields(repo_root), "layout": wl.layout_for(repo_root)}
 
 
 def _answer_from_existing(workspace_path: Path, marker: dict[str, Any], hub: str) -> dict[str, Any]:
@@ -120,6 +122,7 @@ def _build_marker(kind: str, slug: str, branch: str, hub: str, repo_root: Path, 
 def _create_workspace(repo_root: Path, hub: str, kind: str, slug: str, branch: str,
                        workspace_path: Path, args: argparse.Namespace) -> dict[str, Any]:
     """Clone, fetch, checkout, install, and mark a brand-new workspace ready."""
+    workspace_path.parent.mkdir(parents=True, exist_ok=True)
     clone_proc = wg.run_git(["clone", "--no-checkout", "--local", hub, str(workspace_path)], repo_root)
     if clone_proc.returncode != 0:
         return _err("FETCH_FAILED", f"git clone --no-checkout --local failed: {clone_proc.stderr.strip()}")
@@ -146,12 +149,12 @@ def _create_workspace(repo_root: Path, hub: str, kind: str, slug: str, branch: s
     if args.config_path:
         config_path = wp.resolve_arg(args.config_path)
     else:
-        config_path, derive_err = wg.derive_config_path(repo_root, workspace_path)
+        config_path, derive_err = wl.derive_config_path(repo_root, workspace_path)
         if derive_err:
             return _err(
                 derive_err,
-                f"Could not derive the install config from {repo_root}'s own skills_config.json "
-                "(checked .claude/, .gemini/, .cursor/, .github/, .cline/); never the build's "
+                f"No usable skills_config.json in {repo_root} or {repo_root.parent} "
+                "(.claude/, .gemini/, .cursor/, .github/, .cline/); never the build's "
                 "default config, never this maker's own location.",
             )
     built, build_error = wg.run_install_build(workspace_path, config_path)
@@ -190,9 +193,12 @@ def cmd_ensure(args: argparse.Namespace) -> dict[str, Any]:
     if args.kind not in wg.VALID_KINDS:
         return _err("USAGE", f"Unknown --kind {args.kind!r}; expected one of {wg.VALID_KINDS}.")
 
-    repo_root = wg.resolve_repo_root(args.repo_root)
-    if repo_root is None:
-        return _err("NO_REPO", "Could not resolve the main checkout from --repo-root or the current directory.")
+    repo_root, refusal = wl.resolve_repo_root(args.repo_root)
+    if refusal is not None:
+        return refusal
+    place, usage = wl.landing_for(args.landing_root, repo_root)
+    if usage is not None:
+        return usage
     ctx = _repo_context(repo_root)
 
     hub = wg.origin_url(repo_root)
@@ -202,11 +208,12 @@ def cmd_ensure(args: argparse.Namespace) -> dict[str, Any]:
 
     slug = wg.normalize_slug(args.slug)
     branch = f"{wg.KIND_BRANCH_PREFIX[args.kind]}/{slug}"
-    place = wg.landing_place(repo_root)
-    place.mkdir(parents=True, exist_ok=True)
-    workspace_path = place / f"{args.kind}-{slug}"
+    workspace_path = wl.workspace_path_for(place, args.kind, slug)
 
     existing_marker = wg.read_marker(workspace_path) if workspace_path.exists() else None
+    occupant = wl.other_project_occupant(workspace_path, existing_marker, repo_root) if existing_marker else None
+    if occupant is not None:
+        return {**_err("OCCUPIED", f"{workspace_path} holds another project's workspace.", occupant=occupant), **ctx}
     if existing_marker is not None and existing_marker.get("state") == "ready":
         answer = {**ctx, **_answer_from_existing(workspace_path, existing_marker, hub)}
         wp.add_ticket_fields(answer, getattr(args, "ticket", None), repo_root, workspace_path)
@@ -222,6 +229,9 @@ def cmd_ensure(args: argparse.Namespace) -> dict[str, Any]:
 
 def cmd_verify(args: argparse.Namespace) -> dict[str, Any]:
     """Read-only readiness re-check of the workspace marker at ``--path``."""
+    bad_override = wl.override_refusal(args)
+    if bad_override is not None:
+        return bad_override
     workspace_path = wp.resolve_arg(args.path)
     marker = wg.read_marker(workspace_path)
     if marker is None:
@@ -279,6 +289,8 @@ def build_parser() -> argparse.ArgumentParser:
     remove_p.add_argument("--repo-root")
 
     sub.add_parser("where")
+    for name in ("ensure", "locate", "list", "verify", "remove"):
+        sub.choices[name].add_argument("--landing-root")
     return parser
 
 
@@ -369,4 +381,12 @@ if __name__ == "__main__":
 #   path is answered native + POSIX; the marker stores hub/project_root
 #   relative to the workspace; an unreachable hub on clone answers
 #   FETCH_FAILED (refused). (ADR-018)
+# - 2026-09-30 23:10 [python-coder/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/04]:
+#   (#EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/04)
+#   BO-4300b-1/2/3: project resolution, the landing place and config
+#   derivation now come from worktree_layout.py. A workspace lands at
+#   <landing-root>/<kind>/<slug>; --landing-root is parsed here and validated
+#   before anything is written; NO_REPO / AMBIGUOUS_REPO refusals write
+#   nothing; a location holding another project's workspace is OCCUPIED
+#   (occupant other-project). (ADR-018)
 # ===========================================================================

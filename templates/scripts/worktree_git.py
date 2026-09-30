@@ -10,12 +10,8 @@ BUSINESS CONTEXT: BO-4300a-1 ("Every route that asks gets the same kind of
     recipe. This module carries that plumbing out of worktree.py's own CLI
     dispatch so each file stays small and single-purpose (the same split
     build_deploy_manifest_helpers.py already uses relative to build.py).
-    It also carries the shared pieces of the BO-4300c-2 result contract this
-    ticket's own "Expects From" clause names as governing -- config-path
-    derivation (A1.3), and the status/exit-code classification every verb's
-    answer must agree with -- so worktree.py and worktree_admin.py apply the
-    identical rule rather than each guessing separately (pr-reviewer
-    2026-09-28 00:43 H-2/H-3).
+    Project resolution, the landing place and config derivation moved to
+    worktree_layout.py (ADR-018 A1.12); this module keeps no copy.
 ARCHITECTURE: Pure stdlib (json, os, subprocess, tempfile, contextlib,
     logging, pathlib). ``run_git`` is the single subprocess boundary every
     other function in this module goes through, always with its working
@@ -40,9 +36,7 @@ import tempfile
 from pathlib import Path
 from typing import Any
 
-import workspace_root
 import worktree_answer
-import worktree_paths
 
 _log = logging.getLogger(__name__)
 
@@ -62,15 +56,6 @@ _CANARY_FILE_NAME = ".leafcutter_workspace_canary_probe.txt"
 _CANARY_CONTENT = "LEAFCUTTER_WORKSPACE_CANARY_PROBE\n"
 _GIT_TIMEOUT_SECONDS = 60
 _SLUG_DISALLOWED = re.compile(r"[^a-z0-9._-]+")
-
-# _CONFIG_PLATFORM_DIRS mirrors scripts/build.py's own
-# _resolve_skills_config_path() auto-detection order exactly, so
-# derive_config_path() finds the SAME file build.py itself would have found
-# had --config-path been omitted -- never a guessed filename build.py's
-# --config-path never reads (KI: an earlier version of this module guessed
-# ``.pre-commit-config.yaml``, a file the build entry point does not consult
-# for --config-path at all).
-_CONFIG_PLATFORM_DIRS: tuple[str, ...] = (".claude", ".gemini", ".cursor", ".github", ".cline")
 
 def run_git(args: list[str], cwd: Path, timeout: int = _GIT_TIMEOUT_SECONDS) -> subprocess.CompletedProcess:
     """Run ``git <args>`` with the working directory set to *cwd*.
@@ -399,164 +384,6 @@ def normalize_slug(raw: str) -> str:
     return slug.strip("-") or "workspace"
 
 
-def _git_toplevel_of(path: Path) -> Path | None:
-    """Return the git toplevel enclosing *path*, or ``None`` when it is not one."""
-    proc = run_git(["rev-parse", "--show-toplevel"], path)
-    if proc.returncode != 0:
-        return None
-    text = proc.stdout.strip()
-    return Path(text).resolve() if text else None
-
-
-def landing_place(repo_root: Path) -> Path:
-    """Return the project's one landing place: ``<parent>/<project-dir-name>-worktrees``.
-
-    The Q5 sibling rule (decided 2026-09-28), derived only from the resolved
-    main checkout and identical in the dev and consumer layouts. Nothing is
-    ever created inside the project's own working tree. (Ticket 04 moves
-    this rule into its own layout module and adds the validated override.)
-
-    Args:
-        repo_root: Absolute path to the main checkout.
-
-    Returns:
-        Absolute path to the shared landing directory (created by the caller
-        if it does not exist yet).
-    """
-    return repo_root.parent / f"{repo_root.name}-worktrees"
-
-
-def layout_for(repo_root: Path) -> str:
-    """Return ``'consumer'`` when *repo_root*'s parent is a different git repo, else ``'dev'``.
-
-    Mirrors the same dev-vs-consumer distinction :func:`landing_place`
-    already makes, exposed separately because the BO-4300c-2 result
-    contract's ``layout`` field is independent of where workspaces land.
-
-    Args:
-        repo_root: Absolute path to the main checkout.
-
-    Returns:
-        ``"consumer"`` or ``"dev"``.
-    """
-    parent_toplevel = _git_toplevel_of(repo_root.parent)
-    return "consumer" if parent_toplevel is not None and parent_toplevel != repo_root else "dev"
-
-
-def _read_top_level_packages(config_file: Path) -> tuple[str, ...]:
-    """Best-effort read of a skills_config.json's own ``top_level_packages`` list."""
-    try:
-        data = json.loads(config_file.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError) as exc:
-        _log.warning("_read_top_level_packages: cannot read %s: %s", config_file, exc)
-        return ()
-    packages = data.get("top_level_packages") if isinstance(data, dict) else None
-    return tuple(packages) if isinstance(packages, list) else ()
-
-
-def derive_config_path(repo_root: Path, workspace_path: Path) -> tuple[Path | None, str | None]:
-    """Derive the workspace's install config path from the main checkout's own resolved config.
-
-    Mirrors ``scripts/build.py``'s own ``_resolve_skills_config_path()``
-    auto-detection order (:data:`_CONFIG_PLATFORM_DIRS`) against *repo_root*
-    -- never a guessed filename the build entry point's own ``--config-path``
-    does not read.
-
-    KNOWN LIMITATION (pr-reviewer 2026-09-28 02:15 H-2, honestly disclosed
-    rather than silently left, matching the checks-dict scope boundary
-    already disclosed for BO-4300c-1-ii/BO-4300b-1): the search only looks
-    INSIDE *repo_root* -- it never looks above it. In the self-hosted
-    consumer layout (ADR-001; leafcutter-ai cloned as a nested git repo
-    under ``<consumer-root>/leafcutter-ai/``), the outer consumer root's own
-    ``.claude/skills_config.json`` sits ABOVE *repo_root* as this maker
-    resolves it today (:mod:`workspace_root`'s own docstring discloses it
-    implements only ``argument``/``git-common-dir`` resolution, which yields
-    the nested repo's own toplevel, not the consumer root); this function
-    cannot find that file in that case regardless of any prefix handling.
-    Distinguishing the dev vs. consumer layout is explicitly BO-4300b-1's own
-    scope (ADR-001 "Installed-Layout Path Resolution"; this ticket's own
-    Implementation Notes: "the resolution order and exclusions are
-    BO-4300b-1's") -- pre-empting that ordering here would contradict
-    architect-review's own design concern on this ticket, so it is left for
-    that ticket rather than guessed at now.
-
-    The ADR-018 Amendment 1 (A1.3) ``top_level_packages``-prefix-stripping
-    branch below is also narrower than its name suggests: because
-    ``candidate`` is always built as ``repo_root / platform_dir /
-    "skills_config.json"``, the only string ever tested against
-    ``top_level_packages`` is one of :data:`_CONFIG_PLATFORM_DIRS` itself
-    (e.g. ``".claude"``) -- never an ordinary importable package name, which
-    is how ``top_level_packages`` is documented and defaulted
-    (``config/skills_config.schema.json``). It therefore only strips a
-    segment for the narrow case where a caller has deliberately added a
-    platform directory name to its own ``top_level_packages`` list; for
-    every realistic project config today it is an inert no-op, not the
-    general self-hosting-boundary fix its name implies. Kept rather than
-    removed because it is harmless (falls through to the unstripped,
-    already-correct relative path) and forward-compatible once BO-4300b-1's
-    layout detection lands and a real above-repo_root search is added here.
-
-    Args:
-        repo_root: Absolute path to the main checkout.
-        workspace_path: Absolute path to the workspace being built (already
-            cloned and checked out).
-
-    Returns:
-        ``(absolute path inside workspace_path, None)`` when a main-checkout
-        config was found and the derived path exists inside *workspace_path*.
-        ``(None, "NO_CONFIG")`` when the main checkout has no discoverable
-        ``skills_config.json``, or the derived path does not exist in the
-        workspace.
-    """
-    for platform_dir in _CONFIG_PLATFORM_DIRS:
-        candidate = repo_root / platform_dir / "skills_config.json"
-        if not candidate.is_file():
-            continue
-        try:
-            rel = candidate.relative_to(repo_root)
-        except ValueError:
-            continue
-        packages = _read_top_level_packages(candidate)
-        rel_parts = rel.parts
-        if len(rel_parts) > 1 and rel_parts[0] in packages:
-            rel = Path(*rel_parts[1:])
-        derived = workspace_path / rel
-        return (derived, None) if derived.is_file() else (None, "NO_CONFIG")
-    return None, "NO_CONFIG"
-
-
-def resolve_repo_root(repo_root_arg: str | None) -> Path | None:
-    """Resolve the main checkout from an explicit ``--repo-root`` or the cwd.
-
-    Args:
-        repo_root_arg: The caller's ``--repo-root`` value, or ``None``.
-
-    Returns:
-        Absolute Path to the main checkout, or ``None`` when it cannot be
-        resolved (``--repo-root`` given but not a git repo, or the current
-        directory is not inside one and no argument was given).
-    """
-    if repo_root_arg:
-        candidate = worktree_paths.resolve_arg(repo_root_arg)
-        return candidate if (candidate / ".git").exists() else None
-    result = workspace_root.resolve(str(Path.cwd()), None)
-    if result.get("status") == "ok":
-        return Path(result["project_root"])
-    return None
-
-
-def iter_markers(place: Path):
-    """Yield ``(workspace_path, marker)`` for every marked workspace under *place*."""
-    if not place.is_dir():
-        return
-    for child in sorted(place.iterdir()):
-        if not child.is_dir():
-            continue
-        marker = read_marker(child)
-        if marker is not None:
-            yield child, marker
-
-
 # ===========================================================================
 # DECISION HISTORY
 # ===========================================================================
@@ -597,4 +424,9 @@ def iter_markers(place: Path):
 #   landing_place() now follows the Q5 sibling rule
 #   <parent>/<project-dir-name>-worktrees (the red baseline's fixtures require
 #   it; ticket 04 owns moving/extending it). (ADR-018)
+# - 2026-09-30 23:10 [python-coder/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/04]:
+#   (#EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/04)
+#   Moved resolve_repo_root, landing_place, layout_for, derive_config_path,
+#   _read_top_level_packages and iter_markers to worktree_layout.py (A1.12);
+#   no copy kept here. (ADR-018)
 # ===========================================================================

@@ -57,8 +57,8 @@ class TestBO4300c2Answer(unittest.TestCase):
         results["ok"] = run_maker(_ENSURE, cwd=ok["project"])
 
         occ = make_project(self.tmp / "occ")
-        (occ["landing_place"] / "scratch-alpha").mkdir(parents=True)
-        (occ["landing_place"] / "scratch-alpha" / "note.txt").write_text("x\n", encoding="utf-8", newline="\n")
+        (occ["landing_place"] / "scratch" / "alpha").mkdir(parents=True)
+        (occ["landing_place"] / "scratch" / "alpha" / "note.txt").write_text("x\n", encoding="utf-8", newline="\n")
         results["occupied"] = run_maker(_ENSURE, cwd=occ["project"])
 
         unreach = make_project(self.tmp / "unreach")

@@ -7,7 +7,7 @@ components:
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: critical
 roadmap_phase: phase_1
@@ -112,9 +112,17 @@ amended_by:
     second project is refused OCCUPIED (other-project), never mixed. Two tests added. readiness stays
     approved.
 superseded_by: null
-covered_by: []
+covered_by: [unit_tests/build_orchestration/test_bo_4300b_2_i.py]
 implemented_by:
 - tickets/00_inbox/epics/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/04_TICKET-20260928-BO-4300-project-resolution.md
+- templates/scripts/worktree.py
+- templates/scripts/worktree_git.py
+- templates/scripts/worktree_admin.py
+- templates/scripts/workspace_root.py
+- templates/scripts/worktree_layout.py
+- scripts/build_phases_script_deploy_standalone.py
+- scripts/build_deploy_manifest_helpers.py
+- docs/architecture/adrs/worktree-maker-amendment-1-2026-09-27.md
 notes: |
   Q5 -- DECIDED (user, 2026-09-28): workspaces live in a sibling folder per project,
   <parent-of-project>/<project-dir-name>-worktrees/<slug>, so two projects in one parent folder

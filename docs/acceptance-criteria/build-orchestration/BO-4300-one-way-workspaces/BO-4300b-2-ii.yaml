@@ -7,7 +7,7 @@ components:
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: critical
 roadmap_phase: phase_1
@@ -102,9 +102,17 @@ amended_by:
     (delivered by BO-4300f-2 in ticket 14). This record keeps its fixture-planted stale copy so the
     resolver's independence from any install copy stays proven. readiness stays approved.
 superseded_by: null
-covered_by: []
+covered_by: [unit_tests/build_orchestration/test_bo_4300b_2_ii.py]
 implemented_by:
 - tickets/00_inbox/epics/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/04_TICKET-20260928-BO-4300-project-resolution.md
+- templates/scripts/worktree.py
+- templates/scripts/worktree_git.py
+- templates/scripts/worktree_admin.py
+- templates/scripts/workspace_root.py
+- templates/scripts/worktree_layout.py
+- scripts/build_phases_script_deploy_standalone.py
+- scripts/build_deploy_manifest_helpers.py
+- docs/architecture/adrs/worktree-maker-amendment-1-2026-09-27.md
 notes: |
   Section 1 of the consolidation analysis: the resolver always preferred the stale gitignored
   leafcutter-ai/.leafcutter copy (2026-09-09) over the current deployment (2026-09-24). Q6 --
