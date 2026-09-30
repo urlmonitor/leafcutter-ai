@@ -7,7 +7,7 @@ component: testing-quality
 level: L2
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: medium
 roadmap_phase: phase_1
@@ -328,9 +328,13 @@ amended_by:
     newly added test, not the existing deploy-site population, which is TQ-600a-8's.
     criteria untouched.
 superseded_by: null
-covered_by: []
+covered_by:
+- unit_tests/suite_performance/test_tq_600a_5.py
+- unit_tests/suite_performance/test_tq_600a_5_reporting.py
 implemented_by:
 - tickets/00_inbox/TICKET-20260929-TQ-600a-5.md
+- pytest.ini
+- scripts/suite_performance/pytest_shared_reference_layout.py
 change_target: pipeline
 risk_surface: internal
 notes: |
