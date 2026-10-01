@@ -20,8 +20,37 @@ related_docs:
   could pass a commit whose own oversized files it never looked at. The cause is unexplained,
   and the hook's output does not say which checkout it inspected, so a wrong read cannot be
   told apart from a right one.
-- **Status:** open, no AC. Seen once on 2026-09-25. It did not reproduce on a direct run or on
-  the retry.
+- **Status:** open, no AC. **Seen twice: 2026-09-25 and 2026-09-30.** The first occurrence did
+  not reproduce on a direct run or on the retry; the second did reproduce across three
+  consecutive commit attempts in the same worktree.
+- **Occurrences:** 2 · **First seen:** 2026-09-25 · **Last seen:** 2026-09-30
+
+> **Second occurrence, 2026-09-30 — the reported line count matches no file in the worktree
+> OR its deployment, which narrows the cause.** Committing an `origin/main` merge in
+> `worktrees/EPIC-TrustThatAGreenCheckActuallyChecked`, the hook refused two files the merge
+> did not author, one of them
+> `templates/scripts/commit_guardian/frontmatter_validators.py` reported as **403 lines**
+> against the 400 limit. Measured in that worktree at that moment:
+>
+> | copy | lines |
+> |---|---|
+> | `templates/scripts/commit_guardian/frontmatter_validators.py` (source, = `origin/main`, unmodified by the branch) | **744** |
+> | `.leafcutter/scripts/commit_guardian/frontmatter_validators.py` (deployed) | **600** |
+> | what the hook reported | **403** |
+>
+> So this is not the stale-deployment explanation that accounts for several sibling entries:
+> 403 is neither the source nor the deployed copy. The hook read a third thing. `git diff
+> origin/main` on both refused paths is empty, confirming the branch never touched them.
+>
+> Every other hook in the same run inspected the correct worktree — `check-identifier-uniqueness`
+> reported `acceptance-criteria: OK (4459 inspected)` against this worktree's real store. That
+> matches the 2026-09-25 signature exactly: one hook misreading while its siblings are fine.
+>
+> Unlike the first occurrence it was **deterministic** — three consecutive attempts, same two
+> files, same counts. Worked around with `SKIP=check-file-size` for the merge commit only.
+> Since the branch modified neither file, the skip forfeits no real coverage of authored
+> content; but note the severity line above — the same misread could just as easily let an
+> oversized file through unexamined.
 - **Where:** `templates/scripts/commit_guardian/check_file_size.py` lists the staged files with
   a bare `git diff --cached --name-status` (no `-C`, no explicit root), and runs through
   `run_hook.py`. In a worktree with no main `.venv`, `run_hook.py` falls back to
