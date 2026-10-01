@@ -16,6 +16,7 @@ from kernel.capabilities.decision.loading import load_working
 from kernel.contracts import schema_ids
 from kernel.contracts.decision import Option
 from kernel.contracts.enums import ApprovalStatus, RequestKind, ResultStatus
+from kernel.contracts.evidence import EvidenceBundlePayload
 from kernel.contracts.payloads import (
     DecisionReportPayload,
     GoalRequestPayload,
@@ -40,7 +41,13 @@ class TestOptionsAndCriteriaProposals(DecisionTestCase):
         ctx = self.ctx()
         inv = invocation(DECISION, schema_ids.GOAL_REQUEST,
                          GoalRequestPayload(goal="Where should state live?").model_dump())
-        result = self.run_decision(inv, ctx)
+        grounding = self.run_decision(inv, ctx)  # unknown options are grounded in evidence first
+        self.assertEqual(grounding.requests[0].kind, RequestKind.EVIDENCE)
+        bundle = EvidenceBundlePayload(evidence_ids=[self.evidence[0].id],
+                                       evidence=self.evidence)
+        found = child(ctx, RequestKind.EVIDENCE, schema_ids.EVIDENCE_BUNDLE,
+                      bundle.model_dump(mode="json"))
+        result = self.run_decision(resume(inv, grounding, [found]), ctx)
         request = result.requests[0]
         self.assertEqual(request.kind, RequestKind.OPTIONS)
         payload = OptionsRequestPayload.model_validate(request.payload)
@@ -183,6 +190,9 @@ if __name__ == "__main__":
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 23:00 [python-coder]: A goal-only decision first researches the option space; the
+#   options request (with proposed criteria) follows once evidence exists.
+#   (#KernelBootstrapV0/GROUND)
 # - 2026-09-30 23:59 [python-coder]: Moved out of test_decision_graph to keep that file under
 #   the 400-line cap. (#KernelBootstrapV0/P6)
 # ====================================================================

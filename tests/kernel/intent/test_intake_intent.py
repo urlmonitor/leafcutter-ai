@@ -247,6 +247,11 @@ class TestClarification(IntentCase):
         # live: the answer was ignored, the router kept the original wording and asked again
         self.intents = [UNSURE, ("decision", *SURE)]
         answer = "Decide which acceptance criterion is most critical to implement next."
+        criteria = self.repo / "docs" / "acceptance-criteria"  # what the decision grounds in
+        criteria.mkdir(parents=True)
+        (criteria / "AC-1.md").write_text(
+            "Acceptance criterion AC-1: the audit trail is the most critical criterion to "
+            "implement next.\n", encoding="utf-8")
         paused = await self.service().start_run(self.goal_task(IMPLEMENT))
         final = await self.service().resume_run(paused.run_id,
                                                 answer_human(paused, {"free_text": answer}))
@@ -257,7 +262,8 @@ class TestClarification(IntentCase):
         values = await self.checkpoint_values(final.run_id)
         self.assertIn("decision", self.capabilities_used(values))
         self.assertEqual(values["task"].intent, "decision")
-        decision = next(i for i in values["invocations"].values() if i.capability_id == "decision")
+        decision = min((i for i in values["invocations"].values() if i.capability_id == "decision"),
+                       key=lambda i: i.created_at)  # the first one (grounding research follows)
         self.assertIsNone(decision.continuation)  # the router's wait does not leak into the capability
         self.assertEqual(decision.child_outcomes, [])  # nor does the clarification answer
         self.assertEqual(values["task"].original_goal, IMPLEMENT)  # never rewritten
@@ -322,6 +328,9 @@ if __name__ == "__main__":
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 23:00 [python-coder]: The fixture repository gets an acceptance-criteria document:
+#   a decision with unknown options is grounded in repository evidence now, and a repository
+#   without any blocks it as ungrounded. (#KernelBootstrapV0/GROUND)
 # - 2026-10-01 22:00 [python-coder]: Each kind is proven through the real service with the
 #   production registry; the host is the only fake that answers, and it answers through the real
 #   submission validation. (#KernelBootstrapV0/INTENT)

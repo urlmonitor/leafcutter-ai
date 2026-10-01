@@ -114,7 +114,8 @@ class TestDeclines(unittest.TestCase):
         self.assertEqual(sorted(DECLINES), ["change", "out_of_domain"])
 
     def test_the_write_pre_check_names_why_writes_are_refused(self) -> None:
-        self.assertIn("permissions", write_denial_reason(["read_repo"]))
+        self.assertIn("read-only by design", write_denial_reason(["read_repo"]))
+        self.assertIn("no capability writes", write_denial_reason(["read_repo"]))
         self.assertIn("no registered capability", write_denial_reason(["read_repo", "write_repo"]))
 
 
@@ -125,6 +126,8 @@ if __name__ == "__main__":
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 23:00 [python-coder]: The write denial says the kernel is read-only by design, no
+#   longer that the caller permissions forbid writes. (#KernelBootstrapV0/GROUND)
 # - 2026-10-01 22:00 [python-coder]: `out_of_domain` is a separate gap type rather than a flag on
 #   `unsupported`: the build-opportunity rule is a set of types, so a new type is excluded by
 #   default. (#KernelBootstrapV0/INTENT)

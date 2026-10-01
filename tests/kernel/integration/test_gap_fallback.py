@@ -173,7 +173,8 @@ class TestHostOnly(unittest.IsolatedAsyncioTestCase):
         self.assertIsNotNone(gap.proposal)  # host_only is a build opportunity
         self.assertEqual(state["outcome"].status, RunStatus.COMPLETED)
 
-    async def test_a_host_operation_with_a_native_twin_is_recorded_without_a_draft(self) -> None:
+    async def test_a_host_operation_with_a_native_twin_is_recorded_with_a_draft_naming_it(
+            self) -> None:
         rig = Rig([descriptor("decide.root"), host_research(), retrieval_descriptor()])
         rig.bind("decide.root", factory=two_phase(
             lambda inv: waiting(inv, proposal(operation="bounded_research")), completed))
@@ -183,8 +184,10 @@ class TestHostOnly(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(gap.gap_type, GapType.HOST_ONLY)
         self.assertIn("native alternatives", gap.why_insufficient)
         self.assertIn("retrieve.test", gap.why_insufficient)
-        self.assertIsNone(gap.proposal)  # nothing to build: a native capability exists
-        self.assertEqual(rig.gap_store.drafts, {})
+        self.assertIsNotNone(gap.proposal)  # every build opportunity gets a draft
+        draft = rig.gap_store.drafts[gap.proposal.draft_ref]
+        self.assertIn("check whether one can already serve this need", draft)  # ... naming the twin
+        self.assertIn("retrieve.test", draft)
 
 
 class TestRecordHostOnly(unittest.IsolatedAsyncioTestCase):
@@ -279,6 +282,8 @@ if __name__ == "__main__":
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 23:00 [python-coder]: A host operation with a native twin gets a draft too: the
+#   twin may not cover the need, and the draft says to check it first. (#KernelBootstrapV0/GROUND)
 # - 2026-10-01 20:00 [python-coder]: The aggregation test records a second attempt of the item:
 #   observation ids are now deterministic per attempt, so re-recording the same attempt is a
 #   re-execution and counts once. (#KernelBootstrapV0/FIXB)

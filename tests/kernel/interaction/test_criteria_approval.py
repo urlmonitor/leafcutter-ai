@@ -33,12 +33,13 @@ GOAL = "Where should run state live?"
 CLARIFICATION = "We run everything offline on one laptop."
 
 
-def proposals() -> dict:
-    """Return an options.v1 payload: two proposed options and two proposed criteria."""
+def proposals(cited: list[str] | None = None) -> dict:
+    """Return an options.v1 payload: two proposed options (citing `cited`) and two criteria."""
+    refs = list(cited or [])
     options = [Option(id="A", title="Use sqlite", proposal_status="proposed",
-                      approval_status="proposed", proposed_by="host"),
+                      approval_status="proposed", proposed_by="host", source_refs=refs),
                Option(id="B", title="Use files", proposal_status="proposed",
-                      approval_status="proposed", proposed_by="host")]
+                      approval_status="proposed", proposed_by="host", source_refs=refs)]
     criteria = [c.model_copy(update={"id": f"c{i}"}) for i, c in
                 enumerate(proposed_criteria(), start=1)]
     return OptionsPayload(options=options, proposed_criteria=criteria).model_dump(mode="json")
@@ -83,7 +84,7 @@ class ApprovalCase(wiring.WiringCase):
         self.check_input_artifact(host)
         asked = await self.step(raw_submission(
             host, self.run_id, kind=ActorKind.HOST, schema=schema_ids.OPTIONS,
-            response=proposals()))
+            response=proposals(host["input_evidence_ids"])))
         return asked.pending
 
     def check_input_artifact(self, host: dict) -> None:
@@ -94,6 +95,9 @@ class ApprovalCase(wiring.WiringCase):
         self.assertEqual(body["operation"], "generate_options")
         self.assertEqual(body["request_schema"], schema_ids.OPTIONS_REQUEST)
         self.assertIn(GOAL, body["request"]["problem"])
+        self.assertTrue(host["input_evidence_ids"])  # grounded: the host is handed evidence
+        self.assertEqual([e["id"] for e in body["evidence"]], host["input_evidence_ids"])
+        self.assertTrue(all(e["excerpt"] for e in body["evidence"]))
 
     def report(self, state: dict) -> DecisionReportPayload:
         """Return the decision report of the root work item."""
@@ -201,6 +205,9 @@ if __name__ == "__main__":
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 23:00 [python-coder]: The cooperating host cites the evidence its packet carries,
+#   and the input artifact must hold that evidence with excerpts (options are grounded now).
+#   (#KernelBootstrapV0/GROUND)
 # - 2026-09-30 23:59 [python-coder]: The no-leak test approves with choice `approve` because an
 #   applied stale free-text answer would either become a criterion (P5 behaviour) or add a
 #   free-text limitation; both are asserted absent. (#KernelBootstrapV0/P6)

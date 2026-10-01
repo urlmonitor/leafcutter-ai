@@ -118,8 +118,13 @@ class FakeHostResponder:
         """Return the raw submission answering the envelope's pending host packet."""
         packet = envelope.pending_interaction.model_dump(mode="json")
         self.answered.append(packet["operation"])
+        response = self.responses[packet["output_schema_id"]]
+        if packet["output_schema_id"] == schema_ids.OPTIONS:  # a cooperating host cites its input
+            cited = packet["input_evidence_ids"]
+            response = {**response, "options": [{**o, "source_refs": cited}
+                                                for o in response["options"]]}
         return raw_submission(packet, envelope.run_id, kind=ActorKind.HOST,
-                              response=self.responses[packet["output_schema_id"]],
+                              response=response,
                               actor_id="host:fake", relayed_by="fake-host-responder")
 
 
@@ -212,6 +217,8 @@ class ScenarioCase(unittest.IsolatedAsyncioTestCase):
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 23:00 [python-coder]: The fake host cites the evidence of its packet on an options
+#   answer; options must be grounded now. (#KernelBootstrapV0/GROUND)
 # - 2026-10-01 16:00 [python-coder]: Scenarios run through KernelService, not a graph harness, so
 #   the exit gate is proven through the client entry point; only Jev and the tracer are doubles.
 #   (#KernelBootstrapV0/P10)

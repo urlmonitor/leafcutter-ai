@@ -117,8 +117,8 @@ class TestOptionsSchema(unittest.TestCase):
         jsonschema.validate(self.approved, json_schema_for(schema_ids.OPTIONS))
 
     def test_other_schemas_are_returned_unchanged(self) -> None:
-        bundle = json_schema_for(schema_ids.EVIDENCE_BUNDLE)
-        self.assertEqual(tightened_schema(schema_ids.EVIDENCE_BUNDLE, bundle), bundle)
+        findings = json_schema_for(schema_ids.FINDINGS)
+        self.assertEqual(tightened_schema(schema_ids.FINDINGS, findings), findings)
 
 
 if __name__ == "__main__":
@@ -128,6 +128,8 @@ if __name__ == "__main__":
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 23:00 [python-coder]: The `other schemas unchanged` check uses findings.v1: the
+#   evidence bundle schema is now relaxed for hosts on purpose. (#KernelBootstrapV0/GROUND)
 # - 2026-09-30 23:59 [python-coder]: The "catalog schema could not express the rule" test pins
 #   why the packet tightens the schema: a plain options.v1 schema accepts a pre-approved option,
 #   which the semantic check then rejects. (#KernelBootstrapV0/P6)
