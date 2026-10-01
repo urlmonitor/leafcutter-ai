@@ -1,0 +1,167 @@
+id: BO-2900a-1-iii
+components:
+  - build_orchestration
+  - testing_quality
+  - ac_store
+title: "A refusal is armed only after the rule has been shown to return the right verdict on every proof shape the store already contains"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a reachability rule that announces its findings without refusing,
+    And a corpus of proofs assembled from the proof files the store already
+      records as covering criteria — not written for the occasion — containing
+      every shape those proofs are actually written in, including a proof that
+      drives the unit as a separate program it launches and a proof whose test
+      needs something supplied by the suite that normally runs it,
+  When the rule is exercised over every proof in that corpus,
+  Then for each proof the rule either runs it and returns the verdict a reader of
+    that proof would give, or returns no verdict for it,
+    And no proof in the corpus is answered with a refusal the rule reached
+      without having watched that proof run,
+    And the rule keeps announcing without refusing for as long as any proof in
+      the corpus is still answered wrongly, so arming the refusal is a
+      consequence of the corpus being satisfied and not a separate decision
+      anyone can take,
+    And the exercise reports how many proofs the corpus held and how many were
+      answered each way, so a corpus that examined nothing cannot be mistaken
+      for a corpus that found nothing,
+    And a corpus that resolves to no proofs at all is reported as a failure of
+      the exercise, never as the corpus being satisfied.
+depends_on:
+  - BO-2900a-1
+  - BO-2900a-1-ii
+doc_links:
+  - path: docs/analysis/2026-09-29-the-entry-point-gate-refuses-the-proof-it-wants-and-accepts-the-one-it-does-not-3-scoping-recommendation.md
+    relationship: describes
+    status: exists
+    relevance: "States this rule in its 'Two cheap rules worth adopting' section and enumerates the corpus: 862 covers-tagged functions in four shapes (unittest method no-args 698, module function with fixture args 91, unittest method with fixture args 38, module function no-args 35), plus the subprocess-CLI shape. The corpus is already countable; it does not need designing."
+  - path: docs/analysis/2026-09-29-the-entry-point-gate-refuses-the-proof-it-wants-and-accepts-the-one-it-does-not.md
+    relationship: describes
+    status: exists
+    relevance: "Section 5 measures what the current judgement cannot execute at all: 49 criteria, 274 of 803 observations, from pytest fixtures, test classes and package-relative imports. Those are corpus members that must resolve to no verdict rather than to a refusal."
+  - path: docs/acceptance-criteria/build-orchestration/BO-2900-runtime-reachability-guard/BO-2900a-2.yaml
+    relationship: related
+    status: exists
+    relevance: "Owns the observation the corpus exercises. This AC does not say how the observation works — it says the observation's competence must be demonstrated over the store's own proofs before a refusal rides on it."
+  - path: docs/acceptance-criteria/build-orchestration/BO-2900-runtime-reachability-guard/BO-2900a-3.yaml
+    relationship: related
+    status: exists
+    relevance: "The sibling gate that fires for zero of 802 done criteria under either spelling of its scope argument — the worked example of a required rule whose real population nobody measured. Its anti-ritual clause must not be restated here; only its cautionary measurement is relevant."
+assigned_agent: python-coder
+estimated_complexity: L
+it_requirements:
+  - "CORPUS MEMBERSHIP IS DERIVED, NEVER AUTHORED. Members are resolved by walking the AC store and collecting the proof files named by covered_by / covers-tagged functions that already exist on disk. No member may be a file the exercise itself creates, and no member may be reached through a hand-maintained list of paths. A member is identified by (proof file path, test function name) — the same pair the covers tag records."
+  - "SHAPE COVERAGE IS A GATE, NOT A STATISTIC. The corpus must resolve at least one real member in each of the five measured shapes: unittest method taking no arguments (698 in the store), module-level function taking pytest fixture arguments (91), unittest method taking fixture arguments (38), module-level function taking no arguments (35), and the subprocess-CLI shape. A shape that resolves zero members is a FAILURE of the exercise, identical in effect to an empty corpus — not a shape reported as trivially satisfied."
+  - "ZERO RESOLVED MEMBERS EXITS NON-ZERO AND PRINTS NO SUCCESS SHAPE. This repository has three recorded cases of a defence that examined nothing and reported clean (a bare-directory glob matching no files for eight days, a pre-drive check reading a path that never existed, a merge audit comparing against a stale ref). Model the reporting on scripts/ac_store/validate_ac_schema.py, which states the count it inspected in its own success line for exactly this reason."
+  - "THE EXPECTED VERDICT PER MEMBER MUST COME FROM SOMETHING OTHER THAN THE RULE UNDER TEST. Each member carries a declared expectation — reached / not reached / no verdict — recorded in a corpus manifest authored by a reader of that proof. An exercise that derives the expectation from the rule's own output is tautological and satisfies itself on a rule that is wrong in both directions, which is the state the rule is in today."
+  - "THE ARMING CONDITION MUST BE DERIVED FROM THE REPORT AT RUNTIME, NOT A CONSTANT AN AUTHOR CAN FLIP. The refusal path in _done_proof_entry_point_gate.py must be reachable only when the exercise's own persisted artifact records a non-empty corpus, every shape represented, and zero wrong verdicts. An env var, config key, boolean literal or code comment that arms the refusal independently of that artifact is a violation of this AC's central clause — arming is a consequence of the measurement, not a decision anyone takes."
+  - "THE REPORT STATES ABSOLUTE COUNTS PER SHAPE: members resolved, answered correctly, answered with no verdict, answered wrongly — plus the totals. Percentages alone are not acceptable; a percentage of an empty denominator is the failure shape this clause exists to exclude. The counts for the report-only population BO-2900a-1-ii announces must reconcile against the corpus, so the two measurements can be compared."
+  - "NO VERDICT IS AN ACCEPTABLE ANSWER; A REFUSAL REACHED WITHOUT WATCHING IS NOT. A member the observation reports as unwatched (BO-2900a-2-ii) counts as 'no verdict' and does not block arming. A member answered with a refusal while its observation record says the run was unwatched or the question was undecidable counts as WRONG, however plausible the refusal looks."
+  - "THE EXERCISE IS A STANDALONE SWEEP, NOT A GATE. It must be runnable as its own command and must NOT be added to the per-AC done-proof path, the check_done_proof pre-commit hook, or the required CI done-proof job — at 862 candidate covers-tagged functions it cannot run per commit. Two runs over an unchanged tree must produce byte-identical report output so a diff between runs is meaningful."
+  - "READ-ONLY AGAINST THE STORE. The exercise must not write work_status, readiness, covered_by or implemented_by on any AC, must not modify any proof file, and must write nothing outside its own report and manifest paths. Re-running it must be safe on a dirty tree."
+  - "DEPLOY MANIFEST. Any new module this exercise adds that done_proof.py or _done_proof_entry_point_gate.py imports must be added to build_ac_store's deploy_map in scripts/build_phases_ac_store.py in the same change, or the deployed check_done_proof hook and the required CI done-proof job crash with ModuleNotFoundError."
+delivers_to:
+  agent: python-coder
+  contract: "A repeatable exercise over a corpus drawn from the store's own covers-tagged proof files, reporting per-proof verdict-or-no-verdict plus the population counts, and the single fact the announce-versus-refuse posture of BO-2900a-1 is derived from. Concretely: a persisted report {resolved: int, by_shape: {<shape>: {resolved: int, correct: int, no_verdict: int, wrong: int}}, armed: bool} where armed is true only when resolved > 0, every shape has resolved > 0, and every wrong count is 0 — read by _done_proof_entry_point_gate.py to decide whether its refusal path is reachable at all."
+expects_from:
+  ac_id: BO-2900a-1-ii
+  contract: "The announce-without-refusing state this exercise is the exit condition for, and the announced findings that identify which criteria the corpus has to cover. Concretely the structured finding records {unit, entry_point, offending_test, refusal_cause} BO-2900a-1-ii emits, collectable in-process so the corpus can be reconciled against the announced population without parsing stderr."
+test_spec:
+  - name: test_exercise_over_a_corpus_that_resolves_no_proofs_fails_and_says_so
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: "Runs the real exercise against an AC store containing no resolvable proof files; asserts a non-zero result and a message naming zero resolved members, and asserts the report's armed flag is False. No success-shaped line may appear."
+    must_catch:
+      - "an exercise that prints OK and exits 0 on an empty corpus"
+      - "an exercise that reports the shapes it declared rather than the members it resolved"
+      - "an empty corpus that sets armed true because zero wrong verdicts were recorded"
+  - name: test_report_counts_are_per_shape_and_sum_to_the_members_resolved
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    angle: real_artifact
+    description: "Runs the real exercise over a slice of the REAL store — proof files already named by covered_by, not fixtures written for the occasion — and asserts for every shape that correct + no_verdict + wrong equals resolved, that resolved is greater than zero for each of the five shapes, and that the totals equal the sum over shapes."
+    must_catch:
+      - "an exercise that silently drops members it cannot execute instead of counting them"
+      - "an exercise whose shape classification collapses the four pytest shapes into one"
+  - name: test_one_wrongly_answered_member_keeps_the_refusal_disarmed
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    angle: discrimination
+    description: "Seeds the corpus with one member whose declared expectation contradicts what the rule returns, runs the exercise, then calls the real verify_done_eligible over the direct-import fixture and asserts the verdict is still unchanged — the refusal did not arm. Asserts the report names that member as wrong."
+    must_catch:
+      - "an arming flag hardcoded true"
+      - "an arming flag computed from the count of members rather than the count of wrong answers"
+      - "an exercise that records the wrong answer in its report while the gate reads a separate switch"
+  - name: test_refusal_arms_only_once_every_shape_is_answered_correctly
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    angle: discrimination
+    description: "The positive counterpart, in the same module as the previous test: with every member's declared expectation matched and all five shapes represented, the exercise reports armed true and the same verify_done_eligible call over the same direct-import fixture now returns eligible False. Neither an always-armed nor a never-armed implementation can satisfy both tests."
+    must_catch:
+      - "an arming flag hardcoded false, which would pass the disarmed test alone"
+      - "arming that ignores the shape-coverage requirement and fires on a one-member corpus"
+  - name: test_a_subprocess_cli_proof_from_the_store_is_answered_or_given_no_verdict_never_wrongly_refused
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    angle: real_artifact
+    surface_invoked: "scripts/ac_store/done_proof.py::verify_done_eligible"
+    description: "Takes a real pure-subprocess proof already in the store (unit_tests/ac_store/test_bo_2900g_3.py is the measured example) as a corpus member and asserts its recorded outcome is correct or no_verdict, never wrong — the shape the current observer cannot see at all."
+    must_catch:
+      - "an observation that reports a subprocess proof as not reached and the exercise scoring that as correct"
+      - "a corpus that silently excludes the subprocess-CLI shape because no member resolves"
+test_rationale: "The corpus exercise IS the evidence for this AC, so the tests must run it rather than describe it. A test that checks the exercise module exists, or that counts the shape names in a list, passes on an exercise that never runs a proof — and this repository has three recorded cases of exactly that defence, which is why the empty-corpus test is first and asserts on a non-zero result rather than on absence of output. The two arming tests are deliberately paired in one module: a disarmed assertion alone passes a hardcoded false, an armed assertion alone passes a hardcoded true, and only the pair proves arming is derived from the report. The real-store tests exist because every hand-authored fixture reproduces its author's assumptions about what a proof looks like, and the shapes that broke this rule — a fixture-argument method, a package-relative import, a pure spawn — are precisely the ones nobody would think to write."
+origin_agent: business-analyst-v3
+created: 2026-09-30
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+notes: |
+  THE CLASS THIS AC DESIGNS AGAINST. Not "this predicate was wrong" but a
+  required check whose real behaviour was set by something nobody declared: an
+  argument spelling, an alphabetical sort, an empty string. A refusal path shipped
+  before anyone ran it over the proofs it would judge is the general form, and it
+  recurs unless arming the refusal is made a consequence of a measurement rather
+  than a choice.
+
+  WHY THE CORPUS MUST BE DRAWN FROM THE STORE AND NOT WRITTEN FOR THE OCCASION.
+  Every hand-authored fixture reproduces its author's assumptions about what a
+  proof looks like. The shapes that broke this rule are precisely the ones nobody
+  would think to write: a test method that needs a fixture from the suite, a test
+  in a package whose imports only resolve under the real runner, a proof that
+  launches the unit instead of importing it. Those shapes are already on disk in
+  their thousands; sampling them is cheaper than imagining them and is the only
+  version of this exercise that can fail.
+
+  THE ZERO-PROOF CLAUSE IS NOT PEDANTRY. This repository has three recorded cases
+  of a documented defence that examined nothing and reported clean — a validator
+  whose bare-directory glob matched no files for eight days, a pre-drive check
+  reading a path that never existed, and a merge audit comparing against a stale
+  ref. An exercise that resolves to an empty corpus and reports success would be
+  the fourth, and it would arm the refusal on the strength of having looked at
+  nothing.
+
+  BOUNDARY. This AC says nothing about which criteria the rule should judge —
+  that is the scoping question, and the analysis this record derives from
+  recommends deferring it on the ground that today's numbers are artifacts of a
+  blind judgement. Do not let an implementer settle scoping here.
+
+  VERIFICATION MUST EXECUTE. The corpus exercise is itself the evidence, and it
+  must be a thing that can be run and that fails when a shape is answered wrongly
+  — not a document asserting that the shapes were considered. A test that checks
+  the exercise exists, or that counts the shapes named in a list, passes on an
+  exercise that never runs a proof.

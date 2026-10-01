@@ -1,0 +1,157 @@
+id: BO-2900a-1-ii
+components:
+  - build_orchestration
+  - testing_quality
+  - ac_store
+title: "A reachability rule that cannot watch the proof shape the project asks for reports its finding instead of refusing"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a criterion whose proof is written in the shape this project instructs its
+    authors to write it in — driving the unit as a separate program it launches —
+    and that shape is one the reachability judgement cannot watch,
+    And the reachability rule nevertheless reaches a finding against that proof,
+  When the criterion is evaluated for eligibility to be marked done,
+  Then the criterion's eligibility is exactly what it would have been had the
+    reachability rule not run at all, so the finding does not stop the criterion
+    being marked done,
+    And the finding is still announced in full — naming the unit, the way in that
+      was not entered, the proof it is about, and which of the rule's reasons it
+      would have refused for — so every affected criterion stays countable,
+    And the announcement states that the finding does not block and names the
+      defect in the judgement that is the reason it does not,
+    And a criterion the rule reaches no finding against is likewise unaffected,
+      so while the rule is in this state it can move no verdict in either
+      direction,
+    And the announcement offers no way to switch the rule off.
+depends_on:
+  - BO-2900a-1
+doc_links:
+  - path: docs/analysis/2026-09-29-the-entry-point-gate-refuses-the-proof-it-wants-and-accepts-the-one-it-does-not-3-scoping-recommendation.md
+    relationship: describes
+    status: exists
+    relevance: "The measurement behind this AC and the sequencing it recommends: report-only first, in its own change, ahead of any investigation. Read its 'The correction that matters most' section before implementing — the population splits into silent passes and false refusals, which need opposite fixes."
+  - path: docs/analysis/2026-09-29-the-entry-point-gate-refuses-the-proof-it-wants-and-accepts-the-one-it-does-not.md
+    relationship: describes
+    status: exists
+    relevance: "The full-store sweep: 185 of 188 in-scope done criteria refused, and the executed probe showing a ritual proof accepted while an honest direct-import proof is refused."
+  - path: scripts/ac_store/_gtfa_constants.py
+    relationship: describes
+    status: exists
+    relevance: "Carries the standing instruction to authors — invoke the production entry point as a subprocess/dispatch, do NOT satisfy this by importing the function directly — that 164 ticket files reproduce. This is the proof shape the judgement cannot watch, and the reason this AC exists."
+  - path: docs/acceptance-criteria/build-orchestration/BO-2900-runtime-reachability-guard/BO-2900e-1.yaml
+    relationship: related
+    status: exists
+    relevance: "Owns the wording of every refusal the guard emits, including the standing rule that no emitted text names a bypass. A report-only announcement is still guard output and inherits that rule; do not restate BO-2900e-1's four-cause enumeration here."
+  - path: docs/known-issues/ac-store/open-low-ki-acs-20260928-entry-point-gate-demands-cli-traversal-from-every-proof.md
+    relationship: related
+    status: exists
+    relevance: "The register entry this suspension answers. It declined to author an AC because doing so would have presumed the answer to the scoping question; this AC deliberately takes no position on scoping."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "SURFACE. The suspension lives in scripts/ac_store/_done_proof_entry_point_gate.py::_apply_entry_point_reachability_gate, which is already report-only in this tree. This AC's work is (a) making the announcement countable and complete and (b) proving the pass-through executes. Do NOT relocate the rule, do NOT add a second eligibility oracle, and do NOT delete the module's DECISION HISTORY block — BO-2900a-1-iii reads its re-arm conditions."
+  - "THE PASS-THROUGH MUST BE TOTAL, NOT PER-BRANCH. On every path — finding, no finding, no entry point resolved, internal error — the function must return the verdict mapping it received with no key added, removed or changed. 'Same eligibility' is an equality property of the whole verdict, not just of verdict['eligible']; a rule that leaves eligible alone while writing refusal_cause has still moved the verdict for BO-2900e-1's message layer."
+  - "EVERY FINDING MUST CARRY FOUR NAMED FACTS: the unit, the entry point that was not entered, the proof's test nodeid, and the refusal_cause the rule would have used. A finding missing any one of the four is not countable and does not satisfy this AC. The two causes in play are the ones the module already emits — proof_not_through_entry_point and observation_unavailable — and this AC must not invent a third."
+  - "THE FINDINGS MUST BE COUNTABLE WITHOUT PARSING PROSE. Emit each finding through one named function that produces BOTH the operator-facing line on stderr AND a structured finding record ({unit: str, entry_point: str, offending_test: str, refusal_cause: str}) that an in-process caller can collect. BO-2900a-1-iii's corpus exercise measures this population; a population only recoverable by regexing stderr is not a measurement, and a suspension that stops announcing removes the only evidence that can end it."
+  - "NO SUPPRESSION SURFACE MAY EXIST. The announcement path must read no environment variable, accept no keyword argument, and consult no config key that changes whether it announces. This is a property of the code, not only of the emitted text: an emitted line that names no bypass while an undocumented env var silences the whole function still fails this AC."
+  - "THE ANNOUNCEMENT MUST REACH THE OPERATOR IN ALL THREE check_done_proof MODES (precommit, ci, ci-changed) and from the DEPLOYED layout, not only from the source tree. Write to stderr directly; do not route through a logger whose level the calling context can lower to silence."
+  - "ERROR HANDLING. Per the project error handling policy, a failure inside the rule must be logged at WARNING or higher and must not propagate into the eligibility decision — a rule that cannot decide must not be able to crash the gate that is ignoring it. It must equally not be swallowed silently: an inert rule and a suspended rule are indistinguishable without the log line."
+  - "PERFORMANCE. The rule still runs only after the two incumbent conditions have already returned eligible: True, and must not add a second pytest or subprocess invocation of its own beyond the observation call that is already there. It must not increase the per-AC done-proof budget measurably."
+delivers_to:
+  agent: python-coder
+  contract: "An eligibility evaluation in which the reachability rule contributes announcements but never an ineligibility, plus the announcement text BO-2900e-1's message layer composes. Concretely: verify_done_eligible returns a verdict mapping equal in every key to the one it would return with this rule not invoked, alongside zero or more structured findings {unit: str, entry_point: str, offending_test: str, refusal_cause: 'proof_not_through_entry_point'|'observation_unavailable'} emitted on stderr and collectable in-process. The announced findings are the population BO-2900a-1-iii's corpus is drawn from and measured against."
+expects_from: null
+test_spec:
+  - name: test_report_only_finding_is_announced_and_eligibility_is_unchanged
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    angle: reachability
+    surface_invoked: "scripts/ac_store/done_proof.py::verify_done_eligible"
+    description: "Drives the real verify_done_eligible over a fixture AC store plus a fixture unit with a genuine module-level main(), whose only covers-tagged proof direct-imports the implementing function; captures stderr and the structured findings, and asserts IN THE SAME BLOCK that (a) exactly one finding was produced, naming the unit, the entry point, the proof nodeid and refusal_cause proof_not_through_entry_point, and (b) the returned verdict mapping is equal in every key to the verdict the identical fixture yields with the rule not invoked."
+    must_catch:
+      - "a rule that still returns eligible: False on the direct-import fixture"
+      - "a rule that passes the verdict through but announces nothing"
+      - "a rule that leaves eligible alone while writing refusal_cause or reason into the verdict"
+      - "a fixture on which no entry point resolves, so the report-only branch is never reached and the test passes vacuously"
+  - name: test_a_proof_the_rule_finds_nothing_against_is_silent_and_also_unchanged
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    angle: discrimination
+    description: "Same fixture unit, with the proof rewritten to drive main([action]). First asserts the rule was actually exercised — _detect_module_entry_point resolves an entry point for this fixture, so the gate body ran — then asserts zero findings were produced and the verdict is again equal in every key to the not-invoked verdict. Correctly silent is distinguished from never ran by the entry-point assertion plus the paired positive fixture in the same module."
+    must_catch:
+      - "a rule that announces a finding for a proof that did enter the entry point"
+      - "a rule that is never reached at all on any fixture, which would make every silence-assertion pass"
+  - name: test_the_emitted_announcement_names_no_way_to_switch_the_rule_off
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: "Asserts against the text a REAL evaluation emitted, never against the module's source: the captured announcement is non-empty and contains no bypass token (no ALL_CAPS environment-variable-shaped name, no --flag, no SKIP=/DISABLE=/NO_ construct). Then re-runs the same evaluation with every environment variable the module reads set to a suppressing value and asserts the finding count is identical and still non-zero."
+    must_catch:
+      - "an announcement that helpfully names an env var to silence it"
+      - "a suppression path that exists in code while the emitted text mentions nothing"
+      - "an assertion that reads the source file rather than the emitted line, which passes on a rule that never emits"
+test_rationale: "This AC covers code that is already in the tree with no test, so the only evidence that counts is a real evaluation. A test that reads _done_proof_entry_point_gate.py for a report-only branch passes on a rule that never reaches it — the exact defect the whole BO-2900 tree derives from, and the shape that let BO-2900a-1-i ship done with its specified test unwritten. Both halves must be asserted in one run: asserting only the announcement passes an implementation that still refuses, and asserting only the eligibility passes one that has gone silent. The second test carries the absence guarantee, and its 'correctly silent versus never ran' discriminator is explicit — it first proves an entry point resolved for that fixture (so the gate body was entered) and only then asserts zero findings, with the paired positive fixture in the same module proving the finding channel works at all. The third test asserts on the string the run actually emitted rather than on source text, because the guarantee is about emitted text and a source grep would pass on a rule that emits nothing."
+origin_agent: business-analyst-v3
+created: 2026-09-30
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+notes: |
+  THIS AC COVERS CODE THAT IS ALREADY WRITTEN AND HAS NO TEST. The suspension of
+  BO-2900a-1's refusal paths to report-only landed as an uncommitted change on
+  branch analysis/entry-point-gate before any criterion described it. That is the
+  reason this record exists and the reason it is work_status: todo rather than
+  done: the behaviour is present in the tree, and nothing executes it and asserts
+  the verdict is left alone. Do not flip it to done on the strength of the code
+  being there — that is the exact move this whole tree exists to refuse.
+
+  WHY THIS IS AN L3 UNDER BO-2900a-1 AND NOT A NEW L2. BO-2900a is at its
+  five-L2 cap and BO-2900 is at its seven-L1 cap, so neither level had a slot.
+  It would have been the wrong shape regardless: this is not a new guarantee, it
+  is the state BO-2900a-1's own guarantee is held in while the judgement behind it
+  is repaired. The family's precedent for the same bind is BO-2900f-2-ii, parented
+  as an L3 under an existing L2 for the identical reason.
+
+  WHY REPORT-ONLY RATHER THAN REMOVED. Three separately sufficient defects were
+  measured, and each of them is a defect in the JUDGEMENT, not in the intent:
+  the rule accepts a ritual invocation and refuses an honest direct-import proof
+  (the opposite of what it was built for); it cannot see the subprocess proof
+  shape 164 ticket files instruct authors to write, so a pure spawn passes
+  silently while a hybrid spawn is refused; and it names a unit chosen from the
+  proof's import list rather than from the criterion's own record. A rule whose
+  verdict is wrong in both directions must stop deciding, but its findings are
+  the only measurement of how large the affected population is — which is why the
+  announcement is mandatory and full rather than suppressed.
+
+  THE ANNOUNCEMENT IS THE LOAD-BEARING HALF. A suspension that silently passes
+  everything is indistinguishable from a rule that found nothing, which is the
+  failure shape CLAUDE.md's merge-audit section catalogues three times over. The
+  count of announced findings is what BO-2900a-1-iii's re-arm corpus is measured
+  against, so a suspension that stops announcing removes the evidence needed to
+  end it.
+
+  VERIFICATION MUST EXECUTE THE EVALUATION. A test that reads the rule's source
+  for a report-only branch passes on a rule that never reaches it — the identical
+  defect this tree derives from. The evidence has to be a real evaluation of a
+  criterion the rule does reach a finding against, asserting both that the
+  finding was announced and that eligibility is unchanged. Both halves in one
+  run: asserting only the announcement passes an implementation that still
+  refuses, and asserting only the eligibility passes one that has gone silent.
+
+  NAMING HAZARD FOR THE IMPLEMENTER. unit_tests/ac_store/test_bo_2900a_1_ii.py
+  already exists and covers BO-2900a-1, not this record — the filename is an
+  artifact of a file-size split, predating this id. Do not read it as this AC's
+  proof and do not add this AC's proof to it.
