@@ -112,6 +112,31 @@ limitations instead. `decision.max_grounding_evidence` bounds how much evidence 
 request carries. A need counts as covered only by evidence at or above
 `retrieval.coverage_relevance_threshold`.
 
+#### Design decisions, targeted research and answer-aware coverage
+
+When a required criterion is a property of the proposed designs (a design judgement, not a fact
+a file can state), when two assessments in a row barely move (`decision.progress_epsilon`), or
+after `decision.max_research_rounds` rounds, the decision stops researching and asks a human a
+**ranked question**: the options as `#1, #2, ...` ordered by required criteria passed, then the
+required mean, then the supporting mean, each with its criteria in words and the evidence it
+cites. Answer with `{"choice_id": "<option id>"}`, add an option of your own
+(`added_options`), or answer in words (recorded only). A choice resolves the decision with you
+as approver and the ranking in the rationale. `decision.design_judgement_threshold` sets how
+sure Jev must be that a criterion is a design judgement.
+
+Research uses what the decision already knows. An option that cites `kernel/contracts/decision.py`
+(or `path#anchor`, `path::Symbol`) has that file fetched exactly, whatever the need's own sources;
+evidence ids it cites stay context. Queries lead with the goal, then the approved criteria and
+the option titles; `retrieval.max_query_terms` (48) bounds them. Gaps a synthesis named
+(`unknowns`) and the claims of options a human added become supporting needs with their own
+queries (`research.max_targeted_needs`, 4).
+
+A need is `satisfied` only if Jev also judges that the kept evidence **answers** the need's
+question (one `answers.<need>` question per satisfied need, inside the existing assess call,
+so no extra Jev call). Evidence that is on topic but does not answer leaves the need `partial`
+with a limitation: `research.answer_threshold` (0.7) sets the bar and
+`research.answer_aware_coverage` (`true`) switches it off.
+
 ### Step 3 — Write the task and start the run
 
 The goal travels as data, never on a command line. Write a `TaskInput` JSON file and pass it with
