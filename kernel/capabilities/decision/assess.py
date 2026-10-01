@@ -31,6 +31,20 @@ from kernel.providers.base import ChoiceAnswer, JevResult, QuestionSpec, json_st
 
 PURPOSE = "decision.assess"
 NONE_CHOICE = "none"
+#: Version of the criterion-kind question (2: literal, atomic, boundary cases stated).
+KIND_TEMPLATE_VERSION = "2"
+KIND_INSTRUCTIONS = (
+    "`criteria.{id}` asks about a property that each proposed option in `options` would have "
+    "(how the design would behave, look or be used if it were built), not about a fact that "
+    "`evidence` or the repository already states today. True or false?")
+KIND_CRITERIA = {
+    "true": "The criterion is about the designs themselves and can only be judged by imagining "
+            "each option built. Example: whether changes would show up as small, reviewable "
+            "diffs, or whether an existing parser could read a format the option would produce.",
+    "false": "The criterion asks what `evidence` or the repository already states today and can "
+             "be looked up. Example: whether the project already uses YAML for its "
+             "configuration, or whether a recorded decision already says how a thing is "
+             "handled."}
 _PATTERN_CATEGORIES = {EvidenceCategory.EXISTING_PATTERNS}
 _MISSING_TEXT = {
     MissingKnowledge.MISSING_TASK_FACT: "a fact about the task itself is missing",
@@ -87,14 +101,20 @@ def unclassified(work: Working) -> list[Criterion]:
     return [c for c in work.usable_criteria if c.kind_source is None]
 
 
+def kind_question(criterion_id: str) -> QuestionSpec:
+    """Return the literal criterion-kind question: one atomic judgement with both readings named.
+
+    It follows the TypeSafe guidance (ADR-053 section 5): one literal true/false judgement, the
+    state part named in backticks, and a boundary example for each answer.
+    """
+    return noul_question(
+        f"kind.{criterion_id}", "decision.kind", KIND_INSTRUCTIONS.format(id=criterion_id),
+        criteria=dict(KIND_CRITERIA), version=KIND_TEMPLATE_VERSION)
+
+
 def _questions(work: Working) -> list[QuestionSpec]:
     """Build every question of the batch (ids are addressed by the maps built alongside)."""
-    qs: list[QuestionSpec] = [noul_question(
-        f"kind.{c.id}", "decision.kind",
-        f"Is `criteria.{c.id}` a property of the designs in `options` that can only be judged by "
-        f"weighing those designs (for example simplicity, fit or reviewability), rather than a "
-        f"fact about the world or the existing project that `evidence` could establish or "
-        f"refute?") for c in unclassified(work)]
+    qs: list[QuestionSpec] = [kind_question(c.id) for c in unclassified(work)]
     for c in work.usable_criteria:
         qs.append(noul_question(
             f"sufficient.{c.id}", "decision.sufficient",
@@ -146,6 +166,10 @@ async def assess(ctx: ExecutionContext, invocation: CapabilityInvocation, work: 
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 [python-coder]: The criterion-kind question is rewritten literally (template v2):
+#   round 6 gave P(design_judgement) 0.12 to 0.54 for criteria that plainly describe the proposed
+#   designs, because the old wording asked for a vague weighing ("simplicity, fit"). It now names
+#   the two readings with a boundary example each. (#KernelV01/E)
 # - 2026-10-01 [python-coder]: The batch also classifies each not-yet-classified criterion (one
 #   `kind.<id>` question, no extra Jev call): a design judgement is a property of the options
 #   that retrieval cannot settle. (#KernelV01/A)

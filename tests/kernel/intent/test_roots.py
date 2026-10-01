@@ -93,7 +93,7 @@ class TestDeclines(unittest.TestCase):
                          ("out_of_scope_write", GapType.PERMISSION))
         self.assertEqual(
             decline_limitation(narrow(decline)),
-            "out_of_scope_write: The V0 kernel is read-only; implementing or editing is not "
+            "out_of_scope_write: The kernel is read-only; implementing or editing is not "
             "supported. You can ask it to decide what to implement or to find relevant "
             "evidence.")
 

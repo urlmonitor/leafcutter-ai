@@ -110,14 +110,34 @@ def _heading_path(stack: list[tuple[int, str]]) -> str:
                             for _, t in shown)
 
 
+def front_matter_end(lines: list[str]) -> int:
+    """Return the line index after a leading YAML front matter block (0 when there is none).
+
+    A block opens with a `---` line at the very top and closes at the next `---` or `...` line.
+    """
+    if not lines or lines[0].strip() != "---":
+        return 0
+    for index in range(1, len(lines)):
+        if lines[index].strip() in ("---", "..."):
+            return index + 1
+    return 0
+
+
 def _markdown_sections(lines: list[str]) -> list[Section] | None:
-    """Split on headings; the label is the heading path (`§Parent > Child`)."""
+    """Split on headings; the label is the heading path (`§Parent > Child`).
+
+    A leading YAML front matter block is metadata (title, tags, status), not content: it is never
+    a section of its own, because its dense metadata words out-scored the body (a live run was
+    offered only L1-L14 of a concept document). Prose between the front matter and the first
+    heading stays a section.
+    """
     heads = markdown_headings(lines)
     if not heads:
         return None
     sections: list[Section] = []
-    if heads[0][0] > 0 and any(x.strip() for x in lines[:heads[0][0]]):
-        sections.append(Section(0, heads[0][0]))
+    first = front_matter_end(lines)
+    if heads[0][0] > first and any(x.strip() for x in lines[first:heads[0][0]]):
+        sections.append(Section(first, heads[0][0]))
     stack: list[tuple[int, str]] = []
     for position, (index, level, title) in enumerate(heads):
         end = heads[position + 1][0] if position + 1 < len(heads) else len(lines)
@@ -271,6 +291,9 @@ def section_excerpt(lines: list[str], sec: Section, terms: list[str], cfg: Retri
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 [python-coder]: YAML front matter is not a section of its own: a document with
+#   headings is offered only through its body sections (round 6 and the regression pass both
+#   showed front matter winning on term density and crowding the body out). (#KernelV01/E)
 # - 2026-10-01 [python-coder]: Sections replace the one-window-per-file read: Markdown by heading
 #   path, YAML/JSON by top-level key, Python by top-level def or class; other formats keep the
 #   old window. A heading with no body of its own is folded into the next section so a parent

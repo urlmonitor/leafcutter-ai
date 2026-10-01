@@ -19,6 +19,7 @@ from __future__ import annotations
 import math
 import os
 from collections import Counter
+from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
@@ -39,10 +40,14 @@ from kernel.contracts.enums import SourceKind
 STRATEGY = "repo_text"
 PINNED_PATH_TERMS = 2
 MIN_FILES_FOR_COMMON_TERMS = 4
+#: Shortest query term that counts as a word of the project's folder name (a tiny term would
+#: match inside it by accident).
+MIN_PROJECT_TERM = 4
 
-__all__ = ["STRATEGY", "cut_at_boundary", "search_repo_text", "source_cap"]
+__all__ = ["STRATEGY", "common_terms", "cut_at_boundary", "search_repo_text", "source_cap"]
 
-_Prioritised = list[tuple[tuple[bool, int, int, str, int], Candidate]]
+_Key = tuple[bool, int, str, int]
+_Prioritised = list[tuple[_Key, Candidate]]
 
 
 @dataclass
@@ -172,28 +177,45 @@ def _file_record(path: Path, rel: str, text: str, source_id: str, terms: list[st
     return _FileRecord(rel, cands, file_hits, exact, matched, head)
 
 
-def _prioritised(records: list[_FileRecord], files_scanned: int, df: Counter[str]
-                 ) -> _Prioritised:
-    """Return (sort key, candidate) pairs, pinned files first, then path matches, then hits.
+def common_terms(files_scanned: int, path_df: Counter[str], project: frozenset[str]
+                 ) -> frozenset[str]:
+    """Return the terms too generic to say anything about one file's path.
 
-    A term found in the path of most files (the source's own folder name) says nothing about one
-    file, so it is not counted as a path match.
+    A term found in the path of most files (the source's own folder name) does not tell files
+    apart, and neither does a word of the project's own name (the workspace id, the repository
+    folder): the project name is in every path and body of its own documents. They are not
+    counted as path matches.
     """
-    common = {t for t, n in df.items() if files_scanned >= MIN_FILES_FOR_COMMON_TERMS
-              and n * 2 > files_scanned}
+    if files_scanned < MIN_FILES_FOR_COMMON_TERMS:
+        return project
+    spread = {t for t, n in path_df.items() if n * 2 > files_scanned}
+    return frozenset(spread) | project
+
+
+def _prioritised(records: list[_FileRecord], common: frozenset[str], path_weight: int
+                 ) -> _Prioritised:
+    """Return (sort key, candidate) pairs: pinned files first, then by content and path weight.
+
+    A file is pinned when the question names it (an identifier) or its path carries two distinctive
+    question words. The rest are ordered by one number, the file's content hits plus
+    `path_weight` hits per distinctive path word, so a path that happens to share a word cannot
+    outrank a file with many content hits (a live run ranked schema files with 1 to 4 hits above
+    files with 20 to 36).
+    """
     out: _Prioritised = []
     for rec in records:
         score = len(rec.path_hit_terms - common)
         pinned = rec.exact or score >= PINNED_PATH_TERMS
         cands = rec.candidates or ([rec.head] if rec.head is not None and pinned else [])
+        weight = rec.file_hits + path_weight * score
         for index, cand in enumerate(cands):
-            out.append(((not pinned, -score, -rec.file_hits, rec.rel, index), cand))
+            out.append(((not pinned, -weight, rec.rel, index), cand))
     return sorted(out, key=lambda pair: pair[0])
 
 
 def _select(ordered: _Prioritised, cap: int) -> list[Candidate]:
     """Pick at most `cap` candidates: every file's best section first, then second sections."""
-    chosen: dict[str, tuple[tuple[bool, int, int, str, int], Candidate]] = {}
+    chosen: dict[str, tuple[_Key, Candidate]] = {}
     firsts: set[str] = set()
     for key, cand in ordered:
         if len(chosen) < cap and cand.path not in firsts:
@@ -206,8 +228,8 @@ def _select(ordered: _Prioritised, cap: int) -> list[Candidate]:
 
 
 def search_repo_text(policy: ReadPolicy, source_id: str, roots: list[Path], terms: list[str],
-                     cfg: RetrievalConfig, entities: QueryEntities | None = None
-                     ) -> SearchReport:
+                     cfg: RetrievalConfig, entities: QueryEntities | None = None,
+                     project_names: Sequence[str] = ()) -> SearchReport:
     """Search the given resolved roots for the terms.
 
     Args:
@@ -217,6 +239,8 @@ def search_repo_text(policy: ReadPolicy, source_id: str, roots: list[Path], term
         terms: Query terms (lowercase).
         cfg: Retrieval bounds.
         entities: Identifiers named in the question; files whose path carries one are pinned.
+        project_names: Names of the project (the workspace id); their words say nothing about
+            which file is meant, so a path match on them is not distinctive.
 
     Returns:
         SearchReport: Ranked candidates (at most `source_cap`) and skip counters.
@@ -224,7 +248,7 @@ def search_repo_text(policy: ReadPolicy, source_id: str, roots: list[Path], term
     report = SearchReport(source_id=source_id)
     wanted = QueryEntities() if entities is None else entities
     records: list[_FileRecord] = []
-    df: Counter[str] = Counter()
+    path_df: Counter[str] = Counter()
     for root in roots:
         files, linked_dirs = _iter_files(root)
         for link in linked_dirs:
@@ -237,25 +261,51 @@ def search_repo_text(policy: ReadPolicy, source_id: str, roots: list[Path], term
             report.files_scanned += 1
             rel = policy.relative(path) or path.name
             rec = _file_record(path, rel, outcome.text, source_id, terms, wanted, cfg)
-            df.update(rec.path_hit_terms)
+            path_df.update(rec.path_hit_terms)
             if rec.candidates or rec.head is not None:
                 records.append(rec)
-    ordered = _prioritised(records, report.files_scanned, df)
+    common = common_terms(report.files_scanned, path_df,
+                          _project_terms((policy.root.name, *project_names), terms))
+    ordered = _prioritised(records, common, cfg.path_match_weight)
     cap = source_cap(report.files_scanned, cfg)
     report.candidates = _select(ordered, cap)
     cut = len(ordered) - len(report.candidates)
     if cut:
-        unoffered = len({c.path for _, c in ordered}) - len({c.path for c in report.candidates})
-        report.notes.append(
-            f"{cut} lower-ranked section(s) cut at the source cap of {cap} candidates "
-            f"({report.files_scanned} files scanned, max_candidates={cfg.max_candidates}); "
-            f"{unoffered} matching file(s) not offered")
+        report.notes.append(_cut_note(ordered, report.candidates, cut, cap, report.files_scanned,
+                                      cfg))
     return report
+
+
+def _project_terms(names: Iterable[str], terms: list[str]) -> frozenset[str]:
+    """Return the query terms that are words of the project's own names (workspace, folder)."""
+    joined = " ".join(names).lower()
+    return frozenset(t for t in terms if len(t) >= MIN_PROJECT_TERM and t in joined)
+
+
+def _cut_note(ordered: _Prioritised, offered: list[Candidate], cut: int, cap: int, scanned: int,
+              cfg: RetrievalConfig) -> str:
+    """Describe what the source cap cut: sections, files with no section offered, and the best cut."""
+    kept = {c.locator for c in offered}
+    left_out = [c for _, c in ordered if c.locator not in kept]
+    whole = {c.path for _, c in ordered} - {c.path for c in offered}
+    strongest = max(left_out, key=lambda c: c.hits, default=None)
+    best = f"; strongest cut section had {strongest.hits} hit(s) ({strongest.locator})" \
+        if strongest else ""
+    return (f"{cut} lower-ranked section(s) cut at the source cap of {cap} candidates "
+            f"({scanned} files scanned, max_candidates={cfg.max_candidates}); "
+            f"{len(whole)} matching file(s) had no section offered and "
+            f"{len({c.path for c in left_out} - whole)} more lost sections to a sibling{best}")
 
 
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 [python-coder]: Ranking is one weighted number (file content hits plus
+#   retrieval.path_match_weight per distinctive path word) after pinning; terms in the path of
+#   most files and the project's own names (workspace id, folder) are not distinctive. A live
+#   regression run offered `leafcutter.*.schema.json` sections with 1 to 4 hits before files with
+#   20 to 36 hits. The cut note now counts the files that lost a section to a sibling.
+#   (#KernelV01/E)
 # - 2026-10-01 [python-coder]: Files are read as sections (several per file, best first), the
 #   per-source cap scales with source size under max_candidates, and files whose path or name
 #   carries the question's identifiers are pinned ahead of body-hit ranking, so

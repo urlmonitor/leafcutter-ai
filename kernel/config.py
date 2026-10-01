@@ -112,6 +112,14 @@ class DecisionConfig(_Section):
     progress_epsilon: float = Field(ge=0.0, le=1.0)
     #: Most research rounds one decision may request before it hands the ranked options to a human.
     max_research_rounds: int = Field(ge=1)
+    #: Final decision assessments whose Jev calls stay reserved: research (and any other follow-up
+    #: that ends in another assessment) must leave this many assessments' worth of calls.
+    reserve_assessments: int = Field(ge=0)
+    #: Options added to the size of the reserved assessment (a human may add one when shown the
+    #: ranked options, and that option is scored by a fresh assessment).
+    reserve_extra_options: int = Field(ge=0)
+    #: Calls kept beyond the reserved assessments for routing a child request and other overhead.
+    reserve_margin_calls: int = Field(ge=0)
 
 
 class ResearchConfig(_Section):
@@ -126,7 +134,8 @@ class ResearchConfig(_Section):
     answer_aware_coverage: bool
     #: Probability the answer judgement must reach for a relevance-satisfied need to stay so.
     answer_threshold: Probability
-    #: Most extra needs built from named gaps and human-added option claims in one research run.
+    #: Most extra needs built from named gaps and human-added option claims in one research run
+    #: (claims first, then gaps). Every need costs about one rerank call, so this bounds a round.
     max_targeted_needs: int = Field(ge=0)
 
     @model_validator(mode="after")
@@ -164,6 +173,27 @@ class RetrievalConfig(_Section):
     max_explicit_locators: int = Field(ge=0)
     #: Most search terms one retrieval query carries (goal first, then hints, then need filler).
     max_query_terms: int = Field(ge=1)
+    #: Most candidates one need sends to Jev for reranking (`max_candidates` stays the pre-filter
+    #: pool they are chosen from). With `jev.max_questions_per_call` at least this large a need
+    #: costs one rerank call.
+    rerank_max_per_need: int = Field(ge=1)
+    #: Batches of `rerank_max_per_need` one need may judge: the first is normally all it costs, a
+    #: further one is judged only while nothing relevant has been found (a lexical pre-filter can
+    #: put the answer deeper than the first batch).
+    rerank_max_batches: int = Field(ge=1)
+    #: A need is `satisfied` only with at least this many kept items at or above
+    #: `coverage_relevance_threshold` ...
+    satisfied_min_items: int = Field(ge=1)
+    #: ... or with a single kept item whose relevance reaches this stronger bar.
+    satisfied_strong_threshold: Probability
+    #: A candidate whose text repeats at least this share of the request's goal near-verbatim is a
+    #: review or analysis OF the run asking, not evidence for it, and is demoted (0 disables).
+    self_reference_ratio: Probability
+    #: Factor applied to the relevance of a self-referencing candidate (explicitly cited ones are
+    #: exempt), so it falls below the keep bar unless Jev judged it overwhelmingly relevant.
+    self_reference_penalty: Probability
+    #: Hits one distinctive path-term match is worth when ranking files (content hits weigh in).
+    path_match_weight: int = Field(ge=0)
 
 
 class SourceConfig(_Section):
@@ -332,6 +362,10 @@ def write_config_schema(path: Path) -> None:
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 [python-coder]: Round E: decision.reserve_* keep Jev budget for a final assessment,
+#   retrieval.rerank_max_per_need bounds the rerank batch per need, satisfied_* and self_reference_*
+#   tighten coverage and demote reviews of the asking run, path_match_weight weighs path matches
+#   against content hits; research.max_targeted_needs is 2. (#KernelV01/E)
 # - 2026-10-01 [python-coder]: Added decision.design_judgement_threshold, progress_epsilon and
 #   max_research_rounds so the design-decision ending is configuration. (#KernelV01/A)
 # - 2026-10-01 23:00 [python-coder]: Added decision.require_option_grounding and

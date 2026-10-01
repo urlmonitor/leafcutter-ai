@@ -204,7 +204,7 @@ def decide_outcome(state: KernelState) -> RunOutcome:
         limitations = list(dict.fromkeys(limitations))
     else:
         limitations = list(dict.fromkeys([*limitations, *_child_diagnostics(state, root)]))
-    if status is RunStatus.BLOCKED and not has_plain_reason(limitations):
+    if status is RunStatus.BLOCKED and not has_plain_reason(limitations, diagnostics):
         limitations.append(can_do_hint())  # a bare "blocked" says nothing; name what works
     asked = (payload or {}).get("open_questions")
     questions = [str(q) for q in asked] if isinstance(asked, list) else []
@@ -220,7 +220,7 @@ def render_report_md(state: KernelState, outcome: RunOutcome) -> str:
     if trace is not None and trace.trace_url:
         lines.append(f"- Trace: {trace.trace_url}")
     lines.append("")
-    lines += stop_explanation(outcome.status.value, outcome.limitations)
+    lines += stop_explanation(outcome.status.value, outcome.limitations, outcome.diagnostics)
     if outcome.output is not None:
         lines += output_sections(outcome.output.schema_id, outcome.output.payload)
         lines += ["## Output", "", f"Schema: `{outcome.output.schema_id}`", "", "```json",
@@ -280,6 +280,8 @@ __all__ = ["IntakeError", "decide_outcome", "finalize", "intake", "render_report
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 [python-coder]: A budget or guard stop is a plain reason: no `can_do` rephrasing
+#   hint, and the report names the budget and what the user can do. (#KernelV01/E)
 # - 2026-10-02 [python-coder]: mypy: intake narrows the optional payload once; open questions are read as a list (#KernelBootstrapV0/GROUND)
 # - 2026-10-01 23:00 [python-coder]: report.md names the Langfuse trace URL when tracing exported
 #   one (the envelope already carried it in trace_refs), so a reader of the report can open the

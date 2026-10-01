@@ -45,7 +45,7 @@ class Decline:
 DECLINES = {
     CHANGE: Decline(
         "out_of_scope_write",
-        "The V0 kernel is read-only; implementing or editing is not supported. You can ask it "
+        "The kernel is read-only; implementing or editing is not supported. You can ask it "
         "to decide what to implement or to find relevant evidence.", GapType.PERMISSION),
     OUT_OF_DOMAIN: Decline(
         "out_of_domain",

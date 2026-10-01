@@ -39,7 +39,10 @@
     "max_grounding_evidence": 12,
     "design_judgement_threshold": 0.7,
     "progress_epsilon": 0.05,
-    "max_research_rounds": 2
+    "max_research_rounds": 2,
+    "reserve_assessments": 1,
+    "reserve_extra_options": 1,
+    "reserve_margin_calls": 2
   },
   "research": {
     "need_required_threshold": 0.8,
@@ -48,7 +51,7 @@
     "allow_synthesis": true,
     "answer_aware_coverage": true,
     "answer_threshold": 0.7,
-    "max_targeted_needs": 4,
+    "max_targeted_needs": 2,
     "category_descriptions": {
       "authoritative_guidance": "Official documentation or specifications that define how a technology is meant to be used.",
       "internal_principles": "The project's own stated rules, conventions and principles.",
@@ -71,7 +74,14 @@
     "source_candidate_floor": 20,
     "source_candidate_ratio": 1.5,
     "max_explicit_locators": 12,
-    "max_query_terms": 48
+    "max_query_terms": 48,
+    "rerank_max_per_need": 20,
+    "rerank_max_batches": 3,
+    "satisfied_min_items": 2,
+    "satisfied_strong_threshold": 0.85,
+    "self_reference_ratio": 0.6,
+    "self_reference_penalty": 0.5,
+    "path_match_weight": 5
   },
   "sources": [
     {"id": "repo.principles", "kind": "repo_text",
@@ -100,6 +110,9 @@
      "roots": ["docs/acceptance-criteria"]},
     {"id": "repo.roadmap", "kind": "repo_text", "categories": ["task_context", "prior_decisions"],
      "roots": ["docs/roadmap.json", "docs/roadmap.md", "docs/vision.md"]},
+    {"id": "repo.registries", "kind": "repo_text",
+     "categories": ["task_context", "existing_patterns"],
+     "roots": ["docs/components.json", "docs/build-dataflow.json"]},
     {"id": "repo.tickets", "kind": "repo_text", "categories": ["task_context", "prior_decisions"],
      "roots": ["tickets"]},
     {"id": "repo.config", "kind": "repo_text", "categories": ["task_context", "existing_patterns"],

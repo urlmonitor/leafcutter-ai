@@ -27,7 +27,14 @@ def json_strings(values: Iterable[str]) -> list[JsonValue]:
 
 
 class JevError(Exception):
-    """Base for Jev provider errors."""
+    """Base for Jev provider errors.
+
+    `completed_usage` is the usage of the provider calls of the same batch that finished before
+    the error (a chunked assessment aborted after its first chunk): those calls were made and paid
+    for, so the caller records them instead of losing them with the failed result.
+    """
+
+    completed_usage: Usage | None = None
 
 
 class JevUnavailable(JevError):
@@ -161,6 +168,8 @@ class JevPort(Protocol):
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 [python-coder]: JevError carries `completed_usage` so a chunked assessment that
+#   aborts midway still reports the calls it made. (#KernelV01/E)
 # - 2026-09-30 22:00 [python-coder]: JevUnavailable, JevInvalidResponse and JevPayloadTooLarge
 #   are defined here (not in jev_errors.py) because ScriptedJev must raise them in P1; P3's
 #   jev_errors.py may re-export and add adapter-only errors. (#KernelBootstrapV0/P1)

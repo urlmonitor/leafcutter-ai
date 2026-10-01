@@ -16,6 +16,8 @@ ARCHITECTURE: Pure functions of (Working, Assessment, DecisionConfig). Ranking a
 
 from __future__ import annotations
 
+from collections.abc import Mapping
+
 from kernel.capabilities.decision.assess import Assessment
 from kernel.capabilities.decision.state import Working
 from kernel.config import DecisionConfig
@@ -25,7 +27,9 @@ from kernel.contracts.enums import Priority
 DESIGN_JUDGEMENT = "design_judgement"
 NO_PROGRESS = "no_progress"
 RESEARCH_CAP = "research_cap"
-DESIGN_REASONS = (DESIGN_JUDGEMENT, NO_PROGRESS, RESEARCH_CAP)
+#: The Jev budget cannot fund another research round plus the reserved final assessment.
+BUDGET_RESERVE = "budget_reserve"
+DESIGN_REASONS = (DESIGN_JUDGEMENT, NO_PROGRESS, RESEARCH_CAP, BUDGET_RESERVE)
 _ROUND = 4
 
 
@@ -48,21 +52,45 @@ def _mean(values: list[float]) -> float:
     return round(sum(values) / len(values), _ROUND) if values else 0.0
 
 
+def satisfies_from_scores(work: Working, scores: Mapping[str, float]
+                          ) -> dict[tuple[str, str], float] | None:
+    """Return the satisfies score of every usable (criterion, option) pair, or None.
+
+    `scores` is a complete assessment's `current_scores` map (the continuation's `last_scores`).
+    None when any current pair has no score: the options or criteria changed since, and a ranking
+    over some of the options would be half scored.
+    """
+    found: dict[tuple[str, str], float] = {}
+    for c in work.usable_criteria:
+        for o in work.usable_options:
+            score = scores.get(score_key(c.id, o.id))
+            if score is None:
+                return None
+            found[(c.id, o.id)] = score
+    return found if found else None
+
+
 def rank_options(work: Working, a: Assessment, cfg: DecisionConfig) -> list[OptionRanking]:
     """Rank the usable options best first (see the module docstring for the aggregation)."""
+    return rank_satisfies(work, a.satisfies, cfg)
+
+
+def rank_satisfies(work: Working, satisfies: Mapping[tuple[str, str], float],
+                   cfg: DecisionConfig) -> list[OptionRanking]:
+    """Rank the usable options best first from a complete (criterion, option) score map."""
     required = [c for c in work.usable_criteria if c.priority is Priority.REQUIRED]
     supporting = [c for c in work.usable_criteria if c.priority is not Priority.REQUIRED]
     rows = []
     for order, option in enumerate(work.usable_options):
-        req = [a.satisfies[(c.id, option.id)] for c in required]
-        sup = [a.satisfies[(c.id, option.id)] for c in supporting]
+        req = [satisfies[(c.id, option.id)] for c in required]
+        sup = [satisfies[(c.id, option.id)] for c in supporting]
         passed = sum(p >= cfg.satisfies_threshold for p in req)
         rows.append((-passed, -_mean(req), -_mean(sup), order, option.id, passed, req, sup))
     rows.sort(key=lambda r: r[:4])
     return [OptionRanking(
         option_id=oid, rank=rank, required_passed=passed, required_total=len(required),
         required_mean=_mean(req), supporting_mean=_mean(sup) if sup else None,
-        scores={c.id: a.satisfies[(c.id, oid)] for c in work.usable_criteria})
+        scores={c.id: satisfies[(c.id, oid)] for c in work.usable_criteria})
         for rank, (*_, oid, passed, req, sup) in enumerate(rows, start=1)]
 
 
@@ -95,13 +123,21 @@ def required_by_kind(work: Working) -> tuple[list[Criterion], list[Criterion]]:
 def design_reason(work: Working, a: Assessment, cfg: DecisionConfig) -> str | None:
     """Return why the decision is a design decision to hand to a human, or None.
 
-    It is one when a required criterion is a design judgement and every evidence-answerable
-    required criterion is already sufficient (research has nothing left to settle).
+    It is one when a required criterion is a design judgement, every evidence-answerable required
+    criterion is already sufficient (research has nothing left to settle) and no option passes
+    every required criterion. An option that does pass (Jev is sure of each criterion, for example
+    because an ADR states the answer) leaves the decision to the resolved-gate: the ending exists
+    to stop loops on flat scores, not to take a clear answer away (the live ADR-settled goal was
+    ranked for a human although its option scored 0.98 and 0.96).
     """
     answerable, design = required_by_kind(work)
-    if design and all(a.sufficient[c.id] >= cfg.sufficiency_threshold for c in answerable):
-        return DESIGN_JUDGEMENT
-    return None
+    if not design or not all(a.sufficient[c.id] >= cfg.sufficiency_threshold for c in answerable):
+        return None
+    required = [c for c in work.usable_criteria if c.priority is Priority.REQUIRED]
+    if any(all(a.satisfies[(c.id, o.id)] >= cfg.satisfies_threshold for c in required)
+           for o in work.usable_options):
+        return None
+    return DESIGN_JUDGEMENT
 
 
 def loop_reason(work: Working, a: Assessment, cfg: DecisionConfig) -> str | None:
@@ -116,6 +152,13 @@ def loop_reason(work: Working, a: Assessment, cfg: DecisionConfig) -> str | None
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 [python-coder]: A design-judgement ending does not fire while an option passes
+#   every required criterion: the live ADR-settled goal (scores 0.98 and 0.96) was ranked for a
+#   human once Jev classified its criteria as properties of the options. (#KernelV01/E)
+# - 2026-10-01 [python-coder]: The ranking can be built from a stored score map (the last complete
+#   assessment) as well as a fresh Assessment, and refuses (None) when an option or criterion has
+#   no score, so a budget stop never produces a half-scored ranking; BUDGET_RESERVE is the new
+#   reason to stop researching. (#KernelV01/E)
 # - 2026-10-01 [python-coder]: Ranking is lexicographic (required passed, required mean, supporting
 #   mean, declaration order) rather than one weighted number, so a reader can recompute it from
 #   the scores shown to the human. (#KernelV01/A)

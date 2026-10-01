@@ -160,8 +160,8 @@ def _answer_question(need_id: str) -> QuestionSpec:
 
 
 async def judge(ctx: ExecutionContext, invocation: CapabilityInvocation, question: str,
-                out: Collected, ask_evaluable: bool, needs: list[EvidenceNeed] | None = None
-                ) -> Judgement:
+                out: Collected, ask_evaluable: bool, needs: list[EvidenceNeed] | None = None,
+                *, prior_usage: list[Usage] | None = None) -> Judgement:
     """Ask Jev about contradiction, direct answerability and each satisfied need (one batch).
 
     Contradiction needs two or more items; `evaluable` asks whether the bundle answers directly;
@@ -189,7 +189,8 @@ async def judge(ctx: ExecutionContext, invocation: CapabilityInvocation, questio
         "findings": [f.claim for f in out.findings],
         "answer_checks": {i: {"question": n.question, "evidence_ids": [
             e for e in out.need_evidence[i] if e in out.evidence]} for i, n in checks.items()}}
-    result = await ask_jev(ctx, invocation, make_batch(ctx, PURPOSE, state, questions))
+    result = await ask_jev(ctx, invocation, make_batch(ctx, PURPOSE, state, questions),
+                           prior_usage=prior_usage)
     asked = {q.id for q in questions}
     return Judgement(
         conflict=result.noul(CONFLICT).probability if CONFLICT in asked else None,

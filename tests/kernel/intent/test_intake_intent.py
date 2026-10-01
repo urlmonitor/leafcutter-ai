@@ -102,7 +102,7 @@ class TestEachKindRoutesCorrectly(IntentCase):
         self.assertEqual(envelope.status, RunStatus.BLOCKED)
         self.assertIsNone(envelope.pending_interaction)
         self.assertTrue(envelope.limitations[0].startswith("out_of_scope_write: "))
-        self.assertIn("The V0 kernel is read-only; implementing or editing is not supported. "
+        self.assertIn("The kernel is read-only; implementing or editing is not supported. "
                       "You can ask it to decide what to implement or to find relevant evidence.",
                       envelope.limitations[0])
         (gap,) = self.service().list_gaps()

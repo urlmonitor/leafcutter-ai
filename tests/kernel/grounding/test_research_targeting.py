@@ -58,8 +58,23 @@ def _config(research: dict | None = None, retrieval: dict | None = None) -> Kern
         "retrieval": base.retrieval.model_copy(update=retrieval or {})})
 
 
+CITED_FILES = ("kernel/contracts/decision.py", "docs/concepts/colony.md", "kernel/config.py",
+               "tests/README.md")
+
+
 class TargetingCase(ResearchCase):
-    """Run research on a mandated-needs request and read back the children."""
+    """Run research on a mandated-needs request and read back the children.
+
+    The cited files exist in the throwaway repository: an explicit locator is requested only when
+    its file does (round E), so a cited path that is not there never reaches a child.
+    """
+
+    def setUp(self) -> None:
+        super().setUp()
+        for rel in CITED_FILES:
+            target = self.root / rel
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_text("# cited\n", encoding="utf-8")
 
     def children(self, config: KernelConfig | None = None, **fields: Any
                  ) -> dict[str, RetrievalRequestPayload]:
@@ -115,6 +130,30 @@ class TestOptionContextIsConsumed(TargetingCase):
         self.assertEqual(kid.query_hints, [QUESTION])
 
 
+class TestLocatorsMustBeRealFiles(TargetingCase):
+    """Round 6 requested the garbage locator `-NNN.yaml`; only real repository paths are asked for."""
+
+    def test_a_placeholder_fragment_and_a_missing_file_are_dropped(self) -> None:
+        option = OptionContext(
+            option_id="A", title="Per-decision YAML",
+            description="Named like docs/decisions/ADR-NNN.yaml or -NNN.yaml",
+            cited_refs=["-NNN.yaml", "docs/decisions/ADR-NNN.yaml", "kernel/config.py"])
+        for kid in self.children(option_context=[option]).values():
+            self.assertEqual(kid.explicit_locators, ["kernel/config.py"])
+
+    def test_a_dropped_locator_is_logged_at_debug_not_requested(self) -> None:
+        option = OptionContext(option_id="A", title="x", cited_refs=["docs/missing/none.md"])
+        with self.assertLogs("kernel.capabilities.research.targeting", level="DEBUG") as logged:
+            kids = self.children(option_context=[option])
+        self.assertTrue(all(k.explicit_locators == [] for k in kids.values()))
+        self.assertIn("no such file", "\n".join(logged.output))
+
+    def test_a_locator_outside_the_repository_is_dropped(self) -> None:
+        option = OptionContext(option_id="A", title="x", cited_refs=["../outside/secret.md"])
+        self.assertTrue(all(k.explicit_locators == []
+                            for k in self.children(option_context=[option]).values()))
+
+
 class TestTargetedNeeds(TargetingCase):
     """Fix 4: named gaps and human-added claims become needs with their own queries."""
 
@@ -147,6 +186,13 @@ class TestTargetedNeeds(TargetingCase):
         self.assertIn("kernel-minted", claim.need.question)
         self.assertEqual(claim.explicit_locators, ["kernel/contracts/decision.py"])
         self.assertNotIn("need.claim.B", kids)  # only human-added options carry unverified claims
+
+    def test_the_default_caps_targeted_needs_at_two(self) -> None:
+        gaps = [f"missing fact number {n}" for n in range(6)]
+        added = OptionContext(option_id="opt.added.1", title="Added", human_added=True)
+        kids = self.children(gaps=gaps, option_context=[added])
+        targeted = sorted(k for k in kids if k.startswith(("need.gap", "need.claim")))
+        self.assertEqual(targeted, ["need.claim.opt.added.1", "need.gap.1"])  # claims first
 
     def test_a_decision_without_gaps_or_added_options_gets_no_extra_need(self) -> None:
         self.assertEqual(sorted(self.children(option_context=OPTIONS)),
@@ -193,6 +239,9 @@ class TestDecisionHandsGapsToResearch(DesignCase):
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 [python-coder]: Round E: the cited files exist in the fixture repository (a locator
+#   must be a real file), garbage and missing locators are dropped, and the default caps
+#   targeted needs at two. (#KernelV01/E)
 # - 2026-10-01 [python-coder]: Tests for V0.1 wave 2 (targeted queries, answer-aware coverage).
 #   (#KernelV01/D)
 # ====================================================================

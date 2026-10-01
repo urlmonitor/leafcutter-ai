@@ -52,7 +52,7 @@ class TestRealRepositoryMisses(unittest.TestCase):
         report, seconds = _search("repo.analysis", "What fields must a decision record hold?")
         self.assertLess(seconds, 10.0)
         self.assertIn(DESIGN_2, {c.path for c in report.candidates})
-        self.assertTrue(all("; 0 matching file(s) not offered" in note
+        self.assertTrue(all("0 matching file(s) had no section offered" in note
                             for note in report.notes), report.notes)
 
     def test_the_contract_module_and_the_persistence_package_are_offered(self) -> None:

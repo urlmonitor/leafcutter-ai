@@ -53,6 +53,22 @@ def waiting_result(invocation: CapabilityInvocation, cont: ResearchContinuation,
         continuation_state=cont.model_dump(mode="json"))
 
 
+def coverage_summary(cont: ResearchContinuation, out: Collected, limitations: list[str]
+                     ) -> list[str]:
+    """Return the limitations a reader must see even when the run completed.
+
+    A need that is only partly covered (required or not), the answer-aware notes behind it, a need
+    the budget did not allow and what a synthesis could not find. The rest of the bundle's limitations (source cut notes and
+    the like) stay in the bundle payload; the envelope would drown in them.
+    """
+    lines = [f"coverage: need {n.id} ({n.category.value}) is "
+             f"{out.coverage.get(n.id, NeedStatus.OPEN).value}" for n in cont.needs
+             if out.coverage.get(n.id, NeedStatus.OPEN) is not NeedStatus.SATISFIED]
+    lines += [t for t in limitations if t.startswith(("need ", "required need "))]
+    lines += [f"unresolved: {u}" for u in dict.fromkeys(out.unknowns)]
+    return list(dict.fromkeys(lines))
+
+
 def bundle_result(invocation: CapabilityInvocation, plan: Plan, cont: ResearchContinuation,
                   out: Collected, usage: list[Usage]) -> CapabilityResult:
     """Build the final bundle: partial if a required need is unsatisfied (all_required)."""
@@ -63,6 +79,7 @@ def bundle_result(invocation: CapabilityInvocation, plan: Plan, cont: ResearchCo
         limitations.append("no evidence needs were identified for the question")
     limitations += [f"required need {i} is {out.coverage.get(i, NeedStatus.OPEN).value}"
                     for i in unsatisfied]
+    summary = coverage_summary(cont, out, limitations)
     unavailable = {(u.source_id, u.reason): u for u in [*cont.unavailable, *out.unavailable]}
     bundle = EvidenceBundlePayload(
         evidence_ids=list(out.evidence), finding_ids=[f.id for f in out.findings],
@@ -76,12 +93,16 @@ def bundle_result(invocation: CapabilityInvocation, plan: Plan, cont: ResearchCo
         status=ResultStatus.PARTIAL if partial else ResultStatus.COMPLETED,
         output_schema_id=schema_ids.EVIDENCE_BUNDLE,
         output_payload=bundle.model_dump(mode="json"), evidence=list(out.evidence.values()),
-        findings=out.findings, usage=usage, limitations=limitations if partial else [])
+        findings=out.findings, usage=usage, limitations=limitations if partial else summary)
 
 
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 [python-coder]: A completed bundle reports partial coverage, the answer-aware
+#   notes and the synthesis unknowns in its result limitations (so the envelope shows them); they
+#   used to be kept only when a REQUIRED need was unsatisfied, and evidence plans never reach the
+#   required threshold. (#KernelV01/E)
 # - 2026-10-01 [python-coder]: The bundle carries the synthesis unknowns, and a synthesis request
 #   keeps the needs judged unanswered so a resume does not restore their `satisfied` status.
 #   (#KernelV01/D)

@@ -175,6 +175,7 @@ class ScenarioCase(unittest.IsolatedAsyncioTestCase):
             run_store=FileRunStore(self.run_root), gap_store=FileGapStore(self.run_root),
             artifacts=FileArtifactStore(self.run_root), tracer=tracer,
             redactor=Redactor({}, config.data_policy, []), jev_factory=lambda: self.jev)
+        self.addCleanup(self.env.shutdown)  # stop the tracer's workers when the test ends
         return KernelService(self.env)
 
     def task(self, domain: str, *, request: bool = True, known_basis: bool = False,
@@ -221,6 +222,8 @@ class ScenarioCase(unittest.IsolatedAsyncioTestCase):
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 [python-coder]: Every environment `service()` builds is shut down at the end of the
+#   test (addCleanup), as the tracer's workers must not outlive it. (#KernelV01/E)
 # - 2026-10-01 [python-coder]: Scenarios answer research `answers.*` from params["answer"]
 #   (default 0.95: every need's evidence answers it). (#KernelV01/D)
 # - 2026-10-01 23:00 [python-coder]: The fake host cites the evidence of its packet on an options

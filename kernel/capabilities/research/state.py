@@ -72,6 +72,8 @@ class Plan:
     options: list[OptionContext] = field(default_factory=list)
     criteria: list[str] = field(default_factory=list)
     gaps: list[str] = field(default_factory=list)
+    #: Jev calls the requester keeps for itself; research never spends into them.
+    jev_reserve: int = 0
 
 
 @dataclass
@@ -121,6 +123,7 @@ class Collected:
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 [python-coder]: The Plan carries the requester's Jev reserve. (#KernelV01/E)
 # - 2026-10-01 [python-coder]: The Plan carries option_context, criteria and gaps, and Collected
 #   the synthesis unknowns and the per-need evidence ids behind answer-aware coverage; neither is
 #   persisted (a resume re-reads the child bundles). (#KernelV01/D)

@@ -20,11 +20,13 @@ from pathlib import Path
 from pydantic import JsonValue
 
 from kernel.capabilities.base import ExecutionContext
+from kernel.capabilities.call_costs import jev_available, judgement_calls, rerank_calls
 from kernel.capabilities.decision.jev_support import ask_jev, make_batch, noul_question
 from kernel.capabilities.research.state import Plan
 from kernel.capabilities.research.targeting import (
     NeedQuery,
     default_query,
+    existing_locators,
     locator_sources,
     targeted,
 )
@@ -74,6 +76,36 @@ async def plan_needs(ctx: ExecutionContext, invocation: CapabilityInvocation, pl
     """
     needs, usage = await _select_needs(ctx, invocation, plan)
     return [*needs, *(need for need, _ in _targeted(ctx, plan))], usage
+
+
+def afford_needs(ctx: ExecutionContext, plan: Plan, needs: list[EvidenceNeed]
+                 ) -> tuple[list[EvidenceNeed], list[str]]:
+    """Trim the planned needs to the number the budget affords beside the requester's reserve.
+
+    Each need is one retrieval child (one rerank batch) and the round ends with one judgement.
+    Needs are kept in planning order (mandated, then Jev-selected, then claim and gap needs), so
+    the targeted extras are the first to go; each dropped need is named in a limitation.
+
+    Returns:
+        tuple: (the needs to run, one limitation per dropped need).
+    """
+    left = jev_available(ctx.budget)
+    if left is None:
+        return needs, []
+    spare, per_need = left - plan.jev_reserve, rerank_calls(ctx.config)
+    keep = len(needs)
+    while keep > 0 and keep * per_need + judgement_calls(keep, ctx.config) > spare:
+        keep -= 1
+    return needs[:keep], [
+        f"need {n.id} not researched: {spare} Jev call(s) are left for research after the "
+        f"{plan.jev_reserve} kept in reserve for the requester's final assessment"
+        for n in needs[keep:]]
+
+
+def affordable_judgement(ctx: ExecutionContext, plan: Plan, needs: list[EvidenceNeed]) -> bool:
+    """True if the round's judgement fits in the budget without touching the requester's reserve."""
+    left = jev_available(ctx.budget)
+    return left is None or left - plan.jev_reserve >= judgement_calls(len(needs), ctx.config)
 
 
 async def _select_needs(ctx: ExecutionContext, invocation: CapabilityInvocation, plan: Plan
@@ -162,6 +194,12 @@ def _candidates(ctx: ExecutionContext, need: EvidenceNeed, plan: Plan) -> list[S
             and (not scope_ids or s.id in scope_ids) and (not restricted or s.id in restricted)]
 
 
+def _checked(root: Path, query: NeedQuery) -> NeedQuery:
+    """Return the query with only the explicit locators that name a file that exists."""
+    kept = existing_locators(root, query.locators)
+    return query if kept == query.locators else NeedQuery(query.hints, kept)
+
+
 def _defer_host_only(out: Resolution) -> None:
     """Hold back supporting needs only a host can serve while native children can run.
 
@@ -184,8 +222,9 @@ def _defer_host_only(out: Resolution) -> None:
 def resolve_sources(ctx: ExecutionContext, needs: list[EvidenceNeed], plan: Plan) -> Resolution:
     """Map each need to a native retrieval child, a host.research child, or unavailable."""
     out = Resolution()
-    own = need_queries(ctx, plan)
-    shared = default_query(plan, ctx.config.retrieval.max_explicit_locators)
+    root = Path(ctx.scope.repository_root)
+    own = {i: _checked(root, q) for i, q in need_queries(ctx, plan).items()}
+    shared = _checked(root, default_query(plan, ctx.config.retrieval.max_explicit_locators))
     for need in needs:
         candidates = _candidates(ctx, need, plan)
         native, unavailable_reasons = [], []
@@ -220,6 +259,9 @@ def resolve_sources(ctx: ExecutionContext, needs: list[EvidenceNeed], plan: Plan
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 [python-coder]: afford_needs trims the plan to what the budget affords beside the
+#   requester's reserve; explicit locators are checked against the repository before a child
+#   asks for them (a placeholder such as `-NNN.yaml` was requested live). (#KernelV01/E)
 # - 2026-10-01 [python-coder]: Needs from named gaps and human-added option claims are appended
 #   after the planned ones, and every child carries query hints (goal first) and, when native, the
 #   paths the options cite as explicit locators. (#KernelV01/D)

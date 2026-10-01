@@ -79,6 +79,21 @@
           "title": "Require Option Grounding",
           "type": "boolean"
         },
+        "reserve_assessments": {
+          "minimum": 0,
+          "title": "Reserve Assessments",
+          "type": "integer"
+        },
+        "reserve_extra_options": {
+          "minimum": 0,
+          "title": "Reserve Extra Options",
+          "type": "integer"
+        },
+        "reserve_margin_calls": {
+          "minimum": 0,
+          "title": "Reserve Margin Calls",
+          "type": "integer"
+        },
         "satisfies_threshold": {
           "maximum": 1.0,
           "minimum": 0.0,
@@ -102,7 +117,10 @@
         "max_grounding_evidence",
         "design_judgement_threshold",
         "progress_epsilon",
-        "max_research_rounds"
+        "max_research_rounds",
+        "reserve_assessments",
+        "reserve_extra_options",
+        "reserve_margin_calls"
       ],
       "title": "DecisionConfig",
       "type": "object"
@@ -512,16 +530,54 @@
           "title": "Max Query Terms",
           "type": "integer"
         },
+        "path_match_weight": {
+          "minimum": 0,
+          "title": "Path Match Weight",
+          "type": "integer"
+        },
         "relevance_threshold": {
           "maximum": 1.0,
           "minimum": 0.0,
           "title": "Relevance Threshold",
           "type": "number"
         },
+        "rerank_max_batches": {
+          "minimum": 1,
+          "title": "Rerank Max Batches",
+          "type": "integer"
+        },
+        "rerank_max_per_need": {
+          "minimum": 1,
+          "title": "Rerank Max Per Need",
+          "type": "integer"
+        },
+        "satisfied_min_items": {
+          "minimum": 1,
+          "title": "Satisfied Min Items",
+          "type": "integer"
+        },
+        "satisfied_strong_threshold": {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Satisfied Strong Threshold",
+          "type": "number"
+        },
         "sections_per_file": {
           "minimum": 1,
           "title": "Sections Per File",
           "type": "integer"
+        },
+        "self_reference_penalty": {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Self Reference Penalty",
+          "type": "number"
+        },
+        "self_reference_ratio": {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Self Reference Ratio",
+          "type": "number"
         },
         "source_candidate_floor": {
           "minimum": 1,
@@ -552,7 +608,14 @@
         "source_candidate_floor",
         "source_candidate_ratio",
         "max_explicit_locators",
-        "max_query_terms"
+        "max_query_terms",
+        "rerank_max_per_need",
+        "rerank_max_batches",
+        "satisfied_min_items",
+        "satisfied_strong_threshold",
+        "self_reference_ratio",
+        "self_reference_penalty",
+        "path_match_weight"
       ],
       "title": "RetrievalConfig",
       "type": "object"

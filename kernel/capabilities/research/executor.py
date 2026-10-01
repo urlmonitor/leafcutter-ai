@@ -20,6 +20,7 @@ from langchain_core.runnables import RunnableConfig
 from langgraph.graph import END, StateGraph
 
 from kernel.capabilities.base import ExecutionContext
+from kernel.capabilities.call_costs import jev_available
 from kernel.capabilities.decision.jev_support import StopCapability
 from kernel.capabilities.research.collect import (
     Judgement,
@@ -29,7 +30,12 @@ from kernel.capabilities.research.collect import (
     judge,
     record_contradiction,
 )
-from kernel.capabilities.research.planning import plan_needs, resolve_sources
+from kernel.capabilities.research.planning import (
+    affordable_judgement,
+    afford_needs,
+    plan_needs,
+    resolve_sources,
+)
 from kernel.capabilities.research.results import bundle_result, waiting_result
 from kernel.capabilities.research.state import Collected, Plan, ResearchContinuation
 from kernel.contracts.capability import CapabilityResult, Usage
@@ -70,7 +76,7 @@ def parse_plan(invocation: CapabilityInvocation) -> Plan:
                 source_restrictions=list(request.source_restrictions),
                 needs_only=request.evidence_needs_only and bool(request.evidence_needs),
                 options=list(request.option_context), criteria=list(request.criteria_context),
-                gaps=list(request.gaps))
+                gaps=list(request.gaps), jev_reserve=request.jev_reserve)
 
 
 async def _plan(state: ResearchState, config: RunnableConfig) -> dict[str, Any]:
@@ -78,11 +84,12 @@ async def _plan(state: ResearchState, config: RunnableConfig) -> dict[str, Any]:
     invocation, ctx = _run(config)
     plan = parse_plan(invocation)
     needs, usage = await plan_needs(ctx, invocation, plan)
+    needs, trimmed = afford_needs(ctx, plan, needs)
     resolution = resolve_sources(ctx, needs, plan)
     cont = ResearchContinuation(
         phase="planned", needs=resolution.needs, child_map=resolution.child_map,
         unavailable=resolution.unavailable, attempted=resolution.attempted,
-        deferred=resolution.deferred)
+        deferred=resolution.deferred, limitations=trimmed)
     if resolution.requests:
         return {"plan": plan, "cont": cont, "usage": usage,
                 "result": waiting_result(invocation, cont, resolution.requests, usage)}
@@ -107,8 +114,17 @@ async def _evaluate(state: ResearchState, config: RunnableConfig) -> dict[str, A
     invocation, ctx = _run(config)
     plan, cont, out = state["plan"], state["cont"], state["out"]
     ask = ctx.config.research.allow_synthesis and not cont.synthesized
-    judgement: Judgement = await judge(ctx, invocation, plan.question, out, ask, cont.needs)
-    usage = [*state.get("usage", []), *judgement.usage]
+    prior = list(state.get("usage", []))
+    judgement = Judgement(None, None, [])
+    if affordable_judgement(ctx, plan, cont.needs):
+        judgement = await judge(ctx, invocation, plan.question, out, ask, cont.needs,
+                                prior_usage=prior)
+    else:
+        out.limitations.append(
+            "evidence not judged for contradictions or whether it answers each need: the "
+            f"{jev_available(ctx.budget)} Jev call(s) left cannot fund it beside the "
+            f"{plan.jev_reserve} kept in reserve for the requester")
+    usage = [*prior, *judgement.usage]
     if judgement.conflict is not None:
         record_contradiction(ctx, out, judgement.conflict)
     apply_answers(ctx, cont, out, judgement.answers)
@@ -211,6 +227,9 @@ class ResearchExecutor:
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 [python-coder]: Planning is trimmed to the needs the budget affords beside the
+#   requester's reserve, and the judgement is skipped (with a limitation) when it would eat into
+#   that reserve, so research can never starve the decision's final assessment. (#KernelV01/E)
 # - 2026-10-01 [python-coder]: The plan carries option_context, criteria and gaps; after the one
 #   assess batch a need the evidence does not answer is downgraded to partial before the bundle
 #   (and any synthesis request) is built. (#KernelV01/D)

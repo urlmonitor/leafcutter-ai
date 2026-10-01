@@ -67,12 +67,13 @@ def build_query_terms(question: str, hints: Sequence[str] = (),
                       technologies: Sequence[str] = (), max_terms: int = 24) -> list[str]:
     """Return the search terms for a need, led by its hints (the goal first).
 
-    The need's own wording carries a category template ("concrete candidates items facts ...")
-    whose filler used to take the first slots, and a long goal lost its end. With hints, the first
-    hint (the goal) is taken whole up to a share of `max_terms`, then the technologies, the other
-    hints (criteria, option text), and last the need's own words. A quarter of the bound is kept
-    for the other hints, so a long goal cannot push the criteria out. Without hints this is
-    `extract_terms`.
+    With hints, the first hint (the goal) is taken whole up to a share of `max_terms`, then the
+    technologies and the other hints (criteria, option text). A quarter of the bound is kept for
+    the other hints, so a long goal cannot push the criteria out. The need's own wording is not
+    searched: it carries a category template ("official specifications that define how a
+    technology is meant to be used", "how existing code solves a similar problem") whose filler
+    matched paths and bodies that said nothing about the goal. Without hints this is
+    `extract_terms` over the question.
 
     Args:
         question: The need's question (template wording included).
@@ -89,13 +90,16 @@ def build_query_terms(question: str, hints: Sequence[str] = (),
     extra = [t for t in _terms(" ".join(hints[1:])) if t not in set(goal)]
     reserve = min(len(extra), max_terms // 4)
     ordered = [*goal[:max_terms - reserve], *_terms(" ".join(technologies)), *extra,
-               *_terms(question), *goal[max_terms - reserve:]]
+               *goal[max_terms - reserve:]]
     return list(dict.fromkeys(ordered))[:max_terms]
 
 
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 [python-coder]: With hints the need's own wording is no longer searched: the
+#   category template filler ("official, specifications, technology, meant"; "existing, code,
+#   solve, similar, problem") entered the content query in a regression run. (#KernelV01/E)
 # - 2026-10-01 [python-coder]: build_query_terms puts the goal first and the need-template filler
 #   last, and keeps room for criteria and option text; the first 24 terms of "template + goal"
 #   cut off the end of the goal in a live run. (#KernelV01/D)
