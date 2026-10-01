@@ -20,7 +20,7 @@ from pathlib import Path
 
 from pydantic import BaseModel, ConfigDict, Field, SecretStr
 
-from kernel.config import repo_root
+from kernel.config import ConfigError, repo_root
 
 logger = logging.getLogger(__name__)
 
@@ -104,12 +104,23 @@ def find_env_file(start: Path) -> Path | None:
     return None
 
 
-def _read_env_file(path: Path) -> dict[str, str]:
-    """Read and parse an env file; unreadable files are logged (path only) and ignored."""
+def _read_env_file(path: Path, *, explicit: bool = False) -> dict[str, str]:
+    """Read and parse an env file.
+
+    An implicit (walked-up) file that cannot be read is logged (path only) and ignored; a file
+    the caller NAMED must be readable, because ignoring it would send a run out with other
+    credentials.
+
+    Raises:
+        ConfigError: `explicit` is true and the file cannot be read.
+    """
     try:
         return parse_env_text(path.read_text(encoding="utf-8", errors="replace"))
     except OSError as exc:
-        logger.warning("could not read env file %s: %s", path, exc.strerror or "os error")
+        reason = exc.strerror or "os error"
+        if explicit:
+            raise ConfigError(path, f"cannot read the named env file: {reason}") from exc
+        logger.warning("could not read env file %s: %s", path, reason)
         return {}
 
 
@@ -124,13 +135,16 @@ def load_secrets(env_file: Path | None = None, *, env: Mapping[str, str] | None 
 
     Returns:
         SecretSettings: Values that were found plus where each came from.
+
+    Raises:
+        ConfigError: The env file named by `env_file` or LEAFCUTTER_ENV_FILE cannot be read.
     """
     environment = os.environ if env is None else env
     explicit = env_file or (Path(environment[ENV_FILE_VAR])
                             if environment.get(ENV_FILE_VAR) else None)
     sources: list[tuple[str, Mapping[str, str]]] = [("env", environment)]
     if explicit is not None:
-        sources.append((str(explicit), _read_env_file(Path(explicit))))
+        sources.append((str(explicit), _read_env_file(Path(explicit), explicit=True)))
     walked = find_env_file(start_dir or repo_root())
     if walked is not None and walked != explicit:
         sources.append((str(walked), _read_env_file(walked)))
@@ -149,6 +163,9 @@ def load_secrets(env_file: Path | None = None, *, env: Mapping[str, str] | None 
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 16:45 [python-coder]: A NAMED env file that is missing or unreadable is a
+#   ConfigError (exit 5 `config_invalid`); only the implicit walk-up stays best-effort.
+#   (#KernelBootstrapV0/FIXC)
 # - 2026-09-30 22:00 [python-coder]: Source order is the outer loop so an environment value
 #   always beats a file value even when only a fallback alias (LANGFUSE_HOST) is set there.
 #   (#KernelBootstrapV0/P1)

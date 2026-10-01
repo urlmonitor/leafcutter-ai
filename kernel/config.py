@@ -214,6 +214,8 @@ def _read_object(path: Path) -> dict:
         data = json.loads(path.read_text(encoding="utf-8"))
     except OSError as exc:
         raise ConfigError(path, f"cannot read file: {exc}") from exc
+    except UnicodeDecodeError as exc:
+        raise ConfigError(path, f"not valid UTF-8 text: {exc.reason}") from exc
     except json.JSONDecodeError as exc:
         raise ConfigError(path, f"not valid JSON: {exc}") from exc
     if not isinstance(data, dict):
@@ -286,6 +288,8 @@ def write_config_schema(path: Path) -> None:
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 16:45 [python-coder]: A non-UTF-8 file is a ConfigError like bad JSON; the CLI
+#   maps that to exit 5 with a JSON error instead of a traceback. (#KernelBootstrapV0/FIXC)
 # - 2026-09-30 23:59 [python-coder]: Added jev.transport and limits.max_scheduler_iterations
 #   (null = derive from the LangGraph recursion limit). (#KernelBootstrapV0/INT)
 # - 2026-09-30 22:00 [python-coder]: Config models have no field defaults so the default JSON is

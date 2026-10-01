@@ -39,6 +39,7 @@ from kernel.bootstrap import KernelEnvironment, build_environment
 from kernel.config import ConfigError
 from kernel.contracts.run import CapabilityGap
 from kernel.contracts.task import TaskInput
+from kernel.observability.redaction import Redactor
 from kernel.persistence.gap_store import is_build_opportunity
 from kernel.registry.adapter import RegistryError
 from kernel.service import KernelService
@@ -139,8 +140,14 @@ async def _command(args: argparse.Namespace, service: KernelService) -> Result:
     return CLI_EXIT_CODES["ok"], envelope.model_dump(mode="json")
 
 
-async def _guarded(args: argparse.Namespace, service: KernelService) -> Result:
-    """Run a command and map every failure to its documented exit code and payload."""
+async def _guarded(args: argparse.Namespace, service: KernelService,
+                   redactor: Redactor) -> Result:
+    """Run a command and map every failure to its documented exit code and payload.
+
+    Exit-5 messages carry exception text, so they pass through `redactor` before they are
+    printed.
+    """
+    mask = redactor.mask_text
     try:
         return await _command(args, service)
     except CliInputError as exc:
@@ -153,12 +160,12 @@ async def _guarded(args: argparse.Namespace, service: KernelService) -> Result:
         return CLI_EXIT_CODES["run_not_found"], error_payload(
             "run_not_found", str(exc), {"run_id": exc.run_id})
     except ProviderUnavailable as exc:
-        return _internal("provider_unavailable", str(exc))
+        return _internal("provider_unavailable", mask(str(exc)))
     except RegistryChanged as exc:
-        return _internal("registry_changed", str(exc))
+        return _internal("registry_changed", mask(str(exc)))
     except Exception as exc:  # noqa: BLE001 - last resort: the client needs exit 5 and JSON
         logger.exception("internal error")
-        return _internal("internal", f"{type(exc).__name__}: {exc}")
+        return _internal("internal", mask(f"{type(exc).__name__}: {exc}"))
 
 
 def _run_with_environment(args: argparse.Namespace, factory: EnvironmentFactory) -> Result:
@@ -170,7 +177,7 @@ def _run_with_environment(args: argparse.Namespace, factory: EnvironmentFactory)
     except RegistryError as exc:
         return _internal("registry_invalid", str(exc))
     try:
-        return asyncio.run(_guarded(args, KernelService(env)))
+        return asyncio.run(_guarded(args, KernelService(env), env.redactor))
     finally:
         env.shutdown()
 
@@ -214,6 +221,9 @@ def main(argv: list[str] | None = None, *, environment: EnvironmentFactory = bui
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 16:30 [python-coder]: Exit-5 messages built from exception text pass through the
+#   environment's Redactor; the catch-all would otherwise print a provider error that echoes a
+#   credential. (#KernelBootstrapV0/FIXC)
 # - 2026-10-01 14:00 [python-coder]: `gaps` reads the aggregated gap store only (no Jev key, no
 #   run needed) and marks build opportunities, so a client never has to know which gap types may
 #   produce a backlog item. (#KernelBootstrapV0/P9)

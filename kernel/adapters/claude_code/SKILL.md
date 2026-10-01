@@ -3,7 +3,7 @@ name: {{NAME}}
 description: Run Leafcutter's decision and research workflow for a supplied goal. Transport only; the kernel owns every decision.
 argument-hint: [goal]
 disable-model-invocation: true
-allowed-tools: Bash({{COMMAND}}:*), Read, Write, AskUserQuestion
+allowed-tools: Bash({{COMMAND}} run *) Bash({{COMMAND}} resume *) Bash({{COMMAND}} status *) Edit({{CLIENT_RULE}}/**) Read({{RUN_ROOT_RULE}}/**) AskUserQuestion
 ---
 <!-- leafcutter-kernel-skill -->
 
@@ -15,8 +15,8 @@ stderr) and ends with `--json`. `KERNEL` means `{{COMMAND}}`.
 
 ## 1. Start
 
-1. With Write, create a scratch JSON file (outside the repository, e.g. in your scratch
-   directory) holding the goal VERBATIM, never paraphrased or shell-quoted:
+1. With Write, create a scratch JSON file inside `{{CLIENT_DIR}}/` (the only place you may
+   write) holding the goal VERBATIM, never paraphrased or shell-quoted:
    `{"goal": "<$ARGUMENTS>", "caller": {"id": "user", "kind": "human"},
    "scope": {"workspace_id": "<project name>", "repository_root": "<absolute project root>"}}`
 2. Run `KERNEL run --input-file <that file> --json`. Never put the goal in the command line.
@@ -27,7 +27,7 @@ stderr) and ends with `--json`. `KERNEL` means `{{COMMAND}}`.
   - Read only the files in `input_artifact_refs`.
   - Use only `allowed_operations`; never anything in `forbidden_operations`.
   - Follow `goal` and `output_requirements`; produce JSON valid against `output_json_schema`.
-  - Write the submission file (section 3) and run `resume`.
+  - Write the submission file (section 3) inside `{{CLIENT_DIR}}/` and run `resume`.
 - `waiting_human`: ask the USER, with AskUserQuestion, the packet's `question`, showing each
   `choices[].label` and `consequences` and `why_research_cannot_settle`.
   - Offer free text only if `free_text_allowed`.
@@ -41,7 +41,7 @@ stderr) and ends with `--json`. `KERNEL` means `{{COMMAND}}`.
 
 ## 3. Resume
 
-Write a submission file and run `KERNEL resume --run-id <run_id> --input-file <file> --json`:
+Write a submission file inside `{{CLIENT_DIR}}/` and run `KERNEL resume --run-id <run_id> --input-file <file> --json`:
 
 `{"run_id": "<run_id>", "interaction_id": "<pending_interaction.id>",
 "expected_state_revision": <pending_interaction.state_revision>, "actor": <actor>,
@@ -64,5 +64,6 @@ Write a submission file and run `KERNEL resume --run-id <run_id> --input-file <f
 ## 5. Never
 
 Choose the next capability or step, change policy or permissions, approve anything on the user's
-behalf, edit repository files, run other Leafcutter commands, invent evidence, or continue a run
+behalf, edit repository files or write anywhere but `{{CLIENT_DIR}}/`, run other Leafcutter
+commands (`cancel` and `install-skill` are the user's to run, never yours), invent evidence, or continue a run
 after `cancelled`. Keep run ids, interaction ids and state revisions exactly as received.

@@ -80,7 +80,9 @@ class _Handle:
             self.update(level="ERROR")
             self.data["error"] = f"{type(error).__name__}: {error}"
             if self.obs is not None:
-                self._tracer.guard("span error", self.obs.update, status_message=str(error)[:500])
+                # The SDK mask hook never sees status_message, so mask it here.
+                message = self._tracer.redactor.mask_text(str(error))[:500]
+                self._tracer.guard("span error", self.obs.update, status_message=message)
         ended = self.obs is not None and self._tracer.guard("span end", self.obs.end)
         if not ended:
             self._tracer.spool_record("span", self.name, {
@@ -335,6 +337,8 @@ class LangfuseTracer:
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 16:00 [python-coder]: `status_message` is masked by hand: langfuse 4.16 applies
+#   `mask` to input, output and metadata only. (#KernelBootstrapV0/FIXC)
 # - 2026-09-30 23:00 [python-coder]: propagate_attributes wraps each observation creation (not the
 #   whole segment) because parents are explicit handles and the OTel context is not carried
 #   across concurrent Send tasks. (#KernelBootstrapV0/P2)

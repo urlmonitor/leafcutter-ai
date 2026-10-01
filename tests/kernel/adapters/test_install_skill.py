@@ -47,11 +47,12 @@ class InstallCase(unittest.TestCase):
 
 class TestRenderedSkill(InstallCase):
     def test_renders_name_command_marker_and_frontmatter(self) -> None:
-        text = render_skill("leafcutter", Path("/repo/leafcutter"), "/usr/bin/python3")
+        text = render_skill("leafcutter", Path("/repo/leafcutter"), "/usr/bin/python3", Path("/runs"))
         self.assertTrue(text.startswith("---\nname: leafcutter\n"))
         self.assertIn(MARKER, text)
         command = "PYTHONPATH=/repo/leafcutter /usr/bin/python3 -m kernel"
-        self.assertIn(f"allowed-tools: Bash({command}:*), Read, Write, AskUserQuestion", text)
+        self.assertIn(f"Bash({command} run *) Bash({command} resume *) Bash({command} status *)",
+                      text)  # scope itself is asserted in test_skill_scope
         self.assertIn("disable-model-invocation: true", text)
         self.assertIsNone(re.search(r"\{\{[A-Z]+\}\}", text), "unsubstituted placeholder")
 
