@@ -48,6 +48,7 @@ from kernel.service_errors import (
     RegistryChanged,
     RunIdTaken,
     RunNotFound,
+    RunRecordContended,
     error_payload,
 )
 from kernel.service_session import Session, open_session
@@ -270,7 +271,7 @@ class KernelService:
         except OSError:
             logger.exception("could not write run.json of %s", session.run_id)
             raise
-        raise RuntimeError(f"run.json of {session.run_id} kept changing; update not written")
+        raise RunRecordContended(session.run_id)
 
     def _finish(self, session: Session, values: Values, diagnostics: list[str], *,
                 persist: bool = True) -> RunEnvelope:

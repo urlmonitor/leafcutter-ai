@@ -4,7 +4,9 @@
 # BLOCKING (the required status checks named in the branch-protection ruleset)
 # and two informational:
 #
-#   lint       — ruff check over scripts/, tests/, unit_tests/ (config: ruff.toml).
+#   lint       — ruff check over scripts/, tests/, unit_tests/, kernel/ (config:
+#                ruff.toml), plus kernel/ under E722,BLE001,TRY (the Error Handling
+#                Policy; the repo-wide cleanup of the other trees is deferred).
 #                BLOCKING. The templates/ source tree is excluded (see ruff.toml).
 #
 #   component-vocab — every `components` value is a canonical id in
@@ -132,7 +134,12 @@ jobs:
         run: pip install -r requirements-dev.txt
 
       - name: Ruff check
-        run: ruff check scripts tests unit_tests
+        run: ruff check scripts tests unit_tests kernel
+
+      - name: Ruff check kernel error-handling rules
+        # The Decision Kernel is written to the Error Handling Policy (CLAUDE.md), so it is held
+        # to the full E722/BLE001/TRY set; the other trees are not (see ruff.toml).
+        run: ruff check kernel --select E722,BLE001,TRY
 
   component-vocab:
     name: Component vocab style (components.json)

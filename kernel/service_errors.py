@@ -20,7 +20,8 @@ from kernel.interaction.ledger import SubmissionRejected
 from kernel.persistence.base import RunNotFound
 
 __all__ = ["CLI_EXIT_CODES", "ErrorBody", "InvalidTaskInput", "ProviderUnavailable",
-           "RegistryChanged", "RunIdTaken", "RunNotFound", "SubmissionRejected", "error_payload"]
+           "RegistryChanged", "RunIdTaken", "RunNotFound", "RunRecordContended",
+           "SubmissionRejected", "error_payload"]
 
 #: CLI exit codes (design part 5): 0 envelope, 2 usage, 3 rejected, 4 unknown run, 5 internal.
 CLI_EXIT_CODES: dict[str, int] = {"ok": 0, "usage": 2, "rejected": 3, "run_not_found": 4,
@@ -53,6 +54,15 @@ class ProviderUnavailable(Exception):
         super().__init__(f"provider unavailable ({provider}): {reason}")
         self.provider = provider
         self.reason = reason
+
+
+class RunRecordContended(RuntimeError):
+    """run.json kept changing under the compare-and-update; the status was not written."""
+
+    def __init__(self, run_id: str) -> None:
+        """Build the message from the run id."""
+        super().__init__(f"run.json of {run_id} kept changing; update not written")
+        self.run_id = run_id
 
 
 class RegistryChanged(Exception):

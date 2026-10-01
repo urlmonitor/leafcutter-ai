@@ -43,8 +43,9 @@ def _usage(values: Mapping[str, Any]) -> UsageSummary:
     budgets = values.get("budgets")
     if budgets is None:
         return UsageSummary()
+    nothing_known = budgets.cost_unknown_calls > 0 and budgets.cost_usd_known == 0.0
     return UsageSummary(jev_calls=budgets.jev_calls, host_operations=budgets.host_operations,
-                        cost_usd_known=budgets.cost_usd_known,
+                        cost_usd_known=None if nothing_known else budgets.cost_usd_known,
                         cost_unknown_calls=budgets.cost_unknown_calls)
 
 
@@ -99,6 +100,9 @@ def _failure_errors(diagnostics: list[str] | None) -> list[ErrorInfo]:
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 16:50 [python-coder]: When every call's cost is unknown the envelope reports
+#   cost_usd_known as null, not 0.0 (Rev 3 section 16, unknown billing); a partly known cost
+#   keeps its sum plus cost_unknown_calls. (#KernelBootstrapV0/P10)
 # - 2026-10-01 10:30 [python-coder]: A terminal record status outranks a non-terminal graph
 #   status so a run the service stopped (recursion limit) stays blocked even though the graph
 #   never reached finalize. (#KernelBootstrapV0/P7)
