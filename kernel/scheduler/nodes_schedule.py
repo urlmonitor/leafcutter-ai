@@ -22,6 +22,7 @@ from kernel.contracts import HostWorkRequest, Priority, RunStatus, WorkItemStatu
 from kernel.scheduler import guards
 from kernel.scheduler.context import KernelRuntime, flush_events, run_corr, sequential_node
 from kernel.scheduler.merge import Draft
+from kernel.scheduler.nodes_gaps import settle_gap_outcomes
 from kernel.scheduler.state import KernelState
 
 logger = logging.getLogger(__name__)
@@ -57,6 +58,30 @@ def ready_agenda(draft: Draft, capacity: int) -> list[str]:
         rank = 0 if draft.request_of(item).priority is Priority.REQUIRED else 1
         ready.append((rank, item.created_seq, item.id))
     return [item_id for _, _, item_id in sorted(ready)[:capacity]]
+
+
+def stop_unresolved(draft: Draft, root_id: str, guard: str) -> list[str]:
+    """End the work a tripped guard leaves open and return the ids of the items it ended.
+
+    A cancellation cancels every open item, children included, and the root. Any other guard
+    blocks the open non-root items with an `unresolved_at_<guard>` limitation naming their goal,
+    so the partial or blocked envelope lists the unresolved work; the root stays open so the
+    outcome decides between partial and blocked from what was achieved.
+    """
+    cancelled = guard == "cancelled"
+    ids = guards.unresolved_item_ids(draft.items, root_id)
+    if cancelled and draft.items[root_id].status not in guards.TERMINAL_STATUSES:
+        ids.append(root_id)
+    for item_id in ids:
+        item = draft.items[item_id]
+        if cancelled:
+            draft.put_item(item, status=WorkItemStatus.CANCELLED, interaction_ref=None,
+                           limitations=[*item.limitations, "cancelled: the run was cancelled"])
+        else:
+            text = guards.unresolved_text(guard, draft.request_of(item).goal)
+            draft.put_item(item, status=WorkItemStatus.BLOCKED, interaction_ref=None,
+                           limitations=[*item.limitations, text])
+    return ids
 
 
 def _stamp_head_packet(state: KernelState, runtime: KernelRuntime) -> dict[str, Any]:
@@ -105,11 +130,19 @@ async def schedule(state: KernelState, runtime: Runtime[KernelRuntime]) -> dict[
     halt = None if root_done else (trip.guard if trip else None)
     if halt is None and not root_done and not agenda and not queue:
         halt, trip = "deadlock", guards.GuardTrip("deadlock", "nothing is runnable or pending")
+    gaps = settle_gap_outcomes(state, ctx, draft, halting=halt is not None)
     if halt is not None:
-        draft.emit("guard.tripped", trip.detail if trip else halt, guard=halt)
+        waited = guards.waiting_seconds(state.get("events", []))
+        note = f"; {waited:.1f}s waiting on interactions is not active time" if waited else ""
+        draft.emit("guard.tripped", f"{trip.detail if trip else halt}{note}", guard=halt)
         ctx.tracer.event("guard.tripped", run_corr(state), level="WARNING",
                          payload={"guard": halt})
+        stop_unresolved(draft, state["task"].root_work_item_id, halt)
     update = draft.update()
+    if gaps:
+        update["gaps"] = gaps
+    if halt is not None and queue:
+        update["interaction_queue"] = []
     status = RunStatus.RUNNING if halt else _status_for(state, agenda)
     if status in (RunStatus.WAITING_HOST, RunStatus.WAITING_HUMAN):
         update.update(_stamp_head_packet(state, ctx))
@@ -133,6 +166,13 @@ def after_schedule(state: KernelState) -> str:
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 14:00 [python-coder]: A tripped guard ends the open work in the same step: children
+#   are cancelled (cancellation) or blocked with `unresolved_at_<guard>` (other guards), and the
+#   pending queue is cleared, so the envelope names the unresolved work and a late submission is
+#   rejected as cancelled_or_superseded. (#KernelBootstrapV0/P9)
+# - 2026-10-01 14:00 [python-coder]: Gap outcomes are settled here, before unresolved work is
+#   marked, because schedule is the one sequential node that sees every item after each
+#   integrate pass (record_gaps only runs when something is unsupported). (#KernelBootstrapV0/P9)
 # - 2026-09-30 22:30 [python-coder]: A root that is already terminal suppresses guard trips:
 #   finishing work is never turned into a guard stop by a late counter. (#KernelBootstrapV0/P4)
 # - 2026-09-30 22:30 [python-coder]: Head-packet revision stamping happens in schedule (right

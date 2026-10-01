@@ -27,12 +27,18 @@ from kernel.contracts import new_id
 from kernel.contracts.base import utc_now
 from kernel.contracts.enums import RunStatus
 from kernel.contracts.interaction import InteractionSubmission
-from kernel.contracts.run import RunEnvelope
+from kernel.contracts.run import CapabilityGap, RunEnvelope
 from kernel.contracts.task import Actor, TaskInput
 from kernel.interaction import SubmissionRejected, submit_interaction
-from kernel.persistence.base import CancelInfo, RunAlreadyExists, RunRecord
+from kernel.persistence.base import RunAlreadyExists, RunRecord
 from kernel.registry.adapter import RegistryCompatibilityError, verify_pinned
 from kernel.scheduler import flush_events, initial_state
+from kernel.service_cancel import (
+    append_service_event,
+    close_paused_graph,
+    commit_cancel,
+    compare_and_write,
+)
 from kernel.service_envelope import TERMINAL, build_envelope, effective_status
 from kernel.service_errors import (
     CLI_EXIT_CODES,
@@ -53,6 +59,7 @@ __all__ = ["CLI_EXIT_CODES", "ErrorBody", "InvalidTaskInput", "KernelService",
            "SubmissionRejected", "error_payload", "new_envelope"]
 
 Values = dict[str, Any]
+MAX_PERSIST_ATTEMPTS = 5
 
 
 @runtime_checkable
@@ -89,6 +96,9 @@ class RunService(Protocol):
         Raises:
             RunNotFound: Unknown run id.
         """
+
+    def list_gaps(self) -> list[CapabilityGap]:
+        """Return the aggregated capability gaps (deduplicated, with occurrence counts)."""
 
 
 def new_envelope(run_id: str, root_task_id: str, state_revision: int, status: RunStatus,
@@ -178,10 +188,12 @@ class KernelService:
         return self._finish(session, values, [], persist=False)
 
     async def cancel_run(self, run_id: str, actor: Actor) -> RunEnvelope:
-        """Mark the run cancelled (idempotent); later submissions are refused.
+        """Cancel the run: the first actor wins, repeats change nothing, finished runs stay so.
 
-        A run that already reached a terminal status is returned unchanged. P9 hardens this
-        (stopping in-flight work, cancelling children).
+        run.json is written with a compare-and-update (a stale writer can never lose the
+        cancel) and `run.cancelled` goes to events.jsonl. A running graph stops at its next
+        superstep (it polls run.json); a graph paused on an interaction is closed here, so its
+        open work items are cancelled and a later submission is refused.
         """
         env = self._env
         record = env.run_store.get_run(run_id)
@@ -189,12 +201,18 @@ class KernelService:
             values = await session.values()
             if effective_status(record, values) not in TERMINAL:
                 now = utc_now()
-                self._persist(record.model_copy(update={
-                    "cancel": CancelInfo(by=actor.id, at=now), "status": RunStatus.CANCELLED,
-                    "updated_at": now}))
-                env.tracer.event("run.cancelled", session.runtime_corr(), level="WARNING",
-                                 payload={"by": actor.id})
+                _, won = commit_cancel(env.run_store, run_id, actor.id, now)
+                if won:
+                    append_service_event(env.run_store, run_id, "run.cancelled", now,
+                                         f"cancelled by {actor.id}", actor_id=actor.id)
+                    env.tracer.event("run.cancelled", session.runtime_corr(), level="WARNING",
+                                     payload={"by": actor.id})
+                    values = await close_paused_graph(session, actor.id, now)
         return self._finish(session, values, [], persist=False)
+
+    def list_gaps(self) -> list[CapabilityGap]:
+        """Return the aggregated capability gaps from the gap store (sorted by gap key)."""
+        return self._env.gap_store.load_gaps()
 
     # ---- internals ---------------------------------------------------
     def _require_jev(self) -> None:
@@ -235,13 +253,24 @@ class KernelService:
         except RegistryCompatibilityError as exc:
             raise RegistryChanged(pinned.content_hash, self._env.snapshot.content_hash) from exc
 
-    def _persist(self, record: RunRecord) -> None:
-        """Write run.json; the store is the only durable status, so a failure is raised."""
+    def _persist(self, session: Session, values: Values, blocked: bool) -> RunRecord:
+        """Write run.json from a fresh read with a compare-and-update, retrying when stale.
+
+        The record is re-read on every attempt, so a cancellation committed while the graph ran
+        is carried into the update (and wins over the graph status) instead of being overwritten.
+        The store is the only durable status, so a write failure is raised.
+        """
+        store = self._env.run_store
         try:
-            self._env.run_store.update_run(record)
+            for _ in range(MAX_PERSIST_ATTEMPTS):
+                current = store.get_run(session.run_id)
+                record = self._updated_record(current, session, values, blocked)
+                if compare_and_write(store, record, current.state_revision):
+                    return record
         except OSError:
-            logger.exception("could not write run.json of %s", record.run_id)
+            logger.exception("could not write run.json of %s", session.run_id)
             raise
+        raise RuntimeError(f"run.json of {session.run_id} kept changing; update not written")
 
     def _finish(self, session: Session, values: Values, diagnostics: list[str], *,
                 persist: bool = True) -> RunEnvelope:
@@ -250,8 +279,7 @@ class KernelService:
         record = env.run_store.get_run(session.run_id)
         if persist and values:
             flush_events(env.run_store, values)
-            record = self._updated_record(record, session, values, bool(diagnostics))
-            self._persist(record)
+            record = self._persist(session, values, bool(diagnostics))
         return build_envelope(record, values, trace=session.trace,
                               observability=session.observability, diagnostics=diagnostics,
                               report_path=self._report_path(session.run_id, values))
@@ -275,7 +303,9 @@ class KernelService:
     def _updated_record(record: RunRecord, session: Session, values: Mapping[str, Any],
                         blocked: bool) -> RunRecord:
         """Return the record with the service-owned status, revision, root task and trace."""
-        status = RunStatus.BLOCKED if blocked else effective_status(record, values)
+        status = effective_status(record, values)
+        if blocked and record.cancel is None:
+            status = RunStatus.BLOCKED
         return record.model_copy(update={
             "status": status, "updated_at": utc_now(), "trace": session.trace,
             "state_revision": values.get("state_revision", record.state_revision),
@@ -285,6 +315,10 @@ class KernelService:
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 14:00 [python-coder]: Every run.json write goes through a compare-and-update on
+#   a fresh read (`_persist`), and a cancellation always wins over a blocked diagnostic: the
+#   old read-modify-write could overwrite a cancel committed by another process between the two
+#   calls. Cancel mechanics live in service_cancel.py. (#KernelBootstrapV0/P9)
 # - 2026-10-01 11:10 [python-coder]: The envelope is built after the segment closed so
 #   trace_refs.observability reflects the flush, and a rejection carries the current envelope
 #   on the exception (one segment per process). (#KernelBootstrapV0/P7)
