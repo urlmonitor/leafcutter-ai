@@ -129,7 +129,7 @@ The resumable runtime in leafcutter-ai (package `kernel/`) that takes a free-for
 
 ### capability
 
-In the Decision Kernel, the contract-driven unit of work that replaces the agent: an input contract, applicable policies, evidence preparation, decisions, an execution strategy, verification and a typed result. A capability may contain no model, one model call or a bounded worker loop, and callers do not depend on which. See ADR-052.
+In the Decision Kernel, the contract-driven unit of work that replaces the agent: an input contract, applicable policies, evidence preparation, decisions, an execution strategy, verification and a typed result. A capability may contain no model, one model call or a bounded worker loop, and callers do not depend on which. Every capability runs the same lifecycle: PREPARE → PRE-CHECK → COMPILE INVOCATION → EXECUTE → POST-CHECK → ACCEPT, REPAIR, REQUEST INFORMATION or ESCALATE (ADR-052 §4; see `docs/architecture/diagrams/decision-kernel-flows-capability-lifecycle.md`). See ADR-052.
 
 ### Jev
 
@@ -173,7 +173,7 @@ The rule that colony-memory evidence is scoped to the policy, template and model
 
 ### performance store
 
-The planned Stage 4 store of compact routing statistics, produced by an analytics and evaluation job from Langfuse traces. The kernel reads these statistics and never queries Langfuse directly, so observability data does not become operational state. See ADR-056 §8.
+ADR-056's name for the store of compact routing statistics that a learning evaluator derives from Langfuse traces and scores. ADR-057 realises it as the optional PostgreSQL **colony memory store** behind the `ColonyMemory` port. The kernel reads these statistics and never queries Langfuse directly, so observability data does not become operational state. See ADR-056 §8 and ADR-057.
 
 ### confidence calibration
 
@@ -186,3 +186,35 @@ A proposal to change a decision rule (a policy, checklist or ADR) because record
 ### scout
 
 Colony-model name for research and capability-gap handling: the work that goes where no capability exists yet. At founding the general-purpose model does scout work through approved fallback, and repeated gaps for the same need are the signal to build a specialized capability. See ADR-056 §6 and `docs/vision.md`.
+
+### LEAFCUTTER_COLONY_DB_URL
+
+Optional variable in the project-root `.env` holding a PostgreSQL connection URL for the colony memory store. When it is set, and `LEAFCUTTER_SELF_LEARNING` is not `false`, self-learning is enabled. Any Postgres URL works, including a Supabase project's Postgres connection string; the Supabase API is not used. Without it, Leafcutter works the same, just without cross-run learning. See ADR-057 §4.
+
+### LEAFCUTTER_SELF_LEARNING
+
+Optional opt-out in the project-root `.env`: `LEAFCUTTER_SELF_LEARNING=false` keeps self-learning off, so the kernel uses `NullColonyMemory`, even when `LEAFCUTTER_COLONY_DB_URL` is set. Otherwise enablement is inferred from the URL. See ADR-057 §4.
+
+### JEV_API_KEY
+
+The Jev credential, kept in the project-root `.env` next to the Langfuse keys (`LANGFUSE_PUBLIC_KEY`, `LANGFUSE_SECRET_KEY`, `LANGFUSE_BASE_URL`). The Decision Kernel needs it to call Jev.
+
+### NEEDS_CONTEXT
+
+A sentinel choice in the Decision Kernel's routing question (`kernel.route`). When Jev selects it, the request lacks the information needed to pick a capability safely: the routing outcome is `insufficient_context` and the kernel asks for clarification instead of routing. It sits alongside the `__NONE__` sentinel for "no matching capability". See `kernel/scheduler/routing.py`.
+
+### PROJECT_CONTEXT
+
+A `PROJECT_CONTEXT.md` file in an agent, skill or component directory that supplies project-specific context to legacy Leafcutter agents at spawn time. It is one of the channels of the agent knowledge plane. See `docs/architecture/agent_knowledge_plane.md`.
+
+### assemble_context_bundle
+
+A pure function in `scripts/injection_builders.py` that assembles the layered context bundle for agents dispatched by the fast-lane build: architecture docs, acceptance criteria, prior tests and working changes, ordered from most stable to most volatile so the stable prefix stays byte-identical for prompt caching. Exposed as the `assemble-bundle` CLI subcommand. See `docs/reference/fast-lane-prompt-caching.md`.
+
+### agent_knowledge_plane
+
+The architecture reference (`docs/architecture/agent_knowledge_plane.md`) for how legacy Leafcutter agents receive context at spawn time through the harness's injection channels, such as `CLAUDE.md`, auto-memory, the glossary, skills, agent frontmatter, folder `README.md` and `PROJECT_CONTEXT.md`. The Decision Kernel's context map contrasts with it (`docs/architecture/diagrams/decision-kernel-context-map.md`).
+
+### agent_knowledge_system
+
+The architecture reference (`docs/architecture/agent_knowledge_system.md`) for how legacy Leafcutter agents persist learnings after work completes. It is the persistence-side complement to `agent_knowledge_plane`.

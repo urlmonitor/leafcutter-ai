@@ -52,6 +52,8 @@ Every question goes to the cheapest mechanism that can answer it reliably, in th
 
 Why it matters: software engineering rarely has empirical evidence about which of its processes and decisions work. A colony that records its outcomes produces exactly that evidence.
 
+**Langfuse remembers what happened. The colony memory store remembers what Leafcutter learned.** Langfuse holds the complete history: every node traced, decisions scored, and confirmed mistakes kept as regression datasets ([ADR-058](architecture/adrs/ADR-058-langfuse-colony-history-scores-datasets.md)). The learned statistics live in an optional plain PostgreSQL store ([ADR-057](architecture/adrs/ADR-057-colony-memory-store-optional-postgres.md)). Adopters set `LEAFCUTTER_COLONY_DB_URL` to any Postgres URL, including a Supabase Postgres connection string; no Supabase API is involved. Without it, Leafcutter works exactly the same, just without cross-run learning. A team can point everyone at one store and learn as one colony.
+
 ## Growing the Colony, Step by Step
 
 The Decision Kernel is developed inside leafcutter-ai and is not yet shipped to adopters. It is built in stages, and each stage must leave the colony measurably stronger, not just bigger:
@@ -89,7 +91,7 @@ The following are explicitly out of scope until a future phase decision:
 | Self-hosting dogfood | leafcutter develops itself using its own agents and skills (ADR-001) | Every UX issue is discovered during development, not after release |
 | Quality gate suite | Pre-commit hooks for build drift, secrets, doc coverage, structural changes | Adopters get guardrails without writing their own hook infrastructure |
 | Decision Kernel | Capabilities with contracts, checks and compiled prompts; Jev for bounded decisions; routing by process maturity (ADR-052–054) | The engineering process lives in software, not in giant prompts, and each decision uses the cheapest mechanism that can resolve it |
-| Colony memory | Outcomes of capability runs and decisions are recorded and fed back into routing and policy (ADR-056) | The system gets measurably better with use and produces evidence about which engineering processes work |
+| Colony memory | Outcomes of capability runs and decisions are recorded (Langfuse history plus an optional PostgreSQL store) and fed back into routing and policy (ADR-056–058) | The system gets measurably better with use and produces evidence about which engineering processes work |
 
 ## Roadmap (Phases)
 
@@ -114,6 +116,8 @@ Transitions from a personal tool to a shared open-source package.
 ### Decision Kernel Track (parallel)
 
 The colony stages from [Growing the Colony, Step by Step](#growing-the-colony-step-by-step) run as their own roadmap phases, `phase_kernel_1_founding` (active) through `phase_kernel_5_specialists`, in `docs/roadmap.json`. Every stage after founding has to show a colony-health improvement over the previous stage before it counts as done.
+
+The colony memory store has its own track: `phase_colony_1_collect` → `phase_colony_2_analyze` → `phase_colony_3_suggest` → `phase_colony_4_influence` → `phase_colony_5_evolve` (ADR-057 §10). It only records until the statistics are calibrated. Historical evidence may influence routing only after held-out evaluation, so an early lucky path cannot lock itself in.
 
 ## Success Criteria
 
@@ -140,6 +144,8 @@ These are long-term measures for the Decision Kernel. They show a direction to t
 
 | Date | Decision | Rationale |
 |------|----------|-----------|
+| 2026-09-30 | Langfuse is the colony history: every node traced, decisions scored, datasets as regression memory (ADR-058) | Detailed evidence of what happened, and a guard against relearning old mistakes |
+| 2026-09-30 | Colony memory store is optional plain PostgreSQL behind a ColonyMemory port; a Supabase Postgres URL works, but the Supabase API is not used (ADR-057) | Zero-install learning for adopters who add one URL; everything still works without it |
 | 2026-09-30 | Colony memory: paths are reinforced by verified outcomes, never by usage alone (ADR-056) | Leafcutter learns which processes and decisions work, and capability gaps drive what gets built next |
 | 2026-09-30 | The kernel's capability registry starts empty; legacy agents and skills join only by recorded decision (ADR-055) | The colony is founded on capabilities that meet the contract, not on inherited prompts |
 | 2026-09-30 | Process representation and maturity levels 0–4 (ADR-054) | LLMs bootstrap process knowledge; repeated reasoning is promoted into policies and then workflows |

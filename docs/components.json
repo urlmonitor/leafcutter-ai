@@ -104,6 +104,19 @@
         "scripts/changelog/"
       ]
     },
+    "colony_memory": {
+      "id": "colony_memory",
+      "name": "Colony Memory",
+      "type": "infrastructure",
+      "description": "Optional cross-run learning layer: ColonyMemory port with PostgreSQL and Null implementations, fed by a learning evaluator from Langfuse traces and scores.",
+      "detail_ref": "docs/architecture/components/colony-memory.md",
+      "status": "planned",
+      "primary_code": [
+        "kernel/colony_memory"
+      ],
+      "agent_affinity": [],
+      "exposed_interfaces": []
+    },
     "commit_guardian": {
       "id": "commit_guardian",
       "name": "Commit Guardian",

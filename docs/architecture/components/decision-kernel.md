@@ -19,6 +19,8 @@ related_docs:
   - docs/architecture/adrs/ADR-054-process-representation-and-maturity-model.md
   - docs/architecture/adrs/ADR-055-capability-registry-starts-empty.md
   - docs/architecture/adrs/ADR-056-colony-memory-evidence-reinforcement.md
+  - docs/architecture/adrs/ADR-057-colony-memory-store-optional-postgres.md
+  - docs/architecture/adrs/ADR-058-langfuse-colony-history-scores-datasets.md
   - docs/architecture/adrs/ADR-059-decision-store-reviewable-yaml-records-now-graph-later.md
   - docs/architecture/adrs/ADR-060-source-of-truth-and-approval-authority.md
   - docs/architecture/adrs/ADR-061-identity-of-declared-and-learned-records.md
@@ -75,6 +77,10 @@ flowchart LR
 
 Diagram parent: none (`root: true`). This overview is the entry point. The detailed design is
 in [Decision Kernel V0 Design — Part 1](../../analysis/2026-09-30-decision-kernel-design.md).
+The end-to-end flows, the context map (where Jev, the host LLM, workers and humans get their
+context) and the learning loop are in
+[Decision Kernel — Flows and Context](../diagrams/decision-kernel-flows-overview.md). The
+colony memory layer is in [Colony Memory](colony-memory.md).
 
 ## Exposed interfaces
 
@@ -109,6 +115,8 @@ Registered in `docs/components.json` under `decision_kernel.exposed_interfaces`:
 | [ADR-054](../adrs/ADR-054-process-representation-and-maturity-model.md) | How process knowledge is held (workflow, policy/checklist or LLM-guided) and how it matures. |
 | [ADR-055](../adrs/ADR-055-capability-registry-starts-empty.md) | The capability registry starts empty. Legacy agents and skills enter only by recorded decision. |
 | [ADR-056](../adrs/ADR-056-colony-memory-evidence-reinforcement.md) | Colony memory: paths gain evidence from verified outcomes, never from usage alone. Decisions carry outcomes, and capability gaps drive what gets built next. V0 records the prerequisites only. |
+| [ADR-057](../adrs/ADR-057-colony-memory-store-optional-postgres.md) | The colony memory store is optional plain PostgreSQL behind a `ColonyMemory` port with a Null implementation. Enabled by `LEAFCUTTER_COLONY_DB_URL`. See [colony-memory.md](colony-memory.md). |
+| [ADR-058](../adrs/ADR-058-langfuse-colony-history-scores-datasets.md) | Langfuse is the colony history: every node traced, decisions scored, datasets as regression memory. |
 | [ADR-059](../adrs/ADR-059-decision-store-reviewable-yaml-records-now-graph-later.md) | Decision store: human-approved decisions are filed as YAML records under `docs/decisions/` behind a `ColonyMemory` port and reused as precedent; a graph backend can replace the files later. |
 | [ADR-060](../adrs/ADR-060-source-of-truth-and-approval-authority.md) | Git is canonical for published records; only a human approval creates a record; the kernel never writes the repository during a run; precedent is evidence, not authority. |
 | [ADR-061](../adrs/ADR-061-identity-of-declared-and-learned-records.md) | Existing ids stay; decisions get a kernel-minted `dec-<16hex>` id; a record is keyed by (repository_id, kind, id). |

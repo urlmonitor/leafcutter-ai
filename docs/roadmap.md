@@ -2,15 +2,15 @@
 title: Project Roadmap
 type: reference
 status: active
-created: 2026-09-30
-last_updated: 2026-09-30
+created: 2026-10-02
+last_updated: 2026-10-02
 components:
 - infrastructure
 description: Overview of Project Roadmap.
 ---
 <!-- AUTO-GENERATED — do not edit by hand. Source: docs/roadmap.json -->
 <!-- Regenerate manually: python portable-dev-workflow/scripts/commit_guardian/regenerate_roadmap_mirror.py --manual -->
-<!-- Generated: 2026-09-30T22:13:44Z -->
+<!-- Generated: 2026-10-02T08:21:33Z -->
 
 # Project Roadmap
 
@@ -39,6 +39,11 @@ description: Overview of Project Roadmap.
 | `phase_kernel_3_workflows` | Decision Kernel — First Workers: Engineering Workflows and Executable Policies (kernel Stage 3) | Planned |
 | `phase_kernel_4_trails` | Decision Kernel — Trails: Colony Memory and Controlled Learning (kernel Stage 4) | Planned |
 | `phase_kernel_5_specialists` | Decision Kernel — Specialists: Independent Engineering Runtime (kernel Stage 5) | Planned |
+| `phase_colony_1_collect` | Colony Memory — COLLECT (optional PostgreSQL store, write-only) | Planned |
+| `phase_colony_2_analyze` | Colony Memory — ANALYZE (learning evaluator, statistics, calibration) | Planned |
+| `phase_colony_3_suggest` | Colony Memory — SUGGEST (evidence shown, routing unchanged) | Planned |
+| `phase_colony_4_influence` | Colony Memory — INFLUENCE ROUTING (historical evidence in Jev routing) | Planned |
+| `phase_colony_5_evolve` | Colony Memory — EVOLVE (gaps, weak policies and candidate workflows become reviewed proposals) | Planned |
 
 ## Phase Details
 
@@ -154,7 +159,7 @@ Installable via a standard package manager with versioned releases, changelogs, 
 
 **Status**: **ACTIVE**
 
-The colony is founded. A native LangGraph kernel with an empty capability registry (ADR-055) routes and decides with Jev, runs a generic research loop over read-only retrieval, hands generative and human work to Claude Code, resumes persistently, records capability gaps and traces every run in Langfuse. The human and Claude still do most of the work; the kernel records everything needed to count it later. Driven by TICKET-20260930-KernelBootstrapV0. Lives in leafcutter-ai only; not shipped to adopters.
+The colony is founded. A native LangGraph kernel with an empty capability registry (ADR-055) routes and decides with Jev, runs a generic research loop over read-only retrieval, hands generative and human work to Claude Code, resumes persistently, records capability gaps and traces every run in Langfuse. The human and Claude still do most of the work; the kernel records everything needed to count it later. Driven by TICKET-20260930-KernelBootstrapV0. Lives in leafcutter-ai only; not shipped to adopters. The colony-memory COLLECT step (phase_colony_1_collect) can start right after this phase (ADR-057 §10).
 
 **Exit Criteria**:
 
@@ -189,7 +194,7 @@ Discovery before acceptance criteria, AC-specific context, inherited component p
 
 **Status**: Planned
 
-Traces become colony memory (ADR-056): an analytics job feeds a performance store; decisions carry outcomes and per-type calibration; wrong decisions produce reviewed policy-gap and promotion proposals; capability gaps are ranked to propose what to build next. Reinforcement-informed routing and exploration come only after the performance store exists and passes evaluation (spec §19).
+Traces become colony memory (ADR-056): an analytics job feeds a performance store; decisions carry outcomes and per-type calibration; wrong decisions produce reviewed policy-gap and promotion proposals; capability gaps are ranked to propose what to build next. Reinforcement-informed routing and exploration come only after the performance store exists and passes evaluation (spec §19). Delivered through the colony-memory track phase_colony_2_analyze to phase_colony_5_evolve on the optional PostgreSQL colony memory store (ADR-057, ADR-058).
 
 **Exit Criteria**:
 
@@ -211,6 +216,71 @@ Direct model and agent executors, additional clients, stronger isolation and pro
 - Each native executor that replaces host.* work is justified by recorded host_only scout evidence (spec §21, ADR-056 §9)
 - At least one colony-health measure improves on the previous stage's baseline (share of requests resolved by specialized capabilities rather than fallback; decision accuracy and calibration per type; cost and time per resolved task; rework rate; gap recurrence after a capability ships). A stage is not reported as strengthening the colony without such a measure (ADR-056 §9)
 
+### phase_colony_1_collect: Colony Memory — COLLECT (optional PostgreSQL store, write-only)
+
+**Status**: Planned
+
+The optional colony memory store starts recording (ADR-057). A ColonyMemory port with a PostgreSQL implementation and NullColonyMemory is chosen once at startup. LEAFCUTTER_COLONY_DB_URL (any Postgres URL, including a Supabase Postgres connection string; no Supabase API) enables it, LEAFCUTTER_SELF_LEARNING=false opts out. Records graph usage, decisions, outcomes, capability gaps and fallback usage with context dimensions. No behavioural influence. Earliest start: right after phase_kernel_1_founding (inside V0 only if the V0 build decides so).
+
+**Exit Criteria**:
+
+- Without LEAFCUTTER_COLONY_DB_URL (or with LEAFCUTTER_SELF_LEARNING=false) the kernel, Jev, LangGraph, Claude handoff and Langfuse tracing work unchanged via NullColonyMemory, and no code outside the port branches on the setting (ADR-057 §3)
+- With a Postgres URL (a local Postgres and a Supabase Postgres connection string both verified), completed runs write graph usage, decision outcomes, capability gaps and fallback usage through a standard Postgres driver, with no Supabase client or REST API (ADR-057 §2)
+- Every recorded statistic carries the mandatory context dimensions (capability, task_type, component, repository/project, policy_version); nothing is recorded as a global rate (ADR-057 §7)
+- Recording changes no routing or decision behaviour (ADR-057 §10)
+- Every important kernel node is traced in Langfuse, including non-LLM steps, via the v4/OpenTelemetry SDK (ADR-058)
+
+### phase_colony_2_analyze: Colony Memory — ANALYZE (learning evaluator, statistics, calibration)
+
+**Status**: Planned
+
+A learning evaluator distils completed-run outcomes from Langfuse traces and scores into the store; statistics are derived and shown: success rates, common paths, wrong decisions, confidence calibration per decision type (ADR-056 §4, ADR-057 §10, ADR-058). Kernel stage 4.
+
+**Exit Criteria**:
+
+- Decisions and routing choices carry Langfuse scores from later outcomes (human review, application code, deterministic evaluators) (ADR-058)
+- The learning evaluator writes compact statistics to the colony memory store; the routing hot path never queries Langfuse (ADR-057 §5)
+- Calibration per decision type is measured from observed outcomes and visible to the team (ADR-056 §4)
+- Every confirmed wrong decision becomes a Langfuse dataset case (ADR-058)
+- At least one colony-health measure improves on the previous step's baseline before this step is reported as strengthening the colony (ADR-056 §9, ADR-057 §10)
+
+### phase_colony_3_suggest: Colony Memory — SUGGEST (evidence shown, routing unchanged)
+
+**Status**: Planned
+
+Historical evidence is surfaced as suggestions, for example "historically this path performs better", and capability-gap statistics rank what to build next; routing does not change and a human sets priorities (ADR-056 §6, ADR-057 §10). Kernel stage 4.
+
+**Exit Criteria**:
+
+- Suggestions are shown alongside routing and gap reports without changing any routing decision (ADR-057 §10)
+- Capability-gap statistics (frequency, fallback cost, failure rate) produce prioritization proposals; a human sets the priority (ADR-056 §6)
+- At least one colony-health measure improves on the previous step's baseline before this step is reported as strengthening the colony (ADR-056 §9, ADR-057 §10)
+
+### phase_colony_4_influence: Colony Memory — INFLUENCE ROUTING (historical evidence in Jev routing)
+
+**Status**: Planned
+
+Historical success, failures, calibration, cost and latency for similar requests are fed into Jev routing next to semantic fit, with exploration of alternatives (ADR-056 §3, ADR-057 §10). Kernel stage 4 or later.
+
+**Exit Criteria**:
+
+- Routing influence is activated only after calibration and after passing the held-out evaluation of spec §19.4, including the Langfuse dataset regression cases (ADR-057 §10, ADR-058)
+- Usage alone never raises a path's standing; evidence is version-scoped and decays (ADR-056 §3)
+- A share of runs explores eligible alternatives within existing permission and budget rules (ADR-056 §3)
+- At least one colony-health measure improves on the previous step's baseline before this step is reported as strengthening the colony (ADR-056 §9, ADR-057 §10)
+
+### phase_colony_5_evolve: Colony Memory — EVOLVE (gaps, weak policies and candidate workflows become reviewed proposals)
+
+**Status**: Planned
+
+The colony detects recurring capability gaps, weak policies (POLICY GAP), candidate workflows and repeated LLM reasoning, and turns them into reviewed proposals under the promotion rule (ADR-054, ADR-056 §5–§7, ADR-057 §10).
+
+**Exit Criteria**:
+
+- EVOLVE produces proposals only; turning one into a policy, workflow or registry entry remains a reviewed step with versions and rollback (ADR-056 §3 rule 5)
+- At least one reviewed lesson demonstrably changes future work (spec §19 Stage 4 exit)
+- At least one colony-health measure improves on the previous step's baseline before this step is reported as strengthening the colony (ADR-056 §9, ADR-057 §10)
+
 ---
 
-*Last regenerated: 2026-09-30T22:13:44Z. Do not edit this file directly — edit `docs/roadmap.json` instead.*
+*Last regenerated: 2026-10-02T08:21:33Z. Do not edit this file directly — edit `docs/roadmap.json` instead.*

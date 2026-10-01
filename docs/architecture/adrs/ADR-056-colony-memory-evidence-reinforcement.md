@@ -13,6 +13,8 @@ related_docs:
   - docs/architecture/adrs/ADR-052-capabilities-replace-agents-prompts-are-compiled.md
   - docs/architecture/adrs/ADR-053-intelligence-selection-deterministic-jev-llm-human.md
   - docs/architecture/adrs/ADR-054-process-representation-and-maturity-model.md
+  - docs/architecture/adrs/ADR-057-colony-memory-store-optional-postgres.md
+  - docs/architecture/adrs/ADR-058-langfuse-colony-history-scores-datasets.md
   - docs/architecture/components/decision-kernel.md
   - docs/vision.md
   - docs/analysis/2026-09-30-decision-kernel-design-2-contracts-registry-config.md
@@ -288,6 +290,11 @@ The later stages follow the spec's §3 roadmap:
 | 4 or later | Reinforcement-informed routing, path reinforcement and exploration. | The source is silent. They MUST NOT come before the performance store exists, activating them MUST pass the §19.4 evaluation, and exploration MUST NOT ship before reinforcement-informed routing. |
 | 5: independent runtime | Native executors justified by `host_only` scout evidence (§6). | Spec §21: "a justified incremental replacement for observed host reliance". |
 
+[ADR-057](ADR-057-colony-memory-store-optional-postgres.md) later refines the performance store's
+placement: it is the optional PostgreSQL colony memory store, and its write-only COLLECT step (no
+behavioural change) may start right after V0. ANALYZE, SUGGEST and INFLUENCE ROUTING keep the
+placement and gates above.
+
 ## Consequences
 
 ### Positive
@@ -359,7 +366,8 @@ This ADR explicitly does not decide:
 4. **How "similar task" is defined.** This includes which key groups decisions into a decision
    type. V0 has Jev `template_id`s and decision questions, but no decision-type field.
 5. **Where the performance store lives and its format.** This includes whether the job also
-   reads the authoritative local `events.jsonl` records.
+   reads the authoritative local `events.jsonl` records. Answered by
+   [ADR-057](ADR-057-colony-memory-store-optional-postgres.md): an optional PostgreSQL store, named the colony memory store.
 6. **Threshold changes.** Whether calibration-driven changes to evidence thresholds may apply
    automatically within bounds, or always need review.
 
