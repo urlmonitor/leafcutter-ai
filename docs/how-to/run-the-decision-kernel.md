@@ -98,6 +98,25 @@ stdout is exactly one JSON document, the run envelope; logs go to stderr. To ski
 generation supply `input_payload_schema: "leafcutter.decision_request.v1"` and an `input_payload`
 with `question`, `options` and `criteria`. Evidence you already hold goes in `initial_evidence`.
 
+**What kind of answer does the goal need?** When you do not set `requested_output_schema`, the
+kernel asks Jev one bounded question about the goal and picks the answer kind itself:
+
+| Answer kind | The goal asks to... | Result |
+|---|---|---|
+| `decision` | choose between options or approaches, or decide what to do | `decision_report.v1` from the decision capability |
+| `evidence` | find or locate facts in this repository | `evidence_bundle.v1` from research |
+| `ideas` | generate options or ideas without deciding | `options.v1` from `host.generate_options`; every option stays `proposed` |
+| `change` | implement, edit or modify something | declined: status `blocked`, limitation `out_of_scope_write` (the V0 kernel is read-only) |
+| `out_of_domain` | something unrelated to software engineering or this repository | declined: status `blocked`, limitation `out_of_domain`; never a build opportunity |
+
+If Jev is unsure (thresholds in `config.intent`), the run pauses with a question that offers these
+kinds as choices; free text is allowed, and the answer is classified again as the new statement of
+the goal. At most `intent.max_clarifications` questions are asked; after that the run ends with a
+plain `unclear_request` message and a suggested rephrasing. If Jev is unavailable the default
+`decision_report` is kept. **To bypass the classification set `requested_output_schema`
+yourself** (`leafcutter.decision_report.v1`, `leafcutter.evidence_bundle.v1` or
+`leafcutter.options.v1`), or supply a typed `input_payload`; an explicit choice always wins.
+
 ### Step 4 — Route on the envelope `status`
 
 | `status` | Meaning | You do |
@@ -147,7 +166,10 @@ once (`host.max_repair_attempts`); the packet comes back in `error.details.pendi
 python -m kernel gaps --json
 ```
 
-Each row has `gap_type`, `occurrence_count`, `fallback_outcome` and `build_opportunity`. Cancel a
+Each row has `gap_type`, `occurrence_count`, `fallback_outcome`, `build_opportunity` and the closest
+capabilities with the reason each one was excluded (`candidate_exclusions`). Declined requests
+(`permission`, `out_of_domain`) are never build opportunities. A blocked run's report says why it
+stopped, what the kernel can do and how to rephrase. Cancel a
 run with `python -m kernel cancel --run-id <id> --actor human:<id> --json`.
 
 ### Step 7 — Install the `/leafcutter` skill for Claude Code

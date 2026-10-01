@@ -188,3 +188,10 @@ P10 writes `docs/how-to/inspect-kernel-traces-with-langfuse-mcp.md` from the cur
 
 - **`gaps` command.** `python -m kernel gaps` prints the aggregated gaps (one row per dedup key, `occurrence_count`, `example_run_ids`) with a `build_opportunity` flag (only `unsupported` and `host_only` gaps are build opportunities) and the totals `total`, `build_opportunities` and `occurrences`.
 - **Cancel.** `cancel_run` commits to `run.json` with `compare_and_update`, appends `run.cancelled` and closes a paused graph thread. Service events are numbered from `SERVICE_SEQ_BASE` (1e9), a range graph events (numbered from 0 by the reducer) cannot reach, so the two writers never collide.
+
+## As built (intake intent)
+
+- **Envelope.** `usage_summary.input_tokens` / `output_tokens` are the sums of the counts the providers reported (`Budgets.input_tokens/output_tokens`, null until one is known, never 0) and `usage` holds one aggregate `jev` entry. `gaps` shows the gap store's aggregate per gap key (original `first_seen`, summed occurrences) instead of the in-run observation.
+- **Report.** `report.md` explains blocked and partial stops in plain words, names what the kernel can do (decide between options, find evidence in this repository, generate ideas) with a rephrasing example, and renders evidence bundles (findings, sources) and idea sets (under "proposals, not decisions") before the unchanged JSON block. A blocked run with no plain limitation gets a `can_do` limitation line.
+- **Gap records.** `CapabilityGap.candidate_exclusions` maps each considered capability to its exclusion reason; `candidates_considered` is ranked (eligible first, then the closest reason) and capped at five; `need_title` is the readable goal used for titles while `normalized_need` stays the dedup identity.
+- **Skill.** `/leafcutter` no longer sets `requested_output_schema` unless the user explicitly asks for a decision, an evidence lookup or ideas.
