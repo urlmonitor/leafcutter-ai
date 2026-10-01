@@ -10,14 +10,18 @@ ARCHITECTURE: Deterministic and offline (no Jev, no knowledge-map bridge, no net
     functions the retrieval executor calls (build_query_terms, extract_entities, search_repo_text,
     fetch_explicit, merge_pool) over the repository this file lives in, with the default config
     sources of the need's category. A case is data (benchmark_cases.json); this module only
-    runs it and matches the must-have places against the first batch.
+    runs it and matches the must-have places against the first batch. In a git checkout only the
+    files git does not ignore are read, so a local build's outputs never enter the corpus.
 """
 
 from __future__ import annotations
 
 import asyncio
 import json
+import os
+import subprocess
 from dataclasses import dataclass
+from functools import cache
 from pathlib import Path
 from typing import Any
 
@@ -38,17 +42,48 @@ from tests.kernel.capabilities.support import invocation
 from tests.kernel.helpers import as_json, make_context
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
+#: Record its `current` values from CI's checkout path or with this harness, never a dev folder.
 CASES_FILE = Path(__file__).with_name("benchmark_cases.json")
 PROJECT_NAME = "leafcutter"
+#: Skip reason of a file in the checkout that git ignores (a build output, a local file).
+GIT_IGNORED = "git_ignored"
 
 
 _TEXTS: dict[tuple[Path, tuple[str, ...], int], ReadOutcome] = {}
-_RELATIVE: dict[Path, str | None] = {}
+_RELATIVE: dict[tuple[Path, Path], str | None] = {}
+
+
+def is_git_checkout(root: Path) -> bool:
+    """True if the root is the top of a git work tree (`.git` is a folder, or a file in a worktree)."""
+    return (root / ".git").exists()
+
+
+def _fold(rel: str) -> str:
+    """Case-fold a path on Windows, whose file system may spell a name unlike git's index."""
+    return rel.casefold() if os.name == "nt" else rel
+
+
+@cache
+def git_visible_files(root: Path) -> frozenset[str]:
+    """Return the paths in the checkout that git does not ignore: tracked, or new and not ignored.
+
+    This is what CI scores once the work is committed. Ignored build outputs are not: build.py
+    installs `scripts/commit_guardian/` and its siblings as symlinks on Linux (never walked) but
+    as copies on Windows without symlink rights (walked: 152 more files in one source's corpus).
+    Read once per process.
+
+    Raises:
+        subprocess.CalledProcessError: git refused to list the files (the benchmark must not fall
+            back to scanning everything, which is what made it disagree with CI).
+    """
+    listed = subprocess.run(["git", "ls-files", "-z", "--cached", "--others", "--exclude-standard"],
+                            cwd=root, capture_output=True, check=True).stdout
+    return frozenset(_fold(p) for p in listed.decode("utf-8").split("\0") if p)
 
 
 @dataclass(frozen=True)
-class _CachedPolicy(ReadPolicy):
-    """A ReadPolicy that remembers reads for the life of the process.
+class _CheckoutPolicy(ReadPolicy):
+    """A ReadPolicy over a git checkout: reads only what git does not ignore, and remembers reads.
 
     Every case scans the same several thousand files; the cache keeps the whole benchmark to a few
     seconds without changing what a read returns.
@@ -56,15 +91,18 @@ class _CachedPolicy(ReadPolicy):
 
     def relative(self, path: Path) -> str | None:
         """Return the cached relative path (the real path resolution is the slow part)."""
-        if path not in _RELATIVE:
-            _RELATIVE[path] = super().relative(path)
-        return _RELATIVE[path]
+        key = (self.root, path)
+        if key not in _RELATIVE:
+            _RELATIVE[key] = super().relative(path)
+        return _RELATIVE[key]
 
     def read_text(self, path: Path) -> ReadOutcome:
-        """Return the cached read outcome of the file under this policy's limits."""
+        """Return the cached read outcome of the file; a file git ignores is skipped as such."""
         key = (path, self.deny_globs, self.max_file_bytes)
         if key not in _TEXTS:
-            _TEXTS[key] = super().read_text(path)
+            rel = self.relative(path)
+            ignored = rel is not None and _fold(rel) not in git_visible_files(self.root)
+            _TEXTS[key] = ReadOutcome(None, GIT_IGNORED) if ignored else super().read_text(path)
         return _TEXTS[key]
 
 
@@ -92,7 +130,7 @@ def _sources_for(cfg: KernelConfig, case: dict[str, Any]) -> list[SourceConfig]:
 def _search(cfg: KernelConfig, case: dict[str, Any], terms: list[str], root: Path
             ) -> tuple[ReadPolicy, list[SearchReport]]:
     """Search every source of the case in the repository checkout."""
-    kind = _CachedPolicy if root.resolve() == REPO_ROOT.resolve() else ReadPolicy
+    kind = _CheckoutPolicy if is_git_checkout(root) else ReadPolicy
     base = kind(root=root.resolve(), read_roots=(), deny_globs=tuple(cfg.retrieval.deny_globs),
                 max_file_bytes=cfg.retrieval.max_file_bytes)
     entities = extract_entities(" ".join(case.get("hints") or [case["goal"]]))
@@ -198,6 +236,10 @@ def judged_names(case: dict[str, Any], judged: JudgedResult, result: BatchResult
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 [python-coder]: A git checkout is scored as git sees it: files git ignores are
+#   skipped (`git_ignored`). On Windows the build's `scripts/` shims are copies, on Linux symlinks
+#   that are never walked, so the same commit had 731 files in `repo.patterns` on one and 579 on
+#   the other. The read cache is keyed by root as well. (#KernelV01/CI)
 # - 2026-10-01 [python-coder]: judged_with_oracle runs the real rerank loop with a scripted oracle
 #   (must-have places 0.9, the rest 0.1) so the benchmark also shows what a need judges and what
 #   it costs in Jev calls, not only the first batch. (#KernelV01/F)

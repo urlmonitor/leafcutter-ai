@@ -31,23 +31,6 @@
        "path": "kernel/persistence/gap_store.py"
       }
      ]
-    },
-    {
-     "name": "the decision store (ADR-059, kernel/memory)",
-     "any_of": [
-      {
-       "path": "docs/architecture/adrs/ADR-059-decision-store-reviewable-yaml-records-now-graph-later.md"
-      },
-      {
-       "path": "kernel/memory/file_store.py"
-      },
-      {
-       "path": "kernel/memory/port.py"
-      },
-      {
-       "path": "docs/how-to/file-and-reuse-decisions-with-the-kernel.md"
-      }
-     ]
     }
    ],
    "must_not_dominate": [
@@ -78,8 +61,7 @@
     "pool_position": {
      "design-3 section Persistence layout": null,
      "kernel/persistence/run_store.py": 24,
-     "kernel/persistence/gap_store.py": null,
-     "the decision store (ADR-059, kernel/memory)": null
+     "kernel/persistence/gap_store.py": null
     },
     "crowding": {
      "commit_guardian.json": 1,
@@ -89,20 +71,23 @@
      "tickets/": 0
     },
     "judged": {
-     "reached": [],
+     "reached": [
+      "kernel/persistence/run_store.py"
+     ],
      "calls": 2
     }
    },
    "current": {
     "round": "F",
+    "note": "re-measured 2026-10-01 at CI's checkout path after the checkout-folder fix (#KernelV01/CI); the earlier round F values came from a `kernel-v01` worktree folder",
     "reached": [
-     "the decision store (ADR-059, kernel/memory)"
+     "kernel/persistence/run_store.py",
+     "kernel/persistence/gap_store.py"
     ],
     "pool_position": {
-     "design-3 section Persistence layout": 33,
-     "kernel/persistence/run_store.py": null,
-     "kernel/persistence/gap_store.py": null,
-     "the decision store (ADR-059, kernel/memory)": 1
+     "design-3 section Persistence layout": 24,
+     "kernel/persistence/run_store.py": 11,
+     "kernel/persistence/gap_store.py": 8
     },
     "crowding": {
      "commit_guardian.json": 0,
@@ -113,12 +98,13 @@
     },
     "judged": {
      "reached": [
-      "the decision store (ADR-059, kernel/memory)"
+      "design-3 section Persistence layout",
+      "kernel/persistence/run_store.py",
+      "kernel/persistence/gap_store.py"
      ],
-     "calls": 1
+     "calls": 2
     }
-   },
-   "corpus_drift": "Re-baselined when the decision store landed (#KernelDecisionStore): the checkout now holds the answer to this goal (ADR-059..061, the how-to, kernel/memory), which takes the first batch; kernel/persistence/run_store.py and gap_store.py left the 60-candidate pool and stay listed as gaps. The recorded round E judged result lost run_store.py for the same reason. No ranking code changed."
+   }
   },
   {
    "id": "goal2_where_tests_are_saved",
@@ -327,13 +313,14 @@
    },
    "current": {
     "round": "F",
+    "note": "re-measured 2026-10-01 at CI's checkout path after the checkout-folder fix (#KernelV01/CI); the earlier round F values came from a `kernel-v01` worktree folder",
     "reached": [
      "kernel/contracts/decision.py (cited)",
      "docs/components.json (filter terms)"
     ],
     "pool_position": {
      "kernel/contracts/decision.py (cited)": 1,
-     "docs/components.json (filter terms)": 7,
+     "docs/components.json (filter terms)": 2,
      "Stage-0 delta part 4": null,
      "concept part 3 or 4 body": null
     },
@@ -349,10 +336,9 @@
       "kernel/contracts/decision.py (cited)",
       "docs/components.json (filter terms)"
      ],
-     "calls": 2
+     "calls": 1
     }
-   },
-   "corpus_drift": "Re-measured when the decision store landed (#KernelDecisionStore): the loop needs one more rerank call because the decision store's own files rank ahead. No ranking code changed."
+   }
   },
   {
    "id": "lessons_thresholds_config",
@@ -422,12 +408,13 @@
    },
    "current": {
     "round": "F",
+    "note": "re-measured 2026-10-01 at CI's checkout path after the checkout-folder fix (#KernelV01/CI); the earlier round F values came from a `kernel-v01` worktree folder",
     "reached": [
      "kernel/config.py"
     ],
     "pool_position": {
      "config/kernel_config.default.json": null,
-     "kernel/config.py": 12
+     "kernel/config.py": 7
     },
     "crowding": {
      "commit_guardian.json": 0,
@@ -492,7 +479,9 @@
    ],
    "baseline": {
     "round": "E (cd2fd56c)",
-    "reached": [],
+    "reached": [
+     "design-4 section Decision capability"
+    ],
     "pool_position": {
      "kernel/capabilities/decision/approvals.py": 51,
      "design-4 section Decision capability": 3
@@ -513,12 +502,14 @@
    },
    "current": {
     "round": "F",
+    "note": "re-measured 2026-10-01 at CI's checkout path after the checkout-folder fix (#KernelV01/CI); the earlier round F values came from a `kernel-v01` worktree folder",
     "reached": [
-     "kernel/capabilities/decision/approvals.py"
+     "kernel/capabilities/decision/approvals.py",
+     "design-4 section Decision capability"
     ],
     "pool_position": {
      "kernel/capabilities/decision/approvals.py": 5,
-     "design-4 section Decision capability": 26
+     "design-4 section Decision capability": 14
     },
     "crowding": {
      "commit_guardian.json": 0,
@@ -534,8 +525,7 @@
      ],
      "calls": 3
     }
-   },
-   "corpus_drift": "Re-baselined when the decision store landed (#KernelDecisionStore): approval and provenance are now also the subject of ADR-060, kernel/memory/builder.py and staging.py, which take first-batch places; the design-4 section Decision capability fell from pool position 15 to 26 (the loop still judges it, in one more call). No ranking code changed."
+   }
   }
  ]
 }

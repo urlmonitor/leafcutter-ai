@@ -45,6 +45,29 @@ doc_links:
       unit_tests/test_bp_900g_8*.py as the canonical mutating exception and states
       why sharing with them would both corrupt the shared copy and destroy the
       behaviour they exist to prove. This AC is that carve-out made mechanical.
+  - path: scripts/suite_performance/pytest_shared_reference_layout.py
+    relationship: modifies
+    status: exists
+    relevance: >-
+      THE EDIT SURFACE, and the only one. TQ-600a-5 built _select_route,
+      _produce_private_copy, _append_jsonl and pytest_terminal_summary here;
+      every clause of this AC extends one of them. The per-test-unique unshared
+      path is a change to _produce_private_copy (which currently derives one
+      staging dir per call but not per test instance); the mis-routing detector
+      that fails the run and names the offender by node id is a new check
+      alongside the existing routing log; and the count of tests routed
+      unshared, which TQ-600a-6's relational bound needs as its second term,
+      joins declared_mutator_count and undeclared_count in the same whole-run
+      emission rather than a per-worker tally.
+      Declared at `modifies` and not merely `constrains` because this AC really
+      does edit the file. Note the generator derives files_touched from
+      doc_links ONLY -- scripts/ac_store/_gtfa_files_touched.py has zero
+      references to declared_files -- so the declared_files block below is
+      correct per ACD-1600c-4 but does not by itself give the coder any scope.
+      Removing this doc_link would return files_touched to empty.
+declared_files:
+  - path: scripts/suite_performance/pytest_shared_reference_layout.py
+    state: existing
 assigned_agent: python-coder
 estimated_complexity: M
 it_requirements:

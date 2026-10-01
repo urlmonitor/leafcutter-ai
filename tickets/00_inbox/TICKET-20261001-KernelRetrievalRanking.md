@@ -76,3 +76,15 @@ completion_manifest:
     reason: "design-3 section Persistence layout (pool 38), Stage-0 delta part 4 and concept parts 3 and 4 (outside the 60-candidate pool) and config/kernel_config.default.json are not reached in the first batch by any lexical ordering tried; run_store.py is at 28 and is judged in batch 2."
     remediation: "Semantic retrieval or a query expansion (store to persistence) is a separate change; the fixture keeps their pool positions as the gap."
 Benchmark first (commit 03810b4b), then the ranking (a9bd8105) and the research and decision ordering (next commit). First-batch must-haves 4 of 14 before, 9 of 14 now; judged by the real loop with an oracle 6 of 14 before, 11 of 14 now; full kernel suite 1290 passed, 7 live skipped; live suite 7 of 7.
+
+### 2026-10-01 17:03 — python-coder (status: ok)
+feedback-id: fb_2026-10-01_f702d54f
+Cross-platform defect (CI on Linux failed `lessons_approval_provenance` with 3 Jev calls against a ceiling of 2, while Windows passed at a09f9777). The cause was not the OS. Two parts of the environment leaked into the ranking:
+1. `search_repo_text` counted words of the checkout folder's name as project words. In `worktrees/kernel-v01`, `kernel` was not a distinctive path word, so every `kernel/` section lost 3 x idf(kernel), about 15 points. CI checks out into `leafcutter-ai/`. This alone decided the failure.
+2. The benchmark read files that git ignores. `build.py` installs `scripts/commit_guardian/`, `doc_compliance/` and `feedback/` as copies on Windows (no symlink rights) and as symlinks on Linux (never walked). That put 731 files into `repo.patterns` on Windows and 579 on Linux.
+
+Fix: the kernel no longer uses the folder name, only the workspace id (`repository.py`, tested in `test_front_matter_and_ranking.py`). The benchmark scores only the files git does not ignore (`benchmark_support.py`, tested in `test_retrieval_benchmark.py`). With both fixes, Windows (`kernel-v01`, with build copies) and Linux (CI path) build an identical pool for every case.
+
+Open (user decision): in that environment-independent ranking, `lessons_approval_provenance` needs 3 calls on both platforms. The recorded round F values came from the `kernel-v01` folder: positions 6 and 15, where both platforms now give 5 and 14. The ceiling of 2 is left unchanged, so the subtest fails identically everywhere until the baseline is re-recorded. Every other case is equal or better; for example, `run_store.py` moves from pool position 28 to 11 and is now in the first batch.
+
+Resolved: on the orchestrator's decision, every case's round F `current` values were re-recorded from CI's checkout path with the fixed harness. `lessons_approval_provenance` now has a ceiling of 3 calls, and the improved positions and crowding are tightened; the round E baselines are unchanged.
