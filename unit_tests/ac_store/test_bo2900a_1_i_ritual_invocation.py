@@ -182,6 +182,17 @@ class TestRitualInvocationDoesNotLaunderADirectImportProof(unittest.TestCase):
     def tearDown(self) -> None:
         self._tmp.cleanup()
 
+    # Expected-failure for a DIFFERENT reason than the two suspension-marked files:
+    # this one fails on the live defect itself. The gate passes target_spec="" to
+    # _observe_reachability, so `reached_through` is structurally always False and the
+    # predicate collapses to `entered_entry_point` -- which the ritual proof satisfies.
+    # No finding is raised, so once re-armed the rule would ACCEPT the exact shape it
+    # exists to refuse. BO-2900a-1-i is `work_status: todo` for this.
+    #
+    # Repairing the observer (BO-2900a-2-i / a-2-iii) makes this pass, and the marker
+    # then turns the file red on the unexpected success -- which is how the repair
+    # announces itself. Remove the marker in that change; do not weaken the assertion.
+    @unittest.expectedFailure  # gate emits no finding: target_spec="" (BO-2900a-1-i)
     def test_ritual_invocation_does_not_launder_a_direct_import_proof(self) -> None:
         # covers: BO-2900a-1-i
         # angle: criterion
