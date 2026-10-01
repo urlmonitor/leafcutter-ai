@@ -55,7 +55,7 @@ class TestConcurrentBridgeLoad(unittest.TestCase):
             def worker() -> None:
                 barrier.wait()
                 try:
-                    module = km._load_module(REAL_ROOT)
+                    module = km._load_module()
                     result: object = module.build_knowledge_map
                 except km.KnowledgeMapUnavailable as exc:
                     result = exc
@@ -78,3 +78,11 @@ class TestConcurrentBridgeLoad(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+# ====================================================================
+# DECISION HISTORY
+# ====================================================================
+# - 2026-10-02 [python-coder]: _load_module takes no root: the script is always the trusted one.
+#   (#KernelBootstrapV0/GROUND)
+# ====================================================================

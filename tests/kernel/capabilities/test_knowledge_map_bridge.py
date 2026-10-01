@@ -18,6 +18,7 @@ import tempfile
 import textwrap
 import unittest
 from pathlib import Path
+from unittest import mock
 
 from kernel.capabilities.retrieval import RepositoryRetrievalExecutor
 from kernel.capabilities.retrieval import knowledge_map as km
@@ -87,6 +88,10 @@ class BridgeCase(unittest.TestCase):
         self.root = Path(tmp.name).resolve() / "repo"
         (self.root / "scripts").mkdir(parents=True)
         (self.root / "docs").mkdir()
+        # the fake script plays the kernel's own trusted installation; the scope is the same tree
+        patcher = mock.patch.object(km, "trusted_root", return_value=self.root)
+        patcher.start()
+        self.addCleanup(patcher.stop)
 
     def write_script(self, body: str) -> None:
         (self.root / "scripts" / "knowledge_query.py").write_text(body, encoding="utf-8")
@@ -207,6 +212,9 @@ if __name__ == "__main__":
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-02 [python-coder]: The fake script plays the kernel trusted installation
+#   (trusted_root is patched): the bridge no longer loads code from the scope.
+#   (#KernelBootstrapV0/GROUND)
 # - 2026-09-30 23:00 [python-coder]: The slow-map test sleeps 0.6 s in a worker thread and
 #   waits only 0.1 s, keeping the test well under the 5 s limit. (#KernelBootstrapV0/P5)
 # ====================================================================
