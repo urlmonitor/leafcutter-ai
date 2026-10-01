@@ -264,9 +264,11 @@ def account_usage(budgets: Budgets, usages: Iterable[Usage],
         price_per_input_token: Configured price used to estimate a missing cost.
 
     Returns:
-        Budgets: Updated copy (`cost_usd_known` grows by reported or estimated costs only).
+        Budgets: Updated copy (`cost_usd_known` grows by reported or estimated costs only; the
+            token totals grow by the counts that were reported and stay None while none was).
     """
     known, unknown = budgets.cost_usd_known, budgets.cost_unknown_calls
+    tokens = {"input_tokens": budgets.input_tokens, "output_tokens": budgets.output_tokens}
     for usage in usages:
         if usage.cost_usd is not None:
             known += usage.cost_usd
@@ -274,12 +276,19 @@ def account_usage(budgets: Budgets, usages: Iterable[Usage],
             known += usage.input_tokens * price_per_input_token
         else:
             unknown += 1
-    return budgets.model_copy(update={"cost_usd_known": known, "cost_unknown_calls": unknown})
+        for name in tokens:
+            reported = getattr(usage, name)
+            if reported is not None:
+                tokens[name] = (tokens[name] or 0) + reported
+    return budgets.model_copy(update={"cost_usd_known": known, "cost_unknown_calls": unknown,
+                                      **tokens})
 
 
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 22:00 [python-coder]: account_usage also sums the reported token counts; a call
+#   that did not report them adds nothing, so an unknown count stays None. (#KernelBootstrapV0/INTENT)
 # - 2026-10-01 14:00 [python-coder]: The Jev-call and host-operation caps are also run-level
 #   guards using strict `>`: the per-route checks stop new work at the limit, so a trip here only
 #   means accounting drifted past it, and it then ends the run with diagnostics instead of

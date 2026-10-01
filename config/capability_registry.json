@@ -7,7 +7,7 @@
     {
       "id": "decision",
       "name": "Decision",
-      "description": "Decides a bounded question between known options against approved criteria, using evidence. Asks for missing evidence, options, synthesis or human approval instead of guessing.",
+      "description": "Decides what to do or which option to pick for a bounded question, against approved criteria and using evidence. Also handles questions whose options are not known yet: it asks for options to be generated, then for human approval. Asks for missing evidence, options, synthesis or human approval instead of guessing.",
       "version": "1.0.0",
       "request_kinds": [
         "capability"

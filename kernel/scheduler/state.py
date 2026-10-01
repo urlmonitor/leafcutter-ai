@@ -52,6 +52,9 @@ class Budgets(KernelModel):
     active_seconds: float = Field(default=0.0, ge=0.0)
     cost_usd_known: float = Field(default=0.0, ge=0.0)
     cost_unknown_calls: int = Field(default=0, ge=0)
+    #: Token totals over the provider calls that reported them; None while none has (never 0).
+    input_tokens: int | None = Field(default=None, ge=0)
+    output_tokens: int | None = Field(default=None, ge=0)
     retries: dict[str, int] = Field(default_factory=dict)
     no_progress_streak: int = Field(default=0, ge=0)
 
@@ -181,6 +184,9 @@ def new_event(run_id: str, at: datetime, kind: str, detail: str = "", **refs: st
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 22:00 [python-coder]: Budgets carries the known token totals (None until a call
+#   reports them) so the envelope can show usage without guessing 0 for an unknown count.
+#   (#KernelBootstrapV0/INTENT)
 # - 2026-09-30 23:59 [python-coder]: Child results reach parents as run artifacts named by
 #   result_artifact_name; `WorkItem.result_ref` stays the invocation id (the key of `results`).
 #   (#KernelBootstrapV0/INT)

@@ -19,6 +19,10 @@ stderr) and ends with `--json`. `KERNEL` means `{{COMMAND}}`.
    write) holding the goal VERBATIM, never paraphrased or shell-quoted:
    `{"goal": "<$ARGUMENTS>", "caller": {"id": "user", "kind": "human"},
    "scope": {"workspace_id": "<project name>", "repository_root": "<absolute project root>"}}`
+   Do NOT add `requested_output_schema`: the kernel works out what kind of answer the goal
+   needs. Set it only when the user explicitly asks for a decision
+   (`leafcutter.decision_report.v1`), an evidence lookup (`leafcutter.evidence_bundle.v1`) or
+   ideas (`leafcutter.options.v1`).
 2. Run `KERNEL run --input-file <that file> --json`. Never put the goal in the command line.
 
 ## 2. Route on the envelope `status` (exit code 0)

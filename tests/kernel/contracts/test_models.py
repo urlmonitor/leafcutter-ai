@@ -183,8 +183,16 @@ class TestTaskInput(unittest.TestCase):
 
     def test_defaults(self) -> None:
         task = self._input()
-        self.assertEqual(task.requested_output_schema, "leafcutter.decision_report.v1")
+        # None means "the caller did not choose": intake classifies the goal (was: silently
+        # decision_report, which made every evidence or ideas goal unsupported).
+        self.assertIsNone(task.requested_output_schema)
         self.assertEqual(task.permissions, ["read_repo"])
+
+    def test_an_explicit_output_schema_is_kept_and_still_validated(self) -> None:
+        task = self._input(requested_output_schema="leafcutter.evidence_bundle.v1")
+        self.assertEqual(task.requested_output_schema, "leafcutter.evidence_bundle.v1")
+        with self.assertRaises(ValidationError):
+            self._input(requested_output_schema="leafcutter.unknown.v1")
 
     def test_relative_repository_root_rejected(self) -> None:
         with self.assertRaises(ValidationError):
@@ -248,6 +256,9 @@ if __name__ == "__main__":
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 22:00 [python-coder]: test_defaults now expects `requested_output_schema` to be
+#   None (the caller did not choose; intake classifies the goal) instead of the old silent
+#   decision_report default it pinned. (#KernelBootstrapV0/INTENT)
 # - 2026-09-30 22:00 [python-coder]: Covers the ADR-053 proposal/approval track so both the LLM
 #   and human routes for missing criteria remain expressible. (#KernelBootstrapV0/P1)
 # ====================================================================

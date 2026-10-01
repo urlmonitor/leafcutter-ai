@@ -24,6 +24,11 @@
     "min_confidence": 0.5,
     "on_insufficient_context": "human"
   },
+  "intent": {
+    "min_selected_probability": 0.7,
+    "min_confidence": 0.5,
+    "max_clarifications": 2
+  },
   "decision": {
     "sufficiency_threshold": 0.8,
     "satisfies_threshold": 0.8,

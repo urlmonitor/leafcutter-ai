@@ -205,10 +205,21 @@ class TestHumanClarification(unittest.IsolatedAsyncioTestCase):
         packet, run_id = out.interrupts[0].value, out.value["run_id"]
         answer = _submission(packet, run_id, kind=ActorKind.HUMAN,
                              schema=schema_ids.HUMAN_ANSWER, response={"free_text": "No idea"})
-        final = (await rig.resume(graph, config, answer)).value
+        out = await rig.resume(graph, config, answer)
+        # an answered question that still does not route gets ONE improved follow-up (not a
+        # repeat: it quotes the answer and offers the eligible abilities as choices) ...
+        follow_up = out.interrupts[0].value
+        self.assertNotEqual(follow_up["id"], packet["id"])
+        self.assertIn("No idea", follow_up["question"])
+        self.assertTrue(follow_up["choices"])
+        again = _submission(follow_up, run_id, kind=ActorKind.HUMAN,
+                            schema=schema_ids.HUMAN_ANSWER, response={"free_text": "Still none"})
+        final = (await rig.resume(graph, config, again)).value
+        # ... and after the second answer the run ends with a plain message, never looping
         self.assertEqual(final["outcome"].status, RunStatus.BLOCKED)
-        self.assertTrue(any("no_progress" in t for t in final["outcome"].limitations))
-        self.assertEqual(rig.jev.call_count, 2)
+        self.assertTrue(any(t.startswith("unclear_request: ") for t in final["outcome"].limitations))
+        self.assertFalse(any("no_progress" in t for t in final["outcome"].limitations))
+        self.assertEqual(rig.jev.call_count, 3)
 
 
 if __name__ == "__main__":
@@ -218,6 +229,10 @@ if __name__ == "__main__":
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 22:00 [python-coder]: The "second unanswerable clarification" test pinned an
+#   answered question ending in `no_progress`; an answer now gets one improved follow-up and the
+#   run blocks with a plain `unclear_request` only after the second answer.
+#   (#KernelBootstrapV0/INTENT)
 # - 2026-09-30 23:55 [python-coder]: A rejected resume now waits inside the node, so its
 #   rejection event shows in the final state after the valid answer, not while still paused.
 #   (#KernelBootstrapV0/P6)

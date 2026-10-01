@@ -162,7 +162,8 @@ class ArtifactStorePort(Protocol):
 def aggregate_gaps(observations: list[CapabilityGap]) -> list[CapabilityGap]:
     """Merge observations by gap_key into one gap each.
 
-    occurrence_count sums, first_seen/last_seen take the min/max, example_run_ids keeps at most
+    occurrence_count sums, created_at/first_seen/last_seen take the min/min/max (so the aggregate
+    never claims a later first sighting than its earliest observation), example_run_ids keeps at most
     five distinct run ids in first-seen order, and the newest observation supplies the rest.
 
     Args:
@@ -187,6 +188,7 @@ def aggregate_gaps(observations: list[CapabilityGap]) -> list[CapabilityGap]:
         lasts = [g.last_seen for g in group if g.last_seen]
         merged.append(newest.model_copy(update={
             "occurrence_count": sum(g.occurrence_count for g in group),
+            "created_at": min(g.created_at for g in group),
             "example_run_ids": examples,
             "first_seen": min(firsts) if firsts else None,
             "last_seen": max(lasts) if lasts else None,
@@ -197,6 +199,9 @@ def aggregate_gaps(observations: list[CapabilityGap]) -> list[CapabilityGap]:
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 22:00 [python-coder]: The aggregate's created_at is the earliest observation's, not
+#   the newest one's, so the envelope and the store agree on when a gap was first seen.
+#   (#KernelBootstrapV0/INTENT)
 # - 2026-09-30 22:00 [python-coder]: Ports are synchronous; RunNotFound lives here and is
 #   re-exported by service.py so persistence never imports the service layer.
 #   (#KernelBootstrapV0/P1)

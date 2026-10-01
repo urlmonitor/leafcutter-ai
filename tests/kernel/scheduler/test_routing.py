@@ -114,7 +114,10 @@ class TestNoneAndLowConfidence(unittest.IsolatedAsyncioTestCase):
         _, _, state = await rig.start()
         self.assertEqual(state["status"], RunStatus.WAITING_HUMAN)
         head = state["interactions"][state["interaction_queue"][0]]
-        self.assertIn("Which approach or capability", head.question)
+        self.assertIn("I am not sure how to handle this request", head.question)
+        self.assertEqual([c.id for c in head.choices], ["decide.a", "decide.b"])
+        self.assertNotIn(".?", head.question)
+        self.assertEqual(rig.gap_store.observations, [])  # no gap before the human answered
         self.assertEqual(len(rig.executors["decide.a"].invocations), 0)
 
 
@@ -174,6 +177,10 @@ if __name__ == "__main__":
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 22:00 [python-coder]: The human-policy test pinned the old fixed-template question
+#   ("Which approach or capability should handle ...") with no choices; it now expects the plain
+#   question, the eligible abilities as choices and no gap before the answer.
+#   (#KernelBootstrapV0/INTENT)
 # - 2026-09-30 22:40 [python-coder]: Low-confidence tests use policy `block` so the assertion
 #   is the outcome itself; the `human` policy has its own test. (#KernelBootstrapV0/P4)
 # ====================================================================

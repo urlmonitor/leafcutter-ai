@@ -133,6 +133,7 @@ class GapType(StrEnum):
     PROVIDER_FAILURE = "provider_failure"
     PERMISSION = "permission"
     AMBIGUOUS = "ambiguous"
+    OUT_OF_DOMAIN = "out_of_domain"
 
 
 class FallbackOutcome(StrEnum):
@@ -248,6 +249,9 @@ class ObservabilityStatus(StrEnum):
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 22:00 [python-coder]: GapType.OUT_OF_DOMAIN records a request that is not about
+#   software engineering in this repository; it is not a build opportunity (spec section 14: only
+#   true capability gaps are). (#KernelBootstrapV0/INTENT)
 # - 2026-09-30 22:00 [python-coder]: Enum values follow design part 2 exactly; extra enums
 #   (ActorKind, SourceKind, ...) replace string literals so ALL_MODELS can allowlist them for
 #   msgpack serde. (#KernelBootstrapV0/P1)

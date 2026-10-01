@@ -161,7 +161,13 @@ class Rig:
                                 source_path="test", descriptors=self.descriptors)
 
     def task_input(self, goal: str = "Decide the cache store", **extra: Any) -> TaskInput:
-        """Return a TaskInput whose scope is an existing absolute directory."""
+        """Return a TaskInput whose scope is an existing absolute directory.
+
+        The caller's contract is explicit (`decision_report`) unless a test overrides it: these
+        rigs pin routing, merge and guard behaviour, not the intake answer-kind classification
+        (which has its own tests).
+        """
+        extra.setdefault("requested_output_schema", schema_ids.DECISION_REPORT)
         scope = make_scope(Path(tempfile.gettempdir()))
         return TaskInput(goal=goal, caller=Actor(id="tester", kind=ActorKind.HOST), scope=scope,
                          permissions=list(self.permissions), **extra)
@@ -207,6 +213,9 @@ def event_kinds(state: dict[str, Any]) -> list[str]:
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 22:00 [python-coder]: The rig's TaskInput names `decision_report` explicitly: the
+#   old silent default is now classified at intake, and these tests pin what happens after the
+#   contract is known. (#KernelBootstrapV0/INTENT)
 # - 2026-09-30 22:40 [python-coder]: Executors are registered as instances behind a factory so
 #   tests can inspect exactly which invocations each capability received.
 #   (#KernelBootstrapV0/P4)

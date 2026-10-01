@@ -33,12 +33,14 @@ from kernel.contracts import (
     WorkItemStatus,
     canonical_json,
     new_id,
-    schema_ids,
     sha256_hex,
 )
 from kernel.contracts.work import Binding
 from kernel.observability.tracer import TraceState
 from kernel.registry.eligibility import filter_candidates
+from kernel.intent.classify import KIND_SCHEMA
+from kernel.intent.questions import capability_question, repeated_message, unclear_message
+from kernel.intent.step import IntentStep
 from kernel.interaction.formulation import (
     FORMULATE_CAPABILITY,
     apply_wording,
@@ -46,19 +48,9 @@ from kernel.interaction.formulation import (
     formulation_proposal,
 )
 from kernel.scheduler import guards
-from kernel.scheduler.context import (
-    KernelRuntime,
-    constraint_texts,
-    run_corr,
-    sequential_node,
-)
+from kernel.scheduler.context import KernelRuntime, constraint_texts, run_corr, sequential_node
 from kernel.scheduler.merge import Draft, child_outcomes, create_children, plan_proposals
-from kernel.scheduler.routing import (
-    RouteEntry,
-    RouteResult,
-    deterministic_result,
-    route_semantic,
-)
+from kernel.scheduler.routing import RouteEntry, RouteResult, deterministic_result, route_semantic
 from kernel.scheduler.state import KernelState
 
 HUMAN_CAPABILITY = "kernel.human"
@@ -111,7 +103,7 @@ def build_invocation(draft: Draft, state: KernelState, item: WorkItem, binding: 
                            correlation=corr))
 
 
-class _Router:
+class _Router(IntentStep):
     """One routing pass: collects decisions, applies them to a Draft and builds the plan."""
 
     def __init__(self, state: KernelState, runtime: Runtime[KernelRuntime]) -> None:
@@ -123,17 +115,8 @@ class _Router:
         self.invocations: dict[str, CapabilityInvocation] = {}
         self.assessments: dict[str, RoutingAssessment] = {}
         self.scope_rev = _scope_revision(state)
-
-    def _clarifications(self, item: WorkItem) -> list[str]:
-        """Return the human answers already given for this item's clarification children."""
-        texts: list[str] = []
-        for ref in sorted({*item.child_ids, *item.dependency_ids}):
-            child = self.draft.items.get(ref)
-            result = self.draft.results.get(child.result_ref) if child and child.result_ref else None
-            payload = result.output_payload if result and result.output_payload else {}
-            if payload.get("free_text") or payload.get("choice_id"):
-                texts.append(str(payload.get("free_text") or f"choice {payload['choice_id']}"))
-        return texts
+        self.task_update: Any = None
+        self.gaps: dict[str, Any] = {}
 
     def _set(self, item: WorkItem, status: WorkItemStatus, *limits: str, **changes: Any) -> None:
         """Change an item's status and append limitation texts."""
@@ -142,6 +125,8 @@ class _Router:
 
     def _dispatch(self, item: WorkItem, binding: Binding, routing_ref: str | None) -> None:
         """Create the invocation and move the item to DISPATCHED (native) or WAITING."""
+        if item.continuation is not None and item.continuation.capability_id == ROUTER_CAPABILITY:
+            item = self.draft.put_item(item, continuation=None)  # the router's wait is over
         all_invocations = len(self.state.get("invocations", {})) + len(self.invocations)
         invocation = build_invocation(self.draft, self.state, item, binding, all_invocations,
                                      self.ctx.trace)
@@ -196,13 +181,18 @@ class _Router:
                               self.cfg.limits, self.scope_rev)
         if not plan.accepted:
             return False
-        children = create_children(self.draft, item, plan.accepted)
+        self._wait_on(item, create_children(self.draft, item, plan.accepted))
+        return True
+
+    def _wait_on(self, item: WorkItem, children: list[str], linked: list[str] | None = None
+                 ) -> None:
+        """Park the item on child requests with the router continuation (resumed when done)."""
         continuation = Continuation(capability_id=ROUTER_CAPABILITY,
                                     capability_version=KERNEL_CAP_REV, state={},
                                     resume_reason="children_done")
         self.draft.put_item(item, status=WorkItemStatus.WAITING, continuation=continuation,
-                            child_ids=[*item.child_ids, *children])
-        return True
+                            child_ids=[*item.child_ids, *children],
+                            dependency_ids=sorted({*item.dependency_ids, *(linked or [])}))
 
     def _dispatch_human(self, item: WorkItem) -> None:
         """Human requests are fixed control flow: no routing, straight to an interaction."""
@@ -213,17 +203,8 @@ class _Router:
                           execution_mode=ExecutionMode.HOST_HANDOFF)
         self._dispatch(item, binding, None)
 
-    def _clarify(self, item: WorkItem) -> None:
-        """Ask a human to clarify an unroutable request (insufficient_context policy: human)."""
-        request = self.draft.request_of(item)
-        subject = request.goal or request.question or "the request"
-        question = f"Which approach or capability should handle: {subject}?"
-        proposal = RequestProposal(
-            kind=RequestKind.HUMAN, goal=f"Clarify routing of: {subject}", question=question,
-            payload_schema=schema_ids.HUMAN_QUESTION_REQUEST,
-            payload={"question": question, "free_text_allowed": True,
-                     "why_research_cannot_settle": "routing had insufficient context"},
-            requested_output_schema=schema_ids.HUMAN_ANSWER)
+    def _park(self, item: WorkItem, proposal: RequestProposal) -> bool:
+        """Ask a human `proposal` and park the item until it is answered; False when blocked."""
         plan = plan_proposals(self.draft, item, [proposal], self.cfg.limits, self.scope_rev)
         linked_open = [i for i in plan.linked if self.draft.items[i].status
                        not in guards.TERMINAL_STATUSES]
@@ -231,16 +212,32 @@ class _Router:
             code = plan.rejected[0][1]
             self._set(item, WorkItemStatus.BLOCKED, f"{code}: clarification could not be requested")
         elif not plan.accepted and not linked_open:
-            self._set(item, WorkItemStatus.BLOCKED,
-                      "no_progress: clarification already requested without new information")
+            self._set(item, WorkItemStatus.BLOCKED, repeated_message())
         else:
-            children = create_children(self.draft, item, plan.accepted)
-            continuation = Continuation(capability_id=ROUTER_CAPABILITY,
-                                        capability_version=KERNEL_CAP_REV,
-                                        state={}, resume_reason="children_done")
-            self.draft.put_item(item, status=WorkItemStatus.WAITING, continuation=continuation,
-                                child_ids=[*item.child_ids, *children],
-                                dependency_ids=sorted({*item.dependency_ids, *plan.linked}))
+            self._wait_on(item, create_children(self.draft, item, plan.accepted), plan.linked)
+            return True
+        return False
+
+    def _unclear(self, entry: RouteEntry, result: RouteResult) -> None:
+        """Insufficient context: ask a human once more (with choices) or end plainly.
+
+        A gap is recorded only when the request ends unresolved, never before the human answered.
+        """
+        item = self.draft.items[entry.item_id]
+        answers = self.answers_of(item)
+        if self.cfg.routing.on_insufficient_context != "human":
+            self._set(item, WorkItemStatus.BLOCKED,
+                      f"insufficient_context: {', '.join(result.reason_codes)}")
+        elif len(answers) >= self.cfg.intent.max_clarifications:
+            self._set(item, WorkItemStatus.BLOCKED, unclear_message())
+        else:
+            task = self.state["task"]
+            goal = task.original_goal if item.id == task.root_work_item_id else (
+                entry.request.goal or entry.request.question or "the request")
+            if self._park(item, capability_question(goal, entry.report.semantic_candidates,
+                                                    answers[-1] if answers else None)):
+                return
+        self.plan["gap"].append(item.id)
 
     def _record(self, entry: RouteEntry, result: RouteResult) -> RoutingAssessment:
         """Persist the RoutingAssessment for an entry."""
@@ -283,21 +280,21 @@ class _Router:
             self._set(item, status, f"{code}: {codes}", routing_ref=ref)
             self.draft.progress = True
         else:
-            self.plan["gap"].append(item.id)
             self.draft.put_item(item, routing_ref=ref)
-            if self.cfg.routing.on_insufficient_context == "human":
-                self._clarify(self.draft.items[item.id])
-            else:
-                self._set(self.draft.items[item.id], WorkItemStatus.BLOCKED,
-                          f"insufficient_context: {', '.join(result.reason_codes)}")
+            self._unclear(entry, result)
 
     async def run(self) -> dict[str, Any]:
         """Route the whole agenda and return the state update."""
         state, draft = self.state, self.draft
+        await self.resolve_intent()
+        root_id = state["task"].root_work_item_id
+        bound = (self.task_update or state["task"]).intent in KIND_SCHEMA
         entries: list[RouteEntry] = []
         for item_id in state.get("agenda", []):
             item = draft.items[item_id]
             request = draft.request_of(item)
+            if item.status is not WorkItemStatus.READY:
+                continue
             if item.binding is not None:
                 self._dispatch_bound(item, item.binding)
             elif request.kind is RequestKind.HUMAN:
@@ -307,8 +304,11 @@ class _Router:
                                            state.get("permissions", []), draft.budgets, self.cfg,
                                            scope=state["task"].scope,
                                            operation=request.operation)
-                entries.append(RouteEntry(item.id, request, report, self._clarifications(item)))
-        results = {e.item_id: deterministic_result(e.report) for e in entries}
+                entries.append(RouteEntry(item.id, request, report,
+                                          [a.text for a in self.answers_of(item)],
+                                          intent_bound=bound and item.id == root_id))
+        results = {e.item_id: deterministic_result(e.report, e.intent_bound)
+                   for e in entries}
         semantic = [e for e in entries if results[e.item_id] is None]
         if semantic:
             routed, calls = await route_semantic(
@@ -332,6 +332,10 @@ class _Router:
                                  - draft.budgets.work_items_created) // native}
         update = draft.update()
         update.update(invocations=self.invocations, routing=self.assessments, dispatch=self.plan)
+        if self.task_update is not None:
+            update["task"] = self.task_update
+        if self.gaps:
+            update["gaps"] = self.gaps
         return update
 
 
@@ -365,6 +369,11 @@ def _packet(state: KernelState, invocation_id: str, shares: dict[str, int]) -> d
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 22:00 [python-coder]: The root's answer kind is resolved before routing (IntentStep
+#   mixin), clarification is `_park` + `_unclear` (choices, one follow-up, a gap only when the
+#   request ends unresolved), and the router continuation is built in one place. It is dropped
+#   when the item is bound: a clarification answer must not reach the capability as one of its
+#   own answers. (#KernelBootstrapV0/INTENT)
 # - 2026-10-01 20:00 [python-coder]: Routing usage is no longer truncated to the call count: each
 #   Jev call contributes exactly one usage record (see routing.py). (#KernelBootstrapV0/FIXB)
 # - 2026-09-30 22:30 [python-coder]: Every route branch (including "nothing dispatchable")

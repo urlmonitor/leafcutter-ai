@@ -126,6 +126,36 @@
       "title": "HostConfig",
       "type": "object"
     },
+    "IntentConfig": {
+      "additionalProperties": false,
+      "description": "Thresholds for the intake answer-kind classification and the clarification cap.",
+      "properties": {
+        "max_clarifications": {
+          "minimum": 0,
+          "title": "Max Clarifications",
+          "type": "integer"
+        },
+        "min_confidence": {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Min Confidence",
+          "type": "number"
+        },
+        "min_selected_probability": {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Min Selected Probability",
+          "type": "number"
+        }
+      },
+      "required": [
+        "min_selected_probability",
+        "min_confidence",
+        "max_clarifications"
+      ],
+      "title": "IntentConfig",
+      "type": "object"
+    },
     "JevConfig": {
       "additionalProperties": false,
       "description": "Jev provider settings.",
@@ -537,6 +567,9 @@
     "host": {
       "$ref": "#/$defs/HostConfig"
     },
+    "intent": {
+      "$ref": "#/$defs/IntentConfig"
+    },
     "jev": {
       "$ref": "#/$defs/JevConfig"
     },
@@ -570,6 +603,7 @@
     "paths",
     "limits",
     "routing",
+    "intent",
     "decision",
     "research",
     "retrieval",

@@ -83,6 +83,14 @@ class RoutingConfig(_Section):
     on_insufficient_context: Literal["human", "block"]
 
 
+class IntentConfig(_Section):
+    """Thresholds for the intake answer-kind classification and the clarification cap."""
+
+    min_selected_probability: Probability
+    min_confidence: Probability
+    max_clarifications: int = Field(ge=0)
+
+
 class DecisionConfig(_Section):
     """Decision-graph thresholds."""
 
@@ -180,6 +188,7 @@ class KernelConfig(_Section):
     paths: PathsConfig
     limits: LimitsConfig
     routing: RoutingConfig
+    intent: IntentConfig
     decision: DecisionConfig
     research: ResearchConfig
     retrieval: RetrievalConfig
@@ -288,6 +297,9 @@ def write_config_schema(path: Path) -> None:
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 22:00 [python-coder]: Added the `intent` section (answer-kind classification
+#   thresholds and the cap on clarification questions per request) so no threshold is hard-coded
+#   in the intake logic. (#KernelBootstrapV0/INTENT)
 # - 2026-10-01 16:45 [python-coder]: A non-UTF-8 file is a ConfigError like bad JSON; the CLI
 #   maps that to exit 5 with a JSON error instead of a traceback. (#KernelBootstrapV0/FIXC)
 # - 2026-09-30 23:59 [python-coder]: Added jev.transport and limits.max_scheduler_iterations

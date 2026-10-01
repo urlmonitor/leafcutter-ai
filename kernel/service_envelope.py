@@ -15,9 +15,9 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import Any
 
-from kernel.contracts.capability import ErrorInfo
+from kernel.contracts.capability import ErrorInfo, Usage
 from kernel.contracts.enums import ObservabilityStatus, RunStatus
-from kernel.contracts.run import RunEnvelope, TraceRefs, UsageSummary
+from kernel.contracts.run import CapabilityGap, RunEnvelope, TraceRefs, UsageSummary
 from kernel.interaction import pending_packet
 from kernel.observability.tracer import TraceState
 from kernel.persistence.base import RunRecord
@@ -39,20 +39,38 @@ def effective_status(record: RunRecord, values: Mapping[str, Any]) -> RunStatus:
 
 
 def _usage(values: Mapping[str, Any]) -> UsageSummary:
-    """Summarise the budget counters (tokens stay unknown: the kernel does not sum them)."""
+    """Summarise the budget counters; token totals are the known ones (None while unknown)."""
     budgets = values.get("budgets")
     if budgets is None:
         return UsageSummary()
     nothing_known = budgets.cost_unknown_calls > 0 and budgets.cost_usd_known == 0.0
+    jev = [Usage(provider="jev", calls=budgets.jev_calls, input_tokens=budgets.input_tokens,
+                 output_tokens=budgets.output_tokens)] if budgets.jev_calls else []
     return UsageSummary(jev_calls=budgets.jev_calls, host_operations=budgets.host_operations,
+                        input_tokens=budgets.input_tokens, output_tokens=budgets.output_tokens,
                         cost_usd_known=None if nothing_known else budgets.cost_usd_known,
-                        cost_unknown_calls=budgets.cost_unknown_calls)
+                        cost_unknown_calls=budgets.cost_unknown_calls, usage=jev)
+
+
+def reconcile_gaps(run_gaps: list[CapabilityGap], stored: list[CapabilityGap]
+                   ) -> list[CapabilityGap]:
+    """Return the run's gaps as the gap store aggregates them (one entry per gap key).
+
+    The state holds this run's observation (stamped with this process's time); the store holds
+    the aggregate that kept the original first sighting and the summed occurrences. A gap the
+    store does not know (a failed write) is shown as observed.
+    """
+    by_key = {gap.gap_key: gap for gap in stored}
+    shown: dict[str, CapabilityGap] = {}
+    for gap in run_gaps:
+        shown.setdefault(gap.gap_key, by_key.get(gap.gap_key, gap))
+    return list(shown.values())
 
 
 def build_envelope(record: RunRecord, values: Mapping[str, Any], *,
                    trace: TraceState | None, observability: ObservabilityStatus,
-                   diagnostics: list[str] | None = None, report_path: str | None = None
-                   ) -> RunEnvelope:
+                   diagnostics: list[str] | None = None, report_path: str | None = None,
+                   stored_gaps: list[CapabilityGap] | None = None) -> RunEnvelope:
     """Build the envelope for a run.
 
     Args:
@@ -63,6 +81,8 @@ def build_envelope(record: RunRecord, values: Mapping[str, Any], *,
         diagnostics: Extra limitation lines (for example a tripped recursion limit).
         report_path: Absolute path of the rendered report; replaces the artifact name in
             `report_ref` so a client can open it without knowing the run layout.
+        stored_gaps: The gap store's aggregated gaps; the envelope shows those for this run's gap
+            keys so it agrees with the store (first sighting, occurrence count).
 
     Returns:
         RunEnvelope: A valid envelope; waiting statuses carry their packet, terminal ones none.
@@ -84,7 +104,8 @@ def build_envelope(record: RunRecord, values: Mapping[str, Any], *,
         evidence_ids=sorted(values.get("evidence", {})),
         open_questions=list(outcome.open_questions) if outcome else [],
         pending_interaction=pending_packet(values) if waiting else None,
-        limitations=limitations, gaps=list(values.get("gaps", {}).values()),
+        limitations=limitations,
+        gaps=reconcile_gaps(list(values.get("gaps", {}).values()), stored_gaps or []),
         usage_summary=_usage(values), errors=errors,
         trace_refs=TraceRefs(trace_id=shown.trace_id if shown else None,
                              trace_url=shown.trace_url if shown else None,
@@ -100,6 +121,9 @@ def _failure_errors(diagnostics: list[str] | None) -> list[ErrorInfo]:
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 22:00 [python-coder]: The envelope shows the gap store's aggregate for each gap key
+#   of the run instead of the in-run observation: a repeated need reported this run's resume time
+#   as its first sighting while the store kept the original. (#KernelBootstrapV0/INTENT)
 # - 2026-10-01 16:50 [python-coder]: When every call's cost is unknown the envelope reports
 #   cost_usd_known as null, not 0.0 (Rev 3 section 16, unknown billing); a partly known cost
 #   keeps its sum plus cost_unknown_calls. (#KernelBootstrapV0/P10)

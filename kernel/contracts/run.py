@@ -83,6 +83,10 @@ class CapabilityGap(PersistedModel):
     scope_component_ids: list[str] = Field(default_factory=list)
     registry_snapshot_hash: str | None = None
     candidates_considered: list[str] = Field(default_factory=list)
+    #: Why each considered capability could not serve the request (`capability_id: reason_code`).
+    candidate_exclusions: dict[str, str] = Field(default_factory=dict)
+    #: Readable form of the need for titles; `normalized_need` stays the dedup identity.
+    need_title: str = ""
     why_insufficient: str = ""
     occurrence_count: int = Field(default=1, ge=1)
     example_run_ids: list[str] = Field(default_factory=list, max_length=MAX_EXAMPLE_RUNS)
@@ -170,6 +174,10 @@ class RunEnvelope(KernelModel):
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 22:00 [python-coder]: CapabilityGap gains `candidate_exclusions` (reason per
+#   considered capability) and `need_title` (readable text for titles); both are additive with
+#   defaults so stored observations still load, and neither enters the gap key.
+#   (#KernelBootstrapV0/INTENT)
 # - 2026-09-30 22:00 [python-coder]: compute_gap_key lives with the gap contract so P4 and P9
 #   share one dedup definition. (#KernelBootstrapV0/P1)
 # ====================================================================

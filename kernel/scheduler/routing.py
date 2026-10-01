@@ -44,6 +44,8 @@ class RouteEntry:
     request: RequestBody
     report: EligibilityReport
     clarifications: list[str] = field(default_factory=list)
+    #: True for a root whose answer kind was classified: one eligible candidate is then enough.
+    intent_bound: bool = False
 
 
 @dataclass
@@ -61,9 +63,18 @@ class RouteResult:
     usage: list[Usage] = field(default_factory=list)
 
 
-def deterministic_result(report: EligibilityReport) -> RouteResult | None:
-    """Return the outcome fixed by eligibility alone, or None when Jev must choose."""
+def deterministic_result(report: EligibilityReport, intent_bound: bool = False
+                         ) -> RouteResult | None:
+    """Return the outcome fixed by eligibility alone, or None when Jev must choose.
+
+    A root whose answer kind was already classified (`intent_bound`) has one eligible candidate
+    for the contract it resolved to; asking Jev again whether that single candidate fits would
+    only add a second chance to refuse a request the classification already accepted.
+    """
     hint = report.outcome_hint
+    if hint == "needs_semantic" and intent_bound and len(report.eligible) == 1:
+        return RouteResult(RoutingOutcome.SELECTED, selected=report.eligible[0].id,
+                           reason_codes=["intent_bound"])
     if hint == "selected":
         return RouteResult(RoutingOutcome.SELECTED, selected=report.selected_id,
                            reason_codes=["deterministic"])
@@ -194,6 +205,9 @@ async def route_semantic(jev: JevPort, entries: list[RouteEntry], *, goal: str,
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 22:00 [python-coder]: A classified root with exactly one eligible candidate is
+#   selected deterministically (reason `intent_bound`); the answer-kind classification already
+#   was the bounded semantic choice (ADR-053: deterministic first). (#KernelBootstrapV0/INTENT)
 # - 2026-10-01 20:00 [python-coder]: A chunk's usage rides on its first entry only, so the
 #   flattened usage of a route pass holds exactly one record per Jev call; copying it onto every
 #   entry and truncating to the call count counted one call twice and lost another.

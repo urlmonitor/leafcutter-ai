@@ -108,7 +108,8 @@ class TaskInput(KernelModel):
     goal: str = Field(min_length=1, max_length=4000)
     caller: Actor
     scope: Scope
-    requested_output_schema: str = schema_ids.DECISION_REPORT
+    #: None means "not chosen by the caller": intake classifies the goal (Rev 3 section 7.11).
+    requested_output_schema: str | None = None
     input_payload_schema: str | None = None
     input_payload: dict[str, JsonValue] | None = None
     initial_evidence: list[EvidenceInput] = Field(default_factory=list)
@@ -118,7 +119,8 @@ class TaskInput(KernelModel):
     @model_validator(mode="after")
     def _check_schemas(self) -> TaskInput:
         """Output schema must be registered; payload and its schema id come together."""
-        if self.requested_output_schema not in schema_ids.KNOWN_SCHEMA_IDS:
+        if (self.requested_output_schema is not None
+                and self.requested_output_schema not in schema_ids.KNOWN_SCHEMA_IDS):
             fail(f"unknown requested_output_schema {self.requested_output_schema}")
         if (self.input_payload is None) != (self.input_payload_schema is None):
             fail("input_payload and input_payload_schema must be set together")
@@ -146,6 +148,10 @@ class Task(PersistedModel):
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 22:00 [python-coder]: TaskInput.requested_output_schema is optional (None = the
+#   caller did not choose) so intake can tell an explicit choice from the old silent default and
+#   classify the goal; Task.intent records how the root contract was resolved.
+#   (#KernelBootstrapV0/INTENT)
 # - 2026-09-30 22:00 [python-coder]: Component-id validation is a pure helper
 #   (unknown_component_ids) instead of a model validator, so contracts stay free of file IO.
 #   (#KernelBootstrapV0/P1)

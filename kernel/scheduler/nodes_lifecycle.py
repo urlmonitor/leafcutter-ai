@@ -45,6 +45,13 @@ from kernel.contracts import (
     validate_semantics,
 )
 from kernel.contracts.evidence import EvidenceInput
+from kernel.intent.report_text import (
+    can_do_hint,
+    has_plain_reason,
+    output_sections,
+    stop_explanation,
+)
+from kernel.intent.roots import initial_contract
 from kernel.observability.correlation import deterministic_trace_id
 from kernel.observability.tracer import TraceState
 from kernel.scheduler import guards
@@ -94,13 +101,14 @@ async def intake(state: KernelState, runtime: Runtime[KernelRuntime]) -> dict[st
     root_task_id = new_id("task")
     stamps = {"created_at": now, "updated_at": now, "created_seq": 0}
     has_payload = task_input.input_payload is not None
+    output_schema, intent = initial_contract(task_input.requested_output_schema,
+                                             task_input.input_payload_schema)
     request = Request(
         id=new_id("req"), kind=RequestKind.CAPABILITY, goal=task_input.goal,
         payload_schema=task_input.input_payload_schema if has_payload
         else schema_ids.GOAL_REQUEST,
         payload=dict(task_input.input_payload) if has_payload else {"goal": task_input.goal},
-        requested_output_schema=task_input.requested_output_schema,
-        context_refs=sorted(evidence), **stamps)
+        requested_output_schema=output_schema, context_refs=sorted(evidence), **stamps)
     revision = task_input.scope.revision
     request = request.model_copy(update={"dedup_key": guards.request_dedup_key(
         request, revision.model_dump() if revision else None)})
@@ -109,7 +117,7 @@ async def intake(state: KernelState, runtime: Runtime[KernelRuntime]) -> dict[st
     task = Task(id=root_task_id, root_task_id=root_task_id, original_goal=task_input.goal,
                 scope=task_input.scope, evidence_refs=sorted(evidence),
                 constraint_refs=[c.id for c in task_input.constraints],
-                requested_output_schema=task_input.requested_output_schema,
+                requested_output_schema=output_schema, intent=intent,
                 root_work_item_id=root.id, **stamps)
     events = [new_event(run_id, now, "run.started", task_input.goal[:200], task_id=root_task_id,
                         work_item_id=root.id)]
@@ -196,6 +204,8 @@ def decide_outcome(state: KernelState) -> RunOutcome:
         limitations = list(dict.fromkeys(limitations))
     else:
         limitations = list(dict.fromkeys([*limitations, *_child_diagnostics(state, root)]))
+    if status is RunStatus.BLOCKED and not has_plain_reason(limitations):
+        limitations.append(can_do_hint())  # a bare "blocked" says nothing; name what works
     questions = [str(q) for q in (payload or {}).get("open_questions", [])]
     return RunOutcome(status=status, output=output, limitations=limitations, errors=errors,
                       open_questions=questions, diagnostics=diagnostics)
@@ -205,7 +215,9 @@ def render_report_md(state: KernelState, outcome: RunOutcome) -> str:
     """Render the human-readable report from a template (no model-written text)."""
     lines = [f"# Run report {state['run_id']}", "", f"- Status: {outcome.status.value}",
              f"- Task: {state['task'].original_goal}", ""]
+    lines += stop_explanation(outcome.status.value, outcome.limitations)
     if outcome.output is not None:
+        lines += output_sections(outcome.output.schema_id, outcome.output.payload)
         lines += ["## Output", "", f"Schema: `{outcome.output.schema_id}`", "", "```json",
                   json.dumps(outcome.output.payload, indent=2, sort_keys=True), "```", ""]
     for title, entries in (("Limitations", outcome.limitations),
@@ -263,6 +275,9 @@ __all__ = ["IntakeError", "decide_outcome", "finalize", "intake", "render_report
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 22:00 [python-coder]: A blocked run without a plain limitation gets a `can_do`
+#   hint, and report.md explains blocked and partial stops and renders evidence and idea outputs
+#   readably (ideas as proposals) before the unchanged JSON block. (#KernelBootstrapV0/INTENT)
 # - 2026-10-01 00:30 [python-coder]: `run.finalized` is a tracer event inside the finalize span
 #   (status and counts only; limitation text stays in run.json). (#KernelBootstrapV0/OBS)
 # - 2026-09-30 22:30 [python-coder]: A root that completed but fails the completion contract

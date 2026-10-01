@@ -38,8 +38,9 @@ from kernel.contracts import (
     compute_gap_key,
 )
 from kernel.contracts.work import Binding
+from kernel.intent.gap_quality import exclusion_map, rank_closest, readable_need
 from kernel.persistence.gap_store import observation_id, publish_gap
-from kernel.registry.eligibility import MVP_SIDE_EFFECTS
+from kernel.registry.fallback import find_fallback
 from kernel.scheduler import guards
 from kernel.scheduler.context import KernelRuntime, run_corr
 from kernel.scheduler.guards import normalize_text
@@ -85,16 +86,19 @@ def build_gap(state: KernelState, item: WorkItem, request: Request,
     need = normalized_need(request)
     component_ids = list(state["task"].scope.component_ids)
     eligible = assessment.eligible_candidate_ids if assessment else []
-    excluded = assessment.excluded if assessment else []
-    considered = sorted({*eligible, *(e.capability_id for e in excluded)})
+    exclusions = exclusion_map(assessment.excluded if assessment else [])
+    closest = rank_closest(eligible, exclusions)
     return CapabilityGap(
         id=observation_id(state["run_id"], item.id, item.attempts, gap_type), created_at=now, updated_at=now, first_seen=now, last_seen=now,
         gap_key=compute_gap_key(gap_type, request.kind, request.payload_schema,
                                 request.requested_output_schema, need, component_ids),
         gap_type=gap_type, goal=request.goal or request.question or "", normalized_need=need,
+        need_title=readable_need(request.goal or request.question or need),
         request_kind=request.kind, input_schema=request.payload_schema,
         output_schema=request.requested_output_schema, scope_component_ids=component_ids,
-        registry_snapshot_hash=state["registry"].content_hash, candidates_considered=considered,
+        registry_snapshot_hash=state["registry"].content_hash,
+        candidates_considered=closest,
+        candidate_exclusions={c: exclusions[c] for c in closest if c in exclusions},
         why_insufficient=", ".join(assessment.reason_codes) if assessment else "",
         example_run_ids=[state["run_id"]], fallback_outcome=outcome, **extra)
 
@@ -103,36 +107,17 @@ def fallback_candidate(state: KernelState, ctx: KernelRuntime, draft: Draft, req
                        ) -> tuple[CapabilityDescriptor | None, str]:
     """Return the host operation that may serve an unsupported request, or (None, reason).
 
-    Fallback is bounded: fallback must be enabled, the request must not be human, and the
-    candidate must be an enabled, available, bound host_handoff capability that accepts the
-    request kind, produces the requested output schema, needs only granted permissions, has no
-    forbidden side effects, fits the scope and leaves host-operation budget.
+    The bounded-fallback rules live in `kernel.registry.fallback`; this adds the run's state.
     """
-    if not (ctx.config.host.enabled and ctx.config.host.fallback_on_no_match):
-        return None, "host fallback is disabled"
-    if request.kind is RequestKind.HUMAN:
-        return None, "human questions are never routed to a host fallback"
-    scope_ids = set(state["task"].scope.component_ids)
-    granted = set(state.get("permissions", []))
-    left = guards.host_operations_available(draft.budgets, ctx.config.limits)
-    for d in sorted(state["registry"].descriptors, key=lambda x: x.id):
-        ops = d.cost_hints.host_operations if d.cost_hints.host_operations is not None else 1
-        usable = (d.execution_mode is ExecutionMode.HOST_HANDOFF and d.enabled
-                  and d.availability.status != "unavailable"
-                  and request.kind in d.request_kinds
-                  and request.requested_output_schema in d.produces_schemas
-                  and ctx.bindings.has(d.binding, d.version)
-                  and set(d.permissions_required) <= granted
-                  and d.side_effect_class in MVP_SIDE_EFFECTS
-                  and (not d.components or bool(set(d.components) & scope_ids)))
-        if usable and ops <= left:
-            return d, ""
-    return None, "no approved host operation produces the requested output"
+    return find_fallback(state["registry"], ctx.bindings, ctx.config,
+                         state.get("permissions", []), state["task"].scope.component_ids, request,
+                         guards.host_operations_available(draft.budgets, ctx.config.limits))
 
 
 def _block_no_capability(draft: Draft, item: WorkItem, reason: str = "") -> None:
     """Block the item because nothing can serve it (and, if given, why fallback was not used)."""
-    text = "no_capability: no registered capability can serve this request"
+    text = ("no_capability: this kernel has no capability that can serve this request "
+            "(it can decide between options, find evidence in this repository and generate ideas)")
     draft.put_item(item, status=WorkItemStatus.BLOCKED,
                    limitations=[*item.limitations, f"{text}; {reason}" if reason else text])
     draft.progress = True
@@ -175,6 +160,12 @@ def _record_with_events(ctx: KernelRuntime, state: KernelState, item: WorkItem,
         events.append(new_event(state["run_id"], now, "gap.record_failed", gap.gap_key,
                                 work_item_id=item.id))
     return stored or gap, events
+
+
+def record_observation(ctx: KernelRuntime, state: KernelState, item: WorkItem,
+                       gap: CapabilityGap, now: Any) -> tuple[CapabilityGap, list[RunEvent]]:
+    """Publish one observation made outside the gap node (a decline); return it with its events."""
+    return _record_with_events(ctx, state, item, gap, now)
 
 
 def _record(ctx: KernelRuntime, state: KernelState, draft: Draft, item: WorkItem,
@@ -357,6 +348,10 @@ def settle_gap_outcomes(state: KernelState, ctx: KernelRuntime, draft: Draft, *,
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 22:00 [python-coder]: build_gap records ranked closest capabilities with a reason
+#   each and a readable need title; `record_observation` lets the route node record a decline's
+#   observation; the bounded fallback rules moved to kernel.registry.fallback to keep this module
+#   under the size limit. (#KernelBootstrapV0/INTENT)
 # - 2026-10-01 20:00 [python-coder]: Observation ids are deterministic (run, work item, attempt,
 #   gap type) instead of random, because the stores dedupe on the id: a node that re-executes
 #   after publishing but before its checkpoint committed must not double-count an occurrence.

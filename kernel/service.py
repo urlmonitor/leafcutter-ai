@@ -283,7 +283,16 @@ class KernelService:
             record = self._persist(session, values, bool(diagnostics))
         return build_envelope(record, values, trace=session.trace,
                               observability=session.observability, diagnostics=diagnostics,
-                              report_path=self._report_path(session.run_id, values))
+                              report_path=self._report_path(session.run_id, values),
+                              stored_gaps=self._stored_gaps())
+
+    def _stored_gaps(self) -> list[CapabilityGap]:
+        """Return the gap store's aggregated gaps (empty, with a warning, when it cannot be read)."""
+        try:
+            return self._env.gap_store.load_gaps()
+        except OSError:
+            logger.warning("could not read the gap store for the envelope", exc_info=True)
+            return []
 
     def _report_path(self, run_id: str, values: Mapping[str, Any]) -> str | None:
         """Return the absolute path of the Markdown report (else the JSON one) when it exists."""
@@ -316,6 +325,8 @@ class KernelService:
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 22:00 [python-coder]: The envelope is built with the gap store's aggregates so its
+#   gaps agree with `list_gaps` (first sighting, occurrences). (#KernelBootstrapV0/INTENT)
 # - 2026-10-01 14:00 [python-coder]: Every run.json write goes through a compare-and-update on
 #   a fresh read (`_persist`), and a cancellation always wins over a blocked diagnostic: the
 #   old read-modify-write could overwrite a cancel committed by another process between the two
