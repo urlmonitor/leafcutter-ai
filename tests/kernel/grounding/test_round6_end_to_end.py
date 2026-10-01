@@ -248,7 +248,12 @@ class TestTheBudgetIsReserved(Round6Case):
 
 
 class TestDesignCriteriaEndAtOnce(Round6Case):
-    """Round 6 criteria, scripted with the probabilities Jev gave, end in the ranking at once."""
+    """Round 6 criteria, scripted with the probabilities Jev gave: one targeted round, then ranked.
+
+    Round F: a design decision no longer ranks right after its first assessment; it runs ONE
+    targeted research round on what its options claim and cite (here the option a human added)
+    and then ranks.
+    """
 
     kind_probability = 0.45  # between 1 - 0.7 and 0.7: Jev said "evidence-answerable"
 
@@ -263,7 +268,10 @@ class TestDesignCriteriaEndAtOnce(Round6Case):
         self.assertEqual(states[0]["design_reason"], "design_judgement")
         kinds = {c["kind_source"] for c in states[0]["criteria"] if c["id"].startswith("crit.")}
         self.assertEqual(kinds, {"rule"})
-        self.assertEqual(self.purposes().get("research.assess", 0), 1)  # only the grounding round
+        asked = [k for k in states[0]["requested"] if k.endswith(":design_round")]
+        self.assertEqual(len(asked), 1)  # the targeted round ran once, before the ranking
+        # research.assess: the grounding round and the one design round, no more
+        self.assertEqual(self.purposes().get("research.assess", 0), 2)
 
 
 class TestAnEvidenceRunCostsOneRerankCallPerNeed(Round6Case):

@@ -33,8 +33,13 @@ def _judged(item: Evidence, relevance: float) -> Evidence:
 
 
 def _config(**research: Any) -> KernelConfig:
-    """Return the default config with research overrides."""
+    """Return the default config with research overrides (no synthesis unless asked for).
+
+    These tests are about the coverage a bundle reports; a partial need asks for a host synthesis
+    since round F (tests/kernel/decision_research), which they do not want to answer.
+    """
     base = load_kernel_config()
+    research.setdefault("allow_synthesis", False)
     return base.model_copy(update={"research": base.research.model_copy(update=research)})
 
 
@@ -65,7 +70,7 @@ class TestAnswerJudgement(AnswerCase):
     """A topical hit that does not answer leaves the need partial."""
 
     def test_a_need_the_evidence_does_not_answer_is_partial_with_a_limitation(self) -> None:
-        done, bundle = self.finish(answer_by_need={"need.prior_decisions": 0.15})
+        done, bundle = self.finish(_config(), answer_by_need={"need.prior_decisions": 0.15})
         self.assertEqual(bundle.coverage["need.prior_decisions"], NeedStatus.PARTIAL)
         self.assertEqual(bundle.coverage["need.internal_principles"], NeedStatus.SATISFIED)
         text = " ".join(bundle.limitations)

@@ -49,6 +49,7 @@ from tests.kernel.capabilities.support import (
     evidence_item,
     invocation,
     no_git,
+    no_synthesis_config,
     resume,
     script_research,
 )
@@ -194,8 +195,8 @@ class TestPlanning(ResearchCase):
 class TestCollect(ResearchCase):
     """collect and evaluate."""
 
-    def plan(self):
-        ctx = self.ctx()
+    def plan(self, config=None):
+        ctx = self.ctx(config)
         inv = self.goal()
         return inv, ctx, self.run_research(inv, ctx)
 
@@ -242,7 +243,7 @@ class TestCollect(ResearchCase):
         self.assertEqual(self.bundle(done).contradictions, [])
 
     def test_unsatisfied_required_need_makes_the_bundle_partial(self) -> None:
-        inv, ctx, waiting = self.plan()
+        inv, ctx, waiting = self.plan(no_synthesis_config())
         ev_a = evidence_item("docs/a.md#L1-L2", "Use sqlite.")
         ev_b = evidence_item("CLAUDE.md#L1-L1", "Roll back.", CATS.INTERNAL_PRINCIPLES)
         kids = self.children(ctx, waiting, ev_a, ev_b, cov_b=NeedStatus.OPEN)
@@ -254,7 +255,7 @@ class TestCollect(ResearchCase):
         payload = ResearchRequestPayload(question=QUESTION, expected_coverage="best_effort"
                                          ).model_dump(mode="json")
         inv = invocation("research", schema_ids.RESEARCH_REQUEST, payload)
-        ctx = self.ctx()
+        ctx = self.ctx(no_synthesis_config())
         waiting = self.run_research(inv, ctx)
         ev_a = evidence_item("docs/a.md#L1-L2", "Use sqlite.")
         ev_b = evidence_item("CLAUDE.md#L1-L1", "Roll back.", CATS.INTERNAL_PRINCIPLES)

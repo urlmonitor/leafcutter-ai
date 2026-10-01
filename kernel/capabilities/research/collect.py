@@ -218,6 +218,26 @@ def apply_answers(ctx: ExecutionContext, cont: ResearchContinuation, out: Collec
             f"(answer judgement {p:.2f}, below {bar})")
 
 
+def thin_coverage(cont: ResearchContinuation, out: Collected) -> str | None:
+    """Return why the collected evidence does not answer the question by itself, or None.
+
+    Evidence is thin when a planned need is only partial (the topic matched, or the answer
+    judgement said the question is not answered) or still open, or when no need is satisfied at
+    all. Jev's `evaluable` answer alone flipped the same goal between nine findings (0.68) and
+    none (0.78) while no need was satisfied. Nothing is thin when there is no evidence: a
+    synthesis over nothing has nothing to say.
+    """
+    if not out.evidence:
+        return None
+    states = {n.id: out.coverage.get(n.id, NeedStatus.UNAVAILABLE) for n in cont.needs}
+    open_needs = [i for i, st in states.items() if st in (NeedStatus.PARTIAL, NeedStatus.OPEN)]
+    if open_needs:
+        return f"need(s) {', '.join(open_needs)} only partly covered or not answered"
+    if not any(st is NeedStatus.SATISFIED for st in states.values()):
+        return "no need is satisfied"
+    return None
+
+
 def record_contradiction(ctx: ExecutionContext, out: Collected, probability: float) -> None:
     """Record a bundle-wide contradiction (preserved, never averaged) when above threshold.
 
@@ -237,6 +257,9 @@ def record_contradiction(ctx: ExecutionContext, out: Collected, probability: flo
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 [python-coder]: thin_coverage names why evidence cannot answer by itself (a partial
+#   or open need, or no satisfied need) so the research graph asks the host to synthesize on
+#   coverage as well as on Jev's `evaluable` judgement. (#KernelV01/F)
 # - 2026-10-01 [python-coder]: Coverage is answer-aware: relevance only says a hit is on topic,
 #   so each satisfied need adds one `answers.<need>` noul to the existing assess batch and drops
 #   to partial (with a limitation) below research.answer_threshold. The evidence offered per need

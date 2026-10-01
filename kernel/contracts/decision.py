@@ -153,6 +153,9 @@ class Decision(PersistedModel):
     unresolved_risks: list[str] = Field(default_factory=list)
     #: The human who approved the decision, when a human settled it (a design decision).
     approved_by: str | None = None
+    #: Why the kernel stopped researching and ranked the options for a human (design_judgement,
+    #: no_progress, research_cap, budget_reserve); null while the decision is not a design one.
+    design_reason: str | None = None
 
     def differs_from(self, other: Decision) -> bool:
         """True if the two records differ in anything but the clock (one decision, two statuses)."""
@@ -212,6 +215,8 @@ class RoutingAssessment(PersistedModel):
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 [python-coder]: Decision.design_reason records why the options were ranked for a
+#   human; it was only in the continuation state (the record showed null). (#KernelV01/F)
 # - 2026-10-01 [python-coder]: Criterion.kind (evidence_answerable by default) with kind_source,
 #   OptionRanking and Decision.approved_by support the design-decision ending: a design
 #   judgement cannot be settled by research, so a human chooses among ranked options.

@@ -249,3 +249,24 @@ to `open_interactions`, which builds a `HostWorkRequest` (part 5, packet).
 - **Retrieval selection.** YAML front matter is never a section when a body exists. A file is ranked by one number: content hits plus `retrieval.path_match_weight` per distinctive path word; words in the path of most files and the project's own names (workspace id, folder) are not distinctive. A need is `satisfied` only with `retrieval.satisfied_min_items` items at or above the coverage bar or one item at `satisfied_strong_threshold`. A candidate that repeats at least `retrieval.self_reference_ratio` of the goal's five-word runs, and is not explicitly cited, is a review of the asking run: its relevance is multiplied by `self_reference_penalty`. An explicit locator must look like a repository path and name an existing file (`-NNN.yaml` is dropped with a debug note); `docs/components.json` and `docs/build-dataflow.json` are the `repo.registries` source.
 - **Query noise.** With hints, the need's own wording (category template filler) is not searched and does not drive path matching.
 - **Partial coverage is visible.** A completed evidence bundle puts partial needs, the answer-aware notes and the synthesis unknowns in its result limitations (so the envelope shows them) and report.md gains Coverage and Unknowns sections; key evidence is ordered by judged relevance.
+
+## As built (V0.1 round F)
+
+Round E made research cheap but the first rerank batch filled with registry JSON, ticket comments and AC yaml while the files that answer sat unjudged. Round F measures this first (`tests/kernel/retrieval/test_retrieval_benchmark.py`, an offline benchmark of the lexical stage over the real checkout: the first batch of 20 per case, plus the real rerank loop run with a scripted oracle) and then fixes it.
+
+- **Ordering (N1).** Candidates are ordered by a BM25-style score (`retrieval/scoring.py`), never by raw term hits: a term's weight is its rarity over the sections scanned, a section's length is measured against the mean of its own source (`retrieval.bm25_k1`, `bm25_b`), a file named after the topic adds `path_match_weight` rarity units (`run_store.py` for "store"), a registry's `nodes` section is cut into windows of `max_section_lines`, and a JSON object holding one collection is split by entry and pinned when the goal speaks its vocabulary (`registry_pin_min_terms`). The score only orders the pre-filter (spec section 17); Jev still judges relevance. The pool keeps `pool_fair_share` best candidates of every source (when they score `pool_fair_min_ratio` of the best), at most `pool_sections_per_file` sections of a file in the first batch, and sorts that batch by score; "strongest not judged" uses the same score.
+- **Deeper reranking (N3, R2).** A need judges further batches (up to `rerank_max_batches`) until it has enough on-topic evidence: it would count as satisfied AND `rerank_min_items` items passed the keep bar. It stops when the best unjudged candidate scores below `rerank_stop_ratio` of the judged ones, or at the budget. Research gives each retrieval child `max_rerank_batches` (the Jev calls beyond the plan and the decision's reserve, shared evenly: `call_costs.batch_allowance`), so a decision-driven round cannot spend into the reserve.
+- **Synthesis on coverage (N2).** Research asks the host to synthesize when a planned need is partial, open or unanswered, or no need is satisfied, as well as when `evaluable` is low, if a work item is left; evidence is never synthesized when there is none.
+- **Review of the asking run (R3).** A document that reviews a kernel run of this goal is recognised per document (a `trace-review` file name, or a quote of the goal beside a run or trace id): it is demoted like a goal repeat unless cited and does not take a place of the first batch.
+- **Smaller fixes.** The thin-coverage note names its need (N4); a source may carry its own `max_file_bytes` (the registries source reads the 812 KB `docs/build-dataflow.json`) and a file still skipped for size is named once with the remedy (N5).
+- **Benchmark (must-have places in the first batch of 20; judged by the real loop with the oracle):**
+
+| Case | Round E first batch | Round F first batch | Round E judged (calls) | Round F judged (calls) |
+|---|---|---|---|---|
+| goal 5, how the kernel stores decisions | 0 of 3 | 1 of 3 (gap_store.py) | 1 of 3 (2) | 3 of 3 (2) |
+| goal 2, where tests are saved | 1 of 3 | 3 of 3 | 1 of 3 (1) | 3 of 3 (1) |
+| decision records goal | 2 of 4 | 2 of 4 | 2 of 4 (1) | 2 of 4 (1) |
+| thresholds (lessons 18) | 0 of 2 | 1 of 2 | 1 of 2 (3) | 1 of 2 (3) |
+| approval provenance (lessons 16) | 1 of 2 | 2 of 2 | 1 of 2 (1) | 2 of 2 (2) |
+
+  What a lexical score does not reach stays in the fixture as the gap for semantic retrieval: design-3 section Persistence layout (pool position 38), Stage-0 delta part 4 and concept parts 3 and 4 (outside the pool), the default config JSON.

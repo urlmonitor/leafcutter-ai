@@ -20,7 +20,7 @@ from langchain_core.runnables import RunnableConfig
 from langgraph.graph import END, StateGraph
 
 from kernel.capabilities.base import ExecutionContext
-from kernel.capabilities.call_costs import jev_available
+from kernel.capabilities.call_costs import jev_available, work_items_available
 from kernel.capabilities.decision.jev_support import StopCapability
 from kernel.capabilities.research.collect import (
     Judgement,
@@ -29,6 +29,7 @@ from kernel.capabilities.research.collect import (
     collect_outcomes,
     judge,
     record_contradiction,
+    thin_coverage,
 )
 from kernel.capabilities.research.planning import (
     affordable_judgement,
@@ -129,7 +130,9 @@ async def _evaluate(state: ResearchState, config: RunnableConfig) -> dict[str, A
         record_contradiction(ctx, out, judgement.conflict)
     apply_answers(ctx, cont, out, judgement.answers)
     threshold = ctx.config.research.evaluable_threshold
-    enough = judgement.evaluable is not None and judgement.evaluable >= threshold
+    thin = thin_coverage(cont, out)
+    low = judgement.evaluable is not None and judgement.evaluable < threshold
+    enough = judgement.evaluable is not None and not low and thin is None
     if cont.deferred and not cont.deferred_dispatched:
         if not enough:
             return {"usage": usage, "result": waiting_result(
@@ -138,10 +141,28 @@ async def _evaluate(state: ResearchState, config: RunnableConfig) -> dict[str, A
             f"{r.evidence_needs[0].category.value} not consulted: only a host operation can "
             "serve this supporting need and the other evidence was sufficient"
             for r in cont.deferred]
-    if ask and judgement.evaluable is not None and judgement.evaluable < threshold:
-        return {"usage": usage, "result": waiting_result(
-            invocation, cont, [], usage, synthesis=(plan.question, out))}
+    if ask and (low or thin is not None):
+        return _synthesis_or_limit(ctx, invocation, plan, cont, out, usage, thin)
     return {"usage": usage}
+
+
+def _synthesis_or_limit(ctx: ExecutionContext, invocation: CapabilityInvocation, plan: Plan,
+                        cont: ResearchContinuation, out: Collected, usage: list[Usage],
+                        thin: str | None) -> dict[str, Any]:
+    """Ask the host to synthesize the evidence, unless the work-item budget leaves no room.
+
+    The evidence was judged unable to answer directly (Jev's `evaluable`) or thin by coverage (a
+    partial, open or unanswered need, or no satisfied need). A synthesis costs no Jev call but is
+    one more work item; without room for it the run ends with what it has and says why.
+    """
+    left = work_items_available(ctx.budget)
+    if left is not None and left < 1:
+        out.limitations.append(
+            f"evidence is thin ({thin or 'Jev judged it cannot answer directly'}) but the work "
+            "item budget leaves no room for a synthesis")
+        return {"usage": usage}
+    return {"usage": usage, "result": waiting_result(
+        invocation, cont, [], usage, synthesis=(plan.question, out))}
 
 
 def _source_ids(request: RequestProposal) -> list[str]:
@@ -227,6 +248,11 @@ class ResearchExecutor:
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 [python-coder]: Synthesis is requested on coverage as well as on `evaluable`: when
+#   a planned need is partial, open or unanswered, or no need is satisfied, the host synthesizes
+#   (work-item budget permitting); the same goal flipped between nine findings (evaluable 0.68)
+#   and none (0.78) with no need satisfied either time. Held-back host needs are dispatched on
+#   the same test. (#KernelV01/F)
 # - 2026-10-01 [python-coder]: Planning is trimmed to the needs the budget affords beside the
 #   requester's reserve, and the judgement is skipped (with a limitation) when it would eat into
 #   that reserve, so research can never starve the decision's final assessment. (#KernelV01/E)

@@ -16,10 +16,12 @@ ARCHITECTURE: Pure functions of (Working, Assessment, DecisionConfig). Ranking a
 
 from __future__ import annotations
 
+import re
 from collections.abc import Mapping
 
 from kernel.capabilities.decision.assess import Assessment
-from kernel.capabilities.decision.state import Working
+from kernel.capabilities.decision.option_context import cited_refs
+from kernel.capabilities.decision.state import ADDED_OPTION_PREFIX, Working
 from kernel.config import DecisionConfig
 from kernel.contracts.decision import Criterion, CriterionKind, OptionRanking
 from kernel.contracts.enums import Priority
@@ -30,7 +32,13 @@ RESEARCH_CAP = "research_cap"
 #: The Jev budget cannot fund another research round plus the reserved final assessment.
 BUDGET_RESERVE = "budget_reserve"
 DESIGN_REASONS = (DESIGN_JUDGEMENT, NO_PROGRESS, RESEARCH_CAP, BUDGET_RESERVE)
+#: Reason (and request key suffix) of the one targeted research round a design decision runs
+#: before it ranks its options.
+DESIGN_ROUND = "design_round"
 _ROUND = 4
+#: A cited reference that names a repository file (a path with an extension).
+_PATH_REF = re.compile(r"(?:[\w.\-]+/)*[\w.\-]+\.(?:py|md|json|ya?ml|toml|sql|ts|js|txt|cfg|ini|sh)"
+                       r"(?:#\S+|::[\w.]+)?")
 
 
 def score_key(criterion_id: str, option_id: str | None = None) -> str:
@@ -140,6 +148,35 @@ def design_reason(work: Working, a: Assessment, cfg: DecisionConfig) -> str | No
     return DESIGN_JUDGEMENT
 
 
+def design_round_done(work: Working) -> bool:
+    """True if the decision already asked for its one targeted research round before ranking."""
+    return any(k.startswith("research:") and k.endswith(f":{DESIGN_ROUND}")
+               for k in work.cont.requested)
+
+
+def has_targets(work: Working) -> bool:
+    """True if there is something specific to look for: what the options claim and cite.
+
+    That is a gap a synthesis named, the claims of an option a human added, or a file an option
+    cites that is not among the evidence yet. A round that would only repeat the goal's own
+    query finds nothing new and is not worth the calls.
+    """
+    if work.cont.gaps or any(o.id.startswith(ADDED_OPTION_PREFIX) for o in work.usable_options):
+        return True
+    fetched = {e.source.locator.split("#")[0].split("::")[0] for e in work.evidence}
+    refs = (r for o in work.usable_options for r in cited_refs(o) if _PATH_REF.fullmatch(r))
+    return any(r.split("#")[0].split("::")[0] not in fetched for r in refs)
+
+
+def design_round_due(work: Working, cfg: DecisionConfig) -> bool:
+    """True if a design decision should run its targeted research round before ranking.
+
+    Once, while the research-round cap has room and the options give something to aim at.
+    """
+    return (not design_round_done(work) and research_rounds(work) < cfg.max_research_rounds
+            and has_targets(work))
+
+
 def loop_reason(work: Working, a: Assessment, cfg: DecisionConfig) -> str | None:
     """Return the reason to stop researching because research is not converging, or None."""
     if no_progress(work, current_scores(work, a), cfg):
@@ -152,6 +189,12 @@ def loop_reason(work: Working, a: Assessment, cfg: DecisionConfig) -> str | None
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 [python-coder]: A design decision runs ONE targeted research round (option claims,
+#   synthesis gaps, cited files not yet evidence) before it ranks: round 7 reached the ranked
+#   question in 7 calls on 3 evidence items, and the user's own option showed "no evidence cited"
+#   because the round that fetches `kernel/contracts/decision.py` never ran. design_round_due
+#   keeps the research-round cap; the budget gate still decides whether the round fits beside
+#   the reserve. (#KernelV01/F)
 # - 2026-10-01 [python-coder]: A design-judgement ending does not fire while an option passes
 #   every required criterion: the live ADR-settled goal (scores 0.98 and 0.96) was ranked for a
 #   human once Jev classified its criteria as properties of the options. (#KernelV01/E)

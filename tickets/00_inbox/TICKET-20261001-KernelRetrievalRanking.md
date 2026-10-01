@@ -18,7 +18,7 @@ tags:
   - benchmark
 last_updated: 2026-10-01
 agents:
-  python-coder: needed
+  python-coder: signed_off
   commit: needed
 ---
 
@@ -52,4 +52,27 @@ Decision ordering (round 7 reached the ranked question in 7 calls but on 3 evide
 - Embeddings or any mandatory BM25 gate (spec section 17).
 - A structured query mode for the AC store (a separate ticket).
 
+## Sign-offs
+- [x] python-coder — 2026-10-01 14:11
+- [ ] commit
+
 ## Comments
+
+### 2026-10-01 14:11 — python-coder (status: ok)
+feedback-id: fb_2026-10-01_0711575f
+completion_manifest:
+  benchmark_built_first_and_round_e_recorded: true
+  n1_bm25_style_pool_ordering: true
+  n2_synthesis_on_coverage: true
+  n3_deeper_rerank_within_budget_and_reserve: true
+  n4_coverage_note_names_its_need: true
+  n5_per_source_byte_limit_and_named_oversized_file: true
+  r1_one_targeted_design_round_before_ranking: true
+  r2_evidence_floor_and_registry_pin: true
+  r3_review_of_the_asking_run_demoted: true
+  r4_decision_record_design_reason: true
+  must_haves_the_lexical_score_cannot_reach:
+    result: false
+    reason: "design-3 section Persistence layout (pool 38), Stage-0 delta part 4 and concept parts 3 and 4 (outside the 60-candidate pool) and config/kernel_config.default.json are not reached in the first batch by any lexical ordering tried; run_store.py is at 28 and is judged in batch 2."
+    remediation: "Semantic retrieval or a query expansion (store to persistence) is a separate change; the fixture keeps their pool positions as the gap."
+Benchmark first (commit 03810b4b), then the ranking (a9bd8105) and the research and decision ordering (next commit). First-batch must-haves 4 of 14 before, 9 of 14 now; judged by the real loop with an oracle 6 of 14 before, 11 of 14 now; full kernel suite 1290 passed, 7 live skipped; live suite 7 of 7.

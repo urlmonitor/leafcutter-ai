@@ -27,6 +27,15 @@ FIXED_ASSESSMENT_QUESTIONS = 3
 JUDGEMENT_BASE_QUESTIONS = 2
 
 
+def _available(budget: object, resource: str) -> int | None:
+    """Return what the budget still allows of a resource, or None when it cannot say."""
+    probe = getattr(budget, "available", None)
+    if not callable(probe):
+        return None
+    left = probe(resource)
+    return None if left is None else max(0, int(left))
+
+
 def jev_available(budget: object) -> int | None:
     """Return the Jev calls the budget still allows, or None when it cannot say.
 
@@ -36,11 +45,12 @@ def jev_available(budget: object) -> int | None:
     Returns:
         int | None: Calls left, or None for an unbounded or non-reporting budget.
     """
-    probe = getattr(budget, "available", None)
-    if not callable(probe):
-        return None
-    left = probe("jev")
-    return None if left is None else max(0, int(left))
+    return _available(budget, "jev")
+
+
+def work_items_available(budget: object) -> int | None:
+    """Return the work items the budget still allows, or None when it cannot say."""
+    return _available(budget, "work_item")
 
 
 def provider_calls(questions: int, cfg: KernelConfig) -> int:
@@ -75,6 +85,20 @@ def _categories(cfg: KernelConfig) -> list[str]:
     return [c.value for c in cfg.research.category_descriptions]
 
 
+def batch_allowance(left: int | None, reserve: int, needs: int, cfg: KernelConfig) -> int | None:
+    """Return the rerank batches each of `needs` retrieval children may judge, or None (no limit).
+
+    The first batch of every need and the round's judgement are planned for (`afford_needs`); the
+    calls left beyond them and beyond the requester's `reserve` buy further batches, shared evenly
+    between the needs, so deeper reranking can never spend the decision's final assessment.
+    """
+    if left is None or needs <= 0:
+        return None
+    base = needs * rerank_calls(cfg) + judgement_calls(needs, cfg)
+    spare = max(0, left - reserve - base)
+    return 1 + spare // (needs * rerank_calls(cfg))
+
+
 def targeted_need_count(human_added: int, gaps: int, cfg: KernelConfig) -> int:
     """Return how many targeted needs a research round builds (claims and gaps, capped)."""
     return min(cfg.research.max_targeted_needs, human_added + gaps)
@@ -105,6 +129,10 @@ def assessment_reserve(criteria: int, options: int, unclassified: int, cfg: Kern
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 [python-coder]: batch_allowance turns the Jev calls left beyond the plan and the
+#   requester's reserve into extra rerank batches per need, so a need may judge deeper without
+#   touching the reserve; work_items_available reads the work-item share the same way.
+#   (#KernelV01/F)
 # - 2026-10-01 [python-coder]: One cost model shared by the decision gate, research planning and
 #   the Jev call guard, derived entirely from config; decision-driven research plans exactly its
 #   mandated needs (no Jev planning call), so a round's cost is known before it starts.

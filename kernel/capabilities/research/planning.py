@@ -20,7 +20,12 @@ from pathlib import Path
 from pydantic import JsonValue
 
 from kernel.capabilities.base import ExecutionContext
-from kernel.capabilities.call_costs import jev_available, judgement_calls, rerank_calls
+from kernel.capabilities.call_costs import (
+    batch_allowance,
+    jev_available,
+    judgement_calls,
+    rerank_calls,
+)
 from kernel.capabilities.decision.jev_support import ask_jev, make_batch, noul_question
 from kernel.capabilities.research.state import Plan
 from kernel.capabilities.research.targeting import (
@@ -169,17 +174,19 @@ def retrieval_operation(payload: dict, sources: list[SourceConfig]) -> str:
 
 
 def _child(need: EvidenceNeed, source_ids: list[str], sources: list[SourceConfig],
-           query: NeedQuery) -> RequestProposal:
+           query: NeedQuery, batches: int | None = None) -> RequestProposal:
     """Build the retrieval child request for one need, naming the operation it needs.
 
-    Query hints go to every child; exact locators only to a native one (a host reads no files).
+    Query hints go to every child; exact locators only to a native one (a host reads no files);
+    `batches` caps the rerank batches the child may judge (what the budget affords).
     """
     operation = retrieval_operation({"source_ids": source_ids}, sources)
     native = operation == "retrieve"
     holders = locator_sources(query.locators, sources) if native else []
     payload = RetrievalRequestPayload(
         need=need, source_ids=list(dict.fromkeys([*source_ids, *holders])),
-        query_hints=query.hints, explicit_locators=query.locators if native else [])
+        query_hints=query.hints, explicit_locators=query.locators if native else [],
+        max_rerank_batches=batches)
     return RequestProposal(
         kind=RequestKind.EVIDENCE, question=need.question, evidence_needs=[need],
         operation=operation,
@@ -225,6 +232,7 @@ def resolve_sources(ctx: ExecutionContext, needs: list[EvidenceNeed], plan: Plan
     root = Path(ctx.scope.repository_root)
     own = {i: _checked(root, q) for i, q in need_queries(ctx, plan).items()}
     shared = _checked(root, default_query(plan, ctx.config.retrieval.max_explicit_locators))
+    batches = batch_allowance(jev_available(ctx.budget), plan.jev_reserve, len(needs), ctx.config)
     for need in needs:
         candidates = _candidates(ctx, need, plan)
         native, unavailable_reasons = [], []
@@ -240,7 +248,8 @@ def resolve_sources(ctx: ExecutionContext, needs: list[EvidenceNeed], plan: Plan
         if chosen:
             ids = [s.id for s in chosen]
             out.needs.append(need)
-            out.requests.append(_child(need, ids, ctx.config.sources, own.get(need.id, shared)))
+            out.requests.append(_child(need, ids, ctx.config.sources, own.get(need.id, shared),
+                                       batches))
             out.child_map[need.id] = ids
             out.attempted += ids
             continue
@@ -259,6 +268,9 @@ def resolve_sources(ctx: ExecutionContext, needs: list[EvidenceNeed], plan: Plan
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 [python-coder]: Every retrieval child carries `max_rerank_batches` (what the Jev
+#   calls beyond the plan and the requester's reserve afford per need), so deeper reranking stays
+#   within the decision's reserve. (#KernelV01/F)
 # - 2026-10-01 [python-coder]: afford_needs trims the plan to what the budget affords beside the
 #   requester's reserve; explicit locators are checked against the repository before a child
 #   asks for them (a placeholder such as `-NNN.yaml` was requested live). (#KernelV01/E)
