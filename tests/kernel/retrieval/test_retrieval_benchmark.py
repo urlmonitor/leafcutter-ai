@@ -18,22 +18,26 @@ ARCHITECTURE: benchmark_cases.json holds the cases and, per case, the round E ("
     no noisy file pattern exceeds its `max` in the first batch. Must-haves a lexical search does
     not reach stay listed in the fixture (`current.pool_position`) as the gap that semantic
     retrieval, not this score, has to close. The second-domain scenario ("Where should a cache
-    live?") runs on a throwaway repository with noise built to crowd the pool. No Jev, no
-    network, no writes.
+    live?") runs on a throwaway repository with noise built to crowd the pool. Only the files git
+    does not ignore are scored, as in CI. No Jev, no network, no writes.
 """
 
 from __future__ import annotations
 
+import shutil
+import subprocess
 import tempfile
 import unittest
 from pathlib import Path
 from typing import Any
 
 from tests.kernel.retrieval.benchmark_support import (
+    GIT_IGNORED,
     REPO_ROOT,
     BatchResult,
     JudgedResult,
     crowding,
+    is_git_checkout,
     judged_names,
     judged_with_oracle,
     load_cases,
@@ -43,6 +47,7 @@ from tests.kernel.retrieval.benchmark_support import (
 
 CASES = load_cases()
 NOT_A_CHECKOUT = "not a full repository checkout (docs/analysis is missing)"
+NOT_A_GIT_CHECKOUT = "not a git checkout (the benchmark scores only what git does not ignore)"
 CACHE_ADR = ("Decision: the cache lives in process memory with a size cap, because the cached "
              "values are cheap to rebuild and must never outlive a deploy.\n")
 
@@ -74,6 +79,8 @@ class RealCheckout(unittest.TestCase):
         """Share the one run of every case (skipped outside a full checkout)."""
         if not (REPO_ROOT / "docs" / "analysis").is_dir():
             raise unittest.SkipTest(NOT_A_CHECKOUT)
+        if not is_git_checkout(REPO_ROOT):
+            raise unittest.SkipTest(NOT_A_GIT_CHECKOUT)
         cls.results = case_results()
 
 
@@ -184,6 +191,30 @@ class TestSecondDomain(unittest.TestCase):
         self.assertIn("docs/architecture/adrs/ADR-901-cache-location.md", found)
 
 
+class TestCheckoutCorpus(unittest.TestCase):
+    """A git checkout is scored as git sees it: a build's ignored copies (real folders on Windows,
+    symlinks never walked on Linux) cannot move a result on one platform only."""
+
+    def test_an_ignored_build_copy_changes_no_score(self) -> None:
+        if shutil.which("git") is None:
+            self.skipTest("git is not installed")
+        case: dict[str, Any] = {"goal": "Where should a cache live?", "category": "prior_decisions"}
+        with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as tmp:
+            root = Path(tmp)
+            subprocess.run(["git", "init", "-q"], cwd=root, check=True)
+            write(root, ".gitignore", "docs/architecture/adrs/build/\n")
+            write(root, "docs/architecture/adrs/ADR-901-cache-location.md", CACHE_ADR)
+            for n in range(6):
+                write(root, f"docs/analysis/note-{n}.md", f"# Note {n}\nA cache lives, item {n}.\n")
+            before = run_case(case, root=root)
+            for n in range(10):  # what the build's copy fallback leaves in a source root
+                write(root, f"docs/architecture/adrs/build/copy-{n}.md", "cache " * (n + 1) + "\n")
+            after = run_case(case, root=root)
+        self.assertEqual(sum(r.skipped.get(GIT_IGNORED, 0) for r in after.reports), 10)
+        self.assertEqual([(c.locator, c.score) for c in after.pool],
+                         [(c.locator, c.score) for c in before.pool])
+
+
 class TestHarness(unittest.TestCase):
     """The benchmark data is well formed."""
 
@@ -213,6 +244,12 @@ if __name__ == "__main__":
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 [python-coder]: Round F `current` values re-recorded at CI's checkout path after the
+#   checkout-folder fix: tighter positions and crowding, and 3 calls (was 2) for
+#   lessons_approval_provenance; round E baselines unchanged. (#KernelV01/CI)
+# - 2026-10-01 [python-coder]: The real-checkout cases need a git checkout and score only what git
+#   does not ignore; a build's ignored copies are shown to change no score. CI (Linux) and a
+#   Windows worktree disagreed on the same commit. (#KernelV01/CI)
 # - 2026-10-01 [python-coder]: Round F records its results next to round E's: both are ratchets,
 #   the caps are asserted, and the must-haves a lexical score cannot reach (design-3 section
 #   Persistence layout, Stage-0 delta part 4, concept parts 3 and 4, the default config JSON) stay

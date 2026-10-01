@@ -79,13 +79,15 @@
    },
    "current": {
     "round": "F",
+    "note": "re-measured 2026-10-01 at CI's checkout path after the checkout-folder fix (#KernelV01/CI); the earlier round F values came from a `kernel-v01` worktree folder",
     "reached": [
+     "kernel/persistence/run_store.py",
      "kernel/persistence/gap_store.py"
     ],
     "pool_position": {
-     "design-3 section Persistence layout": 38,
-     "kernel/persistence/run_store.py": 28,
-     "kernel/persistence/gap_store.py": 16
+     "design-3 section Persistence layout": 24,
+     "kernel/persistence/run_store.py": 11,
+     "kernel/persistence/gap_store.py": 8
     },
     "crowding": {
      "commit_guardian.json": 0,
@@ -311,6 +313,7 @@
    },
    "current": {
     "round": "F",
+    "note": "re-measured 2026-10-01 at CI's checkout path after the checkout-folder fix (#KernelV01/CI); the earlier round F values came from a `kernel-v01` worktree folder",
     "reached": [
      "kernel/contracts/decision.py (cited)",
      "docs/components.json (filter terms)"
@@ -322,7 +325,7 @@
      "concept part 3 or 4 body": null
     },
     "crowding": {
-     "commit_guardian.json": 1,
+     "commit_guardian.json": 0,
      "agent_registry": 0,
      "test-angles": 0,
      "docs/acceptance-criteria/": 1,
@@ -405,12 +408,13 @@
    },
    "current": {
     "round": "F",
+    "note": "re-measured 2026-10-01 at CI's checkout path after the checkout-folder fix (#KernelV01/CI); the earlier round F values came from a `kernel-v01` worktree folder",
     "reached": [
      "kernel/config.py"
     ],
     "pool_position": {
      "config/kernel_config.default.json": null,
-     "kernel/config.py": 12
+     "kernel/config.py": 7
     },
     "crowding": {
      "commit_guardian.json": 0,
@@ -498,19 +502,20 @@
    },
    "current": {
     "round": "F",
+    "note": "re-measured 2026-10-01 at CI's checkout path after the checkout-folder fix (#KernelV01/CI); the earlier round F values came from a `kernel-v01` worktree folder",
     "reached": [
      "kernel/capabilities/decision/approvals.py",
      "design-4 section Decision capability"
     ],
     "pool_position": {
-     "kernel/capabilities/decision/approvals.py": 6,
-     "design-4 section Decision capability": 15
+     "kernel/capabilities/decision/approvals.py": 5,
+     "design-4 section Decision capability": 14
     },
     "crowding": {
      "commit_guardian.json": 0,
      "agent_registry": 0,
      "test-angles": 0,
-     "docs/acceptance-criteria/": 2,
+     "docs/acceptance-criteria/": 1,
      "tickets/": 0
     },
     "judged": {
@@ -518,7 +523,7 @@
       "kernel/capabilities/decision/approvals.py",
       "design-4 section Decision capability"
      ],
-     "calls": 2
+     "calls": 3
     }
    }
   }
