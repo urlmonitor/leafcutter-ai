@@ -9,12 +9,12 @@ ARCHITECTURE: Uses temp env files and injected environment mappings; values are 
 
 from __future__ import annotations
 
-import logging
 import os
 import tempfile
 import unittest
 from pathlib import Path
 
+from kernel.config import ConfigError
 from kernel.secrets import find_env_file, load_secrets, parse_env_text
 
 
@@ -100,13 +100,13 @@ class TestLoad(unittest.TestCase):
         load_secrets(start_dir=self.dir)
         self.assertEqual(dict(os.environ), before)
 
-    def test_unreadable_env_file_is_ignored_with_path_only_warning(self) -> None:
+    def test_unreadable_explicit_env_file_is_an_error_naming_only_the_path(self) -> None:
+        # Changed by FIXC (R3-6): a NAMED file used to be ignored with a warning, which let the
+        # run fall back to a walked-up .env with other credentials.
         missing = self.dir / "gone.env"
-        with self.assertLogs("kernel.secrets", level=logging.WARNING) as logs:
-            settings = load_secrets(missing, env={}, start_dir=self.dir)
-        self.assertFalse(settings.has_jev())
-        self.assertIn("gone.env", logs.output[0])
-
+        with self.assertRaises(ConfigError) as caught:
+            load_secrets(missing, env={}, start_dir=self.dir)
+        self.assertIn("gone.env", str(caught.exception))
 
 class TestNonDisclosure(unittest.TestCase):
     """Secrets never appear in repr, describe() or serialised dumps."""
