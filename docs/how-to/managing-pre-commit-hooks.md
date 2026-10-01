@@ -4,7 +4,7 @@ description: "Step-by-step guide for enabling, disabling, configuring, and opt-i
 type: how_to
 status: active
 created: 2026-05-28
-last_updated: 2026-09-25
+last_updated: 2026-09-30
 components:
   - build_pipeline
   - ux_prototyping
@@ -160,7 +160,7 @@ Open `leafcutter/templates/scripts/commit_guardian/commit_guardian.json` and:
      `"self_derived"` that does not is named and reported as a failure. An
      entry with no `"change_set_source"` at all is also a reported failure;
      there is no default. See
-     [commit-guardian.md](../architecture/components/commit-guardian.md#recorded-change-set-source-per-entry-change_set_source-ge-120e-2)
+     [commit-guardian-change-set-scoping.md](../architecture/components/commit-guardian-change-set-scoping.md#recorded-change-set-source-per-entry-change_set_source-ge-120e-2)
      for the full field reference.
 
 ### Step 3 — Run build.py
@@ -332,7 +332,7 @@ python3 templates/scripts/commit_guardian/change_set_source.py \
 The last command exits non-zero and names any entry whose `change_set_source`
 is missing, unrecognised, or (for `"self_derived"` entries) not actually
 backed by the shared `_authored_change` source — see
-[commit-guardian.md](../architecture/components/commit-guardian.md#recorded-change-set-source-per-entry-change_set_source-ge-120e-2).
+[commit-guardian-change-set-scoping.md](../architecture/components/commit-guardian-change-set-scoping.md#recorded-change-set-source-per-entry-change_set_source-ge-120e-2).
 
 ---
 
