@@ -14,7 +14,7 @@ from __future__ import annotations
 from datetime import datetime
 
 from kernel.capabilities.retrieval.candidates import Candidate
-from kernel.capabilities.retrieval.repository import cut_at_boundary
+from kernel.capabilities.retrieval.chunking import cut_at_boundary
 from kernel.capabilities.retrieval.rerank import Ranked
 from kernel.contracts.base import content_hash, evidence_id
 from kernel.contracts.enums import EvidenceCategory, SemanticType, SourceKind, Verification

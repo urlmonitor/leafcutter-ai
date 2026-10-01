@@ -123,6 +123,8 @@ class RetrievalRequestPayload(KernelModel):
     source_ids: list[str] = Field(default_factory=list)
     detail: Literal["excerpt", "summary", "locator"] = "excerpt"
     limits: RetrievalLimits = Field(default_factory=RetrievalLimits)
+    #: Exact places to fetch before ranking: `path`, `path#Lx-Ly`, `path#heading`, `path::Symbol`.
+    explicit_locators: list[str] = Field(default_factory=list)
 
 
 class OptionsRequestPayload(KernelModel):

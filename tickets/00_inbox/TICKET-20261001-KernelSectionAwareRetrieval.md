@@ -17,7 +17,7 @@ tags:
   - later-stage
 last_updated: 2026-10-01
 agents:
-  commit: needed
+  commit: signed_off
 ---
 
 # Kernel: section-aware retrieval with multiple windows per file
@@ -55,3 +55,7 @@ measurements rather than mandatory embeddings.
 - Structured-store field queries (a separate ticket).
 
 ## Comments
+
+### 2026-10-01 12:00 — commit (status: ok)
+feedback-id: fb_2026-10-01_a0da0607
+Auto-authorized commit gate: subject "feat(kernel): section-aware chunking, entity-aware size-scaled pre-filter and explicit locators for retrieval (#KernelV01/B)"; staged files: 20 listed kernel/config/docs/tests files plus this ticket.

@@ -147,6 +147,15 @@ class RetrievalConfig(_Section):
     #: Relevance a kept item needs to count towards a need's coverage (items between
     #: `relevance_threshold` and this stay as evidence but leave the need partial).
     coverage_relevance_threshold: Probability
+    #: Sections (headings, top-level keys, top-level defs) returned per file, best first.
+    sections_per_file: int = Field(ge=1)
+    #: Fewest candidates a source may offer when it is small (capped by `max_candidates`).
+    source_candidate_floor: int = Field(ge=1)
+    #: Candidates a source may offer per scanned file (the cap scales with source size, then is
+    #: bounded by `max_candidates`, which is also the overall rerank batch bound).
+    source_candidate_ratio: float = Field(gt=0)
+    #: Most explicit locators fetched per request (`retrieval_request.explicit_locators`).
+    max_explicit_locators: int = Field(ge=0)
 
 
 class SourceConfig(_Section):
