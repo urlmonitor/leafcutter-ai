@@ -1,0 +1,12 @@
+---
+title: "Decision kernel V0.1: design decisions end in a ranked human choice; research finds the right sources (#KernelV01)"
+date: "2026-10-01"
+time: "15:30"
+type: feature
+components: 
+  - decision_kernel
+summary: "Design decisions no longer loop: the kernel classifies criteria, runs one targeted research round within a reserved Jev budget, then ranks the options for a human to choose. Retrieval reads documents by section, fetches cited files exactly and ranks candidates with a length-normalised score, guarded by an offline retrieval benchmark; Jev accounting and tracing status are now honest."
+description: "V0.1 fixes what live dogfood runs of the decision kernel exposed after V0 (#973). Decisions: criteria are classed evidence-answerable or design-judgement, design decisions (and decisions whose scores stall, hit the research-round cap or would eat into the reserved Jev budget) end in a ranked human question whose choice resolves the decision with approved_by; a design decision first runs one bounded targeted research round on its option claims, synthesis gaps and cited files. Research: section-aware chunking (Markdown headings, YAML/JSON keys, Python definitions), explicit locators (path, path#Lx-Ly, path#heading, path::Symbol), goal-first queries with criteria text, answer-aware coverage, synthesis triggered by coverage, a BM25-style length-normalised pool score with per-file caps and fair source shares, deeper rerank until a need has enough evidence, demotion of run-review documents and pinned registries; an offline benchmark over the real checkout (tests/kernel/retrieval/test_retrieval_benchmark.py) ratchets retrieval quality (judged must-haves 6/14 to 11/14). Accounting and tracing: Jev calls are counted per provider call across budget, envelope, usage rows and trace, usage survives a mid-assessment abort, and failed OTLP exports mark the run observability_degraded and spool the lost spans. Also: the user's trace review of the decision-records run (docs/analysis/2026-10-01-kernel-trace-review-decision-records-run.md), the Stage 0 colony-memory docs, and follow-up tickets for gate calibration, compound-goal splitting, goal-constraint checks, trace readability, evidence-route follow-up and ideas grounding. Live: the decision-records goal now reaches the ranked question on real evidence and resolved as decision dec-ef8ddcb79d668a67 (Kernel-contract YAML per decision, approved by the user)."
+---
+
+## Entry
