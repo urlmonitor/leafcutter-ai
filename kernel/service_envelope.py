@@ -76,7 +76,8 @@ def reconcile_gaps(run_gaps: list[CapabilityGap], stored: list[CapabilityGap]
 def build_envelope(record: RunRecord, values: Mapping[str, Any], *,
                    trace: TraceState | None, observability: ObservabilityStatus,
                    diagnostics: list[str] | None = None, report_path: str | None = None,
-                   stored_gaps: list[CapabilityGap] | None = None) -> RunEnvelope:
+                   stored_gaps: list[CapabilityGap] | None = None,
+                   observability_reason: str | None = None) -> RunEnvelope:
     """Build the envelope for a run.
 
     Args:
@@ -89,6 +90,7 @@ def build_envelope(record: RunRecord, values: Mapping[str, Any], *,
             `report_ref` so a client can open it without knowing the run layout.
         stored_gaps: The gap store's aggregated gaps; the envelope shows those for this run's gap
             keys so it agrees with the store (first sighting, occurrence count).
+        observability_reason: Why export is degraded; shown as a limitation line.
 
     Returns:
         RunEnvelope: A valid envelope; waiting statuses carry their packet, terminal ones none.
@@ -97,6 +99,9 @@ def build_envelope(record: RunRecord, values: Mapping[str, Any], *,
     outcome = values.get("outcome")
     waiting = status in (RunStatus.WAITING_HOST, RunStatus.WAITING_HUMAN)
     limitations = [*(outcome.limitations if outcome else []), *(diagnostics or [])]
+    if observability is ObservabilityStatus.DEGRADED:
+        limitations.append(f"observability_degraded: {observability_reason or 'telemetry export failed'}"
+                           "; undelivered observations are in telemetry_spool.jsonl")
     errors = list(outcome.errors) if outcome else []
     if status is RunStatus.FAILED and not errors:
         errors = _failure_errors(diagnostics)
@@ -127,6 +132,8 @@ def _failure_errors(diagnostics: list[str] | None) -> list[ErrorInfo]:
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 [python-coder]: A degraded export adds an `observability_degraded: <reason>` limitation
+#   so the envelope says why telemetry was not delivered. (#KernelV01/C)
 # - 2026-10-01 23:00 [python-coder]: The usage rows come from the per-provider rows the budgets
 #   keep (model id, tokens, known cost, host rows), not from one synthesised Jev row with null
 #   model and cost. (#KernelBootstrapV0/GROUND)

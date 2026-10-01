@@ -17,13 +17,14 @@ from __future__ import annotations
 
 import contextvars
 import logging
-from collections.abc import Callable, Iterator
+from collections.abc import Callable, Iterator, Sequence
 from contextlib import contextmanager
 from pathlib import Path
 from typing import Any
 
 from langfuse import Langfuse, propagate_attributes
 from langfuse.types import TraceContext as LangfuseTraceContext
+from opentelemetry.sdk.trace import ReadableSpan
 from opentelemetry.sdk.trace.export import SpanExporter
 from pydantic import SecretStr
 
@@ -32,6 +33,11 @@ from kernel.contracts.base import CorrelationIds, TraceContext
 from kernel.contracts.capability import Usage
 from kernel.contracts.enums import ObservabilityStatus
 from kernel.observability.correlation import deterministic_trace_id
+from kernel.observability.export_monitor import (
+    DEFAULT_BASE_URL,
+    ObservedSpanExporter,
+    default_langfuse_exporter,
+)
 from kernel.observability.observation_map import observation_type
 from kernel.observability.redaction import Redactor
 from kernel.observability.spool import TelemetrySpool
@@ -207,11 +213,27 @@ class LangfuseTracer:
     def _build_client(self) -> Langfuse:
         """Construct the Langfuse client with the redactor as mask."""
         secrets = self._secrets
+        public_key = _reveal(secrets.langfuse_public_key)
+        secret_key = _reveal(secrets.langfuse_secret_key)
+        delegate = self._span_exporter or default_langfuse_exporter(
+            base_url=secrets.langfuse_base_url or DEFAULT_BASE_URL, public_key=public_key,
+            secret_key=secret_key)
         return Langfuse(
-            public_key=_reveal(secrets.langfuse_public_key),
-            secret_key=_reveal(secrets.langfuse_secret_key),
+            public_key=public_key, secret_key=secret_key,
             base_url=secrets.langfuse_base_url, environment=self._config.environment,
-            release=self._release, mask=self.redactor, span_exporter=self._span_exporter)
+            release=self._release, mask=self.redactor,
+            span_exporter=ObservedSpanExporter(delegate, self.export_failed))
+
+    def export_failed(self, reason: str, spans: Sequence[ReadableSpan]) -> None:
+        """Handle a failed span export (SDK export thread): degrade and spool the lost spans."""
+        self.degrade(f"export failed: {reason}")
+        for span in spans:
+            context = span.get_span_context()
+            self.spool_record("span", span.name, {
+                "trace_id": f"{context.trace_id:032x}" if context else None,
+                "span_id": f"{context.span_id:016x}" if context else None,
+                "start_time": span.start_time, "end_time": span.end_time,
+                "attributes": dict(span.attributes or {}), "export_failure": reason})
 
     def _propagate(self, corr: CorrelationIds) -> Any:
         """Return the propagate_attributes context for session, trace name and tags."""
@@ -348,6 +370,9 @@ class LangfuseTracer:
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 [python-coder]: A failed OTLP export degrades the tracer and spools the lost spans
+#   (via ObservedSpanExporter): the SDK ignores export results, so without the wrapper the
+#   envelope reported ok after a timed-out export. (#KernelV01/C)
 # - 2026-10-02 [python-coder]: mypy: credentials are revealed through a None-safe helper and the trace context is the Langfuse TypedDict (#KernelBootstrapV0/GROUND)
 # - 2026-10-01 16:00 [python-coder]: `status_message` is masked by hand: langfuse 4.16 applies
 #   `mask` to input, output and metadata only. (#KernelBootstrapV0/FIXC)

@@ -1,9 +1,9 @@
 """
 MODULE: kernel.providers.jev_trace
-GOAL: Build and emit the one GENERATION observation of a Jev call through the Tracer port.
+GOAL: Build and emit the GENERATION observation of one Jev provider call through the Tracer port.
 BUSINESS CONTEXT: Langfuse only shows model, usage and cost for generation observations; the
-    LangChain callback path records a Jev call as a usage-less CHAIN. Each assess call must
-    therefore emit a generation carrying purpose, model id, adapter version, token usage
+    LangChain callback path records a Jev call as a usage-less CHAIN. Each provider call (one
+    chunk of an assessment) must therefore emit a generation carrying purpose, model id, adapter version, token usage
     (unknown stays None, never 0), estimated cost, latency and the raw answer distributions
     (design part 5, Rev 3 section 12).
 ARCHITECTURE: Pure payload building plus a single tracer.generation call; the tracer redactor
@@ -32,8 +32,9 @@ def _input_summary(batch: JevBatch, state_chars: int) -> dict[str, Any]:
 
 def emit_generation(tracer: Tracer, batch: JevBatch, *, adapter_version: str,
                     model_name: str | None, state_chars: int, latency_ms: int,
-                    result: JevResult | None = None, error: JevError | None = None) -> None:
-    """Emit the generation for one assess call (success when result is set, else the error).
+                    result: JevResult | None = None, error: JevError | None = None,
+                    extra: dict[str, Any] | None = None) -> None:
+    """Emit the generation for one provider call (success when result is set, else the error).
 
     Args:
         tracer: Tracer receiving the observation (parented to the current span of the caller).
@@ -41,9 +42,10 @@ def emit_generation(tracer: Tracer, batch: JevBatch, *, adapter_version: str,
         adapter_version: Transport identity and version.
         model_name: Configured model, used when the provider did not report one.
         state_chars: Serialised state size (the state itself is not recorded).
-        latency_ms: Wall time of the whole assess call.
+        latency_ms: Wall time of the provider call (all attempts of its chunk).
         result: The normalised result, if the call succeeded.
         error: The raised error, if it failed.
+        extra: Further metadata (chunk position, attempts, calls) merged into the generation.
     """
     meta: dict[str, Any] = {
         "purpose": batch.purpose, "adapter_version": adapter_version, "latency_ms": latency_ms,
@@ -56,6 +58,7 @@ def emit_generation(tracer: Tracer, batch: JevBatch, *, adapter_version: str,
                     input_fingerprint=result.input_fingerprint)
         output = {"answers": {qid: a.model_dump(mode="json")
                               for qid, a in result.answers.items()}}
+    meta.update(extra or {})
     if error is not None:
         meta["error"] = f"{type(error).__name__}: {error}"
     model = (result.model_id if result else None) or model_name or DEFAULT_MODEL_NAME
@@ -67,6 +70,9 @@ def emit_generation(tracer: Tracer, batch: JevBatch, *, adapter_version: str,
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 [python-coder]: One generation per provider call (not per assess), so the number
+#   of generations equals the budget and usage call counts for chunked assessments.
+#   (#KernelV01/C)
 # - 2026-10-01 00:30 [python-coder]: State is summarised, not recorded: traces reference
 #   evidence by fingerprint and size (design part 5: never the full payload), and the state can
 #   be 10k+ characters per call. (#KernelBootstrapV0/OBS)

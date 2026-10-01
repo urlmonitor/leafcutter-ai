@@ -20,8 +20,8 @@ from kernel.providers.base import (
 )
 
 __all__ = [
-    "JevError", "JevInvalidRequest", "JevInvalidResponse", "JevPayloadTooLarge",
-    "JevTransientError", "JevUnavailable",
+    "JevBudgetExhausted", "JevError", "JevInvalidRequest", "JevInvalidResponse",
+    "JevPayloadTooLarge", "JevTransientError", "JevUnavailable",
 ]
 
 
@@ -33,6 +33,14 @@ class JevTransientError(JevError):
         super().__init__(reason)
         self.reason = reason
         self.retry_after_seconds = retry_after_seconds
+
+
+class JevBudgetExhausted(JevUnavailable):
+    """The caller's Jev budget refused a further provider call of a chunked assessment."""
+
+    def __init__(self, reason: str = "jev call budget exhausted") -> None:
+        """Keep the reason as the message."""
+        super().__init__(reason)
 
 
 class JevInvalidRequest(JevError, ValueError):
@@ -47,6 +55,9 @@ class JevInvalidRequest(JevError, ValueError):
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 [python-coder]: JevBudgetExhausted subclasses JevUnavailable so existing callers
+#   (ask_jev, the executor) map it to a provider_unavailable result without new handling.
+#   (#KernelV01/C)
 # - 2026-09-30 23:00 [python-coder]: Port errors are re-exported from base.py, not redefined;
 #   only adapter-internal errors live here. (#KernelBootstrapV0/P3)
 # ====================================================================
