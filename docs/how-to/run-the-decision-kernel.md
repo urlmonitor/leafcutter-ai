@@ -95,7 +95,7 @@ an identifier or word of the question (`ADR-057`, `decision.py`, `kernel.contrac
 a path) is always offered. A source offers at most
 `max(source_candidate_floor, source_candidate_ratio x files scanned)` candidates, so a small
 folder is fully considered while a large one stays bounded; `max_candidates` (default 60) is the
-overall rerank batch. Anything cut is named in the bundle's limitations.
+pool and `rerank_max_per_need` (20) the one Jev call per need. Cuts are named in limitations.
 
 A retrieval request may also carry `explicit_locators` (at most `max_explicit_locators`): a
 repo-relative path, `path#L10-L40`, `path#Heading text` or `path::Symbol` (a Python class,
@@ -129,7 +129,7 @@ Research uses what the decision already knows. An option that cites `kernel/cont
 evidence ids it cites stay context. Queries lead with the goal, then the approved criteria and
 the option titles; `retrieval.max_query_terms` (48) bounds them. Gaps a synthesis named
 (`unknowns`) and the claims of options a human added become supporting needs with their own
-queries (`research.max_targeted_needs`, 4).
+queries (`research.max_targeted_needs`, 2; the budget reserve: design docs, "As built round E").
 
 A need is `satisfied` only if Jev also judges that the kept evidence **answers** the need's
 question (one `answers.<need>` question per satisfied need, inside the existing assess call,
