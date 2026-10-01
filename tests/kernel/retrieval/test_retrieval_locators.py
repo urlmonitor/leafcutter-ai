@@ -1,5 +1,5 @@
 """
-MODULE: tests.kernel.capabilities.test_retrieval_locators
+MODULE: tests.kernel.retrieval.test_retrieval_locators
 GOAL: Behavioural tests of explicit locators on `retrieve.repository`: each form (path,
     `path#Lx-Ly`, `path#heading`, `path::Symbol`) is fetched exactly, marked in provenance and
     kept by ranking, and refused outside the read roots, under deny globs, on traversal and

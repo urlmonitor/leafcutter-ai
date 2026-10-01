@@ -1,5 +1,5 @@
 """
-MODULE: tests.kernel.capabilities.test_retrieval_sections
+MODULE: tests.kernel.retrieval.test_retrieval_sections
 GOAL: Regression tests for section-aware chunking and the entity-aware, size-scaled pre-filter
     of `retrieve.repository`, each built from a live miss (ADR sections never read, a 46-file
     folder cut to 20, `kernel/contracts/decision.py` dropped).
