@@ -56,8 +56,10 @@ class BootstrapCase(unittest.IsolatedAsyncioTestCase):
         if langfuse:
             self.override.write_text(json.dumps({"paths": {"run_root": str(self.tmp / "r")}}),
                                      encoding="utf-8")
-        return build_environment(config_path=self.override,
-                                 overrides=EnvironmentOverrides(secrets=secrets or SecretSettings()))
+        env = build_environment(config_path=self.override,
+                                overrides=EnvironmentOverrides(secrets=secrets or SecretSettings()))
+        self.addCleanup(env.shutdown)  # stop SDK worker threads (#KernelBootstrapV0/CI)
+        return env
 
 
 class TestBindings(BootstrapCase):

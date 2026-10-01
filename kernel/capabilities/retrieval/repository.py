@@ -57,15 +57,21 @@ class _FileRecord:
     head: Candidate | None = None
 
 
-def _iter_files(root: Path) -> list[Path]:
-    """Return every file under root (or root itself if it is a file), sorted by path."""
+def _iter_files(root: Path) -> tuple[list[Path], list[Path]]:
+    """Return (files, linked_dirs) under root, both sorted; a file root yields just itself.
+
+    os.walk lists a symlinked directory in `dirnames` but never descends into it, so such links
+    are returned separately for the caller to report instead of vanishing silently.
+    """
     if root.is_file():
-        return [root]
+        return [root], []
     found: list[Path] = []
+    linked: list[Path] = []
     for dirpath, dirnames, filenames in os.walk(root):
         dirnames.sort()
+        linked += [Path(dirpath) / d for d in dirnames if (Path(dirpath) / d).is_symlink()]
         found += [Path(dirpath) / name for name in sorted(filenames)]
-    return found
+    return found, sorted(linked)
 
 
 def source_cap(files_scanned: int, cfg: RetrievalConfig) -> int:
@@ -220,7 +226,10 @@ def search_repo_text(policy: ReadPolicy, source_id: str, roots: list[Path], term
     records: list[_FileRecord] = []
     df: Counter[str] = Counter()
     for root in roots:
-        for path in _iter_files(root):
+        files, linked_dirs = _iter_files(root)
+        for link in linked_dirs:
+            report.skip("outside_root" if policy.relative(link) is None else "link_not_followed")
+        for path in files:
             outcome = policy.read_text(path)
             if outcome.text is None:
                 report.skip(outcome.reason or "unreadable")
@@ -251,6 +260,9 @@ def search_repo_text(policy: ReadPolicy, source_id: str, roots: list[Path], term
 #   per-source cap scales with source size under max_candidates, and files whose path or name
 #   carries the question's identifiers are pinned ahead of body-hit ranking, so
 #   `kernel/contracts/decision.py` is offered for "the Decision contract". (#KernelV01/B)
+# - 2026-10-02 [python-coder]: A symlinked directory is reported as a skip (outside_root when it
+#   resolves outside the allowed area, else link_not_followed); os.walk never descends into it, so
+#   on Linux an escaping link was silently dropped with no limitation. (#KernelBootstrapV0/CI)
 # - 2026-10-02 [python-coder]: Excerpts are cut at a line or sentence end within the cap (still
 #   marked truncated) instead of mid-sentence. (#KernelBootstrapV0/GROUND)
 # - 2026-09-30 23:00 [python-coder]: One excerpt per file (the densest window) keeps the

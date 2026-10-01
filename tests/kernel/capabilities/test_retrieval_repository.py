@@ -17,13 +17,14 @@ import os
 import subprocess
 import tempfile
 import unittest
+from unittest import mock
 from dataclasses import replace
 from pathlib import Path
 from typing import Any
 
 import pytest
 
-from kernel.capabilities.retrieval import RepositoryRetrievalExecutor
+from kernel.capabilities.retrieval import RepositoryRetrievalExecutor, repository
 from kernel.capabilities.retrieval.knowledge_map import clear_caches
 from kernel.capabilities.retrieval.terms import extract_terms
 from kernel.capabilities.retrieval.versioning import resolve_source_version
@@ -251,6 +252,18 @@ class TestReadProtection(RepoTestCase):
         self.assertTrue(result.evidence)
         self.assertNotIn("leak.md", str(result.output_payload))
         self.assertTrue(any("(outside_root)" in x for x in self.bundle(result).limitations))
+
+    def test_linked_directories_are_reported_as_skips_on_every_os(self) -> None:
+        """os.walk never descends into a symlinked dir; it must still be counted, not dropped."""
+        kept = self.adrs / "ADR-001-state.md"
+        links = [self.outside, self.adrs]  # one resolving outside the repo, one inside it
+        with mock.patch.object(repository, "_iter_files", return_value=([kept], links)):
+            result = self.run_retrieval()
+        limitations = self.bundle(result).limitations
+        self.assertTrue(result.evidence)
+        self.assertTrue(any("1 item(s) skipped (outside_root)" in x for x in limitations))
+        self.assertTrue(any("1 item(s) skipped (link_not_followed)" in x for x in limitations))
+        self.assertNotIn("leak.md", str(result.output_payload))
 
     def test_deny_globs_hide_files_even_when_they_match_the_terms(self) -> None:
         (self.adrs / ".env.local").write_text("sqlite=1\n", encoding="utf-8")
