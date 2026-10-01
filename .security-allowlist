@@ -373,3 +373,22 @@ GENERIC_SECRET:templates/scripts/commit_guardian/_file_description.py:*
 # files grow, and per-line entries break silently when lines shift.
 ENTROPY_HIGH:unit_tests/commit_guardian/test_ge_127e_3_i_no_substitute_and_verdict_independence.py:*
 ENTROPY_HIGH:unit_tests/commit_guardian/test_ge_127e_3_i_reachability_and_deployed.py:*
+
+# KM-400 safe example contains placeholders only; actual credentials remain outside Git.
+ENV_FILE:knowledge/.env.example:0
+
+# KM-400 reviewed false positives: placeholder assignments, synthetic test strings,
+# and optional unresolved canonical documentation paths in sanitized reports.
+ENTROPY_HIGH:knowledge/.env.example:5
+ENTROPY_HIGH:knowledge/.env.example:7
+ENTROPY_HIGH:knowledge/.env.example:10
+ENTROPY_HIGH:reports/knowledge-retrieval-real-subset-status.json:93
+ENTROPY_HIGH:reports/knowledge-retrieval-real-subset-status.json:97
+ENTROPY_HIGH:reports/knowledge-retrieval-real-subset-sync.json:90
+ENTROPY_HIGH:reports/knowledge-retrieval-real-subset-sync.json:94
+ENTROPY_HIGH:tests/knowledge/test_environment.py:55
+ENTROPY_HIGH:tests/knowledge/test_environment.py:75
+ENTROPY_HIGH:tests/knowledge/test_environment.py:105
+ENTROPY_HIGH:tests/knowledge/test_environment.py:107
+ENTROPY_HIGH:tests/knowledge/test_environment.py:139
+ENTROPY_HIGH:tests/knowledge/test_environment.py:187

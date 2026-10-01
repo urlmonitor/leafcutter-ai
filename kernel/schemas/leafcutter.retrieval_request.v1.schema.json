@@ -67,6 +67,7 @@
       "title": "EvidenceNeed",
       "type": "object"
     },
+    "JsonValue": {},
     "NeedStatus": {
       "description": "Completion status of an EvidenceNeed.",
       "enum": [
@@ -161,6 +162,21 @@
       },
       "title": "Explicit Locators",
       "type": "array"
+    },
+    "knowledge": {
+      "anyOf": [
+        {
+          "additionalProperties": {
+            "$ref": "#/$defs/JsonValue"
+          },
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Knowledge"
     },
     "limits": {
       "$ref": "#/$defs/RetrievalLimits"

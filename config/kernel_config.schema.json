@@ -248,6 +248,110 @@
       "title": "JevConfig",
       "type": "object"
     },
+    "KnowledgeBindingConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "backend": {
+          "title": "Backend",
+          "type": "string"
+        },
+        "database": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Database"
+        },
+        "embedding_dimensions": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Embedding Dimensions"
+        },
+        "embedding_endpoint_env": {
+          "title": "Embedding Endpoint Env",
+          "type": "string"
+        },
+        "embedding_model": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Embedding Model"
+        },
+        "embedding_token_env": {
+          "title": "Embedding Token Env",
+          "type": "string"
+        },
+        "embeddings_enabled": {
+          "title": "Embeddings Enabled",
+          "type": "boolean"
+        },
+        "neo4j_password_env": {
+          "title": "Neo4J Password Env",
+          "type": "string"
+        },
+        "neo4j_uri_env": {
+          "title": "Neo4J Uri Env",
+          "type": "string"
+        },
+        "neo4j_username_env": {
+          "title": "Neo4J Username Env",
+          "type": "string"
+        },
+        "query_timeout": {
+          "exclusiveMinimum": 0,
+          "maximum": 30,
+          "title": "Query Timeout",
+          "type": "number"
+        },
+        "repository_id": {
+          "title": "Repository Id",
+          "type": "string"
+        },
+        "repository_root": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Repository Root"
+        }
+      },
+      "required": [
+        "backend",
+        "repository_id",
+        "repository_root",
+        "neo4j_uri_env",
+        "neo4j_username_env",
+        "neo4j_password_env",
+        "database",
+        "embeddings_enabled",
+        "embedding_endpoint_env",
+        "embedding_token_env",
+        "embedding_model",
+        "embedding_dimensions",
+        "query_timeout"
+      ],
+      "title": "KnowledgeBindingConfig",
+      "type": "object"
+    },
     "LangfuseConfig": {
       "additionalProperties": false,
       "description": "Langfuse export settings (credentials come from secrets, never from here).",
@@ -617,6 +721,7 @@
           "enum": [
             "repo_text",
             "knowledge_map",
+            "graph_query",
             "host_research"
           ],
           "title": "Kind",
@@ -666,6 +771,9 @@
     "jev": {
       "$ref": "#/$defs/JevConfig"
     },
+    "knowledge": {
+      "$ref": "#/$defs/KnowledgeBindingConfig"
+    },
     "langfuse": {
       "$ref": "#/$defs/LangfuseConfig"
     },
@@ -693,6 +801,7 @@
     }
   },
   "required": [
+    "knowledge",
     "paths",
     "limits",
     "routing",

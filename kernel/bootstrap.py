@@ -16,6 +16,7 @@ ARCHITECTURE: `build_environment` is synchronous and does no network IO. The Jev
 
 from __future__ import annotations
 
+import asyncio
 import logging
 from collections.abc import Callable
 from dataclasses import dataclass
@@ -23,6 +24,8 @@ from functools import partial
 from pathlib import Path
 
 import kernel
+from knowledge.config import build_retriever
+from knowledge.ports import KnowledgeRetriever
 from kernel.capabilities.decision import DecisionExecutor
 from kernel.capabilities.host import HostBindingExecuted as HostBindingExecuted
 from kernel.capabilities.host import HostOperationExecutor
@@ -89,18 +92,35 @@ class KernelEnvironment:
     tracer: Tracer
     redactor: Redactor
     jev_factory: Callable[[], JevPort] | None
+    knowledge_retriever: KnowledgeRetriever | None = None
+
+    async def aclose(self) -> None:
+        """Await owned knowledge resources and stop the tracer for an async host."""
+        closer = getattr(self.knowledge_retriever, "close", None)
+        try:
+            if closer is not None:
+                await closer()
+        finally:
+            stop = getattr(self.tracer, "shutdown", None)
+            if callable(stop):
+                stop()
 
     def shutdown(self) -> None:
-        """Stop the tracer's background workers (once, at the end of the process)."""
-        stop = getattr(self.tracer, "shutdown", None)
-        if callable(stop):
-            stop()
+        """Close resources after the run loop ends; async hosts await aclose instead."""
+        try:
+            asyncio.get_running_loop()
+        except RuntimeError:
+            asyncio.run(self.aclose())
+            return
+        message = "An async host must await environment.aclose() before ending its loop"
+        raise RuntimeError(message)
 
 
 @dataclass
 class EnvironmentOverrides:
     """Test seams: any piece set here replaces the production wiring."""
 
+    knowledge_retriever: KnowledgeRetriever | None = None
     tracer: Tracer | None = None
     jev_factory: Callable[[], JevPort] | None = None
     bindings: BindingTable | None = None
@@ -114,11 +134,22 @@ def resolve_run_root(config: KernelConfig, root: Path) -> Path:
     return configured if configured.is_absolute() else (root / configured).resolve()
 
 
-def build_bindings(snapshot: RegistrySnapshot) -> BindingTable:
-    """Return the trusted table: native executors plus one host operation per host descriptor."""
+def build_bindings(snapshot: RegistrySnapshot, *, knowledge_retriever: KnowledgeRetriever | None = None) -> BindingTable:
+    """Return the trusted table: native executors plus one host operation per host descriptor.
+
+    Args:
+        snapshot: Verified capability registry snapshot.
+
+    Returns:
+        BindingTable: Result of the documented operation.
+    """
     table = BindingTable()
     for key, factory in NATIVE_BINDINGS.items():
         table.register(key, NATIVE_VERSION, factory)
+    if knowledge_retriever is not None:
+        from integrations.knowledge_capability import KnowledgeRetrievalExecutor
+        table.register("retrieve.repository", NATIVE_VERSION,
+                       partial(KnowledgeRetrievalExecutor, knowledge_retriever))
     for descriptor in snapshot.descriptors:
         if descriptor.execution_mode is ExecutionMode.HOST_HANDOFF:
             table.register(descriptor.binding, descriptor.version,
@@ -171,12 +202,14 @@ def build_environment(*, config_path: Path | None = None, env_file: Path | None 
         secrets=secrets, config=config.langfuse, policy=config.data_policy, deny_globs=deny,
         spool_path=run_root / TELEMETRY_SPOOL, release=kernel.__version__)
     factory = seams.jev_factory or _jev_factory(config, secrets, tracer)
+    knowledge = seams.knowledge_retriever or build_retriever(config.knowledge)
     return KernelEnvironment(
         config=config, secrets=secrets, snapshot=snapshot,
-        bindings=seams.bindings or build_bindings(snapshot), repo_root=root, run_root=run_root,
+        bindings=seams.bindings or build_bindings(snapshot, knowledge_retriever=knowledge), repo_root=root, run_root=run_root,
         run_store=FileRunStore(run_root), gap_store=FileGapStore(run_root),
         artifacts=FileArtifactStore(run_root), tracer=tracer,
-        redactor=Redactor(secrets.secret_values(), config.data_policy, deny), jev_factory=factory)
+        redactor=Redactor(secrets.secret_values(), config.data_policy, deny), jev_factory=factory,
+        knowledge_retriever=knowledge)
 
 
 # ====================================================================
@@ -192,3 +225,5 @@ def build_environment(*, config_path: Path | None = None, env_file: Path | None 
 #   host_handoff descriptors (not a hard-coded id list), so a new host capability needs only a
 #   registry entry until P8 gives it an operation. (#KernelBootstrapV0/P7)
 # ====================================================================
+
+# - 2026-10-01 20:00 [python-coder]: Bind optional knowledge through existing scoped retrieval contracts. (#TICKET-20261001-KM-400e-3)

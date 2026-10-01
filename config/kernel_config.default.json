@@ -1,5 +1,20 @@
 {
   "$schema": "./kernel_config.schema.json",
+  "knowledge": {
+    "backend": "none",
+    "repository_id": "leafcutter",
+    "repository_root": null,
+    "neo4j_uri_env": "LEAFCUTTER_NEO4J_URI",
+    "neo4j_username_env": "LEAFCUTTER_NEO4J_USERNAME",
+    "neo4j_password_env": "LEAFCUTTER_NEO4J_PASSWORD",
+    "database": null,
+    "embeddings_enabled": false,
+    "embedding_endpoint_env": "LEAFCUTTER_EMBEDDING_ENDPOINT",
+    "embedding_token_env": "LEAFCUTTER_EMBEDDING_TOKEN",
+    "embedding_model": null,
+    "embedding_dimensions": null,
+    "query_timeout": 3.0
+  },
   "paths": {
     "run_root": ".leafcutter/kernel",
     "registry": "config/capability_registry.json"

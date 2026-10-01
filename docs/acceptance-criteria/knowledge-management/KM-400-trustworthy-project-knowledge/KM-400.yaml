@@ -1,0 +1,55 @@
+id: KM-400
+title: "Make decisions with project knowledge you can check and trust"
+component: knowledge-management
+components: [knowledge_management]
+level: L0
+status: active
+req_status: active
+readiness: approved
+priority: medium
+work_status: done
+criteria: |
+  Make informed decisions with evidence you can revisit.
+
+  People and agents can find the requirements, rules and lessons relevant to their work, check where each answer came from, and return to the same project version later. Changes become available without disturbing evidence already in use. Missing or unavailable knowledge is visible, so an incomplete search cannot quietly become a false assurance.
+depends_on: []
+doc_links:
+  - path: docs/reference/artifact-knowledge-graph-data-map.md
+    relationship: context
+    status: exists
+    relevance: Reuse canonical identities and declared relationship semantics; do not create competing models.
+  - path: docs/acceptance-criteria/knowledge-management/KM-KGS-100-knowledge-graph-surfaces/KM-KGS-100.yaml
+    relationship: context
+    status: exists
+    relevance: Reuse existing graph-surface and requirement-to-test traceability requirements without relabeling them as implemented.
+  - path: docs/acceptance-criteria/knowledge-management/KM-ADM-100.yaml
+    relationship: context
+    status: exists
+    relevance: Inherit honest treatment of declared, inferred and missing connections.
+  - path: docs/acceptance-criteria/ac-store/ACS-1100-honest-coverage-answers/ACS-1100.yaml
+    relationship: context
+    status: exists
+    relevance: Inherit the standing requirement that reported figures state coverage and method.
+
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: product-owner
+created: '2026-10-01'
+amended_by: []
+superseded_by: null
+covered_by: [KM-400a, KM-400b, KM-400c, KM-400d, KM-400e]
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  Authored by PO for the user-authorized full Knowledge Retrieval implementation
+  (guide dated 2026-10-01, stages 0-4). Approval records the user's delegation to
+  orchestrate building and to have PO, BA and IT PO create/amend/use ACs; it is not
+  evidence of completion. All work remains todo until behavioral proof exists.
+  KM-400 is the next available flat family after KM-300; existing IDs are retained.
+  Stage 0 must reconcile the guide with actual canonical entities, capability
+  contracts, kernel integration and tracing ownership before production mapping.
+  Graph-only delivery is an intermediate milestone, not completion of this family.
+  No roadmap or vision changes are authorized or made by these records.
