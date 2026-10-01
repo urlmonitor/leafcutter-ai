@@ -392,3 +392,7 @@ ENTROPY_HIGH:tests/knowledge/test_environment.py:105
 ENTROPY_HIGH:tests/knowledge/test_environment.py:107
 ENTROPY_HIGH:tests/knowledge/test_environment.py:139
 ENTROPY_HIGH:tests/knowledge/test_environment.py:187
+
+# Verified public pytest command and immutable canonical ADR locator; no credential values.
+ENTROPY_HIGH:docs/analysis/2026-10-01-knowledge-retrieval-aura-acceptance.md:54
+ENTROPY_HIGH:reports/knowledge-retrieval-aura-kernel.json:16

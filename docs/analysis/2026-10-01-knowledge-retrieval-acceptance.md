@@ -49,13 +49,15 @@ A reports54 combined new non-live tests at its last handoff; B reports12 live te
 
 ## Explicit verification limits
 
-- Full legacy AC corpus is rejected for three pre-existing required-reference errors: ACS-200d -> ACS-200b; ACS-600e -> ACS-600b; ACS-600e -> ACS-300f. The real ADR/component-only demonstration uses a separate identity and cannot replace the full projection.
+- The original base corpus had three required-reference errors. The authorized repairs and mapper3 corrections now permit full canonical publication:5992 nodes/19365 edges at c2ddb6f126e5b8539f217836f67decba5e91eca4. Historical subset reports remain separate evidence.
 - Production Decision/Lesson/Policy mappings remain unsupported. Synthetic memory is a reviewed demonstration, not historical production evidence.
 - No paid embedding provider or real-model usefulness evaluation ran. Text above32KiB requires an explicit chunking adapter; automatic chunking is not implemented or advertised.
-- External main-branch GitHub workflow execution, production credentials/permissions and other Neo4j versions are not tested. No push or merge is included in these verdicts.
+- External main-branch GitHub workflow execution and database-enforced least-privilege separation are not tested. Actual Aura5.27 serving/kernel and local Neo4j5.26 tests are recorded separately. No push or merge is included in these verdicts.
 
 Root independent final combined check: all11 new non-live files including full kernel_run passed **60 tests in11.23s** with explicit pytest options. Combined normal Ruff for knowledge, integrations, changed kernel modules and all new/live tests passed. B final component-hub provenance correction is verified separately after this combined run.
 
 Pytest clarification: the recorded commands use `-o addopts=`. This omits the repository AC-enforcement plugin normally injected through addopts, so setting AC_ENFORCE_STRICT alone did not enable that plugin. These are direct, unmasked pytest assertion results; they are not proof that the default repository plugin workflow ran. Canonical AC schema validation was executed separately.
 
-Subsequent user-authorized source repair update: the three historical missing dependencies above describe the original base revision only. BA has now amended the two source ACs, fixed four malformed GE1074 pytest selectors and verified all4490 canonical AC references/schema with no new cycles. Mapper3 full mutable preflight passes5989 nodes/19363 edges. Immutable full Aura publication remains a separate pending gate; see the [Aura acceptance extension](2026-10-01-knowledge-retrieval-aura-acceptance.md).
+Subsequent user-authorized source repair update: the three historical missing dependencies above describe the original base revision only. BA has now amended the two source ACs, fixed four malformed GE1074 pytest selectors and verified all4490 canonical AC references/schema with no new cycles. Mapper3 full mutable preflight passes5989 nodes/19363 edges. Immutable full Aura publication and actual kernel/checkpoint validation subsequently passed at SHA c2ddb6f126e5b8539f217836f67decba5e91eca4; see the [Aura acceptance extension](2026-10-01-knowledge-retrieval-aura-acceptance.md).
+
+Actual Aura e-3 extension:1 test passed in6.93s. Real KernelService consumed published Aura evidence, completed and reopened its SQLite checkpoint with exact source SHA/retrieval provenance. Only Jev/host/human were doubles. No DB writes/provider calls; see reports/knowledge-retrieval-aura-kernel.json.

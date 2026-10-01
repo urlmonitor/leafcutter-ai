@@ -11,7 +11,7 @@ components:
 ---
 # Aura deployment acceptance extension
 
-Status: user-authorized full indexing and actual serving validation underway. This extends deployment evidence for existing KM-400 criteria; it does not add new production memory mappings.
+Status: full immutable repository graph published; actual Aura kernel/checkpoint validation passed. Replay and standalone serving evidence are recorded by the projection owner. This extends deployment evidence for existing KM-400 criteria; it does not add new production memory mappings.
 
 ## Reviewed source repair
 
@@ -35,12 +35,22 @@ No embedding gateway endpoint/token configuration was found by a key-presence-on
 
 No paid provider, account changes, broad cleanup, external workflow trigger, PR or merge is part of these validation gates.
 
-## Repair validation result and next boundary
+## Historical repair validation and resolved mapping boundary
 
-BA validated all4490 canonical AC records after the two-file amendment: schema and required references pass, with no new dependency cycle. Full projection then exposed a distinct mapping issue: repeated PROJECT_CONTEXT Markdown stems were entering the AC surface as if they were AC entities. Full Aura publication is not yet accepted. The appropriate existing a-1/b-2 boundary is to emit validated canonical AC YAML identities; non-AC context documents must be explicitly excluded/diagnosed or represented only as declared path-keyed source-file targets. No deduplication or invented ID renaming is permitted. The mapper owner must add a duplicate-context-file regression and rerun the immutable full preview before publication.
+BA validated all4490 canonical AC records after the two-file amendment: schema and required references pass, with no new dependency cycle. Full projection then exposed a distinct mapping issue: repeated PROJECT_CONTEXT Markdown stems were entering the AC surface as if they were AC entities. At this earlier preflight stage full Aura publication was not yet accepted; mapper3 subsequently resolved this boundary and the final outcome below supersedes it. The appropriate existing a-1/b-2 boundary is to emit validated canonical AC YAML identities; non-AC context documents must be explicitly excluded/diagnosed or represented only as declared path-keyed source-file targets. No deduplication or invented ID renaming is permitted. The mapper owner must add a duplicate-context-file regression and rerun the immutable full preview before publication.
 
 The full-corpus review also approved source-conformant `implemented_by` targets Component and AcceptanceCriterion alongside SourceFile/Test/ADR, retaining an AC-only source. Four referenced component diagrams and two canonical AC deliverables establish the need; no existing declarations are reclassified or interpreted as proof of completion. Positive target-kind and reversed-edge rejection tests gate this adjustment under existing KM-400a-1/a-3/b-2.
 
 ## Full-source preflight outcome
 
-BA reports mapper3 full current-tree preflight passed:4490 canonical ACs,5989 nodes,19363 edges,92 diagnostics. The3 required references and4 malformed GE1074 pytest selectors are repaired; source mapping filters auxiliary Markdown and accepts declared Component/AC implementation targets. This preview is explicitly mutable and nonpublishable; actual immutableSHA validation and Aura publication are still pending. Source regressions12 passed6.20s and unchanged producer-consumer compatibility85 passed78.71s.
+BA reports mapper3 full current-tree preflight passed:4490 canonical ACs,5989 nodes,19363 edges,92 diagnostics. The3 required references and4 malformed GE1074 pytest selectors are repaired; source mapping filters auxiliary Markdown and accepts declared Component/AC implementation targets. This preview is explicitly mutable and nonpublishable; this historical preview was followed by the successful immutable publication recorded below. Source regressions12 passed6.20s and unchanged producer-consumer compatibility85 passed78.71s.
+
+## Actual Aura kernel acceptance
+
+The full supported canonical graph is published under repository `leafcutter`, immutable SHA `c2ddb6f126e5b8539f217836f67decba5e91eca4`:5992 nodes and19365 edges. Counts differ from the earlier mutable preview because committed proof metadata added three nodes and two edges. Publication followed the ordinary source commit with repository hooks; no push or merge occurred.
+
+`tests/knowledge_live/aura_kernel_checks.py` passed **1 test in6.93s** against actual Aura. The real KernelService completed its decision and reopened SQLite checkpoint with two canonical evidence items, exact source SHA and retrieval references. Jev, host and human were deterministic doubles; Neo4j reads, Git excerpt resolution, kernel execution and checkpoint persistence were real. The test performed no database writes or embedding-provider calls. The sanitized artifact is `reports/knowledge-retrieval-aura-kernel.json`. Driver deprecation warnings were observed, with no test failure.
+
+Command: `python -m pytest tests/knowledge_live/aura_kernel_checks.py -q --tb=short -o addopts='' -p no:cacheprovider --basetemp <temporary-directory>`, with explicit `KNOWLEDGE_AURA_SOURCE_SHA`, `KNOWLEDGE_AURA_REPOSITORY_ID=leafcutter` and the authorized external `LEAFCUTTER_ENV_FILE`. This direct pytest command disables repository addopts; it does not claim the AC-enforcement plugin ran. The ordinary source commit hooks passed separately.
+
+Repeat sync and standalone retrieval also passed: same generation/counts, exact disclosure0–3, bounded component/AC graph results, related tests and ADRs, absent-ID empty success, and explicit unsupported production memory/policy. The detailed sanitized artifact is `reports/knowledge-retrieval-aura-publication.json`.
