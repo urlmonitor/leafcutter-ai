@@ -284,6 +284,7 @@ class KernelService:
             record = self._persist(session, values, bool(diagnostics))
         return build_envelope(record, values, trace=session.trace,
                               observability=session.observability, diagnostics=diagnostics,
+                              observability_reason=session.observability_reason,
                               report_path=self._report_path(session.run_id, values),
                               stored_gaps=self._stored_gaps())
 
@@ -326,6 +327,7 @@ class KernelService:
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 [python-coder]: The envelope gets the session's degraded reason. (#KernelV01/C)
 # - 2026-10-01 22:00 [python-coder]: The envelope is built with the gap store's aggregates so its
 #   gaps agree with `list_gaps` (first sighting, occurrences). (#KernelBootstrapV0/INTENT)
 # - 2026-10-01 14:00 [python-coder]: Every run.json write goes through a compare-and-update on

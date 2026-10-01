@@ -123,7 +123,8 @@ class AdapterContract(_Base):
 
         result = asyncio.run(self.adapter(responder).assess(kit.mixed_batch()))
         self.assertEqual(self.sleeper.delays, [3.0])
-        self.assertEqual(result.usage.calls, 2)
+        self.assertEqual(len(self.requests), 2)  # two attempts ...
+        self.assertEqual(result.usage.calls, 1)  # ... but one provider call (#KernelV01/C)
 
     def test_authentication_error_is_not_retried(self) -> None:
         """401 maps to JevUnavailable immediately, without leaking the key."""
