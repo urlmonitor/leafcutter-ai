@@ -1,0 +1,134 @@
+id: AR-300c-3
+title: "A central ability record that disagrees with the agent's own declaration is reported, and the declaration wins"
+component: agent-registry
+components:
+  - agent_registry
+  - skill_registry
+  - build_pipeline
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given an agent whose own declaration grants one set of abilities and whose
+    central record, after consolidation, names a different set -- because
+    someone edited the central record by hand,
+  When the build runs,
+  Then the build reports the disagreement, naming the agent, the abilities the
+    declaration grants and the abilities the central record names,
+    And the compiled prompt continues to name the declaration's abilities, so the
+      hand edit changes nothing the agent sees,
+    And the comparison is made for every agent that has a declaration or a
+      central entry, reporting the count examined, so an agent missing from one
+      side is a disagreement rather than a gap in the comparison,
+    And an agent whose central record agrees with its declaration is not
+      reported,
+  So the derived copy can be read as trustworthy, and there is no second place a
+    grant can be changed without anyone noticing.
+depends_on:
+  - AR-300c
+doc_links:
+  - path: config/agent_registry.json
+    relationship: modifies
+    status: exists
+    relevance: "The copy that becomes derived. This criterion is what makes 'derived' enforceable rather than aspirational."
+  - path: docs/reference/agent-template-frontmatter.md
+    relationship: describes
+    status: exists
+    relevance: "The authoritative declaration side of the comparison."
+  - path: docs/architecture/agent_knowledge_plane.md
+    relationship: describes
+    status: exists
+    relevance: "Documents the cross-reference validation of ability records already envisaged for this channel -- the posture this criterion re-points at the declaration."
+assigned_agent: python-coder
+estimated_complexity: M
+change_target: code
+risk_surface: contract_boundary
+it_requirements:
+  - "The comparison population is the UNION of agents holding a declaration and agents holding a central entry, so an agent present on one side only is a DISAGREEMENT rather than a skipped comparison. Iterating either side alone is how 12 agents became invisible to one side of the store in the first place."
+  - "Report the count examined, so a comparison that reached no agents is not read as one that found no disagreements. The whole AC is a universal over a derived population, and a universal over an empty set is true."
+  - "The compiled prompt continues to name the declaration's abilities regardless of the central record's content -- the hand edit changes nothing the agent sees. Assert this at the compiled prompt, not by inspecting which variable the compiler reads."
+  - "An agent whose central record agrees is NOT reported. Roughly half the tree holds no grant at all; a comparison that reports agreement is reporting most of what it examines, and AR-200b-1 records in this component what happens to a rule that fires across the registry -- it gets switched off."
+  - "This is what makes 'derived' enforceable rather than aspirational. AR-300c-1 alone makes the central record inert, not correct: it can drift arbitrarily while the several consumers that still read it keep believing it. Enumerate those consumers as part of this work and state whether each reads the derived copy or the declaration."
+  - "The comparison must be a set comparison in both directions over ability ids AND their mode/condition values, not a string compare of two serialised blobs -- a formatting difference must not read as a disagreement, and a mode change must not read as agreement."
+  - "Refuse rather than warn on a genuine disagreement (ADR-050)."
+test_spec:
+  - name: test_hand_edited_central_record_is_reported_with_both_ability_sets
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "An agent whose central record names a different ability set than its declaration is reported, naming the agent, the declaration's abilities and the record's abilities."
+  - name: test_compiled_prompt_still_names_the_declarations_abilities_after_a_hand_edit
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: integration
+    angle: deployed
+    description: "The hand edit to the central record changes nothing in the compiled prompt."
+  - name: test_agent_present_on_only_one_side_is_reported_as_a_disagreement
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: "A declaration with no central entry, and a central entry with no declaration, are both disagreements rather than gaps in the comparison."
+  - name: test_agreeing_agent_is_not_reported
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: unit
+    angle: failure
+    description: "Control case: an agent whose central record matches its declaration produces no finding, including agents that hold no grant on either side."
+  - name: test_comparison_reports_the_count_examined
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: "The examined count is stated and a population of zero fails rather than reporting no disagreements."
+  - name: test_formatting_difference_is_not_a_disagreement_and_mode_change_is
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: "Reordering or reformatting the same grant produces no finding; changing an ability's mode from always to conditional does."
+test_rationale: >-
+  'Derived' without a comparison is just 'ignored', so the load-bearing descriptors
+  are the disagreement ones. The control descriptor carries equal weight: roughly
+  half the tree holds no grant, and a comparison that reports them is reporting most
+  of what it examines, which is how this component has already lost a rule. The
+  formatting-versus-mode descriptor exists because the cheap implementation is a
+  serialised string compare, which is simultaneously too noisy and too blind.
+delivers_to:
+  agent: python-coder
+  contract: >-
+    A per-agent declaration-versus-derived-copy verdict over the union of both
+    sides -- {examined_count, findings: [{agent, declared_abilities,
+    recorded_abilities, kind: "divergent" | "declaration-only" |
+    "record-only"}]} -- computed in the same pass that AR-300c-3-i resolves
+    declared ability ids against installed abilities.
+expects_from:
+  ac_id: AR-300c-1
+  contract: "The authoritative per-agent declaration this criterion validates the derived copy against"
+origin_agent: BrainCandy
+created: 2026-09-30
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-10-01'
+superseded_by: null
+covered_by:
+  - AR-300c-3-i
+implemented_by: []
+notes: |
+  'DERIVED' WITHOUT A COMPARISON IS JUST 'IGNORED'. AR-300c-1 says the compiled
+  prompt reads only the declaration. That alone makes the central record inert,
+  not correct -- it can drift arbitrarily while every consumer that reads it, and
+  there are several, keeps believing it. Two records of one grant that can
+  disagree is the defect AR-300c exists to end; a derived copy nobody checks is
+  that defect with a new name.
+
+  THE MISSING-SIDE CASE IS CLASSED AS DISAGREEMENT ON PURPOSE. An agent with a
+  declaration and no central entry, or the reverse, is the shape the current
+  split takes. Treating it as 'nothing to compare' is how 12 agents became
+  invisible to one side of the store in the first place.

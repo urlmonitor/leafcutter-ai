@@ -1,0 +1,83 @@
+id: AR-300c-4
+title: "The authoring reference names one place to grant an ability, and no longer describes the old two"
+component: agent-registry
+components:
+  - agent_registry
+  - skills_system
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given an author with no prior knowledge of this change, consulting the project
+    reference for how an agent is defined,
+  When they look for how to grant an agent an ability,
+  Then the reference names the agent's own declaration, beside the tools
+    declaration, as the one place it is done,
+    And it states that the central record's ability entries are derived and must
+      not be authored by hand, naming what happens if they are,
+    And no surface in the project still instructs an author to add an ability by
+      editing a central record field or by writing an abilities section into the
+      agent's body,
+    And the reference states what an author must do to make a newly granted
+      ability reach the agent, which after this change is nothing beyond the
+      declaration itself,
+  So the split does not simply re-form the first time someone follows the
+    instructions.
+depends_on:
+  - AR-300c
+doc_links:
+  - path: docs/reference/agent-template-frontmatter.md
+    relationship: modifies
+    status: exists
+    relevance: "The reference for the declaration block that becomes the single place. It already documents the tools declaration this grant sits beside."
+  - path: docs/how-to/creating-an-agent-template.md
+    relationship: modifies
+    status: exists
+    relevance: "The authoring-facing surface a reader consults to learn where an agent's abilities are declared -- the second surface that must agree, or the instructions and the mechanism part company."
+  - path: config/agent_registry.json
+    relationship: describes
+    status: exists
+    relevance: "What the reference must stop describing as an authoring target."
+assigned_agent: documentation-expert
+estimated_complexity: M
+change_target: docs
+risk_surface: internal
+it_requirements:
+  - "Two surfaces must end up agreeing, and both are in scope: docs/reference/agent-template-frontmatter.md (the reference for the block that becomes the single place, which already documents the `tools:` declaration the grant sits beside) and docs/how-to/creating-an-agent-template.md (the authoring-facing steps). A new section in one while the other still describes the old route leaves an author with two correct-looking instructions."
+  - "The third clause is the deliverable, not the first: a SWEEP for surviving instructions that tell an author to grant an ability by editing a central record field or by writing an abilities section into the agent body. The sweep must cover docs/, templates/skills/ and templates/agents/ prose, and the finding list must be reported even where it is empty, so 'no surviving instructions' is a stated result rather than an unexamined assumption."
+  - "State what happens if the central record's ability entries ARE authored by hand -- name the consequence concretely (AR-300c-3 reports the disagreement and the declaration wins), not as a general warning."
+  - "State explicitly that an author needs to do NOTHING beyond the declaration for a newly granted ability to reach the agent. This is AR-300d's guarantee reaching the authoring surface; if the how-to still lists a step AR-300d-1 says is unnecessary, one of the two is wrong and the documentation is the cheaper one to fix."
+  - "Document the frontmatter entry's shape as AR-300c-1 actually lands it -- the ability id, `mode` (always | conditional) and the `condition` string -- so an author can write a conditional grant. A bare list of names documented here would invite grants that AR-300a-2 then reports as incomplete."
+  - "Do not restate the mechanism's internals. The reference documents where an author declares a grant and what follows from it; how the compiler delivers the section belongs to the architecture docs, which AR-300c-1's work updates."
+  - "Follow the repository's documentation frontmatter requirements for both files and keep each within the doc-length ratchet -- a change that leaves an already-oversized doc longer is refused."
+test_required: false
+delivers_to: null
+expects_from:
+  ac_id: AR-300c-1
+  contract: "The single declaration place this reference documents"
+origin_agent: BrainCandy
+created: 2026-09-30
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-10-01'
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  AUTHORED BECAUSE AR-300c DECLARES A reference-doc DOCUMENTATION TRIGGER. The
+  parent L1 sets documentation_triggers to reference-doc, so a documentation
+  criterion is required alongside the behavioural ones rather than optional.
+
+  THE THIRD CLAUSE IS THE ONE THAT MATTERS. A new reference section that states
+  the new rule while the old surfaces still describe the old one leaves an
+  author with two correct-looking instructions -- which is the same defect as
+  two records of the grant, relocated to the documentation plane. The sweep for
+  surviving instructions is the criterion; adding a section is the easy part.
+
+  NO ASSIGNED AGENT ON PURPOSE. Agent assignment is the IT Product Owner's lane;
+  this criterion is behavioural and is left unassigned, like its siblings.

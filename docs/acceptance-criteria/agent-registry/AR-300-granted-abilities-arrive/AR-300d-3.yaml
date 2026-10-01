@@ -1,0 +1,111 @@
+id: AR-300d-3
+title: "A revoked ability stops appearing in the agent's prompt on the next build"
+component: agent-registry
+components:
+  - agent_registry
+  - template_compiler
+  - skills_system
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given an agent whose compiled prompt names three granted abilities,
+    And one of the three removed from that agent's declaration and from nothing
+      else,
+  When the build compiles agent prompts again,
+  Then that agent's compiled prompt names the remaining two and does not name the
+    removed one,
+    And no trace of the removed ability survives anywhere in that prompt,
+    And the other agents that were granted the same ability still name it, so
+      revocation is per agent rather than per ability,
+  So the abilities an agent is told it holds are the abilities it holds now, not
+    the ones it has ever been granted.
+depends_on:
+  - AR-300d
+doc_links:
+  - path: scripts/template_compiler.py
+    relationship: modifies
+    status: exists
+    relevance: "Where the section is assembled each build. A section that accumulates rather than being derived afresh fails this criterion while passing every additive one."
+  - path: config/agent_registry.json
+    relationship: describes
+    status: exists
+    relevance: "The derived copy, which must follow a revocation as well as a grant, or the two records disagree again in the one direction nobody tests."
+assigned_agent: python-coder
+estimated_complexity: S
+change_target: code
+risk_surface: internal
+it_requirements:
+  - "The section is DERIVED AFRESH from the declaration on each build. It must not be accumulated, appended to a previous result, or merged with anything persisted from an earlier run. Every additive criterion in this tree is satisfied by an accumulating design; only removal distinguishes the two, and an accumulating design tells an agent it may use an ability that was deliberately taken away -- worse than the original defect, not cosmetic."
+  - "The build must not rely on the compiled output directory being clean. A stale compiled prompt from a previous build must be fully replaced, not patched, or revocation appears to work in a clean tree and silently fails in every real incremental build. The compiled tree is gitignored and persists across builds in practice."
+  - "'No trace of the removed ability survives anywhere in that prompt' means the whole compiled prompt, not just the abilities section -- a revoked ability mentioned in a table of contents, a summary line or a second injected block still tells the agent it holds it."
+  - "Revocation is PER AGENT. The cheapest implementation removes the ability from a shared structure, silently revoking it for everyone; the other holders' compiled prompts must be asserted unchanged."
+  - "The derived registry copy must follow a revocation as well as a grant, or the two records disagree again in the one direction nobody tests. AR-300c-3 reports that disagreement; this AC must not create it."
+test_spec:
+  - name: test_revoked_ability_disappears_from_the_agents_next_compiled_prompt
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: integration
+    angle: deployed
+    description: "One of three granted abilities removed from the declaration leaves the compiled prompt naming the remaining two and not the removed one."
+  - name: test_no_trace_of_the_removed_ability_survives_anywhere_in_the_prompt
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    description: "The removed ability's name appears nowhere in the whole compiled prompt, not merely nowhere in the abilities section."
+  - name: test_other_agents_granted_the_same_ability_still_name_it
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: "Revocation is per agent: the other holders' compiled prompts are unchanged and still name the ability."
+  - name: test_revocation_holds_when_rebuilding_over_a_stale_compiled_tree
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: integration
+    angle: deployed
+    description: "Rebuilding into a directory that already holds the previous compiled prompt still removes the revoked ability; the section is derived afresh, not patched."
+  - name: test_derived_registry_copy_follows_the_revocation
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: integration
+    angle: seam
+    description: "The derived central copy loses the ability too, so AR-300c-3's comparison does not report a disagreement this AC created."
+test_rationale: >-
+  Revocation is the case nobody writes and it is where 'derived' is proved: every
+  additive criterion in this tree is satisfied by a design that appends to something
+  already recorded. The stale-tree descriptor is the practical half -- the compiled
+  tree is a gitignored directory that persists across builds, so a test that always
+  builds into a fresh temp dir would let a patch-rather-than-regenerate
+  implementation pass while failing on every developer's machine.
+delivers_to: null
+expects_from:
+  ac_id: AR-300d-1
+  contract: "The declaration-driven delivery whose subtractive case this criterion pins"
+origin_agent: BrainCandy
+created: 2026-09-30
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-10-01'
+superseded_by: null
+covered_by:
+  - AR-300d-3-i
+implemented_by: []
+notes: |
+  REVOCATION IS THE CASE NOBODY WRITES, AND IT IS WHERE 'DERIVED' IS PROVED.
+  Every additive criterion in this tree is satisfied by a design that appends to
+  something already recorded. Only removal distinguishes a section derived from
+  the declaration on each build from one accumulated over time -- and an
+  accumulating design tells an agent it may use an ability that was deliberately
+  taken away, which is a worse outcome than the original defect rather than a
+  cosmetic one.
+
+  PER AGENT, NOT PER ABILITY. The clause about the other holders exists because
+  the cheapest implementation of revocation removes the ability from a shared
+  structure, silently revoking it for everyone.

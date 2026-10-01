@@ -1,0 +1,99 @@
+id: AR-300b-1-ii
+title: "The delivery failure says why the preparation did not arrive, not only that it did not"
+component: agent-registry
+components:
+  - template_compiler
+  - build_pipeline
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a per-agent preparation that did not reach the compiled prompt of the
+    agent it was prepared for,
+  When the build reports the failure,
+  Then the report distinguishes the case where the prompt offered the
+    preparation no destination from the case where the preparation itself came
+    out empty,
+    And it names which agent and which preparation, so a reader does not have to
+      re-derive the pairing,
+    And when several agents are affected by the same preparation it reports the
+      count of affected agents alongside them rather than only the first one
+      encountered,
+  So the reader knows whether to repair the delivery path or the preparation,
+    which are fixes in two different places.
+depends_on:
+  - AR-300b-1
+doc_links:
+  - path: scripts/template_compiler.py
+    relationship: modifies
+    status: exists
+    relevance: "Holds both failure causes: a destination-gated substitution that finds no destination, and a computation that can legitimately produce nothing."
+assigned_agent: python-coder
+estimated_complexity: S
+change_target: code
+risk_surface: internal
+it_requirements:
+  - "The cause is a closed enumerated field on the finding object, not free prose a reader must interpret: no-destination (the compiled prompt offered the preparation nowhere to land -- the measured defect, fixed once in the delivery path for every agent) versus empty-preparation (the computation legitimately produced nothing -- fixed in that one agent's declaration). Two different repairs in two different places."
+  - "The cause must be DERIVED from the two states, not inferred from which of the two is more common. Distinguishing them requires the gate to know both whether a destination existed and whether the computed content was non-empty, so both facts must be carried from the preparation step to the verdict rather than re-derived after the fact."
+  - "When several agents are affected by the same preparation, report the affected-agent count alongside the findings rather than stopping at the first encountered. The measured defect affects the whole population of 60; a report that stops at the first instance would have presented it as one agent's problem."
+  - "Every finding names its agent and its preparation so the pairing is stated, not re-derived by the reader. This is the same finding object AR-300b-1 delivers -- add the cause field to it, do not introduce a second report."
+  - "A third cause discovered later must be representable without changing the consumers -- the enumeration is closed for today's two states but the field is a value, not a boolean."
+test_spec:
+  - name: test_missing_destination_and_empty_preparation_carry_different_causes
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "A prompt offering the preparation no destination yields cause no-destination; a preparation that computed to nothing yields cause empty-preparation."
+  - name: test_finding_names_both_the_agent_and_the_preparation
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "Each finding carries the agent id and the preparation name explicitly."
+  - name: test_shared_preparation_failure_reports_the_affected_agent_count
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: "One preparation failing for many agents reports the count of affected agents and does not stop after the first."
+  - name: test_cause_is_derived_from_state_not_guessed
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: unit
+    angle: failure
+    description: "A case that is simultaneously destination-less and empty is classified deterministically rather than by whichever branch is checked first."
+test_rationale: >-
+  The two causes are not cosmetic variants: one is fixed once in the delivery path
+  for every agent, the other in a single agent's declaration. Collapsing them sends
+  every future reader down the wrong road about half the time, so the assertions are
+  on the cause field's value rather than on the presence of a message. The
+  affected-count descriptor exists because a first-instance-only report is exactly
+  how a 60-agent defect reads as a 1-agent defect.
+delivers_to: null
+expects_from:
+  ac_id: AR-300b-1
+  contract: "The delivery failure whose content this criterion constrains"
+origin_agent: BrainCandy
+created: 2026-09-30
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-10-01'
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  THE TWO CAUSES ARE NOT COSMETIC VARIANTS. A missing destination is the
+  measured defect and the fix is in the delivery path, once, for every agent. An
+  empty preparation is an agent-specific data problem and the fix is in that
+  agent's declaration. Collapsing them into one message sends every future
+  reader down the wrong one of the two roads about half the time.
+
+  REPORTING ONLY THE FIRST AFFECTED AGENT IS HOW 60 LOOKS LIKE 1. The observed
+  defect affects the entire population; a report that stops at the first
+  instance would have presented it as a single agent's problem.

@@ -1,0 +1,117 @@
+id: AR-300a-4
+title: "No compiled prompt carries two competing accounts of what an agent may use"
+component: agent-registry
+components:
+  - agent_registry
+  - template_compiler
+  - skills_system
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the one agent whose source definition contains a hand-written account of
+    its abilities, written in place rather than delivered,
+  When its compiled prompt is read after delivery has been repaired,
+  Then that prompt contains exactly one account of the agent's abilities, not
+    two,
+    And the abilities named in that single account are exactly the abilities its
+      declaration grants, with none named that it was not granted and none
+      granted that go unnamed,
+    And the same single-account property holds for every agent the build
+      compiled a prompt for, counted and reported, so a second hand-written
+      account added to any other definition later is caught rather than
+      accumulated,
+  So an agent reading its own instructions is never choosing between two
+    statements of what it may use, and a repair by hand cannot masquerade as a
+    delivery.
+depends_on:
+  - AR-300a
+doc_links:
+  - path: config/agent_registry.json
+    relationship: describes
+    status: exists
+    relevance: "The declaration side of the equality this criterion asserts -- what the single surviving account must agree with."
+  - path: scripts/template_compiler.py
+    relationship: modifies
+    status: exists
+    relevance: "Appends the delivered account; the hand-written one is already in the source definition, so the two meet here."
+  - path: docs/how-to/creating-an-agent-template.md
+    relationship: describes
+    status: exists
+    relevance: "The surface that tells an author how to give an agent an ability. While hand-writing the section remains a documented-looking option, this criterion decays."
+assigned_agent: python-coder
+estimated_complexity: M
+change_target:
+  - code
+  - prompt
+risk_surface: internal
+it_requirements:
+  - "Resolving this AC requires DELETING the hand-written abilities section from the affected template's BODY in templates/agents/<agent>.md (the tracked source), leaving the delivered section as the only account. The edit is confined to removing that one contiguous section -- no other prose in the template body may change, and no compiled prompt may be edited. A candidate scan of templates/agents/ surfaced templates/agents/llm-expert.md and templates/agents/python-coder.md as carrying a self-describing abilities heading; the implementer must confirm which of these states the agent's OWN grant (the in-scope case) versus merely discussing abilities in prose (out of scope, per AR-300a-4-i's control clause) before deleting anything."
+  - "Suppressing delivery for the affected agent is NOT an acceptable route to one account. The surviving account must be the delivered one, because the equality clause requires it to agree with the declaration and a hand-written list cannot be held to that."
+  - "The single-account property is asserted over every compiled prompt in every platform root, with the count reported -- not just the one known instance. Deriving the population is what catches a second hand-written account added later; naming the known instance passes forever."
+  - "The equality clause needs a comparison of the set of abilities named in the delivered section against the set the declaration grants, in BOTH directions (none named that was not granted, none granted that goes unnamed). A one-directional subset check satisfies the wording loosely and misses the drift case."
+  - "Detecting a second account in a compiled prompt must not reduce to counting occurrences of a heading string that ordinary prose can also produce -- AR-200b-1 records the cost of that error in this component (a detector matching the bare English word flagged most of the registry, and a noisy rule gets switched off). Anchor on the delivered section's own emitted structure."
+  - "Evidence is the compiled prompt read from the declared output root, never the source template -- a source scan cannot see whether the delivered section arrived beside the hand-written one."
+  - "File-size ratchet: any new comparison logic lands in a new module, not in the already-oversized scripts/template_compiler.py or scripts/injection_builders.py."
+test_spec:
+  - name: test_affected_agent_compiled_prompt_carries_exactly_one_abilities_account
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: integration
+    angle: deployed
+    description: "After the hand-written section is removed and delivery is repaired, the affected agent's compiled prompt contains one account of its abilities, not two."
+  - name: test_the_single_account_equals_the_declaration_in_both_directions
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: integration
+    angle: deployed
+    description: "The abilities named in the surviving account are exactly the declaration's grant -- no extra name, no missing name."
+  - name: test_a_second_hand_written_account_added_to_any_template_is_caught
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    description: "Planting a hand-written abilities account in a different template makes the whole-population single-account assertion fail, naming that template."
+  - name: test_single_account_property_is_asserted_over_every_compiled_prompt_with_a_count
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: "The assertion reports how many compiled prompts it examined and covers every platform root, so it cannot pass over an empty or partial population."
+test_rationale: >-
+  Two identical accounts are untidy; two that disagree is the defect, and a
+  hand-written list drifts from the declaration the first time a grant changes with
+  nothing comparing them. The planted-second-account descriptor is the load-bearing
+  one: without it the assertion is only ever exercised against a tree that has
+  already been repaired, where it degrades into proving a loop runs.
+delivers_to: null
+expects_from:
+  ac_id: AR-300a-1
+  contract: "The delivered abilities section, which this criterion requires to be the only one"
+origin_agent: BrainCandy
+created: 2026-09-30
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-10-01'
+superseded_by: null
+covered_by:
+  - AR-300a-4-i
+implemented_by: []
+notes: |
+  THE MEASURED INSTANCE. Exactly one agent's instructions mention its abilities,
+  and that section is hand-written rather than delivered. Repairing delivery
+  without addressing it produces two accounts in one prompt, and the agent has
+  no way to know which is current. The sharpest detail is that the agent holding
+  the hand-written section does not hold the means to invoke an ability at all --
+  so the account that does exist is the one least able to be acted on. Granting
+  that means is AR-200b's promise, in the leaf AR-200b-2.
+
+  WHY THE EQUALITY CLAUSE MATTERS MORE THAN THE COUNT. Two identical accounts
+  are untidy. Two accounts that disagree is the defect, and a hand-written list
+  drifts from the declaration the first time a grant changes -- with nothing to
+  notice, because nothing today compares them.

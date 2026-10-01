@@ -1,0 +1,114 @@
+id: AR-300a-4-i
+title: "A hand-written abilities section in a source definition is reported by name when the build runs"
+component: agent-registry
+components:
+  - agent_registry
+  - template_compiler
+  - build_pipeline
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a source agent definition that states its own abilities in its body,
+    rather than declaring them and letting delivery place them,
+  When the build compiles agent prompts,
+  Then the build reports that definition by name, together with the abilities it
+    states in place and the abilities its declaration grants,
+    And the report distinguishes the two possible situations -- the in-place text
+      agrees with the declaration, or it disagrees -- because a disagreement is a
+      contradiction and an agreement is merely a duplicate,
+    And a definition that discusses abilities in ordinary prose without stating
+      the agent's own grant is not reported, so the report does not fire on most
+      of the tree and get switched off,
+  So a second source of truth cannot enter the tree quietly, and the one that
+    exists today is named rather than left to be noticed.
+depends_on:
+  - AR-300a-4
+doc_links:
+  - path: scripts/template_compiler.py
+    relationship: modifies
+    status: exists
+    relevance: "Reads every source definition at compile time, so it is the point where an in-place account and a declared grant are both in hand."
+  - path: docs/how-to/creating-an-agent-template.md
+    relationship: describes
+    status: exists
+    relevance: "Where the authoring rule this report enforces is stated; the two must agree or authors will keep producing the reported shape."
+assigned_agent: python-coder
+estimated_complexity: M
+change_target: code
+risk_surface: internal
+it_requirements:
+  - "The detector's positive signal must be 'this body states the agent's OWN grant', not 'this body contains the word skills' or 'this body contains a heading'. AR-200b-1 records the measured cost of the looser rule in this same component: a detector matching the bare English word flagged most of the registry, and a noisy rule gets switched off, which is strictly worse than no rule. The control clause is part of the behaviour, not defensive padding."
+  - "This detector reads the SOURCE template body (templates/agents/*.md) -- it is the one check in this tree that legitimately does so, because its subject is what an author wrote in place. It must not be confused with, or share a code path with, the compiled-prompt checks; keep the two populations and their evidence surfaces separate and say which each is reading."
+  - "The report distinguishes agrees-with-declaration (a duplicate, lower severity) from disagrees (a contradiction) and labels which it found. Both are reported; only the severity differs."
+  - "Report the count of source templates examined and the count found to state their own grant, so a run in which the detector recognised nothing is not read as a clean tree."
+  - "Refuse or report per the severity split, consistently with ADR-050 -- but do not make a duplicate-severity finding block the build so hard that the mid-migration tree cannot build at all, or the check gets switched off before it earns its keep. State the chosen disposition explicitly in the implementation."
+  - "Run against the tracked source in the git index-equivalent working tree, and resolve template paths relative to the repository root rather than the current working directory -- the deployed-layout no-op trap: a path resolved from cwd silently matches nothing in a worktree or a consumer install."
+test_spec:
+  - name: test_template_stating_its_own_grant_in_the_body_is_reported_by_name
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "A source template that states its own abilities in its body is reported, naming the template, the in-place abilities, and the declared grant."
+  - name: test_report_labels_agreement_as_duplicate_and_divergence_as_contradiction
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "An in-place list matching the declaration is labelled a duplicate; one that differs is labelled a contradiction."
+  - name: test_template_merely_discussing_abilities_in_prose_is_not_reported
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: unit
+    angle: failure
+    description: "Control case: a template whose prose mentions skills or abilities without stating its own grant produces no finding, so the report does not fire across the tree."
+  - name: test_detector_reports_counts_examined_and_found
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: "The detector states how many source templates it examined and how many stated their own grant; zero examined is a failure, not a clean result."
+  - name: test_detector_resolves_template_paths_from_the_repository_root
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: unit
+    angle: deployed
+    description: "Invoked from a subdirectory or a worktree, the detector still finds the template population rather than matching nothing and exiting clean."
+test_rationale: >-
+  The control descriptor carries as much weight as the positive one here: this
+  component has already shipped the over-broad version of exactly this detector and
+  the consequence was a rule nobody could leave switched on. The path-resolution
+  descriptor exists because a source-scanning check that resolves paths from cwd is
+  the repository's recurring silent no-op, and its failure mode is a success line
+  over an empty match set.
+delivers_to: null
+expects_from:
+  ac_id: AR-300a-4
+  contract: "The single-account property whose violations this report names"
+origin_agent: BrainCandy
+created: 2026-09-30
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-10-01'
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  THE CONTROL CLAUSE IS LOAD-BEARING, NOT DEFENSIVE. AR-200b-1 records the same
+  hazard one component over: a detector that matched the bare English word
+  instead of the declaration flagged most of the registry, and a noisy rule gets
+  disabled, which is strictly worse than no rule. The distinction here is
+  between a definition that states its own grant and one that merely mentions
+  abilities.
+
+  WHY AGREEMENT IS STILL REPORTED. An in-place account that happens to match
+  today is the state the tree is in right now, and it is one grant change away
+  from being a contradiction with nothing watching. Reporting it as a duplicate
+  rather than a contradiction keeps the severity honest while still making it
+  visible.

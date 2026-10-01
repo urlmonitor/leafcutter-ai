@@ -1,0 +1,98 @@
+id: AR-300d-4-i
+title: "A definition still carrying a leftover marker compiles to one section and no visible token"
+component: agent-registry
+components:
+  - agent_registry
+  - template_compiler
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given an agent definition that declares a grant and also still carries the
+    marker token the old delivery was gated on,
+  When the build compiles that agent's prompt,
+  Then the prompt names the granted abilities exactly once, not twice,
+    And no marker token remains visible anywhere in the compiled prompt,
+    And the leftover marker is reported so it can be removed, naming the
+      definition it is in,
+  So a definition that is mid-migration produces a correct prompt rather than a
+    doubled or a disfigured one, and the residue does not become permanent by
+    being harmless.
+depends_on:
+  - AR-300d-4
+doc_links:
+  - path: scripts/template_compiler.py
+    relationship: modifies
+    status: exists
+    relevance: "Where a token that no longer gates anything would otherwise survive into the compiled prompt, or trigger a second placement."
+assigned_agent: python-coder
+estimated_complexity: S
+change_target: code
+risk_surface: internal
+it_requirements:
+  - "The leftover token must be STRIPPED from the compiled prompt, not left visible and not substituted. A raw `{{...}}` token surviving into an agent's working instructions is noise the agent reads as content."
+  - "Stripping must not trigger a second placement. The delivery is a declaration-driven append; the token must not also be treated as a destination, or a mid-migration definition compiles to a doubled section."
+  - "The report names the definition the leftover token is in, so it can be removed. A token that produces a correct prompt is invisible, and invisible residue is how a tree ends up with two mechanisms again."
+  - "Register the retired token in scripts/build_placeholder_detection.py, which today checks for leftover placeholder tokens and does NOT check either of the two dead injections. This is the RIGHT home for the leftover-token report -- but note it is not the load-bearing gate for the delivery guarantee itself (AR-300b-1 owns that); adding a delivery constraint here would be a no-op. Name both enforcement points and keep them distinct."
+  - "Cover BOTH retired tokens, `{{my_skills_used}}` and `{{my_spawn_allowlist}}`, and prefer deriving the retired-token set from the same registration AR-300b-2 establishes rather than hard-coding two strings -- there are 8 placeholder-guarded injection types in the compiler today."
+  - "File-size ratchet: scripts/build_placeholder_detection.py is 678 lines, already over the 400-content-line limit, and must not grow. Deriving the token set instead of enumerating it helps here."
+test_spec:
+  - name: test_definition_with_a_leftover_marker_compiles_to_exactly_one_section
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: "A template declaring a grant and also carrying the retired marker token compiles to a prompt naming the granted abilities once, not twice."
+  - name: test_no_marker_token_remains_visible_in_the_compiled_prompt
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: integration
+    angle: deployed
+    description: "The retired token appears nowhere in the compiled prompt."
+  - name: test_leftover_marker_is_reported_naming_the_definition
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "The build reports the leftover token and names the template it is in, so the residue does not become permanent by being harmless."
+  - name: test_both_retired_tokens_are_covered
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: "Both retired tokens are detected, and the detected set is derived from the registered preparations rather than two hard-coded strings."
+test_rationale: >-
+  The premise is reachable, not hypothetical: zero of 60 definitions carry the
+  marker today, which is the defect, and the state this AC describes arises the
+  moment anyone mid-repair adds one by following the old instructions. The
+  report-by-name descriptor is the one that matters, because a leftover token that
+  produces a correct prompt is invisible and invisible residue is how the tree ends
+  up with two mechanisms again.
+delivers_to: null
+expects_from:
+  ac_id: AR-300d-4
+  contract: "The marker-independent delivery whose migration residue this criterion bounds"
+origin_agent: BrainCandy
+created: 2026-09-30
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-10-01'
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  THE PREMISE IS REACHABLE, NOT HYPOTHETICAL. Zero of 60 definitions carry the
+  marker today, which is the defect. The state this criterion describes arises
+  the moment anyone, mid-repair, adds one -- following the old instructions, or
+  copying a definition from a branch where the marker fix was attempted. It is
+  the most likely wrong turn on the way to the fix, not an exotic input.
+
+  REPORTING IT IS WHAT STOPS IT BECOMING PERMANENT. A leftover token that
+  produces a correct prompt is invisible, and invisible residue is how a tree
+  ends up with two mechanisms again -- which is the state AR-300c exists to end
+  on the declaration side.

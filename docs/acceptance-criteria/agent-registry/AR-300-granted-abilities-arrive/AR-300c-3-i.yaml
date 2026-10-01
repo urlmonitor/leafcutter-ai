@@ -1,0 +1,131 @@
+id: AR-300c-3-i
+title: "A declared ability that resolves to no installed ability is reported naming the agent, the ability, and where it was looked for"
+component: agent-registry
+components:
+  - agent_registry
+  - skill_registry
+  - skills_system
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given an agent whose declaration grants an ability that matches no ability
+    available to the project -- neither one shipped with the package nor one
+    added by the project itself,
+  When the build runs,
+  Then it reports a failure naming the agent and the unresolvable ability,
+    And the report distinguishes 'not shipped with the package' from 'not found
+      among the project's own', so the reader knows which of the two to add,
+    And every declared ability of every agent is resolved, with the count
+      reported, so an agent whose declaration was not reached is not read as an
+      agent with nothing wrong,
+    And an ability that does resolve is not reported,
+  So a grant cannot name something that does not exist, and an agent is never
+    told it holds an ability nothing can answer to.
+depends_on:
+  - AR-300c-3
+doc_links:
+  - path: config/agent_registry.json
+    relationship: describes
+    status: exists
+    relevance: "Holds the ability names being resolved, until consolidation makes the per-agent declaration the source."
+  - path: docs/reference/agent-template-frontmatter.md
+    relationship: describes
+    status: exists
+    relevance: "The declaration whose ability names this criterion resolves."
+  - path: docs/acceptance-criteria/infrastructure/INF-600-self-describing-agents/INF-600a-1-i.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      SUPERSEDED BY THIS CRITERION -- IT PO DECISION TAKEN 2026-09-30. INF-600a-1-i
+      stated the same resolution requirement, including the packaged-versus-
+      project-local distinction, against the central registry field `skills_invoked`.
+      Its parent INF-600a-1 is superseded by AR-300c-1, which makes that field
+      derived rather than authoritative, so the obligation had to move to the
+      declaration or stop reaching anything. The IT PO superseded INF-600a-1-i in
+      favour of this record rather than re-parenting it: its criteria name the
+      registry field as the validated source, which is precisely the source the new
+      design demotes, and its parent lives in another component folder so a
+      re-parent would break the same-folder parent invariant. This is now the single
+      live record of the rule. See INF-600a-1-i's amended_by and notes for the audit
+      trail.
+assigned_agent: python-coder
+estimated_complexity: M
+change_target: code
+risk_surface: internal
+it_requirements:
+  - "The resolution source is the per-agent frontmatter declaration (AR-300c-1), NOT config/agent_registry.json's ability fields. This record supersedes INF-600a-1-i, which stated the same rule against the registry field; only one of the two may be implemented, and it is this one. Do not implement both against different sources."
+  - "Both halves of the two-way distinction must be resolved independently: an ability shipped with the package (templates/skills/) versus one added by the project itself (the project-local skills directory under the declared output root). The report says which of the two lookups failed so the reader knows which to add -- a single combined not-found verdict does not satisfy this."
+  - "The project-local half must be resolved through the declared output root (skills_config `output_root`, default `.leafcutter`), following the shim rather than hard-coding `.claude/skills/`. A lookup against the hard-coded shim path finds nothing in a fresh worktree and everything is then reported as unresolvable, which is the noisy failure that gets a rule switched off."
+  - "Every declared ability of every agent is resolved, and the count of abilities resolved (not just agents examined) is reported. An agent whose declaration was not reached must not read as an agent with nothing wrong."
+  - "An ability that resolves is not reported. Refuse rather than warn on a genuine unresolvable (ADR-050)."
+  - "Resolve in the SAME pass as AR-300c-3's declaration-versus-record comparison -- both are the act of comparing a grant against something outside it, and an implementation that walks one population walks the other for free. Two separate passes over the same population is the duplication to avoid."
+test_spec:
+  - name: test_unresolvable_ability_is_reported_naming_agent_and_ability
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "A declared ability matching nothing available fails the build, naming the agent and the ability."
+  - name: test_report_distinguishes_not_packaged_from_not_project_local
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "The failure says which of the two lookups came back empty, so the reader knows which surface to add the ability to."
+  - name: test_project_local_ability_resolves_through_the_declared_output_root
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: integration
+    angle: deployed
+    description: "A project-local ability under the configured output root resolves; the lookup does not depend on a hard-coded .claude/skills path that is absent in a fresh worktree."
+  - name: test_every_declared_ability_is_resolved_and_the_count_reported
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: "The count of abilities resolved is stated; an agent whose declaration was not reached fails rather than passing silently."
+  - name: test_resolvable_ability_is_not_reported
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: unit
+    angle: failure
+    description: "Control case: a packaged ability and a project-local ability both resolve cleanly and produce no finding."
+test_rationale: >-
+  This is INF-600a-1-i's requirement re-homed, so the discriminating evidence is
+  which source the resolution reads: a test that seeds the registry field would pass
+  an implementation that never looks at the declaration. The output-root descriptor
+  is the practical trap -- the project-local skills directory is reached through a
+  shim, and a lookup against the hard-coded shim path reports every ability
+  unresolvable in a fresh worktree, which is the noisy-rule failure this component
+  has already paid for once.
+delivers_to: null
+expects_from:
+  ac_id: AR-300c-1
+  contract: "The per-agent declaration whose ability names this criterion resolves"
+origin_agent: BrainCandy
+created: 2026-09-30
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-10-01'
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  THIS IS INF-600a-1-i's REQUIREMENT, RE-HOMED AND NOT REINVENTED. That record
+  already asked for exactly this resolution and exactly this two-way
+  distinction, against the central field. When the declaration becomes the
+  source, the same obligation has to point at the declaration or it stops
+  reaching anything. The wording is deliberately close so the IT PO can see they
+  are one requirement in two homes rather than two requirements.
+
+  WHY IT SITS UNDER AR-300c-3. Both are the same act: comparing a grant against
+  something outside it. AR-300c-3 compares the declaration against the derived
+  copy; this compares it against the set of abilities that actually exist. An
+  implementation that resolves one population will resolve the other in the same
+  pass.

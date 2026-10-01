@@ -16,10 +16,13 @@ criteria: |
   actually do it that way.
 
   A specialist's instructions sometimes name a specific tool as the way to carry
-  out a mandatory step, because that tool is the safe one for that step. Every
-  such instruction is matched by the specialist actually having that tool. The
-  contradiction is caught when the specialist is defined, not discovered by the
-  specialist mid-task.
+  out a mandatory step, because that tool is the safe one for that step. The same
+  obligation arises when a specialist's own definition declares that it may use
+  something — a declared grant is as much a statement that the specialist is
+  expected to use that route as an instruction naming it. Every such
+  obligation, however it is declared, is matched by the specialist actually
+  having the tool it needs. The contradiction is caught when the specialist is
+  defined, not discovered by the specialist mid-task.
 
   The benefit is that a named safe route is a real one. A specialist that cannot
   follow the safe instruction does not simply stop — it improvises with whatever
@@ -47,11 +50,26 @@ doc_links:
 delivers_to: null
 expects_from: null
 origin_agent: product-owner
+amended_by:
+  - reason: >-
+      2026-09-30, business-analyst, authoring AR-200b-2. Criteria widened to
+      admit a DECLARATION-sourced obligation alongside the
+      instruction-in-the-body one it already covered. Reason: 25 agents declare
+      a non-empty ability grant while not being permitted the tool by which an
+      ability is invoked. That is this L1's promise in its second instance, and
+      the L1 as originally worded derived the obligation only from
+      "instructions [that] name a specific tool as the way to carry out a
+      mandatory step" -- wording a structured declaration does not meet. The
+      alternative was to let AR-200b-2 assert something its parent does not
+      promise, which is silently widening a child. Nothing was narrowed: the
+      original instruction-sourced obligation is unchanged and AR-200b-1 is
+      unaffected. Handed to the IT PO / user for re-approval, since this L1 was
+      at readiness approved before the amendment.
 created: 2026-08-26
-amended_by: []
 superseded_by: null
 covered_by:
   - AR-200b-1
+  - AR-200b-2
 implemented_by: []
 documentation_triggers: []
 documentation_rationale: "No new user-facing surface — a configuration contradiction stops occurring. The affected instructions already exist and are unchanged."

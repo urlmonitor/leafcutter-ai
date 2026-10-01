@@ -1,0 +1,71 @@
+id: AR-300c
+title: "What a specialist may do is written down once, beside what it is allowed to use"
+component: agent-registry
+components:
+  - agent_registry
+  - skill_registry
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  One record of a specialist's abilities, sitting next to its permissions.
+
+  A specialist's abilities are declared in a single place, alongside the
+  declaration of what it is permitted to use, so the two can be read together
+  and checked against each other. Any other copy of that list is derived from
+  the one declaration, never typed in again -- so two records of the same grant
+  can no longer disagree, and nobody has to know which one to believe.
+depends_on:
+  - AR-300
+doc_links:
+  - path: config/agent_registry.json
+    relationship: modifies
+    status: exists
+    relevance: "Holds the grant twice today, in two fields with different populations -- 32 specialists in one, 40 in the other, 12 present only in the second. After this criterion these fields are derived, not authoritative."
+  - path: docs/how-to/creating-an-agent-template.md
+    relationship: modifies
+    status: exists
+    relevance: "The surface an author consults to learn where a specialist's abilities are declared. It must state the single place, or the split simply re-forms."
+  - path: docs/acceptance-criteria/infrastructure/INF-600-self-describing-agents/INF-600a-1.yaml
+    relationship: related
+    status: exists
+    relevance: "DIRECT CONTRADICTION -- RECONCILE, DO NOT IGNORE. This reviewed record established the newer central field as the source of truth and kept the older one as a compatibility alias. It is both the origin of today's split population and the opposite of the direction now chosen. It is an L2 and must be amended or superseded explicitly when this criterion is decomposed."
+  - path: docs/acceptance-criteria/agent-registry/AR-200-capability-matches-obligation/AR-200b.yaml
+    relationship: related
+    status: exists
+    relevance: "WHY 'BESIDE' IS LOAD-BEARING RATHER THAN TIDY. AR-200b's promise is that a declared obligation is matched by a declared capability. Putting the ability list next to the permission declaration is what makes that comparison possible for abilities at all; the comparison itself stays AR-200b's."
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-09-30
+amended_by: []
+superseded_by: null
+covered_by:
+  - AR-300c-1
+  - AR-300c-2
+  - AR-300c-3
+  - AR-300c-4
+implemented_by: []
+documentation_triggers:
+  - reference-doc
+documentation_rationale: null
+notes: |
+  THIS CARRIES A DECISION THE USER HAS ALREADY TAKEN. The abilities move into the
+  specialist's own definition, beside the declaration of what it is permitted to
+  use. The central record's ability fields become derived and validated. Do not
+  re-open the placement question at decomposition; do state the migration.
+
+  THE 12 ARE THE TEST OF THIS CRITERION. Twelve specialists appear only in the
+  second of the two rival fields. A migration that consolidates onto either
+  field's population alone silently drops or invents grants, and would leave
+  those twelve receiving nothing even after delivery is repaired. Any acceptance
+  evidence must account for the union and name what it did with each side.
+
+  ONE DECLARATION IS NOT THE SAME AS ONE CORRECT DAY. A design in which every
+  specialist happens to be correct after a round of hand edits satisfies nothing
+  here. The guarantee is that there is one place to change, and that every other
+  copy follows from it without anyone visiting it.

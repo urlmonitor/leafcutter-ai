@@ -1,0 +1,61 @@
+id: AR-300b
+title: "Nothing prepared for a specialist is dropped in silence"
+component: agent-registry
+components:
+  - template_compiler
+  - build_pipeline
+  - agent_registry
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  If something prepared for a specialist never reaches it, you are told.
+
+  Work done on a specialist's behalf either lands where it was meant to land or
+  is reported as a failure by name. A preparation that reaches nobody can no
+  longer finish inside a run that reports success.
+depends_on:
+  - AR-300
+doc_links:
+  - path: scripts/template_compiler.py
+    relationship: modifies
+    status: exists
+    relevance: "Where per-specialist blocks are prepared and, today, silently discarded when their destination is absent. Two separate blocks fail this way at once."
+  - path: docs/acceptance-criteria/build_pipeline/BP-1500-honest-builds/BP-1500.yaml
+    relationship: related
+    status: exists
+    relevance: "FENCED. BP-1500 owns the truthfulness of the build's account of the FILES it wrote, removed and left behind, and every one of its guarantees passes on this defect -- the file was written, nothing is orphaned or stale, and two runs agree. This criterion is about CONTENT that never entered a correctly written file. Cite BP-1500's honesty precedent; do not restate its file-level rules here."
+  - path: docs/acceptance-criteria/build_pipeline/BP-1500-honest-builds/BP-1500d-4.yaml
+    relationship: related
+    status: exists
+    relevance: "The closest existing statement of the same shape -- a check that found nothing to examine must not return the all-clear it returns when nothing is wrong. Prior art for the reporting posture this criterion needs."
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-09-30
+amended_by: []
+superseded_by: null
+covered_by:
+  - AR-300b-1
+  - AR-300b-2
+  - AR-300b-3
+  - AR-300b-4
+implemented_by: []
+documentation_triggers: []
+documentation_rationale: "Internal build-time honesty guarantee -- an existing class of silent failure becomes a reported one; no new user-facing workflow is introduced."
+notes: |
+  WHY THIS IS NOT JUST AR-300a WITH EXTRA STEPS. AR-300a can be fully satisfied
+  for today's 60 specialists by a one-off repair, leaving the mechanism exactly
+  as willing to discard the next block as it was this one. This criterion is
+  about the mechanism: the observed defect hit TWO independent per-specialist
+  blocks simultaneously, by the same silence, and neither was noticed by
+  anything. That is one failure mode with two instances, not two coincidences.
+
+  THE SECOND INSTANCE IS THE PROOF OBLIGATION. A guarantee written against the
+  abilities block alone is indistinguishable from AR-300a. Whatever reports the
+  failure must cover any per-specialist preparation, including the second dead
+  one measured on this defect and one added later.

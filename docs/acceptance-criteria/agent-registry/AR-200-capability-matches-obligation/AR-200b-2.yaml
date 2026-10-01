@@ -1,0 +1,182 @@
+id: AR-200b-2
+title: "An agent whose declared ability grant is non-empty is granted the means to invoke an ability"
+component: agent-registry
+components:
+  - agent_registry
+  - skills_system
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the set of agents whose own definition declares a non-empty grant of
+    abilities,
+  When each such agent's declared grant is compared against the tools its own
+    definition permits it to use,
+  Then every one of them is permitted the tool by which an ability is invoked,
+    And an agent that declares a grant without that tool is reported, naming the
+      agent, the abilities it was granted, and the tools it does declare,
+    And both sides of the comparison are derived from the agents' own
+      definitions, so an agent granted an ability tomorrow is reported without
+      anyone editing the comparison,
+    And the comparison states how many agents it examined and how many held a
+      non-empty grant, so a comparison that resolved to no agents is not read as
+      one that found no violations,
+  So a granted ability is an ability the agent can actually reach, rather than
+    one it silently works around.
+depends_on:
+  - AR-200b
+doc_links:
+  - path: config/agent_registry.json
+    relationship: describes
+    status: exists
+    relevance: "Where grants are recorded today. 31 agents hold a grant; 25 of them are not permitted the tool by which an ability is invoked. The grant is also split across two fields, which is why the population must be the union -- see AR-300c-2."
+  - path: docs/reference/agent-template-frontmatter.md
+    relationship: describes
+    status: exists
+    relevance: "The header block that declares the permitted tools, and -- once AR-300c-1 lands -- the granted abilities beside them. Both sides of this comparison come from here."
+  - path: docs/acceptance-criteria/agent-registry/AR-300-granted-abilities-arrive/AR-300c-1.yaml
+    relationship: related
+    status: exists
+    relevance: "Puts the ability grant beside the tools declaration, which is what makes this comparison possible from the definition alone. This criterion is the comparison; AR-300c-1 is the placement that enables it."
+  - path: docs/acceptance-criteria/agent-registry/AR-200-capability-matches-obligation/AR-200b-1.yaml
+    relationship: related
+    status: exists
+    relevance: "SIBLING WITH A DIFFERENT DERIVATION, AND A CONSTRAINT THIS CRITERION DOES NOT INHERIT. AR-200b-1 derives its obligation from template PROSE naming a tool and is scoped to state-mutating tools on the stated ground that a read-only shortfall stops the agent loudly. The measurement below disproves that ground for this case. See notes."
+  - path: docs/architecture/agent_knowledge_plane.md
+    relationship: describes
+    status: exists
+    relevance: "Channel 5 -- an ability is invoked on demand during the task, through a tool the agent must be permitted. Without that permission the channel does not exist for that agent."
+assigned_agent: python-coder
+estimated_complexity: M
+change_target: code
+risk_surface: internal
+it_requirements:
+  - "BOTH sides of the comparison come from the agents' OWN definitions -- the declared grant and the `tools:` line in the same frontmatter block. This is only possible once AR-300c-1 puts the grant beside the tools; until then the grant lives in config/agent_registry.json and the tools live only in template frontmatter (verified: `tools` appears in 0 of 61 registry entries), and that split is the direct cause of the 25-agent mismatch being invisible today."
+  - "The tool by which an ability is invoked must be identified from the declared tool vocabulary rather than assumed -- `tools:` is a bare comma-separated string today (e.g. `tools: Bash, Read, Edit, Write, Agent`), so the comparison needs a defined parse of that string and a defined name for the invoking tool. Pin both in the implementation rather than pattern-matching a substring, or `Agent` matching inside another token produces silent false passes."
+  - "Derive both populations from the definitions on the run so an agent granted an ability tomorrow is reported with no edit to the comparison. Do not enumerate the 25, and do not hard-code 31 or 6 -- those are 2026-09-30 measurements."
+  - "State how many agents were examined and how many held a non-empty grant. A comparison that resolved to no agents must not read as one that found no violations, and this AC's core clause is a universal over a derived population."
+  - "GRANT THE CAPABILITY, DO NOT DELETE THE GRANT. The cheapest way to make this comparison pass is to empty the ability declarations of the 25 agents, which satisfies the rule and leaves every one of them doing raw text search for answers an ability already holds. The remediation this AC enables is adding the tool, never removing the grant -- state this in the finding's suggested action so a future implementer is not led the wrong way."
+  - "The mutating-tools scope AR-200b-1 applies is deliberately NOT inherited here (the leaf states its own derivation). Do not let a shared helper re-impose it -- if AR-200b-1's detector and this comparison share code, the scope filter must be a parameter of the caller, not a property of the helper."
+  - "Refuse rather than warn (ADR-050)."
+test_spec:
+  - name: test_agent_with_a_grant_but_without_the_invoking_tool_is_reported
+    target_dir: unit_tests/agents/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "An agent declaring a non-empty grant whose tools line omits the invoking tool is reported, naming the agent, its granted abilities and the tools it does declare."
+  - name: test_both_sides_are_read_from_the_agents_own_definition
+    target_dir: unit_tests/agents/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "Grant and tools both parse out of one frontmatter block; changing the registry alone does not change the verdict."
+  - name: test_a_newly_granted_agent_is_reported_with_no_edit_to_the_comparison
+    target_dir: unit_tests/agents/
+    framework: unittest
+    type: unit
+    angle: seam
+    description: "Adding a grant to a template that lacks the invoking tool produces a finding without the comparison's own code changing; the population is derived."
+  - name: test_comparison_states_agents_examined_and_agents_holding_a_grant
+    target_dir: unit_tests/agents/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: "Both counts are reported; a run resolving to zero agents fails rather than reading as no violations found."
+  - name: test_invoking_tool_is_matched_exactly_not_by_substring
+    target_dir: unit_tests/agents/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: "A tools line containing a longer token that merely embeds the invoking tool's name does not count as declaring it."
+  - name: test_comparison_reproduces_the_measured_mismatch_on_the_real_tree
+    target_dir: unit_tests/agents/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    description: "Run against the real templates after AR-300c-1 lands, the comparison reports a non-empty finding set, proving it fires on the population it was written for rather than passing vacuously."
+test_rationale: >-
+  The defect this AC targets is invisible by construction: an agent lacking the
+  invoking tool does not stop, it falls back to raw text search and proceeds
+  successfully and silently -- 33 invocations against roughly 32,600 fallbacks over
+  about 90,000 recorded actions. There is therefore no runtime signal to assert on,
+  and the evidence has to be the static comparison over the real definitions. The
+  real-tree descriptor is included because a comparison verified only on fixtures
+  can be correct and still be pointed at the wrong population; the substring
+  descriptor because `tools:` is an unstructured string and a loose match here
+  produces exactly the silent false pass the AC exists to end.
+delivers_to:
+  agent: python-coder
+  contract: >-
+    A grant-versus-permitted-tools verdict derived from agent template
+    frontmatter alone -- {examined_count, granted_count, findings: [{agent,
+    granted_abilities, declared_tools, suggested_action: "grant the invoking
+    tool"}]} -- whose boundary cases AR-200b-2-i fixes.
+expects_from:
+  ac_id: AR-300c-1
+  contract: >-
+    The per-agent ability declaration placed in the template's own frontmatter
+    beside `tools:`, which is what makes both sides of this comparison readable
+    from one definition. Cross-tree dependency: this comparison is not
+    implementable from the definitions alone until AR-300c-1 lands.
+origin_agent: BrainCandy
+created: 2026-09-30
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-10-01'
+superseded_by: null
+covered_by:
+  - AR-200b-2-i
+implemented_by: []
+notes: |
+  THIS LEAF STATES ITS OWN DERIVATION AND DOES NOT INHERIT AR-200b-1's.
+
+  AR-200b-1's obligation comes from the template BODY: prose that names a
+  specific tool as the way to carry out a step the template marks mandatory. It
+  therefore needs a detector that distinguishes an instruction from ordinary
+  English, and it carries a control case proving benign prose does not fire.
+
+  This leaf's obligation comes from a STRUCTURED DECLARATION: a non-empty grant
+  of abilities in the agent's own definition. There is no prose to match, no
+  ambiguity between a tool name and an English word, and no control case of that
+  kind to write. An agent either declares a grant or it does not. That makes this
+  the cheaper and more reliable half of AR-200b's promise, not a variant of the
+  harder one.
+
+  WHY THE MUTATING-TOOLS SCOPE IS DELIBERATELY NOT INHERITED. AR-200b-1 carries
+  the constraint "SCOPE TO MUTATING TOOLS", justified in its own words: "A body
+  naming a read-only tool it does not hold is also a bug, but a harmless one: the
+  agent cannot proceed, loudly." That line exists and was read before this leaf
+  was authored. Its reasoning is sound for the case it was written against and
+  false for this one, and the measurement is what makes the difference:
+
+    - The tool by which an ability is invoked is not state-mutating.
+    - An agent lacking it does NOT stop. It falls back to raw text search and
+      proceeds -- successfully, silently, and expensively.
+    - Over roughly 90,000 recorded agent actions: 33 ability invocations, all
+      from the 6 agents that hold the tool, against about 32,600 fallbacks to
+      raw text search, including for questions a shipped ability already
+      answers.
+
+  So the premise "the agent cannot proceed, loudly" is exactly inverted here: the
+  agent proceeds quietly. AR-200b-1's constraint selects for the failures an agent
+  cannot hide; this is a failure an agent cannot help but hide. Applying that
+  scope would exclude the 25-agent population entirely, which is why the scope is
+  restated at the leaf rather than borrowed.
+
+  Consequence for the L1: AR-200b's own criteria derived the obligation from
+  "instructions [that] name a specific tool as the way to carry out a mandatory
+  step" -- wording that does not reach a declaration-sourced obligation. The L1
+  was amended on 2026-09-30 to admit both sources, recorded in its amended_by,
+  rather than silently widening this child past its parent's stated promise.
+
+  GRANT THE CAPABILITY, DO NOT DELETE THE GRANT. AR-200b's binding constraint in
+  its third form. The cheapest way to make this criterion pass is to empty the
+  ability declarations of the 25 agents, which satisfies the comparison and
+  leaves every one of them doing raw text search for answers an ability already
+  holds. The grant encodes the intended route; it is the thing to preserve.
