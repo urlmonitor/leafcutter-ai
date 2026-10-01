@@ -255,6 +255,11 @@ def precedent_evidence(hit: DecisionHit, score: float, now: datetime) -> Evidenc
         verification=Verification.SOURCE_VERIFIED)
 
 
+def is_precedent_evidence(item: Evidence) -> bool:
+    """True if the evidence item was added by the kernel from the memory port (a precedent)."""
+    return item.source.id == SOURCE_ID
+
+
 def confirm_text(record: DecisionRecord) -> str:
     """Return the literal confirm question the human is asked."""
     return (f"Decision {record.id} (approved by {record.approval.approved_by} on "
@@ -295,6 +300,9 @@ def reuse_rationale(record: DecisionRecord, actor: str) -> str:
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 [python-coder]: `is_precedent_evidence` marks kernel-added memory evidence by its
+#   source id, so the grounding rule can tell it from evidence a caller supplied.
+#   (#KernelPrecedentSkipsGrounding)
 # - 2026-10-01 [python-coder]: Precedent evidence carries no `provenance.actor`: the decision reads
 #   the newest actor among its context evidence as "the answering human", and a file a person
 #   approved earlier must never be mistaken for that answer. The approver is in the title and the

@@ -193,9 +193,8 @@ class TestAMatchingPrecedentBeforeAnyBasis(PrecedentCase):
         inv, ctx, waiting = self.goal()
         again = self.answer(inv, ctx, waiting, {"choice_id": "decide_anew"})
         self.assertEqual(again.status, ResultStatus.WAITING)
-        # the normal flow: the precedent is the grounding evidence, so options are requested next
-        self.assertEqual(again.requests[0].kind, RequestKind.OPTIONS)
-        self.assertEqual(again.requests[0].payload["evidence_ids"], [waiting.evidence[0].id])
+        # the normal flow: a precedent is not grounding evidence, so the research runs first
+        self.assertEqual(again.requests[0].kind, RequestKind.EVIDENCE)
         self.assertEqual(self.jev.call_count, 1)  # the precedent is not judged twice
         self.assertIn(waiting.evidence[0].id, again.continuation_state["evidence_ids"])
         self.assertEqual(self.staged(ctx), [])
@@ -213,16 +212,16 @@ class TestAMatchingPrecedentBeforeAnyBasis(PrecedentCase):
     def test_an_applicable_precedent_below_the_reuse_threshold_is_evidence_only(self) -> None:
         self.params["applies"] = 0.6
         _, _, waiting = self.goal()
-        self.assertEqual(waiting.requests[0].kind, RequestKind.OPTIONS)  # it grounds the options
+        self.assertEqual(waiting.requests[0].kind, RequestKind.EVIDENCE)  # still grounds first
         self.assertEqual(len(waiting.evidence), 1)
-        self.assertEqual(waiting.requests[0].payload["evidence_ids"], [waiting.evidence[0].id])
+        self.assertIn(waiting.evidence[0].id, waiting.continuation_state["evidence_ids"])
 
     def test_a_superseded_precedent_is_never_offered_for_reuse(self) -> None:
         newer = make_record(id="dec-3333333333333333", supersedes=[PRECEDENT_ID],
                             question="Something about animals and trees?")
         self.write(newer)
         _, _, waiting = self.goal()
-        self.assertEqual(waiting.requests[0].kind, RequestKind.OPTIONS)  # evidence, no reuse offer
+        self.assertEqual(waiting.requests[0].kind, RequestKind.EVIDENCE)  # evidence, no reuse offer
         self.assertEqual(len(waiting.evidence), 1)
 
     def test_no_matching_record_means_no_jev_call_for_precedent(self) -> None:
@@ -251,7 +250,7 @@ class TestAMatchingPrecedentBeforeAnyBasis(PrecedentCase):
         (self.folder / f"{PRECEDENT_ID}.yaml").unlink()
         again = self.answer(inv, ctx, waiting, {"choice_id": "reuse"})
         self.assertEqual(again.status, ResultStatus.WAITING)
-        self.assertEqual(again.requests[0].kind, RequestKind.OPTIONS)  # decided anew, normally
+        self.assertEqual(again.requests[0].kind, RequestKind.EVIDENCE)  # decided anew, normally
         self.assertTrue(any("no longer in the store" in x for x in again.limitations))
 
 
@@ -356,6 +355,9 @@ if __name__ == "__main__":
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 [python-coder]: A precedent-only decision now requests the grounding research first
+#   (the old assertions encoded the defect: options without repository evidence).
+#   (#KernelPrecedentSkipsGrounding)
 # - 2026-10-01 [python-coder]: Every authority rule has a test: a precedent resolves nothing alone,
 #   reuse is approved by the CURRENT human, a host approver or an unanswered decision leaves no
 #   record, and staging never touches the repository's store. (#KernelDecisionStore)

@@ -33,6 +33,7 @@ from kernel.contracts.enums import (
 from kernel.contracts.evidence import Evidence
 from kernel.memory.models import PrecedentNote
 from kernel.memory.port import DecisionHit
+from kernel.memory.precedent import is_precedent_evidence
 
 
 class DecisionContinuation(KernelModel):
@@ -161,6 +162,15 @@ class Working:
     def evidence_ids(self) -> list[str]:
         """Ids of the evidence the decision is based on, in order."""
         return [e.id for e in self.evidence]
+
+    @property
+    def grounding_evidence(self) -> list[Evidence]:
+        """Evidence that grounds the option space: all of it except kernel-added precedent.
+
+        A precedent comes from the memory port, not from the caller or from research, so it must
+        neither skip the grounding research nor count as its result.
+        """
+        return [e for e in self.evidence if not is_precedent_evidence(e)]
 
     @property
     def has_required_criterion(self) -> bool:
