@@ -13,6 +13,7 @@ ARCHITECTURE: Synchronous and side-effect free apart from reads through ReadPoli
 from __future__ import annotations
 
 import os
+import re
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -22,6 +23,7 @@ from kernel.config import RetrievalConfig
 from kernel.contracts.enums import SourceKind
 
 STRATEGY = "repo_text"
+_SENTENCE_END = re.compile(r"[.!?](?=\s)")
 
 
 def _iter_files(root: Path) -> list[Path]:
@@ -49,6 +51,25 @@ def _best_window(lines: list[str], terms: list[str], context: int) -> tuple[int,
     return start, end, hits
 
 
+def cut_at_boundary(text: str, cap: int) -> str:
+    """Return text cut to at most `cap` chars, at a line end, else a sentence end, else a word.
+
+    The cut never goes below half the cap (a tiny excerpt would say nothing); the caller still
+    marks the result as truncated.
+    """
+    if len(text) <= cap:
+        return text
+    window, floor = text[:cap], cap // 2
+    line = window.rfind("\n")
+    if line >= floor:
+        return window[:line]
+    sentence = max((m.end() for m in _SENTENCE_END.finditer(window)), default=0)
+    if sentence >= floor:
+        return window[:sentence]
+    word = window.rfind(" ")
+    return window[:word] if word >= floor else window
+
+
 def _candidate(rel: str, source_id: str, lines: list[str], terms: list[str],
                cfg: RetrievalConfig, modified: datetime | None) -> Candidate | None:
     """Build a Candidate for one file, or None if no term occurs in it."""
@@ -57,7 +78,7 @@ def _candidate(rel: str, source_id: str, lines: list[str], terms: list[str],
         return None
     excerpt = "\n".join(lines[start:end])
     truncated = len(excerpt) > cfg.max_excerpt_chars
-    body = excerpt[:cfg.max_excerpt_chars]
+    body = cut_at_boundary(excerpt, cfg.max_excerpt_chars)
     full = "\n".join(lines).lower()
     matched = tuple(t for t in terms if t in full)
     return Candidate(
@@ -112,6 +133,8 @@ def search_repo_text(policy: ReadPolicy, source_id: str, roots: list[Path], term
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-02 [python-coder]: Excerpts are cut at a line or sentence end within the cap (still
+#   marked truncated) instead of mid-sentence. (#KernelBootstrapV0/GROUND)
 # - 2026-09-30 23:00 [python-coder]: One excerpt per file (the densest window) keeps the
 #   candidate list small enough for one Jev relevance batch. (#KernelBootstrapV0/P5)
 # ====================================================================

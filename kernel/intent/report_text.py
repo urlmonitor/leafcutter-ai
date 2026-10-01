@@ -24,6 +24,7 @@ SUGGESTIONS = ('"Decide which option to pick for ..."', '"Find where ... is defi
 #: Limitation codes whose text is already a plain explanation with next steps.
 _PLAIN_CODES = frozenset({"out_of_scope_write", "out_of_domain", "unclear_request"})
 _MAX_SHOWN = 8
+_EXCERPT_CHARS = 240
 
 
 def has_plain_reason(limitations: list[str]) -> bool:
@@ -74,12 +75,29 @@ def _options_lines(payload: Mapping[str, Any]) -> list[str]:
     return [*lines, ""]
 
 
+def _key_evidence(evidence: list[Mapping[str, Any]]) -> list[str]:
+    """Return the first evidence items as `locator: excerpt` bullets (one line each, cut short)."""
+    lines = []
+    for item in evidence[:_MAX_SHOWN]:
+        where = item.get("source", {}).get("locator", "")
+        text = " ".join(str(item.get("excerpt") or "").split())
+        lines.append(f"- {where}: {text[:_EXCERPT_CHARS]}{'...' if len(text) > _EXCERPT_CHARS else ''}")
+    return lines
+
+
 def _evidence_lines(payload: Mapping[str, Any]) -> list[str]:
     """Return the readable section of an evidence_bundle.v1 output: findings and sources."""
     findings = [f.get("claim", "") for f in payload.get("findings", [])]
     sources = sorted({e.get("source", {}).get("locator", "") for e in payload.get("evidence", [])}
                      - {""})
-    lines = ["## Findings", "", *(_bullets(findings) or ["- No findings were recorded."]), ""]
+    if findings:
+        lines = ["## Findings", "", *_bullets(findings), ""]
+    elif payload.get("evidence"):
+        lines = ["## Key evidence", "",
+                 "The run recorded no separate findings; these are the most relevant excerpts as found.", "",
+                 *_key_evidence(payload["evidence"]), ""]
+    else:
+        lines = ["## Findings", "", "- No findings were recorded.", ""]
     if sources:
         lines += ["## Sources", "", *_bullets(sources), ""]
     return lines
@@ -99,6 +117,8 @@ def output_sections(schema_id: str | None, payload: Mapping[str, Any] | None) ->
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-02 [python-coder]: A bundle with evidence but no findings shows its key excerpts
+#   instead of only "No findings were recorded". (#KernelBootstrapV0/GROUND)
 # - 2026-10-01 22:00 [python-coder]: Ideas are rendered under a heading that says they are
 #   proposals and not decisions, next to the unchanged JSON output block. (#KernelBootstrapV0/INTENT)
 # - 2026-10-01 22:00 [python-coder]: The "can do" hint is a limitation line (code `can_do`) only

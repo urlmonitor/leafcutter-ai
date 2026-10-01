@@ -69,6 +69,7 @@ class TestGroundedRun(ScenarioCase):
         cited = paused.pending_interaction.input_evidence_ids
         self.assertIn(f"grounded in {', '.join(cited)}", question.question)
         self.assertEqual(question.decision_id, approval.decision_ids[0])
+        self.assertEqual(question.relevant_evidence_ids, cited)  # the cited evidence
         self.assertEqual(len(approval.decision_ids), 1)
 
     async def test_one_decision_is_one_record_through_to_the_end(self) -> None:

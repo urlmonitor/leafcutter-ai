@@ -108,7 +108,8 @@ def render_gap_draft(gap: CapabilityGap) -> str:
         f"- First seen: {gap.first_seen.isoformat() if gap.first_seen else 'unknown'}",
         f"- Last seen: {gap.last_seen.isoformat() if gap.last_seen else 'unknown'}",
         f"- Fallback outcome (latest): {gap.fallback_outcome.value}",
-        "- Example runs:", _bullets([f"`{r}`" for r in gap.example_run_ids]), "",
+        "- Example runs:", _bullets([f"`{r}`" for r in gap.example_run_ids]),
+        "- Trace links:", _bullets(gap.example_trace_urls, "none (tracing was off)"), "",
         "## Closest existing capabilities (closest first)", "",
         _bullets([describe_candidate(c, gap.candidate_exclusions)
                   for c in gap.candidates_considered]), "",

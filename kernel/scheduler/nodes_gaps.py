@@ -100,7 +100,9 @@ def build_gap(state: KernelState, item: WorkItem, request: Request,
         candidates_considered=closest,
         candidate_exclusions={c: exclusions[c] for c in closest if c in exclusions},
         why_insufficient=", ".join(assessment.reason_codes) if assessment else "",
-        example_run_ids=[state["run_id"]], fallback_outcome=outcome, **extra)
+        example_run_ids=[state["run_id"]], fallback_outcome=outcome,
+        example_trace_urls=[t.trace_url for t in [state.get("trace")] if t and t.trace_url],
+        **extra)
 
 
 def fallback_candidate(state: KernelState, ctx: KernelRuntime, draft: Draft, request: Request
@@ -348,6 +350,8 @@ def settle_gap_outcomes(state: KernelState, ctx: KernelRuntime, draft: Draft, *,
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-02 [python-coder]: A gap observation carries the run trace URL (when exported).
+#   (#KernelBootstrapV0/GROUND)
 # - 2026-10-01 23:00 [python-coder]: A host_only gap with a native twin gets a draft as well: a
 #   build opportunity without a draft was lost to the backlog; the draft text asks the reader to
 #   check the twin first. (#KernelBootstrapV0/GROUND)

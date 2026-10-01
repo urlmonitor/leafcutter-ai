@@ -100,7 +100,9 @@ def _absorb_findings(work: Working, payload: dict) -> None:
     model = cast(FindingsPayload, validate_payload(schema_ids.FINDINGS, payload))
     claims = [f.claim for f in model.findings] + [f"disagreement: {d}" for d in model.disagreements]
     kept = [*work.cont.findings, *claims][-MAX_FINDINGS_KEPT:]
-    work.cont = work.cont.model_copy(update={"findings": kept})
+    refs = [*work.cont.finding_refs, *(f"[{f.id}] {f.claim}" for f in model.findings)]
+    work.cont = work.cont.model_copy(update={
+        "findings": kept, "finding_refs": list(dict.fromkeys(refs))[-MAX_FINDINGS_KEPT:]})
 
 
 def _answering_actor(ctx: ExecutionContext, invocation: CapabilityInvocation) -> str | None:
@@ -205,6 +207,8 @@ def load_working(invocation: CapabilityInvocation, ctx: ExecutionContext) -> Wor
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-02 [python-coder]: Accepted findings are kept with their ids for the options packet.
+#   (#KernelBootstrapV0/GROUND)
 # - 2026-10-01 23:00 [python-coder]: The decision id is derived from the work item id: it used
 #   to be a fresh random id per invocation, so one decision produced several records.
 #   (#KernelBootstrapV0/GROUND)

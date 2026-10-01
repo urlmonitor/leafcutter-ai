@@ -79,7 +79,8 @@ def options_request(work: Working, max_options: int) -> RequestProposal:
         problem=work.question, constraint_ids=work.constraint_ids,
         existing_option_ids=[o.id for o in work.usable_options],
         evidence_ids=cited, max_options=max_options, propose_criteria=True,
-        require_grounding=work.require_grounding and max_options > 0 and bool(cited))
+        require_grounding=work.require_grounding and max_options > 0 and bool(cited),
+        findings=list(work.cont.finding_refs))
     return RequestProposal(
         kind=RequestKind.OPTIONS, question=work.question,
         payload_schema=schema_ids.OPTIONS_REQUEST, payload=payload.model_dump(mode="json"),
@@ -124,12 +125,13 @@ def synthesis_request(work: Working, why: str) -> RequestProposal:
 
 
 def _human(work: Working, question: str, why: str, choices: list[Choice], free_text: bool,
-           subjects: list[str], structured: bool = False) -> RequestProposal:
+           subjects: list[str], structured: bool = False, evidence: list[str] | None = None
+           ) -> RequestProposal:
     """Build a human_question_request proposal."""
     payload = HumanQuestionRequestPayload(
         question=question, choices=choices, free_text_allowed=free_text,
         structured_allowed=structured, why_research_cannot_settle=why, subject_ids=subjects,
-        decision_id=work.decision_id or None)
+        decision_id=work.decision_id or None, evidence_ids=list(evidence or []))
     return RequestProposal(
         kind=RequestKind.HUMAN, question=question,
         payload_schema=schema_ids.HUMAN_QUESTION_REQUEST,
@@ -144,6 +146,11 @@ def _describe(item: Option | Criterion) -> str:
     grounding = (f"grounded in {', '.join(item.source_refs)}" if item.source_refs
                  else "no cited evidence")
     return f"- [{item.id}] {item.title} ({grounding})"
+
+
+def _cited(options: list[Option]) -> list[str]:
+    """Return the union of the evidence ids the options cite, in first-seen order."""
+    return list(dict.fromkeys(ref for o in options for ref in o.source_refs))
 
 
 def approval_request(work: Working) -> RequestProposal:
@@ -164,7 +171,7 @@ def approval_request(work: Working) -> RequestProposal:
     return _human(work, question,
                   "Generated options and criteria are proposals until a human approves them.",
                   [choice], True, [*(c.id for c in criteria), *(o.id for o in options)],
-                  structured=True)
+                  structured=True, evidence=_cited(options))
 
 
 def decision_approval_request(work: Working, option: Option) -> RequestProposal:
@@ -174,7 +181,7 @@ def decision_approval_request(work: Working, option: Option) -> RequestProposal:
     choices = [Choice(id=APPROVE, label="Approve", consequences="The decision is resolved."),
                Choice(id=REJECT, label="Reject", consequences="The decision is blocked.")]
     return _human(work, question, "The decision requires explicit human approval.", choices,
-                  False, [option.id])
+                  False, [option.id], evidence=_cited([option]))
 
 
 def escalation_request(work: Working, reason: str, text: str, tied: list[Option]
@@ -188,6 +195,8 @@ def escalation_request(work: Working, reason: str, text: str, tied: list[Option]
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-02 [python-coder]: Approval questions list the evidence the options cite, and the
+#   options request carries the accepted findings. (#KernelBootstrapV0/GROUND)
 # - 2026-10-01 23:00 [python-coder]: An unknown option set is first grounded by a bounded research
 #   request (task_context, existing_patterns, prior_decisions), options are then requested WITH
 #   that evidence, and the approval question shows what each option cites; every human question

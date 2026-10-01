@@ -90,6 +90,8 @@ class CapabilityGap(PersistedModel):
     why_insufficient: str = ""
     occurrence_count: int = Field(default=1, ge=1)
     example_run_ids: list[str] = Field(default_factory=list, max_length=MAX_EXAMPLE_RUNS)
+    #: Trace URLs of the example runs (when tracing exported one), so a gap row links to evidence.
+    example_trace_urls: list[str] = Field(default_factory=list, max_length=MAX_EXAMPLE_RUNS)
     fallback_outcome: FallbackOutcome = FallbackOutcome.NONE
     missing_native_capability: str | None = None
     proposal: GapProposal | None = None

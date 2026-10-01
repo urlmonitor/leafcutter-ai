@@ -24,6 +24,7 @@ from kernel.contracts.evidence import (
     Finding,
     UnavailableSource,
 )
+from kernel.contracts.work import RequestProposal
 
 #: Prefix of the note of a bundle-level contradiction that names no evidence pair.
 UNLOCALISED = "unlocalised: "
@@ -45,6 +46,9 @@ class ResearchContinuation(KernelModel):
     limitations: list[str] = Field(default_factory=list)
     truncated: bool = False
     synthesized: bool = False
+    #: Supporting needs only a host can serve, held back until the native evidence proves thin.
+    deferred: list[RequestProposal] = Field(default_factory=list)
+    deferred_dispatched: bool = False
 
 
 def contradiction_key(item: Contradiction) -> tuple[frozenset[str], str]:
@@ -105,6 +109,8 @@ class Collected:
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-02 [python-coder]: The continuation keeps the host-only supporting needs that were
+#   held back and whether they were dispatched. (#KernelBootstrapV0/GROUND)
 # - 2026-10-01 23:00 [python-coder]: Contradictions are deduplicated by evidence pair and claim at
 #   the single point where they are added: a resumed collect re-reads every child bundle, so the
 #   same disagreement used to arrive again and again. (#KernelBootstrapV0/GROUND)

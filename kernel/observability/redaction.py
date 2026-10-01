@@ -38,10 +38,20 @@ _RULES: tuple[tuple[str, re.Pattern[str]], ...] = (
 )
 _TOKEN_RE = re.compile(r"[A-Za-z0-9+/=_\-]{20,}")
 _ENTROPY_THRESHOLD = 4.5
+_EXTENSION = re.compile(r"\.[A-Za-z0-9]{1,5}\b")
+_RANDOM_PART = 20
+_RANDOM_PART_ENTROPY = 4.2
 _MIN_SECRET_LENGTH = 6
 _MAX_DEPTH = 24
 _PATH_KEYS = frozenset({"locator", "path", "file", "source_path"})
 _BODY_KEYS = frozenset({"excerpt", "content", "text"})
+
+
+def _in_path(text: str, match: re.Match[str]) -> bool:
+    """True if the match sits in a path: after a separator, or before one or a file extension."""
+    before = text[match.start() - 1] if match.start() else ""
+    after = text[match.end():]
+    return before in "/\\" or after[:1] in ("/", "\\", "#") or bool(_EXTENSION.match(after))
 
 
 def shannon_entropy(token: str) -> float:
@@ -109,16 +119,24 @@ class Redactor:
             text = text.replace(value, f"[REDACTED:{name}]")
         for rule_id, pattern in _RULES:
             text = pattern.sub(f"[REDACTED:{rule_id}]", text)
-        text = _TOKEN_RE.sub(self._entropy_sub, text)
+        text = _TOKEN_RE.sub(lambda match: self._entropy_sub(match, text), text)
         return self._truncate(text)
 
-    def _entropy_sub(self, match: re.Match[str]) -> str:
-        """Replace a mixed letter/digit token whose entropy exceeds the threshold."""
+    def _entropy_sub(self, match: re.Match[str], text: str) -> str:
+        """Replace a mixed letter/digit token whose entropy exceeds the threshold.
+
+        A token inside a repository path (next to a separator or a file extension) is a name, not
+        a secret, unless one of its parts is long and random.
+        """
         token = match.group(0)
         mixed = any(c.isdigit() for c in token) and any(c.isalpha() for c in token)
-        if mixed and shannon_entropy(token) > _ENTROPY_THRESHOLD:
-            return "[REDACTED:entropy]"
-        return token
+        if not (mixed and shannon_entropy(token) > _ENTROPY_THRESHOLD):
+            return token
+        if _in_path(text, match) and not any(
+                len(part) >= _RANDOM_PART and shannon_entropy(part) > _RANDOM_PART_ENTROPY
+                for part in re.split(r"[_\-]", token)):
+            return token
+        return "[REDACTED:entropy]"
 
     def _truncate(self, text: str) -> str:
         """Cut text to telemetry_max_field_chars, marking the cut."""
@@ -155,6 +173,9 @@ class Redactor:
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-02 [python-coder]: A name inside a repository path is no longer an entropy secret
+#   (`15_TICKET-20260826-ACD-2100c-3.md` reached a host as `[REDACTED:entropy].md`); a path part
+#   that is long and random is still masked. (#KernelBootstrapV0/GROUND)
 # - 2026-09-30 23:00 [python-coder]: Scanner rules are vendored, not imported by path from
 #   templates/ (that tree is not shipped to adopters). (#KernelBootstrapV0/P2)
 # - 2026-09-30 23:00 [python-coder]: The entropy rule only fires on tokens mixing letters and

@@ -25,6 +25,13 @@
       "title": "Existing Option Ids",
       "type": "array"
     },
+    "findings": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Findings",
+      "type": "array"
+    },
     "max_options": {
       "default": 5,
       "minimum": 0,

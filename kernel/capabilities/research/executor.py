@@ -78,7 +78,8 @@ async def _plan(state: ResearchState, config: RunnableConfig) -> dict[str, Any]:
     resolution = resolve_sources(ctx, needs, plan)
     cont = ResearchContinuation(
         phase="planned", needs=resolution.needs, child_map=resolution.child_map,
-        unavailable=resolution.unavailable, attempted=resolution.attempted)
+        unavailable=resolution.unavailable, attempted=resolution.attempted,
+        deferred=resolution.deferred)
     if resolution.requests:
         return {"plan": plan, "cont": cont, "usage": usage,
                 "result": waiting_result(invocation, cont, resolution.requests, usage)}
@@ -107,10 +108,30 @@ async def _evaluate(state: ResearchState, config: RunnableConfig) -> dict[str, A
     if judgement.conflict is not None:
         record_contradiction(ctx, out, judgement.conflict)
     threshold = ctx.config.research.evaluable_threshold
+    enough = judgement.evaluable is not None and judgement.evaluable >= threshold
+    if cont.deferred and not cont.deferred_dispatched:
+        if not enough:
+            return {"usage": usage, "result": waiting_result(
+                invocation, _dispatched(cont), cont.deferred, usage)}
+        out.limitations += [
+            f"{r.evidence_needs[0].category.value} not consulted: only a host operation can "
+            "serve this supporting need and the other evidence was sufficient"
+            for r in cont.deferred]
     if ask and judgement.evaluable is not None and judgement.evaluable < threshold:
         return {"usage": usage, "result": waiting_result(
             invocation, cont, [], usage, synthesis=(plan.question, out))}
     return {"usage": usage}
+
+
+def _dispatched(cont: ResearchContinuation) -> ResearchContinuation:
+    """Return the continuation with the held-back host needs marked as dispatched."""
+    child_map = dict(cont.child_map)
+    for request in cont.deferred:
+        child_map[request.evidence_needs[0].id] = request.payload.get("source_ids", [])
+    attempted = [*cont.attempted, *(s for r in cont.deferred
+                                    for s in r.payload.get("source_ids", []))]
+    return cont.model_copy(update={"deferred_dispatched": True, "child_map": child_map,
+                                   "attempted": list(dict.fromkeys(attempted))})
 
 
 async def _finish(state: ResearchState, config: RunnableConfig) -> dict[str, Any]:
@@ -180,6 +201,9 @@ class ResearchExecutor:
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-02 [python-coder]: After the native evidence is judged, held-back host needs are
+#   skipped with a limitation when it is evaluable and dispatched as a second wave when it is not.
+#   (#KernelBootstrapV0/GROUND)
 # - 2026-10-01 23:00 [python-coder]: parse_plan passes `evidence_needs_only` so grounding
 #   research plans exactly the needs it was given. (#KernelBootstrapV0/GROUND)
 # - 2026-09-30 23:00 [python-coder]: A synthesis resume goes straight to finish: research never

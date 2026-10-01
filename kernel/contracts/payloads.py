@@ -124,6 +124,8 @@ class OptionsRequestPayload(KernelModel):
     propose_criteria: bool = False
     #: Every proposed option must cite, in `source_refs`, evidence ids from `evidence_ids`.
     require_grounding: bool = False
+    #: Accepted synthesis findings as `[id] claim`, so the host does not re-derive them.
+    findings: list[str] = Field(default_factory=list)
 
 
 class OptionsPayload(KernelModel):
@@ -184,6 +186,8 @@ class HumanQuestionRequestPayload(KernelModel):
     why_research_cannot_settle: str = ""
     decision_id: str | None = None
     subject_ids: list[str] = Field(default_factory=list)
+    #: Evidence the question rests on (shown to the human as relevant evidence).
+    evidence_ids: list[str] = Field(default_factory=list)
 
     @model_validator(mode="after")
     def _answerable(self) -> HumanQuestionRequestPayload:
@@ -249,6 +253,9 @@ __all__ = [
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-02 [python-coder]: HumanQuestionRequestPayload.evidence_ids and
+#   OptionsRequestPayload.findings carry cited evidence to the approval question and accepted
+#   synthesis findings to the options packet. (#KernelBootstrapV0/GROUND)
 # - 2026-10-01 23:00 [python-coder]: OptionsRequestPayload.require_grounding and
 #   ResearchRequestPayload.evidence_needs_only support grounded option generation: the first says
 #   options must cite the supplied evidence, the second keeps the grounding research to the

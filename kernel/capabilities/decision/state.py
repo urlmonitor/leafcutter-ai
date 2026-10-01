@@ -40,6 +40,7 @@ class DecisionContinuation(KernelModel):
     criteria: list[Criterion] = Field(default_factory=list)
     evidence_ids: list[str] = Field(default_factory=list)
     findings: list[str] = Field(default_factory=list)
+    finding_refs: list[str] = Field(default_factory=list)
     human_inputs: list[str] = Field(default_factory=list)
     pending_subjects: list[str] = Field(default_factory=list)
     pending_reason: str = ""

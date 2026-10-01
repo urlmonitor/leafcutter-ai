@@ -84,6 +84,9 @@ class GenerateOptions(HostOperation):
             return lines
         lines.append(f"Return at most {request.max_options} options.")
         lines += self._grounding_requirements(request)
+        if request.findings:
+            lines.append("The request lists accepted findings from an earlier synthesis: build on "
+                         "them instead of re-reading the raw excerpts.")
         if not request.propose_criteria:
             lines.append("Leave proposed_criteria empty: criteria were not requested.")
         lines.append("Do not set weight_rule or decision_basis on a criterion; weights belong "

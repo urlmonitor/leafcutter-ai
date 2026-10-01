@@ -43,6 +43,7 @@ class Resolution:
     unavailable: list[UnavailableSource] = field(default_factory=list)
     needs: list[EvidenceNeed] = field(default_factory=list)
     attempted: list[str] = field(default_factory=list)
+    deferred: list[RequestProposal] = field(default_factory=list)
 
 
 async def plan_needs(ctx: ExecutionContext, invocation: CapabilityInvocation, plan: Plan
@@ -125,6 +126,25 @@ def _candidates(ctx: ExecutionContext, need: EvidenceNeed, plan: Plan) -> list[S
             and (not scope_ids or s.id in scope_ids) and (not restricted or s.id in restricted)]
 
 
+def _defer_host_only(out: Resolution) -> None:
+    """Hold back supporting needs only a host can serve while native children can run.
+
+    A host pause is the costliest step of a run: a supporting need that only a host can serve
+    waits until the native evidence has been judged, and is dispatched only if it proves thin.
+    Required needs are never deferred, and neither is a run whose only children are host ones.
+    """
+    held = [r for r in out.requests if r.operation == "bounded_research"
+            and r.evidence_needs[0].priority is Priority.SUPPORTING]
+    if not held or len(held) == len(out.requests):
+        return
+    out.requests = [r for r in out.requests if r not in held]
+    out.deferred = held
+    for request in held:
+        for source_id in out.child_map.pop(request.evidence_needs[0].id, []):
+            if source_id in out.attempted:
+                out.attempted.remove(source_id)
+
+
 def resolve_sources(ctx: ExecutionContext, needs: list[EvidenceNeed], plan: Plan) -> Resolution:
     """Map each need to a native retrieval child, a host.research child, or unavailable."""
     out = Resolution()
@@ -155,12 +175,16 @@ def resolve_sources(ctx: ExecutionContext, needs: list[EvidenceNeed], plan: Plan
         out.needs.append(need.model_copy(update={"status": NeedStatus.UNAVAILABLE,
                                                  "resolution": [why]}))
         out.unavailable.append(UnavailableSource(source_id=f"need:{need.id}", reason=why))
+    _defer_host_only(out)
     return out
 
 
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-02 [python-coder]: Supporting needs only a host can serve are deferred behind the
+#   native children (a live run paused for host work with its answer already found).
+#   (#KernelBootstrapV0/GROUND)
 # - 2026-10-01 23:00 [python-coder]: A request that says `evidence_needs_only` plans exactly its
 #   mandated needs with no Jev call: grounding research for a decision is bounded to the three
 #   categories about the option space. (#KernelBootstrapV0/GROUND)

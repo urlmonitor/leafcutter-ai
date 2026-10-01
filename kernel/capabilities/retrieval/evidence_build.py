@@ -14,6 +14,7 @@ from __future__ import annotations
 from datetime import datetime
 
 from kernel.capabilities.retrieval.candidates import Candidate
+from kernel.capabilities.retrieval.repository import cut_at_boundary
 from kernel.capabilities.retrieval.rerank import Ranked
 from kernel.contracts.base import content_hash, evidence_id
 from kernel.contracts.enums import EvidenceCategory, SemanticType, SourceKind, Verification
@@ -42,7 +43,7 @@ def _shape(candidate: Candidate, request: RetrievalRequestPayload, remaining: in
     elif request.detail == "summary":
         limits.append("detail=summary is not supported natively: excerpt returned")
     if remaining is not None and len(excerpt) > remaining:
-        excerpt, truncated = excerpt[:max(remaining, 0)], True
+        excerpt, truncated = cut_at_boundary(excerpt, max(remaining, 0)), True
         limits.append("excerpt cut to the request's max_chars")
     if candidate.truncated:
         limits.append("excerpt cut at max_excerpt_chars")
@@ -79,6 +80,8 @@ def build_evidence(ranked: Ranked, request: RetrievalRequestPayload,
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-02 [python-coder]: The request char budget also cuts at a boundary.
+#   (#KernelBootstrapV0/GROUND)
 # - 2026-09-30 23:00 [python-coder]: Excerpts read verbatim from a file are marked
 #   source_verified (the text is exactly what the source contains); that says nothing about the
 #   claim being true. (#KernelBootstrapV0/P5)

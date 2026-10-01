@@ -186,6 +186,7 @@ def aggregate_gaps(observations: list[CapabilityGap]) -> list[CapabilityGap]:
             for run_id in obs.example_run_ids:
                 if run_id not in examples and len(examples) < MAX_EXAMPLE_RUNS:
                     examples.append(run_id)
+        urls = list(dict.fromkeys(u for obs in group for u in obs.example_trace_urls))
         firsts = [g.first_seen for g in group if g.first_seen]
         lasts = [g.last_seen for g in group if g.last_seen]
         oldest = group[0]
@@ -193,7 +194,7 @@ def aggregate_gaps(observations: list[CapabilityGap]) -> list[CapabilityGap]:
             "goal": oldest.goal, "need_title": oldest.need_title or newest.need_title,
             "occurrence_count": sum(g.occurrence_count for g in group),
             "created_at": min(g.created_at for g in group),
-            "example_run_ids": examples,
+            "example_run_ids": examples, "example_trace_urls": urls[:MAX_EXAMPLE_RUNS],
             "first_seen": min(firsts) if firsts else None,
             "last_seen": max(lasts) if lasts else None,
         }))
@@ -203,6 +204,8 @@ def aggregate_gaps(observations: list[CapabilityGap]) -> list[CapabilityGap]:
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-02 [python-coder]: Aggregated gaps keep up to five distinct trace URLs.
+#   (#KernelBootstrapV0/GROUND)
 # - 2026-10-01 23:00 [python-coder]: A merged gap keeps the first-seen goal and need_title: the
 #   key aggregates different goals of one need, and the title used to jump to whichever run came
 #   last. (#KernelBootstrapV0/GROUND)

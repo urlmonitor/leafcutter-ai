@@ -56,6 +56,8 @@ def _absorb_bundle(out: Collected, payload: dict) -> None:
     out.attempted += [s for s in bundle.attempted_sources if s not in out.attempted]
     out.unavailable += bundle.unavailable_sources
     out.add_contradictions(bundle.contradictions)
+    known = {f.id for f in out.findings}
+    out.findings += [f for f in bundle.findings if f.id not in known]
     out.limitations += bundle.limitations
     out.truncated = out.truncated or bundle.truncated
 
@@ -156,6 +158,9 @@ def record_contradiction(ctx: ExecutionContext, out: Collected, probability: flo
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-02 [python-coder]: Findings a host reported inside a child evidence bundle are merged
+#   into the final bundle (host-reported labels intact); only synthesis findings were before.
+#   (#KernelBootstrapV0/GROUND)
 # - 2026-10-01 23:00 [python-coder]: A bundle-level conflict from Jev is flagged `unlocalised`
 #   and recorded once; it is skipped when a localised contradiction exists, because the
 #   first/last-id pair it would name is a guess that duplicated real ones. (#KernelBootstrapV0/GROUND)

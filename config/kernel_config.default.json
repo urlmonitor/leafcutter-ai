@@ -63,7 +63,8 @@
     "coverage_relevance_threshold": 0.7
   },
   "sources": [
-    {"id": "repo.principles", "kind": "repo_text", "categories": ["internal_principles"],
+    {"id": "repo.principles", "kind": "repo_text",
+     "categories": ["internal_principles", "authoritative_guidance"],
      "roots": ["CLAUDE.md", "docs/conventions", "docs/vision.md"]},
     {"id": "repo.decisions", "kind": "repo_text", "categories": ["prior_decisions"],
      "roots": ["docs/architecture/adrs"]},
@@ -72,7 +73,8 @@
     {"id": "repo.patterns", "kind": "repo_text", "categories": ["existing_patterns"],
      "roots": ["kernel", "scripts", "docs/architecture"]},
     {"id": "repo.docs", "kind": "repo_text",
-     "categories": ["internal_principles", "task_context", "existing_patterns"],
+     "categories": ["internal_principles", "task_context", "existing_patterns",
+                    "authoritative_guidance"],
      "roots": ["README.md", "docs/how-to", "docs/explanation", "docs/reference", "docs/testing",
                "docs/workflows", "docs/known-issues", "docs/INDEX.md", "docs/glossary.md",
                "docs/ticket-lifecycle.md", "docs/build-pipeline.md"]},
