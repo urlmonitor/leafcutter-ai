@@ -104,6 +104,14 @@ class DecisionConfig(_Section):
     require_option_grounding: bool
     #: Most evidence items attached to one options request (bounds the host input).
     max_grounding_evidence: int = Field(ge=1)
+    #: A criterion counts as a design judgement (a property of the proposed options that research
+    #: cannot settle) when Jev's probability for that reading reaches this value.
+    design_judgement_threshold: Probability
+    #: Two assessments after new evidence show no material progress when every score moved by no
+    #: more than this; the decision then stops researching and asks a human to choose.
+    progress_epsilon: float = Field(ge=0.0, le=1.0)
+    #: Most research rounds one decision may request before it hands the ranked options to a human.
+    max_research_rounds: int = Field(ge=1)
 
 
 class ResearchConfig(_Section):
@@ -307,6 +315,8 @@ def write_config_schema(path: Path) -> None:
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 [python-coder]: Added decision.design_judgement_threshold, progress_epsilon and
+#   max_research_rounds so the design-decision ending is configuration. (#KernelV01/A)
 # - 2026-10-01 23:00 [python-coder]: Added decision.require_option_grounding and
 #   max_grounding_evidence, retrieval.coverage_relevance_threshold and a per-source deny_globs
 #   so grounding, coverage and secret exclusion are configuration, not code.

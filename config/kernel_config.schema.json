@@ -41,9 +41,20 @@
           "title": "Conflict Threshold",
           "type": "number"
         },
+        "design_judgement_threshold": {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Design Judgement Threshold",
+          "type": "number"
+        },
         "max_grounding_evidence": {
           "minimum": 1,
           "title": "Max Grounding Evidence",
+          "type": "integer"
+        },
+        "max_research_rounds": {
+          "minimum": 1,
+          "title": "Max Research Rounds",
           "type": "integer"
         },
         "missing_min_probability": {
@@ -56,6 +67,12 @@
           "maximum": 1.0,
           "minimum": 0.0,
           "title": "Preference Threshold",
+          "type": "number"
+        },
+        "progress_epsilon": {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Progress Epsilon",
           "type": "number"
         },
         "require_option_grounding": {
@@ -82,7 +99,10 @@
         "conflict_threshold",
         "missing_min_probability",
         "require_option_grounding",
-        "max_grounding_evidence"
+        "max_grounding_evidence",
+        "design_judgement_threshold",
+        "progress_epsilon",
+        "max_research_rounds"
       ],
       "title": "DecisionConfig",
       "type": "object"

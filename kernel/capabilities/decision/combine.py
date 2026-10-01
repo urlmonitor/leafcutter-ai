@@ -17,9 +17,15 @@ from typing import Literal
 from dataclasses import dataclass, field, replace
 
 from kernel.capabilities.decision.assess import NONE_CHOICE, Assessment
+from kernel.capabilities.decision.ranking import (
+    design_reason,
+    loop_reason,
+    rank_options,
+    required_by_kind,
+)
 from kernel.capabilities.decision.state import Working
 from kernel.config import DecisionConfig
-from kernel.contracts.decision import CriterionAssessment, ProviderAnswer
+from kernel.contracts.decision import CriterionAssessment, OptionRanking, ProviderAnswer
 from kernel.contracts.enums import (
     DecisionStatus,
     EvidenceCategory,
@@ -48,6 +54,8 @@ class Verdict:
     tied: list[str] = field(default_factory=list)
     candidate_option_id: str | None = None
     assessments: list[CriterionAssessment] = field(default_factory=list)
+    #: Set when the decision stops researching and hands the ranked options to a human.
+    ranking: list[OptionRanking] = field(default_factory=list)
 
 
 def _outcome(p: float, cfg: DecisionConfig) -> Literal["pass", "fail", "uncertain"]:
@@ -176,6 +184,13 @@ def _select(work: Working, a: Assessment, cfg: DecisionConfig) -> Verdict:
     return Verdict(DecisionStatus.RESOLVED, selected_option_id=winners[0])
 
 
+def _hand_to_human(work: Working, a: Assessment, cfg: DecisionConfig, reason: str) -> Verdict:
+    """Stop researching: rank the options so a human can choose (the design-decision ending)."""
+    return Verdict(DecisionStatus.NEEDS_HUMAN, reason=reason,
+                   missing=[MissingKnowledge.HUMAN_PREFERENCE_OR_AUTHORIZATION],
+                   ranking=rank_options(work, a, cfg))
+
+
 def combine(work: Working, a: Assessment, cfg: DecisionConfig) -> Verdict:
     """Apply the resolved-gate; otherwise classify what is missing.
 
@@ -187,13 +202,18 @@ def combine(work: Working, a: Assessment, cfg: DecisionConfig) -> Verdict:
     Returns:
         Verdict: `resolved` with the selected option, or a needs_* status with reasons.
     """
-    required = [c for c in work.usable_criteria if c.priority is Priority.REQUIRED]
+    answerable, _ = required_by_kind(work)
     if not work.has_required_criterion:
         verdict = Verdict(DecisionStatus.NEEDS_OPTIONS, reason="missing_criteria",
                           missing=[MissingKnowledge.UNKNOWN_OPTIONS])
+    elif reason := design_reason(work, a, cfg):
+        verdict = _hand_to_human(work, a, cfg, reason)
     elif not work.has_decision_basis or any(
-            a.sufficient[c.id] < cfg.sufficiency_threshold for c in required):
+            a.sufficient[c.id] < cfg.sufficiency_threshold for c in answerable):
         verdict = classify_missing(a, cfg, work)
+        reason = loop_reason(work, a, cfg)
+        if verdict.status is DecisionStatus.NEEDS_EVIDENCE and reason:
+            verdict = _hand_to_human(work, a, cfg, reason)
     else:
         verdict = _unsettled(work, a, cfg) or _select(work, a, cfg)
     return replace(verdict, assessments=build_assessments(work, a, cfg))
@@ -202,6 +222,9 @@ def combine(work: Working, a: Assessment, cfg: DecisionConfig) -> Verdict:
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 [python-coder]: Design judgements, a flat no-progress pair of assessments and the
+#   research-round cap end in a ranked human choice (needs_human with a ranking) instead of more
+#   research; only evidence-answerable required criteria gate sufficiency. (#KernelV01/A)
 # - 2026-10-02 [python-coder]: mypy: _outcome returns the Literal the assessment model requires (#KernelBootstrapV0/GROUND)
 # - 2026-10-01 02:00 [python-coder]: The gate refuses to open with no required criterion
 #   (all([]) is True), and a decision approval counts only for the option and evidence revision

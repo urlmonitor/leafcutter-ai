@@ -22,13 +22,16 @@ from kernel.capabilities.base import ExecutionContext
 from kernel.capabilities.decision.assess import Assessment, assess
 from kernel.capabilities.decision.basis import grounding_gap, validate_basis
 from kernel.capabilities.decision.combine import Verdict, combine
+from kernel.capabilities.decision.design_ending import apply_kinds, design_followup
 from kernel.capabilities.decision.emit import (
+    design_resolved_result,
     emit_followup,
     followup_for,
     resolved_result,
 )
 from kernel.capabilities.decision.jev_support import StopCapability, blocked_result
 from kernel.capabilities.decision.loading import load_working
+from kernel.capabilities.decision.ranking import current_scores
 from kernel.capabilities.decision.requests import Followup
 from kernel.capabilities.decision.state import Working
 from kernel.contracts.capability import CapabilityResult
@@ -62,6 +65,9 @@ async def _load(state: DecisionState, config: RunnableConfig) -> dict[str, Any]:
         return {"work": work, "result": blocked_result(
             invocation, "approval_rejected", "the human rejected the recommendation",
             usage=work.usage)}
+    if work.cont.design_choice_id:  # the human chose among the ranked options: no Jev call
+        return {"work": work, "result": design_resolved_result(
+            invocation, work, ctx.config.decision)}
     return {"work": work}
 
 
@@ -91,6 +97,7 @@ async def _assess(state: DecisionState, config: RunnableConfig) -> dict[str, Any
     work = state["work"]
     assessment = await assess(ctx, invocation, work)
     work.usage.append(assessment.result.usage)
+    apply_kinds(work, assessment, ctx.config.decision)
     return {"assessment": assessment}
 
 
@@ -98,17 +105,32 @@ async def _combine(state: DecisionState, config: RunnableConfig) -> dict[str, An
     """Apply the resolved-gate; resolved ends the run, anything else becomes a follow-up."""
     invocation, ctx = _run(config)
     work = state["work"]
-    verdict = combine(work, state["assessment"], ctx.config.decision)
+    cfg = ctx.config.decision
+    verdict = combine(work, state["assessment"], cfg)
     ctx.tracer.event("decision.combine", ctx.corr, payload={
         "status": verdict.status.value, "reason": verdict.reason,
         "selected": verdict.selected_option_id, "revision": work.revision(),
-        "thresholds": ctx.config.decision.model_dump(mode="json")})
+        "thresholds": cfg.model_dump(mode="json"),
+        "ranking": [r.option_id for r in verdict.ranking]})
     if verdict.status.value == "resolved":
         result = resolved_result(invocation, work, verdict)
         _status_event(ctx, verdict, result.decisions[0].approval_status.value)
         return {"verdict": verdict, "result": result}
     _status_event(ctx, verdict, "proposed" if work.pending_ids else "not_required")
+    _remember_assessment(work, state["assessment"], verdict)
+    if verdict.ranking:
+        return {"verdict": verdict, "followup": design_followup(
+            work, verdict.reason, verdict.ranking, cfg)}
     return {"verdict": verdict, "followup": followup_for(work, verdict)}
+
+
+def _remember_assessment(work: Working, assessment: Assessment, verdict: Verdict) -> None:
+    """Keep this assessment's scores (and any ranking shown) so the next one can compare."""
+    work.cont = work.cont.model_copy(update={
+        "last_scores": current_scores(work, assessment),
+        "last_scores_evidence": work.evidence_ids,
+        "design_ranking": verdict.ranking,
+        "design_reason": verdict.reason if verdict.ranking else ""})
 
 
 def _status_event(ctx: ExecutionContext, verdict: Verdict, approval: str) -> None:
@@ -175,6 +197,9 @@ class DecisionExecutor:
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 [python-coder]: A chosen design option resolves in `load` with no Jev call; the
+#   assess node classifies criterion kinds and combine's ranking becomes a human follow-up.
+#   (#KernelV01/A)
 # - 2026-10-01 23:00 [python-coder]: When grounding research found nothing the decision blocks
 #   (options_ungrounded) if grounding is required, else asks for options with a limitation.
 #   (#KernelBootstrapV0/GROUND)

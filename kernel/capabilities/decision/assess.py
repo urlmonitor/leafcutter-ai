@@ -24,6 +24,7 @@ from kernel.capabilities.decision.jev_support import (
     noul_question,
 )
 from kernel.capabilities.decision.state import Working
+from kernel.contracts.decision import Criterion
 from kernel.contracts.enums import EvidenceCategory, MissingKnowledge
 from kernel.contracts.work import CapabilityInvocation
 from kernel.providers.base import ChoiceAnswer, JevResult, QuestionSpec, json_strings
@@ -54,6 +55,8 @@ class Assessment:
     sufficient_confidence: dict[str, float | None]
     satisfies_confidence: dict[tuple[str, str], float | None]
     missing: ChoiceAnswer
+    #: Probability that a criterion is a design judgement, for criteria not classified yet.
+    design: dict[str, float]
     preference: float
     conflict: float
     result: JevResult
@@ -79,9 +82,19 @@ def _state(ctx: ExecutionContext, work: Working) -> dict[str, JsonValue]:
     }
 
 
+def unclassified(work: Working) -> list[Criterion]:
+    """Return the usable criteria whose kind nobody has set yet (Jev classifies them once)."""
+    return [c for c in work.usable_criteria if c.kind_source is None]
+
+
 def _questions(work: Working) -> list[QuestionSpec]:
     """Build every question of the batch (ids are addressed by the maps built alongside)."""
-    qs: list[QuestionSpec] = []
+    qs: list[QuestionSpec] = [noul_question(
+        f"kind.{c.id}", "decision.kind",
+        f"Is `criteria.{c.id}` a property of the designs in `options` that can only be judged by "
+        f"weighing those designs (for example simplicity, fit or reviewability), rather than a "
+        f"fact about the world or the existing project that `evidence` could establish or "
+        f"refute?") for c in unclassified(work)]
     for c in work.usable_criteria:
         qs.append(noul_question(
             f"sufficient.{c.id}", "decision.sufficient",
@@ -119,7 +132,9 @@ async def assess(ctx: ExecutionContext, invocation: CapabilityInvocation, work: 
     crit, opts = work.usable_criteria, work.usable_options
     suff = {c.id: result.noul(f"sufficient.{c.id}") for c in crit}
     sat = {(c.id, o.id): result.noul(f"satisfies.{c.id}.{o.id}") for c in crit for o in opts}
+    design = {c.id: result.noul(f"kind.{c.id}").probability for c in unclassified(work)}
     return Assessment(
+        design=design,
         sufficient={k: v.probability for k, v in suff.items()},
         satisfies={k: v.probability for k, v in sat.items()},
         sufficient_confidence={k: v.confidence for k, v in suff.items()},
@@ -131,6 +146,9 @@ async def assess(ctx: ExecutionContext, invocation: CapabilityInvocation, work: 
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 [python-coder]: The batch also classifies each not-yet-classified criterion (one
+#   `kind.<id>` question, no extra Jev call): a design judgement is a property of the options
+#   that retrieval cannot settle. (#KernelV01/A)
 # - 2026-10-02 [python-coder]: mypy: the quoted Jev state is built with JSON-typed values (#KernelBootstrapV0/GROUND)
 # - 2026-09-30 23:00 [python-coder]: Evidence carries a `role` (decision_basis or pattern_only)
 #   in the quoted state so Jev sees that an existing implementation is a pattern, not proof.

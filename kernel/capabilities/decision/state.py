@@ -17,7 +17,7 @@ from pydantic import Field
 
 from kernel.contracts.base import KernelModel, canonical_json, sha256_hex
 from kernel.contracts.capability import Usage
-from kernel.contracts.decision import Criterion, Option
+from kernel.contracts.decision import Criterion, Option, OptionRanking
 from kernel.contracts.enums import (
     ApprovalStatus,
     EvidenceCategory,
@@ -51,6 +51,14 @@ class DecisionContinuation(KernelModel):
     decision_approved: bool = False
     approved_by: str | None = None
     approved_revision: str | None = None
+    #: Satisfies and sufficiency scores of the last assessment (keys from ranking.score_key) and
+    #: the evidence it saw, so the next one can tell whether new evidence moved anything.
+    last_scores: dict[str, float] = Field(default_factory=dict)
+    last_scores_evidence: list[str] = Field(default_factory=list)
+    #: The kernel ranking shown to the human, why it was shown, and the option the human chose.
+    design_ranking: list[OptionRanking] = Field(default_factory=list)
+    design_reason: str = ""
+    design_choice_id: str | None = None
 
 
 def derive_decision_id(work_item_id: str) -> str:
@@ -142,6 +150,9 @@ class Working:
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 [python-coder]: The continuation keeps the last assessment's scores, the ranking
+#   shown to the human and the human's choice, so the design-decision ending needs no new Jev
+#   call after the human answers. (#KernelV01/A)
 # - 2026-10-01 23:00 [python-coder]: Working carries the stable decision id and the grounding
 #   policy (from config) so request builders need no context argument. (#KernelBootstrapV0/GROUND)
 # - 2026-10-01 02:00 [python-coder]: A decision approval records the evidence revision the human
