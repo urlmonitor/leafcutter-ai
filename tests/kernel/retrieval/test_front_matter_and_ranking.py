@@ -146,6 +146,28 @@ class TestContentHitsOutweighPathWords(SearchCase):
         self.assertIn("kernel/contracts/decision.py", {c.path for c in report.candidates})
 
 
+class TestTheCheckoutFolderDoesNotRank(SearchCase):
+    """The same files rank the same wherever they are checked out: a worktree folder `kernel-v01`
+    made `kernel` an indistinct path word, so the benchmark there disagreed with CI's checkout."""
+
+    FILES = {"kernel/persistence/run_store.py": "class FileRunStore:\n" + "    # stores runs\n" * 6,
+             **{f"docs/notes/note-{n}.md": f"# Note {n}\nThe kernel stores decisions.\n"
+                for n in range(6)}}
+
+    def ranked_in(self, folder: str) -> list[tuple[str, float, tuple[str, ...]]]:
+        self.root = self.root.parent / folder
+        for rel, text in self.FILES.items():
+            self.write(rel, text)
+        report = self.search(["kernel", "docs/notes"], QUESTION, ("leafcutter",))
+        return [(c.locator, round(c.score, 9), c.path_hits) for c in report.candidates]
+
+    def test_a_folder_named_after_a_question_word_changes_no_score(self) -> None:
+        neutral, named = self.ranked_in("repo"), self.ranked_in("kernel-v01")
+        self.assertEqual(named, neutral)
+        store = next(hits for loc, _, hits in named if loc.startswith("kernel/persistence/"))
+        self.assertIn("kernel", store)  # still a distinctive path word in `kernel-v01/`
+
+
 class TestFrontMatterNoLongerCrowdsOutCode(SearchCase):
     """Regression pass: `run_store.py` (36 hits, lane rank 1) lost the rerank batch to front matter."""
 
@@ -196,6 +218,8 @@ if __name__ == "__main__":
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 [python-coder]: The checkout's folder name is not a project name: the same files
+#   rank the same in `repo/` and in `kernel-v01/` (the benchmark disagreed with CI). (#KernelV01/CI)
 # - 2026-10-01 [python-coder]: Round E retrieval selection tests, built from round 6 (concept part
 #   3 as front matter only, components.json under no root) and the regression pass (run_store.py
 #   with 36 hits behind schema files with a path match). (#KernelV01/E)

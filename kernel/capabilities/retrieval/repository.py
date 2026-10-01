@@ -204,9 +204,8 @@ def common_terms(files_scanned: int, path_df: Counter[str], project: frozenset[s
     """Return the terms too generic to say anything about one file's path.
 
     A term found in the path of most files (the source's own folder name) does not tell files
-    apart, and neither does a word of the project's own name (the workspace id, the repository
-    folder): the project name is in every path and body of its own documents. They are not
-    counted as path matches.
+    apart, and neither does a word of the project's own name (the workspace id): the project name
+    is in every path and body of its own documents. They are not counted as path matches.
     """
     if files_scanned < MIN_FILES_FOR_COMMON_TERMS:
         return project
@@ -277,7 +276,9 @@ def search_repo_text(policy: ReadPolicy, source_id: str, roots: list[Path], term
         cfg: Retrieval bounds.
         entities: Identifiers named in the question; files whose path carries one are pinned.
         project_names: Names of the project (the workspace id); their words say nothing about
-            which file is meant, so a path match on them is not distinctive.
+            which file is meant, so a path match on them is not distinctive. The checkout's
+            folder name is not one of them: a worktree named `kernel-v01` would make `kernel/`
+            an indistinct path, so the ranking would depend on where the files are checked out.
         goal: The request's goal; a document that reviews a kernel run of it is flagged.
 
     Returns:
@@ -307,8 +308,7 @@ def search_repo_text(policy: ReadPolicy, source_id: str, roots: list[Path], term
             path_df.update(rec.path_hit_terms)
             if rec.candidates or rec.head is not None:
                 records.append(rec)
-    common = common_terms(report.files_scanned, path_df,
-                          _project_terms((policy.root.name, *project_names), terms))
+    common = common_terms(report.files_scanned, path_df, _project_terms(project_names, terms))
     ordered = _prioritised(records, common, report.stats, terms, cfg)
     cap = source_cap(report.files_scanned, cfg)
     report.candidates = _select(ordered, cap)
@@ -320,7 +320,7 @@ def search_repo_text(policy: ReadPolicy, source_id: str, roots: list[Path], term
 
 
 def _project_terms(names: Iterable[str], terms: list[str]) -> frozenset[str]:
-    """Return the query terms that are words of the project's own names (workspace, folder)."""
+    """Return the query terms that are words of the project's own names (the workspace id)."""
     joined = " ".join(names).lower()
     return frozenset(t for t in terms if len(t) >= MIN_PROJECT_TERM and t in joined)
 
@@ -343,6 +343,11 @@ def _cut_note(ordered: _Prioritised, offered: list[Candidate], cut: int, cap: in
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 [python-coder]: The checkout's folder name no longer counts as a project name;
+#   only the caller's (the workspace id) do. In a worktree folder `kernel-v01`, `kernel` stopped
+#   being a distinctive path word, so every `kernel/` section lost 3 x idf(kernel) (about 15
+#   points) there and the same commit ranked differently in CI (`leafcutter-ai/`).
+#   (#KernelV01/CI)
 # - 2026-10-01 [python-coder]: Candidates are ordered by a BM25-style score over the scanned
 #   sections (document frequency from the whole source, section length normalised, path words as
 #   extra occurrences) instead of raw hit counts: registry JSON with 191 to 263 hits filled the
