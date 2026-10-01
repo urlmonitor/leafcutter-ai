@@ -4,7 +4,7 @@ description: "The client-independent application service (start, resume, get, ca
 type: explanation
 status: active
 created: 2026-09-30
-last_updated: 2026-09-30
+last_updated: 2026-10-01
 components:
   - decision_kernel
 ---
@@ -201,3 +201,10 @@ P10 writes `docs/how-to/inspect-kernel-traces-with-langfuse-mcp.md` from the cur
 - **Packet for options.** The options packet's `input_evidence_ids` are the cited research evidence, so the input artifact carries their excerpts; its requirements tell the host it has no repository access, to use only that evidence and to cite ids in `source_refs`. The host evidence schema (`tightened_schema`) drops `id` and `content_hash` (and finding `id`) from `required`.
 - **Envelope usage.** `usage_summary.usage` lists one row per provider and model (Jev with its model id and estimated or reported cost; host with the model and tokens it reported, or only calls and time to answer when it reported nothing). Unknown values and costs are `null`.
 - **Report.** `report.md` links the Langfuse trace (`- Trace: <url>`) when tracing is enabled and a URL was resolved.
+
+## As built (V0.1)
+
+- **Jev generations (fix C).** One `jev.<purpose>` generation per provider call, `calls=1` in its usage, with `chunk_index`/`chunk_count` and `attempts` in the metadata. The envelope usage row sums the same calls.
+- **Export failures.** The Langfuse span exporter is wrapped (`ObservedSpanExporter`): a failed export marks the tracer degraded with a reason, spools the spans, and the envelope reports `observability: degraded` instead of `ok`. A successful export stays `ok`.
+- **Ranked question.** The human question of a design decision lists the options as `#1, #2, ...` with each required and supporting criterion in words (`likely not met (0.10)`), the evidence each option cites, and allows an added option or a free-text answer.
+- **Not yet done** (trace review finding 7, wave 3): LangGraph callback spans are still exported, Jev generations carry their real latency only in metadata, retriever and rerank outputs name no paths or evidence ids, and the service name is the SDK default.

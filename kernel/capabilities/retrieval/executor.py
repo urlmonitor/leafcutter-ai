@@ -27,16 +27,24 @@ from kernel.capabilities.decision.jev_support import (
 )
 from kernel.capabilities.retrieval.access import ReadPolicy
 from kernel.capabilities.retrieval.candidates import Candidate, SearchReport
+from kernel.capabilities.retrieval.entities import QueryEntities, extract_entities
 from kernel.capabilities.retrieval.evidence_build import build_evidence
 from kernel.capabilities.retrieval.knowledge_map import search_knowledge_map
+from kernel.capabilities.retrieval.locators import fetch_explicit
+from kernel.capabilities.retrieval.pool import (
+    coverage,
+    coverage_note,
+    merge_pool,
+    pool_note,
+)
 from kernel.capabilities.retrieval.repository import search_repo_text
 from kernel.capabilities.retrieval.rerank import rerank
-from kernel.capabilities.retrieval.terms import extract_terms
+from kernel.capabilities.retrieval.terms import build_query_terms
 from kernel.capabilities.retrieval.versioning import resolve_source_version
-from kernel.config import SourceConfig
+from kernel.config import RetrievalConfig, SourceConfig
 from kernel.contracts import schema_ids
 from kernel.contracts.capability import CapabilityResult, Usage
-from kernel.contracts.enums import NeedStatus, ResultStatus
+from kernel.contracts.enums import ResultStatus
 from kernel.contracts.evidence import (
     Evidence,
     EvidenceBundlePayload,
@@ -52,6 +60,16 @@ logger = logging.getLogger(__name__)
 CAPABILITY_ID = "retrieve.repository"
 CAPABILITY_VERSION = "1.0.0"
 NATIVE_KINDS = ("repo_text", "knowledge_map")
+
+
+def source_policy(policy: ReadPolicy, source: SourceConfig) -> ReadPolicy:
+    """Return the read policy for one source: its extra deny globs and its own file size limit.
+
+    A source may read larger files than the global `retrieval.max_file_bytes` (the 812 KB
+    `docs/build-dataflow.json` of the registries source was skipped on every run).
+    """
+    return replace(policy, deny_globs=(*policy.deny_globs, *source.deny_globs),
+                   max_file_bytes=source.max_file_bytes or policy.max_file_bytes)
 
 
 def select_sources(ctx: ExecutionContext, request: RetrievalRequestPayload
@@ -78,14 +96,14 @@ def select_sources(ctx: ExecutionContext, request: RetrievalRequestPayload
 
 
 async def _search_one(ctx: ExecutionContext, policy: ReadPolicy, source: SourceConfig,
-                      terms: list[str]) -> SearchReport:
+                      terms: list[str], entities: QueryEntities, goal: str | None
+                      ) -> SearchReport:
     """Search one source inside a `retrieval.<source>` retriever observation."""
     meta = {"source_id": source.id, "strategy": source.kind, "term_count": len(terms)}
-    if source.deny_globs:
-        policy = replace(policy, deny_globs=(*policy.deny_globs, *source.deny_globs))
+    policy = source_policy(policy, source)
     with ctx.tracer.span(f"retrieval.{source.id}", "retriever", ctx.corr, input={"terms": terms},
                          metadata=meta) as span:
-        report = await _search_source(ctx, policy, source, terms)
+        report = await _search_source(ctx, policy, source, terms, entities, goal)
         span.update(output={"files_scanned": report.files_scanned,
                             "candidates": len(report.candidates),
                             "skipped": dict(report.skipped),
@@ -95,7 +113,8 @@ async def _search_one(ctx: ExecutionContext, policy: ReadPolicy, source: SourceC
 
 
 async def _search_source(ctx: ExecutionContext, policy: ReadPolicy, source: SourceConfig,
-                         terms: list[str]) -> SearchReport:
+                         terms: list[str], entities: QueryEntities, goal: str | None
+                         ) -> SearchReport:
     """Search one source in a worker thread; unreachable sources become unavailable reports."""
     cfg = ctx.config.retrieval
     if source.kind == "knowledge_map":
@@ -113,26 +132,26 @@ async def _search_source(ctx: ExecutionContext, policy: ReadPolicy, source: Sour
         report.unavailable_reason = "; ".join(resolved.rejected) or "no readable roots"
         return report
     report = await asyncio.to_thread(search_repo_text, policy, source.id, list(resolved.roots),
-                                     terms, cfg)
+                                     terms, cfg, entities, (ctx.scope.workspace_id,), goal)
     report.notes += [f"root not searched: {r}" for r in resolved.rejected]
     return report
 
 
-def _merge(reports: list[SearchReport], limit: int) -> list[Candidate]:
-    """Merge candidates across sources into at most `limit`, every source getting a turn.
+def _goal_of(request: RetrievalRequestPayload) -> str | None:
+    """Return the request's goal: the first query hint (hints lead with the goal)."""
+    return request.query_hints[0] if request.query_hints else None
 
-    Each source's list is already ranked by hits. Taking the globally densest files instead would
-    let one large source (hundreds of files that all mention a common word) crowd out a small,
-    curated one (a README that answers the question), so the sources are served round-robin, best
-    first within each; duplicate locators are dropped.
+
+def _locator_sources(ctx: ExecutionContext, request: RetrievalRequestPayload
+                     ) -> list[SourceConfig]:
+    """Return the repo_text sources an explicit locator may fall under (any category).
+
+    The request's `source_ids` and the scope's `source_ids` narrow the set, as for a search.
     """
-    lanes = [list(report.candidates) for report in reports if report.candidates]
-    seen: dict[str, Candidate] = {}
-    for rank in range(max((len(lane) for lane in lanes), default=0)):
-        for lane in lanes:
-            if rank < len(lane) and len(seen) < limit:
-                seen.setdefault(lane[rank].locator, lane[rank])
-    return list(seen.values())
+    scope_ids, asked = set(ctx.scope.source_ids), set(request.source_ids)
+    return [s for s in ctx.config.sources
+            if s.kind == "repo_text" and (not asked or s.id in asked)
+            and (not scope_ids or s.id in scope_ids)]
 
 
 def _limitations(reports: list[SearchReport], need: EvidenceNeed) -> list[str]:
@@ -150,31 +169,10 @@ def _limitations(reports: list[SearchReport], need: EvidenceNeed) -> list[str]:
     return out
 
 
-def _relevant(evidence: list[Evidence], bar: float) -> list[Evidence]:
-    """Return the evidence whose judged relevance reaches the coverage bar (unjudged: never)."""
-    return [e for e in evidence
-            if e.provenance.relevance is not None and e.provenance.relevance >= bar]
-
-
-def _coverage(evidence: list[Evidence], consulted: int, unavailable: list[UnavailableSource],
-              bar: float) -> NeedStatus:
-    """Return the need status: unavailable, open (searched, nothing), partial or satisfied.
-
-    Only evidence that passed relevance at the coverage bar can satisfy the need; anything weaker
-    (or never judged) leaves it partial, and a bundle with an unavailable source stays partial.
-    """
-    if consulted == 0:
-        return NeedStatus.UNAVAILABLE
-    if not evidence:
-        return NeedStatus.OPEN
-    if unavailable or not _relevant(evidence, bar):
-        return NeedStatus.PARTIAL
-    return NeedStatus.SATISFIED
-
-
 async def _collect(ctx: ExecutionContext, invocation: CapabilityInvocation,
                    request: RetrievalRequestPayload, reports: list[SearchReport],
-                   terms: list[str]) -> tuple[list[Evidence], list[str], bool, list[Usage]]:
+                   terms: list[str], explicit: list[Candidate]
+                   ) -> tuple[list[Evidence], list[str], bool, list[Usage]]:
     """Rerank the merged candidates and build evidence.
 
     Returns:
@@ -182,10 +180,13 @@ async def _collect(ctx: ExecutionContext, invocation: CapabilityInvocation,
     """
     cfg = ctx.config.retrieval
     top_k = min(cfg.top_k, request.limits.top_k or cfg.top_k)
-    candidates = _merge(reports, cfg.max_candidates)
-    outcome = await rerank(ctx, invocation, request.need, candidates, top_k)
+    candidates = merge_pool(reports, cfg, explicit)
+    cited = {x.split("#")[0].split("::")[0] for x in request.explicit_locators}
+    outcome = await rerank(ctx, invocation, request.need, candidates, top_k,
+                           goal=_goal_of(request), cited=cited,
+                           max_batches=request.max_rerank_batches)
     version = await asyncio.to_thread(resolve_source_version, ctx.run_id, ctx.scope)
-    limits = list(outcome.limitations)
+    limits = [*pool_note(reports, explicit, candidates, cfg), *outcome.limitations]
     if version is None:
         limits.append("source revision unavailable (git not usable)")
     remaining = request.limits.max_chars
@@ -207,23 +208,24 @@ async def _collect(ctx: ExecutionContext, invocation: CapabilityInvocation,
 def _result(invocation: CapabilityInvocation, request: RetrievalRequestPayload,
             evidence: list[Evidence], reports: list[SearchReport],
             unavailable: list[UnavailableSource], limitations: list[str], cut: bool,
-            usage: list[Usage], bar: float) -> CapabilityResult:
+            usage: list[Usage], cfg: RetrievalConfig, explicit_served: bool = False
+            ) -> CapabilityResult:
     """Assemble the evidence bundle result (partial when no source could be consulted)."""
     consulted = [r for r in reports if not r.unavailable_reason]
     unavailable = unavailable + [UnavailableSource(source_id=r.source_id,
                                                    reason=r.unavailable_reason)
                                  for r in reports if r.unavailable_reason]
-    status = _coverage(evidence, len(consulted), unavailable, bar)
+    served = len(consulted) + (1 if explicit_served else 0)
+    status = coverage(evidence, served, unavailable, cfg)
     limits = [*limitations, *_limitations(reports, request.need)]
-    if evidence and not _relevant(evidence, bar):
-        limits.append(f"coverage: no item reached the relevance bar {bar}; the need stays "
-                      "partial (items were kept as context, not as an answer)")
+    if note := coverage_note(evidence, status, cfg, request.need.id):
+        limits.append(note)
     limits += [f"source {u.source_id} unavailable: {u.reason}" for u in unavailable]
     bundle = EvidenceBundlePayload(
         evidence_ids=[e.id for e in evidence], coverage={request.need.id: status},
         attempted_sources=[r.source_id for r in reports], unavailable_sources=unavailable,
         limitations=limits, truncated=cut, evidence=evidence)
-    result_status = ResultStatus.COMPLETED if consulted else ResultStatus.PARTIAL
+    result_status = ResultStatus.COMPLETED if served else ResultStatus.PARTIAL
     return CapabilityResult(
         invocation_id=invocation.id, work_item_id=invocation.work_item_id,
         status=result_status, output_schema_id=schema_ids.EVIDENCE_BUNDLE,
@@ -257,26 +259,48 @@ class RepositoryRetrievalExecutor:
             root=Path(ctx.scope.repository_root), read_roots=tuple(ctx.scope.read_roots),
             deny_globs=tuple(ctx.config.retrieval.deny_globs),
             max_file_bytes=ctx.config.retrieval.max_file_bytes)
-        terms = extract_terms(request.need.question, ctx.scope.technologies)
+        terms = build_query_terms(request.need.question, request.query_hints,
+                                  ctx.scope.technologies, ctx.config.retrieval.max_query_terms)
+        entities = extract_entities(" ".join(request.query_hints or [request.need.question]))
         sources, unavailable = select_sources(ctx, request)
-        if not terms:
+        cfg = ctx.config.retrieval
+        if not terms and not request.explicit_locators:
             return _result(invocation, request, [], [], unavailable,
-                           ["no query terms could be extracted from the need"], False, [],
-                           ctx.config.retrieval.coverage_relevance_threshold)
-        reports = list(await asyncio.gather(*(_search_one(ctx, policy, s, terms)
-                                              for s in sources)))
+                           ["no query terms could be extracted from the need"], False, [], cfg)
+        explicit = await asyncio.to_thread(
+            fetch_explicit, policy, _locator_sources(ctx, request), request.explicit_locators,
+            terms, ctx.config.retrieval)
+        searched = sources if terms else []
+        goal = _goal_of(request)
+        reports = list(await asyncio.gather(*(_search_one(ctx, policy, s, terms, entities, goal)
+                                              for s in searched)))
         try:
-            evidence, limits, cut, usage = await _collect(ctx, invocation, request, reports,
-                                                          terms)
+            evidence, limits, cut, usage = await _collect(
+                ctx, invocation, request, reports, terms, explicit.candidates)
         except StopCapability as stop:
             return stop.result
-        return _result(invocation, request, evidence, reports, unavailable, limits, cut, usage,
-                       ctx.config.retrieval.coverage_relevance_threshold)
+        return _result(invocation, request, evidence, reports, unavailable,
+                       [*explicit.notes, *limits], cut, usage, cfg, bool(explicit.candidates))
 
 
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 [python-coder]: The request's goal reaches the search (a document that reviews a
+#   kernel run of it is flagged), a source may carry its own `max_file_bytes` (one read policy per
+#   source, also for explicit locators), and a request may cap the rerank batches the requester's
+#   budget affords (`max_rerank_batches`). (#KernelV01/F)
+# - 2026-10-01 [python-coder]: Pooling, rerank batching and coverage moved to pool.py/rerank.py:
+#   one rerank batch per need, explicit locators unjudged, a need satisfied only by enough
+#   evidence above the bar, and every cut reported (the pool cap and the batch cap).
+#   (#KernelV01/E)
+# - 2026-10-01 [python-coder]: Query terms come from build_query_terms (request.query_hints
+#   first, then the need's wording, bounded by retrieval.max_query_terms) and the named
+#   identifiers are read from the hints too. (#KernelV01/D)
+# - 2026-10-01 [python-coder]: Explicit locators are fetched first and merged ahead of the search
+#   candidates; the search also gets the question's identifiers so named files are pinned, and
+#   `max_candidates` is the overall rerank batch bound (default raised 20 to 60) while each
+#   source's own cap scales with its size. (#KernelV01/B)
 # - 2026-10-02 [python-coder]: mypy: the requested-source loop variable no longer reuses the catalog loop's name (#KernelBootstrapV0/GROUND)
 # - 2026-10-01 23:00 [python-coder]: Candidates are merged round-robin across sources instead of
 #   by raw hit count: with the project-metadata sources the 4468-file acceptance-criteria store

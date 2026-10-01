@@ -21,14 +21,18 @@ from langgraph.graph import END, StateGraph
 from kernel.capabilities.base import ExecutionContext
 from kernel.capabilities.decision.assess import Assessment, assess
 from kernel.capabilities.decision.basis import grounding_gap, validate_basis
+from kernel.capabilities.decision.budget_gate import fallback_followup, handover, reserve_for
 from kernel.capabilities.decision.combine import Verdict, combine
+from kernel.capabilities.decision.design_ending import apply_kinds, design_followup
 from kernel.capabilities.decision.emit import (
+    design_resolved_result,
     emit_followup,
     followup_for,
     resolved_result,
 )
 from kernel.capabilities.decision.jev_support import StopCapability, blocked_result
 from kernel.capabilities.decision.loading import load_working
+from kernel.capabilities.decision.ranking import current_scores
 from kernel.capabilities.decision.requests import Followup
 from kernel.capabilities.decision.state import Working
 from kernel.contracts.capability import CapabilityResult
@@ -62,6 +66,9 @@ async def _load(state: DecisionState, config: RunnableConfig) -> dict[str, Any]:
         return {"work": work, "result": blocked_result(
             invocation, "approval_rejected", "the human rejected the recommendation",
             usage=work.usage)}
+    if work.cont.design_choice_id:  # the human chose among the ranked options: no Jev call
+        return {"work": work, "result": design_resolved_result(
+            invocation, work, ctx.config.decision)}
     return {"work": work}
 
 
@@ -86,11 +93,29 @@ async def _validate_basis(state: DecisionState, config: RunnableConfig) -> dict[
 
 
 async def _assess(state: DecisionState, config: RunnableConfig) -> dict[str, Any]:
-    """One Jev batch; its usage is recorded on the working state."""
+    """One Jev batch; its usage is recorded on the working state.
+
+    An assessment the budget cannot fund falls back to the last complete one: the ranked human
+    question is built from its scores (never a half-scored ranking). With no usable earlier
+    assessment the stop stands.
+
+    Raises:
+        StopCapability: The assessment failed, or the budget stopped it with nothing to fall back on.
+    """
     invocation, ctx = _run(config)
     work = state["work"]
-    assessment = await assess(ctx, invocation, work)
+    try:
+        assessment = await assess(ctx, invocation, work)
+    except StopCapability as stop:
+        followup = fallback_followup(ctx, work, stop.result)
+        if followup is None:
+            raise
+        ctx.tracer.event("decision.budget_fallback", ctx.corr, payload={
+            "reason": followup.reason, "revision": work.revision(),
+            "reserve": reserve_for(work, ctx.config)})
+        return {"followup": followup}
     work.usage.append(assessment.result.usage)
+    apply_kinds(work, assessment, ctx.config.decision)
     return {"assessment": assessment}
 
 
@@ -98,17 +123,34 @@ async def _combine(state: DecisionState, config: RunnableConfig) -> dict[str, An
     """Apply the resolved-gate; resolved ends the run, anything else becomes a follow-up."""
     invocation, ctx = _run(config)
     work = state["work"]
-    verdict = combine(work, state["assessment"], ctx.config.decision)
+    cfg = ctx.config.decision
+    verdict = combine(work, state["assessment"], cfg)
+    verdict = handover(ctx, work, state["assessment"], verdict) or verdict
     ctx.tracer.event("decision.combine", ctx.corr, payload={
         "status": verdict.status.value, "reason": verdict.reason,
         "selected": verdict.selected_option_id, "revision": work.revision(),
-        "thresholds": ctx.config.decision.model_dump(mode="json")})
+        "thresholds": cfg.model_dump(mode="json"),
+        "ranking": [r.option_id for r in verdict.ranking]})
     if verdict.status.value == "resolved":
         result = resolved_result(invocation, work, verdict)
         _status_event(ctx, verdict, result.decisions[0].approval_status.value)
         return {"verdict": verdict, "result": result}
     _status_event(ctx, verdict, "proposed" if work.pending_ids else "not_required")
-    return {"verdict": verdict, "followup": followup_for(work, verdict)}
+    _remember_assessment(work, state["assessment"], verdict)
+    if verdict.ranking:
+        return {"verdict": verdict, "followup": design_followup(
+            work, verdict.reason, verdict.ranking, cfg)}
+    return {"verdict": verdict, "followup": followup_for(
+        work, verdict, reserve=reserve_for(work, ctx.config))}
+
+
+def _remember_assessment(work: Working, assessment: Assessment, verdict: Verdict) -> None:
+    """Keep this assessment's scores (and any ranking shown) so the next one can compare."""
+    work.cont = work.cont.model_copy(update={
+        "last_scores": current_scores(work, assessment),
+        "last_scores_evidence": work.evidence_ids,
+        "design_ranking": verdict.ranking,
+        "design_reason": verdict.reason if verdict.ranking else ""})
 
 
 def _status_event(ctx: ExecutionContext, verdict: Verdict, approval: str) -> None:
@@ -123,6 +165,11 @@ async def _emit(state: DecisionState, config: RunnableConfig) -> dict[str, Any]:
     """Turn the follow-up into waiting, partial or blocked."""
     invocation, _ = _run(config)
     return {"result": emit_followup(invocation, state["work"], state["followup"])}
+
+
+def _after_assess(state: DecisionState) -> str:
+    """Route to emit when the budget fallback already produced the follow-up, else to combine."""
+    return "emit" if state.get("followup") else "combine"
 
 
 def _done_or(node: str):
@@ -146,7 +193,7 @@ def build_decision_graph() -> Any:
                                 {END: END, "validate_basis": "validate_basis"})
     graph.add_conditional_edges("validate_basis", _after_basis,
                                 {"emit": "emit", "assess": "assess"})
-    graph.add_edge("assess", "combine")
+    graph.add_conditional_edges("assess", _after_assess, {"emit": "emit", "combine": "combine"})
     graph.add_conditional_edges("combine", _done_or("emit"), {END: END, "emit": "emit"})
     graph.add_edge("emit", END)
     return graph.compile()
@@ -175,6 +222,13 @@ class DecisionExecutor:
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 [python-coder]: Budget-aware ending: combine's follow-up passes through the budget
+#   gate (a round that would eat the reserved final assessment becomes the ranked human question)
+#   and an assessment refused for budget falls back to the last complete assessment.
+#   (#KernelV01/E)
+# - 2026-10-01 [python-coder]: A chosen design option resolves in `load` with no Jev call; the
+#   assess node classifies criterion kinds and combine's ranking becomes a human follow-up.
+#   (#KernelV01/A)
 # - 2026-10-01 23:00 [python-coder]: When grounding research found nothing the decision blocks
 #   (options_ungrounded) if grounding is required, else asks for options with a limitation.
 #   (#KernelBootstrapV0/GROUND)

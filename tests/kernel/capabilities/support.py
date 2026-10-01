@@ -20,6 +20,7 @@ from unittest import mock
 
 from kernel.capabilities.base import ExecutionContext
 from kernel.capabilities.retrieval import versioning
+from kernel.config import KernelConfig, load_kernel_config
 from kernel.contracts import Priority
 from kernel.contracts.base import content_hash, evidence_id, new_id, utc_now
 from kernel.contracts.capability import CapabilityResult
@@ -113,13 +114,25 @@ def no_git(testcase: unittest.TestCase) -> None:
     testcase.addCleanup(versioning._CACHE.clear)
 
 
+def no_synthesis_config() -> KernelConfig:
+    """Return the default config with `research.allow_synthesis` off.
+
+    For tests about the coverage and status a research bundle reports: since round F a thin need
+    asks the host for a synthesis (tests/kernel/decision_research), which they do not answer.
+    """
+    base = load_kernel_config()
+    return base.model_copy(update={"research": base.research.model_copy(
+        update={"allow_synthesis": False})})
+
+
 def script_decision(jev: ScriptedJev, params: dict | None = None) -> dict:
     """Script decision.assess answers from a mutable params dict and return it.
 
-    Keys: sufficient, satisfies ({(crit, opt): p}), default_sat, missing, preference, conflict.
+    Keys: sufficient, satisfies ({(crit, opt): p}), default_sat, missing, preference, conflict,
+    design (criterion ids Jev classifies as design judgements; none by default).
     """
     p: dict[str, Any] = {"sufficient": 0.95, "satisfies": {}, "default_sat": 0.05, "missing": "none",
-         "preference": 0.05, "conflict": 0.05}
+         "preference": 0.05, "conflict": 0.05, "design": set()}
     p.update(params or {})
 
     def sat(question, batch):  # noqa: ANN001 - ScriptedJev callback signature
@@ -129,6 +142,8 @@ def script_decision(jev: ScriptedJev, params: dict | None = None) -> dict:
                     return noul_answer(p["satisfies"].get((crit, opt), p["default_sat"]))
         return noul_answer(p["default_sat"])
 
+    jev.script("decision.assess", "kind.*", lambda q, b: noul_answer(
+        0.95 if q.id.removeprefix("kind.") in p["design"] else 0.05))
     jev.script("decision.assess", "sufficient.*", lambda q, b: noul_answer(p["sufficient"]))
     jev.script("decision.assess", "satisfies.*", sat)
     jev.script("decision.assess", "missing", lambda q, b: choice_answer(p["missing"]))
@@ -137,9 +152,27 @@ def script_decision(jev: ScriptedJev, params: dict | None = None) -> dict:
     return p
 
 
+def script_research(jev: ScriptedJev, params: dict | None = None) -> dict:
+    """Script research answers from a mutable dict (need, conflict, evaluable, answer)."""
+    p: dict[str, Any] = {"need": {}, "default_need": 0.05, "conflict": 0.05, "evaluable": 0.95,
+                         "answer": 0.95, "answer_by_need": {}}
+    p.update(params or {})
+    jev.script("research.plan_needs", "need.*",
+               lambda q, b: noul_answer(p["need"].get(q.id.split(".", 1)[1], p["default_need"])))
+    jev.script("research.assess", "conflict", lambda q, b: noul_answer(p["conflict"]))
+    jev.script("research.assess", "evaluable", lambda q, b: noul_answer(p["evaluable"]))
+    jev.script("research.assess", "answers.*", lambda q, b: noul_answer(
+        p["answer_by_need"].get(q.id.removeprefix("answers."), p["answer"])))
+    return p
+
+
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 [python-coder]: script_research (moved from test_research_graph) answers the
+#   research.assess `answers.*` questions of answer-aware coverage. (#KernelV01/D)
+# - 2026-10-01 [python-coder]: script_decision answers the criterion-kind question (`kind.*`):
+#   evidence-answerable unless the id is in params["design"]. (#KernelV01/A)
 # - 2026-09-30 23:00 [python-coder]: Satisfies answers are matched against the ids in the batch
 #   state, so criterion ids containing dots (human-edited criteria) resolve unambiguously.
 #   (#KernelBootstrapV0/P5)

@@ -24,6 +24,7 @@ from typing import Protocol
 
 from kernel.capabilities.retrieval.access import ReadPolicy
 from kernel.capabilities.retrieval.candidates import Candidate, SearchReport
+from kernel.capabilities.retrieval.repository import source_cap
 from kernel.config import RetrievalConfig, SourceConfig, repo_root
 from kernel.contracts.enums import SourceKind
 
@@ -172,16 +173,19 @@ def search_knowledge_map(policy: ReadPolicy, source: SourceConfig, terms: list[s
     found = [c for c in (_node_candidate(policy, source, n, terms, report) for n in nodes)
              if c is not None]
     found.sort(key=lambda c: (-c.hits, c.locator))
-    if len(found) > cfg.max_candidates:
-        report.notes.append(f"{len(found) - cfg.max_candidates} nodes cut at "
-                            f"max_candidates={cfg.max_candidates}")
-    report.candidates = found[:cfg.max_candidates]
+    cap = source_cap(len(nodes), cfg)
+    if len(found) > cap:
+        report.notes.append(f"{len(found) - cap} nodes cut at the source cap of {cap} "
+                            f"(max_candidates={cfg.max_candidates})")
+    report.candidates = found[:cap]
     return report
 
 
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 [python-coder]: Node candidates use the same size-scaled source cap as file
+#   sources. (#KernelV01/B)
 # - 2026-10-02 [python-coder]: the bridge nodes are typed by a Protocol instead of object (#KernelBootstrapV0/GROUND)
 # - 2026-10-02 [python-coder]: SECURITY: the bridge script is loaded only from the kernel's own
 #   installation (`trusted_root`), never from the scope repository, which is passed to it as data.

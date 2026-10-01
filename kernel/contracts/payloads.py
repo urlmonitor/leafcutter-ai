@@ -85,6 +85,18 @@ class DecisionReportPayload(KernelModel):
         return self
 
 
+class OptionContext(KernelModel):
+    """One option the decision researches for: what it is and what it already cites."""
+
+    option_id: str = Field(min_length=1)
+    title: str = Field(min_length=1)
+    description: str | None = None
+    #: Evidence ids plus any file paths or symbol names the option's text mentions.
+    cited_refs: list[str] = Field(default_factory=list)
+    #: True for an option a human added: its claims are unverified and research checks them.
+    human_added: bool = False
+
+
 class ResearchRequestPayload(KernelModel):
     """leafcutter.research_request.v1."""
 
@@ -95,6 +107,15 @@ class ResearchRequestPayload(KernelModel):
     expected_coverage: Literal["all_required", "best_effort"] = "all_required"
     #: Research exactly the given needs: Jev adds no further evidence categories.
     evidence_needs_only: bool = False
+    #: The options the decision has so far (empty before options exist); research reads it.
+    option_context: list[OptionContext] = Field(default_factory=list)
+    #: The approved criteria's questions, used as query text beside the goal.
+    criteria_context: list[str] = Field(default_factory=list)
+    #: What an earlier synthesis said it could not find; each becomes a targeted need.
+    gaps: list[str] = Field(default_factory=list)
+    #: Jev calls the requester keeps for itself afterwards (its final assessment); research plans
+    #: no more needs than the rest of its budget affords and never spends into this reserve.
+    jev_reserve: int = Field(default=0, ge=0)
 
 
 class RetrievalLimits(KernelModel):
@@ -111,6 +132,13 @@ class RetrievalRequestPayload(KernelModel):
     source_ids: list[str] = Field(default_factory=list)
     detail: Literal["excerpt", "summary", "locator"] = "excerpt"
     limits: RetrievalLimits = Field(default_factory=RetrievalLimits)
+    #: Exact places to fetch before ranking: `path`, `path#Lx-Ly`, `path#heading`, `path::Symbol`.
+    explicit_locators: list[str] = Field(default_factory=list)
+    #: Texts to search for before the need's own wording: the goal first, then criteria, options.
+    query_hints: list[str] = Field(default_factory=list)
+    #: Most rerank batches this request may judge (the requester's Jev budget affords no more
+    #: than this beside its reserve); null means the configured `retrieval.rerank_max_batches`.
+    max_rerank_batches: int | None = Field(default=None, ge=1)
 
 
 class OptionsRequestPayload(KernelModel):
@@ -256,7 +284,7 @@ class HumanAnswerPayload(KernelModel):
 __all__ = [
     "AddedOption", "CriterionEdit", "DecisionReportPayload", "DecisionRequestPayload",
     "EvidenceBundlePayload", "FindingsPayload", "GoalRequestPayload", "HumanAnswerPayload",
-    "HumanQuestionRequestPayload", "OptionsPayload", "OptionsRequestPayload",
+    "HumanQuestionRequestPayload", "OptionContext", "OptionsPayload", "OptionsRequestPayload",
     "ResearchRequestPayload", "RetrievalLimits", "RetrievalRequestPayload",
     "SynthesisLimits", "SynthesisRequestPayload",
 ]
@@ -264,6 +292,12 @@ __all__ = [
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 [python-coder]: Research now reads option_context; the request also carries
+#   criteria_context and gaps (what a synthesis could not find), OptionContext.human_added marks
+#   unverified claims, and retrieval_request.query_hints lets queries lead with the goal.
+#   (#KernelV01/D)
+# - 2026-10-01 [python-coder]: ResearchRequestPayload.option_context (OptionContext) tells research
+#   which options the decision weighs and what they cite; not consumed yet. (#KernelV01/A)
 # - 2026-10-02 [python-coder]: OptionsPayload.named_options (kernel-verified, supplied) and
 #   HumanAnswerPayload.added_options (human-supplied at approval). (#KernelBootstrapV0/GROUND)
 # - 2026-10-02 [python-coder]: HumanQuestionRequestPayload.evidence_ids and

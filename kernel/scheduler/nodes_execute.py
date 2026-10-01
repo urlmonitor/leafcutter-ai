@@ -29,6 +29,7 @@ from kernel.contracts import (
 from kernel.observability.correlation import correlation_for_invocation
 from kernel.observability.redaction import Redactor
 from kernel.providers.base import JevUnavailable
+from kernel.providers.jev_budget import bind_call_budget
 from kernel.registry.bindings import BindingUnavailable
 from kernel.scheduler.context import KernelRuntime
 
@@ -55,6 +56,10 @@ class ShareBudget:
         self._left[resource] -= 1
         self.reserved[resource] += 1
         return True
+
+    def available(self, resource: BudgetResource) -> int | None:
+        """Return the units this worker's share still holds."""
+        return max(0, self._left[resource])
 
 
 def failed_result(invocation: CapabilityInvocation, code: str, message: str, *,
@@ -137,7 +142,7 @@ async def execute(packet: dict, runtime: Runtime[KernelRuntime]) -> dict[str, An
     budget = ShareBudget(packet.get("shares", {}))
     started = ctx.monotonic()
     with ctx.tracer.span(f"capability.{invocation.capability_id}", "capability",
-                         invocation.trace.correlation):
+                         invocation.trace.correlation), bind_call_budget(budget):
         result = await _run_executor(packet, ctx, budget)
     diagnostics = {**result.diagnostics, ELAPSED_KEY: max(0.0, ctx.monotonic() - started),
                    JEV_RESERVED_KEY: budget.reserved["jev"]}
@@ -149,6 +154,12 @@ __all__ = ["ELAPSED_KEY", "JEV_RESERVED_KEY", "ShareBudget", "cancelled_result",
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 [python-coder]: ShareBudget reports what is left of its share, so the decision can
+#   reserve a final assessment and research can trim its plan to what is affordable.
+#   (#KernelV01/E)
+# - 2026-10-01 [python-coder]: The worker's budget share is bound for the executor's task so the
+#   Jev adapter reserves the extra provider calls of a chunked assessment from it.
+#   (#KernelV01/C)
 # - 2026-10-01 16:30 [python-coder]: Exception text is masked here, where it becomes an
 #   ErrorInfo, because that message reaches the stdout envelope, run.json and events, which the
 #   Langfuse mask never covers. (#KernelBootstrapV0/FIXC)

@@ -13,7 +13,9 @@ import unittest
 
 from kernel.contracts import schema_ids
 from kernel.intent.report_text import (
+    GUARDS,
     can_do_hint,
+    guard_hit,
     has_plain_reason,
     output_sections,
     stop_explanation,
@@ -33,8 +35,8 @@ class TestStopExplanation(unittest.TestCase):
 
     def test_a_decline_reason_is_quoted_without_its_code(self) -> None:
         text = "\n".join(stop_explanation(
-            "blocked", ["out_of_scope_write: The V0 kernel is read-only; nothing is edited."]))
-        self.assertIn("- The V0 kernel is read-only; nothing is edited.", text)
+            "blocked", ["out_of_scope_write: The kernel is read-only; nothing is edited."]))
+        self.assertIn("- The kernel is read-only; nothing is edited.", text)
         self.assertNotIn("out_of_scope_write", text)
 
     def test_finished_runs_get_no_explanation(self) -> None:
@@ -47,6 +49,45 @@ class TestStopExplanation(unittest.TestCase):
         self.assertTrue(has_plain_reason(["out_of_domain: not about software"]))
         self.assertTrue(has_plain_reason(["unclear_request: rephrase"]))
         self.assertFalse(has_plain_reason(["no_capability: nothing serves this"]))
+
+
+class TestGuardStops(unittest.TestCase):
+    """Round 6 told a budget stop to "try rephrasing"; a guard stop now says what was hit."""
+
+    BUDGET = ["jev call budget exhausted", "budget_exhausted: jev call budget exhausted"]
+
+    def test_a_budget_stop_names_the_budget_the_config_key_and_the_remedies(self) -> None:
+        text = "\n".join(stop_explanation("blocked", self.BUDGET))
+        self.assertIn("The run stopped because the Jev call budget was reached", text)
+        self.assertIn("`limits.max_jev_calls`", text)
+        for remedy in ("raise `limits.max_jev_calls`", "narrow the question",
+                       "decide from the ranked options"):
+            self.assertIn(remedy, text)
+        self.assertNotIn("rephras", text.lower())
+        self.assertNotIn("What the kernel can do", text)
+
+    def test_every_guard_names_its_own_config_key(self) -> None:
+        for guard, (_, key) in GUARDS.items():
+            with self.subTest(guard=guard):
+                self.assertIn(f"`{key}`", "\n".join(stop_explanation(
+                    "partial", [f"unresolved_at_{guard}: some goal"])))
+
+    def test_the_guard_is_found_in_limitations_codes_reasons_and_diagnostics(self) -> None:
+        self.assertEqual(guard_hit(self.BUDGET), "budget_exhausted")
+        self.assertEqual(guard_hit(["unavailable: budget_exhausted"]), "budget_exhausted")
+        self.assertEqual(guard_hit(["unresolved_at_max_host_operations: goal"]),
+                         "max_host_operations")
+        self.assertEqual(guard_hit([], ["guard: max_active_seconds"]), "max_active_seconds")
+        self.assertIsNone(guard_hit(["no_capability: nothing serves this"], ["guard: unknown"]))
+
+    def test_a_guard_stop_needs_no_rephrasing_hint(self) -> None:
+        self.assertTrue(has_plain_reason(self.BUDGET))
+        self.assertTrue(has_plain_reason([], ["guard: no_progress"]))
+        self.assertFalse(has_plain_reason(["no_capability: nothing serves this"]))
+
+    def test_other_blocked_runs_still_suggest_rephrasing(self) -> None:
+        text = "\n".join(stop_explanation("blocked", ["no_capability: nothing serves this"]))
+        self.assertIn("Try rephrasing", text)
 
 
 class TestOutputSections(unittest.TestCase):
@@ -85,6 +126,8 @@ if __name__ == "__main__":
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 [python-coder]: Guard and budget stops name what was hit and the config key that
+#   raises it instead of suggesting a rephrasing. (#KernelV01/E)
 # - 2026-10-01 22:00 [python-coder]: The report keeps the JSON output block and adds these
 #   readable sections before it; nothing here is model-written. (#KernelBootstrapV0/INTENT)
 # ====================================================================

@@ -41,6 +41,7 @@ from kernel.contracts.schema_catalog import validate_payload
 from kernel.contracts.work import CapabilityInvocation, ChildOutcome
 
 MAX_FINDINGS_KEPT = 20
+MAX_GAPS_KEPT = 6
 ACTOR_LOOKUP_LIMIT = 50
 
 
@@ -85,6 +86,13 @@ def _absorb_options(work: Working, payload: dict) -> None:
     work.limitations += [f"unresolved feasibility: {u}" for u in model.unresolved_feasibility]
 
 
+def _keep_gaps(work: Working, unknowns: list[str]) -> None:
+    """Remember what the newest synthesis could not find (it replaces the earlier gaps)."""
+    if unknowns:
+        gaps = list(dict.fromkeys(u.strip() for u in unknowns if u.strip()))[:MAX_GAPS_KEPT]
+        work.cont = work.cont.model_copy(update={"gaps": gaps})
+
+
 def _absorb_bundle(work: Working, payload: dict, inline: dict[str, Evidence]) -> None:
     """Add evidence ids and inline evidence from an evidence_bundle.v1 child."""
     model = cast(EvidenceBundlePayload, validate_payload(schema_ids.EVIDENCE_BUNDLE, payload))
@@ -93,6 +101,7 @@ def _absorb_bundle(work: Working, payload: dict, inline: dict[str, Evidence]) ->
     work.cont = work.cont.model_copy(update={"evidence_ids": merged})
     inline.update({e.id: e for e in model.evidence})
     work.limitations += model.limitations
+    _keep_gaps(work, model.unknowns)
 
 
 def _absorb_findings(work: Working, payload: dict) -> None:
@@ -103,6 +112,7 @@ def _absorb_findings(work: Working, payload: dict) -> None:
     refs = [*work.cont.finding_refs, *(f"[{f.id}] {f.claim}" for f in model.findings)]
     work.cont = work.cont.model_copy(update={
         "findings": kept, "finding_refs": list(dict.fromkeys(refs))[-MAX_FINDINGS_KEPT:]})
+    _keep_gaps(work, model.unknowns)
 
 
 def _answering_actor(ctx: ExecutionContext, invocation: CapabilityInvocation) -> str | None:
@@ -207,6 +217,8 @@ def load_working(invocation: CapabilityInvocation, ctx: ExecutionContext) -> Wor
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 [python-coder]: The unknowns of a synthesis (in a bundle or findings) are kept as
+#   the decision's gaps for the next research request. (#KernelV01/D)
 # - 2026-10-02 [python-coder]: mypy: the payload base values are dict[str, Any] (#KernelBootstrapV0/GROUND)
 # - 2026-10-02 [python-coder]: Kernel-verified named options join the decision as supplied
 #   (usable) options. (#KernelBootstrapV0/GROUND)

@@ -14,7 +14,7 @@ from __future__ import annotations
 
 from typing import TypeVar
 
-from kernel.capabilities.decision.state import Working, is_pending
+from kernel.capabilities.decision.state import ADDED_OPTION_PREFIX, Working, is_pending
 from kernel.contracts.decision import Criterion, Option
 from kernel.contracts.enums import ApprovalStatus, ProposalStatus
 from kernel.contracts.payloads import HumanAnswerPayload
@@ -62,7 +62,7 @@ def _added_options(work: Working, answer: HumanAnswerPayload, actor: str) -> lis
     taken = {o.id for o in work.options}
     made: list[Option] = []
     for n, added in enumerate(answer.added_options or [], start=1):
-        oid = f"opt.added.{n}"
+        oid = f"{ADDED_OPTION_PREFIX}{n}"
         while oid in taken:
             oid += "+"
         taken.add(oid)
@@ -143,6 +143,27 @@ def _apply_escalation(work: Working, answer: HumanAnswerPayload) -> None:
     work.cont = cont.model_copy(update=updates)
 
 
+def _apply_design_choice(work: Working, answer: HumanAnswerPayload, actor: str) -> None:
+    """Record a human's answer to the ranked-options question: a choice, added options or words.
+
+    A choice of a usable option settles the decision (the human is the approver). Added options
+    and free text change what the kernel ranks, so the decision is assessed and ranked again.
+    """
+    cont = work.cont
+    if answer.added_options:
+        work.options = [*work.options, *_added_options(work, answer, actor)]
+    if answer.free_text and answer.free_text.strip():
+        work.cont = cont.model_copy(update={
+            "human_inputs": [*cont.human_inputs, answer.free_text.strip()]})
+    if answer.choice_id is None:
+        return
+    if answer.choice_id in {o.id for o in work.usable_options}:
+        work.cont = cont.model_copy(update={
+            "design_choice_id": answer.choice_id, "approved_by": actor})
+    else:
+        work.limitations.append(f"answer {answer.choice_id!r} is not a usable option")
+
+
 def apply_human_answer(work: Working, answer: HumanAnswerPayload, actor: str | None) -> None:
     """Apply one human answer according to the phase the decision is waiting in.
 
@@ -159,6 +180,8 @@ def apply_human_answer(work: Working, answer: HumanAnswerPayload, actor: str | N
         _apply_decision_approval(work, answer, who)
     elif phase == "awaiting_human":
         _apply_escalation(work, answer)
+    elif phase == "awaiting_design_choice":
+        _apply_design_choice(work, answer, who)
     else:
         work.limitations.append(f"human answer ignored: decision was in phase {phase!r}")
 
@@ -166,6 +189,9 @@ def apply_human_answer(work: Working, answer: HumanAnswerPayload, actor: str | N
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 [python-coder]: A human's choice among the kernel-ranked options settles a design
+#   decision (approver recorded); added options or free text send it back to be ranked again.
+#   (#KernelV01/A)
 # - 2026-10-02 [python-coder]: approval helpers are generic over option and criterion so the two lists keep their types (#KernelBootstrapV0/GROUND)
 # - 2026-10-02 [python-coder]: A structured approval can add options; they are human-supplied and
 #   approved by that human. (#KernelBootstrapV0/GROUND)

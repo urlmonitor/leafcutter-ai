@@ -48,6 +48,22 @@
           "title": "Id",
           "type": "string"
         },
+        "kind": {
+          "$ref": "#/$defs/CriterionKind",
+          "default": "evidence_answerable"
+        },
+        "kind_source": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Kind Source"
+        },
         "priority": {
           "$ref": "#/$defs/Priority",
           "default": "required"
@@ -110,6 +126,15 @@
       ],
       "title": "Criterion",
       "type": "object"
+    },
+    "CriterionKind": {
+      "description": "What can settle a criterion: facts about the world, or a judgement of the designs.",
+      "enum": [
+        "evidence_answerable",
+        "design_judgement"
+      ],
+      "title": "CriterionKind",
+      "type": "string"
     },
     "Option": {
       "additionalProperties": false,

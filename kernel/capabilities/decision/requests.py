@@ -15,6 +15,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 
 from kernel.capabilities.decision.approvals import APPROVE, REJECT
+from kernel.capabilities.decision.option_context import option_context
 from kernel.capabilities.decision.state import Working, is_pending
 from kernel.contracts import schema_ids
 from kernel.contracts.decision import Criterion, Option
@@ -102,12 +103,21 @@ def grounding_request(work: Working) -> RequestProposal:
         requested_output_schema=schema_ids.EVIDENCE_BUNDLE)
 
 
-def research_request(work: Working, categories: list[EvidenceCategory]) -> RequestProposal:
-    """Ask research for the given evidence categories (needs are pre-filled and required)."""
+def research_request(work: Working, categories: list[EvidenceCategory], reserve: int = 0
+                     ) -> RequestProposal:
+    """Ask research for exactly the given evidence categories (needs are pre-filled and required).
+
+    The decision already named the categories it misses, so research plans no further ones (no
+    Jev planning call, and the cost of the round is known before it starts); `reserve` is the Jev
+    calls the decision keeps for its own final assessment, which research must leave untouched.
+    """
     needs = [EvidenceNeed(id=f"need.{c.value}", category=c, priority=Priority.REQUIRED,
                           question=_NEED_QUESTIONS[c] + work.question) for c in categories]
-    payload = ResearchRequestPayload(question=work.question, evidence_needs=needs,
-                                     existing_evidence_ids=work.evidence_ids)
+    payload = ResearchRequestPayload(
+        question=work.question, evidence_needs=needs, existing_evidence_ids=work.evidence_ids,
+        evidence_needs_only=True, jev_reserve=reserve,
+        option_context=option_context(work),
+        criteria_context=[c.question for c in work.usable_criteria], gaps=list(work.cont.gaps))
     return RequestProposal(
         kind=RequestKind.EVIDENCE, question=work.question, evidence_needs=needs,
         payload_schema=schema_ids.RESEARCH_REQUEST, payload=payload.model_dump(mode="json"),
@@ -189,6 +199,13 @@ def decision_approval_request(work: Working, option: Option) -> RequestProposal:
                   False, [option.id], evidence=_cited([option]))
 
 
+def design_choice_request(work: Working, question: str, why: str, choices: list[Choice],
+                          evidence: list[str]) -> RequestProposal:
+    """Ask a human to choose among the kernel-ranked options (or add one, or answer in words)."""
+    return _human(work, question, why, choices, True, [c.id for c in choices],
+                  structured=True, evidence=evidence)
+
+
 def escalation_request(work: Working, reason: str, text: str, tied: list[Option]
                        ) -> RequestProposal:
     """Ask a human about a tie, preference, conflict or unidentified gap."""
@@ -200,6 +217,14 @@ def escalation_request(work: Working, reason: str, text: str, tied: list[Option]
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 [python-coder]: Decision-driven research plans exactly the categories the decision
+#   named and carries the Jev calls the decision reserves, so a round is affordable and bounded
+#   before it starts. (#KernelV01/E)
+# - 2026-10-01 [python-coder]: A research request also carries the approved criteria's questions
+#   and the gaps the last synthesis named, so research can aim its queries. (#KernelV01/D)
+# - 2026-10-01 [python-coder]: A research request made after options exist carries
+#   option_context (titles, descriptions, cited refs); the grounding request cannot, no options
+#   exist yet. (#KernelV01/A)
 # - 2026-10-02 [python-coder]: Approval questions list the evidence the options cite, and the
 #   options request carries the accepted findings. (#KernelBootstrapV0/GROUND)
 # - 2026-10-01 23:00 [python-coder]: An unknown option set is first grounded by a bounded research

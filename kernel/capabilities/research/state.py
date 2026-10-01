@@ -24,6 +24,7 @@ from kernel.contracts.evidence import (
     Finding,
     UnavailableSource,
 )
+from kernel.contracts.payloads import OptionContext
 from kernel.contracts.work import RequestProposal
 
 #: Prefix of the note of a bundle-level contradiction that names no evidence pair.
@@ -49,6 +50,8 @@ class ResearchContinuation(KernelModel):
     #: Supporting needs only a host can serve, held back until the native evidence proves thin.
     deferred: list[RequestProposal] = Field(default_factory=list)
     deferred_dispatched: bool = False
+    #: Needs whose evidence matched the topic but did not answer (kept partial across a resume).
+    unanswered: list[str] = Field(default_factory=list)
 
 
 def contradiction_key(item: Contradiction) -> tuple[frozenset[str], str]:
@@ -65,6 +68,12 @@ class Plan:
     mandated: list[EvidenceNeed]
     source_restrictions: list[str]
     needs_only: bool = False
+    #: What the decision already knows: its options, approved criteria and named gaps.
+    options: list[OptionContext] = field(default_factory=list)
+    criteria: list[str] = field(default_factory=list)
+    gaps: list[str] = field(default_factory=list)
+    #: Jev calls the requester keeps for itself; research never spends into them.
+    jev_reserve: int = 0
 
 
 @dataclass
@@ -79,6 +88,11 @@ class Collected:
     limitations: list[str] = field(default_factory=list)
     findings: list[Finding] = field(default_factory=list)
     truncated: bool = False
+    #: What a synthesis said it could not find.
+    unknowns: list[str] = field(default_factory=list)
+    #: Per need, the ids of its kept evidence that passed relevance (what an answer is judged on).
+    need_evidence: dict[str, list[str]] = field(default_factory=dict)
+    unanswered: list[str] = field(default_factory=list)
 
     def add_contradictions(self, items: list[Contradiction]) -> None:
         """Record contradictions once each (identity: the evidence pair, either order, and claim)."""
@@ -109,6 +123,10 @@ class Collected:
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 [python-coder]: The Plan carries the requester's Jev reserve. (#KernelV01/E)
+# - 2026-10-01 [python-coder]: The Plan carries option_context, criteria and gaps, and Collected
+#   the synthesis unknowns and the per-need evidence ids behind answer-aware coverage; neither is
+#   persisted (a resume re-reads the child bundles). (#KernelV01/D)
 # - 2026-10-02 [python-coder]: The continuation keeps the host-only supporting needs that were
 #   held back and whether they were dispatched. (#KernelBootstrapV0/GROUND)
 # - 2026-10-01 23:00 [python-coder]: Contradictions are deduplicated by evidence pair and claim at

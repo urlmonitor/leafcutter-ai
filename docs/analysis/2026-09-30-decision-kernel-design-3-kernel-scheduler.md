@@ -4,7 +4,7 @@ description: "The fixed LangGraph kernel for the decision kernel MVP: KernelStat
 type: explanation
 status: active
 created: 2026-09-30
-last_updated: 2026-09-30
+last_updated: 2026-10-01
 components:
   - decision_kernel
 ---
@@ -243,3 +243,20 @@ The restart tests must cover a restart immediately before and immediately after 
 - **Gap records.** `aggregate_gaps` keeps the goal and `need_title` of the first observation per gap key (the key merges different goals of one need). A draft is titled from the need (`need_phrase`: `evidence retrieval (<category>)`, `option generation`, `evidence synthesis`), not the root goal that triggered it. Every build opportunity gets a draft: a `host_only` gap with a native twin says so in its purpose and asks the reader to check the twin first. A decline records output schema `none`, and the write decline says the kernel is read-only by design (granting `write_repo` would change nothing).
 - **Usage rows.** `Budgets.usage_rows` holds one `UsageRow` per (provider, model); `account_usage` folds every result's usage into it. The envelope shows a row per provider and model with the model id, summed tokens and the known cost. A cost is shown only when every folded call had one (reported or estimated); otherwise it stays `null` with provenance `unavailable`, never 0.
 - **Report.** `report.md` has a `- Trace: <url>` line when tracing exported a Langfuse trace URL (the envelope carries it in `trace_refs.trace_url`).
+
+## As built (V0.1)
+
+- **A Jev call is one provider request** (fix C). The worker binds the run budget to the adapter: a chunked assessment (more than `jev.max_questions_per_call` questions) reserves every chunk after the first before sending it, and a refused reservation stops the assessment (`JevBudgetExhausted`). Budget, usage rows, envelope `usage_summary.jev_calls` and the tracer's `jev.<purpose>` generations therefore count the same thing. A retried chunk is one call (`attempts` is trace metadata only).
+- **Design decisions end in a human choice** (fix A). A research loop is bounded by `decision.max_research_rounds`; the decision ends in a ranked human question when a required criterion is a design judgement, when two assessments are flat (`decision.progress_epsilon`), or at the cap. The human's choice resolves the decision with the human as approver.
+- **Research is bounded by the same cap**: option-cited paths, named gaps and a human-added option's claims are queried in the rounds that exist; none of them adds a round (wave 2).
+
+## As built (V0.1 round E)
+
+- **The decision keeps the budget for its own ending.** `decision.reserve_assessments` final assessments stay reserved (sized from the question count and `jev.max_questions_per_call`, plus `reserve_extra_options` and `reserve_margin_calls`). After combine, a follow-up that spends calls and ends in another assessment (a research round; a synthesis or options request spends none) is replaced by the ranked human question (`design_reason: budget_reserve`, limitation "ranking made on limited evidence because the Jev call budget ... was reached") when the worker's remaining Jev share cannot fund it plus the reserve. The research request carries the reserve (`jev_reserve`): research trims its plan to the needs it affords and skips its judgement rather than spend into it.
+- **No half-scored assessment.** `ask_jev` refuses a batch whose provider calls do not fit the remaining share before the first call (`budget_exhausted`, not retryable); the decision then ranks the last complete assessment, but only when it covers every usable option and criterion. A mid-assessment refusal or provider failure carries the usage of the chunks that finished (`JevError.completed_usage`), so usage rows, cost, the budget and the trace count the same calls.
+- **Why a run stopped.** A budget or guard stop is a plain reason: report.md and the envelope name the budget, the config key that raises it and the remedies (raise it, narrow the question, decide from the ranked options); "try rephrasing" is only for requests the kernel could not serve.
+
+## As built (V0.1 round F)
+
+- **A design decision researches once before it ranks (R1).** When a required criterion is a design judgement the decision no longer ranks at once: while the research-round cap has room and the options give something to aim at (a gap a synthesis named, the claims of an option a human added, a file an option cites that is not evidence yet) combine asks for ONE targeted round (`needs_evidence`, reason `design_round`, request key ending `:design_round`, so it is asked once). The budget gate still applies: a round that does not fit beside the reserved final assessment becomes the ranked question (`budget_reserve`). A round-7-shaped decision costs 13 provider calls (7 before) and ranks on the evidence that round found; with a 14-call budget it still ends in 7 calls on the ranking.
+- **The decision record carries `design_reason` (R4).** `Decision.design_reason` (design_judgement, no_progress, research_cap or budget_reserve) is set whenever the options were ranked for a human and stays null otherwise.

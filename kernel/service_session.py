@@ -52,6 +52,7 @@ class Session:
         config: LangGraph config (thread id, recursion limit, tracer callbacks).
         runtime: The KernelRuntime for graph invocations.
         observability: Export health, set when the segment closed.
+        observability_reason: Why export is degraded (None while ok).
     """
 
     run_id: str
@@ -61,6 +62,7 @@ class Session:
     config: dict[str, Any]
     runtime: KernelRuntime
     observability: ObservabilityStatus = ObservabilityStatus.OK
+    observability_reason: str | None = None
 
     def runtime_corr(self) -> CorrelationIds:
         """Return run-level correlation ids for events the service records itself."""
@@ -159,11 +161,15 @@ async def open_session(env: KernelEnvironment, kind: str, run_id: str,
         status = _close_trace(env)
         if session is not None:
             session.observability = status
+            if status is ObservabilityStatus.DEGRADED:
+                session.observability_reason = getattr(env.tracer, "degraded_reason", None)
 
 
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 [python-coder]: The session keeps the tracer's degraded reason (read with getattr:
+#   it is not part of the Tracer port) so the envelope can say why export failed. (#KernelV01/C)
 # - 2026-10-02 [python-coder]: A segment that routes no work gets a Jev port that refuses every
 #   batch instead of None: KernelRuntime.jev is a required port. (#KernelBootstrapV0/GROUND)
 # - 2026-10-01 10:50 [python-coder]: Status and cancel segments build no Jev adapter (they never

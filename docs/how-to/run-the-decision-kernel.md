@@ -87,6 +87,22 @@ list, so copy the entries you keep). Every source is bounded by `retrieval.max_c
 `max_excerpt_chars` and `max_file_bytes`; add secret-like paths to `retrieval.deny_globs` or to a
 source's own `deny_globs`.
 
+Files are read by section, not by one window: Markdown by heading (the locator reads
+`path#L10-L40 (§Alternatives)`), YAML and JSON by top-level key, Python by top-level class or
+function; other formats keep the old line window. Up to `retrieval.sections_per_file` sections
+of a file are offered, best term match first. Before ranking, a file whose path or name carries
+an identifier or word of the question (`ADR-057`, `decision.py`, `kernel.contracts.decision`,
+a path) is always offered. A source offers at most
+`max(source_candidate_floor, source_candidate_ratio x files scanned)` candidates, so a small
+folder is fully considered while a large one stays bounded; `max_candidates` (default 60) is the
+pool and `rerank_max_per_need` (20) the one Jev call per need. Cuts are named in limitations.
+
+A retrieval request may also carry `explicit_locators` (at most `max_explicit_locators`): a
+repo-relative path, `path#L10-L40`, `path#Heading text` or `path::Symbol` (a Python class,
+function or `Class.method`). Each is fetched exactly, marked `explicit_locator` in provenance,
+kept by ranking, and refused (with a limitation) outside the scope's read roots, under deny
+globs, on path traversal, or outside every configured `repo_text` source.
+
 A decision whose options are unknown first researches the option space (task context, existing
 patterns, prior decisions) and then asks the host for options with that evidence attached. The
 host has no repository access: it may only use the evidence in the packet's input artifact, and
@@ -95,6 +111,31 @@ each option must cite the evidence ids it rests on. `decision.require_option_gro
 limitations instead. `decision.max_grounding_evidence` bounds how much evidence one options
 request carries. A need counts as covered only by evidence at or above
 `retrieval.coverage_relevance_threshold`.
+
+#### Design decisions, targeted research and answer-aware coverage
+
+When a required criterion is a property of the proposed designs (a design judgement, not a fact
+a file can state), when two assessments in a row barely move (`decision.progress_epsilon`), or
+after `decision.max_research_rounds` rounds, the decision stops researching and asks a human a
+**ranked question**: the options as `#1, #2, ...` ordered by required criteria passed, then the
+required mean, then the supporting mean, each with its criteria in words and the evidence it
+cites. Answer with `{"choice_id": "<option id>"}`, add an option of your own
+(`added_options`), or answer in words (recorded only). A choice resolves the decision with you
+as approver and the ranking in the rationale. `decision.design_judgement_threshold` sets how
+sure Jev must be that a criterion is a design judgement.
+
+Research uses what the decision already knows. An option that cites `kernel/contracts/decision.py`
+(or `path#anchor`, `path::Symbol`) has that file fetched exactly, whatever the need's own sources;
+evidence ids it cites stay context. Queries lead with the goal, then the approved criteria and
+the option titles; `retrieval.max_query_terms` (48) bounds them. Gaps a synthesis named
+(`unknowns`) and the claims of options a human added become supporting needs with their own
+queries (`research.max_targeted_needs`, 2; the budget reserve: design docs, "As built round E").
+
+A need is `satisfied` only if Jev also judges that the kept evidence **answers** the need's
+question (one `answers.<need>` question per satisfied need, inside the existing assess call,
+so no extra Jev call). Evidence that is on topic but does not answer leaves the need `partial`
+with a limitation: `research.answer_threshold` (0.7) sets the bar and
+`research.answer_aware_coverage` (`true`) switches it off.
 
 ### Step 3 — Write the task and start the run
 

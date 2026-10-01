@@ -155,11 +155,38 @@
       "title": "Detail",
       "type": "string"
     },
+    "explicit_locators": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Explicit Locators",
+      "type": "array"
+    },
     "limits": {
       "$ref": "#/$defs/RetrievalLimits"
     },
+    "max_rerank_batches": {
+      "anyOf": [
+        {
+          "minimum": 1,
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Max Rerank Batches"
+    },
     "need": {
       "$ref": "#/$defs/EvidenceNeed"
+    },
+    "query_hints": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Query Hints",
+      "type": "array"
     },
     "schema_version": {
       "const": "1.0",

@@ -12,8 +12,11 @@ ARCHITECTURE: followup_for maps a Verdict to a Followup; result builders read an
 
 from __future__ import annotations
 
+from kernel.capabilities.decision.budget_gate import LIMITATION
 from kernel.capabilities.decision.combine import Verdict
+from kernel.capabilities.decision.design_ending import choice_rationale, ranking_assessments
 from kernel.capabilities.decision.jev_support import blocked_result
+from kernel.capabilities.decision.ranking import BUDGET_RESERVE, DESIGN_ROUND
 from kernel.capabilities.decision.requests import (
     DEFAULT_MAX_OPTIONS,
     Followup,
@@ -24,6 +27,7 @@ from kernel.capabilities.decision.requests import (
     synthesis_request,
 )
 from kernel.capabilities.decision.state import Working, version_of
+from kernel.config import DecisionConfig
 from kernel.contracts import schema_ids
 from kernel.contracts.base import new_id
 from kernel.contracts.capability import CapabilityResult
@@ -81,8 +85,12 @@ def _human_followup(work: Working, verdict: Verdict, reason: str) -> Followup:
         open_question=_HUMAN_TEXT.get(reason, "A human answer is required."))
 
 
-def followup_for(work: Working, verdict: Verdict) -> Followup:
-    """Map a needs_* verdict to the child request that can reduce the uncertainty."""
+def followup_for(work: Working, verdict: Verdict, reserve: int = 0) -> Followup:
+    """Map a needs_* verdict to the child request that can reduce the uncertainty.
+
+    `reserve` is the Jev calls the decision keeps for its own final assessment; a research
+    request carries it so research plans no more than the rest of the budget affords.
+    """
     rev = work.revision()
     status = verdict.status
     if status is DecisionStatus.NEEDS_EVIDENCE:
@@ -91,10 +99,11 @@ def followup_for(work: Working, verdict: Verdict) -> Followup:
                 and _research_asked_for(work, EvidenceCategory.TASK_CONTEXT)):
             return _human_followup(work, verdict, "missing_task_fact")
         key = "research:" + ",".join(sorted(c.value for c in cats)) + f":{rev}"
+        key += f":{DESIGN_ROUND}" if verdict.reason == DESIGN_ROUND else ""
         names = ", ".join(c.value for c in cats)
         return Followup(status=status, key=key, phase="awaiting_evidence",
                         reason=verdict.reason, missing=verdict.missing,
-                        request=research_request(work, cats),
+                        request=research_request(work, cats, reserve),
                         open_question=f"Missing evidence: {names}.")
     if status is DecisionStatus.NEEDS_SYNTHESIS:
         return Followup(status=status, key=f"synthesis:{rev}", phase="awaiting_synthesis",
@@ -127,13 +136,15 @@ def _ver(items: list) -> str:
 
 def _decision_record(work: Working, status: DecisionStatus, missing: list[MissingKnowledge],
                      selected: str | None = None, rationale: Rationale | None = None,
-                     approval: ApprovalStatus = ApprovalStatus.NOT_REQUIRED) -> Decision:
+                     approval: ApprovalStatus = ApprovalStatus.NOT_REQUIRED,
+                     approved_by: str | None = None) -> Decision:
     """Build the Decision record carried in the result."""
     return Decision(
-        id=work.decision_id or new_id("dec"), question=work.question, status=status, selected_option_id=selected,
+        id=work.decision_id or new_id("dec"), question=work.question, status=status,
+        selected_option_id=selected, design_reason=work.cont.design_reason or None,
         option_ids=[o.id for o in work.usable_options],
         criterion_ids=[c.id for c in work.usable_criteria], evidence_ids=work.evidence_ids,
-        missing=missing, rationale=rationale, approval_status=approval,
+        missing=missing, rationale=rationale, approval_status=approval, approved_by=approved_by,
         versions={"options": _ver(work.options), "criteria": _ver(work.criteria),
                   "templates": "decision.assess@1"})
 
@@ -192,6 +203,32 @@ def resolved_result(invocation: CapabilityInvocation, work: Working, verdict: Ve
         limitations=work.limitations)
 
 
+def design_resolved_result(invocation: CapabilityInvocation, work: Working, cfg: DecisionConfig
+                           ) -> CapabilityResult:
+    """Resolve a design decision with the option the human chose (approved by that human).
+
+    The kernel ranking the human saw is recorded in the rationale and the assessments; it is
+    evidence for the choice, never the authority for it.
+    """
+    option = next(o for o in work.options if o.id == work.cont.design_choice_id)
+    rationale = Rationale(text=choice_rationale(work), origin="template")
+    note = ("design decision: the options were ranked by the kernel and a human chose "
+            f"[{option.id}]")
+    limited = [LIMITATION] if work.cont.design_reason == BUDGET_RESERVE else []
+    report = DecisionReportPayload(
+        status=DecisionStatus.RESOLVED, recommendation=option.title,
+        selected_option_id=option.id, criterion_assessments=ranking_assessments(work, cfg),
+        supporting_evidence_ids=work.evidence_ids, approval_status=ApprovalStatus.APPROVED,
+        limitations=[*work.limitations, *limited, note], rationale=rationale)
+    decision = _decision_record(work, DecisionStatus.RESOLVED, [], option.id, rationale,
+                                ApprovalStatus.APPROVED, approved_by=work.cont.approved_by)
+    return CapabilityResult(
+        invocation_id=invocation.id, work_item_id=invocation.work_item_id,
+        status=ResultStatus.COMPLETED, output_schema_id=schema_ids.DECISION_REPORT,
+        output_payload=report.model_dump(mode="json"), decisions=[decision], usage=work.usage,
+        limitations=[*work.limitations, *limited, note])
+
+
 def emit_followup(invocation: CapabilityInvocation, work: Working, followup: Followup
                   ) -> CapabilityResult:
     """Emit `waiting` for a fresh follow-up, or the stalled outcome if it was already made."""
@@ -203,6 +240,16 @@ def emit_followup(invocation: CapabilityInvocation, work: Working, followup: Fol
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 [python-coder]: The decision record carries `design_reason` (from the
+#   continuation) so a reader of the record, not only of the state, sees why the options were
+#   ranked for a human; the design round's research request key ends in `:design_round` so it
+#   is asked once. (#KernelV01/F)
+# - 2026-10-01 [python-coder]: A research follow-up carries the decision's reserved Jev calls, and
+#   a design decision settled after a budget hand-over records the limited-evidence limitation in
+#   its final report. (#KernelV01/E)
+# - 2026-10-01 [python-coder]: design_resolved_result completes a design decision with the human's
+#   choice: approval approved, approved_by the human, rationale recording ranking and choice.
+#   (#KernelV01/A)
 # - 2026-10-02 [python-coder]: mypy: the used items are typed as options or criteria (#KernelBootstrapV0/GROUND)
 # - 2026-10-01 23:00 [python-coder]: The decision record uses the stable decision id, so the
 #   scheduler merges every status of one decision into a single record. (#KernelBootstrapV0/GROUND)

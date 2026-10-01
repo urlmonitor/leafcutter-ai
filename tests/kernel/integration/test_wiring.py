@@ -101,6 +101,7 @@ class WiringCase(unittest.IsolatedAsyncioTestCase):
         self.jev.script("research.plan_needs", "need.*", noul_answer(0.05))
         self.jev.script("research.assess", "conflict", noul_answer(0.05))
         self.jev.script("research.assess", "evaluable", noul_answer(0.95))
+        self.jev.script("research.assess", "answers.*", noul_answer(0.95))
         self.jev.script("retrieval.rerank", "relevant.*", noul_answer(0.9))
         self.run_store = FileRunStore(self.run_root)
         self.artifacts = FileArtifactStore(self.run_root)

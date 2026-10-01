@@ -58,6 +58,10 @@ class UnlimitedBudget:
         self.reserved[resource] += 1
         return True
 
+    def available(self, resource: BudgetResource) -> int | None:
+        """Report no limit (None): callers must not gate on an unbounded budget."""
+        return None
+
 
 @dataclass(frozen=True)
 class ExecutionContext:
@@ -98,6 +102,9 @@ class CapabilityExecutor(Protocol):
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 [python-coder]: A budget may also expose `available(resource)` (units left, None for
+#   unbounded); it is an optional capability read through call_costs.jev_available, so the
+#   BudgetPort protocol and its test doubles are unchanged. (#KernelV01/E)
 # - 2026-09-30 23:59 [python-coder]: `constraints` carries the task's constraint texts (filled by
 #   the scheduler) so executors can quote them to Jev without storing them as evidence.
 #   (#KernelBootstrapV0/INT)

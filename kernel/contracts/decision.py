@@ -9,6 +9,7 @@ ARCHITECTURE: Pure data contracts. Decision and RoutingAssessment carry status i
 
 from __future__ import annotations
 
+from enum import StrEnum
 from typing import Literal
 
 from pydantic import Field, model_validator
@@ -35,6 +36,15 @@ def _check_proposal(proposal: ProposalStatus, approval: ApprovalStatus,
         fail("a proposed item needs approval_status proposed, approved or rejected")
     if approval is ApprovalStatus.APPROVED and not approved_by:
         fail("an approved item must record approved_by")
+
+
+class CriterionKind(StrEnum):
+    """What can settle a criterion: facts about the world, or a judgement of the designs."""
+
+    #: Settled by facts about the world or the repository; research can make it sufficient.
+    EVIDENCE_ANSWERABLE = "evidence_answerable"
+    #: A property of the proposed options themselves; retrieval cannot settle it, a human can.
+    DESIGN_JUDGEMENT = "design_judgement"
 
 
 class Option(KernelModel):
@@ -72,6 +82,10 @@ class Criterion(KernelModel):
     approval_status: ApprovalStatus = ApprovalStatus.NOT_REQUIRED
     proposed_by: str | None = None
     approved_by: str | None = None
+    #: Whether evidence can settle this criterion; Jev classifies it once (kind_source "jev").
+    kind: CriterionKind = CriterionKind.EVIDENCE_ANSWERABLE
+    #: Who set `kind`: None means not classified yet (the decision asks Jev once).
+    kind_source: str | None = None
 
     @model_validator(mode="after")
     def _proposal_needs_approval_track(self) -> Criterion:
@@ -99,6 +113,23 @@ class CriterionAssessment(KernelModel):
     limitations: list[str] = Field(default_factory=list)
 
 
+class OptionRanking(KernelModel):
+    """One option's place in the kernel's deterministic ranking (evidence, never authority).
+
+    `scores` are Jev's raw satisfies probabilities keyed by criterion id; the means are over the
+    required and the supporting criteria and `required_passed` counts required criteria at or
+    above the satisfies threshold. Rank 1 is the best.
+    """
+
+    option_id: str
+    rank: int = Field(ge=1)
+    required_passed: int = Field(ge=0)
+    required_total: int = Field(ge=0)
+    required_mean: float = Field(ge=0.0, le=1.0)
+    supporting_mean: float | None = Field(default=None, ge=0.0, le=1.0)
+    scores: dict[str, float] = Field(default_factory=dict)
+
+
 class Rationale(KernelModel):
     """Concise explanation; origin labels who wrote it (never Jev hidden reasoning)."""
 
@@ -120,6 +151,11 @@ class Decision(PersistedModel):
     rationale: Rationale | None = None
     versions: dict[str, str] = Field(default_factory=dict)
     unresolved_risks: list[str] = Field(default_factory=list)
+    #: The human who approved the decision, when a human settled it (a design decision).
+    approved_by: str | None = None
+    #: Why the kernel stopped researching and ranked the options for a human (design_judgement,
+    #: no_progress, research_cap, budget_reserve); null while the decision is not a design one.
+    design_reason: str | None = None
 
     def differs_from(self, other: Decision) -> bool:
         """True if the two records differ in anything but the clock (one decision, two statuses)."""
@@ -179,6 +215,12 @@ class RoutingAssessment(PersistedModel):
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 [python-coder]: Decision.design_reason records why the options were ranked for a
+#   human; it was only in the continuation state (the record showed null). (#KernelV01/F)
+# - 2026-10-01 [python-coder]: Criterion.kind (evidence_answerable by default) with kind_source,
+#   OptionRanking and Decision.approved_by support the design-decision ending: a design
+#   judgement cannot be settled by research, so a human chooses among ranked options.
+#   (#KernelV01/A)
 # - 2026-10-02 [python-coder]: Option.named_in_goal is a host claim the kernel verifies against the
 #   goal text before treating the option as caller-supplied. (#KernelBootstrapV0/GROUND)
 # - 2026-10-01 23:00 [python-coder]: Decision.differs_from lets the merge update one decision

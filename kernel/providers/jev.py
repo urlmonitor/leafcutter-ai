@@ -34,7 +34,9 @@ from kernel.providers.base import (
     JevResult,
     QuestionSpec,
 )
+from kernel.providers.jev_budget import reserve_extra_call
 from kernel.providers.jev_errors import (
+    JevBudgetExhausted,
     JevInvalidRequest,
     JevPayloadTooLarge,
     JevTransientError,
@@ -173,7 +175,7 @@ class TypeSafeJevAdapter:
                 asks for a specific delay.
             price_per_input_token_usd: Used to estimate cost; None leaves cost unknown.
             sleep: Awaitable sleep (injected in tests).
-            tracer: When set, every assess call emits one `jev.<purpose>` GENERATION through it
+            tracer: When set, every provider call (chunk) emits one `jev.<purpose>` GENERATION
                 (parented to the current span of the caller, correlated by `batch.correlation`).
             model_name: Configured model, reported when the provider does not name one.
         """
@@ -235,28 +237,33 @@ class TypeSafeJevAdapter:
         await self._transport.aclose()
 
     async def assess(self, batch: JevBatch) -> JevResult:
-        """Answer every question of the batch (see JevPort.assess for the error contract)."""
+        """Answer every question of the batch (see JevPort.assess for the error contract).
+
+        A batch larger than `max_questions_per_call` is sent as several provider calls. Each
+        provider call is one generation, one unit of `usage.calls` and (after the first, which
+        the caller reserved) one reservation from the bound budget.
+        """
         started = time.perf_counter()
         try:
-            result = await self._assess(batch)
+            wires = self._validate(batch)
         except JevError as exc:
-            self._trace(batch, started, error=exc)
+            self._trace(batch, started, error=exc, extra={"calls": 0})
             raise
-        self._trace(batch, started, result=result)
-        return result
+        return await self._assess(batch, wires)
 
     def _trace(self, batch: JevBatch, started: float, *, result: JevResult | None = None,
-               error: JevError | None = None) -> None:
-        """Emit the GENERATION for this call when a tracer is configured."""
+               error: JevError | None = None, extra: dict[str, Any] | None = None) -> None:
+        """Emit the GENERATION for one provider call when a tracer is configured."""
         if self._tracer is None:
             return
         emit_generation(
             self._tracer, batch, adapter_version=self.adapter_version,
             model_name=self._model_name, state_chars=len(canonical_json(batch.state)),
-            latency_ms=int((time.perf_counter() - started) * 1000), result=result, error=error)
+            latency_ms=int((time.perf_counter() - started) * 1000), result=result, error=error,
+            extra=extra)
 
-    async def _assess(self, batch: JevBatch) -> JevResult:
-        """Validate, send (chunked, with retry) and map the answers."""
+    def _validate(self, batch: JevBatch) -> dict[str, dict[str, Any]]:
+        """Reject malformed or oversized batches before any call; return the wire questions."""
         ids = [q.id for q in batch.questions]
         if len(set(ids)) != len(ids):
             reason = "duplicate question ids in batch"
@@ -264,20 +271,56 @@ class TypeSafeJevAdapter:
         size = len(canonical_json(batch.state))
         if size > self._max_state_chars:
             raise JevPayloadTooLarge(size, self._max_state_chars)
-        wires = {q.id: question_to_wire(q) for q in batch.questions}
+        return {q.id: question_to_wire(q) for q in batch.questions}
+
+    async def _assess(self, batch: JevBatch, wires: dict[str, dict[str, Any]]) -> JevResult:
+        """Send the chunks one provider call each (with retry) and merge the answers."""
+        questions = batch.questions
+        chunks = [questions[i:i + self._chunk] for i in range(0, len(questions), self._chunk)]
         started = time.perf_counter()
         raws: list[RawResponse] = []
-        attempts = 0
-        for start in range(0, len(ids), self._chunk):
-            chunk = batch.questions[start:start + self._chunk]
-            raw, used = await self._send_with_retry(batch, chunk, wires)
-            raws.append(raw)
-            attempts += used
-        latency_ms = int((time.perf_counter() - started) * 1000)
         answers: dict[str, Any] = {}
-        for raw, start in zip(raws, range(0, len(ids), self._chunk), strict=True):
-            answers.update(map_answers(raw.answers, batch.questions[start:start + self._chunk]))
-        return self._result(batch, raws, answers, attempts, latency_ms)
+        part: JevResult | None = None
+        for index, chunk in enumerate(chunks):
+            try:
+                if index > 0 and not reserve_extra_call():
+                    reason = (f"jev call budget exhausted after {index} of {len(chunks)} provider "
+                              f"calls of one assessment")
+                    logger.warning("%s (purpose=%s)", reason, batch.purpose)
+                    raise JevBudgetExhausted(reason)
+                sub = batch.model_copy(update={"questions": chunk})
+                raw, part = await self._call_chunk(sub, wires, index, len(chunks))
+            except JevError as exc:
+                if raws:  # the earlier chunks were made and paid for: keep their usage
+                    done = self._result(batch, raws, answers, len(raws), int(
+                        (time.perf_counter() - started) * 1000))
+                    exc.completed_usage = done.usage
+                raise
+            raws.append(raw)
+            answers.update(part.answers)
+        latency_ms = int((time.perf_counter() - started) * 1000)
+        result = part if len(chunks) == 1 and part is not None else self._result(
+            batch, raws, answers, len(raws), latency_ms)
+        logger.info("jev purpose=%s model=%s adapter=%s questions=%d calls=%d latency_ms=%d",
+                    batch.purpose, result.model_id, self.adapter_version, len(answers),
+                    len(raws), latency_ms)
+        return result
+
+    async def _call_chunk(self, sub: JevBatch, wires: dict[str, dict[str, Any]], index: int,
+                          count: int) -> tuple[RawResponse, JevResult]:
+        """Make one provider call, trace its generation and return (raw, its own result)."""
+        started = time.perf_counter()
+        position = {"chunk_index": index, "chunk_count": count}
+        try:
+            raw, attempts = await self._send_with_retry(sub, sub.questions, wires)
+            mapped = map_answers(raw.answers, sub.questions)
+        except JevError as exc:
+            self._trace(sub, started, error=exc, extra={**position, "calls": 1})
+            raise
+        latency_ms = int((time.perf_counter() - started) * 1000)
+        part = self._result(sub, [raw], mapped, 1, latency_ms)
+        self._trace(sub, started, result=part, extra={**position, "attempts": attempts})
+        return raw, part
 
     async def _send_with_retry(self, batch: JevBatch, chunk: list[QuestionSpec],
                                wires: dict[str, dict[str, Any]]) -> tuple[RawResponse, int]:
@@ -306,8 +349,8 @@ class TypeSafeJevAdapter:
         raise JevUnavailable(reason) from last
 
     def _result(self, batch: JevBatch, raws: list[RawResponse], answers: dict[str, Any],
-                attempts: int, latency_ms: int) -> JevResult:
-        """Assemble the JevResult with usage; unknown values stay None."""
+                calls: int, latency_ms: int) -> JevResult:
+        """Assemble the JevResult with usage (`calls` provider calls); unknowns stay None."""
         model = next((r.model for r in raws if r.model), None)
         tokens_in = _sum_known([r.input_tokens for r in raws])
         cost = tokens_in * self._price if tokens_in is not None and self._price is not None \
@@ -316,11 +359,8 @@ class TypeSafeJevAdapter:
             provider="jev", model_id=model, input_tokens=tokens_in,
             output_tokens=_sum_known([r.output_tokens for r in raws]), duration_ms=latency_ms,
             cost_usd=cost, cost_provenance="estimated" if cost is not None else "unavailable",
-            calls=attempts)
+            calls=calls)
         ids = [r.request_id for r in raws if r.request_id]
-        logger.info("jev purpose=%s model=%s adapter=%s questions=%d calls=%d latency_ms=%d",
-                    batch.purpose, model, self.adapter_version, len(answers), attempts,
-                    latency_ms)
         return JevResult(model_id=model, request_id=",".join(ids) or None, answers=answers,
                          usage=usage, latency_ms=latency_ms,
                          input_fingerprint=batch.input_fingerprint(),
@@ -330,6 +370,13 @@ class TypeSafeJevAdapter:
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 [python-coder]: Counting model: a Jev call is one provider request for one chunk
+#   (retries of a chunk are not calls; they are bounded by max_retries and reported as
+#   `attempts` in the generation). Budget (chunks 2..N reserved here), usage.calls, envelope
+#   jev_calls and the generations (one per chunk) therefore agree. (#KernelV01/C)
+# - 2026-10-01 [python-coder]: An error after the first chunk of a chunked assessment carries the
+#   usage of the chunks that finished (`completed_usage`), so usage rows, cost and budget agree
+#   even when the assessment is aborted. (#KernelV01/E)
 # - 2026-10-02 [python-coder]: mypy: optional clients are guarded and the retry reason is None-safe (#KernelBootstrapV0/GROUND)
 # - 2026-10-01 00:30 [python-coder]: With a tracer the adapter emits the GENERATION and the
 #   classifier runs with callbacks=[] (an explicit empty list overrides the inherited graph-level
