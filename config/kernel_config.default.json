@@ -55,12 +55,16 @@
   "retrieval": {
     "relevance_threshold": 0.5,
     "top_k": 6,
-    "max_candidates": 20,
+    "max_candidates": 60,
     "excerpt_context_lines": 12,
     "max_excerpt_chars": 2000,
     "max_file_bytes": 400000,
     "deny_globs": [".env*", "**/*.pem", "**/*.key", ".security-allowlist", "**/.git/**"],
-    "coverage_relevance_threshold": 0.7
+    "coverage_relevance_threshold": 0.7,
+    "sections_per_file": 3,
+    "source_candidate_floor": 20,
+    "source_candidate_ratio": 1.5,
+    "max_explicit_locators": 12
   },
   "sources": [
     {"id": "repo.principles", "kind": "repo_text",

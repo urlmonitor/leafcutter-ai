@@ -17,6 +17,7 @@ import fnmatch
 import logging
 import os
 from dataclasses import dataclass
+from datetime import UTC, datetime
 from pathlib import Path, PurePosixPath, PureWindowsPath
 
 logger = logging.getLogger(__name__)
@@ -29,6 +30,14 @@ def _fold(posix: str) -> str:
     on case-insensitive platforms (Windows)."""
     cleaned = PurePosixPath(posix).as_posix()
     return cleaned.casefold() if os.name == "nt" else cleaned
+
+
+def file_mtime(path: Path) -> datetime | None:
+    """Return the file's modification time (UTC) or None if it cannot be read."""
+    try:
+        return datetime.fromtimestamp(path.stat().st_mtime, tz=UTC)
+    except OSError:
+        return None
 
 
 @dataclass(frozen=True)

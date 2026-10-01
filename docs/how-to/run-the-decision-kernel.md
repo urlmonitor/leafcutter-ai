@@ -87,6 +87,22 @@ list, so copy the entries you keep). Every source is bounded by `retrieval.max_c
 `max_excerpt_chars` and `max_file_bytes`; add secret-like paths to `retrieval.deny_globs` or to a
 source's own `deny_globs`.
 
+Files are read by section, not by one window: Markdown by heading (the locator reads
+`path#L10-L40 (§Alternatives)`), YAML and JSON by top-level key, Python by top-level class or
+function; other formats keep the old line window. Up to `retrieval.sections_per_file` sections
+of a file are offered, best term match first. Before ranking, a file whose path or name carries
+an identifier or word of the question (`ADR-057`, `decision.py`, `kernel.contracts.decision`,
+a path) is always offered. A source offers at most
+`max(source_candidate_floor, source_candidate_ratio x files scanned)` candidates, so a small
+folder is fully considered while a large one stays bounded; `max_candidates` (default 60) is the
+overall rerank batch. Anything cut is named in the bundle's limitations.
+
+A retrieval request may also carry `explicit_locators` (at most `max_explicit_locators`): a
+repo-relative path, `path#L10-L40`, `path#Heading text` or `path::Symbol` (a Python class,
+function or `Class.method`). Each is fetched exactly, marked `explicit_locator` in provenance,
+kept by ranking, and refused (with a limitation) outside the scope's read roots, under deny
+globs, on path traversal, or outside every configured `repo_text` source.
+
 A decision whose options are unknown first researches the option space (task context, existing
 patterns, prior decisions) and then asks the host for options with that evidence attached. The
 host has no repository access: it may only use the evidence in the packet's input artifact, and

@@ -31,6 +31,8 @@ class Candidate:
     terms: tuple[str, ...]
     truncated: bool = False
     modified_at: datetime | None = None
+    #: True when the caller named this place (an explicit locator); never dropped by ranking.
+    explicit: bool = False
 
 
 @dataclass
@@ -52,6 +54,8 @@ class SearchReport:
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-01 [python-coder]: `explicit` marks a candidate fetched by locator so reranking keeps
+#   it and provenance can say so. (#KernelV01/B)
 # - 2026-09-30 23:00 [python-coder]: Skips are counted per reason so the bundle can state how
 #   many files were too large, denied or binary instead of silently narrowing the search.
 #   (#KernelBootstrapV0/P5)

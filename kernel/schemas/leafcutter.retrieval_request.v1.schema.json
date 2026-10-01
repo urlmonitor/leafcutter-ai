@@ -155,6 +155,13 @@
       "title": "Detail",
       "type": "string"
     },
+    "explicit_locators": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Explicit Locators",
+      "type": "array"
+    },
     "limits": {
       "$ref": "#/$defs/RetrievalLimits"
     },

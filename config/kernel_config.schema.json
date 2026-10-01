@@ -459,6 +459,11 @@
           "title": "Max Excerpt Chars",
           "type": "integer"
         },
+        "max_explicit_locators": {
+          "minimum": 0,
+          "title": "Max Explicit Locators",
+          "type": "integer"
+        },
         "max_file_bytes": {
           "minimum": 1,
           "title": "Max File Bytes",
@@ -468,6 +473,21 @@
           "maximum": 1.0,
           "minimum": 0.0,
           "title": "Relevance Threshold",
+          "type": "number"
+        },
+        "sections_per_file": {
+          "minimum": 1,
+          "title": "Sections Per File",
+          "type": "integer"
+        },
+        "source_candidate_floor": {
+          "minimum": 1,
+          "title": "Source Candidate Floor",
+          "type": "integer"
+        },
+        "source_candidate_ratio": {
+          "exclusiveMinimum": 0,
+          "title": "Source Candidate Ratio",
           "type": "number"
         },
         "top_k": {
@@ -484,7 +504,11 @@
         "max_excerpt_chars",
         "max_file_bytes",
         "deny_globs",
-        "coverage_relevance_threshold"
+        "coverage_relevance_threshold",
+        "sections_per_file",
+        "source_candidate_floor",
+        "source_candidate_ratio",
+        "max_explicit_locators"
       ],
       "title": "RetrievalConfig",
       "type": "object"
